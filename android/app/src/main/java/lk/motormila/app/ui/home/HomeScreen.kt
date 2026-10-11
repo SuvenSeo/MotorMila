@@ -1115,7 +1115,7 @@ private fun LiveIncomingFeedTicker(
                                 indication = null,
                                 onClick = { onItemClick(item) },
                             )
-                            .padding(horizontal = 16.dp, vertical = 11.dp),
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
@@ -1496,7 +1496,7 @@ private fun DistrictChip(district: String, count: Int, median: String, onClick: 
     MotormilaSurface(
         onClick = onClick,
         fillMaxWidth = false,
-        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
         modifier = Modifier.heightIn(min = 48.dp),
     ) {
         Text(district, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge, color = MotormilaOnSurface)

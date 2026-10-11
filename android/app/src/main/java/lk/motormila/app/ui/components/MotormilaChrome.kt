@@ -94,7 +94,7 @@ fun MotormilaEyebrow(
                 if (accent) Color(0x440A7AFF) else MotormilaGlassBorder,
                 CircleShape,
             )
-            .padding(horizontal = 10.dp, vertical = 5.dp),
+            .padding(horizontal = 12.dp, vertical = 6.dp),
     ) {
         Box(
             modifier = Modifier
@@ -557,8 +557,8 @@ fun MotormilaPrimaryButton(
     Box(
         modifier = modifier
             .then(if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier)
-            .heightIn(min = 52.dp)
-            .then(if (fillMaxWidth) Modifier else Modifier.padding(horizontal = 18.dp))
+            .heightIn(min = 48.dp)
+            .then(if (fillMaxWidth) Modifier else Modifier.padding(horizontal = 16.dp))
             .applePress(interaction, pressedScale = 0.97f)
             .clip(CircleShape)
             .background(if (canClick) MotormilaPrimary else MotormilaPrimary.copy(alpha = 0.35f))
@@ -573,7 +573,7 @@ fun MotormilaPrimaryButton(
                     color = Color.White,
                     modifier = Modifier.size(16.dp),
                 )
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(8.dp))
             } else if (leadingIcon != null) {
                 Icon(
                     leadingIcon,
@@ -587,7 +587,7 @@ fun MotormilaPrimaryButton(
                 text = label,
                 color = Color.White,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 15.sp,
+                fontSize = 14.sp,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )

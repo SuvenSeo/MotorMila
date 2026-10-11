@@ -221,7 +221,7 @@ private fun ValuationWorkbenchTab(
 
         // Multi-step appraisal wizard indicator
         item {
-            MotormilaSurface(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)) {
+            MotormilaSurface(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)) {
                 AppraisalWizardStepIndicator(
                     currentStep = step,
                     onStepClick = { targetStep ->
@@ -592,7 +592,7 @@ private fun Step02MileageCondition(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
