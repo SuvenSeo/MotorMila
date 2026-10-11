@@ -27,13 +27,13 @@ import { revealContainer, revealItem, springSoft } from "@/lib/motion";
 
 const WAITLIST_KEY = "motormila.mobile_waitlist";
 
-/** Live sideload release — keep in step with android/app/build.gradle.kts + public/app/. */
-const APK_VERSION = "1.5.5";
+/** Live sideload release — keep in step with android/app/build.gradle.kts + public/app/latest-release.json. */
+const APK_VERSION = "1.6.0";
 const APK_SIZE = "16.9 MB";
-// Same-origin download: the source repo is private, so the APK ships as a
-// static file on the site itself (public/app/, deployed with the snapshots).
-const APK_URL = `/app/motormila-${APK_VERSION}.apk`;
-const APK_SHA256 = "208923c4883f725d78fec3edd613ad8a987a47e45f76f704e107978c17038ee6";
+// Public R2 download: the source repo is private, so the APK ships from the
+// public motormila-snapshots bucket (published by .github/workflows/android-release.yml).
+const APK_URL = `https://pub-f15911ef9a914db9a44e1fd6b47dfe4e.r2.dev/app/motormila-${APK_VERSION}.apk`;
+const APK_SHA256 = "1cf3fd30f4ae178b18c912b4945531b625043357c7dd36e1cec23c5ee8c8523b";
 
 type Feature = {
   icon: React.ComponentType<{ className?: string }>;
