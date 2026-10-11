@@ -185,7 +185,7 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="${{ steps.apk.outputs.version }}"
-          VERSION_CODE="$(grep -oP 'versionCode\\s*=\\s*\\K[0-9]+' android/app/build.gradle.kts | head -1)"
+          VERSION_CODE="$(grep -oP 'versionCode\s*=\s*\K[0-9]+' android/app/build.gradle.kts | head -1)"
           # Public R2 URL (bucket motormila-snapshots has its managed r2.dev
           # domain enabled). The backend's /releases/app serves this to the
           # in-app updater via the site manifest below.
