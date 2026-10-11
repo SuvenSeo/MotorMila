@@ -21,11 +21,24 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
 /**
  * Network graph. Base URL = BuildConfig.BASE_URL ("…/api/v1", no trailing slash).
- * Timeouts: 25 s connect/read, 60 s write (image-heavy thumbnail proxy reads).
- * Logging: BODY in debug, NONE in release. JSON: ignoreUnknownKeys +
- * coerceInputValues + explicitNulls=false so backend additions never crash decode.
+ *
+ * Timeouts are deliberately SHORT (8 s connect / 10 s read): the backend runs
+ * on HuggingFace Spaces free tier, which sleeps when idle and takes 30-60 s
+ * to cold-start. A hanging live call must fail fast so [withSnapshotFallback]
+ * can serve the Cloudflare snapshot instead of blocking the UI until the
+ * ViewModel's 20 s withTimeout fires. Logging: BODY in debug, NONE in
+ * release. JSON: ignoreUnknownKeys + coerceInputValues + explicitNulls=false
+ * so backend additions never crash decode.
  */
 private const val SNAPSHOT_BASE_URL = "https://motormila.pages.dev/snapshots/latest/"
+
+/** Live API: fail fast on cold/sleeping backend so snapshot fallback wins. */
+private const val LIVE_CONNECT_TIMEOUT_S = 8L
+private const val LIVE_READ_TIMEOUT_S = 10L
+
+/** Snapshot CDN (Cloudflare): normally <2 s; fail fast if it's hanging too. */
+private const val SNAPSHOT_CONNECT_TIMEOUT_S = 8L
+private const val SNAPSHOT_READ_TIMEOUT_S = 10L
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -51,8 +64,8 @@ object NetworkModule {
             else HttpLoggingInterceptor.Level.NONE
         }
         return OkHttpClient.Builder()
-            .connectTimeout(25, TimeUnit.SECONDS)
-            .readTimeout(25, TimeUnit.SECONDS)
+            .connectTimeout(LIVE_CONNECT_TIMEOUT_S, TimeUnit.SECONDS)
+            .readTimeout(LIVE_READ_TIMEOUT_S, TimeUnit.SECONDS)
             .writeTimeout(60, TimeUnit.SECONDS)
             .addInterceptor(authInterceptor)
             .addInterceptor(logging)
@@ -84,8 +97,8 @@ object NetworkModule {
     @Singleton
     fun provideSnapshotApi(json: Json): SnapshotApiService {
         val client = OkHttpClient.Builder()
-            .connectTimeout(25, TimeUnit.SECONDS)
-            .readTimeout(25, TimeUnit.SECONDS)
+            .connectTimeout(SNAPSHOT_CONNECT_TIMEOUT_S, TimeUnit.SECONDS)
+            .readTimeout(SNAPSHOT_READ_TIMEOUT_S, TimeUnit.SECONDS)
             .build()
         return Retrofit.Builder()
             .baseUrl(SNAPSHOT_BASE_URL)

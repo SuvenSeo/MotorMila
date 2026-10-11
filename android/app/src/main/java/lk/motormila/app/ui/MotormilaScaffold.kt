@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -311,7 +312,23 @@ fun MotormilaScaffold(
                 }
             }
         },
-        content = content,
+        content = { paddingValues ->
+            // When the floating AI/scan button stack is visible, reserve end
+            // padding so scrollable content doesn't slide underneath it.
+            // Stack width: 8dp glass padding + 56dp button + 8dp glass padding,
+            // plus 4dp screen margin = 76dp.
+            val fabSafePadding = if (showBottomBar) {
+                PaddingValues(
+                    start = paddingValues.calculateStartPadding(LayoutDirection.Ltr),
+                    top = paddingValues.calculateTopPadding(),
+                    end = paddingValues.calculateEndPadding(LayoutDirection.Ltr) + 76.dp,
+                    bottom = paddingValues.calculateBottomPadding(),
+                )
+            } else {
+                paddingValues
+            }
+            content(fabSafePadding)
+        },
     )
 
     if (showAIChat) {
