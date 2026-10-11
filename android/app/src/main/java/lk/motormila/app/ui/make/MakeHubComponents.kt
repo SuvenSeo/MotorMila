@@ -243,7 +243,7 @@ private fun MakeHubTrendRow(point: TrendPoint) {
     ) {
         Row(
             Modifier
-                .padding(horizontal = 12.dp, vertical = 10.dp)
+                .padding(horizontal = 12.dp, vertical = 12.dp)
                 .heightIn(min = 48.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),

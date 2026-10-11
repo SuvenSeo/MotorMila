@@ -89,7 +89,7 @@ fun SearchBar(
             MotormilaGlass(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 6.dp),
+                    .padding(top = 8.dp),
                 specular = true,
             ) {
                 LazyColumn(modifier = Modifier.fillMaxWidth()) {
