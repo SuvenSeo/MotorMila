@@ -748,11 +748,13 @@ fun MotormilaMetricTile(
         Spacer(Modifier.height(4.dp))
         Text(
             text = value,
-            fontSize = 16.sp,
+            // Long values (e.g. "ENTERPRISE") shrink instead of truncating —
+            // a metric tile must never ellipsis its headline value.
+            fontSize = if (value.length > 8) 13.sp else 16.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = FontFamily.SansSerif,
             color = MotormilaOnSurface,
-            maxLines = 1,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
         if (!note.isNullOrBlank()) {

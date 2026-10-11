@@ -11,7 +11,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import lk.motormila.app.core.common.AppError
 import lk.motormila.app.core.network.ErrorMapper
 import lk.motormila.app.domain.model.DistrictStat
@@ -120,56 +122,70 @@ class InsightsViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = !refresh, isRefreshing = refresh, error = null, offline = false) }
             runCatching {
-                val s = _state.value.selectors
-                val trends = repository.trends(
-                    make = s.toFilter("make"),
-                    model = s.toFilter("model"),
-                    condition = s.toFilter("condition"),
-                    district = s.toFilter("district"),
-                )
-                val index = repository.index()
-                val districts = repository.districts()
-                // Auxiliary sections fail independently — one outage must not blank the rest.
-                val velocities = runCatching { repository.velocities() }.getOrDefault(emptyList())
-                val fuelMix = runCatching { repository.fuelMix() }.getOrDefault(emptyList())
-                val summary = runCatching { stats.summary() }.getOrNull()
-                val priceDrops = runCatching { stats.priceDrops() }.getOrDefault(emptyList())
-                val ev = runCatching { repository.evStats() }.getOrNull()
-                val km = _state.value.chargerRadiusKm
-                val chargers = runCatching { repository.chargers(radiusKm = km.toDouble()) }
-                    .getOrDefault(emptyList())
-                    .map { formatCharger(it.name, it.distanceKm) }
-                val pulse = runCatching { repository.signals() }
-                    .getOrDefault(emptyList())
-                    .map {
-                        PulseSignal(
-                            id = it.id.toString(),
-                            title = it.metric.ifBlank { it.signalType },
-                            tag = it.source,
-                            body = "${it.signalType} · ${it.valueNumeric?.toString().orEmpty()} ${it.unit.orEmpty()}".trim(),
-                            timeLabel = it.observedAt.take(10),
+                // Hard bound (HomeViewModel parity): no hanging call may keep
+                // skeletons up forever. Parallelize — the old sequential chain
+                // could take 12 x timeout before settling.
+                withTimeout(20_000) {
+                    val s = _state.value.selectors
+                    val trendsDef = async {
+                        repository.trends(
+                            make = s.toFilter("make"),
+                            model = s.toFilter("model"),
+                            condition = s.toFilter("condition"),
+                            district = s.toFilter("district"),
                         )
                     }
-                val news = runCatching { repository.news() }.getOrDefault(emptyList())
-                _state.update {
-                    it.copy(
-                        isLoading = false,
-                        isRefreshing = false,
-                        offline = false,
-                        summary = summary,
-                        trends = trends.points,
-                        trendCoverageNote = trends.coverageNote,
-                        index = index.points,
-                        priceIndex = index,
-                        districts = districts,
-                        velocities = velocities,
-                        fuelMix = fuelMix,
-                        priceDrops = priceDrops,
-                        ev = ev,
-                        chargers = chargers,
-                        pulse = pulse,
-                        news = news,
-                    )
+                    val indexDef = async { repository.index() }
+                    val districtsDef = async { repository.districts() }
+                    // Auxiliary sections fail independently — one outage must not blank the rest.
+                    val velocitiesDef = async { runCatching { repository.velocities() }.getOrDefault(emptyList()) }
+                    val fuelMixDef = async { runCatching { repository.fuelMix() }.getOrDefault(emptyList()) }
+                    val summaryDef = async { runCatching { stats.summary() }.getOrNull() }
+                    val priceDropsDef = async { runCatching { stats.priceDrops() }.getOrDefault(emptyList()) }
+                    val evDef = async { runCatching { repository.evStats() }.getOrNull() }
+                    val km = _state.value.chargerRadiusKm
+                    val chargersDef = async {
+                        runCatching { repository.chargers(radiusKm = km.toDouble()) }
+                            .getOrDefault(emptyList())
+                            .map { formatCharger(it.name, it.distanceKm) }
+                    }
+                    val pulseDef = async {
+                        runCatching { repository.signals() }
+                            .getOrDefault(emptyList())
+                            .map {
+                                PulseSignal(
+                                    id = it.id.toString(),
+                                    title = it.metric.ifBlank { it.signalType },
+                                    tag = it.source,
+                                    body = "${it.signalType} · ${it.valueNumeric?.toString().orEmpty()} ${it.unit.orEmpty()}".trim(),
+                                    timeLabel = it.observedAt.take(10),
+                                )
+                            }
+                    }
+                    val newsDef = async { runCatching { repository.news() }.getOrDefault(emptyList()) }
+
+                    val trends = trendsDef.await()
+                    val index = indexDef.await()
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            isRefreshing = false,
+                            offline = false,
+                            summary = summaryDef.await(),
+                            trends = trends.points,
+                            trendCoverageNote = trends.coverageNote,
+                            index = index.points,
+                            priceIndex = index,
+                            districts = districtsDef.await(),
+                            velocities = velocitiesDef.await(),
+                            fuelMix = fuelMixDef.await(),
+                            priceDrops = priceDropsDef.await(),
+                            ev = evDef.await(),
+                            chargers = chargersDef.await(),
+                            pulse = pulseDef.await(),
+                            news = newsDef.await(),
+                        )
+                    }
                 }
             }.onFailure { e ->
                 val mapped = ErrorMapper.map(e)
