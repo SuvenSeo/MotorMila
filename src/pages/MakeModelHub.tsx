@@ -10,6 +10,7 @@ import { PageCanvas } from "@/components/PageCanvas";
 import { PageHero } from "@/components/PageHero";
 import { ListingCard } from "@/components/ListingCard";
 import { ModelPriceTimeMachine } from "@/components/ModelPriceTimeMachine";
+import { ModelTrendPanel } from "@/components/ModelTrendPanel";
 import { MileagePriceScatter } from "@/components/MileagePriceScatter";
 import { SectionHeader } from "@/components/SectionHeader";
 import { NhtsaModelsCard } from "@/components/NhtsaModelsCard";
@@ -260,6 +261,9 @@ export default function MakeModelHub() {
                 )}
               </div>
             ))}
+          </div>
+          <div className="mt-6">
+            <ModelTrendPanel make={makeParam} model={modelParam} />
           </div>
         </div>
       </PageHero>

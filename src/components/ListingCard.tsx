@@ -20,6 +20,7 @@ import { hasFullPlatformAccess } from "@/lib/planLimits";
 import { prefetchRoute } from "@/lib/routePrefetch";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { canonicalizeMake, canonicalizeModel } from "@/lib/makeNormalization";
+import BadgeDelta from "@tremor/react/dist/components/icon-elements/BadgeDelta/BadgeDelta.js";
 
 interface ListingCardProps {
   listing: CarListing;
@@ -225,17 +226,32 @@ export const ListingCard = memo(function ListingCard({
               <p className="text-[12px] font-medium text-muted-foreground">
                 {t("listingCard.fmv", "Fair market value")}
               </p>
-              <p className={`text-[11px] font-semibold num ${
-                fmv == null
-                  ? "text-muted-foreground"
-                  : fmv.band === "below"
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : fmv.band === "above"
-                      ? "text-rose-600 dark:text-rose-400"
-                      : "text-foreground"
-              }`}>
-                {fmv == null ? t("listingCard.pending", "Pending") : fmv.label}
-              </p>
+              <div className="flex items-center gap-1.5">
+                {marketDeltaPct !== null && (
+                  <span className="apex">
+                    <BadgeDelta
+                      deltaType={marketDeltaPct <= 0 ? "moderateDecrease" : "moderateIncrease"}
+                      isIncreasePositive={false}
+                      size="xs"
+                    >
+                      {t("listingCard.vsMarket", "{pct}% vs market", {
+                        pct: `${marketDeltaPct <= 0 ? "−" : "+"}${Math.abs(marketDeltaPct).toFixed(0)}`,
+                      })}
+                    </BadgeDelta>
+                  </span>
+                )}
+                <p className={`text-[11px] font-semibold num ${
+                  fmv == null
+                    ? "text-muted-foreground"
+                    : fmv.band === "below"
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : fmv.band === "above"
+                        ? "text-rose-600 dark:text-rose-400"
+                        : "text-foreground"
+                }`}>
+                  {fmv == null ? t("listingCard.pending", "Pending") : fmv.label}
+                </p>
+              </div>
             </div>
             {fmv != null && (
               <p className="mb-2 text-[10px] font-medium text-muted-foreground num">

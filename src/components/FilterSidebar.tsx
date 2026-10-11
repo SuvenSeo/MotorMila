@@ -4,6 +4,7 @@ import { getListingSources, getMakes, getModels, formatPrice, type ListingSource
 import { SRI_LANKA_DISTRICTS } from "@/data/districts";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { X } from "lucide-react";
 import { useAppPreferences } from "@/lib/appPreferences";
@@ -542,22 +543,14 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
             </PillButton>
           ))}
         </div>
-        <Select
-          value={filters.make || ALL_OPTION}
-          onValueChange={(value) => update({ make: value === ALL_OPTION ? undefined : value, model: undefined })}
-        >
-          <SelectTrigger aria-label={t("filter.byMakeAria", "Filter by make")} className={selectTriggerClass()}>
-            <SelectValue placeholder={t("common.allMakes", "All makes")} />
-          </SelectTrigger>
-          <SelectContent className={selectContentClass()}>
-            <SelectItem value={ALL_OPTION}>{t("common.allMakes", "All makes")}</SelectItem>
-            {makes.map((make) => (
-              <SelectItem key={make.make} value={make.make}>
-                {make.make} ({make.count})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Combobox
+          label={t("common.make", "Make")}
+          options={makes.map((make) => ({ value: make.make, label: `${make.make} (${make.count})` }))}
+          value={filters.make || null}
+          onChange={(value) => update({ make: value || undefined, model: undefined })}
+          placeholder={t("common.allMakes", "All makes")}
+          allLabel={t("common.allMakes", "All makes")}
+        />
       </FilterGroup>
 
       {filters.make ? (

@@ -2331,3 +2331,43 @@ body.cursor-custom-active * { cursor: auto; }
   .animate-palette-in,
   .animate-palette-backdrop-in { animation: none; }
 }
+
+/* ============================================================================
+   Preview branch 2026-10-11: UI component upgrades
+   ========================================================================== */
+
+/* ── Tremor BadgeDelta re-tokenized to Deal Green (#00C853) ──────────────────
+   Tremor v3 renders positive deltas with `bg-emerald-500`, `text-emerald-600`,
+   `ring-emerald-500 ring-opacity-20`; the Apex M system uses #00C853 instead.
+   Scoped to .apex so nothing else is affected. Specificity (.apex .x) beats
+   Tailwind's single-class rules. */
+.apex .bg-emerald-500 {
+  background-color: rgb(0 200 83 / 0.1);
+}
+.apex .text-emerald-600 {
+  color: #007a33;
+}
+.theme-dark .apex .text-emerald-600 {
+  color: #4ade80;
+}
+.apex .ring-emerald-500 {
+  --tw-ring-color: rgb(0 200 83 / 0.2);
+}
+
+/* ── Animated beam (Magic UI pattern, SMIL — zero JS) ─────────────────────── */
+.apex-beam-path {
+  fill: none;
+  stroke: rgba(10, 122, 255, 0.16);
+  stroke-width: 2;
+}
+.apex-beam-glow {
+  fill: none;
+  /* stroke is set per-instance via the `stroke` attribute (unique gradient id) */
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 6px rgba(0, 200, 83, 0.55));
+}
+.apex-beam-dot {
+  fill: #00c853;
+  filter: drop-shadow(0 0 6px rgba(0, 200, 83, 0.8));
+}

@@ -62,6 +62,8 @@ import { loadMarketAlerts, patchMarketAlertServerId, removeMarketAlert, saveMark
 import { useServerMarketAlerts } from "@/hooks/useServerMarketAlerts";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { FreePlanBanner } from "@/components/FreePlanBanner";
+import { AnnouncementBanner } from "@/components/AnnouncementBanner";
+import { HowItWorksBand } from "@/components/HowItWorksBand";
 import { ProFeatureLock } from "@/components/ProFeatureLock";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { useAuth } from "@/lib/authContext";
@@ -729,6 +731,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen">
       <FreePlanBanner />
+      <AnnouncementBanner />
       {showHeroLab ? (
         <HeroVariantPicker activeId={heroVariant.id} onSelect={setHeroVariantId} />
       ) : null}
@@ -1001,6 +1004,9 @@ export default function Dashboard() {
         rows={trendingModels.filter((r) => isReasonableListingPrice(Number(r.avg_price_lkr || 0))).slice(0, 8)}
         onSelect={(row) => focusModel(row.make, row.model)}
       />
+
+      {/* ── How it works — animated beam band ─────────────────────────── */}
+      <HowItWorksBand />
 
       {/* ── Live intelligence (post-hero) ─────────────────────────── */}
       <section className="border-b border-border bg-background">
