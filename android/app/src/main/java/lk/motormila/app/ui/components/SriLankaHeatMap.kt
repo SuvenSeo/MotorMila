@@ -20,6 +20,7 @@ import lk.motormila.app.core.geo.SriLankaDistricts
 import lk.motormila.app.domain.model.DistrictStat
 import lk.motormila.app.ui.theme.MotormilaPrimary
 import lk.motormila.app.ui.theme.MotormilaPrimaryBright
+import lk.motormila.app.ui.theme.MotormilaPrimaryGlow
 import kotlin.math.hypot
 import kotlin.math.sqrt
 
@@ -71,7 +72,7 @@ fun SriLankaHeatMap(
     ) {
         val island = islandPath(size.width, size.height)
         drawPath(island, Color(0x22161B22), style = Fill)
-        drawPath(island, Color(0x330A7AFF), style = Stroke(width = 2.5f))
+        drawPath(island, MotormilaPrimaryGlow, style = Stroke(width = 2.5f))
 
         points.forEach { point ->
             val (x, y) = SriLankaDistricts.project(point.lat, point.lng, size.width, size.height)

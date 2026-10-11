@@ -36,7 +36,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import lk.motormila.app.R
 import lk.motormila.app.ui.theme.MotormilaGood
+import lk.motormila.app.ui.theme.MotormilaGoodContainer
+import lk.motormila.app.ui.theme.MotormilaGoodSoft
 import lk.motormila.app.ui.theme.MotormilaOutline
+import lk.motormila.app.ui.theme.MotormilaRadius
 import lk.motormila.app.ui.theme.MotormilaSecondaryText
 
 enum class BrandLogoSize(
@@ -135,9 +138,9 @@ fun MarketLivePill(modifier: Modifier = Modifier) {
 
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(999.dp))
-            .background(Color(0x2E00C853))
-            .border(0.5.dp, Color(0x5500C853), RoundedCornerShape(999.dp))
+            .clip(MotormilaRadius.pill)
+            .background(MotormilaGoodContainer)
+            .border(1.dp, MotormilaGoodSoft, MotormilaRadius.pill)
             .padding(horizontal = 7.dp, vertical = 2.5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.components
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -12,13 +14,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
@@ -29,10 +32,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -46,6 +52,9 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+import lk.motormila.app.ui.theme.MotionTokens
+import lk.motormila.app.ui.theme.MotormilaRadius
+import lk.motormila.app.ui.theme.ReduceMotion
 import lk.motormila.app.ui.theme.SHIMMER_MS
 import lk.motormila.app.ui.theme.MotormilaOnSurface
 
@@ -85,27 +94,27 @@ fun LoadingSkeletonCard(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(28.dp))
+            .clip(MotormilaRadius.lg)
             .background(MaterialTheme.colorScheme.surface)
             .padding(16.dp)
             .semantics { contentDescription = "Loading market stats" },
     ) {
-        Box(Modifier.width(140.dp).height(14.dp).clip(RoundedCornerShape(999.dp)).shimmer(!reduced))
+        Box(Modifier.width(140.dp).height(14.dp).clip(MotormilaRadius.pill).shimmer(!reduced))
         Spacer(Modifier.height(10.dp))
-        Box(Modifier.width(200.dp).height(34.dp).clip(RoundedCornerShape(12.dp)).shimmer(!reduced))
+        Box(Modifier.width(200.dp).height(34.dp).clip(MotormilaRadius.xs).shimmer(!reduced))
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             repeat(4) {
                 Column(
                     Modifier
                         .weight(1f)
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(MotormilaRadius.sm)
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
                         .padding(10.dp),
                 ) {
-                    Box(Modifier.fillMaxWidth().height(12.dp).clip(RoundedCornerShape(999.dp)).shimmer(!reduced))
+                    Box(Modifier.fillMaxWidth().height(12.dp).clip(MotormilaRadius.pill).shimmer(!reduced))
                     Spacer(Modifier.height(6.dp))
-                    Box(Modifier.width(28.dp).height(12.dp).clip(RoundedCornerShape(999.dp)).shimmer(!reduced))
+                    Box(Modifier.width(28.dp).height(12.dp).clip(MotormilaRadius.pill).shimmer(!reduced))
                 }
             }
         }
@@ -122,12 +131,12 @@ fun LoadingSkeletonRow(modifier: Modifier = Modifier) {
             .semantics { contentDescription = "Loading row" },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(56.dp).clip(RoundedCornerShape(28.dp)).shimmer(!reduced))
+        Box(Modifier.size(56.dp).clip(MotormilaRadius.lg).shimmer(!reduced))
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Box(Modifier.width(160.dp).height(14.dp).clip(RoundedCornerShape(999.dp)).shimmer(!reduced))
+            Box(Modifier.width(160.dp).height(14.dp).clip(MotormilaRadius.pill).shimmer(!reduced))
             Spacer(Modifier.height(6.dp))
-            Box(Modifier.width(100.dp).height(12.dp).clip(RoundedCornerShape(999.dp)).shimmer(!reduced))
+            Box(Modifier.width(100.dp).height(12.dp).clip(MotormilaRadius.pill).shimmer(!reduced))
         }
     }
 }
@@ -139,20 +148,74 @@ fun LoadingSkeletonChart(modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxWidth()
             .height(180.dp)
-            .clip(RoundedCornerShape(28.dp))
+            .clip(MotormilaRadius.lg)
             .shimmer(!reduced)
             .semantics { contentDescription = "Loading chart" },
     )
+}
+
+/** Animated shimmer row list (motion spec §5: stable shell first, 1200ms linear sweep). */
+@Composable
+fun LoadingSkeletonList(
+    rows: Int = 5,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(vertical = 8.dp)
+            .semantics { contentDescription = "Loading content" },
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        repeat(rows) { LoadingSkeletonRow() }
+    }
+}
+
+/**
+ * Stagger delay for cascade entrances: 45ms steps, capped at the 700ms
+ * entrance window (motion spec §5 — late cards just appear).
+ */
+fun cascadeDelay(index: Int): Int =
+    (index * MotionTokens.StaggerStepMs).coerceAtMost(MotionTokens.EntranceWindowMs)
+
+/**
+ * Staggered card entrance: fadeIn + 24dp rise on [MotionTokens.entrance()],
+ * delayed by [cascadeDelay]. Snaps to visible when reduced motion is on
+ * (entrances collapse to the surrounding Crossfade instead).
+ */
+fun Modifier.cascadeEntrance(index: Int): Modifier = composed {
+    val reduce = ReduceMotion.current
+    val delay = cascadeDelay(index)
+    val progress = remember { Animatable(if (reduce) 1f else 0f) }
+    LaunchedEffect(index, reduce) {
+        if (reduce) {
+            progress.snapTo(1f)
+            return@LaunchedEffect
+        }
+        progress.animateTo(
+            1f,
+            animationSpec = tween(
+                durationMillis = 300,
+                delayMillis = delay,
+                easing = CubicBezierEasing(0.2f, 0f, 0f, 1f),
+            ),
+        )
+    }
+    val t = progress.value
+    this
+        .alpha(t)
+        .offset(y = ((1f - t) * MotionTokens.EntranceRiseDp).dp)
 }
 
 @Composable
 fun EmptyState(
     title: String,
     body: String,
-    ctaLabel: String?,
-    onCta: (() -> Unit)?,
+    ctaLabel: String? = null,
+    onCta: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     icon: ImageVector = Icons.Filled.SearchOff,
+    graphic: @Composable (() -> Unit)? = null,
 ) {
     Column(
         modifier = modifier
@@ -161,7 +224,11 @@ fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(56.dp))
+        if (graphic != null) {
+            graphic()
+        } else {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(56.dp))
+        }
         Spacer(Modifier.height(12.dp))
         Text(
             title,
@@ -275,7 +342,7 @@ fun OfflineBanner(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .clip(RoundedCornerShape(999.dp))
+            .clip(MotormilaRadius.pill)
             .background(MaterialTheme.colorScheme.secondaryContainer)
             .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp)
             .semantics { contentDescription = "Offline, showing cached data" },

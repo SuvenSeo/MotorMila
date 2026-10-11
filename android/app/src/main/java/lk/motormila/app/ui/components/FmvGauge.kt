@@ -4,6 +4,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
@@ -30,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import lk.motormila.app.core.format.LkrFormat
 import lk.motormila.app.domain.model.Fmv
+import lk.motormila.app.ui.theme.applePress
 
 /**
  * 120dp semicircular FMV gauge. Needle position = asking vs FMV band.
@@ -57,13 +59,21 @@ fun FmvGauge(
     val good = MaterialTheme.colorScheme.primary
     val warn = MaterialTheme.colorScheme.secondary
     val bad = MaterialTheme.colorScheme.error
+    val gaugePress = remember { MutableInteractionSource() }
     Column(
         modifier = modifier
+            .applePress(gaugePress)
             .semantics {
                 contentDescription = "Fair market value ${LkrFormat.full(fmv.fmvLkr)}, " +
                     "asking ${LkrFormat.full(fmv.askingLkr)}, ${fmv.label}"
             }
-            .clickable(role = Role.Button, onClickLabel = "Explain valuation", onClick = onExplainClick),
+            .clickable(
+                role = Role.Button,
+                onClickLabel = "Explain valuation",
+                interactionSource = gaugePress,
+                indication = null,
+                onClick = onExplainClick,
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Canvas(modifier = Modifier.width(120.dp).height(68.dp)) {

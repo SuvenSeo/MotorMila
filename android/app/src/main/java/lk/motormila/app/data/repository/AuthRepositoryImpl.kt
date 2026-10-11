@@ -49,6 +49,7 @@ class AuthRepositoryImpl @Inject constructor(
             subscriptionStatus = dto.subscriptionStatus,
             token = token,
             expiresAt = sessionStore.snapshot()?.expiresAt,
+            playProEntitled = sessionStore.snapshot()?.playProEntitled == true,
         )
         sessionStore.saveSession(session)
         session
@@ -64,6 +65,7 @@ class AuthRepositoryImpl @Inject constructor(
             subscriptionStatus = res.user.subscriptionStatus,
             token = res.token,
             expiresAt = SessionStore.epochToIso(res.expiresAt),
+            playProEntitled = sessionStore.snapshot()?.playProEntitled == true,
         )
         sessionStore.saveSession(session)
         authInterceptor.updateToken(session.token)
@@ -82,6 +84,7 @@ class AuthRepositoryImpl @Inject constructor(
                 subscriptionStatus = res.user.subscriptionStatus,
                 token = res.token,
                 expiresAt = SessionStore.epochToIso(res.expiresAt),
+                playProEntitled = sessionStore.snapshot()?.playProEntitled == true,
             )
             sessionStore.saveSession(session)
             authInterceptor.updateToken(session.token)
@@ -138,6 +141,7 @@ class AuthRepositoryImpl @Inject constructor(
             subscriptionStatus = res.user.subscriptionStatus,
             token = res.token,
             expiresAt = SessionStore.epochToIso(res.expiresAt),
+            playProEntitled = sessionStore.snapshot()?.playProEntitled == true,
         )
         sessionStore.saveSession(session)
         authInterceptor.updateToken(session.token)

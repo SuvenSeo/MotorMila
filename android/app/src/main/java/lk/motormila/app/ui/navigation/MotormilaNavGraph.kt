@@ -106,6 +106,9 @@ fun MotormilaNavGraph(
     val isInsights = currentDestination?.hasRoute<Insights>() == true
     val isProfile = currentDestination?.hasRoute<Profile>() == true
     val showBottomBar = isHome || isSearch || isWatchlist || isInsights || isProfile
+    // Predictive-back follow-finger transform applies to detail/full-screen
+    // routes only — tab destinations keep the system default (back exits).
+    val isFullScreenRoute = !(isHome || isSearch || isWatchlist || isInsights || isProfile)
     val selectedTab = when {
         isHome -> "home"
         isSearch -> "search"
@@ -198,6 +201,10 @@ fun MotormilaNavGraph(
                         onDismiss = { updateViewModel.dismiss() },
                     )
                 }
+                MotormilaPredictiveBackTransform(
+                    enabled = isFullScreenRoute && !reducedMotion,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
                 NavHost(
                     navController = navController,
                     startDestination = if (sharedUrl != null) ShareImport(sharedUrl) else Splash,
@@ -738,6 +745,7 @@ fun MotormilaNavGraph(
                             onOpenPro = { navController.navigate(Pro) },
                         )
                     }
+                }
                 }
             }
         }

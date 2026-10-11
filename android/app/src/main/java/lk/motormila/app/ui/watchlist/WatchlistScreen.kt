@@ -14,8 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddAlert
 import androidx.compose.material.icons.filled.ClearAll
@@ -50,7 +49,7 @@ import lk.motormila.app.core.format.LkrFormat
 import lk.motormila.app.core.format.formatLkr
 import lk.motormila.app.core.format.formatLkrDelta
 import lk.motormila.app.core.format.formatPct
-import lk.motormila.app.core.ui.EmptyState
+import lk.motormila.app.ui.components.EmptyState
 import lk.motormila.app.core.ui.ErrorRetry
 import lk.motormila.app.core.ui.HealthRing
 import lk.motormila.app.core.ui.SkeletonList
@@ -59,6 +58,11 @@ import lk.motormila.app.domain.model.WatchItem
 import lk.motormila.app.ui.components.MotormilaIconAction
 import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaSurface
+import lk.motormila.app.ui.components.cascadeDelay
+import lk.motormila.app.ui.theme.MotormilaGoodContainer
+import lk.motormila.app.ui.theme.MotormilaGoodSoft
+import lk.motormila.app.ui.theme.MotormilaRadius
+import lk.motormila.app.ui.theme.motormilaReveal
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -109,8 +113,8 @@ fun WatchlistScreen(
                 state.items.isEmpty() -> EmptyState(
                     title = "Nothing watched yet",
                     body = "Tap the steering wheel — save a listing and we'll flag every price drop against fair value.",
-                    actionLabel = "Browse listings",
-                    onAction = onBrowse,
+                    ctaLabel = "Browse listings",
+                    onCta = onBrowse,
                     graphic = { SteeringWheelGraphic() },
                 )
 
@@ -118,14 +122,16 @@ fun WatchlistScreen(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    items(state.items, key = { it.id }) { item ->
-                        WatchRow(
-                            item = item,
-                            flash = item.id in state.droppedIds,
-                            onOpen = { onOpenDetail(item.id) },
-                            onAlert = { onCreateAlert(item.id) },
-                            onRemove = { viewModel.onEvent(WatchlistUiEvent.Remove(item.id)) },
-                        )
+                    itemsIndexed(state.items, key = { _, it -> it.id }) { index, item ->
+                        Box(Modifier.motormilaReveal(delayMillis = cascadeDelay(index))) {
+                            WatchRow(
+                                item = item,
+                                flash = item.id in state.droppedIds,
+                                onOpen = { onOpenDetail(item.id) },
+                                onAlert = { onCreateAlert(item.id) },
+                                onRemove = { viewModel.onEvent(WatchlistUiEvent.Remove(item.id)) },
+                            )
+                        }
                     }
                 }
             }
@@ -235,9 +241,9 @@ private fun WatchRow(
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF69F0AE),
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(999.dp))
-                                        .background(Color(0x2E00C853))
-                                        .border(0.5.dp, Color(0x5500C853), RoundedCornerShape(999.dp))
+                                        .clip(MotormilaRadius.pill)
+                                        .background(MotormilaGoodContainer)
+                                        .border(1.dp, MotormilaGoodSoft, MotormilaRadius.pill)
                                         .padding(horizontal = 8.dp, vertical = 3.dp)
                                         .semantics {
                                             contentDescription = "Price dropped ${LkrFormat.deltaPct(item.dropPct())}"

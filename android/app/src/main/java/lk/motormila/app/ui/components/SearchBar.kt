@@ -1,6 +1,7 @@
 package lk.motormila.app.ui.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,7 +12,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.History
@@ -22,6 +22,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,7 +34,9 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import lk.motormila.app.domain.model.Listing
 import lk.motormila.app.ui.theme.MotormilaPill
+import lk.motormila.app.ui.theme.MotormilaRadius
 import lk.motormila.app.ui.theme.MotormilaSecondaryText
+import lk.motormila.app.ui.theme.applePress
 
 /**
  * Docked search field + suggestions dropdown + voice slot + recent searches.
@@ -92,11 +95,17 @@ fun SearchBar(
                 LazyColumn(modifier = Modifier.fillMaxWidth()) {
                     if (query.isBlank()) {
                         items(recentSearches.take(5)) { recent ->
+                            val recentPress = remember { MutableInteractionSource() }
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .applePress(recentPress)
                                     .heightIn(min = 48.dp)
-                                    .clickable { onRecentClick(recent) }
+                                    .clickable(
+                                        interactionSource = recentPress,
+                                        indication = null,
+                                        onClick = { onRecentClick(recent) },
+                                    )
                                     .padding(horizontal = 16.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
@@ -107,11 +116,17 @@ fun SearchBar(
                         }
                     } else {
                         items(suggestions, key = { it.id }) { s ->
+                            val suggestPress = remember { MutableInteractionSource() }
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .applePress(suggestPress)
                                     .heightIn(min = 48.dp)
-                                    .clickable { onSuggestionClick(s) }
+                                    .clickable(
+                                        interactionSource = suggestPress,
+                                        indication = null,
+                                        onClick = { onSuggestionClick(s) },
+                                    )
                                     .padding(horizontal = 12.dp, vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
@@ -121,7 +136,7 @@ fun SearchBar(
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
                                         .size(44.dp)
-                                        .clip(RoundedCornerShape(28.dp)),
+                                        .clip(MotormilaRadius.lg),
                                 )
                                 Spacer(Modifier.width(12.dp))
                                 Column(Modifier.weight(1f)) {

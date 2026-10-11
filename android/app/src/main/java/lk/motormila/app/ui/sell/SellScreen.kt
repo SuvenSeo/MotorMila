@@ -37,6 +37,8 @@ import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.theme.MotormilaGood
 import lk.motormila.app.ui.theme.MotormilaOnSurface
 import lk.motormila.app.ui.theme.MotormilaSecondaryText
+import lk.motormila.app.ui.theme.pressKeyHaptic
+import lk.motormila.app.ui.theme.rememberHaptics
 
 /**
  * Basic sell-your-car flow — web `SellYourCar.tsx` parity (essentials only).
@@ -52,6 +54,7 @@ fun SellScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val loggedIn by viewModel.loggedIn.collectAsStateWithLifecycle()
+    val haptics = rememberHaptics()
 
     MotormilaPage(
         title = stringResource(R.string.sell_title),
@@ -189,6 +192,7 @@ fun SellScreen(
                         onClick = viewModel::submit,
                         enabled = !state.submitting,
                         loading = state.submitting,
+                        modifier = Modifier.pressKeyHaptic(haptics),
                     )
                     Spacer(Modifier.height(24.dp))
                 }

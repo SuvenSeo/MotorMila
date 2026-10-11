@@ -1,5 +1,11 @@
 package lk.motormila.app.ui.home
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,6 +26,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -37,6 +44,7 @@ import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -50,13 +58,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -75,22 +83,32 @@ import lk.motormila.app.ui.components.BrandLogoSize
 import lk.motormila.app.ui.components.AnnouncementBanner
 import lk.motormila.app.ui.components.HowItWorksBand
 import lk.motormila.app.ui.components.NumberTicker
+import lk.motormila.app.ui.components.SlidingNumber
 import lk.motormila.app.ui.components.EmptyState
 import lk.motormila.app.ui.components.ErrorState
 import lk.motormila.app.ui.components.LivePulse
 import lk.motormila.app.ui.components.LoadingSkeletonCard
+import lk.motormila.app.ui.components.cascadeDelay
 import lk.motormila.app.ui.components.MotormilaGlass
 import lk.motormila.app.ui.components.MotormilaMetricTile
 import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.components.OfflineBanner
 import lk.motormila.app.ui.components.rememberReducedMotion
+import lk.motormila.app.ui.theme.MotionTokens
 import lk.motormila.app.ui.theme.MotormilaGlassBorder
+import lk.motormila.app.ui.theme.MotormilaGood
+import lk.motormila.app.ui.theme.MotormilaGoodContainer
 import lk.motormila.app.ui.theme.MotormilaOnSurface
 import lk.motormila.app.ui.theme.MotormilaOutline
 import lk.motormila.app.ui.theme.MotormilaPrimary
+import lk.motormila.app.ui.theme.MotormilaPrimaryBorder
 import lk.motormila.app.ui.theme.MotormilaPrimaryBright
+import lk.motormila.app.ui.theme.MotormilaPrimaryContainer
+import lk.motormila.app.ui.theme.MotormilaRadius
 import lk.motormila.app.ui.theme.MotormilaSecondaryText
+import lk.motormila.app.ui.theme.PULSE_MS
 import lk.motormila.app.ui.theme.applePress
+import lk.motormila.app.ui.theme.motormilaReveal
 import lk.motormila.app.ui.theme.rememberHaptics
 
 /** Data representation for Trending Models rail. */
@@ -312,7 +330,7 @@ fun HomeScreen(
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(999.dp))
+                                    .clip(MotormilaRadius.pill)
                                     .applePress(tickerInteraction, pressedScale = 0.95f)
                                     .clickable(
                                         interactionSource = tickerInteraction,
@@ -327,7 +345,7 @@ fun HomeScreen(
                                 Spacer(Modifier.width(6.dp))
                                 Text(
                                     "${l.make} ${l.model} · ${l.formattedPrice()}",
-                                    fontSize = 12.sp,
+                                    style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Medium,
                                     color = MotormilaOnSurface,
                                 )
@@ -349,13 +367,15 @@ fun HomeScreen(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        items(state.insights.hotDeals.take(10), key = { it.id }) { deal ->
+                        itemsIndexed(state.insights.hotDeals.take(10), key = { _, deal -> deal.id }) { index, deal ->
                             HotDealCard(
                                 title = "${deal.make} ${deal.model} ${deal.year ?: ""}".trim(),
                                 imageUrl = deal.thumbnailUrl,
-                                price = LkrFormat.price(deal.priceLkr),
+                                priceLkr = deal.priceLkr,
                                 score = deal.dealScore,
                                 isPro = state.isPro,
+                                index = index,
+                                belowFmv = deal.dealScore > 0,
                                 onClick = { onListingClick(deal.id) },
                             )
                         }
@@ -371,12 +391,13 @@ fun HomeScreen(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        items(state.priceDrops.take(10), key = { it.listing.id }) { drop ->
+                        itemsIndexed(state.priceDrops.take(10), key = { _, drop -> drop.listing.id }) { index, drop ->
                             PriceDropCard(
                                 title = drop.listing.displayName,
                                 imageUrl = drop.listing.heroImageUrl,
                                 newPrice = LkrFormat.price(drop.newPriceLkr),
                                 dropPct = drop.dropPct,
+                                index = index,
                                 onClick = { onListingClick(drop.listing.id) },
                             )
                         }
@@ -474,12 +495,12 @@ fun ContextCapsuleBadge(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
-            .clip(RoundedCornerShape(999.dp))
+            .clip(MotormilaRadius.pill)
             .background(Color(0xFF141419))
             .border(
                 width = 1.dp,
                 color = if (isAccent) Color(0x440A7AFF) else MotormilaGlassBorder,
-                shape = RoundedCornerShape(999.dp),
+                shape = MotormilaRadius.pill,
             )
             .padding(horizontal = 10.dp, vertical = 4.dp),
     ) {
@@ -492,7 +513,7 @@ fun ContextCapsuleBadge(
         Spacer(Modifier.width(6.dp))
         Text(
             text = text,
-            fontSize = 10.sp,
+            style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             letterSpacing = 1.2.sp,
             color = if (isAccent) MotormilaPrimaryBright else MotormilaOnSurface,
@@ -524,7 +545,7 @@ private fun CinematicHeroHeader(
             text = buildAnnotatedString {
                 withStyle(
                     SpanStyle(
-                        color = Color.White,
+                        color = MotormilaOnSurface,
                         fontWeight = FontWeight.ExtraBold,
                     )
                 ) {
@@ -539,7 +560,7 @@ private fun CinematicHeroHeader(
                     append("decoded.")
                 }
             },
-            fontSize = 28.sp,
+            style = MaterialTheme.typography.headlineLarge,
             lineHeight = 34.sp,
             letterSpacing = (-0.8).sp,
         )
@@ -552,7 +573,7 @@ private fun CinematicHeroHeader(
         Text(
             text = "$countText across $sourcesText — pricing, deal scores, and market intel in one place.",
             color = MotormilaSecondaryText,
-            fontSize = 14.sp,
+            style = MaterialTheme.typography.bodyMedium,
             lineHeight = 21.sp,
             fontWeight = FontWeight.Normal,
         )
@@ -560,14 +581,16 @@ private fun CinematicHeroHeader(
         Spacer(Modifier.height(16.dp))
 
         // Dark liquid glass pill with search icon and electric blue "SEARCH" button
+        val searchPress = remember { MutableInteractionSource() }
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .applePress(searchPress)
                 .heightIn(min = 48.dp)
-                .clip(RoundedCornerShape(999.dp))
+                .clip(MotormilaRadius.pill)
                 .background(Color(0xFF131318))
-                .border(1.dp, MotormilaOutline, RoundedCornerShape(999.dp))
-                .clickable(onClick = onSearchClick)
+                .border(1.dp, MotormilaOutline, MotormilaRadius.pill)
+                .clickable(interactionSource = searchPress, indication = null, onClick = onSearchClick)
                 .padding(start = 14.dp, end = 6.dp, top = 6.dp, bottom = 6.dp)
                 .semantics { contentDescription = "Search vehicles" },
             contentAlignment = Alignment.CenterStart,
@@ -586,7 +609,7 @@ private fun CinematicHeroHeader(
                 Text(
                     text = "Toyota Aqua, Honda Vezel, Wagon R...",
                     color = MotormilaSecondaryText,
-                    fontSize = 13.sp,
+                    style = MaterialTheme.typography.labelLarge,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
@@ -594,7 +617,7 @@ private fun CinematicHeroHeader(
                 Spacer(Modifier.width(8.dp))
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(999.dp))
+                        .clip(MotormilaRadius.pill)
                         .background(MotormilaPrimary)
                         .padding(horizontal = 14.dp, vertical = 8.dp),
                     contentAlignment = Alignment.Center,
@@ -602,7 +625,7 @@ private fun CinematicHeroHeader(
                     Text(
                         text = "SEARCH",
                         color = Color.White,
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp,
                     )
@@ -655,7 +678,7 @@ private fun HeroStatsCard(
             ) {
                 Text(
                     text = "LIVE LISTINGS",
-                    fontSize = 11.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.5.sp,
                     color = MotormilaSecondaryText,
@@ -663,9 +686,9 @@ private fun HeroStatsCard(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(999.dp))
+                        .clip(MotormilaRadius.pill)
                         .background(Color(0x1F00C853))
-                        .border(0.75.dp, Color(0x3300C853), RoundedCornerShape(999.dp))
+                        .border(1.dp, Color(0x3300C853), MotormilaRadius.pill)
                         .padding(horizontal = 8.dp, vertical = 3.dp),
                 ) {
                     Box(
@@ -677,7 +700,7 @@ private fun HeroStatsCard(
                     Spacer(Modifier.width(5.dp))
                     Text(
                         text = "DATA AS OF 1H AGO",
-                        fontSize = 9.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.5.sp,
                         color = Color(0xFF69F0AE),
@@ -691,20 +714,20 @@ private fun HeroStatsCard(
             if (total > 0) {
                 NumberTicker(
                     value = tickerValue,
-                    style = TextStyle(
-                        fontSize = 38.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = (-0.03).em,
-                    ),
-                    color = Color.White,
+                            style = MaterialTheme.typography.displayMedium.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = (-0.03).em,
+                            ),
+                    color = MotormilaOnSurface,
                 )
             } else {
                 Text(
                     text = "—",
-                    fontSize = 38.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = (-0.03).em,
-                    color = Color.White,
+                    style = MaterialTheme.typography.displayMedium.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = (-0.03).em,
+                    ),
+                    color = MotormilaOnSurface,
                 )
             }
 
@@ -713,7 +736,7 @@ private fun HeroStatsCard(
             // Sub-label
             Text(
                 text = if (total > 0) "Live indexed inventory across Sri Lanka" else "Connect to the market feed to load listings",
-                fontSize = 12.sp,
+                style = MaterialTheme.typography.labelSmall,
                 color = MotormilaSecondaryText,
             )
 
@@ -736,8 +759,7 @@ private fun HeroStatsCard(
                     if (new24h > 0) {
                         NumberTicker(
                             value = new24h.toLong(),
-                            style = TextStyle(
-                                fontSize = 16.sp,
+                            style = MaterialTheme.typography.bodyLarge.copy(
                                 fontWeight = FontWeight.Bold,
                             ),
                             color = MotormilaOnSurface,
@@ -745,7 +767,7 @@ private fun HeroStatsCard(
                     } else {
                         Text(
                             text = "—",
-                            fontSize = 16.sp,
+                            style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Bold,
                             color = MotormilaOnSurface,
                         )
@@ -758,8 +780,7 @@ private fun HeroStatsCard(
                     if (goodDeals > 0) {
                         NumberTicker(
                             value = goodDeals.toLong(),
-                            style = TextStyle(
-                                fontSize = 16.sp,
+                            style = MaterialTheme.typography.bodyLarge.copy(
                                 fontWeight = FontWeight.Bold,
                             ),
                             color = MotormilaOnSurface,
@@ -767,7 +788,7 @@ private fun HeroStatsCard(
                     } else {
                         Text(
                             text = "—",
-                            fontSize = 16.sp,
+                            style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Bold,
                             color = MotormilaOnSurface,
                         )
@@ -821,7 +842,7 @@ private fun FeatureBannersRow(
                     ) {
                         Text(
                             text = "VEHICLE TYPES",
-                            fontSize = 10.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.4.sp,
                             color = MotormilaPrimaryBright,
@@ -835,7 +856,7 @@ private fun FeatureBannersRow(
                     }
                     Text(
                         text = "Browse cars, vans, and SUVs across the live index.",
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = MotormilaOnSurface,
                         lineHeight = 16.sp,
@@ -872,7 +893,7 @@ private fun FeatureBannersRow(
                     ) {
                         Text(
                             text = "VERIFIED SIGNALS",
-                            fontSize = 10.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.4.sp,
                             color = Color(0xFF69F0AE),
@@ -886,7 +907,7 @@ private fun FeatureBannersRow(
                     }
                     Text(
                         text = "Deal scores and seller trust baked into every listing.",
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = MotormilaOnSurface,
                         lineHeight = 16.sp,
@@ -910,7 +931,7 @@ private fun HubShortcutsRow(
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = stringResource(R.string.hub_home_row).uppercase(),
-            fontSize = 10.sp,
+            style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             letterSpacing = 1.4.sp,
             color = MotormilaPrimaryBright,
@@ -997,7 +1018,7 @@ private fun HubShortcutCard(
         Spacer(Modifier.height(8.dp))
         Text(
             text = title,
-            fontSize = 12.sp,
+            style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             color = MotormilaOnSurface,
             maxLines = 2,
@@ -1006,7 +1027,7 @@ private fun HubShortcutCard(
         Spacer(Modifier.height(4.dp))
         Text(
             text = hint,
-            fontSize = 10.sp,
+            style = MaterialTheme.typography.labelSmall,
             color = MotormilaSecondaryText,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
@@ -1046,7 +1067,7 @@ private fun LiveIncomingFeedTicker(
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = "LIVE INCOMING FEED",
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.3.sp,
                         color = MotormilaSecondaryText,
@@ -1054,7 +1075,7 @@ private fun LiveIncomingFeedTicker(
                 }
                 Text(
                     text = "((•)) SYNCED 2H",
-                    fontSize = 10.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.8.sp,
                     color = MotormilaPrimaryBright,
@@ -1072,10 +1093,16 @@ private fun LiveIncomingFeedTicker(
                                 .background(MotormilaOutline),
                         )
                     }
+                    val itemPress = remember { MutableInteractionSource() }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onItemClick(item) }
+                            .applePress(itemPress)
+                            .clickable(
+                                interactionSource = itemPress,
+                                indication = null,
+                                onClick = { onItemClick(item) },
+                            )
                             .padding(horizontal = 16.dp, vertical = 11.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -1093,14 +1120,14 @@ private fun LiveIncomingFeedTicker(
                             Spacer(Modifier.width(10.dp))
                             Text(
                                 text = item.title,
-                                fontSize = 13.sp,
+                                style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MotormilaOnSurface,
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 text = "· ${item.district}",
-                                fontSize = 12.sp,
+                                style = MaterialTheme.typography.labelSmall,
                                 color = MotormilaSecondaryText,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -1110,15 +1137,15 @@ private fun LiveIncomingFeedTicker(
                         // Deal score badge in blue
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(999.dp))
-                                .background(Color(0x2E0A7AFF))
-                                .border(0.5.dp, Color(0x550A7AFF), RoundedCornerShape(999.dp))
+                                .clip(MotormilaRadius.pill)
+                                .background(MotormilaPrimaryContainer)
+                                .border(1.dp, MotormilaPrimaryBorder, MotormilaRadius.pill)
                                 .padding(horizontal = 8.dp, vertical = 3.dp),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
                                 text = item.dealScoreText,
-                                fontSize = 11.sp,
+                                style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MotormilaPrimaryBright,
                             )
@@ -1150,20 +1177,22 @@ private fun TrendingModelsRail(
         ) {
             Text(
                 text = "Trending models",
-                fontSize = 16.sp,
+                style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
                 color = MotormilaOnSurface,
             )
+            val trendsPress = remember { MutableInteractionSource() }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
+                    .applePress(trendsPress)
                     .heightIn(min = 48.dp)
-                    .clickable(onClick = onSeeAllTrends)
+                    .clickable(interactionSource = trendsPress, indication = null, onClick = onSeeAllTrends)
                     .padding(horizontal = 12.dp, vertical = 8.dp),
             ) {
                 Text(
                     text = "ALL TRENDS ↗",
-                    fontSize = 11.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.8.sp,
                     color = MotormilaPrimaryBright,
@@ -1204,7 +1233,7 @@ private fun TrendingModelCard(
             Box(
                 modifier = Modifier
                     .size(46.dp)
-                    .clip(RoundedCornerShape(28.dp))
+                    .clip(MotormilaRadius.lg)
                     .background(Color(0xFF1B1B22)),
                 contentAlignment = Alignment.Center,
             ) {
@@ -1230,7 +1259,7 @@ private fun TrendingModelCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "${item.make} ${item.model}",
-                    fontSize = 14.sp,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MotormilaOnSurface,
                     maxLines = 1,
@@ -1239,7 +1268,7 @@ private fun TrendingModelCard(
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = "${item.countText} · ${item.avgPriceText}",
-                    fontSize = 11.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MotormilaSecondaryText,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -1267,16 +1296,18 @@ private fun SectionRow(title: String, onSeeAll: (() -> Unit)?) {
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(title, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f))
+        Text(title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
         if (onSeeAll != null) {
+            val seeAllPress = remember { MutableInteractionSource() }
             Text(
                 "See all",
-                fontSize = 13.sp,
+                style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MotormilaPrimaryBright,
                 modifier = Modifier
+                    .applePress(seeAllPress)
                     .heightIn(min = 48.dp)
-                    .clickable(onClick = onSeeAll)
+                    .clickable(interactionSource = seeAllPress, indication = null, onClick = onSeeAll)
                     .padding(horizontal = 12.dp, vertical = 8.dp),
             )
         }
@@ -1284,10 +1315,19 @@ private fun SectionRow(title: String, onSeeAll: (() -> Unit)?) {
 }
 
 @Composable
-private fun PriceDropCard(title: String, imageUrl: String?, newPrice: String, dropPct: Double, onClick: () -> Unit) {
+private fun PriceDropCard(
+    title: String,
+    imageUrl: String?,
+    newPrice: String,
+    dropPct: Double,
+    onClick: () -> Unit,
+    index: Int = 0,
+) {
     MotormilaGlass(
         onClick = onClick,
-        modifier = Modifier.width(220.dp),
+        modifier = Modifier
+            .width(220.dp)
+            .motormilaReveal(delayMillis = cascadeDelay(index)),
     ) {
         Column {
             AsyncImage(
@@ -1297,19 +1337,19 @@ private fun PriceDropCard(title: String, imageUrl: String?, newPrice: String, dr
                 modifier = Modifier.fillMaxWidth().height(118.dp),
             )
             Column(Modifier.padding(12.dp)) {
-                Text(title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                Text(newPrice, fontSize = 15.sp, fontWeight = FontWeight.Bold, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                Text(title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                Text(newPrice, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
                 Spacer(Modifier.height(4.dp))
                 Row(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(Color(0x2E00C853))
+                        .clip(MotormilaRadius.pill)
+                        .background(MotormilaGoodContainer)
                         .padding(horizontal = 7.dp, vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         "▼ ${LkrFormat.deltaPct(dropPct)}",
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         color = Color(0xFF69F0AE),
                         fontWeight = FontWeight.Bold,
                     )
@@ -1319,11 +1359,65 @@ private fun PriceDropCard(title: String, imageUrl: String?, newPrice: String, dr
     }
 }
 
+/**
+ * Deal-pulse card (motion spec §7.1): below-FMV listings get a living treatment —
+ * a Deal-Green edge glow breathing on a 1600ms loop, the price in rolling digits,
+ * and a soft spatialExpressive() settle on first appearance. The glow is gated to
+ * below-FMV cards only and oscillates alpha, never scale.
+ */
 @Composable
-private fun HotDealCard(title: String, imageUrl: String?, price: String, score: Double, isPro: Boolean, onClick: () -> Unit) {
+private fun HotDealCard(
+    title: String,
+    imageUrl: String?,
+    priceLkr: Double,
+    score: Double,
+    isPro: Boolean,
+    onClick: () -> Unit,
+    index: Int = 0,
+    belowFmv: Boolean = true,
+) {
+    val reduced = rememberReducedMotion()
+    // Breathing edge glow — infinite, alpha-only, below-FMV cards only.
+    val glowTransition = rememberInfiniteTransition(label = "deal-glow")
+    val glowPulse by glowTransition.animateFloat(
+        initialValue = 0.28f,
+        targetValue = 0.6f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = PULSE_MS),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "glow-alpha",
+    )
+    val glowActive = belowFmv && !reduced
+    // Soft settle on first appearance.
+    val settle = remember { Animatable(if (reduced) 1f else 0.97f) }
+    LaunchedEffect(Unit) {
+        if (!reduced) settle.animateTo(1f, MotionTokens.spatialExpressive())
+    }
+    // Price rolls in on first appearance via NumberTicker.
+    var priceShown by remember { mutableStateOf(reduced) }
+    LaunchedEffect(priceLkr) { priceShown = true }
+
     MotormilaGlass(
         onClick = onClick,
-        modifier = Modifier.width(220.dp),
+        modifier = Modifier
+            .width(220.dp)
+            .motormilaReveal(delayMillis = cascadeDelay(index))
+            .graphicsLayer {
+                scaleX = settle.value
+                scaleY = settle.value
+            }
+            .then(
+                if (glowActive) {
+                    Modifier.border(
+                        width = 1.5.dp,
+                        color = MotormilaGood.copy(alpha = glowPulse),
+                        shape = MotormilaRadius.lg,
+                    )
+                } else {
+                    Modifier
+                },
+            ),
     ) {
         Column {
             AsyncImage(
@@ -1333,19 +1427,36 @@ private fun HotDealCard(title: String, imageUrl: String?, price: String, score: 
                 modifier = Modifier.fillMaxWidth().height(118.dp),
             )
             Column(Modifier.padding(12.dp)) {
-                Text(title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                Text(price, fontSize = 15.sp, fontWeight = FontWeight.Bold, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                Text(title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                if (priceLkr > 0) {
+                    SlidingNumber(
+                        value = if (priceShown) priceLkr.toLong() else 0L,
+                        prefix = "Rs. ",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace,
+                        ),
+                        color = MotormilaOnSurface,
+                    )
+                } else {
+                    Text(
+                        "Price on request",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace,
+                    )
+                }
                 Spacer(Modifier.height(4.dp))
                 Row(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(if (isPro) Color(0x2E00C853) else Color(0x2E0A7AFF))
+                        .clip(MotormilaRadius.pill)
+                        .background(if (isPro) MotormilaGoodContainer else MotormilaPrimaryContainer)
                         .padding(horizontal = 7.dp, vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         if (isPro) "★ %.1f DEAL".format(score) else "🔒 PRO SCORE",
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = if (isPro) Color(0xFF69F0AE) else MotormilaPrimaryBright,
                     )
@@ -1376,7 +1487,7 @@ private fun DistrictChip(district: String, count: Int, median: String, onClick: 
         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
         modifier = Modifier.heightIn(min = 48.dp),
     ) {
-        Text(district, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = MotormilaOnSurface)
-        Text("$count · $median", fontSize = 11.sp, color = MotormilaSecondaryText)
+        Text(district, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge, color = MotormilaOnSurface)
+        Text("$count · $median", style = MaterialTheme.typography.labelSmall, color = MotormilaSecondaryText)
     }
 }

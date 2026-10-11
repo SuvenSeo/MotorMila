@@ -100,7 +100,7 @@ fun ProScreen(
     LaunchedEffect(billingState) {
         if (billingState is BillingState.Purchased) {
             if (!reducedMotion) haptics.confirm()
-            snacks.showSnackbar("Purchase recorded — your Pro plan unlocks on next sync.")
+            snacks.showSnackbar("Pro unlocked — welcome! Your purchase is active on this device.")
             viewModel.onEvent(ProUiEvent.Refresh)
         }
     }
@@ -169,7 +169,7 @@ fun ProScreen(
                     Spacer(Modifier.height(16.dp))
                     if (billingState is BillingState.Purchased) {
                         Text(
-                            "Purchase recorded — your Pro plan unlocks on next sync.",
+                            "Pro unlocked — welcome! Your purchase is active on this device.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary,
                         )

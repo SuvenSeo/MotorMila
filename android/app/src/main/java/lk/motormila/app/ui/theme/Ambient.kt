@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import lk.motormila.app.ui.theme.MotormilaPrimaryGlow
 
 /**
  * Quiet atmospheric field used behind every screen. Two soft electric-blue
@@ -24,7 +25,7 @@ fun MotormilaAmbient(modifier: Modifier = Modifier) {
         drawRect(MotormilaBg)
         drawRect(
             brush = Brush.radialGradient(
-                colors = listOf(Color(0x330A7AFF), Color(0x140A7AFF), Color.Transparent),
+                colors = listOf(MotormilaPrimaryGlow, Color(0x140A7AFF), Color.Transparent),
                 center = Offset(w * 0.86f, h * -0.02f),
                 radius = w * 0.92f,
             ),

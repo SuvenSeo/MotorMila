@@ -6,6 +6,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -42,8 +42,10 @@ import lk.motormila.app.R
 import lk.motormila.app.ui.theme.MotormilaOnSurface
 import lk.motormila.app.ui.theme.MotormilaOutline
 import lk.motormila.app.ui.theme.MotormilaPrimary
+import lk.motormila.app.ui.theme.MotormilaRadius
 import lk.motormila.app.ui.theme.MotormilaSecondaryText
 import lk.motormila.app.ui.theme.MotormilaSurface
+import lk.motormila.app.ui.theme.applePress
 
 /**
  * Searchable make combobox — web `Combobox` parity for the make filter.
@@ -116,9 +118,9 @@ fun MakeCombobox(
                     .fillMaxWidth()
                     .padding(top = 6.dp)
                     .heightIn(max = 264.dp)
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(MotormilaRadius.sm)
                     .background(MotormilaSurface)
-                    .border(0.5.dp, MotormilaOutline, RoundedCornerShape(16.dp)),
+                    .border(1.dp, MotormilaOutline, MotormilaRadius.sm),
             ) {
                 item(key = "__all") {
                     ComboboxRow(
@@ -153,10 +155,12 @@ private fun ComboboxRow(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
+    val rowPress = remember { MutableInteractionSource() }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .applePress(rowPress)
+            .clickable(interactionSource = rowPress, indication = null, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

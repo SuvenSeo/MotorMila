@@ -10,7 +10,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import lk.motormila.app.billing.PlayBillingDataSource
 import lk.motormila.app.ui.navigation.MotormilaNavGraph
 import lk.motormila.app.ui.theme.MotormilaTheme
 
@@ -24,9 +29,17 @@ class MainActivity : ComponentActivity() {
     private var startDeepLink by mutableStateOf<Uri?>(null)
     private var navigationEventId by mutableIntStateOf(0)
 
+    @Inject
+    lateinit var billing: PlayBillingDataSource
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         applyIncomingIntent(intent)
+        // Reconcile the local Play Pro entitlement with Play's purchase cache
+        // (best-effort, off the main thread — never blocks startup).
+        lifecycleScope.launch(Dispatchers.IO) {
+            runCatching { billing.syncPlayEntitlement(this@MainActivity) }
+        }
         enableEdgeToEdge()
         setContent {
             MotormilaTheme {

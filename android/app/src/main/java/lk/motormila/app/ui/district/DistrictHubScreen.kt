@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Place
@@ -74,6 +73,7 @@ import lk.motormila.app.ui.theme.MotormilaGood
 import lk.motormila.app.ui.theme.MotormilaOnSurface
 import lk.motormila.app.ui.theme.MotormilaOutline
 import lk.motormila.app.ui.theme.MotormilaPrimaryBright
+import lk.motormila.app.ui.theme.MotormilaRadius
 import lk.motormila.app.ui.theme.MotormilaSecondaryText
 import lk.motormila.app.ui.theme.MotormilaSurfaceHigh
 import lk.motormila.app.ui.theme.rememberHaptics
@@ -245,7 +245,7 @@ private fun DistrictHubBody(
 private fun DistrictHero(displayName: String) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
         Surface(
-            shape = RoundedCornerShape(50),
+            shape = MotormilaRadius.pill,
             color = MotormilaSurfaceHigh,
             border = BorderStroke(1.dp, MotormilaOutline),
         ) {
@@ -586,14 +586,14 @@ private fun VelocityRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(8.dp)
-                .clip(RoundedCornerShape(999.dp))
+                .clip(MotormilaRadius.pill)
                 .background(MotormilaSurfaceHigh),
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth(fraction.coerceIn(0f, 1f))
                     .height(8.dp)
-                    .clip(RoundedCornerShape(999.dp))
+                    .clip(MotormilaRadius.pill)
                     .background(MotormilaPrimaryBright),
             )
         }

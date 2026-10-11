@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
@@ -24,6 +23,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import lk.motormila.app.domain.model.DealBand
+import lk.motormila.app.ui.theme.MotormilaGoodContainer
+import lk.motormila.app.ui.theme.MotormilaGoodSoft
+import lk.motormila.app.ui.theme.MotormilaPrimaryBorder
+import lk.motormila.app.ui.theme.MotormilaPrimaryContainer
+import lk.motormila.app.ui.theme.MotormilaRadius
 
 /**
  * Deal pill: GREAT (good) / FAIR (warn) / HIGH (bad) + LOCKED (free tier,
@@ -45,15 +49,15 @@ fun DealBadge(
 ) {
     val style = when (band) {
         DealBand.GREAT -> DealBadgeStyle(
-            container = androidx.compose.ui.graphics.Color(0x2E00C853),
+            container = MotormilaGoodContainer,
             content = androidx.compose.ui.graphics.Color(0xFF69F0AE),
-            border = androidx.compose.ui.graphics.Color(0x5500C853),
+            border = MotormilaGoodSoft,
             text = if (score != null) "GREAT %.1f".format(score) else "GREAT",
         )
         DealBand.FAIR -> DealBadgeStyle(
-            container = androidx.compose.ui.graphics.Color(0x2E0A7AFF),
+            container = MotormilaPrimaryContainer,
             content = androidx.compose.ui.graphics.Color(0xFF3D94FF),
-            border = androidx.compose.ui.graphics.Color(0x550A7AFF),
+            border = MotormilaPrimaryBorder,
             text = if (score != null) "FAIR %.1f".format(score) else "FAIR",
         )
         DealBand.HIGH -> DealBadgeStyle(
@@ -72,8 +76,8 @@ fun DealBadge(
     val (container, content, border, text) = style
     Row(
         modifier = modifier
-            .background(container, RoundedCornerShape(999.dp))
-            .border(0.5.dp, border, RoundedCornerShape(999.dp))
+            .background(container, MotormilaRadius.pill)
+            .border(1.dp, border, MotormilaRadius.pill)
             .semantics { contentDescription = "Deal rating $text" }
             .padding(horizontal = 9.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,

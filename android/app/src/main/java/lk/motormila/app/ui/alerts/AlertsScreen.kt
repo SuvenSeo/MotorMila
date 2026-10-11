@@ -48,7 +48,7 @@ import kotlinx.coroutines.delay
 import lk.motormila.app.core.format.formatLkr
 import lk.motormila.app.core.format.formatPct
 import lk.motormila.app.core.motion.rememberReducedMotion
-import lk.motormila.app.core.ui.EmptyState
+import lk.motormila.app.ui.components.EmptyState
 import lk.motormila.app.core.ui.ErrorRetry
 import lk.motormila.app.core.ui.SectionTitle
 import lk.motormila.app.core.ui.SkeletonList
@@ -60,6 +60,12 @@ import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.components.OfflineBanner
+import lk.motormila.app.ui.theme.MotormilaGood
+import lk.motormila.app.ui.theme.MotormilaGoodText
+import lk.motormila.app.ui.theme.MotormilaOnSurface
+import lk.motormila.app.ui.theme.MotormilaPrimary
+import lk.motormila.app.ui.theme.MotormilaPrimaryBright
+import lk.motormila.app.ui.theme.pressKeyHaptic
 import lk.motormila.app.ui.theme.rememberHaptics
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -183,6 +189,7 @@ fun AlertsScreen(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CreateForm(state: AlertsUiState, viewModel: AlertsViewModel, onUpgrade: () -> Unit) {
+    val haptics = rememberHaptics()
     val f = state.form
     val editing = state.editingId != null
     val proLocked = !state.isPro
@@ -338,6 +345,7 @@ private fun CreateForm(state: AlertsUiState, viewModel: AlertsViewModel, onUpgra
                 label = "Save changes",
                 loading = state.updating,
                 onClick = { viewModel.onEvent(AlertsUiEvent.Update) },
+                modifier = Modifier.pressKeyHaptic(haptics),
             )
             MotormilaGhostButton(
                 label = "Cancel editing",
@@ -349,6 +357,7 @@ private fun CreateForm(state: AlertsUiState, viewModel: AlertsViewModel, onUpgra
                 loading = state.creating,
                 enabled = !state.freeCapReached,
                 onClick = { viewModel.onEvent(AlertsUiEvent.Create) },
+                modifier = Modifier.pressKeyHaptic(haptics),
             )
         }
     }
@@ -525,9 +534,10 @@ private fun ConfettiLite(modifier: Modifier = Modifier) {
         label = "confetti",
     )
     val colors = remember {
+        // Brand confetti: Motormila Blue #0A7AFF, Deal Green #00C853, white.
         listOf(
-            Color(0xFFC9A227), Color(0xFF2E7D32), Color(0xFF1565C0),
-            Color(0xFFEF6C00), Color(0xFF6A1B9A), Color(0xFF00838F),
+            MotormilaPrimary, MotormilaGood, MotormilaOnSurface,
+            MotormilaPrimaryBright, MotormilaGoodText, MotormilaPrimary,
         )
     }
     Canvas(modifier.semantics { contentDescription = "Alert created celebration" }) {

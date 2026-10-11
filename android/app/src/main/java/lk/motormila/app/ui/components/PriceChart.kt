@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import lk.motormila.app.core.format.LkrFormat
 import lk.motormila.app.domain.model.PricePoint
+import lk.motormila.app.ui.theme.MotormilaRadius
 
 /**
  * Canvas-only price-history chart (no extra chart dep): path draw-in 700ms,
@@ -76,7 +76,7 @@ fun PriceChart(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(180.dp)
-                .clip(RoundedCornerShape(28.dp))
+                .clip(MotormilaRadius.lg)
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
                 .semantics {
                     contentDescription = "Price history, ${points.size} points, " +
