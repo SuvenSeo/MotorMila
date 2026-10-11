@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import lk.motormila.app.domain.model.DistrictStat
 import lk.motormila.app.domain.model.FuelMixBucket
 import lk.motormila.app.domain.model.Insights
@@ -39,6 +40,15 @@ data class HomeUiState(
     val isOffline: Boolean = false,
     val showCachedBadge: Boolean = false,
     val error: String? = null,
+)
+
+/** 5-tuple for the parallel home load (destructurable). */
+private data class Quint<A, B, C, D, E>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val fourth: D,
+    val fifth: E,
 )
 
 @HiltViewModel
@@ -78,17 +88,23 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
             try {
-                val summaryDef = async { runCatching { getStatsSummary() }.getOrNull() }
-                val insightsDef = async { runCatching { getInsights() }.getOrNull() }
-                val dropsDef = async { runCatching { getPriceDrops() }.getOrNull() }
-                val districtsDef = async { runCatching { getDistrictPrices() }.getOrNull() }
-                val fuelDef = async { runCatching { stats.fuelMix() }.getOrNull() }
-
-                val summary = summaryDef.await()
-                val insights = insightsDef.await()
-                val drops = dropsDef.await()
-                val districts = districtsDef.await()
-                val fuel = fuelDef.await()
+                // Hard bound: no single hanging call (dead radio, captive portal,
+                // stalled snapshot fetch) may keep the skeleton up forever.
+                // withTimeout cancels the stragglers; partial results still apply.
+                val (summary, insights, drops, districts, fuel) = withTimeout(20_000) {
+                    val summaryDef = async { runCatching { getStatsSummary() }.getOrNull() }
+                    val insightsDef = async { runCatching { getInsights() }.getOrNull() }
+                    val dropsDef = async { runCatching { getPriceDrops() }.getOrNull() }
+                    val districtsDef = async { runCatching { getDistrictPrices() }.getOrNull() }
+                    val fuelDef = async { runCatching { stats.fuelMix() }.getOrNull() }
+                    Quint(
+                        summaryDef.await(),
+                        insightsDef.await(),
+                        dropsDef.await(),
+                        districtsDef.await(),
+                        fuelDef.await(),
+                    )
+                }
 
                 if (summary == null && insights == null) {
                     _state.value = _state.value.copy(
@@ -126,17 +142,21 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = _state.value.copy(isRefreshing = true, error = null)
             try {
-                val summaryDef = async { runCatching { getStatsSummary() }.getOrNull() }
-                val insightsDef = async { runCatching { getInsights() }.getOrNull() }
-                val dropsDef = async { runCatching { getPriceDrops() }.getOrNull() }
-                val districtsDef = async { runCatching { getDistrictPrices() }.getOrNull() }
-                val fuelDef = async { runCatching { stats.fuelMix() }.getOrNull() }
-
-                val summary = summaryDef.await()
-                val insights = insightsDef.await()
-                val drops = dropsDef.await()
-                val districts = districtsDef.await()
-                val fuel = fuelDef.await()
+                // Same hard bound as load(): refresh must always settle.
+                val (summary, insights, drops, districts, fuel) = withTimeout(20_000) {
+                    val summaryDef = async { runCatching { getStatsSummary() }.getOrNull() }
+                    val insightsDef = async { runCatching { getInsights() }.getOrNull() }
+                    val dropsDef = async { runCatching { getPriceDrops() }.getOrNull() }
+                    val districtsDef = async { runCatching { getDistrictPrices() }.getOrNull() }
+                    val fuelDef = async { runCatching { stats.fuelMix() }.getOrNull() }
+                    Quint(
+                        summaryDef.await(),
+                        insightsDef.await(),
+                        dropsDef.await(),
+                        districtsDef.await(),
+                        fuelDef.await(),
+                    )
+                }
 
                 _state.value = _state.value.copy(
                     summary = summary ?: _state.value.summary,
