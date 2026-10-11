@@ -199,10 +199,15 @@ fun HomeScreen(
             }
 
             // 3. Stats Row / Bento Metrics Card
+            // Show the full error only when there is truly nothing to display:
+            // if the live feed has listings (from cache/snapshot), show the
+            // stats card instead of a blocking error — the offline banner
+            // (section 1) already communicates the connectivity issue.
             item {
+                val hasAnyContent = state.summary.totalListings > 0 || live.isNotEmpty()
                 if (state.isLoading) {
                     LoadingSkeletonCard(Modifier.padding(horizontal = 16.dp))
-                } else if (state.error != null && state.summary.totalListings == 0) {
+                } else if (state.error != null && !hasAnyContent) {
                     ErrorState(
                         message = state.error ?: "Unknown error",
                         onRetry = viewModel::retry,
@@ -436,8 +441,15 @@ fun HomeScreen(
                 }
             }
 
-            // 12. Empty State
-            if (!state.isLoading && state.priceDrops.isEmpty() && state.insights.hotDeals.isEmpty()) {
+            // 12. Empty State — only when there is genuinely nothing to show.
+            // The live feed (liveStrip) can carry listings even when hotDeals
+            // and priceDrops are empty, so it must be part of the check or the
+            // empty state contradicts the feed above it.
+            if (!state.isLoading &&
+                state.priceDrops.isEmpty() &&
+                state.insights.hotDeals.isEmpty() &&
+                live.isEmpty()
+            ) {
                 item {
                     EmptyState(
                         title = "No market data yet",
