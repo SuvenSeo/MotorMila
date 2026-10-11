@@ -65,35 +65,45 @@ jobs:
 
       - name: Resolve sideload keystore
         working-directory: .
+        env:
+          # Mapped explicitly: without this the secret is invisible to the
+          # step and the secret branch below could never run.
+          ANDROID_KEYSTORE_FILE: ${{ secrets.ANDROID_KEYSTORE_FILE }}
         run: |
           set -euo pipefail
-          # Signing identity (highest priority first):
-          # 1. ANDROID_KEYSTORE_FILE secret (a real, private release identity) — write it
-          #    to the Gradle-expected debug-keystore path so the build picks it up without
-          #    any gradle change.
-          # 2. The committed android/ci-signing.keystore — legacy shared dev identity,
-          #    kept only so today's in-place updates keep working; rotate away from it.
-          # In all cases the same signature must ship every release: a new signature
-          # blocks in-place upgrades — do not reintroduce per-run key generation.
+          # Stage the effective signing identity to ONE fixed path, then hand
+          # that PATH (never the raw base64 secret, never an empty string) to
+          # Gradle via ANDROID_KEYSTORE_FILE. An empty value crashed Gradle
+          # configuration on 2026-10-06 ("path may not be null or empty string").
+          # Priority:
+          # 1. ANDROID_KEYSTORE_FILE secret (a real, private release identity).
+          # 2. The committed android/ci-signing.keystore — legacy shared dev
+          #    identity, kept only so today's in-place updates keep working;
+          #    rotate away from it (see docs/ANDROID_SIGNING.md).
+          # In all cases the same signature must ship every release: a new
+          # signature blocks in-place upgrades — do not reintroduce per-run
+          # key generation.
           mkdir -p "$HOME/.android"
-          KEYSTORE="$HOME/.android/debug.keystore"
+          KEYSTORE="$HOME/.android/motormila-sideload.keystore"
           if [ -n "${ANDROID_KEYSTORE_FILE:-}" ]; then
             printf '%s' "$ANDROID_KEYSTORE_FILE" | base64 --decode > "$KEYSTORE"
             echo "Using ANDROID_KEYSTORE_FILE secret for sideload signing."
           elif [ -f android/ci-signing.keystore ]; then
+            cp android/ci-signing.keystore "$KEYSTORE"
             echo "WARNING: using the committed ci-signing.keystore (public, shared dev identity)."
             echo "Migrate to ANDROID_KEYSTORE_FILE; see docs/ANDROID_SIGNING.md."
           else
             echo "ERROR: no sideload identity — set the ANDROID_KEYSTORE_FILE secret or restore android/ci-signing.keystore"
             exit 1
           fi
+          echo "MOTORMILA_KEYSTORE_PATH=$KEYSTORE" >> "$GITHUB_ENV"
 
       - name: Assemble release APK
         env:
-          # Pass signing secrets to Gradle so ANDROID_KEYSTORE_* is actually
-          # used (Gradle's first choice). Without this the committed
-          # ci-signing.keystore always wins.
-          ANDROID_KEYSTORE_FILE: ${{ secrets.ANDROID_KEYSTORE_FILE }}
+          # Staged keystore path from the step above — always a valid path.
+          # Password/alias/key-password fall back to the debug defaults in
+          # build.gradle.kts when the matching secrets are unset.
+          ANDROID_KEYSTORE_FILE: ${{ env.MOTORMILA_KEYSTORE_PATH }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}

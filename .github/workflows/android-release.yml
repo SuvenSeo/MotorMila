@@ -63,7 +63,7 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Verify sideload keystore present
+      - name: Resolve sideload keystore
         working-directory: .
         env:
           ANDROID_KEYSTORE_FILE: ${{ secrets.ANDROID_KEYSTORE_FILE }}
@@ -74,26 +74,33 @@ jobs:
           # (Before 1.5.1 a fresh debug key was generated per CI run, which
           # blocked in-place upgrades — do not reintroduce key generation.)
           #
-          # Migration path: set ANDROID_KEYSTORE_FILE (base64-encoded real
-          # keystore) + ANDROID_KEYSTORE_PASSWORD/ANDROID_KEY_ALIAS/
-          # ANDROID_KEY_PASSWORD secrets and the committed public keystore is
-          # bypassed automatically — no build change needed. Until then every
-          # release keeps the legacy co-install signature.
-          # See docs/ANDROID_SIGNING.md. Do not delete ci-signing.keystore
-          # before the first secret-keyed release ships.
+          # Stage the effective identity to one fixed path and hand that PATH
+          # to Gradle. Previously the secret branch only echoed and never
+          # materialized the keystore, so a secret-keyed release would have
+          # silently shipped with the legacy signature.
+          mkdir -p "$HOME/.android"
+          KEYSTORE="$HOME/.android/motormila-sideload.keystore"
           if [ -n "${ANDROID_KEYSTORE_FILE:-}" ]; then
-            echo "ANDROID_KEYSTORE_FILE secret present: committed keystore bypassed."
+            printf '%s' "$ANDROID_KEYSTORE_FILE" | base64 --decode > "$KEYSTORE"
+            echo "ANDROID_KEYSTORE_FILE secret present: using secret identity."
           else
             test -f android/ci-signing.keystore || {
               echo "ERROR: android/ci-signing.keystore missing — release would get a new signature and block in-place updates"
               exit 1
             }
+            cp android/ci-signing.keystore "$KEYSTORE"
             echo "WARNING: using committed sideload keystore (public, shared dev identity)."
             echo "Migrate to ANDROID_KEYSTORE_FILE; see docs/ANDROID_SIGNING.md."
           fi
+          echo "MOTORMILA_KEYSTORE_PATH=$KEYSTORE" >> "$GITHUB_ENV"
           echo "Using stable sideload signature."
 
       - name: Assemble release APK
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ env.MOTORMILA_KEYSTORE_PATH }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: ./gradlew :app:assembleRelease --stacktrace
 
       - name: Stage APK

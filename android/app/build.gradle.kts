@@ -43,21 +43,26 @@ android {
 
     signingConfigs {
         // Sideload / GitHub Release preview. Resolution order:
-        // 1. ANDROID_KEYSTORE_* env (real secrets on a hardened CI)
+        // 1. ANDROID_KEYSTORE_FILE env — a keystore FILE PATH staged by CI
+        //    (workflows base64-decode the ANDROID_KEYSTORE_FILE secret to a
+        //    fixed path first; the raw base64 blob is never passed here)
         // 2. the committed ci-signing.keystore — one stable signature so every
         //    release installs over the previous one (in-app self-update works)
         // 3. the local SDK debug key (machine-local fallback)
         create("sideload") {
+            // Blank-tolerant: CI passes unset secrets to Gradle as empty
+            // strings, and file("") throws IllegalArgumentException at
+            // configuration time (this broke the 2026-10-06 release build).
+            // Empty == absent for every signing input.
+            fun envOrNull(name: String): String? =
+                providers.environmentVariable(name).orNull?.takeIf { it.isNotBlank() }
             val committedKey = rootProject.file("ci-signing.keystore").takeIf { it.exists() }
-            storeFile = providers.environmentVariable("ANDROID_KEYSTORE_FILE").orNull?.let { file(it) }
+            storeFile = envOrNull("ANDROID_KEYSTORE_FILE")?.let { file(it) }
                 ?: committedKey
                 ?: file("${System.getProperty("user.home")}/.android/debug.keystore")
-            storePassword = providers.environmentVariable("ANDROID_KEYSTORE_PASSWORD")
-                .orElse("android").get()
-            keyAlias = providers.environmentVariable("ANDROID_KEY_ALIAS")
-                .orElse("androiddebugkey").get()
-            keyPassword = providers.environmentVariable("ANDROID_KEY_PASSWORD")
-                .orElse("android").get()
+            storePassword = envOrNull("ANDROID_KEYSTORE_PASSWORD") ?: "android"
+            keyAlias = envOrNull("ANDROID_KEY_ALIAS") ?: "androiddebugkey"
+            keyPassword = envOrNull("ANDROID_KEY_PASSWORD") ?: "android"
         }
     }
 
