@@ -8,7 +8,7 @@ class AdminSignupUrlTest {
     @Test
     fun signupPath_isPrefixedWithPublicOrigin() {
         assertEquals(
-            "https://motormila.vercel.app/sign-up?token=abc",
+            "https://motormila.pages.dev/sign-up?token=abc",
             adminSignupUrl("/sign-up?token=abc"),
         )
     }
@@ -16,7 +16,7 @@ class AdminSignupUrlTest {
     @Test
     fun missingPath_fallsBackToTokenQuery() {
         assertEquals(
-            "https://motormila.vercel.app/sign-up?token=xyz",
+            "https://motormila.pages.dev/sign-up?token=xyz",
             adminSignupUrl(null, "xyz"),
         )
     }

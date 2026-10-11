@@ -97,7 +97,7 @@ fun MotormilaEyebrow(
             modifier = Modifier
                 .size(6.dp)
                 .clip(CircleShape)
-                .background(if (accent) MotormilaPrimaryBright else Color(0xFF10B981)),
+                .background(if (accent) MotormilaPrimaryBright else Color(0xFF00C853)),
         )
         Spacer(Modifier.width(6.dp))
         Text(
@@ -749,6 +749,40 @@ fun MotormilaMetricTile(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+        if (!note.isNullOrBlank()) {
+            Spacer(Modifier.height(2.dp))
+            Text(note, fontSize = 11.sp, color = MotormilaSecondaryText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+/**
+ * [MotormilaMetricTile] variant whose value is a composable — used for animated
+ * values such as the per-digit [NumberTicker].
+ */
+@Composable
+fun MotormilaMetricTile(
+    label: String,
+    modifier: Modifier = Modifier,
+    note: String? = null,
+    valueContent: @Composable () -> Unit,
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(22.dp))
+            .background(MotormilaSurface)
+            .border(0.5.dp, MotormilaOutline, RoundedCornerShape(22.dp))
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+    ) {
+        Text(
+            text = label.uppercase(),
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.8.sp,
+            color = MotormilaSecondaryText,
+        )
+        Spacer(Modifier.height(4.dp))
+        valueContent()
         if (!note.isNullOrBlank()) {
             Spacer(Modifier.height(2.dp))
             Text(note, fontSize = 11.sp, color = MotormilaSecondaryText, maxLines = 1, overflow = TextOverflow.Ellipsis)

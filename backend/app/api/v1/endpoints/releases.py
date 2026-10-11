@@ -29,7 +29,7 @@ log = structlog.get_logger()
 
 router = APIRouter()
 
-PUBLIC_APP_ORIGIN = os.getenv("PUBLIC_APP_ORIGIN", "https://motormila.vercel.app").rstrip("/")
+PUBLIC_APP_ORIGIN = os.getenv("PUBLIC_APP_ORIGIN", "https://motormila.pages.dev").rstrip("/")
 RELEASE_MANIFEST_URL = (
     os.getenv("APP_RELEASE_MANIFEST_URL", "").strip()
     or f"{PUBLIC_APP_ORIGIN}/app/latest-release.json"

@@ -128,8 +128,8 @@ class AlertsRepositoryImpl @Inject constructor(
         api.markNotificationRead(id)
     }
 
-    /** POST /notifications/read-all — returns count marked; impl helper (no interface change). */
-    suspend fun markAllNotificationsRead(): Int = withContext(io) {
+    /** POST /notifications/read-all — returns count marked. */
+    override suspend fun markAllNotificationsRead(): Int = withContext(io) {
         api.markAllNotificationsRead().markedRead
     }
 

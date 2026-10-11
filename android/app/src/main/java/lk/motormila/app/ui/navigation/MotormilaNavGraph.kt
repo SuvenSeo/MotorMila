@@ -66,6 +66,7 @@ import lk.motormila.app.ui.pulse.PulseGuideScreen
 import lk.motormila.app.ui.splash.SplashScreen
 import lk.motormila.app.ui.scan.PlateScanScreen
 import lk.motormila.app.ui.search.SearchScreen
+import lk.motormila.app.ui.sell.SellScreen
 import lk.motormila.app.ui.settings.SettingsScreen
 import lk.motormila.app.ui.share.ShareImportScreen
 import lk.motormila.app.ui.valuation.ValuationScreen
@@ -240,7 +241,12 @@ fun MotormilaNavGraph(
                             },
                         )
                     }
-                    motormilaComposable<Login> {
+                    motormilaComposable<Login>(
+                        deepLinks = listOf(
+                            navDeepLink { uriPattern = "motormila://login" },
+                            navDeepLink { uriPattern = "https://motormila.pages.dev/sign-in" },
+                        ),
+                    ) {
                         LoginScreen(
                             onLoggedIn = {
                                 navController.navigate(Home) {
@@ -344,6 +350,7 @@ fun MotormilaNavGraph(
                             onDocsClick = { navController.navigate(Docs) },
                             onPricingClick = { navController.navigate(Pricing) },
                             onPermitsClick = { navController.navigate(Permits) },
+                            onSellClick = { navController.navigate(Sell) },
                             onAdminClick = { navController.navigate(Admin) },
                             onEvChargersClick = { navController.navigate(EvChargers) },
                             onPrivacyClick = { navController.navigate(Privacy) },
@@ -353,7 +360,7 @@ fun MotormilaNavGraph(
                     motormilaComposable<ListingDetail>(
                         deepLinks = listOf(
                             navDeepLink { uriPattern = "motormila://listing/{id}" },
-                            navDeepLink { uriPattern = "https://motormila.vercel.app/listing/{id}" },
+                            navDeepLink { uriPattern = "https://motormila.pages.dev/listing/{id}" },
                         ),
                     ) { entry ->
                         val route = entry.toRoute<ListingDetail>()
@@ -364,7 +371,12 @@ fun MotormilaNavGraph(
                             onEstimate = { navController.navigate(Valuation()) },
                         )
                     }
-                    motormilaComposable<Compare> { entry ->
+                    motormilaComposable<Compare>(
+                        deepLinks = listOf(
+                            navDeepLink { uriPattern = "motormila://compare?ids={ids}" },
+                            navDeepLink { uriPattern = "https://motormila.pages.dev/compare?ids={ids}" },
+                        ),
+                    ) { entry ->
                         val route = entry.toRoute<Compare>()
                         CompareScreen(
                             ids = route.ids,
@@ -373,25 +385,45 @@ fun MotormilaNavGraph(
                             onBrowse = { navController.navigate(Search()) },
                         )
                     }
-                    motormilaComposable<Valuation> {
+                    motormilaComposable<Valuation>(
+                        deepLinks = listOf(
+                            navDeepLink { uriPattern = "motormila://valuation?make={make}&model={model}" },
+                            navDeepLink { uriPattern = "https://motormila.pages.dev/valuation?make={make}&model={model}" },
+                        ),
+                    ) {
                         ValuationScreen(
                             onOpenListing = { id -> navController.navigate(ListingDetail(id)) },
                         )
                     }
-                    motormilaComposable<Alerts> {
+                    motormilaComposable<Alerts>(
+                        deepLinks = listOf(
+                            navDeepLink { uriPattern = "motormila://alerts?listingId={listingId}" },
+                            navDeepLink { uriPattern = "https://motormila.pages.dev/alerts?listingId={listingId}" },
+                        ),
+                    ) {
                         AlertsScreen(
                             onOpenDetail = { id -> navController.navigate(ListingDetail(id)) },
                             onUpgrade = { navController.navigate(Pro) },
                         )
                     }
-                    motormilaComposable<Notifications> {
+                    motormilaComposable<Notifications>(
+                        deepLinks = listOf(
+                            navDeepLink { uriPattern = "motormila://notifications" },
+                            navDeepLink { uriPattern = "https://motormila.pages.dev/notifications" },
+                        ),
+                    ) {
                         NotificationsScreen(
                             onOpenNotification = { id ->
                                 id.toIntOrNull()?.let { navController.navigate(ListingDetail(it)) }
                             },
                         )
                     }
-                    motormilaComposable<Pro> {
+                    motormilaComposable<Pro>(
+                        deepLinks = listOf(
+                            navDeepLink { uriPattern = "motormila://pro" },
+                            navDeepLink { uriPattern = "https://motormila.pages.dev/pro" },
+                        ),
+                    ) {
                         ProScreen(
                             onOpenCheckout = { url -> uriHandler.openUri(url) },
                             onOpenDistrict = { district ->
@@ -399,12 +431,22 @@ fun MotormilaNavGraph(
                             },
                         )
                     }
-                    motormilaComposable<Dealer> {
+                    motormilaComposable<Dealer>(
+                        deepLinks = listOf(
+                            navDeepLink { uriPattern = "motormila://dealer" },
+                            navDeepLink { uriPattern = "https://motormila.pages.dev/dealer" },
+                        ),
+                    ) {
                         DealerScreen(
                             onContactSupport = { uriHandler.openUri(SUPPORT_MAILTO) },
                         )
                     }
-                    motormilaComposable<Settings> {
+                    motormilaComposable<Settings>(
+                        deepLinks = listOf(
+                            navDeepLink { uriPattern = "motormila://settings" },
+                            navDeepLink { uriPattern = "https://motormila.pages.dev/settings" },
+                        ),
+                    ) {
                         SettingsScreen(
                             onLoggedOut = {
                                 navController.navigate(Login()) {
@@ -490,7 +532,7 @@ fun MotormilaNavGraph(
                     motormilaComposable<OfficialPulseDetail>(
                         deepLinks = listOf(
                             navDeepLink { uriPattern = "motormila://pulse/{id}" },
-                            navDeepLink { uriPattern = "https://motormila.vercel.app/official-pulse/{id}" },
+                            navDeepLink { uriPattern = "https://motormila.pages.dev/official-pulse/{id}" },
                         ),
                     ) {
                         OfficialPulseDetailScreen(
@@ -517,7 +559,7 @@ fun MotormilaNavGraph(
                         deepLinks = listOf(
                             navDeepLink { uriPattern = "motormila://cars/{make}" },
                             navDeepLink { uriPattern = "motormila://make/{make}" },
-                            navDeepLink { uriPattern = "https://motormila.vercel.app/cars/{make}" },
+                            navDeepLink { uriPattern = "https://motormila.pages.dev/cars/{make}" },
                         ),
                     ) {
                         MakeHubScreen(
@@ -534,7 +576,7 @@ fun MotormilaNavGraph(
                     motormilaComposable<MakeModelHub>(
                         deepLinks = listOf(
                             navDeepLink { uriPattern = "motormila://cars/{make}/{model}" },
-                            navDeepLink { uriPattern = "https://motormila.vercel.app/cars/{make}/{model}" },
+                            navDeepLink { uriPattern = "https://motormila.pages.dev/cars/{make}/{model}" },
                         ),
                     ) {
                         MakeModelHubScreen(
@@ -552,7 +594,7 @@ fun MotormilaNavGraph(
                     motormilaComposable<DistrictHub>(
                         deepLinks = listOf(
                             navDeepLink { uriPattern = "motormila://locations/{district}" },
-                            navDeepLink { uriPattern = "https://motormila.vercel.app/locations/{district}" },
+                            navDeepLink { uriPattern = "https://motormila.pages.dev/locations/{district}" },
                         ),
                     ) {
                         DistrictHubScreen(
@@ -572,7 +614,7 @@ fun MotormilaNavGraph(
                     motormilaComposable<Calculator>(
                         deepLinks = listOf(
                             navDeepLink { uriPattern = "motormila://calculator" },
-                            navDeepLink { uriPattern = "https://motormila.vercel.app/calculator" },
+                            navDeepLink { uriPattern = "https://motormila.pages.dev/calculator" },
                         ),
                     ) {
                         CalculatorScreen(
@@ -583,7 +625,7 @@ fun MotormilaNavGraph(
                     motormilaComposable<Pricing>(
                         deepLinks = listOf(
                             navDeepLink { uriPattern = "motormila://pricing" },
-                            navDeepLink { uriPattern = "https://motormila.vercel.app/pricing" },
+                            navDeepLink { uriPattern = "https://motormila.pages.dev/pricing" },
                         ),
                     ) {
                         PricingScreen(
@@ -595,10 +637,21 @@ fun MotormilaNavGraph(
                             onOpenUrl = { url -> uriHandler.openUri(url) },
                         )
                     }
+                    motormilaComposable<Sell>(
+                        deepLinks = listOf(
+                            navDeepLink { uriPattern = "motormila://sell" },
+                            navDeepLink { uriPattern = "https://motormila.pages.dev/sell" },
+                        ),
+                    ) {
+                        SellScreen(
+                            onBack = { navController.popBackStack() },
+                            onLoginClick = { navController.navigate(Login()) },
+                        )
+                    }
                     motormilaComposable<Docs>(
                         deepLinks = listOf(
                             navDeepLink { uriPattern = "motormila://docs" },
-                            navDeepLink { uriPattern = "https://motormila.vercel.app/docs" },
+                            navDeepLink { uriPattern = "https://motormila.pages.dev/docs" },
                         ),
                     ) {
                         DocsScreen(onBack = { navController.popBackStack() })
@@ -606,7 +659,7 @@ fun MotormilaNavGraph(
                     motormilaComposable<PulseGuide>(
                         deepLinks = listOf(
                             navDeepLink { uriPattern = "motormila://guide/{key}" },
-                            navDeepLink { uriPattern = "https://motormila.vercel.app/official-pulse/guide/{key}" },
+                            navDeepLink { uriPattern = "https://motormila.pages.dev/official-pulse/guide/{key}" },
                         ),
                     ) { entry ->
                         val route = entry.toRoute<PulseGuide>()
@@ -620,7 +673,7 @@ fun MotormilaNavGraph(
                     motormilaComposable<Admin>(
                         deepLinks = listOf(
                             navDeepLink { uriPattern = "motormila://admin" },
-                            navDeepLink { uriPattern = "https://motormila.vercel.app/admin" },
+                            navDeepLink { uriPattern = "https://motormila.pages.dev/admin" },
                         ),
                     ) {
                         AdminScreen(
@@ -631,7 +684,7 @@ fun MotormilaNavGraph(
                     motormilaComposable<EvChargers>(
                         deepLinks = listOf(
                             navDeepLink { uriPattern = "motormila://chargers" },
-                            navDeepLink { uriPattern = "https://motormila.vercel.app/ev-chargers" },
+                            navDeepLink { uriPattern = "https://motormila.pages.dev/ev-chargers" },
                         ),
                     ) {
                         EvChargersScreen(
@@ -642,7 +695,7 @@ fun MotormilaNavGraph(
                     motormilaComposable<Privacy>(
                         deepLinks = listOf(
                             navDeepLink { uriPattern = "motormila://privacy" },
-                            navDeepLink { uriPattern = "https://motormila.vercel.app/privacy" },
+                            navDeepLink { uriPattern = "https://motormila.pages.dev/privacy" },
                         ),
                     ) {
                         LegalScreen(
@@ -654,7 +707,7 @@ fun MotormilaNavGraph(
                     motormilaComposable<Terms>(
                         deepLinks = listOf(
                             navDeepLink { uriPattern = "motormila://terms" },
-                            navDeepLink { uriPattern = "https://motormila.vercel.app/terms" },
+                            navDeepLink { uriPattern = "https://motormila.pages.dev/terms" },
                         ),
                     ) {
                         LegalScreen(
@@ -666,7 +719,7 @@ fun MotormilaNavGraph(
                     motormilaComposable<Permits>(
                         deepLinks = listOf(
                             navDeepLink { uriPattern = "motormila://permits" },
-                            navDeepLink { uriPattern = "https://motormila.vercel.app/permits" },
+                            navDeepLink { uriPattern = "https://motormila.pages.dev/permits" },
                         ),
                     ) {
                         PermitsScreen(
@@ -677,7 +730,7 @@ fun MotormilaNavGraph(
                     motormilaComposable<PriceIndex>(
                         deepLinks = listOf(
                             navDeepLink { uriPattern = "motormila://price-index" },
-                            navDeepLink { uriPattern = "https://motormila.vercel.app/price-index" },
+                            navDeepLink { uriPattern = "https://motormila.pages.dev/price-index" },
                         ),
                     ) {
                         PriceIndexScreen(

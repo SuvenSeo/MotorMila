@@ -211,9 +211,9 @@ fun ListingCard(
 @Composable
 private fun DeltaChip(deltaPct: Double) {
     val down = deltaPct < 0
-    val container = if (down) Color(0x2E10B981) else Color(0x2EEF4444)
-    val content = if (down) Color(0xFF6EE7B7) else Color(0xFFFCA5A5)
-    val border = if (down) Color(0x5510B981) else Color(0x55EF4444)
+    val container = if (down) Color(0x2E00C853) else Color(0x2EEF4444)
+    val content = if (down) Color(0xFF69F0AE) else Color(0xFFFCA5A5)
+    val border = if (down) Color(0x5500C853) else Color(0x55EF4444)
     Text(
         text = "${if (down) "▼" else "▲"} ${LkrFormat.deltaPct(deltaPct)}",
         fontSize = 11.sp,

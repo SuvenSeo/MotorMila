@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import lk.motormila.app.core.common.AppError
 import lk.motormila.app.core.network.ErrorMapper
 import lk.motormila.app.domain.model.DistrictInsight
+import lk.motormila.app.domain.model.DistrictVelocity
 import lk.motormila.app.domain.model.Listing
 import lk.motormila.app.domain.repository.ListingQuery
 import lk.motormila.app.domain.repository.ListingRepository
@@ -35,6 +36,7 @@ data class DistrictHubUiState(
     val listings: List<Listing> = emptyList(),
     val nearby: List<NearbyDistrict> = emptyList(),
     val watchedIds: Set<Int> = emptySet(),
+    val velocityTop: List<DistrictVelocity> = emptyList(),
     val offline: Boolean = false,
     val error: String? = null,
 ) {
@@ -121,6 +123,9 @@ class DistrictHubViewModel @Inject constructor(
 
             val insight = insightResult.getOrNull()
             val page = listingsResult.getOrDefault(emptyList())
+            val velocityTop = velocities
+                .sortedByDescending { it.listingCount }
+                .take(8)
             val nearby = nearbyDistricts(
                 currentNames = listOfNotNull(
                     district,
@@ -142,6 +147,7 @@ class DistrictHubViewModel @Inject constructor(
                         insight = null,
                         listings = emptyList(),
                         nearby = nearby,
+                        velocityTop = velocityTop,
                         offline = mapped is AppError.Network,
                         error = mapped.message,
                     )
@@ -154,6 +160,7 @@ class DistrictHubViewModel @Inject constructor(
                         insight = insight,
                         listings = page,
                         nearby = nearby,
+                        velocityTop = velocityTop,
                         offline = failure != null && ErrorMapper.map(failure) is AppError.Network,
                         error = null,
                     )

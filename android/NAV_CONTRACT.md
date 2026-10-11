@@ -165,11 +165,20 @@ fun ProfileScreen(
     onDocsClick: () -> Unit = {},       // -> Docs
     onPricingClick: () -> Unit = {},     // -> Pricing
     onPermitsClick: () -> Unit = {},    // -> Permits
+    onSellClick: () -> Unit = {},       // -> Sell
     onAdminClick: () -> Unit = {},      // -> Admin
     onEvChargersClick: () -> Unit = {}, // -> EvChargers
     onPrivacyClick: () -> Unit = {},    // -> Privacy
     onTermsClick: () -> Unit = {},      // -> Terms
     viewModel: ProfileViewModel = hiltViewModel(),
+)
+
+// lk.motormila.app.ui.sell — SellScreen.kt
+@Composable
+fun SellScreen(
+    onBack: () -> Unit,              // -> popBackStack()
+    onLoginClick: () -> Unit,        // -> Login()
+    viewModel: SellViewModel = hiltViewModel(),
 )
 
 // lk.motormila.app.ui.scan — PlateScanScreen.kt
@@ -407,7 +416,7 @@ Compose, so MainActivity parses VIEW URIs and navigates after splash):
 | `motormila://ev` | `EvHub` |
 | `motormila://pulse` | `OfficialPulse` |
 | `motormila://listing/{id}` | `ListingDetail` |
-| `https://motormila.vercel.app/listing/{id}` | `ListingDetail` (optional app link) |
+| `https://motormila.pages.dev/listing/{id}` | `ListingDetail` (optional app link) |
 | `motormila://scan` | `PlateScan` |
 | `motormila://home` (no dealOfDay) | `Home` |
 | `motormila://pro?deal=day` | `BestPicks` (legacy) |
@@ -424,27 +433,27 @@ Compose, so MainActivity parses VIEW URIs and navigates after splash):
 | `motormila://cars/{make}` / `motormila://make/{make}` | `MakeHub` |
 | `motormila://cars/{make}/{model}` | `MakeModelHub` |
 | `motormila://locations/{district}` | `DistrictHub` |
-| `https://motormila.vercel.app/cars/{make}[/{model}]` | `MakeHub` / `MakeModelHub` |
-| `https://motormila.vercel.app/locations/{district}` | `DistrictHub` |
-| `https://motormila.vercel.app/calculator` | `Calculator` |
-| `https://motormila.vercel.app/privacy` | `Privacy` |
-| `https://motormila.vercel.app/terms` | `Terms` |
-| `https://motormila.vercel.app/permits` | `Permits` |
-| `https://motormila.vercel.app/price-index` | `PriceIndex` |
-| `https://motormila.vercel.app/trends` | `Insights` |
-| `https://motormila.vercel.app/estimate` | `Valuation` |
-| `https://motormila.vercel.app/best-picks` | `BestPicks` |
-| `https://motormila.vercel.app/compare?ids=` | `Compare` |
-| `https://motormila.vercel.app/compare/12-vs-45` | `Compare` |
-| `https://motormila.vercel.app/dealer` | `Dealer` |
-| `https://motormila.vercel.app/settings` | `Settings` |
-| `https://motormila.vercel.app/alerts` | `Alerts` |
-| `https://motormila.vercel.app/sign-in` | `Login()` |
-| `https://motormila.vercel.app/sign-up?token=` | `Login(token, signup=true)` |
-| `https://motormila.vercel.app/pro` | `Pro` |
-| `https://motormila.vercel.app/official-pulse` | `OfficialPulse` |
-| `https://motormila.vercel.app/pricing` `/docs` `/admin` `/ev-hub` `/ev-chargers` | matching screens |
-| `https://motormila.vercel.app/` | `Home` |
+| `https://motormila.pages.dev/cars/{make}[/{model}]` | `MakeHub` / `MakeModelHub` |
+| `https://motormila.pages.dev/locations/{district}` | `DistrictHub` |
+| `https://motormila.pages.dev/calculator` | `Calculator` |
+| `https://motormila.pages.dev/privacy` | `Privacy` |
+| `https://motormila.pages.dev/terms` | `Terms` |
+| `https://motormila.pages.dev/permits` | `Permits` |
+| `https://motormila.pages.dev/price-index` | `PriceIndex` |
+| `https://motormila.pages.dev/trends` | `Insights` |
+| `https://motormila.pages.dev/estimate` | `Valuation` |
+| `https://motormila.pages.dev/best-picks` | `BestPicks` |
+| `https://motormila.pages.dev/compare?ids=` | `Compare` |
+| `https://motormila.pages.dev/compare/12-vs-45` | `Compare` |
+| `https://motormila.pages.dev/dealer` | `Dealer` |
+| `https://motormila.pages.dev/settings` | `Settings` |
+| `https://motormila.pages.dev/alerts` | `Alerts` |
+| `https://motormila.pages.dev/sign-in` | `Login()` |
+| `https://motormila.pages.dev/sign-up?token=` | `Login(token, signup=true)` |
+| `https://motormila.pages.dev/pro` | `Pro` |
+| `https://motormila.pages.dev/official-pulse` | `OfficialPulse` |
+| `https://motormila.pages.dev/pricing` `/docs` `/admin` `/ev-hub` `/ev-chargers` | matching screens |
+| `https://motormila.pages.dev/` | `Home` |
 
 Splash always runs on a cold start (unless ACTION_SEND → ShareImport). After
 splash the deep-link target is used instead of always Home. `onNewIntent`

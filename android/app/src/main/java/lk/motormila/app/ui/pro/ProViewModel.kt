@@ -259,7 +259,7 @@ class ProViewModel @Inject constructor(
     }
 
     companion object {
-        const val CHECKOUT_URL = "https://motormila.vercel.app/pro"
+        const val CHECKOUT_URL = "https://motormila.pages.dev/pro"
         /** Play Console subscription id — confirm with the release checklist before launch. */
         const val PRO_PRODUCT_ID = "motormila_pro_monthly"
         const val DEFAULT_ARB_THRESHOLD_PCT = 5.0

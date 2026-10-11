@@ -31,7 +31,7 @@ class ShareUrlParserTest {
 
     @Test
     fun motormilaWebListing_goesToCompare() {
-        val t = parseSharedUrl("https://motormila.vercel.app/listings/4242")
+        val t = parseSharedUrl("https://motormila.pages.dev/listings/4242")
         assertTrue(t is ShareTarget.Compare)
         assertEquals(listOf(4242), (t as ShareTarget.Compare).ids)
     }

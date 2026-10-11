@@ -16,7 +16,7 @@ import retrofit2.http.GET
 
 /**
  * Static snapshot fallback served from the production site
- * (`https://motormila.vercel.app/snapshots/latest/`, rebuilt by the
+ * (`https://motormila.pages.dev/snapshots/latest/`, rebuilt by the
  * restore-catalog workflow). Shapes are identical to the live endpoint
  * payloads because the export calls the same builders — existing DTOs parse
  * both. No auth: these files are public by design.

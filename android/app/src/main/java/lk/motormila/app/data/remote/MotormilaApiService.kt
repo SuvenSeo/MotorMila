@@ -58,6 +58,8 @@ import lk.motormila.app.data.remote.dto.MarketSignalDto
 import lk.motormila.app.data.remote.dto.MarketSummaryDto
 import lk.motormila.app.data.remote.dto.MatchResponseDto
 import lk.motormila.app.data.remote.dto.MeResponse
+import lk.motormila.app.data.remote.dto.MyListingCreateDto
+import lk.motormila.app.data.remote.dto.MyListingDto
 import lk.motormila.app.data.remote.dto.NotificationDto
 import lk.motormila.app.data.remote.dto.OkResponse
 import lk.motormila.app.data.remote.dto.OwnershipBundleRequestDto
@@ -212,6 +214,9 @@ interface MotormilaApiService {
 
     @GET("listings/models")
     suspend fun getModels(@Query("make") make: String): List<ModelRowDto>
+
+    @POST("listings/mine")
+    suspend fun createMyListing(@Body body: MyListingCreateDto): MyListingDto
 
     @GET("listings/search-suggestions")
     suspend fun getSearchSuggestions(

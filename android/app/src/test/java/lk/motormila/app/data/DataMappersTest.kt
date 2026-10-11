@@ -89,7 +89,7 @@ class DataMappersTest {
         val n = NotificationDto(
             id = 1,
             title = "Price drop",
-            link = "https://motormila.vercel.app/listings/42",
+            link = "https://motormila.pages.dev/listings/42",
             read = false,
             createdAt = "2026-01-01T00:00:00Z",
         ).toDomain()

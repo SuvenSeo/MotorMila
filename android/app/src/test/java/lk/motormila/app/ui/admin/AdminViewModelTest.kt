@@ -127,7 +127,7 @@ class AdminViewModelTest {
         coVerify { admin.createInvite("new@motormila.lk", "enterprise", "admin") }
         assertEquals("/sign-up?token=tok-1", vm.state.value.lastInviteSignupPath)
         assertEquals(
-            "https://motormila.vercel.app/sign-up?token=tok-1",
+            "https://motormila.pages.dev/sign-up?token=tok-1",
             vm.state.value.lastInviteSignupUrl,
         )
     }

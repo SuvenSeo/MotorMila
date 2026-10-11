@@ -45,9 +45,9 @@ fun DealBadge(
 ) {
     val style = when (band) {
         DealBand.GREAT -> DealBadgeStyle(
-            container = androidx.compose.ui.graphics.Color(0x2E10B981),
-            content = androidx.compose.ui.graphics.Color(0xFF6EE7B7),
-            border = androidx.compose.ui.graphics.Color(0x5510B981),
+            container = androidx.compose.ui.graphics.Color(0x2E00C853),
+            content = androidx.compose.ui.graphics.Color(0xFF69F0AE),
+            border = androidx.compose.ui.graphics.Color(0x5500C853),
             text = if (score != null) "GREAT %.1f".format(score) else "GREAT",
         )
         DealBand.FAIR -> DealBadgeStyle(

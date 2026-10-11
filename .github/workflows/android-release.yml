@@ -75,9 +75,10 @@ jobs:
           # blocked in-place upgrades — do not reintroduce key generation.)
           #
           # Stage the effective identity to one fixed path and hand that PATH
-          # to Gradle. Previously the secret branch only echoed and never
-          # materialized the keystore, so a secret-keyed release would have
-          # silently shipped with the legacy signature.
+          # to Gradle (blank-tolerant in build.gradle.kts). Previously the
+          # secret branch only echoed and never materialized the keystore, so
+          # a secret-keyed release would have silently shipped with the legacy
+          # signature.
           mkdir -p "$HOME/.android"
           KEYSTORE="$HOME/.android/motormila-sideload.keystore"
           if [ -n "${ANDROID_KEYSTORE_FILE:-}" ]; then
@@ -157,22 +158,42 @@ jobs:
           else
             gh release create "$TAG" "${{ steps.apk.outputs.path }}" \
               --title "Motormila Android ${{ steps.apk.outputs.version }}" \
-              --notes-file "$NOTES_FILE" \
-              --prerelease \
-              --latest=false
+              --notes-file "$NOTES_FILE"
           fi
           echo "Published $TAG"
+
+      - name: Upload APK to R2 (public download)
+        working-directory: .
+        env:
+          # Same credentials the snapshot workflows use; the uploader falls
+          # back to the Cloudflare API when S3-style R2_* creds are absent.
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: motormila-snapshots
+          R2_PREFIX: app
+          SNAPSHOT_SOURCE_DIR: dist
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          python backend/upload_snapshots_r2.py
+          echo "APK live at https://pub-f15911ef9a914db9a44e1fd6b47dfe4e.r2.dev/app/${{ steps.apk.outputs.name }}"
 
       - name: Commit release manifest (drives the in-app update checker)
         working-directory: .
         run: |
           set -euo pipefail
           VERSION="${{ steps.apk.outputs.version }}"
-          VERSION_CODE="$(grep -oP 'versionCode\s*=\s*\K[0-9]+' android/app/build.gradle.kts | head -1)"
-          APK_URL="https://motormila.vercel.app/app/${{ steps.apk.outputs.name }}"
+          VERSION_CODE="$(grep -oP 'versionCode\\s*=\\s*\\K[0-9]+' android/app/build.gradle.kts | head -1)"
+          # Public R2 URL (bucket motormila-snapshots has its managed r2.dev
+          # domain enabled). The backend's /releases/app serves this to the
+          # in-app updater via the site manifest below.
+          APK_URL="https://pub-f15911ef9a914db9a44e1fd6b47dfe4e.r2.dev/app/${{ steps.apk.outputs.name }}"
           PUBLISHED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          mkdir -p android
-          cat > android/latest-release.json <<EOF
+          mkdir -p android public/app
+          for DEST in android/latest-release.json public/app/latest-release.json; do
+          cat > "$DEST" <<EOF
           {
             "version": "${VERSION}",
             "version_code": ${VERSION_CODE},
@@ -181,34 +202,19 @@ jobs:
             "tag": "${GITHUB_REF_NAME}"
           }
           EOF
+          done
           cat android/latest-release.json
           git config user.name "motormila-release-bot"
           git config user.email "noreply@motormila.lk"
-          git add android/latest-release.json
+          git add android/latest-release.json public/app/latest-release.json
           if git diff --cached --quiet; then
             echo "Manifest unchanged; nothing to commit"
           else
             git commit -m "chore(release): android-v${VERSION} (versionCode ${VERSION_CODE}) [skip ci]"
+            # Rebase onto latest main first: the tag checkout goes stale if
+            # main moved since the release run started (bit 1.5.4).
+            git fetch origin main
+            git rebase origin/main
             git push origin "HEAD:main"
             echo "Manifest pushed to main"
           fi
-
-      - name: Publish APK to the website (public/app)
-        working-directory: .
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: |
-          set -euo pipefail
-          if [ -z "${VERCEL_TOKEN:-}" ]; then
-            echo "VERCEL_TOKEN not set; APK published as a private release asset only."
-            exit 0
-          fi
-          mkdir -p public/app
-          cp "android/dist/${{ steps.apk.outputs.name }}" "public/app/${{ steps.apk.outputs.name }}"
-          cp android/latest-release.json public/app/latest-release.json
-          # Whole-tree CLI deploy (same mechanism as snapshot publishes) so the
-          # gitignored APK ships; deploy-snapshots-to-prod.sh preserves the
-          # catalog from the live site automatically.
-          bash scripts/deploy-snapshots-to-prod.sh

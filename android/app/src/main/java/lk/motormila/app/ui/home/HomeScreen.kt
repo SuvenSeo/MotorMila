@@ -1,7 +1,5 @@
 package lk.motormila.app.ui.home
 
-import androidx.compose.animation.core.animateIntAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -58,6 +56,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -73,6 +72,9 @@ import lk.motormila.app.R
 import lk.motormila.app.core.format.LkrFormat
 import lk.motormila.app.ui.components.BrandLogo
 import lk.motormila.app.ui.components.BrandLogoSize
+import lk.motormila.app.ui.components.AnnouncementBanner
+import lk.motormila.app.ui.components.HowItWorksBand
+import lk.motormila.app.ui.components.NumberTicker
 import lk.motormila.app.ui.components.EmptyState
 import lk.motormila.app.ui.components.ErrorState
 import lk.motormila.app.ui.components.LivePulse
@@ -150,6 +152,11 @@ fun HomeScreen(
             contentPadding = PaddingValues(bottom = 128.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
+            // 0. Announcement banner (market updates, dismissible, persisted)
+            item {
+                AnnouncementBanner(onViewDeals = onBestPicksClick)
+            }
+
             // 1. Top Brand Lockup Bar
             item {
                 Column(Modifier.padding(top = 10.dp)) {
@@ -194,6 +201,11 @@ fun HomeScreen(
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                 }
+            }
+
+            // 3b. How-it-works animated beam band
+            item {
+                HowItWorksBand()
             }
 
             // 4. Feature Banners (VEHICLE TYPES & VERIFIED SIGNALS)
@@ -475,7 +487,7 @@ fun ContextCapsuleBadge(
             modifier = Modifier
                 .size(6.dp)
                 .clip(CircleShape)
-                .background(if (isAccent) MotormilaPrimaryBright else Color(0xFF10B981)),
+                .background(if (isAccent) MotormilaPrimaryBright else Color(0xFF00C853)),
         )
         Spacer(Modifier.width(6.dp))
         Text(
@@ -615,11 +627,8 @@ private fun HeroStatsCard(
     val reduced = rememberReducedMotion()
     var shown by remember { mutableStateOf(reduced) }
     LaunchedEffect(total) { shown = true }
-    val animatedTotal by animateIntAsState(
-        targetValue = if (shown) total else 0,
-        animationSpec = tween(if (reduced) 1 else 650),
-        label = "hero-stat-count",
-    )
+    // Per-digit rolling ticker (web NumberTicker parity) instead of a plain count-up.
+    val tickerValue = if (shown) total.toLong() else 0L
 
     MotormilaGlass(
         modifier = modifier.fillMaxWidth(),
@@ -655,15 +664,15 @@ private fun HeroStatsCard(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .clip(RoundedCornerShape(999.dp))
-                        .background(Color(0x1F10B981))
-                        .border(0.75.dp, Color(0x3310B981), RoundedCornerShape(999.dp))
+                        .background(Color(0x1F00C853))
+                        .border(0.75.dp, Color(0x3300C853), RoundedCornerShape(999.dp))
                         .padding(horizontal = 8.dp, vertical = 3.dp),
                 ) {
                     Box(
                         modifier = Modifier
                             .size(6.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF10B981))
+                            .background(Color(0xFF00C853))
                     )
                     Spacer(Modifier.width(5.dp))
                     Text(
@@ -671,21 +680,33 @@ private fun HeroStatsCard(
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.5.sp,
-                        color = Color(0xFF6EE7B7),
+                        color = Color(0xFF69F0AE),
                     )
                 }
             }
 
             Spacer(Modifier.height(10.dp))
 
-            // Bold count (207,786 or dynamic)
-            Text(
-                text = if (total > 0) LkrFormat.count(animatedTotal) else "—",
-                fontSize = 38.sp,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = (-0.03).em,
-                color = Color.White,
-            )
+            // Bold count (207,786 or dynamic) — per-digit rolling ticker.
+            if (total > 0) {
+                NumberTicker(
+                    value = tickerValue,
+                    style = TextStyle(
+                        fontSize = 38.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = (-0.03).em,
+                    ),
+                    color = Color.White,
+                )
+            } else {
+                Text(
+                    text = "—",
+                    fontSize = 38.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = (-0.03).em,
+                    color = Color.White,
+                )
+            }
 
             Spacer(Modifier.height(3.dp))
 
@@ -710,14 +731,48 @@ private fun HeroStatsCard(
                 )
                 MotormilaMetricTile(
                     label = "NEW 24H",
-                    value = if (new24h > 0) LkrFormat.count(new24h) else "—",
                     modifier = Modifier.weight(1f),
-                )
+                ) {
+                    if (new24h > 0) {
+                        NumberTicker(
+                            value = new24h.toLong(),
+                            style = TextStyle(
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                            ),
+                            color = MotormilaOnSurface,
+                        )
+                    } else {
+                        Text(
+                            text = "—",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MotormilaOnSurface,
+                        )
+                    }
+                }
                 MotormilaMetricTile(
                     label = "GOOD DEALS",
-                    value = if (goodDeals > 0) LkrFormat.count(goodDeals) else "—",
                     modifier = Modifier.weight(1f),
-                )
+                ) {
+                    if (goodDeals > 0) {
+                        NumberTicker(
+                            value = goodDeals.toLong(),
+                            style = TextStyle(
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                            ),
+                            color = MotormilaOnSurface,
+                        )
+                    } else {
+                        Text(
+                            text = "—",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MotormilaOnSurface,
+                        )
+                    }
+                }
             }
         }
     }
@@ -800,7 +855,7 @@ private fun FeatureBannersRow(
                     .fillMaxSize()
                     .background(
                         Brush.radialGradient(
-                            colors = listOf(Color(0x1A10B981), Color(0x0010B981)),
+                            colors = listOf(Color(0x1A00C853), Color(0x0000C853)),
                             radius = 280f,
                         )
                     )
@@ -820,12 +875,12 @@ private fun FeatureBannersRow(
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.4.sp,
-                            color = Color(0xFF6EE7B7),
+                            color = Color(0xFF69F0AE),
                         )
                         Icon(
                             imageVector = Icons.Filled.Verified,
                             contentDescription = null,
-                            tint = Color(0xFF6EE7B7).copy(alpha = 0.5f),
+                            tint = Color(0xFF69F0AE).copy(alpha = 0.5f),
                             modifier = Modifier.size(16.dp),
                         )
                     }
@@ -1248,14 +1303,14 @@ private fun PriceDropCard(title: String, imageUrl: String?, newPrice: String, dr
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(999.dp))
-                        .background(Color(0x2E10B981))
+                        .background(Color(0x2E00C853))
                         .padding(horizontal = 7.dp, vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         "▼ ${LkrFormat.deltaPct(dropPct)}",
                         fontSize = 11.sp,
-                        color = Color(0xFF6EE7B7),
+                        color = Color(0xFF69F0AE),
                         fontWeight = FontWeight.Bold,
                     )
                 }
@@ -1284,7 +1339,7 @@ private fun HotDealCard(title: String, imageUrl: String?, price: String, score: 
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(999.dp))
-                        .background(if (isPro) Color(0x2E10B981) else Color(0x2E0A7AFF))
+                        .background(if (isPro) Color(0x2E00C853) else Color(0x2E0A7AFF))
                         .padding(horizontal = 7.dp, vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -1292,7 +1347,7 @@ private fun HotDealCard(title: String, imageUrl: String?, price: String, score: 
                         if (isPro) "★ %.1f DEAL".format(score) else "🔒 PRO SCORE",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (isPro) Color(0xFF6EE7B7) else MotormilaPrimaryBright,
+                        color = if (isPro) Color(0xFF69F0AE) else MotormilaPrimaryBright,
                     )
                 }
             }
