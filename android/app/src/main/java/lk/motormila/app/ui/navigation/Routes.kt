@@ -231,6 +231,7 @@ internal fun resolveParsedDeepLink(parsed: ParsedDeepLink): Any? {
             "sign-up" -> loginDestination(parsed, signup = true)
             "pro", "pro-preview" -> Pro
             "sell" -> Sell
+            "notifications" -> Notifications
             else -> null
         }
     }
@@ -286,6 +287,7 @@ internal fun resolveParsedDeepLink(parsed: ParsedDeepLink): Any? {
         "sign-up" -> loginDestination(parsed, signup = true)
         "best-picks" -> BestPicks
         "sell" -> Sell
+        "notifications" -> Notifications
         else -> null
     }
 }

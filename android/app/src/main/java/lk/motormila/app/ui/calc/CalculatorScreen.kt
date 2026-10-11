@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
@@ -65,10 +64,12 @@ import lk.motormila.app.ui.theme.MotormilaOnSurface
 import lk.motormila.app.ui.theme.MotormilaOutline
 import lk.motormila.app.ui.theme.MotormilaPrimary
 import lk.motormila.app.ui.theme.MotormilaPrimaryBright
+import lk.motormila.app.ui.theme.MotormilaRadius
 import lk.motormila.app.ui.theme.MotormilaSecondaryText
 import lk.motormila.app.ui.theme.MotormilaSurface
 import lk.motormila.app.ui.theme.MotormilaSurfaceHigh
 import lk.motormila.app.ui.theme.MotormilaWarn
+import lk.motormila.app.ui.theme.pressKeyHaptic
 import lk.motormila.app.ui.theme.rememberHaptics
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -244,7 +245,7 @@ private fun CalculatorHero() {
         modifier = Modifier.padding(top = 8.dp),
     ) {
         Surface(
-            shape = RoundedCornerShape(50),
+            shape = MotormilaRadius.pill,
             color = MotormilaSurfaceHigh,
             border = BorderStroke(1.dp, MotormilaOutline),
         ) {
@@ -302,6 +303,7 @@ private fun LandedPane(
     onCalculate: () -> Unit,
 ) {
     val form = state.landedForm
+    val haptics = rememberHaptics()
     val calculateCd = stringResource(R.string.calc_cd_calculate_landed)
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         MotormilaPane(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -398,7 +400,7 @@ private fun LandedPane(
                     onClick = onCalculate,
                     enabled = !state.calculatingLanded,
                     loading = state.calculatingLanded,
-                    modifier = Modifier.semantics { contentDescription = calculateCd },
+                    modifier = Modifier.semantics { contentDescription = calculateCd }.pressKeyHaptic(haptics),
                 )
         }
         LandedResultCard(result = state.landed, calculating = state.calculatingLanded)
@@ -412,6 +414,7 @@ private fun TcoPane(
     onCalculate: () -> Unit,
 ) {
     val form = state.tcoForm
+    val haptics = rememberHaptics()
     val calculateCd = stringResource(R.string.calc_cd_calculate_tco)
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         MotormilaPane(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -466,7 +469,7 @@ private fun TcoPane(
                     onClick = onCalculate,
                     enabled = !state.calculatingTco,
                     loading = state.calculatingTco,
-                    modifier = Modifier.semantics { contentDescription = calculateCd },
+                    modifier = Modifier.semantics { contentDescription = calculateCd }.pressKeyHaptic(haptics),
                 )
         }
         TcoResultCard(result = state.tco, calculating = state.calculatingTco)
@@ -543,7 +546,7 @@ private fun LandedResultCard(result: LandedCost?, calculating: Boolean) {
                         }
                     }
                     Surface(
-                        shape = RoundedCornerShape(28.dp),
+                        shape = MotormilaRadius.lg,
                         color = MotormilaPrimary.copy(alpha = 0.08f),
                         border = BorderStroke(1.dp, MotormilaPrimary.copy(alpha = 0.25f)),
                         modifier = Modifier.fillMaxWidth(),
@@ -631,7 +634,7 @@ private fun TcoResultCard(result: Tco?, calculating: Boolean) {
                     CostLineRow(stringResource(R.string.calc_tco_fuel), result.fuelLkr)
                     CostLineRow(stringResource(R.string.calc_tco_service), result.serviceLkr)
                     Surface(
-                        shape = RoundedCornerShape(28.dp),
+                        shape = MotormilaRadius.lg,
                         color = MotormilaPrimary.copy(alpha = 0.08f),
                         border = BorderStroke(1.dp, MotormilaPrimary.copy(alpha = 0.25f)),
                         modifier = Modifier.fillMaxWidth(),
@@ -691,6 +694,7 @@ private fun LeasePane(
     onCalculate: () -> Unit,
 ) {
     val form = state.leaseForm
+    val haptics = rememberHaptics()
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         MotormilaPane(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text(
@@ -730,6 +734,7 @@ private fun LeasePane(
             MotormilaPrimaryButton(
                 label = stringResource(R.string.calc_calculate_lease),
                 onClick = onCalculate,
+                modifier = Modifier.pressKeyHaptic(haptics),
             )
         }
         state.lease?.let { quote ->
@@ -760,6 +765,7 @@ private fun OwnershipPane(
     onCalculate: () -> Unit,
 ) {
     val form = state.ownershipForm
+    val haptics = rememberHaptics()
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         MotormilaPane(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text(
@@ -814,6 +820,7 @@ private fun OwnershipPane(
                 onClick = onCalculate,
                 enabled = !state.calculatingOwnership,
                 loading = state.calculatingOwnership,
+                modifier = Modifier.pressKeyHaptic(haptics),
             )
         }
         state.ownership?.let { bundle ->
@@ -912,6 +919,7 @@ private fun DepreciationPane(
     onCalculate: () -> Unit,
 ) {
     val form = state.depreciationForm
+    val haptics = rememberHaptics()
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         MotormilaPane(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text(
@@ -933,6 +941,7 @@ private fun DepreciationPane(
             MotormilaPrimaryButton(
                 label = stringResource(R.string.calc_calculate_depreciation),
                 onClick = onCalculate,
+                modifier = Modifier.pressKeyHaptic(haptics),
             )
         }
         if (state.depreciation.isNotEmpty()) {
@@ -1040,7 +1049,7 @@ private fun CalcTextField(
         onValueChange = onChange,
         label = { Text(label) },
         singleLine = true,
-        shape = RoundedCornerShape(28.dp),
+        shape = MotormilaRadius.lg,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MotormilaPrimary,

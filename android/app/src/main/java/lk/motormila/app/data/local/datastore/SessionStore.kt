@@ -2,6 +2,7 @@ package lk.motormila.app.data.local.datastore
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -32,6 +33,7 @@ class SessionStore @Inject constructor(
         val USER = stringPreferencesKey("userJson")
         val PLAN = stringPreferencesKey("plan")
         val EXPIRES_AT = stringPreferencesKey("expiresAt")
+        val PLAY_PRO = booleanPreferencesKey("playProEntitled")
     }
 
     @Volatile
@@ -40,7 +42,20 @@ class SessionStore @Inject constructor(
 
     fun observe(): Flow<UserSession?> = dataStore.data.map { prefs ->
         val token = prefs[Keys.JWT] ?: return@map null
-        decode(token, prefs[Keys.USER], prefs[Keys.PLAN], prefs[Keys.EXPIRES_AT])
+        decode(
+            token,
+            prefs[Keys.USER],
+            prefs[Keys.PLAN],
+            prefs[Keys.EXPIRES_AT],
+            playPro = prefs[Keys.PLAY_PRO] == true,
+        )
+    }
+
+    /** Local Google Play Pro entitlement (device Google account's subscription state). */
+    fun observePlayPro(): Flow<Boolean> = dataStore.data.map { prefs -> prefs[Keys.PLAY_PRO] == true }
+
+    suspend fun setPlayProEntitled(entitled: Boolean) {
+        dataStore.edit { prefs -> prefs[Keys.PLAY_PRO] = entitled }
     }
 
     suspend fun snapshot(): UserSession? = observe().first()
@@ -74,11 +89,21 @@ class SessionStore @Inject constructor(
             prefs.remove(Keys.USER)
             prefs.remove(Keys.PLAN)
             prefs.remove(Keys.EXPIRES_AT)
+            // Play entitlement belongs to the device's Google account, but a
+            // fresh login starts clean; the launch-time Play re-check restores
+            // it when the subscription is still active.
+            prefs.remove(Keys.PLAY_PRO)
         }
     }
 
     companion object {
-        fun decode(token: String, userRaw: String?, plan: String?, expiresAt: String?): UserSession? {
+        fun decode(
+            token: String,
+            userRaw: String?,
+            plan: String?,
+            expiresAt: String?,
+            playPro: Boolean = false,
+        ): UserSession? {
             if (token.isBlank()) return null
             val parts = (userRaw ?: "").split("||")
             val email = parts.getOrNull(0).orEmpty()
@@ -91,6 +116,7 @@ class SessionStore @Inject constructor(
                 subscriptionStatus = parts.getOrNull(4)?.ifBlank { null },
                 token = token,
                 expiresAt = expiresAt,
+                playProEntitled = playPro,
             )
         }
 

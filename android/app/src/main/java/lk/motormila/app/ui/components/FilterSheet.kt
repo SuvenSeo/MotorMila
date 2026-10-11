@@ -19,6 +19,7 @@ import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,6 +31,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import lk.motormila.app.domain.repository.ListingQuery
+import lk.motormila.app.ui.theme.pressKeyHaptic
+import lk.motormila.app.ui.theme.rememberHaptics
 
 /** Draft filter state edited inside the sheet; applied on CTA. */
 data class FilterDraft(
@@ -91,8 +94,11 @@ fun FilterSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     var draft by remember(current) { mutableStateOf(FilterDraft.from(current)) }
+    val haptics = rememberHaptics()
+    // Sheet open: light tick per spec §4.
+    LaunchedEffect(Unit) { haptics.tick() }
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { haptics.tick(); onDismiss() },
         sheetState = sheetState,
         shape = lk.motormila.app.ui.theme.MotormilaSheetShape,
         modifier = modifier.semantics { contentDescription = "Search filters" },
@@ -167,7 +173,7 @@ fun FilterSheet(
                 MotormilaPrimaryButton(
                     label = if (resultCount != null) "Show $resultCount results" else "Apply filters",
                     onClick = { onApply(draft.toQuery(current)) },
-                    modifier = Modifier.weight(2f),
+                    modifier = Modifier.weight(2f).pressKeyHaptic(haptics),
                 )
             }
             Spacer(Modifier.height(8.dp))

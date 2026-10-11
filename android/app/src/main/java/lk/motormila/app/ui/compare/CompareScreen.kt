@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,7 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -33,6 +33,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -65,12 +66,17 @@ import lk.motormila.app.ui.components.MotormilaIconAction
 import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.theme.MotormilaBg
+import lk.motormila.app.ui.theme.MotormilaOnSurface
+import lk.motormila.app.ui.theme.MotormilaPrimaryBorder
 import lk.motormila.app.ui.theme.MotormilaPrimaryBright
+import lk.motormila.app.ui.theme.MotormilaPrimaryContainer
+import lk.motormila.app.ui.theme.MotormilaRadius
 import lk.motormila.app.ui.theme.MotormilaSecondaryText
 import lk.motormila.app.ui.theme.MotormilaSurface
+import lk.motormila.app.ui.theme.applePress
 
-private val BestCellHighlight = Color(0x2E0A7AFF)
-private val BestCellBorder = Color(0x550A7AFF)
+private val BestCellHighlight = MotormilaPrimaryContainer
+private val BestCellBorder = MotormilaPrimaryBorder
 
 /**
  * Compare up to 3 listings side by side (web parity: MAX_COMPARE_IDS = 3).
@@ -118,10 +124,18 @@ fun CompareScreen(
             }
         },
     ) {
-        when {
-            state.isLoading -> {
-                Box(Modifier.fillMaxSize()) { SkeletonList() }
-            }
+        // Refresh keeps the loaded matrix visible: the skeleton only shows on
+        // first load (items empty); a mid-session refresh just spins the PTR
+        // indicator over the existing content.
+        PullToRefreshBox(
+            isRefreshing = state.isLoading && state.items.isNotEmpty(),
+            onRefresh = { viewModel.onEvent(CompareUiEvent.Refresh) },
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            when {
+                state.isLoading && state.items.isEmpty() -> {
+                    Box(Modifier.fillMaxSize()) { SkeletonList() }
+                }
             state.error != null && state.items.isEmpty() -> {
                 Box(Modifier.fillMaxSize()) {
                     ErrorRetry(
@@ -159,7 +173,8 @@ fun CompareScreen(
                     )
                 }
             }
-        }
+        } // when
+        } // PullToRefreshBox
     }
 }
 
@@ -174,16 +189,16 @@ private fun CompareHeaderSection(modifier: Modifier = Modifier) {
         // Eyebrow pill: • ⚖️ COMPARE
         Row(
             modifier = Modifier
-                .clip(RoundedCornerShape(999.dp))
-                .background(Color(0x2E0A7AFF))
-                .border(0.6.dp, Color(0x660A7AFF), RoundedCornerShape(999.dp))
+                .clip(MotormilaRadius.pill)
+                .background(MotormilaPrimaryContainer)
+                .border(1.dp, Color(0x660A7AFF), MotormilaRadius.pill)
                 .padding(horizontal = 10.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
                 text = "• ⚖️ COMPARE",
-                fontSize = 11.sp,
+                style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = 1.sp,
                 color = MotormilaPrimaryBright,
@@ -195,9 +210,9 @@ private fun CompareHeaderSection(modifier: Modifier = Modifier) {
         // Headline: Vehicle Comparison
         Text(
             text = "Vehicle Comparison",
-            fontSize = 24.sp,
+            style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
-            color = Color.White,
+            color = MotormilaOnSurface,
             letterSpacing = (-0.5).sp,
         )
 
@@ -206,7 +221,7 @@ private fun CompareHeaderSection(modifier: Modifier = Modifier) {
         // Subtitle: Side-by-side specs, pricing, and deal scores for up to 3 vehicles.
         Text(
             text = "Side-by-side specs, pricing, and deal scores for up to ${CompareUiState.MAX_IDS} vehicles.",
-            fontSize = 13.5.sp,
+            style = MaterialTheme.typography.labelLarge,
             color = MotormilaSecondaryText,
             lineHeight = 18.sp,
         )
@@ -232,9 +247,9 @@ private fun CompareEmptyState(
         Box(
             modifier = Modifier
                 .size(68.dp)
-                .clip(RoundedCornerShape(28.dp))
-                .background(Color(0x2E0A7AFF))
-                .border(1.2.dp, Color(0x663D94FF), RoundedCornerShape(28.dp)),
+                .clip(MotormilaRadius.lg)
+                .background(MotormilaPrimaryContainer)
+                .border(1.dp, Color(0x663D94FF), MotormilaRadius.lg),
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -247,9 +262,9 @@ private fun CompareEmptyState(
 
         Text(
             text = "No vehicles selected",
-            fontSize = 20.sp,
+            style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            color = Color.White,
+            color = MotormilaOnSurface,
             textAlign = TextAlign.Center,
         )
 
@@ -257,7 +272,7 @@ private fun CompareEmptyState(
 
         Text(
             text = "No vehicles selected. Select vehicles from the Dashboard or Search to compare.",
-            fontSize = 14.sp,
+            style = MaterialTheme.typography.bodyMedium,
             color = MotormilaSecondaryText,
             textAlign = TextAlign.Center,
             lineHeight = 20.sp,
@@ -309,7 +324,7 @@ private fun CompareMatrixTable(
             ) {
                 Text(
                     text = "SPECIFICATION",
-                    fontSize = 10.5.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.ExtraBold,
                     letterSpacing = 0.8.sp,
                     color = Color(0xFF6E6E73),
@@ -426,7 +441,7 @@ private fun VehicleMatrixColumn(
                             Icon(
                                 imageVector = Icons.Filled.Close,
                                 contentDescription = "Remove ${listing.displayName}",
-                                tint = Color.White,
+                                tint = MotormilaOnSurface,
                                 modifier = Modifier.size(14.dp),
                             )
                         }
@@ -443,15 +458,15 @@ private fun VehicleMatrixColumn(
                     Column {
                         Text(
                             text = listing.displayName,
-                            fontSize = 12.5.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White,
+                            color = MotormilaOnSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                         Text(
                             text = "${listing.year ?: "—"} · ${listing.district ?: "Sri Lanka"}",
-                            fontSize = 11.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             color = MotormilaSecondaryText,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -465,7 +480,7 @@ private fun VehicleMatrixColumn(
                     ) {
                         Text(
                             text = "Open",
-                            fontSize = 11.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = MotormilaPrimaryBright,
                         )
@@ -566,13 +581,15 @@ private fun AddVehicleColumnSlot(
             .width(150.dp)
             .height(180.dp),
     ) {
+        val slotPress = remember { MutableInteractionSource() }
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(28.dp))
+                .applePress(slotPress)
+                .clip(MotormilaRadius.lg)
                 .background(MotormilaSurface)
-                .border(1.dp, Color(0x443D94FF), RoundedCornerShape(28.dp))
-                .clickable { onAdd() }
+                .border(1.dp, Color(0x443D94FF), MotormilaRadius.lg)
+                .clickable(interactionSource = slotPress, indication = null, onClick = onAdd)
                 .padding(16.dp),
             contentAlignment = Alignment.Center,
         ) {
@@ -584,7 +601,7 @@ private fun AddVehicleColumnSlot(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(Color(0x2E0A7AFF)),
+                        .background(MotormilaPrimaryContainer),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -597,13 +614,13 @@ private fun AddVehicleColumnSlot(
                 Spacer(Modifier.height(10.dp))
                 Text(
                     text = "Add vehicle",
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = MotormilaOnSurface,
                 )
                 Text(
                     text = "Slot ${currentCount + 1}/${CompareUiState.MAX_IDS}",
-                    fontSize = 10.5.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MotormilaSecondaryText,
                 )
             }
@@ -642,12 +659,12 @@ private fun ValueCell(
         modifier = Modifier
             .fillMaxWidth()
             .height(52.dp)
-            .clip(RoundedCornerShape(28.dp))
+            .clip(MotormilaRadius.lg)
             .background(if (isBest) BestCellHighlight else Color.Transparent)
             .border(
                 width = if (isBest) 0.8.dp else 0.dp,
                 color = if (isBest) BestCellBorder else Color.Transparent,
-                shape = RoundedCornerShape(28.dp),
+                shape = MotormilaRadius.lg,
             )
             .padding(horizontal = 12.dp)
             .semantics { contentDescription = "$desc${if (isBest) ", leader" else ""}" },
@@ -658,7 +675,7 @@ private fun ValueCell(
             fontSize = if (isPrice) 13.5.sp else 13.sp,
             fontFamily = if (isPrice) FontFamily.Monospace else FontFamily.Default,
             fontWeight = if (isBest || isPrice) FontWeight.Bold else FontWeight.Normal,
-            color = if (isBest) MotormilaPrimaryBright else Color.White,
+            color = if (isBest) MotormilaPrimaryBright else MotormilaOnSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

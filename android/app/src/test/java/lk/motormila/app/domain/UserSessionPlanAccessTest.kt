@@ -43,6 +43,18 @@ class UserSessionPlanAccessTest {
     }
 
     @Test
+    fun playPurchaseEntitlementUnlocksProLocally() {
+        // v1.6.1: Google Play purchase unlocks Pro on-device (backend has no
+        // Play verification endpoint yet); server plan stays authoritative.
+        val entitled = session("free").copy(playProEntitled = true)
+        assertTrue(entitled.isPro)
+        // ...and losing the Play entitlement re-locks a free plan.
+        assertFalse(entitled.copy(playProEntitled = false).isPro)
+        // Server pro still works without any Play involvement.
+        assertTrue(session("pro").isPro)
+    }
+
+    @Test
     fun adminRoleFlagDoesNotDependOnPlan() {
         assertTrue(session("free", role = "admin").isAdmin)
         assertFalse(session("pro").isAdmin)

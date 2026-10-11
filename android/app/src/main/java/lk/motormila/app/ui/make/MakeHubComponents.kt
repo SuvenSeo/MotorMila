@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Search
@@ -37,6 +36,7 @@ import lk.motormila.app.ui.theme.MotormilaOnSurface
 import lk.motormila.app.ui.theme.MotormilaOutline
 import lk.motormila.app.ui.theme.MotormilaPrimary
 import lk.motormila.app.ui.theme.MotormilaPrimaryBright
+import lk.motormila.app.ui.theme.MotormilaRadius
 import lk.motormila.app.ui.theme.MotormilaSecondaryText
 import lk.motormila.app.ui.theme.MotormilaSurface as MotormilaSurfaceColor
 import lk.motormila.app.ui.theme.MotormilaSurfaceHigh
@@ -68,7 +68,7 @@ internal fun MakeHubHero(
         modifier = modifier.padding(top = 8.dp),
     ) {
         Surface(
-            shape = RoundedCornerShape(50),
+            shape = MotormilaRadius.pill,
             color = MotormilaSurfaceHigh,
             border = BorderStroke(1.dp, MotormilaOutline),
         ) {
@@ -234,7 +234,7 @@ private fun MakeHubTrendRow(point: TrendPoint) {
     val count = stringResource(R.string.make_hub_trend_count, point.listingCount)
     val rowCd = stringResource(R.string.make_hub_cd_trend, period, price)
     Surface(
-        shape = RoundedCornerShape(28.dp),
+        shape = MotormilaRadius.lg,
         color = MotormilaSurfaceColor,
         border = BorderStroke(1.dp, MotormilaOutline),
         modifier = Modifier

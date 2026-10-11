@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.DirectionsCar
@@ -50,6 +49,7 @@ import lk.motormila.app.ui.theme.MotormilaOnSurface
 import lk.motormila.app.ui.theme.MotormilaOutline
 import lk.motormila.app.ui.theme.MotormilaPrimary
 import lk.motormila.app.ui.theme.MotormilaPrimaryBright
+import lk.motormila.app.ui.theme.MotormilaRadius
 import lk.motormila.app.ui.theme.MotormilaSecondaryText
 import lk.motormila.app.ui.theme.MotormilaSurface
 
@@ -243,9 +243,9 @@ private fun BeamNode(
         Box(
             modifier = Modifier
                 .size(64.dp)
-                .clip(RoundedCornerShape(20.dp))
+                .clip(MotormilaRadius.md)
                 .background(MotormilaSurface)
-                .border(0.5.dp, MotormilaOutline, RoundedCornerShape(20.dp)),
+                .border(1.dp, MotormilaOutline, MotormilaRadius.md),
             contentAlignment = Alignment.Center,
         ) {
             Icon(

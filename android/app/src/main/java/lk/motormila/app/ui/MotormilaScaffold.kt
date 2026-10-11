@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CameraAlt
@@ -61,6 +60,9 @@ import lk.motormila.app.ui.theme.MotormilaGood
 import lk.motormila.app.ui.theme.MotormilaPill
 import lk.motormila.app.ui.theme.MotormilaPrimary
 import lk.motormila.app.ui.theme.MotormilaPrimaryBright
+import lk.motormila.app.ui.theme.MotormilaPrimaryContainer
+import lk.motormila.app.ui.theme.MotormilaPrimaryGlow
+import lk.motormila.app.ui.theme.MotormilaRadius
 import lk.motormila.app.ui.theme.MotormilaSecondaryText
 import lk.motormila.app.ui.theme.ReduceMotion
 import lk.motormila.app.ui.theme.applePress
@@ -127,7 +129,7 @@ fun MotormilaScaffold(
                             .liquidGlass(
                                 dockShape,
                                 fill = MotormilaGlassFillStrong,
-                                border = Color(0x330A7AFF),
+                                border = MotormilaPrimaryGlow,
                                 specular = true,
                             )
                             .padding(horizontal = 6.dp, vertical = 8.dp),
@@ -155,7 +157,7 @@ fun MotormilaScaffold(
                                 label = "nav-tint",
                             )
                             val pillWash by animateColorAsState(
-                                targetValue = if (isSelected) Color(0x2E0A7AFF) else Color.Transparent,
+                                targetValue = if (isSelected) MotormilaPrimaryContainer else Color.Transparent,
                                 animationSpec = appleTween(220),
                                 label = "nav-pill",
                             )
@@ -253,9 +255,9 @@ fun MotormilaScaffold(
                     modifier = Modifier
                         .padding(end = 4.dp, bottom = 88.dp)
                         .liquidGlass(
-                            RoundedCornerShape(28.dp),
+                            MotormilaRadius.lg,
                             fill = MotormilaGlassFillStrong,
-                            border = Color(0x330A7AFF),
+                            border = MotormilaPrimaryGlow,
                         )
                         .padding(8.dp),
                 ) {

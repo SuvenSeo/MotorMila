@@ -528,6 +528,5 @@ interface MotormilaApiService {
     suspend fun runRevcarDataPilot(): AdminRevcarPilotDto
 
     // ----------------------------------------------------------------- events
-    @POST("events")
-    suspend fun recordEvent(@Body body: AnalyticsEventRequestDto): AnalyticsEventResponseDto
+    // (recordEvent removed — analytics not wired; do not re-add without a backend contract)
 }

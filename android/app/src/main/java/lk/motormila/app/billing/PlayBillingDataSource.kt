@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import lk.motormila.app.data.local.datastore.SessionStore
 import lk.motormila.app.data.remote.MotormilaApiService
 import lk.motormila.app.data.remote.dto.CheckoutIntentRequestDto
 import kotlin.coroutines.resume
@@ -45,6 +46,7 @@ import kotlin.coroutines.resume
 @Singleton
 class PlayBillingDataSource @Inject constructor(
     private val api: MotormilaApiService,
+    private val sessionStore: SessionStore,
 ) : BillingDataSource {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -111,6 +113,16 @@ class PlayBillingDataSource @Inject constructor(
             }.getOrDefault(false)
         }
 
+    /**
+     * Reconcile the local Play entitlement with Play's purchase cache.
+     * Call on app launch (best-effort): keeps Pro unlocked across restarts
+     * and clears it when the subscription lapses or is refunded.
+     */
+    suspend fun syncPlayEntitlement(activity: Activity) {
+        val active = runCatching { hasActiveProPurchase(activity) }.getOrDefault(false)
+        runCatching { sessionStore.setPlayProEntitled(active) }
+    }
+
     private val purchasesListener = PurchasesUpdatedListener { result, purchases ->
         scope.launch {
             _state.value = when (result.responseCode) {
@@ -127,6 +139,12 @@ class PlayBillingDataSource @Inject constructor(
                             }
                         }
                     }
+                    // Record the local Play entitlement immediately: the backend has
+                    // no Play verification endpoint yet, so a Google-acknowledged
+                    // purchase unlocks Pro on-device (Play's cache = source of
+                    // truth, re-verified on launch via syncPlayEntitlement).
+                    purchases?.firstOrNull { it.purchaseState == com.android.billingclient.api.Purchase.PurchaseState.PURCHASED }
+                        ?.let { runCatching { sessionStore.setPlayProEntitled(true) } }
                     BillingState.Purchased(purchases?.mapNotNull { it.orderId } ?: emptyList())
                 }
                 BillingClient.BillingResponseCode.USER_CANCELED -> BillingState.Idle

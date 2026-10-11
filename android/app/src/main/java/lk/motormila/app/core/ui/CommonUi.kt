@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,7 +25,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import lk.motormila.app.core.motion.rememberReducedMotion
-import lk.motormila.app.ui.components.MotormilaGhostButton
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface
 
@@ -72,43 +72,6 @@ fun ErrorRetry(
             onClick = onRetry,
             fillMaxWidth = false,
         )
-    }
-}
-
-/** Generic empty state with title + body + optional action. */
-@Composable
-fun EmptyState(
-    title: String,
-    body: String,
-    actionLabel: String? = null,
-    onAction: (() -> Unit)? = null,
-    modifier: Modifier = Modifier,
-    graphic: @Composable (() -> Unit)? = null,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(24.dp)
-            .semantics { contentDescription = title },
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        graphic?.invoke()
-        Spacer(Modifier.height(12.dp))
-        Text(title, style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(4.dp))
-        Text(
-            body,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        if (actionLabel != null && onAction != null) {
-            Spacer(Modifier.height(16.dp))
-            MotormilaGhostButton(
-                label = actionLabel,
-                onClick = onAction,
-            )
-        }
     }
 }
 

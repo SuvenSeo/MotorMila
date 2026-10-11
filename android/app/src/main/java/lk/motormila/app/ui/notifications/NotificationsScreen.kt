@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.notifications
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -7,7 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Badge
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -27,9 +29,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import lk.motormila.app.core.motion.rememberReducedMotion
-import lk.motormila.app.core.ui.EmptyState
 import lk.motormila.app.core.ui.ErrorRetry
-import lk.motormila.app.core.ui.SkeletonList
+import lk.motormila.app.ui.components.EmptyState
+import lk.motormila.app.ui.components.LoadingSkeletonList
+import lk.motormila.app.ui.components.cascadeEntrance
 import lk.motormila.app.domain.model.AppNotification
 import lk.motormila.app.ui.components.MotormilaGhostButton
 import lk.motormila.app.ui.components.MotormilaPage
@@ -76,30 +79,43 @@ fun NotificationsScreen(
             onRefresh = { viewModel.onEvent(NotificationsUiEvent.Refresh) },
             modifier = Modifier.fillMaxSize(),
         ) {
-            when {
-                state.isLoading -> SkeletonList()
-                state.error != null && state.items.isEmpty() ->
-                    ErrorRetry(state.error ?: "Error", onRetry = { viewModel.onEvent(NotificationsUiEvent.Refresh) })
+            // Motion spec §5: skeleton→content via Crossfade(200ms); rows cascade in
+            // (fade + 24dp rise, 45ms stagger, 700ms window). Refresh keeps content
+            // visible — isRefreshing never flips isLoading, so no skeleton flash.
+            Crossfade(
+                targetState = state.isLoading,
+                animationSpec = tween(durationMillis = 200),
+                label = "inbox-loading",
+            ) { loading ->
+                if (loading) {
+                    LoadingSkeletonList(rows = 6)
+                } else {
+                    when {
+                        state.error != null && state.items.isEmpty() ->
+                            ErrorRetry(state.error ?: "Error", onRetry = { viewModel.onEvent(NotificationsUiEvent.Refresh) })
 
-                state.items.isEmpty() -> EmptyState(
-                    title = "All caught up",
-                    body = "Price drops, alert matches and market pulses will land here.",
-                )
-
-                else -> LazyColumn(
-                    Modifier.fillMaxSize().padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    item { OfflineBanner(visible = state.offline) }
-                    items(state.items, key = { it.id }) { n ->
-                        NotificationRow(
-                            n = n,
-                            onOpen = {
-                                if (!reducedMotion) haptics.tick()
-                                viewModel.onEvent(NotificationsUiEvent.MarkRead(n.id.toString()))
-                                onOpenNotification(n.id.toString())
-                            },
+                        state.items.isEmpty() -> EmptyState(
+                            title = "All caught up",
+                            body = "Price drops, alert matches and market pulses will land here.",
                         )
+
+                        else -> LazyColumn(
+                            Modifier.fillMaxSize().padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            item { OfflineBanner(visible = state.offline) }
+                            itemsIndexed(state.items, key = { _, n -> n.id }) { index, n ->
+                                NotificationRow(
+                                    n = n,
+                                    modifier = Modifier.cascadeEntrance(index),
+                                    onOpen = {
+                                        if (!reducedMotion) haptics.tick()
+                                        viewModel.onEvent(NotificationsUiEvent.MarkRead(n.id.toString()))
+                                        onOpenNotification(n.id.toString())
+                                    },
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -108,13 +124,17 @@ fun NotificationsScreen(
 }
 
 @Composable
-private fun NotificationRow(n: AppNotification, onOpen: () -> Unit) {
+private fun NotificationRow(
+    n: AppNotification,
+    onOpen: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     // kind is mapper-derived (DATA_CONTRACT §1): "listing" iff the backend
     // link contained /listings/{id}, else "alert". Listing rows deep-link to
     // detail via the graph's Int parsing; alert rows open the inbox only.
     val kindLabel = if (n.kind == "listing") "Listing" else "Alert"
     MotormilaSurface(
-        modifier = Modifier.semantics {
+        modifier = modifier.semantics {
             contentDescription = "${if (n.isRead) "Read" else "Unread"}: ${n.title}"
         },
         onClick = onOpen,

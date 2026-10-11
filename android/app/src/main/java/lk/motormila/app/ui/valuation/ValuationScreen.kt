@@ -1,9 +1,15 @@
 package lk.motormila.app.ui.valuation
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,7 +27,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -33,7 +38,7 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -41,6 +46,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,8 +57,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -73,19 +83,33 @@ import lk.motormila.app.ui.components.MotormilaMetricTile
 import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface
+import lk.motormila.app.ui.components.SlidingNumber
+import lk.motormila.app.ui.components.rememberReducedMotion
+import lk.motormila.app.ui.components.shimmer
+import lk.motormila.app.ui.theme.MotionTokens
 import lk.motormila.app.ui.theme.MotormilaBad
 import lk.motormila.app.ui.theme.MotormilaGood
 import lk.motormila.app.ui.theme.MotormilaOnSurface
 import lk.motormila.app.ui.theme.MotormilaOutline
 import lk.motormila.app.ui.theme.MotormilaPrimary
 import lk.motormila.app.ui.theme.MotormilaPrimaryBright
+import lk.motormila.app.ui.theme.MotormilaRadius
 import lk.motormila.app.ui.theme.MotormilaSecondaryText
 import lk.motormila.app.ui.theme.MotormilaSurface as MotormilaSurfaceColor
 import lk.motormila.app.ui.theme.MotormilaSurfaceHigh
 import lk.motormila.app.ui.theme.MotormilaWarn
+import lk.motormila.app.ui.theme.applePress
+import lk.motormila.app.ui.theme.rememberHaptics
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 private val calcTabs = listOf("Workbench", "Landed", "Lease", "TCO", "Bundle", "Permits", "Deprec.")
 
+/** EaseOutCubic (0.2, 0, 0, 1) — the spec's standard easing for the valuation reveal. */
+private val EaseOutCubic = CubicBezierEasing(0.2f, 0f, 0f, 1f)
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ValuationScreen(
     onOpenListing: (id: Int) -> Unit,
@@ -111,7 +135,15 @@ fun ValuationScreen(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
             when (tab) {
-                0 -> ValuationWorkbenchTab(state, viewModel, onOpenListing)
+                // Pull-to-refresh re-runs the appraisal with the current inputs;
+                // the indicator tracks the estimate — no full-screen takeover.
+                0 -> PullToRefreshBox(
+                    isRefreshing = state.estimating,
+                    onRefresh = { viewModel.onEvent(ValuationUiEvent.Estimate) },
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    ValuationWorkbenchTab(state, viewModel, onOpenListing)
+                }
                 1 -> LandedTab(state, viewModel)
                 2 -> LeaseTab(state, viewModel)
                 3 -> TcoTab(state, viewModel)
@@ -151,7 +183,7 @@ private fun ValuationWorkbenchTab(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 // Eyebrow pill
                 Surface(
-                    shape = RoundedCornerShape(50),
+                    shape = MotormilaRadius.pill,
                     color = MotormilaSurfaceHigh,
                     border = BorderStroke(1.dp, MotormilaOutline),
                 ) {
@@ -288,11 +320,17 @@ private fun AppraisalWizardStepIndicator(
                 else -> MotormilaSecondaryText.copy(alpha = 0.5f)
             }
 
+            val stepPress = remember { MutableInteractionSource() }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(28.dp))
-                    .clickable { onStepClick(stepNum) }
+                    .applePress(stepPress)
+                    .clip(MotormilaRadius.lg)
+                    .clickable(
+                        interactionSource = stepPress,
+                        indication = null,
+                        onClick = { onStepClick(stepNum) },
+                    )
                     .padding(vertical = 4.dp, horizontal = 2.dp),
             ) {
                 Box(
@@ -319,8 +357,7 @@ private fun AppraisalWizardStepIndicator(
                             text = "0$stepNum",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 10.sp,
-                                color = if (isActive) Color.White else MotormilaSecondaryText,
+                                color = if (isActive) MotormilaOnSurface else MotormilaSecondaryText,
                             ),
                         )
                     }
@@ -331,7 +368,6 @@ private fun AppraisalWizardStepIndicator(
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
                         color = if (isActive) MotormilaOnSurface else MotormilaSecondaryText,
-                        fontSize = 11.sp,
                     ),
                 )
             }
@@ -550,7 +586,7 @@ private fun Step02MileageCondition(
 
             // Summary of vehicle selected
             Surface(
-                shape = RoundedCornerShape(28.dp),
+                shape = MotormilaRadius.lg,
                 color = MotormilaSurfaceColor,
                 border = BorderStroke(1.dp, MotormilaOutline),
                 modifier = Modifier.fillMaxWidth(),
@@ -682,7 +718,6 @@ private fun Step02MileageCondition(
                                     text = condDesc,
                                     style = MaterialTheme.typography.bodySmall.copy(
                                         color = MotormilaSecondaryText,
-                                        fontSize = 11.sp,
                                         lineHeight = 16.sp,
                                     ),
                                 )
@@ -732,6 +767,45 @@ private fun Step03ValuationGuidance(
     val f = state.form
     val clipboard = LocalClipboardManager.current
     var copiedWhatsApp by remember { mutableStateOf(false) }
+    val reducedMotion = rememberReducedMotion()
+    val haptics = rememberHaptics()
+
+    // Superpower §7.3 — valuation reveal, choreographed ONCE per fresh estimate.
+    // revealTick bumps only when an estimate that started while this screen was
+    // composed lands (estimating true→false with a result). A cached result on
+    // first open renders settled — no replay, no stray confirm haptic.
+    var revealTick by remember { mutableIntStateOf(0) }
+    var seenEstimating by remember { mutableStateOf(false) }
+    LaunchedEffect(state.estimating, r) {
+        if (state.estimating) {
+            seenEstimating = true
+        } else if (seenEstimating && r != null) {
+            seenEstimating = false
+            revealTick++
+        }
+    }
+    val freshReveal = revealTick > 0
+    // Gauge sweep 0→estimate over 800ms EaseOutCubic.
+    val gaugeSweep = remember(revealTick) { Animatable(if (reducedMotion || !freshReveal) 1f else 0f) }
+    LaunchedEffect(revealTick) {
+        if (reducedMotion || !freshReveal) return@LaunchedEffect
+        gaugeSweep.animateTo(1f, tween(800, easing = EaseOutCubic))
+    }
+    // Digits count up via NumberTicker: start at 0, roll to the median on reveal.
+    var shownMedianLkr by remember(revealTick) {
+        mutableStateOf(if (freshReveal) 0L else r?.medianLkr?.toLong() ?: 0L)
+    }
+    LaunchedEffect(revealTick) {
+        if (!freshReveal) return@LaunchedEffect
+        shownMedianLkr = r?.medianLkr?.toLong() ?: 0L
+    }
+    // Verdict chip springs in with spatialExpressive() + confirm haptic.
+    val chipScale = remember(revealTick) { Animatable(if (reducedMotion || !freshReveal) 1f else 0.55f) }
+    LaunchedEffect(revealTick) {
+        if (reducedMotion || !freshReveal) return@LaunchedEffect
+        chipScale.animateTo(1f, MotionTokens.spatialExpressive())
+        haptics.confirm()
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         // Step banner
@@ -762,28 +836,16 @@ private fun Step03ValuationGuidance(
             )
         }
 
-        // When estimating / loading
-        if (state.estimating) {
-            MotormilaSurface(
-                contentPadding = PaddingValues(32.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                CircularProgressIndicator(
-                    color = MotormilaPrimary,
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                )
-                Text(
-                    text = "Calibrating live Sri Lanka inventory...",
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                )
-                Text(
-                    text = "Synthesizing district asking prices, mileage adjustments, and hedonic regression curves.",
-                    style = MaterialTheme.typography.bodySmall.copy(color = MotormilaSecondaryText),
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                )
-            }
-        } else if (r != null) {
+        // When estimating / loading — motion spec §5: skeleton→result via
+        // Crossfade(200ms); the skeleton mirrors the result card (gauge area + rows).
+        Crossfade(
+            targetState = state.estimating,
+            animationSpec = tween(durationMillis = 200),
+            label = "estimate-swap",
+        ) { estimating ->
+            if (estimating) {
+                EstimatingSkeleton()
+            } else if (r != null) {
             // 1. Fair Market Value Hero Card
             MotormilaSurface(
                 contentPadding = PaddingValues(20.dp),
@@ -811,15 +873,22 @@ private fun Step03ValuationGuidance(
                             else -> MotormilaBad
                         }
                         Surface(
-                            shape = RoundedCornerShape(50),
+                            shape = MotormilaRadius.pill,
                             color = verdictColor.copy(alpha = 0.15f),
                             border = BorderStroke(1.dp, verdictColor.copy(alpha = 0.4f)),
+                            // Superpower §7.3: verdict chip springs in with
+                            // spatialExpressive() + confirm haptic (see revealTick).
+                            modifier = Modifier.graphicsLayer {
+                                val s = chipScale.value
+                                scaleX = s
+                                scaleY = s
+                                alpha = ((s - 0.55f) / 0.45f).coerceIn(0f, 1f)
+                            },
                         ) {
                             Text(
                                 text = r.verdictLabel.ifBlank { r.verdict.replace("_", " ").uppercase() },
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 10.sp,
                                     color = verdictColor,
                                 ),
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
@@ -832,15 +901,56 @@ private fun Step03ValuationGuidance(
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     )
 
-                    // Large Monospace Price
-                    Text(
-                        text = formatLkr(r.medianLkr),
-                        style = MaterialTheme.typography.headlineLarge.copy(
+                    // Superpower §7.3 — estimate gauge: arc draws 0→estimate
+                    // over 800ms EaseOutCubic, driven by gaugeSweep.
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Canvas(
+                            modifier = Modifier
+                                .width(160.dp)
+                                .height(88.dp)
+                                .semantics { contentDescription = "Estimate confidence sweep" },
+                        ) {
+                            val stroke = 12.dp.toPx()
+                            drawArc(
+                                color = MotormilaSurfaceHigh,
+                                startAngle = 180f,
+                                sweepAngle = 180f,
+                                useCenter = false,
+                                style = Stroke(width = stroke, cap = StrokeCap.Round),
+                            )
+                            drawArc(
+                                color = MotormilaPrimary,
+                                startAngle = 180f,
+                                sweepAngle = 180f * gaugeSweep.value,
+                                useCenter = false,
+                                style = Stroke(width = stroke, cap = StrokeCap.Round),
+                            )
+                            val angle = PI * (1.0 - gaugeSweep.value)
+                            val cx = size.width / 2f
+                            val cy = size.height - stroke / 2f
+                            val radius = size.width / 2f - stroke
+                            drawCircle(
+                                color = MotormilaPrimaryBright,
+                                radius = 5.dp.toPx(),
+                                center = Offset(
+                                    (cx + radius * cos(angle)).toFloat(),
+                                    (cy - radius * sin(angle)).toFloat(),
+                                ),
+                            )
+                        }
+                    }
+
+                    // Large Monospace Price — counts up via NumberTicker on each reveal.
+                    SlidingNumber(
+                        value = shownMedianLkr,
+                        prefix = "Rs. ",
+                        style = MaterialTheme.typography.displayMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 32.sp,
-                            color = MotormilaOnSurface,
                         ),
+                        color = MotormilaOnSurface,
                     )
 
                     Text(
@@ -866,7 +976,7 @@ private fun Step03ValuationGuidance(
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Column {
-                            Text("LOW RANGE", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, color = MotormilaSecondaryText))
+                            Text("LOW RANGE", style = MaterialTheme.typography.labelSmall.copy( color = MotormilaSecondaryText))
                             Text(
                                 text = formatLkr(r.lowLkr),
                                 style = MaterialTheme.typography.bodyMedium.copy(
@@ -877,7 +987,7 @@ private fun Step03ValuationGuidance(
                             )
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("FAIR MEDIAN", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, color = MotormilaPrimaryBright, fontWeight = FontWeight.Bold))
+                            Text("FAIR MEDIAN", style = MaterialTheme.typography.labelSmall.copy( color = MotormilaPrimaryBright, fontWeight = FontWeight.Bold))
                             Text(
                                 text = formatLkr(r.medianLkr),
                                 style = MaterialTheme.typography.bodyMedium.copy(
@@ -888,7 +998,7 @@ private fun Step03ValuationGuidance(
                             )
                         }
                         Column(horizontalAlignment = Alignment.End) {
-                            Text("HIGH RANGE", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, color = MotormilaSecondaryText))
+                            Text("HIGH RANGE", style = MaterialTheme.typography.labelSmall.copy( color = MotormilaSecondaryText))
                             Text(
                                 text = formatLkr(r.highLkr),
                                 style = MaterialTheme.typography.bodyMedium.copy(
@@ -905,9 +1015,9 @@ private fun Step03ValuationGuidance(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(10.dp)
-                            .clip(RoundedCornerShape(999.dp))
+                            .clip(MotormilaRadius.pill)
                             .background(MotormilaSurfaceColor)
-                            .border(1.dp, MotormilaOutline, RoundedCornerShape(999.dp)),
+                            .border(1.dp, MotormilaOutline, MotormilaRadius.pill),
                     ) {
                         Box(
                             modifier = Modifier
@@ -989,15 +1099,15 @@ private fun Step03ValuationGuidance(
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
                             text = "• Baseline: Comparable asking median in ${f.district} is ${formatLkr(r.medianLkr)}",
-                            style = MaterialTheme.typography.bodySmall.copy(color = MotormilaSecondaryText, fontSize = 11.sp),
+                            style = MaterialTheme.typography.bodySmall.copy(color = MotormilaSecondaryText,),
                         )
                         Text(
                             text = "• Condition note: ${f.condition} grade vehicle with ${f.mileageKm.ifBlank { "50,000" }} km",
-                            style = MaterialTheme.typography.bodySmall.copy(color = MotormilaSecondaryText, fontSize = 11.sp),
+                            style = MaterialTheme.typography.bodySmall.copy(color = MotormilaSecondaryText,),
                         )
                         Text(
                             text = "• Leverage immediate pay / bank draft for additional 2%–4% settlement concession.",
-                            style = MaterialTheme.typography.bodySmall.copy(color = MotormilaSecondaryText, fontSize = 11.sp),
+                            style = MaterialTheme.typography.bodySmall.copy(color = MotormilaSecondaryText,),
                         )
                     }
             }
@@ -1127,7 +1237,6 @@ private fun Step03ValuationGuidance(
                             "Indicative only — inspect service history and accident record before committing.",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = MotormilaSecondaryText,
-                            fontSize = 11.sp,
                             lineHeight = 16.sp,
                         ),
                     )
@@ -1166,8 +1275,79 @@ private fun Step03ValuationGuidance(
                         modifier = Modifier.align(Alignment.CenterHorizontally),
                     )
                     MotormilaPrimaryButton("Start Appraisal Wizard") { onReset() }
+                }
             }
         }
+    }
+}
+
+/**
+ * Estimating skeleton (polish P1 #7): mirrors the valuation result card —
+ * header row, gauge area, headline figure, caption and low/median/high rows —
+ * with the shared 1200ms shimmer sweep. Static fill when reduced motion is on.
+ */
+@Composable
+private fun EstimatingSkeleton() {
+    val reduced = rememberReducedMotion()
+    MotormilaSurface(
+        contentPadding = PaddingValues(20.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.semantics { contentDescription = "Estimating valuation" },
+    ) {
+        Text(
+            text = "Calibrating live Sri Lanka inventory...",
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.width(150.dp).height(14.dp).clip(MotormilaRadius.pill).shimmer(!reduced))
+            Box(Modifier.width(92.dp).height(26.dp).clip(MotormilaRadius.pill).shimmer(!reduced))
+        }
+        Box(Modifier.width(200.dp).height(18.dp).clip(MotormilaRadius.xs).shimmer(!reduced))
+        // Gauge area.
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Box(
+                Modifier
+                    .width(160.dp)
+                    .height(88.dp)
+                    .clip(MotormilaRadius.md)
+                    .shimmer(!reduced),
+            )
+        }
+        // Headline figure.
+        Box(Modifier.width(230.dp).height(36.dp).clip(MotormilaRadius.xs).shimmer(!reduced))
+        Box(Modifier.width(260.dp).height(14.dp).clip(MotormilaRadius.pill).shimmer(!reduced))
+        Spacer(Modifier.height(4.dp))
+        // Low / median / high rows.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            repeat(3) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(Modifier.width(64.dp).height(12.dp).clip(MotormilaRadius.pill).shimmer(!reduced))
+                    Spacer(Modifier.height(6.dp))
+                    Box(Modifier.width(84.dp).height(16.dp).clip(MotormilaRadius.xs).shimmer(!reduced))
+                }
+            }
+        }
+        // Range bar.
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(10.dp)
+                .clip(MotormilaRadius.pill)
+                .shimmer(!reduced),
+        )
+        Text(
+            text = "Synthesizing district asking prices, mileage adjustments, and hedonic regression curves.",
+            style = MaterialTheme.typography.bodySmall.copy(color = MotormilaSecondaryText),
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+        )
     }
 }
 
@@ -1186,7 +1366,7 @@ private fun GlassTextField(
         onValueChange = onChange,
         label = { Text(label) },
         singleLine = true,
-        shape = RoundedCornerShape(28.dp),
+        shape = MotormilaRadius.lg,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MotormilaPrimary,
