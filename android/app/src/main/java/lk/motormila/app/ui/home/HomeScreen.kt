@@ -199,15 +199,10 @@ fun HomeScreen(
             }
 
             // 3. Stats Row / Bento Metrics Card
-            // Show the full error only when there is truly nothing to display:
-            // if the live feed has listings (from cache/snapshot), show the
-            // stats card instead of a blocking error — the offline banner
-            // (section 1) already communicates the connectivity issue.
             item {
-                val hasAnyContent = state.summary.totalListings > 0 || live.isNotEmpty()
                 if (state.isLoading) {
                     LoadingSkeletonCard(Modifier.padding(horizontal = 16.dp))
-                } else if (state.error != null && !hasAnyContent) {
+                } else if (state.error != null && state.summary.totalListings == 0) {
                     ErrorState(
                         message = state.error ?: "Unknown error",
                         onRetry = viewModel::retry,
@@ -441,15 +436,8 @@ fun HomeScreen(
                 }
             }
 
-            // 12. Empty State — only when there is genuinely nothing to show.
-            // The live feed (liveStrip) can carry listings even when hotDeals
-            // and priceDrops are empty, so it must be part of the check or the
-            // empty state contradicts the feed above it.
-            if (!state.isLoading &&
-                state.priceDrops.isEmpty() &&
-                state.insights.hotDeals.isEmpty() &&
-                live.isEmpty()
-            ) {
+            // 12. Empty State
+            if (!state.isLoading && state.priceDrops.isEmpty() && state.insights.hotDeals.isEmpty()) {
                 item {
                     EmptyState(
                         title = "No market data yet",
@@ -652,7 +640,7 @@ private fun CinematicHeroHeader(
  * large bold count, sub-label, and metrics grid (AVG PRICE, NEW 24H, GOOD DEALS).
  */
 @Composable
-private fun HeroStatsCard(
+internal fun HeroStatsCard(
     total: Int,
     goodDeals: Int,
     new24h: Int,
@@ -1115,7 +1103,7 @@ private fun LiveIncomingFeedTicker(
                                 indication = null,
                                 onClick = { onItemClick(item) },
                             )
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                            .padding(horizontal = 16.dp, vertical = 11.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
@@ -1327,7 +1315,7 @@ private fun SectionRow(title: String, onSeeAll: (() -> Unit)?) {
 }
 
 @Composable
-private fun PriceDropCard(
+internal fun PriceDropCard(
     title: String,
     imageUrl: String?,
     newPrice: String,
@@ -1496,7 +1484,7 @@ private fun DistrictChip(district: String, count: Int, median: String, onClick: 
     MotormilaSurface(
         onClick = onClick,
         fillMaxWidth = false,
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
         modifier = Modifier.heightIn(min = 48.dp),
     ) {
         Text(district, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge, color = MotormilaOnSurface)
