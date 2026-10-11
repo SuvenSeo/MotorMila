@@ -1,4 +1,5 @@
 import java.util.Properties
+import org.gradle.api.tasks.testing.Test
 
 plugins {
     alias(libs.plugins.android.application)
@@ -7,6 +8,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.serialization)
+    alias(libs.plugins.paparazzi)
 }
 
 android {
@@ -17,8 +19,8 @@ android {
         applicationId = "lk.motormila.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 15
-        versionName = "1.6.3"
+        versionCode = 14
+        versionName = "1.6.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -121,6 +123,13 @@ android {
             isReturnDefaultValues = true
         }
     }
+
+    // Show test stdout in CI logs (diagnosing ViewModel dispatcher behaviour).
+    tasks.withType<Test> {
+        testLogging {
+            showStandardStreams = true
+        }
+    }
 }
 
 dependencies {
@@ -199,4 +208,6 @@ dependencies {
     testImplementation(libs.turbine)
     testImplementation(libs.mockk)
     testImplementation(libs.room.testing)
+    // Screenshot (Paparazzi) + functional (Robolectric) tests — JVM only, no emulator.
+    testImplementation(libs.paparazzi)
 }

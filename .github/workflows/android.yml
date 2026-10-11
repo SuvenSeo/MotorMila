@@ -63,6 +63,20 @@ jobs:
       - name: Unit tests
         run: ./gradlew :app:testDebugUnitTest --stacktrace
 
+      - name: Verify Paparazzi snapshots
+        # Visual regression: fails on any pixel diff vs the committed goldens
+        # in android/app/src/test/snapshots/. Re-record locally with
+        # ./gradlew :app:recordPaparazziDebug and commit the updated goldens.
+        run: ./gradlew :app:verifyPaparazziDebug --stacktrace
+
+      - name: Upload Paparazzi failure report
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: paparazzi-failures
+          path: android/app/build/reports/paparazzi/
+          if-no-files-found: ignore
+
       - name: Resolve sideload keystore
         working-directory: .
         env:
