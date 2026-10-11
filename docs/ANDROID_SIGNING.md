@@ -36,11 +36,12 @@ new one is staged, then cutting over. Concretely:
    `ANDROID_KEYSTORE_FILE` (the base64 blob),
    `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`
    (matching the Gradle `ANDROID_KEYSTORE_*` names in `build.gradle.kts`).
-4. The `android.yml` / `android-release.yml` "Resolve / Verify sideload
-   keystore" steps already check `ANDROID_KEYSTORE_FILE` first and stage it to
-   the Gradle-expected debug-keystore path — no build change is needed. Cut
-   over by setting the secrets; remove `ci-signing.keystore` only after the
-   first secret-signed release is installed everywhere.
+4. The `android.yml` / `android-release.yml` "Resolve sideload keystore" steps
+   check `ANDROID_KEYSTORE_FILE` first, base64-decode it to
+   `$HOME/.android/motormila-sideload.keystore`, and pass that path to Gradle
+   (falling back to the committed `ci-signing.keystore` when the secret is
+   unset). Cut over by setting the secrets; remove `ci-signing.keystore`
+   only after the first secret-signed release is installed everywhere.
 5. `git rm --cached android/ci-signing.keystore` once cut over, then purge it
    from history together with the tracked DB dumps (`git filter-repo`), since
    the old private key lives in the cloned history.
