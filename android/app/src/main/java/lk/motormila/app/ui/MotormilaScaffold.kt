@@ -317,13 +317,15 @@ fun MotormilaScaffold(
         content = { paddingValues ->
             // When the floating AI/scan button stack is visible, reserve end
             // padding so scrollable content doesn't slide underneath it.
-            // Stack width: 8dp glass padding + 56dp button + 8dp glass padding,
-            // plus 4dp screen margin = 76dp.
+            // Stack width: 8dp glass padding + 48dp button + 8dp glass padding,
+            // plus 4dp margin = 68dp. We reserve 60dp here; screens add their
+            // own ~16dp content padding, giving ~76dp total clearance — enough
+            // to clear the stack without squeezing content to ~70% width.
             val fabSafePadding = if (showBottomBar) {
                 PaddingValues(
                     start = paddingValues.calculateStartPadding(LayoutDirection.Ltr),
                     top = paddingValues.calculateTopPadding(),
-                    end = paddingValues.calculateEndPadding(LayoutDirection.Ltr) + 76.dp,
+                    end = paddingValues.calculateEndPadding(LayoutDirection.Ltr) + 60.dp,
                     bottom = paddingValues.calculateBottomPadding(),
                 )
             } else {

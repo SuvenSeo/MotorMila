@@ -156,10 +156,13 @@ private fun WatchRow(
                     onAlert()
                     false
                 }
-                // Swipe left: remove from watchlist.
+                // Swipe left: remove from watchlist. Return false so the box
+                // snaps back — the repository Flow drives the actual removal.
+                // Returning true left the card stuck in dismissed state (red
+                // background bleeding through) when the list update lagged.
                 SwipeToDismissBoxValue.EndToStart -> {
                     onRemove()
-                    true
+                    false
                 }
                 SwipeToDismissBoxValue.Settled -> false
             }

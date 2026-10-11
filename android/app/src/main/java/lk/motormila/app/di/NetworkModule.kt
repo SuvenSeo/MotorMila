@@ -67,6 +67,11 @@ object NetworkModule {
             .connectTimeout(LIVE_CONNECT_TIMEOUT_S, TimeUnit.SECONDS)
             .readTimeout(LIVE_READ_TIMEOUT_S, TimeUnit.SECONDS)
             .writeTimeout(60, TimeUnit.SECONDS)
+            // callTimeout covers the WHOLE call including DNS resolution and
+            // TLS handshake, which connect/read timeouts do not. Without this,
+            // a hanging DNS lookup on a flaky mobile network can stall a
+            // request indefinitely past the ViewModel's withTimeout.
+            .callTimeout(15, TimeUnit.SECONDS)
             .addInterceptor(authInterceptor)
             .addInterceptor(logging)
             .build()
@@ -99,6 +104,8 @@ object NetworkModule {
         val client = OkHttpClient.Builder()
             .connectTimeout(SNAPSHOT_CONNECT_TIMEOUT_S, TimeUnit.SECONDS)
             .readTimeout(SNAPSHOT_READ_TIMEOUT_S, TimeUnit.SECONDS)
+            // Same DNS/TLS hang protection as the live client.
+            .callTimeout(15, TimeUnit.SECONDS)
             .build()
         return Retrofit.Builder()
             .baseUrl(SNAPSHOT_BASE_URL)
