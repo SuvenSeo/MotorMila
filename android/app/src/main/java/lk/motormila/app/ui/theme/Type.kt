@@ -9,21 +9,24 @@ import androidx.compose.ui.unit.sp
 import lk.motormila.app.R
 
 /**
- * Space Grotesk 700 — brand display face (brand bible). Bundled from Google
- * Fonts (OFL). Applied to display/headline styles; body stays system default.
+ * Cal Sans — the brand typeface, used fully across the app (display through
+ * body). Single-weight display face (SemiBold 600); Bold requests map to the
+ * same file. Bundled from the Cal.com open-source release (OFL).
  */
-val SpaceGrotesk = FontFamily(
-    Font(R.font.space_grotesk_bold, FontWeight.Bold),
+val CalSans = FontFamily(
+    Font(R.font.cal_sans_semibold, FontWeight.SemiBold),
+    Font(R.font.cal_sans_semibold, FontWeight.Bold),
 )
 
 /**
- * Inter default + monospace numerals. DisplayM uses mono for price figures.
- * Badge style [LabelS] carries +0.3 tracking and is uppercased at call sites.
+ * Cal Sans everywhere + monospace numerals. DisplayM uses mono for price
+ * figures. Badge style [LabelS] carries +0.3 tracking and is uppercased at
+ * call sites.
  */
 val MotormilaTypography = Typography(
     displayLarge = TextStyle(
-        fontFamily = SpaceGrotesk,
-        fontWeight = FontWeight.Bold, // 700
+        fontFamily = CalSans,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 48.sp,
         lineHeight = 52.sp,
         letterSpacing = (-1.2).sp,
@@ -35,45 +38,45 @@ val MotormilaTypography = Typography(
         lineHeight = 40.sp,
     ),
     headlineLarge = TextStyle(
-        fontFamily = SpaceGrotesk,
-        fontWeight = FontWeight.Bold, // 700
+        fontFamily = CalSans,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 24.sp,
         lineHeight = 30.sp,
         letterSpacing = (-0.4).sp,
     ),
     headlineMedium = TextStyle(
-        fontFamily = SpaceGrotesk,
-        fontWeight = FontWeight.Bold, // 700
+        fontFamily = CalSans,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 18.sp,
         lineHeight = 24.sp,
     ),
     titleMedium = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Medium,
+        fontFamily = CalSans,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 16.sp,
         lineHeight = 22.sp,
     ),
     bodyLarge = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = CalSans,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp,
     ),
     bodyMedium = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = CalSans,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         lineHeight = 20.sp,
     ),
     labelLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.SemiBold, // 600
+        fontFamily = CalSans,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 14.sp,
         lineHeight = 20.sp,
     ),
     labelSmall = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Medium, // 500
+        fontFamily = CalSans,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 12.sp,
         lineHeight = 16.sp,
         letterSpacing = 0.3.sp,
