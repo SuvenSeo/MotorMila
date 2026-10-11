@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Minimal legacy colors; Compose tokens in ui/theme/Color.kt are canonical. -->
+<!-- Minimal legacy colors; Compose tokens in ui/theme/Color.kt are canonical.
+     Brand purge 2026-10-11: banned gold #E7C46B remapped to Motormila Blue;
+     dark grounds now Ink #09090B per the brand bible. -->
 <resources>
-    <color name="motormila_bg">#06090E</color>
-    <color name="motormila_gold">#E7C46B</color>
-    <color name="launcher_bg">#06090E</color>
-    <color name="launcher_gold">#E7C46B</color>
+    <color name="motormila_bg">#09090B</color>
+    <color name="motormila_gold">#0A7AFF</color>
+    <color name="motormila_deal">#00C853</color>
+    <color name="launcher_bg">#09090B</color>
+    <color name="launcher_gold">#0A7AFF</color>
 </resources>

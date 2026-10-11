@@ -22,6 +22,7 @@ class SettingsStore @Inject constructor(
         val SORT = stringPreferencesKey("sort")
         val DISTRICT = stringPreferencesKey("district")
         val BIOMETRIC = booleanPreferencesKey("biometricEnabled")
+        val ANNOUNCEMENT_DISMISSED = booleanPreferencesKey("announcementDismissed")
         val BASE_URL = stringPreferencesKey("baseUrlOverride")
         val DEALER_TOKEN = stringPreferencesKey("dealerClaimToken")
         val FCM_TOKEN = stringPreferencesKey("fcmToken")
@@ -33,6 +34,7 @@ class SettingsStore @Inject constructor(
         val sort: String = "newest",
         val district: String? = null,
         val biometricEnabled: Boolean = false,
+        val announcementDismissed: Boolean = false,
         val baseUrlOverride: String? = null,
         val dealerClaimToken: String? = null,
         val fcmToken: String? = null,
@@ -45,6 +47,7 @@ class SettingsStore @Inject constructor(
             sort = prefs[Keys.SORT] ?: "newest",
             district = prefs[Keys.DISTRICT],
             biometricEnabled = prefs[Keys.BIOMETRIC] == true,
+            announcementDismissed = prefs[Keys.ANNOUNCEMENT_DISMISSED] == true,
             baseUrlOverride = prefs[Keys.BASE_URL],
             dealerClaimToken = prefs[Keys.DEALER_TOKEN],
             fcmToken = prefs[Keys.FCM_TOKEN],
@@ -57,6 +60,9 @@ class SettingsStore @Inject constructor(
     suspend fun setDistrict(value: String?) = editNullable(Keys.DISTRICT, value)
     suspend fun setBiometricEnabled(value: Boolean) {
         dataStore.edit { it[Keys.BIOMETRIC] = value }
+    }
+    suspend fun setAnnouncementDismissed(value: Boolean) {
+        dataStore.edit { it[Keys.ANNOUNCEMENT_DISMISSED] = value }
     }
     suspend fun setBaseUrlOverride(value: String?) = editNullable(Keys.BASE_URL, value)
     suspend fun setDealerClaimToken(value: String?) = editNullable(Keys.DEALER_TOKEN, value)

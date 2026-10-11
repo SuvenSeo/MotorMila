@@ -11,9 +11,10 @@ sealed interface ShareTarget {
 
 private val SupportedHosts = listOf(
     "ikman.lk", "riyasewana.com", "patpat.lk",
-    // Own FMV share cards: text share + https://motormila.vercel.app/listings/{id}
+    // Own FMV share cards: text share + https://motormila.pages.dev/listing/{id}
     // (DOMAIN_CONTRACT) and in-app motormila://listing/{id} deep links.
-    "motormila.vercel.app", "motormila.lk",
+    // motormila.vercel.app + motormila.lk kept for back-compat with old shares.
+    "motormila.pages.dev", "motormila.vercel.app", "motormila.lk",
 )
 private val IdInUrl = Regex("""(\d{5,})""")
 // Web URLs are /listing/{id} (singular) — the old /listings/ regex never matched.

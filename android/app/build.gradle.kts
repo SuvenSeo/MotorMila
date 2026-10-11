@@ -17,8 +17,8 @@ android {
         applicationId = "lk.motormila.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 11
-        versionName = "1.5.5"
+        versionCode = 12
+        versionName = "1.6.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -72,7 +72,7 @@ android {
             versionNameSuffix = "-debug"
             // Point a physical-device demo build at any backend without editing code:
             //   .\gradlew.bat :app:assembleDebug -PmotormilaApiUrl=https://host/api/v1
-            // or MOTORMILA_API_URL=https://host/api/v1. Default is the emulator loopback.
+            // or MOTORMILA_API_URL=https://host/api/v1. Default is the production HF backend.
             val debugBaseUrl = providers.environmentVariable("MOTORMILA_API_URL")
                 .orElse(providers.gradleProperty("motormilaApiUrl"))
                 .getOrElse("https://seo292-vehicle-platform-backend.hf.space/api/v1")

@@ -97,4 +97,54 @@
     <string name="update_downloading">புதுப்பிப்பு பதிவிறக்கப்படுகிறது…</string>
     <string name="update_download_failed">புதுப்பிப்பை பதிவிறக்க முடியவில்லை. இணைப்பை சரிபார்த்து மீண்டும் முயற்சிக்கவும்.</string>
     <string name="update_up_to_date">நீங்கள் சமீபத்திய பதிப்பில் இருக்கிறீர்கள்.</string>
+
+    <!-- Announcement banner (Home) -->
+    <string name="announcement_text">சந்தை புதுப்பிப்பு — ikman, riyasewana மற்றும் patpat தளங்களில் குறைந்த விலை பட்டியல்கள் தினமும் குறிக்கப்படுகின்றன.</string>
+    <string name="announcement_view_deals">சலுகைகளைப் பார்க்க</string>
+    <string name="announcement_dismiss">அறிவிப்பை மூடுக</string>
+
+    <!-- How-it-works animated beam band (Home) -->
+    <string name="how_it_works_eyebrow">இது எப்படி வேலை செய்கிறது</string>
+    <string name="how_it_works_title">பட்டியலிலிருந்து சலுகை எச்சரிக்கை வரை மூன்று படிகள்</string>
+    <string name="how_it_works_blurb">தீவின் மிகப்பெரிய சந்தைகளை நாங்கள் தொடர்ந்து கண்காணித்து, ஒவ்வொரு பட்டியலையும் நியாயமான மதிப்புடன் மதிப்பிட்டு, விலை குறைந்த உடனே உங்களுக்குத் தெரிவிக்கிறோம்.</string>
+    <string name="how_step1_title">1 \u00b7 நாங்கள் கண்காணிக்கிறோம்</string>
+    <string name="how_step1_sub">ikman, riyasewana மற்றும் patpat தினமும் ஸ்கேன் செய்யப்படுகிறது</string>
+    <string name="how_step2_title">2 \u00b7 நாங்கள் மதிப்பிடுகிறோம்</string>
+    <string name="how_step2_sub">நியாய-மதிப்பு இயந்திரம் ஒவ்வொரு விவரத்தையும் விலை நிர்ணயிக்கிறது</string>
+    <string name="how_step3_title">3 \u00b7 நீங்கள் செயல்படுங்கள்</string>
+    <string name="how_step3_sub">சலுகை தோன்றிய உடனே எச்சரிக்கைகள்</string>
+
+    <!-- District sales velocity (DistrictHub) -->
+    <string name="district_velocity_eyebrow">சந்தை துடிப்பு</string>
+    <string name="district_velocity_title">மாவட்ட விற்பனை வேகம்</string>
+    <string name="district_velocity_sub">செயலில் உள்ள பட்டியல்கள் \u00b7 முதல் 8 மாவட்டங்கள்</string>
+    <string name="district_velocity_listings">%1$d பட்டியல்கள்</string>
+
+    <!-- Make combobox (FilterSheet) -->
+    <string name="filter_make_label">தயாரிப்பாளர்</string>
+    <string name="filter_make_search_hint">தயாரிப்பாளர்களைத் தேடுக\u2026</string>
+    <string name="filter_all_makes">அனைத்து தயாரிப்பாளர்களும்</string>
+
+    <!-- Sell your car -->
+    <string name="sell_title">உங்கள் காரை விற்கவும்</string>
+    <string name="sell_subtitle">ஒரு நிமிடத்திற்குள் Motormila-இல் பட்டியலிடுங்கள். நேரலைக்கு முன் மதிப்பாய்வு செய்யப்படும்.</string>
+    <string name="sell_make">தயாரிப்பாளர்</string>
+    <string name="sell_model">மாடல்</string>
+    <string name="sell_year">ஆண்டு</string>
+    <string name="sell_price_lkr">கேட்கும் விலை (ரூ.)</string>
+    <string name="sell_mileage_km">ஓடிய தூரம் (km)</string>
+    <string name="sell_fuel">எரிபொருள் வகை</string>
+    <string name="sell_transmission">கியர் அமைப்பு</string>
+    <string name="sell_condition">நிலை</string>
+    <string name="sell_district">மாவட்டம்</string>
+    <string name="sell_city">நகரம்</string>
+    <string name="sell_contact_name">தொடர்பு பெயர்</string>
+    <string name="sell_contact_phone">தொலைபேசி எண்</string>
+    <string name="sell_description">விளக்கம்</string>
+    <string name="sell_submit">வாகனத்தைப் பட்டியலிடுக</string>
+    <string name="sell_submitting">பட்டியலிடப்படுகிறது\u2026</string>
+    <string name="sell_login_required">வாகனத்தைப் பட்டியலிட உள்நுழையவும்.</string>
+    <string name="sell_login_cta">உள்நுழைக / பதிவு செய்க</string>
+    <string name="sell_success_title">பட்டியல் சமர்ப்பிக்கப்பட்டது</string>
+    <string name="sell_success_body">உங்கள் %1$s மதிப்பாய்வில் உள்ளது. நேரலைக்கு வந்ததும் தெரிவிப்போம்.</string>
 </resources>

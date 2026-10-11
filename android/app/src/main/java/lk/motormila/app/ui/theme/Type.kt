@@ -2,9 +2,19 @@ package lk.motormila.app.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import lk.motormila.app.R
+
+/**
+ * Space Grotesk 700 — brand display face (brand bible). Bundled from Google
+ * Fonts (OFL). Applied to display/headline styles; body stays system default.
+ */
+val SpaceGrotesk = FontFamily(
+    Font(R.font.space_grotesk_bold, FontWeight.Bold),
+)
 
 /**
  * Inter default + monospace numerals. DisplayM uses mono for price figures.
@@ -12,8 +22,8 @@ import androidx.compose.ui.unit.sp
  */
 val MotormilaTypography = Typography(
     displayLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.SemiBold, // 600
+        fontFamily = SpaceGrotesk,
+        fontWeight = FontWeight.Bold, // 700
         fontSize = 48.sp,
         lineHeight = 52.sp,
         letterSpacing = (-1.2).sp,
@@ -25,15 +35,15 @@ val MotormilaTypography = Typography(
         lineHeight = 40.sp,
     ),
     headlineLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.SemiBold,
+        fontFamily = SpaceGrotesk,
+        fontWeight = FontWeight.Bold, // 700
         fontSize = 24.sp,
         lineHeight = 30.sp,
         letterSpacing = (-0.4).sp,
     ),
     headlineMedium = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.SemiBold,
+        fontFamily = SpaceGrotesk,
+        fontWeight = FontWeight.Bold, // 700
         fontSize = 18.sp,
         lineHeight = 24.sp,
     ),

@@ -25,7 +25,7 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
  * Logging: BODY in debug, NONE in release. JSON: ignoreUnknownKeys +
  * coerceInputValues + explicitNulls=false so backend additions never crash decode.
  */
-private const val SNAPSHOT_BASE_URL = "https://motormila.vercel.app/snapshots/latest/"
+private const val SNAPSHOT_BASE_URL = "https://motormila.pages.dev/snapshots/latest/"
 
 @Module
 @InstallIn(SingletonComponent::class)

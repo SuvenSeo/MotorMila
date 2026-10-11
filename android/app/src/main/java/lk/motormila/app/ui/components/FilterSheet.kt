@@ -108,8 +108,8 @@ fun FilterSheet(
             Spacer(Modifier.height(12.dp))
 
             SectionLabel("Make")
-            ChipFlow(
-                options = makes.take(14),
+            MakeCombobox(
+                options = makes,
                 selected = draft.make,
                 onSelect = { draft = draft.copy(make = it, model = null) },
             )

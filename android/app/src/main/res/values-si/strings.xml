@@ -97,4 +97,54 @@
     <string name="update_downloading">යාවත්කාලීනය බාගනිමින්…</string>
     <string name="update_download_failed">යාවත්කාලීනය බාගත කළ නොහැක. සම්බන්ධතාවය පරීක්ෂා කර නැවත උත්සාහ කරන්න.</string>
     <string name="update_up_to_date">ඔබ නවතම අනුවාදයේ සිටියි.</string>
+
+    <!-- Announcement banner (Home) -->
+    <string name="announcement_text">වෙළඳපොළ යාවත්කාලීනය — ikman, riyasewana සහ patpat හරහා දිනපතා අඩු මිලට ඇති ලැයිස්තු සලකුණු කෙරේ.</string>
+    <string name="announcement_view_deals">ගනුදෙනු බලන්න</string>
+    <string name="announcement_dismiss">නිවේදනය ඉවත් කරන්න</string>
+
+    <!-- How-it-works animated beam band (Home) -->
+    <string name="how_it_works_eyebrow">ක්‍රියා කරන ආකාරය</string>
+    <string name="how_it_works_title">ලැයිස්තුවේ සිට ගනුදෙනු ඇඟවීමට පියවර තුනකින්</string>
+    <string name="how_it_works_blurb">දිවයිනේ විශාලතම වෙළඳපොළවල් අපි නිරන්තරයෙන් නිරීක්ෂණය කර, සෑම ලැයිස්තුවක්ම සාධාරණ වටිනාකමට සාපේක්ෂව ලකුණු කර, මිල අඩු වූ වහාම ඔබට දැනුම් දෙමු.</string>
+    <string name="how_step1_title">1 \u00b7 අපි නිරීක්ෂණය කරමු</string>
+    <string name="how_step1_sub">ikman, riyasewana සහ patpat දිනපතා පරිලෝකනය කෙරේ</string>
+    <string name="how_step2_title">2 \u00b7 අපි ලකුණු කරමු</string>
+    <string name="how_step2_sub">සාධාරණ-වටිනාකම් එන්ජිම සෑම විස්තරයක්ම මිල කරයි</string>
+    <string name="how_step3_title">3 \u00b7 ඔබ ක්‍රියා කරන්න</string>
+    <string name="how_step3_sub">ගනුදෙනුවක් ආ වහාම ඇඟවීම්</string>
+
+    <!-- District sales velocity (DistrictHub) -->
+    <string name="district_velocity_eyebrow">වෙළඳපොළ ස්පන්දනය</string>
+    <string name="district_velocity_title">දිස්ත්‍රික් විකුණුම් වේගය</string>
+    <string name="district_velocity_sub">සක්‍රීය ලැයිස්තු \u00b7 ඉහළම දිස්ත්‍රික් 8</string>
+    <string name="district_velocity_listings">ලැයිස්තු %1$d</string>
+
+    <!-- Make combobox (FilterSheet) -->
+    <string name="filter_make_label">නිෂ්පාදකයා</string>
+    <string name="filter_make_search_hint">නිෂ්පාදකයින් සොයන්න\u2026</string>
+    <string name="filter_all_makes">සියලුම නිෂ්පාදකයින්</string>
+
+    <!-- Sell your car -->
+    <string name="sell_title">ඔබේ වාහනය විකුණන්න</string>
+    <string name="sell_subtitle">විනාඩියකට අඩු කාලයකින් Motormila හි ලැයිස්තු කරන්න. සජීවී වීමට පෙර සමාලෝචනය කෙරේ.</string>
+    <string name="sell_make">නිෂ්පාදකයා</string>
+    <string name="sell_model">මාදිලිය</string>
+    <string name="sell_year">වර්ෂය</string>
+    <string name="sell_price_lkr">ඉල්ලුම් මිල (රු.)</string>
+    <string name="sell_mileage_km">ධාවන දුර (km)</string>
+    <string name="sell_fuel">ඉන්ධන වර්ගය</string>
+    <string name="sell_transmission">ගියර් පද්ධතිය</string>
+    <string name="sell_condition">තත්ත්වය</string>
+    <string name="sell_district">දිස්ත්‍රික්කය</string>
+    <string name="sell_city">නගරය</string>
+    <string name="sell_contact_name">සම්බන්ධ විය හැකි නම</string>
+    <string name="sell_contact_phone">දුරකථන අංකය</string>
+    <string name="sell_description">විස්තරය</string>
+    <string name="sell_submit">වාහනය ලැයිස්තු කරන්න</string>
+    <string name="sell_submitting">ලැයිස්තු කරමින්\u2026</string>
+    <string name="sell_login_required">වාහනය ලැයිස්තු කිරීමට ලොග් වන්න.</string>
+    <string name="sell_login_cta">ලොග් වන්න / ලියාපදිංචි වන්න</string>
+    <string name="sell_success_title">ලැයිස්තුව යොමු කෙරේ</string>
+    <string name="sell_success_body">ඔබේ %1$s සමාලෝචනයට යටත්. සජීවී වූ වහාම දැනුම් දෙන්නෙමු.</string>
 </resources>

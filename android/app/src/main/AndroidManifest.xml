@@ -92,35 +92,39 @@
                 <data android:scheme="motormila" android:host="sign-in" />
                 <data android:scheme="motormila" android:host="sign-up" />
                 <data android:scheme="motormila" android:host="best-picks" />
+                <data android:scheme="motormila" android:host="notifications" />
+                <data android:scheme="motormila" android:host="sell" />
             </intent-filter>
             <intent-filter android:autoVerify="false">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="motormila.vercel.app" android:pathPrefix="/listing" />
-                <data android:scheme="https" android:host="motormila.vercel.app" android:pathPrefix="/cars" />
-                <data android:scheme="https" android:host="motormila.vercel.app" android:pathPrefix="/locations" />
-                <data android:scheme="https" android:host="motormila.vercel.app" android:pathPrefix="/calculator" />
-                <data android:scheme="https" android:host="motormila.vercel.app" android:pathPrefix="/estimate" />
-                <data android:scheme="https" android:host="motormila.vercel.app" android:pathPrefix="/best-picks" />
-                <data android:scheme="https" android:host="motormila.vercel.app" android:pathPrefix="/compare" />
-                <data android:scheme="https" android:host="motormila.vercel.app" android:pathPrefix="/dealer" />
-                <data android:scheme="https" android:host="motormila.vercel.app" android:pathPrefix="/settings" />
-                <data android:scheme="https" android:host="motormila.vercel.app" android:pathPrefix="/alerts" />
-                <data android:scheme="https" android:host="motormila.vercel.app" android:pathPrefix="/sign-in" />
-                <data android:scheme="https" android:host="motormila.vercel.app" android:pathPrefix="/sign-up" />
-                <data android:scheme="https" android:host="motormila.vercel.app" android:pathPrefix="/pro" />
-                <data android:scheme="https" android:host="motormila.vercel.app" android:pathPrefix="/official-pulse" />
-                <data android:scheme="https" android:host="motormila.vercel.app" android:pathPrefix="/pricing" />
-                <data android:scheme="https" android:host="motormila.vercel.app" android:pathPrefix="/docs" />
-                <data android:scheme="https" android:host="motormila.vercel.app" android:pathPrefix="/admin" />
-                <data android:scheme="https" android:host="motormila.vercel.app" android:pathPrefix="/privacy" />
-                <data android:scheme="https" android:host="motormila.vercel.app" android:pathPrefix="/terms" />
-                <data android:scheme="https" android:host="motormila.vercel.app" android:pathPrefix="/permits" />
-                <data android:scheme="https" android:host="motormila.vercel.app" android:pathPrefix="/price-index" />
-                <data android:scheme="https" android:host="motormila.vercel.app" android:pathPrefix="/trends" />
-                <data android:scheme="https" android:host="motormila.vercel.app" android:pathPrefix="/ev-chargers" />
-                <data android:scheme="https" android:host="motormila.vercel.app" android:pathPrefix="/ev-hub" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/listing" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/cars" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/locations" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/calculator" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/estimate" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/best-picks" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/compare" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/dealer" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/settings" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/alerts" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/sign-in" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/sign-up" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/pro" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/official-pulse" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/pricing" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/docs" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/admin" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/privacy" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/terms" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/permits" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/price-index" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/trends" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/ev-chargers" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/ev-hub" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/notifications" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/sell" />
             </intent-filter>
             <meta-data
                 android:name="android.app.shortcuts"

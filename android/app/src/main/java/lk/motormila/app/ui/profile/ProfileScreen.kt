@@ -76,6 +76,7 @@ fun ProfileScreen(
     onDocsClick: () -> Unit = {},
     onPricingClick: () -> Unit = {},
     onPermitsClick: () -> Unit = {},
+    onSellClick: () -> Unit = {},
     onAdminClick: () -> Unit = {},
     onEvChargersClick: () -> Unit = {},
     onPrivacyClick: () -> Unit = {},
@@ -219,7 +220,8 @@ fun ProfileScreen(
                                 MotormilaGroupRow(stringResource(R.string.hub_index_title), onClick = { navTap(onPriceIndexClick) })
                                 MotormilaGroupRow(stringResource(R.string.hub_permits_title), onClick = { navTap(onPermitsClick) })
                                 MotormilaGroupRow(stringResource(R.string.hub_docs_title), onClick = { navTap(onDocsClick) })
-                                MotormilaGroupRow(stringResource(R.string.hub_pricing_title), onClick = { navTap(onPricingClick) }, showDivider = false)
+                                MotormilaGroupRow(stringResource(R.string.hub_pricing_title), onClick = { navTap(onPricingClick) })
+                                MotormilaGroupRow(stringResource(R.string.sell_title), onClick = { navTap(onSellClick) }, showDivider = false)
                             }
                         }
                         item {

@@ -117,6 +117,9 @@ data object Permits
 @Serializable
 data object PriceIndex
 
+@Serializable
+data object Sell
+
 /** Routes that show the bottom NavigationBar. */
 val BOTTOM_BAR_ROUTES: Set<String> = setOf(
     Home::class.qualifiedName!!,
@@ -129,7 +132,7 @@ val BOTTOM_BAR_ROUTES: Set<String> = setOf(
 /** Returns true if the given destination route (qualified class name) shows the bottom bar. */
 fun isBottomBarRoute(route: String?): Boolean = route in BOTTOM_BAR_ROUTES
 
-private const val HTTPS_APP_HOST = "motormila.vercel.app"
+private const val HTTPS_APP_HOST = "motormila.pages.dev"
 
 internal data class ParsedDeepLink(
     val scheme: String,
@@ -165,7 +168,7 @@ internal fun parseDeepLink(raw: String): ParsedDeepLink? {
 }
 
 /**
- * Maps a `motormila://` or `https://motormila.vercel.app/…` VIEW URI to a
+ * Maps a `motormila://` or `https://motormila.pages.dev/…` VIEW URI to a
  * type-safe destination. Used after splash and on ACTION_VIEW so query params
  * still land even when NavHost deep-link matching is picky.
  */
@@ -227,6 +230,7 @@ internal fun resolveParsedDeepLink(parsed: ParsedDeepLink): Any? {
             "sign-in" -> loginDestination(parsed, signup = false)
             "sign-up" -> loginDestination(parsed, signup = true)
             "pro", "pro-preview" -> Pro
+            "sell" -> Sell
             else -> null
         }
     }
@@ -281,6 +285,7 @@ internal fun resolveParsedDeepLink(parsed: ParsedDeepLink): Any? {
         "login", "sign-in" -> loginDestination(parsed, signup = parsed.flagQuery("signup"))
         "sign-up" -> loginDestination(parsed, signup = true)
         "best-picks" -> BestPicks
+        "sell" -> Sell
         else -> null
     }
 }

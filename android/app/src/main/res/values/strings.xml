@@ -91,4 +91,54 @@
     <string name="update_downloading">Downloading update…</string>
     <string name="update_download_failed">Couldn\'t download the update. Check your connection and try again.</string>
     <string name="update_up_to_date">You\'re on the latest version.</string>
+
+    <!-- Announcement banner (Home) -->
+    <string name="announcement_text">Market update — fresh underpriced listings flagged daily across ikman, riyasewana and patpat.</string>
+    <string name="announcement_view_deals">View deals</string>
+    <string name="announcement_dismiss">Dismiss announcement</string>
+
+    <!-- How-it-works animated beam band (Home) -->
+    <string name="how_it_works_eyebrow">How it works</string>
+    <string name="how_it_works_title">From listing to deal alert in three steps</string>
+    <string name="how_it_works_blurb">We watch the island\'s biggest marketplaces around the clock, score every listing against fair value, and ping you the moment something is priced to move.</string>
+    <string name="how_step1_title">1 \u00b7 We watch</string>
+    <string name="how_step1_sub">ikman, riyasewana and patpat scanned daily</string>
+    <string name="how_step2_title">2 \u00b7 We score</string>
+    <string name="how_step2_sub">Fair-value engine prices every spec</string>
+    <string name="how_step3_title">3 \u00b7 You pounce</string>
+    <string name="how_step3_sub">Alerts the moment a deal appears</string>
+
+    <!-- District sales velocity (DistrictHub) -->
+    <string name="district_velocity_eyebrow">Market pulse</string>
+    <string name="district_velocity_title">District sales velocity</string>
+    <string name="district_velocity_sub">Active listings \u00b7 top 8 districts</string>
+    <string name="district_velocity_listings">%1$d listings</string>
+
+    <!-- Make combobox (FilterSheet) -->
+    <string name="filter_make_label">Make</string>
+    <string name="filter_make_search_hint">Search makes\u2026</string>
+    <string name="filter_all_makes">All makes</string>
+
+    <!-- Sell your car -->
+    <string name="sell_title">Sell your car</string>
+    <string name="sell_subtitle">List it on Motormila in under a minute. Submissions are reviewed before going live.</string>
+    <string name="sell_make">Make</string>
+    <string name="sell_model">Model</string>
+    <string name="sell_year">Year</string>
+    <string name="sell_price_lkr">Asking price (LKR)</string>
+    <string name="sell_mileage_km">Mileage (km)</string>
+    <string name="sell_fuel">Fuel type</string>
+    <string name="sell_transmission">Transmission</string>
+    <string name="sell_condition">Condition</string>
+    <string name="sell_district">District</string>
+    <string name="sell_city">City</string>
+    <string name="sell_contact_name">Contact name</string>
+    <string name="sell_contact_phone">Contact phone</string>
+    <string name="sell_description">Description</string>
+    <string name="sell_submit">List my vehicle</string>
+    <string name="sell_submitting">Listing\u2026</string>
+    <string name="sell_login_required">Log in to list your vehicle on Motormila.</string>
+    <string name="sell_login_cta">Log in / sign up</string>
+    <string name="sell_success_title">Listing submitted</string>
+    <string name="sell_success_body">Your %1$s is pending review. We\'ll notify you once it\'s live.</string>
 </resources>

@@ -150,7 +150,7 @@ fun SectionTitle(text: String, modifier: Modifier = Modifier) {
 }
 
 /**
- * Health ring: % under FMV. progress 0..1, gold when >= 10% under.
+ * Health ring: % under FMV. progress 0..1, deal green when >= 10% under.
  */
 @Composable
 fun HealthRing(
@@ -159,7 +159,7 @@ fun HealthRing(
     sizeDp: Int = 44,
 ) {
     val clamped = fractionUnderFmv.coerceIn(0f, 1f)
-    val ring = if (clamped >= 0.10f) Color(0xFFC9A227) else MaterialTheme.colorScheme.primary
+    val ring = if (clamped >= 0.10f) Color(0xFF00C853) else MaterialTheme.colorScheme.primary
     Canvas(
         modifier
             .then(modifier)

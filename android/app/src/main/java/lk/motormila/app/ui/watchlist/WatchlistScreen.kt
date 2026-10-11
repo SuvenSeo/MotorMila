@@ -233,11 +233,11 @@ private fun WatchRow(
                                     text = "▼ ${LkrFormat.deltaPct(item.dropPct())}",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF6EE7B7),
+                                    color = Color(0xFF69F0AE),
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(999.dp))
-                                        .background(Color(0x2E10B981))
-                                        .border(0.5.dp, Color(0x5510B981), RoundedCornerShape(999.dp))
+                                        .background(Color(0x2E00C853))
+                                        .border(0.5.dp, Color(0x5500C853), RoundedCornerShape(999.dp))
                                         .padding(horizontal = 8.dp, vertical = 3.dp)
                                         .semantics {
                                             contentDescription = "Price dropped ${LkrFormat.deltaPct(item.dropPct())}"

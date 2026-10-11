@@ -59,6 +59,7 @@ import lk.motormila.app.ui.components.MotormilaPillTabs
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface as MotormilaPane
 import lk.motormila.app.ui.components.OfflineBanner
+import lk.motormila.app.ui.components.SlidingNumber
 import lk.motormila.app.ui.theme.MotormilaOnPrimary
 import lk.motormila.app.ui.theme.MotormilaOnSurface
 import lk.motormila.app.ui.theme.MotormilaOutline
@@ -559,13 +560,14 @@ private fun LandedResultCard(result: LandedCost?, calculating: Boolean) {
                                     color = MotormilaPrimaryBright,
                                 ),
                             )
-                            Text(
-                                LkrFormat.full(result.totalLkr),
+                            SlidingNumber(
+                                value = result.totalLkr.toLong(),
                                 style = MaterialTheme.typography.headlineMedium.copy(
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = FontFamily.Monospace,
-                                    color = MotormilaOnSurface,
                                 ),
+                                color = MotormilaOnSurface,
+                                prefix = "Rs. ",
                             )
                             Row(
                                 Modifier.fillMaxWidth(),

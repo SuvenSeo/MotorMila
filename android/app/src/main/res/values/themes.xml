@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Edge-to-edge: window background matches dark-first bg #06090E. -->
+    <!-- Edge-to-edge: window background matches Ink #09090B. -->
     <style name="Theme.Motormila" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/motormila_bg</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
