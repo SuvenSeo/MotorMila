@@ -168,7 +168,9 @@ fun HomeScreen(
             // Extra bottom clearance so the last card clears the nav dock
             // and the floating AI/scan buttons instead of sliding under them.
             contentPadding = PaddingValues(bottom = 128.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
+            // Generous 22dp rhythm between sections — the web's airy,
+            // confident feel rather than a cramped feed.
+            verticalArrangement = Arrangement.spacedBy(22.dp),
         ) {
             // 0. Announcement banner (market updates, dismissible, persisted)
             item {
@@ -182,6 +184,7 @@ fun HomeScreen(
                         OfflineBanner(
                             visible = true,
                             onDismiss = viewModel::dismissCachedBadge,
+                            onRetry = viewModel::retry,
                         )
                     }
                     TopBrandBar(onAlertsClick = onAlertsClick)
@@ -199,10 +202,15 @@ fun HomeScreen(
             }
 
             // 3. Stats Row / Bento Metrics Card
+            // When offline (banner showing), never show the blocking error —
+            // the tappable banner is the single offline affordance and the
+            // screen renders cached data beneath it.
             item {
                 if (state.isLoading) {
                     LoadingSkeletonCard(Modifier.padding(horizontal = 16.dp))
-                } else if (state.error != null && state.summary.totalListings == 0) {
+                } else if (state.error != null && state.summary.totalListings == 0 &&
+                    !state.isOffline && !state.showCachedBadge
+                ) {
                     ErrorState(
                         message = state.error ?: "Unknown error",
                         onRetry = viewModel::retry,

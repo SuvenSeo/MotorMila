@@ -9,6 +9,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -330,12 +331,14 @@ fun ErrorState(
     }
 }
 
-/** Slide-down offline banner; static when reduced motion (no slide animation). */
+/** Slide-down offline banner; static when reduced motion (no slide animation).
+ * Tapping the banner (outside the dismiss button) retries the load. */
 @Composable
 fun OfflineBanner(
     visible: Boolean,
     modifier: Modifier = Modifier,
     onDismiss: (() -> Unit)? = null,
+    onRetry: (() -> Unit)? = null,
 ) {
     if (!visible) return
     Row(
@@ -344,8 +347,9 @@ fun OfflineBanner(
             .padding(horizontal = 16.dp)
             .clip(MotormilaRadius.pill)
             .background(MaterialTheme.colorScheme.secondaryContainer)
+            .then(if (onRetry != null) Modifier.clickable { onRetry() } else Modifier)
             .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp)
-            .semantics { contentDescription = "Offline, showing cached data" },
+            .semantics { contentDescription = "Offline, showing cached data. Tap to retry." },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(Icons.Filled.WifiOff, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(16.dp))
@@ -357,6 +361,16 @@ fun OfflineBanner(
             color = MaterialTheme.colorScheme.onSecondaryContainer,
             modifier = Modifier.weight(1f),
         )
+        if (onRetry != null) {
+            Icon(
+                Icons.Filled.Refresh,
+                contentDescription = "Retry",
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier
+                    .padding(end = 8.dp)
+                    .size(18.dp),
+            )
+        }
         if (onDismiss != null) {
             IconButton(
                 onClick = onDismiss,
