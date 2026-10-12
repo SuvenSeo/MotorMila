@@ -1,7 +1,7 @@
 {
-  "version": "1.6.4",
-  "version_code": 16,
-  "apk_url": "https://pub-f15911ef9a914db9a44e1fd6b47dfe4e.r2.dev/app/motormila-1.6.4.apk",
-  "published_at": "2026-10-11T18:56:13Z",
-  "tag": "android-v1.6.4"
+  "version": "1.0.0-eea351d",
+  "version_code": 17,
+  "apk_url": "https://pub-f15911ef9a914db9a44e1fd6b47dfe4e.r2.dev/app/motormila-1.0.0-eea351d.apk",
+  "published_at": "2026-10-12T04:50:13Z",
+  "tag": "main"
 }
