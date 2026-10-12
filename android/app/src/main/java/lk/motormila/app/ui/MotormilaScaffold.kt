@@ -6,8 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -44,7 +42,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -75,7 +72,6 @@ import lk.motormila.app.ui.theme.liquidGlass
 import lk.motormila.app.ui.theme.rememberHaptics
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.ui.unit.Dp
 
 data class BottomNavItem(
     val route: String,
@@ -315,23 +311,13 @@ fun MotormilaScaffold(
             }
         },
         content = { paddingValues ->
-            // When the floating AI/scan button stack is visible, reserve end
-            // padding so scrollable content doesn't slide underneath it.
-            // Stack width: 8dp glass padding + 48dp button + 8dp glass padding,
-            // plus 4dp margin = 68dp. We reserve 60dp here; screens add their
-            // own ~16dp content padding, giving ~76dp total clearance — enough
-            // to clear the stack without squeezing content to ~70% width.
-            val fabSafePadding = if (showBottomBar) {
-                PaddingValues(
-                    start = paddingValues.calculateStartPadding(LayoutDirection.Ltr),
-                    top = paddingValues.calculateTopPadding(),
-                    end = paddingValues.calculateEndPadding(LayoutDirection.Ltr) + 60.dp,
-                    bottom = paddingValues.calculateBottomPadding(),
-                )
-            } else {
-                paddingValues
-            }
-            content(fabSafePadding)
+            // Full-width content: the floating AI/scan stack is translucent
+            // liquid glass, so it floats OVER content (the standard premium
+            // pattern) instead of squeezing the layout. Screens get the full
+            // width; the stack's bottom=88dp clearance keeps it above the nav
+            // dock, and screens add bottom content padding so nothing hides
+            // behind it.
+            content(paddingValues)
         },
     )
 
