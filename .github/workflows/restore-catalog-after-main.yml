@@ -110,6 +110,11 @@ jobs:
           cp public/snapshots/latest/merged-motormila.db.gz \
             public/snapshots/latest/merged-autolens.db.gz  # legacy name
           ls -lh public/snapshots/latest/merged-*.db.gz
+          # The R2 upload step below reads backend/snapshots/latest, not
+          # public/ — copy the dumps there too so the public R2 bucket the
+          # HF backend downloads failover from stays fresh (2026-10-16: the
+          # gz no longer rides the Vercel deploy, past its 100MB/file limit).
+          cp public/snapshots/latest/merged-*.db.gz backend/snapshots/latest/
 
       - name: Wait for the GitHub → Vercel production deploy
         if: steps.vercel.outputs.configured == 'true'
