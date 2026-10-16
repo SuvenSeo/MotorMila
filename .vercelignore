@@ -8,12 +8,14 @@
 __pycache__/
 *.pyc
 *.db
-# No *.db.gz rule on purpose: the public failover DB
-# (public/snapshots/latest/merged-motormila.db.gz + legacy merged-autolens.db.gz,
-#  built by manus-to-live.yml)
-# MUST be deployed — the HF Space downloads it for SQLite failover while
-# Neon is down. A *.db.gz ignore with a !-negation did not take effect
+# No *.db.gz glob on purpose: a *.db.gz + !-negation did not take effect
 # (2026-09-27: the file 404'd, failover never engaged, API stayed db:down).
+# The merged-DB failover dumps (101MB+, past Vercel's 100MB per-file limit)
+# are served from public R2 instead — the HF backend downloads them from
+# there for SQLite failover while Neon is down (see backend/db/sqlite_failover.py).
+# Explicit paths so Vercel CLI deploys never attempt these files again.
+/public/snapshots/latest/merged-motormila.db.gz
+/public/snapshots/latest/merged-autolens.db.gz
 *.log
 .pytest_cache/
 /android/

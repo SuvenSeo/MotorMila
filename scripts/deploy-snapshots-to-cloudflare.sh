@@ -36,10 +36,14 @@ else
   npm install --no-audit --no-fund
 fi
 
-# Cloudflare Pages rejects files >25 MiB. The merged DB dumps (86MB) are for
-# backend failover only — the frontend never fetches them — so exclude them
-# from the Pages deploy (they stay on Vercel for the HF backend).
-rm -f "${SNAP_DIR}"/merged-*.db.gz
+# Cloudflare Pages rejects files >25 MiB. The merged DB dumps (101MB+) are for
+# backend failover only — the frontend never fetches them — so move them aside
+# for the Pages build+upload, then move them back: the R2 upload step that
+# follows in manus-to-live.yml publishes them to the public R2 bucket the
+# HF backend downloads them from (see backend/db/sqlite_failover.py).
+# (A plain `rm -f` here once starved R2 of the dumps entirely.)
+FAILOVER_STASH="$(mktemp -d)"
+mv "${SNAP_DIR}"/merged-*.db.gz "${FAILOVER_STASH}/" 2>/dev/null || true
 
 echo "==> Building site (Vite)…"
 npm run build
@@ -71,3 +75,8 @@ if [[ "${CODE}" != "200" || "${CTYPE}" != *json* ]]; then
 fi
 
 echo "==> Done — motormila.pages.dev updated."
+
+# Restore the stashed failover DB dumps so the R2 upload step that follows
+# publishes them to the public bucket (see backend/db/sqlite_failover.py).
+mv "${FAILOVER_STASH}"/merged-*.db.gz "${SNAP_DIR}/" 2>/dev/null || true
+rmdir "${FAILOVER_STASH}" 2>/dev/null || true

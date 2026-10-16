@@ -259,7 +259,7 @@ def test_candidate_sources_default_is_public_site_copy(monkeypatch):
     monkeypatch.delenv("MERGED_SQLITE_URL", raising=False)
     # No source-repo URL may ship in the default list — this file is synced
     # to a public HF Space and the repo is private.
-    assert sqlite_failover._candidate_sources() == list(sqlite_failover.VERCEL_MERGED_DB_URLS)
+    assert sqlite_failover._candidate_sources() == list(sqlite_failover.FAILOVER_DB_URLS)
     for source in sqlite_failover._candidate_sources():
         assert "github" not in source.lower()
 
