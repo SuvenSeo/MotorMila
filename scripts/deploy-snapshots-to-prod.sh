@@ -87,13 +87,16 @@ fi
 # 2c) Preserve the emergency failover DB (large; produced by manus-to-live).
 #     Without this, a restore-catalog deploy redeploys the tree without it and
 #     the HF Space loses its Neon-outage fallback (404 -> failover:false).
+#     Served from public R2 since 2026-10-16 (the 101MB+ gz crossed Vercel's
+#     100MB per-file deploy limit) — preserve from there.
 # ---------------------------------------------------------------------------
+R2_FAILOVER_BASE="https://pub-f15911ef9a914db9a44e1fd6b47dfe4e.r2.dev/snapshots/latest"
 for dbname in merged-motormila.db.gz merged-autolens.db.gz; do  # second is the legacy name
   if [[ ! -s "${SNAP_DIR}/${dbname}" ]]; then
-    echo "==> Failover DB ${dbname} missing locally; fetching from live site…"
+    echo "==> Failover DB ${dbname} missing locally; fetching from R2…"
     curl -fsSL --max-time 600 -o "${SNAP_DIR}/${dbname}" \
-      "${LIVE_BASE}/${dbname}" || \
-      echo "WARN: could not preserve ${dbname} from live site" >&2
+      "${R2_FAILOVER_BASE}/${dbname}" || \
+      echo "WARN: could not preserve ${dbname} from R2" >&2
   fi
 done
 
