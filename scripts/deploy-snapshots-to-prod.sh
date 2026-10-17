@@ -148,7 +148,10 @@ echo "==> Deploying to Vercel production…"
 # Vercel upload, then move them back for the R2 step that follows in the
 # workflow. (.vercelignore entries alone did not stop the CLI uploading them —
 # four consecutive 100MB deploy failures on 2026-10-16 proved it.)
+# NOTE: cover both the snapshots dir AND the repo root — the restore-catalog
+# workflow downloads the release gz files to ./ before gunzipping.
 FAILOVER_STASH="$(mktemp -d)"
+mv ./merged-*.db.gz "${FAILOVER_STASH}/" 2>/dev/null || true
 mv "${SNAP_DIR}"/merged-*.db.gz "${FAILOVER_STASH}/" 2>/dev/null || true
 restore_failover_dumps() {
   mv "${FAILOVER_STASH}"/merged-*.db.gz "${SNAP_DIR}/" 2>/dev/null || true
