@@ -143,11 +143,25 @@ PY
 # ---------------------------------------------------------------------------
 cd "${ROOT}"
 echo "==> Deploying to Vercel production…"
+# Vercel rejects individual files >100MB. The merged DB dumps (102MB+) are for
+# backend failover only and already live on public R2 — move them aside for the
+# Vercel upload, then move them back for the R2 step that follows in the
+# workflow. (.vercelignore entries alone did not stop the CLI uploading them —
+# four consecutive 100MB deploy failures on 2026-10-16 proved it.)
+FAILOVER_STASH="$(mktemp -d)"
+mv "${SNAP_DIR}"/merged-*.db.gz "${FAILOVER_STASH}/" 2>/dev/null || true
+restore_failover_dumps() {
+  mv "${FAILOVER_STASH}"/merged-*.db.gz "${SNAP_DIR}/" 2>/dev/null || true
+  rmdir "${FAILOVER_STASH}" 2>/dev/null || true
+}
+trap restore_failover_dumps EXIT
 if [[ -n "${VERCEL_TOKEN:-}" ]]; then
   npx --yes vercel deploy --prod --yes --token "${VERCEL_TOKEN}"
 else
   npx --yes vercel deploy --prod --yes
 fi
+trap - EXIT
+restore_failover_dumps
 
 # ---------------------------------------------------------------------------
 # 5) Verify the production alias serves the fresh stats file AND every catalog
