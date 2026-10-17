@@ -17,7 +17,7 @@ permissions:
 jobs:
   ping:
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 3
     steps:
       - name: Health ping
         run: |
@@ -26,15 +26,40 @@ jobs:
           echo "Pinging ${url}"
           # Retry a few times — Spaces can briefly refuse during redeploys.
           for i in 1 2 3; do
-            if curl -fsS --max-time 25 "${url}"; then
-              echo
-              echo "OK (attempt ${i})"
+            code="000"
+            body=""
+            if body=$(curl -s --max-time 25 -w '\n%{http_code}' "${url}"); then
+              code=$(printf '%s' "${body}" | tail -n 1)
+              body=$(printf '%s' "${body}" | sed '$d')
+            fi
+            if [ "${code}" = "200" ]; then
+              echo "OK (attempt ${i}): ${body}"
               exit 0
             fi
-            echo "Attempt ${i} failed; retrying…"
-            sleep 5
+            # 503 WITH failover active is the expected posture during a Neon
+            # quota outage (API serves the SQLite dump) — warn, don't page.
+            if [ "${code}" = "503" ] && printf '%s' "${body}" | grep -q '"failover":true'; then
+              echo "::warning::backend degraded but SQLite failover is active (expected during Neon quota outage): ${body}"
+              exit 0
+            fi
+            echo "Attempt ${i}: HTTP ${code} :: ${body}"
+            sleep 10
           done
-          # Scheduled keep-alives should not fail the Actions dashboard when
-          # HF is briefly down; exit 0 so the next tick can try again.
-          echo "Health ping failed after retries (non-blocking)"
-          exit 0
+          # 503 WITHOUT failover (or unreachable) means /estimate and
+          # /market/signals are 500ing for users. Fail loudly — a silent
+          # exit 0 here once hid a ~2-day outage (2026-10-16..18).
+          echo "::error::Motormila backend /health not OK after retries (no SQLite failover active)"
+          exit 1
+
+      - name: Notify Slack on backend outage
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -z "${SLACK_WEBHOOK_URL}" ]; then
+            echo "::warning::SLACK_WEBHOOK_URL unset — backend outage not sent to Slack"
+            exit 0
+          fi
+          curl -fsS -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"🚨 Motormila backend /health failing with no SQLite failover (run ${GITHUB_RUN_ID}). /estimate + /market/signals are down for users.\"}" \
+            "$SLACK_WEBHOOK_URL"
