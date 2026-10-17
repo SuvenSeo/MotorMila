@@ -143,28 +143,36 @@ PY
 # ---------------------------------------------------------------------------
 cd "${ROOT}"
 echo "==> Deploying to Vercel production…"
-# Vercel rejects individual files >100MB. The merged DB dumps (102MB+) are for
-# backend failover only and already live on public R2 — move them aside for the
-# Vercel upload, then move them back for the R2 step that follows in the
-# workflow. (.vercelignore entries alone did not stop the CLI uploading them —
-# four consecutive 100MB deploy failures on 2026-10-16 proved it.)
-# NOTE: cover both the snapshots dir AND the repo root — the restore-catalog
-# workflow downloads the release gz files to ./ before gunzipping.
+# Vercel rejects individual files >100MB. Move EVERY such file aside for the
+# upload, then move them back for the R2 step that follows in the workflow.
+# (.vercelignore proved unreliable — the CLI kept uploading ignored files,
+# causing repeated 100MB deploy failures on 2026-10-16/17. This does not depend
+# on ignore semantics at all.)
 FAILOVER_STASH="$(mktemp -d)"
-mv ./merged-*.db.gz "${FAILOVER_STASH}/" 2>/dev/null || true
-mv "${SNAP_DIR}"/merged-*.db.gz "${FAILOVER_STASH}/" 2>/dev/null || true
-restore_failover_dumps() {
-  mv "${FAILOVER_STASH}"/merged-*.db.gz "${SNAP_DIR}/" 2>/dev/null || true
-  rmdir "${FAILOVER_STASH}" 2>/dev/null || true
+restore_stash() {
+  if [[ -d "${FAILOVER_STASH}" ]]; then
+    while IFS= read -r -d '' f; do
+      rel="${f#./}"
+      mkdir -p "$(dirname "./${rel}")"
+      mv "${FAILOVER_STASH}/${rel}" "./${rel}"
+    done < <(cd "${FAILOVER_STASH}" && find . -type f -print0)
+    rm -rf "${FAILOVER_STASH}"
+  fi
 }
-trap restore_failover_dumps EXIT
+trap restore_stash EXIT
+while IFS= read -r -d '' bigfile; do
+  rel="${bigfile#./}"
+  mkdir -p "${FAILOVER_STASH}/$(dirname "${rel}")"
+  mv "${bigfile}" "${FAILOVER_STASH}/${rel}"
+done < <(find . -type f -size +99M -not -path "./.git/*" -print0)
+echo "==> Moved $(find "${FAILOVER_STASH}" -type f | wc -l) file(s) >99MB aside for the Vercel upload"
 if [[ -n "${VERCEL_TOKEN:-}" ]]; then
   npx --yes vercel deploy --prod --yes --token "${VERCEL_TOKEN}"
 else
   npx --yes vercel deploy --prod --yes
 fi
 trap - EXIT
-restore_failover_dumps
+restore_stash
 
 # ---------------------------------------------------------------------------
 # 5) Verify the production alias serves the fresh stats file AND every catalog
