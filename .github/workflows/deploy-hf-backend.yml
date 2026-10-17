@@ -121,6 +121,6 @@ jobs:
           echo "=== runtime status ==="
           curl -s --max-time 20 "https://huggingface.co/api/spaces/${repo}" \
             -H "Authorization: Bearer ${HF_TOKEN}" | head -c 2000; echo
-          echo "=== build log tail (time-boxed 40s) ==="
-          curl -s --max-time 40 -N "https://huggingface.co/api/spaces/${repo}/logs/build" \
+          echo "=== RUNTIME log tail TEMP-DIAG (time-boxed 40s) ==="
+          curl -s --max-time 40 -N "https://huggingface.co/api/spaces/${repo}/logs" \
             -H "Authorization: Bearer ${HF_TOKEN}" 2>/dev/null | tail -n 60 || echo "(build log stream unavailable)"
