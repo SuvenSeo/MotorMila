@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { ArrowUpRight, ExternalLink } from "lucide-react";
 import { useMemo } from "react";
 import { PrefetchLink } from "@/components/PrefetchLink";
+import { HOW_WE_PRICE_PATH } from "@/lib/howWePrice";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -51,6 +52,7 @@ export function AppFooter() {
       { label: t("nav.valuation", "Valuation"), to: "/estimate" },
       { label: t("nav.pricing", "Pricing"), to: "/pricing" },
       { label: t("nav.docs", "Docs"), to: "/docs" },
+      { label: t("footer.howWePrice", "How we score prices"), to: HOW_WE_PRICE_PATH },
     ],
     [t],
   );
