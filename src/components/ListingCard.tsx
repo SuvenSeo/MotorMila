@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { CarListing } from "@/types/car";
 import { formatPrice, getListing } from "@/services/api";
-import { Gauge, MapPin, ArrowRight, Heart, Check, Plus } from "lucide-react";
+import { Gauge, MapPin, ArrowRight, Heart, Check, Plus, TrendingDown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ListingImageCarousel } from "@/components/ListingImageCarousel";
 import { PriceUnavailableBadge } from "@/components/PriceUnavailableBadge";
@@ -20,7 +20,10 @@ import { hasFullPlatformAccess } from "@/lib/planLimits";
 import { prefetchRoute } from "@/lib/routePrefetch";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { canonicalizeMake, canonicalizeModel } from "@/lib/makeNormalization";
-import BadgeDelta from "@tremor/react/dist/components/icon-elements/BadgeDelta/BadgeDelta.js";
+import { usePriceSparklines } from "@/hooks/usePriceSparklines";
+import { isMeaningfulDrop, summarizePricePoints, toPricePoints } from "@/lib/priceHistory";
+import { PriceSparkline } from "@/components/PriceSparkline";
+import { getSourceAttribution } from "@/lib/sourceAttribution";
 
 interface ListingCardProps {
   listing: CarListing;
@@ -101,6 +104,20 @@ export const ListingCard = memo(function ListingCard({
   const displayModel = canonicalizeModel(listing.model) || listing.model;
   const listingTitle = `${displayMake} ${displayModel} ${listing.variant || ""}`.trim();
 
+  // Price path from the shared snapshot index (loaded on idle, once per page).
+  const sparklines = usePriceSparklines();
+  const pricePoints = toPricePoints(sparklines?.[String(listing.id)]);
+  const priceSummary = summarizePricePoints(pricePoints);
+  const snapshotDropPct = Number(listing.price_drop_pct);
+  const showDropBadge =
+    isMeaningfulDrop(priceSummary) || (Number.isFinite(snapshotDropPct) && snapshotDropPct >= 1 && snapshotDropPct < 80);
+  const dropPctLabel = priceSummary && priceSummary.totalChangePct < 0
+    ? Math.abs(priceSummary.totalChangePct).toFixed(0)
+    : Number.isFinite(snapshotDropPct) && snapshotDropPct > 0
+      ? snapshotDropPct.toFixed(0)
+      : null;
+  const attribution = getSourceAttribution(listing);
+
   return (
     <article
       role="article"
@@ -124,6 +141,7 @@ export const ListingCard = memo(function ListingCard({
             listingId={listing.id}
             alt={`${displayMake} ${displayModel}`}
             variant="card"
+            source={listing.source}
             priority={priority}
             className="h-full w-full"
             imageClassName="transition-transform duration-[800ms] ease-out group-hover:scale-[1.08]"
@@ -131,9 +149,17 @@ export const ListingCard = memo(function ListingCard({
           <div className="absolute inset-0 bg-gradient-to-t from-black/82 via-black/25 to-transparent" />
 
           <div className="absolute left-3 top-3 flex items-center gap-1.5">
-            <span className="rounded-full border border-white/8 bg-black/60 px-2.5 py-0.5 text-[10px] font-semibold tracking-tight text-white backdrop-blur-md">
+            <span className="rounded-full border border-white/10 bg-black/70 px-2.5 py-0.5 text-[11px] font-semibold tracking-tight text-white backdrop-blur-md">
               {formatToken(listing.condition)}
             </span>
+            {showDropBadge && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-deal-green/40 bg-zinc-950/85 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-300 backdrop-blur-md">
+                <TrendingDown className="h-3 w-3" aria-hidden />
+                {dropPctLabel
+                  ? t("listingCard.priceDroppedPct", "Price dropped {pct}%", { pct: dropPctLabel })
+                  : t("listingCard.priceDropped", "Price dropped")}
+              </span>
+            )}
           </div>
 
           <div className="absolute right-3 top-3 flex items-center gap-1.5">
@@ -175,7 +201,7 @@ export const ListingCard = memo(function ListingCard({
             ) : (
               <PriceUnavailableBadge
                 label={t("listingCard.priceUnavailable", "Price unavailable")}
-                className="bg-black/75 border-primary/40 text-primary-bright px-2 py-0.5 text-[10px] tracking-[0.1em]"
+                className="bg-black/75 border-primary/40 text-primary-bright px-2 py-0.5 text-[11px] tracking-[0.08em]"
               />
             )}
             {hasDealScore && (
@@ -218,7 +244,7 @@ export const ListingCard = memo(function ListingCard({
           <MileageTrustChip
             mileageKm={listing.mileage_km}
             year={listing.year}
-            className="self-start !px-2 !py-0.5 !text-[10px]"
+            className="self-start !px-2 !py-0.5 !text-[11px]"
           />
 
           <div className="mt-auto">
@@ -228,16 +254,16 @@ export const ListingCard = memo(function ListingCard({
               </p>
               <div className="flex items-center gap-1.5">
                 {marketDeltaPct !== null && (
-                  <span className="apex">
-                    <BadgeDelta
-                      deltaType={marketDeltaPct <= 0 ? "moderateDecrease" : "moderateIncrease"}
-                      isIncreasePositive={false}
-                      size="xs"
-                    >
-                      {t("listingCard.vsMarket", "{pct}% vs market", {
-                        pct: `${marketDeltaPct <= 0 ? "−" : "+"}${Math.abs(marketDeltaPct).toFixed(0)}`,
-                      })}
-                    </BadgeDelta>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[11px] font-semibold num ${
+                      marketDeltaPct <= 0
+                        ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                        : "bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                    }`}
+                  >
+                    {t("listingCard.vsMarket", "{pct}% vs market", {
+                      pct: `${marketDeltaPct <= 0 ? "−" : "+"}${Math.abs(marketDeltaPct).toFixed(0)}`,
+                    })}
                   </span>
                 )}
                 <p className={`text-[11px] font-semibold num ${
@@ -253,10 +279,28 @@ export const ListingCard = memo(function ListingCard({
                 </p>
               </div>
             </div>
-            {fmv != null && (
-              <p className="mb-2 text-[10px] font-medium text-muted-foreground num">
-                FMV {formatPrice(fmv.fmv_lkr)}
-              </p>
+            {(fmv != null || pricePoints.length >= 2) && (
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="text-[11px] font-medium text-muted-foreground num">
+                  {fmv != null ? `FMV ${formatPrice(fmv.fmv_lkr)}` : ""}
+                </p>
+                {pricePoints.length >= 2 && (
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-[11px] text-muted-foreground">
+                      {t("listingCard.priceMoves", "{n} price changes", { n: pricePoints.length - 1 })}
+                    </span>
+                    <PriceSparkline
+                      points={pricePoints}
+                      width={56}
+                      height={18}
+                      label={t("listingCard.sparkAria", "Asking price went from {from} to {to}", {
+                        from: formatPrice(pricePoints[0].price),
+                        to: formatPrice(pricePoints[pricePoints.length - 1].price),
+                      })}
+                    />
+                  </span>
+                )}
+              </div>
             )}
             <div className="relative h-1.5 overflow-hidden rounded-full bg-foreground/[0.08]">
               <div
@@ -281,8 +325,9 @@ export const ListingCard = memo(function ListingCard({
                 {listing.district || t("listingCard.districtNa", "District N/A")}
               </p>
               <p className="mt-0.5 text-[11px] text-muted-foreground truncate">
-                {listing.source}
+                {t("listingCard.listedOn", "Listed on {source}", { source: attribution.sourceName })}
                 {daysOnMarketLabel ? ` · ${daysOnMarketLabel}` : ""}
+                {attribution.checkedAgo ? ` · ${t("listingCard.checked", "checked {ago}", { ago: attribution.checkedAgo })}` : ""}
               </p>
             </div>
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border transition-all group-hover:border-primary/30 group-hover:bg-primary/10">

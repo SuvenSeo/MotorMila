@@ -1,4 +1,5 @@
 import { pickVehicleImageUrl } from "@/lib/listingImage";
+import { parseFlexibleTime } from "@/lib/parseTime";
 
 type ListingImageSource = {
   thumbnail_url?: string | null;
@@ -26,9 +27,8 @@ export function getListingDealLabel(rawScore: number): "Good Deal" | "Fair Price
 }
 
 export function getListingDaysOnMarket(iso: string | null | undefined): number | null {
-  if (!iso) return null;
-  const listedAt = Date.parse(iso);
-  if (!Number.isFinite(listedAt)) return null;
+  const listedAt = parseFlexibleTime(iso);
+  if (listedAt === null) return null;
   const diffMs = Date.now() - listedAt;
   if (diffMs < 0) return 0;
   return Math.floor(diffMs / 86_400_000);
@@ -43,8 +43,9 @@ export function getListingDaysOnMarketLabel(iso: string | null | undefined): str
 }
 
 export function getListingRecencyLabel(iso: string | null): string {
-  if (!iso) return "Today";
-  const d = new Date(iso);
+  const ts = parseFlexibleTime(iso);
+  if (ts === null) return "Today";
+  const d = new Date(ts);
   const now = new Date();
   const diffHrs = Math.floor((now.getTime() - d.getTime()) / 3_600_000);
   if (diffHrs < 1) return "Just now";
@@ -64,9 +65,8 @@ export function getListingRecencyLabel(iso: string | null): string {
  * pipeline gets to the true publication time (scrapes run 3x daily).
  */
 export function formatListedDateTime(iso: string | null | undefined): string | null {
-  if (!iso) return null;
-  const ts = Date.parse(iso);
-  if (!Number.isFinite(ts)) return null;
+  const ts = parseFlexibleTime(iso);
+  if (ts === null) return null;
   const d = new Date(ts);
   const date = d.toLocaleDateString("en-GB", {
     timeZone: "Asia/Colombo",

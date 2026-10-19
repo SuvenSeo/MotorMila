@@ -15,6 +15,8 @@ interface ListingImageCarouselProps {
   imageClassName?: string;
   /** First-screen images should load eagerly to protect LCP. */
   priority?: boolean;
+  /** Source marketplace, shown on the branded placeholder when a photo can't load. */
+  source?: string | null;
 }
 
 function stop(e: React.SyntheticEvent) {
@@ -34,6 +36,7 @@ export function ListingImageCarousel({
   className,
   imageClassName,
   priority = false,
+  source,
 }: ListingImageCarouselProps) {
   const { t } = useAppPreferences();
   const [index, setIndex] = useState(0);
@@ -71,6 +74,8 @@ export function ListingImageCarousel({
       <VehicleThumbnail
         src={null}
         alt={alt}
+        source={source}
+        priority={priority}
         className={`h-full w-full object-cover${imageClassName ? ` ${imageClassName}` : ""}`}
       />
     );
@@ -176,6 +181,7 @@ export function ListingImageCarousel({
                 src={src}
                 listingId={listingId}
                 alt={i === 0 ? alt : `${alt} — ${label(i)}`}
+                source={source}
                 priority={priority && i === 0}
                 className={`h-full w-full object-cover${imageClassName ? ` ${imageClassName}` : ""}`}
               />
@@ -216,7 +222,7 @@ export function ListingImageCarousel({
                 i === index ? "border-primary" : "border-transparent opacity-60 hover:opacity-100"
               }`}
             >
-              <VehicleThumbnail src={src} listingId={listingId} alt="" className="h-full w-full object-cover" />
+              <VehicleThumbnail src={src} listingId={listingId} alt="" source={source} className="h-full w-full object-cover" />
             </button>
           ))}
         </div>
