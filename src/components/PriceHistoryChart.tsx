@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { ArrowDownRight, ArrowUpRight, BarChart3, Gauge } from "lucide-react";
 import { formatPriceLkrMillions } from "@/lib/formatting";
+import { changeTone, formatLakhs, paddedDomain, TONE_STYLES } from "@/lib/dataSanity";
+import { TrendToneLegend } from "@/components/data/TrendToneLegend";
 import type { PriceTrendPoint } from "@/types/car";
 
 interface PriceHistoryChartProps {
@@ -23,6 +25,15 @@ function formatMonthLabel(monthKey: string): string {
   }
   const date = new Date(year, month - 1, 1);
   return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+}
+
+/** Compact axis tick ("Mar 26") so 12 months never overprint on mobile. */
+function formatMonthTick(monthKey: string): string {
+  const [yearRaw, monthRaw] = String(monthKey || "").split("-");
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) return monthKey;
+  return new Date(year, month - 1, 1).toLocaleDateString("en-GB", { month: "short", year: "2-digit" });
 }
 
 function formatPercentChange(value: number | null): string {
@@ -53,6 +64,7 @@ export function PriceHistoryChart({
   const chartData = useMemo(() => {
     return normalizedPoints.map((point) => ({
       label: formatMonthLabel(point.month),
+      tick: formatMonthTick(point.month),
       month: point.month,
       median_million: Number(point.median_price) / 1_000_000,
       median_lkr: Number(point.median_price),
@@ -82,7 +94,12 @@ export function PriceHistoryChart({
   const periodLabel = baselinePoint && latestPoint
     ? `${formatMonthLabel(baselinePoint.month)} to ${formatMonthLabel(latestPoint.month)}`
     : "Waiting for history";
-  const trendTone = changePct === null ? "Awaiting signal" : changePositive ? "Market heating" : "Price cooling";
+  const tone = changeTone(changePct);
+  const toneStyle = TONE_STYLES[tone];
+  const trendTone =
+    changePct === null ? "Awaiting signal" : tone === "stable" ? "Prices stable" : changePositive ? "Prices rising" : "Prices easing";
+  // Padded domain, never forced to zero: a 7.6–8.0M series fills the plot.
+  const yDomain = paddedDomain(chartData.map((d) => d.median_million));
 
   return (
     <div className="asset-surface w-full rounded-3xl p-4 sm:p-6 md:p-7">
@@ -106,14 +123,10 @@ export function PriceHistoryChart({
             <div className="data-card p-3">
               <p className="tech-label">Movement</p>
               <div className={`mt-2 inline-flex items-center gap-1.5 rounded-2xl px-2.5 py-1 text-xs font-bold ${
-                !hasChangeSignal
-                  ? "bg-foreground/[0.03] text-muted-foreground"
-                  : changePositive
-                    ? "bg-primary/10 text-primary-bright"
-                    : "bg-primary/10 text-primary-bright"
+                !hasChangeSignal ? "bg-foreground/[0.03] text-muted-foreground" : toneStyle.chip
               }`}>
-                {!hasChangeSignal ? (
-                  <span className="h-1.5 w-1.5 rounded-full bg-muted" />
+                {!hasChangeSignal || tone === "stable" ? (
+                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
                 ) : changePositive ? (
                   <ArrowUpRight className="h-3.5 w-3.5" />
                 ) : (
@@ -180,16 +193,18 @@ export function PriceHistoryChart({
                 <AreaChart data={chartData} margin={{ top: 18, right: 12, left: -18, bottom: 8 }}>
                   <defs>
                     <linearGradient id="priceHistoryGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="var(--gold)" stopOpacity={0.26} />
-                      <stop offset="58%" stopColor="var(--gold)" stopOpacity={0.1} />
-                      <stop offset="100%" stopColor="var(--gold)" stopOpacity={0} />
+                      <stop offset="0%" stopColor={toneStyle.stroke} stopOpacity={0.24} />
+                      <stop offset="58%" stopColor={toneStyle.stroke} stopOpacity={0.08} />
+                      <stop offset="100%" stopColor={toneStyle.stroke} stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="4 8" vertical={false} stroke="hsl(var(--foreground) / 0.06)" />
                   <XAxis
-                    dataKey="label"
+                    dataKey="tick"
                     axisLine={false}
                     tickLine={false}
+                    minTickGap={28}
+                    interval="preserveStartEnd"
                     tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10, fontWeight: 600, fontFamily: "Nofex" }}
                     dy={10}
                   />
@@ -197,14 +212,18 @@ export function PriceHistoryChart({
                     axisLine={false}
                     tickLine={false}
                     tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10, fontWeight: 600, fontFamily: "Nofex" }}
-                    tickFormatter={(value: number) => `${value.toFixed(1)}M`}
-                    width={56}
+                    domain={yDomain ?? ["auto", "auto"]}
+                    tickCount={5}
+                    allowDecimals
+                    tickFormatter={(value: number) => formatLakhs(value * 1_000_000)}
+                    width={52}
                   />
                   <Tooltip
                     formatter={(value: number, name: string) => [
                       name === "Median" ? formatPriceLkrMillions(Number(value) * 1_000_000) : value,
                       name,
                     ]}
+                    labelFormatter={(_l, payload) => String(payload?.[0]?.payload?.label ?? "")}
                     labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 800 }}
                     contentStyle={{
                       backgroundColor: "hsl(var(--card))",
@@ -218,12 +237,12 @@ export function PriceHistoryChart({
                     type="monotone"
                     dataKey="median_million"
                     name="Median"
-                    stroke="var(--gold)"
-                    strokeWidth={3}
+                    stroke={toneStyle.stroke}
+                    strokeWidth={2.5}
                     fillOpacity={1}
                     fill="url(#priceHistoryGradient)"
-                    dot={{ r: 3, strokeWidth: 2, fill: "hsl(var(--card))", stroke: "var(--gold)" }}
-                    activeDot={{ r: 5, strokeWidth: 2, fill: "var(--gold)", stroke: "var(--gold-bright)" }}
+                    dot={chartData.length <= 14 ? { r: 2.5, strokeWidth: 2, fill: "hsl(var(--card))", stroke: toneStyle.stroke } : false}
+                    activeDot={{ r: 5, strokeWidth: 2, fill: toneStyle.stroke, stroke: "hsl(var(--card))" }}
                     connectNulls
                   />
                 </AreaChart>
@@ -233,7 +252,7 @@ export function PriceHistoryChart({
           </div>
 
           <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 tech-label text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-            <span>Median advertised listings</span>
+            <span className="flex flex-wrap items-center gap-3">Median advertised listings · axis in lakhs <TrendToneLegend className="normal-case tracking-normal" /></span>
             <span className="num">{formatSampleCount(totalSamples)} tracked across this range</span>
           </div>
         </section>
