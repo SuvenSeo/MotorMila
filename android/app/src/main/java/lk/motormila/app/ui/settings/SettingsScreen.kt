@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -32,11 +34,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
+import lk.motormila.app.BuildConfig
 import lk.motormila.app.R
+import lk.motormila.app.data.remote.WEB_DELETE_ACCOUNT_URL
 import lk.motormila.app.core.motion.rememberReducedMotion
 import lk.motormila.app.core.ui.PrimaryAction
 import lk.motormila.app.core.ui.SectionTitle
@@ -83,10 +89,12 @@ fun SettingsScreen(
             viewModel.onEvent(SettingsUiEvent.DismissError)
         }
     }
+    val feedbackThanks = stringResource(R.string.settings_feedback_thanks)
+    val biometricCd = stringResource(R.string.settings_biometric_title)
     LaunchedEffect(state.feedbackSent) {
         if (state.feedbackSent) {
             if (!reducedMotion) haptics.confirm()
-            snacks.showSnackbar("Thanks — feedback sent.")
+            snacks.showSnackbar(feedbackThanks)
         }
     }
     LaunchedEffect(state.loggedOut) {
@@ -97,18 +105,32 @@ fun SettingsScreen(
         }
     }
 
-    MotormilaPage(title = "Settings", snackbarHostState = snacks) {
+    if (state.deleteDialogOpen) {
+        DeleteAccountDialog(
+            password = state.deletePassword,
+            deleting = state.deletingAccount,
+            onPasswordChange = { viewModel.onEvent(SettingsUiEvent.DeletePasswordChanged(it)) },
+            onConfirm = { viewModel.onEvent(SettingsUiEvent.ConfirmDeleteAccount) },
+            onDismiss = { viewModel.onEvent(SettingsUiEvent.CloseDeleteAccount) },
+        )
+    }
+
+    MotormilaPage(title = stringResource(R.string.settings_title), snackbarHostState = snacks) {
         LazyColumn(
             Modifier.fillMaxSize().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item { OfflineBanner(visible = state.offline) }
             item {
-                SectionTitle("Appearance")
+                SectionTitle(stringResource(R.string.settings_appearance))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("light", "dark", "system").forEach { t ->
+                    listOf(
+                        "light" to R.string.settings_theme_light,
+                        "dark" to R.string.settings_theme_dark,
+                        "system" to R.string.settings_theme_system,
+                    ).forEach { (t, labelRes) ->
                         MotormilaChoiceChip(
-                            label = t.replaceFirstChar { c -> c.uppercase() },
+                            label = stringResource(labelRes),
                             selected = theme == t,
                             onClick = { tapTick(); viewModel.onEvent(SettingsUiEvent.ThemeChanged(t)) },
                         )
@@ -134,26 +156,26 @@ fun SettingsScreen(
                 }
             }
             item {
-                SectionTitle("Defaults")
+                SectionTitle(stringResource(R.string.settings_defaults))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = district,
                         onValueChange = { viewModel.onEvent(SettingsUiEvent.DistrictChanged(it)) },
-                        label = { Text("Default district") },
+                        label = { Text(stringResource(R.string.settings_default_district)) },
                         singleLine = true,
                         modifier = Modifier.weight(1f).heightIn(min = 48.dp),
                     )
                     OutlinedTextField(
                         value = sort,
                         onValueChange = { viewModel.onEvent(SettingsUiEvent.SortChanged(it)) },
-                        label = { Text("Default sort") },
+                        label = { Text(stringResource(R.string.settings_default_sort)) },
                         singleLine = true,
                         modifier = Modifier.weight(1f).heightIn(min = 48.dp),
                     )
                 }
             }
             item {
-                SectionTitle("Security")
+                SectionTitle(stringResource(R.string.settings_security))
                 MotormilaSurface {
                     Row(
                         Modifier.fillMaxWidth().heightIn(min = 48.dp),
@@ -161,8 +183,8 @@ fun SettingsScreen(
                     ) {
                         Icon(Icons.Filled.Fingerprint, contentDescription = null)
                         Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                            Text("Biometric unlock", style = MaterialTheme.typography.bodyLarge)
-                            Text("Log in with fingerprint / face", style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.settings_biometric_title), style = MaterialTheme.typography.bodyLarge)
+                            Text(stringResource(R.string.settings_biometric_body), style = MaterialTheme.typography.bodySmall)
                         }
                         Switch(
                             checked = biometric,
@@ -181,12 +203,12 @@ fun SettingsScreen(
                                     viewModel.onEvent(SettingsUiEvent.BiometricChanged(false))
                                 }
                             },
-                            modifier = Modifier.semantics { contentDescription = "Biometric unlock toggle" },
+                            modifier = Modifier.semantics { contentDescription = biometricCd },
                         )
                     }
                 }
             }
-            item {
+            if (BuildConfig.DEBUG) item {
                 SectionTitle("Developer")
                 OutlinedTextField(
                     value = baseUrl,
@@ -204,7 +226,7 @@ fun SettingsScreen(
                     Text(if (state.clearingCache) "Clearing…" else "Clear image + stats cache")
                 }
             }
-            item {
+            if (BuildConfig.DEBUG) item {
                 SectionTitle("Dealer claim (debug)")
                 MotormilaSurface {
                     Text(
@@ -220,44 +242,105 @@ fun SettingsScreen(
                 }
             }
             item {
-                SectionTitle("Feedback")
+                SectionTitle(stringResource(R.string.settings_feedback))
                 OutlinedTextField(
                     value = state.feedbackDraft,
                     onValueChange = { viewModel.onEvent(SettingsUiEvent.FeedbackChanged(it)) },
-                    label = { Text("What should we fix or build?") },
+                    label = { Text(stringResource(R.string.settings_feedback_hint)) },
                     minLines = 3,
                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                 )
                 Spacer(Modifier.height(8.dp))
-                PrimaryAction("Send feedback", onClick = { viewModel.onEvent(SettingsUiEvent.SendFeedback) }, loading = state.sendingFeedback)
+                PrimaryAction(stringResource(R.string.settings_feedback_send), onClick = { viewModel.onEvent(SettingsUiEvent.SendFeedback) }, loading = state.sendingFeedback)
             }
             item {
-                SectionTitle("Legal")
+                SectionTitle(stringResource(R.string.settings_legal))
                 MotormilaGroup {
                     MotormilaGroupRow(
-                        title = "Privacy Policy",
-                        subtitle = "How we collect and protect data",
+                        title = stringResource(R.string.settings_privacy_title),
+                        subtitle = stringResource(R.string.settings_privacy_body),
                         onClick = onPrivacyClick,
                     )
                     MotormilaGroupRow(
-                        title = "Terms of Service",
-                        subtitle = "Rules that govern the platform",
+                        title = stringResource(R.string.settings_terms_title),
+                        subtitle = stringResource(R.string.settings_terms_body),
                         onClick = onTermsClick,
                         showDivider = false,
                     )
                 }
             }
             item {
-                PrimaryAction("Log out", onClick = { viewModel.onEvent(SettingsUiEvent.Logout) }, loading = state.loggingOut)
+                SectionTitle(stringResource(R.string.settings_account))
+                MotormilaGroup {
+                    if (state.signedIn) {
+                        MotormilaGroupRow(
+                            title = stringResource(R.string.account_delete_title),
+                            subtitle = stringResource(R.string.account_delete_row_body),
+                            onClick = { viewModel.onEvent(SettingsUiEvent.OpenDeleteAccount) },
+                        )
+                    }
+                    MotormilaGroupRow(
+                        title = stringResource(R.string.account_delete_web_title),
+                        subtitle = stringResource(R.string.account_delete_web_body),
+                        onClick = { onOpenUrl(WEB_DELETE_ACCOUNT_URL) },
+                        showDivider = false,
+                    )
+                }
+            }
+            if (state.signedIn) item {
+                PrimaryAction(stringResource(R.string.settings_logout), onClick = { viewModel.onEvent(SettingsUiEvent.Logout) }, loading = state.loggingOut)
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Logging out cancels background sync and alert workers on this device.",
+                    stringResource(R.string.settings_logout_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
     }
+}
+
+/** Confirm-before-delete dialog (permanent, server-side). */
+@Composable
+private fun DeleteAccountDialog(
+    password: String,
+    deleting: Boolean,
+    onPasswordChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = { if (!deleting) onDismiss() },
+        title = { Text(stringResource(R.string.account_delete_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(stringResource(R.string.account_delete_body), style = MaterialTheme.typography.bodyMedium)
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = onPasswordChange,
+                    label = { Text(stringResource(R.string.account_delete_password)) },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    enabled = !deleting,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm, enabled = !deleting && password.isNotBlank()) {
+                Text(
+                    stringResource(if (deleting) R.string.account_delete_working else R.string.account_delete_confirm),
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !deleting) {
+                Text(stringResource(R.string.common_cancel))
+            }
+        },
+    )
 }
 
 private data class LanguageChip(
