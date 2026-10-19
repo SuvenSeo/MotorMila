@@ -57,8 +57,9 @@ def upload_via_boto3(source: Path, prefix: str, bucket: str,
         region_name="auto",
     )
 
-    uploaded = 0
-    for path in iter_files(source):
+    from concurrent.futures import ThreadPoolExecutor
+
+    def _put(path: Path) -> str:
         rel = path.relative_to(source).as_posix()
         key = f"{prefix}/{rel}" if prefix else rel
         extra_args = {
@@ -66,8 +67,16 @@ def upload_via_boto3(source: Path, prefix: str, bucket: str,
             "CacheControl": "public, max-age=300, stale-while-revalidate=86400",
         }
         client.upload_file(str(path), bucket, key, ExtraArgs=extra_args)
-        uploaded += 1
-        print(f"uploaded s3://{bucket}/{key}")
+        return key
+
+    # idx/ adds a few thousand small per-entity files; upload in parallel.
+    paths = list(iter_files(source))
+    uploaded = 0
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        for key in pool.map(_put, paths):
+            uploaded += 1
+            if not key.split("/")[-2:-1] or "/idx/" not in f"/{key}":
+                print(f"uploaded s3://{bucket}/{key}")
 
     print(f"Uploaded {uploaded} snapshot files to R2 bucket {bucket} (S3 API).")
 
@@ -116,8 +125,39 @@ def upload_via_cf_api(source: Path, prefix: str, bucket: str,
     )
 
 
+def ensure_entity_indexes(source: Path) -> None:
+    """Build idx/ (per-listing shards, make/model/district indexes) when a
+    catalogue export is present but the index is missing or older, e.g. when
+    the snapshots were pulled from the Vercel export function instead of
+    export_public_snapshots.py. Best effort; never blocks the upload."""
+    import shutil
+    import subprocess
+
+    catalog = source / "listing-catalog.json"
+    manifest = source / "idx" / "manifest.json"
+    if not catalog.exists():
+        return
+    if manifest.exists() and manifest.stat().st_mtime >= catalog.stat().st_mtime:
+        return
+    script = Path(__file__).resolve().parent.parent / "scripts" / "build-snapshot-indexes.mjs"
+    node = shutil.which("node")
+    if not node or not script.exists():
+        print("entity index build skipped (node or script missing)")
+        return
+    try:
+        args = [str(script), str(source), "--no-sitemaps"]
+        # Node < 22 rejects the flag (exit 9); retry without it (the script
+        # then falls back to esbuild / a naive canonicalizer).
+        if subprocess.run([node, "--experimental-strip-types", *args], check=False, timeout=900).returncode != 0:
+            subprocess.run([node, *args], check=False, timeout=900)
+    except Exception as exc:  # noqa: BLE001
+        print(f"entity index build failed: {exc}")
+
+
 def main() -> None:
     source = Path(os.getenv("SNAPSHOT_SOURCE_DIR", "snapshots/latest")).resolve()
+    if source.exists():
+        ensure_entity_indexes(source)
     prefix = (os.getenv("R2_PREFIX") or "latest").strip().strip("/")
     bucket = required_env("R2_BUCKET")
 

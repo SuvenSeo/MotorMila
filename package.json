@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/sync-snapshots-from-r2.mjs && vite build",
+    "build": "node scripts/sync-snapshots-from-r2.mjs && node scripts/build-snapshot-indexes.mjs && vite build && node scripts/prerender-seo.mjs",
+    "snapshots:index": "node scripts/build-snapshot-indexes.mjs",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",

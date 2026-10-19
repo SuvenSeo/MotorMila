@@ -654,6 +654,99 @@ def verify_dealer(
     return _dealer_row(row)
 
 
+# ── User-listing moderation queue ─────────────────────────────────────────
+
+
+class ListingModerationRequest(BaseModel):
+    reason: Optional[str] = Field(default=None, max_length=500)
+
+
+def _moderation_row(row: CarListing) -> dict:
+    return {
+        "id": row.id,
+        "title": row.title,
+        "make": row.make,
+        "model": row.model,
+        "year": row.year,
+        "priceLkr": float(row.price_lkr) if row.price_lkr is not None else None,
+        "district": row.district,
+        "status": row.user_listing_status,
+        "isActive": bool(row.is_active),
+        "owner": row.owner_user_id,
+        "contactName": row.contact_name,
+        "contactPhone": row.contact_phone,
+        "description": row.description,
+        "images": row.user_images,
+        "createdAt": row.first_seen_at.isoformat() if row.first_seen_at else None,
+        "updatedAt": row.content_updated_at.isoformat() if row.content_updated_at else None,
+    }
+
+
+def _user_listing_or_404(db: Session, listing_id: int) -> CarListing:
+    row = (
+        db.query(CarListing)
+        .filter(CarListing.id == listing_id, CarListing.source == "motormila_user")
+        .first()
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="User listing not found.")
+    return row
+
+
+@router.get("/listings/moderation", response_model=dict)
+def list_moderation_queue(
+    status: str = Query(default="pending", max_length=20),
+    limit: int = Query(default=50, ge=1, le=200),
+    admin: dict = Depends(require_admin_access),
+    db: Session = Depends(get_db),
+):
+    """User-submitted listings awaiting review (or any given status)."""
+    del admin
+    query = db.query(CarListing).filter(CarListing.source == "motormila_user")
+    if status != "all":
+        query = query.filter(CarListing.user_listing_status == status)
+    rows = query.order_by(CarListing.first_seen_at.asc()).limit(limit).all()
+    return {"items": [_moderation_row(r) for r in rows], "count": len(rows)}
+
+
+@router.post("/listings/{listing_id}/approve", response_model=dict)
+def approve_user_listing(
+    listing_id: int,
+    admin: dict = Depends(require_admin_access),
+    db: Session = Depends(get_db),
+):
+    """Publish a pending user listing into the live market."""
+    del admin
+    row = _user_listing_or_404(db, listing_id)
+    if row.user_listing_status == "removed":
+        raise HTTPException(status_code=409, detail="Listing was removed by its owner.")
+    row.user_listing_status = "published"
+    row.is_active = True
+    row.last_seen_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(row)
+    return _moderation_row(row)
+
+
+@router.post("/listings/{listing_id}/reject", response_model=dict)
+def reject_user_listing(
+    listing_id: int,
+    payload: Optional[ListingModerationRequest] = None,
+    admin: dict = Depends(require_admin_access),
+    db: Session = Depends(get_db),
+):
+    """Reject (or unpublish) a user listing; it goes back to the owner as draft."""
+    del admin
+    row = _user_listing_or_404(db, listing_id)
+    row.user_listing_status = "draft"
+    row.is_active = False
+    db.commit()
+    db.refresh(row)
+    result = _moderation_row(row)
+    result["reason"] = payload.reason if payload else None
+    return result
+
+
 @router.get("/pipeline", response_model=dict)
 def admin_pipeline(
     admin: dict = Depends(require_admin_access),

@@ -1,11 +1,12 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, BookOpen, Check, HelpCircle, Loader2, MessageCircle, Sparkles, Timer, Users } from "lucide-react";
+import { ArrowRight, BookOpen, Check, CreditCard, HelpCircle, Loader2, MessageCircle, Sparkles, Timer, Users } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ParticleButton, type ParticleButtonHandle } from "@/components/ui/ParticleButton";
 import { BRAND } from "@/lib/brand";
-import { ANNUAL_SAVE_NUDGE, COMING_SOON_COPY, ICP_PERSONAS, PRICING_COMING_SOON, PRICING_FAQ, PRICING_TIERS, TRIAL_OFFER } from "@/lib/pricingContent";
-import type { PricingTierId } from "@/lib/pricingContent";
+import { ANNUAL_SAVE_NUDGE, COMING_SOON_COPY, DEALER_TIERS, ICP_PERSONAS, PLAN_PRICES, PRICING_COMING_SOON, PRICING_FAQ, PRICING_TIERS, TRIAL_OFFER, formatLkr } from "@/lib/pricingContent";
+import type { DealerTierCode } from "@/lib/pricingContent";
+import { createPayhereCheckout, getPayhereConfig, submitPayhereForm, type PayhereConfig } from "@/lib/moneyApi";
 import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
 import { PageHero } from "@/components/PageHero";
@@ -30,8 +31,9 @@ type ManualPayInstructions = {
 };
 
 type CheckoutIntentResponse = {
-  provider: "manual" | "payhere" | "stripe";
+  provider: "manual" | "payhere";
   checkout_url?: string | null;
+  payhere_checkout_endpoint?: string | null;
   message: string;
   manual_pay?: ManualPayInstructions | null;
 };
@@ -293,31 +295,226 @@ const CTA_CLASS = (highlight?: boolean) =>
   }`;
 
 
-export default function Pricing() {
-  const { t } = useAppPreferences();
-  const [checkoutLoading, setCheckoutLoading] = useState<PricingTierId | null>(null);
-  const [manualPay, setManualPay] = useState<{ plan: string; instructions: ManualPayInstructions } | null>(null);
-  const cell = (key: string, fb: string) => (key ? t(key, fb) : fb);
+type Period = "monthly" | "yearly";
 
-  const handleCheckout = async (tierId: PricingTierId, fallbackTo: string) => {
-    setCheckoutLoading(tierId);
+/** Phone + billing-period step before redirecting to PayHere. */
+function PayherePanel({
+  code,
+  period,
+  recurringAvailable,
+  sandbox,
+  onManual,
+  onClose,
+}: {
+  code: DealerTierCode;
+  period: Period;
+  recurringAvailable: boolean;
+  sandbox: boolean;
+  onManual: () => void;
+  onClose: () => void;
+}) {
+  const [phone, setPhone] = useState("");
+  const [recurring, setRecurring] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const tier = DEALER_TIERS.find((t) => t.code === code);
+  const amount = PLAN_PRICES[code][period];
+  return (
+    <div role="dialog" aria-label="Pay with PayHere" className="rounded-2xl border border-primary/25 bg-primary/[0.06] p-6 sm:p-7">
+      <p className="section-eyebrow mb-2 inline-flex items-center gap-2">
+        <CreditCard aria-hidden className="h-3.5 w-3.5" />
+        Dealer {tier?.name} · {formatLkr(amount)} / {period === "yearly" ? "year" : "month"}
+        {sandbox ? <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-700 dark:text-amber-400">Test mode</span> : null}
+      </p>
+      <p className="text-[13px] text-foreground/85">
+        You'll be sent to PayHere to pay by card, Genie, FriMi or eZcash. MotorMila never sees your card details.
+      </p>
+      <form
+        className="mt-4 flex flex-wrap items-end gap-3"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setError(null);
+          setBusy(true);
+          try {
+            const checkout = await createPayhereCheckout({ plan_code: code, period, recurring, phone });
+            submitPayhereForm(checkout);
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Couldn't start the payment.");
+            setBusy(false);
+          }
+        }}
+      >
+        <label className="flex min-w-[220px] flex-1 flex-col gap-1.5 text-[12px] font-semibold text-foreground">
+          Mobile number (PayHere needs it for the receipt)
+          <input
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            required
+            placeholder="077 123 4567"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="h-11 rounded-xl border border-border bg-card px-3.5 text-[13px] font-normal text-foreground focus:border-primary/50 focus:outline-none"
+          />
+        </label>
+        {recurringAvailable && (
+          <label className="flex items-center gap-2 text-[12px] text-foreground/85">
+            <input type="checkbox" checked={recurring} onChange={(e) => setRecurring(e.target.checked)} className="h-4 w-4 accent-[hsl(var(--primary))]" />
+            Renew automatically (cancel any time)
+          </label>
+        )}
+        <button
+          type="submit"
+          disabled={busy}
+          className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-[13px] font-semibold text-primary-foreground disabled:opacity-60"
+        >
+          {busy ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : null}
+          Continue to PayHere
+        </button>
+      </form>
+      {error && <p role="alert" className="mt-3 text-[12px] font-semibold text-destructive">{error}</p>}
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button type="button" onClick={onManual} className="inline-flex h-9 items-center rounded-full border border-border bg-card px-4 text-[12px] font-semibold text-foreground">
+          Pay by bank transfer / KOKO instead
+        </button>
+        <button type="button" onClick={onClose} className="inline-flex h-9 items-center rounded-full border border-border bg-card px-4 text-[12px] font-semibold text-muted-foreground">
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DealerPlans() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [period, setPeriod] = useState<Period>("monthly");
+  const [config, setConfig] = useState<PayhereConfig | null>(null);
+  const [loading, setLoading] = useState<DealerTierCode | null>(null);
+  const [payhere, setPayhere] = useState<DealerTierCode | null>(null);
+  const [manualPay, setManualPay] = useState<{ plan: string; instructions: ManualPayInstructions } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getPayhereConfig()
+      .then((c) => !cancelled && setConfig(c))
+      .catch(() => !cancelled && setConfig(null));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const choose = async (code: DealerTierCode) => {
+    setLoading(code);
+    setManualPay(null);
+    setPayhere(null);
     try {
-      const intent = await fetchCheckoutIntent(tierId);
+      const intent = await fetchCheckoutIntent(code);
+      if (intent.provider === "payhere" && intent.payhere_checkout_endpoint) {
+        if (!user) {
+          toast.message("Sign in first so we know which account to upgrade.");
+          navigate("/sign-in", { state: { from: { pathname: "/pricing" } } });
+          return;
+        }
+        setPayhere(code);
+        return;
+      }
       if (intent.checkout_url) {
         window.location.href = intent.checkout_url;
         return;
       }
-      if (intent.manual_pay) {
-        setManualPay({ plan: tierId, instructions: intent.manual_pay });
-        return;
-      }
-      window.location.href = fallbackTo;
+      if (intent.manual_pay) setManualPay({ plan: code, instructions: intent.manual_pay });
     } catch {
-      window.location.href = fallbackTo;
+      toast.error("Couldn't load payment options. Email us and we'll set you up.");
     } finally {
-      setCheckoutLoading(null);
+      setLoading(null);
     }
   };
+
+  const showManual = async (code: DealerTierCode) => {
+    try {
+      const res = await fetch(`${API_BASE}/billing/manual-pay?plan=${encodeURIComponent(code)}`, { headers: { Accept: "application/json" } });
+      if (res.ok) setManualPay({ plan: code, instructions: (await res.json()) as ManualPayInstructions });
+    } catch {
+      toast.error("Couldn't load bank transfer details.");
+    }
+    setPayhere(null);
+  };
+
+  return (
+    <motion.section id="dealer-plans" variants={revealItem} aria-labelledby="dealer-plans-heading" className="scroll-mt-24">
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="section-eyebrow mb-3">Dealer plans</p>
+          <h2 id="dealer-plans-heading" className="display-2 text-foreground">Priced by the size of your stock.</h2>
+          <p className="mt-2 text-[13px] text-muted-foreground">{ANNUAL_SAVE_NUDGE.dealer}. Market comparisons are shown as medians and ranges, never copies of other sellers' ads.</p>
+        </div>
+        <div role="radiogroup" aria-label="Billing period" className="inline-flex rounded-full border border-border bg-card p-1">
+          {(["monthly", "yearly"] as const).map((p) => (
+            <button
+              key={p}
+              type="button"
+              role="radio"
+              aria-checked={period === p}
+              onClick={() => setPeriod(p)}
+              className={`h-9 rounded-full px-4 text-[12px] font-semibold ${period === p ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+            >
+              {p === "monthly" ? "Monthly" : "Yearly (2 months free)"}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="grid gap-5 md:grid-cols-3">
+        {DEALER_TIERS.map((tier) => (
+          <div key={tier.code} className={`flex flex-col rounded-2xl border p-6 ${tier.highlight ? "border-primary/40 bg-primary/[0.07] shadow-soft" : "border-border bg-card/50"}`}>
+            <p className="text-[12px] font-semibold text-muted-foreground">Dealer {tier.name}</p>
+            <div className="mt-3 flex items-baseline gap-1.5">
+              <span className="num text-2xl font-bold text-foreground">{formatLkr(PLAN_PRICES[tier.code][period])}</span>
+              <span className="text-[12px] text-muted-foreground">/{period === "yearly" ? "yr" : "mo"}</span>
+            </div>
+            <p className="mt-1 text-[11px] font-medium text-muted-foreground">{tier.stock}</p>
+            <ul className="mt-5 flex-1 space-y-2.5 border-t border-border pt-5">
+              {tier.features.map((f) => (
+                <li key={f} className="flex gap-2 text-[12px] leading-snug text-foreground/85">
+                  <Check aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
+            <button type="button" disabled={loading === tier.code} onClick={() => void choose(tier.code)} className={CTA_CLASS(tier.highlight)}>
+              {loading === tier.code ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" aria-hidden /> : null}
+              Choose {tier.name}
+            </button>
+          </div>
+        ))}
+      </div>
+      <p className="mt-4 text-[11px] text-muted-foreground">
+        {config?.enabled ? "Card and wallet payments by PayHere." : "Pay by bank transfer or KOKO; card payments by PayHere are coming soon."} Prices in LKR. Cancel any time; your plan runs to the end of the paid period.
+      </p>
+      {payhere && config && (
+        <div className="mt-6">
+          <PayherePanel
+            code={payhere}
+            period={period}
+            recurringAvailable={Boolean(config.recurringAvailable)}
+            sandbox={config.sandbox}
+            onManual={() => void showManual(payhere)}
+            onClose={() => setPayhere(null)}
+          />
+        </div>
+      )}
+      {manualPay && (
+        <div className="mt-6">
+          <ManualPayPanel plan={manualPay.plan} instructions={manualPay.instructions} onClose={() => setManualPay(null)} />
+        </div>
+      )}
+    </motion.section>
+  );
+}
+
+export default function Pricing() {
+  const { t } = useAppPreferences();
+  const cell = (key: string, fb: string) => (key ? t(key, fb) : fb);
   const COMPARE_ROWS = COMPARE_ROW_DEFS.map((row) => ({
     label: t(row.labelKey, row.labelFb),
     free: cell(row.freeKey, row.freeFb),
@@ -333,13 +530,13 @@ export default function Pricing() {
         eyebrowIcon={Sparkles}
         watermarkIcon={Users}
         title={<>{t("pricing.title", "Pricing that funds the pipeline")}<span className="text-sheen">.</span></>}
-        description={t("pricing.body", PRICING_COMING_SOON ? "Paid plans are coming soon. Free browse stays open — contact us to get notified at launch." : "Free browse stays free. Start a 7-day free Pro trial — then keep Pro with bank, KOKO, or WhatsApp manual pay.")}
+        description={t("pricing.body", PRICING_COMING_SOON ? "Browsing is free. Pro is free during the beta. Dealer plans start at LKR 2,990 a month, paid by card, wallet, bank transfer or KOKO." : "Free browse stays free. Start a 7-day free Pro trial — then keep Pro with bank, KOKO, or WhatsApp manual pay.")}
         media={visuals.alt2PagePricingBg}
         mediaPosition="center 40%"
         mediaTone="brand"
         highlights={[
-          { label: "Trial", value: "7 days", hint: "Free Pro at launch" },
-          { label: "Dealer lane", value: "Pro", hint: "Command center + exports" },
+          { label: "Pro", value: "Free", hint: "During the beta" },
+          { label: "Dealer", value: "2,990", hint: "LKR / month, from" },
           { label: "Annual", value: "-2 mo", hint: "Annual saves 2 months" },
         ]}
         actions={
@@ -371,8 +568,12 @@ export default function Pricing() {
               <Sparkles aria-hidden className="h-4 w-4 text-primary" />
               {COMING_SOON_COPY.badge} — {COMING_SOON_COPY.note} Contact{" "}
               <a href={`mailto:${BRAND.contactEmail}`} className="underline decoration-primary/40 underline-offset-2">{BRAND.contactEmail}</a>
-              {" "}·{" "}
-              <a href={BRAND.contactPhoneHref} className="underline decoration-primary/40 underline-offset-2">{BRAND.contactPhone}</a>
+              {BRAND.contactPhone ? (
+                <>
+                  {" "}·{" "}
+                  <a href={BRAND.contactPhoneHref} className="underline decoration-primary/40 underline-offset-2">{BRAND.contactPhone}</a>
+                </>
+              ) : null}
             </p>
           </div>
         )}
@@ -446,18 +647,10 @@ export default function Pricing() {
                     </li>
                   ))}
                 </ul>
-                {(tier.id === "pro" || tier.id === "dealer") ? (
-                  <button
-                    type="button"
-                    disabled={checkoutLoading === tier.id}
-                    onClick={() => void handleCheckout(tier.id, tier.ctaTo)}
-                    className={CTA_CLASS(tier.highlight)}
-                  >
-                    {checkoutLoading === tier.id ? (
-                      <Loader2 className="mr-1.5 h-3 w-3 animate-spin" aria-hidden />
-                    ) : null}
+                {tier.ctaTo.startsWith("#") ? (
+                  <a href={tier.ctaTo} className={CTA_CLASS(tier.highlight)}>
                     {tier.ctaLabel}
-                  </button>
+                  </a>
                 ) : tier.external ? (
                   <a href={tier.ctaTo} className={CTA_CLASS(tier.highlight)}>
                     {tier.ctaLabel}
@@ -470,12 +663,9 @@ export default function Pricing() {
               </div>
             ))}
           </div>
-          {manualPay && (
-            <div className="mt-6">
-              <ManualPayPanel plan={manualPay.plan} instructions={manualPay.instructions} onClose={() => setManualPay(null)} />
-            </div>
-          )}
         </motion.section>
+
+        <DealerPlans />
 
         <motion.section variants={revealItem} aria-labelledby="compare-heading">
           <p className="section-eyebrow mb-3">{t("pricing.compare", "Compare")}</p>
@@ -537,8 +727,9 @@ export default function Pricing() {
         </motion.section>
 
         <motion.div
+          id="get-started"
           variants={revealItem}
-          className="flex flex-col gap-4 rounded-2xl border border-primary/25 bg-primary/[0.06] p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8"
+          className="flex scroll-mt-24 flex-col gap-4 rounded-2xl border border-primary/25 bg-primary/[0.06] p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8"
         >
           <div>
             <p className="section-eyebrow mb-2">{t("pricing.getStarted", "Get started")}</p>

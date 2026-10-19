@@ -69,6 +69,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -89,6 +90,7 @@ import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
+import lk.motormila.app.R
 import lk.motormila.app.core.format.LkrFormat
 import lk.motormila.app.domain.model.DealBand
 import lk.motormila.app.domain.model.Fmv
@@ -301,6 +303,11 @@ fun ListingDetailScreen(
                         item {
                             SellerCard(
                                 seller = state.seller,
+                                sourceName = sourceDisplayName(listing.source),
+                                onViewSource = {
+                                    val url = listing.externalUrl ?: listing.detailUrl
+                                    if (url != null) openUrl(context, url)
+                                },
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             )
                         }
@@ -358,7 +365,7 @@ fun ListingDetailScreen(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
                                 MotormilaPrimaryButton(
-                                    label = "VIEW ON ${listing.source?.uppercase()?.ifBlank { "SOURCE" } ?: "IKMAN"}",
+                                    label = stringResource(R.string.listing_view_on_source, sourceDisplayName(listing.source)),
                                     onClick = {
                                         val url = listing.externalUrl ?: listing.detailUrl
                                         if (url != null) openUrl(context, url)
@@ -368,7 +375,7 @@ fun ListingDetailScreen(
                                     modifier = Modifier.weight(1f),
                                 )
                                 MotormilaGhostButton(
-                                    label = "SHARE ON WHATSAPP",
+                                    label = stringResource(R.string.listing_share_whatsapp),
                                     onClick = { shareWhatsApp(context, listing, state.fmv) },
                                     fillMaxWidth = false,
                                     leadingIcon = Icons.AutoMirrored.Filled.Chat,
@@ -385,7 +392,7 @@ fun ListingDetailScreen(
     if (showFmvExplain && state.fmv != null) {
         ModalBottomSheet(onDismissRequest = { showFmvExplain = false }) {
             Column(Modifier.padding(20.dp)) {
-                Text("How this valuation works", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineMedium)
+                Text(stringResource(R.string.ui_detail_how_this_valuation_works), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineMedium)
                 Spacer(Modifier.height(8.dp))
                 val fmv = state.fmv!!
                 Text("Method: ${fmv.method ?: "comparable sales"}", style = MaterialTheme.typography.labelLarge)
@@ -821,21 +828,28 @@ private fun HeroActionsRow(
     onShare: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val sourceName = listing.source?.uppercase()?.ifBlank { "SOURCE" } ?: "IKMAN"
+    val sourceName = sourceDisplayName(listing.source)
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    // Attribution: every listing is credited to the site it was listed on.
+    Text(
+        text = stringResource(R.string.listing_listed_on, sourceName),
+        style = MaterialTheme.typography.labelMedium,
+        color = MotormilaSecondaryText,
+    )
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         MotormilaPrimaryButton(
-            label = "VIEW ON $sourceName",
+            label = stringResource(R.string.listing_view_on_source, sourceName),
             fillMaxWidth = false,
             leadingIcon = Icons.AutoMirrored.Filled.OpenInNew,
             modifier = Modifier.weight(1.25f),
             onClick = onViewSource,
         )
         MotormilaGhostButton(
-            label = "SHARE ON WHATSAPP",
+            label = stringResource(R.string.listing_share_whatsapp),
             fillMaxWidth = false,
             leadingIcon = Icons.AutoMirrored.Filled.Chat,
             modifier = Modifier.weight(1f),
@@ -843,11 +857,18 @@ private fun HeroActionsRow(
         )
         MotormilaIconAction(
             icon = Icons.Filled.Share,
-            contentDescription = "Share listing",
+            contentDescription = stringResource(R.string.listing_share_cd),
             onClick = onShare,
         )
     }
+    }
 }
+
+/** Human source name for attribution ("ikman", "Riyasewana"); generic fallback. */
+@Composable
+private fun sourceDisplayName(source: String?): String =
+    source?.trim()?.takeIf { it.isNotEmpty() }?.replaceFirstChar { it.uppercase() }
+        ?: stringResource(R.string.listing_source_fallback)
 
 /** Deal ladder rungs: asking vs low/median/high markers. */
 @Composable
@@ -1115,7 +1136,7 @@ private fun LeasePaymentCalculator(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text("10%", style = MaterialTheme.typography.labelSmall, color = MotormilaSecondaryText)
-                    Text("40% (CBSL Cap)", style = MaterialTheme.typography.labelSmall, color = MotormilaSecondaryText)
+                    Text(stringResource(R.string.ui_detail_40_cbsl_cap), style = MaterialTheme.typography.labelSmall, color = MotormilaSecondaryText)
                     Text("80%", style = MaterialTheme.typography.labelSmall, color = MotormilaSecondaryText)
                 }
             }
@@ -1626,7 +1647,7 @@ private fun HistorySection(
     modifier: Modifier = Modifier,
 ) {
     MotormilaSurface(modifier = modifier) {
-        Text("Price history", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(R.string.ui_detail_price_history), fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
         Spacer(Modifier.height(8.dp))
         if (history == null || history.points.size < 2) {
             Text(
@@ -1649,7 +1670,7 @@ private fun HistorySection(
         val flags = report?.flags.orEmpty()
         if (flags.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
-            Text("Ownership flags", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.ui_detail_ownership_flags), fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
             Spacer(Modifier.height(4.dp))
             flags.forEach { flag ->
                 Row(
@@ -1683,8 +1704,12 @@ private fun HistorySection(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SellerCard(seller: SellerProfile?, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
+private fun SellerCard(
+    seller: SellerProfile?,
+    sourceName: String,
+    onViewSource: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = MotormilaRadius.lg,
@@ -1756,7 +1781,8 @@ private fun SellerCard(seller: SellerProfile?, modifier: Modifier = Modifier) {
             }
 
             if (seller != null) {
-                val badges = seller.verifiedBadges.ifEmpty { listOf("ID Verified", "Phone Verified") }
+                // Only badges the source actually reports — never invented.
+                val badges = seller.verifiedBadges
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -1797,29 +1823,18 @@ private fun SellerCard(seller: SellerProfile?, modifier: Modifier = Modifier) {
                 )
             }
 
-            val phone = seller?.primaryPhone
-            val whatsapp = seller?.primaryWhatsapp
-
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                MotormilaGhostButton(
-                    label = "Call",
-                    fillMaxWidth = false,
-                    leadingIcon = Icons.Filled.Call,
-                    modifier = Modifier.weight(1f),
-                    onClick = {
-                        if (phone != null) context.startActivity(Intent(Intent.ACTION_DIAL, "tel:$phone".toUri()))
-                    },
-                )
-                MotormilaGhostButton(
-                    label = "WhatsApp",
-                    fillMaxWidth = false,
-                    leadingIcon = Icons.AutoMirrored.Filled.Chat,
-                    modifier = Modifier.weight(1f),
-                    onClick = {
-                        if (whatsapp != null) openUrl(context, "https://wa.me/${whatsapp.filter(Char::isDigit)}")
-                    },
-                )
-            }
+            // No phone/WhatsApp reveal: MotorMila does not republish seller
+            // contact details; buyers contact the seller on the original listing.
+            Text(
+                text = stringResource(R.string.listing_contact_on_source, sourceName),
+                style = MaterialTheme.typography.labelSmall,
+                color = MotormilaSecondaryText,
+            )
+            MotormilaGhostButton(
+                label = stringResource(R.string.listing_view_on_source, sourceName),
+                leadingIcon = Icons.AutoMirrored.Filled.OpenInNew,
+                onClick = onViewSource,
+            )
         }
     }
 }

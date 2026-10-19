@@ -124,7 +124,14 @@ def live_listing_filter():
         CarListing.is_outlier == False,  # noqa: E712
         CarListing.is_active == True,  # noqa: E712
         CarListing.is_duplicate == False,  # noqa: E712
+        # User-submitted listings only count once an admin published them
+        # (moderation queue); scraped rows carry 'scraped'.
+        CarListing.user_listing_status.in_(LIVE_LISTING_STATUSES),
     )
+
+
+# user_listing_status values that may appear in public market views.
+LIVE_LISTING_STATUSES = ("scraped", "published")
 
 class PriceAggregate(Base):
     __tablename__ = 'price_aggregates'
@@ -684,3 +691,13 @@ class ListingGeoEnrichment(Base):
         Index("idx_listing_geo_hash", "source_location_hash"),
         Index("idx_listing_geo_fetched", "fetched_at"),
     )
+
+
+class BillingWebhookEvent(Base):
+    """Processed billing-webhook event ids (replay protection / idempotency)."""
+
+    __tablename__ = "billing_webhook_events"
+
+    event_id = Column(String(120), primary_key=True)
+    email = Column(String(255), nullable=True)
+    received_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

@@ -4,6 +4,9 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import java.security.MessageDigest
 import androidx.core.content.FileProvider
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
@@ -18,8 +21,17 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
+/** Static release manifest written by the android-release workflow (CDN, survives backend outages). */
+internal const val STATIC_RELEASE_MANIFEST_URL = "https://motormila.pages.dev/app/latest-release.json"
+
 /**
- * In-app update checking for the sideload APK distribution channel.
+ * In-app update checking for the sideload ("direct" flavor) APK channel.
+ * Disabled entirely in the "play" flavor ([BuildConfig.SELF_UPDATE_ENABLED]):
+ * Play's Device and Network Abuse policy forbids self-updating.
+ *
+ * Integrity: the manifest must carry the APK's SHA-256; the downloaded bytes
+ * are hashed and the installer is never launched on a mismatch (or when no
+ * hash is published). Android's own same-signer check is the second layer.
  *
  * Flow: app calls GET {BASE_URL}/releases/app → backend returns env-published
  * metadata for the newest GitHub Release APK. If [LatestRelease.versionCode]
@@ -44,6 +56,7 @@ class AppUpdateChecker @Inject constructor(
         val notes: String? = null,
         val published_at: String? = null,
         val min_supported_version_code: Int = 0,
+        val sha256: String? = null,
     )
 
     sealed interface CheckResult {
@@ -53,6 +66,10 @@ class AppUpdateChecker @Inject constructor(
             val versionCode: Int,
             val apkUrl: String,
             val notes: String?,
+            /** Lower-case hex SHA-256 of the APK, from the release manifest. */
+            val sha256: String? = null,
+            /** Running build is below min_supported_version_code: no "Later". */
+            val mandatory: Boolean = false,
         ) : CheckResult
 
         /** Running build is the newest (or check failed) — no action needed. */
@@ -65,23 +82,19 @@ class AppUpdateChecker @Inject constructor(
      * apk_url is present. Any network/parse error yields [CheckResult.UpToDate].
      */
     suspend fun check(currentVersionCode: Int): CheckResult {
+        if (!BuildConfig.SELF_UPDATE_ENABLED) return CheckResult.UpToDate
         val release = fetchLatestRelease() ?: return CheckResult.UpToDate
-        val remoteCode = release.version_code ?: return CheckResult.UpToDate
-        val url = release.apk_url?.trim().orEmpty()
-        if (remoteCode <= currentVersionCode || url.isBlank()) return CheckResult.UpToDate
-        return CheckResult.UpdateAvailable(
-            versionName = release.version ?: "v$remoteCode",
-            versionCode = remoteCode,
-            apkUrl = url,
-            notes = release.notes?.takeIf { it.isNotBlank() },
-        )
+        return decide(release, currentVersionCode)
     }
 
     /**
      * Download the APK into app-external cache. Returns null on any failure —
      * the caller keeps the user in the app and surfaces a snackbar.
      */
-    suspend fun downloadApk(apkUrl: String, context: Context): File? {
+    suspend fun downloadApk(apkUrl: String, context: Context, expectedSha256: String?): File? {
+        if (!BuildConfig.SELF_UPDATE_ENABLED) return null
+        val expected = normalizeSha256(expectedSha256) ?: return null
+        if (!apkUrl.startsWith("https://")) return null
         return try {
             // Bare client — never send the session JWT to an APK download host.
             // The shared okHttpClient carries AuthInterceptor which would
@@ -96,10 +109,21 @@ class AppUpdateChecker @Inject constructor(
                 val body = response.body ?: return null
                 val dir = File(context.getExternalFilesDir(null), "updates").apply { mkdirs() }
                 val target = File(dir, "motormila-update.apk")
+                val digest = MessageDigest.getInstance("SHA-256")
                 target.outputStream().use { out ->
-                    body.byteStream().use { input -> input.copyTo(out) }
+                    body.byteStream().use { input ->
+                        val buf = ByteArray(64 * 1024)
+                        while (true) {
+                            val n = input.read(buf)
+                            if (n < 0) break
+                            digest.update(buf, 0, n)
+                            out.write(buf, 0, n)
+                        }
+                    }
                 }
-                if (target.length() == 0L) {
+                val actual = digest.digest().joinToString("") { "%02x".format(it) }
+                if (target.length() == 0L || actual != expected) {
+                    // Tampered, truncated or wrong file: never hand it to the installer.
                     target.delete()
                     return null
                 }
@@ -122,6 +146,7 @@ class AppUpdateChecker @Inject constructor(
      * have "Install unknown apps" enabled for this app (sideload channel).
      */
     fun launchInstaller(apkFile: File, context: Context): Boolean {
+        if (!BuildConfig.SELF_UPDATE_ENABLED) return false
         return try {
             val uri: Uri = FileProvider.getUriForFile(
                 context,
@@ -141,14 +166,46 @@ class AppUpdateChecker @Inject constructor(
         }
     }
 
-    private suspend fun fetchLatestRelease(): LatestRelease? {
-        val url = buildReleaseUrl().toHttpUrlOrNull() ?: return null
+    /** True when this app may launch the package installer ("Install unknown apps"). */
+    fun canInstallPackages(context: Context): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
+            context.packageManager.canRequestPackageInstalls()
+
+    /** Opens the system "Install unknown apps" toggle for this app. */
+    fun openInstallPermissionSettings(context: Context): Boolean = try {
+        context.startActivity(
+            Intent(
+                Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                Uri.parse("package:${context.packageName}"),
+            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+        true
+    } catch (_: ActivityNotFoundException) {
+        false
+    }
+
+    /** Static CDN manifest first (carries sha256, up when the API is down), then the API. */
+    private suspend fun fetchLatestRelease(): LatestRelease? =
+        fetchManifest(STATIC_RELEASE_MANIFEST_URL, bare = true)
+            ?: fetchManifest(buildReleaseUrl(), bare = false)
+
+    private val bareClient: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+    }
+
+    private suspend fun fetchManifest(rawUrl: String, bare: Boolean): LatestRelease? {
+        val client = if (bare) bareClient else okHttpClient
+        val url = rawUrl.toHttpUrlOrNull() ?: return null
         val request = Request.Builder().url(url).get().build()
         return try {
-            okHttpClient.newCall(request).execute().use { response ->
+            client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return null
                 val body = response.body ?: return null
                 json.decodeFromString(LatestRelease.serializer(), body.string())
+                    .takeIf { it.version_code != null }
             }
         } catch (e: CancellationException) {
             // Coroutine cancellation must propagate, never be swallowed.
@@ -162,4 +219,28 @@ class AppUpdateChecker @Inject constructor(
 
     private fun buildReleaseUrl(): String =
         BuildConfig.BASE_URL.trim().trimEnd('/') + "/releases/app"
+
+    companion object {
+        /** Pure decision policy (unit-tested). */
+        internal fun decide(release: LatestRelease, currentVersionCode: Int): CheckResult {
+            val remoteCode = release.version_code ?: return CheckResult.UpToDate
+            val url = release.apk_url?.trim().orEmpty()
+            if (remoteCode <= currentVersionCode || url.isBlank()) return CheckResult.UpToDate
+            // No published hash = no verifiable install: stay quiet.
+            val sha = normalizeSha256(release.sha256) ?: return CheckResult.UpToDate
+            return CheckResult.UpdateAvailable(
+                versionName = release.version ?: "v$remoteCode",
+                versionCode = remoteCode,
+                apkUrl = url,
+                notes = release.notes?.takeIf { it.isNotBlank() },
+                sha256 = sha,
+                mandatory = currentVersionCode < release.min_supported_version_code,
+            )
+        }
+
+        internal fun normalizeSha256(raw: String?): String? {
+            val v = raw?.trim()?.lowercase()?.removePrefix("sha256:") ?: return null
+            return v.takeIf { it.length == 64 && it.all { c -> c in '0'..'9' || c in 'a'..'f' } }
+        }
+    }
 }

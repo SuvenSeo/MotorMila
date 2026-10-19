@@ -35,6 +35,8 @@ const ACTIONS: PaletteAction[] = [
   { id: "best-picks", label: "Best Picks", hint: "Top deals", icon: Sparkles, to: "/best-picks" },
   { id: "calculator", label: "Import Calculator", hint: "Landed cost", icon: Calculator, to: "/calculator" },
   { id: "valuation", label: "Valuation", hint: "Estimate value", icon: Scale, to: "/estimate" },
+  { id: "afford", label: "What can I afford?", hint: "Budget search", icon: Calculator, to: "/afford" },
+  { id: "safe-transfer", label: "Safe-Transfer Kit", hint: "Ownership transfer", icon: Tag, to: "/safe-transfer" },
   { id: "ev-hub", label: "EV Hub", hint: "Electric vehicles", icon: Zap, to: "/ev-hub" },
   { id: "sell", label: "Sell Your Car", hint: "List a vehicle", icon: Tag, to: "/sell" },
 ];

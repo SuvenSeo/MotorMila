@@ -18,10 +18,27 @@ re-checks every ``SQLITE_FAILOVER_CHECK_SECONDS`` (default 120s):
   * Neon back, failed over     -> rebind to the saved primary DSN
     automatically (no manual Space restart needed at month reset).
 
-Download sources are tried in order: ``MERGED_SQLITE_URLS`` (comma-separated),
-then ``MERGED_SQLITE_URL``, then the built-in default — the public copy
-deployed next to the site's snapshot JSON. The source repository is private,
-so no repo URL is baked into this file (it is synced to a public HF Space).
+Download sources are tried in order: ``SQLITE_FAILOVER_SLIM_URL`` (a slimmer
+live-rows-only dump, when published), ``MERGED_SQLITE_URLS`` (comma-separated),
+then ``MERGED_SQLITE_URL``, then the built-in defaults on public R2.
+
+Oct 2026 outage fixes (overhaul/backend-sec):
+
+  * ROOT CAUSE of "failover:false" while Neon was down: the R2 public bucket
+    (``*.r2.dev``, Cloudflare) answers **403 Forbidden** to urllib's default
+    ``Python-urllib/3.x`` User-Agent while curl gets 200. Every download
+    attempt failed instantly. All requests now send an explicit UA
+    (``SQLITE_FAILOVER_USER_AGENT``).
+  * The download timeout is configurable: ``SQLITE_FAILOVER_SOCKET_TIMEOUT``
+    (per-read, default 120 s) and ``SQLITE_FAILOVER_DOWNLOAD_DEADLINE``
+    (whole download, default 1800 s) - the dump is ~108 MB gz / ~455 MB raw
+    and cpu-basic gunzip is slow.
+  * The default path prefers ``/data`` (HF persistent storage, when mounted
+    and writable) over ``/tmp``; leftover ``.partial`` / ``.refresh`` files
+    from a previous process are removed before a download, and a refresh is
+    skipped (not attempted) when the disk cannot hold a second copy.
+  * The last error / attempt count / source are exposed via
+    :func:`failover_status` and reported by ``/health``.
 """
 
 from __future__ import annotations
@@ -33,6 +50,7 @@ import threading
 import time
 import urllib.request
 from pathlib import Path
+from typing import Optional
 
 import structlog
 from sqlalchemy import create_engine, text
@@ -57,6 +75,97 @@ FAILOVER_DB_URLS = (
 VERCEL_MERGED_DB_URL = FAILOVER_DB_URLS[0]
 FAILOVER_DB_URL = FAILOVER_DB_URLS[0]
 DEFAULT_FAILOVER_PATH = "/tmp/motormila-failover.db"
+PERSISTENT_FAILOVER_PATH = "/data/motormila-failover.db"
+# Slim dump name the export pipeline may publish next to the full one. A 404
+# here just falls through to the full dump, so it is safe to try first.
+SLIM_FAILOVER_DB_URL = (
+    "https://pub-f15911ef9a914db9a44e1fd6b47dfe4e.r2.dev/snapshots/latest/merged-motormila-slim.db.gz"
+)
+DEFAULT_USER_AGENT = "MotorMila-Failover/1.1 (+https://motormila.vercel.app)"
+# Raw-to-gz size ratio observed on the merged dump (108 MB -> 455 MB). Used to
+# estimate whether a second copy fits on disk before a refresh.
+_EXPANSION_RATIO_ESTIMATE = 5
+
+_status_lock = threading.Lock()
+_status: dict = {
+    "attempts": 0,
+    "last_error": None,
+    "last_attempt_at": None,
+    "last_success_at": None,
+    "source": None,
+    "path": None,
+    "bytes": None,
+}
+
+
+def _record_status(**fields) -> None:
+    with _status_lock:
+        _status.update(fields)
+
+
+def failover_status() -> dict:
+    """Snapshot of failover diagnostics for /health (no secrets)."""
+    with _status_lock:
+        snap = dict(_status)
+    snap["active"] = _activated
+    snap["enabled"] = failover_enabled()
+    return snap
+
+
+def _user_agent() -> str:
+    return os.getenv("SQLITE_FAILOVER_USER_AGENT", "").strip() or DEFAULT_USER_AGENT
+
+
+def _env_seconds(name: str, default: float) -> float:
+    raw = os.getenv(name, "").strip()
+    try:
+        return max(5.0, float(raw)) if raw else default
+    except ValueError:
+        return default
+
+
+def _socket_timeout() -> float:
+    return _env_seconds("SQLITE_FAILOVER_SOCKET_TIMEOUT", 120.0)
+
+
+def _download_deadline() -> float:
+    return _env_seconds("SQLITE_FAILOVER_DOWNLOAD_DEADLINE", 1800.0)
+
+
+def _failover_path() -> Path:
+    """Where the failover DB lives.
+
+    Explicit ``SQLITE_FAILOVER_PATH`` wins. Otherwise use HF persistent
+    storage (``/data``) when it is mounted and writable - it is larger than the
+    container's /tmp and survives restarts - and fall back to /tmp.
+    """
+    explicit = os.getenv("SQLITE_FAILOVER_PATH", "").strip()
+    if explicit:
+        return Path(explicit)
+    data_dir = Path("/data")
+    try:
+        if data_dir.is_dir() and os.access(data_dir, os.W_OK):
+            return Path(PERSISTENT_FAILOVER_PATH)
+    except OSError:
+        pass
+    return Path(DEFAULT_FAILOVER_PATH)
+
+
+def _cleanup_stale_partials(dest: Path) -> None:
+    """Remove half-written files from a previous (killed) process."""
+    for suffix in (".partial", ".refresh", ".refresh.partial"):
+        try:
+            dest.with_name(dest.name + suffix).unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+def _free_bytes(path: Path) -> Optional[int]:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return shutil.disk_usage(path.parent).free
+    except OSError:
+        return None
 
 _lock = threading.Lock()
 _activated = False
@@ -111,8 +220,11 @@ def neon_reachable(timeout_seconds: float = 3.0) -> bool:
     url = _current_url()
     if url.startswith("sqlite"):
         return True
+    from app.core.db_guard import bypass_breaker
+
     try:
-        with db_session.hot_engine.connect() as conn:
+        # Bypass the circuit breaker: this probe must observe the real DB.
+        with bypass_breaker(), db_session.hot_engine.connect() as conn:
             conn.execute(text("SELECT 1"))
         return True
     except Exception as exc:  # noqa: BLE001 — any connect failure means fail over
@@ -156,17 +268,51 @@ def _is_sqlite_file(path: Path) -> bool:
         return False
 
 
+def _open_source(source_url: str, *, method: str = "GET", timeout: Optional[float] = None):
+    """urlopen with an explicit User-Agent (r2.dev 403s urllib's default UA)."""
+    request = urllib.request.Request(
+        source_url,
+        method=method,
+        headers={
+            "User-Agent": _user_agent(),
+            "Accept": "*/*",
+            "Cache-Control": "no-cache",
+        },
+    )
+    return urllib.request.urlopen(request, timeout=timeout or _socket_timeout())
+
+
 def download_merged_sqlite(dest: Path, source_url: str) -> Path:
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmp_db = dest.with_name(dest.name + ".partial")
+    tmp_db.unlink(missing_ok=True)
+    deadline = time.monotonic() + _download_deadline()
     logger.info("sqlite_failover_download_start", url=source_url, dest=str(dest))
     try:
-        with urllib.request.urlopen(source_url, timeout=120) as resp:
-            # Stream straight through gunzip instead of staging the ~80MB .gz:
-            # next to the live ~337MB database the Space's /tmp cannot hold
-            # live + gz + new copy at once.
+        with _open_source(source_url) as resp:
+            # Disk pre-check: refuse early instead of filling the disk and
+            # failing after minutes of download.
+            raw_length = (resp.headers.get("Content-Length") or "").strip()
+            free = _free_bytes(tmp_db)
+            if raw_length.isdigit() and free is not None:
+                needed = int(raw_length) * _EXPANSION_RATIO_ESTIMATE
+                if free < needed:
+                    raise RuntimeError(
+                        f"not enough disk for failover DB at {tmp_db.parent}: "
+                        f"free={free} needed~={needed}"
+                    )
+            # Stream straight through gunzip (no staged .gz copy on disk), so
+            # only the decompressed file is written.
             with gzip.open(resp, "rb") as src, tmp_db.open("wb") as out:
-                shutil.copyfileobj(src, out, length=1024 * 1024)
+                while True:
+                    chunk = src.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    out.write(chunk)
+                    if time.monotonic() > deadline:
+                        raise TimeoutError(
+                            f"failover download exceeded {int(_download_deadline())}s deadline"
+                        )
         if tmp_db.stat().st_size < 1_000:
             raise RuntimeError(f"Merged SQLite download was empty: {tmp_db}")
         if not _is_sqlite_file(tmp_db):
@@ -211,6 +357,13 @@ def activate_sqlite_file(db_path: Path) -> None:
 def _candidate_sources() -> list[str]:
     """Ordered download mirrors for the merged dump, de-duplicated."""
     urls: list[str] = []
+    # Slim dump first when configured: SQLITE_FAILOVER_SLIM_URL=<url>, or
+    # SQLITE_FAILOVER_SLIM_URL=default for the conventional R2 name.
+    slim = os.getenv("SQLITE_FAILOVER_SLIM_URL", "").strip()
+    if slim.lower() == "default":
+        slim = SLIM_FAILOVER_DB_URL
+    if slim.startswith(("http://", "https://", "file:")):
+        urls.append(slim)
     for raw in os.getenv("MERGED_SQLITE_URLS", "").split(","):
         url = raw.strip()
         if url and url not in urls:
@@ -228,13 +381,8 @@ def _source_version(url: str) -> tuple[str | None, int | None] | None:
     """Read cheap deployment metadata for a public merged-DB source."""
     if not url or url.startswith("file:"):
         return None
-    request = urllib.request.Request(
-        url,
-        method="HEAD",
-        headers={"Cache-Control": "no-cache"},
-    )
     try:
-        with urllib.request.urlopen(request, timeout=20) as response:
+        with _open_source(url, method="HEAD", timeout=20) as response:
             return _version_from_headers(response.headers)
     except Exception as exc:  # noqa: BLE001 - refresh is best effort
         logger.warning("sqlite_failover_source_probe_failed", url=url, error=str(exc))
@@ -258,12 +406,28 @@ def _version_from_headers(headers) -> tuple[str | None, int | None] | None:
 
 def _download_with_fallback(dest: Path) -> Path:
     """Try each mirror in order; only give up when every source fails."""
+    global _active_source_url
     last_error: Exception | None = None
+    _cleanup_stale_partials(dest)
     for url in _candidate_sources():
+        _record_status(
+            attempts=int(_status.get("attempts") or 0) + 1,
+            last_attempt_at=time.time(),
+        )
         try:
-            return download_merged_sqlite(dest, url)
+            result = download_merged_sqlite(dest, url)
+            _active_source_url = url
+            _record_status(
+                last_error=None,
+                last_success_at=time.time(),
+                source=url,
+                path=str(dest),
+                bytes=dest.stat().st_size,
+            )
+            return result
         except Exception as exc:  # noqa: BLE001 — try the next mirror
             last_error = exc
+            _record_status(last_error=f"{url.rsplit('/', 1)[-1]}: {str(exc)[:240]}")
             logger.warning("sqlite_failover_source_failed", url=url, error=str(exc))
     raise RuntimeError(f"all failover DB sources failed; last error: {last_error}")
 
@@ -292,7 +456,7 @@ def _remember_primary_locked() -> None:
 def _activate_locked() -> bool:
     """Download (if needed) and rebind onto the merged dump. Caller holds _lock."""
     global _active_source_url, _active_source_version
-    dest = Path(os.getenv("SQLITE_FAILOVER_PATH", DEFAULT_FAILOVER_PATH))
+    dest = _failover_path()
     # A fresh process must refresh once even when the container reused an old
     # /tmp file from a previous Space process.
     if not _active_source_url or not dest.is_file() or dest.stat().st_size < 1_000:
@@ -314,7 +478,7 @@ def _activate_locked() -> bool:
 def _refresh_active_failover_locked() -> bool:
     """Refresh an active failover DB when the public source changes."""
     global _active_source_url, _active_source_version, _next_refresh_allowed_at
-    dest = Path(os.getenv("SQLITE_FAILOVER_PATH", DEFAULT_FAILOVER_PATH))
+    dest = _failover_path()
     if not _activated or not dest.is_file():
         return False
     if time.time() < _next_refresh_allowed_at:
@@ -331,6 +495,18 @@ def _refresh_active_failover_locked() -> bool:
         # the Space in a permanent download loop.
         _next_refresh_allowed_at = time.time() + _REFRESH_MIN_INTERVAL_SECONDS
         next_dest = dest.with_name(f"{dest.name}.refresh")
+        # A refresh needs live + new copy on disk at once. If that cannot fit,
+        # keep serving the current (stale but valid) file instead of failing
+        # half-way and risking ENOSPC for the live database's WAL.
+        free = _free_bytes(next_dest)
+        gz_len = version[1] if isinstance(version, tuple) else None
+        if free is not None and gz_len and free < gz_len * _EXPANSION_RATIO_ESTIMATE:
+            logger.warning(
+                "sqlite_failover_refresh_skipped_low_disk",
+                free=free,
+                needed=gz_len * _EXPANSION_RATIO_ESTIMATE,
+            )
+            return False
         try:
             download_merged_sqlite(next_dest, url)
             # Close idle pooled connections and drop the previous generation's
@@ -388,6 +564,12 @@ def _tick_once() -> None:
             if primary and _probe_url(primary):
                 db_session.reattach_engines(primary)
                 _activated = False
+                try:
+                    from app.core.db_guard import breaker
+
+                    breaker.reset()
+                except Exception:  # noqa: BLE001
+                    pass
                 global _active_source_url, _active_source_version
                 _active_source_url = None
                 _active_source_version = None
@@ -411,6 +593,7 @@ def _monitor_loop() -> None:
             _consecutive_failures = 0
         except Exception as exc:  # noqa: BLE001 — never kill the monitor thread
             _consecutive_failures += 1
+            _record_status(last_error=str(exc)[:300])
             logger.error(
                 "sqlite_failover_tick_failed",
                 error=str(exc),

@@ -112,7 +112,7 @@ def test_carshop_builds_payload_from_current_detail_shape():
     assert payload is not None
     assert payload["source"] == "carshop"
     assert payload["make"] == "Toyota"
-    assert payload["model"] == "Rav4"
+    assert payload["model"] == "RAV4"
     assert payload["year"] == 2007
     assert payload["price_lkr"] == 7_950_000
     assert payload["district"] == "Kalutara"
@@ -187,7 +187,7 @@ def test_riyahub_keeps_negotiable_vehicle_in_unavailable_price_lane():
     assert payload is not None
     assert payload["source"] == "riyahub"
     assert payload["make"] == "Suzuki"
-    assert payload["model"] == "Wagon"
+    assert payload["model"] == "Wagon R"
     assert payload["year"] == 2018
     assert payload["price_lkr"] is None
     assert payload["district"] == "Kurunegala"

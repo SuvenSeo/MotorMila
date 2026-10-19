@@ -11,4 +11,7 @@ class GetListingsPagingUseCase @Inject constructor(
     private val listings: ListingRepository,
 ) {
     operator fun invoke(query: ListingQuery): Flow<PagingData<Listing>> = listings.paging(query)
+
+    /** True while paged results come from the offline snapshot. */
+    val fromSnapshot: kotlinx.coroutines.flow.StateFlow<Boolean> get() = listings.pagingFromSnapshot
 }

@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.res.stringResource
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import kotlinx.coroutines.launch
@@ -63,6 +64,7 @@ import lk.motormila.app.ui.components.ListingImage
 import lk.motormila.app.ui.components.LoadingSkeletonCard
 import lk.motormila.app.ui.components.MotormilaChoiceChip
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
+import lk.motormila.app.R
 import lk.motormila.app.ui.components.OfflineBanner
 import lk.motormila.app.ui.components.SearchBar
 import lk.motormila.app.ui.components.cascadeDelay
@@ -91,6 +93,7 @@ fun SearchScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val items = viewModel.paging.collectAsLazyPagingItems()
+    val fromSnapshot by viewModel.fromSnapshot.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val isRefreshing = items.loadState.refresh is LoadState.Loading
@@ -143,7 +146,13 @@ fun SearchScreen(
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             if (items.loadState.refresh is LoadState.Error) {
-                OfflineBanner(visible = true)
+                OfflineBanner(visible = true, onRetry = { items.refresh() })
+            } else if (fromSnapshot) {
+                OfflineBanner(
+                    visible = true,
+                    text = stringResource(R.string.offline_snapshot_banner),
+                    onRetry = { items.refresh() },
+                )
             }
             SearchBar(
                 query = state.query,

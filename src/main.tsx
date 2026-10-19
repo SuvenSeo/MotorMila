@@ -1,16 +1,6 @@
 import { migrateLegacyStorageKeys } from "./lib/storageMigration";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
-import "@fontsource/geist-sans/latin-400.css";
-import "@fontsource/geist-sans/latin-500.css";
-import "@fontsource/geist-sans/latin-600.css";
-import "@fontsource/geist-sans/latin-700.css";
-import "@fontsource/geist-mono/latin-400.css";
-import "@fontsource/geist-mono/latin-500.css";
-import "@fontsource/fraunces/latin-400-italic.css";
-import "@fontsource/fraunces/latin-600.css";
-import "@fontsource/fraunces/latin-600-italic.css";
-import "@fontsource/fraunces/latin-700.css";
 import "./index.css";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import { AppPreferencesProvider } from "@/lib/appPreferences";

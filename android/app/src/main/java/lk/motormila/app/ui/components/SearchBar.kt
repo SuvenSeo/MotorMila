@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.components
 
+import lk.motormila.app.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
@@ -82,7 +84,7 @@ fun SearchBar(
                     }
                 }
             },
-            placeholder = { Text("Search make, model… (e.g. Aqua G)") },
+            placeholder = { Text(stringResource(R.string.ui_components_search_make_model_e_g)) },
             modifier = Modifier.fillMaxWidth(),
         )
         if (showDropdown && (suggestions.isNotEmpty() || (query.isBlank() && recentSearches.isNotEmpty()))) {

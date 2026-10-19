@@ -10,13 +10,45 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(facebookexternalhit|WhatsApp|Twitterbot|LinkedInBot|TelegramBot|Slackbot|Discordbot|Viber|Pinterest|vkShare).*"
+          "value": ".*(facebookexternalhit|WhatsApp|Twitterbot|LinkedInBot|TelegramBot|Slackbot|Discordbot|Viber|Pinterest|vkShare|Googlebot|bingbot|Bingbot|DuckDuckBot|YandexBot|Applebot|Baiduspider|Google-InspectionTool).*"
         }
       ],
       "destination": "/api/listing-og?id=:id"
     },
     {
-      "source": "/((?!api/|assets/|snapshots/|app/).*)",
+      "source": "/(admin|price-index|valuation|leasing)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/listing/:id",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/cars/:make",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/cars/:make/:model",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/cars/:make/:model/:year",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/locations/:district",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/compare/:slug",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/official-pulse/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/checkout/return",
       "destination": "/index.html"
     }
   ],
@@ -26,41 +58,109 @@
     },
     "api/internal-snapshot-export.js": {
       "maxDuration": 60
+    },
+    "api/listing-og.js": {
+      "maxDuration": 10
     }
   },
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    },
+    {
+      "source": "/(sign-in|sign-up|profile|alerts|settings|dealer|pro|pro-preview|admin|hero-lab|motormila/admin)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/(privacy|terms|cookies|removal|delete-account)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
       ]
     },
     {
       "source": "/snapshots/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=300, stale-while-revalidate=60" },
-        { "key": "Access-Control-Allow-Origin", "value": "*" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300, stale-while-revalidate=60"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        }
       ]
     },
     {
       "source": "/assets/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     },
     {
       "source": "/(.*)\\.js",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     },
     {
       "source": "/(.*)\\.css",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/snapshots/latest/idx/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300, stale-while-revalidate=86400"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        }
+      ]
+    },
+    {
+      "source": "/(sitemap.*\\.xml|robots\\.txt)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
       ]
     }
-  ]
+  ],
+  "cleanUrls": true
 }

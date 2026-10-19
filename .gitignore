@@ -100,7 +100,6 @@ android/*.status
 # git rm --cached it after the secret-keyed release reaches all devices.
 *.keystore
 *.jks
-!android/ci-signing.keystore
 
 # Database snapshots & checkpoints (contain live data — never commit)
 backend/db_snapshots/
@@ -115,3 +114,10 @@ data/manus-dumps/
 
 # Local Hugging Face Space API dump (runtime status scratch)
 space.json
+
+# Generated at build/export time by scripts/build-snapshot-indexes.mjs
+public/snapshots/latest/idx/
+public/snapshots/latest/idx.tmp-*/
+public/sitemap-hubs.xml
+public/sitemap-listings-*.xml
+public/sitemap-index.xml

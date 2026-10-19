@@ -518,8 +518,8 @@ Features:
 - Review/demo credentials clearly labeled.
 
 Demo accounts:
-- `owner@autolens.lk` / `AutoLensPro2026!` -> enterprise active
-- `free@autolens.lk` / `AutoLensFree2026!` -> free
+- `owner@example.com` / `<redacted - set via env>` -> enterprise active
+- `free@example.com` / `<redacted - set via env>` -> free
 
 Do not make these look like real production credentials. Label them as review access for frontend preview.
 
@@ -853,8 +853,8 @@ Example vehicle lanes:
 ## Auth Rules
 
 Implement frontend demo auth:
-- `owner@autolens.lk` / `AutoLensPro2026!` has enterprise access.
-- `free@autolens.lk` / `AutoLensFree2026!` has free access.
+- `owner@example.com` / `<redacted - set via env>` has enterprise access.
+- `free@example.com` / `<redacted - set via env>` has free access.
 - Store auth user in localStorage key `autolens.auth_user`.
 - Protected `/pro` route requires pro or enterprise active access.
 - Free users should see sign-in/pro-preview messaging, not the Pro dashboard.

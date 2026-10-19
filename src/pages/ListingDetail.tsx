@@ -4,16 +4,20 @@ import {
   ArrowLeft, ExternalLink, MapPin, Calendar,
   Share2, Fuel, Gauge, Settings2, MessageCircle,
   Car as CarIcon, ArrowRight, Zap, Sparkles, ShieldCheck, Clock, Database, AlertTriangle, PlugZap, Scale,
-  Heart, Phone
+  Heart
 } from 'lucide-react';
-import { getListing, getListingFmv, getListingGeo, getListingPriceHistory, getListingSafetyResearch, getSellerTrustProfile, getSimilarListings, formatPrice } from '@/services/api';
+import { getListing, getListingFmv, getListingGeo, getListingHistoryReport, getListingPriceHistory, getListingSafetyResearch, getSimilarListings, formatPrice } from '@/services/api';
+import { TrustCheckPanel } from '@/components/TrustCheckPanel';
+import { SnapshotModeNotice } from '@/components/SnapshotModeNotice';
+import { getSourceAttribution } from '@/lib/sourceAttribution';
+import { parseFlexibleTime } from '@/lib/parseTime';
+import type { TrustRelatedListing } from '@/lib/trustSignals';
 import type { EnrichmentEnvelope, ListingFmvDetail, SafetyResearchResponse } from '@/services/api';
 import type { CarListing, PriceHistoryInfo, SellerTrustProfile } from '@/types/car';
 import { summarizeFmv } from '@/lib/fmv';
 import { plausibleEngineCc } from '@/lib/engineCapacity';
 import { ListingImageCarousel } from '@/components/ListingImageCarousel';
 import { getListingImageList, pickVehicleImageUrl } from '@/lib/listingImage';
-import { safeExternalUrl } from '@/lib/safeExternalUrl';
 import { toast } from 'sonner';
 import { NhtsaModelsCard } from '@/components/NhtsaModelsCard';
 import { SafetyResearchCard } from '@/components/SafetyResearchCard';
@@ -49,6 +53,7 @@ import { AtmosphericImage } from '@/components/AtmosphericImage';
 import { visuals } from '@/lib/visualAssets';
 import { trackEvent } from '@/lib/analytics';
 import { canonicalizeMake, canonicalizeModel } from '@/lib/makeNormalization';
+import { ListingLeadActions } from '@/components/money/ListingLeadActions';
 
 function formatToken(value: string | null | undefined): string {
   if (!value) return 'Unknown';
@@ -59,7 +64,7 @@ export default function ListingDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useAppPreferences();
-  const { hasProAccess, isAdmin, isAuthenticated } = useAuth();
+  const { hasProAccess, isAdmin } = useAuth();
   const fullAccess = hasFullPlatformAccess({ hasProAccess, isAdmin });
   const [listing, setListing] = useState<CarListing | null>(null);
   const [similar, setSimilar] = useState<CarListing[]>([]);
@@ -68,6 +73,8 @@ export default function ListingDetail() {
   const [fmvDetail, setFmvDetail] = useState<ListingFmvDetail | null>(null);
   const [safetyResearch, setSafetyResearch] = useState<SafetyResearchResponse | null>(null);
   const [listingGeo, setListingGeo] = useState<EnrichmentEnvelope | null>(null);
+  /** Cross-site linked listings; null = history service unavailable. */
+  const [relatedListings, setRelatedListings] = useState<TrustRelatedListing[] | null>(null);
   const [loading, setLoading] = useState(true);
   const { toggle: toggleCompare, isPinned: isPinnedForCompare } = useCompareTray();
   const [watchlisted, setWatchlisted] = useState(false);
@@ -145,15 +152,19 @@ export default function ListingDetail() {
   useEffect(() => {
     if (!id) return;
     window.scrollTo(0, 0); // peer links navigate mid-scroll; open each listing at the top
-    setLoading(true); setSellerProfile(null); setPriceHistory(null); setFmvDetail(null); setSafetyResearch(null); setListingGeo(null);
+    let cancelled = false;
+    setLoading(true); setSellerProfile(null); setPriceHistory(null); setFmvDetail(null); setSafetyResearch(null); setListingGeo(null); setRelatedListings(null);
     Promise.all([
       getListing(id).catch(() => null),
       getSimilarListings(id).catch(() => []),
-      getSellerTrustProfile(id).catch(() => null),
+      // seller-profile is retired (410): seller contact happens on the source site.
+      Promise.resolve(null as SellerTrustProfile | null),
       getListingPriceHistory(id).catch(() => null),
       getListingFmv(id).catch(() => null),
     ])
       .then(([detail, sim, profile, history, fmv]) => {
+        // Ignore a slow response for a listing the user already navigated away from.
+        if (cancelled) return;
         setListing(detail); setSimilar(sim); setSellerProfile(profile); setPriceHistory(history); setFmvDetail(fmv); setLoading(false);
         setWatchlisted(detail ? loadWatchlistIds().includes(Number(detail.id)) : false);
         if (detail) {
@@ -161,8 +172,12 @@ export default function ListingDetail() {
           trackEvent("listing_viewed", { listing_id: detail.id, make: detail.make, model: detail.model, source: detail.source });
         }
       });
-    getListingSafetyResearch(id).then(setSafetyResearch).catch(() => setSafetyResearch(null));
-    getListingGeo(id).then(setListingGeo).catch(() => setListingGeo(null));
+    getListingSafetyResearch(id).then((r) => { if (!cancelled) setSafetyResearch(r); }).catch(() => setSafetyResearch(null));
+    getListingGeo(id).then((g) => { if (!cancelled) setListingGeo(g); }).catch(() => setListingGeo(null));
+    getListingHistoryReport(id)
+      .then((report) => { if (!cancelled) setRelatedListings(Array.isArray(report?.related_listings) ? report.related_listings : []); })
+      .catch(() => { if (!cancelled) setRelatedListings(null); });
+    return () => { cancelled = true; };
   }, [id]);
 
   // Enrich the generic route JSON-LD (set by RouteMeta) with real vehicle data
@@ -242,7 +257,8 @@ export default function ListingDetail() {
   }
 
   // ── Derived data ───────────────────────────────────────────
-  const listingUrl = safeExternalUrl(listing.url || listing.detail_url || listing.external_url);
+  const attribution = getSourceAttribution(listing);
+  const listingUrl = attribution.href;
   // Full gallery for the carousel (primary photo first).
   const galleryImages = getListingImageList(listing);
   const specs = [
@@ -285,12 +301,10 @@ export default function ListingDetail() {
   const reviewCount = sellerProfile?.review_count;
   const ratingStars = ratingValue ? Math.round(Math.max(1, Math.min(5, ratingValue))) : 0;
   const trustMeta = [sellerProfile?.member_since ? `Since ${sellerProfile.member_since}` : null, sellerProfile?.listing_count != null ? `${sellerProfile.listing_count} listings` : null].filter(Boolean).join(' · ') || 'No extended seller history available.';
-  const phonePreview = (sellerProfile?.phone_numbers || []).slice(0, 2);
-  const whatsappPreview = (sellerProfile?.whatsapp_numbers || []).slice(0, 1);
-  const trackedDays = (() => { const ts = new Date(listing.first_seen_at || '').getTime(); return Number.isFinite(ts) ? Math.max(1, Math.round((Date.now() - ts) / 86_400_000)) : null; })();
+  const trackedDays = (() => { const ts = parseFlexibleTime(listing.first_seen_at); return ts !== null ? Math.max(1, Math.round((Date.now() - ts) / 86_400_000)) : null; })();
   const trackedLabel = trackedDays ? `${trackedDays}d` : 'N/A';
   const listedDateTime = formatListedDateTime(listing.first_seen_at);
-  const peerAges = visibleSimilar.map((s) => { const ts = new Date(s.first_seen_at || '').getTime(); return Number.isFinite(ts) ? Math.max(1, Math.round((Date.now() - ts) / 86_400_000)) : null; }).filter((v): v is number => v !== null);
+  const peerAges = visibleSimilar.map((s) => { const ts = parseFlexibleTime(s.first_seen_at); return ts !== null ? Math.max(1, Math.round((Date.now() - ts) / 86_400_000)) : null; }).filter((v): v is number => v !== null);
   const avgPeerDays = peerAges.length ? Math.round(peerAges.reduce((a, b) => a + b, 0) / peerAges.length) : null;
 
   // ── Render ─────────────────────────────────────────────────
@@ -324,8 +338,12 @@ export default function ListingDetail() {
           <div className="flex flex-wrap items-center gap-2 mb-3">
             <span className="section-eyebrow text-[10px] tracking-[0.18em]">{t("listing.inspection", "Inspection")}</span>
             <span aria-hidden className="text-muted-foreground/40 text-xs">•</span>
-            <span className="text-[11px] font-medium tracking-tight text-muted-foreground">{listing.source}</span>
+            <span className="text-[12px] font-medium tracking-tight text-muted-foreground">
+              {t("listing.listedOnSource", "Listed on {source}", { source: attribution.sourceName })}
+              {attribution.checkedAgo ? ` · ${t("listing.lastChecked", "last checked {ago}", { ago: attribution.checkedAgo })}` : ''}
+            </span>
           </div>
+          <SnapshotModeNotice className="mb-4 max-w-2xl" />
 
           {listing.is_active === false && (
             <div className="mb-5 flex items-start gap-2.5 rounded-3xl border border-amber-500/25 bg-amber-400/[0.06] p-3.5 max-w-2xl">
@@ -334,7 +352,7 @@ export default function ListingDetail() {
                 <p className="text-xs font-bold text-amber-700 dark:text-amber-300">{t("listing.possiblySold", "Possibly sold or delisted")}</p>
                 <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground font-medium">
                   This ad has not been seen at {listing.source}
-                  {listing.last_seen_at ? ` since ${new Date(listing.last_seen_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}` : ' recently'}.
+                  {parseFlexibleTime(listing.last_seen_at) !== null ? ` since ${new Date(parseFlexibleTime(listing.last_seen_at)!).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Colombo' })}` : ' recently'}.
                   Pricing below is kept for market reference and may be historical.
                 </p>
               </div>
@@ -365,7 +383,7 @@ export default function ListingDetail() {
           <div className="mt-6 flex flex-wrap items-center gap-2.5">
             {listingUrl && (
               <a href={listingUrl} target="_blank" rel="noopener noreferrer" className="flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-[12px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/95 hover:shadow-soft-lg active:scale-[0.97]">
-                {t("listing.viewOnSource", "View on {source}", { source: listing.source })} <ExternalLink aria-hidden className="h-3 w-3" />
+                {t("listing.viewOnSource", "View on {source}", { source: attribution.sourceName })} <ExternalLink aria-hidden className="h-3 w-3" />
               </a>
             )}
             <button type="button" onClick={handleWhatsAppShare} className="flex h-9 items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3.5 text-[12px] font-semibold text-emerald-700 dark:text-emerald-400 transition-all hover:bg-emerald-500/15 active:scale-[0.97]">
@@ -422,7 +440,7 @@ export default function ListingDetail() {
                   <span className="rounded-full border border-white/10 bg-black/60 px-2.5 py-1 text-[10px] font-semibold text-white backdrop-blur-md">{listing.make} {listing.model} · {listing.year || 'N/A'}</span>
                   {/* Fixed bright blue: this badge sits on a black photo scrim, where the
                       light-theme `--primary-bright` token is unreadable. */}
-                  <span className="flex items-center gap-1 rounded-full border border-white/10 bg-black/60 px-2.5 py-1 text-[10px] font-semibold text-[#6CB8FF] backdrop-blur-md"><Database aria-hidden className="h-3 w-3" /> {listing.source}</span>
+                  <span className="flex items-center gap-1 rounded-full border border-white/10 bg-black/60 px-2.5 py-1 text-[10px] font-semibold text-[#6CB8FF] backdrop-blur-md"><Database aria-hidden className="h-3 w-3" /> {attribution.sourceName}</span>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-4 border-t border-border px-4 py-3 bg-card">
@@ -473,13 +491,30 @@ export default function ListingDetail() {
               </motion.div>
             )}
 
+            <motion.div variants={revealItem}>
+              <TrustCheckPanel
+                listing={listing}
+                pricePoints={priceHistory?.points ?? null}
+                related={relatedListings}
+              />
+            </motion.div>
+
             {listing.id != null && <ListingHistoryReport listingId={listing.id} />}
+
+            <motion.div variants={revealItem}>
+              <ListingLeadActions
+                listingId={listing.id ?? undefined}
+                vehicle={[listing.year, canonicalizeMake(listing.make) || listing.make, canonicalizeModel(listing.model) || listing.model].filter(Boolean).join(' ')}
+                priceLkr={hasPrice ? listingPrice : undefined}
+                district={listing.district ?? undefined}
+              />
+            </motion.div>
 
             {/* Description */}
             <motion.div variants={revealItem} className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
               <h2 className="mb-3.5 text-[12px] font-semibold text-muted-foreground">{t("listing.description", "Description")}</h2>
               <p className="whitespace-pre-wrap text-[13px] leading-[1.8] text-muted-foreground font-medium">
-                {listing.description || 'No description provided. Market intelligence indicates this vehicle is priced within the range of comparable models.'}
+                {listing.description || t("listing.noDescription", "The seller didn't add a description. Open the original ad for full details.")}
               </p>
             </motion.div>
 
@@ -491,7 +526,12 @@ export default function ListingDetail() {
 
               return (
                 <motion.div variants={revealItem} className="space-y-4">
-                  <h2 className="text-[12px] font-semibold text-muted-foreground">{t("listing.ownershipPlanning", "Ownership planning")}</h2>
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <h2 className="text-[12px] font-semibold text-muted-foreground">{t("listing.ownershipPlanning", "Ownership planning")}</h2>
+                    <Link to="/afford" className="text-[12px] font-semibold text-primary no-underline hover:underline">
+                      {t("listing.whatCanIAfford", "What else fits my budget?")}
+                    </Link>
+                  </div>
 
                   <CashToOwnStrip
                     priceLkr={listingPrice}
@@ -664,38 +704,26 @@ export default function ListingDetail() {
 
               <p className="mt-3 text-[11px] text-muted-foreground font-medium">{trustMeta}</p>
 
-              {/* Seller contact — the money action on this page. Numbers are
-                  sign-in gated server-side; anonymous visitors get a sign-in CTA. */}
-              <div className="mt-4 flex flex-wrap gap-2">
-                {phonePreview.length > 0 ? (
-                  <>
-                    <a
-                      href={`tel:${phonePreview[0].replace(/[^\d+]/g, "")}`}
-                      className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-primary px-4 text-[13px] font-bold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.97] sm:flex-none sm:px-6"
-                    >
-                      <Phone aria-hidden className="h-3.5 w-3.5" /> {t("listing.callSeller", "Call seller")}
-                    </a>
-                    {whatsappPreview.length > 0 && (
-                      <a
-                        href={`https://wa.me/${whatsappPreview[0].replace(/\D/g, "")}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 text-[13px] font-bold text-emerald-700 dark:text-emerald-400 no-underline transition-all hover:bg-emerald-500/15 active:scale-[0.97] sm:flex-none sm:px-6"
-                      >
-                        <MessageCircle aria-hidden className="h-3.5 w-3.5" /> {t("listing.whatsappSeller", "WhatsApp")}
-                      </a>
-                    )}
-                  </>
-                ) : !isAuthenticated ? (
-                  <Link
-                    to="/sign-in"
-                    className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-2xl border border-primary/25 bg-primary/10 px-4 text-[13px] font-bold text-primary-bright no-underline transition-all hover:bg-primary/15 active:scale-[0.97]"
+              {/* Contact happens on the source marketplace: Motormila doesn't
+                  republish seller phone numbers (privacy + source terms). */}
+              <div className="mt-4 space-y-2">
+                {listingUrl ? (
+                  <a
+                    href={listingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => trackEvent("contact_on_source_clicked", { listing_id: listing.id, source: listing.source })}
+                    className="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-2xl bg-primary px-4 text-[13px] font-bold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.97]"
                   >
-                    <Phone aria-hidden className="h-3.5 w-3.5" /> {t("listing.signInForContact", "Sign in to view seller contact")}
-                  </Link>
+                    {t("listing.contactOnSource", "Contact seller on {source}", { source: attribution.sourceName })}
+                    <ExternalLink aria-hidden className="h-3.5 w-3.5" />
+                  </a>
                 ) : (
-                  <p className="text-[11px] text-muted-foreground italic">{t("listing.noContactShared", "The seller hasn't shared a contact number for this listing.")}</p>
+                  <p className="text-[12px] text-muted-foreground">{t("listing.noSourceLink", "The original ad link isn't available for this listing.")}</p>
                 )}
+                <p className="text-[11.5px] leading-relaxed text-muted-foreground">
+                  {t("listing.contactNote", "Opens the original ad. Motormila doesn't share seller phone numbers.")}
+                </p>
               </div>
 
               {ratingValue ? (
@@ -711,22 +739,6 @@ export default function ListingDetail() {
                 </div>
               ) : <p className="mt-4 border-t border-border pt-3 text-[11px] text-muted-foreground italic">{t("listing.noSellerRating", "No public seller rating synced.")}</p>}
 
-              {(phonePreview.length > 0 || whatsappPreview.length > 0) && (
-                <div className="mt-4 flex flex-wrap gap-1.5 pt-1">
-                  {phonePreview.map((p) => (
-                    <a key={p} href={`tel:${p.replace(/[^\d+]/g, "")}`}
-                      className="num rounded-full border border-border bg-surface px-2 py-1 text-[10px] font-bold text-foreground no-underline transition-colors hover:border-primary/30 hover:bg-card">
-                      {p}
-                    </a>
-                  ))}
-                  {whatsappPreview.map((p) => (
-                    <a key={`wa-${p}`} href={`https://wa.me/${p.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer"
-                      className="num rounded-full border border-emerald-500/25 bg-emerald-500/5 px-2 py-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 no-underline transition-colors hover:bg-emerald-500/10">
-                      WA {p}
-                    </a>
-                  ))}
-                </div>
-              )}
             </motion.div>
 
             {/* Peers */}

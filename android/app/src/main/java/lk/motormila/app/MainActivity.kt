@@ -3,9 +3,9 @@ package lk.motormila.app
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -21,9 +21,12 @@ import lk.motormila.app.ui.theme.MotormilaTheme
 
 /**
  * Launcher activity. Forwards share intents and VIEW deep links into the nav graph.
+ *
+ * AppCompatActivity (not ComponentActivity) so AppCompat per-app language
+ * switching applies on Android 8-12 (API 26-32) without a restart.
  */
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
 
     private var sharedUrl by mutableStateOf<String?>(null)
     private var startDeepLink by mutableStateOf<Uri?>(null)
@@ -33,14 +36,17 @@ class MainActivity : ComponentActivity() {
     lateinit var billing: PlayBillingDataSource
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        applyIncomingIntent(intent)
+        // Only consume the launch intent on a fresh start: on recreation
+        // (rotation, locale switch, process restore) the nav back stack is
+        // already restored and replaying the deep link/share would duplicate it.
+        if (savedInstanceState == null) applyIncomingIntent(intent)
         // Reconcile the local Play Pro entitlement with Play's purchase cache
         // (best-effort, off the main thread — never blocks startup).
         lifecycleScope.launch(Dispatchers.IO) {
-            runCatching { billing.syncPlayEntitlement(this@MainActivity) }
+            runCatching { billing.syncPlayEntitlement() }
         }
-        enableEdgeToEdge()
         setContent {
             MotormilaTheme {
                 MotormilaNavGraph(

@@ -32,6 +32,7 @@ jobs:
       # still finalize its ScrapeRun row before being killed.
       MANUS_SOURCE_TIMEOUT_SECONDS: "600"
       MANUS_SOURCE_KILL_GRACE_SECONDS: "60"
+      BOT_CONTACT: ${{ vars.BOT_CONTACT }}
 
     steps:
       - name: Check out repository
@@ -45,10 +46,9 @@ jobs:
           cache-dependency-path: backend/requirements.txt
 
       - name: Scrape sources and upload dump
-        # riyasewana is deliberately NOT here — it lives in walled-sources
-        # below so each attempt draws a fresh runner IP. saleme/patpat stay
-        # because they now fail fast in ~0.2s instead of burning the budget;
-        # they resume for free the moment a residential proxy is configured.
+        # riyasewana runs in its own job below so a block there cannot stop
+        # this dump. ikman is listed but is skipped unless SOURCES_ENABLED
+        # opts it in (off by default; partnership/feed is the intended path).
         run: |
           bash backend/scripts/ops/manus_scrape_dump.sh \
             ikman autolanka auto-lanka hitad autostream saleme riyahub carshop dimo autodirect cartivate
@@ -76,33 +76,24 @@ jobs:
             "$SLACK_WEBHOOK_URL"
 
   walled-sources:
-    name: Walled Sources (retry for Cloudflare-blocked runner IPs)
+    name: riyasewana (honest single attempt; skipped if blocked)
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
       contents: write
-    # Deliberately NOT the parent manus-scrape-dump-cadence group: these are
-    # parallel IP draws. Sharing the parent lock serializes the matrix legs
-    # and kills the multi-IP strategy.
+    # Legal policy (docs/legal/data-sourcing.md): one attempt per cycle with
+    # the honest MotorMilaBot UA. No matrix of runner-IP draws, no proxies.
+    # If riyasewana blocks us the job records it and we back off.
     concurrency:
       group: manus-walled-sources-${{ github.run_id }}
       cancel-in-progress: false
-    strategy:
-      # riyasewana.com Cloudflare-blocks a large share of GitHub's Azure egress
-      # IPs, so a single attempt succeeds only ~25% of the time and returns
-      # "http_blocked" in 0.1s otherwise. Each matrix leg is a separate job and
-      # therefore a separate runner IP, so retrying is a genuine new IP draw.
-      # 3 legs lift the per-cycle success rate from ~25% to ~58%+.
-      fail-fast: false
-      matrix:
-        attempt: [1, 2, 3]
     env:
       GH_TOKEN: ${{ github.token }}
       MANUS_MAX_PAGES: "30"
       MANUS_SOURCE_TIMEOUT_SECONDS: "600"
       MANUS_SOURCE_KILL_GRACE_SECONDS: "60"
-      # Distinguishes this dump from the main job's in the release tag.
-      MANUS_RELEASE_TAG_SUFFIX: w${{ matrix.attempt }}
+      MANUS_RELEASE_TAG_SUFFIX: w1
+      BOT_CONTACT: ${{ vars.BOT_CONTACT }}
     steps:
       - name: Check out repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -114,11 +105,7 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements.txt
 
-      - name: Scrape walled sources and upload dump
-        # Optional residential proxy. Set SCRAPE_PROXY_URL in repo secrets and
-        # this becomes deterministic instead of a coin flip per IP draw.
-        env:
-          SCRAPE_PROXY_URL: ${{ secrets.SCRAPE_PROXY_URL }}
+      - name: Scrape riyasewana and upload dump
         run: |
           bash backend/scripts/ops/manus_scrape_dump.sh riyasewana
 
@@ -127,4 +114,4 @@ jobs:
         # simply absent. Surfacing it here keeps the retries visible in the UI.
         if: failure()
         run: |
-          echo "::warning::riyasewana attempt ${{ matrix.attempt }} was blocked or failed; another leg may still land."
+          echo "::warning::riyasewana was blocked or failed; backing off until the next cycle (no evasion)."

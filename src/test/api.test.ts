@@ -4,6 +4,8 @@ describe("api module", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    // Fresh module per test: listing-detail cache and the API circuit breaker are module state.
+    vi.resetModules();
   });
 
   it("exports sendChatMessage", async () => {

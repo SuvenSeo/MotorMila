@@ -52,13 +52,16 @@ _PUBLIC_BROWSE_PATHS = frozenset(
         "/api/v1/stats/model-price-history",
         # Live FX context for the signed-out calculator (read-only, no PII).
         "/api/v1/calculators/macro",
-        # Starter valuation is free-plan product copy — the advanced/custom
-        # valuation path stays gated.
+        # Starter valuation is free-plan product copy (web /estimate and the
+        # Android guest Valuation screen call it signed-out) — deliberately
+        # public, with its own tighter rate limit. The advanced/custom
+        # valuation path (/listings/custom-estimate) stays gated.
         "/api/v1/listings/estimate",
     }
 )
 
-# Detail + read-only sub-resources (numeric id only so /listings/estimate stays gated).
+# Detail + read-only sub-resources (numeric id only, so e.g.
+# /listings/custom-estimate and /listings/mine stay gated).
 _LISTING_DETAIL_RE = re.compile(r"^/api/v1/listings/\d+$")
 _LISTING_SUB_RE = re.compile(r"^/api/v1/listings/\d+/(similar|price-history|fmv)$")
 

@@ -80,14 +80,22 @@ def _make_engine(url: str):
     # crash the API process on every connection. Statement timeout is set
     # per-session in get_db() after connect instead.
     # NullPool kept: Space workers should not hold idle pooled conns.
-    return create_engine(
+    # connect_timeout is short (DB_CONNECT_TIMEOUT_SECONDS, default 3s) and a
+    # circuit breaker fails subsequent connects instantly while the database
+    # is known to be down (see app/core/db_guard.py), so a dead Neon no longer
+    # costs every request a full socket timeout.
+    from app.core.db_guard import connect_timeout_seconds, install_breaker
+
+    engine = create_engine(
         url,
         poolclass=NullPool,
         pool_pre_ping=True,
         connect_args={
-            "connect_timeout": 5,
+            "connect_timeout": connect_timeout_seconds(),
         },
     )
+    install_breaker(engine)
+    return engine
 
 hot_engine  = _make_engine(HOT_URL)
 cold_engine = _make_engine(COLD_URL)

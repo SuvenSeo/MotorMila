@@ -1,10 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Edge-to-edge: window background matches Ink #09090B. -->
-    <style name="Theme.Motormila" parent="android:Theme.Material.NoActionBar">
+    <style name="Theme.Motormila" parent="Theme.AppCompat.NoActionBar">
         <item name="android:windowBackground">@color/motormila_bg</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <!-- Invisible trampoline (ShareImportActivity): no opaque flash. -->
+    <style name="Theme.Motormila.Trampoline" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:backgroundDimEnabled">false</item>
     </style>
 </resources>

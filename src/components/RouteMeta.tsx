@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { BRAND } from "@/lib/brand";
+import { isKnownRoutePath, isNoindexPath } from "@/lib/routeIndexing";
 import {
   canonicalComparePath,
   fromCompareSlug,
@@ -277,6 +278,14 @@ export function RouteMeta() {
           siteVars,
         ),
       },
+      "/bot": {
+        title: t("seo.botTitle", "MotorMilaBot — {site}", siteVars),
+        description: t(
+          "seo.botDesc",
+          "About the MotorMilaBot web crawler: what it collects, how politely it crawls, and how to contact us or opt out.",
+          siteVars,
+        ),
+      },
       "/pricing": {
         title: t("seo.pricingTitle", "Pricing — {site}", siteVars),
         description: t(
@@ -284,6 +293,51 @@ export function RouteMeta() {
           "Free, Pro, Dealer, and Custom access for Sri Lanka vehicle market intelligence.",
           siteVars,
         ),
+      },
+      "/sell": {
+        title: t("seo.sellTitle", "Sell Your Vehicle — {site}", siteVars),
+        description: t(
+          "seo.sellDesc",
+          "List your vehicle and see what similar cars are selling for in Sri Lanka before you set a price.",
+        ),
+      },
+      "/mobile-app": {
+        title: t("seo.mobileAppTitle", "Android App — {site}", siteVars),
+        description: t(
+          "seo.mobileAppDesc",
+          "Download the Motormila Android app: Sri Lankan vehicle prices, deal alerts and valuations on your phone.",
+        ),
+      },
+      "/sign-up": {
+        title: t("seo.signUpTitle", "Create Account — {site}", siteVars),
+        description: defaultDescription,
+      },
+      "/profile": {
+        title: t("seo.profileTitle", "Profile — {site}", siteVars),
+        description: defaultDescription,
+      },
+      "/hero-lab": {
+        title: `Hero Lab — ${SITE}`,
+        description: defaultDescription,
+      },
+      "/motormila/admin": {
+        title: `Admin — ${SITE}`,
+        description: defaultDescription,
+      },
+      "/permits": {
+        title: t("seo.permitsTitle", "Vehicle Permits — {site}", siteVars),
+        description: t(
+          "seo.permitsDesc",
+          "Sri Lankan vehicle import permit types and current market prices.",
+        ),
+      },
+      "/privacy": {
+        title: t("seo.privacyTitle", "Privacy Policy — {site}", siteVars),
+        description: t("seo.privacyDesc", "How Motormila collects, uses and protects personal data."),
+      },
+      "/terms": {
+        title: t("seo.termsTitle", "Terms of Service — {site}", siteVars),
+        description: t("seo.termsDesc", "The terms that govern use of Motormila."),
       },
     };
 
@@ -426,6 +480,15 @@ export function RouteMeta() {
             }
           : { title: SITE, description: defaultDescription });
     }
+
+    const unknownRoute = !isKnownRoutePath(pathname);
+    if (unknownRoute) {
+      meta = {
+        title: t("seo.notFoundTitle", "Page not found — {site}", siteVars),
+        description: defaultDescription,
+      };
+    }
+    setMeta("robots", unknownRoute || isNoindexPath(pathname) ? "noindex, nofollow" : "index, follow");
 
     document.title = meta.title;
     setMeta("description", meta.description);

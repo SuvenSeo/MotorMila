@@ -1,3 +1,9 @@
+// Public contact details come from build env so no personal address/number is
+// hard-coded in the bundle. OPS: set VITE_CONTACT_EMAIL (role inbox, e.g.
+// hello@<domain>) and optionally VITE_CONTACT_PHONE in Vercel/Cloudflare.
+const CONTACT_EMAIL = String(import.meta.env.VITE_CONTACT_EMAIL || "hello@motormila.lk").trim();
+const CONTACT_PHONE = String(import.meta.env.VITE_CONTACT_PHONE || "").trim();
+
 export const BRAND = {
   name: "Motormila",
   siteName: "Motormila",
@@ -16,10 +22,11 @@ export const BRAND = {
     sheet: "/brand-sheet.png",
   },
   copilot: "Motormila Copilot",
-  contactEmail: "suvenseoras@gmail.com",
-  contactMailto: "mailto:suvenseoras@gmail.com?subject=Motormila%20custom%20pricing",
-  contactPhone: "0758504424",
-  contactPhoneHref: "tel:0758504424",
+  contactEmail: CONTACT_EMAIL,
+  contactMailto: `mailto:${CONTACT_EMAIL}?subject=Motormila%20custom%20pricing`,
+  /** Empty unless VITE_CONTACT_PHONE is set; callers hide the link when empty. */
+  contactPhone: CONTACT_PHONE,
+  contactPhoneHref: CONTACT_PHONE ? `tel:${CONTACT_PHONE.replace(/\s+/g, "")}` : "",
   origin: "https://motormila.vercel.app",
   vision:
     "Make Sri Lanka’s vehicle market transparent — so every dealer, broker, importer, and serious buyer can see the real price by district, duty, and deal quality.",

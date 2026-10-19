@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.chat
 
+import lk.motormila.app.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
@@ -335,7 +337,7 @@ private fun ChatErrorRow(
             shape = androidx.compose.foundation.shape.CircleShape,
             onClick = onRetry,
             modifier = Modifier.heightIn(min = 48.dp),
-        ) { Text("Retry") }
+        ) { Text(stringResource(R.string.ui_chat_retry)) }
         IconButton(
             onClick = onDismiss,
             modifier = Modifier.size(48.dp),

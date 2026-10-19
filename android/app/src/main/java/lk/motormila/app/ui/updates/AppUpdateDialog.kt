@@ -25,9 +25,10 @@ fun AppUpdateDialog(
     downloading: Boolean,
     onUpdate: () -> Unit,
     onDismiss: () -> Unit,
+    installPermissionRequested: Boolean = false,
 ) {
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!update.mandatory) onDismiss() },
         title = {
             Text(
                 text = stringResource(R.string.update_available_title),
@@ -48,6 +49,14 @@ fun AppUpdateDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                if (installPermissionRequested && !downloading) {
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = stringResource(R.string.update_install_permission_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
                 if (downloading) {
                     Spacer(Modifier.height(12.dp))
                     Text(
@@ -63,9 +72,13 @@ fun AppUpdateDialog(
                 Text(stringResource(R.string.update_now))
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss, enabled = !downloading) {
-                Text(stringResource(R.string.update_later))
+        dismissButton = if (update.mandatory) {
+            null
+        } else {
+            {
+                TextButton(onClick = onDismiss, enabled = !downloading) {
+                    Text(stringResource(R.string.update_later))
+                }
             }
         },
         modifier = Modifier.fillMaxWidth(),

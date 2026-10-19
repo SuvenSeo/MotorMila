@@ -3,9 +3,12 @@ from app.utils.time import utc_now
 
 import httpx
 import structlog
+
+from app.scrapers.polite import BOT_USER_AGENT
 from sqlalchemy.orm import Session
 
 from app.scrapers.cleaner import CarCleaner
+from app.scrapers.net import httpx_client_kwargs
 from app.utils.listing_upsert import buffered_upsert_listing, flush_upsert_buffer
 
 log = structlog.get_logger()
@@ -42,14 +45,10 @@ class AutoStreamScraper:
     async def scrape(self, max_pages: int = 5):
         page_limit = max_pages if max_pages > 0 else 1
         headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/124.0.0.0 Safari/537.36"
-            )
+            "User-Agent": BOT_USER_AGENT
         }
 
-        async with httpx.AsyncClient(headers=headers, follow_redirects=True) as client:
+        async with httpx.AsyncClient(follow_redirects=True, **httpx_client_kwargs(headers)) as client:
             response = await client.get(self.API_LISTINGS_URL, timeout=60)
             response.raise_for_status()
             rows = response.json() if response.content else []

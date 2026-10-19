@@ -37,6 +37,8 @@ data class DealerUiState(
     /** Server-verified claim row (GET /dealer/me); null until verified. */
     val claimStatus: DealerClaim? = null,
     val verifyingClaim: Boolean = false,
+    /** Server answered 403: verification is done manually by the MotorMila team. */
+    val pendingManualVerification: Boolean = false,
     val refreshing: Boolean = false,
     val benchmarkUrls: String = "",
     val benchmarking: Boolean = false,
@@ -155,9 +157,15 @@ class DealerViewModel @Inject constructor(
         runCatching { repository.myClaimStatus() }
             .onSuccess { status ->
                 lastVerifiedToken = token
-                _state.update { it.copy(claimStatus = status, offline = false) }
+                _state.update { it.copy(claimStatus = status, offline = false, pendingManualVerification = false) }
             }
             .onFailure { e ->
+                // Verification is an admin action (backend requires admin_token):
+                // a 403 means "not verified yet", not an error to show the dealer.
+                if ((e as? retrofit2.HttpException)?.code() == 403) {
+                    _state.update { it.copy(pendingManualVerification = true, offline = false, error = null) }
+                    return@onFailure
+                }
                 val mapped = ErrorMapper.map(e)
                 _state.update {
                     it.copy(offline = mapped is AppError.Network, error = mapped.message)

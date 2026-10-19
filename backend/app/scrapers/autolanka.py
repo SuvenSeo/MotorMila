@@ -5,10 +5,13 @@ from urllib.parse import parse_qs, urljoin, urlparse
 
 import httpx
 import structlog
+
+from app.scrapers.polite import BOT_USER_AGENT
 from bs4 import BeautifulSoup
 from sqlalchemy.orm import Session
 
 from app.scrapers.cleaner import CarCleaner
+from app.scrapers.net import httpx_client_kwargs
 from app.scrapers.page_budget import start_page_from_env
 from app.utils.listing_upsert import buffered_upsert_listing, flush_upsert_buffer
 
@@ -201,11 +204,7 @@ class AutoLankaScraper:
 
     async def scrape(self, max_pages: int = 5):
         headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/124.0.0.0 Safari/537.36"
-            )
+            "User-Agent": BOT_USER_AGENT
         }
 
         page_limit = max_pages if max_pages > 0 else None
@@ -216,7 +215,7 @@ class AutoLankaScraper:
         previous_page_signature: frozenset[str] | None = None
         repeated_page_signatures = 0
 
-        async with httpx.AsyncClient(headers=headers, follow_redirects=True) as client:
+        async with httpx.AsyncClient(follow_redirects=True, **httpx_client_kwargs(headers)) as client:
             while True:
                 if page_limit is not None and page_num > page_limit:
                     break

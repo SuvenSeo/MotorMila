@@ -20,6 +20,8 @@ import {
   Store,
   Tag,
   UserCircle2,
+  Wallet,
+  ShieldCheck,
   X,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -119,6 +121,18 @@ export function Navbar() {
         id: "tools",
         label: t("nav.groupTools", "Tools & workspaces"),
         items: [
+          {
+            label: t("nav.afford", "What can I afford?"),
+            detail: t("nav.affordDetail", "Search by cash and monthly budget"),
+            href: "/afford",
+            icon: Wallet,
+          },
+          {
+            label: t("nav.safeTransfer", "Safe-Transfer Kit"),
+            detail: t("nav.safeTransferDetail", "Transfer checklist and sale agreement"),
+            href: "/safe-transfer",
+            icon: ShieldCheck,
+          },
           {
             label: t("nav.compare", "Compare"),
             detail: t("nav.compareDetail", "Put up to three cars side by side"),

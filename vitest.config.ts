@@ -11,6 +11,9 @@ export default defineConfig({
     // Tests exercise the same-origin dev/proxy path, matching real dev runs.
     env: {
       VITE_API_URL: "/api/v1",
+      // Unit tests exercise the live-API contract by default; snapshot tests
+      // opt in with vi.stubEnv("VITE_SNAPSHOT_BASE_URL", ...) + vi.resetModules().
+      VITE_SNAPSHOT_BASE_URL: "off",
     },
   },
   resolve: {

@@ -214,7 +214,7 @@ fun ProfileScreen(
                         }
                         item {
                             Column(Modifier.cascadeEntrance(3)) {
-                                Text("Badges", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge, color = MotormilaSecondaryText)
+                                Text(stringResource(R.string.ui_profile_badges), fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge, color = MotormilaSecondaryText)
                                 Spacer(Modifier.height(8.dp))
                                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     p.badges.forEach { b ->
@@ -245,7 +245,7 @@ fun ProfileScreen(
                         }
                         item {
                             Column(Modifier.cascadeEntrance(5)) {
-                            Text("Manage", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge, color = MotormilaSecondaryText)
+                            Text(stringResource(R.string.ui_profile_manage), fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge, color = MotormilaSecondaryText)
                             Spacer(Modifier.height(8.dp))
                             MotormilaGroup {
                                 MotormilaGroupRow("Settings", onClick = { navTap(onSettingsClick) })

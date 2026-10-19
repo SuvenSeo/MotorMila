@@ -55,7 +55,8 @@ def test_create_my_listing_sets_owner_and_pending_status():
     assert stored.owner_user_id == "seller@example.com"
     assert stored.user_listing_status == STATUS_PENDING
     assert stored.source == "motormila_user"
-    assert stored.is_active is True
+    # Moderation queue: not live until an admin approves it.
+    assert stored.is_active is False
 
 
 def test_create_my_listing_generates_unique_source_ids():
