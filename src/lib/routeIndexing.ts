@@ -11,12 +11,15 @@ const NOINDEX_PREFIXES = [
   "/admin",
   "/motormila/admin",
   "/hero-lab",
+  "/checkout",
+  "/delete-account",
 ];
 
 /** Mirrors the <Route> table in App.tsx (and the SPA allowlist in vercel.json). */
 const KNOWN_ROUTE_PATTERNS: RegExp[] = [
   /^\/$/,
-  /^\/(trends|estimate|calculator|ev-hub|ev-chargers|best-picks|sell|price-index|docs|pricing|privacy|terms|compare|valuation|permits|mobile-app|dealer|settings|alerts|profile|sign-in|sign-up|hero-lab|admin|pro|pro-preview|official-pulse)\/?$/,
+  /^\/(trends|estimate|calculator|ev-hub|ev-chargers|best-picks|sell|price-index|docs|pricing|privacy|terms|compare|valuation|permits|mobile-app|dealer|settings|alerts|profile|sign-in|sign-up|hero-lab|admin|pro|pro-preview|official-pulse|afford|safe-transfer|finance|leasing|inspection|insurance|cookies|removal|delete-account)\/?$/,
+  /^\/checkout\/return\/?$/,
   /^\/listing\/[^/]+\/?$/,
   /^\/cars\/[^/]+(\/[^/]+(\/\d{4})?)?\/?$/,
   /^\/locations\/[^/]+\/?$/,
