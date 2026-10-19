@@ -9,6 +9,7 @@ import { DealScoreBadge } from "@/components/DealScoreBadge";
 import { FmvExplainer } from "@/components/FmvExplainer";
 import { buildCompareLink, loadPinned, useCompareTray } from "@/lib/compareTray";
 import { PageCanvas } from "@/components/PageCanvas";
+import { formatLkrFull } from "@/lib/price";
 
 const MAX_COMPARE_IDS = 3;
 
@@ -232,11 +233,11 @@ export default function Compare() {
                     </p>
                     {listing.price_lkr ? (
                       <p className="mt-2 text-[13px] font-semibold tabular-nums text-primary-bright">
-                        LKR {Number(listing.price_lkr).toLocaleString()}
+                        {formatLkrFull(Number(listing.price_lkr))}
                       </p>
                     ) : null}
                     <p className="mt-0.5 text-[11px] tabular-nums text-muted-foreground">
-                      FMV {fmv ? `LKR ${fmv.toLocaleString()}` : "—"}
+                      FMV {fmv ? formatLkrFull(fmv) : "—"}
                       {listing.mileage_km != null ? ` · ${Number(listing.mileage_km).toLocaleString()} km` : ""}
                     </p>
                     <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-border/70 pt-2.5">

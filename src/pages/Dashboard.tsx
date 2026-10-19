@@ -3,7 +3,7 @@ import { startTransition, useState, useEffect, useCallback, useMemo, useRef, Sus
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { motion } from "motion/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { FilterState, CarListing, DashboardInsights, DistrictVelocityPoint } from "@/types/car";
 import { getPriceDrops,
   getStats, getListings, getMakes, getListingsBatch,
@@ -27,14 +27,11 @@ import { useHeroVariantLab } from "@/hooks/useHeroVariantLab";
 import type { HeroAlign } from "@/lib/heroVariants";
 import { RevealSection } from "@/components/RevealSection";
 import { SectionHeader } from "@/components/SectionHeader";
-import { visuals } from "@/lib/visualAssets";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { TrendingDown,
   ArrowRight,
   ArrowUpRight,
-  ChevronLeft,
-  ChevronRight,
   ExternalLink,
   Flame,
   LayoutGrid,
@@ -68,14 +65,14 @@ import { HowItWorksBand } from "@/components/HowItWorksBand";
 import { ProFeatureLock } from "@/components/ProFeatureLock";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { useAuth } from "@/lib/authContext";
-import {
-  FREE_LISTINGS_PAGE_SIZE,
-  FREE_MAX_LISTING_PAGES,
-  freeListingsVisibleTotal,
-  freePlanCopy,
-  hasFullPlatformAccess,
-} from "@/lib/planLimits";
+import { freePlanCopy, hasFullPlatformAccess } from "@/lib/planLimits";
 import { trackEvent } from "@/lib/analytics";
+import { DEFAULT_SORT, EMPTY_FILTERS, useSearchFilters } from "@/lib/searchUrlState";
+import { normalizeSearchQuery, resolveSearchAlias } from "@/lib/searchAliases";
+import { saveSearchWithAlert, savedSearchLabel } from "@/lib/savedSearchAlerts";
+import { SortControl } from "@/components/search/SortControl";
+import { SearchPagination } from "@/components/search/SearchPagination";
+import { NoResultsState, type AlertStatus } from "@/components/search/NoResultsState";
 
 const heroContainerVariants = {
   hidden: { opacity: 0 },
@@ -153,8 +150,6 @@ const HERO_POPULAR_SCANS = [
   { label: "Toyota Axio", make: "Toyota", model: "Axio" },
 ] as const;
 
-const SORT_VALUES = ["newest", "deal_score", "price_asc", "price_desc", "mileage_asc"] as const;
-
 function heroCopyAlignClass(align: HeroAlign, hideSideSignals: boolean): string {
   switch (align) {
     case "left":
@@ -179,103 +174,16 @@ function heroCopyAlignClass(align: HeroAlign, hideSideSignals: boolean): string 
   }
 }
 
-function parseOptionalNumber(value: string | null) {
-  if (!value) return undefined;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
-}
-
-function isSortValue(value: string | null): value is FilterState["sort"] {
-  return value !== null && (SORT_VALUES as readonly string[]).includes(value);
-}
-
-function normalizeSourceValue(value: string | null | undefined): string | undefined {
-  if (!value) return undefined;
-  const compact = value.trim().toLowerCase().replace(/[-_.\s]/g, "");
-  if (!compact) return undefined;
-  if (compact.startsWith("ikman")) return "ikman";
-  if (compact.startsWith("riyasewana")) return "riyasewana";
-  if (["autolanka", "autolankacom", "autolankasite", "autolankalk"].includes(compact)) return "autolanka";
-  if (compact.startsWith("autodirect")) return "autodirect";
-  if (compact.startsWith("patpat")) return "patpat";
-  if (compact.startsWith("autostream")) return "autostream";
-  if (compact.startsWith("carshop")) return "carshop";
-  if (["saleme", "salemelk"].includes(compact)) return "saleme";
-  if (["riyahub", "riyahublk"].includes(compact)) return "riyahub";
-  if (["dimo", "carsatdimo", "dimoautomobiles"].includes(compact)) return "dimo";
-  return value.trim().toLowerCase();
-}
-
-function parseFilters(params: URLSearchParams): FilterState {
-  const sort = params.get("sort");
-  const priceAvailability = params.get("price_availability");
-  const vehicleCategory = params.get("vehicle_category");
-  const allowedCategories = new Set([
-    "cars",
-    "motorbikes",
-    "three-wheelers",
-    "vans",
-    "buses",
-    "lorries",
-    "heavy-duty",
-    "tractors",
-    "bicycles",
-    "boats",
-    "others",
-  ]);
-  return {
-    q: params.get("q") || undefined,
-    source: normalizeSourceValue(params.get("source")),
-    make: params.get("make") || undefined,
-    model: params.get("model") || undefined,
-    year_min: parseOptionalNumber(params.get("year_min")),
-    year_max: parseOptionalNumber(params.get("year_max")),
-    price_min: parseOptionalNumber(params.get("price_min")),
-    price_max: parseOptionalNumber(params.get("price_max")),
-    mileage_max: parseOptionalNumber(params.get("mileage_max")),
-    condition: (params.get("condition") as FilterState["condition"]) || undefined,
-    body_type: (params.get("body_type") as FilterState["body_type"]) || undefined,
-    transmission: (params.get("transmission") as FilterState["transmission"]) || undefined,
-    fuel_type: (params.get("fuel_type") as FilterState["fuel_type"]) || undefined,
-    district: params.get("district") || undefined,
-    vehicle_category:
-      vehicleCategory && allowedCategories.has(vehicleCategory)
-        ? (vehicleCategory as FilterState["vehicle_category"])
-        : "cars",
-    price_availability: priceAvailability === "unavailable" ? "unavailable" : undefined,
-    fresh_24h: params.get("fresh_24h") === "1" ? true : undefined,
-    sort: isSortValue(sort) ? sort : "newest",
-    page: Math.max(1, parseOptionalNumber(params.get("page")) || 1),
-  };
-}
-
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [filters, setFilters] = useState<FilterState>(() => parseFilters(searchParams));
-  const { hasProAccess, isAdmin } = useAuth();
+  // Filters, sort and page live in the URL (shareable; Back steps back).
+  const [filters, setFilters] = useSearchFilters();
+  const { hasProAccess, isAdmin, isAuthenticated } = useAuth();
   const fullAccess = hasFullPlatformAccess({ hasProAccess, isAdmin });
-
-  useEffect(() => {
-    const nextFilters = parseFilters(searchParams);
-    setFilters((prev) => {
-      const keys = Object.keys(nextFilters) as (keyof FilterState)[];
-      return keys.some((k) => prev[k] !== nextFilters[k]) ? nextFilters : prev;
-    });
-  }, [searchParams]);
-
-  // Free plan: always page 1 — pagination is a Pro unlock.
-  useEffect(() => {
-    if (!fullAccess && filters.page > FREE_MAX_LISTING_PAGES) {
-      setFilters((prev) => ({ ...prev, page: 1 }));
-    }
-  }, [fullAccess, filters.page]);
-
-  const listingFilters = useMemo<FilterState>(
-    () => (fullAccess ? filters : { ...filters, page: 1 }),
-    [filters, fullAccess],
-  );
+  // Guests and free users get normal pagination (no 12-result cap).
+  const listingFilters = filters;
+  const [noResultsAlertStatus, setNoResultsAlertStatus] = useState<AlertStatus>("idle");
   const { t, resolvedTheme } = useAppPreferences();
   const queryClient = useQueryClient();
   const liveMarketSnapshot = useLiveMarketSnapshot();
@@ -377,7 +285,7 @@ export default function Dashboard() {
     let cancelled = false;
     const timer = window.setTimeout(() => {
       setHeroSuggestionsLoading(true);
-      getListingSearchSuggestions(query, 8)
+      getListingSearchSuggestions(normalizeSearchQuery(query) || query, 8)
         .then((rows) => { if (!cancelled) { setHeroSuggestions(rows); setHeroSuggestionsOpen(true); setHeroSearchMessage(null); } })
         .catch(() => { if (!cancelled) setHeroSuggestions([]); })
         .finally(() => { if (!cancelled) setHeroSuggestionsLoading(false); });
@@ -413,42 +321,13 @@ export default function Dashboard() {
     if (!previous || previous === latestAt) return;
     queryClient.invalidateQueries({ queryKey: ["stats"] });
     queryClient.invalidateQueries({ queryKey: ["dashboard-insights"] });
-    if (filters.page === 1 && filters.sort === "newest") {
+    if (filters.page === 1 && (filters.sort === "newest" || filters.sort === DEFAULT_SORT)) {
       queryClient.invalidateQueries({ queryKey: ["listings"] });
       setNewLiveListingsAvailable(false);
     } else {
       setNewLiveListingsAvailable(true);
     }
   }, [queryClient, filters.page, filters.sort, liveMarketSnapshot?.latest_listing_at]);
-
-  // ── URL sync ───────────────────────────────────────────────────
-
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (filters.q) params.set("q", filters.q);
-    if (filters.source) params.set("source", filters.source);
-    if (filters.make) params.set("make", filters.make);
-    if (filters.model) params.set("model", filters.model);
-    if (filters.year_min) params.set("year_min", String(filters.year_min));
-    if (filters.year_max) params.set("year_max", String(filters.year_max));
-    if (filters.price_min) params.set("price_min", String(filters.price_min));
-    if (filters.price_max) params.set("price_max", String(filters.price_max));
-    if (filters.mileage_max) params.set("mileage_max", String(filters.mileage_max));
-    if (filters.condition) params.set("condition", filters.condition);
-    if (filters.body_type) params.set("body_type", filters.body_type);
-    if (filters.transmission) params.set("transmission", filters.transmission);
-    if (filters.fuel_type) params.set("fuel_type", filters.fuel_type);
-    if (filters.district) params.set("district", filters.district);
-    if (filters.vehicle_category && filters.vehicle_category !== "cars") {
-      params.set("vehicle_category", filters.vehicle_category);
-    }
-    if (filters.price_availability === "unavailable") params.set("price_availability", filters.price_availability);
-    if (filters.fresh_24h) params.set("fresh_24h", "1");
-    if (filters.sort && filters.sort !== "newest") params.set("sort", filters.sort);
-    if (filters.page > 1) params.set("page", String(filters.page));
-    const next = params.toString();
-    if (next !== searchParams.toString()) setSearchParams(params, { replace: true });
-  }, [filters, searchParams, setSearchParams]);
 
   // ── Derived data ───────────────────────────────────────────────
 
@@ -597,43 +476,70 @@ export default function Dashboard() {
     startTransition(() => { setFilters((prev) => ({ ...prev, q: undefined, make: s.make, model: s.model, page: 1 })); });
     setHeroSearchMessage(null);
     scrollToMarket();
-  }, [scrollToMarket]);
+  }, [scrollToMarket, setFilters]);
 
   const runHeroSearch = useCallback(() => {
     const query = heroSearch.trim();
     if (!query) return;
     if (heroSuggestions.length > 0) { applyHeroSuggestion(heroSuggestions[0]); return; }
-    const normalizedQuery = query.toLowerCase();
+    // Singlish / misspelling tolerance ("akwa", "wagonr", "primio", "vits").
+    const alias = resolveSearchAlias(query);
+    if (alias.make) {
+      startTransition(() => {
+        setFilters((prev) => ({ ...prev, q: alias.rest || undefined, make: alias.make, model: alias.model, page: 1 }));
+      });
+      setHeroSuggestionsOpen(false);
+      setHeroSearchMessage(null);
+      scrollToMarket();
+      trackEvent("search_submit", { query, make_match: alias.make, alias: alias.corrected });
+      return;
+    }
+    const normalizedQuery = alias.normalized || query.toLowerCase();
     const makeMatch = makes.find((e) => e.make.toLowerCase().includes(normalizedQuery));
     startTransition(() => {
-      setFilters((prev) => ({ ...prev, q: query, make: makeMatch?.make ?? prev.make, model: makeMatch ? undefined : prev.model, page: 1 }));
+      setFilters((prev) => ({ ...prev, q: normalizedQuery, make: makeMatch?.make ?? prev.make, model: makeMatch ? undefined : prev.model, page: 1 }));
     });
     setHeroSuggestionsOpen(false);
     setHeroSearchMessage(makeMatch ? null : t("home.searchingIndexOnly", "Searching vehicle index only."));
     scrollToMarket();
     trackEvent("search_submit", { query, make_match: makeMatch?.make ?? null });
-  }, [applyHeroSuggestion, heroSearch, heroSuggestions, makes, scrollToMarket, t]);
+  }, [applyHeroSuggestion, heroSearch, heroSuggestions, makes, scrollToMarket, setFilters, t]);
 
   const focusModel = useCallback((make: string, model?: string) => {
     startTransition(() => { setFilters((prev) => ({ ...prev, q: undefined, make, model: model || undefined, page: 1 })); });
     scrollToMarket();
-  }, [scrollToMarket]);
+  }, [scrollToMarket, setFilters]);
 
   const sortByDealScore = useCallback(() => {
     startTransition(() => { setFilters((prev) => ({ ...prev, sort: "deal_score", page: 1 })); });
     scrollToMarket();
-  }, [scrollToMarket]);
+  }, [scrollToMarket, setFilters]);
 
   const browseNewestListings = useCallback(() => {
     startTransition(() => { setFilters((prev) => ({ ...prev, fresh_24h: true, sort: "newest", page: 1, vehicle_category: prev.vehicle_category || "cars" })); });
     scrollToMarket();
-  }, [scrollToMarket]);
+  }, [scrollToMarket, setFilters]);
 
-  const totalPages = fullAccess
-    ? Math.ceil(total / LISTINGS_PAGE_SIZE)
-    : Math.min(1, Math.ceil(total / FREE_LISTINGS_PAGE_SIZE) || 0);
-  const freeVisibleCap = freeListingsVisibleTotal(total);
-  const freeHitListingCap = !fullAccess && total > FREE_LISTINGS_PAGE_SIZE * FREE_MAX_LISTING_PAGES;
+  const totalPages = Math.max(0, Math.ceil(total / LISTINGS_PAGE_SIZE));
+  const goToPage = useCallback((page: number) => {
+    setFilters((prev) => ({ ...prev, page: Math.max(1, page) }));
+    scrollToMarket();
+  }, [scrollToMarket, setFilters]);
+  const setSort = useCallback((sort: FilterState["sort"]) => {
+    setFilters((prev) => ({ ...prev, sort, page: 1 }));
+  }, [setFilters]);
+
+  // Reset the empty-state alert button whenever the search changes.
+  useEffect(() => { setNoResultsAlertStatus("idle"); }, [filters]);
+  const createNoResultsAlert = useCallback(async () => {
+    setNoResultsAlertStatus("saving");
+    const { status } = await saveSearchWithAlert(
+      savedSearchLabel(filters, t("filter.currentSearch", "Current search")),
+      filters,
+      "daily",
+    );
+    setNoResultsAlertStatus(status === "saved" ? "saved" : status === "limit" ? "limit" : "error");
+  }, [filters, t]);
   const currentAlertSummary = useMemo(() => summarizeAlertFilters(filters), [filters]);
 
   const saveCurrentMarketAlert = useCallback(() => {
@@ -1192,10 +1098,16 @@ export default function Dashboard() {
               ) : null}
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <SortControl
+                value={filters.sort}
+                onChange={setSort}
+                priceUnavailable={isPriceUnavailableMode}
+                fullAccess={fullAccess}
+              />
               <button
                 type="button"
                 onClick={() => setShowMobileFilter(true)}
-                className="inline-flex lg:hidden items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1.5 text-[12px] font-semibold text-primary-bright transition-colors hover:bg-primary/15 active:scale-[0.97]"
+                className="inline-flex min-h-11 lg:hidden items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1.5 text-[12px] font-semibold text-primary-bright transition-colors hover:bg-primary/15 active:scale-[0.97]"
                 aria-label={t("filter.title", "Filters")}
               >
                 <SlidersHorizontal className="h-3.5 w-3.5" />
@@ -1232,9 +1144,9 @@ export default function Dashboard() {
               {activeFilterLabels.map((label) => (
                 <span key={label} className="rounded-full border border-border bg-foreground/[0.03] px-2.5 py-1 text-[11px] font-medium text-muted-foreground">{label}</span>
               ))}
-              <button type="button" onClick={() => setFilters({ sort: "newest", page: 1, vehicle_category: "cars" })}
+              <button type="button" onClick={() => setFilters({ ...EMPTY_FILTERS })}
                 className="rounded-full px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >Clear all</button>
+              >{t("common.clearAll", "Clear all")}</button>
             </div>
           )}
 
@@ -1285,26 +1197,13 @@ export default function Dashboard() {
                   </button>
                 </div>
               ) : listings.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-[2rem] border border-dashed border-border px-4 py-16 text-center">
-                  <AtmosphericImage
-                    src={visuals.emptyState.src}
-                    srcSm={visuals.emptyState.srcSm}
-                    className="mb-5 h-28 w-auto max-w-[220px] object-contain opacity-90"
-                    sizes="220px"
-                  />
-                  <p className="text-[13px] font-semibold text-foreground">{t("home.noResults", "No results")}</p>
-                  <p className="mt-2 text-sm text-muted-foreground">{t("home.widenFilters", "Widen your filters or clear them to browse.")}</p>
-                  <button type="button" onClick={() => setFilters({ sort: "newest", page: 1, vehicle_category: "cars" })}
-                    className="mt-4 min-h-11 rounded-2xl border border-border px-5 py-3 text-[13px] font-semibold text-foreground transition-colors hover:bg-foreground/[0.03] active:scale-[0.98]"
-                  >Reset filters</button>
-                  <button
-                    type="button"
-                    onClick={() => setShowMobileFilter(true)}
-                    className="mt-2 min-h-11 rounded-2xl bg-primary px-5 py-3 text-[13px] font-bold text-primary-foreground transition-colors hover:bg-primary/95 active:scale-[0.98]"
-                  >
-                    {t("home.adjustFilters", "Adjust filters")}
-                  </button>
-                </div>
+                <NoResultsState
+                  filters={filters}
+                  onFiltersChange={(next) => setFilters(next)}
+                  onCreateAlert={() => { void createNoResultsAlert(); }}
+                  alertStatus={noResultsAlertStatus}
+                  isSignedIn={isAuthenticated}
+                />
               ) : marketView === "grid" ? (
                 <motion.div
                   initial="hidden"
@@ -1358,44 +1257,26 @@ export default function Dashboard() {
                 </motion.div>
               )}
 
-              {/* Pagination / free upgrade ceiling */}
-              {fullAccess && totalPages > 1 && (
-                <div className="mt-8 flex items-center justify-between border-t border-border pt-6">
-                  <p className="text-[11px] text-muted-foreground">
-                    <span className="num text-foreground">{(filters.page - 1) * LISTINGS_PAGE_SIZE + 1}–{Math.min(filters.page * LISTINGS_PAGE_SIZE, total)}</span> of {total.toLocaleString()}
-                  </p>
-                  <div className="flex items-center gap-1.5">
-                    <button type="button" aria-label="Previous page" disabled={filters.page <= 1} onClick={() => setFilters((p) => ({ ...p, page: Math.max(1, p.page - 1) }))}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
-                    ><ChevronLeft className="h-3.5 w-3.5" /></button>
-                    <span className="px-2 text-[11px] font-semibold text-muted-foreground num">{filters.page} / {totalPages}</span>
-                    <button type="button" aria-label="Next page" disabled={filters.page >= totalPages} onClick={() => setFilters((p) => ({ ...p, page: p.page + 1 }))}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
-                    ><ChevronRight className="h-3.5 w-3.5" /></button>
-                  </div>
+              {/* Pagination — everyone, guests included */}
+              {!loadingListings && !listingsFailed && listings.length > 0 ? (
+                <SearchPagination
+                  page={filters.page}
+                  totalPages={totalPages}
+                  total={total}
+                  pageSize={LISTINGS_PAGE_SIZE}
+                  onPageChange={goToPage}
+                />
+              ) : null}
+              {!fullAccess && listings.length > 0 ? (
+                <div className="mt-6">
+                  <UpgradePrompt
+                    variant="strip"
+                    title={freePlanCopy.scoresTitle}
+                    body={freePlanCopy.scoresBody}
+                  />
                 </div>
-              )}
-              {!fullAccess && (
-                <div className="mt-8 space-y-3 border-t border-border pt-6">
-                  <p className="text-[11px] text-muted-foreground">
-                    Showing <span className="num font-semibold text-foreground">{Math.min(listings.length, freeVisibleCap)}</span> of{" "}
-                    <span className="num font-semibold text-foreground">{total.toLocaleString()}</span> live listings on Free
-                  </p>
-                  {freeHitListingCap ? (
-                    <UpgradePrompt
-                      variant="strip"
-                      title={freePlanCopy.listingsTitle}
-                      body={freePlanCopy.listingsBody}
-                    />
-                  ) : (
-                    <UpgradePrompt
-                      variant="strip"
-                      title={freePlanCopy.scoresTitle}
-                      body={freePlanCopy.scoresBody}
-                    />
-                  )}
-                </div>
-              )}            </div>
+              ) : null}
+            </div>
           </div>
         </div>
       </section>
@@ -1568,7 +1449,7 @@ export default function Dashboard() {
                     <p className="mt-0.5 text-[11px] text-muted-foreground">{alert.target_price_lkr ? `Under ${formatPrice(alert.target_price_lkr)}` : t("home.newListingsAvailable", "New listings available")}</p>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <button type="button" onClick={() => { setFilters({ ...(alert.filters as FilterState), sort: alert.filters.sort || "newest", page: 1 }); setShowMarketAlerts(false); scrollToMarket(); }}
+                    <button type="button" onClick={() => { setFilters({ ...(alert.filters as FilterState), sort: alert.filters.sort || DEFAULT_SORT, page: 1 }); setShowMarketAlerts(false); scrollToMarket(); }}
                       className="h-7 rounded-full border border-primary/15 bg-primary/5 px-2.5 text-[10px] font-semibold text-primary-bright transition-all hover:bg-primary/10 active:scale-[0.95]">Open</button>
                     <button type="button" onClick={() => deleteMarketAlert(alert.id)}
                       className="h-7 rounded-full border border-border px-2.5 text-[10px] font-semibold text-muted-foreground transition-all hover:text-foreground active:scale-[0.95]">Delete</button>

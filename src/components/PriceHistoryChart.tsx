@@ -2,9 +2,10 @@ import { useMemo } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { ArrowDownRight, ArrowUpRight, BarChart3, Gauge } from "lucide-react";
 import { formatPriceLkrMillions } from "@/lib/formatting";
-import { changeTone, formatLakhs, paddedDomain, TONE_STYLES } from "@/lib/dataSanity";
+import { changeTone, paddedDomain, TONE_STYLES } from "@/lib/dataSanity";
 import { TrendToneLegend } from "@/components/data/TrendToneLegend";
 import type { PriceTrendPoint } from "@/types/car";
+import { formatLkrAxisFromMillions } from "@/lib/price";
 
 interface PriceHistoryChartProps {
   title?: string;
@@ -205,18 +206,18 @@ export function PriceHistoryChart({
                     tickLine={false}
                     minTickGap={28}
                     interval="preserveStartEnd"
-                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10, fontWeight: 600, fontFamily: "Nofex" }}
+                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10, fontWeight: 600 }}
                     dy={10}
                   />
                   <YAxis
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10, fontWeight: 600, fontFamily: "Nofex" }}
+                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10, fontWeight: 600 }}
                     domain={yDomain ?? ["auto", "auto"]}
                     tickCount={5}
                     allowDecimals
-                    tickFormatter={(value: number) => formatLakhs(value * 1_000_000)}
-                    width={52}
+                    tickFormatter={(value: number) => formatLkrAxisFromMillions(value)}
+                    width={56}
                   />
                   <Tooltip
                     formatter={(value: number, name: string) => [

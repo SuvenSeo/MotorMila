@@ -1,4 +1,5 @@
 import { parseFlexibleTime } from "@/lib/parseTime";
+import { formatLkrAxis, formatLkrCompact } from "@/lib/price";
 
 export const MIN_REASONABLE_LISTING_PRICE_LKR = 100_000;
 
@@ -7,21 +8,25 @@ export function isReasonableListingPrice(price: number | null | undefined): bool
   return Number.isFinite(numeric) && numeric >= MIN_REASONABLE_LISTING_PRICE_LKR;
 }
 
+/**
+ * Compact card/list price. Delegates to the canonical formatter in
+ * `@/lib/price` ("Rs 85 L" below 100 lakhs, "Rs 12.5 Mn" above, full
+ * rupees under 1 lakh). The "Millions" name is historical: every
+ * `formatPrice()` call in the app routes through here.
+ * @deprecated import `formatLkrCompact` from `@/lib/price` in new code.
+ */
 export function formatPriceLkrMillions(price: number | null | undefined): string {
-  if (price === null || price === undefined || !Number.isFinite(price)) {
-    return "N/A";
-  }
-
-  return `Rs. ${(price / 1000000).toFixed(2)}M`;
+  return formatLkrCompact(price, "N/A");
 }
 
-// Backward-compatible alias for older imports; prefer formatPriceLkrMillions.
-export const formatPriceLkrLakhs = formatPriceLkrMillions;
+/** Lakhs-first compact price ("Rs 85 L"). Previously returned millions by mistake. */
+export function formatPriceLkrLakhs(price: number | null | undefined): string {
+  return formatLkrCompact(price, "N/A");
+}
 
+/** Chart-axis tick from a raw LKR value ("70 L", "15 Mn"). */
 export function formatPriceTickMillions(value: number | string | null | undefined): string {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return "N/A";
-  return `${(numeric / 1000000).toFixed(0)}M`;
+  return formatLkrAxis(value, "N/A");
 }
 
 export function formatRelativeTime(iso: string | null | undefined, now: Date = new Date()): string {

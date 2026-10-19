@@ -102,6 +102,7 @@ import type {
   ProTrendPoint,
   ProVehicleLane,
 } from "@/types/pro";
+import { formatLkrCompact } from "@/lib/price";
 
 type WorkspaceTab = "overview" | "vehicles" | "areas" | "trends" | "sources" | "reports";
 type LaneFocus = "all" | "hot" | "coverage" | "fresh";
@@ -434,7 +435,7 @@ function DetailDialog({
                         <Tooltip
                           contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, color: "hsl(var(--foreground))" }}
                           labelStyle={{ color: "hsl(var(--foreground))" }}
-                          formatter={(value: number, name: string) => [`Rs. ${Number(value).toFixed(2)}M`, name]}
+                          formatter={(value: number, name: string) => [formatLkrCompact(Number(value) * 1_000_000), name]}
                         />
                         <Line type="monotone" dataKey="median" name="Median" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={false} />
                         <Line type="monotone" dataKey="avg" name="Average" stroke="hsl(var(--muted-foreground))" strokeWidth={2} strokeDasharray="4 3" dot={false} />
@@ -1390,7 +1391,7 @@ export default function ProDashboard() {
                           const isPost = name === "post";
                           const count = isPost ? (props.payload?.postCount ?? 0) : (props.payload?.preCount ?? 0);
                           const label = isPost ? "Post-freeze ≥2025" : "Pre-freeze ≤2024";
-                          return [numVal !== null ? `${numVal.toFixed(2)}M LKR (${count} listings)` : "—", label];
+                          return [numVal !== null ? `${formatLkrCompact(numVal * 1_000_000)} (${count} listings)` : "—", label];
                         }}
                       />
                       <Bar dataKey="pre" name="Pre-freeze ≤2024" fill="hsl(var(--deal-amber))" radius={[6, 6, 0, 0]} />

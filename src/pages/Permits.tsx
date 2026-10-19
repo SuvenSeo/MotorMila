@@ -11,6 +11,7 @@ import { PageHero } from "@/components/PageHero";
 import { SectionHeader } from "@/components/SectionHeader";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { QUERY_STALE } from "@/lib/queryPolicy";
+import { formatLkrCompact } from "@/lib/price";
 
 const PERMIT_TYPE_LABELS: Record<string, string> = {
   assembled: "Assembled Vehicle",
@@ -28,10 +29,7 @@ function permitTypeLabel(raw: string): string {
 }
 
 function formatLkr(value: number): string {
-  if (value >= 1_000_000) {
-    return `LKR ${(value / 1_000_000).toFixed(2)}M`;
-  }
-  return `LKR ${value.toLocaleString()}`;
+  return formatLkrCompact(value);
 }
 
 function PermitRow({ permit }: { permit: PermitInfo }) {

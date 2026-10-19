@@ -55,6 +55,7 @@ import { visuals } from '@/lib/visualAssets';
 import { trackEvent } from '@/lib/analytics';
 import { canonicalizeMake, canonicalizeModel } from '@/lib/makeNormalization';
 import { ListingLeadActions } from '@/components/money/ListingLeadActions';
+import { formatLkrFull } from "@/lib/price";
 
 function formatToken(value: string | null | undefined): string {
   if (!value) return 'Unknown';
@@ -367,7 +368,7 @@ export default function ListingDetail() {
           {/* Mobile: the sticky price sidebar stacks ~4 screens down — surface ask + verdict here */}
           <div className="mt-4 flex flex-wrap items-center gap-3 lg:hidden">
             <p className="num text-3xl font-extrabold tracking-tight text-foreground">
-              {hasPrice ? formatPrice(listingPrice) : t("listing.unlisted", "Unlisted")}
+              {hasPrice ? formatLkrFull(listingPrice) : t("listing.unlisted", "Unlisted")}
             </p>
             {hasDealScore && (
               <span className="flex items-center gap-2">
@@ -592,7 +593,7 @@ export default function ListingDetail() {
             >
               <div aria-hidden className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary to-transparent" />
               <h2 className="text-[12px] font-semibold text-muted-foreground">{t("listing.askingPrice", "Asking price")}</h2>
-              <p className="num mt-2 text-[2.5rem] font-extrabold leading-[1.05] tracking-tight text-foreground">{hasPrice ? formatPrice(listingPrice) : t("listing.unlisted", "Unlisted")}</p>
+              <p className="num mt-2 text-[2.5rem] font-extrabold leading-[1.05] tracking-tight text-foreground">{hasPrice ? formatLkrFull(listingPrice) : t("listing.unlisted", "Unlisted")}</p>
 
               <div className="mt-4 flex flex-wrap items-center gap-1.5">
                 <HybridCliffBadge fuelType={listing.fuel_type} engineCc={plausibleEngineCc(listing.engine_cc, listing.year)} />

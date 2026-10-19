@@ -1,6 +1,6 @@
 import { memo, startTransition, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { FilterState, Condition, BodyType, Transmission, FuelType, SortOption, VehicleCategory } from "@/types/car";
-import { getListingSources, getMakes, getModels, formatPrice, type ListingSourceStat } from "@/services/api";
+import { getListingSources, getMakes, getModels, type ListingSourceStat } from "@/services/api";
 import { SRI_LANKA_DISTRICTS } from "@/data/districts";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -8,23 +8,28 @@ import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { X } from "lucide-react";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { deleteSavedSearch, listSavedSearches, saveSavedSearch } from "@/utils/savedSearches";
+import { formatLkrRange } from "@/lib/price";
+import { resolveSearchAlias } from "@/lib/searchAliases";
+import { EMPTY_FILTERS } from "@/lib/searchUrlState";
+import { PriceRangeFilter } from "@/components/search/PriceRangeFilter";
+import { SavedSearchesPanel } from "@/components/search/SavedSearchesPanel";
 
 interface FilterSidebarProps {
   filters: FilterState;
   onFiltersChange: (filters: FilterState) => void;
 }
 
+export interface FilterPanelProps extends FilterSidebarProps {
+  /** Drawer variant: 44px touch targets, no sticky inner header. */
+  touch?: boolean;
+}
+
 const ALL_OPTION = "__all";
 const MIN_YEAR = 1990;
 const MAX_YEAR = Math.max(2026, new Date().getFullYear());
-const MIN_PRICE = 500_000;
-const MAX_PRICE = 100_000_000;
-const PRICE_STEP = 500_000;
 const MAX_MILEAGE = 300_000;
 const MILEAGE_STEP = 10_000;
 
-const QUICK_MAKES = ["Toyota", "Suzuki", "Honda", "Nissan"];
 
 const VEHICLE_CATEGORY_VALUES: Array<{ value: VehicleCategory; key: string; fallback: string }> = [
   { value: "cars", key: "vehicle.cars", fallback: "Cars" },
@@ -55,21 +60,6 @@ const CAR_BODY_VALUES: Array<{ value: BodyType | undefined; key: string; fallbac
   { value: "wagon", key: "body.wagon", fallback: "Wagon" },
   { value: "coupe", key: "body.coupe", fallback: "Coupe" },
   { value: "convertible", key: "body.cabrio", fallback: "Cabrio" },
-];
-
-const PRICE_PRESET_VALUES: Array<{ key: string; fallback: string; min: number; max: number }> = [
-  { key: "filter.presetUnder3m", fallback: "Under 3M", min: MIN_PRICE, max: 3_000_000 },
-  { key: "filter.preset3to6", fallback: "3M–6M", min: 3_000_000, max: 6_000_000 },
-  { key: "filter.preset6to10", fallback: "6M–10M", min: 6_000_000, max: 10_000_000 },
-  { key: "filter.preset10plus", fallback: "10M+", min: 10_000_000, max: MAX_PRICE },
-];
-
-const ALL_SORT_VALUES: { value: SortOption; key: string; fallback: string }[] = [
-  { value: "newest", key: "filter.sortNewest", fallback: "Newest" },
-  { value: "deal_score", key: "filter.sortBestDeal", fallback: "Best deal" },
-  { value: "price_asc", key: "filter.sortPriceAsc", fallback: "Price ↑" },
-  { value: "price_desc", key: "filter.sortPriceDesc", fallback: "Price ↓" },
-  { value: "mileage_asc", key: "filter.sortLowMileage", fallback: "Low mileage" },
 ];
 
 const UNAVAILABLE_PRICE_SORTS = new Set<SortOption>(["deal_score", "price_asc", "price_desc"]);
@@ -111,6 +101,8 @@ function PillButton({
   return (
     <button
       type="button"
+      data-pill=""
+      aria-pressed={active}
       onClick={onClick}
       className={`rounded-full border px-3 py-1 text-caption font-medium transition-all duration-150 active:scale-[0.97] ${
         active
@@ -131,7 +123,7 @@ function selectContentClass() {
   return "max-h-64 rounded-2xl border-transparent bg-popover/95 text-foreground backdrop-blur-2xl shadow-soft-xl";
 }
 
-function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
+export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterPanelProps) {
   const { t } = useAppPreferences();
   const [makes, setMakes] = useState<{ make: string; count: number }[]>([]);
   const [modelsList, setModelsList] = useState<{ model: string; count: number }[]>([]);
@@ -143,20 +135,8 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
     filters.year_min ?? MIN_YEAR,
     filters.year_max ?? MAX_YEAR,
   ]);
-  const [priceRange, setPriceRange] = useState<[number, number]>([
-    filters.price_min ?? MIN_PRICE,
-    filters.price_max ?? MAX_PRICE,
-  ]);
   const [mileageValue, setMileageValue] = useState<number>(filters.mileage_max ?? MAX_MILEAGE);
   const [mileageInput, setMileageInput] = useState<string>(filters.mileage_max ? String(filters.mileage_max) : "");
-  const [priceMinInput, setPriceMinInput] = useState<string>(filters.price_min ? String(filters.price_min) : "");
-  const [priceMaxInput, setPriceMaxInput] = useState<string>(filters.price_max ? String(filters.price_max) : "");
-  // Saved-searches entry point (B2-A): localStorage util only, no backend.
-  const [savedTick, setSavedTick] = useState(0);
-  const savedSearches = useMemo(() => {
-    void savedTick;
-    return listSavedSearches();
-  }, [savedTick]);
 
   useEffect(() => {
     getMakes().then(setMakes).catch(() => setMakes([]));
@@ -189,12 +169,6 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
   }, [filters.year_min, filters.year_max]);
 
   useEffect(() => {
-    setPriceRange([filters.price_min ?? MIN_PRICE, filters.price_max ?? MAX_PRICE]);
-    setPriceMinInput(filters.price_min ? String(filters.price_min) : "");
-    setPriceMaxInput(filters.price_max ? String(filters.price_max) : "");
-  }, [filters.price_min, filters.price_max]);
-
-  useEffect(() => {
     setMileageValue(filters.mileage_max ?? MAX_MILEAGE);
     setMileageInput(filters.mileage_max ? String(filters.mileage_max) : "");
   }, [filters.mileage_max]);
@@ -213,10 +187,6 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
   );
   const carBodyOptions = useMemo(
     () => CAR_BODY_VALUES.map((option) => ({ ...option, label: t(option.key, option.fallback) })),
-    [t],
-  );
-  const pricePresets = useMemo(
-    () => PRICE_PRESET_VALUES.map((preset) => ({ ...preset, label: t(preset.key, preset.fallback) })),
     [t],
   );
   const fuelOptions = useMemo(
@@ -250,18 +220,6 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
       ],
     [t],
   );
-  const allSortOptions = useMemo(
-    () => ALL_SORT_VALUES.map((option) => ({ value: option.value, label: t(option.key, option.fallback) })),
-    [t],
-  );
-  const sortOptions = useMemo(
-    () =>
-      priceAvailability === "unavailable"
-        ? allSortOptions.filter((option) => !UNAVAILABLE_PRICE_SORTS.has(option.value))
-        : allSortOptions,
-    [allSortOptions, priceAvailability],
-  );
-
   const update = useCallback(
     (patch: Partial<FilterState>) => {
       startTransition(() => {
@@ -284,7 +242,7 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
 
   const clear = useCallback(() => {
     startTransition(() => {
-      onFiltersChange({ sort: "newest", page: 1, vehicle_category: "cars" });
+      onFiltersChange({ ...EMPTY_FILTERS });
     });
   }, [onFiltersChange]);
 
@@ -298,7 +256,7 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
         price_availability: shouldUseUnavailable ? "unavailable" : undefined,
         price_min: shouldUseUnavailable ? undefined : filters.price_min,
         price_max: shouldUseUnavailable ? undefined : filters.price_max,
-        sort: shouldUseUnavailable && UNAVAILABLE_PRICE_SORTS.has(filters.sort) ? "newest" : filters.sort,
+        sort: shouldUseUnavailable && UNAVAILABLE_PRICE_SORTS.has(filters.sort) ? "best_match" : filters.sort,
       });
     },
     [filters.price_max, filters.price_min, filters.sort, update],
@@ -307,29 +265,20 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
   const commitKeyword = useCallback(
     (nextKeyword = keywordInput) => {
       const normalized = nextKeyword.trim().split(/\s+/).join(" ");
-      update({ q: normalized || undefined });
+      if (!normalized) {
+        update({ q: undefined });
+        return;
+      }
+      // Singlish / misspelling tolerance: "akwa 2015" → Toyota Aqua + "2015".
+      const alias = resolveSearchAlias(normalized);
+      if (alias.make && !filters.make) {
+        update({ make: alias.make, model: alias.model, q: alias.rest || undefined });
+        setKeywordInput(alias.rest);
+        return;
+      }
+      update({ q: alias.normalized || normalized });
     },
-    [keywordInput, update],
-  );
-
-  const commitPriceInputs = useCallback(
-    (nextMinInput = priceMinInput, nextMaxInput = priceMaxInput) => {
-      const parsedMin = parseOptionalInteger(nextMinInput);
-      const parsedMax = parseOptionalInteger(nextMaxInput);
-
-      const normalizedMin = parsedMin == null ? MIN_PRICE : clamp(parsedMin, MIN_PRICE, MAX_PRICE);
-      const normalizedMax = parsedMax == null ? MAX_PRICE : clamp(parsedMax, MIN_PRICE, MAX_PRICE);
-
-      const min = Math.min(normalizedMin, normalizedMax);
-      const max = Math.max(normalizedMin, normalizedMax);
-
-      setPriceRange([min, max]);
-      update({
-        price_min: parsedMin == null && min === MIN_PRICE ? undefined : min,
-        price_max: parsedMax == null && max === MAX_PRICE ? undefined : max,
-      });
-    },
-    [priceMaxInput, priceMinInput, update],
+    [filters.make, keywordInput, update],
   );
 
   const commitMileageInput = useCallback(
@@ -387,7 +336,7 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
     if (filters.price_min || filters.price_max) {
       chips.push({
         key: "price",
-        label: `${formatPrice(filters.price_min ?? MIN_PRICE)}–${formatPrice(filters.price_max ?? MAX_PRICE)}`,
+        label: formatLkrRange(filters.price_min, filters.price_max),
         onRemove: () => update({ price_min: undefined, price_max: undefined }),
       });
     }
@@ -406,8 +355,12 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
     "py-1 [&>span:first-child]:h-2 [&>span:first-child]:bg-secondary [&>span:first-child>span]:bg-gradient-to-r [&>span:first-child>span]:from-primary [&>span:first-child>span]:to-primary";
 
   return (
-    <div className="space-y-3 px-3 py-3 text-sm">
-      <div className="sticky top-0 z-10 space-y-3 rounded-[1.75rem] border border-transparent bg-card/85 px-3.5 py-3 shadow-soft backdrop-blur-xl">
+    <div
+      className={`space-y-3 px-3 py-3 text-sm ${
+        touch ? "[&_[data-pill]]:min-h-11 [&_[data-pill]]:px-3.5 [&_button[role=combobox]]:h-11" : ""
+      }`}
+    >
+      <div className={`${touch ? "" : "sticky top-0 z-10 "}space-y-3 rounded-[1.75rem] border border-transparent bg-card/85 px-3.5 py-3 shadow-soft backdrop-blur-xl`}>
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-semibold tracking-tight text-foreground">{t("filter.title", "Filters")}</p>
           {activeChips.length > 0 ? (
@@ -459,51 +412,6 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
         </div>
       </div>
 
-      <FilterGroup label={t("filter.savedSearches", "Saved searches")}>
-        <div className="space-y-1.5">
-          <button
-            type="button"
-            onClick={() => {
-              const label = [filters.make, filters.model, filters.district].filter(Boolean).join(" · ") || t("filter.currentSearch", "Current search");
-              saveSavedSearch(String(label), filters);
-              setSavedTick((n) => n + 1);
-            }}
-            className="w-full rounded-full border border-transparent bg-surface/70 px-3 py-1.5 text-caption font-medium text-foreground transition-all hover:border-primary/40 hover:bg-surface"
-          >
-            {t("filter.saveCurrentSearch", "Save current search")}
-          </button>
-          {savedSearches.length === 0 ? (
-            <p className="text-caption text-muted-foreground">{t("filter.noSavedSearches", "No saved searches yet.")}</p>
-          ) : (
-            <ul className="space-y-1">
-              {savedSearches.slice(0, 5).map((saved) => (
-                <li key={saved.id} className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => onFiltersChange({ ...saved.filters, page: 1 } as FilterState)}
-                    className="min-w-0 flex-1 truncate rounded-full border border-transparent px-2 py-1 text-left text-caption text-primary-bright hover:border-primary/25 hover:bg-primary/5"
-                    title={saved.name}
-                  >
-                    {saved.name}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      deleteSavedSearch(saved.id);
-                      setSavedTick((n) => n + 1);
-                    }}
-                    aria-label={`Delete ${saved.name}`}
-                    className="rounded-full p-1 text-muted-foreground transition-all hover:bg-surface hover:text-foreground active:scale-[0.97]"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </FilterGroup>
-
       <FilterGroup label={t("filter.vehicle", "Vehicle")}>
         <div className="flex flex-wrap gap-1.5">
           {vehicleCategoryOptions.map((option) => (
@@ -536,13 +444,6 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
       </FilterGroup>
 
       <FilterGroup label={t("common.make", "Make")}>
-        <div className="mb-2 flex flex-wrap gap-1.5">
-          {QUICK_MAKES.map((make) => (
-            <PillButton key={make} active={filters.make === make} onClick={() => update({ make, model: undefined })}>
-              {make}
-            </PillButton>
-          ))}
-        </div>
         <Combobox
           label={t("common.make", "Make")}
           options={makes.map((make) => ({ value: make.make, label: `${make.make} (${make.count})` }))}
@@ -586,85 +487,11 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
         {priceAvailability === "unavailable" ? (
           <p className="text-caption text-muted-foreground">{t("filter.priceUnavailableHint", "Switch to \"With price\" to filter by budget.")}</p>
         ) : (
-          <div className="space-y-2.5">
-            <p className="num text-caption font-medium text-foreground">
-              {formatPrice(priceRange[0])} – {formatPrice(priceRange[1])}
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {pricePresets.map((preset) => {
-                const active = priceRange[0] === preset.min && priceRange[1] === preset.max;
-                return (
-                  <PillButton
-                    key={preset.label}
-                    active={active}
-                    onClick={() => {
-                      setPriceRange([preset.min, preset.max]);
-                      setPriceMinInput(String(preset.min));
-                      setPriceMaxInput(String(preset.max));
-                      update({
-                        price_min: preset.min === MIN_PRICE ? undefined : preset.min,
-                        price_max: preset.max === MAX_PRICE ? undefined : preset.max,
-                      });
-                    }}
-                  >
-                    {preset.label}
-                  </PillButton>
-                );
-              })}
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Input
-                value={priceMinInput}
-                onChange={(event) => setPriceMinInput(event.target.value.replace(/[^\d]/g, ""))}
-                onBlur={() => commitPriceInputs()}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    commitPriceInputs();
-                  }
-                }}
-                inputMode="numeric"
-                placeholder={t("filter.minLkr", "Min LKR")}
-                aria-label={t("filter.minPriceAria", "Minimum price")}
-                className="h-9 rounded-full border-transparent bg-surface/70 text-sm text-foreground"
-              />
-              <Input
-                value={priceMaxInput}
-                onChange={(event) => setPriceMaxInput(event.target.value.replace(/[^\d]/g, ""))}
-                onBlur={() => commitPriceInputs()}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    commitPriceInputs();
-                  }
-                }}
-                inputMode="numeric"
-                placeholder={t("filter.maxLkr", "Max LKR")}
-                aria-label={t("filter.maxPriceAria", "Maximum price")}
-                className="h-9 rounded-full border-transparent bg-surface/70 text-sm text-foreground"
-              />
-            </div>
-            <Slider
-              thumbLabels={[t("filter.minPriceSlider", "Minimum price slider"), t("filter.maxPriceSlider", "Maximum price slider")]}
-              min={MIN_PRICE}
-              max={MAX_PRICE}
-              step={PRICE_STEP}
-              value={priceRange}
-              onValueChange={(value) => {
-                const nextRange: [number, number] = [value[0] ?? MIN_PRICE, value[1] ?? MAX_PRICE];
-                setPriceRange(nextRange);
-                setPriceMinInput(String(nextRange[0]));
-                setPriceMaxInput(String(nextRange[1]));
-              }}
-              onValueCommit={(value) =>
-                update({
-                  price_min: value[0] === MIN_PRICE ? undefined : value[0],
-                  price_max: value[1] === MAX_PRICE ? undefined : value[1],
-                })
-              }
-              className={sliderClass}
-            />
-          </div>
+          <PriceRangeFilter
+            filters={filters}
+            touch={touch}
+            onCommit={(price_min, price_max) => update({ price_min, price_max })}
+          />
         )}
       </FilterGroup>
 
@@ -816,19 +643,8 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
         </Select>
       </FilterGroup>
 
-      <FilterGroup label={t("filter.sort", "Sort")}>
-        <Select value={filters.sort} onValueChange={(value) => update({ sort: value as SortOption })}>
-          <SelectTrigger aria-label={t("filter.sortAria", "Sort listings")} className={selectTriggerClass()}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className={selectContentClass()}>
-            {sortOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <FilterGroup label={t("filter.savedSearches", "Saved searches")}>
+        <SavedSearchesPanel filters={filters} onOpen={(next) => onFiltersChange(next)} touch={touch} />
       </FilterGroup>
     </div>
   );
@@ -837,7 +653,7 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
 export const FilterSidebar = memo(function FilterSidebar({ filters, onFiltersChange }: FilterSidebarProps) {
   return (
     <aside className="surface surface--glass filter-command-rail hidden w-full max-h-[calc(100vh-7.5rem)] overflow-y-auto rounded-[2rem] border border-transparent shadow-soft lg:block">
-      <FilterContent filters={filters} onFiltersChange={onFiltersChange} />
+      <FilterPanel filters={filters} onFiltersChange={onFiltersChange} />
     </aside>
   );
 });

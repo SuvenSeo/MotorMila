@@ -9,6 +9,7 @@ import {
   YAxis,
 } from "recharts";
 import { formatPriceLkrMillions } from "@/lib/formatting";
+import { formatLkrAxis } from "@/lib/price";
 
 export interface MileagePricePoint {
   mileage: number;
@@ -107,7 +108,7 @@ export const MileagePriceScatter = memo(function MileagePriceScatter({
                 fontWeight: 600,
                 fontFamily: "Inter, system-ui, sans-serif",
               }}
-              tickFormatter={(value: number) => `${(value / 1_000_000).toFixed(0)}M`}
+              tickFormatter={(value: number) => formatLkrAxis(value)}
               width={44}
             />
             <Tooltip

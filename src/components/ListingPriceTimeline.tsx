@@ -14,6 +14,7 @@ import { ArrowDownRight, ArrowUpRight, LineChart, TrendingDown } from "lucide-re
 import { formatPrice } from "@/services/api";
 import { formatPriceLkrMillions } from "@/lib/formatting";
 import type { PriceHistoryInfo } from "@/types/car";
+import { formatLkrAxisFromMillions } from "@/lib/price";
 
 interface ListingPriceTimelineProps {
   history: PriceHistoryInfo | null;
@@ -188,7 +189,7 @@ export function ListingPriceTimeline({
                   tickLine={false}
                   domain={yDomain}
                   tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10, fontWeight: 600 }}
-                  tickFormatter={(value: number) => `${value.toFixed(1)}M`}
+                  tickFormatter={(value: number) => formatLkrAxisFromMillions(value)}
                   width={52}
                 />
                 <Tooltip
