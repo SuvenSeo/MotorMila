@@ -104,7 +104,7 @@ export default function SignIn() {
               {t("signin.title", "Sign in")}
             </h1>
             <p className="mt-3 text-[15px] font-medium leading-relaxed text-white/65">
-              {t("signin.subtitle", "Enter your Motormila credentials to open the intelligence cockpit.")}
+              {t("shell.copy.signinSubtitle", "Sign in to see your saved vehicles and price-drop alerts.")}
             </p>
           </div>
 
@@ -171,7 +171,7 @@ export default function SignIn() {
               <Input
                 id="email"
                 type="email"
-                placeholder={t("signin.emailPlaceholder", "you@company.lk")}
+                placeholder={t("shell.copy.emailPlaceholder", "you@example.com")}
                 autoComplete="email"
                 {...register("email")}
                 className="h-11 rounded-xl border-white/15 bg-black/35 text-sm text-white placeholder:text-white/35 focus:border-primary/40 focus:ring-1 focus:ring-primary/30"

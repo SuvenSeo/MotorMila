@@ -159,7 +159,7 @@ function pageContextFor(pathname: string, search: string): PageContext {
   }
 
   return {
-    label: search ? "Filtered dashboard" : "Market cockpit",
+    label: search ? "Filtered search" : "Home",
     summary: search
       ? `The user is on the main dashboard with URL filters: ${search}.`
       : "The user is on the main dashboard, browsing live inventory, market concentration, trends, and priced listings.",

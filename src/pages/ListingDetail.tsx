@@ -324,7 +324,7 @@ export default function ListingDetail() {
           </button>
 
           <div className="flex flex-wrap items-center gap-2 mb-3">
-            <span className="section-eyebrow text-[10px] tracking-[0.18em]">{t("listing.inspection", "Inspection")}</span>
+            <span className="section-eyebrow text-[10px] tracking-[0.18em]">{t("shell.copy.listingEyebrow", "For sale")}</span>
             <span aria-hidden className="text-muted-foreground/40 text-xs">•</span>
             <span className="text-[12px] font-medium tracking-tight text-muted-foreground">
               {t("listing.listedOnSource", "Listed on {source}", { source: attribution.sourceName })}

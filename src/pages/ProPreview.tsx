@@ -200,7 +200,7 @@ export default function ProPreview({ sampleLane, gaps, trialCtaTo = "/pricing#ge
               <Sparkles aria-hidden className="mb-3 h-5 w-5 text-primary" />
               <h2 className="font-display text-[15px] font-bold text-foreground">What your trial unlocks</h2>
               <div className="mt-4 space-y-2">
-                {["Full Pro terminal (/pro) for 7 days", "District profiles + trend history", "Export packs: PDF, Word, CSV, JSON"].map((i) => (
+                {["Pro dashboard with deal scores", "District detail and full price history", "Exports: PDF, Word, CSV, JSON"].map((i) => (
                   <div key={i} className="flex items-start gap-2.5 rounded-xl border border-border bg-surface p-3">
                     <span aria-hidden className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
                     <p className="text-[11px] font-semibold text-muted-foreground">{i}</p>

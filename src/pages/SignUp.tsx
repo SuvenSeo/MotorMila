@@ -170,11 +170,11 @@ export default function SignUp() {
   const planMeta = {
     free: {
       title: t("signup.plan.free.title", "Free access"),
-      detail: t("signup.plan.free.detail", "Browse every page with soft limits. Scores, full history, and deep tools unlock on Pro."),
+      detail: t("shell.copy.signupFree", "Search every listing, price ranges and the import tax calculator. Free during beta."),
     },
     pro: {
       title: t("signup.plan.pro.title", "Pro access"),
-      detail: t("signup.plan.pro.detail", "Full terminal — lane intelligence, district depth, and export packs."),
+      detail: t("shell.copy.signupPro", "Coming soon: deal scores on every listing, full price history and exports."),
     },
     dealer: {
       title: t("signup.plan.dealer.title", "Dealer access"),
