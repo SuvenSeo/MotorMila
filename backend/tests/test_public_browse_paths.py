@@ -28,6 +28,9 @@ def test_guest_home_and_search_paths_are_public():
         "/api/v1/stats/live/stream",
         "/api/v1/stats/make-insight",
         "/api/v1/stats/district-insight",
+        # Starter valuation is intentionally public (guest valuation on web
+        # and Android); see api.py.
+        "/api/v1/listings/estimate",
         "/api/v1/listings/42",
         "/api/v1/listings/42/fmv",
         "/api/v1/ev/chargers",
@@ -38,8 +41,8 @@ def test_guest_home_and_search_paths_are_public():
 
 def test_gated_product_paths_stay_private():
     for path in (
-        "/api/v1/listings/estimate",
         "/api/v1/listings/custom-estimate",
+        "/api/v1/listings/mine",
         "/api/v1/alerts",
         "/api/v1/pro/snapshot",
         "/api/v1/chat",

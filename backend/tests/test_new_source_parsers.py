@@ -112,7 +112,7 @@ def test_carshop_builds_payload_from_current_detail_shape():
     assert payload is not None
     assert payload["source"] == "carshop"
     assert payload["make"] == "Toyota"
-    assert payload["model"] == "Rav4"
+    assert payload["model"] == "RAV4"
     assert payload["year"] == 2007
     assert payload["price_lkr"] == 7_950_000
     assert payload["district"] == "Kalutara"
