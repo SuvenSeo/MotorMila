@@ -337,7 +337,7 @@ private fun DeleteAccountDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !deleting) {
-                Text(stringResource(R.string.common_cancel))
+                Text(stringResource(R.string.cancel))
             }
         },
     )

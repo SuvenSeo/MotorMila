@@ -1,7 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Overhaul 2026-10 strings. si/ta copies live in values-si / values-ta
-     (English placeholders marked TODO until translated). -->
+<!-- Overhaul 2026-10 strings (generated from one table; keep si/ta in sync). -->
 <resources>
-    <!-- Updates (direct flavor) -->
+    <string name="account_delete_body">This permanently deletes your MotorMila account, saved alerts and preferences on our servers. Active Google Play subscriptions are not cancelled automatically: cancel them in the Play Store. Enter your password to confirm.</string>
+    <string name="account_delete_confirm">Delete permanently</string>
+    <string name="account_delete_password">Password</string>
+    <string name="account_delete_row_body">Permanently delete your account and alerts</string>
+    <string name="account_delete_title">Delete account</string>
+    <string name="account_delete_web_body">motormila.pages.dev/delete-account</string>
+    <string name="account_delete_web_title">Delete account on the web</string>
+    <string name="account_delete_working">Deleting…</string>
+    <string name="billing_continue_checkout">Continue to checkout</string>
+    <string name="billing_pending">Payment pending. Pro unlocks as soon as Google Play confirms it.</string>
+    <string name="billing_play_unavailable">Google Play billing isn\'t available. Make sure the Play Store is installed and you\'re signed in.</string>
+    <string name="billing_pro_unlocked">Pro unlocked. Welcome!</string>
+    <string name="billing_sign_in_first">Sign in first so your Pro subscription is linked to your account.</string>
+    <string name="billing_subscribe_play">Subscribe with Google Play</string>
+    <string name="billing_verification_failed">Google Play took the payment but we couldn\'t confirm it yet. We\'ll retry automatically; you won\'t be charged if it can\'t be confirmed.</string>
+    <plurals name="notif_alert_match_count">
+        <item quantity="one">%1$d matching listing</item>
+        <item quantity="other">%1$d matching listings</item>
+    </plurals>
+    <string name="notif_alert_match_from"> from Rs. %1$s</string>
+    <string name="notif_alert_match_title">New match: %1$s</string>
+    <string name="notif_alert_your_alert">your alert</string>
+    <string name="notif_permission_allow">Allow</string>
+    <string name="notif_permission_body">Allow notifications so we can tell you the moment a listing matches this alert.</string>
+    <string name="notif_permission_not_now">Not now</string>
+    <string name="notif_permission_title">Get match alerts?</string>
+    <string name="offline_cached_data">Offline — showing cached data</string>
+    <string name="offline_snapshot_banner">Live data is unavailable — showing the latest snapshot</string>
+    <string name="settings_account">Account</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_biometric_body">Log in with fingerprint / face</string>
+    <string name="settings_biometric_title">Biometric unlock</string>
+    <string name="settings_default_district">Default district</string>
+    <string name="settings_default_sort">Default sort</string>
+    <string name="settings_defaults">Defaults</string>
+    <string name="settings_feedback">Feedback</string>
+    <string name="settings_feedback_hint">What should we fix or build?</string>
+    <string name="settings_feedback_send">Send feedback</string>
+    <string name="settings_feedback_thanks">Thanks — feedback sent.</string>
+    <string name="settings_legal">Legal</string>
+    <string name="settings_logout">Log out</string>
+    <string name="settings_logout_note">Logging out cancels background sync and alert workers on this device.</string>
+    <string name="settings_privacy_body">How we collect and protect data</string>
+    <string name="settings_privacy_title">Privacy Policy</string>
+    <string name="settings_security">Security</string>
+    <string name="settings_terms_body">Rules that govern the platform</string>
+    <string name="settings_terms_title">Terms of Service</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_title">Settings</string>
     <string name="update_install_permission_hint">Allow MotorMila to install apps on the screen that just opened, then tap Update now again.</string>
 </resources>
