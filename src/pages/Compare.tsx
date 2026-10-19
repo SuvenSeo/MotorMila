@@ -13,6 +13,7 @@ import { howWePriceHref } from "@/lib/howWePrice";
 import { useLowData } from "@/hooks/useLowData";
 import { cn } from "@/lib/utils";
 import { useCompare } from "@/components/compare/CompareContext";
+import { SellSpeedBadge } from "@/components/SellSpeedBadge";
 import {
   COMPARE_ROWS,
   bestIndexes,
@@ -270,6 +271,7 @@ export default function Compare() {
                   <X className="h-3.5 w-3.5" aria-hidden />
                 </button>
               </div>
+              <SellSpeedBadge make={l.make} model={l.model} className="self-start" />
             </div>
           ),
           cell: (ctx) => {
