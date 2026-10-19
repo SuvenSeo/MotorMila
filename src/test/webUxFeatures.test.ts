@@ -119,3 +119,31 @@ describe("source attribution", () => {
     expect(a.href).toBe("https://ikman.lk/en/ad/x");
   });
 });
+
+import { computePriceOutlook } from "@/lib/priceOutlook";
+import { transferDeadline, estimateTransferCost, buildAgreementParagraphs, EMPTY_AGREEMENT } from "@/lib/transferKit";
+
+describe("computePriceOutlook", () => {
+  const mk = (prices: number[], n = 30) => prices.map((p, i) => ({ month: `2026-0${i + 1}`, median_price: p, sample_count: n }));
+  it("reads easing, firming, steady and insufficient", () => {
+    expect(computePriceOutlook(mk([10, 9.8, 9.5, 9.2, 9.0].map((x) => x * 1e6))).stance).toBe("easing");
+    expect(computePriceOutlook(mk([9, 9.2, 9.5, 9.7].map((x) => x * 1e6))).stance).toBe("firming");
+    expect(computePriceOutlook(mk([9, 9.02, 8.99, 9.01].map((x) => x * 1e6))).stance).toBe("steady");
+    expect(computePriceOutlook(mk([9e6, 8e6])).stance).toBe("insufficient");
+    expect(computePriceOutlook(mk([9e6, 8e6, 7e6], 2)).stance).toBe("insufficient");
+  });
+});
+
+describe("transfer kit", () => {
+  it("computes the 14-day deadline and strict-enforcement flag", () => {
+    expect(transferDeadline("2026-11-10")).toEqual({ deadline: "2026-11-24", strict: false });
+    expect(transferDeadline("2026-11-20")).toEqual({ deadline: "2026-12-04", strict: true });
+  });
+  it("estimates cost and builds agreement text with blanks", () => {
+    expect(estimateTransferCost({ vehicleClass: "motorcycle", salePriceLkr: 500_000, stampDutyPct: 1, extrasLkr: 150 }).totalLkr).toBe(1_500 + 5_000 + 150);
+    const paras = buildAgreementParagraphs({ ...EMPTY_AGREEMENT, regNo: "CAB-1234", saleDate: "2026-12-01" });
+    expect(paras.join(" ")).toContain("CAB-1234");
+    expect(paras.join(" ")).toContain("2026-12-15");
+    expect(paras.join(" ")).toContain("open papers");
+  });
+});
