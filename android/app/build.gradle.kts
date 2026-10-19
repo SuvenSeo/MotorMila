@@ -37,9 +37,13 @@ val allowUnsignedRelease: Boolean =
 
 android {
     namespace = "lk.motormila.app"
-    // API 36 (Android 16): Play requires targetSdk 36 for updates from
-    // 1 Nov 2026 (extension deadline). AGP 8.9.1+ supports compileSdk 36.
-    compileSdk = 36
+    // Play requires targetSdk 36 for updates from 1 Nov 2026 (extension
+    // deadline). compileSdk stays at 35 because Paparazzi 1.3.5's
+    // Renderer.configureBuildProperties() crashes on API 36's
+    // android.os.Build (new nested class VERSION_CODES_FULL ->
+    // NoSuchElementException), breaking all screenshot tests. Revisit when
+    // Paparazzi is upgraded to 2.x (needs Gradle/AGP/Kotlin bump too).
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "lk.motormila.app"
