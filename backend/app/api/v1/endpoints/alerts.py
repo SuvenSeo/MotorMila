@@ -38,6 +38,10 @@ def _validate_token(token: object) -> str:
     token = token.strip()
     if not token or len(token) > 64:
         raise HTTPException(status_code=400, detail="Invalid alert token")
+    # Account tokens are derived server-side from a live session (`mm:{email}`).
+    # Accepting them from a client header lets anyone impersonate any user.
+    if token.lower().startswith("mm:"):
+        raise HTTPException(status_code=403, detail="Account tokens cannot be supplied by the client.")
     return token
 
 
@@ -70,9 +74,8 @@ def _resolve_alert_identity(
 
 
 def _max_alerts_for(live: Optional[dict]) -> int:
-    if live is None:
-        return PRO_ALERTS_LIMIT
-    if is_free_browse_plan(live.get("plan"), role=live.get("role")):
+    # Anonymous / legacy-token clients get free-tier caps, never Pro.
+    if live is None or is_free_browse_plan(live.get("plan"), role=live.get("role")):
         return FREE_ALERTS_LIMIT
     return PRO_ALERTS_LIMIT
 
@@ -108,27 +111,27 @@ def create_alert(
     quiet_hours_enabled = payload.quiet_hours_enabled
 
     # WhatsApp, email, and Telegram notifications are Pro surfaces — reject
-    # free-plan attempts even if the client bypasses the UI.
-    if live is not None and is_free_browse_plan(live.get("plan"), role=live.get("role")):
+    # free-plan and anonymous/legacy-token attempts even if the client bypasses the UI.
+    if live is None or is_free_browse_plan(live.get("plan"), role=live.get("role")):
         if notify_phone:
             raise HTTPException(
                 status_code=403,
-                detail="WhatsApp alert notifications require a Pro plan.",
+                detail="WhatsApp alert notifications require a signed-in Pro plan.",
             )
         if notify_email:
             raise HTTPException(
                 status_code=403,
-                detail="Email alert notifications require a Pro plan.",
+                detail="Email alert notifications require a signed-in Pro plan.",
             )
         if notify_telegram_chat_id:
             raise HTTPException(
                 status_code=403,
-                detail="Telegram alert notifications require a Pro plan.",
+                detail="Telegram alert notifications require a signed-in Pro plan.",
             )
         if notify_channels:
             raise HTTPException(
                 status_code=403,
-                detail="Multi-channel alert notifications require a Pro plan.",
+                detail="Multi-channel alert notifications require a signed-in Pro plan.",
             )
 
     alert = MarketAlert(
@@ -238,6 +241,29 @@ def update_alert_channels(
     db.commit()
     db.refresh(alert)
     return alert
+
+
+@router.get("/match", response_model=AlertMatchResponse, operation_id="matchAlertsGet")
+def match_alerts_get(
+    request: Request,
+    db: Session = Depends(get_db),
+    token: Optional[str] = Query(default=None),
+    authorization: Optional[str] = Header(default=None),
+    x_alert_token: Optional[str] = Header(default=None, alias="X-Alert-Token"),
+):
+    """GET alias for the alert match read.
+
+    The web client calls /alerts/match with GET while the native app uses POST.
+    Serving only POST answered the browser with 405, so the alerts page hung on
+    "Loading alerts" and every active alert errored.
+    """
+    return match_alerts(
+        request=request,
+        db=db,
+        token=token,
+        authorization=authorization,
+        x_alert_token=x_alert_token,
+    )
 
 
 @router.post("/match", response_model=AlertMatchResponse)

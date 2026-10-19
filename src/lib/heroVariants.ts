@@ -9,7 +9,8 @@ export type HeroVariantId =
   | "expressway-dusk"
   | "orange-sunset"
   | "ultrawide-day"
-  | "blueprint";
+  | "blueprint"
+  | "coastal-aerial";
 
 export type HeroVariant = {
   id: HeroVariantId;
@@ -124,9 +125,25 @@ export const HERO_VARIANTS: HeroVariant[] = [
       "bg-gradient-to-b from-background/50 via-transparent to-background",
     ],
   },
+  {
+    id: "coastal-aerial",
+    label: "7 · Coastal aerial",
+    blurb: "Real drone shot — Galle Road coastline, centered lockup.",
+    image: visuals.pageHomeHeroCoastal,
+    // Aerial coastline is bright — keep copy over the darker road band
+    objectPosition: "center 45%",
+    imageOpacity: "opacity-[0.92]",
+    align: "center",
+    tone: "dark",
+    hideSideSignals: false,
+    scrims: [
+      "bg-gradient-to-b from-background/62 via-background/26 to-background/92",
+      "bg-[radial-gradient(ellipse_72%_58%_at_50%_42%,transparent_32%,hsl(var(--background)/0.5)_100%)]",
+    ],
+  },
 ];
 
-export const DEFAULT_HERO_VARIANT_ID: HeroVariantId = "expressway-dusk";
+export const DEFAULT_HERO_VARIANT_ID: HeroVariantId = "coastal-aerial";
 
 const STORAGE_KEY = "motormila.hero_variant.v3";
 

@@ -3,6 +3,16 @@
 Requires BILLING_WEBHOOK_SECRET. Without it the endpoint returns 503.
 This does not create Stripe Checkout sessions; wire your Stripe dashboard /
 PayHere success hook to POST here after payment succeeds.
+
+Signing scheme (v2, replay-protected):
+    X-Motormila-Timestamp: <unix seconds>
+    X-Motormila-Signature: sha256=<hex HMAC-SHA256(secret, f"{timestamp}." + raw_body)>
+    body must include a unique "event_id".
+Requests older/newer than BILLING_WEBHOOK_TOLERANCE_SECONDS (default 300)
+are rejected, and each event_id is applied at most once (stored in
+billing_webhook_events; an in-process cache covers a missing table).
+The legacy body-only signature (no timestamp) is refused unless
+BILLING_WEBHOOK_ALLOW_LEGACY=true.
 """
 
 from __future__ import annotations
@@ -11,6 +21,9 @@ import hashlib
 import hmac
 import json
 import os
+import threading
+import time
+from collections import OrderedDict
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Header, HTTPException, Request
@@ -22,7 +35,7 @@ from app.api.v1.endpoints.auth import (
     ALLOWED_SUBSCRIPTION_STATUSES,
     default_subscription_for_plan,
 )
-from db.models import PlatformUser
+from db.models import BillingWebhookEvent, PlatformUser
 from db.session import SessionLocal
 
 router = APIRouter()
@@ -32,29 +45,93 @@ class BillingPlanEvent(BaseModel):
     email: str = Field(..., min_length=3, max_length=255)
     plan: str = Field(..., min_length=3, max_length=20)
     subscription_status: Optional[str] = Field(default=None, max_length=20)
-    event_id: Optional[str] = Field(default=None, max_length=120)
+    event_id: Optional[str] = Field(default=None, min_length=1, max_length=120)
 
 
 def _webhook_secret() -> str:
     return os.getenv("BILLING_WEBHOOK_SECRET", "").strip()
 
 
-def _verify_signature(raw_body: bytes, signature: Optional[str]) -> None:
+def _tolerance_seconds() -> int:
+    raw = os.getenv("BILLING_WEBHOOK_TOLERANCE_SECONDS", "").strip()
+    try:
+        return max(30, int(raw)) if raw else 300
+    except ValueError:
+        return 300
+
+
+def _legacy_allowed() -> bool:
+    return os.getenv("BILLING_WEBHOOK_ALLOW_LEGACY", "false").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _sign(secret: str, message: bytes) -> str:
+    return hmac.new(secret.encode("utf-8"), message, hashlib.sha256).hexdigest()
+
+
+def _verify_signature(
+    raw_body: bytes,
+    signature: Optional[str],
+    timestamp: Optional[str] = None,
+    *,
+    now: Optional[float] = None,
+) -> None:
     secret = _webhook_secret()
     if not secret:
         raise HTTPException(status_code=503, detail="Billing webhook is not configured.")
     provided = (signature or "").strip()
     if provided.lower().startswith("sha256="):
         provided = provided.split("=", 1)[1].strip()
-    expected = hmac.new(secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
-    if not provided or not hmac.compare_digest(provided, expected):
+    provided = provided.lower()
+    if not provided:
         raise HTTPException(status_code=401, detail="Invalid billing webhook signature.")
+
+    ts_raw = (timestamp or "").strip()
+    if ts_raw:
+        try:
+            ts = int(ts_raw)
+        except ValueError as exc:
+            raise HTTPException(status_code=401, detail="Invalid billing webhook timestamp.") from exc
+        current = time.time() if now is None else now
+        if abs(current - ts) > _tolerance_seconds():
+            raise HTTPException(status_code=401, detail="Billing webhook timestamp outside tolerance.")
+        expected = _sign(secret, f"{ts}.".encode("utf-8") + raw_body)
+    elif _legacy_allowed():
+        expected = _sign(secret, raw_body)
+    else:
+        raise HTTPException(status_code=401, detail="Missing X-Motormila-Timestamp header.")
+    # Constant-time comparison on equal-type (ASCII hex) strings.
+    if not hmac.compare_digest(provided.encode("ascii", "ignore"), expected.encode("ascii")):
+        raise HTTPException(status_code=401, detail="Invalid billing webhook signature.")
+
+
+# In-process replay cache (bounded). The DB table is the durable store; this
+# covers deployments where the table has not been created yet and races
+# between concurrent deliveries in one process.
+_SEEN_LOCK = threading.Lock()
+_SEEN_EVENTS: "OrderedDict[str, float]" = OrderedDict()
+_SEEN_MAX = 10_000
+
+
+def _seen_in_memory(event_id: str) -> bool:
+    with _SEEN_LOCK:
+        if event_id in _SEEN_EVENTS:
+            return True
+        _SEEN_EVENTS[event_id] = time.time()
+        while len(_SEEN_EVENTS) > _SEEN_MAX:
+            _SEEN_EVENTS.popitem(last=False)
+        return False
+
+
+def _forget_in_memory(event_id: str) -> None:
+    with _SEEN_LOCK:
+        _SEEN_EVENTS.pop(event_id, None)
 
 
 @router.post("/webhook")
 async def billing_webhook(
     request: Request,
     x_motormila_signature: Optional[str] = Header(default=None, alias="X-Motormila-Signature"),
+    x_motormila_timestamp: Optional[str] = Header(default=None, alias="X-Motormila-Timestamp"),
     stripe_signature: Optional[str] = Header(default=None, alias="Stripe-Signature"),
 ):
     """Apply a plan change from a signed webhook body.
@@ -66,7 +143,7 @@ async def billing_webhook(
     """
     del stripe_signature  # reserved for a future native Stripe verifier
     raw = await request.body()
-    _verify_signature(raw, x_motormila_signature)
+    _verify_signature(raw, x_motormila_signature, x_motormila_timestamp)
 
     try:
         parsed = json.loads(raw.decode("utf-8") or "{}")
@@ -81,16 +158,46 @@ async def billing_webhook(
     status = (event.subscription_status or default_subscription_for_plan(plan)).strip().lower()
     if status not in ALLOWED_SUBSCRIPTION_STATUSES:
         raise HTTPException(status_code=400, detail="Invalid subscription_status.")
+    event_id = (event.event_id or "").strip()
+    if not event_id:
+        raise HTTPException(status_code=400, detail="event_id is required.")
+
+    if _seen_in_memory(event_id):
+        return {"ok": True, "duplicate": True, "eventId": event_id}
 
     db: Session = SessionLocal()
     try:
+        durable = True
+        try:
+            if db.get(BillingWebhookEvent, event_id) is not None:
+                return {"ok": True, "duplicate": True, "eventId": event_id}
+        except Exception:
+            # Table missing (schema not migrated yet): fall back to the
+            # in-memory cache plus the timestamp tolerance window.
+            db.rollback()
+            durable = False
+
         user = db.query(PlatformUser).filter(PlatformUser.email == email).first()
         if user is None:
+            _forget_in_memory(event_id)
             raise HTTPException(status_code=404, detail="User not found.")
         user.plan = plan
         user.subscription_status = status
         user.token_version = int(getattr(user, "token_version", 0) or 0) + 1
-        db.commit()
+        if durable:
+            db.add(BillingWebhookEvent(event_id=event_id, email=email))
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+            _forget_in_memory(event_id)
+            # Unique-key race: another delivery of the same event won.
+            try:
+                if durable and db.get(BillingWebhookEvent, event_id) is not None:
+                    return {"ok": True, "duplicate": True, "eventId": event_id}
+            except Exception:
+                pass
+            raise
         return {
             "ok": True,
             "email": email,
@@ -112,8 +219,12 @@ _CONTACT_PHONE_FALLBACK = "0758504424"
 
 
 def _checkout_url() -> Optional[str]:
-    """Return the first configured checkout URL, or None."""
-    for env_var in ("BILLING_CHECKOUT_URL", "STRIPE_CHECKOUT_URL", "PAYHERE_CHECKOUT_URL"):
+    """Return a hosted PayHere link (PayHere "Links" product) if configured, or None.
+
+    STRIPE_CHECKOUT_URL is deliberately ignored: Stripe can't pay out to a
+    Sri Lankan business.
+    """
+    for env_var in ("PAYHERE_CHECKOUT_URL", "BILLING_CHECKOUT_URL"):
         url = os.getenv(env_var, "").strip()
         if url:
             return url
@@ -159,7 +270,7 @@ def manual_pay_instructions(plan: str = "pro") -> dict:
     whatsapp = _manual_pay_whatsapp()
     activation = _manual_pay_activation_window()
     normalized = (plan or "pro").strip().lower()
-    label = normalized if normalized in ("pro", "dealer") else "pro"
+    label = normalized if normalized in ("pro", "dealer", "dealer_starter", "dealer_pro", "dealer_yard") else "pro"
     steps = [
         f"1. Message us on WhatsApp{f' ({whatsapp})' if whatsapp else ''} or email {contact} with your Motormila account email + '{label}' plan.",
         f"2. Pay by bank transfer ({_manual_pay_bank_details()}) or KOKO — {_manual_pay_koko_note()}",
@@ -182,10 +293,13 @@ class CheckoutIntentRequest(BaseModel):
 
 
 class CheckoutIntentResponse(BaseModel):
-    provider: Literal["manual", "payhere", "stripe"]
+    provider: Literal["manual", "payhere"]
     checkout_url: Optional[str] = None
+    # When PayHere's Checkout API is configured the client POSTs here to get
+    # signed form fields (see app/routers/payhere.py).
+    payhere_checkout_endpoint: Optional[str] = None
     message: str
-    manual_pay: Optional[dict] = Field(default=None, description="Manual-pay steps when provider=manual")
+    manual_pay: Optional[dict] = Field(default=None, description="Manual-pay steps (always offered as a fallback)")
 
 
 @router.get("/manual-pay", response_model=dict)
@@ -196,31 +310,39 @@ def manual_pay(plan: str = "pro") -> dict:
 
 @router.post("/checkout-intent", response_model=CheckoutIntentResponse)
 def checkout_intent(body: CheckoutIntentRequest) -> CheckoutIntentResponse:
-    """Return a checkout URL for the requested plan upgrade.
+    """Tell the pricing page how this plan can be paid for.
 
-    Reads environment variables in priority order:
-      BILLING_CHECKOUT_URL > STRIPE_CHECKOUT_URL > PAYHERE_CHECKOUT_URL
+    1. PayHere Checkout API configured -> ``provider=payhere`` with
+       ``payhere_checkout_endpoint`` (client fetches signed form fields).
+    2. A hosted PayHere link in PAYHERE_CHECKOUT_URL / BILLING_CHECKOUT_URL ->
+       ``provider=payhere`` with ``checkout_url``.
+    3. Otherwise ``provider=manual`` (bank transfer / KOKO + WhatsApp).
 
-    When none are set, returns structured manual-pay instructions (bank / KOKO /
-    WhatsApp, activated within the configured window) so the frontend can render
-    steps instead of a bare mailto link.
+    Manual-pay steps are always included so the user has a no-card option.
     """
-    url = _checkout_url()
-    if url:
-        env_vars = {k: os.getenv(k, "") for k in ("STRIPE_CHECKOUT_URL", "PAYHERE_CHECKOUT_URL")}
-        if env_vars.get("STRIPE_CHECKOUT_URL"):
-            provider: Literal["manual", "payhere", "stripe"] = "stripe"
-        elif env_vars.get("PAYHERE_CHECKOUT_URL"):
-            provider = "payhere"
-        else:
-            provider = "manual"
+    from app.routers.payhere import payhere_enabled, pro_checkout_enabled
+
+    plan = (body.plan or "").strip().lower()
+    instructions = manual_pay_instructions(plan)
+    is_pro = plan == "pro"
+
+    if payhere_enabled() and (not is_pro or pro_checkout_enabled()):
         return CheckoutIntentResponse(
-            provider=provider,
-            checkout_url=url,
-            message=f"Redirecting to {provider} checkout for {body.plan} plan.",
+            provider="payhere",
+            payhere_checkout_endpoint="/api/v1/payhere/checkout",
+            message=f"Pay for the {plan} plan by card, Genie, FriMi or eZcash via PayHere, or by bank transfer / KOKO.",
+            manual_pay=instructions,
         )
 
-    instructions = manual_pay_instructions(body.plan)
+    url = _checkout_url()
+    if url and not is_pro:
+        return CheckoutIntentResponse(
+            provider="payhere",
+            checkout_url=url,
+            message=f"Redirecting to PayHere checkout for the {plan} plan.",
+            manual_pay=instructions,
+        )
+
     whatsapp = instructions.get("whatsappNumber")
     activation = instructions.get("activationWindow")
     contact = instructions.get("contactEmail")
@@ -229,7 +351,7 @@ def checkout_intent(body: CheckoutIntentRequest) -> CheckoutIntentResponse:
         provider="manual",
         checkout_url=None,
         message=(
-            f"Pay by bank transfer or KOKO for the {body.plan} plan, then WhatsApp us for activation within {activation}.{hint} "
+            f"Pay by bank transfer or KOKO for the {plan} plan, then WhatsApp us for activation within {activation}.{hint} "
             f"Or email {contact} with your account email."
         ),
         manual_pay=instructions,

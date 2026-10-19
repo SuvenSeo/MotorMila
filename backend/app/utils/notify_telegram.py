@@ -53,5 +53,11 @@ def send_telegram_alert(
         )
         return False
     except Exception as exc:
-        log.warning("telegram_alert_error", error=str(exc))
+        # Never log str(exc): httpx exceptions embed the request URL, which
+        # contains TELEGRAM_BOT_TOKEN.
+        log.warning(
+            "telegram_alert_error",
+            error_type=type(exc).__name__,
+            chat_id=cid,
+        )
         return False

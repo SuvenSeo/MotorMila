@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.components
 
+import lk.motormila.app.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -19,6 +21,7 @@ import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,6 +33,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import lk.motormila.app.domain.repository.ListingQuery
+import lk.motormila.app.ui.theme.pressKeyHaptic
+import lk.motormila.app.ui.theme.rememberHaptics
 
 /** Draft filter state edited inside the sheet; applied on CTA. */
 data class FilterDraft(
@@ -91,8 +96,11 @@ fun FilterSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     var draft by remember(current) { mutableStateOf(FilterDraft.from(current)) }
+    val haptics = rememberHaptics()
+    // Sheet open: light tick per spec §4.
+    LaunchedEffect(Unit) { haptics.tick() }
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { haptics.tick(); onDismiss() },
         sheetState = sheetState,
         shape = lk.motormila.app.ui.theme.MotormilaSheetShape,
         modifier = modifier.semantics { contentDescription = "Search filters" },
@@ -104,12 +112,12 @@ fun FilterSheet(
                 .padding(horizontal = 20.dp)
                 .navigationBarsPadding(),
         ) {
-            Text("Filters", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text(stringResource(R.string.ui_components_filters), fontWeight = FontWeight.Bold, fontSize = 18.sp)
             Spacer(Modifier.height(12.dp))
 
             SectionLabel("Make")
-            ChipFlow(
-                options = makes.take(14),
+            MakeCombobox(
+                options = makes,
                 selected = draft.make,
                 onSelect = { draft = draft.copy(make = it, model = null) },
             )
@@ -167,7 +175,7 @@ fun FilterSheet(
                 MotormilaPrimaryButton(
                     label = if (resultCount != null) "Show $resultCount results" else "Apply filters",
                     onClick = { onApply(draft.toQuery(current)) },
-                    modifier = Modifier.weight(2f),
+                    modifier = Modifier.weight(2f).pressKeyHaptic(haptics),
                 )
             }
             Spacer(Modifier.height(8.dp))

@@ -149,6 +149,45 @@ def check_and_record_delivery(
         return True
 
 
+def release_failed_delivery(db, *, key: str) -> None:
+    """Delete a delivery receipt after a failed send so the next pass can retry.
+
+    Used when the receipt was written as ``attempted``/``sent`` before the
+    provider call and the call then failed — without this the row would
+    permanently suppress that alert.
+    """
+    try:
+        from db.models import NotificationDeliveryLog
+
+        db.query(NotificationDeliveryLog).filter(
+            NotificationDeliveryLog.dedupe_key == key
+        ).delete(synchronize_session=False)
+        db.flush()
+    except Exception as exc:
+        log.debug("delivery_release_fail_open", key=key, error=str(exc))
+        try:
+            db.rollback()
+        except Exception:
+            pass
+
+
+def mark_delivery_sent(db, *, key: str) -> None:
+    """Flip an ``attempted`` receipt to ``sent`` after the provider call succeeds."""
+    try:
+        from db.models import NotificationDeliveryLog
+
+        db.query(NotificationDeliveryLog).filter(
+            NotificationDeliveryLog.dedupe_key == key
+        ).update({"status": "sent"}, synchronize_session=False)
+        db.flush()
+    except Exception as exc:
+        log.debug("delivery_mark_sent_fail_open", key=key, error=str(exc))
+        try:
+            db.rollback()
+        except Exception:
+            pass
+
+
 def next_digest_at(now_utc: Optional[datetime] = None) -> datetime:
     """Next 07:00 Colombo digest slot as UTC datetime."""
     now = now_utc or datetime.now(timezone.utc)

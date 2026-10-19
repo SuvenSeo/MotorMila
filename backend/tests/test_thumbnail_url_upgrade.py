@@ -126,3 +126,123 @@ def _ikman_row(*, thumbnail_url: str, now: datetime):
         last_seen_at=now,
         is_outlier=False,
     )
+
+
+def test_ikman_gallery_captures_every_image_id():
+    row = {
+        "slug": "honda-vezel-z-play-moon-roof-2026-for-sale-colombo-63",
+        "title": "Honda Vezel Z PLAY MOON ROOF 2026",
+        "url": "https://ikman.lk/en/ad/honda-vezel-z-play-moon-roof-2026-for-sale-colombo-63",
+        "money": {"amount": "Rs 19,278,000"},
+        "details": ["20 km", "SUV / 4x4", "Import"],
+        "area": {"name": "Colombo"},
+        "location": {"name": "Kohuwala"},
+        "images": {
+            "ids": ["id-one", "id-two", "id-one", "id-three"],
+            "base_uri": "https://i.ikman-st.com",
+        },
+        "properties": [{"key": "model_year", "value": "2026"}],
+    }
+
+    payload = IkmanCarScraper(db=None)._build_payload_from_api_ad(row)
+
+    assert payload is not None
+    import json
+
+    images = json.loads(payload["images"])
+    assert images == [
+        f"https://i.ikman-st.com/honda-vezel-z-play-moon-roof-2026-for-sale-colombo-63/id-one/{TARGET_WIDTH}/{TARGET_HEIGHT}/cropped.jpg",
+        f"https://i.ikman-st.com/honda-vezel-z-play-moon-roof-2026-for-sale-colombo-63/id-two/{TARGET_WIDTH}/{TARGET_HEIGHT}/cropped.jpg",
+        f"https://i.ikman-st.com/honda-vezel-z-play-moon-roof-2026-for-sale-colombo-63/id-three/{TARGET_WIDTH}/{TARGET_HEIGHT}/cropped.jpg",
+    ]
+
+
+def test_normalize_image_list_dedupes_caps_and_serializes():
+    import json
+
+    from app.utils.thumbnail_urls import GALLERY_IMAGE_LIMIT, normalize_image_list, parse_image_list
+
+    urls = [f"https://example.com/{i}.jpg" for i in range(10)]
+    urls.insert(3, urls[0])  # duplicate
+    urls.append("https://example.com/placeholder.jpg")  # junk
+    result = normalize_image_list(urls)
+    assert result is not None
+    parsed = json.loads(result)
+    assert len(parsed) == GALLERY_IMAGE_LIMIT
+    assert len(set(parsed)) == len(parsed)
+    assert not any("placeholder" in u for u in parsed)
+    # Round-trips through the DB column format.
+    assert parse_image_list(result) == parsed
+
+
+def test_normalize_image_list_returns_none_when_empty():
+    from app.utils.thumbnail_urls import normalize_image_list, parse_image_list
+
+    assert normalize_image_list([]) is None
+    assert normalize_image_list(["https://example.com/no-image.png"]) is None
+    assert parse_image_list(None) == []
+    assert parse_image_list("not-json{{{") == []
+
+
+def test_gallery_survives_snapshot_export_and_api_schema():
+    import json
+
+    from app.utils.listing_snapshot import listing_to_dict
+
+    class FakeRow:
+        id = 1
+        source = "ikman"
+        source_id = "x"
+        url = "https://ikman.lk/en/ad/x"
+        title = "T"
+        make = "Toyota"
+        model = "Prius"
+        year = 2020
+        price_lkr = 1000000
+        mileage = 50000
+        fuel_type = None
+        transmission = None
+        engine_capacity = None
+        condition = None
+        body_type = None
+        vehicle_category = "cars"
+        district = "Colombo"
+        city = None
+        thumbnail_url = SMALL
+        images = json.dumps(
+            [
+                "https://i.ikman-st.com/a/b/id1/1080/810/cropped.jpg",
+                "https://i.ikman-st.com/a/b/id2/1080/810/cropped.jpg",
+            ]
+        )
+        scraped_at = datetime.now(timezone.utc)
+        first_seen_at = datetime.now(timezone.utc)
+        last_seen_at = datetime.now(timezone.utc)
+        deal_score = None
+        market_median_lkr = None
+        is_outlier = False
+
+    exported = listing_to_dict(FakeRow())
+    assert exported["images"] == [
+        "https://i.ikman-st.com/a/b/id1/1080/810/cropped.jpg",
+        "https://i.ikman-st.com/a/b/id2/1080/810/cropped.jpg",
+    ]
+    # The live API schema parses the stored JSON string into a list.
+    read = CarListingRead.model_validate(FakeRow())
+    assert read.images == exported["images"]
+
+
+def test_upgrades_riyasewana_thumb_to_full_size_upload():
+    small = "https://riyasewana.com/thumb/thumbhonda-vezel-sensing-42058444711.jpg"
+    big = "https://riyasewana.com/uploads/honda-vezel-sensing-42058444711.jpg"
+    assert upgrade_thumbnail_url(small) == big
+    # Already-full-size uploads are untouched.
+    assert upgrade_thumbnail_url(big) == big
+    # www host and http scheme also rewrite.
+    assert (
+        upgrade_thumbnail_url("http://www.riyasewana.com/thumb/thumbfoo-bar-123.jpg")
+        == "https://riyasewana.com/uploads/foo-bar-123.jpg"
+    )
+    # Non-thumb riyasewana paths are left alone.
+    other = "https://riyasewana.com/some/other.jpg"
+    assert upgrade_thumbnail_url(other) == other

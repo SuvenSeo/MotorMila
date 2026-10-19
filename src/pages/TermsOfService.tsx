@@ -1,166 +1,113 @@
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ArrowRight, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import { BRAND } from "@/lib/brand";
-import { PageBody } from "@/components/PageBody";
-import { PageCanvas } from "@/components/PageCanvas";
-import { PageHero } from "@/components/PageHero";
-import { revealItem } from "@/lib/motion";
-import { visuals } from "@/lib/visualAssets";
+import { CONTROLLER_NAME, LegalPageShell, LegalSection, PRIVACY_EMAIL } from "@/components/money/LegalPageShell";
+import { LISTING_SOURCES } from "@/lib/listingSources";
 
 export default function TermsOfService() {
   return (
-    <PageCanvas>
-      <PageHero
-        theme="default"
-        eyebrow="Legal"
-        eyebrowIcon={FileText}
-        watermarkIcon={FileText}
-        title={<>Terms of Service<span className="text-sheen">.</span></>}
-        description={`The rules that govern your use of ${BRAND.name} and the obligations of both parties.`}
-        media={visuals.pageFaqIllustration}
-        mediaPosition="center 40%"
-        mediaTone="brand"
-        highlights={[
-          { label: "Platform", value: "SL", hint: "Sri Lanka vehicle market" },
-          { label: "Estimates", value: "Not appraisals", hint: "Algorithmic signals only" },
-          { label: "Access", value: "Invite", hint: "Seat-based, revocable" },
-        ]}
-        actions={
-          <>
-            <Link
-              to="/privacy"
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-[13px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              Privacy Policy
-              <ArrowRight aria-hidden className="h-4 w-4" />
-            </Link>
-          </>
-        }
-      />
+    <LegalPageShell
+      icon={FileText}
+      title="Terms of Use"
+      description="The rules for using MotorMila, in plain English."
+    >
+      <LegalSection title="1. About these terms">
+        <p>
+          These terms apply when you use the MotorMila website, app and API ("MotorMila"), run by {CONTROLLER_NAME}.
+          By using MotorMila you agree to them. If you don't agree, please don't use the service.
+        </p>
+      </LegalSection>
 
-      <PageBody>
-        <motion.article
-          variants={revealItem}
-          className="prose prose-sm prose-neutral dark:prose-invert max-w-3xl space-y-8 text-[14px] leading-7 text-foreground/85"
-        >
-          <section className="space-y-3">
-            <h2 className="font-display text-xl font-semibold text-foreground">1. Acceptance</h2>
-            <p>
-              By creating an account or using {BRAND.name} you agree to these Terms. If you do
-              not agree, do not use the platform. Access is invite-only and may be revoked at
-              any time for violation of these Terms.
-            </p>
-          </section>
+      <LegalSection title="2. What MotorMila is, and isn't">
+        <ul>
+          <li>MotorMila is an independent search and price-comparison service. It collects vehicle ads published on other websites ({LISTING_SOURCES.map((s) => s.name).join(", ")}) and ads posted directly on MotorMila.</li>
+          <li>We are <strong>not affiliated with</strong> those websites. Their ads belong to the sellers and the sites that published them. Each listing links to the original ad, and that ad is the authoritative version.</li>
+          <li>We are not a dealer, broker, lender or insurer. We don't own, inspect or sell the vehicles shown, and we aren't part of any deal between a buyer and a seller.</li>
+        </ul>
+      </LegalSection>
 
-          <section className="space-y-3">
-            <h2 className="font-display text-xl font-semibold text-foreground">2. Description of service</h2>
-            <p>
-              {BRAND.name} is a vehicle market intelligence platform that aggregates publicly
-              available car listings from Sri Lanka classifieds, applies pricing algorithms,
-              and presents analytics for buyers, dealers, and importers.
-            </p>
-            <p>
-              Listing data is scraped from public sources and may lag real-world availability.
-              {BRAND.name} does not sell vehicles, broker transactions, or guarantee the
-              accuracy of any third-party listing.
-            </p>
-          </section>
+      <LegalSection title="3. No guarantees">
+        <ul>
+          <li>Listings can be out of date, sold, wrong or removed from the original site. Check the original ad and the vehicle itself before you pay.</li>
+          <li>Prices, deal scores, "fair value", trends, landed-cost and tax estimates are automated estimates from available data. They are not valuations, financial advice or tax advice.</li>
+          <li>Import duty and tax figures follow the gazettes we know about and can change at any time. Confirm with Sri Lanka Customs or a licensed clearing agent.</li>
+          <li>MotorMila is provided "as is". We don't promise it will always be available or error-free.</li>
+        </ul>
+      </LegalSection>
 
-          <section className="space-y-3">
-            <h2 className="font-display text-xl font-semibold text-foreground">3. Pricing estimates and FMV scores</h2>
-            <p>
-              Fair Market Value (FMV) estimates, deal scores, and price indices produced by
-              {BRAND.name} are <strong>algorithmic signals derived from scraped listing data</strong>.
-              They are not certified appraisals, professional valuations, or financial advice.
-              Do not rely on them as the sole basis for any financial decision. {BRAND.name}
-              accepts no liability for decisions made using platform outputs.
-            </p>
-          </section>
+      <LegalSection title="4. Leasing, inspection and insurance requests">
+        <p>
+          If you send a request through a MotorMila form, we pass your details to the partner named on the form, with
+          your consent. The partner makes its own decisions and its own agreement with you. Partners may pay MotorMila
+          a referral fee. Insurance requests go only to a broker registered with the Insurance Regulatory Commission of
+          Sri Lanka. MotorMila does not give insurance advice.
+        </p>
+      </LegalSection>
 
-          <section className="space-y-3">
-            <h2 className="font-display text-xl font-semibold text-foreground">4. Permitted use</h2>
-            <p>You may use {BRAND.name} for lawful personal or business research. You must not:</p>
-            <ul className="list-disc space-y-1 pl-5">
-              <li>Scrape, copy, or republish platform data in bulk without a written B2B licence.</li>
-              <li>Attempt to reverse-engineer pricing algorithms or access APIs beyond published endpoints.</li>
-              <li>Use the platform to mislead buyers or artificially inflate/deflate market perceptions.</li>
-              <li>Share account credentials or seats with parties outside your licensed team.</li>
-            </ul>
-          </section>
+      <LegalSection title="5. Your account">
+        <ul>
+          <li>Keep your password safe. You're responsible for what happens under your account.</li>
+          <li>Give accurate information, and don't share a paid seat outside the team it was bought for.</li>
+          <li>You can close your account at any time on the <Link to="/delete-account">account deletion page</Link>.</li>
+        </ul>
+      </LegalSection>
 
-          <section className="space-y-3">
-            <h2 className="font-display text-xl font-semibold text-foreground">5. Subscription and payment</h2>
-            <p>
-              Free, Pro, and Dealer plans are described on the{" "}
-              <Link to="/pricing" className="text-primary-bright underline decoration-primary/40 underline-offset-2">
-                Pricing page
-              </Link>
-              . Paid plans are billed in advance. Failure to renew reverts access to Free tier.
-              Refunds are not provided for partial periods except where required by applicable law.
-            </p>
-          </section>
+      <LegalSection title="6. Plans and payments">
+        <ul>
+          <li>Pro is free while MotorMila is in beta. We'll tell you before any Pro charge starts, and nothing renews without your agreement.</li>
+          <li>Dealer plans are billed monthly or yearly in LKR through PayHere, or by bank transfer or KOKO. Prices are on the <Link to="/pricing">pricing page</Link>.</li>
+          <li>You can cancel at any time. The plan stays active until the end of the period you've paid for. If a payment was taken in error, contact us within 14 days for a refund.</li>
+        </ul>
+      </LegalSection>
 
-          <section className="space-y-3">
-            <h2 className="font-display text-xl font-semibold text-foreground">6. WhatsApp notifications</h2>
-            <p>
-              WhatsApp market-alert messages are opt-in only. By adding a phone number to an
-              alert you consent to receive automated messages via Twilio. Standard carrier
-              message rates may apply. Opt out at any time by removing the alert.
-            </p>
-          </section>
+      <LegalSection title="7. Posting your own ads">
+        <p>
+          If you post a vehicle on MotorMila, you confirm you have the right to sell it and to use the photos and text.
+          You give MotorMila permission to show, resize and promote that ad on MotorMila and its apps while it is live.
+          Ads are reviewed before going live, and we may remove ads that are misleading, illegal or duplicated.
+        </p>
+      </LegalSection>
 
-          <section className="space-y-3">
-            <h2 className="font-display text-xl font-semibold text-foreground">7. Intellectual property</h2>
-            <p>
-              The {BRAND.name} platform, brand, algorithms, and original content are owned by
-              Ardeno Studio. Individual listing data remains the property of the originating
-              classifieds platforms; {BRAND.name} aggregates it under fair-use indexing.
-            </p>
-          </section>
+      <LegalSection title="8. Fair use of MotorMila">
+        <p>Please don't:</p>
+        <ul>
+          <li>use MotorMila for anything illegal, or to harass or spam sellers;</li>
+          <li>try to break into, overload or disrupt the service, or get around rate limits and access controls;</li>
+          <li>misrepresent MotorMila data as your own, or remove the links to original sources.</li>
+        </ul>
+        <p>
+          Automated access is fine if it is polite: identify your bot, respect our robots.txt and rate limits, and link
+          back to us. For regular or large-scale use, ask us about an API key at{" "}
+          <a href={`mailto:${BRAND.contactEmail}`}>{BRAND.contactEmail}</a>.
+        </p>
+      </LegalSection>
 
-          <section className="space-y-3">
-            <h2 className="font-display text-xl font-semibold text-foreground">8. Limitation of liability</h2>
-            <p>
-              To the maximum extent permitted by law, Ardeno Studio is not liable for any
-              indirect, incidental, or consequential damages arising from use of {BRAND.name},
-              including losses from transactions made using platform pricing signals.
-            </p>
-          </section>
+      <LegalSection title="9. Removing content">
+        <p>
+          If a listing is yours, shows your personal details, or uses your photo or text without permission, send a{" "}
+          <Link to="/removal">removal request</Link>. We act within 72 hours and tell you what we did.
+        </p>
+      </LegalSection>
 
-          <section className="space-y-3">
-            <h2 className="font-display text-xl font-semibold text-foreground">9. Governing law</h2>
-            <p>
-              These Terms are governed by the laws of Sri Lanka. Disputes shall be resolved
-              in the courts of Sri Lanka unless otherwise agreed in writing.
-            </p>
-          </section>
+      <LegalSection title="10. Liability">
+        <p>
+          As far as Sri Lankan law allows, MotorMila isn't liable for losses from relying on a listing or estimate, from
+          a deal with a seller or partner, or from the service being unavailable. If we are liable to you, our total
+          liability is limited to what you paid us in the 12 months before the claim. Nothing in these terms limits
+          liability that can't be limited by law.
+        </p>
+      </LegalSection>
 
-          <section className="space-y-3">
-            <h2 className="font-display text-xl font-semibold text-foreground">10. Contact</h2>
-            <p>
-              Questions about these Terms:{" "}
-              <a
-                href={BRAND.contactMailto}
-                className="text-primary-bright underline decoration-primary/40 underline-offset-2"
-              >
-                {BRAND.contactEmail}
-              </a>{" "}
-              ·{" "}
-              <a
-                href={BRAND.contactPhoneHref}
-                className="text-primary-bright underline decoration-primary/40 underline-offset-2"
-              >
-                {BRAND.contactPhone}
-              </a>
-            </p>
-          </section>
-
-          <p className="border-t border-border pt-6 text-[12px] text-muted-foreground">
-            Last updated: July 2025 · {BRAND.name} is operated by Ardeno Studio.
-          </p>
-        </motion.article>
-      </PageBody>
-    </PageCanvas>
+      <LegalSection title="11. Changes, law and contact">
+        <p>
+          We may update these terms. We'll change the effective date and give notice of important changes. These terms
+          are governed by the laws of Sri Lanka, and the courts of Sri Lanka have jurisdiction.
+        </p>
+        <p>
+          Questions: <a href={`mailto:${BRAND.contactEmail}`}>{BRAND.contactEmail}</a>. Privacy questions:{" "}
+          <a href={`mailto:${PRIVACY_EMAIL}`}>{PRIVACY_EMAIL}</a>.
+        </p>
+      </LegalSection>
+    </LegalPageShell>
   );
 }

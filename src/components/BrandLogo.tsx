@@ -79,7 +79,7 @@ export function BrandLogo({
       ) : (
         <>
           <img
-            src="/logo-mark.png"
+            src="/logo-mark-light.webp"
             alt=""
             width={markPx}
             height={markPx}
@@ -87,13 +87,13 @@ export function BrandLogo({
             decoding="async"
           />
           <img
-            src="/logo.png"
+            src="/logo-mark.webp"
             alt=""
             width={markPx}
             height={markPx}
             className={cn(
               mark,
-              "hidden shrink-0 rounded-[22%] object-cover shadow-sm ring-1 ring-foreground/10 dark:block",
+              "hidden shrink-0 object-contain dark:block",
               markClassName,
             )}
             decoding="async"

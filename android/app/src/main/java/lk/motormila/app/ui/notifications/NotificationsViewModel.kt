@@ -88,17 +88,15 @@ class NotificationsViewModel @Inject constructor(
                     }
             }
             NotificationsUiEvent.MarkAllRead -> viewModelScope.launch {
-                // No mark-all on the repository interface (backend POST
-                // /notifications/read-all exists — Agent B follow-up); mark rows one by one.
-                runCatching {
-                    repository.notifications().filter { !it.isRead }
-                        .forEach { repository.markNotificationRead(it.id) }
-                }.onFailure { e ->
-                    val mapped = ErrorMapper.map(e)
-                    _state.update {
-                        it.copy(offline = mapped is AppError.Network, error = mapped.message)
+                // Backend POST /notifications/read-all marks everything server-side
+                // in one call (previously marked rows one by one).
+                runCatching { repository.markAllNotificationsRead() }
+                    .onFailure { e ->
+                        val mapped = ErrorMapper.map(e)
+                        _state.update {
+                            it.copy(offline = mapped is AppError.Network, error = mapped.message)
+                        }
                     }
-                }
             }
             NotificationsUiEvent.DismissError -> _state.update { it.copy(error = null, offline = false) }
         }

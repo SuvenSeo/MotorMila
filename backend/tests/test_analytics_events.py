@@ -69,6 +69,57 @@ def test_record_event_strips_event_name():
     assert db.query(AnalyticsEvent).one().event == "search_submit"
 
 
+def test_record_event_strips_credential_properties():
+    """Alert/session bearer tokens must never be persisted in analytics_events."""
+    db = _session()
+    events_module.record_event(
+        AnalyticsEventCreate(
+            event="alert_created",
+            properties={
+                "user_token": "mm:victim@example.com",
+                "alert_token": "mm:victim@example.com",
+                "token": "mm:victim@example.com",
+                "api_key": "sk-secret",
+                "make": "Toyota",
+            },
+        ),
+        request=DummyRequest(),
+        db=db,
+    )
+    stored = db.query(AnalyticsEvent).one()
+    assert stored.properties == {"make": "Toyota"}
+
+
+def test_anonymous_events_cannot_inject_notifications():
+    """Unauthenticated /events must not write into any user's in-app feed."""
+    from db.models import UserNotification
+
+    db = _session()
+    events_module.record_event(
+        AnalyticsEventCreate(
+            event="listing_view",
+            properties={
+                "user_token": "mm:victim@example.com",
+                "listing_id": 1,
+                "price_drop": 1,
+                "nudge_body": "Click here to claim your prize",
+            },
+        ),
+        request=DummyRequest(),
+        db=db,
+    )
+    assert db.query(UserNotification).count() == 0
+
+
+def test_sanitize_properties_rejects_nested_credential_keys():
+    clean = events_module._sanitize_properties({
+        "owner_token": "mm:x@y.z",
+        "session_token": "abc",
+        "listing_id": 9,
+    })
+    assert clean == {"listing_id": 9}
+
+
 def test_record_event_rate_limit_rejects_excess():
     request = DummyRequest()
     db = _session()

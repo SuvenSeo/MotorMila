@@ -262,18 +262,26 @@ fun CustomEstimateDto.toDomain(): Valuation = Valuation(
 
 /** Quick GET /estimate band mapped onto Valuation (no comparables). */
 fun EstimateDto.toDomain(): Valuation {
-    val median = estimatedMedianLkr ?: marketMedianLkr ?: 0.0
+    // Backend keys: estimated_price_lkr, price_range_low/high, comparable_listings
+    val median = estimatedPriceLkr ?: 0.0
+    val low = priceRangeLow ?: median
+    val high = priceRangeHigh ?: median
+    val verdict = when {
+        median <= 0.0 -> "unknown"
+        low < median && high > median -> "fair"
+        else -> "fair"
+    }
     return Valuation(
         vehicleLabel = listOfNotNull(make, model, year?.toString()).joinToString(" "),
-        lowLkr = estimatedLowLkr ?: median,
+        lowLkr = low,
         medianLkr = median,
-        highLkr = estimatedHighLkr ?: median,
-        confidence = confidence ?: "low",
-        verdict = verdict ?: "unknown",
-        verdictLabel = verdictLabel ?: "",
+        highLkr = high,
+        confidence = if (comparableListings >= 5) "medium" else "low",
+        verdict = verdict,
+        verdictLabel = "",
         deltaPct = null,
-        comparableCount = comparableCount,
-        methodology = methodology ?: "",
+        comparableCount = comparableListings,
+        methodology = "",
         comparables = emptyList(),
     )
 }

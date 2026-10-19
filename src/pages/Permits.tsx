@@ -89,7 +89,7 @@ export default function Permits() {
           {
             label: t("permits.highlightTypes", "Permit types"),
             value: String(new Set(permits.map((p) => p.permit_type)).size || "—"),
-            hint: t("permits.typesHint", "Duty-free, EV, retirement, import"),
+            hint: [...new Set(permits.map((p) => p.permit_type).filter(Boolean))].join(", ") || t("permits.typesHint", "Duty-free, EV"),
           },
           {
             label: t("permits.highlightCount", "Entries"),

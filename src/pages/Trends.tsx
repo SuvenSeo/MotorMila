@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { SRI_LANKA_DISTRICTS } from "@/data/districts";
 import { PriceHistoryChart } from "@/components/PriceHistoryChart";
+import { TrendKpis } from "@/components/TrendKpis";
 import { ImportEraPublicSection } from "@/components/ImportEraPublicSection";
 import { RotateCcw, Zap, BarChart3 } from "lucide-react";
 import { PageBody } from "@/components/PageBody";
@@ -258,6 +259,11 @@ export default function Trends() {
               </Button>
             )}
           </div>
+        </motion.div>
+
+        {/* KPI strip — Tremor cards + sparklines from the real series (#7 UI review) */}
+        <motion.div variants={revealItem}>
+          <TrendKpis points={visibleTrendData} />
         </motion.div>
 
         {/* Chart — PriceHistoryChart owns its own theme-aware surface + Recharts */}

@@ -29,7 +29,29 @@ class ListingRemoteMediator(
 
     companion object {
         const val TTL_MS = 15 * 60 * 1000L
-        fun hashOf(query: ListingQuery): String = query.toString().hashCode().toString(16)
+
+        /**
+         * Stable per-query cache key. toString().hashCode() is 32-bit and
+         * JVM-dependent — distinct queries can collide and share cache rows.
+         * Use the canonical query string itself (short, unique).
+         */
+        fun hashOf(query: ListingQuery): String {
+            val canonical = listOf(
+                query.keyword, query.make, query.model, query.district, query.source,
+                query.yearMin?.toString(), query.yearMax?.toString(),
+                query.priceMin?.toString(), query.priceMax?.toString(),
+                query.mileageMax?.toString(),
+                query.fuelType, query.transmission, query.condition, query.bodyType,
+                query.vehicleCategory, query.sort,
+            ).joinToString("|")
+            // Shorten to a compact stable key (FNV-1a 64-bit, hex).
+            var h = -0x340d631b7bdddcdbL
+            for (c in canonical) {
+                h = h xor c.code.toLong()
+                h *= 0x100000001b3L
+            }
+            return "q" + h.toULong().toString(16)
+        }
     }
 
     private val hash: String = hashOf(query)
@@ -76,8 +98,12 @@ class ListingRemoteMediator(
             )
             val now = System.currentTimeMillis()
             if (loadType == LoadType.REFRESH) {
+                // Listings are not tagged with queryHash (schema change pending),
+                // so a refresh wipes the shared table. Clear ALL remote keys too —
+                // otherwise other queries keep "fresh" keys over empty rows and
+                // serve blank result sets for up to TTL_MS.
                 db.listingDao().clear()
-                db.statsCacheDao().clearRemoteKeys(hash)
+                db.statsCacheDao().clearAllRemoteKeys()
             }
             db.listingDao().upsertAll(res.items.map { it.toDomain().toEntity(now) })
             val end = page >= res.pages || res.items.isEmpty()

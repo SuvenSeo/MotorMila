@@ -47,7 +47,7 @@ describe("SignIn preview access", () => {
     expect(screen.getByRole("button", { name: /preview pro/i })).toBeInTheDocument();
     // Hardcoded review accounts must never ship in the bundle.
     expect(screen.queryByText(/review accounts/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/owner@autolens\.lk/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/owner@motormila\.lk/i)).not.toBeInTheDocument();
   });
 
   it("routes to the public preview without creating a Pro session", () => {
@@ -67,7 +67,7 @@ describe("SignIn preview access", () => {
     fireEvent.click(screen.getByRole("button", { name: /preview pro/i }));
 
     expect(screen.getByText(/pro preview teaser/i)).toBeInTheDocument();
-    expect(localStorage.getItem("autolens.auth_user")).toBeNull();
+    expect(localStorage.getItem("motormila.auth_user")).toBeNull();
   });
 
   it("supports env-provisioned review accounts without exposing passwords in the summary", async () => {
@@ -114,7 +114,7 @@ describe("SignIn preview access", () => {
     fireEvent.click(screen.getByRole("button", { name: /^sign in/i }));
 
     expect(await screen.findByText(/full pro workspace/i)).toBeInTheDocument();
-    expect(localStorage.getItem("autolens.auth_user")).toContain("reviewer@example.com");
+    expect(localStorage.getItem("motormila.auth_user")).toContain("reviewer@example.com");
 
     vi.unstubAllEnvs();
     vi.resetModules();

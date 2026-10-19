@@ -99,26 +99,24 @@ def test_create_alert_with_minimal_fields():
 
 
 def test_create_alert_persists_email_and_telegram_fields():
+    """External channels require a signed-in Pro plan — legacy tokens must not attach them."""
     db = _session()
 
-    result = alerts_module.create_alert(
-        request=_DummyRequest(),
-        payload=MarketAlertCreate(
-            make="Toyota",
-            notify_email="user@example.com",
-            notify_telegram_chat_id="123456",
-            notify_channels="email,telegram",
-        ),
-        x_alert_token="tok-multi",
-        db=db,
-    )
+    with pytest.raises(HTTPException) as exc_info:
+        alerts_module.create_alert(
+            request=_DummyRequest(),
+            payload=MarketAlertCreate(
+                make="Toyota",
+                notify_email="user@example.com",
+                notify_telegram_chat_id="123456",
+                notify_channels="email,telegram",
+            ),
+            x_alert_token="tok-multi",
+            db=db,
+        )
 
-    stored = db.query(MarketAlert).one()
-    assert stored.notify_email == "user@example.com"
-    assert stored.notify_telegram_chat_id == "123456"
-    assert stored.notify_channels == "email,telegram"
-    assert result.notify_email == "user@example.com"
-    assert result.notify_telegram_chat_id == "123456"
+    assert exc_info.value.status_code == 403
+    assert "Pro plan" in str(exc_info.value.detail)
 
 
 def test_create_alert_schema_validates_email_format():
@@ -149,6 +147,22 @@ def test_create_alert_rejects_empty_token():
     assert exc_info.value.status_code == 400
 
 
+def test_create_alert_rejects_account_token_impersonation():
+    """Client-supplied `mm:{email}` tokens must never resolve to another account."""
+    db = _session()
+
+    with pytest.raises(HTTPException) as exc_info:
+        alerts_module.create_alert(
+            request=_DummyRequest(),
+            payload=MarketAlertCreate(make="Toyota"),
+            x_alert_token="mm:victim@example.com",
+            db=db,
+        )
+
+    assert exc_info.value.status_code == 403
+    assert "mm:" in str(exc_info.value.detail).lower() or "client" in str(exc_info.value.detail).lower()
+
+
 def test_create_alert_rejects_token_exceeding_max_length():
     db = _session()
 
@@ -167,7 +181,8 @@ def test_create_alert_enforces_per_token_limit():
     db = _session()
     token = "tok-limit-test"
 
-    for i in range(alerts_module.PRO_ALERTS_LIMIT):
+    # Legacy / anonymous tokens get free-tier caps.
+    for i in range(alerts_module.FREE_ALERTS_LIMIT):
         alerts_module.create_alert(
             request=_DummyRequest(),
             payload=MarketAlertCreate(make=f"Make{i}"),
@@ -194,16 +209,17 @@ def test_list_alerts_returns_only_active_for_token():
     db = _session()
     token = "tok-list-001"
     other_token = "tok-list-002"
+    third_token = "tok-list-003"
 
     alerts_module.create_alert(request=_DummyRequest(), payload=MarketAlertCreate(make="Toyota"), x_alert_token=token, db=db)
-    alerts_module.create_alert(request=_DummyRequest(), payload=MarketAlertCreate(make="Honda"), x_alert_token=token, db=db)
-    alerts_module.create_alert(request=_DummyRequest(), payload=MarketAlertCreate(make="Nissan"), x_alert_token=other_token, db=db)
+    alerts_module.create_alert(request=_DummyRequest(), payload=MarketAlertCreate(make="Honda"), x_alert_token=other_token, db=db)
+    alerts_module.create_alert(request=_DummyRequest(), payload=MarketAlertCreate(make="Nissan"), x_alert_token=third_token, db=db)
 
     result = alerts_module.list_alerts(request=_DummyRequest(), token=token, db=db)
 
-    assert len(result) == 2
+    assert len(result) == 1
     makes = {a.make for a in result}
-    assert makes == {"Toyota", "Honda"}
+    assert makes == {"Toyota"}
 
 
 def test_list_alerts_returns_empty_list_for_unknown_token():
@@ -367,3 +383,41 @@ def test_match_alerts_district_filter_is_case_insensitive():
     response = alerts_module.match_alerts(request=_DummyRequest(), token=token, db=db)
     assert response.results[0].matching_count == 1
     assert response.results[0].listings[0].district == "Colombo"
+
+
+# ---------------------------------------------------------------------------
+# Transport contract: /alerts/match must answer GET as well as POST.
+# The web client issues a GET; serving POST only returned 405, which left the
+# alerts page stuck on "Loading alerts" with 405/500 in the console.
+# ---------------------------------------------------------------------------
+
+def test_match_route_is_registered_for_both_get_and_post():
+    paths = {
+        (route.path, method)
+        for route in alerts_module.router.routes
+        for method in (getattr(route, "methods", None) or set())
+    }
+    assert ("/match", "GET") in paths
+    assert ("/match", "POST") in paths
+
+
+def test_match_alerts_get_delegates_to_the_post_handler():
+    db = _session()
+    token = "tok-get-alias"
+
+    _seed_listing(db, make="Toyota", model="Axio", price_lkr=3_000_000)
+    alerts_module.create_alert(
+        request=_DummyRequest(),
+        payload=MarketAlertCreate(make="Toyota"),
+        x_alert_token=token,
+        db=db,
+    )
+
+    response = alerts_module.match_alerts_get(
+        request=_DummyRequest(),
+        token=token,
+        db=db,
+    )
+
+    assert len(response.results) == 1
+    assert response.results[0].matching_count == 1

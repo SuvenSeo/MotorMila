@@ -59,8 +59,9 @@ export function ListingPriceTimeline({
   }, [points]);
 
   const yDomain = useMemo(() => {
-    const values = points.map((p) => p.price_lkr);
-    if (marketMedianLkr && marketMedianLkr > 0) values.push(marketMedianLkr);
+    // Use millions to match the price_million dataKey used by the Area chart.
+    const values = points.map((p) => p.price_lkr / 1_000_000);
+    if (marketMedianLkr && marketMedianLkr > 0) values.push(marketMedianLkr / 1_000_000);
     if (!values.length) return [0, 1];
     const min = Math.min(...values);
     const max = Math.max(...values);

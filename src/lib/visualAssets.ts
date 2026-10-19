@@ -46,6 +46,8 @@ import pageHomeHero from "../../assets/page_home_hero.webp";
 import pageHomeHeroSm from "../../assets/page_home_hero-sm.webp";
 import pageHomeHeroDusk from "../../assets/page_home_hero_dusk.webp";
 import pageHomeHeroDuskSm from "../../assets/page_home_hero_dusk-sm.webp";
+import pageHomeHeroCoastal from "../../assets/page_home_hero_coastal.webp";
+import pageHomeHeroCoastalSm from "../../assets/page_home_hero_coastal-sm.webp";
 import alt2PageFeaturesBg from "../../assets/alt2_page_features_bg.webp";
 import alt2PageFeaturesBgSm from "../../assets/alt2_page_features_bg-sm.webp";
 
@@ -81,6 +83,7 @@ export const visuals = {
   pageListingDetail: pair(pageListingDetail, pageListingDetailSm),
   pageHomeHero: pair(pageHomeHero, pageHomeHeroSm),
   pageHomeHeroDusk: pair(pageHomeHeroDusk, pageHomeHeroDuskSm),
+  pageHomeHeroCoastal: pair(pageHomeHeroCoastal, pageHomeHeroCoastalSm),
   alt2PageFeaturesBg: pair(alt2PageFeaturesBg, alt2PageFeaturesBgSm),
 } as const;
 

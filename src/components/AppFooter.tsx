@@ -45,8 +45,9 @@ export function AppFooter() {
 
   const toolLinks = useMemo(
     () => [
+      { label: t("nav.afford", "What can I afford?"), to: "/afford" },
+      { label: t("nav.safeTransfer", "Safe-Transfer Kit"), to: "/safe-transfer" },
       { label: t("nav.evHub", "EV Hub"), to: "/ev-hub" },
-      { label: t("nav.evChargers", "EV Chargers"), to: "/ev-chargers" },
       { label: t("nav.valuation", "Valuation"), to: "/estimate" },
       { label: t("nav.pricing", "Pricing"), to: "/pricing" },
       { label: t("nav.docs", "Docs"), to: "/docs" },
@@ -60,8 +61,9 @@ export function AppFooter() {
       { label: t("nav.officialPulse", "Official Pulse"), to: "/official-pulse" },
       { label: t("nav.dealer", "Dealer"), to: "/dealer" },
       { label: t("nav.bestPicks", "Best Picks"), to: "/best-picks" },
-      { label: t("nav.priceIndex", "Price Index"), to: "/price-index" },
       { label: t("nav.compare", "Compare"), to: "/compare" },
+      { label: t("nav.leasing", "Leasing quotes"), to: "/finance" },
+      { label: t("nav.inspection", "Book an inspection"), to: "/inspection" },
       { label: t("nav.proPreview", "Pro Preview"), to: "/pro-preview" },
       { label: t("nav.alerts", "Alerts"), to: "/alerts" },
       { label: t("nav.settings", "Settings"), to: "/settings" },
@@ -72,7 +74,10 @@ export function AppFooter() {
   const legalLinks = useMemo(
     () => [
       { label: t("footer.privacy", "Privacy Policy"), to: "/privacy" },
-      { label: t("footer.terms", "Terms of Service"), to: "/terms" },
+      { label: t("footer.terms", "Terms of Use"), to: "/terms" },
+      { label: t("footer.cookies", "Cookie notice"), to: "/cookies" },
+      { label: t("footer.removal", "Remove a listing"), to: "/removal" },
+      { label: t("footer.deleteAccount", "Delete my account"), to: "/delete-account" },
     ],
     [t],
   );

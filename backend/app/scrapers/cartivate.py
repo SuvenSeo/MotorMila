@@ -5,21 +5,21 @@ from urllib.parse import urljoin
 
 import httpx
 import structlog
+
+from app.scrapers.polite import BOT_USER_AGENT
 from bs4 import BeautifulSoup
 from sqlalchemy.orm import Session
 
 from app.scrapers.cleaner import CarCleaner
+from app.scrapers.net import httpx_client_kwargs
+from app.scrapers.page_budget import should_stop_at_page_hint, start_page_from_env
 from app.utils.listing_upsert import buffered_upsert_listing, flush_upsert_buffer
 from app.utils.time import utc_now
 
 log = structlog.get_logger()
 
 DEFAULT_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
-    ),
+    "User-Agent": BOT_USER_AGENT,
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
 }
@@ -142,14 +142,17 @@ class CartivateScraper:
 
     async def scrape(self, max_pages: int = 5):
         page_limit = max_pages if max_pages > 0 else None
-        page_num = 1
+        start_page = start_page_from_env(self.SOURCE)
+        page_num = start_page
+        stop_at_page = start_page + page_limit if page_limit is not None else None
         seen_urls: set[str] = set()
         consecutive_empty_pages = 0
         consecutive_page_errors = 0
+        max_page_hint: int | None = None
 
-        async with httpx.AsyncClient(headers=DEFAULT_HEADERS, follow_redirects=True) as client:
+        async with httpx.AsyncClient(follow_redirects=True, **httpx_client_kwargs(DEFAULT_HEADERS)) as client:
             while True:
-                if page_limit is not None and page_num > page_limit:
+                if stop_at_page is not None and page_num >= stop_at_page:
                     break
 
                 url = self._page_url(page_num)
@@ -170,12 +173,25 @@ class CartivateScraper:
                             page=page_num,
                             consecutive_empty_pages=consecutive_empty_pages,
                         )
+                        if should_stop_at_page_hint(
+                            page_num, max_page_hint, produced_listings=False
+                        ):
+                            log.info(
+                                "cartivate_reached_last_page",
+                                page=page_num,
+                                last_page=max_page_hint,
+                            )
+                            break
                         if consecutive_empty_pages >= 5:
                             break
                         page_num += 1
                         continue
 
-                    max_page_hint = self._extract_max_page(soup)
+                    # Keep the last-page hint sticky: a page that renders no
+                    # pagination must not erase what an earlier page advertised.
+                    page_hint = self._extract_max_page(soup)
+                    if page_hint is not None:
+                        max_page_hint = page_hint
                     new_on_page = 0
 
                     for card in cards:
@@ -195,6 +211,8 @@ class CartivateScraper:
                             self.db.rollback()
 
                     if new_on_page == 0:
+                        # Cards present but none parsed: a parsing gap, not the
+                        # end of the catalogue.
                         consecutive_empty_pages += 1
                         if consecutive_empty_pages >= 5:
                             break
@@ -203,10 +221,6 @@ class CartivateScraper:
 
                     consecutive_empty_pages = 0
                     consecutive_page_errors = 0
-                    if page_limit is not None and page_num >= page_limit:
-                        break
-                    if page_limit is None and max_page_hint is not None and page_num >= max_page_hint:
-                        break
                     page_num += 1
                 except Exception as exc:
                     log.error("cartivate_page_error", page=page_num, error=str(exc))

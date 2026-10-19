@@ -2,7 +2,6 @@ apscheduler==3.11.3
 fastapi==0.138.2
 uvicorn==0.49.0
 httpx==0.28.1
-curl_cffi==0.16.0
 playwright==1.61.0
 beautifulsoup4==4.15.0
 lxml==6.1.1
@@ -19,4 +18,7 @@ boto3==1.43.53
 Pillow==12.2.0
 imagehash==4.3.2
 pywebpush==1.14.0
+pyyaml==6.0.3
 redis==5.2.1
+# Test-suite dependency: the scraper guard tests parse workflow YAML fixtures.
+PyYAML==6.0.3

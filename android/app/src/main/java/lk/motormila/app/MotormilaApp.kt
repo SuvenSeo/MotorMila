@@ -15,10 +15,16 @@ import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 import lk.motormila.app.core.locale.LocaleHelper
+import lk.motormila.app.core.network.AuthEvent
+import lk.motormila.app.core.network.AuthEventBus
 import lk.motormila.app.data.local.datastore.SettingsStore
+import lk.motormila.app.domain.repository.AuthRepository
 import lk.motormila.app.ui.widget.enqueueDealWidgetRefresh
 import lk.motormila.app.work.PriceAlertSyncWorker
 import lk.motormila.app.work.SnapshotRefreshWorker
@@ -36,6 +42,12 @@ class MotormilaApp : Application(), SingletonImageLoader.Factory, Configuration.
     @Inject
     lateinit var settingsStore: SettingsStore
 
+    @Inject
+    lateinit var authRepository: AuthRepository
+
+    @Inject
+    lateinit var authEventBus: AuthEventBus
+
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override val workManagerConfiguration: Configuration
@@ -44,6 +56,33 @@ class MotormilaApp : Application(), SingletonImageLoader.Factory, Configuration.
     override fun onCreate() {
         super.onCreate()
         createNotificationChannels()
+        // Restore the persisted session immediately (the interceptor also
+        // restores lazily on its first request, so no request can ever leave
+        // without the bearer even if this hasn't finished yet).
+        appScope.launch { runCatching { authRepository.restore() } }
+        // A rejected bearer (HTTP 401) clears the persisted session; the nav
+        // graph separately routes to Login.
+        appScope.launch {
+            authEventBus.events.collect { event ->
+                if (event is AuthEvent.Unauthorized) {
+                    runCatching { authRepository.clearRejectedSession() }
+                }
+            }
+        }
+        // Alert matching only runs while signed in.
+        appScope.launch {
+            runCatching {
+                authRepository.session()
+                    .map { it != null }
+                    .distinctUntilChanged()
+                    .collect { signedIn ->
+                        if (signedIn) runCatching { PriceAlertSyncWorker.enqueue(this@MotormilaApp) }
+                        else runCatching { PriceAlertSyncWorker.cancel(this@MotormilaApp) }
+                    }
+            }
+        }
+        // AppCompat persists the per-app locale itself (autoStoreLocales);
+        // re-apply from settings for installs that predate that.
         appScope.launch {
             runCatching {
                 LocaleHelper.applyFromStore(settingsStore.observe().first().language)
@@ -51,14 +90,26 @@ class MotormilaApp : Application(), SingletonImageLoader.Factory, Configuration.
         }
         // Periodic + one-shot WorkManager (KEEP unique names, network-required).
         runCatching { SnapshotRefreshWorker.enqueue(this) }
-        runCatching { PriceAlertSyncWorker.enqueue(this) }
         runCatching { enqueueDealWidgetRefresh(this) }
+    }
+
+    /**
+     * Images use a client derived from the shared one (same connection pool)
+     * but with NO interceptors (no bearer to third-party CDNs) and no 15 s
+     * whole-call timeout (large photos on slow 3G).
+     */
+    private val imageClient: OkHttpClient by lazy {
+        okHttpClient.newBuilder()
+            .apply { interceptors().clear() }
+            .callTimeout(0, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build()
     }
 
     override fun newImageLoader(context: coil3.PlatformContext): ImageLoader =
         ImageLoader.Builder(context)
             .components {
-                add(OkHttpNetworkFetcherFactory(callFactory = { okHttpClient }))
+                add(OkHttpNetworkFetcherFactory(callFactory = { imageClient }))
             }
             .memoryCache {
                 MemoryCache.Builder()

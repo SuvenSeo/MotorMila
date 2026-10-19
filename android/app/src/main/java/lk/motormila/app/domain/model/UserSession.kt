@@ -15,10 +15,19 @@ data class UserSession(
     val token: String,
     /** ISO-8601 expiry, null = non-expiring / unknown. */
     val expiresAt: String?,
+    /**
+     * Local Google Play entitlement. True when Play Billing reports an active
+     * `motormila_pro_monthly` subscription for this device's Google account.
+     * The backend has no Play verification endpoint yet, so a Play purchase
+     * unlocks Pro locally (Play's purchase cache is the source of truth,
+     * re-verified on launch); server plan remains authoritative when present.
+     */
+    val playProEntitled: Boolean = false,
 ) {
-    /** Mirrors backend PRO_PLANS {pro, enterprise, dealer} (+ legacy aliases). */
+    /** Mirrors backend PRO_PLANS {pro, enterprise, dealer} (+ legacy aliases), OR local Play entitlement. */
     val isPro: Boolean
-        get() = plan.equals("pro", ignoreCase = true) ||
+        get() = playProEntitled ||
+            plan.equals("pro", ignoreCase = true) ||
             plan.equals("pro_plus", ignoreCase = true) ||
             plan.equals("business", ignoreCase = true) ||
             plan.equals("enterprise", ignoreCase = true) ||

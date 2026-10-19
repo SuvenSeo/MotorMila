@@ -26,7 +26,7 @@ interface AuthContextType {
   previewAccessEnabled: boolean;
 }
 
-const STORAGE_KEY = "autolens.auth_user";
+const STORAGE_KEY = "motormila.auth_user";
 const DEMO_USERS_ENV = "VITE_DEMO_USERS";
 /**
  * When true the API is the source of truth for identity (login, session

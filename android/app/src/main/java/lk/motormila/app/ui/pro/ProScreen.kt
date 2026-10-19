@@ -34,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
@@ -43,6 +44,8 @@ import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.io.File
+import lk.motormila.app.BuildConfig
+import lk.motormila.app.R
 import lk.motormila.app.billing.BillingState
 import lk.motormila.app.core.format.formatLkr
 import lk.motormila.app.core.format.formatPct
@@ -97,11 +100,23 @@ fun ProScreen(
             viewModel.onEvent(ProUiEvent.ConsumeCheckout)
         }
     }
+    LaunchedEffect(state.billingMessageRes) {
+        state.billingMessageRes?.let { res ->
+            snacks.showSnackbar(context.getString(res))
+            viewModel.onEvent(ProUiEvent.DismissError)
+        }
+    }
     LaunchedEffect(billingState) {
-        if (billingState is BillingState.Purchased) {
-            if (!reducedMotion) haptics.confirm()
-            snacks.showSnackbar("Purchase recorded — your Pro plan unlocks on next sync.")
-            viewModel.onEvent(ProUiEvent.Refresh)
+        when (billingState) {
+            is BillingState.Purchased -> {
+                if (!reducedMotion) haptics.confirm()
+                snacks.showSnackbar(context.getString(R.string.billing_pro_unlocked))
+                viewModel.onEvent(ProUiEvent.Refresh)
+            }
+            BillingState.Pending -> snacks.showSnackbar(context.getString(R.string.billing_pending))
+            BillingState.VerificationFailed ->
+                snacks.showSnackbar(context.getString(R.string.billing_verification_failed))
+            else -> Unit
         }
     }
     // Non-Pro users land on the paywall sheet (dismissible to peek blurred previews).
@@ -157,7 +172,7 @@ fun ProScreen(
                 ) {
                     Icon(Icons.Filled.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.height(8.dp))
-                    Text("Motormila Pro", style = MaterialTheme.typography.headlineSmall)
+                    Text(stringResource(R.string.ui_pro_motormila_pro), style = MaterialTheme.typography.headlineSmall)
                     Text(
                         "Snapshots, lane velocity, district arbitrage and source-quality scores. " +
                             "Blurred previews above — unlock to trade on them.",
@@ -169,13 +184,16 @@ fun ProScreen(
                     Spacer(Modifier.height(16.dp))
                     if (billingState is BillingState.Purchased) {
                         Text(
-                            "Purchase recorded — your Pro plan unlocks on next sync.",
+                            stringResource(R.string.billing_pro_unlocked),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary,
                         )
                     }
                     PrimaryAction(
-                        "Continue to checkout",
+                        stringResource(
+                            if (BuildConfig.PLAY_BILLING_ENABLED) R.string.billing_subscribe_play
+                            else R.string.billing_continue_checkout,
+                        ),
                         onClick = {
                             tapConfirm()
                             if (activity != null) viewModel.onCheckout(activity)
@@ -225,7 +243,7 @@ private fun ProContent(
                     KpiChip("Hot deals", snap.hotDealCount.toString())
                     KpiChip("Districts", snap.districtsCovered.toString())
                 } else {
-                    Text("Upgrade to load live KPIs.", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.ui_pro_upgrade_to_load_live_kpis), style = MaterialTheme.typography.bodyMedium)
                 }
             }
             if (!blurred && snap != null) {
@@ -242,7 +260,7 @@ private fun ProContent(
         item { SectionTitle("Lanes — tap a lane for detail") }
         val lanes: List<VehicleLane> = state.lanes
         if (lanes.isEmpty() && !blurred) {
-            item { Text("No lane data yet.", style = MaterialTheme.typography.bodyMedium) }
+            item { Text(stringResource(R.string.ui_pro_no_lane_data_yet), style = MaterialTheme.typography.bodyMedium) }
         } else {
             items((lanes.ifEmpty { previewLanes() })) { lane ->
                 val laneName = "${lane.make} ${lane.model}".trim().ifBlank { "Lane" }
@@ -302,7 +320,7 @@ private fun ProContent(
         item { SectionTitle("Districts") }
         val districts: List<ProDistrict> = state.districts
         if (districts.isEmpty() && !blurred) {
-            item { Text("No district data yet.", style = MaterialTheme.typography.bodyMedium) }
+            item { Text(stringResource(R.string.ui_pro_no_district_data_yet), style = MaterialTheme.typography.bodyMedium) }
         } else {
             items(districts.ifEmpty { if (blurred) previewDistricts() else emptyList() }) { d ->
                 val expanded = state.districtDetailKey == d.district && !blurred
@@ -379,7 +397,7 @@ private fun ProContent(
         }
         val arb: List<ArbitrageGap> = state.arbitrage
         if (arb.isEmpty() && !blurred) {
-            item { Text("No arbitrage gaps for your scope yet.", style = MaterialTheme.typography.bodyMedium) }
+            item { Text(stringResource(R.string.ui_pro_no_arbitrage_gaps_for_your), style = MaterialTheme.typography.bodyMedium) }
         } else {
             items(arb.ifEmpty { if (blurred) previewArb() else emptyList() }) { a ->
                 val hot = a.gapPct >= state.arbitrageThresholdPct
@@ -436,7 +454,7 @@ private fun ProContent(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(label, style = MaterialTheme.typography.bodyLarge)
-                        Text("PRO", style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.ui_pro_pro), style = MaterialTheme.typography.titleSmall)
                     }
                 }
             }
@@ -479,8 +497,8 @@ private fun BlurredPreview() {
             .blur(8.dp)
             .semantics { contentDescription = "Locked Pro preview" },
     ) {
-        Text("DEAL RADAR · ▓▓▓▓", style = MaterialTheme.typography.titleSmall)
-        Text("Spread ▓▓▓▓ · ▓▓ district", style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(R.string.ui_pro_deal_radar), style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(R.string.ui_pro_spread_district), style = MaterialTheme.typography.bodyMedium)
     }
 }
 

@@ -55,8 +55,6 @@ export function useServerMarketAlerts(): UseServerMarketAlertsResult {
         make: data.make,
         model: data.model,
         district: data.district,
-        user_token: token,
-        alert_token: token,
       });
       return created;
     },

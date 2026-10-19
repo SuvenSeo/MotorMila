@@ -3,11 +3,11 @@ import { ArrowUpRight, Landmark } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getMarketSignals } from "@/services/api";
 import type { MarketSignal } from "@/types/car";
-import { formatPulseValue, labelPulseSource } from "@/lib/officialPulseContent";
+import { formatPulseValue, labelPulseMetric, labelPulseSource } from "@/lib/officialPulseContent";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 
 function SignalCard({ signal }: { signal: MarketSignal }) {
-  const title = signal.category || signal.metric;
+  const title = labelPulseMetric(signal.category || signal.metric);
   const period =
     signal.period_year && signal.period_month
       ? `${signal.period_year}-${String(signal.period_month).padStart(2, "0")}`

@@ -43,6 +43,28 @@ from db.models import CarListing, MarketStatsCache, PriceAggregate, live_listing
 
 log = structlog.get_logger()
 
+
+def invalidate_stats_cache(db: Session, *, key: Optional[str] = None) -> int:
+    """Drop cached market stats so the next read recomputes.
+
+    Call after mutations that change the numbers users see (deal-score
+    refresh, outlier pass, dedup, listing lifecycle). Without this the
+    15min–24h TTLs keep serving stale summaries for hours.
+    """
+    query = db.query(MarketStatsCache)
+    if key:
+        query = query.filter(MarketStatsCache.cache_key == key)
+    deleted = query.delete(synchronize_session=False)
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    if deleted:
+        log.info("stats_cache_invalidated", deleted=deleted, key=key)
+    return int(deleted)
+
+
 CACHE_TTL_SECONDS = 3600  # legacy default; kept for unknown keys
 SUMMARY_TTL_SECONDS = 900  # 15 min — counts move with every sync
 DISTRICT_PRICES_TTL_SECONDS = 3600  # 1 h

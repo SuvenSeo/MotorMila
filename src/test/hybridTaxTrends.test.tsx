@@ -122,7 +122,7 @@ vi.mock("@/data/districts", () => ({
 function installProAuth() {
   const store = new Map<string, string>();
   store.set(
-    "autolens.auth_user",
+    "motormila.auth_user",
     JSON.stringify({
       email: "pro@example.com",
       name: "Pro User",

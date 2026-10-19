@@ -62,25 +62,32 @@ function HybridTaxAdvantageCallout({ engineCapacity, fuelType }: { engineCapacit
 
 export function TaxBreakdown({
   price,
-  engineCapacity = 1500,
+  engineCapacity,
   initialFuelType,
 }: {
   price: number;
-  engineCapacity?: number;
+  /** Listing's known engine capacity in cc; when absent the user enters it — never silently assumed. */
+  engineCapacity?: number | null;
   /** Seed from the listing's known fuel type so a hybrid doesn't open on petrol excise. */
   initialFuelType?: ImportFuelType;
 }) {
   const [fuelType, setFuelType] = useState<ImportFuelType>(initialFuelType ?? "petrol");
   const [motorKw, setMotorKw] = useState(110);
+  const [ccInput, setCcInput] = useState<string>(engineCapacity != null ? String(engineCapacity) : "");
+  // A capacity equal to the listing year (or otherwise implausible) is a
+  // scrape artifact — treat it as unknown rather than computing on it.
+  const knownCc = engineCapacity != null && engineCapacity > 0 ? engineCapacity : null;
+  const parsedCc = Number(ccInput);
+  const effectiveCc = knownCc ?? (Number.isFinite(parsedCc) && parsedCc > 0 ? parsedCc : null);
 
   const result = computeImportTaxes({
     cifLkr: price,
     fuelType,
-    engineCc: engineCapacity,
+    engineCc: effectiveCc ?? 0,
     motorKw,
   });
 
-  const showHybridAdvantage = fuelType === "hybrid" || isAtHybridExciseCliff(engineCapacity);
+  const showHybridAdvantage = fuelType === "hybrid" || (effectiveCc != null && isAtHybridExciseCliff(effectiveCc));
 
   return (
     <div className="page-panel space-y-4 rounded-xl p-6">
@@ -125,6 +132,36 @@ export function TaxBreakdown({
         )}
       </div>
 
+      {/* CC input — the listing's capacity may be unknown (or a scrape
+          artifact); duty is per-cc so we ask instead of assuming 1,500 cc. */}
+      {!knownCc && (
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-surface p-3">
+          <label htmlFor="tax-cc-input" className="text-xs font-medium text-muted-foreground">
+            Engine capacity
+          </label>
+          <input
+            id="tax-cc-input"
+            type="number"
+            min={1}
+            value={ccInput}
+            onChange={(e) => setCcInput(e.target.value)}
+            placeholder="e.g. 1496"
+            className="w-28 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-primary/50 num"
+            aria-describedby="tax-cc-hint"
+          />
+          <span className="text-xs text-muted-foreground">cc</span>
+          <p id="tax-cc-hint" className="w-full text-[11px] text-muted-foreground">
+            This listing doesn't carry a verified engine capacity — enter it to get an indicative duty figure.
+          </p>
+        </div>
+      )}
+
+      {effectiveCc == null ? (
+        <p className="text-xs text-muted-foreground">
+          Enter the engine capacity above to see the indicative import-duty breakdown.
+        </p>
+      ) : (
+        <>
       <div className="space-y-3">
         <div className="flex justify-between border-b border-border pb-2 text-xs text-muted-foreground">
           <span>Base Value (CIF est.)</span>
@@ -142,7 +179,7 @@ export function TaxBreakdown({
         ))}
       </div>
 
-      {showHybridAdvantage && <HybridTaxAdvantageCallout engineCapacity={engineCapacity} fuelType={fuelType} />}
+      {showHybridAdvantage && <HybridTaxAdvantageCallout engineCapacity={effectiveCc} fuelType={fuelType} />}
 
       <div className="space-y-2 border-t border-border pt-4">
         <div className="flex items-center justify-between rounded-xl border border-border bg-surface p-3">
@@ -155,6 +192,8 @@ export function TaxBreakdown({
           <span className="text-lg font-bold tracking-tight text-foreground num">{formatPrice(result.totalOnRoad)}</span>
         </div>
       </div>
+        </>
+      )}
 
       <div className="flex gap-2 rounded-2xl border border-deal-amber/30 bg-deal-amber/10 p-3">
         <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-deal-amber" />

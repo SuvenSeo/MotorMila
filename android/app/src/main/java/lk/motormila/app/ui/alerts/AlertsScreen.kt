@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.alerts
 
+import lk.motormila.app.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -48,7 +50,7 @@ import kotlinx.coroutines.delay
 import lk.motormila.app.core.format.formatLkr
 import lk.motormila.app.core.format.formatPct
 import lk.motormila.app.core.motion.rememberReducedMotion
-import lk.motormila.app.core.ui.EmptyState
+import lk.motormila.app.ui.components.EmptyState
 import lk.motormila.app.core.ui.ErrorRetry
 import lk.motormila.app.core.ui.SectionTitle
 import lk.motormila.app.core.ui.SkeletonList
@@ -60,6 +62,12 @@ import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.components.OfflineBanner
+import lk.motormila.app.ui.theme.MotormilaGood
+import lk.motormila.app.ui.theme.MotormilaGoodText
+import lk.motormila.app.ui.theme.MotormilaOnSurface
+import lk.motormila.app.ui.theme.MotormilaPrimary
+import lk.motormila.app.ui.theme.MotormilaPrimaryBright
+import lk.motormila.app.ui.theme.pressKeyHaptic
 import lk.motormila.app.ui.theme.rememberHaptics
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -82,6 +90,11 @@ fun AlertsScreen(
             viewModel.onEvent(AlertsUiEvent.DismissError)
         }
     }
+    // Android 13+: ask for notification permission right after the first
+    // alert is created (the moment the value of notifications is obvious).
+    lk.motormila.app.core.notifications.NotificationPermissionPrompt(
+        trigger = state.justCreatedId != null,
+    )
     LaunchedEffect(state.justCreatedId) {
         if (state.justCreatedId != null) {
             if (!reducedMotion) haptics.confirm()
@@ -183,6 +196,7 @@ fun AlertsScreen(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CreateForm(state: AlertsUiState, viewModel: AlertsViewModel, onUpgrade: () -> Unit) {
+    val haptics = rememberHaptics()
     val f = state.form
     val editing = state.editingId != null
     val proLocked = !state.isPro
@@ -191,42 +205,42 @@ private fun CreateForm(state: AlertsUiState, viewModel: AlertsViewModel, onUpgra
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
                 value = f.make, onValueChange = { viewModel.onEvent(AlertsUiEvent.FormChanged(f.copy(make = it))) },
-                label = { Text("Make") }, singleLine = true,
+                label = { Text(stringResource(R.string.ui_alerts_make)) }, singleLine = true,
                 modifier = Modifier.weight(1f).heightIn(min = 48.dp),
             )
             OutlinedTextField(
                 value = f.model, onValueChange = { viewModel.onEvent(AlertsUiEvent.FormChanged(f.copy(model = it))) },
-                label = { Text("Model (optional)") }, singleLine = true,
+                label = { Text(stringResource(R.string.ui_alerts_model_optional)) }, singleLine = true,
                 modifier = Modifier.weight(1f).heightIn(min = 48.dp),
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
                 value = f.district, onValueChange = { viewModel.onEvent(AlertsUiEvent.FormChanged(f.copy(district = it))) },
-                label = { Text("District") }, singleLine = true,
+                label = { Text(stringResource(R.string.ui_alerts_district)) }, singleLine = true,
                 modifier = Modifier.weight(1f).heightIn(min = 48.dp),
             )
             OutlinedTextField(
                 value = f.maxPrice, onValueChange = { viewModel.onEvent(AlertsUiEvent.FormChanged(f.copy(maxPrice = it))) },
-                label = { Text("Max (e.g. 8m)") }, singleLine = true,
-                supportingText = { Text("Triggers at or under this price") },
+                label = { Text(stringResource(R.string.ui_alerts_max_e_g_8m)) }, singleLine = true,
+                supportingText = { Text(stringResource(R.string.ui_alerts_triggers_at_or_under_this)) },
                 modifier = Modifier.weight(1f).heightIn(min = 48.dp),
             )
         }
         OutlinedTextField(
             value = f.whatsappPhone,
             onValueChange = { viewModel.onEvent(AlertsUiEvent.FormChanged(f.copy(whatsappPhone = it))) },
-            label = { Text("WhatsApp phone") },
+            label = { Text(stringResource(R.string.ui_alerts_whatsapp_phone)) },
             singleLine = true,
-            supportingText = { Text("Used when WhatsApp is selected (Pro)") },
+            supportingText = { Text(stringResource(R.string.ui_alerts_used_when_whatsapp_is_selected)) },
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
         )
         OutlinedTextField(
             value = f.telegramChatId,
             onValueChange = { viewModel.onEvent(AlertsUiEvent.FormChanged(f.copy(telegramChatId = it))) },
-            label = { Text("Telegram chat ID") },
+            label = { Text(stringResource(R.string.ui_alerts_telegram_chat_id)) },
             singleLine = true,
-            supportingText = { Text("Chat ID or @username (Pro)") },
+            supportingText = { Text(stringResource(R.string.ui_alerts_chat_id_or_username_pro)) },
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
         )
         Text(
@@ -338,6 +352,7 @@ private fun CreateForm(state: AlertsUiState, viewModel: AlertsViewModel, onUpgra
                 label = "Save changes",
                 loading = state.updating,
                 onClick = { viewModel.onEvent(AlertsUiEvent.Update) },
+                modifier = Modifier.pressKeyHaptic(haptics),
             )
             MotormilaGhostButton(
                 label = "Cancel editing",
@@ -349,6 +364,7 @@ private fun CreateForm(state: AlertsUiState, viewModel: AlertsViewModel, onUpgra
                 loading = state.creating,
                 enabled = !state.freeCapReached,
                 onClick = { viewModel.onEvent(AlertsUiEvent.Create) },
+                modifier = Modifier.pressKeyHaptic(haptics),
             )
         }
     }
@@ -468,8 +484,10 @@ private fun AlertRow(
             SectionTitle("Matches (${flat.size})")
             flat.forEach { m ->
                 // % under the alert threshold — the "move" that triggered this match.
-                val underPct = if (m.priceLkr != null && (alert.maxPriceLkr ?: 0.0) > 0) {
-                    (alert.maxPriceLkr!! - m.priceLkr) / alert.maxPriceLkr!! * 100
+                val maxPrice = alert.maxPriceLkr
+                val price = m.priceLkr
+                val underPct = if (price != null && maxPrice != null && maxPrice > 0) {
+                    (maxPrice - price) / maxPrice * 100
                 } else {
                     null
                 }
@@ -525,9 +543,10 @@ private fun ConfettiLite(modifier: Modifier = Modifier) {
         label = "confetti",
     )
     val colors = remember {
+        // Brand confetti: Motormila Blue #0A7AFF, Deal Green #00C853, white.
         listOf(
-            Color(0xFFC9A227), Color(0xFF2E7D32), Color(0xFF1565C0),
-            Color(0xFFEF6C00), Color(0xFF6A1B9A), Color(0xFF00838F),
+            MotormilaPrimary, MotormilaGood, MotormilaOnSurface,
+            MotormilaPrimaryBright, MotormilaGoodText, MotormilaPrimary,
         )
     }
     Canvas(modifier.semantics { contentDescription = "Alert created celebration" }) {

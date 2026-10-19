@@ -3,7 +3,7 @@
 How to run (from repo root)::
 
     python scripts/seed-demo.py --demo
-    python scripts/seed-demo.py --demo --db backend/autolens.db
+    python scripts/seed-demo.py --demo --db backend/motormila.db
     python scripts/seed-demo.py --demo --count 50 --clear-cache
 
 Notes
@@ -31,7 +31,7 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_DB = REPO_ROOT / "backend" / "autolens.db"
+DEFAULT_DB = REPO_ROOT / "backend" / "motormila.db"
 
 MAKES: list[tuple[str, str, int, int]] = [
     # (make, model, base_price_lkr, base_deal_score)
@@ -154,7 +154,7 @@ def existing_columns(conn: sqlite3.Connection, table: str) -> list[str]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Seed demo car_listings (requires --demo).")
     parser.add_argument("--demo", action="store_true", help="Required safety flag.")
-    parser.add_argument("--db", default=str(DEFAULT_DB), help="SQLite file (default: backend/autolens.db).")
+    parser.add_argument("--db", default=str(DEFAULT_DB), help="SQLite file (default: backend/motormila.db).")
     parser.add_argument("--count", type=int, default=50, help="Demo rows to upsert (default: 50).")
     parser.add_argument("--clear-cache", dest="clear_cache", action="store_true", default=True)
     parser.add_argument("--no-clear-cache", dest="clear_cache", action="store_false")

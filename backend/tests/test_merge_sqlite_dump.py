@@ -129,7 +129,7 @@ def _history_points(path: Path) -> list[tuple]:
 def test_neon_export_merge_imports_listings_and_history(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    dump = _make_dump(tmp_path / "autolens.db")
+    dump = _make_dump(tmp_path / "motormila.db")
     target = tmp_path / "merged.db"
     _fresh_target(target)
 
@@ -159,7 +159,7 @@ def test_neon_export_merge_imports_listings_and_history(
 def test_neon_export_merge_is_idempotent(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    dump = _make_dump(tmp_path / "autolens.db")
+    dump = _make_dump(tmp_path / "motormila.db")
     target = tmp_path / "merged.db"
     _fresh_target(target)
 
@@ -179,7 +179,7 @@ def test_neon_export_merge_is_idempotent(
 def test_manus_dump_without_history_table_merges_listings_only(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    dump = _make_dump(tmp_path / "autolens.db", with_history_src=False)
+    dump = _make_dump(tmp_path / "motormila.db", with_history_src=False)
     target = tmp_path / "merged.db"
     _fresh_target(target)
 
@@ -193,7 +193,7 @@ def test_merge_imports_latest_scrape_run_and_is_idempotent(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     dump = _make_dump(
-        tmp_path / "autolens.db",
+        tmp_path / "motormila.db",
         with_history_src=False,
         scrape_run=("ikman", "2026-08-03 09:00:00"),
     )
@@ -217,7 +217,7 @@ def test_merge_does_not_replace_newer_target_scrape_run(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     dump = _make_dump(
-        tmp_path / "autolens.db",
+        tmp_path / "motormila.db",
         with_history_src=False,
         scrape_run=("ikman", "2026-08-01 09:00:00"),
     )
@@ -250,7 +250,7 @@ def test_import_sqlite_to_neon_wrapper_dry_run_uses_dsn(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The Neon import CLI must pass a DSN through to merge_sqlite_dump."""
-    dump = _make_dump(tmp_path / "autolens.db")
+    dump = _make_dump(tmp_path / "motormila.db")
     target = tmp_path / "neon.db"
     _fresh_target(target)
     monkeypatch.setattr(
@@ -281,7 +281,7 @@ def test_engine_url_for_postgres_dsn_is_not_wrapped_as_sqlite() -> None:
 
 
 def test_dry_run_writes_nothing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    dump = _make_dump(tmp_path / "autolens.db")
+    dump = _make_dump(tmp_path / "motormila.db")
     target = tmp_path / "merged.db"
     _fresh_target(target)
 
@@ -292,7 +292,7 @@ def test_dry_run_writes_nothing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
 
 def test_merge_preserves_vehicle_category(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The dump merge must preserve vehicle_category on car_listings."""
-    dump_db = tmp_path / "autolens.db"
+    dump_db = tmp_path / "motormila.db"
     engine = create_engine(f"sqlite:///{dump_db}")
     Base.metadata.create_all(engine)
     with engine.begin() as conn:
@@ -336,7 +336,7 @@ def test_merge_does_not_overwrite_existing_first_seen_at(
         )
     engine.dispose()
 
-    dump = _make_dump(tmp_path / "autolens.db", with_history_src=False)
+    dump = _make_dump(tmp_path / "motormila.db", with_history_src=False)
     assert _run_merge(monkeypatch, dump, target) == 0
 
     with sqlite3.connect(target) as con:

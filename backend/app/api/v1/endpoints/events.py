@@ -1,9 +1,10 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Header, Request
 from sqlalchemy.orm import Session
 
+from app.api.v1.endpoints.auth import _extract_token, resolve_live_session, verify_token
 from app.models.schemas import AnalyticsEventCreate, AnalyticsEventRead
 from app.services.rate_limit import RateLimiter
 from db.models import AnalyticsEvent
@@ -12,12 +13,45 @@ from db.session import get_db
 router = APIRouter()
 
 # Tight rate limit: 60 events/min per client. Public endpoint used for funnel
-# tracking (page views from anonymous users), so no auth required.
+# tracking (page views from anonymous users), so no auth required for the
+# analytics write itself. Nudges require a signed-in session (see below).
 _events_rate_limiter = RateLimiter(
     max_requests=60,
     window_seconds=60,
     message="Too many analytics events. Try again shortly.",
 )
+
+# Credential-like keys must never be persisted: they are session/alert bearer
+# tokens and would turn analytics_events into an impersonation oracle.
+_CREDENTIAL_KEYS = frozenset({
+    "user_token", "alert_token", "token", "owner_token",
+    "authorization", "auth_token", "session_token", "access_token", "api_key",
+})
+
+
+def _sanitize_properties(properties: object) -> Optional[dict]:
+    """Drop credential keys and cap free-form depth before persisting."""
+    if not isinstance(properties, dict):
+        return None
+    clean: dict = {}
+    for key, value in properties.items():
+        key_str = str(key)
+        if key_str.lower() in _CREDENTIAL_KEYS:
+            continue
+        if key_str.lower().endswith("_token") or key_str.lower().endswith("_key"):
+            continue
+        if isinstance(value, str):
+            clean[key_str] = value[:300]
+        elif isinstance(value, (int, float, bool)) or value is None:
+            clean[key_str] = value
+        elif isinstance(value, list):
+            clean[key_str] = [str(v)[:80] for v in value[:20]]
+        elif isinstance(value, dict):
+            # Nested objects are flattened to strings to avoid PII sinks.
+            clean[key_str] = str(value)[:300]
+        else:
+            clean[key_str] = str(value)[:300]
+    return clean or None
 
 
 @router.post("", response_model=AnalyticsEventRead, status_code=201)
@@ -25,43 +59,52 @@ def record_event(
     payload: AnalyticsEventCreate,
     request: Request,
     db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(default=None),
 ):
     _events_rate_limiter(request)
+    clean_props = _sanitize_properties(payload.properties)
     event = AnalyticsEvent(
         event=payload.event.strip(),
-        properties=payload.properties or None,
+        properties=clean_props,
         session_id=(payload.session_id or "").strip()[:64] or None,
     )
     db.add(event)
     db.commit()
     db.refresh(event)
-    # Minimal product-signal nudges (saved search / listing view / alert
-    # create -> price-drop / back-in-stock in-app nudges). Fail-open.
+    # Minimal product-signal nudges. Identity is taken ONLY from a verified
+    # session — never from client-supplied properties (injection vector).
     try:
-        _maybe_emit_nudge(db, event_name=event.event, properties=payload.properties)
+        nudge_owner = _resolve_nudge_owner(request, authorization, db)
+        if nudge_owner:
+            _maybe_emit_nudge(
+                db,
+                event_name=event.event,
+                properties=clean_props,
+                owner=nudge_owner,
+            )
     except Exception:
         pass
     return event
 
 
+def _resolve_nudge_owner(request: Optional[Request], authorization: Optional[str], db: Session) -> Optional[str]:
+    token = _extract_token(authorization, request)
+    payload = verify_token(token) if token else None
+    if payload is None:
+        return None
+    live = resolve_live_session(payload, db)
+    return f"mm:{live['email'].strip().lower()}"
+
+
 _NUDGE_EVENTS = frozenset({"saved_search", "listing_view", "alert_created"})
 
 
-def _nudge_token(properties: object) -> Optional[str]:
-    if not isinstance(properties, dict):
-        return None
-    for key in ("user_token", "alert_token", "token", "owner_token"):
-        value = properties.get(key)
-        if isinstance(value, str) and value.strip() and len(value.strip()) <= 64:
-            return value.strip()
-    return None
-
-
-def _maybe_emit_nudge(db: Session, *, event_name: str, properties: object):
+def _maybe_emit_nudge(db: Session, *, event_name: str, properties: object, owner: str):
     """Create a lightweight in-app nudge for key product signals.
 
     - alert_created / saved_search -> "watch armed" confirmation nudge.
     - listing_view with price_drop/back_in_stock flags -> price-drop nudge.
+    Copy is entirely server-generated; client nudge_body is ignored.
     Deduped via notification_delivery_log (alert:listing:inapp); always
     fail-open to a plain in-app row when the log table is unavailable.
     """
@@ -69,9 +112,7 @@ def _maybe_emit_nudge(db: Session, *, event_name: str, properties: object):
     if name not in _NUDGE_EVENTS:
         return None
     props = properties if isinstance(properties, dict) else {}
-    token = _nudge_token(props)
-    if not token:
-        return None
+    token = owner
 
     listing_id = props.get("listing_id") if isinstance(props, dict) else None
     try:
@@ -85,7 +126,8 @@ def _maybe_emit_nudge(db: Session, *, event_name: str, properties: object):
         if not (is_drop or is_back):
             return None
         title = "Price drop on a car you viewed" if is_drop else "Back in stock: a car you viewed"
-        body = str(props.get("nudge_body") or "Tap to see the latest price.")[:300]
+        # Server-fixed copy only — client nudge_body is never trusted.
+        body = "Tap to see the latest price."
         link = f"/listing/{listing_id_int}" if listing_id_int else "/alerts"
     else:
         label = str(props.get("label") or props.get("make") or "your search").strip()[:80]

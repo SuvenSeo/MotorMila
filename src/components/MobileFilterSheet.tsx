@@ -199,7 +199,7 @@ export function MobileFilterSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="max-h-[85vh] overflow-y-auto rounded-t-2xl border-t border-border bg-card p-0 text-foreground"
+        className="max-h-[85dvh] overflow-y-auto overscroll-contain rounded-t-2xl border-t border-border bg-card p-0 text-foreground touch-pan-y"
       >
         <SheetHeader className="border-b border-border px-5 pb-4 pt-5">
           <div className="flex items-center justify-between">

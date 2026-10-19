@@ -24,12 +24,15 @@ PRO_PLANS = {"pro", "enterprise", "dealer"}
 
 
 def is_free_browse_plan(plan: Optional[str], *, role: Optional[str] = None) -> bool:
-    """True when the caller should receive free-tier teaser limits."""
+    """True when the caller should receive free-tier teaser limits.
+
+    Anonymous callers (``plan is None``) are free-teased: omitting the
+    Authorization header must never unlock Pro-depth data.
+    """
     if str(role or "").strip().lower() == "admin":
         return False
     if plan is None:
-        # Anonymous / open-mode callers are not free-teased here; app gate handles auth.
-        return False
+        return True
     return str(plan).strip().lower() not in PRO_PLANS
 
 

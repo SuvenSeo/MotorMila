@@ -187,8 +187,10 @@ def test_app_access_gate_requires_auth(client: TestClient):
     # Non-allowlisted product routes still require a session.
     assert client.get("/api/v1/vehicles/safety-research").status_code == 401
     # Writes and privileged surfaces stay gated (B2-A boundary).
-    assert client.post("/api/v1/alerts", json={}).status_code == 401
-    assert client.post("/api/v1/dealer/verify", json={}).status_code == 401
+    # Unsafe methods without a Bearer token are CSRF-blocked (403) before
+    # the auth-session check ever runs (see require_authenticated).
+    assert client.post("/api/v1/alerts", json={}).status_code in (401, 403)
+    assert client.post("/api/v1/dealer/verify", json={}).status_code in (401, 403)
     assert client.get("/api/v1/pro/market-snapshot").status_code in (401, 403)
 
     headers = _admin_headers(client)

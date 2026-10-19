@@ -1,7 +1,9 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Crown, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppPreferences } from "@/lib/appPreferences";
+import { trackEvent } from "@/lib/analytics";
 
 type UpgradePromptProps = {
   title: string;
@@ -21,7 +23,16 @@ export function UpgradePrompt({
   ctaLabel,
 }: UpgradePromptProps) {
   const { t } = useAppPreferences();
-  const resolvedCta = ctaLabel ?? t("upgrade.cta", "Start 7-day free trial");
+  const resolvedCta = ctaLabel ?? t("upgrade.cta", "Join the waitlist");
+
+  // Paywall funnel: one view event per prompt mount.
+  useEffect(() => {
+    trackEvent("paywall_view", { source: "upgrade_prompt", variant, title });
+  }, [variant, title]);
+
+  const onCtaClick = () => {
+    trackEvent("paywall_click", { source: "upgrade_prompt", variant, title, cta: "join_waitlist" });
+  };
 
   if (variant === "strip") {
     return (
@@ -42,6 +53,7 @@ export function UpgradePrompt({
         </div>
         <Link
           to="/pricing"
+          onClick={onCtaClick}
           className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-[12px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/95 active:scale-[0.98]"
         >
           <Crown className="h-3.5 w-3.5" aria-hidden />
@@ -62,6 +74,7 @@ export function UpgradePrompt({
       <p className="mx-auto mt-2 max-w-md text-[13px] leading-relaxed text-muted-foreground">{body}</p>
       <Link
         to="/pricing"
+        onClick={onCtaClick}
         className="mt-5 inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-[13px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/95 active:scale-[0.98]"
       >
         {resolvedCta}

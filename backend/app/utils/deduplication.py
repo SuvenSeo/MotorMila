@@ -3,9 +3,19 @@
 Matching criteria for a duplicate pair:
 - Normalised make and model are equal (strip punctuation, case-insensitive)
 - Year matches exactly (both None counts as equal)
-- price_lkr within 3% of each other (both None counts as a match)
+- price_lkr within 3% of each other — both sides MUST have a price
+  (both-null prices are not a match; distinct unpriced cars must not collapse)
 - mileage within 5% of each other, OR either side has mileage IS NULL
 - Listings must belong to different sources
+
+``mark_duplicates_batch`` (the pass that actually hides rows) is STRICTER:
+the loose rules above flagged >50% of the catalogue (distinct cars in
+different districts) in Sept 2026. A pair is only flagged when, in addition
+to make/model/year and price within ``STRICT_PRICE_TOLERANCE``:
+- both listings carry the same perceptual image hash, OR
+- both have the same (non-null) district AND both have a mileage within
+  ``STRICT_MILEAGE_TOLERANCE`` of each other.
+Only active listings are compared, and each listing pairs at most once.
 """
 
 from __future__ import annotations
@@ -15,7 +25,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import structlog
-from sqlalchemy import and_, or_, text, update
+from sqlalchemy import and_, false, or_, text, update
 from sqlalchemy.orm import Session
 
 from db.models import CarListing
@@ -26,6 +36,8 @@ _STRIP_NON_ALNUM = re.compile(r"[^a-z0-9]")
 
 PRICE_TOLERANCE = 0.03  # 3 %
 MILEAGE_TOLERANCE = 0.05  # 5 %
+STRICT_PRICE_TOLERANCE = 0.02  # 2 %
+STRICT_MILEAGE_TOLERANCE = 0.02  # 2 %
 
 
 # ---------------------------------------------------------------------------
@@ -98,12 +110,14 @@ def find_duplicate_candidates(
     else:
         filters.append(CarListing.year.is_(None))
 
-    # Price — within band, or both NULL
+    # Price — within band; both-null prices must NOT match (would collapse
+    # distinct unpriced cars).
     if price_band is not None:
         low_p, high_p = price_band
         filters.append(CarListing.price_lkr.between(low_p, high_p))
     else:
-        filters.append(CarListing.price_lkr.is_(None))
+        # No price on the listing: never treat as a duplicate on price alone.
+        filters.append(false())
 
     # Mileage — within band OR candidate mileage is NULL; skip filter when
     # listing mileage itself is NULL (any mileage is acceptable)
@@ -132,11 +146,12 @@ def find_duplicate_candidates(
 
 def _price_match(listing, candidate) -> bool:
     """Replicate the DB-side price filter of :func:`find_duplicate_candidates`
-    for the *listing* being scanned: a candidate matches when it is within the
-    listing's 3% band, or when both sides are null-priced."""
+    for the *listing* being scanned: a candidate matches when both sides have
+    a non-null price within the 3% band. Both-null prices are NOT a match —
+    distinct unpriced cars would otherwise collapse into one row."""
     band = _price_band(listing.price_lkr)
     if band is None:
-        return candidate.price_lkr is None
+        return False
     low, high = band
     return candidate.price_lkr is not None and low <= float(candidate.price_lkr) <= high
 
@@ -160,6 +175,27 @@ def _mileage_match(listing, candidate) -> bool:
         return True
     low, high = band
     return candidate.mileage is None or low <= int(candidate.mileage) <= high
+
+
+def _strict_match(listing, candidate) -> bool:
+    """Evidence that two cross-source rows are the same physical car."""
+    lp, cp = listing.price_lkr, candidate.price_lkr
+    if lp is None or cp is None or float(lp) <= 0:
+        return False
+    if abs(float(cp) - float(lp)) > float(lp) * STRICT_PRICE_TOLERANCE:
+        return False
+    l_hash = (getattr(listing, "image_phash", None) or "").strip()
+    c_hash = (getattr(candidate, "image_phash", None) or "").strip()
+    if l_hash and c_hash and l_hash == c_hash:
+        return True
+    l_district = _norm(getattr(listing, "district", None))
+    c_district = _norm(getattr(candidate, "district", None))
+    if not l_district or l_district != c_district:
+        return False
+    lm, cm = listing.mileage, candidate.mileage
+    if lm is None or cm is None or int(lm) <= 0:
+        return False
+    return abs(int(cm) - int(lm)) <= int(lm) * STRICT_MILEAGE_TOLERANCE
 
 
 def mark_duplicates_batch(
@@ -189,7 +225,10 @@ def mark_duplicates_batch(
 
     Returns the number of listings newly marked as duplicates.
     """
-    filters = [CarListing.is_duplicate == False]  # noqa: E712
+    filters = [
+        CarListing.is_duplicate == False,  # noqa: E712
+        CarListing.is_active == True,  # noqa: E712
+    ]
     rows = (
         db.query(
             CarListing.id,
@@ -200,6 +239,8 @@ def mark_duplicates_batch(
             CarListing.price_lkr,
             CarListing.mileage,
             CarListing.scraped_at,
+            CarListing.district,
+            CarListing.image_phash,
         )
         .filter(and_(*filters))
         .all()
@@ -219,12 +260,15 @@ def mark_duplicates_batch(
 
     total_marked = 0
     flagged_ids: set[int] = set()
+    paired_ids: set[int] = set()  # canonical rows already used by a pair
     flag_updates: list[dict] = []
 
     for bucket in buckets.values():
         bucket.sort(key=lambda r: r.id)
         for listing in bucket:
             if since is not None and _as_utc(listing.scraped_at) < since:
+                continue
+            if listing.id in flagged_ids or listing.id in paired_ids:
                 continue
 
             # Best (lowest-id) matching candidate that is not already flagged
@@ -233,11 +277,9 @@ def mark_duplicates_batch(
             for candidate in bucket:
                 if candidate.id == listing.id or candidate.source == listing.source:
                     continue
-                if candidate.id in flagged_ids:
+                if candidate.id in flagged_ids or candidate.id in paired_ids:
                     continue
-                if not _price_match(listing, candidate):
-                    continue
-                if not _mileage_match(listing, candidate):
+                if not _strict_match(listing, candidate):
                     continue
                 if best is None or candidate.id < best.id:
                     best = candidate
@@ -257,6 +299,7 @@ def mark_duplicates_batch(
                 }
             )
             flagged_ids.add(int(lower.id))
+            paired_ids.add(int(higher.id))
             total_marked += 1
 
             log.info(
@@ -299,6 +342,13 @@ def mark_duplicates_batch(
             db.commit()
 
     log.info("dedup_batch_complete", total_marked=total_marked)
+    # Duplicates change the live listing set every aggregate reads — drop cache.
+    try:
+        from app.utils.stats_cache import invalidate_stats_cache
+
+        invalidate_stats_cache(db)
+    except Exception:
+        log.warning("stats_cache_invalidate_failed", exc_info=True)
     return total_marked
 
 

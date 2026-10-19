@@ -267,7 +267,22 @@ jobs:
           ).fetchone()[0]
           print("laptop db rows:", rows)
 
-          with open(dst, "rb") as fin, gzip.open("autolens.db.gz", "wb") as fout:
+          # Never publish account/PII tables. The merge path only needs listings.
+          con = sqlite3.connect(dst)
+          for table in (
+              "platform_users", "user_invites", "market_alerts",
+              "market_alert_matches", "user_notifications", "user_feedback",
+              "analytics_events", "dealer_profiles",
+              "push_subscriptions", "notification_delivery_log",
+          ):
+              try:
+                  con.execute(f'DELETE FROM "{table}"')
+              except sqlite3.OperationalError:
+                  pass
+          con.commit()
+          con.close()
+
+          with open(dst, "rb") as fin, gzip.open("motormila.db.gz", "wb") as fout:
               shutil.copyfileobj(fin, fout)
 
           token = os.environ["GH_TOKEN"]
@@ -286,18 +301,20 @@ jobs:
           )
           with urllib.request.urlopen(req) as resp:
               release = json.load(resp)
-          with open("autolens.db.gz", "rb") as fh:
+          with open("motormila.db.gz", "rb") as fh:
               payload = fh.read()
-          upload = urllib.request.Request(
-              f"https://uploads.github.com/repos/{repo}/releases/"
-              f"{release['id']}/assets?name=autolens.db.gz",
-              data=payload,
-              headers={"Authorization": f"Bearer {token}",
-                       "Content-Type": "application/gzip"},
-              method="POST",
-          )
-          with urllib.request.urlopen(upload) as resp:
-              print("published", tag, "(asset autolens.db.gz)")
+          for asset_name in ("motormila.db.gz", "autolens.db.gz"):  # legacy name second
+              upload = urllib.request.Request(
+                  f"https://uploads.github.com/repos/{repo}/releases/"
+                  f"{release['id']}/assets?name={asset_name}",
+                  data=payload,
+                  headers={"Authorization": f"Bearer {token}",
+                           "Content-Type": "application/gzip"},
+                  method="POST",
+              )
+              with urllib.request.urlopen(upload):
+                  pass
+          print("published", tag, "(assets motormila.db.gz + autolens.db.gz)")
           PY
 
       # Hand the snapshots to the hosted deploy job (it needs no DB access —

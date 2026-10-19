@@ -1,6 +1,16 @@
-# Neon-first: hourly /health + /pipeline/status probes are small bounded reads
-# (ScrapeRun table only) — negligible egress on Neon. Public browsing reads R2
-# snapshots, not this API.
+# Monitor the two paths Motormila actually serves from.
+#
+#   1. Neon path  — HF Space /health + /pipeline/status (the primary database).
+#   2. Live path  — Vercel site + the public snapshot manifest, which is what
+#                   users and scrapers read. During a Neon outage this is the
+#                   only path that matters.
+#
+# The monitor used to probe only the HF Space, so the whole Neon quota outage
+# turned it into a permanently red workflow (503 every hour) while the public
+# site kept serving fresh data. A monitor that is always red stops being read,
+# so real regressions were getting lost in the noise. It now degrades to the
+# live path when Neon is unavailable, and only fails when users are actually
+# affected.
 name: Monitor Vehicle Pipeline
 
 on:
@@ -12,8 +22,16 @@ permissions:
   contents: read
 
 jobs:
+  neon-guard:
+    name: Skip when Neon transfer quota is exhausted
+    uses: ./.github/workflows/probe-neon.yml
+    secrets: inherit
+
   pipeline-health:
+    name: Neon pipeline health
     runs-on: ubuntu-latest
+    needs: neon-guard
+    if: ${{ needs.neon-guard.outputs.available == 'true' }}
     steps:
       - name: Check backend health and scrape freshness
         env:
@@ -53,3 +71,112 @@ jobs:
             echo "::error::Scrape pipeline is ${overall}; ${delayed} source(s) are delayed."
             exit 1
           fi
+
+  live-site-health:
+    name: Live site and snapshot freshness
+    runs-on: ubuntu-latest
+    needs: neon-guard
+    # Always runs: it is the check that stays meaningful while Neon is down,
+    # and it is cheap (one HTML shell + one small manifest).
+    if: ${{ always() && !cancelled() }}
+    steps:
+      - name: Check the public site and its snapshot manifest
+        env:
+          SITE_URL: https://motormila.vercel.app
+          # A full catalog export runs on the Manus merge cadence (3x daily).
+          # Allow generous slack so a slow-but-healthy run is not paged on.
+          MAX_SNAPSHOT_AGE_HOURS: "12"
+        run: |
+          set -euo pipefail
+
+          site_code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 25 "$SITE_URL/")
+          echo "Site HTTP ${site_code}"
+          if [ "$site_code" -ge 500 ]; then
+            echo "::error::Live site is down (HTTP ${site_code})."
+            exit 1
+          fi
+
+          manifest_code=$(curl -sS -o manifest.json -w "%{http_code}" --max-time 25 \
+            "$SITE_URL/snapshots/latest/manifest.json")
+          echo "Manifest HTTP ${manifest_code}"
+          if [ "$manifest_code" -ge 400 ]; then
+            echo "::error::Public snapshot manifest is unavailable (HTTP ${manifest_code})."
+            exit 1
+          fi
+
+          listing_count=$(jq -r '.listing_count // 0' manifest.json)
+          generated_at=$(jq -r '.generated_at // ""' manifest.json)
+          echo "listing_count=${listing_count} generated_at=${generated_at}"
+
+          if [ "${listing_count}" -lt 1000 ]; then
+            echo "::error::Public catalog is implausibly small (${listing_count} listings)."
+            exit 1
+          fi
+
+          # Every file the manifest advertises must actually be fetchable, or
+          # the SPA silently falls back to empties for that surface. HEAD only:
+          # listing-catalog-part-*.json is tens of MB and a GET would download
+          # the whole catalog just to check it exists.
+          missing=0
+          while IFS= read -r name; do
+            [ -z "$name" ] && continue
+            code=$(curl -sS -I -o /dev/null -w "%{http_code}" --max-time 25 \
+              "$SITE_URL/snapshots/latest/$name")
+            if [ "$code" -ge 400 ]; then
+              echo "::error::Manifest file missing on the live site: ${name} (HTTP ${code})"
+              missing=$((missing + 1))
+            fi
+          done < <(jq -r '.files[]?' manifest.json)
+          if [ "$missing" -gt 0 ]; then
+            exit 1
+          fi
+
+          age_hours=$(python3 -c "
+          import datetime as dt, sys
+          raw = sys.argv[1]
+          try:
+              gen = dt.datetime.fromisoformat(raw.replace('Z', '+00:00'))
+          except Exception:
+              print(-1); raise SystemExit
+          if gen.tzinfo is None:
+              gen = gen.replace(tzinfo=dt.timezone.utc)
+          delta = dt.datetime.now(dt.timezone.utc) - gen
+          print(round(delta.total_seconds() / 3600.0, 2))
+          " "$generated_at")
+          echo "Snapshot age: ${age_hours}h (budget ${MAX_SNAPSHOT_AGE_HOURS}h)"
+
+          if [ "$age_hours" = "-1" ]; then
+            echo "::error::Could not parse manifest generated_at (${generated_at})."
+            exit 1
+          fi
+          if awk "BEGIN{exit !($age_hours > $MAX_SNAPSHOT_AGE_HOURS)}"; then
+            echo "::error::Public snapshots are stale: ${age_hours}h old (budget ${MAX_SNAPSHOT_AGE_HOURS}h)."
+            exit 1
+          fi
+
+          if [ "${{ needs.neon-guard.outputs.available }}" = "true" ]; then
+            echo "Live site healthy. Neon is available too — both paths checked."
+          else
+            echo "::notice::Neon is quota-blocked, so this run verified the live site + snapshots path only."
+          fi
+          echo "Live site healthy."
+
+  # The safety net going red is useless if nobody is paged. Fire Slack whenever
+  # either health job fails (or is cancelled unexpectedly).
+  alert-on-failure:
+    name: Notify Slack on monitor failure
+    runs-on: ubuntu-latest
+    needs: [pipeline-health, live-site-health]
+    if: ${{ failure() || cancelled() }}
+    steps:
+      - name: Notify Slack
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "::warning::SLACK_WEBHOOK_URL unset — monitor failure not alerted"
+            exit 0
+          fi
+          curl -fsS -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"🚨 Motormila pipeline monitor failed (run ${GITHUB_RUN_ID}). Neon or live site is unhealthy.\"}" \
+            "$SLACK_WEBHOOK_URL"

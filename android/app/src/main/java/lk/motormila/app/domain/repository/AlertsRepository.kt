@@ -24,5 +24,7 @@ interface AlertsRepository {
     fun observeNotifications(): Flow<List<AppNotification>>
     suspend fun notifications(limit: Int = 30): List<AppNotification>
     suspend fun markNotificationRead(id: Int)
+    /** POST /notifications/read-all — returns count marked. */
+    suspend fun markAllNotificationsRead(): Int
     suspend fun unreadCount(): Flow<Int>
 }

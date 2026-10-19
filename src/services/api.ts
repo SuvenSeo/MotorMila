@@ -41,6 +41,7 @@ import type {
   ProVehicleLane,
   ProVehicleLaneFilters,
 } from "@/types/pro";
+import { canonicalizeMake, canonicalizeModel, isJunkMake, modelContainsForeignMake } from "@/lib/makeNormalization";
 import { normalizeVehicleImageUrlWithBase, pickVehicleImageUrl } from "@/lib/listingImage";
 import { formatPriceLkrMillions } from "@/lib/formatting";
 import { authHeaders } from "@/lib/authToken";
@@ -107,7 +108,11 @@ export function resolveFetchCredentials(apiBase: string = API_BASE): RequestCred
 
 function resolveSnapshotBase() {
   const configured = String(import.meta.env.VITE_SNAPSHOT_BASE_URL || "").trim();
-  return configured ? configured.replace(/\/+$/, "") : "";
+  // "off" disables snapshot reads entirely (live API only; used by unit tests).
+  if (/^(off|none|false|0)$/i.test(configured)) return "";
+  // Same-origin snapshots are the natural default: every deployment bundles
+  // public/snapshots/latest, so snapshot reads must not require an explicit base.
+  return configured ? configured.replace(/\/+$/, "") : "/snapshots/latest";
 }
 
 function resolveSnapshotOnly(): boolean {
@@ -570,9 +575,15 @@ function normalizeListing(raw: JsonRecord): CarListing {
   const transmission = normalizeTransmissionValue(raw?.transmission);
   const fuelType = normalizeFuelValue(raw?.fuel_type);
   const bodyType = normalizeBodyTypeValue(raw?.body_type);
+  // Collapse duplicate/typo/junk make spellings at the ingest boundary so the
+  // combobox, model pickers, and filters all see one brand.
+  const make = canonicalizeMake(raw?.make);
+  const model = canonicalizeModel(raw?.model);
 
   return {
     ...raw,
+    make,
+    model,
     url: listingUrl,
     detail_url: detailUrl,
     external_url: externalUrl,
@@ -655,32 +666,45 @@ export function dedupeListings(rows: CarListing[]): CarListing[] {
 
 const snapshotJsonCache = new Map<string, Promise<unknown>>();
 let snapshotCatalogPromise: Promise<CarListing[] | null> | null = null;
+let snapshotCatalogFetchedAt = 0;
+/** Refresh the offline catalog at most this often (ms). */
+const SNAPSHOT_CATALOG_TTL_MS = 15 * 60 * 1000;
 
-async function fetchSnapshotJSON<T>(fileName: string): Promise<T> {
-  if (!SNAPSHOT_BASE) {
-    throw new Error("Snapshot base is not configured");
-  }
-
+export async function fetchSnapshotJSON<T>(fileName: string): Promise<T> {
   const normalizedFile = fileName.replace(/^\/+/, "");
-  const url = new URL(`${SNAPSHOT_BASE}/${normalizedFile}`, window.location.origin).toString();
-  const cached = snapshotJsonCache.get(url);
+  // Primary: the configured snapshot base (usually the production CDN, so
+  // previews read fresh data). Fallback: the same-origin bundled snapshots,
+  // so a deployment keeps working when the CDN doesn't have a file yet
+  // (e.g. a newly added export that the pipeline hasn't published).
+  const primaryUrl = new URL(`${SNAPSHOT_BASE}/${normalizedFile}`, window.location.origin).toString();
+  const sameOriginUrl = new URL(`/snapshots/latest/${normalizedFile}`, window.location.origin).toString();
+  const urls = sameOriginUrl === primaryUrl ? [primaryUrl] : [primaryUrl, sameOriginUrl];
+
+  const cached = snapshotJsonCache.get(primaryUrl);
   if (cached) return cached as Promise<T>;
 
-  const request = fetch(url, {
-    headers: { Accept: "application/json" },
-  })
-    .then(async (response) => {
-      if (!response.ok) {
-        throw new Error(`Snapshot ${normalizedFile} failed with ${response.status}`);
+  const request = (async (): Promise<T> => {
+    let lastError: unknown = new Error(`Snapshot ${normalizedFile} unavailable`);
+    for (const url of urls) {
+      try {
+        const response = await fetch(url, {
+          headers: { Accept: "application/json" },
+        });
+        if (!response.ok) {
+          throw new Error(`Snapshot ${normalizedFile} failed with ${response.status}`);
+        }
+        return (await response.json()) as T;
+      } catch (error) {
+        lastError = error;
       }
-      return response.json() as Promise<T>;
-    })
-    .catch((error) => {
-      snapshotJsonCache.delete(url);
-      throw error;
-    });
+    }
+    throw lastError;
+  })().catch((error) => {
+    snapshotJsonCache.delete(primaryUrl);
+    throw error;
+  });
 
-  snapshotJsonCache.set(url, request);
+  snapshotJsonCache.set(primaryUrl, request);
   return request as Promise<T>;
 }
 
@@ -710,9 +734,29 @@ async function getIncomingSnapshotListings(): Promise<CarListing[]> {
   );
 }
 
-function getSnapshotListingCatalog(): Promise<CarListing[] | null> {
-  if (!SNAPSHOT_BASE) return Promise.resolve(null);
+/**
+ * LEGACY full-catalogue loader (tens of MB). Only used when the idx/ layout
+ * is not published; once idx/manifest.json exists it always resolves null so
+ * no code path can pull the whole catalogue into the browser.
+ */
+async function getSnapshotListingCatalog(): Promise<CarListing[] | null> {
+  if (!SNAPSHOT_BASE) return null;
+  if (await hasSnapshotIndex()) return null;
+  return loadLegacySnapshotCatalog();
+}
+
+function loadLegacySnapshotCatalog(): Promise<CarListing[] | null> {
+  // TTL: the catalog was previously cached forever, so a long session never
+  // saw refreshed snapshot data.
+  const now = Date.now();
+  if (
+    snapshotCatalogPromise &&
+    (!snapshotCatalogFetchedAt || now - snapshotCatalogFetchedAt >= SNAPSHOT_CATALOG_TTL_MS)
+  ) {
+    snapshotCatalogPromise = null;
+  }
   if (!snapshotCatalogPromise) {
+    snapshotCatalogFetchedAt = now;
     snapshotCatalogPromise = readSnapshot<{
       items?: unknown[];
       parts?: string[];
@@ -753,6 +797,235 @@ function getSnapshotListingCatalog(): Promise<CarListing[] | null> {
     });
   }
   return snapshotCatalogPromise;
+}
+
+// ── Per-entity snapshot index (idx/) ─────────────────────────────────────────
+// scripts/build-snapshot-indexes.mjs splits the catalogue into per-listing
+// shards and make/model/district indexes so a page view downloads a few KB
+// instead of the whole catalogue (~38 MB br). When idx/ is absent (export not
+// yet run with the index step) we fall back to the legacy full catalogue.
+
+interface SnapshotIndexManifest {
+  version: number;
+  shard_size: number;
+  listing_count: number;
+}
+
+interface SnapshotScopedIndex {
+  total: number;
+  items: CarListing[];
+  /** Compact rows for every listing in scope (model indexes only). */
+  comps?: CarListing[];
+  raw: JsonRecord;
+}
+
+let snapshotIndexManifestPromise: Promise<SnapshotIndexManifest | null> | null = null;
+let snapshotIndexManifestAt = 0;
+
+/** Same compact key as scripts/build-snapshot-indexes.mjs. */
+export function snapshotIndexKey(value: unknown): string {
+  return String(value ?? "")
+    .normalize("NFKD")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function makeIndexKey(make: unknown): string {
+  return snapshotIndexKey(canonicalizeMake(make) || make);
+}
+
+function modelIndexKey(model: unknown): string {
+  return snapshotIndexKey(canonicalizeModel(model) || model);
+}
+
+function districtIndexKey(district: unknown): string {
+  return snapshotIndexKey(normalizeDistrictName(String(district ?? "")) || district);
+}
+
+function getSnapshotIndexManifest(): Promise<SnapshotIndexManifest | null> {
+  if (!SNAPSHOT_BASE) return Promise.resolve(null);
+  const now = Date.now();
+  if (snapshotIndexManifestPromise && now - snapshotIndexManifestAt >= SNAPSHOT_CATALOG_TTL_MS) {
+    snapshotIndexManifestPromise = null;
+  }
+  if (!snapshotIndexManifestPromise) {
+    snapshotIndexManifestAt = now;
+    snapshotIndexManifestPromise = readSnapshot<JsonRecord>("idx/manifest.json").then((raw) => {
+      if (!raw || Number(raw.version) !== 1 || !(Number(raw.shard_size) > 0)) return null;
+      return {
+        version: 1,
+        shard_size: Number(raw.shard_size),
+        listing_count: Number(raw.listing_count || 0),
+      };
+    });
+  }
+  return snapshotIndexManifestPromise;
+}
+
+async function readIndexFile<T>(relPath: string): Promise<T | null> {
+  const manifest = await getSnapshotIndexManifest();
+  if (!manifest) return null;
+  return readSnapshot<T>(`idx/${relPath}`);
+}
+
+function normalizeIndexRows(rows: unknown): CarListing[] {
+  return Array.isArray(rows)
+    ? rows.map((row) => normalizeListing(asJsonRecord(row))).filter((row) => Number(row.id) > 0)
+    : [];
+}
+
+/** True when the idx/ layout is published; callers then never touch the full catalogue. */
+async function hasSnapshotIndex(): Promise<boolean> {
+  return (await getSnapshotIndexManifest()) !== null;
+}
+
+async function getSnapshotListingById(id: string | number): Promise<CarListing | null> {
+  const numeric = Number(id);
+  if (!Number.isInteger(numeric) || numeric <= 0) return null;
+  const manifest = await getSnapshotIndexManifest();
+  if (!manifest) return null;
+  const incoming = await getIncomingSnapshotListings();
+  const fresh = incoming.find((row) => Number(row.id) === numeric);
+  if (fresh) return fresh;
+  const shard = await readSnapshot<{ items?: unknown[] }>(
+    `idx/listings/${Math.floor(numeric / manifest.shard_size)}.json`,
+  );
+  const row = Array.isArray(shard?.items)
+    ? shard!.items.find((item) => Number(asJsonRecord(item).id) === numeric)
+    : undefined;
+  return row ? normalizeListing(asJsonRecord(row)) : null;
+}
+
+function compsToListings(raw: JsonRecord, make: string, model: string): CarListing[] {
+  const fields = Array.isArray(raw.comp_fields) ? (raw.comp_fields as string[]) : [];
+  const rows = Array.isArray(raw.comps) ? (raw.comps as unknown[][]) : [];
+  return rows.map((tuple) => {
+    const record: JsonRecord = { make, model };
+    fields.forEach((field, index) => {
+      const value = tuple[index];
+      if (value !== null && value !== undefined) record[field] = value;
+    });
+    return record as unknown as CarListing;
+  });
+}
+
+async function getSnapshotModelIndex(make: string, model: string): Promise<SnapshotScopedIndex | null> {
+  const mk = makeIndexKey(make);
+  const mo = modelIndexKey(model);
+  if (!mk || !mo) return null;
+  const raw = await readIndexFile<JsonRecord>(`models/${mk}/${mo}.json`);
+  if (!raw) return null;
+  const displayMake = String(raw.make || make);
+  const displayModel = String(raw.model || model);
+  return {
+    total: Number(raw.total || 0),
+    items: normalizeIndexRows(raw.items),
+    comps: compsToListings(raw, displayMake, displayModel),
+    raw,
+  };
+}
+
+async function getSnapshotMakeIndex(make: string): Promise<SnapshotScopedIndex | null> {
+  const mk = makeIndexKey(make);
+  if (!mk) return null;
+  const raw = await readIndexFile<JsonRecord>(`makes/${mk}.json`);
+  if (!raw) return null;
+  return { total: Number(raw.total || 0), items: normalizeIndexRows(raw.items), raw };
+}
+
+async function getSnapshotDistrictIndex(district: string): Promise<SnapshotScopedIndex | null> {
+  const dk = districtIndexKey(district);
+  if (!dk) return null;
+  const raw = await readIndexFile<JsonRecord>(`districts/${dk}.json`);
+  if (!raw) return null;
+  return { total: Number(raw.listing_count || 0), items: normalizeIndexRows(raw.items), raw };
+}
+
+async function getSnapshotLatestIndex(): Promise<SnapshotScopedIndex | null> {
+  const raw = await readIndexFile<JsonRecord>("latest.json");
+  if (!raw) return null;
+  const items = overlayIncomingListings(normalizeIndexRows(raw.items), await getIncomingSnapshotListings());
+  return { total: Number(raw.total || items.length), items, raw };
+}
+
+async function getSnapshotAggregates(): Promise<JsonRecord | null> {
+  return readIndexFile<JsonRecord>("aggregates.json");
+}
+
+/**
+ * Narrowest published index for a filter set: make+model, then make, then
+ * district, then the newest-N market index. Returns null when idx/ is absent.
+ */
+async function getScopedSnapshotIndex(filters: Partial<FilterState>): Promise<SnapshotScopedIndex | null> {
+  if (!(await hasSnapshotIndex())) return null;
+  const make = String(filters.make || "").trim();
+  const model = String(filters.model || "").trim();
+  const district = String(filters.district || "").trim();
+  if (make && model) {
+    const idx = await getSnapshotModelIndex(make, model);
+    return idx ?? { total: 0, items: [], comps: [], raw: {} };
+  }
+  if (make) {
+    const idx = await getSnapshotMakeIndex(make);
+    return idx ?? { total: 0, items: [], raw: {} };
+  }
+  if (district) {
+    const idx = await getSnapshotDistrictIndex(district);
+    if (idx) return idx;
+  }
+  return getSnapshotLatestIndex();
+}
+
+/** Filter + paginate inside a scoped index; scales the total when the index is a capped sample. */
+function filterScopedSnapshot(
+  index: SnapshotScopedIndex,
+  filters: FilterState,
+  pageSize = LISTINGS_PAGE_SIZE,
+): { listings: CarListing[]; total: number } {
+  const result = filterSnapshotListings(index.items, filters, pageSize);
+  if (index.items.length > 0 && index.total > index.items.length) {
+    // The index holds the newest N rows; estimate the full count from the
+    // sample's match rate instead of under-reporting.
+    const matchedSample = index.items.filter((listing) => matchesSnapshotFilters(listing, filters)).length;
+    const estimated = Math.round((matchedSample / index.items.length) * index.total);
+    return { listings: result.listings, total: Math.max(result.total, estimated) };
+  }
+  return result;
+}
+
+async function searchSuggestionsFromIndex(q: string, limit: number): Promise<ListingSearchSuggestion[]> {
+  const index = await readIndexFile<{ rows?: unknown[][] }>("search.json");
+  const rows = Array.isArray(index?.rows) ? index!.rows : [];
+  const tokens = String(q || "").toLowerCase().split(/\s+/).map(snapshotIndexKey).filter(Boolean);
+  if (!tokens.length) return [];
+  const out: ListingSearchSuggestion[] = [];
+  for (const row of rows) {
+    const [make, model, , maxYear, medianPrice] = row as [string, string, number, number | null, number | null];
+    const hay = `${snapshotIndexKey(make)} ${snapshotIndexKey(model)} ${snapshotIndexKey(`${make}${model}`)}`;
+    if (!tokens.every((token) => hay.includes(token))) continue;
+    out.push({
+      id: 0,
+      make: String(make),
+      model: String(model),
+      year: Number(maxYear) || 0,
+      price_lkr: toNumberOrNull(medianPrice),
+      source: "snapshot",
+    });
+    if (out.length >= Math.max(1, limit)) break;
+  }
+  return out;
+}
+
+function deriveSourcesFromCounts(rows: { source: string; count: number }[]): ListingSourceStat[] {
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const source = canonicalSource(row.source);
+    if (!source) continue;
+    counts.set(source, (counts.get(source) || 0) + Number(row.count || 0));
+  }
+  return Array.from(counts.entries())
+    .map(([source, count]) => ({ source, label: sourceLabel(source), count }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 }
 
 function normalizeStatsOverview(data: JsonRecord): StatsOverview {
@@ -816,10 +1089,11 @@ function normalizeLiveMarketData(data: JsonRecord): LiveMarketSnapshot {
 
 function normalizeDistrictPricesPayload(data: JsonRecord): DistrictPrice[] {
   const points = Array.isArray(data.points) ? data.points : [];
-  return points.map((point): DistrictPrice => {
+  return points.map((point): DistrictPrice | null => {
     const p = asJsonRecord(point);
     const district = String(p.district || "");
-    const canonical = normalizeDistrictName(district) || district;
+    const canonical = normalizeDistrictName(district);
+    if (!canonical) return null;
     const coords = districtCoords(canonical);
     const rawLat = toNumberOrNull(p.lat);
     const rawLng = toNumberOrNull(p.lng);
@@ -836,7 +1110,7 @@ function normalizeDistrictPricesPayload(data: JsonRecord): DistrictPrice[] {
       top_model: p?.top_model ? String(p.top_model) : undefined,
       top_model_count: toNumberOrNull(p?.top_model_count) ?? undefined,
     };
-  }).filter((p) => Boolean(p.district) && Number.isFinite(p.lat) && Number.isFinite(p.lng));
+  }).filter((p): p is DistrictPrice => Boolean(p) && Boolean(p.district) && Number.isFinite(p.lat) && Number.isFinite(p.lng));
 }
 
 function normalizeListingSourceRows(rows: unknown): ListingSourceStat[] {
@@ -889,6 +1163,11 @@ function normalizeDashboardInsights(data: Record<string, unknown>): DashboardIns
         const price = toNumberOrNull(item.price_lkr);
 
         if (!Number.isFinite(id) || id <= 0 || price === null || price <= 0) {
+          return acc;
+        }
+        // Drop unbrandable rows ("Other brand Other model") so a scrape
+        // artifact can never be surfaced as a headline deal.
+        if (isJunkMake(item.make)) {
           return acc;
         }
 
@@ -949,9 +1228,16 @@ function matchesSnapshotFilters(listing: CarListing, filters: FilterState): bool
   const filterSource = canonicalSource(filters.source);
   if (filterSource && listingSource !== filterSource) return false;
 
-  if (filters.make && String(listing.make || "").toLowerCase() !== String(filters.make).toLowerCase()) return false;
-  if (filters.model && String(listing.model || "").toLowerCase() !== String(filters.model).toLowerCase()) return false;
+  if (filters.make) {
+    const wantedMake = canonicalizeMake(filters.make);
+    if (wantedMake && canonicalizeMake(listing.make) !== wantedMake) return false;
+  }
+  if (filters.model) {
+    const wantedModel = canonicalizeModel(filters.model);
+    if (wantedModel && canonicalizeModel(listing.model) !== wantedModel) return false;
+  }
   if (filters.district && String(listing.district || "").toLowerCase() !== String(filters.district).toLowerCase()) return false;
+  if (filters.fresh_24h && listingTimestamp(listing) < Date.now() - 24 * 60 * 60 * 1000) return false;
   if (filters.year_min && Number(listing.year || 0) < filters.year_min) return false;
   if (filters.year_max && Number(listing.year || 0) > filters.year_max) return false;
   if (filters.mileage_max && Number(listing.mileage_km || 0) > filters.mileage_max) return false;
@@ -1029,7 +1315,7 @@ function filterSnapshotListings(
 function deriveMakes(catalog: CarListing[]): { make: string; count: number }[] {
   const counts = new Map<string, number>();
   for (const listing of catalog) {
-    const make = String(listing.make || "").trim();
+    const make = canonicalizeMake(listing.make);
     if (!make) continue;
     counts.set(make, (counts.get(make) || 0) + 1);
   }
@@ -1039,11 +1325,11 @@ function deriveMakes(catalog: CarListing[]): { make: string; count: number }[] {
 }
 
 function deriveModels(catalog: CarListing[], make: string): { model: string; count: number }[] {
-  const makeKey = String(make || "").trim().toLowerCase();
+  const makeKey = (canonicalizeMake(make) || String(make || "").trim()).toLowerCase();
   const counts = new Map<string, number>();
   for (const listing of catalog) {
-    if (makeKey && String(listing.make || "").toLowerCase() !== makeKey) continue;
-    const model = String(listing.model || "").trim();
+    if (makeKey && canonicalizeMake(listing.make)?.toLowerCase() !== makeKey) continue;
+    const model = canonicalizeModel(listing.model);
     if (!model) continue;
     counts.set(model, (counts.get(model) || 0) + 1);
   }
@@ -1101,14 +1387,14 @@ function buildSnapshotTrendSeries(
   condition?: string,
   district?: string,
 ): PriceTrendSeries {
-  const makeKey = String(make || "").trim().toLowerCase();
-  const modelKey = String(model || "").trim().toLowerCase();
+  const makeKey = (canonicalizeMake(make) || String(make || "").trim()).toLowerCase();
+  const modelKey = (canonicalizeModel(model) || String(model || "").trim()).toLowerCase();
   const conditionKey = normalizeConditionValue(condition) || normalizeConditionValue(normalizeConditionFilter(condition));
   const districtKey = String(district || "").trim().toLowerCase();
 
   const rows = catalog.filter((listing) => {
-    if (makeKey && String(listing.make || "").toLowerCase() !== makeKey) return false;
-    if (modelKey && String(listing.model || "").toLowerCase() !== modelKey) return false;
+    if (makeKey && (canonicalizeMake(listing.make) || "").toLowerCase() !== makeKey) return false;
+    if (modelKey && (canonicalizeModel(listing.model) || "").toLowerCase() !== modelKey) return false;
     if (conditionKey && normalizeConditionValue(listing.condition) !== conditionKey) return false;
     if (districtKey && String(listing.district || "").toLowerCase() !== districtKey) return false;
     return isPricedListing(listing);
@@ -1127,23 +1413,126 @@ function buildSnapshotTrendSeries(
   }
 
   const now = new Date();
-  const month = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
-  const avg = prices.reduce((sum, price) => sum + price, 0) / prices.length;
+  const monthKeys: string[] = [];
+  for (let back = 11; back >= 0; back--) {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - back, 1));
+    monthKeys.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`);
+  }
+  const oldestAllowed = monthKeys[0];
+
+  const pricesByMonth = new Map<string, number[]>();
+  for (const listing of rows) {
+    const price = toNumberOrNull(listing.price_lkr);
+    if (price === null || price < MIN_REASONABLE_PRICE_LKR) continue;
+    const raw = String(listing.first_seen_at || listing.scraped_at || listing.last_seen_at || "");
+    if (!/^\d{4}-\d{2}/.test(raw)) continue;
+    const key = raw.slice(0, 7);
+    if (key < oldestAllowed) continue;
+    const bucket = pricesByMonth.get(key);
+    if (bucket) bucket.push(price);
+    else pricesByMonth.set(key, [price]);
+  }
+
+  // Drop thin months (fewer than 3 priced listings) — a 2-listing "median"
+  // is noise, not a trend.
+  const points = monthKeys
+    .map((month) => {
+      const prices = pricesByMonth.get(month);
+      if (!prices || prices.length < 3) return null;
+      const avg = prices.reduce((sum, price) => sum + price, 0) / prices.length;
+      return {
+        month,
+        median_price: Math.round(median(prices)),
+        avg_price: Math.round(avg),
+        sample_count: prices.length,
+      };
+    })
+    .filter((point): point is NonNullable<typeof point> => point !== null);
+
+  if (points.length === 0) {
+    return {
+      points: [],
+      coverage_scope: "none",
+      coverage_note: "No matching listings in the current public snapshot.",
+    };
+  }
+
+  if (points.length === 1) {
+    return {
+      points,
+      coverage_scope: "current_snapshot",
+      coverage_note:
+        "Only one month of matching listings in the public snapshot — pick a broader lane for a trajectory.",
+    };
+  }
 
   return {
-    points: [{
-      month,
-      median_price: Math.round(median(prices)),
-      avg_price: Math.round(avg),
-      sample_count: prices.length,
-    }],
-    coverage_scope: "current_snapshot",
-    coverage_note: "Current public snapshot only; historical trend data needs the live API.",
+    points,
+    coverage_scope: "exact",
+    coverage_note: `Monthly medians from the public Sri Lanka snapshot (${points[0].month} – ${points[points.length - 1].month}).`,
   };
+}
+
+// ── Live API circuit breaker ─────────────────────────────────────────────────
+// When the backend is down (5xx / timeout / network), public reads fail fast
+// for a few minutes so every widget switches to snapshots immediately instead
+// of each waiting through timeouts and retries. Remembered across reloads in
+// sessionStorage. Authenticated/user paths are never short-circuited.
+const API_DOWN_STORAGE_KEY = "motormila.api_down_until";
+export const API_DOWN_COOLDOWN_MS = 3 * 60 * 1000;
+const PUBLIC_READ_TIMEOUT_MS = 10_000;
+const PRIVATE_PATH_RE = /^\/(auth|alerts|pro|dealer|admin|me|billing|profile|watchlist|users|account|my-|feedback|pipeline\/trigger)/;
+let apiDownUntil = (() => {
+  try {
+    return typeof sessionStorage !== "undefined" ? Number(sessionStorage.getItem(API_DOWN_STORAGE_KEY) || 0) : 0;
+  } catch {
+    return 0;
+  }
+})();
+
+function isPublicReadPath(path: string): boolean {
+  return !PRIVATE_PATH_RE.test(path) && !/\/(seller-profile|mine)(\/|$)/.test(path);
+}
+
+/** True while the live API is known to be failing (snapshot mode). */
+export function isLiveApiDegraded(now = Date.now()): boolean {
+  return apiDownUntil > now;
+}
+
+export function markLiveApiDown(now = Date.now()): void {
+  apiDownUntil = now + API_DOWN_COOLDOWN_MS;
+  try {
+    sessionStorage.setItem(API_DOWN_STORAGE_KEY, String(apiDownUntil));
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+export function resetLiveApiHealth(): void {
+  apiDownUntil = 0;
+  try {
+    sessionStorage.removeItem(API_DOWN_STORAGE_KEY);
+  } catch {
+    /* storage unavailable */
+  }
 }
 
 async function fetchJSON<T>(path: string, params?: QueryParams, headers?: Record<string, string>): Promise<T> {
   if (USE_MOCK) throw new Error("Mock mode is disabled");
+
+  // /alerts/match is a POST endpoint. Issuing it as a GET returned 405 and
+  // pinned the alerts page on "Loading alerts". Upgrade the verb here so the
+  // client is correct against every deployed API build, including ones that do
+  // not yet carry the server-side GET alias.
+  if (path === "/alerts/match") {
+    return postJSON<T>(path, { ...(params || {}) }, headers);
+  }
+
+  // The API accepts the alert token as a query param or the X-Alert-Token
+  // header, but prefers the header when a Motormila session is also present.
+  if (path === "/alerts" && !headers?.["X-Alert-Token"] && params?.token) {
+    return fetchJSON<T>(path, params, { ...headers, "X-Alert-Token": String(params.token) });
+  }
 
   const url = new URL(`${API_BASE}${path}`, window.location.origin);
   if (params) {
@@ -1154,8 +1543,16 @@ async function fetchJSON<T>(path: string, params?: QueryParams, headers?: Record
     });
   }
 
-  const timeoutMs = API_BASE.includes("hf.space") ? HF_COLD_START_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
-  const maxAttempts = API_BASE.includes("hf.space") ? 3 : 2;
+  const publicRead = isPublicReadPath(path);
+  if (publicRead && isLiveApiDegraded()) {
+    throw new APIError(503, "Live API temporarily unavailable; serving snapshots.");
+  }
+  // Public reads all have snapshot fallbacks: one short attempt (plus one
+  // retry on a plain network blip) instead of 3 x 60 s on a cold/broken Space.
+  const timeoutMs = publicRead
+    ? PUBLIC_READ_TIMEOUT_MS
+    : API_BASE.includes("hf.space") ? HF_COLD_START_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
+  const maxAttempts = publicRead ? 2 : API_BASE.includes("hf.space") ? 3 : 2;
   const credentials = resolveFetchCredentials();
   let lastError: unknown;
 
@@ -1174,13 +1571,23 @@ async function fetchJSON<T>(path: string, params?: QueryParams, headers?: Record
         throw await parseApiError(response);
       }
 
-      return await response.json();
+      const payload = await response.json();
+      if (publicRead && apiDownUntil) resetLiveApiHealth();
+      return payload;
     } catch (error) {
       lastError = error;
       const isAbort = error instanceof DOMException && error.name === "AbortError";
       const isServerError = error instanceof APIError && error.status >= 500;
       const isNetworkError = error instanceof TypeError;
       const retryable = isAbort || isServerError || isNetworkError;
+      if (publicRead && retryable) {
+        // Trip the breaker on the first 5xx/timeout; only a bare network
+        // error on the first attempt gets one retry.
+        if (!isNetworkError || attempt === maxAttempts - 1) {
+          markLiveApiDown();
+          throw error;
+        }
+      }
       if (!retryable || attempt === maxAttempts - 1) {
         throw error;
       }
@@ -1250,6 +1657,8 @@ export const getStats = async (): Promise<StatsOverview> => {
   if (snapshot) {
     const stats = normalizeStatsOverview(snapshot);
     if (stats.good_deals_count > 0) return stats;
+    const aggregates = await getSnapshotAggregates();
+    if (aggregates) return { ...stats, good_deals_count: Number(aggregates.good_deals_count || 0) };
     const catalog = await getSnapshotListingCatalog();
     if (!catalog) return stats;
     const goodDeals = catalog.filter((row) => Number(row.deal_score || 0) >= 8).length;
@@ -1279,6 +1688,40 @@ export const getListings = async (filters: FilterState): Promise<{ listings: Car
     ...filters,
     vehicle_category: filters.vehicle_category || "cars",
   };
+  // Live API is the first choice (see offlineValuation.ts). Snapshot is the
+  // fallback for offline / SNAPSHOT_ONLY — not the primary catalog.
+  if (!SNAPSHOT_ONLY) {
+    try {
+      const data = await fetchJSON<JsonRecord>("/listings", {
+        ...effectiveFilters,
+        size: LISTINGS_PAGE_SIZE,
+      });
+      const items = Array.isArray(data.items) ? data.items : [];
+      let listings = dedupeListings(items.map((item) => normalizeListing(asJsonRecord(item))));
+      // The backend may not support fresh_24h; apply it client-side to ensure
+      // the "New in 24h" filter actually filters. We use the same matcher as
+      // the snapshot path for consistency.
+      if (effectiveFilters.fresh_24h) {
+        const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+        listings = listings.filter((listing) => listingTimestamp(listing) >= cutoff);
+        // If no listings have valid timestamps, fall back to showing all rather
+        // than an empty result (data quality issue, not a filter issue).
+        if (listings.length === 0 && items.length > 0) {
+          listings = dedupeListings(items.map((item) => normalizeListing(asJsonRecord(item))));
+        }
+      }
+      return {
+        listings,
+        total: effectiveFilters.fresh_24h ? listings.length : (Number(data.total) || 0),
+      };
+    } catch (error) {
+      // Fall through to snapshot when live is unreachable.
+      if (import.meta.env.DEV) console.warn("live listings failed, using snapshot", error);
+    }
+  }
+
+  const scoped = await getScopedSnapshotIndex(effectiveFilters);
+  if (scoped) return filterScopedSnapshot(scoped, effectiveFilters);
   const catalog = await getSnapshotListingCatalog();
   if (catalog?.length) return filterSnapshotListings(catalog, effectiveFilters);
   if (SNAPSHOT_ONLY) {
@@ -1287,15 +1730,8 @@ export const getListings = async (filters: FilterState): Promise<{ listings: Car
     return { listings: [], total: 0 };
   }
 
-  const data = await fetchJSON<JsonRecord>("/listings", {
-    ...effectiveFilters,
-    size: LISTINGS_PAGE_SIZE,
-  });
-  const items = Array.isArray(data.items) ? data.items : [];
-  return {
-    listings: dedupeListings(items.map((item) => normalizeListing(asJsonRecord(item)))),
-    total: Number(data.total) || 0,
-  };
+  // Live failed and no snapshot — surface the error rather than a silent empty list.
+  throw new APIError(503, "Listings are temporarily unavailable.");
 };
 
 export const sendFeedback = async (payload: FeedbackInput): Promise<FeedbackReceipt> => {
@@ -1340,6 +1776,13 @@ export const getListing = async (id: string | number) => {
 };
 
 async function loadListing(id: string | number) {
+  if (await hasSnapshotIndex()) {
+    const fromShard = await getSnapshotListingById(id);
+    if (fromShard) return fromShard;
+    if (SNAPSHOT_ONLY) refuseLiveApiFallback(`listing ${id}`);
+    const data = await fetchJSON<JsonRecord>(`/listings/${id}`);
+    return normalizeListing(data);
+  }
   const catalog = await getSnapshotListingCatalog();
   if (catalog) {
     const match = catalog.find((listing) => String(listing.id) === String(id));
@@ -1432,6 +1875,16 @@ export const getListingFmv = async (id: string | number): Promise<ListingFmvDeta
     };
   } catch {
     const { predictFmvOffline } = await import("@/lib/offlineValuation");
+    if (await hasSnapshotIndex()) {
+      const target = await getSnapshotListingById(id);
+      const modelIdx = target ? await getSnapshotModelIndex(String(target.make || ""), String(target.model || "")) : null;
+      if (target && modelIdx) {
+        // Comps share make/model; align their display names with the target.
+        const comps = (modelIdx.comps || []).map((row) => ({ ...row, make: target.make, model: target.model }) as CarListing);
+        return predictFmvOffline(comps, target);
+      }
+      throw new Error("FMV unavailable (server unreachable and listing not in snapshot).");
+    }
     const catalog = await getSnapshotListingCatalog();
     const listing = catalog?.find((row) => String(row.id) === String(id));
     if (catalog && listing) return predictFmvOffline(catalog, listing);
@@ -1530,6 +1983,19 @@ export const getSellerTrustProfile = async (id: string | number): Promise<Seller
 };
 
 export const getSimilarListings = async (id: string | number) => {
+  if (await hasSnapshotIndex()) {
+    const base = await getSnapshotListingById(id);
+    if (base) {
+      const modelIdx = await getSnapshotModelIndex(String(base.make || ""), String(base.model || ""));
+      return sortSnapshotListings(
+        (modelIdx?.items || []).filter((listing) => listing.id !== base.id),
+        "deal_score",
+      ).slice(0, 8);
+    }
+    if (SNAPSHOT_ONLY) return [];
+    const live = await fetchJSON<JsonRecord[]>(`/listings/${id}/similar`);
+    return (live || []).map(normalizeListing);
+  }
   const catalog = await getSnapshotListingCatalog();
   if (catalog) {
     const base = catalog.find((listing) => String(listing.id) === String(id));
@@ -1562,7 +2028,8 @@ export const getDistrictPrices = async (): Promise<DistrictPrice[]> => {
 function normalizeDistrictVelocityPayload(raw: Record<string, unknown>): DistrictVelocityData {
   const points: DistrictVelocityPoint[] = Array.isArray(raw?.points)
     ? (raw.points as Record<string, unknown>[]).map((p) => {
-        const district = normalizeDistrictName(String(p?.district ?? "")) || String(p?.district ?? "");
+        const district = normalizeDistrictName(String(p?.district ?? ""));
+        if (!district) return null;
         const coords = districtCoords(district);
         const rawLat = Number(p?.lat ?? 0);
         const rawLng = Number(p?.lng ?? 0);
@@ -1574,7 +2041,7 @@ function normalizeDistrictVelocityPayload(raw: Record<string, unknown>): Distric
           new_7d_count: Math.round(Number(p?.new_7d_count ?? 0)),
           velocity_score: Number(p?.velocity_score ?? 0),
         };
-      }).filter((p) => Boolean(p.district) && Number.isFinite(p.lat) && Number.isFinite(p.lng))
+      }).filter((p) => Boolean(p) && Boolean(p.district) && Number.isFinite(p.lat) && Number.isFinite(p.lng)) as DistrictVelocityPoint[]
     : [];
   return {
     points,
@@ -1583,12 +2050,40 @@ function normalizeDistrictVelocityPayload(raw: Record<string, unknown>): Distric
 }
 
 async function deriveDistrictVelocityFromCatalog(): Promise<DistrictVelocityData | null> {
+  const aggregates = await getSnapshotAggregates();
+  if (aggregates && Array.isArray(aggregates.districts)) {
+    const merged = new Map<string, { listing_count: number; new_7d_count: number }>();
+    for (const row of aggregates.districts as JsonRecord[]) {
+      const district = normalizeDistrictName(String(row.district || ""));
+      if (!district || !districtCoords(district)) continue;
+      const entry = merged.get(district) || { listing_count: 0, new_7d_count: 0 };
+      entry.listing_count += Number(row.listing_count || 0);
+      entry.new_7d_count += Number(row.new_7d_count || 0);
+      merged.set(district, entry);
+    }
+    if (merged.size === 0) return null;
+    return {
+      points: Array.from(merged.entries()).map(([district, counts]) => {
+        const coords = districtCoords(district)!;
+        return {
+          district,
+          lat: coords.lat,
+          lng: coords.lng,
+          listing_count: counts.listing_count,
+          new_7d_count: counts.new_7d_count,
+          velocity_score: counts.new_7d_count / Math.max(counts.listing_count, 1),
+        };
+      }),
+      generated_at: String(aggregates.generated_at || new Date().toISOString()),
+    };
+  }
+  if (await hasSnapshotIndex()) return null;
   const catalog = await getSnapshotListingCatalog();
   if (!catalog || catalog.length === 0) return null;
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const byDistrict = new Map<string, { listing_count: number; new_7d_count: number }>();
   for (const listing of catalog) {
-    const district = normalizeDistrictName(listing.district || "") || String(listing.district || "").trim();
+    const district = normalizeDistrictName(listing.district || "");
     if (!district || !districtCoords(district)) continue;
     const entry = byDistrict.get(district) || { listing_count: 0, new_7d_count: 0 };
     entry.listing_count += 1;
@@ -1627,6 +2122,24 @@ function offlineFuelCategory(raw: unknown): string {
 }
 
 async function deriveFuelMixFromCatalog(): Promise<FuelMixData | null> {
+  const aggregates = await getSnapshotAggregates();
+  if (aggregates && aggregates.fuel_mix && typeof aggregates.fuel_mix === "object") {
+    const mix = aggregates.fuel_mix as Record<string, number>;
+    const totals: Record<string, number> = { petrol: 0, hybrid: 0, electric: 0, diesel: 0, other: 0 };
+    for (const key of OFFLINE_FUEL_ORDER) totals[key] = Number(mix[key] || 0);
+    const total = Object.values(totals).reduce((a, b) => a + b, 0);
+    if (total === 0) return null;
+    return {
+      total,
+      buckets: OFFLINE_FUEL_ORDER.map((fuel_type) => ({
+        fuel_type,
+        count: totals[fuel_type],
+        pct: Math.round((totals[fuel_type] / total) * 1000) / 10,
+      })),
+      generated_at: String(aggregates.generated_at || new Date().toISOString()),
+    };
+  }
+  if (await hasSnapshotIndex()) return null;
   const catalog = await getSnapshotListingCatalog();
   if (!catalog || catalog.length === 0) return null;
   const totals: Record<string, number> = { petrol: 0, hybrid: 0, electric: 0, diesel: 0, other: 0 };
@@ -1644,7 +2157,22 @@ async function deriveFuelMixFromCatalog(): Promise<FuelMixData | null> {
 }
 
 async function deriveEvInsightFromCatalog(): Promise<EvInsightData | null> {
-  const catalog = await getSnapshotListingCatalog();
+  let catalog: CarListing[] | null;
+  let catalogSize: number;
+  if (await hasSnapshotIndex()) {
+    // ev.json holds every electric row; the Aqua index supplies the hybrid
+    // benchmark. Together they replace the full-catalogue scan.
+    const [ev, aqua] = await Promise.all([
+      readIndexFile<JsonRecord>("ev.json"),
+      getSnapshotModelIndex("Toyota", "Aqua"),
+    ]);
+    if (!ev) return null;
+    catalog = [...normalizeIndexRows(ev.items), ...((aqua?.comps || []) as CarListing[])];
+    catalogSize = Number(ev.listing_count || 0);
+  } else {
+    catalog = await getSnapshotListingCatalog();
+    catalogSize = catalog?.length || 0;
+  }
   if (!catalog || catalog.length === 0) return null;
   const priced = (row: CarListing): number | null => {
     const p = toNumberOrNull(row.price_lkr);
@@ -1688,7 +2216,7 @@ async function deriveEvInsightFromCatalog(): Promise<EvInsightData | null> {
   ).length;
   return {
     ev_count: evRows.length,
-    ev_pct: catalog.length > 0 ? Math.round((evRows.length / catalog.length) * 1000) / 10 : 0,
+    ev_pct: catalogSize > 0 ? Math.round((evRows.length / catalogSize) * 1000) / 10 : 0,
     median_ev_price_lkr: evPrices.length > 0 ? median(evPrices) : null,
     top_ev_models: topEvModels,
     hybrid_benchmark: {
@@ -1716,14 +2244,66 @@ export const getDistrictVelocity = async (): Promise<DistrictVelocityData> => {
 };
 
 export const getMakes = async () => {
-  const snapshot = await readSnapshot<unknown>("listing-makes.json");
-  if (Array.isArray(snapshot)) return snapshot as { make: string; count: number }[];
+  const sanitize = (rows: { make: string; count: number }[]) => {
+    // Snapshot rows are pre-cleaned at export, but older snapshots may still
+    // carry junk makes ("2012 Gp 1 2012"). Canonicalize defensively.
+    const merged = new Map<string, { make: string; count: number }>();
+    for (const row of rows) {
+      const make = canonicalizeMake(row?.make);
+      if (!make) continue;
+      const key = make.toLowerCase();
+      const bucket = merged.get(key);
+      if (bucket) bucket.count += Number(row?.count || 0);
+      else merged.set(key, { make, count: Number(row?.count || 0) });
+    }
+    return [...merged.values()].sort((a, b) => b.count - a.count);
+  };
 
-  const catalog = await getSnapshotListingCatalog();
-  if (catalog) return deriveMakes(catalog);
+  const snapshot = await readSnapshot<unknown>("listing-makes.json");
+  if (Array.isArray(snapshot)) {
+    const cleaned = sanitize(snapshot as { make: string; count: number }[]);
+    if (cleaned.length) return cleaned;
+  }
+
+  const aggregates = await getSnapshotAggregates();
+  if (aggregates && Array.isArray(aggregates.makes)) {
+    const cleaned = sanitize(aggregates.makes as { make: string; count: number }[]);
+    if (cleaned.length) return cleaned;
+  }
+  const catalog = (await hasSnapshotIndex()) ? null : await getSnapshotListingCatalog();
+  if (catalog) return sanitize(deriveMakes(catalog));
   if (SNAPSHOT_ONLY) return [];
 
-  return fetchJSON<{ make: string; count: number }[]>("/listings/makes");
+  return sanitize(await fetchJSON<{ make: string; count: number }[]>("/listings/makes"));
+};
+
+export type ModelIndexEntry = { make: string; model: string; count: number };
+
+/**
+ * Full make → model index for the command palette, derived from the same
+ * `listing-models.json` snapshot that backs `getModels(make)`. Canonicalized
+ * and count-merged so junk rows never surface in search results.
+ */
+export const getModelIndex = async (): Promise<ModelIndexEntry[]> => {
+  const snapshot = await readSnapshot<Record<string, { model: string; count: number }[]>>(
+    "listing-models.json",
+  );
+  if (!snapshot) return [];
+  const merged = new Map<string, ModelIndexEntry>();
+  for (const [rawMake, rows] of Object.entries(snapshot)) {
+    const make = canonicalizeMake(rawMake);
+    if (!make || !Array.isArray(rows)) continue;
+    for (const row of rows) {
+      const model = canonicalizeModel(row?.model);
+      if (!model) continue;
+      const key = `${make.toLowerCase()}|${model.toLowerCase()}`;
+      const count = Number(row?.count || 0);
+      const bucket = merged.get(key);
+      if (bucket) bucket.count += count;
+      else merged.set(key, { make, model, count });
+    }
+  }
+  return [...merged.values()].sort((a, b) => b.count - a.count);
 };
 
 export const getListingSearchSuggestions = async (
@@ -1733,8 +2313,13 @@ export const getListingSearchSuggestions = async (
   const query = String(q || "").trim();
   if (!query) return [];
 
-  const catalog = await getSnapshotListingCatalog();
-  if (catalog) return searchSuggestionsFromCatalog(catalog, query, limit);
+  if (await hasSnapshotIndex()) {
+    const fromIndex = await searchSuggestionsFromIndex(query, limit);
+    if (fromIndex.length || SNAPSHOT_ONLY) return fromIndex;
+  } else {
+    const catalog = await getSnapshotListingCatalog();
+    if (catalog) return searchSuggestionsFromCatalog(catalog, query, limit);
+  }
   if (SNAPSHOT_ONLY) return [];
 
   const data = await fetchJSON<JsonRecord[]>("/listings/search-suggestions", { q: query, limit });
@@ -1763,7 +2348,11 @@ export const getListingSources = async (): Promise<ListingSourceStat[]> => {
   const snapshotRows = normalizeListingSourceRows(snapshot);
   if (snapshotRows.length > 0) return snapshotRows;
 
-  const catalog = await getSnapshotListingCatalog();
+  const aggregates = await getSnapshotAggregates();
+  if (aggregates && Array.isArray(aggregates.sources) && aggregates.sources.length) {
+    return deriveSourcesFromCounts(aggregates.sources as { source: string; count: number }[]);
+  }
+  const catalog = (await hasSnapshotIndex()) ? null : await getSnapshotListingCatalog();
   if (catalog) return deriveSources(catalog);
   if (SNAPSHOT_ONLY) return [];
 
@@ -1792,18 +2381,107 @@ export const getListingSources = async (): Promise<ListingSourceStat[]> => {
     .sort((a, b) => b.count - a.count);
 };
 
+/** Collect model rows for a make slug from a make-keyed snapshot.
+ * Route params arrive as slugs ("land-rover"); snapshot keys are display names
+ * ("Land Rover"). Compare canonical forms so multi-word makes match.
+ * Multiple keys can canonicalize to the same make (e.g. the polluted
+ * "2017 Toyota Allion 260 G 2017" alongside the real "Toyota") — rows from ALL
+ * matching keys are merged so a junk key never shadows the real one. */
+export const collectMakeModelRows = (
+  snapshot: Record<string, { model: string; count: number }[]> | null | undefined,
+  make: string,
+): { model: string; count: number }[] => {
+  if (!snapshot) return [];
+  const wanted = (canonicalizeMake(make) || String(make || "").trim()).toLowerCase();
+  const rows: { model: string; count: number }[] = [];
+  for (const key of Object.keys(snapshot)) {
+    if ((canonicalizeMake(key) || key).toLowerCase() !== wanted) continue;
+    const bucket = snapshot[key];
+    if (Array.isArray(bucket)) rows.push(...bucket);
+  }
+  return rows;
+};
+
 export const getModels = async (make: string) => {
+  const canonicalOwnMake = canonicalizeMake(make) || make;
+  const modelKey = (model: string) => model.toLowerCase().replace(/[^a-z0-9]+/g, "");
+  // Cross-make dominance map: normalized model name -> { make, count } of the
+  // make with the most listings for that name. Built from the full snapshot so
+  // misattributed rows ("Sunny" with 2 listings under Toyota vs 5000 under
+  // Nissan) can be dropped by ratio instead of a hardcoded blocklist.
+  const buildDominantMap = (
+    snap: Record<string, { model: string; count: number }[]>,
+  ): Map<string, { make: string; count: number }> => {
+    const dominant = new Map<string, { make: string; count: number }>();
+    for (const [makeKey, rows] of Object.entries(snap)) {
+      if (!Array.isArray(rows)) continue;
+      const rowMake = canonicalizeMake(makeKey) || makeKey;
+      for (const row of rows) {
+        const model = canonicalizeModel(row?.model);
+        if (!model) continue;
+        const count = Number(row?.count || 0);
+        const key = modelKey(model);
+        const existing = dominant.get(key);
+        if (!existing || count > existing.count) dominant.set(key, { make: rowMake, count });
+      }
+    }
+    return dominant;
+  };
+  const sanitize = (
+    rows: { model: string; count: number }[],
+    dominant?: Map<string, { make: string; count: number }>,
+  ) => {
+    // Canonicalize defensively: older snapshots carry phone numbers,
+    // misspellings and trim-word leaks as model rows. Merge counts by the
+    // canonical name so "Wira"/"wira" don't split a model. Rows naming a
+    // foreign marque ("Toyota Aqua" under Land Rover) are misattributed
+    // feed rows, not real models.
+    const merged = new Map<string, { model: string; count: number }>();
+    const ownKey = canonicalOwnMake.toLowerCase();
+    for (const row of rows) {
+      const model = canonicalizeModel(row?.model);
+      if (!model) continue;
+      if (modelContainsForeignMake(row?.model, canonicalOwnMake)) continue;
+      const key = modelKey(model);
+      const rowCount = Number(row?.count || 0);
+      // Drop rows dominated 10:1 by another make's listings for the same
+      // model name ("Hino"/"Sunny"/"Swift" leaking under Toyota). The
+      // dominant make needs real volume so close rebadges aren't nuked.
+      const dom = dominant?.get(key);
+      if (
+        dom &&
+        dom.make.toLowerCase() !== ownKey &&
+        dom.count >= 50 &&
+        rowCount > 0 &&
+        dom.count >= 10 * rowCount
+      ) {
+        continue;
+      }
+      const bucket = merged.get(key);
+      if (bucket) bucket.count += rowCount;
+      else merged.set(key, { model, count: rowCount });
+    }
+    return [...merged.values()].sort((a, b) => b.count - a.count);
+  };
+
   const snapshot = await readSnapshot<Record<string, { model: string; count: number }[]>>("listing-models.json");
-  if (snapshot) {
-    const makeKey = Object.keys(snapshot).find((key) => key.toLowerCase() === String(make || "").toLowerCase());
-    if (makeKey && Array.isArray(snapshot[makeKey])) return snapshot[makeKey];
+  const dominant = snapshot ? buildDominantMap(snapshot) : undefined;
+  const rows = collectMakeModelRows(snapshot, make);
+  if (rows.length) {
+    const cleaned = sanitize(rows, dominant);
+    if (cleaned.length) return cleaned;
   }
 
-  const catalog = await getSnapshotListingCatalog();
-  if (catalog) return deriveModels(catalog, make);
+  const makeIdx = await getSnapshotMakeIndex(make);
+  if (makeIdx && Array.isArray(makeIdx.raw.models)) {
+    const cleaned = sanitize(makeIdx.raw.models as { model: string; count: number }[]);
+    if (cleaned.length) return cleaned;
+  }
+  const catalog = (await hasSnapshotIndex()) ? null : await getSnapshotListingCatalog();
+  if (catalog) return sanitize(deriveModels(catalog, make));
   if (SNAPSHOT_ONLY) return [];
 
-  return fetchJSON<{ model: string; count: number }[]>("/listings/models", { make });
+  return sanitize(await fetchJSON<{ model: string; count: number }[]>("/listings/models", { make }));
 };
 
 export const estimatePrice = async (params: EstimateParams): Promise<PriceEstimate> => {
@@ -1907,7 +2585,11 @@ export const getPriceTrendSeries = async (
   condition?: string,
   district?: string
 ): Promise<PriceTrendSeries> => {
-  const catalog = await getSnapshotListingCatalog();
+  if (await hasSnapshotIndex()) {
+    const modelIdx = make && model ? await getSnapshotModelIndex(make, model) : null;
+    if (modelIdx) return buildSnapshotTrendSeries(modelIdx.comps || [], make, model, condition, district);
+  }
+  const catalog = (await hasSnapshotIndex()) ? null : await getSnapshotListingCatalog();
   if (catalog) return buildSnapshotTrendSeries(catalog, make, model, condition, district);
   if (SNAPSHOT_ONLY) {
     return {
@@ -2023,6 +2705,35 @@ export const triggerPipelineJob = async (job: PipelineTriggerJob, adminKey?: str
 };
 
 async function deriveDashboardInsightsFromCatalog(): Promise<DashboardInsights | null> {
+  const aggregates = await getSnapshotAggregates();
+  if (aggregates) {
+    const hot = normalizeIndexRows(aggregates.hot_deals);
+    const top = Array.isArray(aggregates.top_models) ? (aggregates.top_models as JsonRecord[]) : [];
+    return {
+      new_listings_24h: Number(aggregates.new_listings_24h || 0),
+      segment_performance: [],
+      trending_models: top.slice(0, 8).map((row) => ({
+        make: String(row.make || ""),
+        model: String(row.model || ""),
+        listing_count: Number(row.listing_count || 0),
+        avg_price_lkr: Number(row.listing_count) ? Number(row.price_sum || 0) / Number(row.listing_count) : 0,
+        movement_pct: null as number | null,
+        thumbnail_url: null as string | null,
+      })),
+      hot_deals: hot.map((row) => ({
+        id: Number(row.id),
+        make: String(row.make || ""),
+        model: String(row.model || ""),
+        year: Number(row.year || 0),
+        district: row.district ? String(row.district) : null,
+        source: String(row.source || "unknown"),
+        price_lkr: Number(row.price_lkr || 0),
+        deal_score: Number(row.deal_score || 0),
+        thumbnail_url: row.thumbnail_url ? String(row.thumbnail_url) : null,
+      })),
+    };
+  }
+  if (await hasSnapshotIndex()) return null;
   const catalog = await getSnapshotListingCatalog();
   if (!catalog || catalog.length === 0) return null;
 
@@ -2135,6 +2846,8 @@ export const getListingsForExport = async (
   maxRows = 100,
 ): Promise<{ listings: CarListing[]; total: number }> => {
   const size = Math.max(1, Math.min(100, Math.floor(maxRows)));
+  const scoped = await getScopedSnapshotIndex(filters);
+  if (scoped) return filterScopedSnapshot(scoped, { ...filters, page: 1 }, size);
   const catalog = await getSnapshotListingCatalog();
   if (catalog?.length) return filterSnapshotListings(catalog, { ...filters, page: 1 }, size);
   if (SNAPSHOT_ONLY) {
@@ -2157,7 +2870,26 @@ export const getListingsForExport = async (
 };
 
 export const getDistrictQuickInsight = async (district: string): Promise<DistrictQuickInsight> => {
-  const catalog = await getSnapshotListingCatalog();
+  const districtIdx = await getSnapshotDistrictIndex(district);
+  if (districtIdx && districtIdx.total > 0) {
+    const raw = districtIdx.raw;
+    return {
+      district: String(raw.district || district),
+      listing_count: districtIdx.total,
+      avg_price_lkr: toNumberOrNull(raw.avg_price_lkr),
+      median_price_lkr: toNumberOrNull(raw.median_price_lkr),
+      change_pct_30d: null,
+      top_models: Array.isArray(raw.top_models)
+        ? (raw.top_models as JsonRecord[]).map((row) => ({
+            make: String(row.make || ""),
+            model: String(row.model || ""),
+            listing_count: Number(row.listing_count || 0),
+            avg_price_lkr: toNumberOrNull(row.avg_price_lkr) ?? 0,
+          }))
+        : [],
+    };
+  }
+  const catalog = (await hasSnapshotIndex()) ? null : await getSnapshotListingCatalog();
   if (catalog) {
     const districtKey = String(district || "").trim().toLowerCase();
     const rows = catalog.filter((listing) => String(listing.district || "").toLowerCase() === districtKey);
@@ -2178,7 +2910,7 @@ export const getDistrictQuickInsight = async (district: string): Promise<Distric
       }
 
       return {
-        district,
+        district: normalizeDistrictName(district) || district,
         listing_count: rows.length,
         avg_price_lkr: priced.length ? priced.reduce((sum, price) => sum + price, 0) / priced.length : null,
         median_price_lkr: sortedPrices.length ? sortedPrices[Math.floor(sortedPrices.length / 2)] : null,
@@ -2222,7 +2954,7 @@ export const getDistrictQuickInsight = async (district: string): Promise<Distric
     : [];
 
   return {
-    district: String(data.district || district),
+    district: normalizeDistrictName(String(data.district || district)) || String(data.district || district),
     listing_count: Number(data.listing_count || 0),
     avg_price_lkr: toNumberOrNull(data.avg_price_lkr),
     median_price_lkr: toNumberOrNull(data.median_price_lkr),
@@ -2269,7 +3001,18 @@ export const getMarketSignal = async (id: number): Promise<MarketSignal> => {
 };
 
 export const getMakeModelInsight = async (make: string, model: string): Promise<MakeModelInsight> => {
-  const catalog = await getSnapshotListingCatalog();
+  let catalog: CarListing[] | null = null;
+  if (await hasSnapshotIndex()) {
+    // Every row of the model as compact comps: exact totals, medians, districts.
+    const modelIdx = await getSnapshotModelIndex(make, model);
+    if (modelIdx) {
+      catalog = modelIdx.comps || [];
+      make = String(modelIdx.raw.make || make);
+      model = String(modelIdx.raw.model || model);
+    }
+  } else {
+    catalog = await getSnapshotListingCatalog();
+  }
   if (catalog) {
     const makeKey = make.trim().toLowerCase();
     const modelKey = model.trim().toLowerCase();
@@ -2412,19 +3155,55 @@ export const getModelPriceHistory = async (
 };
 
 export const getMakeInsight = async (make: string): Promise<MakeInsight> => {
+  // Snapshot-first: the exported make-insights.json carries the same payload
+  // as the backend endpoint, so MakeHub stats/popular-models render without
+  // depending on the live API.
+  const snapshot = await readSnapshot<Record<string, JsonRecord>>("make-insights.json");
+  if (snapshot) {
+    const wanted = (canonicalizeMake(make) || String(make || "").trim()).toLowerCase();
+    for (const key of Object.keys(snapshot)) {
+      if ((canonicalizeMake(key) || key).toLowerCase() !== wanted) continue;
+      const data = snapshot[key];
+      const mapModelRow = (row: JsonRecord) => ({
+        model: String(row.model || ""),
+        count: Number(row.count || 0),
+        avg_price_lkr: toNumberOrNull(row.avg_price_lkr),
+      });
+      return {
+        make: String(data.make || make),
+        total: Number(data.total || 0),
+        avg_price_lkr: toNumberOrNull(data.avg_price_lkr),
+        median_price_lkr: toNumberOrNull(data.median_price_lkr),
+        top_models: Array.isArray(data.top_models) ? (data.top_models as JsonRecord[]).map(mapModelRow) : [],
+        all_models: Array.isArray(data.all_models) ? (data.all_models as JsonRecord[]).map(mapModelRow) : undefined,
+        top_districts: Array.isArray(data.top_districts)
+          ? (data.top_districts as JsonRecord[]).map((row) => ({
+              district: String(row.district || ""),
+              count: Number(row.count || 0),
+              avg_price_lkr: toNumberOrNull(row.avg_price_lkr),
+            }))
+          : [],
+      };
+    }
+  }
+
   const data = await fetchJSON<JsonRecord>("/stats/make-insight", { make });
+  const mapModelRow = (row: JsonRecord) => ({
+    model: String(row.model || ""),
+    count: Number(row.count || 0),
+    avg_price_lkr: toNumberOrNull(row.avg_price_lkr),
+  });
   return {
     make: String(data.make || make),
     total: Number(data.total || 0),
     avg_price_lkr: toNumberOrNull(data.avg_price_lkr),
     median_price_lkr: toNumberOrNull(data.median_price_lkr),
     top_models: Array.isArray(data.top_models)
-      ? (data.top_models as JsonRecord[]).map((row) => ({
-          model: String(row.model || ""),
-          count: Number(row.count || 0),
-          avg_price_lkr: toNumberOrNull(row.avg_price_lkr),
-        }))
+      ? (data.top_models as JsonRecord[]).map(mapModelRow)
       : [],
+    all_models: Array.isArray(data.all_models)
+      ? (data.all_models as JsonRecord[]).map(mapModelRow)
+      : undefined,
     top_districts: Array.isArray(data.top_districts)
       ? (data.top_districts as JsonRecord[]).map((row) => ({
           district: String(row.district || ""),
@@ -2443,7 +3222,7 @@ export const formatPrice = (price: number | null): string => {
 // Market Alerts — server-side (anonymous token pattern)
 // ---------------------------------------------------------------------------
 
-const ALERT_TOKEN_KEY = "autolens.alert_token.v1";
+const ALERT_TOKEN_KEY = "motormila.alert_token.v1";
 
 export function getOrCreateAlertToken(): string {
   try {
@@ -3008,6 +3787,9 @@ export interface PermitInfo {
   updated_at?: string | null;
 }
 
+/** Reference USD/LKR used only when the live macro feed is unreachable (labelled non-live). */
+const MACRO_FALLBACK_USD_LKR = 300;
+
 export interface MacroContext {
   usd_lkr: number;
   reference_date?: string | null;
@@ -3018,6 +3800,8 @@ export interface MacroContext {
   inflation_yoy_percent?: number | null;
   inflation_reference_date?: string | null;
   notes: string;
+  /** True when this context came from the local fallback instead of the live feed. */
+  fallback?: boolean;
 }
 
 export type OwnershipVehicleClass = "motor_car" | "dual_purpose" | "motorcycle" | "three_wheeler";
@@ -3149,7 +3933,21 @@ export const getChargingStations = async (input?: {
 };
 
 export const getMacroContext = async (): Promise<MacroContext> => {
-  return await fetchJSON<MacroContext>("/calculators/macro");
+  try {
+    return await fetchJSON<MacroContext>("/calculators/macro");
+  } catch {
+    // Live FX is best-effort: when the feed is unreachable, fall back to a
+    // clearly-labelled reference rate so the calculator still works.
+    return {
+      usd_lkr: MACRO_FALLBACK_USD_LKR,
+      reference_date: null,
+      source: "Fallback reference rate (live FX unavailable)",
+      source_url: "",
+      fetched_at: new Date().toISOString(),
+      notes: "Fallback rate — not a live print. Confirm with your bank before committing.",
+      fallback: true,
+    };
+  }
 };
 
 export const calculateOwnershipBundle = async (input: {
@@ -3496,4 +4294,160 @@ export const revokeAdminInvite = async (inviteId: number): Promise<{ ok: boolean
   });
   if (!response.ok) throw await parseApiError(response);
   return response.json();
+};
+
+// ── User-submitted listings (sell-your-car) ────────────────────────────────
+
+export type MyListingInput = {
+  make: string;
+  model: string;
+  year?: number;
+  priceLkr?: number;
+  mileage?: number;
+  fuelType?: string;
+  transmission?: string;
+  condition?: string;
+  bodyType?: string;
+  vehicleCategory?: string;
+  district?: string;
+  city?: string;
+  title?: string;
+  description?: string;
+  contactName?: string;
+  contactPhone: string;
+  imageUrls?: string[];
+};
+
+export type MyListing = {
+  id: number;
+  make: string;
+  model: string;
+  year?: number | null;
+  priceLkr?: number | null;
+  mileage?: number | null;
+  fuelType?: string | null;
+  transmission?: string | null;
+  condition?: string | null;
+  bodyType?: string | null;
+  vehicleCategory?: string | null;
+  district?: string | null;
+  city?: string | null;
+  title?: string | null;
+  description?: string | null;
+  contactName?: string | null;
+  contactPhone?: string | null;
+  imageUrls: string[];
+  status: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
+
+function toMyListing(data: JsonRecord): MyListing {
+  return {
+    id: Number(data.id || 0),
+    make: String(data.make || ""),
+    model: String(data.model || ""),
+    year: toNumberOrNull(data.year),
+    priceLkr: toNumberOrNull(data.price_lkr ?? data.priceLkr),
+    mileage: toNumberOrNull(data.mileage),
+    fuelType: data.fuel_type ? String(data.fuel_type) : data.fuelType ? String(data.fuelType) : null,
+    transmission: data.transmission ? String(data.transmission) : null,
+    condition: data.condition ? String(data.condition) : null,
+    bodyType: data.body_type ? String(data.body_type) : data.bodyType ? String(data.bodyType) : null,
+    vehicleCategory: data.vehicle_category ? String(data.vehicle_category) : data.vehicleCategory ? String(data.vehicleCategory) : null,
+    district: data.district ? String(data.district) : null,
+    city: data.city ? String(data.city) : null,
+    title: data.title ? String(data.title) : null,
+    description: data.description ? String(data.description) : null,
+    contactName: data.contact_name ? String(data.contact_name) : data.contactName ? String(data.contactName) : null,
+    contactPhone: data.contact_phone ? String(data.contact_phone) : data.contactPhone ? String(data.contactPhone) : null,
+    imageUrls: Array.isArray(data.image_urls)
+      ? data.image_urls.map((u: unknown) => String(u)).filter(Boolean)
+      : Array.isArray(data.imageUrls)
+        ? data.imageUrls.map((u: unknown) => String(u)).filter(Boolean)
+        : [],
+    status: String(data.status || data.user_listing_status || "pending"),
+    createdAt: data.created_at ? String(data.created_at) : data.createdAt ? String(data.createdAt) : null,
+    updatedAt: data.updated_at ? String(data.updated_at) : data.updatedAt ? String(data.updatedAt) : null,
+  };
+}
+
+export const createMyListing = async (input: MyListingInput): Promise<MyListing> => {
+  const body: Record<string, unknown> = {
+    make: input.make,
+    model: input.model,
+    year: input.year,
+    price_lkr: input.priceLkr,
+    mileage: input.mileage,
+    fuel_type: input.fuelType,
+    transmission: input.transmission,
+    condition: input.condition,
+    body_type: input.bodyType,
+    vehicle_category: input.vehicleCategory,
+    district: input.district,
+    city: input.city,
+    title: input.title,
+    description: input.description,
+    contact_name: input.contactName,
+    contact_phone: input.contactPhone,
+    image_urls: input.imageUrls || [],
+  };
+  const data = await postJSON<JsonRecord>("/listings/mine", body, authHeaders());
+  return toMyListing(data);
+};
+
+export const getMyListings = async (): Promise<MyListing[]> => {
+  const items = await fetchJSON<JsonRecord[]>("/listings/mine", undefined, authHeaders());
+  return Array.isArray(items) ? items.map(toMyListing) : [];
+};
+
+export const updateMyListing = async (
+  id: number,
+  patch: Partial<MyListingInput> & { status?: string },
+): Promise<MyListing> => {
+  const body: Record<string, unknown> = {};
+  if (patch.make !== undefined) body.make = patch.make;
+  if (patch.model !== undefined) body.model = patch.model;
+  if (patch.year !== undefined) body.year = patch.year;
+  if (patch.priceLkr !== undefined) body.price_lkr = patch.priceLkr;
+  if (patch.mileage !== undefined) body.mileage = patch.mileage;
+  if (patch.fuelType !== undefined) body.fuel_type = patch.fuelType;
+  if (patch.transmission !== undefined) body.transmission = patch.transmission;
+  if (patch.condition !== undefined) body.condition = patch.condition;
+  if (patch.bodyType !== undefined) body.body_type = patch.bodyType;
+  if (patch.vehicleCategory !== undefined) body.vehicle_category = patch.vehicleCategory;
+  if (patch.district !== undefined) body.district = patch.district;
+  if (patch.city !== undefined) body.city = patch.city;
+  if (patch.title !== undefined) body.title = patch.title;
+  if (patch.description !== undefined) body.description = patch.description;
+  if (patch.contactName !== undefined) body.contact_name = patch.contactName;
+  if (patch.contactPhone !== undefined) body.contact_phone = patch.contactPhone;
+  if (patch.imageUrls !== undefined) body.image_urls = patch.imageUrls;
+  if (patch.status !== undefined) body.status = patch.status;
+  const url = new URL(`${API_BASE}/listings/mine/${id}`, window.location.origin).toString();
+  const response = await fetch(url, {
+    method: "PATCH",
+    credentials: resolveFetchCredentials(),
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throw await parseApiError(response);
+  return toMyListing((await response.json()) as JsonRecord);
+};
+
+export const deleteMyListing = async (id: number): Promise<void> => {
+  const url = new URL(`${API_BASE}/listings/mine/${id}`, window.location.origin).toString();
+  const response = await fetch(url, {
+    method: "DELETE",
+    credentials: resolveFetchCredentials(),
+    headers: {
+      Accept: "application/json",
+      ...authHeaders(),
+    },
+  });
+  if (!response.ok) throw await parseApiError(response);
 };

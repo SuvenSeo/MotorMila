@@ -99,7 +99,7 @@ function AlertMatchSection({ token }: { token: string }) {
     try {
       const result = await matchAlerts(token);
       setMatchData(result);
-      trackEvent("saved_search", { user_token: token, alert_token: token, matches: result.results.length });
+      trackEvent("saved_search", { matches: result.results.length });
     } catch (err) {
       setError(err instanceof Error ? err.message : t("alerts.matchFailed", "Failed to fetch matches"));
     } finally {
@@ -622,7 +622,7 @@ function AlertRow({
         <div className="flex shrink-0 items-center gap-1.5">
           <Link
             to={`/?make=${encodeURIComponent(alert.make || "")}&model=${encodeURIComponent(alert.model || "")}${alert.district ? `&district=${encodeURIComponent(alert.district)}` : ""}${alert.max_price ? `&price_max=${alert.max_price}` : ""}#market`}
-            onClick={() => trackEvent("listing_view", { user_token: token, alert_token: token, alert_id: alert.id })}
+            onClick={() => trackEvent("listing_view", { alert_id: alert.id })}
             className="flex h-7 items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 text-[10px] font-bold text-primary-bright no-underline transition-all hover:bg-primary/20"
           >
             {t("common.browse", "Browse")}

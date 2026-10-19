@@ -9,8 +9,8 @@ import { ProFeatureLock } from "@/components/ProFeatureLock";
 
 function installLocalStorage(seed?: Record<string, unknown>, token?: string) {
   const store = new Map<string, string>();
-  if (seed) store.set("autolens.auth_user", JSON.stringify(seed));
-  if (token) store.set("autolens.auth_token", token);
+  if (seed) store.set("motormila.auth_user", JSON.stringify(seed));
+  if (token) store.set("motormila.auth_token", token);
 
   const storage = {
     getItem: (key: string) => store.get(key) ?? null,
@@ -84,8 +84,8 @@ describe("RequireAuth + free plan locks", () => {
     expect(screen.getByText(/you're on the free plan/i)).toBeInTheDocument();
     expect(screen.getAllByText(/lane intelligence/i).length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: /^upgrade$/i })).toHaveAttribute("href", "/pricing");
-    expect(screen.getByText(/start your 7-day free trial/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /start 7-day free trial/i })).toHaveAttribute(
+    expect(screen.getAllByText(/join the waitlist/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: /join the waitlist/i })).toHaveAttribute(
       "href",
       "/pricing",
     );

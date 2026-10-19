@@ -11,6 +11,9 @@ export interface PinnedListing {
   mileage_km?: number | null;
   district?: string | null;
   deal_score?: number | null;
+  // Image fields for tray thumbnails (optional, for richer UI)
+  thumbnail_url?: string | null;
+  detail_url?: string | null;
 }
 
 export const COMPARE_TRAY_KEY = "motormila:compare-tray:v1";
@@ -53,8 +56,7 @@ export function isPinned(id: number): boolean {
 }
 
 /** Pin or unpin. Returns { pinned, atCap } so callers can toast when full. */
-export function togglePinned(listing: PinnedListing): { pinned: boolean; atCap: boolean } {
-  const rows = loadPinned();
+export function togglePinned(listing: PinnedListing): { pinned: boolean; atCap: boolean } {  const rows = loadPinned();
   if (rows.some((row) => row.id === listing.id)) {
     persistPinned(rows.filter((row) => row.id !== listing.id));
     return { pinned: false, atCap: false };
@@ -70,6 +72,13 @@ export function removePinned(id: number): void {
 
 export function clearPinned(): void {
   persistPinned([]);
+}
+
+/** Merge fresh fields into one pinned row (e.g. FMV refreshed after pin time). */
+export function updatePinned(id: number, patch: Partial<PinnedListing>): void {
+  persistPinned(
+    loadPinned().map((row) => (row.id === id ? { ...row, ...patch } : row)),
+  );
 }
 
 export function useCompareTray() {

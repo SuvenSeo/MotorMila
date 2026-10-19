@@ -27,10 +27,16 @@
 
 export const ADMIN_SESSION_KEY = "motormila.admin_session";
 
-/** Compile-time fallbacks. Rotate these via env in any real deployment. */
+/**
+ * Compile-time fallbacks. These exist ONLY for snapshot/dev builds.
+ * Production must set VITE_ENABLE_BACKEND_AUTH=true so the server is the
+ * real gate — verifyLocalAdminCredential refuses when backend auth is on.
+ */
 const DEFAULT_ADMIN_USERNAME = "motormila";
-/** sha256("Motormila#Admin2026") — the default password is never in the bundle. */
-const DEFAULT_ADMIN_PASSWORD_HASH = "6d976670e6aa5d7b2734dbdc7de3097a2fab17a782b0d8b9d53854f59b65a103";
+// Placeholder only. Deployments MUST override via VITE_ADMIN_PASSWORD_HASH.
+// The previous default was a known-password digest disclosed in source —
+// never put a password hint or the plaintext next to a hash again.
+const DEFAULT_ADMIN_PASSWORD_HASH = "";
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 60_000;
@@ -61,6 +67,10 @@ export function adminUsername(): string {
 
 function adminPasswordHash(): string {
   return (envValue("VITE_ADMIN_PASSWORD_HASH") || DEFAULT_ADMIN_PASSWORD_HASH).toLowerCase();
+}
+
+function backendAuthEnabled(): boolean {
+  return envValue("VITE_ENABLE_BACKEND_AUTH").toLowerCase() === "true";
 }
 
 const SHA256_K = new Uint32Array([
@@ -170,11 +180,22 @@ function clearFailure(): void {
 
 /** Local credential check against the compiled-in (or env-supplied) digest. */
 export function verifyLocalAdminCredential(username: string, password: string): AdminVerifyResult {
+  // When backend auth is on, the local digest is never a valid gate —
+  // require POST /auth/login and a real admin role instead.
+  if (backendAuthEnabled()) {
+    return { ok: false, error: "Admin sign-in requires a backend session." };
+  }
+  // Refuse an empty digest (no password configured) rather than accepting "".
+  const expectedHash = adminPasswordHash();
+  if (!expectedHash) {
+    return { ok: false, error: "Admin console is not configured." };
+  }
+
   const lockedForSeconds = lockoutSecondsRemaining();
   if (lockedForSeconds > 0) return { ok: false, lockedForSeconds };
 
   const userMatches = username.trim().toLowerCase() === adminUsername().toLowerCase();
-  const passwordMatches = sha256Hex(password) === adminPasswordHash();
+  const passwordMatches = sha256Hex(password) === expectedHash;
 
   if (!userMatches || !passwordMatches) {
     recordFailure();

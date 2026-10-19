@@ -46,6 +46,12 @@ class CarListing(Base):
     # Image & Thumbnails
     thumbnail_url = Column(Text)
     thumbnail_url_cached = Column(Text, nullable=True)
+    # JSON array (string) of the listing's full gallery image URLs, as served
+    # by the source site. Populated by scrapers that can cheaply enumerate all
+    # photos (e.g. ikman's API hands out every image id); NULL/empty means
+    # "only thumbnail_url is known". Merge/upsert paths must never overwrite
+    # a populated value with NULL (see listing_upsert._UPDATE_SKIP_NULL_KEYS).
+    images = Column(Text, nullable=True)
     # Perceptual hash (64-bit pHash, hex-encoded) of the thumbnail image, used
     # to spot the same physical vehicle re-listed with edited specs (year,
     # district, price) that heuristic make/model matching would miss.
@@ -63,6 +69,19 @@ class CarListing(Base):
     # Soft-delete: flipped False by the post-scrape lifecycle pass when the
     # listing stops appearing at its source; flipped back True on re-sight.
     is_active = Column(Boolean, nullable=False, default=True, server_default='true')
+
+    # ── User-submitted listings (sell-your-car) ──────────────────────────
+    # owner_user_id is NULL for scraper-fed rows; set when a signed-in user
+    # creates a listing. user_listing_status tracks the seller workflow
+    # (draft → pending → published / removed). Scraped rows keep 'scraped'.
+    owner_user_id = Column(String(64), nullable=True)
+    user_listing_status = Column(
+        String(20), nullable=False, default='scraped', server_default='scraped'
+    )
+    contact_name = Column(String(120), nullable=True)
+    contact_phone = Column(String(32), nullable=True)
+    description = Column(Text, nullable=True)
+    user_images = Column(Text, nullable=True)  # JSON array of image URLs
 
     __table_args__ = (
         Index('idx_car_listings_source_source_id', 'source', 'source_id', unique=True),
@@ -105,7 +124,14 @@ def live_listing_filter():
         CarListing.is_outlier == False,  # noqa: E712
         CarListing.is_active == True,  # noqa: E712
         CarListing.is_duplicate == False,  # noqa: E712
+        # User-submitted listings only count once an admin published them
+        # (moderation queue); scraped rows carry 'scraped'.
+        CarListing.user_listing_status.in_(LIVE_LISTING_STATUSES),
     )
+
+
+# user_listing_status values that may appear in public market views.
+LIVE_LISTING_STATUSES = ("scraped", "published")
 
 class PriceAggregate(Base):
     __tablename__ = 'price_aggregates'
@@ -665,3 +691,13 @@ class ListingGeoEnrichment(Base):
         Index("idx_listing_geo_hash", "source_location_hash"),
         Index("idx_listing_geo_fetched", "fetched_at"),
     )
+
+
+class BillingWebhookEvent(Base):
+    """Processed billing-webhook event ids (replay protection / idempotency)."""
+
+    __tablename__ = "billing_webhook_events"
+
+    event_id = Column(String(120), primary_key=True)
+    email = Column(String(255), nullable=True)
+    received_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

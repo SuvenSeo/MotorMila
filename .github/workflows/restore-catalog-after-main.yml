@@ -66,13 +66,17 @@ jobs:
           set -euo pipefail
           if gh release view merged-db >/dev/null 2>&1; then
             gh release download merged-db \
-              --pattern "merged-autolens.db.gz" \
+              --pattern "merged-motormila.db.gz" --pattern "merged-autolens.db.gz" \
               --dir . --clobber
           else
             echo "ERROR: merged-db release is missing" >&2
             exit 1
           fi
-          gunzip -f -c merged-autolens.db.gz > backend/motormila.db
+          if [[ -s merged-motormila.db.gz ]]; then
+            gunzip -f -c merged-motormila.db.gz > backend/motormila.db
+          else
+            gunzip -f -c merged-autolens.db.gz > backend/motormila.db  # legacy asset name
+          fi
           python - <<'PY'
           import sqlite3
           con = sqlite3.connect("backend/motormila.db")
@@ -91,6 +95,26 @@ jobs:
           python backend/export_public_snapshots.py --output backend/snapshots/latest
           mkdir -p public/snapshots/latest
           cp -r backend/snapshots/latest/. public/snapshots/latest/
+
+      - name: Publish failover DB into snapshots
+        run: |
+          set -euo pipefail
+          # The merged DB is gitignored, so the git-triggered Vercel deploy
+          # wipes it from production. Rebuild it here from the durable
+          # merged-db release asset (restored above) instead of trusting the
+          # live site to still serve it: once the live copy is gone, the
+          # preserve-from-live fallback 404s and every restore redeploys
+          # without the DB, leaving the HF backend with no failover.
+          python -c "import sqlite3; c=sqlite3.connect('backend/motormila.db'); c.execute('PRAGMA wal_checkpoint(TRUNCATE)'); c.close()"
+          gzip -f -c backend/motormila.db > public/snapshots/latest/merged-motormila.db.gz
+          cp public/snapshots/latest/merged-motormila.db.gz \
+            public/snapshots/latest/merged-autolens.db.gz  # legacy name
+          ls -lh public/snapshots/latest/merged-*.db.gz
+          # The R2 upload step below reads backend/snapshots/latest, not
+          # public/ — copy the dumps there too so the public R2 bucket the
+          # HF backend downloads failover from stays fresh (2026-10-16: the
+          # gz no longer rides the Vercel deploy, past its 100MB/file limit).
+          cp public/snapshots/latest/merged-*.db.gz backend/snapshots/latest/
 
       - name: Wait for the GitHub → Vercel production deploy
         if: steps.vercel.outputs.configured == 'true'

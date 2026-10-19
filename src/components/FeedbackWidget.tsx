@@ -11,7 +11,7 @@ import { useAppPreferences } from "@/lib/appPreferences";
 
 import { OPEN_FEEDBACK_EVENT } from "@/lib/feedbackEvents";
 
-const LOCAL_FEEDBACK_KEY = "autolens.feedback.offline.v1";
+const LOCAL_FEEDBACK_KEY = "motormila.feedback.offline.v1";
 
 function storeOfflineFeedback(payload: FeedbackInput) {
   if (typeof window === "undefined") return;

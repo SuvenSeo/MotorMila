@@ -174,7 +174,8 @@ def step2_merge_manus_dumps(dst_db_path: Path):
         tag = rel.get("tag_name") or ""
         if not tag.startswith(("manus-scrape-", "laptop-db-")):
             continue
-        asset = next((a for a in rel.get("assets", []) if a.get("name") == "autolens.db.gz"), None)
+        assets = {a.get("name"): a for a in rel.get("assets", [])}
+        asset = assets.get("motormila.db.gz") or assets.get("autolens.db.gz")  # legacy name
         if not asset:
             continue
         m = ts_re.search(tag)

@@ -77,7 +77,7 @@ object FmvShare {
     }
 
     fun listingShareUrl(listingId: Int): String =
-        "https://motormila.vercel.app/listing/$listingId"
+        "https://motormila.pages.dev/listing/$listingId"
 
     fun listingShareText(listing: Listing): String =
         "${listing.displayName} — ${listing.formattedPrice()} (Motormila: ${listingShareUrl(listing.id)})"
@@ -144,13 +144,13 @@ object FmvShare {
     }
 
     private fun renderShareCard(context: Context, listing: Listing, fmv: Fmv?): Bitmap {
-        val gold = ContextCompat.getColor(context, R.color.motormila_gold)
+        val brandBlue = ContextCompat.getColor(context, R.color.motormila_gold) // remapped to Motormila Blue #0A7AFF (gold purge)
         val bg = ContextCompat.getColor(context, R.color.motormila_bg)
         val bitmap = Bitmap.createBitmap(CARD_WIDTH, CARD_HEIGHT, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         canvas.drawColor(bg)
 
-        val accent = paint(gold)
+        val accent = paint(brandBlue)
         canvas.drawRect(0f, 0f, CARD_WIDTH.toFloat(), 14f, accent)
 
         val pad = 56f
@@ -159,7 +159,7 @@ object FmvShare {
             context.getString(R.string.share_card_brand),
             pad,
             y,
-            textPaint(gold, 28f, bold = true),
+            textPaint(brandBlue, 28f, bold = true),
         )
         y += 72f
 
@@ -176,7 +176,7 @@ object FmvShare {
             y += 28f
         }
 
-        canvas.drawText(listing.formattedPrice(), pad, y, textPaint(gold, 72f, bold = true))
+        canvas.drawText(listing.formattedPrice(), pad, y, textPaint(brandBlue, 72f, bold = true))
         y += 68f
 
         val fmvLine = fmvPriceCaption(context, fmv)
@@ -220,7 +220,7 @@ object FmvShare {
     }
 
     private fun bandColor(band: DealBand): Int = when (band) {
-        DealBand.GREAT -> 0xFF10B981.toInt()
+        DealBand.GREAT -> 0xFF00C853.toInt()
         DealBand.FAIR -> 0xFF0A7AFF.toInt()
         DealBand.HIGH -> 0xFFEF4444.toInt()
         DealBand.LOCKED -> 0xFF8E8E93.toInt()

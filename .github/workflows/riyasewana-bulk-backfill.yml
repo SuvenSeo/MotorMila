@@ -1,22 +1,25 @@
 # Riyasewana Deep Backfill (Neon-first)
 #
 # One-shot / scheduled deep crawl of riyasewana.com using the scraper's fast
-# plain-HTTP mode (curl_cffi Chrome impersonation; no Playwright browser).
+# plain-HTTP mode (honest MotorMilaBot UA, robots.txt + 2-5s per-host delay).
 # Riyasewana's full catalog runs to ~2,000+ pages across categories (cars ~534,
 # motorcycles ~700, suvs ~171, vans ~151, three-wheels ~161, lorries ~123 ...),
 # vs the 60 pages/day the daily pipeline touches.  This is the tool to run to
 # recover listings missed while scrapers were paused.
 #
 # RIYASEWANA_FLAT_BUDGET=true gives every category the full page budget instead
-# of the capped secondary share, so a large max_pages crawls the whole catalog
+# of any rationed secondary share, so a large max_pages crawls the whole catalog
 # deeply.  The scraper honors the SERP's own pagination hint and stops at each
-# category's true last page.
+# category's true last page.  start_page segments a crawl that is deeper than one
+# run can reach, instead of re-reading the same head of the catalogue.
 #
 # DB WRITES ONLY (ingress is free on Neon). Optional snapshot refresh afterwards
 # keeps the public Vercel/R2 catalog in sync — run it with refresh_catalog=true.
 #
 # Run: Actions → "Riyasewana Deep Backfill" → Run workflow
 #   max_pages: 800 covers every category to its last page in one pass
+#   start_page: 1 for the newest pages; 801 to continue deeper past a first
+#               800-page pass instead of re-crawling it
 
 name: Riyasewana Deep Backfill
 
@@ -27,10 +30,14 @@ on:
         description: "Page budget per category (800 = full catalog depth)"
         type: string
         default: "800"
+      start_page:
+        description: "First listing page to crawl. Use to walk a segment deeper: a run that starts at 1 re-reads pages 1..max_pages and never gets past them."
+        type: string
+        default: "1"
       refresh_catalog:
-        description: "Refresh public listing catalog (full DB read — weekly cadence)"
+        description: "Deploy snapshots straight from Neon. Leave OFF: manus-to-live.yml owns the public catalog and will overwrite these within 6h. For a durable backfill run 'Neon Export' afterwards — it publishes a neon-export-* release that manus-to-live merges into the merged SQLite."
         type: boolean
-        default: true
+        default: false
 
 concurrency:
   group: riyasewana-bulk-backfill
@@ -41,10 +48,17 @@ permissions:
 
 jobs:
   scrape-riyasewana:
-    # Runs on the laptop self-hosted runner (residential IP) so Cloudflare
-    # rate-limits don't cut the deep crawl short like they do on datacenter
-    # hosted runners. Requires Git Bash on the runner for the bash steps.
-    runs-on: self-hosted
+    # Was `runs-on: self-hosted` (the laptop runner), so this workflow could
+    # never execute — meaning the ONE source with a dedicated deep-backfill
+    # tool, and 54% of the live catalog, had no working recovery path at all.
+    #
+    # Note the deliberate choice of ONE job rather than a retry matrix: each leg
+    # of a matrix would be a separate runner (a fresh IP is the only thing that
+    # defeats the Cloudflare block) but they would then write to Neon
+    # concurrently and contend on the same upserts. If this run reports
+    # `http_blocked`, just re-dispatch — a blocked attempt now fails in ~0.1s
+    # instead of burning the 4-hour budget, so re-dispatching is cheap.
+    runs-on: ubuntu-latest
     timeout-minutes: 240
     defaults:
       run:
@@ -53,12 +67,12 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      # setup-python@v5 needs admin rights on Windows self-hosted runners
-      # (it cleans registry entries), so use the system Python instead.
-      - name: Check Python
-        run: |
-          python --version
-          python -m pip --version
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
 
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
@@ -88,6 +102,8 @@ jobs:
           ALLOW_SQLITE_FALLBACK: "false"
           SCRAPE_PROFILE: "all"
           SCRAPE_ENABLED_SOURCES: "riyasewana"
+          SOURCES_ENABLED: ${{ vars.SOURCES_ENABLED }}
+          BOT_CONTACT: ${{ vars.BOT_CONTACT }}
           RUN_SCRAPERS: "true"
           RUN_MARKET_ANALYSIS: "false"
           RUN_MARKET_SIGNALS: "false"
@@ -97,10 +113,11 @@ jobs:
           SCRAPE_MAX_PAGES_RIYASEWANA: ${{ github.event.inputs.max_pages || '800' }}
           SCRAPE_SOURCE_TIMEOUT_SECONDS: "10800"
           SCRAPE_SOURCE_TIMEOUT_SECONDS_RIYASEWANA: "10800"
-          # Fast plain-HTTP crawl (curl_cffi Chrome impersonation) — no browser.
+          # Plain-HTTP crawl with the honest bot UA; a block ends the run (no evasion).
           RIYASEWANA_SCRAPE_MODE: "http"
           # Full budget for every category so the whole catalog is covered.
           RIYASEWANA_FLAT_BUDGET: "true"
+          RIYASEWANA_START_PAGE: ${{ github.event.inputs.start_page || '1' }}
         run: python run_sync.py
 
       - name: Count riyasewana listings after

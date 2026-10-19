@@ -66,18 +66,33 @@ class RiyahubScraper(GenericDetailScraper):
         "/vehicle/others/",
     }
 
-    def _build_page_urls(self, max_pages: int) -> list[str]:
-        urls: list[str] = []
+    def _page_url_for(self, start_url: str, page_num: int) -> str:
+        if page_num <= 1:
+            return start_url
+        return f"{start_url.rstrip('/')}/page/{page_num}/"
+
+    def _build_page_url_groups(
+        self,
+        max_pages: int,
+        *,
+        start_page: int = 1,
+    ) -> list[list[str]]:
+        # riyahub paginates well past page 25 (verified live: page 26 returns
+        # older listings than page 1, so the catalogue keeps going), which is
+        # why the old hard 25-page ceiling plus a missing start page meant no
+        # riyahub category could ever be crawled past its first 25 pages.
+        start = max(1, int(start_page or 1))
+        groups: list[list[str]] = []
         for start_url in self.START_URLS:
             slug = start_url.rstrip("/").rsplit("/", 1)[-1]
             page_limit = page_budget_for_category(
                 is_primary=slug == self.PRIMARY_CATEGORY,
                 max_pages=max_pages,
             )
-            urls.append(start_url)
-            for page_num in range(2, page_limit + 1):
-                urls.append(f"{start_url.rstrip('/')}/page/{page_num}/")
-        return urls
+            groups.append(
+                [self._page_url_for(start_url, page) for page in range(start, start + page_limit)]
+            )
+        return groups
 
     @classmethod
     def _extract_listing_links(cls, soup: BeautifulSoup) -> list[str]:

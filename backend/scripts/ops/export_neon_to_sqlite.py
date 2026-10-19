@@ -11,7 +11,7 @@ restoring the pre-outage catalog.
 
 Usage:
   DATABASE_URL=postgresql://... python scripts/ops/export_neon_to_sqlite.py
-  python scripts/ops/export_neon_to_sqlite.py --dsn postgresql://... --output autolens.db.gz
+  python scripts/ops/export_neon_to_sqlite.py --dsn postgresql://... --output motormila.db.gz
   python scripts/ops/export_neon_to_sqlite.py --limit 5000     # quick connectivity test
 
 The dump uses the full CarListing schema (companion tables empty) plus a
@@ -128,7 +128,7 @@ def main() -> int:
         ),
         help="PostgreSQL DSN (default: DATABASE_URL / HOT_DATABASE_URL / COLD_DATABASE_URL)",
     )
-    ap.add_argument("--output", default="autolens.db.gz", help="output .db.gz path")
+    ap.add_argument("--output", default="motormila.db.gz", help="output .db.gz path")
     ap.add_argument(
         "--limit",
         type=int,
@@ -169,7 +169,7 @@ def main() -> int:
     pg = create_engine(dsn, poolclass=NullPool, pool_pre_ping=True, connect_args={"connect_timeout": 10})
 
     tmpdir = Path(tempfile.mkdtemp(prefix="neon-export-"))
-    db_path = tmpdir / "autolens.db"
+    db_path = tmpdir / "motormila.db"
     sq = create_engine(f"sqlite:///{db_path}")
     Base.metadata.create_all(sq)
 

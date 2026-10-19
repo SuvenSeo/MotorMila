@@ -15,10 +15,28 @@ from app.scrapers.saleme import SaleMeScraper
 
 def test_secondary_page_budget_never_exceeds_max_pages():
     assert secondary_page_budget(1) == 1
-    assert secondary_page_budget(8) == 5
-    assert secondary_page_budget(40) == 10
+    assert secondary_page_budget(8) == 8
+    assert secondary_page_budget(40) == 40
     assert page_budget_for_category(is_primary=True, max_pages=40) == 40
-    assert page_budget_for_category(is_primary=False, max_pages=40) == 10
+    assert page_budget_for_category(is_primary=False, max_pages=40) == 40
+
+
+def test_secondary_budget_does_not_impose_a_page_ceiling(monkeypatch):
+    """A 120-page budget must reach far past the old hard-coded 25 ceiling."""
+    assert secondary_page_budget(120) == 120
+    assert secondary_page_budget(800) == 800
+
+    monkeypatch.setenv("SCRAPE_SECONDARY_PAGE_CAP", "25")
+    assert secondary_page_budget(800) == 25
+    monkeypatch.delenv("SCRAPE_SECONDARY_PAGE_CAP")
+
+    monkeypatch.setenv("SCRAPE_SECONDARY_PAGE_DIVISOR", "4")
+    assert secondary_page_budget(800) == 200
+    monkeypatch.delenv("SCRAPE_SECONDARY_PAGE_DIVISOR")
+
+    # Junk must not silently shrink a crawl.
+    monkeypatch.setenv("SCRAPE_SECONDARY_PAGE_CAP", "not-a-number")
+    assert secondary_page_budget(800) == 800
 
 
 def test_marketplace_scrapers_cover_non_car_vehicle_categories():
@@ -58,7 +76,7 @@ def test_riyahub_page_urls_budget_per_category():
     ]
     bikes = [url for url in urls if "/vehicle/motorcycles" in url]
     assert len(cars) == 8  # primary full depth
-    assert len(bikes) == 5  # secondary budget for max_pages=8
+    assert len(bikes) == 8  # secondary categories get the full budget too
 
 
 def test_auto_lanka_page_url_indexing():

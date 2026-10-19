@@ -4,16 +4,27 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Full-bleed dark base (background layer provides the same color). -->
-    <path
-        android:fillColor="#06090E"
-        android:pathData="M0,0h108v108h-108z" />
-    <!-- Gold "M" monogram, centered on the 108dp grid. -->
+    <!-- Apex M: bold M whose final stroke launches into a rising arrow.
+         Motormila Blue #0A7AFF. Background comes from @color/launcher_bg. -->
     <path
         android:fillColor="#00000000"
-        android:strokeColor="#E7C46B"
-        android:strokeWidth="7"
+        android:strokeColor="#0A7AFF"
+        android:strokeWidth="8.5"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M30,74 L30,34 L54,56 L78,34 L78,74" />
+        android:pathData="M30,76 L30,34 L54,58 L78,34 L78,62" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#0A7AFF"
+        android:strokeWidth="8.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M78,62 L97,43" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#0A7AFF"
+        android:strokeWidth="8.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M97,43 L87.5,43 M97,43 L97,52.5" />
 </vector>

@@ -6,17 +6,22 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { FilterState, CarListing, DashboardInsights, DistrictVelocityPoint } from "@/types/car";
 import { getPriceDrops,
-  getStats, getListings, getMakes,
+  getStats, getListings, getMakes, getListingsBatch,
   formatPrice, getDashboardInsights, LISTINGS_PAGE_SIZE, getDistrictVelocity,
 } from "@/services/api";
 import { useLiveMarketSnapshot } from "@/hooks/useLiveMarketSnapshot";
+import { useCompareTray, loadPinned, PinnedListing } from "@/lib/compareTray";
 import { ListingCard } from "@/components/ListingCard";
 import { FilterSidebar } from "@/components/FilterSidebar";
 import { MarketSignalsStrip } from "@/components/MarketSignalsStrip";
 import { FuelMixStrip } from "@/components/FuelMixStrip";
 import { DataFreshnessIndicator } from "@/components/DataFreshnessIndicator";
+import { SnapshotModeNotice } from "@/components/SnapshotModeNotice";
 import { AtmosphericImage } from "@/components/AtmosphericImage";
 import { HeroSideSignals } from "@/components/HeroSideSignals";
+import { FlipWords } from "@/components/ui/FlipWords";
+import { MarketTicker } from "@/components/MarketTicker";
+import { SourceMarquee } from "@/components/SourceMarquee";
 import { HeroVariantPicker } from "@/components/HeroVariantPicker";
 import { useHeroVariantLab } from "@/hooks/useHeroVariantLab";
 import type { HeroAlign } from "@/lib/heroVariants";
@@ -49,6 +54,7 @@ import { useAppPreferences } from "@/lib/appPreferences";
 import { loadWatchlistIds, saveWatchlistIds, toggleWatchlistId } from "@/lib/watchlist";
 import { pickVehicleImageUrl } from "@/lib/listingImage";
 import { isReasonableListingPrice } from "@/lib/formatting";
+import { isJunkMake } from "@/lib/makeNormalization";
 import { cn } from "@/lib/utils";
 import { VehicleThumbnail } from "@/components/VehicleThumbnail";
 import { PriceUnavailableBadge } from "@/components/PriceUnavailableBadge";
@@ -57,6 +63,8 @@ import { loadMarketAlerts, patchMarketAlertServerId, removeMarketAlert, saveMark
 import { useServerMarketAlerts } from "@/hooks/useServerMarketAlerts";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { FreePlanBanner } from "@/components/FreePlanBanner";
+import { AnnouncementBanner } from "@/components/AnnouncementBanner";
+import { HowItWorksBand } from "@/components/HowItWorksBand";
 import { ProFeatureLock } from "@/components/ProFeatureLock";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { useAuth } from "@/lib/authContext";
@@ -127,6 +135,9 @@ const ComparisonModal = lazyWithRetry(() =>
 );
 const MarketIntelligencePanel = lazyWithRetry(() =>
   import("@/components/MarketIntelligencePanel").then((m) => ({ default: m.MarketIntelligencePanel }))
+);
+const MarketIntelligenceSkeleton = lazyWithRetry(() =>
+  import("@/components/MarketIntelligencePanel").then((m) => ({ default: m.MarketIntelligenceSkeleton }))
 );
 const MobileFilterSheet = lazyWithRetry(() =>
   import("@/components/MobileFilterSheet").then((m) => ({ default: m.MobileFilterSheet }))
@@ -232,6 +243,7 @@ function parseFilters(params: URLSearchParams): FilterState {
         ? (vehicleCategory as FilterState["vehicle_category"])
         : "cars",
     price_availability: priceAvailability === "unavailable" ? "unavailable" : undefined,
+    fresh_24h: params.get("fresh_24h") === "1" ? true : undefined,
     sort: isSortValue(sort) ? sort : "newest",
     page: Math.max(1, parseOptionalNumber(params.get("page")) || 1),
   };
@@ -267,6 +279,9 @@ export default function Dashboard() {
   const { t, resolvedTheme } = useAppPreferences();
   const queryClient = useQueryClient();
   const liveMarketSnapshot = useLiveMarketSnapshot();
+  // Use the persisted compare tray (localStorage) so selections survive navigation.
+  // Full CarListing objects are fetched for the pinned IDs for the modal/thumbnails.
+  const { pinned: comparePinned, toggle: toggleCompareTray, isPinned } = useCompareTray();
   const [compareListings, setCompareListings] = useState<CarListing[]>([]);
   const [showCompare, setShowCompare] = useState(false);
   const [showMobileFilter, setShowMobileFilter] = useState(false);
@@ -428,6 +443,7 @@ export default function Dashboard() {
       params.set("vehicle_category", filters.vehicle_category);
     }
     if (filters.price_availability === "unavailable") params.set("price_availability", filters.price_availability);
+    if (filters.fresh_24h) params.set("fresh_24h", "1");
     if (filters.sort && filters.sort !== "newest") params.set("sort", filters.sort);
     if (filters.page > 1) params.set("page", String(filters.page));
     const next = params.toString();
@@ -474,9 +490,14 @@ export default function Dashboard() {
   }, [dashboardInsights?.trending_models, fallbackTrendingModels]);
 
   const hotDeals = useMemo(() => {
+    // A listing with no resolvable make/model ("Other brand Other model") must
+    // never be the hero's #1 deal — it is a scrape artifact, not a bargain.
+    const isBrandable = (r: { make?: string; model?: string }) => !isJunkMake(r.make);
     const rows = dashboardInsights?.hot_deals?.length
-      ? dashboardInsights.hot_deals.filter((r) => isReasonableListingPrice(Number(r.price_lkr || 0)))
-      : fallbackHotDeals.map((r) => ({
+      ? dashboardInsights.hot_deals.filter(
+          (r) => isReasonableListingPrice(Number(r.price_lkr || 0)) && isBrandable(r),
+        )
+      : fallbackHotDeals.filter(isBrandable).map((r) => ({
           id: r.id, make: r.make, model: r.model, year: r.year, district: r.district || null,
           source: r.source, price_lkr: r.price_lkr, deal_score: Number(r.deal_score || 0),
           thumbnail_url: r.thumbnail_url || r.images?.[0] || null,
@@ -504,15 +525,54 @@ export default function Dashboard() {
 
   // ── Actions ────────────────────────────────────────────────────
 
-  const toggleCompare = useCallback((listing: CarListing) => {
-    setCompareListings((prev) => {
-      if (prev.some((i) => i.id === listing.id)) return prev.filter((i) => i.id !== listing.id);
-      if (prev.length >= 3) return prev;
-      return [...prev, listing];
+  // Sync full CarListing objects for the persisted tray (for modal and thumbnails).
+  useEffect(() => {
+    const pinnedIds = comparePinned.map((p) => p.id);
+    if (pinnedIds.length === 0) {
+      setCompareListings([]);
+      return;
+    }
+    let cancelled = false;
+    getListingsBatch(pinnedIds).then((listings) => {
+      if (!cancelled) setCompareListings(listings);
+    }).catch(() => {
+      if (!cancelled) {
+        // Fallback: construct minimal listings from pinned data
+        setCompareListings(comparePinned.map((p) => ({
+          id: p.id,
+          make: p.make,
+          model: p.model,
+          year: p.year,
+          price_lkr: p.price_lkr,
+          mileage_km: p.mileage_km,
+          district: p.district,
+          thumbnail_url: p.thumbnail_url,
+          detail_url: p.detail_url,
+        } as CarListing)));
+      }
     });
-  }, []);
+    return () => { cancelled = true; };
+  }, [comparePinned]);
 
-  const compareIds = useMemo(() => compareListings.map((l) => l.id), [compareListings]);
+  const toggleCompare = useCallback((listing: CarListing) => {
+    const median = Number(listing.market_median_lkr);
+    const images = Array.isArray(listing.images) ? listing.images : [];
+    toggleCompareTray({
+      id: Number(listing.id),
+      make: listing.make,
+      model: listing.model,
+      year: listing.year,
+      price_lkr: Number(listing.price_lkr) || null,
+      fmv_lkr: Number.isFinite(median) && median > 0 ? median : null,
+      mileage_km: Number(listing.mileage_km) || null,
+      district: listing.district,
+      deal_score: typeof listing.deal_score === "number" ? listing.deal_score : null,
+      thumbnail_url: listing.thumbnail_url || (images[0] as string) || null,
+      detail_url: listing.detail_url || null,
+    });
+  }, [toggleCompareTray]);
+
+  const compareIds = useMemo(() => comparePinned.map((p) => p.id), [comparePinned]);
   const compareIdSet = useMemo(() => new Set(compareIds), [compareIds]);
   const watchlistIdSet = useMemo(() => new Set(watchlistIds), [watchlistIds]);
 
@@ -565,7 +625,7 @@ export default function Dashboard() {
   }, [scrollToMarket]);
 
   const browseNewestListings = useCallback(() => {
-    startTransition(() => { setFilters((prev) => ({ ...prev, sort: "newest", page: 1, vehicle_category: prev.vehicle_category || "cars" })); });
+    startTransition(() => { setFilters((prev) => ({ ...prev, fresh_24h: true, sort: "newest", page: 1, vehicle_category: prev.vehicle_category || "cars" })); });
     scrollToMarket();
   }, [scrollToMarket]);
 
@@ -613,6 +673,7 @@ export default function Dashboard() {
 
   const activeFilterLabels = useMemo(
     () => [
+      filters.fresh_24h ? t("home.newIn24h", "New in 24h") : undefined,
       filters.price_availability === "unavailable" ? t("home.missingPrices", "Missing prices") : undefined,
       filters.vehicle_category && filters.vehicle_category !== "cars" ? filters.vehicle_category : undefined,
       filters.q ? `"${filters.q}"` : undefined,
@@ -671,6 +732,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen">
       <FreePlanBanner />
+      <AnnouncementBanner />
       {showHeroLab ? (
         <HeroVariantPicker activeId={heroVariant.id} onSelect={setHeroVariantId} />
       ) : null}
@@ -756,7 +818,15 @@ export default function Dashboard() {
               </span>
               <span className={cn("italic text-primary", heroCentered ? "display-hero__accent" : undefined)}>
                 {heroCentered ? null : " "}
-                {t("hero.titleAccent", "decoded.")}
+                {/* Flip Words — rotating accent (#8 UI review) */}
+                <FlipWords
+                  words={[
+                    t("hero.titleAccent", "decoded."),
+                    t("hero.accentWord2", "priced."),
+                    t("hero.accentWord3", "tracked."),
+                    t("hero.accentWord4", "compared."),
+                  ]}
+                />
               </span>
             </motion.h1>
 
@@ -930,12 +1000,25 @@ export default function Dashboard() {
         </motion.div>
       </section>
 
+      {/* ── Market ticker — Kibo UI ticker (#12 UI review) ─────────────── */}
+      <MarketTicker
+        rows={trendingModels.filter((r) => isReasonableListingPrice(Number(r.avg_price_lkr || 0))).slice(0, 8)}
+        onSelect={(row) => focusModel(row.make, row.model)}
+      />
+
+      {/* ── How it works — animated beam band ─────────────────────────── */}
+      <HowItWorksBand />
+
       {/* ── Live intelligence (post-hero) ─────────────────────────── */}
       <section className="border-b border-border bg-background">
         <div className="mx-auto max-w-[1560px] px-5 py-10 sm:px-6 lg:py-14">
           <ProFeatureLock label={t("home.liveIntelLock", "Live intelligence console")}>
             <Suspense fallback={null}>
-              <MarketIntelligencePanel snapshot={liveMarketSnapshot} stats={stats} insights={dashboardInsights} />
+              {!liveMarketSnapshot && !stats && !dashboardInsights ? (
+                <MarketIntelligenceSkeleton />
+              ) : (
+                <MarketIntelligencePanel snapshot={liveMarketSnapshot} stats={stats} insights={dashboardInsights} />
+              )}
             </Suspense>
           </ProFeatureLock>
         </div>
@@ -1170,6 +1253,7 @@ export default function Dashboard() {
             variant="banner"
             className="mb-5"
           />
+          <SnapshotModeNotice className="mb-5" />
 
           {/* Filters + Grid */}
           <div className="flex flex-col items-start gap-6 lg:flex-row">
@@ -1186,8 +1270,11 @@ export default function Dashboard() {
                 </div>
               ) : listingsFailed ? (
                 <div className="flex flex-col items-center justify-center gap-3 rounded-[2rem] border border-border bg-surface px-4 py-20 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Listings temporarily unavailable — market API returned an error.
+                  <p className="text-sm font-semibold text-foreground">
+                    {t("home.listingsErrorTitle", "We couldn't load listings just now")}
+                  </p>
+                  <p className="max-w-sm text-sm text-muted-foreground">
+                    {t("home.listingsErrorBody", "This is usually a short outage on our side. Your filters are kept. Try again in a moment.")}
                   </p>
                   <button
                     type="button"
@@ -1244,7 +1331,7 @@ export default function Dashboard() {
                       <motion.div key={listing.id} variants={cardItemVariants}>
                         <Link to={`/listing/${listing.id}`} className="inventory-tile group flex items-center gap-4 p-3 no-underline active:scale-[0.99]">
                           <div className="h-16 w-24 shrink-0 overflow-hidden rounded-2xl bg-black/30">
-                            <VehicleThumbnail src={pickVehicleImageUrl([listing.thumbnail_url, ...(Array.isArray(listing.images) ? listing.images : [])], [listing.detail_url])} listingId={listing.id} alt={`${listing.make} ${listing.model}`} className="w-full h-full object-cover" />
+                            <VehicleThumbnail src={pickVehicleImageUrl([listing.thumbnail_url, ...(Array.isArray(listing.images) ? listing.images : [])], [listing.detail_url])} listingId={listing.id} source={listing.source} alt={`${listing.make} ${listing.model}`} className="w-full h-full object-cover" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-[14px] font-semibold text-foreground group-hover:text-primary transition-colors">{listing.make} {listing.model} {listing.variant || ""}</p>
@@ -1388,6 +1475,13 @@ export default function Dashboard() {
       </RevealSection>
 
 
+      {/* ── Source marquee — Marquee (#11 UI review) ───────────────────── */}
+      <SourceMarquee
+        items={(liveMarketSnapshot?.source_status || [])
+          .filter((st) => Number(st.listings_found || 0) > 0)
+          .map((st) => ({ source: st.source, listings: Number(st.listings_found || 0) }))}
+      />
+
       {/* ── COMPARE BAR ─────────────────────────────────────────── */}
       {compareIds.length > 0 && (
         <div className="fixed bottom-24 left-1/2 z-[1200] w-[min(94vw,720px)] -translate-x-1/2 md:bottom-4">
@@ -1462,7 +1556,7 @@ export default function Dashboard() {
             <p className="mt-1.5 text-[13px] font-semibold text-foreground">{currentAlertSummary}</p>
             <div className="mt-3 flex gap-2">
               <Input value={alertPriceInput} onChange={(e) => setAlertPriceInput(e.target.value.replace(/[^\d]/g, ""))} inputMode="numeric" placeholder="Target max price (LKR)" className="h-9 flex-1 rounded-2xl border-border bg-transparent text-base md:text-sm" />
-              <button type="button" onClick={saveCurrentMarketAlert} className="h-9 rounded-full bg-primary px-4 text-[12px] font-semibold text-white hover:bg-primary/95">Save</button>
+              <button type="button" onClick={saveCurrentMarketAlert} className="h-9 rounded-full bg-primary px-4 text-[12px] font-semibold text-white transition-all hover:bg-primary/95 active:scale-[0.97]">Save</button>
             </div>
           </div>
           {marketAlerts.length ? (
@@ -1475,9 +1569,9 @@ export default function Dashboard() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <button type="button" onClick={() => { setFilters({ ...(alert.filters as FilterState), sort: alert.filters.sort || "newest", page: 1 }); setShowMarketAlerts(false); scrollToMarket(); }}
-                      className="h-7 rounded-full border border-primary/15 bg-primary/5 px-2.5 text-[10px] font-semibold text-primary-bright hover:bg-primary/10">Open</button>
+                      className="h-7 rounded-full border border-primary/15 bg-primary/5 px-2.5 text-[10px] font-semibold text-primary-bright transition-all hover:bg-primary/10 active:scale-[0.95]">Open</button>
                     <button type="button" onClick={() => deleteMarketAlert(alert.id)}
-                      className="h-7 rounded-full border border-border px-2.5 text-[10px] font-semibold text-muted-foreground hover:text-foreground">Delete</button>
+                      className="h-7 rounded-full border border-border px-2.5 text-[10px] font-semibold text-muted-foreground transition-all hover:text-foreground active:scale-[0.95]">Delete</button>
                   </div>
                 </div>
               ))}
@@ -1502,15 +1596,29 @@ export default function Dashboard() {
                     <p className="mt-0.5 text-[10px] text-muted-foreground">{listing.district || "LK"} · {isReasonableListingPrice(Number(listing.price_lkr || 0)) ? formatPrice(listing.price_lkr) : "N/A"}</p>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <button type="button" onClick={() => toggleWatchlist(listing)} className="h-7 rounded-full border border-primary/15 bg-primary/5 px-2.5 text-[10px] font-semibold text-primary-bright hover:bg-primary/10">{t("home.remove", "Remove")}</button>
-                    <Link to={`/listing/${listing.id}`} onClick={() => setShowSavedListings(false)} className="flex h-7 items-center gap-1 rounded-full border border-border px-2.5 text-[10px] font-semibold text-muted-foreground no-underline hover:text-foreground">
+                    <button type="button" onClick={() => toggleWatchlist(listing)} className="h-7 rounded-full border border-primary/15 bg-primary/5 px-2.5 text-[10px] font-semibold text-primary-bright transition-all hover:bg-primary/10 active:scale-[0.95]">{t("home.remove", "Remove")}</button>
+                    <Link to={`/listing/${listing.id}`} onClick={() => setShowSavedListings(false)} className="flex h-7 items-center gap-1 rounded-full border border-border px-2.5 text-[10px] font-semibold text-muted-foreground no-underline transition-all hover:text-foreground active:scale-[0.95]">
                       Open <ExternalLink className="h-2.5 w-2.5" />
                     </Link>
                   </div>
                 </div>
               ))}
             </div>
-          ) : <p className="py-6 text-center text-[11px] text-muted-foreground">No saved listings</p>}
+          ) : (
+            <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
+              <p className="text-[13px] font-bold text-foreground">{t("home.noSavedTitle", "Nothing saved yet")}</p>
+              <p className="max-w-xs text-[11px] leading-relaxed text-muted-foreground">
+                {t("home.noSavedBody", "Tap the bookmark on any listing and it will wait for you here.")}
+              </p>
+              <Link
+                to="/#market"
+                onClick={() => setShowSavedListings(false)}
+                className="min-h-11 rounded-full bg-primary px-5 py-3 text-[13px] font-bold text-primary-foreground no-underline transition-all hover:bg-primary/95 active:scale-[0.97]"
+              >
+                {t("common.browseInventory", "Browse inventory")}
+              </Link>
+            </div>
+          )}
           {savedListingsError && <p className="text-[11px] text-primary-bright">{savedListingsError}</p>}
         </DialogContent>
       </Dialog>

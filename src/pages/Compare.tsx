@@ -7,7 +7,7 @@ import { CarListing } from "@/types/car";
 import { ComparisonModal } from "@/components/ComparisonModal";
 import { DealScoreBadge } from "@/components/DealScoreBadge";
 import { FmvExplainer } from "@/components/FmvExplainer";
-import { buildCompareLink, useCompareTray } from "@/lib/compareTray";
+import { buildCompareLink, loadPinned, useCompareTray } from "@/lib/compareTray";
 import { PageCanvas } from "@/components/PageCanvas";
 
 const MAX_COMPARE_IDS = 3;
@@ -21,11 +21,15 @@ export default function Compare() {
   const { toggle: toggleCompare, isPinned } = useCompareTray();
 
   const rawIds = searchParams.get("ids") ?? "";
-  const ids = rawIds
+  const urlIds = rawIds
     .split(",")
     .map((s) => parseInt(s.trim(), 10))
     .filter((n) => Number.isFinite(n) && n > 0)
     .slice(0, MAX_COMPARE_IDS);
+  // Fall back to the persisted tray so a direct visit to /compare (navbar,
+  // bookmark, refresh) keeps the user's pinned selection instead of showing
+  // an empty "no vehicles selected" state.
+  const ids = urlIds.length > 0 ? urlIds : loadPinned().map((p) => p.id).slice(0, MAX_COMPARE_IDS);
 
   const fetchListings = useCallback(async () => {
     if (ids.length === 0) {

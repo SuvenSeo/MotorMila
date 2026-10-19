@@ -2,26 +2,26 @@ from __future__ import annotations
 
 from datetime import datetime
 from app.utils.time import utc_now
+import os
 import re
 from urllib.parse import urljoin, urlparse
 
 import httpx
 import structlog
+
+from app.scrapers.polite import BOT_USER_AGENT
 from bs4 import BeautifulSoup
 from sqlalchemy.orm import Session
 
 from app.scrapers.cleaner import CarCleaner
-from app.scrapers.net import httpx_client_kwargs
+from app.scrapers.net import httpx_client_kwargs, response_blocked_reason
+from app.scrapers.page_budget import start_page_from_env
 from app.utils.listing_upsert import buffered_upsert_listing, flush_upsert_buffer
 
 log = structlog.get_logger()
 
 DEFAULT_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
-    ),
+    "User-Agent": BOT_USER_AGENT,
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
 
@@ -54,6 +54,15 @@ SRI_LANKA_DISTRICTS = (
 )
 
 
+class SourceBlockedError(RuntimeError):
+    """Raised when a source answers with a bot wall instead of listings.
+
+    Aborting the whole source on the first challenge page is deliberate: these
+    walls never clear mid-run, so continuing only burns the source's entire
+    wall-clock budget (and the fleet's IP reputation) for zero listings.
+    """
+
+
 class GenericDetailScraper:
     SOURCE = ""
     BASE_URL = ""
@@ -61,9 +70,30 @@ class GenericDetailScraper:
     EMPTY_PAGE_LIMIT = 3
     ALLOW_UNAVAILABLE_PRICE = False
 
+    def empty_page_limit(self) -> int:
+        """Consecutive empty pages tolerated before a category is done.
+
+        Three is enough to clear a real end of catalogue without stalling, and
+        it is tunable so a site that interleaves empty pages can be crawled
+        further.
+        """
+        raw = os.getenv("SCRAPE_EMPTY_PAGE_LIMIT")
+        if raw is None or str(raw).strip() == "":
+            return max(1, int(self.EMPTY_PAGE_LIMIT))
+        try:
+            parsed = int(str(raw).strip())
+        except (TypeError, ValueError):
+            return max(1, int(self.EMPTY_PAGE_LIMIT))
+        return parsed if parsed >= 1 else max(1, int(self.EMPTY_PAGE_LIMIT))
+
     def __init__(self, db: Session):
         self.db = db
         self.cleaner = CarCleaner()
+        # Set to a short reason when the source answered with a bot wall so the
+        # caller can record a truthful FAILED run instead of a zero-listing
+        # SUCCESS. Checked with getattr() so subclasses that skip __init__ or
+        # older scrapers stay safe.
+        self.blocked_reason: str | None = None
 
     def _upsert_listing(self, payload: dict):
         return buffered_upsert_listing(self, payload)
@@ -115,15 +145,34 @@ class GenericDetailScraper:
     def _extract_listing_links(cls, soup: BeautifulSoup) -> list[str]:
         raise NotImplementedError
 
-    def _build_page_urls(self, max_pages: int) -> list[str]:
+    def _page_url_for(self, start_url: str, page_num: int) -> str:
+        if page_num <= 1:
+            return start_url
+        return f"{start_url.rstrip('/')}?page={page_num}"
+
+    def _build_page_url_groups(
+        self,
+        max_pages: int,
+        *,
+        start_page: int = 1,
+    ) -> list[list[str]]:
+        """Listing-page URLs grouped by category, one group per start URL.
+
+        Grouping matters: a source's categories end at different pages, so the
+        "this category is finished" counter has to be per group. A single
+        shared counter made a source stop as soon as its *first* category ran
+        out of pages, and every remaining category was never visited.
+        """
         page_limit = max(1, int(max_pages or 1))
-        urls: list[str] = []
+        start = max(1, int(start_page or 1))
         starts = self.START_URLS or (self.BASE_URL,)
-        for start_url in starts:
-            urls.append(start_url)
-            for page_num in range(2, page_limit + 1):
-                urls.append(f"{start_url.rstrip('/')}?page={page_num}")
-        return urls[: page_limit * len(starts)]
+        return [
+            [self._page_url_for(start_url, page) for page in range(start, start + page_limit)]
+            for start_url in starts
+        ]
+
+    def _build_page_urls(self, max_pages: int) -> list[str]:
+        return [url for group in self._build_page_url_groups(max_pages) for url in group]
 
     def _extract_title(self, soup: BeautifulSoup) -> str:
         title = self._attr(
@@ -252,7 +301,10 @@ class GenericDetailScraper:
 
     @staticmethod
     def _extract_engine_capacity(text: str) -> int | None:
-        match = re.search(r"\b([1-9][0-9]{2,4})\s*(?:cc|c\.c\.|engine)\b", text, flags=re.IGNORECASE)
+        # The unit is REQUIRED: with an optional unit, a bare manufacture year
+        # ("Toyota Vitz 2007") matched as 2,007 cc and polluted listings with
+        # year-as-displacement values (plus bogus "near 1,500cc cliff" badges).
+        match = re.search(r"\b([1-9][0-9]{2,4})\s*(?:cc|c\.c\.)\b", text, flags=re.IGNORECASE)
         if not match:
             return None
         try:
@@ -357,55 +409,119 @@ class GenericDetailScraper:
             return
 
         seen_urls: set[str] = set()
-        consecutive_empty_pages = 0
+        blocked = False
+        block_reason: str | None = None
+
+        start_page = start_page_from_env(self.SOURCE)
+        empty_page_limit = self.empty_page_limit()
+        groups = self._build_page_url_groups(max_pages, start_page=start_page)
+        if start_page > 1:
+            log.info(
+                "generic_detail_segment_start",
+                source=self.SOURCE,
+                start_page=start_page,
+                max_pages=max_pages,
+                categories=len(groups),
+            )
 
         async with httpx.AsyncClient(
             follow_redirects=True, **httpx_client_kwargs(DEFAULT_HEADERS)
         ) as client:
-            for page_url in self._build_page_urls(max_pages):
-                log.info("scraping_page", source=self.SOURCE, url=page_url)
-                try:
-                    response = await client.get(page_url, timeout=30)
-                    response.raise_for_status()
-                    soup = BeautifulSoup(response.text, "lxml")
-                    listing_urls = self._extract_listing_links(soup)
-                except Exception as exc:
-                    log.error("generic_detail_page_error", source=self.SOURCE, url=page_url, error=str(exc))
-                    continue
-
-                if not listing_urls:
-                    consecutive_empty_pages += 1
-                    if consecutive_empty_pages >= self.EMPTY_PAGE_LIMIT:
-                        break
-                    continue
-
+            for category_urls in groups:
+                # Per-category, not per-source: one category running out of
+                # pages must never end the crawl for the categories after it.
                 consecutive_empty_pages = 0
-                new_on_page = 0
-                page_category = self._category_from_page_url(page_url)
-                for detail_url in listing_urls:
-                    if detail_url in seen_urls:
-                        continue
-                    seen_urls.add(detail_url)
+                for page_url in category_urls:
+                    log.info("scraping_page", source=self.SOURCE, url=page_url)
                     try:
-                        detail = await client.get(detail_url, timeout=30)
-                        detail.raise_for_status()
-                        payload = self._build_payload(
-                            str(detail.url),
-                            detail.text,
-                            vehicle_category=page_category,
+                        response = await client.get(page_url, timeout=30)
+                        page_blocked = response_blocked_reason(response)
+                        if page_blocked:
+                            raise SourceBlockedError(page_blocked)
+                        response.raise_for_status()
+                        soup = BeautifulSoup(response.text, "lxml")
+                        listing_urls = self._extract_listing_links(soup)
+                    except SourceBlockedError as exc:
+                        log.warning(
+                            "generic_detail_source_blocked",
+                            source=self.SOURCE,
+                            url=page_url,
+                            reason=str(exc),
                         )
-                        if not payload:
-                            continue
-                        self._upsert_listing(payload)
-                        self.db.commit()
-                        new_on_page += 1
-                    except Exception as exc:
-                        self.db.rollback()
-                        log.error("generic_detail_item_error", source=self.SOURCE, url=detail_url, error=str(exc))
-
-                if new_on_page == 0:
-                    consecutive_empty_pages += 1
-                    if consecutive_empty_pages >= self.EMPTY_PAGE_LIMIT:
+                        blocked = True
+                        block_reason = str(exc)
                         break
+                    except Exception as exc:
+                        log.error("generic_detail_page_error", source=self.SOURCE, url=page_url, error=str(exc))
+                        continue
+
+                    if not listing_urls:
+                        consecutive_empty_pages += 1
+                        log.info(
+                            "generic_detail_empty_page",
+                            source=self.SOURCE,
+                            url=page_url,
+                            consecutive_empty_pages=consecutive_empty_pages,
+                            limit=empty_page_limit,
+                        )
+                        if consecutive_empty_pages >= empty_page_limit:
+                            break
+                        continue
+
+                    consecutive_empty_pages = 0
+                    new_on_page = 0
+                    page_category = self._category_from_page_url(page_url)
+                    for detail_url in listing_urls:
+                        if detail_url in seen_urls:
+                            continue
+                        seen_urls.add(detail_url)
+                        try:
+                            detail = await client.get(detail_url, timeout=30)
+                            detail_blocked = response_blocked_reason(detail)
+                            if detail_blocked:
+                                raise SourceBlockedError(detail_blocked)
+                            detail.raise_for_status()
+                            payload = self._build_payload(
+                                str(detail.url),
+                                detail.text,
+                                vehicle_category=page_category,
+                            )
+                            if not payload:
+                                continue
+                            self._upsert_listing(payload)
+                            self.db.commit()
+                            new_on_page += 1
+                        except SourceBlockedError as exc:
+                            self.db.rollback()
+                            log.warning(
+                                "generic_detail_source_blocked",
+                                source=self.SOURCE,
+                                url=detail_url,
+                                reason=str(exc),
+                            )
+                            blocked = True
+                            block_reason = str(exc)
+                            break
+                        except Exception as exc:
+                            self.db.rollback()
+                            log.error("generic_detail_item_error", source=self.SOURCE, url=detail_url, error=str(exc))
+
+                    if new_on_page == 0:
+                        consecutive_empty_pages += 1
+                        if consecutive_empty_pages >= empty_page_limit:
+                            break
+
+                    if blocked:
+                        break
+
+                if blocked:
+                    break
 
         flush_upsert_buffer(self)
+        if blocked:
+            self.blocked_reason = block_reason or "bot_wall:unknown"
+            log.warning(
+                "generic_detail_source_gave_up_blocked",
+                source=self.SOURCE,
+                reason=self.blocked_reason,
+            )

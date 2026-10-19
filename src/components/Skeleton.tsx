@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { ListingCardSkeleton } from "@/components/ListingCardSkeleton";
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div aria-hidden="true" className={cn("animate-pulse rounded-2xl bg-surface", className)} />;
+  return <div aria-hidden="true" className={cn("skeleton-shimmer rounded-2xl", className)} />;
 }
 
 /** BestPicks-shaped loading skeleton: one featured block + card grid. */

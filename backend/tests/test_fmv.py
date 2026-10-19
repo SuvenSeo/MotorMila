@@ -51,7 +51,9 @@ def test_fmv_falls_back_to_stored_median_without_comps():
     result = predict_listing_fmv(db, subject)
     assert result["method"] == "cohort_median"
     assert result["fmv_lkr"] == 5_200_000
-    assert result["band"] == "below"
+    # Thin cohorts (here: 0 comps) must not emit a verdict band.
+    assert result["band"] is None
+    assert result["label"] is None
     assert result["confidence"] == "low"
     assert result["sample_size"] == 0
     assert result["comps_median_lkr"] is None

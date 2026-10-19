@@ -1,8 +1,9 @@
-import { type ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Crown, Lock } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
 import { cn } from "@/lib/utils";
+import { trackEvent } from "@/lib/analytics";
 
 type ProFeatureLockProps = {
   children: ReactNode;
@@ -29,6 +30,16 @@ export function ProFeatureLock({
   const { hasProAccess, isAdmin } = useAuth();
   const open = unlocked ?? (hasProAccess || isAdmin);
 
+  // Paywall funnel: fire once per label when the lock is actually shown.
+  useEffect(() => {
+    if (open) return;
+    trackEvent("paywall_view", { source: "pro_feature_lock", label, density });
+  }, [open, label, density]);
+
+  const onCtaClick = () => {
+    trackEvent("paywall_click", { source: "pro_feature_lock", label, density, cta: "join_waitlist" });
+  };
+
   if (open) {
     return <>{children}</>;
   }
@@ -41,6 +52,7 @@ export function ProFeatureLock({
         </div>
         <Link
           to="/pricing"
+          onClick={onCtaClick}
           className="absolute inset-0 z-10 inline-flex items-center justify-center gap-1.5 rounded-full bg-background/55 px-3 text-[11px] font-semibold text-foreground no-underline backdrop-blur-[6px] transition-colors hover:bg-background/70"
         >
           <Lock className="h-3 w-3 text-primary-bright" aria-hidden />
@@ -62,14 +74,15 @@ export function ProFeatureLock({
             {label}
           </span>
           <p className="mx-auto mt-3 max-w-xs text-[13px] font-medium leading-relaxed text-muted-foreground">
-            Start your 7-day free trial for full lane intelligence, exports, and deeper market tools.
+            Join the waitlist for full lane intelligence, exports, and deeper market tools at launch.
           </p>
           <Link
             to="/pricing"
+            onClick={onCtaClick}
             className="mt-4 inline-flex h-10 items-center gap-1.5 rounded-full bg-primary px-5 text-[12px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/95 active:scale-[0.98]"
           >
             <Crown className="h-3.5 w-3.5" aria-hidden />
-            Start 7-day free trial
+            Join the waitlist
           </Link>
         </div>
       </div>

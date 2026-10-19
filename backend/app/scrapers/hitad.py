@@ -5,23 +5,25 @@ from urllib.parse import urljoin
 
 import httpx
 import structlog
+
+from app.scrapers.polite import BOT_USER_AGENT
 from bs4 import BeautifulSoup
 from sqlalchemy.orm import Session
 
 from app.scrapers.cleaner import CarCleaner
 from app.scrapers.net import httpx_client_kwargs
-from app.scrapers.page_budget import page_budget_for_category
+from app.scrapers.page_budget import (
+    page_budget_for_category,
+    should_stop_at_page_hint,
+    start_page_from_env,
+)
 from app.utils.listing_upsert import buffered_upsert_listing, flush_upsert_buffer
 from app.utils.time import utc_now
 
 log = structlog.get_logger()
 
 DEFAULT_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
-    ),
+    "User-Agent": BOT_USER_AGENT,
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
 }
@@ -168,17 +170,20 @@ class HitadScraper:
 
     async def scrape(self, max_pages: int = 5):
         seen_urls: set[str] = set()
+        start_page = start_page_from_env(self.SOURCE)
 
         async with httpx.AsyncClient(
             follow_redirects=True, **httpx_client_kwargs(DEFAULT_HEADERS)
         ) as client:
             for keyword in self.CATEGORY_KEYWORDS:
                 page_limit = self._page_budget_for_category(keyword, max_pages)
-                page_num = 1
+                page_num = start_page
+                stop_at_page = start_page + page_limit
                 consecutive_empty_pages = 0
                 consecutive_page_errors = 0
+                max_page_hint: int | None = None
 
-                while page_num <= page_limit:
+                while page_num < stop_at_page:
                     url = self._page_url(keyword, page_num)
                     log.info(
                         "scraping_page",
@@ -186,6 +191,7 @@ class HitadScraper:
                         category=keyword,
                         page=page_num,
                         page_limit=page_limit,
+                        start_page=start_page,
                     )
 
                     try:
@@ -202,10 +208,30 @@ class HitadScraper:
                                 page=page_num,
                                 consecutive_empty_pages=consecutive_empty_pages,
                             )
+                            # A dry page past the site's advertised last page
+                            # is a confirmed end, so stop now instead of
+                            # spending the whole empty-page budget proving it.
+                            if should_stop_at_page_hint(
+                                page_num, max_page_hint, produced_listings=False
+                            ):
+                                log.info(
+                                    "hitad_reached_last_page",
+                                    category=keyword,
+                                    page=page_num,
+                                    last_page=max_page_hint,
+                                )
+                                break
                             if consecutive_empty_pages >= 10:
                                 break
                             page_num += 1
                             continue
+
+                        # Remember the advertised last page; it is only ever used
+                        # to end a dry tail, never to cut short a page that is
+                        # still yielding cards.
+                        page_hint = self._extract_max_page(soup)
+                        if page_hint and (max_page_hint is None or page_hint > max_page_hint):
+                            max_page_hint = page_hint
 
                         new_on_page = 0
 
@@ -232,6 +258,9 @@ class HitadScraper:
                                 self.db.rollback()
 
                         if new_on_page == 0:
+                            # Cards were present but none parsed. That is a
+                            # parsing gap, not the end of the catalogue, so the
+                            # crawl keeps going.
                             consecutive_empty_pages += 1
                             if consecutive_empty_pages >= 10:
                                 break

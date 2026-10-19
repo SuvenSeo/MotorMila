@@ -1,6 +1,6 @@
 import type { FilterState } from "@/types/car";
 
-const MARKET_ALERTS_KEY = "autolens.market_alerts.v1";
+const MARKET_ALERTS_KEY = "motormila.market_alerts.v1";
 const MAX_ALERTS = 12;
 
 export interface MarketAlert {

@@ -20,7 +20,16 @@ permissions:
   contents: read
 
 jobs:
+  # Deploy gate: the backend test suite must pass before anything is pushed
+  # to the Space (six deploys went out on 2026-10-18 while CI was red).
+  # Skipped only for the read-only logs_only dispatch.
+  backend-tests:
+    if: ${{ github.event.inputs.logs_only != 'true' }}
+    uses: ./.github/workflows/backend-tests.yml
+
   sync-to-hf:
+    needs: backend-tests
+    if: ${{ always() && (needs.backend-tests.result == 'success' || (github.event.inputs.logs_only == 'true' && needs.backend-tests.result == 'skipped')) }}
     runs-on: ubuntu-latest
 
     steps:
@@ -56,7 +65,7 @@ jobs:
             --exclude="*.pyc" \
             --exclude="*.pyo" \
             --exclude="*.db" \
-            --exclude="autolens.db" \
+            --exclude="motormila.db" \
             --exclude=".env" \
             --exclude=".env.local" \
             --exclude="rescue_exports/" \

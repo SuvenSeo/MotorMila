@@ -25,8 +25,8 @@ import { useAuth } from "@/lib/authContext";
 import { hasFullPlatformAccess } from "@/lib/planLimits";
 import { safeExternalUrl } from "@/lib/safeExternalUrl";
 
-const STORAGE_KEY = "autolens_chat_v2";
-const TOOLTIP_KEY = "autolens_chat_tooltip_seen";
+const STORAGE_KEY = "motormila_chat_v2";
+const TOOLTIP_KEY = "motormila_chat_tooltip_seen";
 const genId = () => Math.random().toString(36).slice(2, 10);
 
 type Message = {

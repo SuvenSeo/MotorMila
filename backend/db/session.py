@@ -45,7 +45,7 @@ if not HOT_URL and not COLD_URL:
         raise ValueError(
             "No database URL configured. Set HOT_DATABASE_URL and/or COLD_DATABASE_URL."
         )
-    HOT_URL = COLD_URL = "sqlite:///./autolens.db"
+    HOT_URL = COLD_URL = "sqlite:///./motormila.db"
 elif not HOT_URL:
     HOT_URL = COLD_URL   # single-DB: reads also go to Neon
 elif not COLD_URL:
@@ -80,14 +80,22 @@ def _make_engine(url: str):
     # crash the API process on every connection. Statement timeout is set
     # per-session in get_db() after connect instead.
     # NullPool kept: Space workers should not hold idle pooled conns.
-    return create_engine(
+    # connect_timeout is short (DB_CONNECT_TIMEOUT_SECONDS, default 3s) and a
+    # circuit breaker fails subsequent connects instantly while the database
+    # is known to be down (see app/core/db_guard.py), so a dead Neon no longer
+    # costs every request a full socket timeout.
+    from app.core.db_guard import connect_timeout_seconds, install_breaker
+
+    engine = create_engine(
         url,
         poolclass=NullPool,
         pool_pre_ping=True,
         connect_args={
-            "connect_timeout": 5,
+            "connect_timeout": connect_timeout_seconds(),
         },
     )
+    install_breaker(engine)
+    return engine
 
 hot_engine  = _make_engine(HOT_URL)
 cold_engine = _make_engine(COLD_URL)
@@ -110,9 +118,13 @@ def reattach_engines(url: str) -> None:
     `SessionLocal` / `HotSessionLocal` are imported by name in API modules.
     Reconfiguring the existing sessionmaker objects updates those aliases;
     replacing the names here would not.
+
+    The previous engines are disposed: without this every failover refresh
+    leaked a pool of open SQLite file handles against superseded inodes.
     """
     global hot_engine, cold_engine, engine, HOT_URL, COLD_URL
     url = _validate(_normalise(url), "SQLITE_FAILOVER")
+    old_engines = {hot_engine, cold_engine}
     new_engine = _make_engine(url)
     HotSessionLocal.configure(bind=new_engine)
     ColdSessionLocal.configure(bind=new_engine)
@@ -121,6 +133,12 @@ def reattach_engines(url: str) -> None:
     engine = new_engine
     HOT_URL = url
     COLD_URL = url
+    for old in old_engines:
+        if old is not new_engine:
+            try:
+                old.dispose()
+            except Exception:  # noqa: BLE001 - best effort
+                pass
 
 
 def _apply_statement_timeout(db) -> None:

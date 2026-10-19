@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Article
@@ -62,6 +61,7 @@ import lk.motormila.app.ui.theme.MotormilaOnSurface
 import lk.motormila.app.ui.theme.MotormilaOutline
 import lk.motormila.app.ui.theme.MotormilaPrimary
 import lk.motormila.app.ui.theme.MotormilaPrimaryBright
+import lk.motormila.app.ui.theme.MotormilaRadius
 import lk.motormila.app.ui.theme.MotormilaSecondaryText
 import lk.motormila.app.ui.theme.MotormilaSurfaceHigh
 import lk.motormila.app.ui.theme.rememberHaptics
@@ -174,7 +174,7 @@ private fun PulseSkeleton() {
 private fun PulseHero() {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
         Surface(
-            shape = RoundedCornerShape(50),
+            shape = MotormilaRadius.pill,
             color = MotormilaSurfaceHigh,
             border = BorderStroke(1.dp, MotormilaOutline),
         ) {
@@ -224,7 +224,7 @@ private fun SignalsPane(
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Surface(
-                    shape = RoundedCornerShape(28.dp),
+                    shape = MotormilaRadius.lg,
                     color = MotormilaSurfaceHigh,
                     border = BorderStroke(1.dp, MotormilaOutline),
                     modifier = Modifier.weight(1f),
@@ -237,7 +237,7 @@ private fun SignalsPane(
                     }
                 }
                 Surface(
-                    shape = RoundedCornerShape(28.dp),
+                    shape = MotormilaRadius.lg,
                     color = MotormilaSurfaceHigh,
                     border = BorderStroke(1.dp, MotormilaOutline),
                     modifier = Modifier.weight(1f),

@@ -47,4 +47,7 @@ interface StatsCacheDao {
 
     @Query("DELETE FROM remote_keys WHERE queryHash = :hash")
     suspend fun clearRemoteKeys(hash: String)
+
+    @Query("DELETE FROM remote_keys")
+    suspend fun clearAllRemoteKeys()
 }

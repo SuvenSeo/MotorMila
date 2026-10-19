@@ -29,20 +29,27 @@ describe("Docs and Pricing pages", () => {
   it("renders pricing tiers and ICP personas", () => {
     wrap(<Pricing />);
     expect(screen.getByRole("heading", { name: /Pricing that funds the pipeline/i })).toBeInTheDocument();
+    // Live LKR prices are shown; Pro is labelled free during beta, Dealer from LKR 2,990.
+    expect(screen.getByText("LKR 999")).toBeInTheDocument();
+    expect(screen.getAllByText("LKR 2,990").length).toBeGreaterThan(0);
+    expect(screen.getByText("LKR 6,990")).toBeInTheDocument();
+    expect(screen.getByText("LKR 14,990")).toBeInTheDocument();
     if (PRICING_COMING_SOON) {
-      // Paid plans are in Coming Soon mode: tiers render placeholder copy
-      // ("Coming soon") instead of live LKR prices. Assert the shipped state
-      // so this test tracks the flag rather than stale pricing copy.
-      expect(screen.getAllByText(/^coming soon$/i).length).toBeGreaterThan(0);
-    } else {
-      expect(screen.getByText("LKR 999")).toBeInTheDocument();
-      expect(screen.getByText("LKR 1,999")).toBeInTheDocument();
+      expect(screen.getAllByText(/free during beta/i).length).toBeGreaterThan(0);
     }
+    expect(screen.queryByText(/stripe/i)).toBeNull();
     expect(screen.getByText("Dealers")).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: /start 7-day free trial/i })[0]).toHaveAttribute(
-      "href",
-      "/sign-up",
-    );
+    if (PRICING_COMING_SOON) {
+      // Trial CTA is an honest waitlist form while paid plans are coming soon
+      // (not a link to invite-gated signup that would error).
+      expect(screen.getAllByPlaceholderText(/email for launch invite/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole("button", { name: /notify me/i }).length).toBeGreaterThan(0);
+    } else {
+      expect(screen.getAllByRole("link", { name: /join the waitlist/i })[0]).toHaveAttribute(
+        "href",
+        "#get-started",
+      );
+    }
     expect(screen.getAllByRole("link", { name: /Message us/i }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: /Message us/i })[0]).toHaveAttribute(
       "href",

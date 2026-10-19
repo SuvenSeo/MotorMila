@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.chat
 
+import lk.motormila.app.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
@@ -86,15 +88,22 @@ import lk.motormila.app.domain.model.Listing
 import lk.motormila.app.ui.components.DealBadge
 import lk.motormila.app.ui.components.OfflineBanner
 import lk.motormila.app.ui.theme.MotormilaBg
+import lk.motormila.app.ui.theme.MotormilaOnSurface
 import lk.motormila.app.ui.theme.MotormilaOutline
 import lk.motormila.app.ui.theme.MotormilaPill
 import lk.motormila.app.ui.theme.MotormilaPrimary
+import lk.motormila.app.ui.theme.MotormilaPrimaryBorder
 import lk.motormila.app.ui.theme.MotormilaPrimaryBright
+import lk.motormila.app.ui.theme.MotormilaPrimaryContainer
+import lk.motormila.app.ui.theme.MotormilaPrimaryGlow
+import lk.motormila.app.ui.theme.MotormilaPrimarySoft
+import lk.motormila.app.ui.theme.MotormilaRadius
 import lk.motormila.app.ui.theme.MotormilaSecondaryText
 import lk.motormila.app.ui.theme.MotormilaSheetShape
 import lk.motormila.app.ui.theme.MotormilaSurface
 import lk.motormila.app.ui.theme.MotormilaSurfaceHigh
 import lk.motormila.app.ui.theme.MotormilaSurfaceHighest
+import lk.motormila.app.ui.theme.applePress
 import lk.motormila.app.ui.theme.pressSpring
 
 val QUICK_PROMPTS = listOf(
@@ -225,7 +234,7 @@ private fun AIChatHeader(
                 .align(Alignment.CenterHorizontally)
                 .width(36.dp)
                 .height(4.dp)
-                .clip(RoundedCornerShape(999.dp))
+                .clip(MotormilaRadius.pill)
                 .background(Color(0x33FFFFFF)),
         )
 
@@ -246,7 +255,7 @@ private fun AIChatHeader(
                     modifier = Modifier
                         .size(42.dp)
                         .clip(CircleShape)
-                        .background(Color(0x2E0A7AFF))
+                        .background(MotormilaPrimaryContainer)
                         .border(1.dp, Color(0x663D94FF), CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -264,7 +273,7 @@ private fun AIChatHeader(
                             text = "Motormila AI Intelligence Assistant",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White,
+                            color = MotormilaOnSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -286,12 +295,12 @@ private fun AIChatHeader(
                         .size(48.dp)
                         .clip(CircleShape)
                         .background(MotormilaSurfaceHigh)
-                        .border(0.5.dp, MotormilaOutline, CircleShape),
+                        .border(1.dp, MotormilaOutline, CircleShape),
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Close,
                         contentDescription = "Close AI Assistant",
-                        tint = Color.White,
+                        tint = MotormilaOnSurface,
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -328,7 +337,7 @@ private fun ChatErrorRow(
             shape = androidx.compose.foundation.shape.CircleShape,
             onClick = onRetry,
             modifier = Modifier.heightIn(min = 48.dp),
-        ) { Text("Retry") }
+        ) { Text(stringResource(R.string.ui_chat_retry)) }
         IconButton(
             onClick = onDismiss,
             modifier = Modifier.size(48.dp),
@@ -362,19 +371,13 @@ private fun QuickPromptChipsRow(
     ) {
         prompts.forEach { prompt ->
             val interaction = remember { MutableInteractionSource() }
-            val pressed by interaction.collectIsPressedAsState()
-            val chipScale by animateFloatAsState(
-                targetValue = if (pressed) 0.95f else 1.0f,
-                animationSpec = pressSpring(),
-                label = "chip-press",
-            )
 
             Row(
                 modifier = Modifier
-                    .scale(chipScale)
+                    .applePress(interaction)
                     .clip(MotormilaPill)
-                    .background(Color(0x1A0A7AFF))
-                    .border(0.8.dp, Color(0x550A7AFF), MotormilaPill)
+                    .background(MotormilaPrimarySoft)
+                    .border(1.dp, MotormilaPrimaryBorder, MotormilaPill)
                     .clickable(
                         interactionSource = interaction,
                         indication = null,
@@ -390,13 +393,13 @@ private fun QuickPromptChipsRow(
                     imageVector = Icons.Filled.AutoAwesome,
                     contentDescription = null,
                     tint = MotormilaPrimaryBright,
-                    modifier = Modifier.size(13.dp),
+                    modifier = Modifier.size(12.dp),
                 )
                 Text(
                     text = prompt,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White,
+                    color = MotormilaOnSurface,
                 )
             }
         }
@@ -467,9 +470,9 @@ private fun WelcomeGlassCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(28.dp))
+            .clip(MotormilaRadius.lg)
             .background(MotormilaSurfaceHigh)
-            .border(1.dp, MotormilaOutline, RoundedCornerShape(28.dp))
+            .border(1.dp, MotormilaOutline, MotormilaRadius.lg)
             .padding(18.dp),
     ) {
         Row(
@@ -480,7 +483,7 @@ private fun WelcomeGlassCard(
                 imageVector = Icons.Filled.AutoAwesome,
                 contentDescription = null,
                 tint = MotormilaPrimaryBright,
-                modifier = Modifier.size(15.dp),
+                modifier = Modifier.size(16.dp),
             )
             Text(
                 text = "MOTORMILA MARKET COPILOT",
@@ -497,7 +500,7 @@ private fun WelcomeGlassCard(
             text = "Ask the market assistant before you decide.",
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.White,
+            color = MotormilaOnSurface,
             lineHeight = 24.sp,
         )
 
@@ -524,13 +527,19 @@ private fun WelcomeGlassCard(
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             QUICK_PROMPTS.take(3).forEach { prompt ->
+                val promptInteraction = remember { MutableInteractionSource() }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(28.dp))
+                        .applePress(promptInteraction)
+                        .clip(MotormilaRadius.lg)
                         .background(MotormilaBg)
-                        .border(0.5.dp, MotormilaOutline, RoundedCornerShape(28.dp))
-                        .clickable { onPromptSelected(prompt) }
+                        .border(1.dp, MotormilaOutline, MotormilaRadius.lg)
+                        .clickable(
+                            interactionSource = promptInteraction,
+                            indication = null,
+                            onClick = { onPromptSelected(prompt) },
+                        )
                         .heightIn(min = 48.dp)
                         .padding(horizontal = 12.dp, vertical = 9.dp)
                         .semantics { contentDescription = "Ask: $prompt" },
@@ -541,7 +550,7 @@ private fun WelcomeGlassCard(
                         text = prompt,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color.White,
+                        color = MotormilaOnSurface,
                     )
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
@@ -569,7 +578,7 @@ private fun UserSpeechBubble(
             modifier = Modifier
                 .fillMaxWidth(0.85f)
                 .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp, bottomStart = 16.dp, bottomEnd = 4.dp))
-                .background(Color(0x2E0A7AFF))
+                .background(MotormilaPrimaryContainer)
                 .border(1.dp, Color(0x660A7AFF), RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp, bottomStart = 16.dp, bottomEnd = 4.dp))
                 .padding(horizontal = 14.dp, vertical = 10.dp),
         ) {
@@ -577,7 +586,7 @@ private fun UserSpeechBubble(
                 text = content,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Normal,
-                color = Color.White,
+                color = MotormilaOnSurface,
                 lineHeight = 20.sp,
             )
         }
@@ -615,7 +624,7 @@ private fun AssistantSpeechBubble(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp, bottomStart = 4.dp, bottomEnd = 16.dp))
                     .background(MotormilaSurfaceHigh)
-                    .border(0.8.dp, MotormilaOutline, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp, bottomStart = 4.dp, bottomEnd = 16.dp))
+                    .border(1.dp, MotormilaOutline, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp, bottomStart = 4.dp, bottomEnd = 16.dp))
                     .padding(horizontal = 14.dp, vertical = 12.dp),
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -628,7 +637,7 @@ private fun AssistantSpeechBubble(
                             modifier = Modifier
                                 .size(20.dp)
                                 .clip(CircleShape)
-                                .background(Color(0x2E0A7AFF)),
+                                .background(MotormilaPrimaryContainer),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
@@ -675,13 +684,19 @@ private fun AssistantSpeechBubble(
             }
 
             // Copy action button
+            val copyInteraction = remember { MutableInteractionSource() }
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(28.dp))
-                    .clickable {
-                        clipboardManager.setText(AnnotatedString(message.content))
-                        copied = true
-                    }
+                    .applePress(copyInteraction)
+                    .clip(MotormilaRadius.lg)
+                    .clickable(
+                        interactionSource = copyInteraction,
+                        indication = null,
+                        onClick = {
+                            clipboardManager.setText(AnnotatedString(message.content))
+                            copied = true
+                        },
+                    )
                     .padding(horizontal = 6.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -730,7 +745,7 @@ private fun FormattedMessageText(content: String) {
                         Text(
                             text = bulletText,
                             fontSize = 13.sp,
-                            color = Color.White,
+                            color = MotormilaOnSurface,
                             lineHeight = 18.sp,
                         )
                     }
@@ -756,20 +771,14 @@ private fun EmbeddedVehicleCard(
     modifier: Modifier = Modifier,
 ) {
     val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    val cardScale by animateFloatAsState(
-        targetValue = if (pressed) 0.98f else 1.0f,
-        animationSpec = pressSpring(),
-        label = "embed-card-press",
-    )
 
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .scale(cardScale)
-            .clip(RoundedCornerShape(28.dp))
+            .applePress(interaction)
+            .clip(MotormilaRadius.lg)
             .background(MotormilaSurfaceHighest)
-            .border(1.dp, Color(0x330A7AFF), RoundedCornerShape(28.dp))
+            .border(1.dp, MotormilaPrimaryGlow, MotormilaRadius.lg)
             .clickable(
                 interactionSource = interaction,
                 indication = null,
@@ -784,7 +793,7 @@ private fun EmbeddedVehicleCard(
         Box(
             modifier = Modifier
                 .size(68.dp)
-                .clip(RoundedCornerShape(28.dp))
+                .clip(MotormilaRadius.lg)
                 .background(MotormilaBg),
             contentAlignment = Alignment.Center,
         ) {
@@ -814,7 +823,7 @@ private fun EmbeddedVehicleCard(
                 text = listing.displayName,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White,
+                color = MotormilaOnSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -854,7 +863,7 @@ private fun EmbeddedVehicleCard(
             modifier = Modifier
                 .size(34.dp)
                 .clip(CircleShape)
-                .background(Color(0x2E0A7AFF)),
+                .background(MotormilaPrimaryContainer),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -872,9 +881,9 @@ private fun EmbeddedVehicleCard(
 private fun LoadingThinkingIndicator(modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(28.dp))
-            .background(Color(0x1A0A7AFF))
-            .border(0.8.dp, Color(0x440A7AFF), RoundedCornerShape(28.dp))
+            .clip(MotormilaRadius.lg)
+            .background(MotormilaPrimarySoft)
+            .border(1.dp, Color(0x440A7AFF), MotormilaRadius.lg)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -944,13 +953,13 @@ private fun AIChatInputBar(
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = MotormilaBg,
                     unfocusedContainerColor = MotormilaBg,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
+                    focusedTextColor = MotormilaOnSurface,
+                    unfocusedTextColor = MotormilaOnSurface,
                     focusedIndicatorColor = MotormilaPrimary,
                     unfocusedIndicatorColor = MotormilaOutline,
                     cursorColor = MotormilaPrimaryBright,
                 ),
-                shape = RoundedCornerShape(28.dp),
+                shape = MotormilaRadius.lg,
                 modifier = Modifier
                     .weight(1f)
                     .semantics { contentDescription = "Chat input text field" },

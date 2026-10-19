@@ -1,4 +1,4 @@
-# AutoLens public snapshots
+# Motormila public snapshots
 
 The production site can read public JSON snapshots from Cloudflare R2 before it
 falls back to the API. This keeps normal visitors away from Postgres for the

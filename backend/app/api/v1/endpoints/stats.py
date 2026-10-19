@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import re
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from fastapi.responses import StreamingResponse
@@ -401,7 +402,20 @@ async def stream_live_market_snapshot(request: Request):
                 snapshot = await asyncio.to_thread(_fetch_snapshot)
 
                 yield f"event: snapshot\ndata: {json.dumps(snapshot)}\n\n"
-                await asyncio.sleep(LIVE_STREAM_INTERVAL_SECONDS)
+                # Sleep in short slices and re-check the client between them,
+                # so a disconnect releases the SSE slot within ~1s instead of
+                # holding it for the whole interval.
+                remaining = float(LIVE_STREAM_INTERVAL_SECONDS)
+                disconnected = False
+                while remaining > 0:
+                    step = min(1.0, remaining)
+                    await asyncio.sleep(step)
+                    remaining -= step
+                    if await request.is_disconnected():
+                        disconnected = True
+                        break
+                if disconnected:
+                    break
         finally:
             _sse_active_connections -= 1
 
@@ -1244,8 +1258,24 @@ def get_make_insight(
     make: str = Query(..., min_length=1),
     db: Session = Depends(get_db),
 ):
-    """Programmatic SEO hub payload for /cars/:make (all models for a make)."""
-    make_lower = make.strip().lower()
+    """Programmatic SEO hub payload for /cars/:make (all models for a make).
+
+    Model rows are canonicalized in Python (misspellings folded, phone
+    numbers / trim-word leaks / cross-make values dropped, case variants
+    merged) so the hub shows real models instead of scrape noise. Returns
+    both ``top_models`` (top 12, for the hero grid) and ``all_models`` (the
+    full cleaned list, for the "all models" browser).
+    """
+    from app.utils.make_canonical import (
+        canonicalize_model,
+        compact_key,
+        model_contains_foreign_make,
+    )
+
+    # "land-rover" / "land_rover" -> "land rover": hub URLs use slugs, the DB
+    # stores display names.
+    make_normalized = re.sub(r"[-_]+", " ", make.strip()).strip()
+    make_lower = make_normalized.lower()
 
     base_clause = and_(
         live_listing_filter(),
@@ -1261,7 +1291,10 @@ def get_make_insight(
     avg_price = db.query(func.avg(CarListing.price_lkr)).filter(priced_clause).scalar()
     median_price = median_price_for_listings(db, priced_clause)
 
-    top_models_rows = (
+    # Pull a wide net of raw model rows, then canonicalize + merge in Python:
+    # junk rows ("Other Model", phone numbers, "Suv") are dropped and case
+    # variants ("Wira"/"wira") merge instead of splitting the model.
+    model_rows = (
         db.query(
             CarListing.model,
             func.count(CarListing.id).label("count"),
@@ -1270,9 +1303,40 @@ def get_make_insight(
         .filter(base_clause, CarListing.model.isnot(None))
         .group_by(CarListing.model)
         .order_by(desc("count"))
-        .limit(12)
         .all()
     )
+    merged: dict[str, dict] = {}
+    for row in model_rows:
+        if not row.model:
+            continue
+        canonical = canonicalize_model(row.model)
+        if not canonical:
+            continue
+        # Cross-feed misattribution ("Toyota Aqua" under Land Rover).
+        if model_contains_foreign_make(row.model, make_normalized):
+            continue
+        key = compact_key(canonical)
+        bucket = merged.get(key)
+        if bucket is None:
+            merged[key] = {
+                "model": canonical,
+                "count": int(row.count or 0),
+                "price_total": float(row.avg_price or 0) * int(row.count or 0),
+            }
+        else:
+            # Keep the most common raw variant's display form.
+            if int(row.count or 0) > bucket["count"]:
+                bucket["model"] = canonical
+            bucket["count"] += int(row.count or 0)
+            bucket["price_total"] += float(row.avg_price or 0) * int(row.count or 0)
+    all_models = [
+        {
+            "model": bucket["model"],
+            "count": bucket["count"],
+            "avg_price_lkr": round(bucket["price_total"] / bucket["count"], 2) if bucket["count"] else None,
+        }
+        for bucket in sorted(merged.values(), key=lambda b: b["count"], reverse=True)
+    ]
 
     top_districts_rows = (
         db.query(
@@ -1283,27 +1347,20 @@ def get_make_insight(
         .filter(base_clause, CarListing.district.isnot(None))
         .group_by(CarListing.district)
         .order_by(desc("count"))
-        .limit(6)
+        .limit(12)
         .all()
     )
 
     canonical = db.query(CarListing.make).filter(base_clause).first()
-    canonical_make = str(canonical.make) if canonical else make.strip().title()
+    canonical_make = str(canonical.make) if canonical else make_normalized.title()
 
     return {
         "make": canonical_make,
         "total": int(total),
         "avg_price_lkr": round(float(avg_price), 2) if avg_price is not None else None,
         "median_price_lkr": round(float(median_price), 2) if median_price is not None else None,
-        "top_models": [
-            {
-                "model": str(row.model),
-                "count": int(row.count),
-                "avg_price_lkr": round(float(row.avg_price), 2) if row.avg_price is not None else None,
-            }
-            for row in top_models_rows
-            if row.model
-        ],
+        "top_models": all_models[:12],
+        "all_models": all_models,
         "top_districts": [
             {
                 "district": str(row.district),
@@ -1311,8 +1368,8 @@ def get_make_insight(
                 "avg_price_lkr": round(float(row.avg_price), 2) if row.avg_price is not None else None,
             }
             for row in top_districts_rows
-            if row.district
-        ],
+            if row.district and compact_key(str(row.district)) != "srilanka"
+        ][:6],
     }
 
 
@@ -1634,6 +1691,12 @@ def get_ev_insight(
     ev_clause = and_(
         live_listing_filter(),
         func.lower(CarListing.fuel_type).in_(list(_EV_FUEL_TYPES)),
+        # The EV hub tracks passenger vehicles — two-wheelers (e-bikes,
+        # e-scooters) would otherwise drag the median price down.
+        or_(
+            CarListing.vehicle_category.is_(None),
+            func.lower(CarListing.vehicle_category) != "motorbikes",
+        ),
     )
     ev_priced_clause = and_(
         ev_clause,

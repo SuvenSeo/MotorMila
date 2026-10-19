@@ -1,7 +1,11 @@
 package lk.motormila.app.ui.district
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -15,7 +19,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Place
@@ -34,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -50,6 +54,7 @@ import lk.motormila.app.core.format.LkrFormat
 import lk.motormila.app.core.format.formatPct
 import lk.motormila.app.core.motion.rememberReducedMotion
 import lk.motormila.app.domain.model.DistrictInsight
+import lk.motormila.app.domain.model.DistrictVelocity
 import lk.motormila.app.domain.model.HubTopModel
 import lk.motormila.app.domain.model.Listing
 import lk.motormila.app.ui.components.BrandLogo
@@ -62,11 +67,13 @@ import lk.motormila.app.ui.components.ErrorState
 import lk.motormila.app.ui.components.ListingCard
 import lk.motormila.app.ui.components.LoadingSkeletonCard
 import lk.motormila.app.ui.components.OfflineBanner
+import lk.motormila.app.ui.theme.AppleEasing
 import lk.motormila.app.ui.theme.MotormilaBg
 import lk.motormila.app.ui.theme.MotormilaGood
 import lk.motormila.app.ui.theme.MotormilaOnSurface
 import lk.motormila.app.ui.theme.MotormilaOutline
 import lk.motormila.app.ui.theme.MotormilaPrimaryBright
+import lk.motormila.app.ui.theme.MotormilaRadius
 import lk.motormila.app.ui.theme.MotormilaSecondaryText
 import lk.motormila.app.ui.theme.MotormilaSurfaceHigh
 import lk.motormila.app.ui.theme.rememberHaptics
@@ -188,6 +195,11 @@ private fun DistrictHubBody(
         item { OfflineBanner(visible = state.offline) }
         item { DistrictHero(displayName = displayName) }
         item { DistrictStatsGrid(insight = state.insight) }
+        if (state.velocityTop.isNotEmpty()) {
+            item {
+                DistrictVelocitySection(points = state.velocityTop)
+            }
+        }
         if (state.nearby.isNotEmpty()) {
             item {
                 NearbyDistrictsRow(
@@ -233,7 +245,7 @@ private fun DistrictHubBody(
 private fun DistrictHero(displayName: String) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
         Surface(
-            shape = RoundedCornerShape(50),
+            shape = MotormilaRadius.pill,
             color = MotormilaSurfaceHigh,
             border = BorderStroke(1.dp, MotormilaOutline),
         ) {
@@ -500,5 +512,90 @@ private fun RecentListingsHeader() {
             text = stringResource(R.string.district_hub_recent),
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
         )
+    }
+}
+
+/**
+ * District sales-velocity section — web `DistrictVelocityList` (Tremor BarList)
+ * parity: top districts by active listings as animated blue bars, fed by the
+ * real `GET /stats/district-velocity` endpoint (already loaded in the VM).
+ */
+@Composable
+private fun DistrictVelocitySection(points: List<DistrictVelocity>) {
+    val reduced = rememberReducedMotion()
+    val max = (points.maxOfOrNull { it.listingCount } ?: 0).coerceAtLeast(1)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = stringResource(R.string.district_velocity_eyebrow).uppercase(),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp,
+                    color = MotormilaSecondaryText,
+                ),
+            )
+            Text(
+                text = stringResource(R.string.district_velocity_title),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            )
+            Text(
+                text = stringResource(R.string.district_velocity_sub),
+                fontSize = 13.sp,
+                color = MotormilaSecondaryText,
+            )
+        }
+        points.forEach { point ->
+            VelocityRow(point = point, max = max, reducedMotion = reduced)
+        }
+    }
+}
+
+@Composable
+private fun VelocityRow(
+    point: DistrictVelocity,
+    max: Int,
+    reducedMotion: Boolean,
+) {
+    val fraction by animateFloatAsState(
+        targetValue = point.listingCount.toFloat() / max,
+        animationSpec = tween(if (reducedMotion) 1 else 700, easing = AppleEasing),
+        label = "velocity-bar",
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = point.district,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = MotormilaOnSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = stringResource(R.string.district_velocity_listings, point.listingCount),
+                fontSize = 12.sp,
+                color = MotormilaSecondaryText,
+            )
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .clip(MotormilaRadius.pill)
+                .background(MotormilaSurfaceHigh),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(fraction.coerceIn(0f, 1f))
+                    .height(8.dp)
+                    .clip(MotormilaRadius.pill)
+                    .background(MotormilaPrimaryBright),
+            )
+        }
     }
 }

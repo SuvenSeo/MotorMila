@@ -36,13 +36,13 @@ def _rel(tag: str, *assets: str, draft: bool = False) -> dict:
 
 DUMPS = [
     _rel("manus-scrape-20260815T1133Z", "autolens.db.gz"),
-    _rel("manus-scrape-20260818T1404Z", "autolens.db.gz"),
+    _rel("manus-scrape-20260818T1404Z", "motormila.db.gz"),
     _rel("manus-scrape-20260818T1547Z", "autolens.db.gz"),
     _rel("manus-scrape-20260818T1551Z", "autolens.db.gz"),
     _rel("merged-db", "merged-autolens.db.gz", "last-merged.txt"),
     _rel("manus-scrape-parallel-20260814T0000Z", "autolens-recovered.db.gz"),
-    _rel("neon-export-20260901T0400Z", "autolens.db.gz"),
-    _rel("laptop-db-20260816T0900Z", "autolens.db.gz"),
+    _rel("neon-export-20260901T0400Z", "motormila.db.gz", "autolens.db.gz"),
+    _rel("laptop-db-20260816T0900Z", "motormila.db.gz"),
     _rel("manus-scrape-20260818T1600Z", "autolens.db.gz", draft=True),
 ]
 
@@ -53,6 +53,35 @@ def test_extract_dump_timestamp_from_tag_or_bare_marker() -> None:
     assert ddr.extract_dump_timestamp("  manus-scrape-20260815T1133Z\n") == "20260815T113300Z"
     assert ddr.extract_dump_timestamp("20260818T154700Z") == "20260818T154700Z"
     assert ddr.extract_dump_timestamp("") == ""
+
+
+def test_extract_dump_timestamp_tolerates_six_digit_seconds() -> None:
+    """A hand-created release used %H%M%SZ instead of the script's %H%MZ.
+
+    manus-scrape-20260823T093908Z shipped this way on 2026-08-23 and got
+    written into last-merged.txt. The old strict 4-digit regex did not match
+    it at all, so extract_dump_timestamp fell back to returning the whole
+    tag string — a value that (being alphabetic) sorts *after* every real
+    "YYYYMMDDTHHMMZ" candidate, so `ts > last_ts` was always false and the
+    live merge silently stopped consuming new dumps for 10 days.
+    """
+    assert ddr.extract_dump_timestamp("manus-scrape-20260823T093908Z") == "20260823T093908Z"
+
+
+def test_select_dumps_recovers_from_a_malformed_last_merged_tag() -> None:
+    """Regression test for the production incident: a poisoned watermark
+    must not block dumps that are genuinely newer than it.
+    """
+    releases = [
+        _rel("manus-scrape-20260823T093908Z", "autolens.db.gz"),
+        _rel("manus-scrape-20260903T0737Z", "autolens.db.gz"),
+    ]
+    tags, new_last = ddr.select_dumps_to_merge(
+        releases=releases,
+        last_merged="manus-scrape-20260823T093908Z",
+    )
+    assert tags == ["manus-scrape-20260903T0737Z"]
+    assert new_last == "20260903T073700Z"
 
 
 def test_select_dumps_newer_than_full_tag_last_merged() -> None:
@@ -175,3 +204,26 @@ def test_monthly_neon_export_tag_detection() -> None:
     assert ddr.has_neon_export_for_month(tags, "202609") is True
     assert ddr.has_neon_export_for_month(tags, "202610") is False
     assert ddr.has_neon_export_for_month(tags, "202608") is True
+
+
+def test_accepts_new_and_legacy_dump_asset_names() -> None:
+    """Post-rename producers ship motormila.db.gz; old releases only have
+    autolens.db.gz. Both must merge; anything else must not."""
+    releases = [
+        _rel("manus-scrape-20260910T0100Z", "motormila.db.gz"),
+        _rel("manus-scrape-20260909T0100Z", "autolens.db.gz"),
+        _rel("manus-scrape-20260908T0100Z", "something-else.db.gz"),
+    ]
+    tags, _ = ddr.select_dumps_to_merge(releases=releases, last_merged="")
+    assert "manus-scrape-20260910T0100Z" in tags
+    assert "manus-scrape-20260909T0100Z" in tags
+    assert "manus-scrape-20260908T0100Z" not in tags
+
+
+def test_preferred_dump_asset_prefers_new_name() -> None:
+    assert ddr.preferred_dump_asset(_rel("t", "autolens.db.gz")) == "autolens.db.gz"
+    assert (
+        ddr.preferred_dump_asset(_rel("t", "motormila.db.gz", "autolens.db.gz"))
+        == "motormila.db.gz"
+    )
+    assert ddr.preferred_dump_asset(_rel("t", "other.db.gz")) is None

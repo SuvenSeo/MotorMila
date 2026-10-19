@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Header, Query, HTTPException, Request, Response
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session, load_only
 from sqlalchemy import String, cast, func, desc, and_, or_
 from typing import Optional, List, Dict, Any, Annotated
@@ -16,16 +17,22 @@ from urllib.parse import urljoin, urlparse
 import httpx
 from bs4 import BeautifulSoup
 from db.session import get_db
-from db.models import CarListing, VehiclePriceHistory, live_listing_filter
+from db.models import CarListing, ScrapeRun, VehiclePriceHistory, live_listing_filter
 from app.services.nhtsa_specs import fetch_models_for_make as _nhtsa_fetch_models
 from app.services.safety_research import combined_research
 from app.services.geo_service import enrich_listing
 from app.utils.history_report import build_history_report
 from app.utils.fmv import predict_listing_fmv
 from app.utils.price_history import summarize_price_history
+from app.utils.make_canonical import canonicalize_make, canonicalize_model, compact_key
 from app.utils.vehicle_category import category_sql_filter, resolve_browse_category
 from app.utils.thumbnail_urls import upgrade_thumbnail_url
-from app.api.v1.endpoints.auth import PRO_PLANS, resolve_live_session, verify_token
+from app.api.v1.endpoints.auth import (
+    PRO_PLANS,
+    get_current_auth_payload,
+    resolve_live_session,
+    verify_token,
+)
 from app.utils.plan_limits import (
     FREE_LISTINGS_MAX_PAGE,
     FREE_LISTINGS_MAX_SIZE,
@@ -47,7 +54,10 @@ from app.models.schemas import (
 )
 from app.services.rate_limit import RateLimiter
 
-_listings_rate_limiter = RateLimiter(max_requests=300, window_seconds=60)
+_listings_rate_limiter = RateLimiter(max_requests=300, window_seconds=60, tier="listings")
+# Public (anonymous) valuation: own, tighter bucket so it cannot be used to
+# bulk-scrape price bands while sharing the generous browse budget.
+_estimate_rate_limiter = RateLimiter(max_requests=30, window_seconds=60, tier="listings-estimate")
 
 router = APIRouter(dependencies=[Depends(_listings_rate_limiter)])
 
@@ -76,6 +86,27 @@ def _request_live_access(
         except Exception:
             return None, None
     return str(payload.get("plan") or "free").strip().lower(), str(payload.get("role") or "user").strip().lower()
+
+
+def _user_listing_hidden(
+    listing: CarListing,
+    request: Optional[Request],
+    authorization: Optional[str],
+    role: Optional[str],
+) -> bool:
+    """Moderation: an unapproved user listing is visible only to its owner/admins."""
+    status = str(getattr(listing, "user_listing_status", "") or "scraped").lower()
+    if getattr(listing, "source", None) != "motormila_user" or status == "published":
+        return False
+    if (role or "").lower() == "admin":
+        return False
+    auth_value = authorization if isinstance(authorization, str) else None
+    token = (auth_value or "").removeprefix("Bearer ").strip()
+    if not token and request is not None:
+        token = str((getattr(request, "cookies", None) or {}).get("mm_session") or "").strip()
+    payload = verify_token(token) if token else None
+    email = str((payload or {}).get("email") or "").strip().lower()
+    return not email or email != str(listing.owner_user_id or "").strip().lower()
 
 
 def _request_plan(request: Optional[Request] = None, authorization: Optional[str] = None) -> Optional[str]:
@@ -112,396 +143,10 @@ IMAGE_HEADERS = {
     "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
 }
 
-SELLER_PROFILE_CACHE_TTL_SECONDS = 30 * 60
 MIN_REASONABLE_PRICE_LKR = 100_000
-SELLER_BADGE_MARKERS = {
-    "id verified": "ID Verified",
-    "verified dealer": "Verified Dealer",
-    "trusted seller": "Trusted Seller",
-    "top seller": "Top Seller",
-    "premium seller": "Premium Seller",
-}
-SOURCE_SITE_NAME_MARKERS = {
-    "ikman": {"ikman"},
-    "riyasewana": {"riyasewana"},
-    "patpat": {"patpat"},
-    "autolanka": {"autolanka"},
-    "autodirect": {"autodirect"},
-    "autostream": {"autostream"},
-    "carshop": {"carshop", "carshoplk"},
-    "saleme": {"saleme", "salemelk"},
-    "riyahub": {"riyahub", "riyahublk"},
-    "dimo": {"dimo", "carsatdimo", "carsatdimolk"},
-}
-SELLER_PROFILE_CACHE: dict[int, tuple[float, dict[str, object]]] = {}
-SELLER_PROFILE_CACHE_MAX_ENTRIES = 512
 MAX_PROXY_IMAGE_BYTES = 5 * 1024 * 1024
 MAX_DETAIL_HTML_BYTES = 1 * 1024 * 1024
 MAX_FETCH_REDIRECTS = 3
-
-
-def _clean_seller_name(value: Optional[str]) -> Optional[str]:
-    raw = re.sub(r"\s+", " ", str(value or "")).strip(" -|:\t\n\r")
-    if not raw:
-        return None
-    cleaned = re.sub(r"^(listed by|posted by|seller|dealer)\s*[:\-]\s*", "", raw, flags=re.IGNORECASE).strip()
-    cleaned = re.sub(r"\bmember since\b.*$", "", cleaned, flags=re.IGNORECASE).strip(" -|,")
-    return cleaned or None
-
-
-def _normalize_phone(value: Optional[str]) -> Optional[str]:
-    raw = str(value or "").strip()
-    digits = re.sub(r"\D", "", raw)
-    if not digits:
-        return None
-    if raw.startswith("+"):
-        return f"+{digits}"
-    if digits.startswith("94"):
-        return f"+{digits}"
-    if len(digits) == 10 and digits.startswith("0"):
-        return f"+94{digits[1:]}"
-    if len(digits) == 9:
-        return f"+94{digits}"
-    return digits
-
-
-def _dedupe_keep_order(values: List[str], limit: int = 5) -> List[str]:
-    seen: set[str] = set()
-    ordered: List[str] = []
-    for value in values:
-        item = str(value or "").strip()
-        if not item or item in seen:
-            continue
-        seen.add(item)
-        ordered.append(item)
-        if len(ordered) >= limit:
-            break
-    return ordered
-
-
-def _is_site_brand_name(name: str, source: str) -> bool:
-    compact = re.sub(r"[^a-z0-9]", "", name.lower())
-    return compact in SOURCE_SITE_NAME_MARKERS.get(source, set())
-
-
-def _extract_jsonld_blocks(soup: BeautifulSoup) -> List[object]:
-    blocks: List[object] = []
-    for node in soup.select("script[type='application/ld+json']"):
-        raw = (node.string or node.get_text(" ", strip=True) or "").strip()
-        if not raw:
-            continue
-        try:
-            parsed = json.loads(raw)
-        except Exception:
-            continue
-        if isinstance(parsed, list):
-            blocks.extend(parsed)
-        else:
-            blocks.append(parsed)
-    return blocks
-
-
-def _extract_seller_name_from_jsonld(blocks: List[object], source: str) -> Optional[str]:
-    candidates: List[tuple[int, str]] = []
-    brand_candidates: List[tuple[int, str]] = []
-
-    def add_candidate(name: Optional[str], weight: int):
-        cleaned = _clean_seller_name(name)
-        if not cleaned:
-            return
-        if _is_site_brand_name(cleaned, source):
-            brand_candidates.append((weight, cleaned))
-            return
-        candidates.append((weight, cleaned))
-
-    def walk(node: object):
-        if isinstance(node, dict):
-            node_type = str(node.get("@type") or "").lower()
-
-            seller_value = node.get("seller")
-            if isinstance(seller_value, dict):
-                add_candidate(seller_value.get("name"), 100)
-            elif isinstance(seller_value, str):
-                add_candidate(seller_value, 95)
-
-            author_value = node.get("author")
-            if isinstance(author_value, dict):
-                add_candidate(author_value.get("name"), 90)
-            elif isinstance(author_value, str):
-                add_candidate(author_value, 85)
-
-            if node_type in {"person", "organization", "autodealer", "localbusiness"}:
-                add_candidate(node.get("name"), 80)
-
-            for value in node.values():
-                walk(value)
-        elif isinstance(node, list):
-            for value in node:
-                walk(value)
-
-    for block in blocks:
-        walk(block)
-
-    if not candidates:
-        if brand_candidates and source in {"autodirect", "autostream"}:
-            brand_candidates.sort(key=lambda item: (item[0], len(item[1])), reverse=True)
-            return brand_candidates[0][1]
-        return None
-
-    candidates.sort(key=lambda item: (item[0], len(item[1])), reverse=True)
-    return candidates[0][1]
-
-
-def _extract_seller_type_from_jsonld(blocks: List[object]) -> str:
-    seller_type = "unknown"
-
-    def walk(node: object):
-        nonlocal seller_type
-        if isinstance(node, dict):
-            node_type = str(node.get("@type") or "").lower()
-            if node_type in {"autodealer", "organization", "localbusiness"}:
-                seller_type = "dealer"
-            elif node_type == "person" and seller_type == "unknown":
-                seller_type = "private"
-
-            seller_value = node.get("seller")
-            if isinstance(seller_value, dict):
-                seller_node_type = str(seller_value.get("@type") or "").lower()
-                if seller_node_type in {"autodealer", "organization", "localbusiness"}:
-                    seller_type = "dealer"
-                elif seller_node_type == "person" and seller_type == "unknown":
-                    seller_type = "private"
-
-            for value in node.values():
-                walk(value)
-        elif isinstance(node, list):
-            for value in node:
-                walk(value)
-
-    for block in blocks:
-        walk(block)
-
-    return seller_type
-
-
-def _extract_phone_numbers(soup: BeautifulSoup, html: str) -> List[str]:
-    phones: List[str] = []
-
-    for link in soup.select("a[href^='tel:']"):
-        href = str(link.get("href") or "")
-        normalized = _normalize_phone(href.replace("tel:", ""))
-        if normalized:
-            phones.append(normalized)
-
-    for match in re.finditer(r"tel:\s*([+\d][\d\-\s\(\)]{6,})", html or "", flags=re.IGNORECASE):
-        normalized = _normalize_phone(match.group(1))
-        if normalized:
-            phones.append(normalized)
-
-    return _dedupe_keep_order(phones)
-
-
-def _extract_whatsapp_numbers(soup: BeautifulSoup, html: str) -> List[str]:
-    numbers: List[str] = []
-
-    for link in soup.select("a[href*='wa.me/'], a[href*='whatsapp']"):
-        href = str(link.get("href") or "")
-        digit_matches = re.findall(r"(\d{7,15})", href)
-        for digits in digit_matches:
-            normalized = _normalize_phone(digits)
-            if normalized:
-                numbers.append(normalized)
-
-    for match in re.finditer(r"(?:wa\.me/|phone=)(\d{7,15})", html or "", flags=re.IGNORECASE):
-        normalized = _normalize_phone(match.group(1))
-        if normalized:
-            numbers.append(normalized)
-
-    return _dedupe_keep_order(numbers)
-
-
-def _extract_member_since(text: str) -> Optional[str]:
-    match = re.search(
-        r"(?:member\s+since|joined)\s*[:\-]?\s*([A-Za-z]{3,9}\s+\d{1,2},\s*\d{4}|[A-Za-z]{3,9}\s+\d{4}|\d{4})",
-        text,
-        flags=re.IGNORECASE,
-    )
-    if not match:
-        return None
-    return re.sub(r"\s+", " ", str(match.group(1))).strip()
-
-
-def _extract_int_metric(text: str, patterns: List[str]) -> Optional[int]:
-    for pattern in patterns:
-        match = re.search(pattern, text, flags=re.IGNORECASE)
-        if not match:
-            continue
-        digits = re.sub(r"\D", "", str(match.group(1)))
-        if not digits:
-            continue
-        try:
-            return int(digits)
-        except ValueError:
-            continue
-    return None
-
-
-def _extract_rating(text: str) -> Optional[float]:
-    match = re.search(r"([1-5](?:\.\d)?)\s*/\s*5", text, flags=re.IGNORECASE)
-    if not match:
-        match = re.search(r"rating\s*[:\-]?\s*([1-5](?:\.\d)?)", text, flags=re.IGNORECASE)
-    if not match:
-        return None
-    try:
-        value = float(match.group(1))
-        if 1.0 <= value <= 5.0:
-            return value
-    except ValueError:
-        return None
-    return None
-
-
-def _infer_seller_type(source: str, text: str, html: str) -> str:
-    lowered = f"{text} {html}".lower()
-    if re.search(r"\b(private seller|direct owner|owner listing|private owner)\b", lowered):
-        return "private"
-    if re.search(r"\b(verified dealer|contact dealer|dealer|dealership|autodealer)\b", lowered):
-        return "dealer"
-    if source in {"autodirect", "autostream"} and "dealer" in lowered:
-        return "dealer"
-    return "unknown"
-
-
-def _extract_verified_badges(text: str) -> List[str]:
-    lowered = text.lower()
-    badges = [label for marker, label in SELLER_BADGE_MARKERS.items() if marker in lowered]
-    return _dedupe_keep_order(badges, limit=3)
-
-
-def _extract_seller_profile_from_html(source: str, detail_url: str, html: str) -> dict[str, object]:
-    normalized_source = _canonical_source(source) or str(source or "unknown")
-    soup = BeautifulSoup(html or "", "lxml")
-    jsonld_blocks = _extract_jsonld_blocks(soup)
-
-    text_soup = BeautifulSoup(html or "", "lxml")
-    for tag in text_soup(["script", "style", "noscript"]):
-        tag.extract()
-    visible_text = re.sub(r"\s+", " ", text_soup.get_text(" ", strip=True)).strip()
-
-    seller_name = _extract_seller_name_from_jsonld(jsonld_blocks, normalized_source)
-    seller_type_hint = _extract_seller_type_from_jsonld(jsonld_blocks)
-    member_since = _extract_member_since(visible_text)
-
-    if normalized_source == "autolanka":
-        seller_node = soup.select_one(".seller-info li.name")
-        if seller_node:
-            seller_clone = BeautifulSoup(str(seller_node), "lxml")
-            for nested in seller_clone.select(".type"):
-                nested.extract()
-            seller_name = _clean_seller_name(seller_clone.get_text(" ", strip=True)) or seller_name
-        if not member_since:
-            type_node = soup.select_one(".seller-info .type")
-            if type_node:
-                member_since = _extract_member_since(type_node.get_text(" ", strip=True))
-
-    if not seller_name:
-        fallback_match = re.search(
-            r"(?:listed by|posted by|seller|dealer)\s*[:\-]\s*([A-Za-z0-9][A-Za-z0-9\s\-\.'&|]{2,80})",
-            visible_text,
-            flags=re.IGNORECASE,
-        )
-        if fallback_match:
-            seller_name = _clean_seller_name(fallback_match.group(1))
-
-    listing_count = _extract_int_metric(
-        visible_text,
-        [
-            r"(\d{1,5}(?:,\d{3})*)\s+(?:listings?|ads?)\s+(?:sold|active|posted)",
-            r"(?:sold|active|posted)\s+(\d{1,5}(?:,\d{3})*)\s+(?:listings?|ads?)",
-            r"(\d{1,5}(?:,\d{3})*)\s+ads?",
-        ],
-    )
-    review_count = _extract_int_metric(
-        visible_text,
-        [
-            r"(\d{1,5}(?:,\d{3})*)\s+reviews?",
-            r"reviews?\s*[:\-]?\s*(\d{1,5}(?:,\d{3})*)",
-        ],
-    )
-    rating = _extract_rating(visible_text)
-    phone_numbers = _extract_phone_numbers(soup, html or "")
-    whatsapp_numbers = _extract_whatsapp_numbers(soup, html or "")
-    seller_type = _infer_seller_type(normalized_source, visible_text, html or "")
-    verified_badges = _extract_verified_badges(visible_text)
-
-    if not seller_name and normalized_source in {"autodirect", "autostream"}:
-        seller_name = SOURCE_LABELS.get(normalized_source, normalized_source.title())
-
-    if seller_type == "unknown" and seller_type_hint != "unknown":
-        seller_type = seller_type_hint
-    if seller_type == "unknown" and any("Verified Dealer" == badge for badge in verified_badges):
-        seller_type = "dealer"
-    if seller_type == "unknown" and normalized_source in {"autodirect", "autostream"} and seller_name:
-        seller_type = "dealer"
-
-    if seller_type == "unknown" and seller_name and seller_name.lower() in {"owner", "private seller"}:
-        seller_type = "private"
-
-    return {
-        "source": normalized_source,
-        "source_url": detail_url,
-        "seller_name": seller_name,
-        "seller_type": seller_type,
-        "member_since": member_since,
-        "listing_count": listing_count,
-        "review_count": review_count,
-        "rating": rating,
-        "phone_numbers": phone_numbers,
-        "whatsapp_numbers": whatsapp_numbers,
-        "verified_badges": verified_badges,
-    }
-
-
-def _empty_seller_profile(source: str, detail_url: str) -> dict[str, object]:
-    normalized_source = _canonical_source(source) or str(source or "unknown")
-    return {
-        "source": normalized_source,
-        "source_url": detail_url,
-        "seller_name": None,
-        "seller_type": "unknown",
-        "member_since": None,
-        "listing_count": None,
-        "review_count": None,
-        "rating": None,
-        "phone_numbers": [],
-        "whatsapp_numbers": [],
-        "verified_badges": [],
-    }
-
-
-def _store_seller_profile_cache(listing_id: int, now: float, profile: dict[str, object]) -> None:
-    """Insert into SELLER_PROFILE_CACHE, keeping it bounded to
-    SELLER_PROFILE_CACHE_MAX_ENTRIES by evicting expired entries first, then
-    the oldest remaining ones."""
-    SELLER_PROFILE_CACHE[listing_id] = (now, profile)
-    if len(SELLER_PROFILE_CACHE) <= SELLER_PROFILE_CACHE_MAX_ENTRIES:
-        return
-
-    expired_keys = [
-        key
-        for key, (cached_at, _profile) in SELLER_PROFILE_CACHE.items()
-        if (now - cached_at) >= SELLER_PROFILE_CACHE_TTL_SECONDS
-    ]
-    for key in expired_keys:
-        SELLER_PROFILE_CACHE.pop(key, None)
-
-    if len(SELLER_PROFILE_CACHE) <= SELLER_PROFILE_CACHE_MAX_ENTRIES:
-        return
-
-    oldest_first = sorted(SELLER_PROFILE_CACHE.items(), key=lambda item: item[1][0])
-    overflow = len(SELLER_PROFILE_CACHE) - SELLER_PROFILE_CACHE_MAX_ENTRIES
-    for key, _value in oldest_first[:overflow]:
-        SELLER_PROFILE_CACHE.pop(key, None)
 
 
 MODEL_ALIAS_GROUPS = (
@@ -613,65 +258,6 @@ def _checked_get(client: httpx.Client, url: str, *, timeout: float) -> httpx.Res
         return response
 
     raise ValueError("too many redirects while fetching external URL")
-
-
-def _extract_thumbnail_from_detail(detail_url: Optional[str]) -> Optional[str]:
-    if not detail_url:
-        return None
-
-    try:
-        with httpx.Client(transport=SSRFSafeTransport(), headers=IMAGE_HEADERS, follow_redirects=False, timeout=15) as client:
-            res = _checked_get(client, detail_url, timeout=15)
-            res.raise_for_status()
-            if len(res.content) > MAX_DETAIL_HTML_BYTES:
-                return None
-    except Exception:
-        return None
-
-    soup = BeautifulSoup(res.text, "lxml")
-
-    meta_candidates = [
-        ("meta[property='og:image']", "content"),
-        ("meta[name='twitter:image']", "content"),
-        ("meta[property='og:image:url']", "content"),
-    ]
-    for selector, attr in meta_candidates:
-        node = soup.select_one(selector)
-        if node and node.has_attr(attr):
-            resolved = _normalize_image_url(str(res.url), str(node.get(attr) or ""))
-            if resolved:
-                return resolved
-
-    img_candidates = [
-        ("img[src]", "src"),
-        ("img[data-src]", "data-src"),
-        ("img[data-lazy-src]", "data-lazy-src"),
-    ]
-    for selector, attr in img_candidates:
-        for node in soup.select(selector):
-            if node and node.has_attr(attr):
-                resolved = _normalize_image_url(str(res.url), str(node.get(attr) or ""))
-                if resolved:
-                    return resolved
-
-    return None
-
-
-def _download_image_bytes(image_url: str) -> tuple[bytes, str]:
-    with httpx.Client(transport=SSRFSafeTransport(), headers=IMAGE_HEADERS, follow_redirects=False, timeout=20) as client:
-        res = _checked_get(client, image_url, timeout=20)
-        res.raise_for_status()
-
-    content_type = str(res.headers.get("content-type") or "").split(";")[0].strip().lower()
-    if not content_type.startswith("image/"):
-        raise ValueError("response was not an image")
-    content_length = res.headers.get("content-length")
-    if content_length and int(content_length or 0) > MAX_PROXY_IMAGE_BYTES:
-        raise ValueError("image is too large")
-    if len(res.content) > MAX_PROXY_IMAGE_BYTES:
-        raise ValueError("image is too large")
-
-    return res.content, content_type
 
 
 def _compact(value: Optional[str]) -> Optional[str]:
@@ -1550,11 +1136,32 @@ def get_sources(db: Session = Depends(get_db)):
             continue
         counts[source_key] = counts.get(source_key, 0) + int(row.count or 0)
 
+    # Attribution + freshness: when MotorMila last successfully checked each
+    # source (latest SUCCESS scrape run). The frontend shows it next to the
+    # source credit.
+    last_checked: dict[str, str] = {}
+    try:
+        checked_rows = (
+            db.query(ScrapeRun.source, func.max(ScrapeRun.finished_at))
+            .filter(ScrapeRun.status == "SUCCESS")
+            .group_by(ScrapeRun.source)
+            .all()
+        )
+        for raw_source, finished in checked_rows:
+            key = _canonical_source(str(raw_source or ""))
+            if key and finished is not None:
+                stamp = finished.isoformat()
+                if stamp > last_checked.get(key, ""):
+                    last_checked[key] = stamp
+    except Exception:  # noqa: BLE001 - freshness is best-effort
+        db.rollback()
+
     return [
         {
             "source": key,
             "label": SOURCE_LABELS.get(key, key.replace("-", " ").title()),
             "count": value,
+            "last_checked_at": last_checked.get(key),
         }
         for key, value in sorted(counts.items(), key=lambda item: item[1], reverse=True)
     ]
@@ -1615,18 +1222,69 @@ def get_makes(db: Session = Depends(get_db)):
         .order_by(desc("count"))
         .all()
     )
-    return [{"make": r.make, "count": r.count} for r in results]
+    # Fold duplicate/typo spellings ("Bmw"/"BMW", "Mitshubishi") into one
+    # brand and drop junk rows ("Test", "2018", "Other brand") so the public
+    # make combobox never offers a scraped typo as a car brand.
+    merged: Dict[str, int] = {}
+    for r in results:
+        canonical = canonicalize_make(r.make)
+        if not canonical:
+            continue
+        merged[canonical] = merged.get(canonical, 0) + int(r.count or 0)
+    return [
+        {"make": make, "count": count}
+        for make, count in sorted(merged.items(), key=lambda kv: (-kv[1], kv[0]))
+    ]
+
 
 @router.get("/models")
 def get_models(make: str, db: Session = Depends(get_db)):
+    canonical_make = canonicalize_make(make)
+    if not canonical_make:
+        return []
+
+    # Always resolve every stored spelling of the brand, not just the exact one
+    # the caller typed — otherwise "Toyota" and "toyota" return different model
+    # lists and the valuation dropdown silently loses models.
+    variants = [
+        r.make
+        for r in (
+            db.query(CarListing.make)
+            .filter(live_listing_filter(), CarListing.make.isnot(None))
+            .distinct()
+            .all()
+        )
+        if canonicalize_make(r.make) == canonical_make
+    ]
+    if not variants:
+        return []
+
     results = (
         db.query(CarListing.model, func.count(CarListing.id).label("count"))
-        .filter(CarListing.make == make, live_listing_filter())
+        .filter(CarListing.make.in_(variants), live_listing_filter())
         .group_by(CarListing.model)
         .order_by(desc("count"))
         .all()
     )
-    return [{"model": r.model, "count": r.count} for r in results]
+
+    merged: Dict[str, Dict[str, int]] = {}
+    for r in results:
+        model = canonicalize_model(r.model)
+        if not model:
+            continue
+        # Merge case variants ("Wira"/"wira") under one canonical key.
+        key = compact_key(model)
+        bucket = merged.get(key)
+        if bucket is None:
+            merged[key] = {"model": model, "count": int(r.count or 0)}
+        else:
+            if int(r.count or 0) > bucket["count"]:
+                bucket["model"] = model
+            bucket["count"] += int(r.count or 0)
+    return [
+        {"model": bucket["model"], "count": bucket["count"]}
+        for bucket in sorted(merged.values(), key=lambda b: (-b["count"], b["model"]))
+    ]
 
 
 @router.get("/nhtsa-models")
@@ -1747,7 +1405,7 @@ def get_search_suggestions(
 ):
     return search_listing_suggestions(q=q, limit=limit, db=db)
 
-@router.get("/estimate")
+@router.get("/estimate", dependencies=[Depends(_estimate_rate_limiter)])
 def estimate_price(
     make: str,
     model: str,
@@ -2035,80 +1693,44 @@ def estimate_custom_vehicle(payload: CustomVehicleEstimateRequest, db: Session =
     )
 
 
-@router.get("/{listing_id}/seller-profile", response_model=SellerProfileResponse)
+def _source_display_name(source: Optional[str]) -> str:
+    key = str(source or "").strip().lower()
+    return SOURCE_LABELS.get(key) or (str(source).strip() if source else "the original listing site")
+
+
+@router.get("/{listing_id}/seller-profile", status_code=410)
 def get_seller_profile(listing_id: int, db: Session = Depends(get_db)):
+    """Retired: MotorMila no longer fetches or republishes seller contact data.
+
+    Seller names, phone and WhatsApp numbers are personal data (PDPA No. 9 of
+    2022). Buyers are sent to the source listing to contact the seller.
+    See docs/legal/data-sourcing.md.
+    """
     listing = db.query(CarListing).filter(CarListing.id == listing_id).first()
-    if not listing:
-        raise HTTPException(status_code=404, detail="Listing not found.")
-
-    cache_hit = SELLER_PROFILE_CACHE.get(listing_id)
-    now = time.time()
-    if cache_hit and (now - cache_hit[0]) < SELLER_PROFILE_CACHE_TTL_SECONDS:
-        return cache_hit[1]
-
-    source = str(getattr(listing, "source", "") or "")
-    detail_url = str(getattr(listing, "url", "") or "").strip()
-    profile = _empty_seller_profile(source=source, detail_url=detail_url)
-
-    if detail_url:
-        try:
-            with httpx.Client(transport=SSRFSafeTransport(), headers=IMAGE_HEADERS, follow_redirects=False, timeout=20) as client:
-                response = _checked_get(client, detail_url, timeout=20)
-                response.raise_for_status()
-            if len(response.content) > MAX_DETAIL_HTML_BYTES:
-                raise ValueError("detail page is too large")
-            profile = _extract_seller_profile_from_html(
-                source=source,
-                detail_url=detail_url,
-                html=response.text,
-            )
-        except Exception:
-            # Keep response truthful: unknown metrics when source blocks scraping.
-            profile = _empty_seller_profile(source=source, detail_url=detail_url)
-
-    profile["fetched_at"] = datetime.now(timezone.utc)
-    _store_seller_profile_cache(listing_id, now, profile)
-    return profile
-
-
-@router.get("/{listing_id}/thumbnail-proxy")
-def get_listing_thumbnail_proxy(listing_id: int, db: Session = Depends(get_db)):
-    listing = db.query(CarListing).filter(CarListing.id == listing_id).first()
-    if not listing:
-        raise HTTPException(status_code=404, detail="Listing not found.")
-
-    source_thumbnail = _normalize_image_url(listing.url, listing.thumbnail_url)
-    resolved_thumbnail = source_thumbnail or _extract_thumbnail_from_detail(listing.url)
-
-    if not resolved_thumbnail:
-        raise HTTPException(status_code=404, detail="Thumbnail not available.")
-
-    try:
-        image_bytes, content_type = _download_image_bytes(resolved_thumbnail)
-    except Exception:
-        # Retry once using fresh detail-page extraction in case a stored thumbnail has expired.
-        fallback_thumbnail = _extract_thumbnail_from_detail(listing.url)
-        if not fallback_thumbnail:
-            raise HTTPException(status_code=502, detail="Failed to fetch thumbnail image.")
-
-        try:
-            image_bytes, content_type = _download_image_bytes(fallback_thumbnail)
-            resolved_thumbnail = fallback_thumbnail
-        except Exception:
-            raise HTTPException(status_code=502, detail="Failed to fetch thumbnail image.")
-
-    if listing.thumbnail_url != resolved_thumbnail:
-        listing.thumbnail_url = resolved_thumbnail
-        try:
-            db.commit()
-        except Exception:
-            db.rollback()
-
-    return Response(
-        content=image_bytes,
-        media_type=content_type,
-        headers={"Cache-Control": "public, max-age=1800"},
+    source = getattr(listing, "source", None) if listing else None
+    source_url = str(getattr(listing, "url", "") or "") if listing else ""
+    label = _source_display_name(source)
+    return JSONResponse(
+        status_code=410,
+        content={
+            "detail": f"Contact the seller on {label}",
+            "source": source or None,
+            "source_url": source_url or None,
+        },
     )
+
+
+@router.get("/{listing_id}/thumbnail-proxy", status_code=410)
+def get_listing_thumbnail_proxy(listing_id: int):
+    """Retired: MotorMila does not download or re-serve source photos.
+
+    Images are only linked to their original host with a source credit.
+    """
+    return JSONResponse(
+        status_code=410,
+        content={"detail": "Thumbnail proxy retired; images are linked from the source site."},
+    )
+
 
 @router.get("/{listing_id}/fmv")
 def get_listing_fmv(listing_id: int, db: Session = Depends(get_db)):
@@ -2190,6 +1812,8 @@ def get_listing(
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found.")
     plan, role = _request_live_access(request, authorization, db)
+    if _user_listing_hidden(listing, request, authorization, role):
+        raise HTTPException(status_code=404, detail="Listing not found.")
     if _is_free_browse_plan(plan, role):
         listing.deal_score = None
         listing.market_median_lkr = None

@@ -24,7 +24,10 @@ import {
   freePlanCopy,
   hasFullPlatformAccess,
 } from "@/lib/planLimits";
+import { MorphingDialog } from "@/components/ui/MorphingDialog";
+import { setSpotlightVars, CardSpotlightGlow } from "@/components/ui/CardSpotlight";
 import { visuals } from "@/lib/visualAssets";
+import { InfiniteMovingCards } from "@/components/ui/InfiniteMovingCards";
 
 const PICKS_PAGES = 4;
 const MIN_DEAL_SCORE = 8;
@@ -51,6 +54,80 @@ function dealBandChip(score: number): string {
 
 function dealMeter(score: number): string {
   return dealBand(score) === "watch" ? "bg-primary/60" : "bg-emerald-500/60";
+}
+
+/**
+ * Deal-band chip that morphs into a score explainer dialog (#6 UI review —
+ * Motion Primitives morphing dialog). Real per-listing score, shared layout
+ * animation from chip to panel.
+ */
+function DealScoreExplainer({
+  listing,
+  score,
+  t,
+}: {
+  listing: CarListing;
+  score: number;
+  t: (key: string, fallback?: string) => string;
+}) {
+  const band = dealBand(score);
+  const bands: { key: "elite" | "strong" | "watch"; range: string; blurb: string }[] = [
+    { key: "elite", range: "15+", blurb: t("picks.bandEliteBlurb", "Priced far below the lane median — the sharpest deals.") },
+    { key: "strong", range: "10–14", blurb: t("picks.bandStrongBlurb", "Clearly under median — strong value.") },
+    { key: "watch", range: "< 10", blurb: t("picks.bandWatchBlurb", "Near or above median — worth watching, not chasing.") },
+  ];
+  return (
+    <MorphingDialog
+      ariaLabel={t("picks.scoreDialogLabel", "Deal score explained")}
+      triggerClassName={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold ${dealBandChip(score)}`}
+      trigger={
+        <>
+          <Star className="mr-1 inline h-3 w-3 text-emerald-600 dark:text-emerald-400" aria-hidden />
+          {dealBandLabel(score, t)}
+        </>
+      }
+    >
+      <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+        {t("picks.scoreEyebrow", "Deal score")}
+      </p>
+      <div className="mt-2 flex items-baseline gap-2">
+        <span className="num text-4xl font-bold tracking-tight text-foreground">+{score.toFixed(0)}</span>
+        <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${dealBandChip(score)}`}>
+          {dealBandLabel(score, t)}
+        </span>
+      </div>
+      <p className="mt-1 text-[12px] font-medium text-muted-foreground">
+        {listing.make} {listing.model}{listing.year ? ` · ${listing.year}` : ""}
+      </p>
+      <p className="mt-4 text-[13px] leading-relaxed text-muted-foreground">
+        {t(
+          "picks.scoreBody",
+          "The score compares this listing against the live market median for its lane. Higher means further below median — more deal for the money.",
+        )}
+      </p>
+      <ul className="mt-4 space-y-2">
+        {bands.map((b) => {
+          const active = b.key === band;
+          return (
+            <li
+              key={b.key}
+              className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 ${active ? "border-emerald-500/30 bg-emerald-500/[0.07]" : "border-border bg-surface"}`}
+            >
+              <span className={`num w-12 shrink-0 text-[12px] font-bold ${active ? "text-emerald-700 dark:text-emerald-300" : "text-muted-foreground"}`}>
+                {b.range}
+              </span>
+              <div>
+                <p className="text-[12px] font-semibold text-foreground">
+                  {b.key === "elite" ? t("picks.bandElite", "Elite") : b.key === "strong" ? t("picks.bandStrong", "Strong") : t("picks.bandWatch", "Watch")}
+                </p>
+                <p className="text-[11px] text-muted-foreground">{b.blurb}</p>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </MorphingDialog>
+  );
 }
 
 function sortPicks(listings: CarListing[], mode: BestPicksSortMode): CarListing[] {
@@ -200,9 +277,9 @@ export default function BestPicks() {
               </div>
             </div>
             {!dropsLoaded ? (
-              <div className="grid gap-2.5 pt-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-2.5 pt-4 sm:grid-cols-2 lg:grid-cols-4" role="status" aria-label={t("picks.cutsLoading", "Loading price cuts")}>
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="h-24 rounded-2xl border border-border bg-surface animate-pulse" />
+                  <div key={i} className="skeleton-shimmer h-24 rounded-2xl border border-border" aria-hidden="true" />
                 ))}
               </div>
             ) : drops.length === 0 ? (
@@ -210,12 +287,17 @@ export default function BestPicks() {
                 {t("picks.cutsEmpty", "No cuts recorded in the last 7 days yet — price tracking is scan-over-scan, so drops appear here as our daily scans catch sellers moving their asking prices.")}
               </p>
             ) : (
-              <div className="grid grid-flow-col auto-cols-[78%] gap-2.5 pt-4 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid-flow-row sm:auto-cols-auto sm:overflow-visible sm:grid-cols-2 lg:grid-cols-4">
-                {drops.map((drop) => (
+              <InfiniteMovingCards
+                items={drops}
+                keyOf={(drop) => drop.listing.id}
+                direction="left"
+                speed="normal"
+                pauseOnHover
+                className="pt-3"
+                renderItem={(drop) => (
                   <Link
-                    key={drop.listing.id}
                     to={`/listing/${drop.listing.id}`}
-                    className="group snap-start rounded-xl border border-border bg-surface p-3.5 no-underline transition-all hover:border-emerald-500/30 hover:bg-card hover:shadow-soft"
+                    className="group block h-full rounded-xl border border-border bg-surface p-3.5 no-underline transition-all hover:border-emerald-500/30 hover:bg-card hover:shadow-soft"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="truncate text-[12px] font-bold text-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
@@ -233,8 +315,8 @@ export default function BestPicks() {
                       {drop.listing.district || drop.listing.source}
                     </p>
                   </Link>
-                ))}
-              </div>
+                )}
+              />
             )}
           </motion.section>
 
@@ -273,18 +355,17 @@ export default function BestPicks() {
               const pct = topScore > 0 ? Math.min(100, Math.round((score / topScore) * 100)) : 0;
               const cashDown = minCashDownForPrice(Number(featured.price_lkr || 0));
               return (
-                <motion.article variants={revealItem} className="group relative grid overflow-hidden rounded-2xl border border-border bg-card shadow-soft backdrop-blur-md transition-all duration-300 hover:border-primary/30 hover:shadow-soft-lg lg:grid-cols-[1.1fr_1fr]">
+                <motion.article variants={revealItem} className="group relative grid overflow-hidden rounded-2xl border border-border bg-card shadow-soft backdrop-blur-md transition-all duration-300 hover:border-primary/30 hover:shadow-soft-lg lg:grid-cols-[1.1fr_1fr]" onMouseMove={setSpotlightVars}>
+                  <CardSpotlightGlow />
                   <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-30 pointer-events-none" aria-hidden />
-                  <Link to={`/listing/${featured.id}`} className="block aspect-[16/10] overflow-hidden bg-muted no-underline lg:aspect-auto lg:min-h-[320px]">
+                  <Link to={`/listing/${featured.id}`} className="block aspect-[16/10] overflow-hidden bg-muted no-underline transition-transform duration-200 active:scale-[0.99] lg:aspect-auto lg:min-h-[320px]">
                     <VehicleThumbnail src={pickVehicleImageUrl([featured.thumbnail_url, ...(Array.isArray(featured.images) ? featured.images : [])], [featured.url, featured.detail_url, featured.external_url])} listingId={featured.id} alt={`${featured.make} ${featured.model}`} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
                   </Link>
                   <div className="flex flex-col justify-between gap-6 p-6 sm:p-8">
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <span className="text-[12px] font-semibold text-muted-foreground">{featured.source}</span>
-                        <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${dealBandChip(score)}`}>
-                          <Star className="mr-1 inline h-3 w-3 text-emerald-600 dark:text-emerald-400" aria-hidden />{dealBandLabel(score, t)}
-                        </span>
+                        <DealScoreExplainer listing={featured} score={score} t={t} />
                       </div>
                       <Link to={`/listing/${featured.id}`} className="block no-underline">
                         <h2 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl group-hover:text-primary transition-colors">{featured.make} {featured.model}</h2>
@@ -330,16 +411,17 @@ export default function BestPicks() {
                     const pct = topScore > 0 ? Math.min(100, Math.round((score / topScore) * 100)) : 0;
                     const cashDown = minCashDownForPrice(Number(listing.price_lkr || 0));
                     return (
-                      <motion.article key={listing.id} variants={revealItem} className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg">
+                      <motion.article key={listing.id} variants={revealItem} className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg" onMouseMove={setSpotlightVars}>
+                        <CardSpotlightGlow />
                         <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-30 pointer-events-none" aria-hidden />
-                        <Link to={`/listing/${listing.id}`} className="relative block aspect-[16/10] overflow-hidden bg-muted no-underline">
+                        <Link to={`/listing/${listing.id}`} className="relative block aspect-[16/10] overflow-hidden bg-muted no-underline transition-transform duration-200 active:scale-[0.98]">
                           <VehicleThumbnail src={pickVehicleImageUrl([listing.thumbnail_url, ...(Array.isArray(listing.images) ? listing.images : [])], [listing.url, listing.detail_url, listing.external_url])} listingId={listing.id} alt={`${listing.make} ${listing.model}`} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
                           <span className="absolute left-2 top-2 rounded-full border border-white/20 bg-black/60 px-1.5 py-0.5 text-[10px] font-bold text-white num backdrop-blur-sm">{String(idx + 2).padStart(2, "0")}</span>
                         </Link>
                         <div className="flex flex-1 flex-col gap-3 p-4">
                           <div className="flex items-center justify-between">
                             <span className="text-[12px] font-semibold text-muted-foreground">{listing.source}</span>
-                            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${dealBandChip(score)}`}>{dealBandLabel(score, t)}</span>
+                            <DealScoreExplainer listing={listing} score={score} t={t} />
                           </div>
                           <Link to={`/listing/${listing.id}`} className="block no-underline">
                             <h3 className="font-display text-[15px] font-semibold tracking-tight text-foreground group-hover:text-primary transition-colors truncate">{listing.make} {listing.model}</h3>

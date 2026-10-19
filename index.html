@@ -16,7 +16,7 @@
          first paint so there is no flash of the wrong palette. Dark is default. */
       (function () {
         try {
-          var mode = localStorage.getItem("autolens_theme_mode") || "dark";
+          var mode = localStorage.getItem("motormila_theme_mode") || localStorage.getItem("autolens_theme_mode") || "dark";
           var dark =
             mode === "dark" ||
             (mode === "system" &&
@@ -36,18 +36,46 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preconnect" href="https://api.fontshare.com" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700,900&f[]=general-sans@400,500,600,700&f[]=clash-display@500,600,700&display=swap" rel="stylesheet" />
+    <link rel="preconnect" href="https://api.fontshare.com" crossorigin />
+    <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
+    <!-- Production type: Satoshi (display) + Inter (body) + JetBrains Mono.
+         Non-blocking (print->all swap) with font-display=swap; the other
+         FontStudio families load only when a saved choice needs them (below). -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700,900&display=swap" media="print" onload="this.media='all'" />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+      <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700,900&display=swap" />
+    </noscript>
+    <script>
+      /* Optional families for non-default FontStudio choices (dev tool / saved prefs). */
+      (function () {
+        try {
+          var choice = document.documentElement.getAttribute("data-theme-font") || "satoshi-inter";
+          var extra = {
+            "general-sans-inter": "https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap",
+            "general-sans-pure": "https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap",
+            "clash-display": "https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&display=swap",
+            "sora-inter": "https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap",
+            "satoshi-pure": "https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap"
+          }[choice];
+          if (extra) {
+            var link = document.createElement("link");
+            link.rel = "stylesheet";
+            link.href = extra;
+            document.head.appendChild(link);
+          }
+        } catch (e) {}
+      })();
+    </script>
     <meta name="robots" content="index, follow" />
-    <link rel="canonical" href="https://motormila.vercel.app/" />
     <meta property="og:title" content="Motormila — Vehicle Intelligence for Sri Lanka" />
     <meta
       property="og:description"
       content="Track Sri Lankan vehicle prices, trends, deal signals, and valuation tools in one market intelligence cockpit."
     />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://motormila.vercel.app/" />
     <meta property="og:image" content="https://motormila.vercel.app/og-card.jpg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -59,74 +87,12 @@
       content="Track Sri Lankan vehicle prices, trends, deal signals, and valuation tools in one market intelligence cockpit."
     />
     <meta name="twitter:image" content="https://motormila.vercel.app/og-card.jpg" />
+    <!-- seo:route -->
     <link rel="icon" type="image/png" href="/logo.png" />
-    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="preload" href="/logo-mark.png" as="image" type="image/png" />
-    <link rel="preload" href="/fonts/azonix.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
-    <link rel="preload" href="/fonts/nofex.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
-    <script>
-      /* Recover from stale deploys where /assets/*.css 404s were rewritten to index.html,
-         which leaves the app rendered with zero styles until a hard refresh. */
-      (function () {
-        var CSS_RELOAD_KEY = "motormila.css_reload_attempted";
-        var CSS_RELOAD_KEY_LEGACY = "autolens.css_reload_attempted";
-        var CSS_RELOAD_TTL_MS = 30000;
-
-        function canReload() {
-          try {
-            var raw =
-              sessionStorage.getItem(CSS_RELOAD_KEY) ||
-              sessionStorage.getItem(CSS_RELOAD_KEY_LEGACY);
-            if (!raw) return true;
-            var stamped = Number(raw);
-            if (!isFinite(stamped)) return false;
-            return Date.now() - stamped > CSS_RELOAD_TTL_MS;
-          } catch (e) {
-            return true;
-          }
-        }
-
-        function reloadOnce() {
-          if (!canReload()) return;
-          try {
-            sessionStorage.setItem(CSS_RELOAD_KEY, String(Date.now()));
-          } catch (e) {
-            return;
-          }
-          location.reload();
-        }
-
-        function looksLikeHtml(text) {
-          var head = String(text || "").slice(0, 200).toLowerCase();
-          return head.indexOf("<!doctype") !== -1 || head.indexOf("<html") !== -1;
-        }
-
-        window.addEventListener("load", function () {
-          var links = document.querySelectorAll('link[rel="stylesheet"][href*="/assets/"]');
-          if (!links.length) return;
-
-          links.forEach(function (link) {
-            fetch(link.href, { cache: "reload" })
-              .then(function (res) {
-                if (!res.ok) {
-                  reloadOnce();
-                  return null;
-                }
-                return res.text();
-              })
-              .then(function (body) {
-                if (body == null) return;
-                if (looksLikeHtml(body)) reloadOnce();
-              })
-              .catch(function () {
-                reloadOnce();
-              });
-          });
-        });
-      })();
-    </script>
+    <link rel="preload" href="/logo-mark.webp" as="image" type="image/webp" media="(prefers-color-scheme: dark)" />
   </head>
   <body>
     <div id="root"></div>

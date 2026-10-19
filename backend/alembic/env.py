@@ -41,7 +41,7 @@ def _resolve_alembic_url() -> str:
     elif hot:
         url = hot
     elif allow_sqlite:
-        url = "sqlite:///./autolens.db"
+        url = "sqlite:///./motormila.db"
     else:
         raise ValueError(
             "No database URL configured for Alembic. Set HOT_DATABASE_URL and/or "

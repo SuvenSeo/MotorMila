@@ -2,7 +2,8 @@
 # Vercel ignores this file. Set BACKEND_URL to the live API host on cutover.
 # NOTE: the bot user-agent split for /listing/:id OG cards (vercel.json) has no
 # _redirects equivalent — it needs a Pages Function middleware. See migration plan.
-/api/v1/* https://seo292-vehicle-platform-backend.hf.space/api/v1/:splat 200
+# NOTE: /api/v1/* is proxied by functions/api/v1/[[path]].js (a plain _redirects
+# 200 rule for that path proved unreliable on Pages), so no rule here.
 /assets/* /assets/:splat 200
 /snapshots/* /snapshots/:splat 200
 /* /index.html 200

@@ -19,7 +19,7 @@ the UI.
   `backend/.venv/bin/uvicorn`, `backend/.venv/bin/python -m pytest`).
 - No external Postgres/Neon is needed for local dev: set
   `ALLOW_SQLITE_FALLBACK=true` and the backend uses a local SQLite file
-  (`backend/autolens.db`). Without it the backend aborts startup with
+  (`backend/motormila.db`). Without it the backend aborts startup with
   "No database URL configured" (this flag defaults to `false`).
 - For local work also set `PRO_ACCESS_ENFORCED=false` and
   `APP_ACCESS_ENFORCED=false`, otherwise `/api/v1/pro/*` and product data
@@ -31,7 +31,7 @@ the UI.
 - Platform access is invite-only: bootstrap an admin via `AUTH_USERS` with
   `"role":"admin"`, set `VITE_ENABLE_BACKEND_AUTH=true`, then invite users
   from `/admin` (email + free/pro plan). Invited users complete `/sign-up?token=…`.
-  Production app: `https://motormila.vercel.app`. Generate HF/Vercel secrets with
+  Production app: `https://motormila.pages.dev`. Generate HF secrets with
   `python scripts/bootstrap_platform_auth.py --email … --password …`.
 
 ### Run commands (local dev)

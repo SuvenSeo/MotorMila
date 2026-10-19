@@ -87,13 +87,18 @@ fi
 # 2c) Preserve the emergency failover DB (large; produced by manus-to-live).
 #     Without this, a restore-catalog deploy redeploys the tree without it and
 #     the HF Space loses its Neon-outage fallback (404 -> failover:false).
+#     Served from public R2 since 2026-10-16 (the 101MB+ gz crossed Vercel's
+#     100MB per-file deploy limit) — preserve from there.
 # ---------------------------------------------------------------------------
-if [[ ! -s "${SNAP_DIR}/merged-autolens.db.gz" ]]; then
-  echo "==> Failover DB missing locally; fetching from live site…"
-  curl -fsSL --max-time 600 -o "${SNAP_DIR}/merged-autolens.db.gz" \
-    "${LIVE_BASE}/merged-autolens.db.gz" || \
-    echo "WARN: could not preserve merged-autolens.db.gz from live site" >&2
-fi
+R2_FAILOVER_BASE="https://pub-f15911ef9a914db9a44e1fd6b47dfe4e.r2.dev/snapshots/latest"
+for dbname in merged-motormila.db.gz merged-autolens.db.gz; do  # second is the legacy name
+  if [[ ! -s "${SNAP_DIR}/${dbname}" ]]; then
+    echo "==> Failover DB ${dbname} missing locally; fetching from R2…"
+    curl -fsSL --max-time 600 -o "${SNAP_DIR}/${dbname}" \
+      "${R2_FAILOVER_BASE}/${dbname}" || \
+      echo "WARN: could not preserve ${dbname} from R2" >&2
+  fi
+done
 
 # ---------------------------------------------------------------------------
 # 2b) Preserve the sideload APK + release manifest (/app/*) across deploys.
@@ -138,11 +143,36 @@ PY
 # ---------------------------------------------------------------------------
 cd "${ROOT}"
 echo "==> Deploying to Vercel production…"
+# Vercel rejects individual files >100MB. Move EVERY such file aside for the
+# upload, then move them back for the R2 step that follows in the workflow.
+# (.vercelignore proved unreliable — the CLI kept uploading ignored files,
+# causing repeated 100MB deploy failures on 2026-10-16/17. This does not depend
+# on ignore semantics at all.)
+FAILOVER_STASH="$(mktemp -d)"
+restore_stash() {
+  if [[ -d "${FAILOVER_STASH}" ]]; then
+    while IFS= read -r -d '' f; do
+      rel="${f#./}"
+      mkdir -p "$(dirname "./${rel}")"
+      mv "${FAILOVER_STASH}/${rel}" "./${rel}"
+    done < <(cd "${FAILOVER_STASH}" && find . -type f -print0)
+    rm -rf "${FAILOVER_STASH}"
+  fi
+}
+trap restore_stash EXIT
+while IFS= read -r -d '' bigfile; do
+  rel="${bigfile#./}"
+  mkdir -p "${FAILOVER_STASH}/$(dirname "${rel}")"
+  mv "${bigfile}" "${FAILOVER_STASH}/${rel}"
+done < <(find . -type f -size +99M -not -path "./.git/*" -print0)
+echo "==> Moved $(find "${FAILOVER_STASH}" -type f | wc -l) file(s) >99MB aside for the Vercel upload"
 if [[ -n "${VERCEL_TOKEN:-}" ]]; then
   npx --yes vercel deploy --prod --yes --token "${VERCEL_TOKEN}"
 else
   npx --yes vercel deploy --prod --yes
 fi
+trap - EXIT
+restore_stash
 
 # ---------------------------------------------------------------------------
 # 5) Verify the production alias serves the fresh stats file AND every catalog

@@ -230,7 +230,7 @@ export default function SignUp() {
           <motion.div variants={revealItem} className="premium-surface mx-auto w-full max-w-md p-7 shadow-soft-lg sm:p-9 lg:mx-0 lg:max-w-none">
             <Link to="/sign-in" className="mb-8 inline-flex items-center gap-2.5 no-underline group">
               <div className="h-9 w-9 overflow-hidden rounded-full ring-1 ring-border transition-all group-hover:ring-primary/40">
-                <img src="/logo.svg" alt="Motormila" className="h-full w-full object-cover" />
+                <img src="/logo.png" alt="Motormila" className="h-full w-full object-cover" />
               </div>
               <span className="font-display text-sm font-bold text-foreground">{BRAND.name}</span>
             </Link>

@@ -1,4 +1,4 @@
-import java.util.Properties
+import org.gradle.api.tasks.testing.Test
 
 plugins {
     alias(libs.plugins.android.application)
@@ -7,22 +7,77 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.serialization)
+    alias(libs.plugins.paparazzi)
 }
+
+data class ReleaseSigning(
+    val storeFile: String,
+    val storePassword: String,
+    val keyAlias: String,
+    val keyPassword: String,
+)
+
+fun envOrNull(name: String): String? =
+    System.getenv(name)?.takeIf { it.isNotBlank() }
+
+/** All four values present and the keystore file exists, else null. */
+fun signingFromEnv(prefix: String): ReleaseSigning? {
+    val file = envOrNull("${prefix}_KEYSTORE_FILE") ?: return null
+    val storePassword = envOrNull("${prefix}_KEYSTORE_PASSWORD") ?: return null
+    val alias = envOrNull("${prefix}_KEY_ALIAS") ?: return null
+    val keyPassword = envOrNull("${prefix}_KEY_PASSWORD") ?: storePassword
+    if (!File(file).isFile) return null
+    return ReleaseSigning(file, storePassword, alias, keyPassword)
+}
+
+val directSigning: ReleaseSigning? = signingFromEnv("ANDROID")
+val playSigning: ReleaseSigning? = signingFromEnv("PLAY_UPLOAD") ?: directSigning
+val allowUnsignedRelease: Boolean =
+    (findProperty("motormilaAllowUnsignedRelease") as String?)?.toBoolean() == true
 
 android {
     namespace = "lk.motormila.app"
+    // Play requires targetSdk 36 for updates from 1 Nov 2026 (extension
+    // deadline). compileSdk stays at 35 because Paparazzi 1.3.5's
+    // Renderer.configureBuildProperties() crashes on API 36's
+    // android.os.Build (new nested class VERSION_CODES_FULL ->
+    // NoSuchElementException), breaking all screenshot tests. Revisit when
+    // Paparazzi is upgraded to 2.x (needs Gradle/AGP/Kotlin bump too).
     compileSdk = 35
 
     defaultConfig {
         applicationId = "lk.motormila.app"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 11
-        versionName = "1.5.5"
+        targetSdk = 36
+        versionCode = 17
+        versionName = "1.6.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
+        }
+    }
+
+    // Two distribution channels (see docs/overhaul/android.md):
+    // - play:   Google Play. Play Billing only; no self-updater, no
+    //           REQUEST_INSTALL_PACKAGES, no external (bank/WhatsApp/web) checkout.
+    // - direct: GitHub/R2 sideload. Self-updater with SHA-256 verification and
+    //           the external checkout path (Play Billing is unavailable there).
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("play") {
+            dimension = "distribution"
+            buildConfigField("String", "DISTRIBUTION", "\"play\"")
+            buildConfigField("boolean", "SELF_UPDATE_ENABLED", "false")
+            buildConfigField("boolean", "EXTERNAL_CHECKOUT_ENABLED", "false")
+            buildConfigField("boolean", "PLAY_BILLING_ENABLED", "true")
+        }
+        create("direct") {
+            dimension = "distribution"
+            buildConfigField("String", "DISTRIBUTION", "\"direct\"")
+            buildConfigField("boolean", "SELF_UPDATE_ENABLED", "true")
+            buildConfigField("boolean", "EXTERNAL_CHECKOUT_ENABLED", "true")
+            buildConfigField("boolean", "PLAY_BILLING_ENABLED", "false")
         }
     }
 
@@ -41,23 +96,37 @@ android {
         buildConfig = true
     }
 
+    // Release signing comes ONLY from the environment (GitHub Actions secrets
+    // or a local shell). Nothing secret is committed. Missing values make any
+    // release packaging task fail with a clear message (see bottom of file),
+    // unless -PmotormilaAllowUnsignedRelease=true is passed (CI R8 smoke build
+    // that is never published).
+    //   ANDROID_KEYSTORE_FILE      path to the keystore file (CI decodes the
+    //                              base64 secret to a temp path first)
+    //   ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+    // Play upload key (optional, falls back to the ANDROID_* values):
+    //   PLAY_UPLOAD_KEYSTORE_FILE, PLAY_UPLOAD_KEYSTORE_PASSWORD,
+    //   PLAY_UPLOAD_KEY_ALIAS, PLAY_UPLOAD_KEY_PASSWORD
     signingConfigs {
-        // Sideload / GitHub Release preview. Resolution order:
-        // 1. ANDROID_KEYSTORE_* env (real secrets on a hardened CI)
-        // 2. the committed ci-signing.keystore — one stable signature so every
-        //    release installs over the previous one (in-app self-update works)
-        // 3. the local SDK debug key (machine-local fallback)
-        create("sideload") {
-            val committedKey = rootProject.file("ci-signing.keystore").takeIf { it.exists() }
-            storeFile = providers.environmentVariable("ANDROID_KEYSTORE_FILE").orNull?.let { file(it) }
-                ?: committedKey
-                ?: file("${System.getProperty("user.home")}/.android/debug.keystore")
-            storePassword = providers.environmentVariable("ANDROID_KEYSTORE_PASSWORD")
-                .orElse("android").get()
-            keyAlias = providers.environmentVariable("ANDROID_KEY_ALIAS")
-                .orElse("androiddebugkey").get()
-            keyPassword = providers.environmentVariable("ANDROID_KEY_PASSWORD")
-                .orElse("android").get()
+        directSigning?.let { cfg ->
+            create("directRelease") {
+                storeFile = file(cfg.storeFile)
+                storePassword = cfg.storePassword
+                keyAlias = cfg.keyAlias
+                keyPassword = cfg.keyPassword
+                enableV2Signing = true
+                enableV3Signing = true
+            }
+        }
+        playSigning?.let { cfg ->
+            create("playRelease") {
+                storeFile = file(cfg.storeFile)
+                storePassword = cfg.storePassword
+                keyAlias = cfg.keyAlias
+                keyPassword = cfg.keyPassword
+                enableV2Signing = true
+                enableV3Signing = true
+            }
         }
     }
 
@@ -67,7 +136,7 @@ android {
             versionNameSuffix = "-debug"
             // Point a physical-device demo build at any backend without editing code:
             //   .\gradlew.bat :app:assembleDebug -PmotormilaApiUrl=https://host/api/v1
-            // or MOTORMILA_API_URL=https://host/api/v1. Default is the emulator loopback.
+            // or MOTORMILA_API_URL=https://host/api/v1. Default is the production HF backend.
             val debugBaseUrl = providers.environmentVariable("MOTORMILA_API_URL")
                 .orElse(providers.gradleProperty("motormilaApiUrl"))
                 .getOrElse("https://seo292-vehicle-platform-backend.hf.space/api/v1")
@@ -84,9 +153,10 @@ android {
                 "BASE_URL",
                 "\"https://seo292-vehicle-platform-backend.hf.space/api/v1\"",
             )
-            signingConfig = signingConfigs.getByName("sideload")
-            isMinifyEnabled = false // v1: avoid R8 risk; proguard file kept for v2
-            isShrinkResources = false
+            // Per-flavor signing (env only) is wired below the android block.
+            signingConfig = null
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -115,6 +185,62 @@ android {
             isIncludeAndroidResources = true
             isReturnDefaultValues = true
         }
+    }
+
+    // Show test stdout in CI logs (diagnosing ViewModel dispatcher behaviour).
+    tasks.withType<Test> {
+        testLogging {
+            showStandardStreams = true
+        }
+    }
+}
+
+ksp {
+    // Exported Room schemas back the migration tests (commit app/schemas/).
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+// Room schema export races when the play/direct KSP tasks run in parallel
+// (org.gradle.parallel=true): both variants share $projectDir/schemas and
+// Room's exportSchema() reads the schema file back while the other task is
+// still writing it, failing with "IllegalStateException: Empty schema file"
+// (seen on CI for :app:kspDirectDebugKotlin). The schema is
+// flavor-independent, so serialize the KSP tasks instead of the whole build.
+tasks.configureEach {
+    if (name.matches(Regex("^kspDirect\\w*Kotlin$"))) {
+        mustRunAfter(tasks.matching { it.name.matches(Regex("^kspPlay\\w*Kotlin$")) })
+    }
+}
+
+// Wire per-flavor release signing.
+android.productFlavors.getByName("direct").signingConfig =
+    android.signingConfigs.findByName("directRelease")
+android.productFlavors.getByName("play").signingConfig =
+    android.signingConfigs.findByName("playRelease")
+
+// Fail release packaging loudly when signing env is missing (never fall back
+// to a committed/public key again). Debug and unit-test tasks are unaffected.
+gradle.taskGraph.whenReady {
+    val releaseTaskRe = Regex("^(assemble|bundle|package)(Play|Direct)?Release$")
+    val releaseTasks = allTasks.filter { it.project == project && releaseTaskRe.matches(it.name) }
+    if (releaseTasks.isEmpty() || allowUnsignedRelease) return@whenReady
+    val needsDirect = releaseTasks.any { !it.name.contains("Play") }
+    val needsPlay = releaseTasks.any { !it.name.contains("Direct") }
+    val missing = buildList {
+        if (needsDirect && directSigning == null) {
+            add("direct (ANDROID_KEYSTORE_FILE, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD)")
+        }
+        if (needsPlay && playSigning == null) {
+            add("play (PLAY_UPLOAD_KEYSTORE_* or ANDROID_KEYSTORE_*)")
+        }
+    }
+    if (missing.isNotEmpty()) {
+        throw GradleException(
+            "MotorMila release signing is not configured for: ${missing.joinToString("; ")}. " +
+                "Set the env vars / GitHub secrets (see docs/overhaul/android.md, 'Signing'). " +
+                "The committed sideload keystore was removed on purpose. " +
+                "For a non-publishable R8 smoke build pass -PmotormilaAllowUnsignedRelease=true.",
+        )
     }
 }
 
@@ -194,4 +320,6 @@ dependencies {
     testImplementation(libs.turbine)
     testImplementation(libs.mockk)
     testImplementation(libs.room.testing)
+    // Screenshot (Paparazzi) + functional (Robolectric) tests — JVM only, no emulator.
+    testImplementation(libs.paparazzi)
 }

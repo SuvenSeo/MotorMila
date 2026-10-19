@@ -436,6 +436,8 @@ export interface MakeInsight {
   avg_price_lkr: number | null;
   median_price_lkr: number | null;
   top_models: MakeInsightModelEntry[];
+  /** Full cleaned model list for the make (may be absent on older backends). */
+  all_models?: MakeInsightModelEntry[];
   top_districts: MakeModelDistrictEntry[];
 }
 
@@ -540,6 +542,8 @@ export interface FilterState {
   /** Browse category — defaults to cars on the homepage. */
   vehicle_category?: VehicleCategory;
   price_availability?: PriceAvailability;
+  /** Only listings first seen in the last 24h (the "New in 24h" hero chip). */
+  fresh_24h?: boolean;
   sort: SortOption;
   page: number;
 }

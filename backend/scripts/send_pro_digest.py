@@ -81,7 +81,7 @@ def _db_session() -> Session:
         allow_sqlite = os.getenv("ALLOW_SQLITE_FALLBACK", "false").lower() == "true"
         if not allow_sqlite:
             raise RuntimeError("No database URL configured (set HOT_DATABASE_URL).")
-        url = "sqlite:///./autolens.db"
+        url = "sqlite:///./motormila.db"
     engine = create_engine(url, pool_pre_ping=True) if not url.startswith("sqlite") else create_engine(url, connect_args={"check_same_thread": False})
     return sessionmaker(bind=engine)()
 

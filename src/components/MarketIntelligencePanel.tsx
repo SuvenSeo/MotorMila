@@ -45,6 +45,49 @@ interface FeedRow {
   time: string;
 }
 
+/** Loading placeholder for the live-intelligence bento — same footprint, shimmer blocks.
+ *  Shimmer is disabled under prefers-reduced-motion (static placeholders remain). */
+export function MarketIntelligenceSkeleton() {
+  return (
+    <div role="status" aria-label="Loading market intelligence">
+      <div
+        className="grid grid-cols-2 overflow-hidden rounded-3xl border border-border bg-border lg:grid-cols-4"
+        style={{ gap: "1px" }}
+      >
+        <div className="relative col-span-2 bg-card p-6 sm:p-8 lg:row-span-2" aria-hidden="true">
+          <div className="skeleton-shimmer h-3 w-28 rounded-full" />
+          <div className="skeleton-shimmer mt-5 h-16 w-3/4 rounded-2xl sm:h-20" />
+          <div className="skeleton-shimmer mt-4 h-3 w-2/3 rounded-full" />
+          <div className="mt-6 flex flex-wrap gap-1.5">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="skeleton-shimmer h-6 w-16 rounded-full" />
+            ))}
+          </div>
+        </div>
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="bg-card p-5" aria-hidden="true">
+            <div className="skeleton-shimmer h-3 w-20 rounded-full" />
+            <div className="skeleton-shimmer mt-3 h-8 w-24 rounded-xl" />
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 overflow-hidden rounded-[1.75rem] border border-border bg-surface" aria-hidden="true">
+        <div className="border-b border-border px-5 py-3">
+          <div className="skeleton-shimmer h-3.5 w-36 rounded-full" />
+        </div>
+        <div className="divide-y divide-border">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex items-center justify-between px-5 py-3">
+              <div className="skeleton-shimmer h-4 w-40 rounded-full" />
+              <div className="skeleton-shimmer h-4 w-16 rounded-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Metric cell ────────────────────────────────────────────────────────────
 
 function MetricCell({
@@ -89,7 +132,10 @@ export const MarketIntelligencePanel = memo(function MarketIntelligencePanel({
   );
   // Priced listings match the default inventory browse count; fall back to total when priced is unknown.
   const liveListings = pricedListings > 0 ? pricedListings : totalIndexed;
-  const sourceCount = Number(snapshot?.active_scrape_sources?.length || stats?.source_count || 0);
+  // "N sources" must mean the same thing everywhere on the page: the number of
+  // sources actually indexed, not just the ones that happened to run in the
+  // latest scrape cycle (which is why this used to read 10 next to a hero 13).
+  const sourceCount = Number(stats?.source_count || snapshot?.source_status?.length || 0);
   const districtCount = Number(stats?.district_count || 0);
   const avgPrice = Number(snapshot?.avg_price_lkr ?? stats?.avg_price_lkr ?? 0);
   const momChange = stats?.price_change_mom ?? null;

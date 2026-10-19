@@ -40,7 +40,7 @@ def test_maybe_activate_downloads_when_neon_is_down(tmp_path, monkeypatch):
     sqlite_failover._activated = False
     restore_url = db_session.HOT_URL
     dest = tmp_path / "merged.db"
-    gz_source = tmp_path / "merged-autolens.db.gz"
+    gz_source = tmp_path / "merged-motormila.db.gz"
     db_path = _tiny_sqlite(tmp_path / "source.db")
     with db_path.open("rb") as src, gzip.open(gz_source, "wb") as out:
         out.write(src.read())
@@ -80,11 +80,13 @@ def _reset_failover_state():
     sqlite_failover._primary_url = None
     sqlite_failover._active_source_url = None
     sqlite_failover._active_source_version = None
+    sqlite_failover._next_refresh_allowed_at = 0.0
     yield
     sqlite_failover._activated = False
     sqlite_failover._primary_url = None
     sqlite_failover._active_source_url = None
     sqlite_failover._active_source_version = None
+    sqlite_failover._next_refresh_allowed_at = 0.0
 
 
 def test_tick_fails_back_to_neon_after_recovery(monkeypatch):
@@ -127,7 +129,7 @@ def test_tick_refreshes_failover_db_when_public_source_changes(tmp_path, monkeyp
     sqlite_failover._activated = True
     sqlite_failover._primary_url = "postgresql://example.neon.tech/neondb"
     sqlite_failover._active_source_url = "https://example.test/merged.db.gz"
-    sqlite_failover._active_source_version = ("old", None, 100)
+    sqlite_failover._active_source_version = ("old", 100)
     monkeypatch.setenv("SQLITE_FAILOVER_FORCE", "true")
     failover_path = tmp_path / "merged.db"
     failover_path.write_bytes(b"old-db" * 300)
@@ -137,7 +139,7 @@ def test_tick_refreshes_failover_db_when_public_source_changes(tmp_path, monkeyp
     monkeypatch.setattr(
         sqlite_failover,
         "_source_version",
-        lambda url: ("new", None, 200),
+        lambda url: ("new", 200),
     )
 
     downloaded: list[str] = []
@@ -160,14 +162,14 @@ def test_tick_refreshes_failover_db_when_public_source_changes(tmp_path, monkeyp
 
     assert downloaded == ["https://example.test/merged.db.gz"]
     assert activated
-    assert sqlite_failover._active_source_version == ("new", None, 200)
+    assert sqlite_failover._active_source_version == ("new", 200)
 
 
 def test_tick_does_not_redownload_unchanged_failover_db(tmp_path, monkeypatch):
     sqlite_failover._activated = True
     sqlite_failover._primary_url = "postgresql://example.neon.tech/neondb"
     sqlite_failover._active_source_url = "https://example.test/merged.db.gz"
-    sqlite_failover._active_source_version = ("same", None, 100)
+    sqlite_failover._active_source_version = ("same", 100)
     monkeypatch.setenv("SQLITE_FAILOVER_FORCE", "true")
     monkeypatch.setenv("SQLITE_FAILOVER_PATH", str(tmp_path / "merged.db"))
     (tmp_path / "merged.db").write_bytes(b"same-db" * 300)
@@ -176,7 +178,7 @@ def test_tick_does_not_redownload_unchanged_failover_db(tmp_path, monkeypatch):
     monkeypatch.setattr(
         sqlite_failover,
         "_source_version",
-        lambda url: ("same", None, 100),
+        lambda url: ("same", 100),
     )
     monkeypatch.setattr(
         sqlite_failover,
@@ -201,11 +203,8 @@ def test_source_version_parses_http_metadata():
 
     headers = _Headers()
 
-    assert sqlite_failover._version_from_headers(headers) == (
-        '"abc123"',
-        "Thu, 24 Sep 2026 15:00:00 GMT",
-        42,
-    )
+    # Last-Modified is excluded: Vercel's edge flaps it for identical bytes.
+    assert sqlite_failover._version_from_headers(headers) == ('"abc123"', 42)
 
 
 def test_tick_retries_download_on_next_pass_after_failure(tmp_path, monkeypatch):
@@ -260,6 +259,71 @@ def test_candidate_sources_default_is_public_site_copy(monkeypatch):
     monkeypatch.delenv("MERGED_SQLITE_URL", raising=False)
     # No source-repo URL may ship in the default list — this file is synced
     # to a public HF Space and the repo is private.
-    assert sqlite_failover._candidate_sources() == [sqlite_failover.VERCEL_MERGED_DB_URL]
+    assert sqlite_failover._candidate_sources() == list(sqlite_failover.FAILOVER_DB_URLS)
     for source in sqlite_failover._candidate_sources():
         assert "github" not in source.lower()
+
+
+def test_refresh_drops_stale_wal_sidecars(tmp_path, monkeypatch):
+    """Atomic DB swaps must not leave the previous generation's -wal/-shm.
+
+    Stale sidecars make new connections read old WAL frames (wrong data) or
+    fail with "database disk image is malformed" -> sustained db:down.
+    """
+    sqlite_failover._activated = True
+    sqlite_failover._active_source_url = "https://example.test/merged.db.gz"
+    sqlite_failover._active_source_version = ("old", 100)
+    monkeypatch.setenv("SQLITE_FAILOVER_FORCE", "true")
+    live = tmp_path / "merged.db"
+    live.write_bytes(b"old-db" * 300)
+    (tmp_path / "merged.db-wal").write_bytes(b"stale-wal")
+    (tmp_path / "merged.db-shm").write_bytes(b"stale-shm")
+    monkeypatch.setenv("SQLITE_FAILOVER_PATH", str(live))
+    monkeypatch.setenv("MERGED_SQLITE_URL", "https://example.test/merged.db.gz")
+    monkeypatch.setattr(sqlite_failover, "_probe_url", lambda url, **kwargs: False)
+    monkeypatch.setattr(sqlite_failover, "_source_version", lambda url: ("new", 200))
+
+    def fake_download(dest, url):
+        dest.write_bytes(b"new-db" * 300)
+        return dest
+
+    monkeypatch.setattr(sqlite_failover, "download_merged_sqlite", fake_download)
+    monkeypatch.setattr(sqlite_failover, "activate_sqlite_file", lambda path: None)
+    monkeypatch.setattr(sqlite_failover, "_ensure_failover_schema", lambda: None)
+
+    assert sqlite_failover._refresh_active_failover_locked() is True
+    assert live.read_bytes() == b"new-db" * 300
+    assert not (tmp_path / "merged.db-wal").exists()
+    assert not (tmp_path / "merged.db-shm").exists()
+
+
+def test_refresh_throttles_repeated_attempts(tmp_path, monkeypatch):
+    """A version change refreshes at most once an hour; failures back off."""
+    sqlite_failover._activated = True
+    sqlite_failover._active_source_url = "https://example.test/merged.db.gz"
+    sqlite_failover._active_source_version = ("old", 100)
+    monkeypatch.setenv("SQLITE_FAILOVER_FORCE", "true")
+    live = tmp_path / "merged.db"
+    live.write_bytes(b"old-db" * 300)
+    monkeypatch.setenv("SQLITE_FAILOVER_PATH", str(live))
+    monkeypatch.setenv("MERGED_SQLITE_URL", "https://example.test/merged.db.gz")
+    monkeypatch.setattr(sqlite_failover, "_probe_url", lambda url, **kwargs: False)
+    monkeypatch.setattr(sqlite_failover, "_source_version", lambda url: ("new", 200))
+
+    calls: list[str] = []
+
+    def fake_download(dest, url):
+        calls.append(url)
+        dest.write_bytes(b"new-db" * 300)
+        return dest
+
+    monkeypatch.setattr(sqlite_failover, "download_merged_sqlite", fake_download)
+    monkeypatch.setattr(sqlite_failover, "activate_sqlite_file", lambda path: None)
+    monkeypatch.setattr(sqlite_failover, "_ensure_failover_schema", lambda: None)
+
+    assert sqlite_failover._refresh_active_failover_locked() is True
+    assert len(calls) == 1
+    # Immediate second attempt is throttled even though the version differs.
+    sqlite_failover._active_source_version = ("older", 50)
+    assert sqlite_failover._refresh_active_failover_locked() is False
+    assert len(calls) == 1

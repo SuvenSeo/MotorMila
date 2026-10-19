@@ -81,6 +81,7 @@ fun BestPicksScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val pagingItems = viewModel.paging.collectAsLazyPagingItems()
+    val fromSnapshot by viewModel.fromSnapshot.collectAsStateWithLifecycle()
     val snacks = remember { SnackbarHostState() }
     val reducedMotion = rememberReducedMotion()
     val haptics = rememberHaptics()
@@ -140,6 +141,15 @@ fun BestPicksScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     item { OfflineBanner(visible = state.offline) }
+                    if (!state.offline && fromSnapshot && state.unlocked) {
+                        item {
+                            OfflineBanner(
+                                visible = true,
+                                text = stringResource(R.string.offline_snapshot_banner),
+                                onRetry = { pagingItems.refresh() },
+                            )
+                        }
+                    }
                     item { PicksHero(unlocked = state.unlocked) }
                     item {
                         SortRow(

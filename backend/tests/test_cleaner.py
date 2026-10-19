@@ -58,6 +58,19 @@ def test_clean_price_rejects_installment_only_or_noise_values():
     assert cleaner.clean_price("Contact for price / negotiable") is None
 
 
+def test_clean_price_rejects_foreign_currency():
+    """USD/other-currency amounts must never land as LKR."""
+    cleaner = CarCleaner()
+    assert cleaner.clean_price("USD 4.5 million") is None
+    assert cleaner.clean_price("US$ 12,000") is None
+    assert cleaner.clean_price("$15000") is None
+    assert cleaner.clean_price("Price: 45000 dollars") is None
+    assert cleaner.clean_price("EUR 8.2 million") is None
+    assert cleaner.clean_price("AED 55,000") is None
+    # Explicit LKR/RS still parse.
+    assert cleaner.clean_price("Rs 8.7 Million") == 8_700_000
+
+
 def test_normalize_listing_payload_parses_string_price():
     cleaner = CarCleaner()
     payload = _base_payload(source="autodirect", source_id="listing-1")

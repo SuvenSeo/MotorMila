@@ -101,6 +101,6 @@ curl -s localhost:8000/api/v1/seo/sitemap-index.xml | head -12
 2. Vercel owner: apply snippet 2 after reading `vercel.json`.
 3. Full SSG/prerender of top-500 manifest entries (manifest + sample only for now).
 4. Remove page-level `setCanonical`/`setJsonLd` in `MakeModelHub.tsx` (id
-   `autolens-jsonld` collides with RouteMeta graph — last-write wins today).
+   `motormila-jsonld` collides with RouteMeta graph — last-write wins today).
 5. Point `public/robots.txt` + `public/sitemap.xml` at `/api/v1/seo/sitemap-index.xml`.
 6. `stats_cache` TTL still 1h — hub numbers can lag fresh listings by 1h.

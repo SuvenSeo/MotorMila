@@ -9,9 +9,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import lk.motormila.app.BuildConfig
+import lk.motormila.app.R
 import lk.motormila.app.billing.BillingState
 import lk.motormila.app.billing.PlayBillingDataSource
 import lk.motormila.app.core.common.AppError
@@ -45,6 +48,8 @@ data class ProUiState(
     val detailError: String? = null,
     val billingLoading: Boolean = false,
     val billingError: String? = null,
+    /** Localised billing message (string resource id), shown once as a snackbar. */
+    val billingMessageRes: Int? = null,
     /** Manual-provider note from checkout-intent (contact-sales fallback). */
     val checkoutMessage: String? = null,
     val checkoutUrl: String? = null,
@@ -66,7 +71,7 @@ sealed interface ProUiEvent {
 class ProViewModel @Inject constructor(
     private val proRepository: ProRepository,
     private val billing: PlayBillingDataSource,
-    authRepository: AuthRepository,
+    private val authRepository: AuthRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ProUiState())
@@ -100,7 +105,9 @@ class ProViewModel @Inject constructor(
             is ProUiEvent.ToggleDistrictDetail -> toggleDistrictDetail(event.district)
             is ProUiEvent.ThresholdChanged -> _state.update { it.copy(arbitrageThresholdPct = event.pct) }
             ProUiEvent.DismissError ->
-                _state.update { it.copy(error = null, detailError = null, billingError = null, offline = false) }
+                _state.update {
+                    it.copy(error = null, detailError = null, billingError = null, billingMessageRes = null, offline = false)
+                }
         }
     }
 
@@ -214,10 +221,26 @@ class ProViewModel @Inject constructor(
         if (_state.value.billingLoading) return
         viewModelScope.launch {
             _state.update { it.copy(billingLoading = true, billingError = null) }
-            val native = runCatching { billing.launchProUpgrade(activity, PRO_PRODUCT_ID) }.getOrDefault(false)
-            if (native) {
-                // Purchase UI is now Play-owned; result arrives via billingState.
-                _state.update { it.copy(billingLoading = false) }
+            if (BuildConfig.PLAY_BILLING_ENABLED) {
+                // Play flavor: Play Billing is the ONLY payment path (policy).
+                // The purchase is verified server-side against this account,
+                // so a signed-in session is required first.
+                val signedIn = runCatching { authRepository.session().first() != null }.getOrDefault(false)
+                if (!signedIn) {
+                    _state.update { it.copy(billingLoading = false, billingMessageRes = R.string.billing_sign_in_first) }
+                    return@launch
+                }
+                val native = runCatching { billing.launchProUpgrade(activity, PRO_PRODUCT_ID) }.getOrDefault(false)
+                _state.update {
+                    it.copy(
+                        billingLoading = false,
+                        billingMessageRes = if (native) null else R.string.billing_play_unavailable,
+                    )
+                }
+                return@launch
+            }
+            if (!BuildConfig.EXTERNAL_CHECKOUT_ENABLED) {
+                _state.update { it.copy(billingLoading = false, billingMessageRes = R.string.billing_play_unavailable) }
                 return@launch
             }
             runCatching { billing.checkoutIntent("pro") }
@@ -254,12 +277,17 @@ class ProViewModel @Inject constructor(
 
     private fun checkout() {
         // No-Activity fallback: static Pro page (opened via LocalUriHandler).
+        // Never in the Play flavor (no external payment links for digital goods).
+        if (!BuildConfig.EXTERNAL_CHECKOUT_ENABLED) {
+            _state.update { it.copy(billingMessageRes = R.string.billing_play_unavailable) }
+            return
+        }
         _state.update { it.copy(checkoutUrl = null) }
         _state.update { it.copy(checkoutUrl = CHECKOUT_URL) }
     }
 
     companion object {
-        const val CHECKOUT_URL = "https://motormila.vercel.app/pro"
+        const val CHECKOUT_URL = "https://motormila.pages.dev/pro"
         /** Play Console subscription id — confirm with the release checklist before launch. */
         const val PRO_PRODUCT_ID = "motormila_pro_monthly"
         const val DEFAULT_ARB_THRESHOLD_PCT = 5.0

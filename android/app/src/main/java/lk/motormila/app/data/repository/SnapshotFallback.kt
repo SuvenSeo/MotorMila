@@ -21,9 +21,14 @@ suspend fun <T> withSnapshotFallback(
 ): T {
     try {
         return live()
+    } catch (liveError: kotlin.coroutines.cancellation.CancellationException) {
+        // Never swallow cooperative cancellation — the coroutine is done.
+        throw liveError
     } catch (liveError: Exception) {
         try {
             return snapshot()
+        } catch (snapshotError: kotlin.coroutines.cancellation.CancellationException) {
+            throw snapshotError
         } catch (snapshotError: Exception) {
             snapshotError.addSuppressed(liveError)
             throw snapshotError

@@ -11,6 +11,7 @@ import { PageHero } from "@/components/PageHero";
 import { ListingCard } from "@/components/ListingCard";
 import { SectionHeader } from "@/components/SectionHeader";
 import { DistrictPriceHeatmap } from "@/components/DistrictPriceHeatmap";
+import { DistrictVelocityList } from "@/components/DistrictVelocityList";
 import { Button } from "@/components/ui/button";
 import { BRAND } from "@/lib/brand";
 import { QUERY_STALE } from "@/lib/queryPolicy";
@@ -163,6 +164,10 @@ export default function DistrictHub() {
             </motion.div>
           </motion.section>
         )}
+
+        <motion.section variants={revealItem}>
+          <DistrictVelocityList />
+        </motion.section>
 
         {recentListings.length > 0 && (
           <motion.section variants={revealItem}>

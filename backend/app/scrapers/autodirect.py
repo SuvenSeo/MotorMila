@@ -5,9 +5,13 @@ from urllib.parse import urlencode
 
 import httpx
 import structlog
+
+from app.scrapers.polite import BOT_USER_AGENT
 from sqlalchemy.orm import Session
 
 from app.scrapers.cleaner import CarCleaner
+from app.scrapers.net import httpx_client_kwargs
+from app.scrapers.page_budget import start_page_from_env
 from app.utils.listing_upsert import buffered_upsert_listing, flush_upsert_buffer
 
 log = structlog.get_logger()
@@ -179,25 +183,23 @@ class AutoDirectScraper:
     async def scrape(self, max_pages: int = 5):
         page_limit = max_pages if max_pages > 0 else None
         headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/124.0.0.0 Safari/537.36"
-            )
+            "User-Agent": BOT_USER_AGENT
         }
 
         seen_source_ids: set[str] = set()
+        start_page = start_page_from_env(self.SOURCE)
 
-        async with httpx.AsyncClient(headers=headers, follow_redirects=True) as client:
+        async with httpx.AsyncClient(follow_redirects=True, **httpx_client_kwargs(headers)) as client:
             conditions = await self._fetch_conditions(client)
 
             for condition_id, condition_label in conditions:
-                page_num = 1
+                page_num = start_page
+                stop_at_page = start_page + page_limit if page_limit is not None else None
                 consecutive_empty_pages = 0
                 consecutive_page_errors = 0
 
                 while True:
-                    if page_limit is not None and page_num > page_limit:
+                    if stop_at_page is not None and page_num >= stop_at_page:
                         break
 
                     offset = (page_num - 1) * self.PAGE_SIZE

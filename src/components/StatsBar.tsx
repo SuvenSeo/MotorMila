@@ -1,47 +1,16 @@
 import { memo } from "react";
 import { StatsOverview } from "@/types/car";
-import { formatPrice } from "@/services/api";
-import { useEffect, useState, useRef } from "react";
 import { DataFreshnessIndicator } from "@/components/DataFreshnessIndicator";
 import { useAppPreferences } from "@/lib/appPreferences";
+import { NumberTicker } from "@/components/ui/NumberTicker";
 
 interface StatsBarProps {
   stats: StatsOverview;
   latestListingAt?: string | null;
 }
 
-function useCountUp(target: number, duration = 1200): number {
-  const [value, setValue] = useState(0);
-  const rafRef = useRef(0);
-  const prevTarget = useRef(0);
-  const currentValue = useRef(0);
-
-  useEffect(() => {
-    if (!target || target === prevTarget.current) return;
-    prevTarget.current = target;
-    const start = Date.now();
-    const from = currentValue.current;
-
-    const tick = () => {
-      const t = Math.min((Date.now() - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - t, 3);
-      const next = Math.round(from + (target - from) * eased);
-      currentValue.current = next;
-      setValue(next);
-    };
-    cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [target, duration]);
-
-  return value;
-}
-
 export const StatsBar = memo(function StatsBar({ stats, latestListingAt }: StatsBarProps) {
   const { t } = useAppPreferences();
-  const totalCount = useCountUp(stats.total_listings);
-  const avgPrice = useCountUp(stats.avg_price_lkr);
-  const dealsCount = useCountUp(stats.good_deals_count);
   const momChange = stats.price_change_mom;
   const sourceLabel =
     stats.source_count > 0
@@ -59,7 +28,11 @@ export const StatsBar = memo(function StatsBar({ stats, latestListingAt }: Stats
             <p className="tech-label tracking-[0.18em]">{t("stats.avgIndexPrice", "Average Index Price")}</p>
             <div>
               <p className="text-5xl font-semibold leading-none text-foreground num lg:text-7xl">
-                {formatPrice(avgPrice)}
+                <NumberTicker
+                  value={stats.avg_price_lkr / 1_000_000}
+                  decimalPlaces={2}
+                  formatValue={(v) => `Rs. ${v.toFixed(2)}M`}
+                />
               </p>
               <div className={`mt-6 inline-flex items-center gap-2 rounded-full px-4 py-1.5 tech-label num ${
                 momChange == null
@@ -86,7 +59,7 @@ export const StatsBar = memo(function StatsBar({ stats, latestListingAt }: Stats
           <p className="tech-label tracking-[0.18em]">{t("stats.totalDepth", "Total Depth")}</p>
           <div>
             <p className="text-4xl font-semibold leading-none text-foreground num lg:text-5xl">
-              {totalCount.toLocaleString()}
+              <NumberTicker value={stats.total_listings} delay={0.15} />
             </p>
             <p className="mt-4 flex items-center gap-2 tech-label text-muted-foreground">
               <span className="w-1.5 h-1.5 rounded-full bg-primary" />
@@ -100,7 +73,7 @@ export const StatsBar = memo(function StatsBar({ stats, latestListingAt }: Stats
           <p className="tech-label tracking-[0.18em]">{t("stats.opportunities", "Opportunities")}</p>
           <div>
             <p className="text-4xl font-semibold leading-none text-primary num lg:text-5xl">
-              {dealsCount}+
+              <NumberTicker value={stats.good_deals_count} delay={0.3} />+
             </p>
             <p className="mt-4 tech-label text-muted-foreground">{t("stats.arbitrageDeals", "Arbitrage Deals")}</p>
           </div>

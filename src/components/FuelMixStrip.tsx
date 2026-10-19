@@ -88,6 +88,14 @@ export function FuelMixStrip() {
   const maxBandCount = hybridBands
     ? Math.max(...hybridBands.bands.map((b) => b.count), 1)
     : 1;
+  // When the unclassified ("other") share dominates, the mix bar is
+  // meaningless — show an honest "classification in progress" note instead of
+  // a 95% "Other" bar. Hybrid bands are real data and stay visible.
+  const otherBucket = fuelMix?.buckets.find((b) => b.fuel_type === "other");
+  const otherPct = otherBucket && fuelMix && fuelMix.total > 0
+    ? (otherBucket.count / fuelMix.total) * 100
+    : 0;
+  const mixMeaningful = !fuelMix || fuelMix.total === 0 || otherPct <= 70;
 
   return (
     <section
@@ -117,7 +125,7 @@ export function FuelMixStrip() {
         </div>
       ) : (
         <div className="space-y-4">
-          {fuelMix && fuelMix.total > 0 && (
+          {fuelMix && fuelMix.total > 0 && mixMeaningful && (
             <>
               <FuelBar buckets={fuelMix.buckets} total={fuelMix.total} />
               <div className="flex flex-wrap gap-2">
@@ -129,6 +137,14 @@ export function FuelMixStrip() {
                 {fuelMix.total.toLocaleString()} total listings
               </p>
             </>
+          )}
+
+          {fuelMix && fuelMix.total > 0 && !mixMeaningful && (
+            <p className="text-[12px] leading-relaxed text-muted-foreground">
+              Fuel-type classification is still in progress — only{" "}
+              {Math.round(100 - otherPct)}% of listings are classified so far, so
+              a mix chart would mislead. Hybrid bands below use verified data.
+            </p>
           )}
 
           {hybridBands && hybridBands.total_hybrids > 0 && (

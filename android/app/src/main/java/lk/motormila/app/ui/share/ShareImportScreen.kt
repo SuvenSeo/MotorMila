@@ -19,7 +19,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import lk.motormila.app.R
-import lk.motormila.app.core.ui.EmptyState
+import lk.motormila.app.ui.components.EmptyState
 import lk.motormila.app.core.ui.PrimaryAction
 import lk.motormila.app.domain.repository.ListingQuery
 import lk.motormila.app.ui.components.MotormilaPage
@@ -62,8 +62,8 @@ fun ShareImportScreen(
                 is ShareTarget.Unsupported -> EmptyState(
                     title = stringResource(R.string.share_unsupported_title),
                     body = stringResource(R.string.share_unsupported_body, (sharedUrl ?: "").take(80)),
-                    actionLabel = stringResource(R.string.share_browse),
-                    onAction = onBrowse,
+                    ctaLabel = stringResource(R.string.share_browse),
+                    onCta = onBrowse,
                 )
                 else -> MotormilaSurface(
                     modifier = Modifier.semantics { contentDescription = resolvingDesc },

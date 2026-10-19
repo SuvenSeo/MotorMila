@@ -23,7 +23,9 @@ def test_is_free_browse_plan_matrix():
     assert is_free_browse_plan("dealer") is False
     assert is_free_browse_plan("enterprise") is False
     assert is_free_browse_plan("free", role="admin") is False
-    assert is_free_browse_plan(None) is False
+    # Anonymous callers get free-tier teaser limits — omitting auth must not
+    # unlock Pro-depth data.
+    assert is_free_browse_plan(None) is True
 
 
 def test_free_ceiling_constants():

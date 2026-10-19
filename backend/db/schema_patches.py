@@ -15,6 +15,13 @@ _CAR_LISTING_COLUMN_PATCHES = (
     ("image_phash", "VARCHAR(16)", "VARCHAR(16)"),
     ("vehicle_category", "VARCHAR(40)", "VARCHAR(40)"),
     ("content_updated_at", "TIMESTAMPTZ", "DATETIME"),
+    # User-submitted listings (sell-your-car).
+    ("owner_user_id", "VARCHAR(64)", "VARCHAR(64)"),
+    ("user_listing_status", "VARCHAR(20) NOT NULL DEFAULT 'scraped'", "VARCHAR(20) NOT NULL DEFAULT 'scraped'"),
+    ("contact_name", "VARCHAR(120)", "VARCHAR(120)"),
+    ("contact_phone", "VARCHAR(32)", "VARCHAR(32)"),
+    ("description", "TEXT", "TEXT"),
+    ("user_images", "TEXT", "TEXT"),
 )
 
 # (table, column, postgres type, sqlite type) — non-car_listings additive columns

@@ -16,6 +16,7 @@ import {
   PULSE_SOURCE_GUIDES,
   formatPulsePeriod,
   formatPulseValue,
+  labelPulseMetric,
   labelPulseSource,
   matchPulseGuide,
   type PulseSourceGuide,
@@ -65,8 +66,7 @@ function RelatedSignalCard({ signal }: { signal: MarketSignal }) {
   const guide = matchPulseGuide(signal.source, signal.signal_type);
   const title =
     guide?.title ||
-    signal.category ||
-    signal.metric.replace(/_/g, " ") ||
+    labelPulseMetric(signal.category || signal.metric) ||
     t("pulse.marketSignal", "Market signal");
   const period = formatPulsePeriod(signal.period_year, signal.period_month);
   const value = formatPulseValue(signal.value_numeric, signal.unit, signal.metric);

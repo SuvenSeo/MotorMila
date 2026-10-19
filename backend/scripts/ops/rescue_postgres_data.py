@@ -159,7 +159,7 @@ def export_table(conn, table: str, output_dir: Path) -> dict[str, object]:
 def export_data(args: argparse.Namespace) -> None:
     source_url = get_url(SOURCE_ENV_NAMES, "source")
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    output_dir = Path(args.output or (DEFAULT_EXPORT_ROOT / f"autolens-postgres-{timestamp}")).resolve()
+    output_dir = Path(args.output or (DEFAULT_EXPORT_ROOT / f"motormila-postgres-{timestamp}")).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"source_host={safe_host(source_url)}")

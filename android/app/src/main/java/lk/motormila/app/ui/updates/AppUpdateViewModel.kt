@@ -46,6 +46,8 @@ class AppUpdateViewModel @Inject constructor(
         val dismissedVersionCode: Int? = null,
         val downloadFailedTick: Int = 0,
         val manuallyCheckedWithNoUpdate: Boolean = false,
+        /** User was sent to "Install unknown apps"; tap Update again on return. */
+        val installPermissionRequested: Boolean = false,
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -75,6 +77,7 @@ class AppUpdateViewModel @Inject constructor(
 
     /** "Later" — quiet for this version on passive checks. */
     fun dismiss() {
+        if (_state.value.available?.mandatory == true) return
         _state.update { current ->
             current.copy(
                 available = null,
@@ -85,11 +88,18 @@ class AppUpdateViewModel @Inject constructor(
 
     fun downloadAndInstall(update: AppUpdateChecker.CheckResult.UpdateAvailable) {
         if (_state.value.downloading) return
-        _state.update { it.copy(downloading = true) }
+        // Android 8+: the user must allow this app to install packages first.
+        val canInstall = runCatching { updateChecker.canInstallPackages(appContext) }.getOrDefault(false)
+        if (!canInstall) {
+            runCatching { updateChecker.openInstallPermissionSettings(appContext) }
+            _state.update { it.copy(installPermissionRequested = true) }
+            return
+        }
+        _state.update { it.copy(downloading = true, installPermissionRequested = false) }
         viewModelScope.launch {
             // Blocking network + disk I/O stays off the main thread.
             val apk = runCatching {
-                withContext(io) { updateChecker.downloadApk(update.apkUrl, appContext) }
+                withContext(io) { updateChecker.downloadApk(update.apkUrl, appContext, update.sha256) }
             }.getOrElse {
                 if (it is kotlinx.coroutines.CancellationException) throw it
                 null

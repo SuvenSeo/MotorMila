@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Header, Request
 from sqlalchemy.orm import Session
 
 from db.session import get_db
-from .endpoints import admin, alerts, auth, b2b, billing, calculators, chat, dealer, events, ev, feedback, listings, market, notifications, pipeline, pro, releases, seo, stats, vehicles
+from .endpoints import admin, alerts, auth, b2b, billing, calculators, chat, dealer, events, ev, feedback, listings, market, my_listings, notifications, pipeline, pro, releases, seo, stats, vehicles
 from .endpoints.auth import require_authenticated, require_pro_access
 
 api_router = APIRouter()
@@ -24,7 +24,7 @@ def _normalize_browse_path(value: str) -> str:
 # even when APP_ACCESS_ENFORCED=true / PRO_ACCESS_ENFORCED=true.
 # Matches the web dashboard (snapshot + these live reads) so native guest
 # Home / Search / hubs are not a 401 wall. /pro/*, POST /alerts, /dealer/*,
-# /listings/estimate stay gated.
+# /listings/custom-estimate stay gated.
 _PUBLIC_BROWSE_PATHS = frozenset(
     _normalize_browse_path(path)
     for path in {
@@ -50,10 +50,18 @@ _PUBLIC_BROWSE_PATHS = frozenset(
         "/api/v1/stats/make-model-insight",
         "/api/v1/stats/district-insight",
         "/api/v1/stats/model-price-history",
+        # Live FX context for the signed-out calculator (read-only, no PII).
+        "/api/v1/calculators/macro",
+        # Starter valuation is free-plan product copy (web /estimate and the
+        # Android guest Valuation screen call it signed-out) — deliberately
+        # public, with its own tighter rate limit. The advanced/custom
+        # valuation path (/listings/custom-estimate) stays gated.
+        "/api/v1/listings/estimate",
     }
 )
 
-# Detail + read-only sub-resources (numeric id only so /listings/estimate stays gated).
+# Detail + read-only sub-resources (numeric id only, so e.g.
+# /listings/custom-estimate and /listings/mine stay gated).
 _LISTING_DETAIL_RE = re.compile(r"^/api/v1/listings/\d+$")
 _LISTING_SUB_RE = re.compile(r"^/api/v1/listings/\d+/(similar|price-history|fmv)$")
 
@@ -85,15 +93,17 @@ def require_app_access_or_public_browse(
 
 
 _public_browse_gate = [Depends(require_app_access_or_public_browse)]
+api_router.include_router(my_listings.router, prefix="/listings", tags=["my-listings"], dependencies=_app_gate)
 api_router.include_router(listings.router, prefix="/listings", tags=["listings"], dependencies=_public_browse_gate)
 api_router.include_router(vehicles.router, prefix="/vehicles", tags=["vehicles"], dependencies=_app_gate)
 api_router.include_router(ev.router, prefix="/ev", tags=["ev"], dependencies=_public_browse_gate)
 api_router.include_router(stats.router, prefix="/stats", tags=["stats"], dependencies=_public_browse_gate)
-api_router.include_router(calculators.router, prefix="/calculators", tags=["calculators"], dependencies=_app_gate)
+api_router.include_router(calculators.router, prefix="/calculators", tags=["calculators"], dependencies=_public_browse_gate)
 # Pro endpoints become a real server-side boundary when PRO_ACCESS_ENFORCED=true.
 api_router.include_router(pro.router, prefix="/pro", tags=["pro"], dependencies=[Depends(require_pro_access)])
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"], dependencies=_app_gate)
-api_router.include_router(feedback.router, prefix="/feedback", tags=["feedback"], dependencies=_app_gate)
+# Feedback is public (waitlist, password-reset, contact forms) — rate-limited at the endpoint.
+api_router.include_router(feedback.router, prefix="/feedback", tags=["feedback"])
 api_router.include_router(pipeline.router, prefix="/pipeline", tags=["pipeline"])
 api_router.include_router(market.router, prefix="/market", tags=["market"], dependencies=_public_browse_gate)
 api_router.include_router(alerts.router, prefix="/alerts", tags=["alerts"], dependencies=_app_gate)

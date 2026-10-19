@@ -17,6 +17,7 @@ import { QUERY_STALE } from "@/lib/queryPolicy";
 import {
   formatPulsePeriod,
   formatPulseValue,
+  labelPulseMetric,
   labelPulseSource,
   matchPulseGuide,
 } from "@/lib/officialPulseContent";
@@ -139,8 +140,7 @@ export default function OfficialPulseDetail() {
   const guide = matchPulseGuide(signal.source, signal.signal_type);
   const title =
     guide?.title ||
-    signal.category ||
-    signal.metric.replace(/_/g, " ") ||
+    labelPulseMetric(signal.category || signal.metric) ||
     t("pulse.marketSignal", "Market signal");
   const period = formatPulsePeriod(signal.period_year, signal.period_month);
   const value = formatPulseValue(signal.value_numeric, signal.unit, signal.metric);
@@ -216,7 +216,7 @@ export default function OfficialPulseDetail() {
               label: t("pulse.observedLabel", "Observed"),
               value: observedLabel || "—",
               note: signal.category
-                ? t("pulse.categoryNote", "Category · {category}", { category: signal.category })
+                ? t("pulse.categoryNote", "Category · {category}", { category: labelPulseMetric(signal.category) })
                 : t("pulse.syncTimestamp", "Sync timestamp"),
             },
           ].map((card) => (

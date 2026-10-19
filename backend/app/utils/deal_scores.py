@@ -4,7 +4,7 @@ import time
 from datetime import datetime
 
 import structlog
-from sqlalchemy import and_, func, select, text, update
+from sqlalchemy import and_, case, func, select, text, update
 from sqlalchemy.orm import Session
 
 from db.models import CarListing, PriceAggregate, live_listing_filter
@@ -72,7 +72,13 @@ def _build_listing_median_select():
             PriceAggregate.make,
             PriceAggregate.model,
             PriceAggregate.year,
-            func.avg(PriceAggregate.median_price_lkr).label("median"),
+            # Count-weighted average of district medians — a raw avg() lets a
+            # 1-listing district pull the national figure as hard as a
+            # 200-listing one.
+            (
+                func.sum(PriceAggregate.median_price_lkr * PriceAggregate.listing_count)
+                / func.nullif(func.sum(PriceAggregate.listing_count), 0)
+            ).label("median"),
             func.sum(PriceAggregate.listing_count).label("comparables"),
         )
         .join(
@@ -123,6 +129,7 @@ def _build_listing_median_select():
             PriceAggregate.year,
             PriceAggregate.district,
             PriceAggregate.median_price_lkr.label("median"),
+            PriceAggregate.listing_count.label("listing_count"),
         )
         .join(
             dist_latest_sq,
@@ -146,7 +153,15 @@ def _build_listing_median_select():
             CarListing.id,
             CarListing.price_lkr,
             CarListing.year,
-            func.coalesce(dist_agg_sq.c.median, nat_agg_sq.c.median).label("best_median"),
+            # Prefer the district median only when the district cohort is
+            # thick enough to be meaningful; otherwise fall back to national.
+            func.coalesce(
+                case(
+                    (dist_agg_sq.c.listing_count >= 5, dist_agg_sq.c.median),
+                    else_=None,
+                ),
+                nat_agg_sq.c.median,
+            ).label("best_median"),
             # Cohort size always comes from the national latest-period sum —
             # a single district row can look thin while the model is liquid.
             nat_agg_sq.c.comparables.label("comparables"),
@@ -346,6 +361,14 @@ def bulk_refresh_deal_scores(db: Session, *, batch_size: int = 5000) -> dict:
         suppressed=suppressed,
         batches=batches,
     )
+    # Deal scores feed summary/good-deals/trends — drop the materialized
+    # cache so the next read reflects the refresh instead of a 15min–24h TTL.
+    try:
+        from app.utils.stats_cache import invalidate_stats_cache
+
+        invalidate_stats_cache(db)
+    except Exception:
+        logger.warning("stats_cache_invalidate_failed", exc_info=True)
     return {
         "updated": updated,
         "skipped_no_median": skipped_no_median,

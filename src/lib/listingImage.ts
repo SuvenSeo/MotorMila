@@ -115,3 +115,37 @@ export function pickVehicleImageUrl(candidates: Array<unknown>, baseUrls: Array<
   }
   return null;
 }
+
+export interface ListingImageListSource {
+  thumbnail_url?: string | null;
+  images?: unknown;
+  url?: string | null;
+  detail_url?: string | null;
+  external_url?: string | null;
+}
+
+/**
+ * Every photo for a listing as normalized absolute URLs, primary first.
+ * The stored `images` gallery leads (scrapers put the primary photo first);
+ * `thumbnail_url` is appended only when it isn't already in the gallery.
+ * Empty when the listing has no usable image at all.
+ */
+export function getListingImageList(listing: ListingImageListSource): string[] {
+  const baseUrls = [listing.url, listing.detail_url, listing.external_url];
+  const ordered: string[] = [];
+  const seen = new Set<string>();
+
+  const push = (candidate: unknown) => {
+    const normalized = normalizeVehicleImageUrlWithBase(candidate, baseUrls);
+    if (normalized && !seen.has(normalized)) {
+      seen.add(normalized);
+      ordered.push(normalized);
+    }
+  };
+
+  if (Array.isArray(listing.images)) {
+    for (const candidate of listing.images) push(candidate);
+  }
+  push(listing.thumbnail_url);
+  return ordered;
+}

@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { sendFeedback } from "@/services/api";
+import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Navigate, useNavigate, useLocation, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, ArrowRight, Lock } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, Lock, KeyRound } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AtmosphericImage } from "@/components/AtmosphericImage";
@@ -24,6 +26,10 @@ export default function SignIn() {
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetSending, setResetSending] = useState(false);
+  const [resetDone, setResetDone] = useState(false);
   const from = sanitizeSignInRedirect(
     (location.state as { from?: { pathname: string } } | null)?.from?.pathname,
   );
@@ -77,7 +83,7 @@ export default function SignIn() {
           <div>
             <Link to="/" className="mb-8 inline-flex items-center gap-2.5 group">
               <div className="h-9 w-9 overflow-hidden rounded-2xl ring-1 ring-white/20 transition-all group-hover:ring-primary/50">
-                <img src="/logo.svg" alt="" className="h-full w-full object-cover" />
+                <img src="/logo.png" alt="" className="h-full w-full object-cover" />
               </div>
               <span className="font-display text-xl font-bold tracking-tight text-white sm:text-2xl">
                 Motormila
@@ -199,6 +205,15 @@ export default function SignIn() {
               {errors.password && (
                 <p className="text-[11px] font-semibold text-rose-300">{errors.password.message}</p>
               )}
+              <div className="mt-1.5 text-right">
+                <button
+                  type="button"
+                  onClick={() => { setShowReset(true); setResetDone(false); }}
+                  className="text-[12px] font-medium text-white/55 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white"
+                >
+                  {t("signin.forgotPassword", "Forgot password?")}
+                </button>
+              </div>
             </div>
             {serverError && (
               <p className="rounded-xl border border-rose-400/25 bg-rose-500/10 px-3 py-2 text-[11px] font-medium text-rose-200">
@@ -244,6 +259,107 @@ export default function SignIn() {
             </p>
           </div>
         </motion.div>
+
+        {/* Password reset — routed to support until a self-serve endpoint exists */}
+        {showReset && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("signin.resetTitle", "Reset your password")}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-5 backdrop-blur-sm"
+            onClick={() => setShowReset(false)}
+          >
+            <div
+              className="w-full max-w-sm rounded-3xl border border-white/10 bg-[#101014] p-6 shadow-soft-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-3 flex items-center gap-2">
+                <KeyRound aria-hidden className="h-4 w-4 text-primary-bright" />
+                <h2 className="text-[15px] font-bold text-white">
+                  {t("signin.resetTitle", "Reset your password")}
+                </h2>
+              </div>
+              {resetDone ? (
+                <p className="text-[13px] leading-relaxed text-white/70">
+                  {t(
+                    "signin.resetDone",
+                    "Request received — we'll email you a reset link once support verifies the account. Check your inbox within a day.",
+                  )}
+                </p>
+              ) : (
+                <>
+                  <p className="text-[13px] leading-relaxed text-white/60">
+                    {t(
+                      "signin.resetBody",
+                      "Enter your account email and we'll have support send you a password reset link.",
+                    )}
+                  </p>
+                  <form
+                    className="mt-4 space-y-3"
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const address = resetEmail.trim();
+                      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) {
+                        toast.error(t("signin.resetInvalid", "Enter a valid email address."));
+                        return;
+                      }
+                      setResetSending(true);
+                      try {
+                        await sendFeedback({
+                          category: "general",
+                          route: "/sign-in",
+                          message: `Password reset requested for ${address}`,
+                          email: address,
+                        });
+                        setResetDone(true);
+                      } catch {
+                        toast.error(t("signin.resetFailed", "Couldn't send the request — try again."));
+                      } finally {
+                        setResetSending(false);
+                      }
+                    }}
+                  >
+                    <Input
+                      type="email"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      placeholder={t("signin.emailPlaceholder", "you@example.com")}
+                      aria-label={t("signin.emailPlaceholder", "you@example.com")}
+                      className="h-11 rounded-xl border-white/15 bg-black/35 text-sm text-white placeholder:text-white/35 focus:border-primary/40"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowReset(false)}
+                        className="h-10 flex-1 rounded-full border border-white/15 text-[12px] font-semibold text-white/70 transition-colors hover:text-white"
+                      >
+                        {t("common.cancel", "Cancel")}
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={resetSending}
+                        className="h-10 flex-1 rounded-full bg-[#0A7AFF] text-[12px] font-semibold text-white transition-all hover:bg-[#3D94FF] disabled:opacity-50"
+                      >
+                        {resetSending
+                          ? t("signin.resetSending", "Sending...")
+                          : t("signin.resetSubmit", "Request reset")}
+                      </button>
+                    </div>
+                  </form>
+                </>
+              )}
+              {resetDone && (
+                <button
+                  type="button"
+                  onClick={() => setShowReset(false)}
+                  className="mt-4 h-10 w-full rounded-full border border-white/15 text-[12px] font-semibold text-white/70 transition-colors hover:text-white"
+                >
+                  {t("common.close", "Close")}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Desktop-only brand whisper in the luminous right field — never overpowers Motormila mark */}
         <p

@@ -75,7 +75,7 @@ function LockedOverlay({ label }: { label?: string }) {
   );
 }
 
-export default function ProPreview({ sampleLane, gaps, trialCtaTo = "/sign-up" }: ProPreviewProps) {
+export default function ProPreview({ sampleLane, gaps, trialCtaTo = "/pricing" }: ProPreviewProps) {
   const { t } = useAppPreferences();
   // Data-only feed (B2-D): one REAL lane when the API has data, otherwise the
   // mock fallback below stays labelled as a live sample. B1-E structure intact.
@@ -133,7 +133,7 @@ export default function ProPreview({ sampleLane, gaps, trialCtaTo = "/sign-up" }
               to={trialCtaTo}
               className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-[13px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
-              <Sparkles aria-hidden className="h-4 w-4" /> {t("pro.startTrial", "Start 7-day free trial")}
+              <Sparkles aria-hidden className="h-4 w-4" /> {t("pro.startTrial", "Join the waitlist")}
             </Link>
             <Link
               to="/pricing"
@@ -211,7 +211,7 @@ export default function ProPreview({ sampleLane, gaps, trialCtaTo = "/sign-up" }
                 to={trialCtaTo}
                 className="mt-5 flex h-11 items-center justify-center gap-2 rounded-full bg-primary text-[13px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98]"
               >
-                <Sparkles aria-hidden className="h-4 w-4" /> Start 7-day free trial
+                <Sparkles aria-hidden className="h-4 w-4" /> Join the waitlist
               </Link>
               <p className="mt-2.5 text-center text-[11px] text-muted-foreground">
                 Annual saves 2 months · Manual pay activates within 2 hours

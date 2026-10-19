@@ -39,6 +39,10 @@ sealed interface AppError {
 suspend fun <T> resultOf(block: suspend () -> T): AppResult<T> =
     try {
         AppResult.Success(block())
+    } catch (ce: kotlin.coroutines.cancellation.CancellationException) {
+        // Never swallow cooperative cancellation — rethrow so structured
+        // concurrency keeps working and callers don't write stale error state.
+        throw ce
     } catch (t: Throwable) {
         AppResult.Error(lk.motormila.app.core.network.ErrorMapper.map(t))
     }

@@ -19,6 +19,13 @@ val MotormilaPrimaryBright = Color(0xFF3D94FFL)
 val MotormilaPrimaryGlow = Color(0x330A7AFFL)
 val MotormilaOnPrimary = Color(0xFFFFFFFFL)
 
+// Shared alpha variants — use these instead of raw ARGB hex or .copy(alpha=).
+// Pairs with the Motormila*Container family below.
+val MotormilaPrimaryContainer = Color(0x2E0A7AFFL) // 18% blue — tinted surfaces, highlights
+val MotormilaPrimaryBorder = Color(0x550A7AFFL) // 33% blue — highlighted borders
+val MotormilaPrimarySoft = Color(0x1A0A7AFFL) // 10% blue — soft washes
+val MotormilaGoodSoft = Color(0x5500C853L) // 33% green — deal borders
+
 // Legacy alias kept for call sites still using Gold naming
 val MotormilaGold = Color(0xFF0A7AFFL)
 val MotormilaOnGold = Color(0xFFFFFFFFL)
@@ -26,9 +33,9 @@ val MotormilaOnGold = Color(0xFFFFFFFFL)
 // Semantic deal and signal tokens
 val MotormilaTeal = Color(0xFF38BDF8L)
 val MotormilaSky = Color(0xFF3D94FFL)
-val MotormilaGood = Color(0xFF10B981L)
-val MotormilaGoodContainer = Color(0x2E10B981L)
-val MotormilaGoodText = Color(0xFF6EE7B7L)
+val MotormilaGood = Color(0xFF00C853L)
+val MotormilaGoodContainer = Color(0x2E00C853L)
+val MotormilaGoodText = Color(0xFF69F0AEL)
 val MotormilaWarn = Color(0xFFF59E0BL)
 val MotormilaWarnContainer = Color(0x2EF59E0BL)
 val MotormilaBad = Color(0xFFEF4444L)

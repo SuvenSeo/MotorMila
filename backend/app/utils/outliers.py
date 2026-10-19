@@ -181,12 +181,21 @@ def mark_price_outliers(
     bind = db.bind
     dialect = getattr(bind, "dialect", None)
     if dialect is not None and dialect.name == "postgresql":
-        return _mark_price_outliers_postgres(
+        result = _mark_price_outliers_postgres(
             db, min_group_size=min_group_size, iqr_multiplier=iqr_multiplier
         )
-    return _mark_price_outliers_python(
-        db, min_group_size=min_group_size, iqr_multiplier=iqr_multiplier
-    )
+    else:
+        result = _mark_price_outliers_python(
+            db, min_group_size=min_group_size, iqr_multiplier=iqr_multiplier
+        )
+    # Outlier flags feed medians/deal-scores/summary — drop the stats cache.
+    try:
+        from app.utils.stats_cache import invalidate_stats_cache
+
+        invalidate_stats_cache(db)
+    except Exception:
+        log.warning("stats_cache_invalidate_failed", exc_info=True)
+    return result
 
 
 def _mark_price_outliers_postgres(

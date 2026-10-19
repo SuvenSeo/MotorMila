@@ -16,19 +16,26 @@ class DimoScraper(GenericDetailScraper):
         "https://carsatdimo.lk/",
     )
 
-    def _build_page_urls(self, max_pages: int) -> list[str]:
+    def _page_url_for(self, start_url: str, page_num: int) -> str:
+        if page_num <= 1:
+            return start_url
+        return f"{start_url.rstrip('/')}/page/{page_num}/"
+
+    def _build_page_url_groups(
+        self,
+        max_pages: int,
+        *,
+        start_page: int = 1,
+    ) -> list[list[str]]:
+        # The paginated archive and the site root are independent entry points,
+        # so each gets its own page budget instead of sharing one global pool
+        # where the root URL consumed a slot of the archive's depth.
         page_limit = max(1, int(max_pages or 1))
-        urls: list[str] = []
-        for start_url in self.START_URLS:
-            if len(urls) >= page_limit:
-                return urls
-            urls.append(start_url)
-        product_category = self.START_URLS[0]
-        for page_num in range(2, page_limit + 1):
-            if len(urls) >= page_limit:
-                return urls
-            urls.append(f"{product_category.rstrip('/')}/page/{page_num}/")
-        return urls
+        start = max(1, int(start_page or 1))
+        return [
+            [self._page_url_for(start_url, page) for page in range(start, start + page_limit)]
+            for start_url in self.START_URLS
+        ]
 
     @classmethod
     def _extract_listing_links(cls, soup: BeautifulSoup) -> list[str]:

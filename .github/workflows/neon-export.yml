@@ -98,18 +98,19 @@ jobs:
         run: |
           set -euo pipefail
           LIMIT="${{ github.event.inputs.limit || 0 }}"
-          python scripts/ops/export_neon_to_sqlite.py --output autolens.db.gz --limit "${LIMIT}"
+          python scripts/ops/export_neon_to_sqlite.py --output motormila.db.gz --limit "${LIMIT}"
 
       - name: Publish dump release
         if: steps.export.outputs.skip == 'false'
         run: |
           set -euo pipefail
-          if [[ ! -f autolens.db.gz ]]; then
-            echo "ERROR: export reported success but autolens.db.gz is missing"
+          if [[ ! -f motormila.db.gz ]]; then
+            echo "ERROR: export reported success but motormila.db.gz is missing"
             exit 1
           fi
           TAG="neon-export-$(date -u +%Y%m%dT%H%MZ)"
-          gh release create "$TAG" autolens.db.gz \
+          cp motormila.db.gz autolens.db.gz  # legacy asset name for pre-rename merger runs
+          gh release create "$TAG" motormila.db.gz autolens.db.gz \
             --title "$TAG" \
             --notes "Neon export (listings=${{ steps.export.outputs.listings || 'unknown' }}, history=${{ steps.export.outputs.history || 'unknown' }}). Merged into the live site automatically by manus-to-live.yml. Full-table read — do not re-run this month unless force=true." \
             --prerelease --latest=false

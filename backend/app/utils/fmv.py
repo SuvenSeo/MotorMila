@@ -271,7 +271,15 @@ def predict_listing_fmv(db: Session, listing: CarListing) -> dict[str, Any]:
     band = None
     delta_pct = None
     label = None
-    if asking is not None and fmv is not None and asking > 0 and fmv > 0:
+    # Suppress verdicts on thin cohorts — a 1-comp "Overpriced 12%" is noise.
+    _MIN_BAND_COMPS = 5
+    if (
+        asking is not None
+        and fmv is not None
+        and asking > 0
+        and fmv > 0
+        and sample_count >= _MIN_BAND_COMPS
+    ):
         delta_pct = round(((asking - fmv) / fmv) * 100, 2)
         if delta_pct <= -5:
             band = "below"

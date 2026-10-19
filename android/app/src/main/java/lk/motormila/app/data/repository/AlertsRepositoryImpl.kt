@@ -63,12 +63,58 @@ class AlertsRepositoryImpl @Inject constructor(
         created
     }
 
+    /**
+     * The backend has no full-alert PATCH, so an edit is create-then-delete:
+     * the replacement is created FIRST and the old alert is removed only after
+     * that succeeded. A failed create (offline, plan limit, 5xx) throws and the
+     * original alert is left untouched — an edit can never lose the alert.
+     * If the old delete fails, the new alert still exists and the stale one is
+     * cleaned up on the next refresh().
+     */
     override suspend fun update(id: Int, input: AlertInput): Alert = withContext(io) {
-        runCatching { api.deleteAlert(id) }
+        val original = db.alertDao().getAll().firstOrNull { it.id == id }?.toDomain()
+        val replacement = try {
+            create(input)
+        } catch (e: retrofit2.HttpException) {
+            // Plan cap (e.g. Free = 1 alert) rejects the extra alert. Swap in
+            // place instead, rolling back to the original on failure.
+            if (e.code() == 401 || e.code() !in 400..499 || original == null) throw e
+            return@withContext swapWithRollback(id, original, input)
+        }
+        if (replacement.id != id) {
+            runCatching { api.deleteAlert(id) }
+            db.alertDao().delete(id)
+            deliveryExtras.remove(id)
+        }
+        replacement
+    }
+
+    private suspend fun swapWithRollback(id: Int, original: Alert, input: AlertInput): Alert {
+        api.deleteAlert(id)
         db.alertDao().delete(id)
         deliveryExtras.remove(id)
-        create(input)
+        return try {
+            create(input)
+        } catch (e: Exception) {
+            if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+            // Restore the user's original alert (new id) before surfacing the error.
+            runCatching { create(original.toInput()) }
+            throw e
+        }
     }
+
+    private fun Alert.toInput(): AlertInput = AlertInput(
+        make = make,
+        model = model,
+        maxPriceLkr = maxPriceLkr,
+        district = district,
+        notifyPhone = notifyPhone,
+        notifyEmail = notifyEmail,
+        notifyTelegramChatId = notifyTelegramChatId,
+        notifyChannels = notifyChannels,
+        deliveryMode = deliveryMode,
+        quietHoursEnabled = quietHoursEnabled,
+    )
 
     override suspend fun updateChannels(
         id: Int,
@@ -128,8 +174,8 @@ class AlertsRepositoryImpl @Inject constructor(
         api.markNotificationRead(id)
     }
 
-    /** POST /notifications/read-all — returns count marked; impl helper (no interface change). */
-    suspend fun markAllNotificationsRead(): Int = withContext(io) {
+    /** POST /notifications/read-all — returns count marked. */
+    override suspend fun markAllNotificationsRead(): Int = withContext(io) {
         api.markAllNotificationsRead().markedRead
     }
 

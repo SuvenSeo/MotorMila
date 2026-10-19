@@ -15,6 +15,8 @@ data class PricingTier(
 data class PricingFaq(
     val question: String,
     val answer: String,
+    /** Mentions bank transfer / KOKO / WhatsApp: hidden in the Play flavor. */
+    val externalPayment: Boolean = false,
 )
 
 object PricingCatalog {
@@ -100,6 +102,7 @@ object PricingCatalog {
         PricingFaq(
             "Can I try Pro before paying?",
             "Yes. Start a 7-day free Pro trial from Sign up when self-serve is enabled. After the trial, pay by bank transfer or KOKO and WhatsApp the receipt for activation within 2 hours.",
+            externalPayment = true,
         ),
         PricingFaq(
             "Is annual billing cheaper?",
@@ -108,6 +111,7 @@ object PricingCatalog {
         PricingFaq(
             "How do I pay without a card?",
             "Pay by bank transfer or KOKO, then WhatsApp the receipt with your account email. We activate Pro / Dealer within 2 hours.",
+            externalPayment = true,
         ),
         PricingFaq(
             "Do deal scores work on Free?",
@@ -115,6 +119,10 @@ object PricingCatalog {
         ),
     )
 
-    const val CONTACT_MAILTO = "mailto:suvenseoras@gmail.com"
+    /** FAQs for this build's distribution channel (Play: no external payment copy). */
+    val channelFaqs: List<PricingFaq>
+        get() = faqs.filter { lk.motormila.app.BuildConfig.EXTERNAL_CHECKOUT_ENABLED || !it.externalPayment }
+
+    const val CONTACT_MAILTO = lk.motormila.app.core.SupportContact.MAILTO
     const val CONTACT_PHONE = "0758504424"
 }

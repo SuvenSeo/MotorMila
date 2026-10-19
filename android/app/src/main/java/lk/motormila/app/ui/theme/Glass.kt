@@ -56,5 +56,5 @@ fun Modifier.liquidGlass(
     } else {
         base
     }
-    return withSheen.border(0.5.dp, border, shape)
+    return withSheen.border(1.dp, border, shape)
 }

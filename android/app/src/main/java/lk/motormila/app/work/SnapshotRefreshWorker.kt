@@ -83,6 +83,7 @@ class SnapshotRefreshWorker(
         val db = entryPoint.db()
         return try {
             val now = System.currentTimeMillis()
+            var successCount = 0
             runCatching {
                 val districts = api.districtPrices().points
                 db.statsCacheDao().upsertDistricts(
@@ -90,13 +91,27 @@ class SnapshotRefreshWorker(
                         DistrictStatEntity(it.district, it.count, it.avgPriceLkr, it.medianPriceLkr, now)
                     },
                 )
+                successCount++
             }
             runCatching {
                 val drops = api.getPriceDrops(7)
                 db.listingDao().upsertAll(drops.items.map { it.listing.toDomain().toEntity(now) })
+                successCount++
             }
-            runCatching { db.listingDao().pruneOlderThan(now - TimeUnit.DAYS.toMillis(2)) }
-            Result.success()
+            runCatching {
+                db.listingDao().pruneOlderThan(now - TimeUnit.DAYS.toMillis(2))
+                successCount++
+            }
+            // All three steps wrapped in runCatching — the outer catch is
+            // unreachable. Report failure when nothing succeeded so WorkManager
+            // retries instead of silently marking success forever.
+            if (successCount == 0) {
+                if (runAttemptCount >= 3) Result.failure() else Result.retry()
+            } else {
+                Result.success()
+            }
+        } catch (ce: kotlin.coroutines.cancellation.CancellationException) {
+            throw ce
         } catch (t: Throwable) {
             if (runAttemptCount >= 3) Result.failure() else Result.retry()
         }

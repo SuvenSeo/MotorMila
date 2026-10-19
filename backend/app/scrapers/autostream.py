@@ -3,9 +3,12 @@ from app.utils.time import utc_now
 
 import httpx
 import structlog
+
+from app.scrapers.polite import BOT_USER_AGENT
 from sqlalchemy.orm import Session
 
 from app.scrapers.cleaner import CarCleaner
+from app.scrapers.net import httpx_client_kwargs
 from app.utils.listing_upsert import buffered_upsert_listing, flush_upsert_buffer
 
 log = structlog.get_logger()
@@ -42,14 +45,10 @@ class AutoStreamScraper:
     async def scrape(self, max_pages: int = 5):
         page_limit = max_pages if max_pages > 0 else 1
         headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/124.0.0.0 Safari/537.36"
-            )
+            "User-Agent": BOT_USER_AGENT
         }
 
-        async with httpx.AsyncClient(headers=headers, follow_redirects=True) as client:
+        async with httpx.AsyncClient(follow_redirects=True, **httpx_client_kwargs(headers)) as client:
             response = await client.get(self.API_LISTINGS_URL, timeout=60)
             response.raise_for_status()
             rows = response.json() if response.content else []
@@ -71,8 +70,23 @@ class AutoStreamScraper:
                 return
             log.info("autostream_active_rows", active=len(active_rows), total=len(rows))
 
+            # The listings endpoint returns the whole active set in one call, so
+            # there is no pagination to walk. The old cap of
+            # ``max_pages * PAGE_SIZE`` silently discarded everything past
+            # 12,000 rows at the default 120-page budget — with no log line and
+            # no error. Process what the API actually returned; the page budget
+            # only becomes a limit once it is genuinely exceeded.
             max_items = page_limit * self.PAGE_SIZE
-            rows_to_process = active_rows[:max_items]
+            rows_to_process = active_rows
+            if len(rows_to_process) > max_items:
+                log.warning(
+                    "autostream_truncating_active_rows",
+                    active=len(rows_to_process),
+                    max_items=max_items,
+                    page_size=self.PAGE_SIZE,
+                    max_pages=page_limit,
+                )
+                rows_to_process = rows_to_process[:max_items]
 
             for page_num, start in enumerate(range(0, len(rows_to_process), self.PAGE_SIZE), start=1):
                 batch = rows_to_process[start : start + self.PAGE_SIZE]

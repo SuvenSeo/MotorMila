@@ -85,12 +85,14 @@ class DetailViewModel @Inject constructor(
             try {
                 val detail = getDetail(listingId)
                 _state.value = _state.value.copy(listing = detail, isLoading = false)
-                observeWatched()
+                observeWatchedOnce()
                 // Secondary payloads load independently; one failure must not blank the page.
                 launch { loadSimilar() }
                 launch { loadHistory() }
                 launch { loadFmv() }
                 launch { loadSeller() }
+            } catch (ce: kotlin.coroutines.cancellation.CancellationException) {
+                throw ce
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
                     isLoading = false,
@@ -106,6 +108,8 @@ class DetailViewModel @Inject constructor(
     private suspend fun loadSimilar() {
         try {
             _state.value = _state.value.copy(similar = getSimilar(listingId))
+        } catch (ce: kotlin.coroutines.cancellation.CancellationException) {
+            throw ce
         } catch (_: Exception) {
         }
     }
@@ -136,8 +140,13 @@ class DetailViewModel @Inject constructor(
         }
     }
 
-    private fun observeWatched() {
-        viewModelScope.launch {
+    private var watchedJob: kotlinx.coroutines.Job? = null
+
+    private fun observeWatchedOnce() {
+        // Cancel any prior collector before starting a new one — load()/retry()
+        // must not stack infinite collectors.
+        watchedJob?.cancel()
+        watchedJob = viewModelScope.launch {
             watchlist.isWatched(listingId).collect { watched ->
                 _state.value = _state.value.copy(isWatched = watched)
             }

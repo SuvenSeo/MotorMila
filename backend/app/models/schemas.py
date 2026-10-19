@@ -4,12 +4,20 @@ from datetime import datetime
 from decimal import Decimal
 import re
 
-from app.utils.thumbnail_urls import upgrade_thumbnail_url
+from app.utils.thumbnail_urls import parse_image_list, upgrade_thumbnail_url
 
 
 def _upgrade_thumbnail(value: Optional[str]) -> Optional[str]:
     """Pydantic validator shared by every schema that carries a card image."""
     return upgrade_thumbnail_url(value)
+
+
+def _parse_gallery(value) -> Optional[List[str]]:
+    """The DB stores ``CarListing.images`` as a JSON string; the API serves a list."""
+    urls = parse_image_list(value)
+    if not urls:
+        return None
+    return [upgrade_thumbnail_url(url) or url for url in urls]
 
 
 class CarListingBase(BaseModel):
@@ -37,6 +45,11 @@ class CarListingBase(BaseModel):
     @classmethod
     def _upgrade_thumbnail_url(cls, value: Optional[str]) -> Optional[str]:
         return _upgrade_thumbnail(value)
+
+    @field_validator("images", mode="before")
+    @classmethod
+    def _parse_gallery_images(cls, value) -> Optional[List[str]]:
+        return _parse_gallery(value)
 
 class CarListingRead(CarListingBase):
     id: int

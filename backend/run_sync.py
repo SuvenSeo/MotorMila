@@ -20,6 +20,7 @@ from app.scrapers.patpat import PatpatScraper
 from app.scrapers.riyahub import RiyahubScraper
 from app.scrapers.riyasewana import RiyasewanaScraper
 from app.scrapers.saleme import SaleMeScraper
+from app.scrapers.polite import source_enabled
 from app.api.v1.endpoints.pipeline import reconcile_orphan_running_runs
 from app.services.aggregator import CarPriceAggregator
 from app.services.market_signals import MarketSignalImporter
@@ -540,12 +541,32 @@ async def _run_source(scraper_cls, max_pages: int, source_timeout_seconds: int |
         listings_after = _count_source_listings_safe(source_name)
         listings_new = max(0, listings_after - listings_before)
         listings_found = _listings_found_from_scrape(scrape_result, listings_after)
-        _finalize_scrape_run_safe(
-            run_id,
-            status="SUCCESS",
-            listings_found=listings_found,
-            listings_new=listings_new,
-        )
+        # A source behind a bot wall returns cleanly with zero listings. Recording
+        # that as SUCCESS made walled sources (saleme) look permanently "ok" on
+        # the public pipeline-status snapshot while contributing nothing, so the
+        # scraper's own blocked signal drives the status instead.
+        blocked_reason = str(getattr(scraper, "blocked_reason", "") or "").strip()
+        if blocked_reason:
+            _finalize_scrape_run_safe(
+                run_id,
+                status="FAILED",
+                listings_found=listings_found,
+                listings_new=listings_new,
+                error_message=f"Source blocked by bot wall ({blocked_reason}); no listings scraped",
+            )
+            log.warning(
+                "scraping_source_blocked",
+                source=source_name,
+                reason=blocked_reason,
+                listings_found=listings_found,
+            )
+        else:
+            _finalize_scrape_run_safe(
+                run_id,
+                status="SUCCESS",
+                listings_found=listings_found,
+                listings_new=listings_new,
+            )
         log.info("scraping_source_completed", source=source_name)
         if checkpoint is not None:
             _validate_checkpoint_safe(source_name, checkpoint)
@@ -637,6 +658,12 @@ async def main(profile_override: str | None = None):
     profile = _resolve_profile(profile_override)
     source_configs = _build_source_configs(profile)
     enabled_sources = _resolve_enabled_sources(SOURCE_PROFILES[profile])
+    # Legal kill-switch (SOURCES_ENABLED / SOURCES_DISABLED, ikman off by
+    # default): see app/scrapers/polite.py and docs/legal/data-sourcing.md.
+    flag_disabled = sorted(s for s in enabled_sources if not source_enabled(s))
+    if flag_disabled:
+        log.warning("sources_disabled_by_flag", sources=flag_disabled)
+    enabled_sources = {s for s in enabled_sources if source_enabled(s)}
     active_configs = [config for config in source_configs if config[0] in enabled_sources]
     run_scrapers = _resolve_bool_env("RUN_SCRAPERS", True)
     run_market_analysis = _resolve_bool_env("RUN_MARKET_ANALYSIS", True)

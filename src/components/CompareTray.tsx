@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowUpRight, Scale, Share2, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -17,7 +17,9 @@ import {
   MAX_PINNED,
   buildCompareLink,
   useCompareTray,
+  updatePinned,
 } from "@/lib/compareTray";
+import { getListingFmv } from "@/services/api";
 
 export type { PinnedListing };
 
@@ -43,6 +45,41 @@ export function CompareTray({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const link = buildCompareLink(pinned.map((p) => p.id));
+
+  // The tray pins whatever FMV was available at pin time (sometimes only the
+  // snapshot median, if the detail FMV hadn't loaded yet). Refresh each pinned
+  // row's FMV/deal score from the listing FMV endpoint whenever the tray is
+  // opened so the tray agrees with the detail page.
+  const [refreshedAt, setRefreshedAt] = useState(0);
+  useEffect(() => {
+    if (!open || pinned.length === 0) return;
+    // Avoid hammering the endpoint if the tray is opened repeatedly.
+    if (Date.now() - refreshedAt < 60_000) return;
+    setRefreshedAt(Date.now());
+    let cancelled = false;
+    void Promise.all(
+      pinned.map(async (row) => {
+        try {
+          const detail = await getListingFmv(row.id);
+          if (cancelled) return;
+          const fmv = Number(detail?.fmv_lkr);
+          if (Number.isFinite(fmv) && fmv > 0) {
+            updatePinned(row.id, {
+              fmv_lkr: fmv,
+              deal_score:
+                typeof detail?.deal_score === "number" ? detail.deal_score : row.deal_score,
+            });
+          }
+        } catch {
+          // FMV unavailable (offline / snapshot mode) — keep the pinned snapshot.
+        }
+      }),
+    );
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const copyLink = async () => {
     const url = `${window.location.origin}${link}`;

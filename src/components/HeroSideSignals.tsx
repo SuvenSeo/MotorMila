@@ -94,17 +94,17 @@ function SignalChip({
   const Icon = icon;
 
   const inner = (
-    <span className={cn("flex w-full items-center gap-2.5", align === "right" && "flex-row-reverse text-right")}>
+    <span className={cn("flex w-full items-center gap-3", align === "right" && "flex-row-reverse text-right")}>
       {thumb ?? (
-        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-foreground/[0.05]">
-          <Icon className="h-3.5 w-3.5 text-primary" aria-hidden />
+        <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-gradient-to-br from-white/[0.14] to-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+          <Icon className="h-5 w-5 text-primary drop-shadow-[0_2px_6px_hsl(var(--primary)/0.5)]" aria-hidden />
         </span>
       )}
       <span className={cn("min-w-0 flex-1", align === "right" && "items-end")}>
-        <span className="block truncate text-[10px] font-semibold uppercase tracking-[0.13em] text-muted-foreground">
+        <span className="block truncate text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
           {label}
         </span>
-        <span className="mt-0.5 block truncate text-[13px] font-semibold tracking-tight text-foreground num">
+        <span className="mt-1 block truncate text-[15px] font-semibold tracking-tight text-foreground num">
           {value}
         </span>
       </span>
@@ -112,7 +112,7 @@ function SignalChip({
   );
 
   const shellClass = cn(
-    "hero-signal-card group block w-full p-2.5 no-underline outline-none",
+    "hero-signal-card group block w-full p-3.5 pr-4 no-underline outline-none",
     `hero-signal-card--accent-${accent}`,
   );
 
@@ -174,7 +174,7 @@ function ListingThumb({
   ring: string;
 }) {
   return (
-    <span className={cn("hero-signal-thumb h-9 w-12 shrink-0 bg-black/25 ring-1", ring)}>
+    <span className={cn("hero-signal-thumb h-12 w-[72px] shrink-0 bg-black/25 ring-1", ring)}>
       <VehicleThumbnail
         src={src}
         listingId={listingId}
@@ -202,8 +202,8 @@ export function HeroSideSignals({
   onGoodDealsClick,
 }: Props) {
   const railClass =
-    "pointer-events-none absolute inset-y-0 hidden w-[min(19vw,236px)] xl:flex xl:flex-col xl:justify-center";
-  const stackClass = "pointer-events-auto flex flex-col gap-3.5 px-1";
+    "pointer-events-none absolute inset-y-0 hidden w-[min(22vw,284px)] xl:flex xl:flex-col xl:justify-center";
+  const stackClass = "pointer-events-auto flex flex-col gap-4 px-1";
 
   return (
     <>

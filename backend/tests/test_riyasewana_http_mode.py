@@ -85,10 +85,20 @@ def test_flat_budget_gives_full_budget_to_all_categories(scraper, monkeypatch):
     assert scraper._page_budget_for_category("vans", 800) == 800
 
 
-def test_default_budget_caps_secondary_categories(scraper, monkeypatch):
+def test_default_budget_lets_secondary_categories_use_the_full_budget(scraper, monkeypatch):
     monkeypatch.setattr(riyasewana_module, "_FLAT_BUDGET_ENABLED", False)
     assert scraper._page_budget_for_category("cars", 800) == 800
-    # Secondary categories get max(5, 800//4) capped at 25.
+    # No artificial ceiling: a secondary category may use the whole budget
+    # unless the operator asks for rationing via SCRAPE_SECONDARY_PAGE_*.
+    assert scraper._page_budget_for_category("motorcycles", 800) == 800
+    assert scraper._page_budget_for_category("vans", 800) == 800
+
+
+def test_secondary_rationing_is_still_available_for_secondary_categories(scraper, monkeypatch):
+    monkeypatch.setattr(riyasewana_module, "_FLAT_BUDGET_ENABLED", False)
+    monkeypatch.setenv("SCRAPE_SECONDARY_PAGE_DIVISOR", "4")
+    monkeypatch.setenv("SCRAPE_SECONDARY_PAGE_CAP", "25")
+    assert scraper._page_budget_for_category("cars", 800) == 800
     assert scraper._page_budget_for_category("motorcycles", 800) == 25
     assert scraper._page_budget_for_category("vans", 800) == 25
 
@@ -155,12 +165,13 @@ def test_http_fetch_page_returns_soup_on_success(scraper):
     asyncio.run(_run())
 
 
-def test_scrape_auto_uses_http_and_falls_back_to_playwright(scraper, monkeypatch, db_session):
-    """auto mode: http first; RiyasewanaBlockedError from http routes to Playwright."""
+def test_scrape_auto_block_backs_off_without_browser_fallback(scraper, monkeypatch):
+    """Legacy auto mode == http: a block is never answered with a Playwright retry."""
     monkeypatch.setattr(riyasewana_module, "_DEFAULT_SCRAPE_MODE", "auto")
+    monkeypatch.setattr(riyasewana_module, "_archive_fallback_enabled", lambda: False)
     calls = {"http": 0, "playwright": 0}
 
-    async def fake_http(max_pages: int = 5, *, mode: str = "auto"):
+    async def fake_http(max_pages: int = 5, *, mode: str = "http"):
         calls["http"] += 1
         raise RiyasewanaBlockedError("http blocked")
 
@@ -171,18 +182,23 @@ def test_scrape_auto_uses_http_and_falls_back_to_playwright(scraper, monkeypatch
     monkeypatch.setattr(scraper, "_scrape_via_http", fake_http)
     monkeypatch.setattr(scraper, "_scrape_live", fake_playwright)
 
-    result = asyncio.run(scraper.scrape(max_pages=5))
-    assert calls == {"http": 1, "playwright": 1}
-    assert result == {"status": "ok"}
+    with pytest.raises(RiyasewanaBlockedError):
+        asyncio.run(scraper.scrape(max_pages=5))
+    assert calls == {"http": 1, "playwright": 0}
 
 
-def test_scrape_auto_rate_limit_falls_back_to_playwright(scraper, monkeypatch):
-    """auto mode: sustained HTTP errors (rate limit) raise a block so Playwright takes over."""
-    monkeypatch.setattr(riyasewana_module, "_DEFAULT_SCRAPE_MODE", "auto")
-    calls = {"playwright": 0}
+def test_http_403_aborts_source_on_first_page(scraper, monkeypatch):
+    """A 403 stops the whole source immediately: no retries, no other categories."""
+    monkeypatch.setattr(riyasewana_module, "_DEFAULT_SCRAPE_MODE", "http")
+    monkeypatch.setattr(riyasewana_module, "_archive_fallback_enabled", lambda: False)
+    requested: list[str] = []
 
     class _FakeClient:
+        def __init__(self, **kwargs):
+            pass
+
         async def get(self, url):
+            requested.append(url)
             return type("R", (), {"status_code": 403, "text": "<html></html>"})()
 
         async def __aenter__(self):
@@ -191,21 +207,17 @@ def test_scrape_auto_rate_limit_falls_back_to_playwright(scraper, monkeypatch):
         async def __aexit__(self, *args):
             return None
 
-    async def fake_playwright(max_pages: int = 5):
-        calls["playwright"] += 1
-        return {"status": "ok"}
+    monkeypatch.setattr(riyasewana_module.httpx, "AsyncClient", _FakeClient)
 
-    monkeypatch.setattr(
-        riyasewana_module,
-        "CurlCffiAsyncSession",
-        lambda **kwargs: _FakeClient(),
+    with pytest.raises(RiyasewanaBlockedError):
+        asyncio.run(scraper.scrape(max_pages=30))
+    assert len(requested) == 1
+
+
+def test_archive_fallback_is_off_by_default():
+    assert riyasewana_module._ARCHIVE_FALLBACK_ENABLED is False or __import__("os").getenv(
+        "RIYASEWANA_ARCHIVE_FALLBACK"
     )
-    monkeypatch.setattr(scraper, "_scrape_live", fake_playwright)
-    monkeypatch.setattr(scraper, "CATEGORY_PATHS", ("cars",))
-
-    result = asyncio.run(scraper.scrape(max_pages=30))
-    assert calls["playwright"] == 1
-    assert result == {"status": "ok"}
 
 
 def test_scrape_http_mode_routes_to_archive_on_block(scraper, monkeypatch):

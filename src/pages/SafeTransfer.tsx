@@ -1,0 +1,364 @@
+import { useEffect, useId, useMemo, useState } from "react";
+import { AlertTriangle, CalendarClock, ClipboardCheck, FileDown, FileText, ShieldCheck } from "lucide-react";
+import { toast } from "sonner";
+import { PageBody } from "@/components/PageBody";
+import { PageCanvas } from "@/components/PageCanvas";
+import { PageHero } from "@/components/PageHero";
+import { formatPrice } from "@/services/api";
+import { useAppPreferences } from "@/lib/appPreferences";
+import {
+  buildAgreementParagraphs,
+  EMPTY_AGREEMENT,
+  estimateTransferCost,
+  TRANSFER_CLASS_LABELS,
+  TRANSFER_DEADLINE_DAYS,
+  transferDeadline,
+  type SaleAgreementFields,
+  type TransferVehicleClass,
+} from "@/lib/transferKit";
+
+const CHECK_KEY = "motormila.transfer_checklist.v1";
+
+const CHECKLIST: Array<{ phase: string; items: Array<{ id: string; text: string }> }> = [
+  {
+    phase: "Before any money changes hands",
+    items: [
+      { id: "cr-name", text: "The name on the Certificate of Registration (CR) matches the seller's NIC." },
+      { id: "dmt-record", text: "DMT online record checked: registered owner, absolute owner (lease or loan) and engine number match the CR." },
+      { id: "numbers", text: "Chassis and engine numbers on the car match the CR (check the stamped plates yourself)." },
+      { id: "finance-release", text: "If a leasing company or bank is the absolute owner: you have their written release or settlement letter." },
+      { id: "customs", text: "Imported car: Customs vehicle check shows it was cleared legally." },
+      { id: "licence", text: "Revenue licence and emission test certificate are current." },
+      { id: "inspection", text: "Independent mechanic inspection or test drive done. Mileage looks consistent with service records." },
+    ],
+  },
+  {
+    phase: "On the day of sale",
+    items: [
+      { id: "mta6", text: "Transfer application (MTA-6) filled in and signed by both seller and buyer, and dated." },
+      { id: "nic-copies", text: "Copies of both NICs, plus the original CR, handed over." },
+      { id: "agreement", text: "Sale agreement signed by both parties and two witnesses. Each keeps a copy." },
+      { id: "payment", text: "Payment by bank transfer or bank draft, with a receipt. Avoid large cash payments." },
+      { id: "handover", text: "All keys, the service book and the handover time are written down." },
+      { id: "no-open", text: "No \u201copen papers\u201d: never sign undated or blank transfer forms." },
+    ],
+  },
+  {
+    phase: `Within ${TRANSFER_DEADLINE_DAYS} days`,
+    items: [
+      { id: "submit", text: "Transfer submitted to the Department of Motor Traffic (head office or a district office). The submission receipt is kept." },
+      { id: "insurance", text: "Insurance moved to the new owner's name." },
+      { id: "seller-copy", text: "Seller keeps copies of the MTA-6, agreement and DMT receipt. These protect you from fines or accidents after the sale." },
+    ],
+  },
+];
+
+function Field({
+  label,
+  value,
+  onChange,
+  type = "text",
+  className,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  className?: string;
+}) {
+  const id = useId();
+  return (
+    <div className={className}>
+      <label htmlFor={id} className="text-[12.5px] font-medium text-foreground">
+        {label}
+      </label>
+      <input
+        id={id}
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1 h-10 w-full rounded-xl border border-border bg-background px-3 text-[14px] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      />
+    </div>
+  );
+}
+
+async function downloadAgreementPdf(fields: SaleAgreementFields) {
+  const { jsPDF } = await import("jspdf");
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const margin = 18;
+  const width = 210 - margin * 2;
+  let y = 22;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(15);
+  doc.text("VEHICLE SALE AGREEMENT", 105, y, { align: "center" });
+  y += 9;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10.5);
+
+  for (const para of buildAgreementParagraphs(fields)) {
+    const lines = doc.splitTextToSize(para, width) as string[];
+    if (y + lines.length * 5.2 > 255) {
+      doc.addPage();
+      y = 22;
+    }
+    doc.text(lines, margin, y);
+    y += lines.length * 5.2 + 3;
+  }
+
+  y += 6;
+  if (y > 230) {
+    doc.addPage();
+    y = 30;
+  }
+  const col = width / 2;
+  const sig = (label: string, x: number, yy: number) => {
+    doc.line(x, yy, x + col - 10, yy);
+    doc.setFontSize(9);
+    doc.text(label, x, yy + 4.5);
+    doc.setFontSize(10.5);
+  };
+  sig("Seller signature & date", margin, y + 12);
+  sig("Buyer signature & date", margin + col, y + 12);
+  sig("Witness 1: name, NIC, signature", margin, y + 32);
+  sig("Witness 2: name, NIC, signature", margin + col, y + 32);
+
+  doc.setFontSize(8);
+  doc.setTextColor(110);
+  doc.text(
+    doc.splitTextToSize(
+      "Template generated by Motormila (motormila.vercel.app). It is not legal advice. Check current requirements with the Department of Motor Traffic and, for high-value or financed vehicles, a lawyer.",
+      width,
+    ) as string[],
+    margin,
+    285,
+  );
+
+  const name = fields.regNo ? `sale-agreement-${fields.regNo.replace(/[^A-Za-z0-9-]/g, "")}.pdf` : "vehicle-sale-agreement.pdf";
+  doc.save(name);
+}
+
+/** Safe-Transfer Kit: ownership-transfer checklist, deadline, costs and a printable sale agreement. */
+export default function SafeTransfer() {
+  const { t } = useAppPreferences();
+  const [checked, setChecked] = useState<Record<string, boolean>>({});
+  const [saleDate, setSaleDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [vehicleClass, setVehicleClass] = useState<TransferVehicleClass>("motor_car");
+  const [salePrice, setSalePrice] = useState(6_000_000);
+  const [stampPct, setStampPct] = useState(0);
+  const [extras, setExtras] = useState(0);
+  const [fields, setFields] = useState<SaleAgreementFields>(EMPTY_AGREEMENT);
+  const [busy, setBusy] = useState(false);
+  const classId = useId();
+
+  useEffect(() => {
+    document.title = "Safe-Transfer Kit: vehicle ownership transfer in Sri Lanka | Motormila";
+    try {
+      setChecked(JSON.parse(localStorage.getItem(CHECK_KEY) || "{}") || {});
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const toggle = (id: string) =>
+    setChecked((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      try {
+        localStorage.setItem(CHECK_KEY, JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+
+  const { deadline, strict } = transferDeadline(saleDate);
+  const cost = useMemo(
+    () => estimateTransferCost({ vehicleClass, salePriceLkr: salePrice, stampDutyPct: stampPct, extrasLkr: extras }),
+    [vehicleClass, salePrice, stampPct, extras],
+  );
+  const total = CHECKLIST.reduce((n, p) => n + p.items.length, 0);
+  const done = CHECKLIST.reduce((n, p) => n + p.items.filter((i) => checked[i.id]).length, 0);
+  const setField = (k: keyof SaleAgreementFields) => (v: string) => setFields((prev) => ({ ...prev, [k]: v }));
+
+  const onDownload = async () => {
+    setBusy(true);
+    try {
+      await downloadAgreementPdf({ ...fields, saleDate: fields.saleDate || saleDate });
+      toast.success(t("transfer.pdfReady", "Sale agreement downloaded"));
+    } catch {
+      toast.error(t("transfer.pdfError", "Couldn't create the PDF. Please try again."));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <PageCanvas>
+      <PageHero
+        eyebrow={t("transfer.eyebrow", "Safe-Transfer Kit")}
+        eyebrowIcon={ShieldCheck}
+        watermarkIcon={ClipboardCheck}
+        title={t("transfer.title", "Transfer ownership safely")}
+        description={t(
+          "transfer.description",
+          "A step-by-step checklist, your 14-day deadline, a cost estimate and a sale agreement you can print. For buyers and sellers of used vehicles in Sri Lanka.",
+        )}
+      />
+      <PageBody narrow className="space-y-8">
+        <div role="note" className="flex items-start gap-3 rounded-[1.5rem] border border-amber-500/30 bg-amber-400/10 p-4">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden />
+          <p className="text-[13.5px] leading-relaxed text-foreground">
+            {t(
+              "transfer.strictNotice",
+              "From 1 December 2026 the Department of Motor Traffic says it will strictly enforce the rule that ownership transfers are submitted within 14 days of sale. Until the transfer is registered, the seller can be held liable for the vehicle. Rules and fees can change, so check with the DMT before you rely on any figure here.",
+            )}
+          </p>
+        </div>
+
+        {/* Checklist */}
+        <section aria-labelledby="checklist-title" className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 id="checklist-title" className="text-[16px] font-semibold text-foreground">
+              {t("transfer.checklist", "Transfer checklist")}
+            </h2>
+            <p className="num text-[13px] text-muted-foreground" aria-live="polite">
+              {t("transfer.progress", "{done} of {total} done", { done, total })}
+            </p>
+          </div>
+          <div className="mt-4 space-y-6">
+            {CHECKLIST.map((phase) => (
+              <fieldset key={phase.phase}>
+                <legend className="text-[13px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{phase.phase}</legend>
+                <ul className="mt-2 space-y-1.5">
+                  {phase.items.map((item) => (
+                    <li key={item.id}>
+                      <label className="flex cursor-pointer items-start gap-3 rounded-xl px-2 py-2 hover:bg-muted/60">
+                        <input
+                          type="checkbox"
+                          checked={!!checked[item.id]}
+                          onChange={() => toggle(item.id)}
+                          className="mt-0.5 h-4 w-4 shrink-0 rounded border-border accent-[hsl(var(--primary))]"
+                        />
+                        <span className={`text-[14px] leading-relaxed ${checked[item.id] ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                          {item.text}
+                        </span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              </fieldset>
+            ))}
+          </div>
+        </section>
+
+        {/* Deadline + cost */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <section aria-labelledby="deadline-title" className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
+            <h2 id="deadline-title" className="flex items-center gap-2 text-[16px] font-semibold text-foreground">
+              <CalendarClock className="h-4 w-4 text-primary" aria-hidden />
+              {t("transfer.deadline", "Your transfer deadline")}
+            </h2>
+            <Field label={t("transfer.saleDate", "Date of sale")} type="date" value={saleDate} onChange={setSaleDate} className="mt-3" />
+            {deadline && (
+              <p className="mt-4 text-[14px] text-foreground" aria-live="polite">
+                {t("transfer.submitBy", "Submit the transfer to the DMT by")}{" "}
+                <strong className="num">
+                  {new Date(`${deadline}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })}
+                </strong>
+                .
+              </p>
+            )}
+            <p className="mt-2 text-[12.5px] text-muted-foreground">
+              {strict
+                ? t("transfer.strictYes", "This falls within strict enforcement (from {date}).", { date: "1 Dec 2026" })
+                : t("transfer.strictNo", "The 14-day rule already applies. Strict enforcement starts {date}.", { date: "1 Dec 2026" })}
+            </p>
+          </section>
+
+          <section aria-labelledby="cost-title" className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
+            <h2 id="cost-title" className="text-[16px] font-semibold text-foreground">
+              {t("transfer.cost", "Transfer cost estimate")}
+            </h2>
+            <div className="mt-3 space-y-3">
+              <div>
+                <label htmlFor={classId} className="text-[12.5px] font-medium text-foreground">
+                  {t("transfer.class", "Vehicle type")}
+                </label>
+                <select
+                  id={classId}
+                  value={vehicleClass}
+                  onChange={(e) => setVehicleClass(e.target.value as TransferVehicleClass)}
+                  className="mt-1 h-10 w-full rounded-xl border border-border bg-background px-3 text-[14px] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {(Object.keys(TRANSFER_CLASS_LABELS) as TransferVehicleClass[]).map((k) => (
+                    <option key={k} value={k}>
+                      {TRANSFER_CLASS_LABELS[k]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Field label={t("transfer.price", "Sale price (LKR)")} type="number" value={String(salePrice)} onChange={(v) => setSalePrice(Number(v) || 0)} />
+              <Field label={t("transfer.stamp", "Stamp duty on sale value, if charged (%)")} type="number" value={String(stampPct)} onChange={(v) => setStampPct(Number(v) || 0)} />
+              <Field label={t("transfer.extras", "Other costs: DMT record, lawyer, inspection (LKR)")} type="number" value={String(extras)} onChange={(v) => setExtras(Number(v) || 0)} />
+            </div>
+            <dl className="mt-4 grid grid-cols-2 gap-y-1.5 text-[13.5px]">
+              <dt className="text-muted-foreground">{t("transfer.fee", "DMT transfer fee (indicative)")}</dt>
+              <dd className="num text-right font-semibold">{formatPrice(cost.transferFeeLkr)}</dd>
+              <dt className="text-muted-foreground">{t("transfer.stampLine", "Stamp duty")}</dt>
+              <dd className="num text-right font-semibold">{formatPrice(cost.stampDutyLkr)}</dd>
+              <dt className="text-muted-foreground">{t("transfer.extrasLine", "Other")}</dt>
+              <dd className="num text-right font-semibold">{formatPrice(cost.extrasLkr)}</dd>
+              <dt className="border-t border-border pt-1.5 font-semibold text-foreground">{t("transfer.total", "Total")}</dt>
+              <dd className="num border-t border-border pt-1.5 text-right font-bold">{formatPrice(cost.totalLkr)}</dd>
+            </dl>
+            <p className="mt-2 text-[12px] text-muted-foreground">
+              {t("transfer.costNote", "Indicative only. Check current fees with the DMT. Late-transfer penalties aren't included.")}
+            </p>
+          </section>
+        </div>
+
+        {/* Agreement */}
+        <section aria-labelledby="agreement-title" className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
+          <h2 id="agreement-title" className="flex items-center gap-2 text-[16px] font-semibold text-foreground">
+            <FileText className="h-4 w-4 text-primary" aria-hidden />
+            {t("transfer.agreement", "Sale agreement (PDF)")}
+          </h2>
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            {t("transfer.agreementBody", "Fill in what you know. Blank fields print as lines to complete by hand. Nothing you type leaves your device.")}
+          </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <Field label="Seller full name" value={fields.sellerName} onChange={setField("sellerName")} />
+            <Field label="Seller NIC" value={fields.sellerNic} onChange={setField("sellerNic")} />
+            <Field label="Seller address" value={fields.sellerAddress} onChange={setField("sellerAddress")} className="sm:col-span-2" />
+            <Field label="Buyer full name" value={fields.buyerName} onChange={setField("buyerName")} />
+            <Field label="Buyer NIC" value={fields.buyerNic} onChange={setField("buyerNic")} />
+            <Field label="Buyer address" value={fields.buyerAddress} onChange={setField("buyerAddress")} className="sm:col-span-2" />
+            <Field label="Registration number" value={fields.regNo} onChange={setField("regNo")} />
+            <Field label="Make and model" value={fields.makeModel} onChange={setField("makeModel")} />
+            <Field label="Year of manufacture" value={fields.yearOfManufacture} onChange={setField("yearOfManufacture")} />
+            <Field label="Odometer (km)" value={fields.mileageKm} onChange={setField("mileageKm")} />
+            <Field label="Chassis number" value={fields.chassisNo} onChange={setField("chassisNo")} />
+            <Field label="Engine number" value={fields.engineNo} onChange={setField("engineNo")} />
+            <Field label="Total price (LKR)" value={fields.priceLkr} onChange={setField("priceLkr")} />
+            <Field label="Amount paid today (LKR)" value={fields.amountPaidLkr} onChange={setField("amountPaidLkr")} />
+            <Field label="Date of sale" type="date" value={fields.saleDate || saleDate} onChange={setField("saleDate")} />
+            <Field label="Place" value={fields.place} onChange={setField("place")} />
+          </div>
+          <button
+            type="button"
+            onClick={onDownload}
+            disabled={busy}
+            className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-primary px-5 text-[14px] font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            <FileDown className="h-4 w-4" aria-hidden />
+            {busy ? t("transfer.generating", "Preparing PDF…") : t("transfer.download", "Download sale agreement")}
+          </button>
+          <p className="mt-3 text-[12px] text-muted-foreground">
+            {t("transfer.legal", "This is a general template, not legal advice. For financed or high-value vehicles, ask a lawyer to review it.")}
+          </p>
+        </section>
+      </PageBody>
+    </PageCanvas>
+  );
+}

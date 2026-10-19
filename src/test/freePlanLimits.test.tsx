@@ -8,7 +8,7 @@ import { freeListingsVisibleTotal, FREE_LISTINGS_PAGE_SIZE, FREE_EV_MODELS_LIMIT
 
 function installLocalStorage(seed?: Record<string, unknown>) {
   const store = new Map<string, string>();
-  if (seed) store.set("autolens.auth_user", JSON.stringify(seed));
+  if (seed) store.set("motormila.auth_user", JSON.stringify(seed));
   const storage = {
     getItem: (key: string) => store.get(key) ?? null,
     setItem: (key: string, value: string) => store.set(key, value),

@@ -34,6 +34,39 @@ const MONTH_SHORT = [
   "Dec",
 ] as const;
 
+/** Human labels for raw metric/category keys stored on market signals. */
+const METRIC_LABELS: Record<string, string> = {
+  import_cost: "Import cost index",
+  official: "Official signal",
+  macro: "Macro indicator",
+  usd_lkr: "USD / LKR rate",
+  registrations: "Registrations",
+  transfers: "Ownership transfers",
+  new_registrations: "New registrations",
+  price_index: "Price index",
+  import_parity: "Import parity",
+  revenue_licence: "Revenue licence",
+  revenue_license: "Revenue licence",
+};
+
+/** Turn a raw metric/category key ("import_cost") into a human title. */
+export function labelPulseMetric(raw: string | null | undefined): string {
+  const value = String(raw ?? "").trim();
+  if (!value) return "Market signal";
+  const known = METRIC_LABELS[value.toLowerCase()];
+  if (known) return known;
+  // Only prettify machine-looking keys (snake_case or plain lowercase).
+  // Human-written labels ("Passenger cars") pass through untouched.
+  if (value === value.toLowerCase()) {
+    return value
+      .replace(/[_-]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/\b\w/g, (ch) => ch.toUpperCase());
+  }
+  return value;
+}
+
 export const PULSE_SOURCE_GUIDES: PulseSourceGuide[] = [
   {
     key: "dmt_registrations",

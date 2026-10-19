@@ -1,7 +1,6 @@
 /backend/
 /mobile/
 /.freebuff/
-/.opencode/
 /.swarm/
 /dist/
 /data/
@@ -9,10 +8,14 @@
 __pycache__/
 *.pyc
 *.db
-*.db.gz
-# …except the public failover DB the HF Space downloads during Neon outages
-# (deployed alongside the snapshot JSON by manus-to-live.yml).
-!public/snapshots/latest/merged-autolens.db.gz
+# No *.db.gz glob on purpose: a *.db.gz + !-negation did not take effect
+# (2026-09-27: the file 404'd, failover never engaged, API stayed db:down).
+# The merged-DB failover dumps (101MB+, past Vercel's 100MB per-file limit)
+# are served from public R2 instead — the HF backend downloads them from
+# there for SQLite failover while Neon is down (see backend/db/sqlite_failover.py).
+# Explicit paths so Vercel CLI deploys never attempt these files again.
+/public/snapshots/latest/merged-motormila.db.gz
+/public/snapshots/latest/merged-autolens.db.gz
 *.log
 .pytest_cache/
 /android/

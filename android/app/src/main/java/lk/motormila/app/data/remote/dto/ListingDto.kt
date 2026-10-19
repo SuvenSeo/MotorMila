@@ -270,7 +270,8 @@ data class MakesDto(val makes: List<String> = emptyList())
 data class ModelsDto(val models: List<String> = emptyList())
 
 /**
- * GET /listings/estimate?make=&model=&year=... returns a mean ±15% band:
+ * GET /listings/estimate?make=&model=&year=... returns a mean ±15% band.
+ * Backend keys (listings.py:1831-1841):
  * {make,model,year,estimated_price_lkr,price_range_low,price_range_high,
  *  min_seen_lkr,max_seen_lkr,comparable_listings}.
  */
@@ -279,15 +280,12 @@ data class EstimateDto(
     val make: String? = null,
     val model: String? = null,
     val year: Int? = null,
-    @SerialName("market_median_lkr") val marketMedianLkr: Double? = null,
-    @SerialName("estimated_low_lkr") val estimatedLowLkr: Double? = null,
-    @SerialName("estimated_median_lkr") val estimatedMedianLkr: Double? = null,
-    @SerialName("estimated_high_lkr") val estimatedHighLkr: Double? = null,
-    @SerialName("comparable_count") val comparableCount: Int = 0,
-    val confidence: String? = null,
-    val methodology: String? = null,
-    val verdict: String? = null,
-    @SerialName("verdict_label") val verdictLabel: String? = null,
+    @SerialName("estimated_price_lkr") val estimatedPriceLkr: Double? = null,
+    @SerialName("price_range_low") val priceRangeLow: Double? = null,
+    @SerialName("price_range_high") val priceRangeHigh: Double? = null,
+    @SerialName("min_seen_lkr") val minSeenLkr: Double? = null,
+    @SerialName("max_seen_lkr") val maxSeenLkr: Double? = null,
+    @SerialName("comparable_listings") val comparableListings: Int = 0,
 )
 
 @Serializable

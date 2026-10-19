@@ -20,8 +20,8 @@ type AppPreferencesContextValue = {
   t: (key: string, fallback?: string, vars?: TranslateVars) => string;
 };
 
-const THEME_STORAGE_KEY = "autolens_theme_mode";
-const LANGUAGE_STORAGE_KEY = "autolens_language";
+const THEME_STORAGE_KEY = "motormila_theme_mode";
+const LANGUAGE_STORAGE_KEY = "motormila_language";
 const DEFAULT_THEME_MODE: ThemeMode = "dark";
 
 const AppPreferencesContext = createContext<AppPreferencesContextValue | null>(null);

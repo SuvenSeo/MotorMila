@@ -11,7 +11,7 @@
 #   - Post-reset Neon exports  -> neon-export-* releases
 #
 # It maintains a durable merged SQLite DB published as the `merged-db` release
-# (merged-autolens.db.gz + last-merged.txt marker). Each run:
+# (merged-motormila.db.gz + last-merged.txt marker). Each run:
 #   1. restores the merged DB (or starts fresh),
 #   2. paginates every dump release newer than last-merged.txt (compares the
 #      YYYYMMDDTHHMMZ timestamp so a full tag in the marker still works; the
@@ -27,7 +27,12 @@ name: Manus to Live (hosted merge and deploy)
 on:
   workflow_run:
     # Run right after a Manus scrape completes and after a Neon export.
-    workflows: ["Manus Scrape Dump (3x Daily)", "Neon Export"]
+    # Match by exact workflow name. "Neon Export" is kept for older runs;
+    # the live workflow is titled "Neon Export (DR capture — dispatch only)".
+    workflows:
+      - "Manus Scrape Dump (3x Daily)"
+      - "Neon Export"
+      - "Neon Export (DR capture — dispatch only)"
     types: [completed]
   schedule:
     # Fallback schedule every 6 hours (catches any missed dumps and retries cleanly).
@@ -83,6 +88,12 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements.txt
 
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: npm
+
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
 
@@ -92,14 +103,33 @@ jobs:
           mkdir -p ../merged-store
           if gh release view merged-db >/dev/null 2>&1; then
             gh release download merged-db \
-              --pattern "merged-autolens.db.gz" --pattern "last-merged.txt" \
+              --pattern "merged-motormila.db.gz" --pattern "merged-autolens.db.gz" --pattern "last-merged.txt" \
               --dir ../merged-store --clobber
             echo "downloaded merged-db release"
           fi
-          if [[ -s ../merged-store/merged-autolens.db.gz ]]; then
-            gunzip -f -c ../merged-store/merged-autolens.db.gz > motormila.db
+          DB_OK=false
+          if [[ -s ../merged-store/merged-motormila.db.gz ]]; then
+            gunzip -f -c ../merged-store/merged-motormila.db.gz > motormila.db
+            DB_OK=true
             echo "restored merged DB ($(du -h motormila.db | cut -f1))"
-          else
+          elif [[ -s ../merged-store/merged-autolens.db.gz ]]; then
+            gunzip -f -c ../merged-store/merged-autolens.db.gz > motormila.db
+            DB_OK=true
+            echo "restored merged DB from legacy asset ($(du -h motormila.db | cut -f1))"
+          fi
+          # Guard against a partial release download: if the .gz is missing or
+          # the restored file is not a real SQLite DB, the marker is untrustworthy
+          # — drop it so discover_dump_releases re-scans from scratch instead of
+          # skipping every prior dump and publishing an empty catalog.
+          if [[ "$DB_OK" == "true" ]]; then
+            if ! python -c "import sys; h=open('motormila.db','rb').read(16); sys.exit(0 if h.startswith(b'SQLite format 3\x00') else 1)"; then
+              echo "restored file is not a SQLite DB — discarding marker"
+              rm -f ../merged-store/last-merged.txt motormila.db
+              DB_OK=false
+            fi
+          fi
+          if [[ "$DB_OK" != "true" ]]; then
+            rm -f ../merged-store/last-merged.txt
             python -c "from db.session import init_db; init_db(); print('fresh DB created')"
           fi
 
@@ -124,9 +154,14 @@ jobs:
           while IFS= read -r TAG || [[ -n "${TAG}" ]]; do
             [[ -z "$TAG" ]] && continue
             echo "== merging ${TAG} =="
-            gh release download "$TAG" --pattern "autolens.db.gz" --dir dump-store --clobber
-            python scripts/ops/merge_sqlite_dump.py dump-store/autolens.db.gz --target motormila.db
-            rm -f dump-store/autolens.db.gz
+            if gh release download "$TAG" --pattern "motormila.db.gz" --dir dump-store --clobber; then
+              ASSET="dump-store/motormila.db.gz"
+            else
+              gh release download "$TAG" --pattern "autolens.db.gz" --dir dump-store --clobber
+              ASSET="dump-store/autolens.db.gz"  # legacy asset name
+            fi
+            python scripts/ops/merge_sqlite_dump.py "$ASSET" --target motormila.db
+            rm -f dump-store/motormila.db.gz dump-store/autolens.db.gz
           done < new-dumps.txt
           python - <<'PY'
           import sqlite3
@@ -134,6 +169,18 @@ jobs:
           print("merged DB listings:", con.execute("SELECT COUNT(*) FROM car_listings").fetchone()[0])
           print("merged DB history:", con.execute("SELECT COUNT(*) FROM vehicle_price_history").fetchone()[0])
           PY
+
+      - name: Reset duplicate flags before the strict dedup pass
+        # Clears is_duplicate/duplicate_of left by the old loose matcher; the
+        # next step re-flags only strict matches (same photo hash, or same
+        # district + mileage within 2% + price within 2%). Same run condition
+        # as the export step so a forced publish-full-catalog redeploy heals.
+        if: steps.discover.outputs.count != '0' || github.event.inputs.publish-full-catalog == 'true'
+        env:
+          COLD_DATABASE_URL: sqlite:///motormila.db
+          MOTORMILA_LOCAL_DB: motormila.db
+          ALLOW_SQLITE_FALLBACK: "true"
+        run: python scripts/ops/repair_duplicate_flags.py --apply
 
       - name: Run market analysis + dedup
         if: steps.discover.outputs.count != '0'
@@ -143,17 +190,13 @@ jobs:
           RUN_MARKET_ANALYSIS: "true"
           RUN_MARKET_SIGNALS: "true"
           RUN_DEAL_SCORE_REFRESH: "true"
-          # Dedup marking DISABLED (2026-09-17): the make/model/year/price±3%
-          # matcher was flagging >50% of the catalog as cross-source duplicates
-          # (incl. distinct cars in different districts), collapsing public
-          # live counts 207k → 106k. Keep off until the matcher requires
-          # district + seller/photo evidence. The repair step below clears any
-          # residual flags before every export so the catalog stays whole.
-          RUN_DEDUP: "false"
-          # Incremental (48h window) dedup — a full sweep re-reads 240k rows
-          # and adds ~40 min to every merge. Full passes run on-demand via
-          # heavy-maintenance.yml against SQLite (zero egress cost).
-          DEDUP_FULL_PASS: "false"
+          # Dedup re-enabled with the strict matcher (app/utils/deduplication.py):
+          # a pair needs the same photo hash, or same district + mileage and
+          # price within 2%. The loose matcher that flagged >50% of the
+          # catalog (Sept 2026) is gone. Flags are reset in the previous step,
+          # so this is a full in-memory pass over the local SQLite DB.
+          RUN_DEDUP: "true"
+          DEDUP_FULL_PASS: "true"
           RUN_STATS_CACHE_REFRESH: "true"
           RUN_LISTING_LIFECYCLE: "true"
           RUN_OUTLIER_DETECTION: "true"
@@ -163,17 +206,6 @@ jobs:
           RUN_THUMBNAIL_CACHE: "false"
           RUN_IMAGE_PHASH: "false"
         run: python run_sync.py
-
-      - name: Repair duplicate flags (keep catalog whole)
-        # Clears is_duplicate/duplicate_of set by earlier dedup passes so the
-        # export counts every row. Same run condition as the export step so a
-        # forced publish-full-catalog redeploy also heals.
-        if: steps.discover.outputs.count != '0' || github.event.inputs.publish-full-catalog == 'true'
-        env:
-          COLD_DATABASE_URL: sqlite:///motormila.db
-          MOTORMILA_LOCAL_DB: motormila.db
-          ALLOW_SQLITE_FALLBACK: "true"
-        run: python scripts/ops/repair_duplicate_flags.py --apply
 
       - name: Export and deploy SQLite snapshots (zero-egress catalog refresh)
         # Permanent path: whenever new dump data was merged, refresh the live
@@ -186,18 +218,15 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           SNAPSHOT_SOURCE_DIR: public/snapshots/latest
         run: |
           set -euo pipefail
           echo "Full catalog export from merged SQLite (zero Neon egress)"
-          COLD_DATABASE_URL="sqlite:///${GITHUB_WORKSPACE}/backend/motormila.db" python backend/export_public_snapshots.py --output backend/snapshots/latest
-          mkdir -p public/snapshots/latest
-          cp -r backend/snapshots/latest/. public/snapshots/latest/
-          # Public failover DB for the HF Space. The GitHub `merged-db` release
-          # is unreachable anonymously (private repo -> 404), so the Space's
-          # sqlite_failover downloads this Vercel copy instead. User/alert/event
-          # tables are empty by design (auth lives only in Neon) but wipe them
-          # anyway so account data can never ship in a public artifact.
+          # Wipe user/PII tables BEFORE the export so the exporter never
+          # reads them (JSON snapshots are CarListing-only today, but this
+          # order is the safe default).
           python - <<'PY'
           import sqlite3
           con = sqlite3.connect("backend/motormila.db")
@@ -205,18 +234,62 @@ jobs:
               "platform_users", "user_invites", "market_alerts",
               "market_alert_matches", "user_notifications", "user_feedback",
               "analytics_events", "dealer_profiles",
+              # Device push endpoints/keys and delivery receipts are PII —
+              # they must never ride a public artifact.
+              "push_subscriptions", "notification_delivery_log",
           ):
-              con.execute(f'DELETE FROM "{table}"')
+              try:
+                  con.execute(f'DELETE FROM "{table}"')
+              except sqlite3.OperationalError:
+                  # Legacy dumps may pre-date the table.
+                  pass
           con.commit()
           con.close()
           PY
-          gzip -f -c backend/motormila.db > public/snapshots/latest/merged-autolens.db.gz
-          ls -lh public/snapshots/latest/merged-autolens.db.gz
+          COLD_DATABASE_URL="sqlite:///${GITHUB_WORKSPACE}/backend/motormila.db" python backend/export_public_snapshots.py --output backend/snapshots/latest
+          mkdir -p public/snapshots/latest
+          cp -r backend/snapshots/latest/. public/snapshots/latest/
+          # Checkpoint WAL before gzip — otherwise unflushed -wal frames are lost.
+          python -c "import sqlite3; c=sqlite3.connect('backend/motormila.db'); c.execute('PRAGMA wal_checkpoint(TRUNCATE)'); c.close()"
+          gzip -f -c backend/motormila.db > public/snapshots/latest/merged-motormila.db.gz
+          cp public/snapshots/latest/merged-motormila.db.gz public/snapshots/latest/merged-autolens.db.gz  # legacy name
+          ls -lh public/snapshots/latest/merged-motormila.db.gz
           # Sideload APK + release manifest for /app/* (private repo: the
           # release asset can only be fetched with a token, and the binary is
           # gitignored, so it must ride the CLI deploy).
           bash scripts/fetch-apk-for-deploy.sh
           bash scripts/deploy-snapshots-to-prod.sh
+          # Cloudflare Pages — permanent Vercel alternative (motormila.pages.dev).
+          # Skipped if the Cloudflare secrets are not configured.
+          if [[ -n "${CLOUDFLARE_API_TOKEN:-}" && -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]]; then
+            bash scripts/deploy-snapshots-to-cloudflare.sh
+          else
+            echo "NOTICE: CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID not set — skipping Cloudflare deploy" >&2
+          fi
+
+      # Keep the R2 snapshot bucket fresh: the Cloudflare Pages build pulls
+      # public/snapshots/latest from R2 at build time (scripts/sync-snapshots-from-r2.mjs)
+      # when the bundled copy is stale, so every merge must publish the fresh
+      # export there. Same layout the site expects: <prefix>/manifest.json, parts.
+      - name: Upload fresh snapshots to R2
+        if: steps.discover.outputs.count != '0' || github.event.inputs.publish-full-catalog == 'true'
+        working-directory: ${{ github.workspace }}
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          # Canonical snapshot bucket (source of truth for the Pages
+          # build-time sync). Set explicitly — there is no R2_BUCKET repo
+          # secret; the uploader also accepts S3-style R2_* creds above.
+          R2_BUCKET: motormila-snapshots
+          R2_PREFIX: snapshots/latest
+          SNAPSHOT_SOURCE_DIR: public/snapshots/latest
+          # Cloudflare API fallback: the uploader uses this when the S3-style
+          # R2_* credentials above are absent. The token needs R2 Storage
+          # write permission on the bucket.
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python backend/upload_snapshots_r2.py
 
       # Always advance the merge marker after a successful merge so a skipped
       # Vercel deploy (Neon is healthy) does not re-merge the same dumps.
@@ -228,12 +301,15 @@ jobs:
         run: |
           set -euo pipefail
           NEW_LAST="$(cat backend/last-merged-new.txt)"
-          gzip -f -c backend/motormila.db > merged-autolens.db.gz
+          # Checkpoint WAL before gzip — otherwise unflushed -wal frames are lost.
+          python -c "import sqlite3; c=sqlite3.connect('backend/motormila.db'); c.execute('PRAGMA wal_checkpoint(TRUNCATE)'); c.close()"
+          gzip -f -c backend/motormila.db > merged-motormila.db.gz
+          cp merged-motormila.db.gz merged-autolens.db.gz  # legacy asset name
           printf '%s' "$NEW_LAST" > last-merged.txt
           if gh release view merged-db >/dev/null 2>&1; then
-            gh release upload merged-db merged-autolens.db.gz last-merged.txt --clobber
+            gh release upload merged-db merged-motormila.db.gz merged-autolens.db.gz last-merged.txt --clobber
           else
-            gh release create merged-db merged-autolens.db.gz last-merged.txt \
+            gh release create merged-db merged-motormila.db.gz merged-autolens.db.gz last-merged.txt \
               --title "Merged outage DB" \
               --notes "Durable merged SQLite DB maintained by manus-to-live.yml. Last merged dump: ${NEW_LAST}" \
               --latest=false --prerelease

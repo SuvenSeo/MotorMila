@@ -451,7 +451,12 @@ def test_district_insight_uses_true_median():
     assert payload["avg_price_lkr"] == round((5_000_000 + 6_000_000 + 9_000_000) / 3, 2)
 
 
-def test_price_trends_fall_back_to_national_lane_when_district_samples_are_thin():
+def test_price_trends_fall_back_to_national_lane_when_district_samples_are_thin(monkeypatch):
+    # District depth is a Pro capability: `get_price_trends` strips `district` for
+    # free/anonymous callers by design, so the district_fallback branch is only
+    # reachable for a paying caller. Authenticate as Pro, otherwise the gate
+    # nulls the district and the request resolves as a plain national "exact" read.
+    monkeypatch.setattr(stats, "resolve_request_access", lambda *a, **k: ("pro", "user"))
     db = _session()
     db.add_all(
         [
@@ -482,3 +487,29 @@ def test_price_trends_fall_back_to_national_lane_when_district_samples_are_thin(
     assert payload["coverage_scope"] == "district_fallback"
     assert "Sri Lanka-wide" in payload["coverage_note"]
     assert [point["month"] for point in payload["points"]] == [3, 4]
+
+
+def test_price_trends_free_caller_is_not_given_district_depth():
+    """Guard rail for the test above: anonymous/free callers must NOT reach the
+    district lane. The free-tier gate drops `district`, so the response is the
+    national series - that is the policy, not a district_fallback."""
+    db = _session()
+    db.add_all(
+        [
+            PriceAggregate(
+                make="Toyota", model="Vitz", period_year=2026, period_month=3,
+                avg_price_lkr=7_000_000, median_price_lkr=6_900_000, listing_count=12,
+            ),
+            PriceAggregate(
+                make="Toyota", model="Vitz", period_year=2026, period_month=4,
+                avg_price_lkr=7_200_000, median_price_lkr=7_100_000, listing_count=14,
+            ),
+        ]
+    )
+    db.commit()
+
+    payload = stats.get_price_trends(
+        request=MagicMock(), make="Toyota", model="Vitz", district="Kandy", db=db
+    )
+
+    assert payload["coverage_scope"] != "district_fallback"

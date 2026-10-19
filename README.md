@@ -11,11 +11,15 @@
   <img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
   <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript 5" />
   <img src="https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI" />
-  <img src="https://img.shields.io/badge/PostgreSQL-Neon-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="Neon PostgreSQL" />
+  <img src="https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white" alt="SQLite" />
   <img src="https://img.shields.io/badge/Playwright-2EAD33?style=flat-square&logo=playwright&logoColor=white" alt="Playwright" />
   <img src="https://img.shields.io/badge/Android-Jetpack%20Compose-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Android Jetpack Compose" />
   <img src="https://img.shields.io/badge/Deployed-Vercel%20%2B%20HF%20Spaces-000000?style=flat-square&logo=vercel&logoColor=white" alt="Vercel + HF Spaces" />
   <img src="https://img.shields.io/badge/WCAG-2.2%20AA-3D9970?style=flat-square" alt="WCAG 2.2 AA" />
+</p>
+
+<p align="center">
+  <a href="https://github.com/SuvenSeo/Vehicle-Platform/actions/workflows/ci.yml"><img src="https://github.com/SuvenSeo/Vehicle-Platform/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
 </p>
 
 <p align="center">
@@ -29,17 +33,26 @@
 
 ---
 
+<p align="center">
+  <img src="https://img.shields.io/badge/📊_Listings-~275K-2563eb?style=for-the-badge" alt="275K listings" />
+  <img src="https://img.shields.io/badge/🌐_Sources-13+-059669?style=for-the-badge" alt="13+ sources" />
+  <img src="https://img.shields.io/badge/🔄_Refresh-3×%20daily-d97706?style=for-the-badge" alt="3x daily" />
+  <img src="https://img.shields.io/badge/💰_Cost-$0%2Fmo-7c3aed?style=for-the-badge" alt="Zero cost" />
+</p>
+
+---
+
 <img src="public/og-card.jpg" alt="Motormila dashboard" width="100%" />
 
 ---
 
 ## 🚗 What is Motormila?
 
-Motormila is a **vehicle market intelligence platform for Sri Lanka**. It watches every major used-car marketplace, deduplicates the same car across sites, and turns ~180,000 live listings into clear answers:
+Motormila is a **vehicle market intelligence platform for Sri Lanka**. It watches every major used-car marketplace, deduplicates the same car across sites, and turns ~275,000 live listings into clear answers:
 
 > **What is this car actually worth today?** · Is it a good deal, or a trap? · Which districts move fastest? · Is the market going up or down — and where?
 
-Think Bloomberg terminal for the Sri Lankan second-hand car market — but free to browse, obsessive about fairness, and built on real listing data refreshed multiple times a day.
+Think Bloomberg terminal for the Sri Lankan second-hand car market — but free to browse, obsessive about fairness, and built on real listing data refreshed three times a day.
 
 ### The problem it solves
 
@@ -48,9 +61,9 @@ Sri Lanka's car market is fragmented across a dozen+ marketplaces with wildly di
 Motormila fixes that with one obsessive idea: **watch everything, deduplicate ruthlessly, price honestly.**
 
 - **13+ sources scraped** — ikman, riyasewana, patpat, autolanka, autodirect, saleme, riyahub, dimo, hitad, cartivate, and more
-- **~180,000 listings tracked** with price history, not just snapshots
+- **~275,000 listings tracked** with price history, not just snapshots
 - **Same car across sites merged** via VIN + multi-signal fuzzy matching — one canonical record, not five duplicates
-- **Refreshed 2× a day** (plus midday top-source refreshes) by an autonomous GitHub Actions fleet
+- **Refreshed 3× daily** (07:40 / 15:40 / 23:40 SLT) by an autonomous GitHub Actions fleet — **$0/month** infrastructure
 
 ---
 
@@ -101,7 +114,7 @@ Windows / JDK 17 setup: [`android/README-WINDOWS-BUILD.md`](android/README-WINDO
 
 ## 🕸️ The Pipeline
 
-Everything is automated. Nobody touches a database.
+Everything is automated. Nobody touches a database. The entire pipeline runs on **$0/month** — GitHub Actions (unlimited on public repos), HuggingFace Spaces (free tier), Vercel (hobby), and Cloudflare.
 
 ```mermaid
 flowchart LR
@@ -110,32 +123,33 @@ flowchart LR
         RI[riyasewana.com] --> GH
         PA[patpat.lk] --> GH
         AL[autolanka] --> GH
-        OT[7 more sources] --> GH
+        OT[9 more sources] --> GH
     end
 
     subgraph GH["GitHub Actions fleet"]
-        SC["Scrape jobs<br/>(Playwright + API hybrid)"]
-        MA["Market analysis<br/>dedup · deal scores · signals"]
-        EX["Snapshot export<br/>→ R2 → Vercel deploy"]
+        SC["Scrape dumps<br/>3× daily"]
+        MA["Merge + analysis<br/>dedup · deal scores · signals"]
+        EX["Snapshot export<br/>→ Vercel deploy"]
     end
 
-    GH --> NEON[("Neon PostgreSQL<br/>single DB, ingress-free")]
-    NEON --> EX
-    EX --> R2[("Cloudflare R2<br/>public snapshots")]
-    R2 --> FE[("React frontend<br/>Vercel")]
-    NEON --> API[("FastAPI<br/>HF Spaces")]
+    SC --> REL[("GitHub Releases<br/>SQLite dumps")]
+    REL --> MA
+    MA --> REL2[("merged-db release<br/>canonical SQLite")]
+    REL2 --> EX
+    EX --> FE[("React frontend<br/>Vercel<br/>static snapshots")]
+    REL2 --> API[("FastAPI<br/>HF Spaces<br/>SQLite failover")]
     API --> FE
 ```
 
-**The egress-first rule:** scrapers *write* to Neon (free ingress); the public site *reads* from R2 snapshots, so database egress stays flat even with ~180k listings. Full catalog snapshots refresh weekly; stats-only snapshots refresh every scrape.
+**The zero-egress rule:** scrapers write to local SQLite (no database egress costs); the public site reads from static JSON snapshots, so the database is never hit by visitors. The backend API runs on SQLite failover for Pro features.
 
 | Workflow | Cadence | Job |
 |---|---|---|
-| **Unified Vehicle Scraper** | 02:00 & 12:40 UTC | All 13 sources → analysis → export |
-| **Midday Top Sources** | 06:30 UTC | ikman + riyasewana refresh |
-| **Weekly Full-Catalog Refresh** | Weekly | Full snapshot rebuild |
-| **DB Backup** | Daily / emergency | Neon backups |
-| **Pipeline Monitor + Keep-Alive** | Continuous | Health + HF Space warm-up |
+| **Manus Scrape Dump** | 3× daily (07:40 / 15:40 / 23:40 SLT) | All 13 sources → SQLite dumps to Releases |
+| **Manus to Live** | After each dump | Merge dumps → analysis → snapshot export → Vercel deploy |
+| **Keep HF Space Awake** | Every 30 min | Ping backend to prevent cold starts |
+| **Pipeline Monitor** | Continuous | Health checks + alerts |
+| **DB Backup** | Weekly | SQLite snapshots to Releases |
 
 ---
 
@@ -145,8 +159,8 @@ flowchart LR
 |---|---|---|
 | **Frontend** | React 18 · Vite · TypeScript · Tailwind · React Query · Recharts · Leaflet · framer-motion | Vercel |
 | **Backend** | FastAPI · SQLAlchemy · APScheduler · structlog · Playwright | HF Spaces |
-| **Database** | PostgreSQL (Neon, single-DB) · SQLite fallback for local dev | Neon |
-| **Snapshots** | JSON snapshots + manifest → Cloudflare R2 → Vercel deploy | R2 |
+| **Database** | SQLite (zero-egress) · dumps versioned as GitHub Release assets | GitHub Releases |
+| **Snapshots** | Static JSON snapshots → Vercel deploy (same-origin, no CORS) | Vercel |
 | **Scrapers** | Python + Playwright (API-first, browser fallback), per-source isolation | GitHub Actions |
 | **Mobile** | Kotlin · Jetpack Compose · Hilt · Paging 3 · CameraX · WorkManager | `android/` |
 | **Quality** | Vitest · Testing Library · vitest-axe · ESLint · JUnit (Android) · GitHub Actions CI | CI |
@@ -157,7 +171,7 @@ flowchart LR
 ├── backend/        # FastAPI app, scrapers, services, db models
 │   ├── app/scrapers/   # 13+ per-source scraper modules
 │   ├── app/services/   # market signals, aggregator, stats cache
-│   └── db/             # SQLAlchemy models + session config
+│   └── db/             # SQLAlchemy models + SQLite failover
 ├── android/        # Native Android app (Jetpack Compose)
 ├── api/            # (edge helpers)
 ├── scripts/        # ops tooling (snapshot deploy, auth bootstrap)
@@ -185,7 +199,7 @@ npm run dev            # → http://localhost:8080 (proxies /api → 127.0.0.1:8
 cd backend
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-# local dev needs no Neon — SQLite fallback is fine:
+# local dev uses SQLite — no external DB needed:
 ALLOW_SQLITE_FALLBACK=true \
 PRO_ACCESS_ENFORCED=false APP_ACCESS_ENFORCED=false \
 .venv/bin/uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
@@ -260,10 +274,11 @@ python scripts/bootstrap_platform_auth.py --email you@example.com --password '�
 
 ## 🗺️ Roadmap
 
-- [x] 13+ sources live, ~180k listings, VIN + fuzzy dedup
+- [x] 13+ sources live, ~275k listings, VIN + fuzzy dedup
 - [x] Valuation (FMV), deal scores, price alerts, district velocity
 - [x] Pro workspace: vehicle lanes, district profiles, arbitrage gaps
 - [x] Mobile companion app (native Android)
+- [x] Zero-cost infrastructure ($0/month)
 - [ ] 50+ sources (see `SCRAPER_ARCHITECTURE.md`)
 - [ ] LLM extraction for unstructured listing descriptions
 - [ ] Adaptive per-source scheduling based on market turnover
@@ -278,7 +293,14 @@ python scripts/bootstrap_platform_auth.py --email you@example.com --password '�
 | [`SCRAPER_ARCHITECTURE.md`](SCRAPER_ARCHITECTURE.md) | Scaling to 50+ sources, proxies, resilience |
 | [`docs/neon-egress-budget.md`](docs/neon-egress-budget.md) | Egress budget & snapshot strategy |
 | [`docs/MASTER PLAN FOR FUTURE OF MOTORMILA.txt`](docs/MASTER%20PLAN%20FOR%20FUTURE%20OF%20MOTORMILA.txt) | The long game |
+| [`docs/disaster-recovery-plan.md`](docs/disaster-recovery-plan.md) | Backup & recovery procedures |
 | [`android/README-WINDOWS-BUILD.md`](android/README-WINDOWS-BUILD.md) | Android JDK 17 setup, debug `BASE_URL`, unit tests |
+
+---
+
+## 🤝 Contributing
+
+This repo is public. Issues and PRs are welcome — but please keep the zero-cost constraint in mind: every new dependency, workflow, or service should work within the free tier.
 
 ---
 

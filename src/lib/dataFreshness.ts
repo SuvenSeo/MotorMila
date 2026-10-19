@@ -1,4 +1,5 @@
 import { formatRelativeTime } from "@/lib/formatting";
+import { parseFlexibleTime } from "@/lib/parseTime";
 
 export const LISTING_DATA_STALE_HOURS = 6;
 export const LISTING_DATA_STALE_MS = LISTING_DATA_STALE_HOURS * 60 * 60 * 1000;
@@ -19,9 +20,8 @@ export interface ListingDataFreshness {
 }
 
 function parseTimestamp(iso: string | null | undefined): Date | null {
-  if (!iso) return null;
-  const parsed = new Date(iso);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+  const t = parseFlexibleTime(iso);
+  return t === null ? null : new Date(t);
 }
 
 export function getListingAgeMs(iso: string | null | undefined, now: Date = new Date()): number | null {

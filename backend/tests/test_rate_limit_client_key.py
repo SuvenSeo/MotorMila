@@ -33,7 +33,7 @@ def test_client_key_uses_rightmost_forwarded_hop():
         }
     )
 
-    assert _client_key(request) == "203.0.113.7|pytest-agent"
+    assert _client_key(request) == "203.0.113.7"
 
 
 def test_client_key_ignores_client_forged_leftmost_entry():
@@ -44,10 +44,31 @@ def test_client_key_ignores_client_forged_leftmost_entry():
     assert _client_key(forged_a) == _client_key(forged_b)
 
 
+def test_client_key_ignores_user_agent_rotation():
+    """UA rotation must not multiply limiter buckets."""
+    a = DummyRequest(headers={"user-agent": "ua-1"}, host="192.0.2.10")
+    b = DummyRequest(headers={"user-agent": "ua-2"}, host="192.0.2.10")
+    assert _client_key(a) == _client_key(b)
+
+
 def test_client_key_falls_back_to_socket_host_without_header():
     request = DummyRequest(headers={"user-agent": "ua"}, host="192.0.2.4")
 
-    assert _client_key(request) == "192.0.2.4|ua"
+    assert _client_key(request) == "192.0.2.4"
+
+
+def test_rate_limiter_blocks_user_agent_rotation():
+    limiter = RateLimiter(max_requests=2, window_seconds=60)
+
+    for ua in ("ua-1", "ua-2"):
+        limiter(DummyRequest(headers={"user-agent": ua}, host="198.51.100.9"), now=1000)
+
+    try:
+        limiter(DummyRequest(headers={"user-agent": "ua-3"}, host="198.51.100.9"), now=1001)
+    except Exception as exc:
+        assert getattr(exc, "status_code", None) == 429
+    else:
+        raise AssertionError("UA rotation should not bypass the limiter")
 
 
 def test_rate_limiter_blocks_spoofed_header_rotation():

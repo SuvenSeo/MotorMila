@@ -143,7 +143,8 @@ class AppUpdateFlowTest {
     @Test
     fun downloadFailureTicksWithoutCrashing() = runTest(testDispatcher) {
         coEvery { checker.check(7) } returns AppUpdateChecker.CheckResult.UpToDate
-        coEvery { checker.downloadApk(any(), any()) } returns null
+        io.mockk.every { checker.canInstallPackages(any()) } returns true
+        coEvery { checker.downloadApk(any(), any(), any()) } returns null
 
         viewModel.downloadAndInstall(release(8))
         advanceUntilIdle()

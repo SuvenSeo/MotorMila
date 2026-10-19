@@ -73,9 +73,11 @@ export default function EVHub() {
       ? medianEvPrice - benchmark.median_price_lkr
       : null;
   const paybackYears =
-    evPremiumLkr !== null && annualFuelSavingLkr > 0
+    evPremiumLkr !== null && annualFuelSavingLkr > 0 && evPremiumLkr > 0
       ? Math.ceil(evPremiumLkr / annualFuelSavingLkr)
       : null;
+  // A negative premium means the EV is already cheaper than the hybrid
+  // benchmark — payback is instant, not "−16 yrs".
 
   const na = t("common.na", "N/A");
   const liveStats = [
@@ -251,9 +253,15 @@ export default function EVHub() {
                         ? "…"
                         : paybackYears !== null
                           ? `~${paybackYears} yr${paybackYears !== 1 ? "s" : ""}`
-                          : "N/A"}
+                          : evPremiumLkr !== null && evPremiumLkr <= 0
+                            ? "Instant"
+                            : "N/A"}
                     </p>
-                    <p className="mt-1 text-[10px] font-medium text-muted-foreground">to recover EV price premium</p>
+                    <p className="mt-1 text-[10px] font-medium text-muted-foreground">
+                      {evPremiumLkr !== null && evPremiumLkr <= 0
+                        ? "EVs already cheaper than the hybrid benchmark"
+                        : "to recover EV price premium"}
+                    </p>
                   </div>
                 </div>
                 <p className="mt-4 text-[11px] font-medium text-muted-foreground">
@@ -322,11 +330,6 @@ export default function EVHub() {
             <Button asChild size="lg" className="mt-auto w-full">
               <Link to="/?fuel_type=electric#market">
                 {t("ev.browseCta", "Browse electric inventory")} <ArrowRight className="h-4 w-4" aria-hidden />
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="mt-3 w-full">
-              <Link to="/ev-chargers">
-                {t("ev.chargersCta", "Public charging stations")} <PlugZap className="h-4 w-4" aria-hidden />
               </Link>
             </Button>
           </div>

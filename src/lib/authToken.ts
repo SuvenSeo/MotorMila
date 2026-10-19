@@ -1,7 +1,7 @@
 // Shared bearer-token storage, kept outside authContext so the API layer can
 // attach Authorization headers without importing React context (no cycle).
 
-const TOKEN_STORAGE_KEY = "autolens.auth_token";
+const TOKEN_STORAGE_KEY = "motormila.auth_token";
 
 export function getStoredAuthToken(): string | null {
   try {

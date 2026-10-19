@@ -33,6 +33,10 @@ data class SettingsUiState(
     val loggedOut: Boolean = false,
     val offline: Boolean = false,
     val error: String? = null,
+    val signedIn: Boolean = false,
+    val deletingAccount: Boolean = false,
+    val deleteDialogOpen: Boolean = false,
+    val deletePassword: String = "",
 )
 
 sealed interface SettingsUiEvent {
@@ -43,6 +47,10 @@ sealed interface SettingsUiEvent {
     data class BiometricChanged(val enabled: Boolean) : SettingsUiEvent
     data class BaseUrlChanged(val url: String) : SettingsUiEvent
     data class FeedbackChanged(val text: String) : SettingsUiEvent
+    data object OpenDeleteAccount : SettingsUiEvent
+    data object CloseDeleteAccount : SettingsUiEvent
+    data class DeletePasswordChanged(val password: String) : SettingsUiEvent
+    data object ConfirmDeleteAccount : SettingsUiEvent
     data object SendFeedback : SettingsUiEvent
     data object ClearCache : SettingsUiEvent
     data object Logout : SettingsUiEvent
@@ -115,6 +123,13 @@ class SettingsViewModel @Inject constructor(
             SettingsUiEvent.SendFeedback -> sendFeedback()
             SettingsUiEvent.ClearCache -> clearCache()
             SettingsUiEvent.Logout -> logout()
+            SettingsUiEvent.OpenDeleteAccount ->
+                _state.update { it.copy(deleteDialogOpen = true, deletePassword = "") }
+            SettingsUiEvent.CloseDeleteAccount ->
+                _state.update { it.copy(deleteDialogOpen = false, deletePassword = "") }
+            is SettingsUiEvent.DeletePasswordChanged ->
+                _state.update { it.copy(deletePassword = event.password) }
+            SettingsUiEvent.ConfirmDeleteAccount -> deleteAccount()
             SettingsUiEvent.ConsumeLoggedOut -> _state.update { it.copy(loggedOut = false) }
             SettingsUiEvent.DismissError -> _state.update { it.copy(error = null, offline = false) }
         }
@@ -161,6 +176,40 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(clearingCache = true) }
             _state.update { it.copy(clearingCache = false) }
+        }
+    }
+
+    init {
+        viewModelScope.launch {
+            authRepository.session().collect { session ->
+                _state.update { it.copy(signedIn = session != null) }
+            }
+        }
+    }
+
+    /** Permanent server-side deletion (Play policy), then a full local sign-out. */
+    private fun deleteAccount() {
+        if (_state.value.deletingAccount) return
+        val password = _state.value.deletePassword
+        viewModelScope.launch {
+            _state.update { it.copy(deletingAccount = true, error = null, offline = false) }
+            runCatching {
+                authRepository.deleteAccount(password)
+                WorkManager.getInstance(context).cancelAllWork()
+            }.onSuccess {
+                _state.update {
+                    it.copy(deletingAccount = false, deleteDialogOpen = false, deletePassword = "", loggedOut = true)
+                }
+            }.onFailure { e ->
+                val mapped = ErrorMapper.map(e)
+                _state.update {
+                    it.copy(
+                        deletingAccount = false,
+                        offline = mapped is AppError.Network,
+                        error = mapped.message,
+                    )
+                }
+            }
         }
     }
 

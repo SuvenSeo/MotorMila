@@ -11,6 +11,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Navbar } from "@/components/Navbar";
+import { CommandPalette } from "@/components/CommandPalette";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { AppFooter } from "@/components/AppFooter";
 import { ScrollProgressBar } from "@/components/ScrollProgressBar";
@@ -44,7 +45,9 @@ const Estimate = lazyWithRetry(() => import("./pages/Estimate"));
 const Calculator = lazyWithRetry(() => import("./pages/Calculator"));
 const EVHub = lazyWithRetry(() => import("./pages/EVHub"));
 const EVChargers = lazyWithRetry(() => import("./pages/EVChargers"));
+
 const BestPicks = lazyWithRetry(() => import("./pages/BestPicks"));
+const SellYourCar = lazyWithRetry(() => import("./pages/SellYourCar"));
 const SignIn = lazyWithRetry(() => import("./pages/SignIn"));
 const SignUp = lazyWithRetry(() => import("./pages/SignUp"));
 const ProDashboard = lazyWithRetry(() => import("./pages/ProDashboard"));
@@ -55,7 +58,8 @@ const MakeModelHub = lazyWithRetry(() => import("./pages/MakeModelHub"));
 const MakeHub = lazyWithRetry(() => import("./pages/MakeHub"));
 const DistrictHub = lazyWithRetry(() => import("./pages/DistrictHub"));
 const Alerts = lazyWithRetry(() => import("./pages/Alerts"));
-const PriceIndex = lazyWithRetry(() => import("./pages/PriceIndex"));
+const Profile = lazyWithRetry(() => import("./pages/Profile"));
+
 const Docs = lazyWithRetry(() => import("./pages/Docs"));
 const Pricing = lazyWithRetry(() => import("./pages/Pricing"));
 const OfficialPulse = lazyWithRetry(() => import("./pages/OfficialPulse"));
@@ -66,6 +70,15 @@ const PrivacyPolicy = lazyWithRetry(() => import("./pages/PrivacyPolicy"));
 const TermsOfService = lazyWithRetry(() => import("./pages/TermsOfService"));
 const Permits = lazyWithRetry(() => import("./pages/Permits"));
 const Compare = lazyWithRetry(() => import("./pages/Compare"));
+const Afford = lazyWithRetry(() => import("./pages/Afford"));
+const SafeTransfer = lazyWithRetry(() => import("./pages/SafeTransfer"));
+// overhaul/money-legal: lead capture, legal requests, PayHere return
+const LeadRequest = lazyWithRetry(() => import("./pages/LeadRequest"));
+const RemovalRequest = lazyWithRetry(() => import("./pages/RemovalRequest"));
+const AccountDeletion = lazyWithRetry(() => import("./pages/AccountDeletion"));
+const CookieNotice = lazyWithRetry(() => import("./pages/CookieNotice"));
+const CheckoutReturn = lazyWithRetry(() => import("./pages/CheckoutReturn"));
+const BotInfo = lazyWithRetry(() => import("./pages/BotInfo"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -92,8 +105,7 @@ function HeroLabGate() {
   return enabled ? <HeroLab /> : <Navigate to="/" replace />;
 }
 
-function TrialBannerSlot() {
-  const { user } = useAuth();
+function TrialBannerSlot() {  const { user } = useAuth();
   // Defer the Pricing chunk until the banner can actually render: anonymous
   // and paid users always render null, so skip the dynamic import entirely.
   if (!user) return null;
@@ -107,11 +119,28 @@ function TrialBannerSlot() {
   );
 }
 
+/** Scrolls to the URL hash after navigation (e.g. Market -> /#market from another page). */
+function HashScroller() {
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (!hash) return;
+    const id = hash.replace("#", "");
+    // Wait for the lazy route to mount before looking for the anchor.
+    const timer = window.setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 150);
+    return () => window.clearTimeout(timer);
+  }, [hash]);
+  return null;
+}
+
 function AppShell({ chatMounted }: { chatMounted: boolean }) {
   return (
     <div className="min-h-screen app-shell selection:bg-primary/20 bg-background">
       <a href="#main-content" className="skip-to-content">Skip to main content</a>
+      <HashScroller />
       <Navbar />
+      <CommandPalette />
       <SettingsFloatingIcon />
       <Suspense fallback={null}>
         <FeedbackWidget />
@@ -190,29 +219,47 @@ const App = () => {
                   <Route path="/estimate" element={<Estimate />} />
                   <Route path="/calculator" element={<Calculator />} />
                   <Route path="/ev-hub" element={<EVHub />} />
+                  {/* EV chargers: Open Charge Map cache is empty — redirect to EV Hub until real data exists. */}
                   <Route path="/ev-chargers" element={<EVChargers />} />
                   <Route path="/best-picks" element={<BestPicks />} />
+                  <Route path="/sell" element={<SellYourCar />} />
                   <Route path="/listing/:id" element={<ListingDetail />} />
+                  <Route path="/cars/:make/:model/:year" element={<MakeModelHub />} />
                   <Route path="/cars/:make/:model" element={<MakeModelHub />} />
                   <Route path="/cars/:make" element={<MakeHub />} />
                   <Route path="/locations/:district" element={<DistrictHub />} />
-                  <Route path="/price-index" element={<PriceIndex />} />
+                  {/* Price index: needs months of history before it's meaningful — redirect to Trends meanwhile. */}
+                  <Route path="/price-index" element={<Navigate to="/trends" replace />} />
                   <Route path="/official-pulse" element={<OfficialPulse />} />
                   <Route path="/official-pulse/guide/:key" element={<OfficialPulseGuide />} />
                   <Route path="/official-pulse/:id" element={<OfficialPulseDetail />} />
                   <Route path="/docs" element={<Docs />} />
+                  <Route path="/bot" element={<BotInfo />} />
                   <Route path="/pricing" element={<Pricing />} />
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="/terms" element={<TermsOfService />} />
+                  <Route path="/cookies" element={<CookieNotice />} />
+                  <Route path="/removal" element={<RemovalRequest />} />
+                  <Route path="/delete-account" element={<AccountDeletion />} />
+                  <Route path="/finance" element={<LeadRequest kind="finance" />} />
+                  <Route path="/leasing" element={<Navigate to="/finance" replace />} />
+                  <Route path="/inspection" element={<LeadRequest kind="inspection" />} />
+                  <Route path="/insurance" element={<LeadRequest kind="insurance" />} />
+                  <Route path="/checkout/return" element={<CheckoutReturn />} />
                   <Route path="/compare" element={<Compare />} />
+                  {/** Legacy valuation path: header/footer now point at /estimate. */}
+                  <Route path="/valuation" element={<Navigate to="/estimate" replace />} />
                   <Route path="/permits" element={<Permits />} />
                   <Route path="/mobile-app" element={<MobileApp />} />
+                  <Route path="/afford" element={<Afford />} />
+                  <Route path="/safe-transfer" element={<SafeTransfer />} />
                   <Route path="*" element={<NotFound />} />
                 </Route>
                 <Route element={<ProtectedLayout chatMounted={chatMounted} />}>
                   <Route path="/dealer" element={<DealerDashboard />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/alerts" element={<Alerts />} />
+                  <Route path="/profile" element={<Profile />} />
                 </Route>
                 <Route path="/sign-in" element={
                   <Suspense fallback={<MinimalLoader />}>

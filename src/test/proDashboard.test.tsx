@@ -144,8 +144,8 @@ describe("ProDashboard", () => {
     vi.clearAllMocks();
     installLocalStorage();
     localStorage.setItem(
-      "autolens.auth_user",
-      JSON.stringify({ email: "pro@autolens.lk", name: "Pro User", plan: "pro", avatarInitials: "PU" }),
+      "motormila.auth_user",
+      JSON.stringify({ email: "pro@motormila.lk", name: "Pro User", plan: "pro", avatarInitials: "PU" }),
     );
     vi.mocked(getProMarketSnapshot).mockResolvedValue(snapshot as ProMarketSnapshot);
     vi.mocked(getProVehicleLanes).mockResolvedValue([lane] as ProVehicleLane[]);
@@ -169,6 +169,49 @@ describe("ProDashboard", () => {
     vi.mocked(getProVehicleLaneDetail).mockResolvedValue(detail as ProDetailPayload);
     vi.mocked(getProArbitrageGaps).mockResolvedValue([]);
   });
+
+  it("keeps the panels that loaded when the market snapshot request fails", async () => {
+    // Regression: the workspace loader used Promise.all, so a single failing
+    // request discarded the lanes and districts that DID load, blanking the
+    // whole command center (0 deals / 0 lanes / "Generated pending") even
+    // though two of three endpoints were healthy.
+    vi.mocked(getProMarketSnapshot).mockRejectedValue(new Error("internal server error"));
+
+    render(
+      <AuthProvider>
+        <TestRouter>
+          <ProDashboard />
+        </TestRouter>
+      </AuthProvider>,
+    );
+
+    // The surviving lane data is still on screen...
+    fireEvent.click(await screen.findByRole("tab", { name: /vehicles/i }));
+    expect(await screen.findByRole("button", { name: /Toyota Aqua/i })).toBeInTheDocument();
+
+    // ...and it is not reported as a total workspace failure.
+    expect(
+      screen.queryByText(/Unable to load the Pro workspace/i),
+    ).not.toBeInTheDocument();
+  }, 10_000);
+
+  it("reports a workspace error when every panel request fails", async () => {
+    vi.mocked(getProMarketSnapshot).mockRejectedValue(new Error("boom"));
+    vi.mocked(getProVehicleLanes).mockRejectedValue(new Error("boom"));
+    vi.mocked(getProDistricts).mockRejectedValue(new Error("boom"));
+
+    render(
+      <AuthProvider>
+        <TestRouter>
+          <ProDashboard />
+        </TestRouter>
+      </AuthProvider>,
+    );
+
+    expect(
+      await screen.findByText(/Unable to load the Pro workspace/i),
+    ).toBeInTheDocument();
+  }, 10_000);
 
   it("loads Pro data, switches to vehicle intelligence, and opens lane details", async () => {
     render(

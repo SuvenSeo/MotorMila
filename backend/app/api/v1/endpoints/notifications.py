@@ -74,6 +74,17 @@ def _account_alert_token(email: str) -> str:
     return f"mm:{email.strip().lower()}"
 
 
+def _validate_legacy_token(token: str) -> str:
+    token = token.strip()
+    if not token or len(token) > 64:
+        raise HTTPException(status_code=400, detail="Invalid alert token")
+    # Account tokens are derived server-side (`mm:{email}`). Accepting them
+    # from a client header lets anyone impersonate any user's inbox.
+    if token.lower().startswith("mm:"):
+        raise HTTPException(status_code=403, detail="Account tokens cannot be supplied by the client.")
+    return token
+
+
 def _resolve_notification_identity(
     request: Optional[Request],
     authorization: Optional[str],
@@ -90,10 +101,7 @@ def _resolve_notification_identity(
     alert_token = _optional_str(x_alert_token)
     if not alert_token:
         raise HTTPException(status_code=400, detail="Alert token or signed-in session required.")
-    token_str = alert_token.strip()
-    if not token_str or len(token_str) > 64:
-        raise HTTPException(status_code=400, detail="Invalid alert token")
-    return token_str, None
+    return _validate_legacy_token(alert_token), None
 
 
 @router.get("", response_model=List[NotificationRead])

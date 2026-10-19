@@ -41,7 +41,7 @@ describe("ProPreview", () => {
     expect(screen.getByRole("heading", { name: /Pro workspace preview/i })).toBeInTheDocument();
     expect(screen.getAllByText(/unlock with pro/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/report formats/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("link", { name: /start 7-day free trial/i })[0]).toHaveAttribute("href", "/sign-up");
-    expect(localStorage.getItem("autolens.auth_user")).toBeNull();
+    expect(screen.getAllByRole("link", { name: /join the waitlist/i })[0]).toHaveAttribute("href", "/pricing");
+    expect(localStorage.getItem("motormila.auth_user")).toBeNull();
   });
 });

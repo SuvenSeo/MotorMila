@@ -41,7 +41,7 @@ Manus VMs run on datacenter IPs. riyasewana and patpat block datacenter IPs
 
 You can run several Manus tasks in parallel for different subsets, and repeat
 the task daily — each run creates a fresh **GitHub Release** tagged
-`manus-scrape-*` with asset `autolens.db.gz`. Do **not** commit dumps onto
+`manus-scrape-*` with asset `motormila.db.gz` (+ legacy `autolens.db.gz` copy). Do **not** commit dumps onto
 `main`; `manus-to-live.yml` only reads Release assets. Old dumps are kept so
 unmerged hours are not deleted.
 
@@ -59,12 +59,12 @@ unmerged hours are not deleted.
 ## Merging into the laptop pipeline
 
 On the laptop, download the newest `manus-scrape-*` release asset
-(`autolens.db.gz`) and merge it into the local outage DB:
+(`motormila.db.gz`) and merge it into the local outage DB:
 
 ```
 cd backend
-python scripts/ops/merge_sqlite_dump.py path/to/autolens.db.gz --dry-run   # preview first
-python scripts/ops/merge_sqlite_dump.py path/to/autolens.db.gz             # merge
+python scripts/ops/merge_sqlite_dump.py path/to/motormila.db.gz --dry-run   # preview first
+python scripts/ops/merge_sqlite_dump.py path/to/motormila.db.gz             # merge
 ```
 
 Rows are upserted by `(source, source_id)` — existing cars get refreshed with
@@ -88,7 +88,7 @@ or Manus session required. It triggers:
 Each run:
 
 1. restores a **durable merged SQLite DB** published as the `merged-db`
-   release (`merged-autolens.db.gz` + `last-merged.txt` marker),
+   release (`merged-motormila.db.gz` + `last-merged.txt` marker),
 2. merges every dump newer than the marker — it **paginates** GitHub
    Releases (a single `per_page=100` page is not enough) and compares the
    `YYYYMMDDTHHMMZ` timestamp inside the tag **and** inside
@@ -133,7 +133,7 @@ cartivate 51 · dimo 29 · autolanka 26 · autodirect 24 · carshop 15.
 
 The `manus-scrape-parallel-*` experimental release (asset
 `autolens-recovered.db.gz`) is intentionally skipped — the merge only looks
-for assets named `autolens.db.gz`. riyasewana/patpat/auto-lanka bulk coverage
+for assets named `motormila.db.gz` (legacy `autolens.db.gz` still accepted). riyasewana/patpat/auto-lanka bulk coverage
 comes from `laptop-db-*` releases and the post-reset Neon export.
 
 ### Laptop full-DB upload
@@ -165,7 +165,7 @@ The live site during the outage is the **Manus-merged SQLite catalog**
    with `force=true`.
 2. Probe Neon (`SELECT 1`). If it is still blocked, **skip** (green), do
    not fail Slack.
-3. Stream `car_listings` + `vehicle_price_history` into `autolens.db.gz`.
+3. Stream `car_listings` + `vehicle_price_history` into `motormila.db.gz`.
 4. Publish `neon-export-YYYYMMDDTHHMMZ`.
 5. `manus-to-live.yml` merges it (workflow_run + 30 min schedule).
 
@@ -183,7 +183,7 @@ Neon afterwards.
 ```
 cd backend
 export DATABASE_URL=postgresql://...
-python scripts/ops/export_neon_to_sqlite.py --output autolens.db.gz
+python scripts/ops/export_neon_to_sqlite.py --output motormila.db.gz
 ```
 
 ### Push Manus-only rows back into Neon (optional)
@@ -195,9 +195,9 @@ listings scraped during the outage that Neon never saw:
 ```
 cd backend
 export HOT_DATABASE_URL=postgresql://...
-python scripts/ops/import_sqlite_to_neon.py merged-autolens.db.gz --dry-run
-python scripts/ops/import_sqlite_to_neon.py merged-autolens.db.gz
+python scripts/ops/import_sqlite_to_neon.py merged-motormila.db.gz --dry-run
+python scripts/ops/import_sqlite_to_neon.py merged-motormila.db.gz
 ```
 
-Download `merged-autolens.db.gz` from the `merged-db` release first. Rows
+Download `merged-motormila.db.gz` from the `merged-db` release first. Rows
 upsert on `(source, source_id)`.

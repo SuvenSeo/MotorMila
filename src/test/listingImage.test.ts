@@ -54,3 +54,40 @@ describe("getListingImageUrl", () => {
     ).toBe(`${origin}/demo/aqua.webp`);
   });
 });
+describe("getListingImageList", () => {
+  it("returns the gallery first, then the thumbnail when not duplicated", async () => {
+    const { getListingImageList } = await import("@/lib/listingImage");
+    expect(
+      getListingImageList({
+        thumbnail_url: "https://example.com/thumb.jpg",
+        images: ["https://example.com/1.jpg", "https://example.com/2.jpg"],
+      } as ListingImageInput),
+    ).toEqual([
+      "https://example.com/1.jpg",
+      "https://example.com/2.jpg",
+      "https://example.com/thumb.jpg",
+    ]);
+  });
+
+  it("dedupes the thumbnail when it is already the first gallery image", async () => {
+    const { getListingImageList } = await import("@/lib/listingImage");
+    expect(
+      getListingImageList({
+        thumbnail_url: "https://example.com/1.jpg",
+        images: ["https://example.com/1.jpg", "https://example.com/2.jpg"],
+      } as ListingImageInput),
+    ).toEqual(["https://example.com/1.jpg", "https://example.com/2.jpg"]);
+  });
+
+  it("falls back to the thumbnail alone when there is no gallery", async () => {
+    const { getListingImageList } = await import("@/lib/listingImage");
+    expect(
+      getListingImageList({ thumbnail_url: "https://example.com/thumb.jpg" } as ListingImageInput),
+    ).toEqual(["https://example.com/thumb.jpg"]);
+  });
+
+  it("returns an empty list when there are no images", async () => {
+    const { getListingImageList } = await import("@/lib/listingImage");
+    expect(getListingImageList({} as ListingImageInput)).toEqual([]);
+  });
+});

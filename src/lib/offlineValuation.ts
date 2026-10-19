@@ -37,6 +37,9 @@ function median(values: number[]): number | null {
 }
 
 function numOrNull(value: unknown): number | null {
+  // Number(null) === 0 — treat null/undefined/"" as missing, not zero.
+  // A 0-LKR comp would collapse the offline FMV/IQR clamp.
+  if (value === null || value === undefined || value === "") return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
 }

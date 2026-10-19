@@ -25,7 +25,7 @@ import lk.motormila.app.domain.model.AdminUserRow
 import lk.motormila.app.domain.repository.AdminRepository
 import lk.motormila.app.domain.usecase.ObserveSessionUseCase
 
-internal const val ADMIN_PUBLIC_ORIGIN = "https://motormila.vercel.app"
+internal const val ADMIN_PUBLIC_ORIGIN = "https://motormila.pages.dev"
 
 internal val ADMIN_PLANS = listOf("free", "pro", "dealer", "enterprise")
 internal val ADMIN_ROLES = listOf("user", "admin")

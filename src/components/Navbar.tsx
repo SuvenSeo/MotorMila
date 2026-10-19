@@ -12,14 +12,17 @@ import {
   Menu,
   MoreHorizontal,
   Scale,
+  Search,
   Settings,
   Smartphone,
   Sparkles,
   Star,
   Store,
+  Tag,
   UserCircle2,
+  Wallet,
+  ShieldCheck,
   X,
-  Zap,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
@@ -35,6 +38,7 @@ import { useAppPreferences } from "@/lib/appPreferences";
 import { useAuth } from "@/lib/authContext";
 import { formatRelativeTimeI18n } from "@/lib/formatting";
 import { NotificationBell } from "@/components/NotificationBell";
+import { openCommandPalette } from "@/lib/commandPalette";
 
 type NavSection = {
   label: string;
@@ -67,7 +71,7 @@ export function Navbar() {
   const reducedMotion = useReducedMotion() ?? false;
   const navSpring = reducedMotion
     ? { duration: 0.2 }
-    : { type: "spring" as const, stiffness: 220, damping: 30, mass: 0.78, restDelta: 0.001 };
+    : { type: "spring" as const, stiffness: 260, damping: 32, mass: 0.7, restDelta: 0.0008 };
 
   const sections = useMemo<NavSection[]>(
     () => [
@@ -77,6 +81,7 @@ export function Navbar() {
       { label: t("nav.calculator", "Calculator"), href: "/calculator", id: "calculator", isRoute: true },
       { label: t("nav.evHub", "EV Hub"), href: "/ev-hub", id: "ev-hub", isRoute: true },
       { label: t("nav.valuation", "Valuation"), href: "/estimate", id: "estimate", isRoute: true },
+      { label: t("nav.sell", "Sell"), href: "/sell", id: "sell", isRoute: true },
       { label: t("nav.pricing", "Pricing"), href: "/pricing", id: "pricing", isRoute: true },
     ],
     [t],
@@ -99,12 +104,6 @@ export function Navbar() {
             icon: Star,
           },
           {
-            label: t("nav.priceIndex", "Price Index"),
-            detail: t("nav.priceIndexDetail", "Mix-adjusted market index"),
-            href: "/price-index",
-            icon: BarChart3,
-          },
-          {
             label: t("nav.officialPulse", "Official Pulse"),
             detail: t("nav.officialPulseDetail", "DMT, Customs & news signals"),
             href: "/official-pulse",
@@ -123,16 +122,22 @@ export function Navbar() {
         label: t("nav.groupTools", "Tools & workspaces"),
         items: [
           {
+            label: t("nav.afford", "What can I afford?"),
+            detail: t("nav.affordDetail", "Search by cash and monthly budget"),
+            href: "/afford",
+            icon: Wallet,
+          },
+          {
+            label: t("nav.safeTransfer", "Safe-Transfer Kit"),
+            detail: t("nav.safeTransferDetail", "Transfer checklist and sale agreement"),
+            href: "/safe-transfer",
+            icon: ShieldCheck,
+          },
+          {
             label: t("nav.compare", "Compare"),
             detail: t("nav.compareDetail", "Put up to three cars side by side"),
             href: "/compare",
             icon: Scale,
-          },
-          {
-            label: t("nav.evChargers", "EV Chargers"),
-            detail: t("nav.evChargersDetail", "Charging points across the island"),
-            href: "/ev-chargers",
-            icon: Zap,
           },
           {
             label: t("nav.alerts", "Alerts"),
@@ -152,6 +157,12 @@ export function Navbar() {
         id: "account",
         label: t("nav.groupAccount", "Your account"),
         items: [
+          {
+            label: t("nav.myListings", "My listings"),
+            detail: t("nav.myListingsDetail", "Manage your vehicle ads"),
+            href: "/profile",
+            icon: UserCircle2,
+          },
           isAuthenticated
             ? {
                 label: t("nav.proDashboard", "Pro Dashboard"),
@@ -400,13 +411,16 @@ export function Navbar() {
               </span>
             </Link>
 
-            {/* ── Desktop nav tabs ──────────────────────── */}
+            {/* ── Desktop nav tabs ────────────────────────
+                Compact (scrolled) mode shows only the first 5 sections so the
+                pill never overflows and truncates labels (e.g. "Valuation"
+                rendering as "Vali"). Full mode keeps every section. */}
             <div className="hidden min-w-0 flex-1 justify-center lg:flex">
               <div
                 className="inline-flex max-w-full items-center gap-0.5 overflow-x-auto rounded-full border border-border bg-foreground/[0.03] p-1 shadow-inner [&::-webkit-scrollbar]:hidden"
                 style={{ scrollbarWidth: "none" }}
               >
-                {sections.map((section) => {
+                {(isScrolled ? sections.slice(0, 5) : sections).map((section) => {
                   const active = isSectionActive(section);
                   return (
                     <a
@@ -438,6 +452,25 @@ export function Navbar() {
 
             {/* ── Right actions ─────────────────────────── */}
             <div className="ml-auto flex shrink-0 items-center gap-1.5">
+              {/* Search — opens the command palette (touch-friendly; ⌘K/Ctrl+K also works) */}
+              <button
+                type="button"
+                onClick={openCommandPalette}
+                className="inline-flex h-8 w-8 items-center justify-center gap-1.5 rounded-full border border-border bg-foreground/[0.03] text-muted-foreground outline-none transition-colors hover:bg-foreground/[0.06] hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/50 sm:w-auto sm:px-3"
+                aria-label={t("nav.search", "Search")}
+                title={t("nav.searchHint", "Search (Ctrl+K)")}
+              >
+                <Search className="h-3.5 w-3.5" aria-hidden />
+                <span className="hidden text-[13px] font-medium tracking-tight md:inline">
+                  {t("nav.search", "Search")}
+                </span>
+                <kbd
+                  className="hidden rounded border border-border bg-foreground/[0.04] px-1 text-[10px] font-semibold lg:inline"
+                  aria-hidden
+                >
+                  ⌘K
+                </kbd>
+              </button>
               {/* More — grouped mega menu */}
               <DropdownMenu open={moreOpen} onOpenChange={setMoreOpen}>
                 <DropdownMenuTrigger asChild>
@@ -457,7 +490,7 @@ export function Navbar() {
                 <DropdownMenuContent
                   align="end"
                   sideOffset={10}
-                  className="w-[min(94vw,480px)] overflow-hidden rounded-[1.75rem] border-border bg-popover/96 p-0 text-foreground shadow-soft-xl backdrop-blur-2xl"
+                  className="w-[min(94vw,480px)] overflow-hidden rounded-[1.75rem] border border-border bg-popover/95 p-0 text-foreground shadow-[0_28px_80px_-16px_rgba(0,0,0,0.7)] ring-1 ring-foreground/10 backdrop-blur-2xl"
                 >
                   <div className="max-h-[min(74vh,620px)] overflow-y-auto overscroll-contain p-2.5">
                     {/* Mobile app spotlight */}
@@ -468,7 +501,7 @@ export function Navbar() {
                       className="group/mobile relative w-full overflow-hidden rounded-2xl border border-primary/20 bg-[radial-gradient(ellipse_at_top_left,hsl(var(--primary)/0.16),transparent_62%)] px-3.5 py-3 text-left outline-none transition-colors hover:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/50"
                     >
                       <span className="flex items-start gap-3">
-                        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary/12">
+                        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary/[0.12]">
                           <Smartphone className="h-4 w-4 text-primary" aria-hidden />
                         </span>
                         <span className="min-w-0 flex-1">
@@ -476,7 +509,7 @@ export function Navbar() {
                             <span className="text-[13px] font-semibold tracking-tight text-foreground">
                               {t("nav.mobileApp", "Mobile App")}
                             </span>
-                            <span className="rounded-full border border-amber-400/35 bg-amber-400/12 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.1em] text-amber-600 dark:text-amber-300">
+                            <span className="rounded-full border border-amber-400/35 bg-amber-400/[0.12] px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.1em] text-amber-600 dark:text-amber-300">
                               {t("mobile.releasingSoon", "Releasing soon")}
                             </span>
                           </span>
@@ -514,7 +547,7 @@ export function Navbar() {
                                 <span
                                   className={`mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${
                                     active
-                                      ? "border-primary/30 bg-primary/12 text-primary"
+                                      ? "border-primary/30 bg-primary/[0.12] text-primary"
                                       : "border-border bg-foreground/[0.03] text-muted-foreground group-hover/item:text-foreground"
                                   }`}
                                 >
@@ -552,6 +585,16 @@ export function Navbar() {
               <div className="hidden md:flex">
                 <LocaleSwitcher compact />
               </div>
+
+              {/* Sell CTA */}
+              <button
+                type="button"
+                onClick={() => navigate("/sell")}
+                className="hidden h-8 items-center gap-1.5 rounded-full bg-primary px-3.5 text-[12px] font-semibold text-primary-foreground outline-none shadow-soft transition-all hover:bg-primary/95 active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-primary/50 sm:inline-flex"
+              >
+                <Tag className="h-3.5 w-3.5" aria-hidden />
+                {t("nav.sellYourCar", "Sell your car")}
+              </button>
 
               {/* Notification bell */}
               <NotificationBell />
@@ -657,7 +700,7 @@ export function Navbar() {
                   : "border-primary/20 bg-primary/[0.06] hover:border-primary/35"
               }`}
             >
-              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary/12">
+              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary/[0.12]">
                 <Smartphone className="h-4 w-4 text-primary" aria-hidden />
               </span>
               <span className="min-w-0 flex-1">
@@ -665,7 +708,7 @@ export function Navbar() {
                   <span className="text-[13px] font-semibold tracking-tight text-foreground">
                     {t("nav.mobileApp", "Mobile App")}
                   </span>
-                  <span className="rounded-full border border-amber-400/35 bg-amber-400/12 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.1em] text-amber-600 dark:text-amber-300">
+                  <span className="rounded-full border border-amber-400/35 bg-amber-400/[0.12] px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.1em] text-amber-600 dark:text-amber-300">
                     {t("mobile.releasingSoon", "Releasing soon")}
                   </span>
                 </span>
@@ -723,7 +766,7 @@ export function Navbar() {
                       >
                         <span
                           className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${
-                            active ? "border-primary/30 bg-primary/12 text-primary" : "border-border text-muted-foreground"
+                            active ? "border-primary/30 bg-primary/[0.12] text-primary" : "border-border text-muted-foreground"
                           }`}
                         >
                           <Icon className="h-3.5 w-3.5" aria-hidden />

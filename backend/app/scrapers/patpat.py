@@ -5,17 +5,17 @@ from urllib.parse import urljoin
 
 import httpx
 import structlog
+
+from app.scrapers.polite import BOT_USER_AGENT
 from bs4 import BeautifulSoup
 from sqlalchemy.orm import Session
 
 from app.scrapers.cleaner import CarCleaner
-from app.scrapers.net import httpx_client_kwargs
-from app.scrapers.page_budget import page_budget_for_category
+from app.scrapers.net import httpx_client_kwargs, response_blocked_reason
+from app.scrapers.page_budget import page_budget_for_category, start_page_from_env
 from app.utils.listing_upsert import buffered_upsert_listing, flush_upsert_buffer
 
 log = structlog.get_logger()
-
-_BLOCKED_HTTP_STATUSES = frozenset({403, 429})
 
 
 class PatpatBlockedError(RuntimeError):
@@ -44,6 +44,9 @@ class PatpatScraper:
     def __init__(self, db: Session):
         self.db = db
         self.cleaner = CarCleaner()
+        # Mirrors GenericDetailScraper so run_sync can record a truthful FAILED
+        # run instead of a zero-listing SUCCESS when the wall is hit.
+        self.blocked_reason: str | None = None
 
     def _upsert_listing(self, payload: dict):
         return buffered_upsert_listing(self, payload)
@@ -129,14 +132,11 @@ class PatpatScraper:
 
     async def scrape(self, max_pages: int = 5):
         headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/124.0.0.0 Safari/537.36"
-            )
+            "User-Agent": BOT_USER_AGENT
         }
 
         seen_urls: set[str] = set()
+        start_page = start_page_from_env(self.SOURCE)
 
         async with httpx.AsyncClient(
             follow_redirects=True, **httpx_client_kwargs(headers)
@@ -144,11 +144,12 @@ class PatpatScraper:
             for category_path in self.CATEGORY_PATHS:
                 page_limit = self._page_budget_for_category(category_path, max_pages)
                 base_url = self._category_base_url(category_path)
-                page_num = 1
+                page_num = start_page
+                stop_at_page = start_page + page_limit
                 consecutive_empty_pages = 0
                 consecutive_page_errors = 0
 
-                while page_num <= page_limit:
+                while page_num < stop_at_page:
                     url = base_url if page_num == 1 else f"{base_url}?page={page_num}"
                     log.info(
                         "scraping_page",
@@ -160,9 +161,17 @@ class PatpatScraper:
 
                     try:
                         res = await client.get(url, timeout=30)
-                        if res.status_code in _BLOCKED_HTTP_STATUSES:
+                        # Uses the shared detector rather than a status check:
+                        # patpat.lk answers blocked GETs with 405 + a
+                        # "Human Verification" interstitial (not a 403), so the
+                        # old status-only guard never fired and every page fell
+                        # through to the generic error path — up to 25 errors
+                        # per category across 11 categories of pure wall.
+                        blocked = response_blocked_reason(res)
+                        if blocked:
                             raise PatpatBlockedError(
-                                f"patpat.lk returned HTTP {res.status_code} for {url}"
+                                f"patpat.lk blocked the request for {url} "
+                                f"(HTTP {res.status_code}: {blocked})"
                             )
                         res.raise_for_status()
                         soup = BeautifulSoup(res.text, "lxml")
@@ -297,7 +306,8 @@ class PatpatScraper:
                         consecutive_empty_pages = 0
                         consecutive_page_errors = 0
                         page_num += 1
-                    except PatpatBlockedError:
+                    except PatpatBlockedError as blocked_exc:
+                        self.blocked_reason = str(blocked_exc)
                         raise
                     except Exception as e:
                         log.error(

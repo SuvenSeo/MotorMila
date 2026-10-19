@@ -31,6 +31,7 @@ import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
 import { PageHero } from "@/components/PageHero";
 import { FreePlanBanner } from "@/components/FreePlanBanner";
+import { SlidingNumber } from "@/components/ui/SlidingNumber";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { toast } from "sonner";
 import { getSurchargeCountdown } from "@/lib/importTaxModel";
@@ -123,7 +124,12 @@ export default function Calculator() {
   const [lcFuelType, setLcFuelType] = useState<FuelType>(() => fuelParam(searchParams, "fuel", "hybrid"));
   const [lcEngineCc, setLcEngineCc] = useState(() => numParam(searchParams, "cc", 1500));
   const [lcMotorKw, setLcMotorKw] = useState(() => numParam(searchParams, "kw", 110));
-  const [applySurcharge, setApplySurcharge] = useState(() => boolParam(searchParams, "surcharge", true));
+  // Default OFF once the gazetted CID surcharge window has lapsed — the page
+  // already tells the user the period ended, so pre-checking the box
+  // contradicted that banner and inflated every landed-cost total.
+  const [applySurcharge, setApplySurcharge] = useState(() =>
+    boolParam(searchParams, "surcharge", !getSurchargeCountdown().expired),
+  );
   const [applySscl, setApplySscl] = useState(() => boolParam(searchParams, "sscl", true));
   const [lcResult, setLcResult] = useState<(LandedCostResult & OfflineFlag) | null>(null);
   // What this exact import saves if the 50% surcharge lapses on schedule.
@@ -145,11 +151,17 @@ export default function Calculator() {
         setFxUserOverridden(false);
       }
       if (!silent) {
-        toast.success(`Live FX · Rs ${quote.usd_lkr.toLocaleString()} / USD`, {
-          description: quote.reference_date
-            ? `CBSL-linked print · ref ${quote.reference_date}`
-            : quote.source,
-        });
+        if (quote.fallback) {
+          toast.message("Using reference FX rate", {
+            description: "Live FX feed is unreachable right now — Rs 300 / USD reference rate applied. Confirm with your bank before committing.",
+          });
+        } else {
+          toast.success(`Live FX · Rs ${quote.usd_lkr.toLocaleString()} / USD`, {
+            description: quote.reference_date
+              ? `CBSL-linked print · ref ${quote.reference_date}`
+              : quote.source,
+          });
+        }
       }
     } catch (e: unknown) {
       if (!silent) {
@@ -572,8 +584,12 @@ export default function Calculator() {
                       </div>
                       {macro ? (
                         <p className="text-[10px] font-semibold text-muted-foreground">
-                          Feed {macro.source.replace(/_/g, " ")}
-                          {macro.reference_date ? ` · ref ${macro.reference_date}` : ""}
+                          {macro.fallback ? (
+                            <span className="text-deal-amber">Reference rate — live FX unavailable · </span>
+                          ) : (
+                            <>Feed {macro.source.replace(/_/g, " ")} </>
+                          )}
+                          {macro.reference_date ? `· ref ${macro.reference_date}` : ""}
                           {macro.inflation_yoy_percent != null
                             ? ` · CCPI YoY ${macro.inflation_yoy_percent}%`
                             : ""}
@@ -682,7 +698,17 @@ export default function Calculator() {
                     {/* Featured readout — landed cost towers, total taxes demoted below it */}
                     <div aria-live="polite" className="rounded-2xl border border-primary/25 bg-primary/5 p-5 sm:p-6 shadow-soft">
                       <span className="text-[12px] font-semibold text-primary-bright">{t("calc.estLanded", "Est. Landed Cost")}</span>
-                      <p className="display-1 text-foreground num mt-2">{formatPrice(lcResult.landed_cost)}</p>
+                      <div className="display-1 text-foreground num mt-2">
+                        {lcResult.landed_cost == null || !Number.isFinite(lcResult.landed_cost) ? (
+                          "N/A"
+                        ) : (
+                          <span className="inline-flex items-baseline">
+                            <span>Rs.&nbsp;</span>
+                            <SlidingNumber value={Math.round((lcResult.landed_cost / 1_000_000) * 100) / 100} />
+                            <span>M</span>
+                          </span>
+                        )}
+                      </div>
                       <div className="mt-4 flex items-center gap-3 border-t border-primary/15 pt-3">
                         <span className="text-[12px] font-medium text-muted-foreground">Total Taxes &amp; Duties</span>
                         <span className="ml-auto text-sm font-bold text-primary num">+{formatPrice(lcResult.total_tax)}</span>

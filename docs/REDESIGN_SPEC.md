@@ -1,4 +1,4 @@
-# AutoLens LK — World-Class Redesign Spec (dual-theme, dark default)
+# Motormila — World-Class Redesign Spec (dual-theme, dark default)
 
 This is the **binding contract** for the platform redesign. Every page and component
 must conform so the coordinated sweep stays coherent. When in doubt, match the

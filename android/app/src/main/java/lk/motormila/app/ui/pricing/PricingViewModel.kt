@@ -42,7 +42,8 @@ class PricingViewModel @Inject constructor(
             runCatching { billing.checkoutIntent(plan) }
                 .onSuccess { info ->
                     _state.update { it.copy(busyPlan = null, message = info.message.takeIf { msg -> msg.isNotBlank() }) }
-                    if (info.hasUrl) onOpenUrl(info.checkoutUrl!!) else fallback()
+                    val url = info.checkoutUrl
+                    if (info.hasUrl && url != null) onOpenUrl(url) else fallback()
                 }
                 .onFailure { error ->
                     _state.update {

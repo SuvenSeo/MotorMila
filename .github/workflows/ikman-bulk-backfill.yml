@@ -6,8 +6,12 @@
 # of listings across all vehicle categories (cars gets the full budget,
 # secondary categories a capped share, see backend/app/scrapers/page_budget.py).
 #
-# DB WRITES ONLY (ingress is free on Neon). Optional snapshot refresh afterwards
-# keeps the public R2/CDN catalog in sync — run it with refresh_catalog=true.
+# DB WRITES ONLY (ingress is free on Neon). This workflow writes to Neon; the
+# public catalog is owned by manus-to-live.yml, which rebuilds it from the
+# merged SQLite DB. To get a backfill onto the live site, run
+# "Neon Export (DR capture)" after this — it publishes a neon-export-* release
+# that manus-to-live.yml merges and deploys. refresh_catalog=true also deploys
+# directly from Neon, but that output is overwritten by the next merge.
 #
 # Run: Actions → "Ikman Deep Backfill" → Run workflow
 #   start_page: 1 for newest / 201 to continue after a previous 200-page run
@@ -27,9 +31,9 @@ on:
         type: string
         default: "1"
       refresh_catalog:
-        description: "Refresh public listing catalog (full DB read — weekly cadence)"
+        description: "Deploy snapshots straight from Neon. Leave OFF: manus-to-live.yml owns the public catalog and will overwrite these within 6h. For a durable backfill run 'Neon Export' afterwards — it publishes a neon-export-* release that manus-to-live merges into the merged SQLite."
         type: boolean
-        default: true
+        default: false
 
 concurrency:
   group: ikman-bulk-backfill
@@ -82,6 +86,8 @@ jobs:
           ALLOW_SQLITE_FALLBACK: "false"
           SCRAPE_PROFILE: "all"
           SCRAPE_ENABLED_SOURCES: "ikman"
+          SOURCES_ENABLED: ${{ vars.SOURCES_ENABLED }}
+          BOT_CONTACT: ${{ vars.BOT_CONTACT }}
           RUN_SCRAPERS: "true"
           RUN_MARKET_ANALYSIS: "false"
           RUN_MARKET_SIGNALS: "false"
@@ -93,7 +99,7 @@ jobs:
           SCRAPE_SOURCE_TIMEOUT_SECONDS: "10800"
           SCRAPE_SOURCE_TIMEOUT_SECONDS_IKMAN: "10800"
           # API mode only — no Playwright fallback (faster, cheaper, less risk).
-          IKMAN_SCRAPE_MODE: "api"
+          # api.ikman.lk is no longer used; ikman runs only if SOURCES_ENABLED opts it in.
         run: python run_sync.py
 
       - name: Count ikman listings after

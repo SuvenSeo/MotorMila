@@ -681,6 +681,10 @@ def test_district_prices_endpoint_serves_stale_cache_on_compute_failure(monkeypa
 
 def test_trends_endpoint_returns_cached_on_hit(monkeypatch):
     db = _session()
+    # Anonymous MagicMock() requests are free-teased (plan=None -> free
+    # tier) since the CSRF/free-tease fix; force a non-free plan so this
+    # test exercises cache read-through, not the free-tier month cap.
+    monkeypatch.setattr(stats_module, "resolve_request_access", lambda *a, **k: ("pro", "user"))
     cache_key = build_trends_cache_key(
         make="toyota",
         model="vitz",
@@ -707,8 +711,9 @@ def test_trends_endpoint_returns_cached_on_hit(monkeypatch):
     assert result["coverage_scope"] == "exact"
 
 
-def test_trends_endpoint_stores_on_miss():
+def test_trends_endpoint_stores_on_miss(monkeypatch):
     db = _session()
+    monkeypatch.setattr(stats_module, "resolve_request_access", lambda *a, **k: ("pro", "user"))
     cache_key = build_trends_cache_key(
         make="toyota",
         model="vitz",
@@ -727,6 +732,7 @@ def test_trends_endpoint_stores_on_miss():
 
 def test_trends_endpoint_serves_stale_on_compute_failure(monkeypatch):
     db = _session()
+    monkeypatch.setattr(stats_module, "resolve_request_access", lambda *a, **k: ("pro", "user"))
     cache_key = build_trends_cache_key(
         make=None,
         model=None,

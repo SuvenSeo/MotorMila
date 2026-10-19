@@ -1,4 +1,4 @@
-const WATCHLIST_KEY = "autolens.watchlist.ids";
+const WATCHLIST_KEY = "motormila.watchlist.ids";
 
 function normalizeIds(ids: number[]): number[] {
   return ids.filter((id) => Number.isInteger(id) && id > 0);

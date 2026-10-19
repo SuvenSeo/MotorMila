@@ -22,7 +22,9 @@ import urllib.request
 from pathlib import Path
 
 DUMP_PREFIXES = ("manus-scrape-", "neon-export-", "laptop-db-")
-ASSET_NAME = "autolens.db.gz"
+# Preferred dump asset first; the legacy name is still accepted so
+# pre-rename releases keep merging through the transition.
+DUMP_ASSET_NAMES = ("motormila.db.gz", "autolens.db.gz")
 TS_RE = re.compile(r"(\d{8}T\d{4,6}Z?)")
 USER_AGENT = "manus-to-live"
 
@@ -71,7 +73,16 @@ def paginate_github_releases(
 
 def _has_dump_asset(release: dict) -> bool:
     names = {asset.get("name") for asset in release.get("assets") or []}
-    return ASSET_NAME in names
+    return any(name in names for name in DUMP_ASSET_NAMES)
+
+
+def preferred_dump_asset(release: dict) -> str | None:
+    """Return the dump asset name to download, preferring the new name."""
+    names = {asset.get("name") for asset in release.get("assets") or []}
+    for name in DUMP_ASSET_NAMES:
+        if name in names:
+            return name
+    return None
 
 
 def list_dump_candidates(releases: list[dict]) -> list[tuple[str, str]]:
@@ -109,7 +120,7 @@ def select_dumps_to_merge(
     if force_tag:
         if force_tag not in ts_by_tag:
             print(
-                f"ERROR: release-tag {force_tag} not found (or lacks an {ASSET_NAME} asset)",
+                f"ERROR: release-tag {force_tag} not found (or lacks a dump asset: {"/".join(DUMP_ASSET_NAMES)})",
                 file=sys.stderr,
             )
             raise SystemExit(1)

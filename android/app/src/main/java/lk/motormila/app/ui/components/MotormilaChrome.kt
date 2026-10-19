@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
@@ -64,15 +63,19 @@ import lk.motormila.app.ui.theme.MotormilaOnSurface
 import lk.motormila.app.ui.theme.MotormilaOutline
 import lk.motormila.app.ui.theme.MotormilaPill
 import lk.motormila.app.ui.theme.MotormilaPrimary
+import lk.motormila.app.ui.theme.MotormilaPrimaryBorder
 import lk.motormila.app.ui.theme.MotormilaPrimaryBright
+import lk.motormila.app.ui.theme.MotormilaPrimarySoft
+import lk.motormila.app.ui.theme.MotormilaRadius
 import lk.motormila.app.ui.theme.MotormilaSecondaryText
 import lk.motormila.app.ui.theme.MotormilaSurface
 import lk.motormila.app.ui.theme.applePress
 import lk.motormila.app.ui.theme.appleTween
 import lk.motormila.app.ui.theme.fluidSpring
 import lk.motormila.app.ui.theme.liquidGlass
+import lk.motormila.app.ui.theme.rememberHaptics
 
-val MotormilaCardShape = RoundedCornerShape(28.dp)
+val MotormilaCardShape = MotormilaRadius.lg
 
 /** Signature context capsule — `MARKET PULSE`, `BEST PICKS`. */
 @Composable
@@ -87,17 +90,17 @@ fun MotormilaEyebrow(
             .clip(CircleShape)
             .background(MotormilaSurface)
             .border(
-                0.5.dp,
+                1.dp,
                 if (accent) Color(0x440A7AFF) else MotormilaGlassBorder,
                 CircleShape,
             )
-            .padding(horizontal = 10.dp, vertical = 5.dp),
+            .padding(horizontal = 12.dp, vertical = 6.dp),
     ) {
         Box(
             modifier = Modifier
                 .size(6.dp)
                 .clip(CircleShape)
-                .background(if (accent) MotormilaPrimaryBright else Color(0xFF10B981)),
+                .background(if (accent) MotormilaPrimaryBright else Color(0xFF00C853)),
         )
         Spacer(Modifier.width(6.dp))
         Text(
@@ -195,14 +198,16 @@ fun MotormilaSectionHeader(
                 overflow = TextOverflow.Ellipsis,
             )
             if (action != null && onAction != null) {
+                val actionPress = remember { MutableInteractionSource() }
                 Text(
                     text = action,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MotormilaPrimaryBright,
                     modifier = Modifier
+                        .applePress(actionPress)
                         .clip(CircleShape)
-                        .clickable(onClick = onAction)
+                        .clickable(interactionSource = actionPress, indication = null, onClick = onAction)
                         .padding(horizontal = 8.dp, vertical = 6.dp)
                         .semantics { contentDescription = action },
                 )
@@ -224,8 +229,8 @@ fun MotormilaSurface(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val shape = MotormilaCardShape
-    val fill = if (highlighted) Color(0x1A0A7AFF) else MotormilaGlassFillStrong
-    val border = if (highlighted) Color(0x550A7AFF) else MotormilaGlassBorder
+    val fill = if (highlighted) MotormilaPrimarySoft else MotormilaGlassFillStrong
+    val border = if (highlighted) MotormilaPrimaryBorder else MotormilaGlassBorder
     val clickMod = if (onClick != null) {
         Modifier
             .applePress(interaction)
@@ -255,8 +260,8 @@ fun MotormilaGlass(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val shape = MotormilaCardShape
-    val fill = if (highlighted) Color(0x1A0A7AFF) else MotormilaGlassFillStrong
-    val border = if (highlighted) Color(0x550A7AFF) else MotormilaGlassBorder
+    val fill = if (highlighted) MotormilaPrimarySoft else MotormilaGlassFillStrong
+    val border = if (highlighted) MotormilaPrimaryBorder else MotormilaGlassBorder
     val clickMod = if (onClick != null) {
         Modifier
             .applePress(interaction)
@@ -362,7 +367,7 @@ fun MotormilaPillTabs(
                 val isSelected = index == safeSelected
                 val interaction = remember(label) { MutableInteractionSource() }
                 val labelColor by animateColorAsState(
-                    targetValue = if (isSelected) Color.White else MotormilaSecondaryText,
+                    targetValue = if (isSelected) MotormilaOnSurface else MotormilaSecondaryText,
                     animationSpec = appleTween(220),
                     label = "pill-label",
                 )
@@ -436,7 +441,7 @@ fun MotormilaChipTabs(
                     .applePress(interaction, pressedScale = 0.96f)
                     .clip(CircleShape)
                     .background(fill)
-                    .border(0.5.dp, border, CircleShape)
+                    .border(1.dp, border, CircleShape)
                     .clickable(
                         interactionSource = interaction,
                         indication = null,
@@ -450,7 +455,7 @@ fun MotormilaChipTabs(
                     text = label,
                     fontSize = 13.sp,
                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                    color = if (isSelected) Color.White else MotormilaOnSurface,
+                    color = if (isSelected) MotormilaOnSurface else MotormilaOnSurface,
                     maxLines = 1,
                 )
             }
@@ -468,6 +473,7 @@ fun MotormilaChoiceChip(
     compact: Boolean = false,
     leadingIcon: ImageVector? = null,
 ) {
+    val haptics = rememberHaptics()
     val interaction = remember(label) { MutableInteractionSource() }
     val fill by animateColorAsState(
         targetValue = when {
@@ -483,7 +489,7 @@ fun MotormilaChoiceChip(
         label = "choice-border",
     )
     val labelColor by animateColorAsState(
-        targetValue = if (selected) Color.White else if (enabled) MotormilaOnSurface else MotormilaSecondaryText,
+        targetValue = if (selected) MotormilaOnSurface else if (enabled) MotormilaOnSurface else MotormilaSecondaryText,
         animationSpec = appleTween(200),
         label = "choice-label",
     )
@@ -502,12 +508,12 @@ fun MotormilaChoiceChip(
             .applePress(interaction, pressedScale = 0.96f)
             .clip(CircleShape)
             .background(if (enabled) fill else fill.copy(alpha = 0.45f))
-            .border(0.5.dp, border, CircleShape)
+            .border(1.dp, border, CircleShape)
             .clickable(
                 enabled = enabled,
                 interactionSource = interaction,
                 indication = null,
-                onClick = onClick,
+                onClick = { haptics.tick(); onClick() },
             )
             .padding(horizontal = if (compact) 12.dp else 14.dp)
             .semantics { contentDescription = label }
@@ -551,8 +557,8 @@ fun MotormilaPrimaryButton(
     Box(
         modifier = modifier
             .then(if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier)
-            .heightIn(min = 52.dp)
-            .then(if (fillMaxWidth) Modifier else Modifier.padding(horizontal = 18.dp))
+            .heightIn(min = 48.dp)
+            .then(if (fillMaxWidth) Modifier else Modifier.padding(horizontal = 16.dp))
             .applePress(interaction, pressedScale = 0.97f)
             .clip(CircleShape)
             .background(if (canClick) MotormilaPrimary else MotormilaPrimary.copy(alpha = 0.35f))
@@ -567,7 +573,7 @@ fun MotormilaPrimaryButton(
                     color = Color.White,
                     modifier = Modifier.size(16.dp),
                 )
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(8.dp))
             } else if (leadingIcon != null) {
                 Icon(
                     leadingIcon,
@@ -581,7 +587,7 @@ fun MotormilaPrimaryButton(
                 text = label,
                 color = Color.White,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 15.sp,
+                fontSize = 14.sp,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -604,7 +610,7 @@ fun MotormilaGhostButton(
             .heightIn(min = 48.dp)
             .applePress(interaction, pressedScale = 0.97f)
             .clip(CircleShape)
-            .border(0.5.dp, MotormilaGlassBorder, CircleShape)
+            .border(1.dp, MotormilaGlassBorder, CircleShape)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
             .semantics { contentDescription = label },
         contentAlignment = Alignment.Center,
@@ -646,7 +652,7 @@ fun MotormilaListRow(
             .applePress(interaction)
             .clip(MotormilaCardShape)
             .background(MotormilaSurface)
-            .border(0.5.dp, MotormilaOutline, MotormilaCardShape)
+            .border(1.dp, MotormilaOutline, MotormilaCardShape)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp)
             .semantics { contentDescription = "Open $title" },
@@ -657,7 +663,7 @@ fun MotormilaListRow(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(Color(0x1A0A7AFF)),
+                    .background(MotormilaPrimarySoft),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(icon, contentDescription = null, tint = MotormilaPrimaryBright, modifier = Modifier.size(18.dp))
@@ -727,9 +733,9 @@ fun MotormilaMetricTile(
 ) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(22.dp))
+            .clip(MotormilaRadius.md)
             .background(MotormilaSurface)
-            .border(0.5.dp, MotormilaOutline, RoundedCornerShape(22.dp))
+            .border(1.dp, MotormilaOutline, MotormilaRadius.md)
             .padding(horizontal = 12.dp, vertical = 12.dp),
     ) {
         Text(
@@ -742,13 +748,49 @@ fun MotormilaMetricTile(
         Spacer(Modifier.height(4.dp))
         Text(
             text = value,
-            fontSize = 16.sp,
+            // Long values (e.g. "ENTERPRISE") shrink instead of truncating —
+            // a metric tile must never ellipsis its headline value.
+            fontSize = if (value.length > 8) 13.sp else 16.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = FontFamily.SansSerif,
             color = MotormilaOnSurface,
-            maxLines = 1,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
+        if (!note.isNullOrBlank()) {
+            Spacer(Modifier.height(2.dp))
+            Text(note, fontSize = 11.sp, color = MotormilaSecondaryText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+/**
+ * [MotormilaMetricTile] variant whose value is a composable — used for animated
+ * values such as the per-digit [NumberTicker].
+ */
+@Composable
+fun MotormilaMetricTile(
+    label: String,
+    modifier: Modifier = Modifier,
+    note: String? = null,
+    valueContent: @Composable () -> Unit,
+) {
+    Column(
+        modifier = modifier
+            .clip(MotormilaRadius.md)
+            .background(MotormilaSurface)
+            .border(1.dp, MotormilaOutline, MotormilaRadius.md)
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+    ) {
+        Text(
+            text = label.uppercase(),
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.8.sp,
+            color = MotormilaSecondaryText,
+        )
+        Spacer(Modifier.height(4.dp))
+        valueContent()
         if (!note.isNullOrBlank()) {
             Spacer(Modifier.height(2.dp))
             Text(note, fontSize = 11.sp, color = MotormilaSecondaryText, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -861,7 +903,7 @@ fun MotormilaGroup(
             .fillMaxWidth()
             .clip(MotormilaCardShape)
             .background(MotormilaSurface)
-            .border(0.5.dp, MotormilaOutline, MotormilaCardShape),
+            .border(1.dp, MotormilaOutline, MotormilaCardShape),
         content = content,
     )
 }

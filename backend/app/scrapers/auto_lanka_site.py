@@ -5,11 +5,14 @@ from urllib.parse import quote, urljoin
 
 import httpx
 import structlog
+
+from app.scrapers.polite import BOT_USER_AGENT
 from bs4 import BeautifulSoup
 from sqlalchemy.orm import Session
 
 from app.scrapers.cleaner import CarCleaner
-from app.scrapers.page_budget import page_budget_for_category
+from app.scrapers.net import httpx_client_kwargs
+from app.scrapers.page_budget import page_budget_for_category, start_page_from_env
 from app.utils.listing_upsert import buffered_upsert_listing, flush_upsert_buffer
 from app.utils.time import utc_now
 
@@ -88,19 +91,16 @@ class AutoLankaSiteScraper:
 
     async def scrape(self, max_pages: int = 5):
         headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/124.0.0.0 Safari/537.36"
-            )
+            "User-Agent": BOT_USER_AGENT
         }
-        async with httpx.AsyncClient(headers=headers, follow_redirects=True) as client:
+        async with httpx.AsyncClient(follow_redirects=True, **httpx_client_kwargs(headers)) as client:
             seen_urls: set[str] = set()
+            start_page = start_page_from_env(self.SOURCE)
             for vehicle_type in self.VEHICLE_TYPES:
                 page_limit = self._page_budget_for_type(vehicle_type, max_pages)
                 consecutive_empty_pages = 0
                 consecutive_page_errors = 0
-                for page_num in range(1, page_limit + 1):
+                for page_num in range(start_page, start_page + page_limit):
                     url = self._build_page_url(vehicle_type, page_num)
                     log.info(
                         "scraping_page",

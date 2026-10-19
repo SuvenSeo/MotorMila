@@ -405,11 +405,11 @@ def test_autodirect_scraper_uses_direct_api_strategy():
     assert "api.autodirect.lk" in text
 
 
-def test_ikman_scraper_uses_public_json_api_with_playwright_fallback():
+def test_ikman_scraper_reads_public_html_only():
     source = Path(__file__).resolve().parents[1] / "app" / "scrapers" / "ikman.py"
     text = source.read_text(encoding="utf-8")
 
-    assert "api.ikman.lk" in text
+    assert "https://api.ikman.lk" not in text
     assert "CARS_CATEGORY_ID = 392" in text
     assert "VEHICLE_CATEGORY_IDS" in text
     assert "402" in text  # Motorbikes
@@ -417,9 +417,10 @@ def test_ikman_scraper_uses_public_json_api_with_playwright_fallback():
     assert "393" not in text  # Auto Parts excluded
     assert "405" not in text  # Auto Services excluded
     assert "406" not in text  # Rentals excluded
-    assert "_scrape_via_api" in text
+    assert "_scrape_via_api" not in text
     assert "_scrape_via_playwright" in text
-    assert "IKMAN_SCRAPE_MODE" in text
+    assert "source_enabled" in text
+    assert "polite_goto" in text
 
 
 def test_marketplace_scrapers_are_multi_vehicle():

@@ -13,7 +13,9 @@ import structlog
 
 log = structlog.get_logger()
 
-ESANA_RECENT_URL = "https://esana-api.vercel.app/EsanaV3/GetRecentNews"
+# The community mirror renamed its route: /EsanaV3/GetRecentNews 404s.
+# Current route is GET /EsanaV3 (307-redirects; httpx follows it).
+ESANA_RECENT_URL = "https://esana-api.vercel.app/EsanaV3"
 
 VEHICLE_KEYWORDS = (
     "vehicle",
@@ -53,7 +55,17 @@ def _pick_items(payload: Any) -> list[dict[str, Any]]:
 def _matches_vehicle_topic(row: dict[str, Any]) -> bool:
     haystack = " ".join(
         str(row.get(key) or "")
-        for key in ("title", "title_en", "Title", "TitleEn", "description", "Description", "summary")
+        for key in (
+            "title",
+            "title_en",
+            "Title",
+            "TitleEn",
+            "titleEn",
+            "titleSi",
+            "description",
+            "Description",
+            "summary",
+        )
     ).lower()
     return any(keyword.lower() in haystack for keyword in VEHICLE_KEYWORDS)
 
@@ -77,7 +89,15 @@ def fetch_vehicle_policy_news(*, limit: int = 8) -> list[dict[str, Any]]:
     normalized: list[dict[str, Any]] = []
     for row in selected:
         news_id = row.get("id") or row.get("Id") or row.get("news_id")
-        title = row.get("title_en") or row.get("TitleEn") or row.get("title") or row.get("Title") or "News"
+        title = (
+            row.get("title_en")
+            or row.get("TitleEn")
+            or row.get("titleEn")
+            or row.get("title")
+            or row.get("Title")
+            or row.get("titleSi")
+            or "News"
+        )
         thumb = row.get("thumb") or row.get("Thumb") or row.get("image") or None
         normalized.append(
             {

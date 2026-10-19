@@ -1,9 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, BarChart2, Car, MapPin } from "lucide-react";
-import { getMakeInsight, getListings, formatPrice } from "@/services/api";
+import { ArrowRight, BarChart2, Car, MapPin, Search } from "lucide-react";
+import { getMakeInsight, getListings, getModels, formatPrice } from "@/services/api";
 import { revealContainer, revealItem } from "@/lib/motion";
 import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
@@ -91,6 +91,30 @@ export default function MakeHub() {
   const isPending = insightQuery.isPending;
   const recentListings = listingsQuery.data?.listings?.slice(0, 4) ?? [];
 
+  // Full model browser: prefer the endpoint's cleaned all_models; fall back
+  // to the snapshot model list so older backends still show every model.
+  const [modelFilter, setModelFilter] = useState("");
+  const fallbackModelsQuery = useQuery({
+    queryKey: ["models", makeParam],
+    queryFn: () => getModels(makeParam),
+    enabled: Boolean(makeParam) && !insight?.all_models?.length,
+    staleTime: QUERY_STALE.hub,
+  });
+  const allModels = useMemo(() => {
+    if (insight?.all_models?.length) return insight.all_models;
+    return (fallbackModelsQuery.data ?? []).map((row) => ({
+      model: row.model,
+      count: row.count,
+      avg_price_lkr: null as number | null,
+    }));
+  }, [insight?.all_models, fallbackModelsQuery.data]);
+  const visibleModels = useMemo(() => {
+    const q = modelFilter.trim().toLowerCase();
+    if (!q) return allModels;
+    return allModels.filter((entry) => entry.model.toLowerCase().includes(q));
+  }, [allModels, modelFilter]);
+  const popularModels = insight?.top_models ?? [];
+
   return (
     <PageCanvas>
       <PageHero
@@ -110,14 +134,24 @@ export default function MakeHub() {
                 label: t("makeHub.liveListings", "Live listings"),
                 value: isPending ? "…" : insight ? insight.total.toLocaleString() : t("common.na", "N/A"),
               },
-              {
-                label: t("makeHub.avgPrice", "Average price"),
-                value: isPending ? "…" : formatPrice(insight?.avg_price_lkr ?? null),
-              },
-              {
-                label: t("makeHub.medianPrice", "Median price"),
-                value: isPending ? "…" : formatPrice(insight?.median_price_lkr ?? null),
-              },
+              // Price stats only render when the data has them; a snapshot
+              // derived without prices shows just the live-listings card.
+              ...(isPending || insight?.avg_price_lkr != null
+                ? [
+                    {
+                      label: t("makeHub.avgPrice", "Average price"),
+                      value: isPending ? "…" : formatPrice(insight?.avg_price_lkr ?? null),
+                    },
+                  ]
+                : []),
+              ...(isPending || insight?.median_price_lkr != null
+                ? [
+                    {
+                      label: t("makeHub.medianPrice", "Median price"),
+                      value: isPending ? "…" : formatPrice(insight?.median_price_lkr ?? null),
+                    },
+                  ]
+                : []),
             ].map((card) => (
               <div key={card.label} className="bg-card p-6">
                 <p className="text-[12px] font-semibold text-muted-foreground">
@@ -129,11 +163,11 @@ export default function MakeHub() {
           </div>
         </section>
 
-        {insight && insight.top_models.length > 0 && (
+        {popularModels.length > 0 && (
           <motion.section variants={revealItem}>
             <SectionHeader eyebrow={t("makeHub.models", "Models")} title={t("makeHub.popularModels", "Popular {make} models", { make: canonicalMake })} className="mb-8" />
             <motion.div variants={revealContainer} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {insight.top_models.map((entry) => (
+              {popularModels.map((entry) => (
                 <Link
                   key={entry.model}
                   to={`/cars/${encodeURIComponent(makeParam)}/${encodeURIComponent(entry.model)}`}
@@ -145,12 +179,56 @@ export default function MakeHub() {
                       {entry.count}
                     </span>
                   </div>
-                  <p className="num mt-3 text-lg font-bold tracking-tight text-foreground">
-                    {entry.avg_price_lkr != null ? formatPrice(entry.avg_price_lkr) : t("common.priceNa", "Price N/A")}
-                  </p>
+                  {entry.avg_price_lkr != null && (
+                    <p className="num mt-3 text-lg font-bold tracking-tight text-foreground">
+                      {formatPrice(entry.avg_price_lkr)}
+                    </p>
+                  )}
                 </Link>
               ))}
             </motion.div>
+          </motion.section>
+        )}
+
+        {allModels.length > 0 && (
+          <motion.section variants={revealItem}>
+            <SectionHeader
+              eyebrow={t("makeHub.allModelsEyebrow", "Browse")}
+              title={t("makeHub.allModels", "All {make} models", { make: canonicalMake })}
+              className="mb-8"
+            />
+            {allModels.length > 12 && (
+              <div className="relative mb-6 max-w-sm">
+                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                <input
+                  value={modelFilter}
+                  onChange={(e) => setModelFilter(e.target.value)}
+                  placeholder={t("makeHub.findModel", "Find a model…")}
+                  aria-label={t("makeHub.findModel", "Find a model…")}
+                  className="h-11 w-full rounded-xl border border-border bg-surface pl-10 pr-4 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/40"
+                />
+              </div>
+            )}
+            {visibleModels.length > 0 ? (
+              <motion.div variants={revealContainer} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {visibleModels.map((entry) => (
+                  <Link
+                    key={entry.model}
+                    to={`/cars/${encodeURIComponent(makeParam)}/${encodeURIComponent(entry.model)}`}
+                    className="group flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 no-underline"
+                  >
+                    <p className="text-[14px] font-bold tracking-tight text-foreground">{entry.model}</p>
+                    <span className="num shrink-0 rounded-full border border-border bg-surface px-2.5 py-0.5 text-[10px] font-bold text-muted-foreground">
+                      {entry.count}
+                    </span>
+                  </Link>
+                ))}
+              </motion.div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {t("makeHub.noModelMatch", "No models match “{q}”.", { q: modelFilter.trim() })}
+              </p>
+            )}
           </motion.section>
         )}
 

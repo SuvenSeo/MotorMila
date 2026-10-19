@@ -8,10 +8,10 @@ import { AppPreferencesProvider } from "@/lib/appPreferences";
 function installLocalStorage(seed?: Record<string, unknown>, token?: string) {
   const store = new Map<string, string>();
   if (seed) {
-    store.set("autolens.auth_user", JSON.stringify(seed));
+    store.set("motormila.auth_user", JSON.stringify(seed));
   }
   if (token) {
-    store.set("autolens.auth_token", token);
+    store.set("motormila.auth_token", token);
   }
 
   const storage = {
@@ -59,7 +59,7 @@ describe("Pro access gate", () => {
 
   it("blocks signed-in free users from the Pro dashboard", () => {
     installLocalStorage({
-      email: "free@autolens.lk",
+      email: "free@motormila.lk",
       name: "Free User",
       plan: "free",
       subscriptionStatus: "none",
@@ -75,7 +75,7 @@ describe("Pro access gate", () => {
 
   it("allows active Pro subscribers into the dashboard", () => {
     installLocalStorage({
-      email: "owner@autolens.lk",
+      email: "owner@motormila.lk",
       name: "Motormila Owner",
       plan: "enterprise",
       subscriptionStatus: "active",
@@ -142,7 +142,7 @@ describe("Pro access gate", () => {
 
     installLocalStorage(
       {
-        email: "owner@autolens.lk",
+        email: "owner@motormila.lk",
         name: "Motormila Owner",
         plan: "enterprise",
         subscriptionStatus: "active",

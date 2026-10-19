@@ -21,6 +21,47 @@ log = structlog.get_logger()
 # public "newest" grid keeps surfacing the same dealer stock.
 _UPDATE_IMMUTABLE_KEYS = frozenset({"id", "first_seen_at", "source", "source_id"})
 
+# Columns that must never be overwritten with an empty value on update.
+# ``images`` is only populated by scrapers that enumerate full galleries; an
+# older dump (or a scraper that only knows the thumbnail) carries NULL, and
+# writing that would wipe a gallery the merged DB already has.
+_UPDATE_SKIP_EMPTY_KEYS = frozenset({"images"})
+
+# A re-scrape often knows less than an earlier one (list page vs detail page,
+# "Negotiable" price, thumbnail-only feed). On update, a missing value never
+# replaces a known one: None / "" / placeholder values are skipped for every
+# column. Columns where "unknown" is spelled as a placeholder string:
+_PLACEHOLDER_VALUES = {
+    "model": {"other", "unknown", ""},
+    "district": {"sri lanka", ""},
+}
+
+
+def _is_empty_update(key: str, value, current) -> bool:
+    """True when writing ``value`` over ``current`` would lose information."""
+    if value is None:
+        return True
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return True
+        if key in ("thumbnail_url",) and stripped.startswith("data:"):
+            return True
+        placeholders = _PLACEHOLDER_VALUES.get(key)
+        if placeholders and stripped.lower() in placeholders and current not in (None, ""):
+            return True
+    if isinstance(value, (list, dict)) and not value:
+        return True
+    return False
+
+
+def _naive(value):
+    if value is None or getattr(value, "tzinfo", None) is None:
+        return value
+    from datetime import timezone
+
+    return value.astimezone(timezone.utc).replace(tzinfo=None)
+
 
 def _as_decimal(value) -> Decimal | None:
     if value is None:
@@ -112,12 +153,22 @@ def flush_upsert_buffer(scraper) -> None:
     scraper._upsert_buffer = []
 
 
-def upsert_listing(db: Session, source: str, payload: dict) -> bool:
+def upsert_listing(
+    db: Session,
+    source: str,
+    payload: dict,
+    *,
+    preserve_lifecycle: bool = False,
+) -> bool:
     """Insert or update a listing keyed on (source, source_id).
 
     Returns True when a new listing was created, False on update.
     Records a ``vehicle_price_history`` row on first sighting and whenever
     the price changes on re-scrape.
+
+    When *preserve_lifecycle* is True (dump-merge path), do NOT force
+    ``is_active=True`` or stamp ``last_seen_at=now()`` — merging an old dump
+    must not resurrect lifecycle-deactivated listings or falsify freshness.
     """
     existing = (
         db.query(CarListing)
@@ -129,18 +180,38 @@ def upsert_listing(db: Session, source: str, payload: dict) -> bool:
     )
 
     if existing:
+        # Dump merges can replay an older sighting after a newer one already
+        # landed; an older observation must never overwrite newer data.
+        incoming_seen = _naive(payload.get("scraped_at"))
+        current_seen = _naive(existing.scraped_at)
+        if (
+            preserve_lifecycle
+            and incoming_seen is not None
+            and current_seen is not None
+            and incoming_seen < current_seen
+        ):
+            return False
+
         old_price = _as_decimal(existing.price_lkr)
         was_active = bool(existing.is_active)
         for key, value in payload.items():
             if key in _UPDATE_IMMUTABLE_KEYS:
                 continue
+            if key in _UPDATE_SKIP_EMPTY_KEYS and not value:
+                # Never let an older dump / thumbnail-only scrape wipe a
+                # gallery the row already has.
+                continue
+            if _is_empty_update(key, value, getattr(existing, key, None)):
+                # Never replace known data with NULL / "" / a placeholder.
+                continue
             setattr(existing, key, value)
-        existing.last_seen_at = utc_now()
-        existing.is_active = True  # re-sighted at source: live again
+        if not preserve_lifecycle:
+            existing.last_seen_at = utc_now()
+            existing.is_active = True  # re-sighted at source: live again
 
         new_price = _as_decimal(payload.get("price_lkr"))
         price_changed = new_price is not None and new_price != old_price
-        status_changed = not was_active  # flipped inactive → active
+        status_changed = not preserve_lifecycle and not was_active  # flipped inactive → active
         if price_changed:
             _record_price_point(db, existing.id, new_price)
             log.info(

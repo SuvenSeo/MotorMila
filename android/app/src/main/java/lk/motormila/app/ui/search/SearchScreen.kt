@@ -4,8 +4,9 @@ import android.app.Activity
 import android.speech.RecognizerIntent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,7 +23,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddAlert
 import androidx.compose.material.icons.filled.FilterList
@@ -42,16 +42,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.res.stringResource
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import kotlinx.coroutines.launch
@@ -60,16 +60,23 @@ import lk.motormila.app.ui.components.EmptyState
 import lk.motormila.app.ui.components.ErrorState
 import lk.motormila.app.ui.components.FilterSheet
 import lk.motormila.app.ui.components.ListingCard
+import lk.motormila.app.ui.components.ListingImage
 import lk.motormila.app.ui.components.LoadingSkeletonCard
 import lk.motormila.app.ui.components.MotormilaChoiceChip
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
+import lk.motormila.app.R
 import lk.motormila.app.ui.components.OfflineBanner
 import lk.motormila.app.ui.components.SearchBar
-import lk.motormila.app.ui.components.rememberReducedMotion
+import lk.motormila.app.ui.components.cascadeDelay
+import lk.motormila.app.ui.navigation.LocalNavAnimatedVisibilityScope
+import lk.motormila.app.ui.navigation.LocalSharedTransitionScope
+import lk.motormila.app.ui.theme.MotormilaRadius
+import lk.motormila.app.ui.theme.applePress
+import lk.motormila.app.ui.theme.motormilaReveal
+import lk.motormila.app.ui.components.motormilaSharedBoundsTransform
 import lk.motormila.app.ui.scan.VoiceSearchHelper
 import lk.motormila.app.ui.scan.parseVoiceQuery
 import lk.motormila.app.ui.theme.MotormilaGlassFillStrong
-import lk.motormila.app.ui.theme.fluidSpring
 import lk.motormila.app.ui.theme.liquidGlass
 
 /**
@@ -86,7 +93,7 @@ fun SearchScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val items = viewModel.paging.collectAsLazyPagingItems()
-    val reducedMotion = rememberReducedMotion()
+    val fromSnapshot by viewModel.fromSnapshot.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val isRefreshing = items.loadState.refresh is LoadState.Loading
@@ -139,7 +146,13 @@ fun SearchScreen(
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             if (items.loadState.refresh is LoadState.Error) {
-                OfflineBanner(visible = true)
+                OfflineBanner(visible = true, onRetry = { items.refresh() })
+            } else if (fromSnapshot) {
+                OfflineBanner(
+                    visible = true,
+                    text = stringResource(R.string.offline_snapshot_banner),
+                    onRetry = { items.refresh() },
+                )
             }
             SearchBar(
                 query = state.query,
@@ -181,7 +194,7 @@ fun SearchScreen(
                     Spacer(Modifier.width(6.dp))
                     Text(
                         "Free plan · newest first — Pro unlocks deal-score sort",
-                        fontSize = 12.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -240,7 +253,7 @@ fun SearchScreen(
                             ) { i ->
                                 val listing = items[i]
                                 if (listing != null) {
-                                    StaggeredItem(index = i, reducedMotion = reducedMotion) {
+                                    StaggeredItem(index = i) {
                                         ListingCard(
                                             listing = listing,
                                             isWatched = false,
@@ -275,11 +288,18 @@ fun SearchScreen(
 
         // Compare tray (max 3).
         if (state.compareIds.isNotEmpty()) {
+            val compareThumbs = remember(state.compareIds, items.itemSnapshotList) {
+                val byId = items.itemSnapshotList.items.filterNotNull().associateBy { it.id }
+                state.compareIds.mapNotNull { id ->
+                    byId[id]?.let { CompareThumb(id = it.id, imageUrl = it.heroImageUrl) }
+                }
+            }
             CompareTray(
                 count = state.compareIds.size,
                 onCompare = { onCompare(state.compareIds) },
                 onClear = viewModel::clearCompare,
                 modifier = Modifier.align(Alignment.BottomCenter),
+                thumbnails = compareThumbs,
             )
         }
         SnackbarHost(snackbar, modifier = Modifier.align(Alignment.BottomCenter))
@@ -339,31 +359,15 @@ private fun SortFilterRow(
 }
 
 /**
- * First-8 stagger: 35ms per index fade+rise in graphicsLayer (no layout
- * pass). Skipped entirely when reduced motion is on or index >= 8.
+ * Result-row stagger on the house pattern: [motormilaReveal] with
+ * [cascadeDelay] (45ms steps, capped at the 700ms entrance window).
+ * Reduced motion is handled inside the modifier.
  */
 @Composable
-private fun StaggeredItem(index: Int, reducedMotion: Boolean, content: @Composable () -> Unit) {
-    if (reducedMotion || index >= 8) {
+private fun StaggeredItem(index: Int, content: @Composable () -> Unit) {
+    Box(Modifier.motormilaReveal(delayMillis = cascadeDelay(index))) {
         content()
-        return
     }
-    val shown = remember { androidx.compose.runtime.mutableStateOf(false) }
-    LaunchedEffect(index) {
-        kotlinx.coroutines.delay(index * 35L)
-        shown.value = true
-    }
-    val alpha by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (shown.value) 1f else 0f,
-        animationSpec = fluidSpring(),
-        label = "stagger-alpha",
-    )
-    Box(
-        Modifier.graphicsLayer {
-            this.alpha = alpha
-            translationY = (1f - alpha) * 24f
-        },
-    ) { content() }
 }
 
 @Composable
@@ -384,27 +388,41 @@ private fun CompareToggleRow(selected: Boolean, enabled: Boolean, onToggle: () -
 }
 
 @Composable
-private fun CompareTray(count: Int, onCompare: () -> Unit, onClear: () -> Unit, modifier: Modifier = Modifier) {
+private fun CompareTray(
+    count: Int,
+    onCompare: () -> Unit,
+    onClear: () -> Unit,
+    modifier: Modifier = Modifier,
+    thumbnails: List<CompareThumb> = emptyList(),
+) {
     androidx.compose.material3.Surface(
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,
         color = Color.Transparent,
-        shape = RoundedCornerShape(28.dp),
+        shape = MotormilaRadius.lg,
         modifier = modifier
             .padding(16.dp)
-            .liquidGlass(RoundedCornerShape(28.dp), fill = MotormilaGlassFillStrong),
+            .liquidGlass(MotormilaRadius.lg, fill = MotormilaGlassFillStrong),
     ) {
         Row(
             Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("$count/$MAX_COMPARE_IDS selected", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.weight(1f))
+            // Selected-vehicle thumbnails — the fly-to-tray target end
+            // (spec §3 / §7.5, sharedElement key "compare-thumb-{id}").
+            thumbnails.forEach { thumb ->
+                CompareTrayThumb(thumb = thumb)
+                Spacer(Modifier.width(8.dp))
+            }
+            Text("$count/$MAX_COMPARE_IDS selected", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            val clearPress = remember { MutableInteractionSource() }
             Text(
                 "Clear",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
+                    .applePress(clearPress)
                     .heightIn(min = 48.dp)
-                    .clickable(onClick = onClear)
+                    .clickable(interactionSource = clearPress, indication = null, onClick = onClear)
                     .padding(horizontal = 12.dp, vertical = 8.dp),
             )
             Spacer(Modifier.width(8.dp))
@@ -416,4 +434,41 @@ private fun CompareTray(count: Int, onCompare: () -> Unit, onClear: () -> Unit, 
             )
         }
     }
+}
+
+/** Thumbnail shown in the compare tray for one selected listing. */
+private data class CompareThumb(val id: Int, val imageUrl: String?)
+
+/** Shared-transition key for the compare-tray thumbnail (grid → tray). */
+private fun compareThumbKey(listingId: Int): String = "compare-thumb-$listingId"
+
+/**
+ * One compare-tray thumbnail. Carries the sharedElement target end of the
+ * "compare-thumb-{id}" pair (spec §3 / §7.5) — the source end belongs on the
+ * originating grid card.
+ */
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+private fun CompareTrayThumb(thumb: CompareThumb) {
+    val sharedScope = LocalSharedTransitionScope.current
+    val animatedScope = LocalNavAnimatedVisibilityScope.current
+    val sharedMod = if (sharedScope != null && animatedScope != null) {
+        with(sharedScope) {
+            Modifier.sharedElement(
+                rememberSharedContentState(key = compareThumbKey(thumb.id)),
+                animatedScope,
+                boundsTransform = motormilaSharedBoundsTransform(),
+            )
+        }
+    } else {
+        Modifier
+    }
+    ListingImage(
+        model = thumb.imageUrl,
+        contentDescription = "Compared vehicle",
+        modifier = Modifier
+            .size(44.dp)
+            .clip(MotormilaRadius.xs)
+            .then(sharedMod),
+    )
 }
