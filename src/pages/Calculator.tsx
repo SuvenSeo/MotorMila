@@ -57,6 +57,7 @@ import {
   unsubscribeSurchargeLapseNotify,
 } from "@/lib/surchargeAlert";
 import { visuals } from "@/lib/visualAssets";
+import { formatLkrMonthly } from "@/lib/price";
 
 type TabType = "landed-cost" | "lease" | "tco" | "ownership" | "permits" | "depreciation";
 type FuelType = "petrol" | "diesel" | "hybrid" | "electric";
@@ -911,21 +912,21 @@ export default function Calculator() {
                       </div>
                       <div className="flex justify-between text-xs text-muted-foreground">
                         <span>Monthly fuel/energy consumption</span>
-                        <span className="font-semibold text-foreground num">{formatPrice(tcoResult.fuel_cost_monthly)}</span>
+                        <span className="font-semibold text-foreground num">{formatLkrMonthly(tcoResult.fuel_cost_monthly)}</span>
                       </div>
                       <div className="flex justify-between text-xs text-muted-foreground">
                         <span>Monthly lease installments</span>
-                        <span className="font-semibold text-foreground num">{formatPrice(tcoResult.lease_cost_monthly)}</span>
+                        <span className="font-semibold text-foreground num">{formatLkrMonthly(tcoResult.lease_cost_monthly)}</span>
                       </div>
                       <div className="flex justify-between text-xs text-muted-foreground">
                         <span>Amortized service, insurance, tyres & depreciation</span>
-                        <span className="font-semibold text-foreground num">{formatPrice(tcoResult.overhead_cost_monthly)}</span>
+                        <span className="font-semibold text-foreground num">{formatLkrMonthly(tcoResult.overhead_cost_monthly)}</span>
                       </div>
                     </div>
 
                     <div aria-live="polite" className="rounded-2xl border border-primary/25 bg-primary/5 p-6 text-center shadow-soft">
                       <span className="text-[12px] font-semibold text-primary-bright">{t("calc.tcoTotal", "Total ownership cost / month")}</span>
-                      <p className="display-1 text-foreground mt-2 num">{formatPrice(tcoResult.total_tco_monthly)}</p>
+                      <p className="display-1 text-foreground mt-2 num">{formatLkrMonthly(tcoResult.total_tco_monthly)}</p>
                     </div>
 
                     <div className="rounded-2xl bg-surface border border-border p-3 flex gap-2">

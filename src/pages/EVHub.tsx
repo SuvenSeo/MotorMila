@@ -29,6 +29,7 @@ import {
   hasFullPlatformAccess,
 } from "@/lib/planLimits";
 import { visuals } from "@/lib/visualAssets";
+import { groupThousands } from "@/lib/price";
 
 const EV_MODULE_DEFS = [
   { icon: Battery, step: "01", titleKey: "ev.module.battery", titleFb: "Battery health", descFb: "Degradation patterns, SoH benchmarks, and what to inspect before buying." },
@@ -228,7 +229,7 @@ export default function EVHub() {
                 </p>
                 <h3 className="mt-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">{t("ev.tcoTitle", "EV vs. Toyota Aqua hybrid — real running cost")}</h3>
                 <p className="mt-3 max-w-2xl text-[14px] font-medium leading-relaxed text-muted-foreground">
-                  Fuel saving estimated at <span className="num font-bold text-foreground">Rs.{annualFuelSavingLkr.toLocaleString()}/yr</span> (LKR {TCO_FUEL_COST_PER_KM_EV_LKR} vs LKR {TCO_FUEL_COST_PER_KM_PETROL_LKR} per km, {(TCO_KM_PER_YEAR / 1000).toFixed(0)}k km/yr).
+                  Fuel saving estimated at <span className="num font-bold text-foreground">Rs {groupThousands(annualFuelSavingLkr)}/yr</span> (LKR {TCO_FUEL_COST_PER_KM_EV_LKR} vs LKR {TCO_FUEL_COST_PER_KM_PETROL_LKR} per km, {(TCO_KM_PER_YEAR / 1000).toFixed(0)}k km/yr).
                 </p>
                 <div className="mt-6 grid gap-3 sm:grid-cols-3">
                   <div className="metric-tile p-4">

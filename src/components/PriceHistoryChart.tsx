@@ -3,6 +3,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { ArrowDownRight, ArrowUpRight, BarChart3, Gauge } from "lucide-react";
 import { formatPriceLkrMillions } from "@/lib/formatting";
 import type { PriceTrendPoint } from "@/types/car";
+import { formatLkrAxisFromMillions } from "@/lib/price";
 
 interface PriceHistoryChartProps {
   title?: string;
@@ -197,7 +198,7 @@ export function PriceHistoryChart({
                     axisLine={false}
                     tickLine={false}
                     tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10, fontWeight: 600, fontFamily: "Nofex" }}
-                    tickFormatter={(value: number) => `${value.toFixed(1)}M`}
+                    tickFormatter={(value: number) => formatLkrAxisFromMillions(value)}
                     width={56}
                   />
                   <Tooltip
