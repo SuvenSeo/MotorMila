@@ -39,12 +39,15 @@ def _write():
     return {"ok": True}
 
 
-if not any(getattr(r, "path", "") == "/__test/db-down" for r in main.app.routes):
-    main.app.include_router(_probe_router)
+def _ensure_probe_routes():
+    # main may have been reloaded by another test module (new app object).
+    if not any(getattr(r, "path", "") == "/__test/db-down" for r in main.app.routes):
+        main.app.include_router(_probe_router)
 
 
 @pytest.fixture()
 def client(monkeypatch):
+    _ensure_probe_routes()
     monkeypatch.setattr(main, "_probe_db", lambda: None)
     db_guard.breaker.reset()
     yield TestClient(main.app, raise_server_exceptions=False)

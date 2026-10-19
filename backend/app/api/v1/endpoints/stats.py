@@ -402,7 +402,20 @@ async def stream_live_market_snapshot(request: Request):
                 snapshot = await asyncio.to_thread(_fetch_snapshot)
 
                 yield f"event: snapshot\ndata: {json.dumps(snapshot)}\n\n"
-                await asyncio.sleep(LIVE_STREAM_INTERVAL_SECONDS)
+                # Sleep in short slices and re-check the client between them,
+                # so a disconnect releases the SSE slot within ~1s instead of
+                # holding it for the whole interval.
+                remaining = float(LIVE_STREAM_INTERVAL_SECONDS)
+                disconnected = False
+                while remaining > 0:
+                    step = min(1.0, remaining)
+                    await asyncio.sleep(step)
+                    remaining -= step
+                    if await request.is_disconnected():
+                        disconnected = True
+                        break
+                if disconnected:
+                    break
         finally:
             _sse_active_connections -= 1
 
