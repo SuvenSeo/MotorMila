@@ -768,7 +768,9 @@ private fun SplashGate(
     var sessionReady by remember { mutableStateOf(false) }
     var splashDone by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        val session = sessionStore.snapshot()
+        // rehydrate() (not snapshot()) primes the interceptor's token and
+        // drops an expired session before any screen fires a request.
+        val session = runCatching { sessionStore.rehydrate() }.getOrNull()
         loggedIn = session != null && session.token.isNotBlank()
         sessionReady = true
     }

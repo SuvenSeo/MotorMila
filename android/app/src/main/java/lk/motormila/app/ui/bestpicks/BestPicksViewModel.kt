@@ -76,6 +76,9 @@ class BestPicksViewModel @Inject constructor(
     private val unlocked = MutableStateFlow(false)
     private val sortKey = MutableStateFlow(BestPicksSort.RECENCY)
 
+    /** True while picks come from the offline snapshot (backend down). */
+    val fromSnapshot: kotlinx.coroutines.flow.StateFlow<Boolean> get() = getListingsPaging.fromSnapshot
+
     val paging: Flow<PagingData<Listing>> = combine(unlocked, sortKey) { pro, sort ->
         if (!pro) {
             null

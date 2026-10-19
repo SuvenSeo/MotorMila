@@ -88,6 +88,11 @@ fun AlertsScreen(
             viewModel.onEvent(AlertsUiEvent.DismissError)
         }
     }
+    // Android 13+: ask for notification permission right after the first
+    // alert is created (the moment the value of notifications is obvious).
+    lk.motormila.app.core.notifications.NotificationPermissionPrompt(
+        trigger = state.justCreatedId != null,
+    )
     LaunchedEffect(state.justCreatedId) {
         if (state.justCreatedId != null) {
             if (!reducedMotion) haptics.confirm()
@@ -477,8 +482,10 @@ private fun AlertRow(
             SectionTitle("Matches (${flat.size})")
             flat.forEach { m ->
                 // % under the alert threshold — the "move" that triggered this match.
-                val underPct = if (m.priceLkr != null && (alert.maxPriceLkr ?: 0.0) > 0) {
-                    (alert.maxPriceLkr!! - m.priceLkr) / alert.maxPriceLkr!! * 100
+                val maxPrice = alert.maxPriceLkr
+                val price = m.priceLkr
+                val underPct = if (price != null && maxPrice != null && maxPrice > 0) {
+                    (maxPrice - price) / maxPrice * 100
                 } else {
                     null
                 }

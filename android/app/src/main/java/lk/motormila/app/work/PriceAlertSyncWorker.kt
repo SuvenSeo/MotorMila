@@ -58,6 +58,8 @@ class PriceAlertSyncWorker(
         const val UNIQUE_NAME = "price_alert_sync"
         const val UNIQUE_ONCE = "price_alert_sync_once"
         private const val NOTIF_ID_BASE = 10_000
+        private const val MAX_ATTEMPTS = 5
+        private const val SEEN_PREFS = "alert_seen_matches"
 
         fun enqueue(context: Context) {
             val constraints = Constraints.Builder()
@@ -91,18 +93,45 @@ class PriceAlertSyncWorker(
         val notifications = entryPoint.notifications()
         val alerts = runCatching { db.alertDao().getAll().filter { it.active } }.getOrElse { emptyList() }
         if (alerts.isEmpty()) return Result.success()
-        val match = runCatching { api.matchAlerts() }.getOrElse { return Result.retry() }
+        val match = runCatching { api.matchAlerts() }.getOrElse { e ->
+            // Auth/plan errors will not fix themselves: stop instead of retrying
+            // forever. Transient errors retry with backoff, capped.
+            val code = (e as? retrofit2.HttpException)?.code()
+            return if (code != null && code in 400..499) Result.success()
+            else if (runAttemptCount >= MAX_ATTEMPTS) Result.success()
+            else Result.retry()
+        }
+        val seen = applicationContext.getSharedPreferences(SEEN_PREFS, Context.MODE_PRIVATE)
+        val seenEditor = seen.edit()
+        val res = applicationContext.resources
         match.results.forEach { row ->
             if (row.matchingCount <= 0 || alerts.none { it.id == row.alertId }) return@forEach
             val first = row.listings.firstOrNull()
+            // Dedupe: notify only when the newest matching listing changed.
+            val fingerprint = "${first?.id ?: 0}:${row.matchingCount}"
+            val key = "alert_${row.alertId}"
+            if (seen.getString(key, null) == fingerprint) return@forEach
+            seenEditor.putString(key, fingerprint)
             notifications.notifyPriceDrop(
                 id = NOTIF_ID_BASE + row.alertId,
-                title = "New match: ${listOfNotNull(row.make, row.model).joinToString(" ").ifBlank { "your alert" }}",
-                body = "${row.matchingCount} matching listing(s)" +
-                    (first?.let { " from Rs. ${"%,.0f".format(it.priceLkr ?: 0.0)}" } ?: ""),
+                title = res.getString(
+                    lk.motormila.app.R.string.notif_alert_match_title,
+                    listOfNotNull(row.make, row.model).joinToString(" ")
+                        .ifBlank { res.getString(lk.motormila.app.R.string.notif_alert_your_alert) },
+                ),
+                body = res.getQuantityString(
+                    lk.motormila.app.R.plurals.notif_alert_match_count,
+                    row.matchingCount,
+                    row.matchingCount,
+                ) + (
+                    first?.priceLkr?.let { price ->
+                        res.getString(lk.motormila.app.R.string.notif_alert_match_from, "%,.0f".format(price))
+                    } ?: ""
+                    ),
                 contentIntent = contentIntentOf(row.alertId, first?.id),
             )
         }
+        seenEditor.apply()
         return Result.success()
     }
 

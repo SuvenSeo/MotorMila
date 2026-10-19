@@ -58,6 +58,13 @@ interface ListingRepository {
     /** Paged search stream. Data builder implements with Paging3 + remote mediator/cache. */
     fun paging(query: ListingQuery): Flow<PagingData<Listing>>
 
+    /**
+     * True while the current paged search is served from the public offline
+     * snapshot (live API failed on page 1). Drives the "showing snapshot" banner.
+     */
+    val pagingFromSnapshot: kotlinx.coroutines.flow.StateFlow<Boolean>
+        get() = kotlinx.coroutines.flow.MutableStateFlow(false)
+
     /** First-page snapshot for hub rails (make / model / district). */
     suspend fun searchPage(query: ListingQuery, page: Int = 1, size: Int = 8): List<Listing>
 
