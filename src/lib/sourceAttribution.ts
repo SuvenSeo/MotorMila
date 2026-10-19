@@ -50,6 +50,6 @@ export function getSourceAttribution(listing: AttributableListing, now: number =
   return {
     sourceName: formatSourceName(listing.source) || "source site",
     checkedAgo: relativeAgo(listing.last_seen_at || listing.scraped_at, now),
-    href: safeExternalUrl(listing.url || listing.detail_url || listing.external_url) || null,
+    href: [listing.url, listing.detail_url, listing.external_url].map((u) => safeExternalUrl(u)).find(Boolean) ?? null,
   };
 }
