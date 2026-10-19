@@ -305,6 +305,8 @@ export async function buildIndexes(dir = SNAPSHOT_DIR, { publicDir = PUBLIC_DIR,
           m.models.set(modelKey, mo);
         }
         mo.total += 1;
+        const y = Number(row.year) || 0;
+        if (y > (mo.maxYear || 0) && y <= new Date().getUTCFullYear() + 1) mo.maxYear = y;
         if (mo.items.length < MODEL_ITEM_CAP * 2) mo.items.push(json);
         if (first > mo.lastmod) mo.lastmod = first;
         if (price !== null) {
@@ -385,7 +387,7 @@ export async function buildIndexes(dir = SNAPSHOT_DIR, { publicDir = PUBLIC_DIR,
     if (mo.total >= 3) {
       routes.models.push({ path: `/cars/${slugify(mo.make)}/${slugify(mo.model)}`, make: mo.make, model: mo.model, count: mo.total, median_price_lkr: prices.length ? Math.round(median(prices)) : null, lastmod: mo.lastmod.slice(0, 10) || null });
     }
-    searchRows.push([mo.make, mo.model, mo.total]);
+    searchRows.push([mo.make, mo.model, mo.total, mo.maxYear || null, prices.length ? Math.round(median(prices)) : null]);
   }
   for (const [makeKey, m] of makes) {
     await writeJson(path.join(tmpDir, "makes", `${makeKey}.json`), {
@@ -423,7 +425,7 @@ export async function buildIndexes(dir = SNAPSHOT_DIR, { publicDir = PUBLIC_DIR,
   }
 
   searchRows.sort((a, b) => b[2] - a[2]);
-  await writeJson(path.join(tmpDir, "search.json"), { fields: ["make", "model", "count"], rows: searchRows.slice(0, SEARCH_CAP) });
+  await writeJson(path.join(tmpDir, "search.json"), { fields: ["make", "model", "count", "max_year", "median_price_lkr"], rows: searchRows.slice(0, SEARCH_CAP) });
   await writeJson(path.join(tmpDir, "latest.json"), { items: parseRows(latest, LATEST_CAP), total });
   await writeJson(path.join(tmpDir, "ev.json"), { listing_count: total, items: evRows.map((j) => JSON.parse(j)) });
   hotDeals.sort((a, b) => b[0] - a[0]);

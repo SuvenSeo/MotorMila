@@ -732,8 +732,18 @@ async function getIncomingSnapshotListings(): Promise<CarListing[]> {
   );
 }
 
-function getSnapshotListingCatalog(): Promise<CarListing[] | null> {
-  if (!SNAPSHOT_BASE) return Promise.resolve(null);
+/**
+ * LEGACY full-catalogue loader (tens of MB). Only used when the idx/ layout
+ * is not published; once idx/manifest.json exists it always resolves null so
+ * no code path can pull the whole catalogue into the browser.
+ */
+async function getSnapshotListingCatalog(): Promise<CarListing[] | null> {
+  if (!SNAPSHOT_BASE) return null;
+  if (await hasSnapshotIndex()) return null;
+  return loadLegacySnapshotCatalog();
+}
+
+function loadLegacySnapshotCatalog(): Promise<CarListing[] | null> {
   // TTL: the catalog was previously cached forever, so a long session never
   // saw refreshed snapshot data.
   const now = Date.now();
@@ -785,6 +795,235 @@ function getSnapshotListingCatalog(): Promise<CarListing[] | null> {
     });
   }
   return snapshotCatalogPromise;
+}
+
+// ── Per-entity snapshot index (idx/) ─────────────────────────────────────────
+// scripts/build-snapshot-indexes.mjs splits the catalogue into per-listing
+// shards and make/model/district indexes so a page view downloads a few KB
+// instead of the whole catalogue (~38 MB br). When idx/ is absent (export not
+// yet run with the index step) we fall back to the legacy full catalogue.
+
+interface SnapshotIndexManifest {
+  version: number;
+  shard_size: number;
+  listing_count: number;
+}
+
+interface SnapshotScopedIndex {
+  total: number;
+  items: CarListing[];
+  /** Compact rows for every listing in scope (model indexes only). */
+  comps?: CarListing[];
+  raw: JsonRecord;
+}
+
+let snapshotIndexManifestPromise: Promise<SnapshotIndexManifest | null> | null = null;
+let snapshotIndexManifestAt = 0;
+
+/** Same compact key as scripts/build-snapshot-indexes.mjs. */
+export function snapshotIndexKey(value: unknown): string {
+  return String(value ?? "")
+    .normalize("NFKD")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function makeIndexKey(make: unknown): string {
+  return snapshotIndexKey(canonicalizeMake(make) || make);
+}
+
+function modelIndexKey(model: unknown): string {
+  return snapshotIndexKey(canonicalizeModel(model) || model);
+}
+
+function districtIndexKey(district: unknown): string {
+  return snapshotIndexKey(normalizeDistrictName(String(district ?? "")) || district);
+}
+
+function getSnapshotIndexManifest(): Promise<SnapshotIndexManifest | null> {
+  if (!SNAPSHOT_BASE) return Promise.resolve(null);
+  const now = Date.now();
+  if (snapshotIndexManifestPromise && now - snapshotIndexManifestAt >= SNAPSHOT_CATALOG_TTL_MS) {
+    snapshotIndexManifestPromise = null;
+  }
+  if (!snapshotIndexManifestPromise) {
+    snapshotIndexManifestAt = now;
+    snapshotIndexManifestPromise = readSnapshot<JsonRecord>("idx/manifest.json").then((raw) => {
+      if (!raw || Number(raw.version) !== 1 || !(Number(raw.shard_size) > 0)) return null;
+      return {
+        version: 1,
+        shard_size: Number(raw.shard_size),
+        listing_count: Number(raw.listing_count || 0),
+      };
+    });
+  }
+  return snapshotIndexManifestPromise;
+}
+
+async function readIndexFile<T>(relPath: string): Promise<T | null> {
+  const manifest = await getSnapshotIndexManifest();
+  if (!manifest) return null;
+  return readSnapshot<T>(`idx/${relPath}`);
+}
+
+function normalizeIndexRows(rows: unknown): CarListing[] {
+  return Array.isArray(rows)
+    ? rows.map((row) => normalizeListing(asJsonRecord(row))).filter((row) => Number(row.id) > 0)
+    : [];
+}
+
+/** True when the idx/ layout is published; callers then never touch the full catalogue. */
+async function hasSnapshotIndex(): Promise<boolean> {
+  return (await getSnapshotIndexManifest()) !== null;
+}
+
+async function getSnapshotListingById(id: string | number): Promise<CarListing | null> {
+  const numeric = Number(id);
+  if (!Number.isInteger(numeric) || numeric <= 0) return null;
+  const manifest = await getSnapshotIndexManifest();
+  if (!manifest) return null;
+  const incoming = await getIncomingSnapshotListings();
+  const fresh = incoming.find((row) => Number(row.id) === numeric);
+  if (fresh) return fresh;
+  const shard = await readSnapshot<{ items?: unknown[] }>(
+    `idx/listings/${Math.floor(numeric / manifest.shard_size)}.json`,
+  );
+  const row = Array.isArray(shard?.items)
+    ? shard!.items.find((item) => Number(asJsonRecord(item).id) === numeric)
+    : undefined;
+  return row ? normalizeListing(asJsonRecord(row)) : null;
+}
+
+function compsToListings(raw: JsonRecord, make: string, model: string): CarListing[] {
+  const fields = Array.isArray(raw.comp_fields) ? (raw.comp_fields as string[]) : [];
+  const rows = Array.isArray(raw.comps) ? (raw.comps as unknown[][]) : [];
+  return rows.map((tuple) => {
+    const record: JsonRecord = { make, model };
+    fields.forEach((field, index) => {
+      const value = tuple[index];
+      if (value !== null && value !== undefined) record[field] = value;
+    });
+    return record as unknown as CarListing;
+  });
+}
+
+async function getSnapshotModelIndex(make: string, model: string): Promise<SnapshotScopedIndex | null> {
+  const mk = makeIndexKey(make);
+  const mo = modelIndexKey(model);
+  if (!mk || !mo) return null;
+  const raw = await readIndexFile<JsonRecord>(`models/${mk}/${mo}.json`);
+  if (!raw) return null;
+  const displayMake = String(raw.make || make);
+  const displayModel = String(raw.model || model);
+  return {
+    total: Number(raw.total || 0),
+    items: normalizeIndexRows(raw.items),
+    comps: compsToListings(raw, displayMake, displayModel),
+    raw,
+  };
+}
+
+async function getSnapshotMakeIndex(make: string): Promise<SnapshotScopedIndex | null> {
+  const mk = makeIndexKey(make);
+  if (!mk) return null;
+  const raw = await readIndexFile<JsonRecord>(`makes/${mk}.json`);
+  if (!raw) return null;
+  return { total: Number(raw.total || 0), items: normalizeIndexRows(raw.items), raw };
+}
+
+async function getSnapshotDistrictIndex(district: string): Promise<SnapshotScopedIndex | null> {
+  const dk = districtIndexKey(district);
+  if (!dk) return null;
+  const raw = await readIndexFile<JsonRecord>(`districts/${dk}.json`);
+  if (!raw) return null;
+  return { total: Number(raw.listing_count || 0), items: normalizeIndexRows(raw.items), raw };
+}
+
+async function getSnapshotLatestIndex(): Promise<SnapshotScopedIndex | null> {
+  const raw = await readIndexFile<JsonRecord>("latest.json");
+  if (!raw) return null;
+  const items = overlayIncomingListings(normalizeIndexRows(raw.items), await getIncomingSnapshotListings());
+  return { total: Number(raw.total || items.length), items, raw };
+}
+
+async function getSnapshotAggregates(): Promise<JsonRecord | null> {
+  return readIndexFile<JsonRecord>("aggregates.json");
+}
+
+/**
+ * Narrowest published index for a filter set: make+model, then make, then
+ * district, then the newest-N market index. Returns null when idx/ is absent.
+ */
+async function getScopedSnapshotIndex(filters: Partial<FilterState>): Promise<SnapshotScopedIndex | null> {
+  if (!(await hasSnapshotIndex())) return null;
+  const make = String(filters.make || "").trim();
+  const model = String(filters.model || "").trim();
+  const district = String(filters.district || "").trim();
+  if (make && model) {
+    const idx = await getSnapshotModelIndex(make, model);
+    return idx ?? { total: 0, items: [], comps: [], raw: {} };
+  }
+  if (make) {
+    const idx = await getSnapshotMakeIndex(make);
+    return idx ?? { total: 0, items: [], raw: {} };
+  }
+  if (district) {
+    const idx = await getSnapshotDistrictIndex(district);
+    if (idx) return idx;
+  }
+  return getSnapshotLatestIndex();
+}
+
+/** Filter + paginate inside a scoped index; scales the total when the index is a capped sample. */
+function filterScopedSnapshot(
+  index: SnapshotScopedIndex,
+  filters: FilterState,
+  pageSize = LISTINGS_PAGE_SIZE,
+): { listings: CarListing[]; total: number } {
+  const result = filterSnapshotListings(index.items, filters, pageSize);
+  if (index.items.length > 0 && index.total > index.items.length) {
+    // The index holds the newest N rows; estimate the full count from the
+    // sample's match rate instead of under-reporting.
+    const matchedSample = index.items.filter((listing) => matchesSnapshotFilters(listing, filters)).length;
+    const estimated = Math.round((matchedSample / index.items.length) * index.total);
+    return { listings: result.listings, total: Math.max(result.total, estimated) };
+  }
+  return result;
+}
+
+async function searchSuggestionsFromIndex(q: string, limit: number): Promise<ListingSearchSuggestion[]> {
+  const index = await readIndexFile<{ rows?: unknown[][] }>("search.json");
+  const rows = Array.isArray(index?.rows) ? index!.rows : [];
+  const tokens = String(q || "").toLowerCase().split(/\s+/).map(snapshotIndexKey).filter(Boolean);
+  if (!tokens.length) return [];
+  const out: ListingSearchSuggestion[] = [];
+  for (const row of rows) {
+    const [make, model, , maxYear, medianPrice] = row as [string, string, number, number | null, number | null];
+    const hay = `${snapshotIndexKey(make)} ${snapshotIndexKey(model)} ${snapshotIndexKey(`${make}${model}`)}`;
+    if (!tokens.every((token) => hay.includes(token))) continue;
+    out.push({
+      id: 0,
+      make: String(make),
+      model: String(model),
+      year: Number(maxYear) || 0,
+      price_lkr: toNumberOrNull(medianPrice),
+      source: "snapshot",
+    });
+    if (out.length >= Math.max(1, limit)) break;
+  }
+  return out;
+}
+
+function deriveSourcesFromCounts(rows: { source: string; count: number }[]): ListingSourceStat[] {
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const source = canonicalSource(row.source);
+    if (!source) continue;
+    counts.set(source, (counts.get(source) || 0) + Number(row.count || 0));
+  }
+  return Array.from(counts.entries())
+    .map(([source, count]) => ({ source, label: sourceLabel(source), count }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 }
 
 function normalizeStatsOverview(data: JsonRecord): StatsOverview {
@@ -1232,6 +1471,50 @@ function buildSnapshotTrendSeries(
   };
 }
 
+// ── Live API circuit breaker ─────────────────────────────────────────────────
+// When the backend is down (5xx / timeout / network), public reads fail fast
+// for a few minutes so every widget switches to snapshots immediately instead
+// of each waiting through timeouts and retries. Remembered across reloads in
+// sessionStorage. Authenticated/user paths are never short-circuited.
+const API_DOWN_STORAGE_KEY = "motormila.api_down_until";
+export const API_DOWN_COOLDOWN_MS = 3 * 60 * 1000;
+const PUBLIC_READ_TIMEOUT_MS = 10_000;
+const PRIVATE_PATH_RE = /^\/(auth|alerts|pro|dealer|admin|me|billing|profile|watchlist|users|account|my-|feedback|pipeline\/trigger)/;
+let apiDownUntil = (() => {
+  try {
+    return typeof sessionStorage !== "undefined" ? Number(sessionStorage.getItem(API_DOWN_STORAGE_KEY) || 0) : 0;
+  } catch {
+    return 0;
+  }
+})();
+
+function isPublicReadPath(path: string): boolean {
+  return !PRIVATE_PATH_RE.test(path) && !/\/(seller-profile|mine)(\/|$)/.test(path);
+}
+
+/** True while the live API is known to be failing (snapshot mode). */
+export function isLiveApiDegraded(now = Date.now()): boolean {
+  return apiDownUntil > now;
+}
+
+export function markLiveApiDown(now = Date.now()): void {
+  apiDownUntil = now + API_DOWN_COOLDOWN_MS;
+  try {
+    sessionStorage.setItem(API_DOWN_STORAGE_KEY, String(apiDownUntil));
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+export function resetLiveApiHealth(): void {
+  apiDownUntil = 0;
+  try {
+    sessionStorage.removeItem(API_DOWN_STORAGE_KEY);
+  } catch {
+    /* storage unavailable */
+  }
+}
+
 async function fetchJSON<T>(path: string, params?: QueryParams, headers?: Record<string, string>): Promise<T> {
   if (USE_MOCK) throw new Error("Mock mode is disabled");
 
@@ -1258,8 +1541,16 @@ async function fetchJSON<T>(path: string, params?: QueryParams, headers?: Record
     });
   }
 
-  const timeoutMs = API_BASE.includes("hf.space") ? HF_COLD_START_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
-  const maxAttempts = API_BASE.includes("hf.space") ? 3 : 2;
+  const publicRead = isPublicReadPath(path);
+  if (publicRead && isLiveApiDegraded()) {
+    throw new APIError(503, "Live API temporarily unavailable; serving snapshots.");
+  }
+  // Public reads all have snapshot fallbacks: one short attempt (plus one
+  // retry on a plain network blip) instead of 3 x 60 s on a cold/broken Space.
+  const timeoutMs = publicRead
+    ? PUBLIC_READ_TIMEOUT_MS
+    : API_BASE.includes("hf.space") ? HF_COLD_START_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
+  const maxAttempts = publicRead ? 2 : API_BASE.includes("hf.space") ? 3 : 2;
   const credentials = resolveFetchCredentials();
   let lastError: unknown;
 
@@ -1278,13 +1569,23 @@ async function fetchJSON<T>(path: string, params?: QueryParams, headers?: Record
         throw await parseApiError(response);
       }
 
-      return await response.json();
+      const payload = await response.json();
+      if (publicRead && apiDownUntil) resetLiveApiHealth();
+      return payload;
     } catch (error) {
       lastError = error;
       const isAbort = error instanceof DOMException && error.name === "AbortError";
       const isServerError = error instanceof APIError && error.status >= 500;
       const isNetworkError = error instanceof TypeError;
       const retryable = isAbort || isServerError || isNetworkError;
+      if (publicRead && retryable) {
+        // Trip the breaker on the first 5xx/timeout; only a bare network
+        // error on the first attempt gets one retry.
+        if (!isNetworkError || attempt === maxAttempts - 1) {
+          markLiveApiDown();
+          throw error;
+        }
+      }
       if (!retryable || attempt === maxAttempts - 1) {
         throw error;
       }
@@ -1354,6 +1655,8 @@ export const getStats = async (): Promise<StatsOverview> => {
   if (snapshot) {
     const stats = normalizeStatsOverview(snapshot);
     if (stats.good_deals_count > 0) return stats;
+    const aggregates = await getSnapshotAggregates();
+    if (aggregates) return { ...stats, good_deals_count: Number(aggregates.good_deals_count || 0) };
     const catalog = await getSnapshotListingCatalog();
     if (!catalog) return stats;
     const goodDeals = catalog.filter((row) => Number(row.deal_score || 0) >= 8).length;
@@ -1415,6 +1718,8 @@ export const getListings = async (filters: FilterState): Promise<{ listings: Car
     }
   }
 
+  const scoped = await getScopedSnapshotIndex(effectiveFilters);
+  if (scoped) return filterScopedSnapshot(scoped, effectiveFilters);
   const catalog = await getSnapshotListingCatalog();
   if (catalog?.length) return filterSnapshotListings(catalog, effectiveFilters);
   if (SNAPSHOT_ONLY) {
@@ -1469,6 +1774,13 @@ export const getListing = async (id: string | number) => {
 };
 
 async function loadListing(id: string | number) {
+  if (await hasSnapshotIndex()) {
+    const fromShard = await getSnapshotListingById(id);
+    if (fromShard) return fromShard;
+    if (SNAPSHOT_ONLY) refuseLiveApiFallback(`listing ${id}`);
+    const data = await fetchJSON<JsonRecord>(`/listings/${id}`);
+    return normalizeListing(data);
+  }
   const catalog = await getSnapshotListingCatalog();
   if (catalog) {
     const match = catalog.find((listing) => String(listing.id) === String(id));
@@ -1561,6 +1873,16 @@ export const getListingFmv = async (id: string | number): Promise<ListingFmvDeta
     };
   } catch {
     const { predictFmvOffline } = await import("@/lib/offlineValuation");
+    if (await hasSnapshotIndex()) {
+      const target = await getSnapshotListingById(id);
+      const modelIdx = target ? await getSnapshotModelIndex(String(target.make || ""), String(target.model || "")) : null;
+      if (target && modelIdx) {
+        // Comps share make/model; align their display names with the target.
+        const comps = (modelIdx.comps || []).map((row) => ({ ...row, make: target.make, model: target.model }) as CarListing);
+        return predictFmvOffline(comps, target);
+      }
+      throw new Error("FMV unavailable (server unreachable and listing not in snapshot).");
+    }
     const catalog = await getSnapshotListingCatalog();
     const listing = catalog?.find((row) => String(row.id) === String(id));
     if (catalog && listing) return predictFmvOffline(catalog, listing);
@@ -1659,6 +1981,19 @@ export const getSellerTrustProfile = async (id: string | number): Promise<Seller
 };
 
 export const getSimilarListings = async (id: string | number) => {
+  if (await hasSnapshotIndex()) {
+    const base = await getSnapshotListingById(id);
+    if (base) {
+      const modelIdx = await getSnapshotModelIndex(String(base.make || ""), String(base.model || ""));
+      return sortSnapshotListings(
+        (modelIdx?.items || []).filter((listing) => listing.id !== base.id),
+        "deal_score",
+      ).slice(0, 8);
+    }
+    if (SNAPSHOT_ONLY) return [];
+    const live = await fetchJSON<JsonRecord[]>(`/listings/${id}/similar`);
+    return (live || []).map(normalizeListing);
+  }
   const catalog = await getSnapshotListingCatalog();
   if (catalog) {
     const base = catalog.find((listing) => String(listing.id) === String(id));
@@ -1713,6 +2048,34 @@ function normalizeDistrictVelocityPayload(raw: Record<string, unknown>): Distric
 }
 
 async function deriveDistrictVelocityFromCatalog(): Promise<DistrictVelocityData | null> {
+  const aggregates = await getSnapshotAggregates();
+  if (aggregates && Array.isArray(aggregates.districts)) {
+    const merged = new Map<string, { listing_count: number; new_7d_count: number }>();
+    for (const row of aggregates.districts as JsonRecord[]) {
+      const district = normalizeDistrictName(String(row.district || ""));
+      if (!district || !districtCoords(district)) continue;
+      const entry = merged.get(district) || { listing_count: 0, new_7d_count: 0 };
+      entry.listing_count += Number(row.listing_count || 0);
+      entry.new_7d_count += Number(row.new_7d_count || 0);
+      merged.set(district, entry);
+    }
+    if (merged.size === 0) return null;
+    return {
+      points: Array.from(merged.entries()).map(([district, counts]) => {
+        const coords = districtCoords(district)!;
+        return {
+          district,
+          lat: coords.lat,
+          lng: coords.lng,
+          listing_count: counts.listing_count,
+          new_7d_count: counts.new_7d_count,
+          velocity_score: counts.new_7d_count / Math.max(counts.listing_count, 1),
+        };
+      }),
+      generated_at: String(aggregates.generated_at || new Date().toISOString()),
+    };
+  }
+  if (await hasSnapshotIndex()) return null;
   const catalog = await getSnapshotListingCatalog();
   if (!catalog || catalog.length === 0) return null;
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
@@ -1757,6 +2120,24 @@ function offlineFuelCategory(raw: unknown): string {
 }
 
 async function deriveFuelMixFromCatalog(): Promise<FuelMixData | null> {
+  const aggregates = await getSnapshotAggregates();
+  if (aggregates && aggregates.fuel_mix && typeof aggregates.fuel_mix === "object") {
+    const mix = aggregates.fuel_mix as Record<string, number>;
+    const totals: Record<string, number> = { petrol: 0, hybrid: 0, electric: 0, diesel: 0, other: 0 };
+    for (const key of OFFLINE_FUEL_ORDER) totals[key] = Number(mix[key] || 0);
+    const total = Object.values(totals).reduce((a, b) => a + b, 0);
+    if (total === 0) return null;
+    return {
+      total,
+      buckets: OFFLINE_FUEL_ORDER.map((fuel_type) => ({
+        fuel_type,
+        count: totals[fuel_type],
+        pct: Math.round((totals[fuel_type] / total) * 1000) / 10,
+      })),
+      generated_at: String(aggregates.generated_at || new Date().toISOString()),
+    };
+  }
+  if (await hasSnapshotIndex()) return null;
   const catalog = await getSnapshotListingCatalog();
   if (!catalog || catalog.length === 0) return null;
   const totals: Record<string, number> = { petrol: 0, hybrid: 0, electric: 0, diesel: 0, other: 0 };
@@ -1774,7 +2155,22 @@ async function deriveFuelMixFromCatalog(): Promise<FuelMixData | null> {
 }
 
 async function deriveEvInsightFromCatalog(): Promise<EvInsightData | null> {
-  const catalog = await getSnapshotListingCatalog();
+  let catalog: CarListing[] | null;
+  let catalogSize: number;
+  if (await hasSnapshotIndex()) {
+    // ev.json holds every electric row; the Aqua index supplies the hybrid
+    // benchmark. Together they replace the full-catalogue scan.
+    const [ev, aqua] = await Promise.all([
+      readIndexFile<JsonRecord>("ev.json"),
+      getSnapshotModelIndex("Toyota", "Aqua"),
+    ]);
+    if (!ev) return null;
+    catalog = [...normalizeIndexRows(ev.items), ...((aqua?.comps || []) as CarListing[])];
+    catalogSize = Number(ev.listing_count || 0);
+  } else {
+    catalog = await getSnapshotListingCatalog();
+    catalogSize = catalog?.length || 0;
+  }
   if (!catalog || catalog.length === 0) return null;
   const priced = (row: CarListing): number | null => {
     const p = toNumberOrNull(row.price_lkr);
@@ -1818,7 +2214,7 @@ async function deriveEvInsightFromCatalog(): Promise<EvInsightData | null> {
   ).length;
   return {
     ev_count: evRows.length,
-    ev_pct: catalog.length > 0 ? Math.round((evRows.length / catalog.length) * 1000) / 10 : 0,
+    ev_pct: catalogSize > 0 ? Math.round((evRows.length / catalogSize) * 1000) / 10 : 0,
     median_ev_price_lkr: evPrices.length > 0 ? median(evPrices) : null,
     top_ev_models: topEvModels,
     hybrid_benchmark: {
@@ -1867,7 +2263,12 @@ export const getMakes = async () => {
     if (cleaned.length) return cleaned;
   }
 
-  const catalog = await getSnapshotListingCatalog();
+  const aggregates = await getSnapshotAggregates();
+  if (aggregates && Array.isArray(aggregates.makes)) {
+    const cleaned = sanitize(aggregates.makes as { make: string; count: number }[]);
+    if (cleaned.length) return cleaned;
+  }
+  const catalog = (await hasSnapshotIndex()) ? null : await getSnapshotListingCatalog();
   if (catalog) return sanitize(deriveMakes(catalog));
   if (SNAPSHOT_ONLY) return [];
 
@@ -1910,8 +2311,13 @@ export const getListingSearchSuggestions = async (
   const query = String(q || "").trim();
   if (!query) return [];
 
-  const catalog = await getSnapshotListingCatalog();
-  if (catalog) return searchSuggestionsFromCatalog(catalog, query, limit);
+  if (await hasSnapshotIndex()) {
+    const fromIndex = await searchSuggestionsFromIndex(query, limit);
+    if (fromIndex.length || SNAPSHOT_ONLY) return fromIndex;
+  } else {
+    const catalog = await getSnapshotListingCatalog();
+    if (catalog) return searchSuggestionsFromCatalog(catalog, query, limit);
+  }
   if (SNAPSHOT_ONLY) return [];
 
   const data = await fetchJSON<JsonRecord[]>("/listings/search-suggestions", { q: query, limit });
@@ -1940,7 +2346,11 @@ export const getListingSources = async (): Promise<ListingSourceStat[]> => {
   const snapshotRows = normalizeListingSourceRows(snapshot);
   if (snapshotRows.length > 0) return snapshotRows;
 
-  const catalog = await getSnapshotListingCatalog();
+  const aggregates = await getSnapshotAggregates();
+  if (aggregates && Array.isArray(aggregates.sources) && aggregates.sources.length) {
+    return deriveSourcesFromCounts(aggregates.sources as { source: string; count: number }[]);
+  }
+  const catalog = (await hasSnapshotIndex()) ? null : await getSnapshotListingCatalog();
   if (catalog) return deriveSources(catalog);
   if (SNAPSHOT_ONLY) return [];
 
@@ -2060,7 +2470,12 @@ export const getModels = async (make: string) => {
     if (cleaned.length) return cleaned;
   }
 
-  const catalog = await getSnapshotListingCatalog();
+  const makeIdx = await getSnapshotMakeIndex(make);
+  if (makeIdx && Array.isArray(makeIdx.raw.models)) {
+    const cleaned = sanitize(makeIdx.raw.models as { model: string; count: number }[]);
+    if (cleaned.length) return cleaned;
+  }
+  const catalog = (await hasSnapshotIndex()) ? null : await getSnapshotListingCatalog();
   if (catalog) return sanitize(deriveModels(catalog, make));
   if (SNAPSHOT_ONLY) return [];
 
@@ -2168,7 +2583,11 @@ export const getPriceTrendSeries = async (
   condition?: string,
   district?: string
 ): Promise<PriceTrendSeries> => {
-  const catalog = await getSnapshotListingCatalog();
+  if (await hasSnapshotIndex()) {
+    const modelIdx = make && model ? await getSnapshotModelIndex(make, model) : null;
+    if (modelIdx) return buildSnapshotTrendSeries(modelIdx.comps || [], make, model, condition, district);
+  }
+  const catalog = (await hasSnapshotIndex()) ? null : await getSnapshotListingCatalog();
   if (catalog) return buildSnapshotTrendSeries(catalog, make, model, condition, district);
   if (SNAPSHOT_ONLY) {
     return {
@@ -2284,6 +2703,35 @@ export const triggerPipelineJob = async (job: PipelineTriggerJob, adminKey?: str
 };
 
 async function deriveDashboardInsightsFromCatalog(): Promise<DashboardInsights | null> {
+  const aggregates = await getSnapshotAggregates();
+  if (aggregates) {
+    const hot = normalizeIndexRows(aggregates.hot_deals);
+    const top = Array.isArray(aggregates.top_models) ? (aggregates.top_models as JsonRecord[]) : [];
+    return {
+      new_listings_24h: Number(aggregates.new_listings_24h || 0),
+      segment_performance: [],
+      trending_models: top.slice(0, 8).map((row) => ({
+        make: String(row.make || ""),
+        model: String(row.model || ""),
+        listing_count: Number(row.listing_count || 0),
+        avg_price_lkr: Number(row.listing_count) ? Number(row.price_sum || 0) / Number(row.listing_count) : 0,
+        movement_pct: null as number | null,
+        thumbnail_url: null as string | null,
+      })),
+      hot_deals: hot.map((row) => ({
+        id: Number(row.id),
+        make: String(row.make || ""),
+        model: String(row.model || ""),
+        year: Number(row.year || 0),
+        district: row.district ? String(row.district) : null,
+        source: String(row.source || "unknown"),
+        price_lkr: Number(row.price_lkr || 0),
+        deal_score: Number(row.deal_score || 0),
+        thumbnail_url: row.thumbnail_url ? String(row.thumbnail_url) : null,
+      })),
+    };
+  }
+  if (await hasSnapshotIndex()) return null;
   const catalog = await getSnapshotListingCatalog();
   if (!catalog || catalog.length === 0) return null;
 
@@ -2396,6 +2844,8 @@ export const getListingsForExport = async (
   maxRows = 100,
 ): Promise<{ listings: CarListing[]; total: number }> => {
   const size = Math.max(1, Math.min(100, Math.floor(maxRows)));
+  const scoped = await getScopedSnapshotIndex(filters);
+  if (scoped) return filterScopedSnapshot(scoped, { ...filters, page: 1 }, size);
   const catalog = await getSnapshotListingCatalog();
   if (catalog?.length) return filterSnapshotListings(catalog, { ...filters, page: 1 }, size);
   if (SNAPSHOT_ONLY) {
@@ -2418,7 +2868,26 @@ export const getListingsForExport = async (
 };
 
 export const getDistrictQuickInsight = async (district: string): Promise<DistrictQuickInsight> => {
-  const catalog = await getSnapshotListingCatalog();
+  const districtIdx = await getSnapshotDistrictIndex(district);
+  if (districtIdx && districtIdx.total > 0) {
+    const raw = districtIdx.raw;
+    return {
+      district: String(raw.district || district),
+      listing_count: districtIdx.total,
+      avg_price_lkr: toNumberOrNull(raw.avg_price_lkr),
+      median_price_lkr: toNumberOrNull(raw.median_price_lkr),
+      change_pct_30d: null,
+      top_models: Array.isArray(raw.top_models)
+        ? (raw.top_models as JsonRecord[]).map((row) => ({
+            make: String(row.make || ""),
+            model: String(row.model || ""),
+            listing_count: Number(row.listing_count || 0),
+            avg_price_lkr: toNumberOrNull(row.avg_price_lkr) ?? 0,
+          }))
+        : [],
+    };
+  }
+  const catalog = (await hasSnapshotIndex()) ? null : await getSnapshotListingCatalog();
   if (catalog) {
     const districtKey = String(district || "").trim().toLowerCase();
     const rows = catalog.filter((listing) => String(listing.district || "").toLowerCase() === districtKey);
@@ -2530,7 +2999,18 @@ export const getMarketSignal = async (id: number): Promise<MarketSignal> => {
 };
 
 export const getMakeModelInsight = async (make: string, model: string): Promise<MakeModelInsight> => {
-  const catalog = await getSnapshotListingCatalog();
+  let catalog: CarListing[] | null = null;
+  if (await hasSnapshotIndex()) {
+    // Every row of the model as compact comps: exact totals, medians, districts.
+    const modelIdx = await getSnapshotModelIndex(make, model);
+    if (modelIdx) {
+      catalog = modelIdx.comps || [];
+      make = String(modelIdx.raw.make || make);
+      model = String(modelIdx.raw.model || model);
+    }
+  } else {
+    catalog = await getSnapshotListingCatalog();
+  }
   if (catalog) {
     const makeKey = make.trim().toLowerCase();
     const modelKey = model.trim().toLowerCase();
