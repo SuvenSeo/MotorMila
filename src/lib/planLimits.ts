@@ -65,7 +65,7 @@ export const freePlanCopy = {
   trendsTitle: "6-month trend window on Free",
   trendsBody: "Pro unlocks full history plus district and condition filters.",
   calcTitle: "Starter calculator on Free",
-  calcBody: "Landed-cost is open on Free. Lease, TCO, on-road fees, permits, and retention curves unlock on Pro.",
+  calcBody: "The import tax calculator is free. Lease, running-cost and on-road fee calculators are coming with Pro.",
   indexTitle: "6-month index window on Free",
   indexBody: "Pro unlocks the full index history and segment breakdowns.",
   estimateTitle: "Starter valuation on Free",
