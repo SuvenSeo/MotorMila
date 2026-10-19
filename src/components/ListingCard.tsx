@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { CarListing } from "@/types/car";
-import { formatPrice, getListing } from "@/services/api";
+import { formatPrice } from "@/services/api";
 import { Gauge, MapPin, ArrowRight, Heart, Check, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ListingImageCarousel } from "@/components/ListingImageCarousel";
@@ -107,8 +107,9 @@ export const ListingCard = memo(function ListingCard({
       aria-label={t("listingCard.aria", "{title} listing card", { title: listingTitle || "Vehicle" })}
       className="liquid-panel vehicle-card group relative isolate h-full overflow-hidden rounded-3xl border border-transparent shadow-soft transition-all duration-500 ease-apple hover:-translate-y-2 hover:border-primary/35 hover:shadow-soft-xl active:scale-[0.985] active:shadow-soft"
       onPointerEnter={() => {
+        // Only warm the route chunk. Data prefetch on hover used to pull the
+        // whole snapshot catalogue (tens of MB) the first time a card was hovered.
         prefetchRoute(`/listing/${listing.id}`);
-        void getListing(listing.id);
       }}
     >
       <Link
