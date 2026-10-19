@@ -73,6 +73,8 @@ export function Combobox({
   const selectedLabel = value ? items.find((i) => i.value === value)?.label : undefined;
 
   return (
+    // Keyboard handling is delegated from the trigger button / search input inside.
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <div ref={rootRef} className="relative" onKeyDown={onKeyDown}>
       <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
@@ -85,7 +87,7 @@ export function Combobox({
         aria-label={label}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "flex min-h-[44px] w-full items-center justify-between gap-2 rounded-xl border bg-card px-3.5 text-left text-[15px] text-foreground transition",
+          "flex min-h-[44px] w-full items-center justify-between gap-2 rounded-xl border bg-card px-3.5 text-left text-base text-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           open ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-muted-foreground/50",
         )}
       >
@@ -100,12 +102,14 @@ export function Combobox({
           <div className="flex items-center gap-2 border-b border-border px-3">
             <Search className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
             <input
+              // Focus moves into the list's search field when the popup opens (combobox pattern).
+              // eslint-disable-next-line jsx-a11y/no-autofocus
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={`Search ${label.toLowerCase()}…`}
               aria-label={`Search ${label}`}
-              className="h-11 w-full bg-transparent text-[15px] text-foreground outline-none placeholder:text-muted-foreground/70"
+              className="h-11 w-full bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
             />
           </div>
           <ul id={listId} role="listbox" aria-label={label} className="max-h-56 overflow-auto py-1.5">
@@ -123,7 +127,7 @@ export function Combobox({
                     onMouseEnter={() => setActive(i)}
                     onClick={() => pick(item)}
                     className={cn(
-                      "flex min-h-[40px] w-full items-center gap-2 px-3.5 text-left text-[15px]",
+                      "flex min-h-[40px] w-full items-center gap-2 px-3.5 text-left text-base",
                       i === active ? "bg-primary/10 text-foreground" : "text-foreground",
                       selected && "font-semibold",
                     )}

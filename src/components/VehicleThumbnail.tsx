@@ -28,21 +28,33 @@ function escapeSvgText(value: string): string {
  * clip-art). Used both as the `<img>` background while the photo loads (so a
  * slow or blocked source never shows a blank tile) and as the final image when
  * the source refuses to serve it (riyasewana hot-link 403s, proxy 401s).
+ *
+ * Everything sits inside a crop-safe box (x 180–780, y 70–530 of 960×600), so
+ * the Apex M mark and the full "Motormila" wordmark survive `object-cover`
+ * from 1:1 squares up to 2:1 banners. Text widths are pinned with textLength
+ * because a data-URI SVG can't use the page's web fonts (system fallback).
  */
 function createFallbackThumbnailDataUri(label: string, source?: string | null): string {
-  const safeLabel = escapeSvgText(String(label || "Vehicle").trim().slice(0, 32) || "Vehicle");
+  const rawLabel = String(label || "Vehicle").trim().slice(0, 40) || "Vehicle";
+  const safeLabel = escapeSvgText(rawLabel);
   const sourceName = formatSourceName(source);
   const sourceLine = escapeSvgText(sourceName ? `Photos on ${sourceName}` : "Photo unavailable");
+  // ~0.58em average glyph width: shrink long titles to the 560px safe width,
+  // and pin it with textLength as a backstop for wide fallback fonts.
+  const labelSize = Math.max(20, Math.min(34, Math.floor(560 / (rawLabel.length * 0.6))));
+  const labelFit = rawLabel.length * labelSize * 0.58 > 520 ? ' textLength="560" lengthAdjust="spacingAndGlyphs"' : "";
   const svg = `
 <svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600">
   <rect width="960" height="600" fill="#09090B"/>
   <g stroke="#ffffff" stroke-opacity="0.05">
     <path d="M0 150h960M0 300h960M0 450h960M240 0v600M480 0v600M720 0v600"/>
   </g>
-  <rect x="440" y="226" width="80" height="6" rx="3" fill="#0A7AFF"/>
-  <text x="480" y="300" fill="#FFFFFF" fill-opacity="0.86" font-family="Space Grotesk,Inter,system-ui,sans-serif" font-weight="700" font-size="40" text-anchor="middle">${safeLabel}</text>
-  <text x="480" y="350" fill="#FFFFFF" fill-opacity="0.55" font-family="Inter,system-ui,sans-serif" font-size="26" text-anchor="middle">${sourceLine}</text>
-  <text x="480" y="548" fill="#0A7AFF" fill-opacity="0.75" font-family="Space Grotesk,Inter,system-ui,sans-serif" font-weight="700" font-size="20" letter-spacing="4" text-anchor="middle">MOTORMILA</text>
+  <g transform="translate(378.4 92) scale(1.6)" fill="none" stroke="#0A7AFF" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M30 76V34l24 24 24-24v28l19-19M97 43h-9.5M97 43v9.5"/>
+  </g>
+  <text x="480" y="286" font-family="Space Grotesk,Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-weight="700" font-size="46" letter-spacing="-1.6" text-anchor="middle" textLength="250" lengthAdjust="spacingAndGlyphs"><tspan fill="#FFFFFF">Motor</tspan><tspan fill="#3D94FF">mila</tspan></text>
+  <text x="480" y="384" fill="#FFFFFF" fill-opacity="0.86" font-family="Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-weight="600" font-size="${labelSize}" text-anchor="middle"${labelFit}>${safeLabel}</text>
+  <text x="480" y="432" fill="#FFFFFF" fill-opacity="0.6" font-family="Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="24" text-anchor="middle">${sourceLine}</text>
 </svg>`;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
