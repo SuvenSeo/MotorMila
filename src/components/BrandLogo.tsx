@@ -79,7 +79,7 @@ export function BrandLogo({
       ) : (
         <>
           <img
-            src="/logo-mark-light.png"
+            src="/logo-mark-light.webp"
             alt=""
             width={markPx}
             height={markPx}
@@ -87,7 +87,7 @@ export function BrandLogo({
             decoding="async"
           />
           <img
-            src="/logo-mark.png"
+            src="/logo-mark.webp"
             alt=""
             width={markPx}
             height={markPx}

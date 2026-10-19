@@ -371,8 +371,12 @@ export default function Pricing() {
               <Sparkles aria-hidden className="h-4 w-4 text-primary" />
               {COMING_SOON_COPY.badge} — {COMING_SOON_COPY.note} Contact{" "}
               <a href={`mailto:${BRAND.contactEmail}`} className="underline decoration-primary/40 underline-offset-2">{BRAND.contactEmail}</a>
-              {" "}·{" "}
-              <a href={BRAND.contactPhoneHref} className="underline decoration-primary/40 underline-offset-2">{BRAND.contactPhone}</a>
+              {BRAND.contactPhone ? (
+                <>
+                  {" "}·{" "}
+                  <a href={BRAND.contactPhoneHref} className="underline decoration-primary/40 underline-offset-2">{BRAND.contactPhone}</a>
+                </>
+              ) : null}
             </p>
           </div>
         )}

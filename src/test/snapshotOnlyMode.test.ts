@@ -23,9 +23,9 @@ describe("snapshot-only mode", () => {
     expect(api.SNAPSHOT_ONLY).toBe(true);
 
     await expect(api.getStats()).rejects.toMatchObject({ status: 503 });
-    // Only the CDN snapshot fetch should run — never /stats/summary.
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    // Only snapshot fetches (CDN, then the same-origin bundled copy) — never /stats/summary.
     expect(String(fetchMock.mock.calls[0]?.[0] || "")).toContain("cdn.example/latest/stats-summary.json");
+    expect(fetchMock.mock.calls.every((call) => !String(call[0]).includes("/api/v1/"))).toBe(true);
   });
 
   it("returns empty listings instead of calling live API in snapshot-only mode", async () => {
@@ -48,7 +48,7 @@ describe("snapshot-only mode", () => {
 
     expect(result).toEqual({ listings: [], total: 0 });
     // Catalog fetch only — no /listings API call.
-    expect(fetchMock.mock.calls.every((call) => String(call[0]).includes("cdn.example"))).toBe(true);
+    expect(fetchMock.mock.calls.every((call) => !String(call[0]).includes("/api/v1/"))).toBe(true);
   });
 
   it("loads multi-part listing-catalog manifests from CDN", async () => {
@@ -127,7 +127,7 @@ describe("snapshot-only mode", () => {
         expect.stringContaining("/listing-catalog-part-001.json"),
       ]),
     );
-    expect(fetchMock.mock.calls.every((call) => String(call[0]).includes("cdn.example"))).toBe(true);
+    expect(fetchMock.mock.calls.every((call) => !String(call[0]).includes("/api/v1/"))).toBe(true);
   });
 
   it("sorts snapshot newest by first_seen_at, not re-scrape time", async () => {
@@ -392,6 +392,6 @@ describe("snapshot-only mode", () => {
     });
 
     expect(result).toEqual({ listings: [], total: 0 });
-    expect(fetchMock.mock.calls.every((call) => String(call[0]).includes("cdn.example"))).toBe(true);
+    expect(fetchMock.mock.calls.every((call) => !String(call[0]).includes("/api/v1/"))).toBe(true);
   });
 });

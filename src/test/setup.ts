@@ -1,6 +1,15 @@
 import "@testing-library/jest-dom";
 import React from "react";
-import { vi } from "vitest";
+import { beforeEach, vi } from "vitest";
+
+// The live-API circuit breaker persists in sessionStorage; never leak it between tests.
+beforeEach(() => {
+  try {
+    sessionStorage.clear();
+  } catch {
+    /* jsdom without storage */
+  }
+});
 
 vi.mock("recharts", async () => {
   const original = await vi.importActual("recharts");

@@ -611,6 +611,42 @@ def build_snapshot(output_dir: Path, catalog_limit: int | None = None, *, skip_c
         db.close()
 
 
+def build_entity_indexes(output_dir: Path) -> None:
+    """Emit per-listing shards + make/model/district indexes (idx/).
+
+    The browser must never download the whole catalogue, so the frontend reads
+    idx/listings/<bucket>.json, idx/models/<make>/<model>.json etc. The layout
+    is produced by scripts/build-snapshot-indexes.mjs (shared with the Vercel
+    build so keys always match the SPA's canonicalizers). Best effort: a missing
+    Node runtime only means the frontend keeps using its legacy fallback.
+    """
+    import shutil
+    import subprocess
+
+    script = BASE_DIR.parent / "scripts" / "build-snapshot-indexes.mjs"
+    node = shutil.which("node")
+    if not node or not script.exists():
+        logger.warning("entity index build skipped (node=%s, script=%s)", node, script.exists())
+        return
+    cmd = [node]
+    try:
+        major = int(
+            subprocess.run([node, "--version"], capture_output=True, text=True, timeout=10)
+            .stdout.strip()
+            .lstrip("v")
+            .split(".")[0]
+        )
+        if 22 <= major:
+            cmd.append("--experimental-strip-types")
+    except Exception:  # noqa: BLE001
+        pass
+    cmd += [str(script), str(output_dir), "--no-sitemaps"]
+    try:
+        subprocess.run(cmd, check=False, timeout=900)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("entity index build failed: %s", exc)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Export public JSON snapshots for Motormila.")
     parser.add_argument(
@@ -640,6 +676,8 @@ def main() -> None:
     args = parse_args()
     limit = args.catalog_limit if args.catalog_limit and args.catalog_limit > 0 else None
     manifest = build_snapshot(args.output, catalog_limit=limit, skip_catalog=args.skip_catalog)
+    if not args.skip_catalog:
+        build_entity_indexes(args.output)
     print(
         "Snapshot ready:",
         args.output,
