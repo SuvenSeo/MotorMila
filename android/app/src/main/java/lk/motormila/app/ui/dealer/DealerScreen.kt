@@ -25,12 +25,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import lk.motormila.app.R
 import lk.motormila.app.core.format.formatLkr
 import lk.motormila.app.core.format.formatPct
 import lk.motormila.app.core.motion.rememberReducedMotion
@@ -111,7 +113,13 @@ private fun ClaimStatusCard(state: DealerUiState) {
     ) {
         SectionTitle("Claim status")
         if (state.verifyingClaim && status == null) {
-            Text("Verifying claim with the server…", style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.dealer_verifying), style = MaterialTheme.typography.bodyMedium)
+        } else if (state.pendingManualVerification && status == null) {
+            Text(
+                stringResource(R.string.dealer_pending_manual),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         } else if (status != null) {
             BenchmarkRow("Status", status.status.ifBlank { "pending" })
             if (status.message.isNotBlank()) {
@@ -127,7 +135,7 @@ private fun ClaimStatusCard(state: DealerUiState) {
             status.claimedUrl?.takeIf { it.isNotBlank() }?.let { BenchmarkRow("Claimed URL", it) }
         } else {
             Text(
-                "Claim saved on this device — pull to refresh to verify with the server.",
+                stringResource(R.string.dealer_claim_saved),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

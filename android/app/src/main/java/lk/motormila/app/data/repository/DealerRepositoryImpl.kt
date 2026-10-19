@@ -82,7 +82,13 @@ class DealerRepositoryImpl @Inject constructor(
         res.toDomain()
     }
 
-    /** POST /dealer/verify — confirm a claim with an out-of-band code. Impl helper. */
+    /**
+     * POST /dealer/verify — ADMIN-ONLY on the backend (requires admin_token);
+     * a dealer's own session always gets 403. Not called from the dealer UI:
+     * dealers see "pending manual verification" until an admin verifies them
+     * (Admin → Dealers uses POST /admin/dealers/{id}/verify).
+     */
+    @Deprecated("Admin-only endpoint; dealer UI never calls it.")
     suspend fun verifyDealer(claimToken: String, code: String? = null): DealerClaim = withContext(io) {
         api.verifyDealer(DealerVerifyRequestDto(claimToken, code)).toDomain()
     }

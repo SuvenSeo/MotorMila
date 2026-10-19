@@ -60,14 +60,14 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Unit tests
-        run: ./gradlew :app:testDebugUnitTest --stacktrace
+      - name: Unit tests (play + direct)
+        run: ./gradlew :app:testPlayDebugUnitTest :app:testDirectDebugUnitTest --stacktrace
 
       - name: Verify Paparazzi snapshots
         # Visual regression: fails on any pixel diff vs the committed goldens
         # in android/app/src/test/snapshots/. Re-record locally with
-        # ./gradlew :app:recordPaparazziDebug and commit the updated goldens.
-        run: ./gradlew :app:verifyPaparazziDebug --stacktrace
+        # ./gradlew :app:recordPaparazziPlayDebug and commit the updated goldens.
+        run: ./gradlew :app:verifyPaparazziPlayDebug --stacktrace
 
       - name: Upload Paparazzi failure report
         if: failure()
@@ -77,54 +77,50 @@ jobs:
           path: android/app/build/reports/paparazzi/
           if-no-files-found: ignore
 
-      - name: Resolve sideload keystore
+      - name: R8 release smoke build (unsigned, never published)
+        # Proves minify + resource shrinking + keep rules compile for both
+        # channels. Unsigned on purpose: PR CI never sees signing secrets, and
+        # the Gradle signing guard is bypassed only by this explicit flag.
+        run: >-
+          ./gradlew :app:assemblePlayRelease :app:assembleDirectRelease :app:bundlePlayRelease
+          -PmotormilaAllowUnsignedRelease=true --stacktrace
+
+      - name: Play policy guard (no install permission, no self-updater in play)
         working-directory: .
-        env:
-          # Mapped explicitly: without this the secret is invisible to the
-          # step and the secret branch below could never run.
-          ANDROID_KEYSTORE_FILE: ${{ secrets.ANDROID_KEYSTORE_FILE }}
         run: |
           set -euo pipefail
-          # Stage the effective signing identity to ONE fixed path, then hand
-          # that PATH (never the raw base64 secret, never an empty string) to
-          # Gradle via ANDROID_KEYSTORE_FILE. An empty value crashed Gradle
-          # configuration on 2026-10-06 ("path may not be null or empty string").
-          # Priority:
-          # 1. ANDROID_KEYSTORE_FILE secret (a real, private release identity).
-          # 2. The committed android/ci-signing.keystore — legacy shared dev
-          #    identity, kept only so today's in-place updates keep working;
-          #    rotate away from it (see docs/ANDROID_SIGNING.md).
-          # In all cases the same signature must ship every release: a new
-          # signature blocks in-place upgrades — do not reintroduce per-run
-          # key generation.
-          mkdir -p "$HOME/.android"
-          KEYSTORE="$HOME/.android/motormila-sideload.keystore"
-          if [ -n "${ANDROID_KEYSTORE_FILE:-}" ]; then
-            printf '%s' "$ANDROID_KEYSTORE_FILE" | base64 --decode > "$KEYSTORE"
-            echo "Using ANDROID_KEYSTORE_FILE secret for sideload signing."
-          elif [ -f android/ci-signing.keystore ]; then
-            cp android/ci-signing.keystore "$KEYSTORE"
-            echo "WARNING: using the committed ci-signing.keystore (public, shared dev identity)."
-            echo "Migrate to ANDROID_KEYSTORE_FILE; see docs/ANDROID_SIGNING.md."
-          else
-            echo "ERROR: no sideload identity — set the ANDROID_KEYSTORE_FILE secret or restore android/ci-signing.keystore"
-            exit 1
+          AAPT2="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)aapt2"
+          PLAY_APK="$(ls android/app/build/outputs/apk/play/release/*.apk | head -1)"
+          DIRECT_APK="$(ls android/app/build/outputs/apk/direct/release/*.apk | head -1)"
+          "$AAPT2" dump permissions "$PLAY_APK" > play-perms.txt
+          "$AAPT2" dump permissions "$DIRECT_APK" > direct-perms.txt
+          cat play-perms.txt
+          if grep -q "REQUEST_INSTALL_PACKAGES" play-perms.txt; then
+            echo "ERROR: play flavor must not request REQUEST_INSTALL_PACKAGES"; exit 1
           fi
-          echo "MOTORMILA_KEYSTORE_PATH=$KEYSTORE" >> "$GITHUB_ENV"
+          if grep -qE "ACCESS_(FINE|COARSE)_LOCATION" play-perms.txt; then
+            echo "ERROR: unused location permission is back in the play flavor"; exit 1
+          fi
+          grep -q "REQUEST_INSTALL_PACKAGES" direct-perms.txt || {
+            echo "ERROR: direct flavor lost REQUEST_INSTALL_PACKAGES (self-updater cannot install)"; exit 1; }
+          "$AAPT2" dump badging "$PLAY_APK" | grep -E "targetSdkVersion|sdkVersion"
+          "$AAPT2" dump badging "$PLAY_APK" | grep -q "targetSdkVersion:'36'" || {
+            echo "ERROR: targetSdk must be 36 (Play deadline 2026-11-01)"; exit 1; }
 
-      - name: Assemble release APK
-        env:
-          # Staged keystore path from the step above — always a valid path.
-          # Password/alias/key-password fall back to the debug defaults in
-          # build.gradle.kts when the matching secrets are unset.
-          ANDROID_KEYSTORE_FILE: ${{ env.MOTORMILA_KEYSTORE_PATH }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew :app:assembleRelease --stacktrace
+      - name: Guard against committed signing keys
+        working-directory: .
+        run: |
+          set -euo pipefail
+          if git ls-files | grep -Ei '\.(jks|keystore|p12)$'; then
+            echo "ERROR: a keystore is committed. Signing keys come from GitHub secrets only."; exit 1
+          fi
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: motormila-apk
-          path: android/app/build/outputs/apk/release/app-release.apk
-          if-no-files-found: error
+          name: motormila-unsigned-smoke
+          path: |
+            android/app/build/outputs/apk/play/release/*.apk
+            android/app/build/outputs/apk/direct/release/*.apk
+            android/app/build/outputs/mapping/
+          if-no-files-found: warn
+          retention-days: 7

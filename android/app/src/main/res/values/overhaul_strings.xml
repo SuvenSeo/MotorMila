@@ -16,6 +16,9 @@
     <string name="billing_sign_in_first">Sign in first so your Pro subscription is linked to your account.</string>
     <string name="billing_subscribe_play">Subscribe with Google Play</string>
     <string name="billing_verification_failed">Google Play took the payment but we couldn\'t confirm it yet. We\'ll retry automatically; you won\'t be charged if it can\'t be confirmed.</string>
+    <string name="dealer_claim_saved">Claim saved on this device — pull to refresh to check its status.</string>
+    <string name="dealer_pending_manual">Claim received — pending manual verification by the MotorMila team. Pull to refresh to check its status.</string>
+    <string name="dealer_verifying">Verifying claim with the server…</string>
     <plurals name="notif_alert_match_count">
         <item quantity="one">%1$d matching listing</item>
         <item quantity="other">%1$d matching listings</item>
