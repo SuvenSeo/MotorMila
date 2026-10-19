@@ -19,6 +19,12 @@
     <string name="dealer_claim_saved">Claim saved on this device — pull to refresh to check its status.</string>
     <string name="dealer_pending_manual">Claim received — pending manual verification by the MotorMila team. Pull to refresh to check its status.</string>
     <string name="dealer_verifying">Verifying claim with the server…</string>
+    <string name="listing_contact_on_source">Contact the seller on %1$s. MotorMila doesn\'t show seller phone numbers.</string>
+    <string name="listing_listed_on">Listed on %1$s</string>
+    <string name="listing_share_cd">Share listing</string>
+    <string name="listing_share_whatsapp">Share on WhatsApp</string>
+    <string name="listing_source_fallback">source site</string>
+    <string name="listing_view_on_source">View on %1$s</string>
     <plurals name="notif_alert_match_count">
         <item quantity="one">%1$d matching listing</item>
         <item quantity="other">%1$d matching listings</item>

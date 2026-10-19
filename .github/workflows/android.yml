@@ -56,6 +56,8 @@ jobs:
             exit 0
           fi
           yes | "$SDKMANAGER" --licenses >/dev/null || true
+          # Paparazzi 1.3.x renders against API 35 (compileSdk is 36).
+          "$SDKMANAGER" "platforms;android-35" >/dev/null || true
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
