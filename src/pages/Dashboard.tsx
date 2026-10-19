@@ -1,7 +1,7 @@
 import { scrollBehavior } from "@/lib/motion";
 import { startTransition, useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { FilterState, CarListing, DashboardInsights, DistrictVelocityPoint } from "@/types/car";

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { sendFeedback } from "@/services/api";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { Navigate, useNavigate, useLocation, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";

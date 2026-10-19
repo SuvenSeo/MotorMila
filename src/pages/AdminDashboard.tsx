@@ -1,7 +1,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import {
   Activity,
   BarChart3,

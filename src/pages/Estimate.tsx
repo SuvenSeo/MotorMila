@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { APIError, estimatePrice, formatPrice, getMakes, getModels, getPriceTrends } from "@/services/api";
 import { PriceEstimate, PriceTrendPoint } from "@/types/car";
 import { SRI_LANKA_DISTRICTS } from "@/data/districts";

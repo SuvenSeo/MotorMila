@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { m } from "motion/react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
@@ -135,7 +135,7 @@ export default function EVHub() {
 
       <PageBody className="space-y-16 lg:space-y-24">
         {/* Live inventory pulse — one number towers */}
-        <motion.section variants={revealItem}>
+        <m.section variants={revealItem}>
           <SectionHeader title={t("ev.liveInventory", "Live EV inventory")} className="mb-8" />
           <div className="space-y-3">
             <div className="data-card flex flex-col gap-4 p-6 sm:flex-row sm:items-end sm:justify-between sm:p-8">
@@ -155,11 +155,11 @@ export default function EVHub() {
               ))}
             </div>
           </div>
-        </motion.section>
+        </m.section>
 
         {/* Top EV models — feature the leading model */}
         {(pending || topModels.length > 0) && (
-          <motion.section variants={revealItem}>
+          <m.section variants={revealItem}>
             <SectionHeader title={t("ev.topModels", "Top EV models")} className="mb-8" />
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {pending
@@ -211,11 +211,11 @@ export default function EVHub() {
                 variant="strip"
               />
             ) : null}
-          </motion.section>
+          </m.section>
         )}
 
         {/* TCO comparison callout */}
-        <motion.section variants={revealItem}>
+        <m.section variants={revealItem}>
           <div className="surface--glass rounded-2xl p-6 sm:p-8">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10">
@@ -270,10 +270,10 @@ export default function EVHub() {
               </div>
             </div>
           </div>
-        </motion.section>
+        </m.section>
 
         {/* Decision modules */}
-        <motion.section variants={revealItem}>
+        <m.section variants={revealItem}>
           <SectionHeader title={t("ev.decisionModules", "Decision modules")} className="mb-8" />
           <div className="grid gap-3 md:grid-cols-3">
             {evModules.map((m) => {
@@ -292,10 +292,10 @@ export default function EVHub() {
               );
             })}
           </div>
-        </motion.section>
+        </m.section>
 
         {/* Market action */}
-        <motion.section variants={revealItem} className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
+        <m.section variants={revealItem} className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
           <div className="data-card p-6 sm:p-8">
             <p className="text-[12px] font-semibold text-muted-foreground/80">{t("ev.ownershipChecks", "Ownership checks")}</p>
             <h3 className="mt-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">{t("ev.buyerGuidelines", "Buyer guidelines")}</h3>
@@ -333,7 +333,7 @@ export default function EVHub() {
               </Link>
             </Button>
           </div>
-        </motion.section>
+        </m.section>
       </PageBody>
     </PageCanvas>
   );

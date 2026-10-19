@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { ArrowRight, BookOpen, Check, CreditCard, HelpCircle, Loader2, MessageCircle, Sparkles, Timer, Users } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ParticleButton, type ParticleButtonHandle } from "@/components/ui/ParticleButton";

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { ArrowLeft, ArrowUpRight, BarChart3, MapPin, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SectionHeader } from "@/components/SectionHeader";
