@@ -217,3 +217,34 @@ describe("Dashboard runtime safety", () => {
     expect(screen.queryByText(/couldn't load listings/i)).not.toBeInTheDocument();
   });
 });
+
+describe("Home page order and honesty (ui/shell)", () => {
+  it("puts the listings grid right after the hero and the Pro block well below it", async () => {
+    renderDashboard();
+    await screen.findByText("FilterSidebar");
+    const market = document.getElementById("market");
+    const hero = document.getElementById("overview");
+    expect(hero && market).toBeTruthy();
+    // Listings section directly follows the hero.
+    expect(hero!.nextElementSibling).toBe(market);
+    // The Pro overview line (free users) sits after the listings, never blurred.
+    const proLine = screen.getByText(/full market overview/i);
+    expect(market!.compareDocumentPosition(proLine) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByText(/join the waitlist/i)).not.toBeInTheDocument();
+    expect(document.querySelector(".blur-\\[7px\\]")).toBeNull();
+  });
+
+  it("gives bikes and three-wheelers quick links next to cars", async () => {
+    renderDashboard();
+    const nav = await screen.findByRole("navigation", { name: /browse by type/i });
+    const labels = Array.from(nav.querySelectorAll("button")).map((b) => b.textContent);
+    expect(labels.slice(0, 3)).toEqual(["Cars", "Bikes", "Three-wheelers"]);
+  });
+
+  it("drops inflated trust claims", async () => {
+    renderDashboard();
+    await screen.findByText("FilterSidebar");
+    expect(screen.queryByText(/seller trust on every listing/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/verified signals/i)).not.toBeInTheDocument();
+  });
+});

@@ -315,18 +315,6 @@ export default function ListingDetail() {
       variants={revealContainer}
       className="min-h-screen relative overflow-hidden bg-background"
     >
-      {/* Decorative Blur Orbs — token-based, adapt to both themes */}
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        <AtmosphericImage
-          src={visuals.pageListingDetail.src}
-          srcSm={visuals.pageListingDetail.srcSm}
-          className="h-[28rem] w-full object-cover object-[center_30%] opacity-[0.18]"
-          sizes="100vw"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background to-background" />
-      </div>
-      <div aria-hidden className="pointer-events-none absolute top-[-10%] left-[-10%] h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px]" />
-      <div aria-hidden className="pointer-events-none absolute bottom-[20%] right-[-10%] h-[600px] w-[600px] rounded-full bg-primary/5 blur-[150px]" />
 
       {/* Header — the editorial hero: eyebrow, towering title, ask + verdict */}
       <motion.section variants={revealItem} className="relative z-10 -mt-[var(--nav-offset)] border-b border-border bg-card/30 pt-[var(--nav-offset)] backdrop-blur-md">

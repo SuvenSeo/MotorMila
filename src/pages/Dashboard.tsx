@@ -18,14 +18,11 @@ import { FuelMixStrip } from "@/components/FuelMixStrip";
 import { DataFreshnessIndicator } from "@/components/DataFreshnessIndicator";
 import { SnapshotModeNotice } from "@/components/SnapshotModeNotice";
 import { AtmosphericImage } from "@/components/AtmosphericImage";
-import { HeroSideSignals } from "@/components/HeroSideSignals";
-import { FlipWords } from "@/components/ui/FlipWords";
-import { MarketTicker } from "@/components/MarketTicker";
-import { SourceMarquee } from "@/components/SourceMarquee";
 import { HeroVariantPicker } from "@/components/HeroVariantPicker";
 import { useHeroVariantLab } from "@/hooks/useHeroVariantLab";
 import type { HeroAlign } from "@/lib/heroVariants";
 import { RevealSection } from "@/components/RevealSection";
+import { SourceCredits } from "@/components/SourceCredits";
 import { SectionHeader } from "@/components/SectionHeader";
 import { visuals } from "@/lib/visualAssets";
 import { Input } from "@/components/ui/input";
@@ -64,7 +61,6 @@ import { useServerMarketAlerts } from "@/hooks/useServerMarketAlerts";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { FreePlanBanner } from "@/components/FreePlanBanner";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
-import { HowItWorksBand } from "@/components/HowItWorksBand";
 import { ProFeatureLock } from "@/components/ProFeatureLock";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { useAuth } from "@/lib/authContext";
@@ -130,9 +126,6 @@ const DistrictVelocityMap = lazyWithRetry(() =>
 const ProvinceVelocityStrip = lazyWithRetry(() =>
   import("@/components/ProvinceVelocityStrip").then((m) => ({ default: m.ProvinceVelocityStrip }))
 );
-const ComparisonModal = lazyWithRetry(() =>
-  import("@/components/ComparisonModal").then((m) => ({ default: m.ComparisonModal }))
-);
 const MarketIntelligencePanel = lazyWithRetry(() =>
   import("@/components/MarketIntelligencePanel").then((m) => ({ default: m.MarketIntelligencePanel }))
 );
@@ -151,6 +144,15 @@ const HERO_POPULAR_SCANS = [
   { label: "Wagon R", make: "Suzuki", model: "Wagon R" },
   { label: "Nissan Leaf", make: "Nissan", model: "Leaf" },
   { label: "Toyota Axio", make: "Toyota", model: "Axio" },
+] as const;
+
+/** Home quick links. Bikes and three-wheelers get top billing next to cars. */
+const HOME_CATEGORIES = [
+  { value: "cars", labelKey: "shell.home.cat.cars", fallback: "Cars" },
+  { value: "motorbikes", labelKey: "shell.home.cat.bikes", fallback: "Bikes" },
+  { value: "three-wheelers", labelKey: "shell.home.cat.threeWheelers", fallback: "Three-wheelers" },
+  { value: "vans", labelKey: "shell.home.cat.vans", fallback: "Vans" },
+  { value: "lorries", labelKey: "shell.home.cat.lorries", fallback: "Lorries" },
 ] as const;
 
 const SORT_VALUES = ["newest", "deal_score", "price_asc", "price_desc", "mileage_asc"] as const;
@@ -629,6 +631,20 @@ export default function Dashboard() {
     scrollToMarket();
   }, [scrollToMarket]);
 
+  const browseCategory = useCallback((category: string) => {
+    startTransition(() => {
+      setFilters((prev) => ({
+        ...prev,
+        vehicle_category: category as FilterState["vehicle_category"],
+        make: undefined,
+        model: undefined,
+        body_type: undefined,
+        page: 1,
+      }));
+    });
+    scrollToMarket();
+  }, [scrollToMarket]);
+
   const totalPages = fullAccess
     ? Math.ceil(total / LISTINGS_PAGE_SIZE)
     : Math.min(1, Math.ceil(total / FREE_LISTINGS_PAGE_SIZE) || 0);
@@ -771,37 +787,16 @@ export default function Dashboard() {
           className={cn(
             "relative z-10 mx-auto flex w-full max-w-[1560px] flex-1 flex-col px-5 sm:px-6",
             heroCentered
-              ? "min-h-[min(calc(88svh-var(--nav-offset)),calc(900px-var(--nav-offset)))] items-center justify-center py-24 sm:py-28"
-              : "justify-end pb-28 pt-24 sm:pb-24 sm:pt-28 lg:pb-28 lg:pt-32",
+              ? "min-h-[min(calc(70svh-var(--nav-offset)),calc(720px-var(--nav-offset)))] items-center justify-center py-10 sm:py-16"
+              : "justify-end pb-10 pt-12 sm:pb-16 sm:pt-20 lg:pb-20 lg:pt-24",
           )}
         >
-          {!heroVariant.hideSideSignals ? (
-            <HeroSideSignals
-              trending={trendingModels[0] ?? null}
-              hotDeal={hotDeals[0] ?? null}
-              priceDrop={heroPriceDrop}
-              newListings24h={heroNewListings24h}
-              goodDealsCount={heroGoodDealsCount}
-              avgPriceLkr={stats?.avg_price_lkr ?? null}
-              sourceCount={marketPulseSources}
-              districtCount={Number(stats?.district_count || 0)}
-              onTrendingClick={() => {
-                const row = trendingModels[0];
-                if (row) focusModel(row.make, row.model);
-              }}
-              onBrowseNewest={browseNewestListings}
-              onGoodDealsClick={sortByDealScore}
-            />
-          ) : null}
 
           <div className={`relative ${heroAlignClass}`}>
             <motion.p variants={heroItemVariants} className={cn("hero-pill", heroCentered && "flex justify-center")}>
               <span className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[12px] font-medium tracking-tight ${heroKickerClass}`}>
-                <span aria-hidden className="relative inline-flex h-1.5 w-1.5">
-                  <span className="animate-live-dot absolute inset-0 rounded-full bg-primary" />
-                  <span className="relative h-1.5 w-1.5 rounded-full bg-primary" />
-                </span>
-                {t("hero.kicker", "Sri Lanka live market")}
+                <span aria-hidden className="relative h-1.5 w-1.5 rounded-full bg-primary" />
+                {t("shell.home.kicker", "Every vehicle ad in Sri Lanka, one search")}
               </span>
             </motion.p>
 
@@ -818,15 +813,7 @@ export default function Dashboard() {
               </span>
               <span className={cn("italic text-primary", heroCentered ? "display-hero__accent" : undefined)}>
                 {heroCentered ? null : " "}
-                {/* Flip Words — rotating accent (#8 UI review) */}
-                <FlipWords
-                  words={[
-                    t("hero.titleAccent", "decoded."),
-                    t("hero.accentWord2", "priced."),
-                    t("hero.accentWord3", "tracked."),
-                    t("hero.accentWord4", "compared."),
-                  ]}
-                />
+                {t("hero.accentWord2", "priced.")}
               </span>
             </motion.h1>
 
@@ -849,12 +836,13 @@ export default function Dashboard() {
               ) : null}
               {marketPulseSources > 0
                 ? t(
-                    "hero.bodyShort",
-                    "live listings across {sources} sources — pricing, deal scores, and market intel in one place.",
-                  ).replace("{sources}", String(marketPulseSources))
+                    "shell.home.body",
+                    "vehicle ads from {sources} Sri Lankan sites, with price history and a fair-price range for each.",
+                    { sources: marketPulseSources },
+                  )
                 : t(
-                    "hero.bodyShortNoSources",
-                    "Live market pricing, deal scores, and intel in one place — sourced from Sri Lanka's vehicle marketplaces.",
+                    "shell.home.bodyNoCount",
+                    "Vehicle ads from Sri Lanka's marketplaces in one search, with price history and a fair-price range for each.",
                   )}
             </motion.p>
 
@@ -995,171 +983,40 @@ export default function Dashboard() {
                     {heroSearchMessage}
                   </p>
                 )}
+
+                {/* Category quick links — bikes and three-wheelers sit right next to cars */}
+                <nav
+                  aria-label={t("shell.home.categories", "Browse by type")}
+                  className={cn("mt-4 flex flex-wrap gap-2", heroCentered && "justify-center")}
+                >
+                  {HOME_CATEGORIES.map((cat) => {
+                    const active = (filters.vehicle_category || "cars") === cat.value;
+                    return (
+                      <button
+                        key={cat.value}
+                        type="button"
+                        onClick={() => browseCategory(cat.value)}
+                        aria-pressed={active}
+                        className={cn(
+                          "inline-flex min-h-10 items-center rounded-full border px-4 text-[13px] font-semibold transition-colors active:scale-[0.97]",
+                          heroFilmTone === "cinematic"
+                            ? active
+                              ? "border-white/40 bg-white/20 text-white"
+                              : "border-white/20 bg-black/30 text-white/90 hover:bg-white/15"
+                            : active
+                              ? "border-primary/40 bg-primary/10 text-primary-bright"
+                              : "border-border bg-card/80 text-foreground hover:border-primary/30",
+                        )}
+                      >
+                        {t(cat.labelKey, cat.fallback)}
+                      </button>
+                    );
+                  })}
+                </nav>
             </motion.div>
           </div>
         </motion.div>
       </section>
-
-      {/* ── Market ticker — Kibo UI ticker (#12 UI review) ─────────────── */}
-      <MarketTicker
-        rows={trendingModels.filter((r) => isReasonableListingPrice(Number(r.avg_price_lkr || 0))).slice(0, 8)}
-        onSelect={(row) => focusModel(row.make, row.model)}
-      />
-
-      {/* ── How it works — animated beam band ─────────────────────────── */}
-      <HowItWorksBand />
-
-      {/* ── Live intelligence (post-hero) ─────────────────────────── */}
-      <section className="border-b border-border bg-background">
-        <div className="mx-auto max-w-[1560px] px-5 py-10 sm:px-6 lg:py-14">
-          <ProFeatureLock label={t("home.liveIntelLock", "Live intelligence console")}>
-            <Suspense fallback={null}>
-              {!liveMarketSnapshot && !stats && !dashboardInsights ? (
-                <MarketIntelligenceSkeleton />
-              ) : (
-                <MarketIntelligencePanel snapshot={liveMarketSnapshot} stats={stats} insights={dashboardInsights} />
-              )}
-            </Suspense>
-          </ProFeatureLock>
-        </div>
-      </section>
-
-      {/* ── Market trust bar — three real numbers, no photos ─────── */}
-      <section className="border-b border-border bg-background">
-        <div className="mx-auto max-w-[1560px] px-5 py-8 sm:px-6">
-          <dl className="grid gap-x-8 gap-y-6 sm:grid-cols-3">
-            <div>
-              <dt className="text-[13px] font-medium text-muted-foreground">Vehicle types covered</dt>
-              <dd className="mt-1 text-[15px] font-semibold text-foreground">
-                Cars, vans, SUVs, bikes and more
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[13px] font-medium text-muted-foreground">Verified signals</dt>
-              <dd className="mt-1 text-[15px] font-semibold text-foreground">
-                Deal scores and seller trust on every listing
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[13px] font-medium text-muted-foreground">Data freshness</dt>
-              <dd className="mt-1 text-[15px] font-semibold text-foreground">
-                Re-scanned across sources every few hours
-              </dd>
-            </div>
-          </dl>
-        </div>
-      </section>
-
-      {/* ── INVENTORY ───────────────────────────────────────────── */}
-      {/* Market pulse showcase: curated proof-of-inventory above the grid */}
-      <RevealSection className="border-t border-border">
-        <div className="mx-auto max-w-[1560px] px-5 py-14 sm:px-6 lg:py-20">
-          <SectionHeader eyebrow={t("home.marketPulse", "Market pulse")} title={t("home.whatsMoving", "What's moving right now")} />
-          <div className="grid gap-10 lg:grid-cols-3">
-
-            <div>
-              <div className="mb-5 flex items-center justify-between">
-                <h3 className="font-display text-base font-semibold tracking-tight text-foreground">{t("home.trendingModels", "Trending models")}</h3>
-                <Link to="/trends" className="flex items-center gap-1 text-[12px] font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright">
-                  All trends <ArrowUpRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
-              {trendingModels.length ? (
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {trendingModels.slice(0, 4).map((row) => (
-                    <button key={`${row.make}-${row.model}`} type="button" onClick={() => focusModel(row.make, row.model)}
-                      className="inventory-tile group/trend flex items-center gap-3 p-3 text-left active:scale-[0.99]"
-                    >
-                      <div className="h-12 w-16 shrink-0 overflow-hidden rounded-2xl bg-black/30">
-                        <VehicleThumbnail src={row.thumbnail_url} alt={`${row.make} ${row.model}`} className="w-full h-full object-cover" placeholderClassName="flex h-full w-full items-center justify-center bg-black/20" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[14px] font-semibold text-foreground">{row.make} {row.model}</p>
-                        <p className="mt-0.5 text-[11px] text-muted-foreground num">{row.listing_count.toLocaleString()} listed · avg {formatPrice(row.avg_price_lkr)}</p>
-                      </div>
-                      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover/trend:translate-x-0.5 group-hover/trend:text-primary" />
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-[11px] text-muted-foreground">{t("home.awaitingData", "Awaiting data")}</p>
-              )}
-            </div>
-
-            {/* Hot deals */}
-            <ProFeatureLock label={t("home.bestDealsLock", "Best deals scoring")}>
-            <div>
-              <div className="mb-5 flex items-center justify-between">
-                <h3 className="font-display text-base font-semibold tracking-tight text-foreground flex items-center gap-2">
-                  <Flame className="h-4 w-4 text-primary/70" /> Best deals
-                </h3>
-                <Link to="/best-picks" className="flex items-center gap-1 text-[12px] font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright">
-                  All picks <ArrowUpRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
-              {hotDeals.length ? (
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {hotDeals.slice(0, 4).map((row) => (
-                    <Link key={row.id} to={`/listing/${row.id}`}
-                      className="inventory-tile group/deal flex items-center gap-3 p-3 no-underline active:scale-[0.99]"
-                    >
-                      <div className="h-12 w-16 shrink-0 overflow-hidden rounded-2xl bg-black/30">
-                        <VehicleThumbnail src={row.thumbnail_url} listingId={row.id} alt={`${row.make} ${row.model}`} className="w-full h-full object-cover" placeholderClassName="flex h-full w-full items-center justify-center bg-black/20" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[14px] font-semibold text-foreground">{row.make} {row.model} {row.year}</p>
-                        <p className="mt-0.5 text-[11px] text-muted-foreground num">{formatPrice(row.price_lkr)} · {row.district || "LK"}</p>
-                      </div>
-                      <span className="shrink-0 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 num">
-                        +{Number(row.deal_score || 0).toFixed(0)}
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-[11px] text-muted-foreground">{t("home.noDeals", "No deals found in current slice")}</p>
-              )}
-            </div>
-            </ProFeatureLock>
-            {/* Price cuts (7d) */}
-            <div>
-              <div className="mb-5 flex items-center justify-between">
-                <h3 className="font-display text-base font-semibold tracking-tight text-foreground flex items-center gap-2">
-                  <TrendingDown className="h-4 w-4 text-emerald-500" /> Price cuts &middot; 7d
-                </h3>
-                <Link to="/best-picks" className="flex items-center gap-1 text-[12px] font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright">
-                  All cuts <ArrowUpRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
-              {(dropsQuery.data || []).length ? (
-                <div className="grid gap-2">
-                  {(dropsQuery.data || []).slice(0, 4).map((drop) => (
-                    <Link key={drop.listing.id} to={`/listing/${drop.listing.id}`}
-                      className="inventory-tile group/drop flex items-center gap-3 p-3 no-underline active:scale-[0.99]"
-                    >
-                      <div className="h-12 w-16 shrink-0 overflow-hidden rounded-2xl bg-black/30">
-                        <VehicleThumbnail src={drop.listing.thumbnail_url} listingId={drop.listing.id} alt={`${drop.listing.make} ${drop.listing.model}`} className="w-full h-full object-cover" placeholderClassName="flex h-full w-full items-center justify-center bg-black/20" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[14px] font-semibold text-foreground">{drop.listing.make} {drop.listing.model}{drop.listing.year ? ` ${drop.listing.year}` : ""}</p>
-                        <p className="mt-0.5 text-[11px] text-muted-foreground num">
-                          <span className="line-through">{formatPrice(drop.previous_price_lkr)}</span>{" "}
-                          <span className="font-semibold text-foreground">{formatPrice(drop.new_price_lkr)}</span>
-                        </p>
-                      </div>
-                      <span className="shrink-0 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 num">
-                        &minus;{drop.drop_pct}%
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-[11px] text-muted-foreground">No cuts caught in the last 7 days &mdash; tracking is scan-over-scan.</p>
-              )}
-            </div>
-          </div>
-        </div>
-      </RevealSection>
 
       <section id="market" className="scroll-mt-20">
         <div className="mx-auto max-w-[1560px] px-5 py-8 sm:px-6 lg:py-10">
@@ -1400,10 +1257,157 @@ export default function Dashboard() {
         </div>
       </section>
 
+      {/* ── Market pulse — what's moving (below the listings grid) ───── */}
+      <RevealSection className="border-t border-border">
+        <div className="mx-auto max-w-[1560px] px-5 py-14 sm:px-6 lg:py-20">
+          <SectionHeader eyebrow={t("home.marketPulse", "Market pulse")} title={t("home.whatsMoving", "What's moving right now")} />
+          <div className="grid gap-10 lg:grid-cols-3">
+
+            <div>
+              <div className="mb-5 flex items-center justify-between">
+                <h3 className="font-display text-base font-semibold tracking-tight text-foreground">{t("home.trendingModels", "Trending models")}</h3>
+                <Link to="/trends" className="flex items-center gap-1 text-[12px] font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright">
+                  All trends <ArrowUpRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+              {trendingModels.length ? (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {trendingModels.slice(0, 4).map((row) => (
+                    <button key={`${row.make}-${row.model}`} type="button" onClick={() => focusModel(row.make, row.model)}
+                      className="inventory-tile group/trend flex items-center gap-3 p-3 text-left active:scale-[0.99]"
+                    >
+                      <div className="h-12 w-16 shrink-0 overflow-hidden rounded-2xl bg-black/30">
+                        <VehicleThumbnail src={row.thumbnail_url} alt={`${row.make} ${row.model}`} className="w-full h-full object-cover" placeholderClassName="flex h-full w-full items-center justify-center bg-black/20" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[14px] font-semibold text-foreground">{row.make} {row.model}</p>
+                        <p className="mt-0.5 text-[11px] text-muted-foreground num">{row.listing_count.toLocaleString()} listed · avg {formatPrice(row.avg_price_lkr)}</p>
+                      </div>
+                      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover/trend:translate-x-0.5 group-hover/trend:text-primary" />
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[11px] text-muted-foreground">{t("home.awaitingData", "Awaiting data")}</p>
+              )}
+            </div>
+
+            {/* Hot deals */}
+            <ProFeatureLock label={t("shell.home.bestDealsLock", "Best deals")}>
+            <div>
+              <div className="mb-5 flex items-center justify-between">
+                <h3 className="font-display text-base font-semibold tracking-tight text-foreground flex items-center gap-2">
+                  <Flame className="h-4 w-4 text-primary/70" /> Best deals
+                </h3>
+                <Link to="/best-picks" className="flex items-center gap-1 text-[12px] font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright">
+                  All picks <ArrowUpRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+              {hotDeals.length ? (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {hotDeals.slice(0, 4).map((row) => (
+                    <Link key={row.id} to={`/listing/${row.id}`}
+                      className="inventory-tile group/deal flex items-center gap-3 p-3 no-underline active:scale-[0.99]"
+                    >
+                      <div className="h-12 w-16 shrink-0 overflow-hidden rounded-2xl bg-black/30">
+                        <VehicleThumbnail src={row.thumbnail_url} listingId={row.id} alt={`${row.make} ${row.model}`} className="w-full h-full object-cover" placeholderClassName="flex h-full w-full items-center justify-center bg-black/20" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[14px] font-semibold text-foreground">{row.make} {row.model} {row.year}</p>
+                        <p className="mt-0.5 text-[11px] text-muted-foreground num">{formatPrice(row.price_lkr)} · {row.district || "LK"}</p>
+                      </div>
+                      <span className="shrink-0 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 num">
+                        +{Number(row.deal_score || 0).toFixed(0)}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[11px] text-muted-foreground">{t("home.noDeals", "No deals found in current slice")}</p>
+              )}
+            </div>
+            </ProFeatureLock>
+            {/* Price cuts (7d) */}
+            <div>
+              <div className="mb-5 flex items-center justify-between">
+                <h3 className="font-display text-base font-semibold tracking-tight text-foreground flex items-center gap-2">
+                  <TrendingDown className="h-4 w-4 text-emerald-500" /> Price cuts &middot; 7d
+                </h3>
+                <Link to="/best-picks" className="flex items-center gap-1 text-[12px] font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright">
+                  All cuts <ArrowUpRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+              {(dropsQuery.data || []).length ? (
+                <div className="grid gap-2">
+                  {(dropsQuery.data || []).slice(0, 4).map((drop) => (
+                    <Link key={drop.listing.id} to={`/listing/${drop.listing.id}`}
+                      className="inventory-tile group/drop flex items-center gap-3 p-3 no-underline active:scale-[0.99]"
+                    >
+                      <div className="h-12 w-16 shrink-0 overflow-hidden rounded-2xl bg-black/30">
+                        <VehicleThumbnail src={drop.listing.thumbnail_url} listingId={drop.listing.id} alt={`${drop.listing.make} ${drop.listing.model}`} className="w-full h-full object-cover" placeholderClassName="flex h-full w-full items-center justify-center bg-black/20" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[14px] font-semibold text-foreground">{drop.listing.make} {drop.listing.model}{drop.listing.year ? ` ${drop.listing.year}` : ""}</p>
+                        <p className="mt-0.5 text-[11px] text-muted-foreground num">
+                          <span className="line-through">{formatPrice(drop.previous_price_lkr)}</span>{" "}
+                          <span className="font-semibold text-foreground">{formatPrice(drop.new_price_lkr)}</span>
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 num">
+                        &minus;{drop.drop_pct}%
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[11px] text-muted-foreground">{t("shell.home.noCuts", "No price cuts spotted in the last 7 days.")}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </RevealSection>
+
+      {/* ── Trust bar — only claims this page backs with data ─────── */}
+      <section className="border-b border-border bg-background">
+        <div className="mx-auto max-w-[1560px] px-5 py-8 sm:px-6">
+          <dl className="grid gap-x-8 gap-y-6 sm:grid-cols-3">
+            <div>
+              <dt className="text-[13px] font-medium text-muted-foreground">{t("shell.home.trust.sources", "Sources")}</dt>
+              <dd className="mt-1 text-[15px] font-semibold text-foreground">
+                {marketPulseSources > 0
+                  ? t("shell.home.trust.sourcesValue", "{n} Sri Lankan marketplaces, credited on every listing", { n: marketPulseSources })
+                  : t("shell.home.trust.sourcesFallback", "Sri Lankan marketplaces, credited on every listing")}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[13px] font-medium text-muted-foreground">{t("shell.home.trust.types", "Vehicle types")}</dt>
+              <dd className="mt-1 text-[15px] font-semibold text-foreground">
+                {t("shell.home.trust.typesValue", "Cars, bikes, three-wheelers, vans and lorries")}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[13px] font-medium text-muted-foreground">{t("shell.home.trust.updated", "Last updated")}</dt>
+              <dd className="mt-1 text-[15px] font-semibold text-foreground">
+                {listingFreshnessAt ? (
+                  <DataFreshnessIndicator
+                    latestListingAt={liveMarketSnapshot?.latest_listing_at}
+                    lastUpdated={stats?.last_updated}
+                    variant="subline"
+                    className="text-[15px] font-semibold normal-case tracking-normal text-foreground"
+                  />
+                ) : (
+                  t("shell.home.trust.updatedPending", "Waiting for the first update")
+                )}
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
       {/* ── MARKET PULSE ────────────────────────────────────────── */}
       <RevealSection className="border-t border-border">
         <div className="mx-auto max-w-[1560px] px-5 py-14 sm:px-6 lg:py-20">
-          <SectionHeader eyebrow={t("home.deeperIntel", "Deeper intelligence")} title={t("home.deeperTitle", "Fuel mix, market signals & regional momentum")} />
+          <SectionHeader eyebrow={t("shell.home.moreData", "More market data")} title={t("shell.home.moreDataTitle", "Fuel mix, price signals and demand by district")} />
           <div className="space-y-6">
             <FuelMixStrip />
             <MarketSignalsStrip />
@@ -1411,19 +1415,19 @@ export default function Dashboard() {
 
           {/* District demand velocity */}
           <div className="mt-12 border-t border-border pt-8">
-            <ProFeatureLock label="District demand velocity">
+            <ProFeatureLock label={t("shell.home.districtDemandLock", "Demand by district")}>
             <div className="mb-5 flex items-center justify-between">
               <div>
-                <p className="text-[13px] font-medium text-primary">Demand velocity</p>
+                <p className="text-[13px] font-medium text-primary">{t("shell.home.districtDemand", "Demand by district")}</p>
                 <h3 className="mt-1 font-display text-base font-semibold tracking-tight text-foreground">
-                  Regional listing momentum — last 7 days
+                  {t("shell.home.districtDemandTitle", "Where new ads are appearing — last 7 days")}
                 </h3>
               </div>
               <Link
                 to="/#market"
                 className="flex items-center gap-1 text-[12px] font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright"
               >
-                Market feed <ArrowUpRight className="h-3 w-3" />
+                {t("shell.home.allListings", "All listings")} <ArrowUpRight className="h-3 w-3" />
               </Link>
             </div>
             <Suspense
@@ -1453,14 +1457,14 @@ export default function Dashboard() {
 
           {/* Tool links */}
           <div className="mt-12 border-t border-border pt-8">
-            <p className="mb-4 text-[13px] font-medium text-muted-foreground">Intelligence tools</p>
+            <p className="mb-4 text-[13px] font-medium text-muted-foreground">{t("shell.nav.tools", "Tools")}</p>
             <div className="flex flex-wrap gap-2">
             {[
-              { label: "Valuation", to: "/estimate" },
-              { label: "Trends", to: "/trends" },
-              { label: "Calculator", to: "/calculator" },
-              { label: "EV Hub", to: "/ev-hub" },
-              { label: "Official Pulse", to: "/official-pulse" },
+              { label: t("shell.nav.valueMyVehicle", "What's my vehicle worth?"), to: "/estimate" },
+              { label: t("shell.nav.priceTrends", "Price trends"), to: "/trends" },
+              { label: t("shell.nav.importTax", "Import tax calculator"), to: "/calculator" },
+              { label: t("shell.nav.electric", "Electric & hybrid"), to: "/ev-hub" },
+              { label: t("shell.nav.officialUpdates", "Tax & customs updates"), to: "/official-pulse" },
             ].map((tool) => (
               <Link key={tool.label} to={tool.to}
                 className="group/tool flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2.5 text-[12px] font-semibold text-foreground no-underline transition-all hover:border-primary/30 hover:bg-primary/[0.06] hover:shadow-soft active:scale-[0.98]"
@@ -1475,75 +1479,27 @@ export default function Dashboard() {
       </RevealSection>
 
 
-      {/* ── Source marquee — Marquee (#11 UI review) ───────────────────── */}
-      <SourceMarquee
+      {/* ── Market overview (Pro) — deliberately low on the page ─────── */}
+      <section className="border-b border-border bg-background">
+        <div className="mx-auto max-w-[1560px] px-5 py-10 sm:px-6 lg:py-14">
+          <ProFeatureLock label={t("shell.home.marketOverviewLock", "Full market overview")}>
+            <Suspense fallback={null}>
+              {!liveMarketSnapshot && !stats && !dashboardInsights ? (
+                <MarketIntelligenceSkeleton />
+              ) : (
+                <MarketIntelligencePanel snapshot={liveMarketSnapshot} stats={stats} insights={dashboardInsights} />
+              )}
+            </Suspense>
+          </ProFeatureLock>
+        </div>
+      </section>
+
+      {/* ── Sources — static credit list (no marquee) ──────────────── */}
+      <SourceCredits
         items={(liveMarketSnapshot?.source_status || [])
           .filter((st) => Number(st.listings_found || 0) > 0)
           .map((st) => ({ source: st.source, listings: Number(st.listings_found || 0) }))}
       />
-
-      {/* ── COMPARE BAR ─────────────────────────────────────────── */}
-      {compareIds.length > 0 && (
-        <div className="fixed bottom-24 left-1/2 z-[1200] w-[min(94vw,720px)] -translate-x-1/2 md:bottom-4">
-          <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card/95 px-3 py-2.5 shadow-soft-xl backdrop-blur-xl md:px-4">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex -space-x-2">
-                {compareListings.slice(0, 4).map((listing) => (
-                  <div
-                    key={listing.id}
-                    className="relative h-9 w-9 overflow-hidden rounded-2xl border-2 border-card bg-muted ring-1 ring-border"
-                  >
-                    <VehicleThumbnail
-                      src={pickVehicleImageUrl(
-                        [listing.thumbnail_url, ...(Array.isArray(listing.images) ? listing.images : [])],
-                        [listing.detail_url],
-                      )}
-                      listingId={listing.id}
-                      alt={`${listing.make} ${listing.model}`}
-                      className="h-full w-full object-cover"
-                      placeholderClassName="flex h-full w-full items-center justify-center bg-muted"
-                    />
-                  </div>
-                ))}
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-[12px] font-semibold text-foreground">
-                  {compareIds.length} selected to compare
-                </p>
-                <p className="truncate text-[10px] text-muted-foreground">
-                  {compareIds.length < 2 ? "Add one more vehicle" : "Ready to compare side-by-side"}
-                </p>
-              </div>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setCompareListings([])}
-                className="flex h-9 items-center gap-1 rounded-xl border border-border px-3 text-[11px] font-semibold text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <X className="h-3 w-3" /> Clear
-              </button>
-              <button
-                type="button"
-                disabled={compareIds.length < 2}
-                onClick={() => setShowCompare(true)}
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-primary px-4 text-[11px] font-bold text-primary-foreground transition-colors hover:bg-primary/95 disabled:opacity-40"
-              >
-                <Scale className="h-3.5 w-3.5" />
-                Compare
-              </button>
-              {compareIds.length >= 2 && (
-                <Link
-                  to={`/compare?ids=${compareIds.slice(0, 4).join(",")}`}
-                  className="inline-flex h-9 items-center gap-1 rounded-xl border border-border bg-card px-3 text-[11px] font-semibold text-foreground no-underline transition-colors hover:border-primary/30 hover:bg-primary/10 hover:text-primary-bright"
-                >
-                  Full page
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── DIALOGS ─────────────────────────────────────────────── */}
       <Dialog open={showMarketAlerts} onOpenChange={setShowMarketAlerts}>
@@ -1552,7 +1508,7 @@ export default function Dashboard() {
             <DialogTitle className="font-display text-lg font-semibold tracking-tight">Market alerts</DialogTitle>
           </DialogHeader>
           <div className="rounded-2xl border border-border bg-surface p-4">
-            <p className="text-[11px] font-medium text-muted-foreground">Current lane</p>
+            <p className="text-[11px] font-medium text-muted-foreground">{t("shell.home.currentSearch", "Current search")}</p>
             <p className="mt-1.5 text-[13px] font-semibold text-foreground">{currentAlertSummary}</p>
             <div className="mt-3 flex gap-2">
               <Input value={alertPriceInput} onChange={(e) => setAlertPriceInput(e.target.value.replace(/[^\d]/g, ""))} inputMode="numeric" placeholder="Target max price (LKR)" className="h-9 flex-1 rounded-2xl border-border bg-transparent text-base md:text-sm" />
@@ -1632,9 +1588,6 @@ export default function Dashboard() {
         />
       </Suspense>
 
-      <Suspense fallback={null}>
-        <ComparisonModal listings={compareListings} open={showCompare} onClose={() => setShowCompare(false)} />
-      </Suspense>
     </div>
   );
 }

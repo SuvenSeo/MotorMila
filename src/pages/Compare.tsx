@@ -90,7 +90,7 @@ export default function Compare() {
   };
 
   return (
-    <PageCanvas>
+    <PageCanvas ambient="none">
       <div className="mx-auto max-w-5xl px-4 py-8 md:px-6">
         {/* Header */}
         <div className="mb-6 flex items-start gap-4">

@@ -59,7 +59,7 @@ export const freePlanCopy = {
   alertsTitle: "One free alert included",
   alertsBody: "Pro unlocks deeper alert watches, richer match refresh, and WhatsApp notifications.",
   scoresTitle: "Deal scores are a Pro signal",
-  scoresBody: "Upgrade to see fair-price scoring on every listing and sort by deal quality.",
+  scoresBody: "Fair-price scoring on every listing, and sorting by deal quality, are coming with Pro.",
   pulseTitle: "Limited Official Pulse on Free",
   pulseBody: "Free shows the latest 6 signals. Pro unlocks the full pulse desk and history.",
   trendsTitle: "6-month trend window on Free",
@@ -72,5 +72,5 @@ export const freePlanCopy = {
   estimateBody: "Fair market range is open on Free. 1Y/3Y trajectory and seller fair-ask tools unlock on Pro.",
   dealerTitle: "Dealer workspace teaser",
   dealerBody: "Claim and basic yard tools are open. Deep dealer intelligence unlocks on Pro / Dealer.",
-  genericCta: "Upgrade to Pro",
+  genericCta: "Notify me",
 } as const;
