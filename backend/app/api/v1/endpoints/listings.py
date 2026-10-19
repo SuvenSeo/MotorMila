@@ -17,7 +17,7 @@ from urllib.parse import urljoin, urlparse
 import httpx
 from bs4 import BeautifulSoup
 from db.session import get_db
-from db.models import CarListing, VehiclePriceHistory, live_listing_filter
+from db.models import CarListing, ScrapeRun, VehiclePriceHistory, live_listing_filter
 from app.services.nhtsa_specs import fetch_models_for_make as _nhtsa_fetch_models
 from app.services.safety_research import combined_research
 from app.services.geo_service import enrich_listing
@@ -1112,11 +1112,32 @@ def get_sources(db: Session = Depends(get_db)):
             continue
         counts[source_key] = counts.get(source_key, 0) + int(row.count or 0)
 
+    # Attribution + freshness: when MotorMila last successfully checked each
+    # source (latest SUCCESS scrape run). The frontend shows it next to the
+    # source credit.
+    last_checked: dict[str, str] = {}
+    try:
+        checked_rows = (
+            db.query(ScrapeRun.source, func.max(ScrapeRun.finished_at))
+            .filter(ScrapeRun.status == "SUCCESS")
+            .group_by(ScrapeRun.source)
+            .all()
+        )
+        for raw_source, finished in checked_rows:
+            key = _canonical_source(str(raw_source or ""))
+            if key and finished is not None:
+                stamp = finished.isoformat()
+                if stamp > last_checked.get(key, ""):
+                    last_checked[key] = stamp
+    except Exception:  # noqa: BLE001 - freshness is best-effort
+        db.rollback()
+
     return [
         {
             "source": key,
             "label": SOURCE_LABELS.get(key, key.replace("-", " ").title()),
             "count": value,
+            "last_checked_at": last_checked.get(key),
         }
         for key, value in sorted(counts.items(), key=lambda item: item[1], reverse=True)
     ]

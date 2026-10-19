@@ -27,6 +27,41 @@ _UPDATE_IMMUTABLE_KEYS = frozenset({"id", "first_seen_at", "source", "source_id"
 # writing that would wipe a gallery the merged DB already has.
 _UPDATE_SKIP_EMPTY_KEYS = frozenset({"images"})
 
+# A re-scrape often knows less than an earlier one (list page vs detail page,
+# "Negotiable" price, thumbnail-only feed). On update, a missing value never
+# replaces a known one: None / "" / placeholder values are skipped for every
+# column. Columns where "unknown" is spelled as a placeholder string:
+_PLACEHOLDER_VALUES = {
+    "model": {"other", "unknown", ""},
+    "district": {"sri lanka", ""},
+}
+
+
+def _is_empty_update(key: str, value, current) -> bool:
+    """True when writing ``value`` over ``current`` would lose information."""
+    if value is None:
+        return True
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return True
+        if key in ("thumbnail_url",) and stripped.startswith("data:"):
+            return True
+        placeholders = _PLACEHOLDER_VALUES.get(key)
+        if placeholders and stripped.lower() in placeholders and current not in (None, ""):
+            return True
+    if isinstance(value, (list, dict)) and not value:
+        return True
+    return False
+
+
+def _naive(value):
+    if value is None or getattr(value, "tzinfo", None) is None:
+        return value
+    from datetime import timezone
+
+    return value.astimezone(timezone.utc).replace(tzinfo=None)
+
 
 def _as_decimal(value) -> Decimal | None:
     if value is None:
@@ -145,6 +180,18 @@ def upsert_listing(
     )
 
     if existing:
+        # Dump merges can replay an older sighting after a newer one already
+        # landed; an older observation must never overwrite newer data.
+        incoming_seen = _naive(payload.get("scraped_at"))
+        current_seen = _naive(existing.scraped_at)
+        if (
+            preserve_lifecycle
+            and incoming_seen is not None
+            and current_seen is not None
+            and incoming_seen < current_seen
+        ):
+            return False
+
         old_price = _as_decimal(existing.price_lkr)
         was_active = bool(existing.is_active)
         for key, value in payload.items():
@@ -153,6 +200,9 @@ def upsert_listing(
             if key in _UPDATE_SKIP_EMPTY_KEYS and not value:
                 # Never let an older dump / thumbnail-only scrape wipe a
                 # gallery the row already has.
+                continue
+            if _is_empty_update(key, value, getattr(existing, key, None)):
+                # Never replace known data with NULL / "" / a placeholder.
                 continue
             setattr(existing, key, value)
         if not preserve_lifecycle:
