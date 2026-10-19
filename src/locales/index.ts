@@ -1,14 +1,15 @@
 import { en } from "./en";
 import { si } from "./si";
 import { ta } from "./ta";
+import { listingEn, listingSi, listingTa } from "./listing";
 
 export type Language = "en" | "si" | "ta";
 export type Dictionary = Record<string, string>;
 
 export const DICTIONARIES: Record<Language, Dictionary> = {
-  en: en as unknown as Dictionary,
-  si: si as unknown as Dictionary,
-  ta: ta as unknown as Dictionary,
+  en: { ...(en as unknown as Dictionary), ...listingEn },
+  si: { ...(si as unknown as Dictionary), ...listingSi },
+  ta: { ...(ta as unknown as Dictionary), ...listingTa },
 };
 
 export const LOCALE_TAGS: Record<Language, string> = {

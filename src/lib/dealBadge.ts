@@ -90,6 +90,10 @@ export function formatLkrShort(value: number): string {
 }
 
 /**
+ * The single deal palette. Integration note: when the ui/design deal tokens
+ * land, swap these in this one place — below→deal-good, fair→deal-fair,
+ * above→deal-high, verify→deal-caution (lease stays informational/sky).
+ *
  * The single deal palette. Solid-ish fills so the 11–12px text keeps contrast
  * on photo overlays as well as on cards (WCAG 1.4.3).
  */
