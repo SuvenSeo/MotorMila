@@ -5,6 +5,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppPreferencesProvider } from "@/lib/appPreferences";
 import { AuthProvider } from "@/lib/authContext";
 
+vi.mock("@/components/SnapshotModeNotice", () => ({
+  SnapshotModeNotice: () => null,
+  default: () => null,
+}));
+
 vi.mock("@/components/StatsBar", () => ({
   StatsBar: () => <div>StatsBar</div>,
 }));

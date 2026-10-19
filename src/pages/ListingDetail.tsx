@@ -6,7 +6,7 @@ import {
   Car as CarIcon, ArrowRight, Zap, Sparkles, ShieldCheck, Clock, Database, AlertTriangle, PlugZap, Scale,
   Heart
 } from 'lucide-react';
-import { getListing, getListingFmv, getListingGeo, getListingHistoryReport, getListingPriceHistory, getListingSafetyResearch, getSellerTrustProfile, getSimilarListings, formatPrice } from '@/services/api';
+import { getListing, getListingFmv, getListingGeo, getListingHistoryReport, getListingPriceHistory, getListingSafetyResearch, getSimilarListings, formatPrice } from '@/services/api';
 import { TrustCheckPanel } from '@/components/TrustCheckPanel';
 import { SnapshotModeNotice } from '@/components/SnapshotModeNotice';
 import { getSourceAttribution } from '@/lib/sourceAttribution';
@@ -157,7 +157,8 @@ export default function ListingDetail() {
     Promise.all([
       getListing(id).catch(() => null),
       getSimilarListings(id).catch(() => []),
-      getSellerTrustProfile(id).catch(() => null),
+      // seller-profile is retired (410): seller contact happens on the source site.
+      Promise.resolve(null as SellerTrustProfile | null),
       getListingPriceHistory(id).catch(() => null),
       getListingFmv(id).catch(() => null),
     ])

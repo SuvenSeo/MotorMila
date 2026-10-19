@@ -1,5 +1,4 @@
 import { memo, useEffect, useMemo, useState } from "react";
-import { getListingThumbnailProxyUrl } from "@/services/api";
 import { formatSourceName } from "@/lib/sourceAttribution";
 
 interface VehicleThumbnailProps {
@@ -58,10 +57,9 @@ export const VehicleThumbnail = memo(function VehicleThumbnail({
   sizes = "(max-width: 768px) 100vw, 33vw",
 }: VehicleThumbnailProps) {
   const fallbackSrc = useMemo(() => createFallbackThumbnailDataUri(alt, source), [alt, source]);
-  const proxyUrl = useMemo(() => {
-    if (!src || !Number.isFinite(listingId)) return null;
-    return getListingThumbnailProxyUrl(Number(listingId));
-  }, [src, listingId]);
+  // The thumbnail proxy is retired (410) - photos are only hotlinked with
+  // source credit, so there is no proxy candidate any more.
+  const proxyUrl: string | null = null;
 
   // Ordered candidates: direct photo, then proxy, then the branded placeholder.
   const candidates = useMemo(() => {

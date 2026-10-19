@@ -1139,8 +1139,11 @@ def require_authenticated(
                 status_code=403,
                 detail="Writes require an Authorization Bearer token (cookie alone is not accepted).",
             )
+        # Native clients (Android) send a Bearer token and no Origin header.
+        # A Bearer token cannot be attached by a foreign page, so a missing
+        # Origin is fine; a present-but-untrusted Origin is still rejected.
         origin = _request_origin(request)
-        if not _is_trusted_origin(origin):
+        if origin and not _is_trusted_origin(origin):
             raise HTTPException(status_code=403, detail="Writes require a trusted Origin.")
     return get_current_auth_payload(request, authorization, db)
 
