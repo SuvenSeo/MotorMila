@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { m } from "motion/react";
 import { ExternalLink, SearchX, Star, TrendingDown } from "lucide-react";
 import { getListings, getPriceDrops, formatPrice } from "@/services/api";
 import type { CarListing, FilterState, PriceDropItem } from "@/types/car";
@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { SectionHeader } from "@/components/SectionHeader";
 import { pickVehicleImageUrl } from "@/lib/listingImage";
 import { isReasonableListingPrice } from "@/lib/formatting";
+import { cleanDistrict, isPlausiblePriceDrop } from "@/lib/dataSanity";
 import { minCashDownForPrice, sortListingsByAffordability } from "@/lib/cashToOwn";
 import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
@@ -31,6 +32,21 @@ import { InfiniteMovingCards } from "@/components/ui/InfiniteMovingCards";
 
 const PICKS_PAGES = 4;
 const MIN_DEAL_SCORE = 8;
+/** Never leave the board on "Scanning inventory…" — give up and show a real state. */
+const PICKS_TIMEOUT_MS = 12_000;
+
+class PicksTimeoutError extends Error {}
+
+/** Reject after `ms` so a hung request ends in an error/empty state, not a skeleton forever. */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new PicksTimeoutError("timeout")), ms);
+    promise.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); },
+    );
+  });
+}
 
 export type BestPicksSortMode = "deal_score" | "affordability";
 
@@ -152,14 +168,16 @@ export default function BestPicks() {
   const [picks, setPicks] = useState<CarListing[]>([]);
   const [drops, setDrops] = useState<PriceDropItem[]>([]);
   const [dropsLoaded, setDropsLoaded] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [sortMode, setSortMode] = useState<BestPicksSortMode>(() =>
     fullAccess ? "deal_score" : "affordability",
   );
 
   useEffect(() => {
     let cancelled = false;
-    getPriceDrops(7, fullAccess ? 8 : FREE_PRICE_DROPS_LIMIT)
-      .then((items) => { if (!cancelled) setDrops(items); })
+    withTimeout(getPriceDrops(7, fullAccess ? 8 : FREE_PRICE_DROPS_LIMIT), PICKS_TIMEOUT_MS)
+      // Belt-and-braces: the API layer already applies the sanity guard.
+      .then((items) => { if (!cancelled) setDrops(items.filter(isPlausiblePriceDrop)); })
       .catch(() => { /* feed is additive — page works without it */ })
       .finally(() => { if (!cancelled) setDropsLoaded(true); });
     return () => { cancelled = true; };
@@ -175,9 +193,15 @@ export default function BestPicks() {
         const pagesToFetch = fullAccess ? PICKS_PAGES : 1;
         const sort = fullAccess ? "deal_score" : "newest";
         const base: FilterState = { sort, page: 1, vehicle_category: "cars" };
-        const responses = await Promise.all(
-          Array.from({ length: pagesToFetch }, (_, i) => getListings({ ...base, page: i + 1 })),
+        // allSettled: one slow/failed page must not sink the board.
+        const settled = await withTimeout(
+          Promise.allSettled(
+            Array.from({ length: pagesToFetch }, (_, i) => getListings({ ...base, page: i + 1 })),
+          ),
+          PICKS_TIMEOUT_MS,
         );
+        const responses = settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+        if (responses.length === 0) throw new Error("no pages");
         if (cancelled) return;
         const unique = new Map<number, CarListing>();
         const candidates = responses
@@ -192,8 +216,14 @@ export default function BestPicks() {
             if (!unique.has(l.id)) unique.set(l.id, l);
           });
         setPicks(Array.from(unique.values()));
-      } catch {
-        if (!cancelled) setError(t("picks.loadError", "Unable to load best picks."));
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err instanceof PicksTimeoutError
+              ? t("picks.timeout", "Inventory is taking too long to load. Check your connection and try again.")
+              : t("picks.loadError", "Unable to load best picks."),
+          );
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -201,7 +231,7 @@ export default function BestPicks() {
     return () => {
       cancelled = true;
     };
-  }, [fullAccess, t]);
+  }, [fullAccess, t, attempt]);
 
   const ranked = useMemo(() => {
     const sorted = sortPicks(picks, sortMode);
@@ -214,6 +244,28 @@ export default function BestPicks() {
       ? "ranked by min cash down (CBSL LTV)"
       : "ranked by deal strength";
   const hiddenPickCount = fullAccess ? 0 : Math.max(0, picks.length - FREE_BEST_PICKS_LIMIT);
+  const renderDropCard = (drop: PriceDropItem) => (
+                  <Link
+                    to={`/listing/${drop.listing.id}`}
+                    className="group block h-full rounded-xl border border-border bg-surface p-3.5 no-underline transition-all hover:border-emerald-500/30 hover:bg-card hover:shadow-soft"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate text-[12px] font-bold text-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                        {drop.listing.make} {drop.listing.model}{drop.listing.year ? ` ${drop.listing.year}` : ""}
+                      </span>
+                      <span className="shrink-0 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 num">
+                        −{drop.drop_pct.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="mt-2 flex items-baseline gap-2">
+                      <span className="text-[11px] font-semibold text-muted-foreground line-through num">{formatPrice(drop.previous_price_lkr)}</span>
+                      <span className="text-[13px] font-bold text-foreground num">{formatPrice(drop.new_price_lkr)}</span>
+                    </div>
+                    <p className="mt-1 text-[10px] font-semibold text-muted-foreground">
+                      {cleanDistrict(drop.listing.district) || drop.listing.source}
+                    </p>
+                  </Link>
+  );
   return (
     <PageCanvas>
       <PageHero
@@ -222,17 +274,31 @@ export default function BestPicks() {
         eyebrowIcon={Star}
         watermarkIcon={Star}
         title={<>{t("picks.title", "Deal-score picks.")}</>}
-        description={loading ? t("picks.scanning", "Scanning inventory...") : fullAccess
-          ? `${ranked.length} vehicles scored ${MIN_DEAL_SCORE}+ from ${PICKS_PAGES} pages, ${rankCaption}.`
-          : `${ranked.length} free teaser picks scored ${MIN_DEAL_SCORE}+ — upgrade for the full board.`}
+        description={loading
+          ? t("picks.scanning", "Scanning inventory…")
+          : error || ranked.length === 0
+            ? t("picks.descNone", "Listings scored against the live market median for their lane.")
+            : fullAccess
+              ? t("picks.descFull", "{n} vehicles scored {min}+ from {pages} pages, {caption}.", { n: ranked.length, min: MIN_DEAL_SCORE, pages: PICKS_PAGES, caption: rankCaption })
+              : t("picks.descFree", "{n} free teaser picks, {caption} — upgrade for the full deal-score board.", { n: ranked.length, caption: rankCaption })}
         media={visuals.altCategorySuvWhite}
         mediaPosition="center 40%"
         mediaTone="light"
-        highlights={[
-          { label: "Min score", value: `${MIN_DEAL_SCORE}+`, hint: "Strict deal-score floor" },
-          { label: "Inventory", value: loading ? "…" : String(ranked.length), hint: fullAccess ? "Vehicles in this shortlist" : "Free teaser shortlist" },
-          { label: "Sort modes", value: "2", hint: "Deal score or affordability" },
-        ]}
+        highlights={
+          // Only real numbers: the count is hidden until it is known (no "…").
+          !loading && !error && ranked.length > 0
+            ? [
+                ...(fullAccess
+                  ? [{ label: t("picks.hlMinScore", "Min score"), value: `${MIN_DEAL_SCORE}+`, hint: t("picks.hlMinScoreHint", "Deal-score floor") }]
+                  : []),
+                {
+                  label: t("picks.hlInventory", "In this shortlist"),
+                  value: ranked.length.toLocaleString("en-LK"),
+                  hint: fullAccess ? t("picks.hlInventoryHint", "Vehicles that cleared the floor") : t("picks.hlInventoryFree", "Free teaser shortlist"),
+                },
+              ]
+            : undefined
+        }
       >
         {!loading && !error && picks.length > 0 && (
           <div className="mt-8 flex flex-wrap gap-2.5" role="group" aria-label={t("picks.sortAria", "Sort best picks")}>
@@ -266,7 +332,7 @@ export default function BestPicks() {
 
       <PageBody className="space-y-14 lg:space-y-20">
         {/* Biggest cuts this week — powered by per-listing price history */}
-        <motion.section initial="hidden" animate="show" variants={revealItem} className="rounded-2xl border border-border bg-card p-5 shadow-soft backdrop-blur-md sm:p-6">
+        <m.section initial="hidden" animate="show" variants={revealItem} className="rounded-2xl border border-border bg-card p-5 shadow-soft backdrop-blur-md sm:p-6">
             <div className="flex items-center gap-2.5 border-b border-border pb-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-2xl border border-emerald-500/25 bg-emerald-500/10">
                 <TrendingDown className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
@@ -286,6 +352,13 @@ export default function BestPicks() {
               <p className="pt-4 text-[13px] text-muted-foreground font-medium">
                 {t("picks.cutsEmpty", "No cuts recorded in the last 7 days yet — price tracking is scan-over-scan, so drops appear here as our daily scans catch sellers moving their asking prices.")}
               </p>
+            ) : drops.length < 4 ? (
+              // Too few to loop — a 3-card marquee repeating forever looks broken.
+              <div className="grid gap-2.5 pt-4 sm:grid-cols-2 lg:grid-cols-3">
+                {drops.map((drop) => (
+                  <div key={drop.listing.id}>{renderDropCard(drop)}</div>
+                ))}
+              </div>
             ) : (
               <InfiniteMovingCards
                 items={drops}
@@ -294,59 +367,34 @@ export default function BestPicks() {
                 speed="normal"
                 pauseOnHover
                 className="pt-3"
-                renderItem={(drop) => (
-                  <Link
-                    to={`/listing/${drop.listing.id}`}
-                    className="group block h-full rounded-xl border border-border bg-surface p-3.5 no-underline transition-all hover:border-emerald-500/30 hover:bg-card hover:shadow-soft"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-[12px] font-bold text-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                        {drop.listing.make} {drop.listing.model}{drop.listing.year ? ` ${drop.listing.year}` : ""}
-                      </span>
-                      <span className="shrink-0 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 num">
-                        −{drop.drop_pct}%
-                      </span>
-                    </div>
-                    <div className="mt-2 flex items-baseline gap-2">
-                      <span className="text-[11px] font-semibold text-muted-foreground line-through num">{formatPrice(drop.previous_price_lkr)}</span>
-                      <span className="text-[13px] font-bold text-foreground num">{formatPrice(drop.new_price_lkr)}</span>
-                    </div>
-                    <p className="mt-1 text-[10px] font-semibold text-muted-foreground">
-                      {drop.listing.district || drop.listing.source}
-                    </p>
-                  </Link>
-                )}
+                renderItem={renderDropCard}
               />
             )}
-          </motion.section>
+          </m.section>
 
         {loading ? (
           <CardSkeleton />
         ) : error ? (
-          <motion.div variants={revealItem} className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-border py-16 text-center">
+          <m.div variants={revealItem} className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-border py-16 text-center">
             <SearchX className="h-5 w-5 text-muted-foreground" aria-hidden />
             <p className="text-[13px] text-muted-foreground font-medium">{error}</p>
+            <button type="button" onClick={() => setAttempt((n) => n + 1)} className="rounded-full bg-primary px-4 py-2 text-[11px] font-bold text-primary-foreground transition-all hover:bg-primary/95 active:scale-[0.97]">{t("common.retry", "Try again")}</button>
             <Link to="/#market" className="rounded-full border border-border bg-card px-4 py-2 text-[11px] font-bold text-foreground no-underline transition-all hover:bg-surface active:scale-[0.97]">{t("common.openInventory", "Open inventory")}</Link>
-          </motion.div>
+          </m.div>
         ) : ranked.length === 0 ? (
-          <motion.div variants={revealItem}>
+          <m.div variants={revealItem}>
             <EmptyState
               headline={t("picks.empty", "No vehicles meet the deal-score gate right now.")}
-              body={t("picks.emptyHint", "Try clearing the sort, or seed local demo inventory to preview this board.")}
-              actionLabel={t("picks.clearFilters", "Clear filters")}
-              onAction={() => setSortMode("deal_score")}
+              body={t("picks.emptyBody", "Nothing in the latest scan is priced clearly below its lane median. Scores refresh with every daily scan — check back tomorrow, or browse the full market.")}
+              actionLabel={t("common.retry", "Try again")}
+              onAction={() => setAttempt((n) => n + 1)}
               hint={
-                <span>
-                  {t("picks.loadDemoHint", "Load demo:")}{" "}
-                  <code className="rounded bg-surface px-1.5 py-0.5 font-mono text-[10px]">python scripts/seed-demo.py --demo</code>{" "}
-                  ·{" "}
-                  <Link to="/#market" className="underline underline-offset-2 hover:text-foreground">
-                    {t("common.browseInventory", "Browse inventory")}
-                  </Link>
-                </span>
+                <Link to="/#market" className="underline underline-offset-2 hover:text-foreground">
+                  {t("common.browseInventory", "Browse inventory")}
+                </Link>
               }
             />
-          </motion.div>
+          </m.div>
         ) : (
           <>
             {/* Featured — the one hero pick, at 2× weight */}
@@ -355,7 +403,7 @@ export default function BestPicks() {
               const pct = topScore > 0 ? Math.min(100, Math.round((score / topScore) * 100)) : 0;
               const cashDown = minCashDownForPrice(Number(featured.price_lkr || 0));
               return (
-                <motion.article variants={revealItem} className="group relative grid overflow-hidden rounded-2xl border border-border bg-card shadow-soft backdrop-blur-md transition-all duration-300 hover:border-primary/30 hover:shadow-soft-lg lg:grid-cols-[1.1fr_1fr]" onMouseMove={setSpotlightVars}>
+                <m.article variants={revealItem} className="group relative grid overflow-hidden rounded-2xl border border-border bg-card shadow-soft backdrop-blur-md transition-all duration-300 hover:border-primary/30 hover:shadow-soft-lg lg:grid-cols-[1.1fr_1fr]" onMouseMove={setSpotlightVars}>
                   <CardSpotlightGlow />
                   <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-30 pointer-events-none" aria-hidden />
                   <Link to={`/listing/${featured.id}`} className="block aspect-[16/10] overflow-hidden bg-muted no-underline transition-transform duration-200 active:scale-[0.99] lg:aspect-auto lg:min-h-[320px]">
@@ -392,7 +440,7 @@ export default function BestPicks() {
                       )}
                     </div>
                   </div>
-                </motion.article>
+                </m.article>
               );
             })()}
 
@@ -405,13 +453,13 @@ export default function BestPicks() {
                   className="mb-8"
                   actions={<span className="text-[11px] font-bold text-muted-foreground num">{t("picks.more", "{n} more", { n: rest.length })}</span>}
                 />
-                <motion.div variants={revealContainer} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <m.div variants={revealContainer} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {rest.map((listing, idx) => {
                     const score = Number(listing.deal_score || 0);
                     const pct = topScore > 0 ? Math.min(100, Math.round((score / topScore) * 100)) : 0;
                     const cashDown = minCashDownForPrice(Number(listing.price_lkr || 0));
                     return (
-                      <motion.article key={listing.id} variants={revealItem} className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg" onMouseMove={setSpotlightVars}>
+                      <m.article key={listing.id} variants={revealItem} className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg" onMouseMove={setSpotlightVars}>
                         <CardSpotlightGlow />
                         <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-30 pointer-events-none" aria-hidden />
                         <Link to={`/listing/${listing.id}`} className="relative block aspect-[16/10] overflow-hidden bg-muted no-underline transition-transform duration-200 active:scale-[0.98]">
@@ -439,10 +487,10 @@ export default function BestPicks() {
                             <div className={`h-full rounded-full ${dealMeter(score)}`} style={{ width: `${pct}%` }} />
                           </div>
                         </div>
-                      </motion.article>
+                      </m.article>
                     );
                   })}
-                </motion.div>
+                </m.div>
               </div>
             )}
           </>
