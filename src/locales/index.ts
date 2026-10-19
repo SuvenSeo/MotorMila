@@ -1,14 +1,15 @@
 import { en } from "./en";
 import { si } from "./si";
 import { ta } from "./ta";
+import { shellEn, shellSi, shellTa } from "./shell";
 
 export type Language = "en" | "si" | "ta";
 export type Dictionary = Record<string, string>;
 
 export const DICTIONARIES: Record<Language, Dictionary> = {
-  en: en as unknown as Dictionary,
-  si: si as unknown as Dictionary,
-  ta: ta as unknown as Dictionary,
+  en: { ...(en as unknown as Dictionary), ...shellEn },
+  si: { ...(si as unknown as Dictionary), ...shellSi },
+  ta: { ...(ta as unknown as Dictionary), ...shellTa },
 };
 
 export const LOCALE_TAGS: Record<Language, string> = {

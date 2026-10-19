@@ -456,7 +456,7 @@ export function AIChatWidget() {
 
       {showTooltip && !open && (
         <div
-          className={`${tooltipOut ? "aw-tooltip-out" : "aw-tooltip-in"} fixed bottom-7 right-[92px] z-[9998] hidden max-w-[250px] items-center gap-3 rounded-2xl border border-primary/25 bg-popover/95 px-3 py-3 shadow-soft-lg backdrop-blur-2xl sm:flex`}
+          className={`${tooltipOut ? "aw-tooltip-out" : "aw-tooltip-in"} fixed bottom-7 right-[92px] z-floating hidden max-w-[250px] items-center gap-3 rounded-2xl border border-primary/25 bg-popover/95 px-3 py-3 shadow-soft-lg backdrop-blur-2xl sm:flex`}
         >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-primary/25 bg-primary/12 text-primary">
             <Bot className="h-4 w-4" />
@@ -480,7 +480,7 @@ export function AIChatWidget() {
           if (open) closePanel();
           else setOpen(true);
         }}
-        className="aw-fab aw-fab-wrapper group flex h-14 w-14 items-center justify-center rounded-full border border-primary/30 bg-card text-primary shadow-soft-lg transition-transform active:scale-95"
+        className="aw-fab aw-fab-wrapper dock-float group flex h-14 w-14 items-center justify-center rounded-full border border-primary/30 bg-card text-primary shadow-soft-lg transition-transform active:scale-95"
       >
         {open ? <X className="h-5 w-5" /> : <MessageCircle className="h-5 w-5" />}
       </button>

@@ -101,7 +101,7 @@ export function CompareTray({ className }: { className?: string }) {
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
-          "fixed bottom-[108px] left-4 z-40 inline-flex h-11 items-center gap-2 rounded-full border border-primary/25 bg-card/95 px-4 text-[12px] font-bold text-foreground shadow-soft-xl backdrop-blur transition-all hover:border-primary/40 active:scale-[0.97] md:left-auto md:right-24 md:bottom-6",
+          "dock-float dock-hide-when-typing left-4 inline-flex h-11 items-center gap-2 rounded-full border border-primary/25 bg-card/95 px-4 text-[12px] font-bold text-foreground shadow-soft-xl backdrop-blur transition-all hover:border-primary/40 active:scale-[0.97] md:left-auto md:right-[6.5rem]",
           className,
         )}
         aria-label={`Open compare tray, ${pinned.length} pinned`}

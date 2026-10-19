@@ -1,0 +1,117 @@
+/**
+ * UI strings added by the ui/shell refresh (navigation, freshness hint, Pro
+ * messaging, home copy). Kept in their own file so parallel locale edits don't
+ * collide; merged over the base dictionaries in ./index.ts.
+ *
+ * si/ta: only short, common words are translated here. Anything longer falls
+ * back to English until the locale pipeline translates it.
+ */
+export const shellEn: Record<string, string> = {
+  // Primary destinations
+  "shell.nav.buy": "Buy",
+  "shell.nav.prices": "Prices",
+  "shell.nav.tools": "Tools",
+  "shell.nav.sell": "Sell",
+  "shell.nav.saved": "Saved",
+  "shell.nav.account": "Your account",
+  "shell.nav.freePlan": "Free plan",
+  // Menu items
+  "shell.nav.browseAll": "Browse all vehicles",
+  "shell.nav.browseAllDetail": "Cars, bikes, three-wheelers, vans",
+  "shell.nav.bestDeals": "Best deals",
+  "shell.nav.bestDealsDetail": "Priced below similar ads",
+  "shell.nav.electric": "Electric & hybrid",
+  "shell.nav.electricDetail": "EV prices and running costs",
+  "shell.nav.compareDetail": "Up to three vehicles side by side",
+  "shell.nav.priceTrends": "Price trends",
+  "shell.nav.priceTrendsDetail": "Asking prices by model over time",
+  "shell.nav.valueMyVehicle": "What's my vehicle worth?",
+  "shell.nav.valueMyVehicleDetail": "Price range from similar ads",
+  "shell.nav.officialUpdates": "Tax & customs updates",
+  "shell.nav.officialUpdatesDetail": "Gazettes, DMT and Customs news",
+  "shell.nav.permits": "Import permit prices",
+  "shell.nav.permitsDetail": "What permits are selling for",
+  "shell.nav.importTax": "Import tax calculator",
+  "shell.nav.importTaxDetail": "Landed cost with duty and VAT",
+  "shell.nav.affordDetail": "Search by cash and monthly budget",
+  "shell.nav.safeTransfer": "Ownership transfer checklist",
+  "shell.nav.safeTransferDetail": "CR book, DMT forms, sale agreement",
+  "shell.nav.leasing": "Leasing quotes",
+  "shell.nav.leasingDetail": "Ask lenders for a quote",
+  "shell.nav.inspection": "Book an inspection",
+  "shell.nav.inspectionDetail": "Have a mechanic check the vehicle",
+  "shell.nav.insurance": "Insurance quotes",
+  "shell.nav.insuranceDetail": "Through a licensed broker",
+  "shell.nav.sellVehicle": "Sell your vehicle",
+  "shell.nav.sellVehicleDetail": "See a fair asking price first",
+  "shell.nav.dealer": "Dealer workspace",
+  "shell.nav.dealerDetail": "Price your stock against the market",
+  "shell.nav.savedAlerts": "Saved vehicles & alerts",
+  "shell.nav.savedAlertsDetail": "Price-drop alerts on what you follow",
+  "shell.nav.pricingDetail": "Free during beta",
+  "shell.nav.proPreview": "Pro preview",
+  "shell.nav.proPreviewDetail": "What Pro will include",
+  "shell.nav.howItWorks": "How it works",
+  "shell.nav.howItWorksDetail": "Where prices and scores come from",
+  "shell.nav.mobileAppDetail": "Android app, coming soon",
+  "shell.nav.feedback": "Send feedback",
+  // Header freshness hint
+  "shell.fresh.short": "Updates behind",
+  "shell.fresh.updatedAgo": "Updated {ago}",
+  "shell.fresh.explainAgo": "Listings last updated {ago}. New ads and price changes can take a few hours to show here.",
+  "shell.fresh.explain": "Listing updates are running behind. New ads and price changes can take a few hours to show here.",
+  // Pro messaging (one voice: free during beta, Pro coming soon, notify me)
+  "shell.pro.badge": "Pro · coming soon",
+  "shell.pro.lockBody": "This will be part of Pro. Everything else on MotorMila is free during beta.",
+  "shell.pro.notify": "Notify me",
+  "shell.pro.freeBeta": "Free during beta",
+  // Home
+  "shell.home.categories": "Browse by type",
+  "shell.home.cat.cars": "Cars",
+  "shell.home.cat.bikes": "Bikes",
+  "shell.home.cat.threeWheelers": "Three-wheelers",
+  "shell.home.cat.vans": "Vans",
+  "shell.home.cat.lorries": "Lorries",
+  "shell.home.trust.sources": "Sources",
+  "shell.home.trust.sourcesValue": "{n} Sri Lankan marketplaces, credited on every listing",
+  "shell.home.trust.sourcesFallback": "Sri Lankan marketplaces, credited on every listing",
+  "shell.home.trust.types": "Vehicle types",
+  "shell.home.trust.typesValue": "Cars, bikes, three-wheelers, vans and lorries",
+  "shell.home.trust.updated": "Last updated",
+  "shell.home.trust.updatedPending": "Waiting for the first update",
+  "shell.home.proBelow": "More with Pro",
+  // Best Picks loading/empty
+  "shell.picks.loading": "Finding the best-priced listings…",
+  "shell.picks.emptyTitle": "No standout deals right now",
+  "shell.picks.emptyBody": "We only list vehicles priced clearly below similar ads. Check back after the next update, or browse everything.",
+  "shell.picks.timeoutTitle": "This is taking longer than usual",
+  "shell.picks.timeoutBody": "We couldn't load deal picks just now. Try again, or browse all listings.",
+  "shell.picks.retry": "Try again",
+  "shell.picks.browse": "Browse all listings",
+};
+
+export const shellSi: Record<string, string> = {
+  "shell.nav.buy": "මිලදී ගන්න",
+  "shell.nav.prices": "මිල ගණන්",
+  "shell.nav.tools": "මෙවලම්",
+  "shell.nav.sell": "විකුණන්න",
+  "shell.nav.saved": "සුරැකි",
+  "shell.home.cat.cars": "කාර්",
+  "shell.home.cat.bikes": "බයික්",
+  "shell.home.cat.threeWheelers": "ත්‍රීවීල්",
+  "shell.home.cat.vans": "වෑන්",
+  "shell.home.cat.lorries": "ලොරි",
+};
+
+export const shellTa: Record<string, string> = {
+  "shell.nav.buy": "வாங்க",
+  "shell.nav.prices": "விலைகள்",
+  "shell.nav.tools": "கருவிகள்",
+  "shell.nav.sell": "விற்க",
+  "shell.nav.saved": "சேமித்தவை",
+  "shell.home.cat.cars": "கார்கள்",
+  "shell.home.cat.bikes": "பைக்குகள்",
+  "shell.home.cat.threeWheelers": "முச்சக்கர வண்டிகள்",
+  "shell.home.cat.vans": "வேன்கள்",
+  "shell.home.cat.lorries": "லாரிகள்",
+};

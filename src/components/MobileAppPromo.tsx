@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Smartphone, X } from "lucide-react";
 import { useAppPreferences } from "@/lib/appPreferences";
+import { setDockExtra } from "@/lib/dock";
 
 const SEEN_KEY = "motormila.mobile_promo_seen";
 /**
@@ -49,6 +50,7 @@ export function MobileAppPromo() {
   const { t } = useAppPreferences();
   const { pathname, search } = useLocation();
   const [visible, setVisible] = useState(false);
+  const stripRef = useRef<HTMLElement>(null);
 
   const isFilteredSearch = pathname === "/" && search.length > 1;
   const suppressed = isFilteredSearch || SUPPRESSED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
@@ -67,7 +69,26 @@ export function MobileAppPromo() {
     return () => window.clearTimeout(timer);
   }, [suppressed]);
 
-  if (suppressed || !visible) return null;
+  const shown = !suppressed && visible;
+
+  // Claim dock height while shown so the chat button / compare tray stack
+  // above the strip instead of overlapping it.
+  useLayoutEffect(() => {
+    if (!shown) {
+      setDockExtra(0);
+      return;
+    }
+    const el = stripRef.current;
+    const measure = () => setDockExtra((el?.offsetHeight ?? 0) + 8);
+    measure();
+    window.addEventListener("resize", measure);
+    return () => {
+      window.removeEventListener("resize", measure);
+      setDockExtra(0);
+    };
+  }, [shown]);
+
+  if (!shown) return null;
 
   const dismiss = () => {
     setVisible(false);
@@ -76,9 +97,10 @@ export function MobileAppPromo() {
 
   return (
     <aside
+      ref={stripRef}
       role="complementary"
       aria-label={t("mobile.promoAria", "Motormila mobile app announcement")}
-      className="pointer-events-none fixed inset-x-0 bottom-[calc(88px+env(safe-area-inset-bottom))] z-40 flex justify-center px-3 md:bottom-4 md:justify-end md:px-4"
+      className="dock-strip pointer-events-none inset-x-0 flex justify-center px-3 md:justify-end md:px-6"
     >
       <div className="pointer-events-auto flex w-full max-w-md items-center gap-2.5 rounded-2xl border border-border bg-card/95 py-2 pl-3 pr-1.5 text-foreground shadow-soft-lg backdrop-blur-md motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
         <Smartphone className="h-4 w-4 shrink-0 text-primary" aria-hidden />

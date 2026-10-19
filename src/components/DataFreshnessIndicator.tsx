@@ -1,6 +1,7 @@
 import { AlertTriangle, Clock3 } from "lucide-react";
 import { getListingDataFreshness, type ListingDataFreshness } from "@/lib/dataFreshness";
 import { cn } from "@/lib/utils";
+import { useStaleBannerSlot } from "@/lib/staleBannerSlot";
 
 type DataFreshnessIndicatorProps = {
   latestListingAt?: string | null;
@@ -41,8 +42,10 @@ export function DataFreshnessIndicator({
 }: DataFreshnessIndicatorProps) {
   const freshness = getListingDataFreshness({ latestListingAt, lastUpdated, now });
   const tone = toneClasses(freshness.tone);
+  // Only one stale-data banner per page, whoever asks first (snapshot notice wins).
+  const ownsBannerSlot = useStaleBannerSlot(variant === "banner" && freshness.isStale, 0);
 
-  if (variant === "banner" && freshness.isStale) {
+  if (variant === "banner" && freshness.isStale && ownsBannerSlot) {
     return (
       <div
         className={cn(
@@ -66,7 +69,7 @@ export function DataFreshnessIndicator({
     );
   }
 
-  if (variant === "banner" && !freshness.isStale) {
+  if (variant === "banner") {
     return null;
   }
 
