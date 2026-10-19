@@ -36,7 +36,7 @@ export function LocaleSwitcher({ compact = false }: Props) {
             aria-pressed={active}
             aria-label={opt.label}
             title={opt.label}
-            className={`rounded-full px-2 py-1 text-[11px] font-semibold tracking-tight transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+            className={`rounded-full px-2 py-1 text-2xs font-semibold tracking-tight transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
               active
                 ? "bg-primary/15 text-primary-bright"
                 : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground"

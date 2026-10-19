@@ -29,16 +29,16 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName;
 
 const sheetVariants = cva(
-  "fixed z-50 gap-4 border-white/40 bg-background/80 p-6 shadow-soft-xl backdrop-blur-2xl transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500 dark:border-white/12",
+  "fixed z-50 gap-4 border-border bg-background/95 p-6 shadow-soft-xl backdrop-blur-2xl transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500 dark:border-white/12",
   {
     variants: {
       side: {
-        top: "inset-x-3 top-3 rounded-[32px] border data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
+        top: "inset-x-3 top-3 rounded-sheet border data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
         bottom:
-          "inset-x-3 bottom-3 rounded-[32px] border data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
-        left: "inset-y-3 left-3 h-[calc(100%-1.5rem)] w-3/4 rounded-[32px] border data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm",
+          "inset-x-3 bottom-3 rounded-sheet border data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
+        left: "inset-y-3 left-3 h-[calc(100%-1.5rem)] w-3/4 rounded-sheet border data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm",
         right:
-          "inset-y-3 right-3 h-[calc(100%-1.5rem)] w-3/4 rounded-[32px] border data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm",
+          "inset-y-3 right-3 h-[calc(100%-1.5rem)] w-3/4 rounded-sheet border data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm",
       },
     },
     defaultVariants: {

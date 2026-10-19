@@ -656,7 +656,7 @@
   .brand-wordmark {
     font-family: var(--font-wordmark, var(--font-display));
     font-weight: 700;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.035em; /* brand guide: Space Grotesk 700, −3.5% */
   }
 
   .brand-watermark {
