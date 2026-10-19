@@ -21,6 +21,7 @@ from db.sqlite_failover import (
 )
 
 from .api.v1.api import api_router
+from .routers import money_router  # PayHere, leads, legal requests (overhaul/money-legal)
 
 # Setup logging
 structlog.configure(
@@ -302,6 +303,7 @@ async def security_txt():
 
 # Include API router
 app.include_router(api_router, prefix="/api/v1")
+app.include_router(money_router, prefix="/api/v1")
 
 if __name__ == "__main__":
     import uvicorn
