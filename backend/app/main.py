@@ -17,8 +17,18 @@ from db.session import init_db
 from db.sqlite_failover import (
     failover_active,
     failover_enabled,
+    failover_status,
     start_sqlite_failover_background,
 )
+from app.core.db_guard import (
+    DatabaseUnavailable,
+    breaker as db_breaker,
+    bypass_breaker,
+    find_db_unavailable,
+    retry_after_seconds,
+)
+from app.core.http_security import CSRFOriginMiddleware, StrictCORSHeadersMiddleware
+from app.core.origins import cors_allowlist
 
 from .api.v1.api import api_router
 
@@ -165,28 +175,37 @@ async def lifespan(app: FastAPI):
         logger.error("daily_sync_scheduler_stop_failed", error=str(e))
 
 
+def api_docs_enabled() -> bool:
+    """Swagger/ReDoc/OpenAPI exposure.
+
+    Explicit API_DOCS_ENABLED wins. Otherwise docs are OFF in production
+    (a Hugging Face Space sets SPACE_ID; ENV/APP_ENV=production also counts)
+    so the full route map - including every /admin/* path - is not public.
+    """
+    raw = os.getenv("API_DOCS_ENABLED", "").strip().lower()
+    if raw:
+        return raw in {"1", "true", "yes", "on"}
+    env = (os.getenv("ENV") or os.getenv("APP_ENV") or "").strip().lower()
+    if env in {"prod", "production"} or os.getenv("SPACE_ID"):
+        return False
+    return True
+
+
+_docs_on = api_docs_enabled()
+
 app = FastAPI(
     title="Motormila API",
     description="Car Market Intelligence Platform for Sri Lanka",
     version="1.0.0",
     lifespan=lifespan,
+    docs_url="/docs" if _docs_on else None,
+    redoc_url="/redoc" if _docs_on else None,
+    openapi_url="/openapi.json" if _docs_on else None,
 )
 
-cors_origins = os.getenv("CORS_ORIGINS")
-if cors_origins:
-    allow_origins = [origin.strip() for origin in cors_origins.split(",") if origin.strip()]
-else:
-    allow_origins = [
-        "http://localhost:8080",
-        "http://127.0.0.1:8080",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:5174",
-        "https://motormila.vercel.app",
-        "https://vehicle-platform-one.vercel.app",
-        "https://vehicle-platform-one-suvenseoras-projects.vercel.app",
-    ]
+# Strict allowlist (app/core/origins.py): defaults are the production web
+# origins + localhost dev; CORS_ORIGINS extends it ("*" = no credentials).
+allow_origins = cors_allowlist()
 
 allow_credentials = True
 if any(origin == "*" for origin in allow_origins):
@@ -197,6 +216,8 @@ if any(origin == "*" for origin in allow_origins):
     )
 
 # CORS configuration — restrict to methods/headers actually used by the frontend.
+# Cookie-CSRF guard sits inside CORS so allowed-origin 403s stay readable.
+app.add_middleware(CSRFOriginMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,
@@ -208,6 +229,9 @@ app.add_middleware(
 
 app.add_middleware(GZipMiddleware, minimum_size=500)
 app.add_middleware(BodySizeLimitMiddleware)
+# Outermost: strip Access-Control-* for non-allowlisted origins (HF proxy
+# reflects Origin; Starlette always adds Allow-Credentials).
+app.add_middleware(StrictCORSHeadersMiddleware)
 
 
 @app.middleware("http")
@@ -239,8 +263,48 @@ async def add_security_headers(request: Request, call_next):
     return response
 
 
+def _db_unavailable_response() -> JSONResponse:
+    retry = retry_after_seconds()
+    return JSONResponse(
+        status_code=503,
+        content={
+            "detail": "Database temporarily unavailable. Please retry shortly.",
+            "code": "db_unavailable",
+            "retry_after": retry,
+        },
+        headers={"Retry-After": str(retry), "Cache-Control": "no-store"},
+    )
+
+
+async def _database_error_handler(request: Request, exc: Exception) -> JSONResponse:
+    outage = find_db_unavailable(exc)
+    if outage is not None:
+        logger.warning(
+            "db_unavailable",
+            path=request.url.path,
+            method=request.method,
+            error=str(outage)[:200],
+        )
+        return _db_unavailable_response()
+    logger.error("unhandled_db_exception", error=str(exc), path=request.url.path, method=request.method)
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
+
+app.add_exception_handler(DatabaseUnavailable, _database_error_handler)
+try:
+    from sqlalchemy import exc as _sa_exc
+
+    app.add_exception_handler(_sa_exc.DBAPIError, _database_error_handler)
+    app.add_exception_handler(_sa_exc.TimeoutError, _database_error_handler)
+except Exception:  # pragma: no cover
+    pass
+
+
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    # Outage-type failures wrapped in other exceptions still map to 503.
+    if find_db_unavailable(exc) is not None:
+        return _db_unavailable_response()
     # Ensure HF proxy + frontend parseApiError always get JSON, not plain text.
     logger.error(
         "unhandled_exception",
@@ -255,7 +319,9 @@ HEALTH_DB_PROBE_TIMEOUT_SECONDS = 5
 
 
 def _probe_db() -> None:
-    with db_session.hot_engine.connect() as conn:
+    # Bypass the circuit breaker: health must observe the real database (and
+    # a successful probe closes the circuit for everyone).
+    with bypass_breaker(), db_session.hot_engine.connect() as conn:
         conn.execute(text("SELECT 1"))
 
 
@@ -271,28 +337,49 @@ async def health_check():
         db_status = "down"
         logger.warning("health_db_probe_failed", error=str(exc))
 
+    active = failover_active()
+    if db_status == "ok":
+        mode = "failover" if active else "primary"
+    else:
+        mode = "down"
+    fo = failover_status()
+    circuit = db_breaker.snapshot()
     content = {
         "status": "ok" if db_status == "ok" else "degraded",
         "db": db_status,
+        "mode": mode,
         # True while serving from the downloaded SQLite dump (Neon quota
         # block); the DB probe above then targets SQLite, so "ok" +
         # failover=true is the expected outage posture.
-        "failover": failover_active(),
+        "failover": active,
+        "failover_enabled": bool(fo.get("enabled")),
+        "failover_attempts": int(fo.get("attempts") or 0),
+        "failover_error": fo.get("last_error"),
+        "failover_last_attempt_at": fo.get("last_attempt_at"),
+        "failover_source": (fo.get("source") or "").rsplit("/", 1)[-1] or None,
+        # Breaker state only - the error text can name the DB host.
+        "circuit": circuit.get("state"),
         "version": "1.0.0",
     }
 
     if db_status != "ok":
-        return JSONResponse(status_code=503, content=content)
-    return content
+        return JSONResponse(
+            status_code=503,
+            content=content,
+            headers={"Retry-After": str(retry_after_seconds()), "Cache-Control": "no-store"},
+        )
+    return JSONResponse(status_code=200, content=content, headers={"Cache-Control": "no-store"})
 
 
-SECURITY_TXT = """\
-Contact: mailto:suvenseoras@gmail.com
-Contact: tel:0758504424
-Preferred-Languages: en
-Policy: https://motormila.vercel.app/security
-Expires: 2027-01-01T00:00:00.000Z
-"""
+# RFC 9116. No personal phone number; contact is env-overridable so a role
+# address (e.g. security@<own domain>) can replace the mailbox without a deploy.
+_SECURITY_CONTACT = os.getenv("SECURITY_CONTACT", "mailto:suvenseoras@gmail.com").strip()
+SECURITY_TXT = (
+    f"Contact: {_SECURITY_CONTACT}\n"
+    "Preferred-Languages: en\n"
+    "Policy: https://motormila.vercel.app/security\n"
+    "Expires: 2027-10-01T00:00:00.000Z\n"
+)
 
 
 @app.get("/.well-known/security.txt")
