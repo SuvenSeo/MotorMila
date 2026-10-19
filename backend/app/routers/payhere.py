@@ -19,7 +19,8 @@ PAYHERE_MERCHANT_ID, PAYHERE_MERCHANT_SECRET (secret; never logged),
 PAYHERE_NOTIFY_URL (public backend URL of /api/v1/payhere/notify),
 PAYHERE_RETURN_URL, PAYHERE_CANCEL_URL, PAYHERE_SANDBOX (default true),
 PAYHERE_ENABLED (default true when the three required vars are set),
-PAYHERE_PRO_CHECKOUT_ENABLED (default false: Pro is free during beta).
+PAYHERE_PRO_CHECKOUT_ENABLED (default false: Pro is free during beta),
+PAYHERE_RECURRING_ENABLED (default false: needs a PayHere Plus/Premium account).
 
 Docs: https://support.payhere.lk/api-&-mobile-sdk/checkout-api
 """
@@ -171,6 +172,8 @@ def payhere_config() -> dict:
         "sandbox": sandbox_mode(),
         "currency": "LKR",
         "proFreeDuringBeta": not pro_checkout_enabled(),
+        # Recurring billing needs PayHere Plus/Premium; Lite is one-off only.
+        "recurringAvailable": payhere_enabled() and _truthy("PAYHERE_RECURRING_ENABLED", "false"),
         "plans": [
             {
                 "code": code,
@@ -224,6 +227,8 @@ def create_checkout(
     _checkout_limiter(request)
     if not payhere_enabled():
         raise HTTPException(status_code=503, detail="Card payments are not switched on yet. Use bank transfer or KOKO.")
+    if body.recurring and not _truthy("PAYHERE_RECURRING_ENABLED", "false"):
+        raise HTTPException(status_code=409, detail="Recurring billing isn't switched on yet. Pay for a month or a year instead.")
     if body.plan_code == "pro" and not pro_checkout_enabled():
         raise HTTPException(status_code=409, detail="Pro is free during the beta, so there is nothing to pay.")
     phone = normalise_phone(body.phone)

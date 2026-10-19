@@ -1,10 +1,8 @@
-"""Billing: signed plan-change webhook, manual pay (bank / KOKO) and checkout intent.
+"""Billing webhook — upgrade/downgrade Motormila plans from Stripe (or compatible) events.
 
-Stripe is not available to Sri Lankan businesses, so it is not a provider
-here. Card / wallet payments go through PayHere (``app/routers/payhere.py``),
-which verifies PayHere's md5sig itself. ``/billing/webhook`` stays for ops
-tooling: an HMAC-signed body (BILLING_WEBHOOK_SECRET) that sets a plan, e.g.
-after a bank-transfer receipt is checked.
+Requires BILLING_WEBHOOK_SECRET. Without it the endpoint returns 503.
+This does not create Stripe Checkout sessions; wire your Stripe dashboard /
+PayHere success hook to POST here after payment succeeds.
 """
 
 from __future__ import annotations
@@ -57,13 +55,16 @@ def _verify_signature(raw_body: bytes, signature: Optional[str]) -> None:
 async def billing_webhook(
     request: Request,
     x_motormila_signature: Optional[str] = Header(default=None, alias="X-Motormila-Signature"),
+    stripe_signature: Optional[str] = Header(default=None, alias="Stripe-Signature"),
 ):
     """Apply a plan change from a signed webhook body.
 
     Body JSON: ``{ "email", "plan", "subscription_status?", "event_id?" }``
     Signature: HMAC-SHA256 hex of the raw body in ``X-Motormila-Signature``
-    (``sha256=<hex>`` also accepted).
+    (``sha256=<hex>`` also accepted). Stripe-Signature is ignored unless you
+    terminate Stripe → Motormila in your own adapter; keep using our header.
     """
+    del stripe_signature  # reserved for a future native Stripe verifier
     raw = await request.body()
     _verify_signature(raw, x_motormila_signature)
 

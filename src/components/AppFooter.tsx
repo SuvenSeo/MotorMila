@@ -60,6 +60,8 @@ export function AppFooter() {
       { label: t("nav.dealer", "Dealer"), to: "/dealer" },
       { label: t("nav.bestPicks", "Best Picks"), to: "/best-picks" },
       { label: t("nav.compare", "Compare"), to: "/compare" },
+      { label: t("nav.leasing", "Leasing quotes"), to: "/finance" },
+      { label: t("nav.inspection", "Book an inspection"), to: "/inspection" },
       { label: t("nav.proPreview", "Pro Preview"), to: "/pro-preview" },
       { label: t("nav.alerts", "Alerts"), to: "/alerts" },
       { label: t("nav.settings", "Settings"), to: "/settings" },
@@ -70,7 +72,10 @@ export function AppFooter() {
   const legalLinks = useMemo(
     () => [
       { label: t("footer.privacy", "Privacy Policy"), to: "/privacy" },
-      { label: t("footer.terms", "Terms of Service"), to: "/terms" },
+      { label: t("footer.terms", "Terms of Use"), to: "/terms" },
+      { label: t("footer.cookies", "Cookie notice"), to: "/cookies" },
+      { label: t("footer.removal", "Remove a listing"), to: "/removal" },
+      { label: t("footer.deleteAccount", "Delete my account"), to: "/delete-account" },
     ],
     [t],
   );

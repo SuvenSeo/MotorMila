@@ -19,6 +19,7 @@ def _payhere_env(monkeypatch):
     monkeypatch.setenv("PAYHERE_SANDBOX", "true")
     monkeypatch.delenv("PAYHERE_PRO_CHECKOUT_ENABLED", raising=False)
     monkeypatch.delenv("PAYHERE_ENABLED", raising=False)
+    monkeypatch.setenv("PAYHERE_RECURRING_ENABLED", "true")
 
 
 def _add_user(Session, email="buyer@example.com"):
@@ -178,3 +179,13 @@ def test_checkout_intent_manual_when_payhere_off(monkeypatch):
     client, _ = make_client()
     data = client.post("/api/v1/billing/checkout-intent", json={"plan": "dealer_starter"}).json()
     assert data["provider"] == "manual" and data["checkout_url"] is None
+
+
+def test_recurring_refused_when_not_enabled(monkeypatch):
+    monkeypatch.setenv("PAYHERE_RECURRING_ENABLED", "false")
+    client, _ = make_client()
+    res = client.post(
+        "/api/v1/payhere/checkout", json={"plan_code": "dealer_pro", "phone": "0771234567", "recurring": True}
+    )
+    assert res.status_code == 409
+    assert client.get("/api/v1/payhere/config").json()["recurringAvailable"] is False

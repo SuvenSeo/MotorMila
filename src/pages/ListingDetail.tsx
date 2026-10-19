@@ -49,6 +49,7 @@ import { AtmosphericImage } from '@/components/AtmosphericImage';
 import { visuals } from '@/lib/visualAssets';
 import { trackEvent } from '@/lib/analytics';
 import { canonicalizeMake, canonicalizeModel } from '@/lib/makeNormalization';
+import { ListingLeadActions } from '@/components/money/ListingLeadActions';
 
 function formatToken(value: string | null | undefined): string {
   if (!value) return 'Unknown';
@@ -474,6 +475,15 @@ export default function ListingDetail() {
             )}
 
             {listing.id != null && <ListingHistoryReport listingId={listing.id} />}
+
+            <motion.div variants={revealItem}>
+              <ListingLeadActions
+                listingId={listing.id ?? undefined}
+                vehicle={[listing.year, canonicalizeMake(listing.make) || listing.make, canonicalizeModel(listing.model) || listing.model].filter(Boolean).join(' ')}
+                priceLkr={hasPrice ? listingPrice : undefined}
+                district={listing.district ?? undefined}
+              />
+            </motion.div>
 
             {/* Description */}
             <motion.div variants={revealItem} className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
