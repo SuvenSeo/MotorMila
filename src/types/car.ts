@@ -29,7 +29,12 @@ export type VehicleCategory =
   | "bicycles"
   | "boats"
   | "others";
-export type SortOption = "newest" | "deal_score" | "price_asc" | "price_desc" | "mileage_asc";
+/**
+ * "best_match" (default) ranks listings that have a real price and a photo
+ * first, then by recency — so priceless / photoless rows sink. Neutral:
+ * nothing is paid placement.
+ */
+export type SortOption = "best_match" | "newest" | "deal_score" | "price_asc" | "price_desc" | "mileage_asc";
 export type PriceAvailability = "priced" | "unavailable";
 
 export interface CarListing {

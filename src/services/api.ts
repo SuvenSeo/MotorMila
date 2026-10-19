@@ -1273,8 +1273,21 @@ function matchesSnapshotFilters(listing: CarListing, filters: FilterState): bool
   return true;
 }
 
+/** Best match: real price (2) + a photo (1). Priceless / photoless rows sink. */
+function bestMatchRank(listing: CarListing): number {
+  const price = toNumberOrNull(listing.price_lkr);
+  const hasPrice = price !== null && price >= 100_000;
+  const hasPhoto = Boolean(listing.thumbnail_url || (Array.isArray(listing.images) && listing.images.length));
+  return (hasPrice ? 2 : 0) + (hasPhoto ? 1 : 0);
+}
+
 function sortSnapshotListings(listings: CarListing[], sort: FilterState["sort"]): CarListing[] {
   return [...listings].sort((a, b) => {
+    if (sort === "best_match") {
+      return bestMatchRank(b) - bestMatchRank(a)
+        || listingTimestamp(b) - listingTimestamp(a)
+        || Number(b.id || 0) - Number(a.id || 0);
+    }
     if (sort === "deal_score") {
       return (toNumberOrNull(b.deal_score) ?? -Infinity) - (toNumberOrNull(a.deal_score) ?? -Infinity)
         || listingTimestamp(b) - listingTimestamp(a)
@@ -1732,6 +1745,53 @@ export const getListings = async (filters: FilterState): Promise<{ listings: Car
 
   // Live failed and no snapshot — surface the error rather than a silent empty list.
   throw new APIError(503, "Listings are temporarily unavailable.");
+};
+
+/**
+ * Price sample for the filter histogram: up to `size` newest priced listings
+ * matching every filter except price. Returns whole-rupee prices plus the
+ * total match count. Empty on failure — the histogram simply hides.
+ */
+export const getListingPriceSample = async (
+  filters: FilterState,
+  size = 100,
+): Promise<{ prices: number[]; total: number }> => {
+  const sampleFilters: FilterState = {
+    ...filters,
+    price_min: undefined,
+    price_max: undefined,
+    price_availability: undefined,
+    sort: "newest",
+    page: 1,
+    vehicle_category: filters.vehicle_category || "cars",
+  };
+  const toPrices = (rows: CarListing[]) =>
+    rows
+      .map((row) => toNumberOrNull(row.price_lkr))
+      .filter((price): price is number => price !== null && price >= 100_000)
+      .map((price) => Math.round(price));
+  try {
+    if (!SNAPSHOT_ONLY) {
+      const data = await fetchJSON<JsonRecord>("/listings", { ...sampleFilters, size: Math.min(100, Math.max(1, size)) });
+      const items = Array.isArray(data.items) ? data.items : [];
+      return {
+        prices: toPrices(items.map((item) => normalizeListing(asJsonRecord(item)))),
+        total: Number(data.total) || 0,
+      };
+    }
+  } catch {
+    // fall through to the snapshot sample
+  }
+  try {
+    const scoped = await getScopedSnapshotIndex(sampleFilters);
+    if (scoped) {
+      const result = filterScopedSnapshot(scoped, sampleFilters, size);
+      return { prices: toPrices(result.listings), total: result.total };
+    }
+  } catch {
+    // no snapshot either
+  }
+  return { prices: [], total: 0 };
 };
 
 export const sendFeedback = async (payload: FeedbackInput): Promise<FeedbackReceipt> => {
