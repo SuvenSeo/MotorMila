@@ -1,32 +1,23 @@
 import asyncio
 import os
-import random
 import re
 from datetime import datetime, timedelta
 from typing import Any
 from urllib.parse import parse_qs, urljoin, urlparse
 
+import httpx
 import structlog
 from bs4 import BeautifulSoup
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 from playwright.async_api import async_playwright
 from sqlalchemy.orm import Session
 
-try:
-    from curl_cffi.requests import AsyncSession as CurlCffiAsyncSession
-
-    CURL_CFFI_AVAILABLE = True
-except Exception:  # pragma: no cover - fallback path
-    CurlCffiAsyncSession = None  # type: ignore[assignment]
-    CURL_CFFI_AVAILABLE = False
-
 from app.scrapers.cleaner import CarCleaner
 from app.scrapers.net import (
-    get_proxy,
+    httpx_client_kwargs,
     playwright_context_kwargs,
-    playwright_launch_proxy,
-    stealth_init_script,
 )
+from app.scrapers.polite import RobotsDisallowedError, polite_goto
 from app.utils.time import utc_now
 from app.scrapers.page_budget import page_budget_for_category, start_page_from_env
 from app.services.historical_archive import (
@@ -40,27 +31,33 @@ log = structlog.get_logger()
 
 
 class RiyasewanaBlockedError(RuntimeError):
-    """Raised when riyasewana.com hard-blocks the scraper (Cloudflare block page)."""
+    """Raised when riyasewana.com blocks / challenges / rate-limits us.
+
+    Policy: we back off and skip the source for this run. We never retry
+    through a challenge, switch to a browser, rotate IPs or impersonate a
+    browser TLS fingerprint to get past a block.
+    """
 
 
-_ARCHIVE_FALLBACK_DISABLED = os.getenv("RIYASEWANA_ARCHIVE_FALLBACK", "1").lower() in {
-    "0",
-    "false",
-    "no",
-    "off",
+# Wayback Machine fallback is OFF by default: re-reading a site's archived
+# copies right after it blocked us is still working around the block.
+_ARCHIVE_FALLBACK_ENABLED = os.getenv("RIYASEWANA_ARCHIVE_FALLBACK", "0").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
 }
 
 
 def _archive_fallback_enabled() -> bool:
-    return not _ARCHIVE_FALLBACK_DISABLED
+    return _ARCHIVE_FALLBACK_ENABLED
 
 
-# Scrape mode: "auto" (fast plain-HTTP crawl, falls back to Playwright on hard
-# block), "http" (plain-HTTP only), "playwright" (full browser, pre-HTTP-mode
-# behavior).  Riyasewana serves complete server-rendered SERP HTML over plain
-# HTTP, so the http path is ~50x cheaper/faster than a Playwright browser per
-# page and can crawl the full catalog depth (hundreds of pages per category).
-_DEFAULT_SCRAPE_MODE = str(os.getenv("RIYASEWANA_SCRAPE_MODE", "auto") or "auto").strip().lower()
+# Scrape mode: "http" (default; plain HTTP with the honest bot UA) or
+# "playwright" (explicit opt-in browser, same honest UA, no stealth). "auto"
+# is accepted for backwards compatibility and means "http": a block is never
+# answered by falling back to a browser.
+_DEFAULT_SCRAPE_MODE = str(os.getenv("RIYASEWANA_SCRAPE_MODE", "http") or "http").strip().lower()
 _VALID_SCRAPE_MODES = {"auto", "http", "playwright"}
 _BLOCKED_HTTP_STATUSES = frozenset({401, 403, 405, 406, 429})
 
@@ -369,46 +366,21 @@ class RiyasewanaScraper:
         )
 
     async def _load_page_with_retries(self, page, page_url: str, page_num: int) -> tuple[BeautifulSoup, list]:
-        last_soup = BeautifulSoup("", "lxml")
-        last_cards: list = []
-        for attempt in range(1, 4):
-            if attempt == 1:
-                await page.goto(page_url, wait_until="domcontentloaded", timeout=45_000)
-            else:
-                await page.reload(wait_until="domcontentloaded", timeout=45_000)
-
-            try:
-                await page.wait_for_selector(self.LISTING_SELECTOR, timeout=20_000)
-            except PlaywrightTimeoutError:
-                pass
-
-            await page.wait_for_timeout(3_000)
-            await page.mouse.wheel(0, 1_800)
-            await page.wait_for_timeout(1_500)
-
-            soup = BeautifulSoup(await page.content(), "lxml")
-            if self._is_hard_block_page(soup):
-                title = soup.title.get_text(strip=True) if soup.title else "(no title)"
-                log.error("riyasewana_hard_blocked", page=page_num, attempt=attempt, title=title)
-                raise RiyasewanaBlockedError(
-                    f"riyasewana.com served a Cloudflare block page on page {page_num} "
-                    f"(title={title!r}); source unreachable"
-                )
-            cards = self._extract_cards(soup)
-            if cards:
-                return soup, cards
-
-            last_soup, last_cards = soup, cards
+        """Load one SERP page once. A challenge/block page aborts the source."""
+        await polite_goto(page, page_url, wait_until="domcontentloaded", timeout=45_000)
+        try:
+            await page.wait_for_selector(self.LISTING_SELECTOR, timeout=20_000)
+        except PlaywrightTimeoutError:
+            pass
+        soup = BeautifulSoup(await page.content(), "lxml")
+        if self._is_hard_block_page(soup) or self._is_challenge_page(soup):
             title = soup.title.get_text(strip=True) if soup.title else "(no title)"
-            if self._is_challenge_page(soup):
-                log.warning("riyasewana_challenge_retry", page=page_num, attempt=attempt, title=title)
-                await page.wait_for_timeout(12_000)  # wait longer for CF challenge to clear
-            else:
-                log.warning("riyasewana_no_cards_debug", page=page_num, attempt=attempt, title=title)
-                if attempt < 3:
-                    await page.wait_for_timeout(5_000)
-
-        return last_soup, last_cards
+            log.error("riyasewana_blocked_backoff", page=page_num, title=title)
+            raise RiyasewanaBlockedError(
+                f"riyasewana.com served a block/challenge page on page {page_num} "
+                f"(title={title!r}); backing off and skipping source"
+            )
+        return soup, self._extract_cards(soup)
 
     @classmethod
     def _category_base_url(cls, category_path: str) -> str:
@@ -425,45 +397,17 @@ class RiyasewanaScraper:
 
     async def _scrape_live(self, max_pages: int = 5):
         seen_urls: set[str] = set()
-        default_user_agent = (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/131.0.0.0 Safari/537.36"
-        )
-        context_opts = playwright_context_kwargs(default_user_agent)
+        context_opts = playwright_context_kwargs()
 
         async with async_playwright() as playwright:
-            launch_kwargs = {
-                "headless": True,
-                "args": [
-                    "--disable-blink-features=AutomationControlled",
-                    "--no-sandbox",
-                    "--disable-setuid-sandbox",
-                    "--disable-dev-shm-usage",
-                ],
-            }
-            launch_proxy = playwright_launch_proxy()
-            if launch_proxy:
-                launch_kwargs["proxy"] = launch_proxy
-            browser = await playwright.chromium.launch(**launch_kwargs)
+            browser = await playwright.chromium.launch(
+                headless=True,
+                args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+            )
             context = await browser.new_context(
                 user_agent=context_opts["user_agent"],
                 viewport=context_opts["viewport"],
-                locale="en-US",
-                timezone_id="Asia/Colombo",
-                extra_http_headers={
-                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-                    "Accept-Language": "en-US,en;q=0.9",
-                    "Accept-Encoding": "gzip, deflate, br",
-                    "Upgrade-Insecure-Requests": "1",
-                    "Sec-Fetch-Dest": "document",
-                    "Sec-Fetch-Mode": "navigate",
-                    "Sec-Fetch-Site": "none",
-                },
             )
-            stealth_script = stealth_init_script()
-            if stealth_script:
-                await context.add_init_script(stealth_script)
             page = await context.new_page()
 
             try:
@@ -535,6 +479,9 @@ class RiyasewanaScraper:
                             consecutive_page_errors = 0
                         except RiyasewanaBlockedError:
                             raise
+                        except RobotsDisallowedError:
+                            log.info("riyasewana_robots_skip_category", category=category_path)
+                            break
                         except Exception as e:
                             log.error(
                                 "riyasewana_page_error",
@@ -558,53 +505,32 @@ class RiyasewanaScraper:
             return False
 
     async def _http_fetch_page(self, client: Any, page_url: str, page_num: int) -> BeautifulSoup:
-        """Fetch one SERP page with retries + block detection.
+        """Fetch one SERP page with the honest bot client.
 
-        ``client`` is a curl_cffi ``AsyncSession`` (browser-grade TLS
-        fingerprint) — plain httpx gets 403'd by riyasewana's Cloudflare.
+        Any block, challenge or rate-limit answer raises
+        :class:`RiyasewanaBlockedError` immediately (no retry through it).
+        Plain network errors are retried once with backoff.
         """
         last_exc: Exception | None = None
-        for attempt in range(1, 4):
+        for attempt in range(1, 3):
             try:
                 response = await client.get(page_url)
                 if self._http_status_is_block(response.status_code):
                     raise RiyasewanaBlockedError(
                         f"HTTP {response.status_code} for {page_url}"
                     )
+                soup = BeautifulSoup(response.text, "lxml")
+                if self._is_hard_block_page(soup) or self._is_challenge_page(soup):
+                    title = soup.title.get_text(strip=True) if soup.title else "(no title)"
+                    log.error("riyasewana_blocked_backoff", page=page_num, title=title)
+                    raise RiyasewanaBlockedError(
+                        f"riyasewana.com served a block/challenge page on page {page_num} "
+                        f"(title={title!r}); backing off and skipping source"
+                    )
                 if response.status_code != 200:
                     raise RuntimeError(f"HTTP {response.status_code} for {page_url}")
-                soup = BeautifulSoup(response.text, "lxml")
-                if self._is_hard_block_page(soup):
-                    title = soup.title.get_text(strip=True) if soup.title else "(no title)"
-                    log.error(
-                        "riyasewana_http_hard_blocked",
-                        page=page_num,
-                        attempt=attempt,
-                        title=title,
-                    )
-                    raise RiyasewanaBlockedError(
-                        f"riyasewana.com served a Cloudflare block page over HTTP on page {page_num} "
-                        f"(title={title!r}); source unreachable"
-                    )
-                if self._is_challenge_page(soup):
-                    log.warning(
-                        "riyasewana_http_challenge_retry",
-                        page=page_num,
-                        attempt=attempt,
-                    )
-                    if attempt < 3:
-                        await asyncio.sleep(5 * attempt)
-                        continue
-                    # Persistent challenge: abort the source instead of
-                    # returning the wall page as content (which then walks
-                    # every remaining page as "empty").
-                    raise RiyasewanaBlockedError(
-                        f"riyasewana.com served a challenge page over HTTP on page {page_num}"
-                    )
-                # Fetch succeeded and isn't a challenge/block page; the caller
-                # decides whether the page is legitimately empty.
                 return soup
-            except RiyasewanaBlockedError:
+            except (RiyasewanaBlockedError, RobotsDisallowedError):
                 raise
             except Exception as exc:
                 last_exc = exc
@@ -614,39 +540,29 @@ class RiyasewanaScraper:
                     attempt=attempt,
                     error=str(exc),
                 )
-                if attempt < 3:
-                    await asyncio.sleep(2 * attempt)
+                if attempt < 2:
+                    await asyncio.sleep(10 * attempt)
                     continue
         if last_exc is not None:
             raise last_exc
         return BeautifulSoup("", "lxml")
 
-    async def _scrape_via_http(self, max_pages: int = 5, *, mode: str = "auto"):
-        """Fast plain-HTTP crawl of riyasewana SERP pages.
+    async def _scrape_via_http(self, max_pages: int = 5, *, mode: str = "http"):
+        """Plain-HTTP crawl of riyasewana SERP pages (server-rendered HTML).
 
-        Riyasewana renders the full listing grid server-side, so no browser is
-        needed: a plain GET returns the same cards the Playwright path parses.
-        This is dramatically cheaper/faster and can reach deep page numbers that
-        would take hours through a headless browser.  Uses curl_cffi's Chrome
-        impersonation because Cloudflare TLS-fingerprints plain httpx into a
-        403.  Shared card parsing lives in :meth:`_process_cards`.
+        Uses the shared polite client: honest MotorMilaBot UA, robots.txt
+        check per URL, one request at a time per host with a 2-5 s delay.
+        No TLS impersonation and no proxies. Card parsing lives in
+        :meth:`_process_cards`.
         """
-        if not CURL_CFFI_AVAILABLE:
-            raise RiyasewanaBlockedError(
-                "curl_cffi is not installed; riyasewana plain-HTTP mode unavailable"
-            )
-
         seen_urls: set[str] = set()
         upserted = 0
-        session_kwargs: dict[str, Any] = {
-            "impersonate": "chrome",
-            "timeout": 30.0,
-        }
-        proxy = get_proxy()
-        if proxy:
-            session_kwargs["proxies"] = {"http": proxy, "https": proxy}
 
-        async with CurlCffiAsyncSession(**session_kwargs) as client:
+        async with httpx.AsyncClient(
+            follow_redirects=True,
+            timeout=30.0,
+            **httpx_client_kwargs({"Accept": "text/html,application/xhtml+xml"}),
+        ) as client:
             for category_path in self.CATEGORY_PATHS:
                 page_limit = self._page_budget_for_category(category_path, max_pages)
                 base_url = self._category_base_url(category_path)
@@ -670,6 +586,9 @@ class RiyasewanaScraper:
                         soup = await self._http_fetch_page(client, page_url, page_num)
                     except RiyasewanaBlockedError:
                         raise
+                    except RobotsDisallowedError:
+                        log.info("riyasewana_robots_skip_category", category=category_path, url=page_url)
+                        break
                     except Exception as e:
                         log.error(
                             "riyasewana_http_page_error",
@@ -678,22 +597,11 @@ class RiyasewanaScraper:
                             error=str(e),
                         )
                         consecutive_page_errors += 1
-                        # Cloudflare rate-limits datacenter IPs after a burst
-                        # (403s). In auto mode raise so scrape() falls back to
-                        # the Playwright browser; in explicit http mode stop the
-                        # crawl and keep the partial results already upserted.
-                        if consecutive_page_errors >= 15:
-                            if mode == "auto" and (category_path == "cars" or upserted == 0):
-                                raise RiyasewanaBlockedError(
-                                    f"riyasewana.com rate-limited the HTTP crawl "
-                                    f"({consecutive_page_errors} consecutive page errors "
-                                    f"on {category_path}); falling back to Playwright"
-                                )
+                        if consecutive_page_errors >= 5:
                             log.warning(
-                                "riyasewana_http_rate_limited_skip_category",
+                                "riyasewana_http_errors_skip_category",
                                 category=category_path,
                                 consecutive_page_errors=consecutive_page_errors,
-                                note="skipping remaining pages of this category and continuing",
                             )
                             break
                         page_num += 1
@@ -735,7 +643,6 @@ class RiyasewanaScraper:
 
                     consecutive_page_errors = 0
                     page_num += 1
-                    await asyncio.sleep(random.uniform(0.4, 1.2))
 
         return upserted
 
@@ -771,7 +678,9 @@ class RiyasewanaScraper:
                 mode=mode,
                 fallback="auto",
             )
-            mode = "auto"
+            mode = "http"
+        if mode == "auto":
+            mode = "http"
 
         start_page = _start_page()
         # Stored on the instance rather than threaded through the private
@@ -784,24 +693,16 @@ class RiyasewanaScraper:
         if mode == "playwright":
             try:
                 return await self._scrape_live(max_pages=max_pages)
-            except RiyasewanaBlockedError:
+            except RiyasewanaBlockedError as exc:
+                log.warning("source_blocked_backoff", source=self.SOURCE, error=str(exc))
                 return self._recover_from_live_block(max_pages, "playwright_blocked")
 
-        # auto / http: try the fast plain-HTTP crawl first.
+        # http (and legacy "auto"): never fall back to a browser on a block.
         try:
             return await self._scrape_via_http(max_pages=max_pages, mode=mode)
         except RiyasewanaBlockedError as exc:
-            if mode == "http":
-                return self._recover_from_live_block(max_pages, "http_blocked")
-            log.warning(
-                "riyasewana_http_fallback_to_playwright",
-                max_pages=max_pages,
-                error=str(exc),
-            )
-            try:
-                return await self._scrape_live(max_pages=max_pages)
-            except RiyasewanaBlockedError:
-                return self._recover_from_live_block(max_pages, "playwright_blocked")
+            log.warning("source_blocked_backoff", source=self.SOURCE, error=str(exc))
+            return self._recover_from_live_block(max_pages, "http_blocked")
 
     def _run_archive_fallback(self, max_pages: int = 5) -> dict[str, Any]:
         """Upsert listings parsed from the most recent Wayback snapshot of the
