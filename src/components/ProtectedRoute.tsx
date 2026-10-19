@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { Crown, Lock, LogOut, ShieldCheck, Sparkles } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
 import { useAppPreferences } from "@/lib/appPreferences";

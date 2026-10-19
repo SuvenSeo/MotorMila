@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { FileText, Info, RefreshCw, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getPermits } from "@/services/api";

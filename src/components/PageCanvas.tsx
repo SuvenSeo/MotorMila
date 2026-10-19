@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { AmbientBackground } from "@/components/AmbientBackground";
 import { revealContainer } from "@/lib/motion";
 import { cn } from "@/lib/utils";

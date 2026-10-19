@@ -1,4 +1,4 @@
-import { MotionConfig } from "framer-motion";
+import { LazyMotion, MotionConfig, domAnimation } from "motion/react";
 import { Suspense, useState, useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { ScrollRestoration } from "@/components/ScrollRestoration";
@@ -205,6 +205,9 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <TooltipProvider>
+          {/* `m` components load only the domAnimation feature set; reduced
+              motion follows the OS setting app-wide. */}
+          <LazyMotion features={domAnimation}>
           <MotionConfig reducedMotion="user">
             <ScrollProgressBar />
             <Sonner />
@@ -299,6 +302,7 @@ const App = () => {
               </Routes>
             </BrowserRouter>
           </MotionConfig>
+          </LazyMotion>
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>

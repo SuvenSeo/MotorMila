@@ -1,6 +1,6 @@
 import { prefersReducedMotion, scrollBehavior } from "@/lib/motion";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "motion/react";
 import { ArrowUpRight, ExternalLink } from "lucide-react";
 import { useMemo } from "react";
 import { PrefetchLink } from "@/components/PrefetchLink";

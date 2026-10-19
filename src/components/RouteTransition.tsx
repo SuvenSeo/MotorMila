@@ -1,4 +1,4 @@
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useLocation, useOutlet } from "react-router-dom";
 import { pageEnter, pageExit, pageInitial } from "@/lib/motion";
 

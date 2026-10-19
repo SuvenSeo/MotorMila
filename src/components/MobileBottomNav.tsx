@@ -1,5 +1,5 @@
 import { BarChart2, Bell, Crown, Home, Star, TrendingUp } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { useLocation } from "react-router-dom";
 import { PrefetchLink } from "@/components/PrefetchLink";
 import { useAppPreferences } from "@/lib/appPreferences";

@@ -15,7 +15,7 @@ import {
   Sun,
   Trash2,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { toast } from "sonner";
 import { useAppPreferences, type Language } from "@/lib/appPreferences";
 import { useCompareTray } from "@/lib/compareTray";
