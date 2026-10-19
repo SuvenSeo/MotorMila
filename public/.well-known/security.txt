@@ -1,5 +1,4 @@
 Contact: mailto:suvenseoras@gmail.com
-Contact: tel:0758504424
 Preferred-Languages: en
 Canonical: https://motormila.vercel.app/.well-known/security.txt
 Expires: 2027-07-28T00:00:00.000Z
