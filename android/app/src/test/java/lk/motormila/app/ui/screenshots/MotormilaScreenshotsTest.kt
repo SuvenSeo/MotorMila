@@ -6,7 +6,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
-import app.cash.paparazzi.detectEnvironment
 import lk.motormila.app.ui.components.ErrorState
 import lk.motormila.app.ui.components.LoadingSkeletonCard
 import lk.motormila.app.ui.home.HeroStatsCard
@@ -30,14 +29,12 @@ class MotormilaScreenshotsTest {
     @get:Rule
     val paparazzi = Paparazzi(
         deviceConfig = DeviceConfig.PIXEL_6,
-        // compileSdk is 36 but Paparazzi 1.3.x bundles an API 35 layoutlib:
-        // render against the android-35 platform so goldens stay stable
-        // (CI installs platforms;android-35, see .github/workflows/android.yml).
-        environment = detectEnvironment().run {
-            copy(compileSdkVersion = 35, platformDir = platformDir.replace("android-36", "android-35"))
-        },
         // Fail loudly on missing goldens instead of silently recording.
         // (Record via the recordPaparazziDebug task.)
+        // NOTE: Paparazzi 1.3.5's Environment has no platformDir (it was
+        // removed); layoutlib comes from the Gradle plugin, so there is
+        // nothing to override here. Keep this block identical to main or
+        // re-record the goldens.
     )
 
     // ------------------------------------------------------------------
@@ -158,3 +155,4 @@ class MotormilaScreenshotsTest {
         }
     }
 }
+
