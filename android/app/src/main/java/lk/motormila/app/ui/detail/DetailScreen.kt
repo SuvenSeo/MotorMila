@@ -392,7 +392,7 @@ fun ListingDetailScreen(
     if (showFmvExplain && state.fmv != null) {
         ModalBottomSheet(onDismissRequest = { showFmvExplain = false }) {
             Column(Modifier.padding(20.dp)) {
-                Text("How this valuation works", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineMedium)
+                Text(stringResource(R.string.ui_detail_how_this_valuation_works), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineMedium)
                 Spacer(Modifier.height(8.dp))
                 val fmv = state.fmv!!
                 Text("Method: ${fmv.method ?: "comparable sales"}", style = MaterialTheme.typography.labelLarge)
@@ -1136,7 +1136,7 @@ private fun LeasePaymentCalculator(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text("10%", style = MaterialTheme.typography.labelSmall, color = MotormilaSecondaryText)
-                    Text("40% (CBSL Cap)", style = MaterialTheme.typography.labelSmall, color = MotormilaSecondaryText)
+                    Text(stringResource(R.string.ui_detail_40_cbsl_cap), style = MaterialTheme.typography.labelSmall, color = MotormilaSecondaryText)
                     Text("80%", style = MaterialTheme.typography.labelSmall, color = MotormilaSecondaryText)
                 }
             }
@@ -1647,7 +1647,7 @@ private fun HistorySection(
     modifier: Modifier = Modifier,
 ) {
     MotormilaSurface(modifier = modifier) {
-        Text("Price history", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(R.string.ui_detail_price_history), fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
         Spacer(Modifier.height(8.dp))
         if (history == null || history.points.size < 2) {
             Text(
@@ -1670,7 +1670,7 @@ private fun HistorySection(
         val flags = report?.flags.orEmpty()
         if (flags.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
-            Text("Ownership flags", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.ui_detail_ownership_flags), fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
             Spacer(Modifier.height(4.dp))
             flags.forEach { flag ->
                 Row(

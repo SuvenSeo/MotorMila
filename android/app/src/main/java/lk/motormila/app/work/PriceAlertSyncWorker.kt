@@ -125,7 +125,7 @@ class PriceAlertSyncWorker(
                     row.matchingCount,
                 ) + (
                     first?.priceLkr?.let { price ->
-                        res.getString(lk.motormila.app.R.string.notif_alert_match_from, "%,.0f".format(price))
+                        " " + res.getString(lk.motormila.app.R.string.notif_alert_match_from, "%,.0f".format(price))
                     } ?: ""
                     ),
                 contentIntent = contentIntentOf(row.alertId, first?.id),

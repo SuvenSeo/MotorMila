@@ -213,9 +213,9 @@ fun SettingsScreen(
                 OutlinedTextField(
                     value = baseUrl,
                     onValueChange = { viewModel.onEvent(SettingsUiEvent.BaseUrlChanged(it)) },
-                    label = { Text("API base URL override (blank = default)") },
+                    label = { Text(stringResource(R.string.ui_settings_api_base_url_override_blank)) },
                     singleLine = true,
-                    supportingText = { Text("Debug builds only — honoured by the network module.") },
+                    supportingText = { Text(stringResource(R.string.ui_settings_debug_builds_only_honoured_by)) },
                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                 )
                 TextButton(

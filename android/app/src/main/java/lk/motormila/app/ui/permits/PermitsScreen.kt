@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.permits
 
+import lk.motormila.app.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -115,7 +117,7 @@ private fun PermitsBody(
         if (permits.isEmpty()) {
             item {
                 MotormilaSurface {
-                    Text("No permit data yet", fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = MotormilaOnSurface)
+                    Text(stringResource(R.string.ui_permits_no_permit_data_yet), fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = MotormilaOnSurface)
                     Spacer(Modifier.height(6.dp))
                     Text(
                         "Permit prices are seeded by administrators or the permitsale scraper. The calculator still models landed cost without this table.",
@@ -132,7 +134,7 @@ private fun PermitsBody(
         }
         item {
             MotormilaSurface(modifier = Modifier.motormilaReveal(delayMillis = 80)) {
-                Text("Indicative prices only", fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = MotormilaOnSurface)
+                Text(stringResource(R.string.ui_permits_indicative_prices_only), fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = MotormilaOnSurface)
                 Spacer(Modifier.height(6.dp))
                 Text(
                     "Permit prices move with demand, regulation, and FX. These figures are research baselines and may not match a live desk quote.",

@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.pricing
 
+import lk.motormila.app.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -88,7 +90,7 @@ fun PricingScreen(
                             modifier = Modifier.weight(1f),
                         )
                         if (tier.highlight) {
-                            Text("MOST USED", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MotormilaGoodText)
+                            Text(stringResource(R.string.ui_pricing_most_used), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MotormilaGoodText)
                         }
                     }
                     Spacer(Modifier.height(8.dp))
@@ -141,7 +143,7 @@ fun PricingScreen(
                 }
             }
             item {
-                Text("FAQ", fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = MotormilaOnSurface)
+                Text(stringResource(R.string.ui_pricing_faq), fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = MotormilaOnSurface)
             }
             itemsIndexed(PricingCatalog.channelFaqs, key = { _, faq -> faq.question }) { _, faq ->
                 MotormilaSurface(onClick = { openFaq = if (openFaq == faq.question) null else faq.question }) {

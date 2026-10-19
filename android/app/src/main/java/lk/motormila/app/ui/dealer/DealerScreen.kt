@@ -211,7 +211,7 @@ private fun BenchmarkCard(state: DealerUiState, viewModel: DealerViewModel) {
         OutlinedTextField(
             value = state.benchmarkUrls,
             onValueChange = { viewModel.onEvent(DealerUiEvent.BenchmarkUrlsChanged(it)) },
-            label = { Text("One URL per line (ikman / riyasewana / patpat)") },
+            label = { Text(stringResource(R.string.ui_dealer_one_url_per_line_ikman)) },
             supportingText = {
                 Text(if (urlCount > 0) "$urlCount URL${if (urlCount == 1) "" else "s"} queued" else "No URLs yet")
             },
@@ -289,7 +289,7 @@ private fun UrlBenchmarkRow(row: UrlBenchmarkResult) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Price", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.ui_dealer_price), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(formatLkr(row.listingPrice), style = MaterialTheme.typography.titleSmall)
         }
         Row(
@@ -297,7 +297,7 @@ private fun UrlBenchmarkRow(row: UrlBenchmarkResult) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Median", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.ui_dealer_median), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(formatLkr(row.marketMedian), style = MaterialTheme.typography.titleSmall)
         }
         Row(
@@ -305,7 +305,7 @@ private fun UrlBenchmarkRow(row: UrlBenchmarkResult) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Gap", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.ui_dealer_gap), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(formatPct(row.priceGapPct, 1), style = MaterialTheme.typography.titleSmall)
         }
         row.error?.takeIf { it.isNotBlank() }?.let { err ->

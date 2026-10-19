@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.alerts
 
+import lk.motormila.app.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -203,42 +205,42 @@ private fun CreateForm(state: AlertsUiState, viewModel: AlertsViewModel, onUpgra
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
                 value = f.make, onValueChange = { viewModel.onEvent(AlertsUiEvent.FormChanged(f.copy(make = it))) },
-                label = { Text("Make") }, singleLine = true,
+                label = { Text(stringResource(R.string.ui_alerts_make)) }, singleLine = true,
                 modifier = Modifier.weight(1f).heightIn(min = 48.dp),
             )
             OutlinedTextField(
                 value = f.model, onValueChange = { viewModel.onEvent(AlertsUiEvent.FormChanged(f.copy(model = it))) },
-                label = { Text("Model (optional)") }, singleLine = true,
+                label = { Text(stringResource(R.string.ui_alerts_model_optional)) }, singleLine = true,
                 modifier = Modifier.weight(1f).heightIn(min = 48.dp),
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
                 value = f.district, onValueChange = { viewModel.onEvent(AlertsUiEvent.FormChanged(f.copy(district = it))) },
-                label = { Text("District") }, singleLine = true,
+                label = { Text(stringResource(R.string.ui_alerts_district)) }, singleLine = true,
                 modifier = Modifier.weight(1f).heightIn(min = 48.dp),
             )
             OutlinedTextField(
                 value = f.maxPrice, onValueChange = { viewModel.onEvent(AlertsUiEvent.FormChanged(f.copy(maxPrice = it))) },
-                label = { Text("Max (e.g. 8m)") }, singleLine = true,
-                supportingText = { Text("Triggers at or under this price") },
+                label = { Text(stringResource(R.string.ui_alerts_max_e_g_8m)) }, singleLine = true,
+                supportingText = { Text(stringResource(R.string.ui_alerts_triggers_at_or_under_this)) },
                 modifier = Modifier.weight(1f).heightIn(min = 48.dp),
             )
         }
         OutlinedTextField(
             value = f.whatsappPhone,
             onValueChange = { viewModel.onEvent(AlertsUiEvent.FormChanged(f.copy(whatsappPhone = it))) },
-            label = { Text("WhatsApp phone") },
+            label = { Text(stringResource(R.string.ui_alerts_whatsapp_phone)) },
             singleLine = true,
-            supportingText = { Text("Used when WhatsApp is selected (Pro)") },
+            supportingText = { Text(stringResource(R.string.ui_alerts_used_when_whatsapp_is_selected)) },
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
         )
         OutlinedTextField(
             value = f.telegramChatId,
             onValueChange = { viewModel.onEvent(AlertsUiEvent.FormChanged(f.copy(telegramChatId = it))) },
-            label = { Text("Telegram chat ID") },
+            label = { Text(stringResource(R.string.ui_alerts_telegram_chat_id)) },
             singleLine = true,
-            supportingText = { Text("Chat ID or @username (Pro)") },
+            supportingText = { Text(stringResource(R.string.ui_alerts_chat_id_or_username_pro)) },
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
         )
         Text(

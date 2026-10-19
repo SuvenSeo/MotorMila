@@ -8,10 +8,10 @@ import androidx.core.os.LocaleListCompat
  *
  * [apply] / [applyFromStore] call
  * `AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))`.
- * On API 33+ the platform LocaleManager picks this up for any Activity. On API 26–32
- * AppCompat applies it to AppCompatActivity through attachBaseContext; a
- * ComponentActivity can wrap [android.content.Context.createConfigurationContext]
- * with the same tag if a pre-33 host never migrates to AppCompatActivity.
+ * - API 33+: the platform LocaleManager applies it (manifest `android:localeConfig`
+ *   = res/xml/locales_config.xml also lists the app in system per-app language settings).
+ * - API 26-32: MainActivity is an AppCompatActivity, so AppCompat recreates it with
+ *   the new locale; AppLocalesMetadataHolderService (autoStoreLocales) persists it.
  *
  * Call [applyFromStore] from Application.onCreate so a persisted code is active
  * before the first frame. Settings applies immediately on change.

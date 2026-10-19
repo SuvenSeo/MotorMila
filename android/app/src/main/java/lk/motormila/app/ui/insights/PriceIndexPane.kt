@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.insights
 
+import lk.motormila.app.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -157,7 +159,7 @@ fun PriceIndexPane(
             }
             item {
                 MotormilaSurface(modifier = Modifier.motormilaReveal(delayMillis = 110)) {
-                    Text("Month-on-month", fontWeight = FontWeight.SemiBold, color = MotormilaOnSurface)
+                    Text(stringResource(R.string.ui_insights_month_on_month), fontWeight = FontWeight.SemiBold, color = MotormilaOnSurface)
                     Spacer(Modifier.height(10.dp))
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -179,7 +181,7 @@ fun PriceIndexPane(
         if (index.methodology.isNotBlank()) {
             item {
                 MotormilaSurface(modifier = Modifier.motormilaReveal(delayMillis = 130)) {
-                    Text("Methodology", fontWeight = FontWeight.SemiBold, color = MotormilaOnSurface)
+                    Text(stringResource(R.string.ui_insights_methodology), fontWeight = FontWeight.SemiBold, color = MotormilaOnSurface)
                     Spacer(Modifier.height(8.dp))
                     Text(index.methodology, fontSize = 13.sp, lineHeight = 20.sp, color = MotormilaSecondaryText)
                 }

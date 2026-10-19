@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.valuation
 
+import lk.motormila.app.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
@@ -488,7 +490,7 @@ private fun Step01VehicleProfile(
 
             // Transmission Selector
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Transmission", style = MaterialTheme.typography.labelSmall.copy(color = MotormilaSecondaryText))
+                Text(stringResource(R.string.ui_valuation_transmission), style = MaterialTheme.typography.labelSmall.copy(color = MotormilaSecondaryText))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf("Automatic", "Manual", "CVT", "Tiptronic").forEach { t ->
                         MotormilaChoiceChip(
@@ -503,7 +505,7 @@ private fun Step01VehicleProfile(
 
             // Fuel Selector
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Fuel type", style = MaterialTheme.typography.labelSmall.copy(color = MotormilaSecondaryText))
+                Text(stringResource(R.string.ui_valuation_fuel_type), style = MaterialTheme.typography.labelSmall.copy(color = MotormilaSecondaryText))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf("Petrol", "Diesel", "Hybrid", "Electric", "Plug-in Hybrid").forEach { fuel ->
                         MotormilaChoiceChip(
@@ -518,7 +520,7 @@ private fun Step01VehicleProfile(
 
             // District Selector
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Target district", style = MaterialTheme.typography.labelSmall.copy(color = MotormilaSecondaryText))
+                Text(stringResource(R.string.ui_valuation_target_district), style = MaterialTheme.typography.labelSmall.copy(color = MotormilaSecondaryText))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf("Colombo", "Gampaha", "Kandy", "Kurunegala", "Kalutara", "Galle").forEach { d ->
                         MotormilaChoiceChip(
@@ -976,7 +978,7 @@ private fun Step03ValuationGuidance(
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Column {
-                            Text("LOW RANGE", style = MaterialTheme.typography.labelSmall.copy( color = MotormilaSecondaryText))
+                            Text(stringResource(R.string.ui_valuation_low_range), style = MaterialTheme.typography.labelSmall.copy( color = MotormilaSecondaryText))
                             Text(
                                 text = formatLkr(r.lowLkr),
                                 style = MaterialTheme.typography.bodyMedium.copy(
@@ -987,7 +989,7 @@ private fun Step03ValuationGuidance(
                             )
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("FAIR MEDIAN", style = MaterialTheme.typography.labelSmall.copy( color = MotormilaPrimaryBright, fontWeight = FontWeight.Bold))
+                            Text(stringResource(R.string.ui_valuation_fair_median), style = MaterialTheme.typography.labelSmall.copy( color = MotormilaPrimaryBright, fontWeight = FontWeight.Bold))
                             Text(
                                 text = formatLkr(r.medianLkr),
                                 style = MaterialTheme.typography.bodyMedium.copy(
@@ -998,7 +1000,7 @@ private fun Step03ValuationGuidance(
                             )
                         }
                         Column(horizontalAlignment = Alignment.End) {
-                            Text("HIGH RANGE", style = MaterialTheme.typography.labelSmall.copy( color = MotormilaSecondaryText))
+                            Text(stringResource(R.string.ui_valuation_high_range), style = MaterialTheme.typography.labelSmall.copy( color = MotormilaSecondaryText))
                             Text(
                                 text = formatLkr(r.highLkr),
                                 style = MaterialTheme.typography.bodyMedium.copy(

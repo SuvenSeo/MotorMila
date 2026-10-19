@@ -167,7 +167,7 @@ fun LoginScreen(
                 OutlinedTextField(
                     value = state.name,
                     onValueChange = { viewModel.onEvent(AuthUiEvent.NameChanged(it)) },
-                    label = { Text("Name") },
+                    label = { Text(stringResource(R.string.ui_auth_name)) },
                     singleLine = true,
                     shape = MotormilaPill,
                     colors = fieldColors,
@@ -178,7 +178,7 @@ fun LoginScreen(
             OutlinedTextField(
                 value = state.email,
                 onValueChange = { viewModel.onEvent(AuthUiEvent.EmailChanged(it)) },
-                label = { Text("Email") },
+                label = { Text(stringResource(R.string.ui_auth_email)) },
                 singleLine = true,
                 shape = MotormilaPill,
                 colors = fieldColors,
@@ -188,7 +188,7 @@ fun LoginScreen(
             OutlinedTextField(
                 value = state.password,
                 onValueChange = { viewModel.onEvent(AuthUiEvent.PasswordChanged(it)) },
-                label = { Text("Password") },
+                label = { Text(stringResource(R.string.account_delete_password)) },
                 singleLine = true,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 shape = MotormilaPill,
@@ -209,7 +209,7 @@ fun LoginScreen(
                 OutlinedTextField(
                     value = state.inviteToken,
                     onValueChange = { viewModel.onEvent(AuthUiEvent.InviteTokenChanged(it)) },
-                    label = { Text("Invite token") },
+                    label = { Text(stringResource(R.string.ui_auth_invite_token)) },
                     singleLine = true,
                     supportingText = {
                         Text(
