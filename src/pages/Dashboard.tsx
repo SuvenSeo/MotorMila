@@ -467,7 +467,11 @@ export default function Dashboard() {
     // same tick gets cancelled when the grid re-lays out.
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        document.getElementById("market")?.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
+        const market = document.getElementById("market");
+        // jsdom (tests) has no scrollIntoView; old WebViews may lack it too.
+        if (market && typeof market.scrollIntoView === "function") {
+          market.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
+        }
       });
     });
   }, []);

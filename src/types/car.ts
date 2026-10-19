@@ -84,6 +84,8 @@ export interface PriceDropItem {
   new_price_lkr: number;
   drop_pct: number;
   dropped_at: string;
+  /** Scans at (about) the new price, when the API provides it. */
+  confirmations?: number | null;
 }
 
 export interface PriceHistoryPoint {

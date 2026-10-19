@@ -361,7 +361,8 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
       }`}
     >
       <div className={`${touch ? "" : "sticky top-0 z-10 "}space-y-3 rounded-[1.75rem] border border-transparent bg-card/85 px-3.5 py-3 shadow-soft backdrop-blur-xl`}>
-        <div className="flex items-center justify-between gap-2">
+        {/* In the drawer the sheet header already shows "Filters" + "Clear all". */}
+        <div className={touch ? "hidden" : "flex items-center justify-between gap-2"}>
           <p className="text-sm font-semibold tracking-tight text-foreground">{t("filter.title", "Filters")}</p>
           {activeChips.length > 0 ? (
             <button
@@ -446,6 +447,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
       <FilterGroup label={t("common.make", "Make")}>
         <Combobox
           label={t("common.make", "Make")}
+          hideLabel
           options={makes.map((make) => ({ value: make.make, label: `${make.make} (${make.count})` }))}
           value={filters.make || null}
           onChange={(value) => update({ make: value || undefined, model: undefined })}

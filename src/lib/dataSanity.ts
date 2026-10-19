@@ -9,7 +9,7 @@
 import { detectLeaseTakeover } from "@/lib/leaseTakeover";
 import { compactLkrAmount, formatLkrFull } from "@/lib/price";
 
-/** A drop larger than this is treated as suspect unless independently confirmed. */
+/** A drop of this size or larger is treated as suspect unless independently confirmed. */
 export const MAX_UNCONFIRMED_DROP_PCT = 50;
 /** Price points (scans) needed to confirm a suspect drop. */
 export const MIN_CONFIRMING_POINTS = 2;
@@ -75,7 +75,11 @@ export function rejectPriceDrop(drop: PriceDropLike): DropRejection | null {
     return "lease_takeover";
   }
   const pct = ((prev - next) / prev) * 100;
-  if (pct > MAX_UNCONFIRMED_DROP_PCT && Number(drop.confirmations || 0) < MIN_CONFIRMING_POINTS) {
+  // ">=": an exact −50.0% (e.g. 1.0M → 500k) is the classic half-price parse
+  // bug; also catch any new price below half the old one independent of the
+  // (possibly rounded) percentage.
+  const suspect = pct >= MAX_UNCONFIRMED_DROP_PCT || next < prev * 0.5;
+  if (suspect && Number(drop.confirmations || 0) < MIN_CONFIRMING_POINTS) {
     return "unconfirmed_large_drop";
   }
   return null;

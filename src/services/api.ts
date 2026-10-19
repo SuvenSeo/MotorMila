@@ -1927,8 +1927,9 @@ function normalizePriceDropItems(data: JsonRecord, limit = 12): PriceDropItem[] 
     })
     // Sanity guard: unit mismatches (lakhs vs millions), lease takeovers and
     // unconfirmed >50% "cuts" are parse bugs, not market moves.
+    // confirmations are kept on the item so a later re-check (BestPicks) can
+    // still honour a confirmed large drop.
     .filter((item) => item.listing.id && item.drop_pct > 0 && isPlausiblePriceDrop(item))
-    .map(({ confirmations: _c, ...item }) => item)
     .slice(0, limit);
 }
 

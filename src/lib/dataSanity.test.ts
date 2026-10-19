@@ -37,6 +37,11 @@ describe("price-drop sanity guard", () => {
   it("rejects unconfirmed drops over 50% (the −78.7% / −74.6% cases)", () => {
     expect(rejectPriceDrop(drop(470_000, 100_000))).toBe("unconfirmed_large_drop");
     expect(rejectPriceDrop(drop(1_000_000, 254_000))).toBe("unconfirmed_large_drop");
+    // exactly −50.0% (Bajaj RE case) and anything below half the old price
+    expect(rejectPriceDrop(drop(1_000_000, 500_000))).toBe("unconfirmed_large_drop");
+    expect(rejectPriceDrop(drop(1_000_000, 499_999))).toBe("unconfirmed_large_drop");
+    expect(isPlausiblePriceDrop(drop(1_000_000, 500_000, { confirmations: 2 }))).toBe(true);
+    expect(isPlausiblePriceDrop(drop(1_000_000, 500_001))).toBe(true);
   });
 
   it("allows a >50% drop when confirmed by at least 2 points", () => {

@@ -19,6 +19,7 @@ export function Combobox({
   onChange,
   placeholder = "Select…",
   allLabel = "All",
+  hideLabel = false,
 }: {
   label: string;
   options: ComboboxOption[];
@@ -26,6 +27,8 @@ export function Combobox({
   onChange: (v: string | null) => void;
   placeholder?: string;
   allLabel?: string;
+  /** Keep the label for screen readers only (when a parent group already shows a heading). */
+  hideLabel?: boolean;
 }) {
   const ALL_VALUE = "__all__";
   const [open, setOpen] = useState(false);
@@ -76,7 +79,7 @@ export function Combobox({
     // Keyboard handling is delegated from the trigger button / search input inside.
     // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <div ref={rootRef} className="relative" onKeyDown={onKeyDown}>
-      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <label className={hideLabel ? "sr-only" : "mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground"}>
         {label}
       </label>
       <button
