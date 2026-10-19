@@ -9,6 +9,7 @@ import { PageHero } from "@/components/PageHero";
 import { revealItem, springSnappy } from "@/lib/motion";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { visuals } from "@/lib/visualAssets";
+import { NotFoundSearch } from "@/components/notFound/NotFoundSearch";
 
 const NotFound = () => {
   const { t } = useAppPreferences();
@@ -43,7 +44,7 @@ const NotFound = () => {
         theme="default"
         eyebrow={t("notFound.eyebrow", "404")}
         title={<>{t("notFound.title", "Page not found.")}</>}
-        description={t("notFound.description", "This route doesn't exist. Try one of the links below.")}
+        description={t("notFound.descriptionSearch", "We couldn't find that page. It may have moved, or the ad may have been removed. Search for the car or pick a link below.")}
         media={visuals.lostCarFork404}
         mediaPosition="center"
         mediaTone="brand"
@@ -63,6 +64,7 @@ const NotFound = () => {
       />
 
       <PageBody className="pb-20 lg:pb-28">
+          <NotFoundSearch />
           <motion.div variants={revealItem}>
             <SectionHeader
               eyebrow={t("notFound.destinations", "Popular destinations")}
