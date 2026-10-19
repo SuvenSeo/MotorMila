@@ -106,7 +106,7 @@ export function FontStudioBar() {
   if (!import.meta.env.DEV) return null;
 
   return (
-    <div className="fixed bottom-5 left-5 z-[9999] flex flex-col items-start gap-2 print:hidden font-sans">
+    <div className="fixed bottom-5 left-5 z-devtools flex flex-col items-start gap-2 print:hidden font-sans">
       {/* Floating control dock */}
       <div
         className={`overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/90 shadow-2xl backdrop-blur-xl transition-all duration-300 ${

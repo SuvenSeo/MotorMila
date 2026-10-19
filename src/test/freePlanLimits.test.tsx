@@ -66,6 +66,6 @@ describe("Free plan limits", () => {
     );
 
     expect(screen.getByText(/free browse limit reached/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /upgrade to pro/i })).toHaveAttribute("href", "/pricing");
+    expect(screen.getByRole("link", { name: /notify me/i })).toHaveAttribute("href", "/pricing#get-started");
   });
 });

@@ -2042,7 +2042,7 @@
   position: fixed;
   top: -100%;
   left: 1rem;
-  z-index: 9999;
+  z-index: var(--z-skip, 90);
   padding: 0.5rem 1rem;
   background: hsl(var(--primary));
   color: hsl(var(--primary-foreground));
@@ -2141,25 +2141,12 @@
 .aw-text p:last-child { margin-bottom: 0; }
 .aw-text ul { margin: 8px 0 0; padding-left: 18px; }
 .aw-text li { margin: 5px 0; }
-.aw-backdrop {
-  position: fixed; inset: 0; z-index: 9997;
-  background: rgba(0,0,0,.25); backdrop-filter: blur(6px);
-}
-.aw-fab-wrapper {
-  position: fixed; right: 24px; bottom: 24px; z-index: 9999;
-}
-.aw-panel-wrapper {
-  position: fixed; right: 24px; bottom: 92px;
-  width: 420px; max-width: calc(100vw - 20px);
-  height: min(650px, calc(100vh - 112px)); z-index: 9998;
-}
+/* .aw-backdrop / .aw-fab-wrapper / .aw-panel-wrapper positions live in src/styles/layers.css */
 @media (prefers-reduced-motion: reduce) {
   .aw-tooltip-in, .aw-tooltip-out, .aw-panel-in, .aw-panel-out, .aw-msg { animation: none; }
 }
 @media (max-width: 640px) {
   .aw-tooltip-in, .aw-tooltip-out { display: none !important; }
-  .aw-fab-wrapper { right: 14px; bottom: 108px; }
-  .aw-panel-wrapper { right: 10px; bottom: 174px; height: min(650px, calc(100vh - 200px)); }
 }
 
 @media (min-width: 1024px) and (max-height: 760px) {
@@ -2209,7 +2196,7 @@
   height: 2px;
   width: 100%;
   background: hsl(var(--primary));
-  z-index: 9996;
+  z-index: var(--z-toast, 80);
   transform-origin: left;
   transform: scaleX(0);
   will-change: transform;

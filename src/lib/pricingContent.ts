@@ -41,7 +41,7 @@ export const PRO_FREE_DURING_BETA = PRICING_COMING_SOON;
 
 export const COMING_SOON_COPY = {
   badge: "Free during beta",
-  note: "Pro is free while MotorMila is in beta, no card needed. Dealer plans are live now.",
+  note: "MotorMila is free while in beta, no card needed. Pro is coming soon.",
 } as const;
 
 /** LKR list prices. Annual = 10x monthly (2 months free). Mirror of backend/app/routers/payhere.py PLAN_CATALOG. */
@@ -97,33 +97,33 @@ export const PRICING_TIERS: PricingTier[] = [
     priceNote: "/mo",
     audience: "Browsers and first-time buyers testing the market",
     features: [
-      "Open every product page (soft limits, not hard locks)",
-      "First 12 live listings · page 1 only",
-      "Latest 6 Official Pulse signals",
-      "Landed-cost calculator (starter)",
-      "6-month trends & price-index window",
-      "Teaser Best Picks shortlist",
-      "1 market alert (no WhatsApp)",
+      "Search listings from every source we track",
+      "First 12 results per search",
+      "Price range and history on every listing",
+      "Import tax calculator",
+      "6 months of price trends",
+      "Latest 6 tax & customs updates",
+      "1 price-drop alert",
     ],
-    ctaLabel: "Open dashboard",
+    ctaLabel: "Start browsing",
     ctaTo: "/",
   },
   {
     id: "pro",
     name: "Pro",
-    priceLkr: "LKR 999",
-    priceNote: "/mo",
-    annualNote: "LKR 9,990/yr · free during beta",
-    audience: "Brokers, analysts, and serious buyers who need depth",
+    priceLkr: "Coming soon",
+    priceNote: "",
+    annualNote: "Planned price LKR 999/mo or LKR 9,990/yr. We'll email you before it starts.",
+    audience: "Serious buyers, brokers and anyone who checks prices every week",
     features: [
-      "Full Pro terminal (/pro)",
-      "Official Pulse history",
-      "Deeper alerts and match refresh",
-      "Lane drill-downs and source coverage",
-      "CSV / PDF export packs",
-      "Free while MotorMila is in beta",
+      "Deal score on every listing",
+      "Every result, not just the first 12",
+      "Full price history with district and condition filters",
+      "All tax & customs updates",
+      "More alerts, including WhatsApp",
+      "CSV / PDF exports",
     ],
-    ctaLabel: "Join the waitlist",
+    ctaLabel: "Notify me",
     ctaTo: "#get-started",
   },
   {
@@ -199,20 +199,28 @@ export const ICP_PERSONAS: IcpPersona[] = [
 
 export const PRICING_FAQ: { q: string; a: string }[] = [
   {
-    q: "Why do Dealer plans cost money?",
-    a: "Running and checking market data every day costs money. Free covers browsing and starter tools. Dealer plans pay for the workspace that prices your own stock and sends you buyer leads.",
+    q: "Is MotorMila free?",
+    a: "Yes. Searching listings, price ranges, price history and the import tax calculator are free while MotorMila is in beta. No card needed.",
   },
   {
-    q: "Is Pro really free?",
-    a: "Yes, while MotorMila is in beta. Join the waitlist and we'll email you before Pro pricing (LKR 999/mo or LKR 9,990/yr) starts. Nothing is charged without your agreement.",
+    q: "When is Pro coming, and what will it cost?",
+    a: "Soon. Pro is planned at LKR 999 a month or LKR 9,990 a year. Leave your email and we'll tell you before it launches. Nothing is ever charged without your agreement.",
   },
+  {
+    q: "Where do the listings come from?",
+    a: "From public ads on Sri Lankan vehicle sites. Every listing links back to the original ad and names its source.",
+  },
+  {
+    q: "I run a dealership. Is there a plan for me?",
+    a: "Yes. Open \"For dealers\" below to see dealer plans, or message us.",
+  },
+];
+
+/** Dealer-specific questions, shown inside the dealer section. */
+export const DEALER_FAQ: { q: string; a: string }[] = [
   {
     q: "Which Dealer plan do I need?",
-    a: "It depends on stock size: Starter up to 20 cars (LKR 2,990/mo), Pro up to 75 (LKR 6,990/mo), Yard unlimited with team seats (LKR 14,990/mo).",
-  },
-  {
-    q: "Is annual billing cheaper?",
-    a: "Yes, annual saves 2 months. For example Dealer Starter is LKR 29,900/yr instead of LKR 2,990/mo.",
+    a: "It depends on stock size: Starter up to 20 vehicles (LKR 2,990/mo), Pro up to 75 (LKR 6,990/mo), Yard unlimited with team seats (LKR 14,990/mo).",
   },
   {
     q: "How do I pay?",
@@ -221,9 +229,5 @@ export const PRICING_FAQ: { q: string; a: string }[] = [
   {
     q: "Can I cancel?",
     a: "Yes, any time. Your plan stays active until the end of the period you paid for.",
-  },
-  {
-    q: "What is Custom?",
-    a: "Partnerships for leasing companies, banks, insurers and import agents: lead routing, sponsorship and multi-branch seats. Use the Message us button.",
   },
 ];

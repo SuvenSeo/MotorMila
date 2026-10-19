@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { m } from "motion/react";
+import { cleanDistrict, isPlausiblePriceDrop } from "@/lib/dataSanity";
 import { ExternalLink, SearchX, Star, TrendingDown } from "lucide-react";
 import { getListings, getPriceDrops, formatPrice } from "@/services/api";
 import type { CarListing, FilterState, PriceDropItem } from "@/types/car";
@@ -10,7 +11,6 @@ import { EmptyState } from "@/components/EmptyState";
 import { SectionHeader } from "@/components/SectionHeader";
 import { pickVehicleImageUrl } from "@/lib/listingImage";
 import { isReasonableListingPrice } from "@/lib/formatting";
-import { cleanDistrict, isPlausiblePriceDrop } from "@/lib/dataSanity";
 import { minCashDownForPrice, sortListingsByAffordability } from "@/lib/cashToOwn";
 import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
@@ -28,25 +28,9 @@ import {
 import { MorphingDialog } from "@/components/ui/MorphingDialog";
 import { setSpotlightVars, CardSpotlightGlow } from "@/components/ui/CardSpotlight";
 import { visuals } from "@/lib/visualAssets";
-import { InfiniteMovingCards } from "@/components/ui/InfiniteMovingCards";
 
 const PICKS_PAGES = 4;
 const MIN_DEAL_SCORE = 8;
-/** Never leave the board on "Scanning inventory…" — give up and show a real state. */
-const PICKS_TIMEOUT_MS = 12_000;
-
-class PicksTimeoutError extends Error {}
-
-/** Reject after `ms` so a hung request ends in an error/empty state, not a skeleton forever. */
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new PicksTimeoutError("timeout")), ms);
-    promise.then(
-      (v) => { clearTimeout(timer); resolve(v); },
-      (e) => { clearTimeout(timer); reject(e); },
-    );
-  });
-}
 
 export type BestPicksSortMode = "deal_score" | "affordability";
 
@@ -159,6 +143,8 @@ function sortPicks(listings: CarListing[], mode: BestPicksSortMode): CarListing[
   }
 }
 
+const PICKS_TIMEOUT_MS = 15_000;
+
 export default function BestPicks() {
   const { t } = useAppPreferences();
   const { hasProAccess, isAdmin } = useAuth();
@@ -168,15 +154,16 @@ export default function BestPicks() {
   const [picks, setPicks] = useState<CarListing[]>([]);
   const [drops, setDrops] = useState<PriceDropItem[]>([]);
   const [dropsLoaded, setDropsLoaded] = useState(false);
-  const [attempt, setAttempt] = useState(0);
+  const navigate = useNavigate();
+  const [timedOut, setTimedOut] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [sortMode, setSortMode] = useState<BestPicksSortMode>(() =>
     fullAccess ? "deal_score" : "affordability",
   );
 
   useEffect(() => {
     let cancelled = false;
-    withTimeout(getPriceDrops(7, fullAccess ? 8 : FREE_PRICE_DROPS_LIMIT), PICKS_TIMEOUT_MS)
-      // Belt-and-braces: the API layer already applies the sanity guard.
+    getPriceDrops(7, fullAccess ? 8 : FREE_PRICE_DROPS_LIMIT)
       .then((items) => { if (!cancelled) setDrops(items.filter(isPlausiblePriceDrop)); })
       .catch(() => { /* feed is additive — page works without it */ })
       .finally(() => { if (!cancelled) setDropsLoaded(true); });
@@ -185,23 +172,25 @@ export default function BestPicks() {
 
   useEffect(() => {
     let cancelled = false;
+    // Never leave the page on "loading" forever: after PICKS_TIMEOUT_MS show a
+    // proper "taking longer than usual" state with a retry.
+    const timer = window.setTimeout(() => {
+      if (cancelled) return;
+      cancelled = true;
+      setTimedOut(true);
+      setLoading(false);
+    }, PICKS_TIMEOUT_MS);
     (async () => {
-      setLoading(true); setError(null);
+      setLoading(true); setError(null); setTimedOut(false);
       try {
         // Free cannot receive deal_score from the API — use newest teasers ranked
         // by affordability instead of an empty deal-score filter.
         const pagesToFetch = fullAccess ? PICKS_PAGES : 1;
         const sort = fullAccess ? "deal_score" : "newest";
         const base: FilterState = { sort, page: 1, vehicle_category: "cars" };
-        // allSettled: one slow/failed page must not sink the board.
-        const settled = await withTimeout(
-          Promise.allSettled(
-            Array.from({ length: pagesToFetch }, (_, i) => getListings({ ...base, page: i + 1 })),
-          ),
-          PICKS_TIMEOUT_MS,
+        const responses = await Promise.all(
+          Array.from({ length: pagesToFetch }, (_, i) => getListings({ ...base, page: i + 1 })),
         );
-        const responses = settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
-        if (responses.length === 0) throw new Error("no pages");
         if (cancelled) return;
         const unique = new Map<number, CarListing>();
         const candidates = responses
@@ -216,22 +205,18 @@ export default function BestPicks() {
             if (!unique.has(l.id)) unique.set(l.id, l);
           });
         setPicks(Array.from(unique.values()));
-      } catch (err) {
-        if (!cancelled) {
-          setError(
-            err instanceof PicksTimeoutError
-              ? t("picks.timeout", "Inventory is taking too long to load. Check your connection and try again.")
-              : t("picks.loadError", "Unable to load best picks."),
-          );
-        }
+      } catch {
+        if (!cancelled) setError(t("picks.loadError", "Unable to load best picks."));
       } finally {
+        window.clearTimeout(timer);
         if (!cancelled) setLoading(false);
       }
     })();
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
     };
-  }, [fullAccess, t, attempt]);
+  }, [fullAccess, t, reloadKey]);
 
   const ranked = useMemo(() => {
     const sorted = sortPicks(picks, sortMode);
@@ -244,28 +229,6 @@ export default function BestPicks() {
       ? "ranked by min cash down (CBSL LTV)"
       : "ranked by deal strength";
   const hiddenPickCount = fullAccess ? 0 : Math.max(0, picks.length - FREE_BEST_PICKS_LIMIT);
-  const renderDropCard = (drop: PriceDropItem) => (
-                  <Link
-                    to={`/listing/${drop.listing.id}`}
-                    className="group block h-full rounded-xl border border-border bg-surface p-3.5 no-underline transition-all hover:border-emerald-500/30 hover:bg-card hover:shadow-soft"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-[12px] font-bold text-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                        {drop.listing.make} {drop.listing.model}{drop.listing.year ? ` ${drop.listing.year}` : ""}
-                      </span>
-                      <span className="shrink-0 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 num">
-                        −{drop.drop_pct.toFixed(1)}%
-                      </span>
-                    </div>
-                    <div className="mt-2 flex items-baseline gap-2">
-                      <span className="text-[11px] font-semibold text-muted-foreground line-through num">{formatPrice(drop.previous_price_lkr)}</span>
-                      <span className="text-[13px] font-bold text-foreground num">{formatPrice(drop.new_price_lkr)}</span>
-                    </div>
-                    <p className="mt-1 text-[10px] font-semibold text-muted-foreground">
-                      {cleanDistrict(drop.listing.district) || drop.listing.source}
-                    </p>
-                  </Link>
-  );
   return (
     <PageCanvas>
       <PageHero
@@ -273,34 +236,24 @@ export default function BestPicks() {
         eyebrow={t("picks.eyebrow", "Best picks")}
         eyebrowIcon={Star}
         watermarkIcon={Star}
-        title={<>{t("picks.title", "Deal-score picks.")}</>}
+        title={<>{t("shell.picks.title", "Best deals.")}</>}
         description={loading
-          ? t("picks.scanning", "Scanning inventory…")
-          : error || ranked.length === 0
-            ? t("picks.descNone", "Listings scored against the live market median for their lane.")
+          ? t("shell.picks.loading", "Finding the best-priced listings…")
+          : timedOut || error
+            ? t("shell.picks.descUnavailable", "Vehicles priced clearly below similar ads.")
             : fullAccess
-              ? t("picks.descFull", "{n} vehicles scored {min}+ from {pages} pages, {caption}.", { n: ranked.length, min: MIN_DEAL_SCORE, pages: PICKS_PAGES, caption: rankCaption })
-              : t("picks.descFree", "{n} free teaser picks, {caption} — upgrade for the full deal-score board.", { n: ranked.length, caption: rankCaption })}
+              ? t("shell.picks.descPro", "{n} vehicles priced well below similar ads, {rank}.", { n: ranked.length, rank: rankCaption })
+              : t("shell.picks.descFree", "{n} recent listings, smallest down payment first. Deal scores are coming with Pro.", { n: ranked.length })}
         media={visuals.altCategorySuvWhite}
         mediaPosition="center 40%"
         mediaTone="light"
         highlights={
-          // Only real numbers: the count is hidden until it is known (no "…").
-          !loading && !error && ranked.length > 0
-            ? [
-                ...(fullAccess
-                  ? [{ label: t("picks.hlMinScore", "Min score"), value: `${MIN_DEAL_SCORE}+`, hint: t("picks.hlMinScoreHint", "Deal-score floor") }]
-                  : []),
-                {
-                  label: t("picks.hlInventory", "In this shortlist"),
-                  value: ranked.length.toLocaleString("en-LK"),
-                  hint: fullAccess ? t("picks.hlInventoryHint", "Vehicles that cleared the floor") : t("picks.hlInventoryFree", "Free teaser shortlist"),
-                },
-              ]
-            : undefined
+          loading || timedOut || error
+            ? undefined
+            : [{ label: t("shell.picks.hlCount", "Listings"), value: String(ranked.length), hint: t("shell.picks.hlCountHint", "In this shortlist") }]
         }
       >
-        {!loading && !error && picks.length > 0 && (
+        {!loading && !error && !timedOut && picks.length > 0 && (
           <div className="mt-8 flex flex-wrap gap-2.5" role="group" aria-label={t("picks.sortAria", "Sort best picks")}>
               <button
                 type="button"
@@ -339,7 +292,7 @@ export default function BestPicks() {
               </div>
               <div>
                 <h2 className="text-[15px] font-bold tracking-tight text-foreground">{t("picks.cutsTitle", "Biggest cuts this week")}</h2>
-                <p className="text-[11px] text-muted-foreground font-semibold">{t("picks.cutsSubtitle", "Sellers who moved their asking price down — tracked scan-over-scan")}</p>
+                <p className="text-[11px] text-muted-foreground font-semibold">{t("shell.picks.cutsSubtitle", "Sellers who lowered their asking price in the last 7 days")}</p>
               </div>
             </div>
             {!dropsLoaded ? (
@@ -350,49 +303,70 @@ export default function BestPicks() {
               </div>
             ) : drops.length === 0 ? (
               <p className="pt-4 text-[13px] text-muted-foreground font-medium">
-                {t("picks.cutsEmpty", "No cuts recorded in the last 7 days yet — price tracking is scan-over-scan, so drops appear here as our daily scans catch sellers moving their asking prices.")}
+                {t("shell.picks.cutsEmpty", "No price cuts spotted in the last 7 days. They show up here when a seller lowers an asking price.")}
               </p>
-            ) : drops.length < 4 ? (
-              // Too few to loop — a 3-card marquee repeating forever looks broken.
-              <div className="grid gap-2.5 pt-4 sm:grid-cols-2 lg:grid-cols-3">
-                {drops.map((drop) => (
-                  <div key={drop.listing.id}>{renderDropCard(drop)}</div>
-                ))}
-              </div>
             ) : (
-              <InfiniteMovingCards
-                items={drops}
-                keyOf={(drop) => drop.listing.id}
-                direction="left"
-                speed="normal"
-                pauseOnHover
-                className="pt-3"
-                renderItem={renderDropCard}
-              />
+              <ul className="grid gap-2.5 pt-4 sm:grid-cols-2 lg:grid-cols-4">
+                {drops.map((drop) => (
+                  <li key={drop.listing.id}>
+                  <Link
+                    to={`/listing/${drop.listing.id}`}
+                    className="group block h-full rounded-xl border border-border bg-surface p-3.5 no-underline transition-all hover:border-emerald-500/30 hover:bg-card hover:shadow-soft"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate text-[12px] font-bold text-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                        {drop.listing.make} {drop.listing.model}{drop.listing.year ? ` ${drop.listing.year}` : ""}
+                      </span>
+                      <span className="shrink-0 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 num">
+                        −{drop.drop_pct.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="mt-2 flex items-baseline gap-2">
+                      <span className="text-[11px] font-semibold text-muted-foreground line-through num">{formatPrice(drop.previous_price_lkr)}</span>
+                      <span className="text-[13px] font-bold text-foreground num">{formatPrice(drop.new_price_lkr)}</span>
+                    </div>
+                    <p className="mt-1 text-[10px] font-semibold text-muted-foreground">
+                      {cleanDistrict(drop.listing.district) || drop.listing.source}
+                    </p>
+                  </Link>
+                  </li>
+                ))}
+              </ul>
             )}
           </m.section>
 
         {loading ? (
-          <CardSkeleton />
+          <div role="status" aria-live="polite">
+            <p className="mb-3 text-[13px] font-medium text-muted-foreground">{t("shell.picks.loading", "Finding the best-priced listings…")}</p>
+            <CardSkeleton />
+          </div>
+        ) : timedOut ? (
+          <m.div variants={revealItem}>
+            <EmptyState
+              headline={t("shell.picks.timeoutTitle", "This is taking longer than usual")}
+              body={t("shell.picks.timeoutBody", "We couldn't load deal picks just now. Try again, or browse all listings.")}
+              actionLabel={t("shell.picks.retry", "Try again")}
+              onAction={() => setReloadKey((k) => k + 1)}
+              hint={
+                <Link to="/#market" className="underline underline-offset-2 hover:text-foreground">
+                  {t("shell.picks.browse", "Browse all listings")}
+                </Link>
+              }
+            />
+          </m.div>
         ) : error ? (
           <m.div variants={revealItem} className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-border py-16 text-center">
             <SearchX className="h-5 w-5 text-muted-foreground" aria-hidden />
             <p className="text-[13px] text-muted-foreground font-medium">{error}</p>
-            <button type="button" onClick={() => setAttempt((n) => n + 1)} className="rounded-full bg-primary px-4 py-2 text-[11px] font-bold text-primary-foreground transition-all hover:bg-primary/95 active:scale-[0.97]">{t("common.retry", "Try again")}</button>
             <Link to="/#market" className="rounded-full border border-border bg-card px-4 py-2 text-[11px] font-bold text-foreground no-underline transition-all hover:bg-surface active:scale-[0.97]">{t("common.openInventory", "Open inventory")}</Link>
           </m.div>
         ) : ranked.length === 0 ? (
           <m.div variants={revealItem}>
             <EmptyState
-              headline={t("picks.empty", "No vehicles meet the deal-score gate right now.")}
-              body={t("picks.emptyBody", "Nothing in the latest scan is priced clearly below its lane median. Scores refresh with every daily scan — check back tomorrow, or browse the full market.")}
-              actionLabel={t("common.retry", "Try again")}
-              onAction={() => setAttempt((n) => n + 1)}
-              hint={
-                <Link to="/#market" className="underline underline-offset-2 hover:text-foreground">
-                  {t("common.browseInventory", "Browse inventory")}
-                </Link>
-              }
+              headline={t("shell.picks.emptyTitle", "No standout deals right now")}
+              body={t("shell.picks.emptyBody", "We only list vehicles priced clearly below similar ads. Check back after the next update, or browse everything.")}
+              actionLabel={t("shell.picks.browse", "Browse all listings")}
+              onAction={() => navigate("/#market")}
             />
           </m.div>
         ) : (

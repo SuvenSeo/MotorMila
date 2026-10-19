@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Crown, Sparkles } from "lucide-react";
+import { Bell, Sparkles } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
 import { useAppPreferences } from "@/lib/appPreferences";
 
@@ -17,15 +17,15 @@ export function FreePlanBanner() {
             <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
           </span>
           <span>
-            {t("freeBanner.body", "Free plan: every page is open, with soft limits on depth. Pro unlocks full feeds, scores, history, and exports.")}
+            {t("shell.pro.freeBanner", "MotorMila is free during beta. Pro tools like full history and exports are coming soon.")}
           </span>
         </p>
         <Link
-          to="/pricing"
+          to="/pricing#get-started"
           className="inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-[12px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/95 active:scale-[0.98]"
         >
-          <Crown className="h-3.5 w-3.5" aria-hidden />
-          {t("common.upgrade", "Upgrade")}
+          <Bell className="h-3.5 w-3.5" aria-hidden />
+          {t("shell.pro.notify", "Notify me")}
         </Link>
       </div>
     </div>

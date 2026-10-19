@@ -16,12 +16,12 @@ import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { AppFooter } from "@/components/AppFooter";
 import { ScrollProgressBar } from "@/components/ScrollProgressBar";
 import { RouteMeta } from "@/components/RouteMeta";
-import { SettingsFloatingIcon } from "@/components/SettingsFloatingIcon";
 import { MobileAppPromo } from "@/components/MobileAppPromo";
 import { AuthProvider, useAuth } from "@/lib/authContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { RequireAuth } from "@/components/RequireAuth";
 import { QUERY_STALE } from "@/lib/queryPolicy";
+import { useDockTypingFlag } from "@/lib/dock";
 
 const AIChatWidget = lazyWithRetry(() => import("@/components/AIChatWidget").then((m) => ({ default: m.AIChatWidget })));
 const FeedbackWidget = lazyWithRetry(() =>
@@ -108,7 +108,8 @@ function TrialBannerSlot() {  const { user } = useAuth();
   // Defer the Pricing chunk until the banner can actually render: anonymous
   // and paid users always render null, so skip the dynamic import entirely.
   if (!user) return null;
-  if (user.subscriptionStatus !== "trialing" && user.plan !== "free") return null;
+  // Only an actual trial gets a site-wide line; free users aren't nagged on every page.
+  if (user.subscriptionStatus !== "trialing") return null;
   return (
     <div className="mx-auto w-full max-w-[1560px] px-5 pt-3 sm:px-6">
       <Suspense fallback={null}>
@@ -134,13 +135,17 @@ function HashScroller() {
 }
 
 function AppShell({ chatMounted }: { chatMounted: boolean }) {
+  // Floating buttons step aside while a text field is focused (mobile keyboard).
+  useDockTypingFlag();
   return (
-    <div className="min-h-screen app-shell selection:bg-primary/20 bg-background">
+    // app-shell-dock-pad: content and footer always clear the bottom dock
+    // (mobile nav + one floating button). See src/styles/layers.css.
+    <div className="min-h-screen app-shell app-shell-dock-pad selection:bg-primary/20 bg-background">
       <a href="#main-content" className="skip-to-content">Skip to main content</a>
       <HashScroller />
       <Navbar />
       <CommandPalette />
-      <SettingsFloatingIcon />
+      {/* Feedback is a dialog opened from the menu / footer — no floating button. */}
       <Suspense fallback={null}>
         <FeedbackWidget />
       </Suspense>
@@ -149,7 +154,7 @@ function AppShell({ chatMounted }: { chatMounted: boolean }) {
           <AIChatWidget />
         </Suspense>
       )}
-      <main id="main-content" className="relative z-[1] pt-[var(--nav-offset)] pb-36 md:pb-0">
+      <main id="main-content" className="relative z-base pt-[var(--nav-offset)]">
           <TrialBannerSlot />
         <RouteErrorBoundary>
           <Suspense fallback={<RouteFallback />}>
@@ -158,8 +163,9 @@ function AppShell({ chatMounted }: { chatMounted: boolean }) {
         </RouteErrorBoundary>
       </main>
       <AppFooter />
-      <CompareTray />
+      {/* Bottom dock — one area, stacked: app promo strip → compare tray / chat button → bottom nav. */}
       <MobileAppPromo />
+      <CompareTray />
       <MobileBottomNav />
       <FontStudioBar />
     </div>
@@ -210,7 +216,8 @@ const App = () => {
           <LazyMotion features={domAnimation}>
           <MotionConfig reducedMotion="user">
             <ScrollProgressBar />
-            <Sonner />
+            {/* Toasts sit under the header, clear of the bottom dock (nav, chat, compare). */}
+            <Sonner position="top-center" offset={88} mobileOffset={{ top: 84 }} />
             <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <ScrollRestoration />
               <RouteMeta />

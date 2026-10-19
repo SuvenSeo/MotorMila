@@ -2,6 +2,7 @@ import { migrateLegacyStorageKeys } from "./lib/storageMigration";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import "./styles/layers.css";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import { AppPreferencesProvider } from "@/lib/appPreferences";
 import { Analytics } from "@vercel/analytics/react";

@@ -159,8 +159,8 @@ export function RouteMeta() {
   useEffect(() => {
     const siteVars = { site: SITE };
     const defaultDescription = t(
-      "seo.defaultDescription",
-      "Track Sri Lankan vehicle prices, trends, deal signals, and valuation tools in one market intelligence cockpit.",
+      "shell.copy.seoDefault",
+      "Search every vehicle ad in Sri Lanka in one place, with price history, fair-price ranges and an import tax calculator.",
     );
 
     const routeMeta: Record<string, Meta> = {

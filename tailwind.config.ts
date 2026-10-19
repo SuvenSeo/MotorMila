@@ -44,6 +44,19 @@ export default {
       },
     },
     extend: {
+      // Floating-layer scale (ui/shell). Values live in src/styles/layers.css.
+      zIndex: {
+        base: "var(--z-base)",
+        sticky: "var(--z-sticky)",
+        floating: "var(--z-floating)",
+        "bottom-nav": "var(--z-bottom-nav)",
+        header: "var(--z-header)",
+        overlay: "var(--z-overlay)",
+        modal: "var(--z-modal)",
+        toast: "var(--z-toast)",
+        skip: "var(--z-skip)",
+        devtools: "var(--z-devtools)",
+      },
       fontFamily: {
         // Brand guide: Space Grotesk (display) + Inter (body/UI). Two Latin families.
         sans: ['var(--font-sans)', '"Inter"', "system-ui", "-apple-system", '"Segoe UI"', "sans-serif"],

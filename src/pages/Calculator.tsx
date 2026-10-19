@@ -65,6 +65,15 @@ type FuelType = "petrol" | "diesel" | "hybrid" | "electric";
 const TAB_IDS: TabType[] = ["landed-cost", "lease", "tco", "ownership", "permits", "depreciation"];
 const FUEL_TYPES: FuelType[] = ["petrol", "diesel", "hybrid", "electric"];
 const FREE_TAB_SET = new Set<string>(FREE_CALCULATOR_TABS);
+/**
+ * Tabs that are not real calculators yet (hard-coded benchmark tables) stay
+ * hidden for everyone; /permits has the permit page. Locked tabs are hidden
+ * too — we only show calculators this visitor can actually run.
+ */
+const UNFINISHED_TABS = new Set<TabType>(["permits", "depreciation"]);
+function visibleTabsFor(fullAccess: boolean): TabType[] {
+  return TAB_IDS.filter((id) => !UNFINISHED_TABS.has(id) && (fullAccess || FREE_TAB_SET.has(id)));
+}
 
 // Cap URL-seeded numbers well above any real-world value; a crafted
 // ?cif=1e300 must not reach the backend or overflow the math.
@@ -118,11 +127,16 @@ export default function Calculator() {
   const { hasProAccess, isAdmin } = useAuth();
   const fullAccess = hasFullPlatformAccess({ hasProAccess, isAdmin });
   const [searchParams, setSearchParams] = useSearchParams();
+  const visibleTabs = visibleTabsFor(fullAccess);
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     const raw = searchParams.get("tab") as TabType | null;
-    return raw && TAB_IDS.includes(raw) ? raw : "landed-cost";
+    return raw && visibleTabsFor(fullAccess).includes(raw) ? raw : "landed-cost";
   });
-  const tabUnlocked = fullAccess || FREE_TAB_SET.has(activeTab);
+  // Plan can resolve after first paint; never sit on a tab that isn't shown.
+  useEffect(() => {
+    if (!visibleTabs.includes(activeTab)) setActiveTab("landed-cost");
+  }, [activeTab, visibleTabs]);
+  const tabUnlocked = visibleTabs.includes(activeTab);
 
   // Landed Cost State (seeded from the shareable URL when present)
   const [cifUsd, setCifUsd] = useState(() => numParam(searchParams, "cif", 12000, { positive: true }));
@@ -418,18 +432,18 @@ export default function Calculator() {
     <PageCanvas>
       <PageHero
         theme="calculator"
-        eyebrow={t("calc.eyebrow", "Motormila Intelligence Hub")}
+        eyebrow={t("shell.calc.eyebrow", "Calculator")}
         eyebrowIcon={Compass}
         watermarkIcon={Banknote}
-        title={<>{t("calc.title", "Mobility & Tax Calculators")}<span className="text-sheen">.</span></>}
-        description={t("calc.description", "Verify import tax gazettes, map Total Cost of Ownership (TCO), track black market permits, and assess retention curves.")}
+        title={<>{t("shell.calc.title", "Import tax calculator")}<span className="text-sheen">.</span></>}
+        description={t("shell.calc.description", "Work out what an imported vehicle costs once it lands: customs duty, surcharge, excise, SSCL and VAT on the CIF price, using the current gazette rates.")}
         media={visuals.alt2PageInsuranceFinance}
         mediaPosition="center 30%"
         mediaTone="brand"
         highlights={[
-          { label: "Import duty", value: "Live FX", hint: "CBSL-linked landed cost" },
-          { label: "Ownership", value: "Licence+", hint: "Revenue licence & CMT" },
-          { label: "Permits", value: "Tracker", hint: "Black market permit signals" },
+          { label: t("shell.calc.hlFx", "Exchange rate"), value: "CBSL", hint: t("shell.calc.hlFxHint", "Latest published rate") },
+          { label: t("shell.calc.hlTax", "Taxes"), value: "5", hint: t("shell.calc.hlTaxHint", "Duty, surcharge, excise, SSCL, VAT") },
+          { label: t("shell.calc.hlShare", "Share"), value: t("shell.calc.hlShareValue", "Link"), hint: t("shell.calc.hlShareHint", "Send any scenario as a link") },
         ]}
       />
 
@@ -445,8 +459,9 @@ export default function Calculator() {
 
       <PageBody className="space-y-0 pb-0">
       <m.div variants={itemVariants} className="flex max-w-[1320px] flex-wrap items-center justify-end gap-3 pb-6 sm:flex-nowrap sm:justify-start">
-        {/* Mobile: full-width horizontally scrollable strip; labels never truncate
-            (whitespace-nowrap + shrink-0), edge fade hints there is more. */}
+        {visibleTabs.length > 1 ? (
+        /* Mobile: full-width horizontally scrollable strip; labels never truncate
+            (whitespace-nowrap + shrink-0), edge fade hints there is more. */
         <div
           ref={tabStripRef}
           className="flex w-full min-w-0 flex-nowrap gap-1 overflow-x-auto overscroll-x-contain rounded-full border border-border bg-card p-1.5 shadow-soft scroll-px-2 [mask-image:linear-gradient(to_right,transparent,#000_12px,#000_calc(100%-24px),transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:w-auto sm:flex-none sm:flex-wrap sm:overflow-visible sm:[mask-image:none]"
@@ -458,7 +473,7 @@ export default function Calculator() {
             { id: "ownership", label: t("calc.tab.ownership", "On-road fees"), icon: FileBadge },
             { id: "permits", label: t("calc.tab.permits", "Permit Tracker"), icon: FileText },
             { id: "depreciation", label: t("calc.tab.depreciation", "Retention Curves"), icon: TrendingDown },
-          ].map((tab) => {
+          ].filter((tab) => visibleTabs.includes(tab.id as TabType)).map((tab) => {
             const Icon = tab.icon;
             const locked = !fullAccess && !FREE_TAB_SET.has(tab.id);
             return (
@@ -488,6 +503,9 @@ export default function Calculator() {
             );
           })}
         </div>
+        ) : (
+          <div className="min-w-0 flex-1" />
+        )}
         <button
           onClick={() => void copyShareLink()}
           className="flex shrink-0 items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-xs font-semibold tracking-wide text-muted-foreground shadow-soft transition-colors hover:text-foreground active:scale-[0.97]"

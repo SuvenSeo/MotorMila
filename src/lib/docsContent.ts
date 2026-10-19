@@ -11,7 +11,7 @@ export const DOCS_SECTIONS: DocsSection[] = [
   {
     id: "overview",
     title: "What Motormila is",
-    summary: "Sri Lanka vehicle market intelligence — listings, deal scores, and decision tools in one cockpit.",
+    summary: "Sri Lanka vehicle market intelligence — listings, deal scores, and decision tools in one place.",
     body: [
       "Motormila is a vehicle intelligence platform built for the Sri Lankan used and import market. It aggregates public listings, scores how asking prices sit against condition-aware peers, and surfaces tools dealers, brokers, importers, and serious buyers actually use before they negotiate.",
       "The public dashboard is the front door: browse live inventory, filter by make, model, district, and fuel type, then drill into deal signals, trends, and valuation. Paid workspaces add depth — history, exports, dealer inventory ops, and Official Pulse signals from DMT, Customs, and import policy.",
@@ -118,7 +118,7 @@ export const DOCS_SECTIONS: DocsSection[] = [
     title: "Pro terminal",
     summary: "Lane drill-downs, source coverage, exports, and pulse history for power users.",
     body: [
-      "The Pro terminal (/pro) is the paid market cockpit: deeper lane tables, district profiles, source-quality views, and export packs (CSV, PDF, and related briefs). /pro-preview shows a locked tour of the same surface before you sign in.",
+      "The Pro terminal (/pro) is the paid market dashboard: deeper lane tables, district profiles, source-quality views, and export packs (CSV, PDF, and related briefs). /pro-preview shows a locked tour of the same surface before you sign in.",
       "Pro is aimed at brokers, serious buyers, and analysts who need history and exports beyond the public dashboard. It pairs with Official Pulse history and alert depth so you can watch a lane without refreshing the homepage all day.",
       "Sign in unlocks /pro when the subscription is active. Use /pro-preview anytime to see layout and sample depth.",
     ],
