@@ -21,6 +21,7 @@ import { getListingImageList, pickVehicleImageUrl } from '@/lib/listingImage';
 import { toast } from 'sonner';
 import { NhtsaModelsCard } from '@/components/NhtsaModelsCard';
 import { SafetyResearchCard } from '@/components/SafetyResearchCard';
+import { listingVin } from '@/lib/dataSanity';
 import { ListingGeoCard } from '@/components/ListingGeoCard';
 import { FairPriceIndicator } from '@/components/FairPriceIndicator';
 import { FmvExplainer } from '@/components/FmvExplainer';
@@ -47,7 +48,7 @@ import {
   hasFullPlatformAccess,
 } from '@/lib/planLimits';
 import type { ImportFuelType } from '@/lib/importTaxModel';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { revealContainer, revealItem, springSnappy } from '@/lib/motion';
 import { AtmosphericImage } from '@/components/AtmosphericImage';
 import { visuals } from '@/lib/visualAssets';
@@ -773,7 +774,7 @@ export default function ListingDetail() {
 
             {listing.make && (
               <motion.div variants={revealItem}>
-                <SafetyResearchCard research={safetyResearch} />
+                <SafetyResearchCard research={safetyResearch} vin={listingVin(listing)} />
               </motion.div>
             )}
 
@@ -784,7 +785,7 @@ export default function ListingDetail() {
             {/* NHTSA catalog disclosure */}
             {listing.make && (
               <motion.div variants={revealItem}>
-                <NhtsaModelsCard make={listing.make} model={listing.model ?? undefined} compact />
+                <NhtsaModelsCard make={listing.make} model={listing.model ?? undefined} compact vin={listingVin(listing)} />
               </motion.div>
             )}
 
