@@ -2910,7 +2910,7 @@ export const getDistrictQuickInsight = async (district: string): Promise<Distric
       }
 
       return {
-        district,
+        district: normalizeDistrictName(district) || district,
         listing_count: rows.length,
         avg_price_lkr: priced.length ? priced.reduce((sum, price) => sum + price, 0) / priced.length : null,
         median_price_lkr: sortedPrices.length ? sortedPrices[Math.floor(sortedPrices.length / 2)] : null,
@@ -2954,7 +2954,7 @@ export const getDistrictQuickInsight = async (district: string): Promise<Distric
     : [];
 
   return {
-    district: String(data.district || district),
+    district: normalizeDistrictName(String(data.district || district)) || String(data.district || district),
     listing_count: Number(data.listing_count || 0),
     avg_price_lkr: toNumberOrNull(data.avg_price_lkr),
     median_price_lkr: toNumberOrNull(data.median_price_lkr),

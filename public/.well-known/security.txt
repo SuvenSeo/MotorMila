@@ -1,5 +1,7 @@
-Contact: mailto:suvenseoras@gmail.com
-Contact: tel:0758504424
+# Report security issues privately. OPS: set SECURITY_CONTACT_EMAIL at build
+# time to prepend a role mailbox (e.g. security@<domain>); see
+# scripts/prerender-seo.mjs. No personal contact details belong here.
+Contact: https://github.com/SuvenSeo/Vehicle-Platform/security/advisories/new
 Preferred-Languages: en
 Canonical: https://motormila.vercel.app/.well-known/security.txt
 Expires: 2027-07-28T00:00:00.000Z

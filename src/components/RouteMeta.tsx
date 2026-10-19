@@ -151,6 +151,41 @@ function hubJsonLd(
   };
 }
 
+/** Utility / account routes: never indexed (auth, dashboards, admin, labs). */
+const NOINDEX_PREFIXES = [
+  "/sign-in",
+  "/sign-up",
+  "/profile",
+  "/alerts",
+  "/settings",
+  "/dealer",
+  "/pro",
+  "/pro-preview",
+  "/admin",
+  "/motormila/admin",
+  "/hero-lab",
+];
+
+/** Mirrors the <Route> table in App.tsx (and the SPA allowlist in vercel.json). */
+const KNOWN_ROUTE_PATTERNS: RegExp[] = [
+  /^\/$/,
+  /^\/(trends|estimate|calculator|ev-hub|ev-chargers|best-picks|sell|price-index|docs|pricing|privacy|terms|compare|valuation|permits|mobile-app|dealer|settings|alerts|profile|sign-in|sign-up|hero-lab|admin|pro|pro-preview|official-pulse)\/?$/,
+  /^\/listing\/[^/]+\/?$/,
+  /^\/cars\/[^/]+(\/[^/]+(\/\d{4})?)?\/?$/,
+  /^\/locations\/[^/]+\/?$/,
+  /^\/official-pulse\/(guide\/)?[^/]+\/?$/,
+  /^\/compare\/[^/]+\/?$/,
+  /^\/motormila\/admin\/?$/,
+];
+
+export function isNoindexPath(pathname: string): boolean {
+  return NOINDEX_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
+export function isKnownRoutePath(pathname: string): boolean {
+  return KNOWN_ROUTE_PATTERNS.some((re) => re.test(pathname));
+}
+
 export function RouteMeta() {
   const { pathname, search } = useLocation();
   const { t } = useAppPreferences();
@@ -284,6 +319,51 @@ export function RouteMeta() {
           "Free, Pro, Dealer, and Custom access for Sri Lanka vehicle market intelligence.",
           siteVars,
         ),
+      },
+      "/sell": {
+        title: t("seo.sellTitle", "Sell Your Vehicle — {site}", siteVars),
+        description: t(
+          "seo.sellDesc",
+          "List your vehicle and see what similar cars are selling for in Sri Lanka before you set a price.",
+        ),
+      },
+      "/mobile-app": {
+        title: t("seo.mobileAppTitle", "Android App — {site}", siteVars),
+        description: t(
+          "seo.mobileAppDesc",
+          "Download the Motormila Android app: Sri Lankan vehicle prices, deal alerts and valuations on your phone.",
+        ),
+      },
+      "/sign-up": {
+        title: t("seo.signUpTitle", "Create Account — {site}", siteVars),
+        description: defaultDescription,
+      },
+      "/profile": {
+        title: t("seo.profileTitle", "Profile — {site}", siteVars),
+        description: defaultDescription,
+      },
+      "/hero-lab": {
+        title: `Hero Lab — ${SITE}`,
+        description: defaultDescription,
+      },
+      "/motormila/admin": {
+        title: `Admin — ${SITE}`,
+        description: defaultDescription,
+      },
+      "/permits": {
+        title: t("seo.permitsTitle", "Vehicle Permits — {site}", siteVars),
+        description: t(
+          "seo.permitsDesc",
+          "Sri Lankan vehicle import permit types and current market prices.",
+        ),
+      },
+      "/privacy": {
+        title: t("seo.privacyTitle", "Privacy Policy — {site}", siteVars),
+        description: t("seo.privacyDesc", "How Motormila collects, uses and protects personal data."),
+      },
+      "/terms": {
+        title: t("seo.termsTitle", "Terms of Service — {site}", siteVars),
+        description: t("seo.termsDesc", "The terms that govern use of Motormila."),
       },
     };
 
@@ -426,6 +506,15 @@ export function RouteMeta() {
             }
           : { title: SITE, description: defaultDescription });
     }
+
+    const unknownRoute = !isKnownRoutePath(pathname);
+    if (unknownRoute) {
+      meta = {
+        title: t("seo.notFoundTitle", "Page not found — {site}", siteVars),
+        description: defaultDescription,
+      };
+    }
+    setMeta("robots", unknownRoute || isNoindexPath(pathname) ? "noindex, nofollow" : "index, follow");
 
     document.title = meta.title;
     setMeta("description", meta.description);

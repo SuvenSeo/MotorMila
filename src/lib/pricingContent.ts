@@ -179,7 +179,7 @@ export const PRICING_FAQ: { q: string; a: string }[] = [
   },
   {
     q: "How do I pay without a card?",
-    a: "Coming soon — bank transfer / KOKO manual pay will go live with paid plans. Contact suvenseoras@gmail.com or 0758504424 meanwhile.",
+    a: `Coming soon — bank transfer / KOKO manual pay will go live with paid plans. Contact ${BRAND.contactEmail} meanwhile.`,
   },
   {
     q: "What is Custom?",

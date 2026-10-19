@@ -1,17 +1,12 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
 User-agent: *
 Allow: /
+# JSON data and internal endpoints are not pages (OG image endpoints stay crawlable).
+Disallow: /api/v1/
+Disallow: /api/internal-
+Disallow: /snapshots/
 
+# Sitemaps are generated at build time from the public snapshot (no DB needed):
+# sitemap-index.xml -> sitemap.xml (core pages), sitemap-hubs.xml (make, model,
+# district hubs), sitemap-listings-N.xml (listing pages).
+Sitemap: https://motormila.vercel.app/sitemap-index.xml
 Sitemap: https://motormila.vercel.app/sitemap.xml
-Sitemap: https://motormila.vercel.app/api/v1/seo/sitemap-index.xml
