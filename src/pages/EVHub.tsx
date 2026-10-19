@@ -124,7 +124,8 @@ export default function EVHub() {
         media={visuals.alt2HeroUltrawidePanorama}
         mediaPosition="center 45%"
         mediaTone="brand"
-        highlights={liveStats.slice(0, 3).map((stat) => ({
+        // Real numbers only: no "…" placeholders or N/A tiles in the hero.
+        highlights={pending ? undefined : liveStats.filter((stat) => stat.value !== na).slice(0, 3).map((stat) => ({
           label: stat.label,
           value: stat.value,
           hint: stat.note,
