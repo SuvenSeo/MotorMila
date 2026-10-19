@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Overhaul 2026-10 strings. si/ta copies live in values-si / values-ta
+     (English placeholders marked TODO until translated). -->
+<resources>
+    <!-- Updates (direct flavor) -->
+    <string name="update_install_permission_hint">Allow MotorMila to install apps on the screen that just opened, then tap Update now again.</string>
+</resources>

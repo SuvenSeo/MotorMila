@@ -6,8 +6,9 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Location permissions removed (2026-10 overhaul): EV chargers fall back
+         to Colombo and never requested them; declaring unused location
+         permissions complicates the Play Data safety form. -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
     <uses-feature
@@ -25,7 +26,9 @@
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:networkSecurityConfig="@xml/network_security_config"
-        tools:targetApi="35">
+        android:localeConfig="@xml/locales_config"
+        android:enableOnBackInvokedCallback="true"
+        tools:targetApi="36">
 
         <activity
             android:name=".MainActivity"
@@ -95,7 +98,9 @@
                 <data android:scheme="motormila" android:host="notifications" />
                 <data android:scheme="motormila" android:host="sell" />
             </intent-filter>
-            <intent-filter android:autoVerify="false">
+            <!-- Verified App Links: requires https://motormila.pages.dev/.well-known/assetlinks.json
+                 listing the Play app-signing + direct-release cert SHA-256 (OPS step). -->
+            <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
@@ -137,7 +142,8 @@
             android:name=".ShareImportActivity"
             android:exported="true"
             android:launchMode="singleTask"
-            android:theme="@style/Theme.Motormila">
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.Motormila.Trampoline">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -149,7 +155,7 @@
              builder: lk.motormila.app.ui.scan.ScanTileService -->
         <service
             android:name="lk.motormila.app.ui.scan.ScanTileService"
-            android:exported="false"
+            android:exported="true"
             android:icon="@mipmap/ic_launcher"
             android:label="@string/tile_scan_plate"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
@@ -181,6 +187,17 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- AppCompat per-app language on API 26-32: persists the chosen locale
+             and re-applies it at startup (API 33+ uses the platform LocaleManager). -->
+        <service
+            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
+            android:enabled="false"
+            android:exported="false">
+            <meta-data
+                android:name="autoStoreLocales"
+                android:value="true" />
+        </service>
 
         <!-- Hilt-injected WorkManager (MotormilaApp implements Configuration.Provider):
              disable the default initializer so our HiltWorkerFactory is used. -->

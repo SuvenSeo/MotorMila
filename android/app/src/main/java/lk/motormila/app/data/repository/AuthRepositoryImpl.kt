@@ -33,6 +33,7 @@ class AuthRepositoryImpl @Inject constructor(
     private val api: MotormilaApiService,
     private val sessionStore: SessionStore,
     private val authInterceptor: AuthInterceptor,
+    private val database: lk.motormila.app.data.local.db.MotormilaDatabase,
     @IoDispatcher private val io: CoroutineDispatcher,
 ) : AuthRepository {
 
@@ -119,6 +120,27 @@ class AuthRepositoryImpl @Inject constructor(
         // with a cleared token after logout.
         runCatching { PriceAlertSyncWorker.cancel(context) }
         runCatching { SnapshotRefreshWorker.cancel(context) }
+        Unit
+    }
+
+    override suspend fun clearRejectedSession(): Unit = withContext(io) {
+        sessionStore.clear()
+        runCatching { PriceAlertSyncWorker.cancel(context) }
+        Unit
+    }
+
+    override suspend fun deleteAccount(password: String?): Unit = withContext(io) {
+        val response = api.deleteAccount(
+            lk.motormila.app.data.remote.dto.DeleteAccountRequestDto(password?.takeIf { it.isNotBlank() }),
+        )
+        if (!response.isSuccessful && response.code() != 404) {
+            throw retrofit2.HttpException(response)
+        }
+        sessionStore.clear()
+        authInterceptor.updateToken(null)
+        runCatching { PriceAlertSyncWorker.cancel(context) }
+        // Local caches tied to the account (alerts, watchlist) go too.
+        runCatching { database.clearAllTables() }
         Unit
     }
 

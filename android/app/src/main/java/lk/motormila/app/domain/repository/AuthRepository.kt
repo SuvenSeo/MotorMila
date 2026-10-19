@@ -22,4 +22,13 @@ interface AuthRepository {
 
     /** Restore persisted session on cold start (data builder reads DataStore). */
     suspend fun restore(): UserSession?
+
+    /** Server rejected the bearer (401): drop the local session without calling the API. */
+    suspend fun clearRejectedSession() {}
+
+    /**
+     * Permanently delete the signed-in account on the server (Play account
+     * deletion requirement), then clear everything local. Throws on failure.
+     */
+    suspend fun deleteAccount(password: String?) {}
 }

@@ -34,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
@@ -43,6 +44,8 @@ import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.io.File
+import lk.motormila.app.BuildConfig
+import lk.motormila.app.R
 import lk.motormila.app.billing.BillingState
 import lk.motormila.app.core.format.formatLkr
 import lk.motormila.app.core.format.formatPct
@@ -97,11 +100,23 @@ fun ProScreen(
             viewModel.onEvent(ProUiEvent.ConsumeCheckout)
         }
     }
+    LaunchedEffect(state.billingMessageRes) {
+        state.billingMessageRes?.let { res ->
+            snacks.showSnackbar(context.getString(res))
+            viewModel.onEvent(ProUiEvent.DismissError)
+        }
+    }
     LaunchedEffect(billingState) {
-        if (billingState is BillingState.Purchased) {
-            if (!reducedMotion) haptics.confirm()
-            snacks.showSnackbar("Pro unlocked — welcome! Your purchase is active on this device.")
-            viewModel.onEvent(ProUiEvent.Refresh)
+        when (billingState) {
+            is BillingState.Purchased -> {
+                if (!reducedMotion) haptics.confirm()
+                snacks.showSnackbar(context.getString(R.string.billing_pro_unlocked))
+                viewModel.onEvent(ProUiEvent.Refresh)
+            }
+            BillingState.Pending -> snacks.showSnackbar(context.getString(R.string.billing_pending))
+            BillingState.VerificationFailed ->
+                snacks.showSnackbar(context.getString(R.string.billing_verification_failed))
+            else -> Unit
         }
     }
     // Non-Pro users land on the paywall sheet (dismissible to peek blurred previews).
@@ -169,13 +184,16 @@ fun ProScreen(
                     Spacer(Modifier.height(16.dp))
                     if (billingState is BillingState.Purchased) {
                         Text(
-                            "Pro unlocked — welcome! Your purchase is active on this device.",
+                            stringResource(R.string.billing_pro_unlocked),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary,
                         )
                     }
                     PrimaryAction(
-                        "Continue to checkout",
+                        stringResource(
+                            if (BuildConfig.PLAY_BILLING_ENABLED) R.string.billing_subscribe_play
+                            else R.string.billing_continue_checkout,
+                        ),
                         onClick = {
                             tapConfirm()
                             if (activity != null) viewModel.onCheckout(activity)

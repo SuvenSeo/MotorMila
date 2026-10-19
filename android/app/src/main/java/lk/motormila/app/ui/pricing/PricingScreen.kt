@@ -116,13 +116,17 @@ fun PricingScreen(
                         onClick = {
                             when (tier.id) {
                                 "free" -> onOpenHome()
-                                "pro" -> {
-                                    if (state.loggedIn) viewModel.checkout("pro", onOpenUrl, onSignUp)
-                                    else onSignUp()
+                                "pro" -> when {
+                                    !state.loggedIn -> onSignUp()
+                                    // Play flavor: purchase only through Play Billing on the Pro screen.
+                                    !lk.motormila.app.BuildConfig.EXTERNAL_CHECKOUT_ENABLED -> onOpenPro()
+                                    else -> viewModel.checkout("pro", onOpenUrl, onSignUp)
                                 }
                                 "dealer" -> {
                                     if (state.loggedIn) {
-                                        viewModel.checkout("dealer", onOpenUrl, onOpenDealer)
+                                        if (lk.motormila.app.BuildConfig.EXTERNAL_CHECKOUT_ENABLED) {
+                                            viewModel.checkout("dealer", onOpenUrl, onOpenDealer)
+                                        }
                                         onOpenDealer()
                                     } else onSignUp()
                                 }
@@ -139,7 +143,7 @@ fun PricingScreen(
             item {
                 Text("FAQ", fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = MotormilaOnSurface)
             }
-            itemsIndexed(PricingCatalog.faqs, key = { _, faq -> faq.question }) { _, faq ->
+            itemsIndexed(PricingCatalog.channelFaqs, key = { _, faq -> faq.question }) { _, faq ->
                 MotormilaSurface(onClick = { openFaq = if (openFaq == faq.question) null else faq.question }) {
                     Text(faq.question, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = MotormilaOnSurface)
                     if (openFaq == faq.question) {

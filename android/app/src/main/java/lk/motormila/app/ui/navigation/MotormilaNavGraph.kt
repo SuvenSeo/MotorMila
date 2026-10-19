@@ -199,6 +199,7 @@ fun MotormilaNavGraph(
                         downloading = updateState.downloading,
                         onUpdate = { updateViewModel.downloadAndInstall(update) },
                         onDismiss = { updateViewModel.dismiss() },
+                        installPermissionRequested = updateState.installPermissionRequested,
                     )
                 }
                 MotormilaPredictiveBackTransform(
@@ -777,4 +778,4 @@ private fun SplashGate(
     }
 }
 
-private const val SUPPORT_MAILTO = "mailto:suvenseoras@gmail.com"
+private const val SUPPORT_MAILTO = lk.motormila.app.core.SupportContact.MAILTO

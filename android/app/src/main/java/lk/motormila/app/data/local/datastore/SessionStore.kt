@@ -12,6 +12,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
 import lk.motormila.app.di.SessionDataStore
 import lk.motormila.app.domain.model.UserSession
 
@@ -40,6 +41,32 @@ class SessionStore @Inject constructor(
     var cachedToken: String? = null
         private set
 
+    /** True once [cachedToken] reflects DataStore (cold-start restore done). */
+    @Volatile
+    private var hydrated: Boolean = false
+
+    /**
+     * The ONE token source for [lk.motormila.app.core.network.AuthInterceptor].
+     * Called on OkHttp worker threads only (never the main thread), so the
+     * one-time blocking DataStore read on a cold start is safe and guarantees
+     * the very first request after process start carries the bearer.
+     */
+    fun tokenForRequest(): String? {
+        if (!hydrated) {
+            runCatching { runBlocking { rehydrate() } }
+        }
+        return cachedToken
+    }
+
+    /**
+     * Synchronously forget the in-memory token after a 401 so no further
+     * request can resurrect it while the async [clear] is still running.
+     */
+    fun invalidateCachedToken() {
+        cachedToken = null
+        hydrated = true
+    }
+
     fun observe(): Flow<UserSession?> = dataStore.data.map { prefs ->
         val token = prefs[Keys.JWT] ?: return@map null
         decode(
@@ -62,13 +89,20 @@ class SessionStore @Inject constructor(
 
     /** Re-hydrate [cachedToken] on cold start; returns the restored session. */
     suspend fun rehydrate(): UserSession? {
-        val session = snapshot()
+        var session = snapshot()
+        if (session != null && isExpired(session.expiresAt)) {
+            // Never send an expired JWT: treat it as signed out.
+            clear()
+            session = null
+        }
         cachedToken = session?.token
+        hydrated = true
         return session
     }
 
     suspend fun save(token: String, email: String, name: String, plan: String, role: String, subscriptionStatus: String?, expiresAtIso: String?) {
         cachedToken = token
+        hydrated = true
         dataStore.edit { prefs ->
             prefs[Keys.JWT] = token
             prefs[Keys.USER] = listOf(email, name, plan, role, subscriptionStatus ?: "").joinToString("||")
@@ -84,6 +118,7 @@ class SessionStore @Inject constructor(
 
     suspend fun clear() {
         cachedToken = null
+        hydrated = true
         dataStore.edit { prefs ->
             prefs.remove(Keys.JWT)
             prefs.remove(Keys.USER)
@@ -118,6 +153,13 @@ class SessionStore @Inject constructor(
                 expiresAt = expiresAt,
                 playProEntitled = playPro,
             )
+        }
+
+        /** True when [expiresAtIso] parses and is in the past (unparseable = not expired). */
+        fun isExpired(expiresAtIso: String?, now: Instant = Instant.now()): Boolean {
+            if (expiresAtIso.isNullOrBlank()) return false
+            val exp = runCatching { Instant.parse(expiresAtIso) }.getOrNull() ?: return false
+            return !exp.isAfter(now)
         }
 
         /** Backend `expires_at` is epoch seconds; domain carries ISO strings. */
