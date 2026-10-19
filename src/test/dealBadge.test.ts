@@ -1,0 +1,80 @@
+import { describe, expect, it } from "vitest";
+import {
+  computeDealBadge,
+  dealBadgeLabel,
+  formatLkrShort,
+  DEAL_BADGE_CLASSES,
+  DEAL_SOFT_CLASSES,
+} from "@/lib/dealBadge";
+
+const t = (_k: string, fallback?: string, vars?: Record<string, string | number>) =>
+  (fallback ?? "").replace(/\{(\w+)\}/g, (_m, k: string) => String(vars?.[k] ?? ""));
+
+describe("computeDealBadge", () => {
+  it("reports the rupee gap below typical", () => {
+    const b = computeDealBadge({ askingLkr: 7_580_000, fmvLkr: 8_000_000, confidence: "high", compsCount: 40 });
+    expect(b.kind).toBe("below");
+    expect(b.gapLkr).toBe(420_000);
+    expect(dealBadgeLabel(b, t)).toBe("Rs 4.2 L below typical");
+  });
+
+  it("calls near-FMV asks fair and expensive asks above", () => {
+    expect(computeDealBadge({ askingLkr: 8_100_000, fmvLkr: 8_000_000 }).kind).toBe("fair");
+    expect(computeDealBadge({ askingLkr: 7_700_000, fmvLkr: 8_000_000 }).kind).toBe("fair");
+    const above = computeDealBadge({ askingLkr: 9_000_000, fmvLkr: 8_000_000 });
+    expect(above.kind).toBe("above");
+    expect(dealBadgeLabel(above, t)).toBe("Rs 10 L above typical");
+  });
+
+  it("turns very cheap outliers amber, never green", () => {
+    const b = computeDealBadge({ askingLkr: 4_000_000, fmvLkr: 8_000_000, confidence: "high", compsCount: 80 });
+    expect(b.kind).toBe("verify");
+    expect(dealBadgeLabel(b, t)).toBe("Unusually low — verify first");
+    expect(DEAL_BADGE_CLASSES.verify).toMatch(/amber/);
+    expect(DEAL_BADGE_CLASSES.verify).not.toMatch(/emerald|green/);
+    expect(DEAL_SOFT_CLASSES.verify).not.toMatch(/emerald|green/);
+  });
+
+  it("treats a below-FMV call on a low-confidence estimate as verify", () => {
+    expect(computeDealBadge({ askingLkr: 7_000_000, fmvLkr: 8_000_000, confidence: "low" }).kind).toBe("verify");
+    expect(computeDealBadge({ askingLkr: 7_000_000, fmvLkr: 8_000_000, confidence: "none" }).kind).toBe("verify");
+    expect(computeDealBadge({ askingLkr: 7_000_000, fmvLkr: 8_000_000, compsCount: 2 }).kind).toBe("verify");
+    // Low confidence does not invent a warning for fair/expensive asks.
+    expect(computeDealBadge({ askingLkr: 8_000_000, fmvLkr: 8_000_000, confidence: "low" }).kind).toBe("fair");
+  });
+
+  it("does not penalise unknown confidence (cards have only the median)", () => {
+    expect(computeDealBadge({ askingLkr: 7_000_000, fmvLkr: 8_000_000 }).kind).toBe("below");
+  });
+
+  it("gives lease takeovers no deal call", () => {
+    const b = computeDealBadge({ askingLkr: 2_175_000, fmvLkr: 8_000_000, isLeaseTakeover: true });
+    expect(b.kind).toBe("lease");
+    expect(b.gapLkr).toBe(0);
+    expect(dealBadgeLabel(b, t)).toBe("Lease takeover — price shown isn't full price");
+  });
+
+  it("keeps safety labels when the rating is not allowed, hides the rest", () => {
+    expect(computeDealBadge({ askingLkr: 7_000_000, fmvLkr: 8_000_000, ratingAllowed: false }).kind).toBe("none");
+    expect(computeDealBadge({ askingLkr: 3_000_000, fmvLkr: 8_000_000, ratingAllowed: false }).kind).toBe("verify");
+    expect(
+      computeDealBadge({ askingLkr: 3_000_000, fmvLkr: 8_000_000, ratingAllowed: false, isLeaseTakeover: true }).kind,
+    ).toBe("lease");
+  });
+
+  it("returns none without usable numbers", () => {
+    expect(computeDealBadge({ askingLkr: null, fmvLkr: 8_000_000 }).kind).toBe("none");
+    expect(computeDealBadge({ askingLkr: 8_000_000, fmvLkr: 0 }).kind).toBe("none");
+    expect(dealBadgeLabel({ kind: "none", gapLkr: 0, gapPctBelow: 0 }, t)).toBeNull();
+  });
+});
+
+describe("formatLkrShort", () => {
+  it("formats lakhs, millions and thousands", () => {
+    expect(formatLkrShort(420_000)).toBe("Rs 4.2 L");
+    expect(formatLkrShort(1_000_000)).toBe("Rs 10 L");
+    expect(formatLkrShort(12_500_000)).toBe("Rs 12.5 Mn");
+    expect(formatLkrShort(45_000)).toBe("Rs 45k");
+    expect(formatLkrShort(-300_000)).toBe("Rs 3 L");
+  });
+});
