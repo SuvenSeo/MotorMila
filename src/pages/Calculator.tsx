@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, motion, AnimatePresence } from "motion/react";
 import { formatPrice, getPermits, getMacroContext, type LandedCostResult, type TcoResult, type PermitInfo, type MacroContext } from "@/services/api";
 import {
   calculateLandedCostResilient as calculateLandedCost,
@@ -107,6 +107,11 @@ const itemVariants = {
   }
 } as const;
 
+/** Display FX at 2 dp (e.g. 330.60); the unrounded rate is kept for the math. */
+function formatFxDisplay(rate: number): string {
+  return Number.isFinite(rate) ? (Math.round(rate * 100) / 100).toFixed(2) : "";
+}
+
 export default function Calculator() {
   const { t } = useAppPreferences();
   const { hasProAccess, isAdmin } = useAuth();
@@ -138,6 +143,20 @@ export default function Calculator() {
   const [macro, setMacro] = useState<MacroContext | null>(null);
   const [fxLoading, setFxLoading] = useState(false);
   const [fxUserOverridden, setFxUserOverridden] = useState(() => searchParams.has("fx"));
+  const [fxFocused, setFxFocused] = useState(false);
+  const [fxText, setFxText] = useState("");
+  const tabStripRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    // Keep the active tab fully visible in the mobile scroll strip.
+    // Horizontal only — never scroll the page vertically.
+    const strip = tabStripRef.current;
+    const el = strip?.querySelector<HTMLElement>(`[data-tab="${activeTab}"]`);
+    if (!strip || !el || strip.scrollWidth <= strip.clientWidth) return;
+    const left = el.offsetLeft - 8;
+    const right = el.offsetLeft + el.offsetWidth + 24;
+    if (left < strip.scrollLeft) strip.scrollLeft = left;
+    else if (right > strip.scrollLeft + strip.clientWidth) strip.scrollLeft = right - strip.clientWidth;
+  }, [activeTab]);
   const surchargeCountdown = getSurchargeCountdown();
   const [surchargeNotifyOn, setSurchargeNotifyOn] = useState(() => isSurchargeNotifySubscribed());
 
@@ -156,7 +175,7 @@ export default function Calculator() {
             description: "Live FX feed is unreachable right now — Rs 300 / USD reference rate applied. Confirm with your bank before committing.",
           });
         } else {
-          toast.success(`Live FX · Rs ${quote.usd_lkr.toLocaleString()} / USD`, {
+          toast.success(`Live FX · Rs ${formatFxDisplay(quote.usd_lkr)} / USD`, {
             description: quote.reference_date
               ? `CBSL-linked print · ref ${quote.reference_date}`
               : quote.source,
@@ -424,8 +443,13 @@ export default function Calculator() {
       )}
 
       <PageBody className="space-y-0 pb-0">
-      <motion.div variants={itemVariants} className="flex max-w-[1320px] flex-nowrap items-center gap-3 pb-6">
-        <div className="flex min-w-0 flex-1 flex-nowrap gap-1 overflow-x-auto rounded-full border border-border bg-card p-1.5 shadow-soft snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-none sm:flex-wrap sm:overflow-visible">
+      <m.div variants={itemVariants} className="flex max-w-[1320px] flex-wrap items-center justify-end gap-3 pb-6 sm:flex-nowrap sm:justify-start">
+        {/* Mobile: full-width horizontally scrollable strip; labels never truncate
+            (whitespace-nowrap + shrink-0), edge fade hints there is more. */}
+        <div
+          ref={tabStripRef}
+          className="flex w-full min-w-0 flex-nowrap gap-1 overflow-x-auto overscroll-x-contain rounded-full border border-border bg-card p-1.5 shadow-soft scroll-px-2 [mask-image:linear-gradient(to_right,transparent,#000_12px,#000_calc(100%-24px),transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:w-auto sm:flex-none sm:flex-wrap sm:overflow-visible sm:[mask-image:none]"
+        >
           {[
             { id: "landed-cost", label: t("calc.tab.landed", "Landed Cost"), icon: Banknote },
             { id: "lease", label: t("calc.tab.lease", "Lease Scenario"), icon: WalletCards },
@@ -439,15 +463,18 @@ export default function Calculator() {
             return (
               <button
                 key={tab.id}
+                type="button"
+                data-tab={tab.id}
                 onClick={() => setActiveTab(tab.id as TabType)}
                 aria-pressed={activeTab === tab.id}
-                className={`relative flex min-h-[40px] shrink-0 snap-start items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold tracking-wide transition-colors z-10 active:scale-[0.97] ${
+                className={`relative flex min-h-[40px] shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold tracking-wide transition-colors z-10 active:scale-[0.97] ${
                   activeTab === tab.id
                     ? "text-black font-bold"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {activeTab === tab.id && (
+                  /* layoutId needs the full motion feature set (not domAnimation) */
                   <motion.div
                     layoutId="active-tab-indicator"
                     className="absolute inset-0 bg-primary rounded-full -z-10 shadow-soft"
@@ -468,7 +495,7 @@ export default function Calculator() {
           <Link2 className="h-3.5 w-3.5" />
           {t("calc.share", "Share")}
         </button>
-      </motion.div>
+      </m.div>
 
       <div className="mx-auto max-w-[1320px] px-5 pb-16 sm:px-6 relative z-10">
         {!tabUnlocked ? (
@@ -480,7 +507,7 @@ export default function Calculator() {
         ) : (
         <AnimatePresence mode="wait">
           {activeTab === "landed-cost" && (
-            <motion.div
+            <m.div
               key="landed-cost-tab"
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
@@ -526,7 +553,7 @@ export default function Calculator() {
                   )}
                   <AnimatePresence initial={false}>
                     {!surchargeCountdown.expired && applySurcharge && lcLapseSavings !== null && lcLapseSavings > 0 && (
-                      <motion.span
+                      <m.span
                         initial={{ opacity: 0, scale: 0.92 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.92 }}
@@ -534,7 +561,7 @@ export default function Calculator() {
                         className="w-full text-center sm:w-auto sm:text-left sm:ml-auto rounded-full border border-emerald-500/25 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 num"
                       >
                         {t("calc.lapseSavings", "This import lands {amount} cheaper if it lapses", { amount: formatPrice(lcLapseSavings) })}
-                      </motion.span>
+                      </m.span>
                     )}
                   </AnimatePresence>
                 </div>
@@ -553,7 +580,7 @@ export default function Calculator() {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <label htmlFor="lc-cif" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.cifUsd", "CIF Price (USD)")}</label>
                       <Input id="lc-cif" type="number" value={cifUsd} onChange={(e) => setCifUsd(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
@@ -564,10 +591,22 @@ export default function Calculator() {
                         <Input
                           id="lc-fx"
                           type="number"
-                          value={exchangeRate}
+                          inputMode="decimal"
+                          step="0.01"
+                          // Show 2 dp; full CBSL precision stays in state for the math.
+                          value={fxFocused ? fxText : formatFxDisplay(exchangeRate)}
+                          onFocus={() => {
+                            setFxText(formatFxDisplay(exchangeRate));
+                            setFxFocused(true);
+                          }}
+                          onBlur={() => setFxFocused(false)}
                           onChange={(e) => {
-                            setFxUserOverridden(true);
-                            setExchangeRate(Number(e.target.value));
+                            setFxText(e.target.value);
+                            const next = Number(e.target.value);
+                            if (Number.isFinite(next) && next > 0) {
+                              setFxUserOverridden(true);
+                              setExchangeRate(next);
+                            }
                           }}
                           className="num bg-surface border-border focus-visible:ring-primary/40"
                         />
@@ -722,11 +761,11 @@ export default function Calculator() {
                   </div>
                 ) : null}
               </div>
-            </motion.div>
+            </m.div>
           )}
 
           {activeTab === "lease" && (
-            <motion.div
+            <m.div
               key="lease-tab"
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
@@ -768,7 +807,7 @@ export default function Calculator() {
                   const newDown = leasePrice * 0.6;    // 40% LTV on new/unregistered
                   const usedBudgetFromNewDown = newDown / 0.4; // same cash, used market
                   return (
-                    <motion.div
+                    <m.div
                       key="ltv-arbitrage"
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
@@ -795,7 +834,7 @@ export default function Calculator() {
                         </div>
                       </div>
                       </div>
-                    </motion.div>
+                    </m.div>
                   );
                 })()}
                 </AnimatePresence>
@@ -808,11 +847,11 @@ export default function Calculator() {
                   <LeaseCalculator price={leasePrice} financeClass="registered_used" />
                 </div>
               </div>
-            </motion.div>
+            </m.div>
           )}
 
           {activeTab === "tco" && (
-            <motion.div
+            <m.div
               key="tco-tab"
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
@@ -832,7 +871,7 @@ export default function Calculator() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <label htmlFor="tco-km" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.dailyCommute", "Daily Commute (KM)")}</label>
                     <Input id="tco-km" type="number" value={tcoDailyKm} onChange={(e) => setTcoDailyKm(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
@@ -868,7 +907,7 @@ export default function Calculator() {
                   <Input id="tco-lease" type="number" value={tcoLease} onChange={(e) => setTcoLease(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 border-t border-border pt-4">
+                <div className="grid grid-cols-1 gap-4 border-t border-border pt-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <label htmlFor="tco-ins" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.annualInsurance", "Annual Insurance")}</label>
                     <Input id="tco-ins" type="number" value={tcoInsurance} onChange={(e) => setTcoInsurance(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
@@ -879,7 +918,7 @@ export default function Calculator() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <label htmlFor="tco-tyres" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.annualTyres", "Annual Tyres")}</label>
                     <Input id="tco-tyres" type="number" value={tcoTyres} onChange={(e) => setTcoTyres(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
@@ -935,11 +974,11 @@ export default function Calculator() {
                   </div>
                 ) : null}
               </div>
-            </motion.div>
+            </m.div>
           )}
 
           {activeTab === "ownership" && (
-            <motion.div
+            <m.div
               key="ownership-tab"
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
@@ -951,11 +990,11 @@ export default function Calculator() {
                 initialCc={lcEngineCc}
                 initialPrice={leasePrice}
               />
-            </motion.div>
+            </m.div>
           )}
 
           {activeTab === "permits" && (
-            <motion.div
+            <m.div
               key="permits-tab"
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
@@ -996,11 +1035,11 @@ export default function Calculator() {
                   </div>
                 )}
               </div>
-            </motion.div>
+            </m.div>
           )}
 
           {activeTab === "depreciation" && (
-            <motion.div
+            <m.div
               key="depreciation-tab"
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1047,7 +1086,7 @@ export default function Calculator() {
                   ))}
                 </div>
               </div>
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
         )}
