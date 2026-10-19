@@ -196,6 +196,18 @@ ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
 
+// Room schema export races when the play/direct KSP tasks run in parallel
+// (org.gradle.parallel=true): both variants share $projectDir/schemas and
+// Room's exportSchema() reads the schema file back while the other task is
+// still writing it, failing with "IllegalStateException: Empty schema file"
+// (seen on CI for :app:kspDirectDebugKotlin). The schema is
+// flavor-independent, so serialize the KSP tasks instead of the whole build.
+tasks.configureEach {
+    if (name.matches(Regex("^kspDirect\\w*Kotlin$"))) {
+        mustRunAfter(tasks.matching { it.name.matches(Regex("^kspPlay\\w*Kotlin$")) })
+    }
+}
+
 // Wire per-flavor release signing.
 android.productFlavors.getByName("direct").signingConfig =
     android.signingConfigs.findByName("directRelease")

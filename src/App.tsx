@@ -78,6 +78,7 @@ const RemovalRequest = lazyWithRetry(() => import("./pages/RemovalRequest"));
 const AccountDeletion = lazyWithRetry(() => import("./pages/AccountDeletion"));
 const CookieNotice = lazyWithRetry(() => import("./pages/CookieNotice"));
 const CheckoutReturn = lazyWithRetry(() => import("./pages/CheckoutReturn"));
+const BotInfo = lazyWithRetry(() => import("./pages/BotInfo"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -233,6 +234,7 @@ const App = () => {
                   <Route path="/official-pulse/guide/:key" element={<OfficialPulseGuide />} />
                   <Route path="/official-pulse/:id" element={<OfficialPulseDetail />} />
                   <Route path="/docs" element={<Docs />} />
+                  <Route path="/bot" element={<BotInfo />} />
                   <Route path="/pricing" element={<Pricing />} />
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="/terms" element={<TermsOfService />} />
