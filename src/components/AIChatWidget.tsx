@@ -456,7 +456,7 @@ export function AIChatWidget() {
 
       {showTooltip && !open && (
         <div
-          className={`${tooltipOut ? "aw-tooltip-out" : "aw-tooltip-in"} fixed bottom-7 right-[92px] z-floating hidden max-w-[250px] items-center gap-3 rounded-2xl border border-primary/25 bg-popover/95 px-3 py-3 shadow-soft-lg backdrop-blur-2xl sm:flex`}
+          className={`${tooltipOut ? "aw-tooltip-out" : "aw-tooltip-in"} dock-float right-[92px] hidden max-w-[250px] items-center gap-3 rounded-2xl border border-primary/25 bg-popover/95 px-3 py-3 shadow-soft-lg backdrop-blur-2xl sm:flex`}
         >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-primary/25 bg-primary/12 text-primary">
             <Bot className="h-4 w-4" />

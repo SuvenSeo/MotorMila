@@ -213,7 +213,8 @@ const App = () => {
         <TooltipProvider>
           <MotionConfig reducedMotion="user">
             <ScrollProgressBar />
-            <Sonner />
+            {/* Toasts sit under the header, clear of the bottom dock (nav, chat, compare). */}
+            <Sonner position="top-center" offset={88} mobileOffset={{ top: 84 }} />
             <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <ScrollRestoration />
               <RouteMeta />
