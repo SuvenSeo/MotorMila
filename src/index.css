@@ -1,3 +1,6 @@
+/* Semantic tokens (deal signals, radius scale, script fonts) — see src/styles/TOKENS.md */
+@import "./styles/tokens.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,24 +11,6 @@
        url('/fonts/Azonix.otf') format('opentype');
   font-weight: 100 900;
   font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Nofex';
-  src: url('/fonts/nofex.woff2') format('woff2'),
-       url('/fonts/nofex.otf') format('opentype');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Nofex';
-  src: url('/fonts/nofex.woff2') format('woff2'),
-       url('/fonts/nofex.otf') format('opentype');
-  font-weight: 100 900;
-  font-style: italic;
   font-display: swap;
 }
 
@@ -52,7 +37,9 @@
     --surface-foreground: 24 16% 9%;
 
     /* ── Brand accent — Motormila electric blue #0A7AFF ───────────────── */
-    --primary: 213 100% 52%;             /* #0A7AFF */
+    /* Fill blue: white text on it is 5.1:1 (AA). Pure #0A7AFF (4.07:1) stays
+       for the mark only — see --brand-blue in styles/tokens.css. */
+    --primary: 213 100% 45%;             /* #0067E6 */
     --primary-bright: 213 100% 42%;      /* stronger text on light */
     --primary-foreground: 0 0% 100%;
 
@@ -60,19 +47,19 @@
     --secondary-foreground: 240 6% 14%;
 
     --muted: 240 20% 96%;
-    --muted-foreground: 240 3% 45%;      /* #6e6e73 secondary label */
+    --muted-foreground: 240 4% 42%;      /* 4.9:1 on muted/surface, 5.3:1 on background */
 
     --accent: 240 20% 95%;
     --accent-foreground: 240 6% 12%;
 
-    --destructive: 4 72% 51%;
+    --destructive: 4 72% 47%;            /* white text 5.2:1 */
     --destructive-foreground: 0 0% 100%;
 
     --border: 240 6% 10% / 0.10;         /* hairline on light */
     --input: 240 6% 10% / 0.14;
-    --ring: 213 100% 52%;
+    --ring: 213 100% 45%;
 
-    --radius: 32px;
+    --radius: 12px;                      /* cards; full scale in styles/tokens.css */
     --nav-offset: 4.75rem;
 
     /* ── Semantic signals ─────────────────────────────────────────────── */
@@ -80,22 +67,18 @@
     --signal-cyan: 199 89% 48%;
     --signal-red: 4 72% 51%;
 
-    --deal-green: 145 63% 36%;
-    --deal-green-foreground: 0 0% 100%;
-    --deal-amber: 38 92% 46%;
-    --deal-amber-foreground: 0 0% 100%;
-    --deal-red: 4 72% 50%;
-    --deal-red-foreground: 0 0% 100%;
+    /* Deal colours: one semantic set (deal-great/good/fair/high/caution) in
+       styles/tokens.css; legacy --deal-green/amber/red alias to it there. */
 
     /* ── Sidebar ──────────────────────────────────────────────────────── */
     --sidebar-background: 240 20% 98%;
     --sidebar-foreground: 240 6% 14%;
-    --sidebar-primary: 213 100% 52%;
+    --sidebar-primary: 213 100% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 20% 95%;
     --sidebar-accent-foreground: 240 6% 12%;
     --sidebar-border: 240 6% 10% / 0.10;
-    --sidebar-ring: 213 100% 52%;
+    --sidebar-ring: 213 100% 45%;
 
     /* ── Accent palette (repurposed "gold" → Motormila blue) ──────────── */
     /* Many components reference var(--gold*) directly; mapping them to the
@@ -121,13 +104,15 @@
     --shadow-xl: 0 20px 56px rgba(0,0,0,0.12), 0 6px 16px rgba(0,0,0,0.06);
     --console-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
 
-    /* ── Fonts — 2026 Automotive Mobility Hierarchy (Satoshi 500 + Inter 400) ─ */
-    --font-wordmark: 'Satoshi', 'General Sans', sans-serif;
-    --font-display: 'Satoshi', 'General Sans', sans-serif;
+    /* ── Fonts — brand guide (MOTORMILA-BRAND.md): Space Grotesk display +
+       Inter body/UI. Two Latin families only. Numbers use Inter with
+       tabular-nums — never a monospace fallback. */
+    --font-wordmark: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+    --font-display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
     --font-body: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --font-numeric: 'Inter', 'JetBrains Mono', monospace;
-    --font-mono: 'JetBrains Mono', monospace;
+    --font-numeric: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; /* code only */
 
     /* ── Motion — Apple easing ────────────────────────────────────────── */
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -154,12 +139,12 @@
     --font-display: 'Satoshi', sans-serif;
     --font-body: 'Inter', sans-serif;
     --font-sans: 'Inter', sans-serif;
-    --font-numeric: 'Inter', monospace;
+    --font-numeric: 'Inter', system-ui, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
   }
   html[data-theme-font="satoshi-inter"][data-font-scope="full"] {
     --font-body: 'Satoshi', sans-serif;
-    --font-numeric: 'Satoshi', monospace;
+    --font-numeric: 'Satoshi', system-ui, sans-serif;
     --font-sans: 'Satoshi', sans-serif;
   }
 
@@ -169,12 +154,12 @@
     --font-display: 'General Sans', sans-serif;
     --font-body: 'Inter', sans-serif;
     --font-sans: 'Inter', sans-serif;
-    --font-numeric: 'Inter', monospace;
+    --font-numeric: 'Inter', system-ui, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
   }
   html[data-theme-font="general-sans-inter"][data-font-scope="full"] {
     --font-body: 'General Sans', sans-serif;
-    --font-numeric: 'General Sans', monospace;
+    --font-numeric: 'General Sans', system-ui, sans-serif;
     --font-sans: 'General Sans', sans-serif;
   }
 
@@ -184,12 +169,12 @@
     --font-display: 'Sora', sans-serif;
     --font-body: 'Inter', sans-serif;
     --font-sans: 'Inter', sans-serif;
-    --font-numeric: 'Inter', monospace;
+    --font-numeric: 'Inter', system-ui, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
   }
   html[data-theme-font="sora-inter"][data-font-scope="full"] {
     --font-body: 'Sora', sans-serif;
-    --font-numeric: 'Sora', monospace;
+    --font-numeric: 'Sora', system-ui, sans-serif;
     --font-sans: 'Sora', sans-serif;
   }
 
@@ -199,7 +184,7 @@
     --font-display: 'Satoshi', sans-serif;
     --font-body: 'Satoshi', sans-serif;
     --font-sans: 'Satoshi', sans-serif;
-    --font-numeric: 'Satoshi', monospace;
+    --font-numeric: 'Satoshi', system-ui, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
   }
 
@@ -209,7 +194,7 @@
     --font-display: 'General Sans', sans-serif;
     --font-body: 'General Sans', sans-serif;
     --font-sans: 'General Sans', sans-serif;
-    --font-numeric: 'General Sans', monospace;
+    --font-numeric: 'General Sans', system-ui, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
   }
 
@@ -219,12 +204,12 @@
     --font-display: 'Clash Display', sans-serif;
     --font-body: 'Inter', sans-serif;
     --font-sans: 'Inter', sans-serif;
-    --font-numeric: 'Inter', monospace;
+    --font-numeric: 'Inter', system-ui, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
   }
   html[data-theme-font="clash-display"][data-font-scope="full"] {
     --font-body: 'Clash Display', sans-serif;
-    --font-numeric: 'Clash Display', monospace;
+    --font-numeric: 'Clash Display', system-ui, sans-serif;
     --font-sans: 'Clash Display', sans-serif;
   }
 
@@ -234,28 +219,28 @@
     --font-display: 'Azonix', sans-serif;
     --font-body: 'Inter', sans-serif;
     --font-sans: 'Inter', sans-serif;
-    --font-numeric: 'Inter', monospace;
+    --font-numeric: 'Inter', system-ui, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
   }
   html[data-theme-font="azonix"][data-font-scope="full"] {
     --font-body: 'Azonix', sans-serif;
-    --font-numeric: 'Azonix', monospace;
+    --font-numeric: 'Azonix', system-ui, sans-serif;
     --font-sans: 'Azonix', sans-serif;
   }
 
-  /* 8. Drag-Race Block: Nofex */
+  /* 8. Drag-Race Block: Russo One (OFL; replaces the demo-licensed Nofex) */
   html[data-theme-font="nofex"] {
-    --font-wordmark: 'Nofex', sans-serif;
-    --font-display: 'Nofex', sans-serif;
+    --font-wordmark: 'Russo One', sans-serif;
+    --font-display: 'Russo One', sans-serif;
     --font-body: 'Inter', sans-serif;
     --font-sans: 'Inter', sans-serif;
-    --font-numeric: 'Inter', monospace;
+    --font-numeric: 'Inter', system-ui, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
   }
   html[data-theme-font="nofex"][data-font-scope="full"] {
-    --font-body: 'Nofex', sans-serif;
-    --font-numeric: 'Nofex', monospace;
-    --font-sans: 'Nofex', sans-serif;
+    --font-body: 'Russo One', sans-serif;
+    --font-numeric: 'Russo One', sans-serif;
+    --font-sans: 'Russo One', sans-serif;
   }
 
   /* ── Refined dark mode ──────────────────────────────────────────────── */
@@ -272,7 +257,9 @@
     --surface: 24 14% 5.8%;
     --surface-foreground: 36 28% 96%;
 
-    --primary: 213 100% 62%;            /* Motormila blue, brightened for dark */
+    /* Fill blue on dark: white text 4.95:1 (AA; was 3.04:1 at 62%). Blue TEXT
+       on dark uses --primary-text (68%) via the text-primary utility. */
+    --primary: 213 100% 46%;            /* #006AEB */
     --primary-foreground: 0 0% 100%;
 
     --secondary: 24 10% 12%;
@@ -284,7 +271,7 @@
     --accent: 24 10% 14%;
     --accent-foreground: 36 20% 94%;
 
-    --destructive: 4 76% 58%;
+    --destructive: 4 76% 50%;           /* white text 4.6:1 */
     --destructive-foreground: 0 0% 100%;
 
     /* Dark hairline — blends with the dark surface instead of drawing a
@@ -297,9 +284,6 @@
     --signal-cyan: 199 89% 60%;
     --signal-red: 4 72% 60%;
 
-    --deal-green: 145 58% 46%;
-    --deal-amber: 38 90% 56%;
-    --deal-red: 4 72% 58%;
 
     --sidebar-background: 24 16% 4.6%;
     --sidebar-foreground: 36 20% 92%;
@@ -629,7 +613,7 @@
 @layer components {
   .section-eyebrow {
     @apply font-sans text-label font-semibold uppercase tracking-[0.12em];
-    color: hsl(var(--primary));
+    color: hsl(var(--primary-text));
   }
 
   .headline-display {
@@ -750,7 +734,7 @@
 
   /* Signature period / accent word — brand blue, no rainbow sheen. */
   .text-sheen {
-    color: hsl(var(--primary));
+    color: hsl(var(--primary-text));
     background: none;
     -webkit-background-clip: unset;
     background-clip: unset;
@@ -1147,7 +1131,7 @@
     border-radius: 999px;
     border: 1px solid hsl(var(--primary) / 0.25);
     background: hsl(var(--primary) / 0.08);
-    color: hsl(var(--primary));
+    color: hsl(var(--primary-text));
   }
 
   .platform-metric-tile {
@@ -1342,7 +1326,7 @@
     font-size: 0.8125rem;
     font-weight: 500;
     letter-spacing: -0.005em;
-    color: hsl(var(--primary));
+    color: hsl(var(--primary-text));
     box-shadow: var(--shadow-sm), inset 0 1px 0 var(--glass-top);
     backdrop-filter: blur(var(--glass-blur)) saturate(1.8);
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.8);
@@ -1753,7 +1737,7 @@
 
   .liquid-toggle.is-on .liquid-toggle__thumb {
     transform: translateX(2.05rem);
-    color: hsl(var(--primary));
+    color: hsl(var(--primary-text));
   }
 }
 

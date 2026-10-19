@@ -11,6 +11,13 @@ export interface FontPreset {
 
 export const FONT_PRESETS: FontPreset[] = [
   {
+    id: "brand",
+    name: "Space Grotesk + Inter",
+    badge: "Brand guide • Production",
+    description: "Space Grotesk 700 display (−3.5% tracking) + Inter UI, per MOTORMILA-BRAND.md.",
+    displayFamily: "'Space Grotesk', sans-serif",
+  },
+  {
     id: "satoshi-inter",
     name: "Satoshi + Inter",
     badge: "Top Pick • 2026 Standard",
@@ -61,20 +68,20 @@ export const FONT_PRESETS: FontPreset[] = [
   },
   {
     id: "nofex",
-    name: "Nofex + Inter",
+    name: "Russo One + Inter",
     badge: "Heavy Drag-Race",
-    description: "Ultra-heavy drag racing display titles paired with clean Inter UI.",
-    displayFamily: "'Nofex', sans-serif",
+    description: "Heavy racing display titles (Russo One, OFL — replaces demo-licensed Nofex) with clean Inter UI.",
+    displayFamily: "'Russo One', sans-serif",
   },
 ];
 
 export function FontStudioBar() {
-  const [currentFont, setCurrentFont] = useState<string>("satoshi-inter");
+  const [currentFont, setCurrentFont] = useState<string>("brand");
   const [currentScope, setCurrentScope] = useState<"hybrid" | "full">("hybrid");
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
   useEffect(() => {
-    const savedFont = localStorage.getItem("motormila_font_choice") || "satoshi-inter";
+    const savedFont = localStorage.getItem("motormila_font_choice") || "brand";
     const savedScope = (localStorage.getItem("motormila_font_scope") as "hybrid" | "full") || "hybrid";
     setCurrentFont(savedFont);
     setCurrentScope(savedScope);
