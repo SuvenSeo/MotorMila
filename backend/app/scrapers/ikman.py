@@ -216,19 +216,6 @@ class IkmanCarScraper:
 
         return ""
 
-    async def _fetch_detail_thumbnail(self, context, listing_url: str) -> str:
-        if not listing_url:
-            return ""
-        try:
-            response = await context.request.get(listing_url, timeout=20_000)
-            if not response.ok:
-                return ""
-            html = await response.text()
-            return self._extract_thumbnail_from_detail_html(html)
-        except Exception as exc:
-            log.debug("ikman_detail_thumbnail_failed", url=listing_url, error=str(exc))
-            return ""
-
     @staticmethod
     def _properties_map(row: dict) -> dict[str, str]:
         props = row.get("properties")
