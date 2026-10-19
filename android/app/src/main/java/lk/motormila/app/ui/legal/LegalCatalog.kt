@@ -68,7 +68,7 @@ object LegalCatalog {
             LegalSection(
                 heading = "6. Data retention and erasure",
                 paragraphs = listOf(
-                    "Account data is retained while your account is active. Delete your account at any time in Settings → Delete account, or on the web at motormila.pages.dev/delete-account. You can also email $CONTACT_EMAIL with subject \"Data erasure request\". Erasure completes within 14 days.",
+                    "Account data is retained while your account is active. Delete your account at any time in Settings → Delete account, or on the web at motormila.vercel.app/delete-account. You can also email $CONTACT_EMAIL with subject \"Data erasure request\". Erasure completes within 14 days.",
                 ),
             ),
             LegalSection(

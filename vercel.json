@@ -16,7 +16,7 @@
       "destination": "/api/listing-og?id=:id"
     },
     {
-      "source": "/(trends|estimate|calculator|ev-hub|ev-chargers|best-picks|sell|price-index|docs|pricing|privacy|terms|valuation|permits|mobile-app|dealer|settings|alerts|profile|sign-in|sign-up|hero-lab|admin|pro|pro-preview|official-pulse|compare|afford|safe-transfer|finance|leasing|inspection|insurance|cookies|removal|delete-account|how-we-price)",
+      "source": "/(admin|price-index|valuation|leasing)",
       "destination": "/index.html"
     },
     {
@@ -45,10 +45,6 @@
     },
     {
       "source": "/official-pulse/:path*",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/motormila/admin",
       "destination": "/index.html"
     },
     {
@@ -87,6 +83,15 @@
     },
     {
       "source": "/(sign-in|sign-up|profile|alerts|settings|dealer|pro|pro-preview|admin|hero-lab|motormila/admin)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/(privacy|terms|cookies|removal|delete-account)",
       "headers": [
         {
           "key": "X-Robots-Tag",

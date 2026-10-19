@@ -285,6 +285,14 @@ export function RouteMeta() {
           siteVars,
         ),
       },
+      "/bot": {
+        title: t("seo.botTitle", "MotorMilaBot — {site}", siteVars),
+        description: t(
+          "seo.botDesc",
+          "About the MotorMilaBot web crawler: what it collects, how politely it crawls, and how to contact us or opt out.",
+          siteVars,
+        ),
+      },
       "/pricing": {
         title: t("seo.pricingTitle", "Pricing — {site}", siteVars),
         description: t(

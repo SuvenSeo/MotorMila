@@ -1,3 +1,5 @@
+> **DEPRECATED (2026-10-19):** this doc describes the old committed-keystore setup. The committed `android/ci-signing.keystore` was removed; release signing is now env-only and fail-closed. See `docs/overhaul/android.md` (Signing) for the current process.
+
 # Android signing identity — how releases stay co-installable
 
 The sideload APKs published by `.github/workflows/android-release.yml` must
