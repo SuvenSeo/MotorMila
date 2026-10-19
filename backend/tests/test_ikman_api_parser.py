@@ -96,41 +96,38 @@ def test_ikman_api_rejects_missing_price():
     assert IkmanCarScraper(db=None)._build_payload_from_api_ad(row) is None
 
 
-def test_ikman_scrape_defaults_to_api_mode_auto(monkeypatch):
+def test_ikman_scrape_never_uses_internal_api(monkeypatch):
     calls: list[str] = []
 
-    async def fake_api(self, max_pages: int = 5, *, start_page: int = 1):
-        calls.append(f"api:{max_pages}:{start_page}")
+    async def fake_playwright(self, max_pages: int = 5):
+        calls.append(f"html:{max_pages}")
         return 3
 
-    async def fake_playwright(self, max_pages: int = 5):
-        calls.append(f"playwright:{max_pages}")
+    monkeypatch.setenv("IKMAN_SCRAPE_MODE", "api")
+    monkeypatch.setenv("SOURCES_ENABLED", "ikman")
+    monkeypatch.setattr(IkmanCarScraper, "_scrape_via_playwright", fake_playwright)
+    assert not hasattr(IkmanCarScraper, "_scrape_via_api")
 
-    monkeypatch.delenv("IKMAN_SCRAPE_MODE", raising=False)
-    monkeypatch.setattr(IkmanCarScraper, "_scrape_via_api", fake_api)
+    import asyncio
+
+    assert asyncio.run(IkmanCarScraper(db=None).scrape(max_pages=2)) == 3
+    assert calls == ["html:2"]
+
+
+def test_ikman_is_disabled_by_default(monkeypatch):
+    calls: list[str] = []
+
+    async def fake_playwright(self, max_pages: int = 5):
+        calls.append("html")
+        return 3
+
+    monkeypatch.delenv("SOURCES_ENABLED", raising=False)
     monkeypatch.setattr(IkmanCarScraper, "_scrape_via_playwright", fake_playwright)
 
     import asyncio
 
-    asyncio.run(IkmanCarScraper(db=None).scrape(max_pages=2))
-    assert calls == ["api:2:1"]
-
-
-def test_ikman_api_start_page_can_resume_older_results(monkeypatch):
-    calls: list[tuple[int, int]] = []
-
-    async def fake_api(self, max_pages: int = 5, *, start_page: int = 1):
-        calls.append((max_pages, start_page))
-        return 1
-
-    monkeypatch.setenv("IKMAN_SCRAPE_MODE", "api")
-    monkeypatch.setenv("IKMAN_START_PAGE", "201")
-    monkeypatch.setattr(IkmanCarScraper, "_scrape_via_api", fake_api)
-
-    import asyncio
-
-    asyncio.run(IkmanCarScraper(db=None).scrape(max_pages=200))
-    assert calls == [(200, 201)]
+    assert asyncio.run(IkmanCarScraper(db=None).scrape(max_pages=2)) == 0
+    assert calls == []
 
 
 def test_ikman_vehicle_categories_cover_all_for_sale_leaves():

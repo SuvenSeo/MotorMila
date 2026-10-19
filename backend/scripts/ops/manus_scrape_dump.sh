@@ -31,7 +31,8 @@
 #
 # NOTE: use this for API / plain-HTTP friendly sources (riyasewana, ikman,
 # autolanka, hitad, autostream, saleme, riyahub, carshop, dimo, autodirect,
-# cartivate). riyasewana uses curl_cffi Chrome impersonation over HTTP.
+# cartivate). All sources use the honest MotorMilaBot UA, robots.txt checks and
+# per-host delays (app/scrapers/polite.py). Blocked sources are skipped.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
