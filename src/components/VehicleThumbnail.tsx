@@ -33,16 +33,26 @@ function createFallbackThumbnailDataUri(label: string, source?: string | null): 
   const safeLabel = escapeSvgText(String(label || "Vehicle").trim().slice(0, 32) || "Vehicle");
   const sourceName = formatSourceName(source);
   const sourceLine = escapeSvgText(sourceName ? `Photos on ${sourceName}` : "Photo unavailable");
+  // Layout keeps everything in the top ~60% of the 16:10 frame: card/detail
+  // overlays (price, deal badge, source credit) sit along the bottom edge and
+  // used to clip a bottom-anchored wordmark down to "RMILA".
+  // Lockup = Apex M vector (same geometry as the Android adaptive icon) + "otormila",
+  // mirroring /logo-wordmark.png (brand bible: the M *is* the first letter).
+  // textLength pins the word width because web fonts don't load inside <img> SVGs.
   const svg = `
 <svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600">
   <rect width="960" height="600" fill="#09090B"/>
   <g stroke="#ffffff" stroke-opacity="0.05">
     <path d="M0 150h960M0 300h960M0 450h960M240 0v600M480 0v600M720 0v600"/>
   </g>
-  <rect x="440" y="226" width="80" height="6" rx="3" fill="#0A7AFF"/>
-  <text x="480" y="300" fill="#FFFFFF" fill-opacity="0.86" font-family="Space Grotesk,Inter,system-ui,sans-serif" font-weight="700" font-size="40" text-anchor="middle">${safeLabel}</text>
-  <text x="480" y="350" fill="#FFFFFF" fill-opacity="0.55" font-family="Inter,system-ui,sans-serif" font-size="26" text-anchor="middle">${sourceLine}</text>
-  <text x="480" y="548" fill="#0A7AFF" fill-opacity="0.75" font-family="Space Grotesk,Inter,system-ui,sans-serif" font-weight="700" font-size="20" letter-spacing="4" text-anchor="middle">MOTORMILA</text>
+  <g transform="translate(276 107) scale(1.2)" fill="none" stroke="#0A7AFF" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M30,76 L30,34 L54,58 L78,34 L78,62"/>
+    <path d="M78,62 L97,43"/>
+    <path d="M97,43 L87.5,43 M97,43 L97,52.5"/>
+  </g>
+  <text x="402" y="198" textLength="246" lengthAdjust="spacingAndGlyphs" fill="#FFFFFF" font-family="Space Grotesk,Inter,system-ui,sans-serif" font-weight="700" font-size="62">otormila</text>
+  <text x="480" y="282" fill="#FFFFFF" fill-opacity="0.86" font-family="Space Grotesk,Inter,system-ui,sans-serif" font-weight="700" font-size="34" text-anchor="middle">${safeLabel}</text>
+  <text x="480" y="326" fill="#FFFFFF" fill-opacity="0.55" font-family="Inter,system-ui,sans-serif" font-size="24" text-anchor="middle">${sourceLine}</text>
 </svg>`;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
