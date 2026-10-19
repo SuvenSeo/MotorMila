@@ -1,18 +1,19 @@
 import { memo } from "react";
+import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import {
   Ticker,
   TickerIcon,
-  TickerPrice,
-  TickerPriceChange,
   TickerSymbol,
 } from "@/components/kibo-ui/ticker";
 import { cn } from "@/lib/utils";
+import { changeTone, formatChangePct, formatLkrWhole, TONE_STYLES } from "@/lib/dataSanity";
+import { useAppPreferences } from "@/lib/appPreferences";
 
 export interface MarketTickerRow {
   make: string;
   model: string;
   avg_price_lkr: number;
-  movement_pct: number;
+  movement_pct: number | null;
   listing_count: number;
   thumbnail_url?: string | null;
 }
@@ -22,22 +23,39 @@ interface MarketTickerProps {
   onSelect?: (row: MarketTickerRow) => void;
 }
 
-const lkr0 = new Intl.NumberFormat("en-LK", {
-  style: "currency",
-  currency: "LKR",
-  maximumFractionDigits: 0,
-});
+/**
+ * Change chip: up = amber, down = green, |Δ| < 1% = grey "stable". Buyer-
+ * neutral — a falling asking price is not "bad news" for the people using this.
+ */
+function TickerChange({ pct, stableLabel }: { pct: number | null; stableLabel: string }) {
+  const tone = changeTone(pct);
+  const Icon = tone === "up" ? ArrowUpRight : tone === "down" ? ArrowDownRight : Minus;
+  return (
+    <span className={cn("inline-flex items-center gap-0.5 num text-[11px] font-semibold", TONE_STYLES[tone].text)}>
+      <Icon className="h-3 w-3" aria-hidden />
+      {tone === "stable" ? stableLabel : formatChangePct(Number(pct))}
+    </span>
+  );
+}
 
 /** Shared inner markup so the live track and its loop clone measure identically. */
-function TickerItemInner({ row }: { row: MarketTickerRow }) {
+function TickerItemInner({ row, stableLabel }: { row: MarketTickerRow; stableLabel: string }) {
   return (
     <>
       <TickerIcon src={row.thumbnail_url} symbol={row.make} />
       <TickerSymbol symbol={`${row.make} ${row.model}`} className="max-w-[140px] truncate" />
-      <TickerPrice price={row.avg_price_lkr} className="num" />
-      <TickerPriceChange change={row.movement_pct} isPercent className="num text-[11px] font-semibold" />
+      {/* Whole rupees — used-vehicle averages never need cents. */}
+      <span className="num text-muted-foreground">{formatLkrWhole(row.avg_price_lkr)}</span>
+      <TickerChange pct={row.movement_pct} stableLabel={stableLabel} />
     </>
   );
+}
+
+function ariaChange(pct: number | null, t: (k: string, f?: string, v?: Record<string, string | number>) => string): string {
+  const tone = changeTone(pct);
+  if (tone === "stable") return t("ticker.ariaStable", "stable");
+  const n = Math.abs(Number(pct)).toFixed(1);
+  return tone === "up" ? t("ticker.ariaUp", "up {n} percent", { n }) : t("ticker.ariaDown", "down {n} percent", { n });
 }
 
 /**
@@ -48,7 +66,9 @@ function TickerItemInner({ row }: { row: MarketTickerRow }) {
  * preferred.
  */
 export const MarketTicker = memo(function MarketTicker({ rows, onSelect }: MarketTickerProps) {
+  const { t } = useAppPreferences();
   if (!rows.length) return null;
+  const stableLabel = t("ticker.stable", "stable");
   const itemClass = "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-1 py-0.5 align-middle text-[12px]";
   return (
     <section aria-label="Trending models ticker" className="market-ticker border-b border-border bg-surface/60">
@@ -67,9 +87,9 @@ export const MarketTicker = memo(function MarketTicker({ rows, onSelect }: Marke
                   locale="en-LK"
                   onClick={() => onSelect?.(row)}
                   className={cn(itemClass, "transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-primary")}
-                  aria-label={`${row.make} ${row.model}, average ${lkr0.format(row.avg_price_lkr)}, ${row.movement_pct >= 0 ? "up" : "down"} ${Math.abs(row.movement_pct).toFixed(1)} percent`}
+                  aria-label={`${row.make} ${row.model}, ${t("ticker.ariaAverage", "average")} ${formatLkrWhole(row.avg_price_lkr)}, ${ariaChange(row.movement_pct, t)}`}
                 >
-                  <TickerItemInner row={row} />
+                  <TickerItemInner row={row} stableLabel={stableLabel} />
                 </Ticker>
               ) : (
                 <Ticker
@@ -79,7 +99,7 @@ export const MarketTicker = memo(function MarketTicker({ rows, onSelect }: Marke
                   tabIndex={-1}
                   className={cn(itemClass, "pointer-events-none text-foreground")}
                 >
-                  <TickerItemInner row={row} />
+                  <TickerItemInner row={row} stableLabel={stableLabel} />
                 </Ticker>
               ),
             )}

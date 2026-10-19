@@ -47,6 +47,7 @@ import { formatPriceLkrMillions } from "@/lib/formatting";
 import { authHeaders } from "@/lib/authToken";
 import { districtCoords, normalizeDistrictName } from "@/data/districts";
 import { QUERY_STALE } from "@/lib/queryPolicy";
+import { cleanDistrict, computedDropPct, isPlausiblePriceDrop } from "@/lib/dataSanity";
 
 const DEFAULT_PRODUCTION_API = "https://seo292-vehicle-platform-backend.hf.space/api/v1";
 const HF_COLD_START_TIMEOUT_MS = 60_000;
@@ -599,6 +600,8 @@ function normalizeListing(raw: JsonRecord): CarListing {
     body_type: bodyType,
     thumbnail_url: thumbnailUrl,
     images,
+    // "Sri Lanka" / "Island-wide" is the country, not a district — unknown.
+    district: cleanDistrict(raw?.district) ?? undefined,
     // Snapshot payloads predate the lifecycle flag — default to active so
     // only an explicit backend false renders the possibly-sold state.
     is_active: raw?.is_active === undefined ? true : Boolean(raw.is_active),
@@ -1804,15 +1807,22 @@ function normalizePriceDropItems(data: JsonRecord, limit = 12): PriceDropItem[] 
   return data.items
     .map((row: unknown) => {
       const record = asJsonRecord(row);
+      const previous = toNumberOrNull(record?.previous_price_lkr) ?? 0;
+      const next = toNumberOrNull(record?.new_price_lkr) ?? 0;
       return {
         listing: normalizeListing(asJsonRecord(record?.listing)),
-        previous_price_lkr: toNumberOrNull(record?.previous_price_lkr) ?? 0,
-        new_price_lkr: toNumberOrNull(record?.new_price_lkr) ?? 0,
-        drop_pct: toNumberOrNull(record?.drop_pct) ?? 0,
+        previous_price_lkr: previous,
+        new_price_lkr: next,
+        // Recompute from the two prices so the badge always matches them.
+        drop_pct: computedDropPct(previous, next) || (toNumberOrNull(record?.drop_pct) ?? 0),
         dropped_at: String(record?.dropped_at || ""),
+        confirmations: toNumberOrNull(record?.confirmations ?? record?.points_at_new_price),
       };
     })
-    .filter((item) => item.listing.id && item.drop_pct > 0)
+    // Sanity guard: unit mismatches (lakhs vs millions), lease takeovers and
+    // unconfirmed >50% "cuts" are parse bugs, not market moves.
+    .filter((item) => item.listing.id && item.drop_pct > 0 && isPlausiblePriceDrop(item))
+    .map(({ confirmations: _c, ...item }) => item)
     .slice(0, limit);
 }
 
@@ -1821,7 +1831,8 @@ export const getPriceDrops = async (days = 7, limit = 12): Promise<PriceDropItem
   if (snapshot) return normalizePriceDropItems(snapshot, limit);
   if (SNAPSHOT_ONLY) return [];
 
-  const data = await fetchJSON<JsonRecord>(`/listings/price-drops?days=${days}&limit=${limit}`);
+  // Over-fetch: the sanity guard drops implausible rows, keep the board full.
+  const data = await fetchJSON<JsonRecord>(`/listings/price-drops?days=${days}&limit=${Math.min(60, limit * 3)}`);
   return normalizePriceDropItems(data, limit);
 };
 
@@ -3035,7 +3046,7 @@ export const getMakeModelInsight = async (make: string, model: string): Promise<
 
     const districtMap = new Map<string, { count: number; total: number; priced: number }>();
     for (const l of rows) {
-      const d = String(l.district || "").trim();
+      const d = cleanDistrict(l.district);
       if (!d) continue;
       const entry = districtMap.get(d) ?? { count: 0, total: 0, priced: 0 };
       entry.count += 1;
@@ -3086,10 +3097,10 @@ export const getMakeModelInsight = async (make: string, model: string): Promise<
     median_price_lkr: toNumberOrNull(data.median_price_lkr),
     top_districts: Array.isArray(data.top_districts)
       ? (data.top_districts as JsonRecord[]).map((row) => ({
-          district: String(row.district || ""),
+          district: cleanDistrict(row.district) ?? "",
           count: Number(row.count || 0),
           avg_price_lkr: toNumberOrNull(row.avg_price_lkr),
-        }))
+        })).filter((row) => row.district)
       : [],
   };
 };
@@ -3178,10 +3189,10 @@ export const getMakeInsight = async (make: string): Promise<MakeInsight> => {
         all_models: Array.isArray(data.all_models) ? (data.all_models as JsonRecord[]).map(mapModelRow) : undefined,
         top_districts: Array.isArray(data.top_districts)
           ? (data.top_districts as JsonRecord[]).map((row) => ({
-              district: String(row.district || ""),
+              district: cleanDistrict(row.district) ?? "",
               count: Number(row.count || 0),
               avg_price_lkr: toNumberOrNull(row.avg_price_lkr),
-            }))
+            })).filter((row) => row.district)
           : [],
       };
     }
@@ -3206,10 +3217,10 @@ export const getMakeInsight = async (make: string): Promise<MakeInsight> => {
       : undefined,
     top_districts: Array.isArray(data.top_districts)
       ? (data.top_districts as JsonRecord[]).map((row) => ({
-          district: String(row.district || ""),
+          district: cleanDistrict(row.district) ?? "",
           count: Number(row.count || 0),
           avg_price_lkr: toNumberOrNull(row.avg_price_lkr),
-        }))
+        })).filter((row) => row.district)
       : [],
   };
 };
