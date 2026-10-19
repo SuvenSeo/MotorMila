@@ -4522,3 +4522,38 @@ export const deleteMyListing = async (id: number): Promise<void> => {
   });
   if (!response.ok) throw await parseApiError(response);
 };
+
+// ---------------------------------------------------------------------------
+// ui/features: snapshot comps for a make/model (estimate fallback, sell-speed)
+// ---------------------------------------------------------------------------
+
+/**
+ * Every snapshot row for one make/model (compact comps: id, price, year,
+ * mileage, district, condition, first_seen_at, fuel). Reads the per-model
+ * idx/ file when published, else filters the legacy full catalogue.
+ * Never calls the live API; returns [] when no snapshot covers the model.
+ * Pass `{ allowFullCatalog: false }` for non-essential UI (badges) so it
+ * never triggers the full-catalogue download.
+ */
+export const getSnapshotModelComps = async (
+  make: string,
+  model: string,
+  opts: { allowFullCatalog?: boolean } = {},
+): Promise<CarListing[]> => {
+  if (!make || !model) return [];
+  try {
+    if (await hasSnapshotIndex()) {
+      const idx = await getSnapshotModelIndex(make, model);
+      return (idx?.comps || []) as CarListing[];
+    }
+    // The legacy catalogue is tens of MB: only badges/extras opt out of it.
+    if (opts.allowFullCatalog === false) return [];
+    const catalog = await getSnapshotListingCatalog();
+    if (!catalog) return [];
+    const mk = makeIndexKey(make);
+    const mo = modelIndexKey(model);
+    return catalog.filter((row) => makeIndexKey(row.make) === mk && modelIndexKey(row.model) === mo);
+  } catch {
+    return [];
+  }
+};

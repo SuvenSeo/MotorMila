@@ -3,14 +3,15 @@ import { si } from "./si";
 import { ta } from "./ta";
 import { listingEn, listingSi, listingTa } from "./listing";
 import { shellEn, shellSi, shellTa } from "./shell";
+import { featuresEn, featuresSi, featuresTa } from "./features";
 
 export type Language = "en" | "si" | "ta";
 export type Dictionary = Record<string, string>;
 
 export const DICTIONARIES: Record<Language, Dictionary> = {
-  en: { ...(en as unknown as Dictionary), ...listingEn, ...shellEn },
-  si: { ...(si as unknown as Dictionary), ...listingSi, ...shellSi },
-  ta: { ...(ta as unknown as Dictionary), ...listingTa, ...shellTa },
+  en: { ...(en as unknown as Dictionary), ...listingEn, ...shellEn, ...featuresEn },
+  si: { ...(si as unknown as Dictionary), ...listingSi, ...shellSi, ...featuresSi },
+  ta: { ...(ta as unknown as Dictionary), ...listingTa, ...shellTa, ...featuresTa },
 };
 
 export const LOCALE_TAGS: Record<Language, string> = {

@@ -18,7 +18,8 @@ import {
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import { useAppPreferences, type Language } from "@/lib/appPreferences";
-import { useCompareTray } from "@/lib/compareTray";
+import { MAX_PINNED, useCompareTray } from "@/lib/compareTray";
+import { LowDataSettingsCard } from "@/components/lowData/LowDataSettingsCard";
 import { openFeedbackDialog } from "@/lib/feedbackEvents";
 import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
@@ -414,7 +415,7 @@ export default function Settings() {
                   </div>
                 </div>
                 <span className="rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] font-mono font-bold text-foreground">
-                  {pinned.length} / 3 Pinned
+                  {pinned.length} / {MAX_PINNED} Pinned
                 </span>
               </div>
 
@@ -424,7 +425,7 @@ export default function Settings() {
                     <p className="text-xs font-bold text-foreground">Active Compare Tray</p>
                     <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
                       {pinned.length === 0
-                        ? "No vehicles are currently pinned. Pin up to 3 cars from search or market results to compare side-by-side."
+                        ? `No vehicles are currently pinned. Pin up to ${MAX_PINNED} cars from search or market results to compare side-by-side.`
                         : `You have ${pinned.length} vehicle${pinned.length > 1 ? "s" : ""} saved in your comparison session.`}
                     </p>
                   </div>
@@ -479,6 +480,11 @@ export default function Settings() {
                 <ArrowUpRight className="h-3.5 w-3.5" />
               </Link>
             </div>
+          </motion.div>
+
+          {/* ui/features: low-data mode */}
+          <motion.div variants={revealItem} className="lg:col-span-12">
+            <LowDataSettingsCard />
           </motion.div>
 
           {/* Card 5: Feedback & Issue Reporting Hub */}

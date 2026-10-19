@@ -20,7 +20,11 @@ import {
   Store,
   Users,
   Wrench,
+  ClipboardCheck,
+  Inbox,
+  ShieldX,
 } from "lucide-react";
+import { LeadsPanel, ModerationQueuePanel, RemovalRequestsPanel } from "@/pages/admin/AdminQueues";
 import { toast } from "sonner";
 import {
   clearAdminStatsCache,
@@ -70,7 +74,11 @@ type AdminTab =
   | "feedback"
   | "dealers"
   | "permits"
-  | "system";
+  | "system"
+  // ui/features: work queues
+  | "moderation"
+  | "leads"
+  | "removals";
 
 const TAB_IDS: AdminTab[] = [
   "overview",
@@ -82,6 +90,9 @@ const TAB_IDS: AdminTab[] = [
   "dealers",
   "permits",
   "system",
+  "moderation",
+  "leads",
+  "removals",
 ];
 
 function formatCount(value: number | undefined) {
@@ -456,6 +467,9 @@ export default function AdminDashboard() {
               { id: "dealers", label: "Dealers", icon: Store },
               { id: "permits", label: "Permits", icon: Crown },
               { id: "system", label: "System", icon: Wrench },
+              { id: "moderation", label: "Moderation", icon: ClipboardCheck },
+              { id: "leads", label: "Leads", icon: Inbox },
+              { id: "removals", label: "Removals", icon: ShieldX },
             ].map((tab) => {
               const Icon = tab.icon;
               return (
@@ -1195,6 +1209,16 @@ export default function AdminDashboard() {
                 ) : null}
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="moderation" className="space-y-6">
+            {activeTab === "moderation" ? <ModerationQueuePanel /> : null}
+          </TabsContent>
+          <TabsContent value="leads" className="space-y-6">
+            {activeTab === "leads" ? <LeadsPanel /> : null}
+          </TabsContent>
+          <TabsContent value="removals" className="space-y-6">
+            {activeTab === "removals" ? <RemovalRequestsPanel /> : null}
           </TabsContent>
 
           <TabsContent value="system" className="space-y-6">

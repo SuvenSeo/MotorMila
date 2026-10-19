@@ -16,7 +16,7 @@
       "destination": "/api/listing-og?id=:id"
     },
     {
-      "source": "/(trends|estimate|calculator|ev-hub|ev-chargers|best-picks|sell|price-index|docs|pricing|privacy|terms|valuation|permits|mobile-app|dealer|settings|alerts|profile|sign-in|sign-up|hero-lab|admin|pro|pro-preview|official-pulse|compare|afford|safe-transfer|finance|leasing|inspection|insurance|cookies|removal|delete-account)",
+      "source": "/(trends|estimate|calculator|ev-hub|ev-chargers|best-picks|sell|price-index|docs|pricing|privacy|terms|valuation|permits|mobile-app|dealer|settings|alerts|profile|sign-in|sign-up|hero-lab|admin|pro|pro-preview|official-pulse|compare|afford|safe-transfer|finance|leasing|inspection|insurance|cookies|removal|delete-account|how-we-price)",
       "destination": "/index.html"
     },
     {

@@ -182,6 +182,13 @@ export function RouteMeta() {
           "Estimate a fair market price for any Sri Lankan vehicle from live listing data.",
         ),
       },
+      "/how-we-price": {
+        title: t("seo.howWePriceTitle", "How we score prices — {site}", siteVars),
+        description: t(
+          "seo.howWePriceDesc",
+          "How MotorMila estimates fair market value from comparable Sri Lankan listings, what confidence levels and deal badges mean, and the limits of asking-price data.",
+        ),
+      },
       "/calculator": {
         title: t("seo.calculatorTitle", "Import & Cost Calculator — {site}", siteVars),
         description: t(

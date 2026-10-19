@@ -27,7 +27,7 @@ const AIChatWidget = lazyWithRetry(() => import("@/components/AIChatWidget").the
 const FeedbackWidget = lazyWithRetry(() =>
   import("@/components/FeedbackWidget").then((m) => ({ default: m.FeedbackWidget }))
 );
-import { CompareTray } from "@/components/CompareTray";
+import { CompareTray, CompareProvider } from "@/components/compare/CompareTray";
 import { FontStudioBar } from "@/components/FontStudioBar";
 // Trial banner lives in Pricing to avoid a new chunk; lazy keeps it out of first paint.
 const TrialCountdownBanner = lazyWithRetry(() =>
@@ -78,6 +78,8 @@ const RemovalRequest = lazyWithRetry(() => import("./pages/RemovalRequest"));
 const AccountDeletion = lazyWithRetry(() => import("./pages/AccountDeletion"));
 const CookieNotice = lazyWithRetry(() => import("./pages/CookieNotice"));
 const CheckoutReturn = lazyWithRetry(() => import("./pages/CheckoutReturn"));
+// ui/features: methodology explainer
+const HowWePrice = lazyWithRetry(() => import("./pages/HowWePrice"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -221,6 +223,7 @@ const App = () => {
             <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <ScrollRestoration />
               <RouteMeta />
+              <CompareProvider>
               <Routes>
                 <Route element={<PublicLayout chatMounted={chatMounted} />}>
                   <Route path="/" element={<Dashboard />} />
@@ -255,6 +258,7 @@ const App = () => {
                   <Route path="/insurance" element={<LeadRequest kind="insurance" />} />
                   <Route path="/checkout/return" element={<CheckoutReturn />} />
                   <Route path="/compare" element={<Compare />} />
+                  <Route path="/how-we-price" element={<HowWePrice />} />
                   {/** Legacy valuation path: header/footer now point at /estimate. */}
                   <Route path="/valuation" element={<Navigate to="/estimate" replace />} />
                   <Route path="/permits" element={<Permits />} />
@@ -307,6 +311,7 @@ const App = () => {
                   </Suspense>
                 } />
               </Routes>
+              </CompareProvider>
             </BrowserRouter>
           </MotionConfig>
           </LazyMotion>
