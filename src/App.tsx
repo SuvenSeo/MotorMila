@@ -72,6 +72,12 @@ const Permits = lazyWithRetry(() => import("./pages/Permits"));
 const Compare = lazyWithRetry(() => import("./pages/Compare"));
 const Afford = lazyWithRetry(() => import("./pages/Afford"));
 const SafeTransfer = lazyWithRetry(() => import("./pages/SafeTransfer"));
+// overhaul/money-legal: lead capture, legal requests, PayHere return
+const LeadRequest = lazyWithRetry(() => import("./pages/LeadRequest"));
+const RemovalRequest = lazyWithRetry(() => import("./pages/RemovalRequest"));
+const AccountDeletion = lazyWithRetry(() => import("./pages/AccountDeletion"));
+const CookieNotice = lazyWithRetry(() => import("./pages/CookieNotice"));
+const CheckoutReturn = lazyWithRetry(() => import("./pages/CheckoutReturn"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -230,6 +236,14 @@ const App = () => {
                   <Route path="/pricing" element={<Pricing />} />
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="/terms" element={<TermsOfService />} />
+                  <Route path="/cookies" element={<CookieNotice />} />
+                  <Route path="/removal" element={<RemovalRequest />} />
+                  <Route path="/delete-account" element={<AccountDeletion />} />
+                  <Route path="/finance" element={<LeadRequest kind="finance" />} />
+                  <Route path="/leasing" element={<Navigate to="/finance" replace />} />
+                  <Route path="/inspection" element={<LeadRequest kind="inspection" />} />
+                  <Route path="/insurance" element={<LeadRequest kind="insurance" />} />
+                  <Route path="/checkout/return" element={<CheckoutReturn />} />
                   <Route path="/compare" element={<Compare />} />
                   {/** Legacy valuation path: header/footer now point at /estimate. */}
                   <Route path="/valuation" element={<Navigate to="/estimate" replace />} />

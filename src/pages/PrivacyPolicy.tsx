@@ -1,152 +1,138 @@
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ArrowRight, Shield } from "lucide-react";
-import { BRAND } from "@/lib/brand";
-import { PageBody } from "@/components/PageBody";
-import { PageCanvas } from "@/components/PageCanvas";
-import { PageHero } from "@/components/PageHero";
-import { revealItem } from "@/lib/motion";
-import { visuals } from "@/lib/visualAssets";
+import { Shield } from "lucide-react";
+import { CONTROLLER_NAME, LegalPageShell, LegalSection, PRIVACY_EMAIL } from "@/components/money/LegalPageShell";
+import { LISTING_SOURCES } from "@/lib/listingSources";
 
 export default function PrivacyPolicy() {
   return (
-    <PageCanvas>
-      <PageHero
-        theme="default"
-        eyebrow="Legal"
-        eyebrowIcon={Shield}
-        watermarkIcon={Shield}
-        title={<>Privacy Policy<span className="text-sheen">.</span></>}
-        description={`How ${BRAND.name} collects, uses, and protects information when you use the platform.`}
-        media={visuals.pageFaqIllustration}
-        mediaPosition="center 40%"
-        mediaTone="brand"
-        highlights={[
-          { label: "Data", value: "Public", hint: "Listings from public sources" },
-          { label: "Opt-in", value: "WhatsApp", hint: "Alerts require your consent" },
-          { label: "Contact", value: "Email", hint: "Full erasure on request" },
-        ]}
-        actions={
-          <>
-            <Link
-              to="/terms"
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-[13px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              Terms of Service
-              <ArrowRight aria-hidden className="h-4 w-4" />
-            </Link>
-          </>
-        }
-      />
+    <LegalPageShell
+      icon={Shield}
+      title="Privacy Policy"
+      description="What we collect, where it comes from, why we use it, how long we keep it, and how you can control it."
+    >
+      <LegalSection title="1. Who we are">
+        <p>
+          MotorMila is a vehicle price and market website for Sri Lanka. The data controller is {CONTROLLER_NAME}.
+          You can reach us about anything in this policy at <a href={`mailto:${PRIVACY_EMAIL}`}>{PRIVACY_EMAIL}</a>.
+          That mailbox is read by our data protection officer.
+        </p>
+        <p>
+          We aim to follow Sri Lanka's Personal Data Protection Act, No. 9 of 2022 (as amended), which we call
+          the PDPA below.
+        </p>
+      </LegalSection>
 
-      <PageBody>
-        <motion.article
-          variants={revealItem}
-          className="prose prose-sm prose-neutral dark:prose-invert max-w-3xl space-y-8 text-[14px] leading-7 text-foreground/85"
-        >
-          <section className="space-y-3">
-            <h2 className="font-display text-xl font-semibold text-foreground">1. What we collect</h2>
-            <p>
-              {BRAND.name} aggregates vehicle listing data from publicly accessible Sri Lanka
-              classified websites (Ikman, Riyasewana, AutoLanka, and others). We do not collect
-              personal information from those listings — only vehicle attributes, asking prices,
-              and seller-provided descriptions that are already public.
-            </p>
-            <p>
-              When you create an account, we store your email address, chosen display name,
-              access plan, and encrypted password hash. We also record sign-in timestamps and
-              the IP address of each authenticated request for security purposes.
-            </p>
-          </section>
+      <LegalSection title="2. The short version">
+        <ul>
+          <li>We show vehicle facts (make, model, year, price, mileage, district) from public listing sites, with a link back to the original ad.</li>
+          <li>We don't sell your personal data.</li>
+          <li>If you ask for a leasing, inspection or insurance quote, we share your details only with the partner named on that form, and only after you tick the consent box.</li>
+          <li>You can ask us to remove a listing or your data at any time. We act on removal requests within 72 hours.</li>
+        </ul>
+      </LegalSection>
 
-          <section className="space-y-3">
-            <h2 className="font-display text-xl font-semibold text-foreground">2. How we use your information</h2>
-            <ul className="list-disc space-y-1 pl-5">
-              <li>To authenticate your session and enforce plan limits.</li>
-              <li>To send platform invite emails and transactional notifications.</li>
-              <li>To deliver WhatsApp market-alert messages — only when you explicitly opt in by providing your phone number in the Alerts panel.</li>
-              <li>To improve scrape quality and detect data anomalies (aggregate, anonymised).</li>
-            </ul>
-            <p>We do not sell, rent, or share your personal data with third parties for marketing.</p>
-          </section>
+      <LegalSection id="sources" title="3. Listing data from other websites">
+        <p>
+          Most listings on MotorMila come from public vehicle ads on these sites:{" "}
+          {LISTING_SOURCES.map((s) => s.name).join(", ")}. We only collect ads that anyone can see without an account,
+          and every listing links back to the original ad.
+        </p>
+        <p>From those ads we keep the vehicle details and the link: title, make, model, year, price, mileage, fuel,
+          transmission, engine size, body type, condition, district or town, and the dates we first and last saw the ad.
+          We use these to build price statistics such as medians, trends and deal scores.
+        </p>
+        <p>
+          A listing can contain personal data about the seller, such as a name, a phone number, or a person or number
+          plate in a photo. We don't build profiles of sellers. To contact a seller you go to the original ad.
+          If you are the seller and want a listing or your details removed, use the{" "}
+          <Link to="/removal">removal request form</Link>.
+        </p>
+        <p>
+          Legal basis: our legitimate interest, and that of buyers, in comparing vehicle prices in one place. We have
+          weighed this against sellers' interests, and we limit what we keep for that reason (see section 7).
+        </p>
+      </LegalSection>
 
-          <section className="space-y-3">
-            <h2 className="font-display text-xl font-semibold text-foreground">3. Fair Market Value estimates</h2>
-            <p>
-              Price intelligence, deal scores, and FMV estimates on {BRAND.name} are
-              <strong> algorithmic signals derived from live listing data</strong> — they are
-              not formal appraisals, certified valuations, or financial advice. Treat them as
-              market reference points only.
-            </p>
-          </section>
+      <LegalSection title="4. Data you give us">
+        <ul>
+          <li><strong>Account:</strong> email, display name, a hashed password, your plan, and sign-in times. Basis: our contract with you.</li>
+          <li><strong>Your own ads</strong> (Sell your car): vehicle details, photos, and the contact name and phone you choose to show. Basis: contract.</li>
+          <li><strong>Alerts:</strong> your saved searches and, if you turn them on, the phone number, Telegram or email used to send alerts. Basis: your consent, which you can withdraw in Alerts or Settings.</li>
+          <li><strong>Leasing, inspection and insurance requests:</strong> name, phone, optional email, district, the vehicle, budget or down payment, preferred date and notes, plus the exact consent text you agreed to and when. Basis: your consent.</li>
+          <li><strong>Payments:</strong> handled by PayHere (cards, Genie, FriMi, eZcash and others) or by bank transfer or KOKO. We never see or store your card number. We keep the order, plan, amount and status. Basis: contract and our legal duty to keep accounting records.</li>
+          <li><strong>Messages to us:</strong> feedback, waitlist emails, removal and deletion requests. Basis: legitimate interest in replying, or a legal duty.</li>
+        </ul>
+      </LegalSection>
 
-          <section className="space-y-3">
-            <h2 className="font-display text-xl font-semibold text-foreground">4. WhatsApp alerts</h2>
-            <p>
-              WhatsApp notifications are strictly opt-in. By submitting a phone number in the
-              Alerts panel you consent to receiving vehicle-match messages via Twilio. You can
-              withdraw consent at any time by removing the alert or contacting us.
-            </p>
-          </section>
+      <LegalSection title="5. Data collected automatically">
+        <ul>
+          <li><strong>Security logs:</strong> IP address, browser type and request times, to keep the service secure and stop abuse. On lead forms we store a one-way hash of your IP, not the IP itself.</li>
+          <li><strong>Usage analytics:</strong> pages viewed and product events (for example "compare opened"), linked to a random ID that lasts only for your browser session. We also use Vercel Web Analytics, which doesn't use cookies. See the <Link to="/cookies">cookie notice</Link>.</li>
+          <li><strong>Error reports:</strong> if the app crashes, a technical report goes to our error tracker without your name or email.</li>
+        </ul>
+      </LegalSection>
 
-          <section className="space-y-3">
-            <h2 className="font-display text-xl font-semibold text-foreground">5. Cookies and local storage</h2>
-            <p>
-              We use a session cookie (HttpOnly, Secure) to maintain your authenticated session.
-              Watchlist IDs and UI preferences (theme, language) are stored in your browser's
-              local storage and never transmitted to our servers.
-            </p>
-          </section>
+      <LegalSection title="6. Who we share data with">
+        <ul>
+          <li><strong>Partners you choose:</strong> the leasing company, inspection company or licensed insurance broker named on a request form, and only for that request.</li>
+          <li><strong>Service providers</strong> who process data for us under contract: Vercel (website hosting), Hugging Face (API hosting), Neon (database), Cloudflare (storage and network), PayHere (payments), our email provider (account and alert emails), and Telegram and WhatsApp if you turn on those alerts.</li>
+          <li><strong>Authorities</strong>, when Sri Lankan law requires it.</li>
+        </ul>
+        <p>
+          Some of these providers store data outside Sri Lanka, mainly in the United States and the European Union.
+          We only use providers that commit to protect personal data to a standard equal to the PDPA.
+        </p>
+      </LegalSection>
 
-          <section className="space-y-3">
-            <h2 className="font-display text-xl font-semibold text-foreground">6. Data retention and erasure</h2>
-            <p>
-              Account data is retained while your account is active. You may request full
-              erasure at any time by emailing{" "}
-              <a
-                href={BRAND.contactMailto}
-                className="text-primary-bright underline decoration-primary/40 underline-offset-2"
-              >
-                {BRAND.contactEmail}
-              </a>{" "}
-              with subject "Data erasure request". We will complete erasure within 30 days.
-            </p>
-          </section>
+      <LegalSection title="7. How long we keep data">
+        <ul>
+          <li>Listings from other sites: vehicle details while the ad is live. After an ad disappears we keep only anonymous price statistics, and remove the link and any personal details within 90 days.</li>
+          <li>Accounts: while the account is open. Deleted within 14 days of a deletion request.</li>
+          <li>Lead requests: 12 months, then deleted. Sooner if you ask.</li>
+          <li>Payment records: 6 years, for tax and accounting law.</li>
+          <li>Security logs: up to 90 days.</li>
+          <li>Removal and deletion requests: 3 years, as a record that we acted on them.</li>
+        </ul>
+      </LegalSection>
 
-          <section className="space-y-3">
-            <h2 className="font-display text-xl font-semibold text-foreground">7. Changes to this policy</h2>
-            <p>
-              Material changes will be communicated via email to registered users at least 14 days
-              before taking effect. Continued use of the platform after that date constitutes
-              acceptance of the updated policy.
-            </p>
-          </section>
+      <LegalSection title="8. Your rights">
+        <p>Under the PDPA you can ask us to:</p>
+        <ul>
+          <li>tell you what personal data we hold about you and give you a copy;</li>
+          <li>correct data that's wrong or out of date;</li>
+          <li>delete your data, or stop using it;</li>
+          <li>withdraw consent you gave (this doesn't affect what we did before you withdrew);</li>
+          <li>object to our use of your data based on legitimate interests, for example a listing that shows your details;</li>
+          <li>review a decision made only by automated means that significantly affects you.</li>
+        </ul>
+        <p>
+          Email <a href={`mailto:${PRIVACY_EMAIL}`}>{PRIVACY_EMAIL}</a>, or use the{" "}
+          <Link to="/removal">removal form</Link> or the <Link to="/delete-account">account deletion page</Link>. We may
+          ask you to confirm who you are. We reply within 21 working days, and act on listing removals within 72 hours.
+        </p>
+        <p>
+          If you aren't happy with our answer, you can complain to the Data Protection Authority of Sri Lanka.
+        </p>
+      </LegalSection>
 
-          <section className="space-y-3">
-            <h2 className="font-display text-xl font-semibold text-foreground">8. Contact</h2>
-            <p>
-              Questions about privacy:{" "}
-              <a
-                href={BRAND.contactMailto}
-                className="text-primary-bright underline decoration-primary/40 underline-offset-2"
-              >
-                {BRAND.contactEmail}
-              </a>{" "}
-              ·{" "}
-              <a
-                href={BRAND.contactPhoneHref}
-                className="text-primary-bright underline decoration-primary/40 underline-offset-2"
-              >
-                {BRAND.contactPhone}
-              </a>
-            </p>
-          </section>
+      <LegalSection title="9. Security">
+        <p>
+          Passwords are hashed, traffic is encrypted (HTTPS), and access to the database and admin tools is limited to
+          the people who need it. If a breach puts your data at risk, we'll tell you and the Data Protection Authority
+          as the PDPA requires.
+        </p>
+      </LegalSection>
 
-          <p className="border-t border-border pt-6 text-[12px] text-muted-foreground">
-            Last updated: July 2025 · {BRAND.name} is operated by Ardeno Studio.
-          </p>
-        </motion.article>
-      </PageBody>
-    </PageCanvas>
+      <LegalSection title="10. Children">
+        <p>MotorMila is not meant for children under 18, and we don't knowingly collect their data.</p>
+      </LegalSection>
+
+      <LegalSection title="11. Changes">
+        <p>
+          If we change this policy we'll update the effective date above, and for important changes we'll show a notice
+          on the site or email account holders.
+        </p>
+      </LegalSection>
+    </LegalPageShell>
   );
 }

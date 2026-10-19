@@ -219,8 +219,12 @@ _CONTACT_PHONE_FALLBACK = "0758504424"
 
 
 def _checkout_url() -> Optional[str]:
-    """Return the first configured checkout URL, or None."""
-    for env_var in ("BILLING_CHECKOUT_URL", "STRIPE_CHECKOUT_URL", "PAYHERE_CHECKOUT_URL"):
+    """Return a hosted PayHere link (PayHere "Links" product) if configured, or None.
+
+    STRIPE_CHECKOUT_URL is deliberately ignored: Stripe can't pay out to a
+    Sri Lankan business.
+    """
+    for env_var in ("PAYHERE_CHECKOUT_URL", "BILLING_CHECKOUT_URL"):
         url = os.getenv(env_var, "").strip()
         if url:
             return url
@@ -266,7 +270,7 @@ def manual_pay_instructions(plan: str = "pro") -> dict:
     whatsapp = _manual_pay_whatsapp()
     activation = _manual_pay_activation_window()
     normalized = (plan or "pro").strip().lower()
-    label = normalized if normalized in ("pro", "dealer") else "pro"
+    label = normalized if normalized in ("pro", "dealer", "dealer_starter", "dealer_pro", "dealer_yard") else "pro"
     steps = [
         f"1. Message us on WhatsApp{f' ({whatsapp})' if whatsapp else ''} or email {contact} with your Motormila account email + '{label}' plan.",
         f"2. Pay by bank transfer ({_manual_pay_bank_details()}) or KOKO — {_manual_pay_koko_note()}",
@@ -289,10 +293,13 @@ class CheckoutIntentRequest(BaseModel):
 
 
 class CheckoutIntentResponse(BaseModel):
-    provider: Literal["manual", "payhere", "stripe"]
+    provider: Literal["manual", "payhere"]
     checkout_url: Optional[str] = None
+    # When PayHere's Checkout API is configured the client POSTs here to get
+    # signed form fields (see app/routers/payhere.py).
+    payhere_checkout_endpoint: Optional[str] = None
     message: str
-    manual_pay: Optional[dict] = Field(default=None, description="Manual-pay steps when provider=manual")
+    manual_pay: Optional[dict] = Field(default=None, description="Manual-pay steps (always offered as a fallback)")
 
 
 @router.get("/manual-pay", response_model=dict)
@@ -303,31 +310,39 @@ def manual_pay(plan: str = "pro") -> dict:
 
 @router.post("/checkout-intent", response_model=CheckoutIntentResponse)
 def checkout_intent(body: CheckoutIntentRequest) -> CheckoutIntentResponse:
-    """Return a checkout URL for the requested plan upgrade.
+    """Tell the pricing page how this plan can be paid for.
 
-    Reads environment variables in priority order:
-      BILLING_CHECKOUT_URL > STRIPE_CHECKOUT_URL > PAYHERE_CHECKOUT_URL
+    1. PayHere Checkout API configured -> ``provider=payhere`` with
+       ``payhere_checkout_endpoint`` (client fetches signed form fields).
+    2. A hosted PayHere link in PAYHERE_CHECKOUT_URL / BILLING_CHECKOUT_URL ->
+       ``provider=payhere`` with ``checkout_url``.
+    3. Otherwise ``provider=manual`` (bank transfer / KOKO + WhatsApp).
 
-    When none are set, returns structured manual-pay instructions (bank / KOKO /
-    WhatsApp, activated within the configured window) so the frontend can render
-    steps instead of a bare mailto link.
+    Manual-pay steps are always included so the user has a no-card option.
     """
-    url = _checkout_url()
-    if url:
-        env_vars = {k: os.getenv(k, "") for k in ("STRIPE_CHECKOUT_URL", "PAYHERE_CHECKOUT_URL")}
-        if env_vars.get("STRIPE_CHECKOUT_URL"):
-            provider: Literal["manual", "payhere", "stripe"] = "stripe"
-        elif env_vars.get("PAYHERE_CHECKOUT_URL"):
-            provider = "payhere"
-        else:
-            provider = "manual"
+    from app.routers.payhere import payhere_enabled, pro_checkout_enabled
+
+    plan = (body.plan or "").strip().lower()
+    instructions = manual_pay_instructions(plan)
+    is_pro = plan == "pro"
+
+    if payhere_enabled() and (not is_pro or pro_checkout_enabled()):
         return CheckoutIntentResponse(
-            provider=provider,
-            checkout_url=url,
-            message=f"Redirecting to {provider} checkout for {body.plan} plan.",
+            provider="payhere",
+            payhere_checkout_endpoint="/api/v1/payhere/checkout",
+            message=f"Pay for the {plan} plan by card, Genie, FriMi or eZcash via PayHere, or by bank transfer / KOKO.",
+            manual_pay=instructions,
         )
 
-    instructions = manual_pay_instructions(body.plan)
+    url = _checkout_url()
+    if url and not is_pro:
+        return CheckoutIntentResponse(
+            provider="payhere",
+            checkout_url=url,
+            message=f"Redirecting to PayHere checkout for the {plan} plan.",
+            manual_pay=instructions,
+        )
+
     whatsapp = instructions.get("whatsappNumber")
     activation = instructions.get("activationWindow")
     contact = instructions.get("contactEmail")
@@ -336,7 +351,7 @@ def checkout_intent(body: CheckoutIntentRequest) -> CheckoutIntentResponse:
         provider="manual",
         checkout_url=None,
         message=(
-            f"Pay by bank transfer or KOKO for the {body.plan} plan, then WhatsApp us for activation within {activation}.{hint} "
+            f"Pay by bank transfer or KOKO for the {plan} plan, then WhatsApp us for activation within {activation}.{hint} "
             f"Or email {contact} with your account email."
         ),
         manual_pay=instructions,
