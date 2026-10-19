@@ -108,7 +108,8 @@ function TrialBannerSlot() {  const { user } = useAuth();
   // Defer the Pricing chunk until the banner can actually render: anonymous
   // and paid users always render null, so skip the dynamic import entirely.
   if (!user) return null;
-  if (user.subscriptionStatus !== "trialing" && user.plan !== "free") return null;
+  // Only an actual trial gets a site-wide line; free users aren't nagged on every page.
+  if (user.subscriptionStatus !== "trialing") return null;
   return (
     <div className="mx-auto w-full max-w-[1560px] px-5 pt-3 sm:px-6">
       <Suspense fallback={null}>
