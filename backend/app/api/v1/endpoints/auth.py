@@ -39,7 +39,9 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.services.rate_limit import RateLimiter
+from app.core.db_guard import DatabaseUnavailable, find_db_unavailable
+from app.core import origins as _origins
+from app.services.rate_limit import LoginThrottle, RateLimiter, _client_key
 from db.models import PlatformUser, UserInvite
 from db.schema_patches import heal_platform_users_schema
 from db.session import get_db
@@ -116,20 +118,36 @@ def _session_or_none(db: object) -> Optional[Session]:
     """FastAPI injects Session; direct unit calls may pass Depends(...) or omit db."""
     return db if isinstance(db, Session) else None
 
-_login_rate_limiter = RateLimiter(
-    max_requests=10,
+# Failed-login throttle (per account + per IP, exponential backoff), checked
+# BEFORE bcrypt so a locked-out attacker gets no password oracle.
+_login_rate_limiter = LoginThrottle(message="Too many sign-in attempts. Try again shortly.")
+# Coarse per-IP cap on raw login volume (successes included) - bounds bcrypt
+# CPU burn on the single cpu-basic worker.
+_login_volume_limiter = RateLimiter(
+    max_requests=30,
     window_seconds=60,
     message="Too many sign-in attempts. Try again shortly.",
+    tier="auth-login-volume",
+    key_func=_client_key,
 )
 _me_rate_limiter = RateLimiter(
     max_requests=60,
     window_seconds=60,
     message="Too many account lookups. Try again shortly.",
+    tier="auth-me",
 )
 _signup_rate_limiter = RateLimiter(
     max_requests=10,
     window_seconds=60,
     message="Too many sign-up attempts. Try again shortly.",
+    tier="auth-signup",
+    key_func=_client_key,
+)
+_delete_account_limiter = RateLimiter(
+    max_requests=5,
+    window_seconds=300,
+    message="Too many account deletion attempts. Try again shortly.",
+    tier="auth-delete",
 )
 
 
@@ -423,6 +441,7 @@ def resolve_user_record(email: str, db: Optional[Session] = None) -> Optional[di
     if not normalized:
         return None
 
+    db_unavailable = False
     if db is not None:
         try:
             row = db.query(PlatformUser).filter(PlatformUser.email == normalized).first()
@@ -430,16 +449,33 @@ def resolve_user_record(email: str, db: Optional[Session] = None) -> Optional[di
                 if not row.is_active:
                     return None
                 return _platform_user_to_record(row)
-        except Exception:
+        except Exception as exc:
             # Table/column may be missing during early migrate — fall through.
             # Postgres aborts the whole transaction on the failed statement; without
             # rollback, later queries in this same request (invites, listings) 500.
+            db_unavailable = find_db_unavailable(exc) is not None
             try:
                 db.rollback()
             except Exception:
                 pass
 
-    return _configured_users().get(normalized)
+    env_record = _configured_users().get(normalized)
+    if env_record is None and (db_unavailable or _accounts_store_degraded()):
+        # Outage: we cannot tell "no such account" from "DB down". Answer 503
+        # instead of 401 so clients keep their session and retry, rather than
+        # signing the user out.
+        raise DatabaseUnavailable("account store unavailable")
+    return env_record
+
+
+def _accounts_store_degraded() -> bool:
+    """True while serving from the SQLite failover dump (no user tables there)."""
+    try:
+        from db.sqlite_failover import failover_active
+
+        return bool(failover_active())
+    except Exception:
+        return False
 
 
 def sync_env_user_to_db(record: dict, db: Session) -> Optional[PlatformUser]:
@@ -502,10 +538,18 @@ def _cookie_secure() -> bool:
 
 
 def _cookie_samesite() -> str:
-    raw = os.getenv("AUTH_COOKIE_SAMESITE", "none").strip().lower()
+    """SameSite for mm_session. Default ``lax``.
+
+    The web app talks to the API same-origin through the Vercel / Pages
+    ``/api/v1`` rewrite, so the cookie is first-party and Lax is enough.
+    ``none`` made the cookie ride every cross-site request (CSRF + credentialed
+    CORS reads). Set AUTH_COOKIE_SAMESITE=none only for a deliberate
+    cross-site deployment (it also requires Secure).
+    """
+    raw = os.getenv("AUTH_COOKIE_SAMESITE", "lax").strip().lower()
     if raw in {"lax", "strict", "none"}:
         return raw
-    return "none"
+    return "lax"
 
 
 def _extract_token(
@@ -594,6 +638,13 @@ def login(
         raise HTTPException(status_code=503, detail="Authentication is not configured on this deployment.")
 
     email = payload.email.strip().lower()
+    client_ip = _client_key(request)
+    # Throttle checks run BEFORE any password verification: a locked account
+    # or IP gets 429 even with the right password, so lockout is not a
+    # password oracle. Only failures count towards the lockout.
+    _login_rate_limiter.check(client_ip, email)
+    _login_volume_limiter(request)
+
     session = _session_or_none(db)
     record = resolve_user_record(email, session)
     env_record = _configured_users().get(email)
@@ -602,13 +653,10 @@ def login(
     env_ok = bool(env_record and _verify_password(payload.password, env_record["password_hash"]))
 
     if db_ok or env_ok:
-        # Successful sign-ins never consume rate-limit budget: only failed
-        # attempts do. Otherwise a burst of bad tries from a shared IP (or an
-        # old app build auto-filling stale demo credentials) locks real
-        # accounts out of a *correct* login.
+        _login_rate_limiter.record_success(email)
         return _issue_login_response(env_record if (env_ok and not db_ok) else record, response, db)
 
-    _login_rate_limiter(request)
+    _login_rate_limiter.record_failure(client_ip, email)
     raise HTTPException(status_code=401, detail="Invalid email or password.")
 
 
@@ -740,6 +788,144 @@ def me(
     )
 
 
+class DeleteAccountRequest(BaseModel):
+    """Optional re-authentication for account deletion."""
+
+    password: Optional[str] = Field(default=None, max_length=200)
+
+
+def _delete_account_data(db: Session, email: str) -> dict:
+    """Hard-delete a platform user and the personal data keyed to them.
+
+    Returns per-table counts. Runs in the caller's transaction (no commit).
+    """
+    from db.models import (
+        AnalyticsEvent,
+        CarListing,
+        DealerProfile,
+        MarketAlert,
+        MarketAlertMatch,
+        PushSubscription,
+        UserFeedback,
+        UserNotification,
+    )
+
+    counts: dict[str, int] = {}
+    owner_token = f"mm:{email}"
+
+    # Alerts (+ their match rows), notifications, push subscriptions.
+    alert_ids = [row.id for row in db.query(MarketAlert.id).filter(MarketAlert.user_token == owner_token).all()]
+    if alert_ids:
+        counts["alert_matches"] = (
+            db.query(MarketAlertMatch)
+            .filter(MarketAlertMatch.alert_id.in_(alert_ids))
+            .delete(synchronize_session=False)
+        )
+    counts["alerts"] = (
+        db.query(MarketAlert).filter(MarketAlert.user_token == owner_token).delete(synchronize_session=False)
+    )
+    counts["notifications"] = (
+        db.query(UserNotification)
+        .filter(UserNotification.user_token == owner_token)
+        .delete(synchronize_session=False)
+    )
+    counts["push_subscriptions"] = (
+        db.query(PushSubscription)
+        .filter(PushSubscription.user_token == owner_token)
+        .delete(synchronize_session=False)
+    )
+
+    # Seller listings created by this user (contact details, photos, text).
+    listing_ids = [
+        row.id
+        for row in db.query(CarListing.id)
+        .filter(CarListing.owner_user_id == email, CarListing.source == "motormila_user")
+        .all()
+    ]
+    if listing_ids:
+        db.query(CarListing).filter(CarListing.duplicate_of.in_(listing_ids)).update(
+            {CarListing.duplicate_of: None}, synchronize_session=False
+        )
+        counts["listings"] = (
+            db.query(CarListing).filter(CarListing.id.in_(listing_ids)).delete(synchronize_session=False)
+        )
+
+    counts["feedback"] = (
+        db.query(UserFeedback).filter(UserFeedback.email == email).delete(synchronize_session=False)
+    )
+    counts["invites"] = db.query(UserInvite).filter(UserInvite.email == email).delete(synchronize_session=False)
+    counts["analytics_unlinked"] = (
+        db.query(AnalyticsEvent)
+        .filter(AnalyticsEvent.user_email == email)
+        .update({AnalyticsEvent.user_email: None}, synchronize_session=False)
+    )
+    for column in (DealerProfile.contact_email, DealerProfile.billing_email):
+        db.query(DealerProfile).filter(column == email).update({column: None}, synchronize_session=False)
+
+    counts["user"] = db.query(PlatformUser).filter(PlatformUser.email == email).delete(synchronize_session=False)
+    return counts
+
+
+@router.delete("/me", response_model=dict)
+def delete_my_account(
+    request: Request,
+    response: Response,
+    payload: Optional[DeleteAccountRequest] = None,
+    authorization: Optional[str] = Header(default=None),
+    db: Session = Depends(get_db),
+):
+    """Permanently delete the signed-in account and its personal data.
+
+    Auth: ``Authorization: Bearer <token>`` (Android / API) or the
+    ``mm_session`` cookie from a trusted Origin (web; enforced by the CSRF
+    middleware). Optional JSON body ``{"password": "..."}`` re-checks the
+    password when supplied.
+
+    Deletes the platform_users row, the user's alerts (+ matches),
+    notifications, push subscriptions, seller listings, feedback and pending
+    invites; unlinks analytics events and dealer-profile emails. Deleting the
+    user row revokes every outstanding token (sessions resolve against the
+    live account store). Bootstrap accounts defined in AUTH_USERS cannot be
+    deleted through the API (409).
+    """
+    _delete_account_limiter(request)
+    token = _extract_token(authorization, request)
+    claims = verify_token(token)
+    if claims is None:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    live = resolve_live_session(claims, _session_or_none(db))
+    email = live["email"]
+
+    if email in _configured_users():
+        raise HTTPException(
+            status_code=409,
+            detail="This bootstrap account is managed by the operator and cannot be deleted here.",
+        )
+    if db is None or not isinstance(db, Session):
+        raise HTTPException(status_code=503, detail="Account deletion is temporarily unavailable.")
+
+    row = db.query(PlatformUser).filter(PlatformUser.email == email).first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Account not found.")
+    if payload is not None and payload.password:
+        if not _verify_password(payload.password, row.password_hash or ""):
+            raise HTTPException(status_code=403, detail="Password is incorrect.")
+
+    try:
+        counts = _delete_account_data(db, email)
+        db.commit()
+    except HTTPException:
+        raise
+    except Exception as exc:
+        db.rollback()
+        if find_db_unavailable(exc) is not None:
+            raise
+        raise HTTPException(status_code=500, detail="Account deletion failed; nothing was deleted.") from exc
+
+    _clear_session_cookie(response)
+    return {"ok": True, "deleted": True, "email": email, "counts": counts}
+
+
 @router.get("/self-signup/status", response_model=dict)
 def self_signup_status() -> dict:
     """Public flag so Pricing/ProPreview can switch CTAs to self-serve trial."""
@@ -840,19 +1026,9 @@ def app_access_enforced() -> bool:
 # app/main.py: that one may be set to "*" (an operator escape hatch, which also
 # forces allow_credentials off), whereas a wildcard here would turn the CSRF
 # check into a no-op. Keep the two concepts apart.
-FIRST_PARTY_ORIGINS = frozenset(
-    {
-        "http://localhost:8080",
-        "http://127.0.0.1:8080",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:5174",
-        "https://motormila.vercel.app",
-        "https://vehicle-platform-one.vercel.app",
-        "https://vehicle-platform-one-suvenseoras-projects.vercel.app",
-    }
-)
+# Single source of truth lives in app/core/origins.py (shared with CORS and
+# the global CSRF middleware).
+FIRST_PARTY_ORIGINS = frozenset(_origins.DEFAULT_ALLOWED_ORIGINS)
 
 
 def _normalize_origin(value: Optional[str]) -> Optional[str]:
@@ -885,14 +1061,7 @@ def _cors_allowed_origins() -> set[str]:
     and every write 403'd with "Writes require a trusted Origin." — the site
     blocking itself.
     """
-    allowed = set(FIRST_PARTY_ORIGINS)
-    raw = os.getenv("CORS_ORIGINS", "").strip()
-    if raw:
-        for entry in raw.split(","):
-            normalized = _normalize_origin(entry)
-            if normalized and normalized != "*":
-                allowed.add(normalized)
-    return allowed
+    return _origins.write_allowlist()
 
 
 def _request_origin(request: Request) -> Optional[str]:
@@ -916,13 +1085,7 @@ def _trusted_origin_suffixes() -> tuple[str, ...]:
     suffixes — e.g. "-myteam.vercel.app" for a Vercel team scope,
     ".example.com" for a domain and its subdomains.
     """
-    raw = os.getenv("TRUSTED_ORIGIN_SUFFIXES", "-suvenseoras-projects.vercel.app")
-    suffixes: list[str] = []
-    for entry in raw.split(","):
-        cleaned = entry.strip().lower()
-        if cleaned:
-            suffixes.append(cleaned)
-    return tuple(suffixes)
+    return _origins.trusted_origin_suffixes()
 
 
 def _is_trusted_origin(origin: Optional[str]) -> bool:
@@ -932,12 +1095,7 @@ def _is_trusted_origin(origin: Optional[str]) -> bool:
     CORS_ORIGINS extensions, wildcards excluded); anything else must fall under
     one of the trusted team-controlled domain suffixes.
     """
-    if not origin:
-        return False
-    if origin in _cors_allowed_origins():
-        return True
-    host = urlparse(origin).netloc.lower()
-    return any(host.endswith(suffix) for suffix in _trusted_origin_suffixes())
+    return _origins.is_trusted_write_origin(origin)
 
 
 def _is_unsafe_method(request: Request) -> bool:
@@ -992,7 +1150,17 @@ def require_admin_access(
     authorization: Optional[str] = Header(default=None),
     db: Session = Depends(get_db),
 ) -> dict:
-    """Require an authenticated admin from the live account store (not JWT role alone)."""
+    """Require an authenticated admin from the live account store (not JWT role alone).
+
+    Cookie-only admin writes additionally need a trusted Origin/Referer
+    (defence in depth on top of the global CSRF middleware); Bearer-token
+    admin calls are not CSRF-able and pass.
+    """
+    if _is_unsafe_method(request):
+        auth_value = authorization if isinstance(authorization, str) else None
+        bearer = (auth_value or "").removeprefix("Bearer ").strip()
+        if not bearer and not _is_trusted_origin(_request_origin(request)):
+            raise HTTPException(status_code=403, detail="Admin writes require a trusted Origin.")
     live = get_current_auth_payload(request, authorization, db)
     if str(live.get("role") or "").lower() != "admin":
         raise HTTPException(status_code=403, detail="Admin access required.")

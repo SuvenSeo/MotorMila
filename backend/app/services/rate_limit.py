@@ -10,7 +10,11 @@ Used as a FastAPI dependency: Depends(rate_limiter_instance)
 
 from __future__ import annotations
 
+import hashlib
+import itertools
 import os
+import sys
+import threading
 import time
 from collections.abc import Callable
 from typing import Any
@@ -78,6 +82,41 @@ def _client_key(request: Request) -> str:
     client_host = getattr(getattr(request, "client", None), "host", None)
     ip = last_hop or str(client_host or "unknown")
     return ip
+
+
+def _session_identity(request: Request) -> str | None:
+    """Stable hash of the signed-in account when the request carries a valid token.
+
+    Lets per-user buckets follow the account instead of the IP (many users
+    share a carrier NAT / the Vercel proxy egress IP). Imported lazily: the
+    auth module itself imports this module.
+    """
+    try:
+        headers = getattr(request, "headers", None) or {}
+        auth_value = str(headers.get("authorization") or "")
+        token = auth_value[7:].strip() if auth_value.lower().startswith("bearer ") else ""
+        if not token:
+            cookies = getattr(request, "cookies", None) or {}
+            token = str(cookies.get("mm_session") or "").strip()
+        if not token:
+            return None
+        from app.api.v1.endpoints.auth import verify_token
+
+        payload = verify_token(token)
+        email = str((payload or {}).get("email") or "").strip().lower()
+        if not email:
+            return None
+        return hashlib.sha256(email.encode()).hexdigest()[:24]
+    except Exception:
+        return None
+
+
+def user_or_ip_key(request: Request) -> str:
+    """Per-account bucket for signed-in callers, per-IP otherwise."""
+    identity = _session_identity(request)
+    if identity:
+        return f"u:{identity}"
+    return f"ip:{_client_key(request)}"
 
 
 # ---------------------------------------------------------------------------
@@ -237,8 +276,29 @@ def _get_backend():
 # Public API — drop-in replacement for old RateLimiter class
 # ---------------------------------------------------------------------------
 
+_tier_counter = itertools.count(1)
+
+
+def _default_tier() -> str:
+    """Namespace for a limiter created without an explicit tier.
+
+    Previously every limiter shared one bucket per IP (the tier was stored
+    but never used), so browsing /listings consumed the login budget and vice
+    versa. The default namespace is the defining module + a per-process
+    sequence number, which is stable for a given deploy.
+    """
+    try:
+        module = sys._getframe(2).f_globals.get("__name__", "anon")
+    except Exception:  # pragma: no cover
+        module = "anon"
+    return f"{module.rsplit('.', 1)[-1]}#{next(_tier_counter)}"
+
+
 class RateLimiter:
     """Sliding-window rate limiter with Redis or in-memory backend.
+
+    Each limiter has its own bucket namespace (``tier``), and the default key
+    is per signed-in account, falling back to per-IP (``user_or_ip_key``).
 
     Usage (unchanged from before — sync, used as FastAPI dependency):
         _limiter = RateLimiter(max_requests=60, window_seconds=60)
@@ -260,12 +320,16 @@ class RateLimiter:
         self.max_requests = max_requests
         self.window_seconds = window_seconds
         self.message = message
-        self._key_func = key_func or _client_key
-        self._tier = tier
+        self._key_func = key_func or user_or_ip_key
+        self._tier = tier or _default_tier()
+
+    @property
+    def tier(self) -> str:
+        return self._tier
 
     def __call__(self, request: Request, *, now: float | None = None) -> None:
         backend = _get_backend()
-        key = self._key_func(request)
+        key = f"{self._tier}:{self._key_func(request)}"
 
         result = backend.check(
             key,
@@ -304,3 +368,121 @@ class RateLimiter:
         backend = _get_backend()
         if isinstance(backend, _InMemoryRateLimiter):
             backend._buckets.clear()
+
+
+# ---------------------------------------------------------------------------
+# Login brute-force throttle (checked BEFORE password verification)
+# ---------------------------------------------------------------------------
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = os.getenv(name, "").strip()
+    try:
+        return max(1, int(raw)) if raw else default
+    except ValueError:
+        return default
+
+
+class LoginThrottle:
+    """Failed-login tracking per account and per IP, with exponential backoff.
+
+    * ``check(ip, email)`` runs before any bcrypt work; while an account or IP
+      is locked it raises 429 - even for the correct password, otherwise the
+      lockout would still be a password oracle.
+    * Per account: after ``LOGIN_ACCOUNT_MAX_FAILURES`` (default 5) failures in
+      ``LOGIN_FAILURE_WINDOW_SECONDS`` (default 900) the account is locked for
+      30 s, doubling per further failure, capped at ``LOGIN_MAX_LOCKOUT_SECONDS``
+      (default 900).
+    * Per IP: ``LOGIN_IP_MAX_FAILURES`` (default 30) failures in the window
+      locks that IP until the oldest failure ages out. Deliberately generous
+      because carrier NAT / office Wi-Fi share addresses.
+    * A successful login clears the account's failures (not the IP's).
+
+    State is per process (HF runs one uvicorn worker). Emails are stored only
+    as SHA-256 prefixes.
+    """
+
+    def __init__(self, message: str = "Too many sign-in attempts. Try again shortly.") -> None:
+        self.message = message
+        self._lock = threading.Lock()
+        self._fails: dict[str, list[float]] = {}
+
+    # -- config ----------------------------------------------------------
+    @staticmethod
+    def window() -> int:
+        return _env_int("LOGIN_FAILURE_WINDOW_SECONDS", 900)
+
+    @staticmethod
+    def account_max() -> int:
+        return _env_int("LOGIN_ACCOUNT_MAX_FAILURES", 5)
+
+    @staticmethod
+    def ip_max() -> int:
+        return _env_int("LOGIN_IP_MAX_FAILURES", 30)
+
+    @staticmethod
+    def max_lockout() -> int:
+        return _env_int("LOGIN_MAX_LOCKOUT_SECONDS", 900)
+
+    # -- keys --------------------------------------------------------------
+    @staticmethod
+    def _acct_key(email: str) -> str:
+        return "a:" + hashlib.sha256(email.strip().lower().encode()).hexdigest()[:32]
+
+    @staticmethod
+    def _ip_key(ip: str) -> str:
+        return "i:" + (ip or "unknown")
+
+    def _recent(self, key: str, now: float) -> list[float]:
+        cutoff = now - self.window()
+        hits = [t for t in self._fails.get(key, []) if t >= cutoff]
+        if hits:
+            self._fails[key] = hits
+        else:
+            self._fails.pop(key, None)
+        return hits
+
+    def retry_after(self, ip: str, email: str, *, now: float | None = None) -> int:
+        """Seconds until a login attempt is allowed (0 = allowed now)."""
+        now = time.time() if now is None else now
+        with self._lock:
+            wait = 0.0
+            acct = self._recent(self._acct_key(email), now)
+            over = len(acct) - self.account_max()
+            if over >= 0 and acct:
+                lock = min(self.max_lockout(), 30 * (2 ** over))
+                wait = max(wait, acct[-1] + lock - now)
+            ips = self._recent(self._ip_key(ip), now)
+            if len(ips) >= self.ip_max():
+                # Locked until enough failures age out of the window.
+                idx = len(ips) - self.ip_max()
+                wait = max(wait, ips[idx] + self.window() - now)
+            return max(0, int(wait + 0.999))
+
+    def check(self, ip: str, email: str, *, now: float | None = None) -> None:
+        wait = self.retry_after(ip, email, now=now)
+        if wait > 0:
+            raise HTTPException(
+                status_code=429,
+                detail=self.message,
+                headers={"Retry-After": str(wait)},
+            )
+
+    def record_failure(self, ip: str, email: str, *, now: float | None = None) -> None:
+        now = time.time() if now is None else now
+        with self._lock:
+            for key in (self._acct_key(email), self._ip_key(ip)):
+                self._recent(key, now)
+                self._fails.setdefault(key, []).append(now)
+            if len(self._fails) > 5000:
+                cutoff = now - self.window()
+                for k in [k for k, v in self._fails.items() if not v or v[-1] < cutoff][:2000]:
+                    self._fails.pop(k, None)
+
+    def record_success(self, email: str) -> None:
+        with self._lock:
+            self._fails.pop(self._acct_key(email), None)
+
+    def reset(self) -> None:
+        with self._lock:
+            self._fails.clear()

@@ -295,21 +295,27 @@ def test_me_endpoint_rate_limited(monkeypatch):
     assert excinfo.value.status_code == 429
 
 
-def test_successful_login_never_rate_limited_by_failed_attempts(monkeypatch):
-    """Regression (v1.3.1): a burst of WRONG attempts from one client (old app
-    build auto-filling removed demo credentials, shared Wi-Fi, etc.) used to
-    trip the limiter and lock real users out of a CORRECT login. Budget is
-    only consumed by failures now; a valid login always goes through."""
+def test_login_lockout_is_checked_before_password_verification(monkeypatch):
+    """S-2: the throttle runs BEFORE bcrypt. Once an account is locked, even
+    the correct password gets 429 - otherwise the lockout is still a password
+    oracle for brute force. The lock is temporary (exponential backoff) and a
+    success clears the account's failure history."""
     from fastapi import Response
 
     _configure(monkeypatch)
     limiter = auth._login_rate_limiter
     limiter.reset()
+    verified: list[str] = []
+    real_verify = auth._verify_password
+
+    def spy_verify(plain, hashed):
+        verified.append(plain)
+        return real_verify(plain, hashed)
+
+    monkeypatch.setattr(auth, "_verify_password", spy_verify)
     try:
-        # Exhaust the failure budget (limit is 10/min) with wrong passwords.
-        # Once tripped, later failures come back as 429 instead of 401.
         statuses = []
-        for _ in range(14):
+        for _ in range(7):
             with pytest.raises(HTTPException) as excinfo:
                 auth.login(
                     auth.LoginRequest(email="owner@example.com", password="wrong"),
@@ -317,27 +323,65 @@ def test_successful_login_never_rate_limited_by_failed_attempts(monkeypatch):
                     Response(),
                 )
             statuses.append(excinfo.value.status_code)
-        assert 429 in statuses
-        assert statuses[:10] == [401] * 10
+        # 5 failures allowed, then locked.
+        assert statuses[:5] == [401] * 5
+        assert statuses[5:] == [429, 429]
 
-        # The limiter is now tripped for this client...
+        # Locked: the correct password is refused WITHOUT verifying it.
+        verified.clear()
         with pytest.raises(HTTPException) as excinfo:
             auth.login(
-                auth.LoginRequest(email="owner@example.com", password="also-wrong"),
+                auth.LoginRequest(email="owner@example.com", password="correct-horse"),
                 DummyRequest(),
                 Response(),
             )
         assert excinfo.value.status_code == 429
+        assert "Retry-After" in (excinfo.value.headers or {})
+        assert verified == []
 
-        # ...but the correct password still succeeds.
+        # After the backoff elapses, the correct password works and clears state.
+        real_time = time.time
+        monkeypatch.setattr(
+            "app.services.rate_limit.time.time", lambda: real_time() + 3600
+        )
         result = auth.login(
             auth.LoginRequest(email="owner@example.com", password="correct-horse"),
             DummyRequest(),
             Response(),
         )
         assert result["user"]["email"] == "owner@example.com"
+        assert limiter.retry_after("127.0.0.1", "owner@example.com") == 0
     finally:
         limiter.reset()
+
+
+def test_login_lockout_backoff_grows_and_is_per_account():
+    from app.services.rate_limit import LoginThrottle
+
+    throttle = LoginThrottle()
+    now = 1_000_000.0
+    for i in range(5):
+        throttle.record_failure("10.0.0.1", "a@example.com", now=now + i)
+    first = throttle.retry_after("10.0.0.1", "a@example.com", now=now + 5)
+    assert 0 < first <= 30
+    throttle.record_failure("10.0.0.1", "a@example.com", now=now + 40)
+    second = throttle.retry_after("10.0.0.1", "a@example.com", now=now + 40)
+    assert second > first  # exponential backoff
+    # A different account from another IP is unaffected.
+    assert throttle.retry_after("10.0.0.2", "b@example.com", now=now + 40) == 0
+
+
+def test_login_ip_lockout_after_many_accounts(monkeypatch):
+    from app.services.rate_limit import LoginThrottle
+
+    monkeypatch.setenv("LOGIN_IP_MAX_FAILURES", "10")
+    throttle = LoginThrottle()
+    now = 2_000_000.0
+    for i in range(10):
+        throttle.record_failure("10.9.9.9", f"user{i}@example.com", now=now + i)
+    # Credential stuffing across accounts trips the per-IP lock.
+    assert throttle.retry_after("10.9.9.9", "fresh@example.com", now=now + 11) > 0
+    assert throttle.retry_after("10.1.1.1", "fresh@example.com", now=now + 11) == 0
 
 
 def test_login_auth_users_overrides_stale_db_password(monkeypatch):
