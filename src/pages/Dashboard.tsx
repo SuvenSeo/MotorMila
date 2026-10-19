@@ -16,6 +16,7 @@ import { FilterSidebar } from "@/components/FilterSidebar";
 import { MarketSignalsStrip } from "@/components/MarketSignalsStrip";
 import { FuelMixStrip } from "@/components/FuelMixStrip";
 import { DataFreshnessIndicator } from "@/components/DataFreshnessIndicator";
+import { SnapshotModeNotice } from "@/components/SnapshotModeNotice";
 import { AtmosphericImage } from "@/components/AtmosphericImage";
 import { HeroSideSignals } from "@/components/HeroSideSignals";
 import { FlipWords } from "@/components/ui/FlipWords";
@@ -1252,6 +1253,7 @@ export default function Dashboard() {
             variant="banner"
             className="mb-5"
           />
+          <SnapshotModeNotice className="mb-5" />
 
           {/* Filters + Grid */}
           <div className="flex flex-col items-start gap-6 lg:flex-row">
@@ -1268,8 +1270,11 @@ export default function Dashboard() {
                 </div>
               ) : listingsFailed ? (
                 <div className="flex flex-col items-center justify-center gap-3 rounded-[2rem] border border-border bg-surface px-4 py-20 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Listings temporarily unavailable — market API returned an error.
+                  <p className="text-sm font-semibold text-foreground">
+                    {t("home.listingsErrorTitle", "We couldn't load listings just now")}
+                  </p>
+                  <p className="max-w-sm text-sm text-muted-foreground">
+                    {t("home.listingsErrorBody", "This is usually a short outage on our side. Your filters are kept. Try again in a moment.")}
                   </p>
                   <button
                     type="button"
@@ -1326,7 +1331,7 @@ export default function Dashboard() {
                       <motion.div key={listing.id} variants={cardItemVariants}>
                         <Link to={`/listing/${listing.id}`} className="inventory-tile group flex items-center gap-4 p-3 no-underline active:scale-[0.99]">
                           <div className="h-16 w-24 shrink-0 overflow-hidden rounded-2xl bg-black/30">
-                            <VehicleThumbnail src={pickVehicleImageUrl([listing.thumbnail_url, ...(Array.isArray(listing.images) ? listing.images : [])], [listing.detail_url])} listingId={listing.id} alt={`${listing.make} ${listing.model}`} className="w-full h-full object-cover" />
+                            <VehicleThumbnail src={pickVehicleImageUrl([listing.thumbnail_url, ...(Array.isArray(listing.images) ? listing.images : [])], [listing.detail_url])} listingId={listing.id} source={listing.source} alt={`${listing.make} ${listing.model}`} className="w-full h-full object-cover" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-[14px] font-semibold text-foreground group-hover:text-primary transition-colors">{listing.make} {listing.model} {listing.variant || ""}</p>

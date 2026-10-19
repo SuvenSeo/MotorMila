@@ -70,6 +70,8 @@ const PrivacyPolicy = lazyWithRetry(() => import("./pages/PrivacyPolicy"));
 const TermsOfService = lazyWithRetry(() => import("./pages/TermsOfService"));
 const Permits = lazyWithRetry(() => import("./pages/Permits"));
 const Compare = lazyWithRetry(() => import("./pages/Compare"));
+const Afford = lazyWithRetry(() => import("./pages/Afford"));
+const SafeTransfer = lazyWithRetry(() => import("./pages/SafeTransfer"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -233,6 +235,8 @@ const App = () => {
                   <Route path="/valuation" element={<Navigate to="/estimate" replace />} />
                   <Route path="/permits" element={<Permits />} />
                   <Route path="/mobile-app" element={<MobileApp />} />
+                  <Route path="/afford" element={<Afford />} />
+                  <Route path="/safe-transfer" element={<SafeTransfer />} />
                   <Route path="*" element={<NotFound />} />
                 </Route>
                 <Route element={<ProtectedLayout chatMounted={chatMounted} />}>

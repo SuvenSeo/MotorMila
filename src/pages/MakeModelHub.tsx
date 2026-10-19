@@ -11,6 +11,7 @@ import { PageHero } from "@/components/PageHero";
 import { ListingCard } from "@/components/ListingCard";
 import { ModelPriceTimeMachine } from "@/components/ModelPriceTimeMachine";
 import { ModelTrendPanel } from "@/components/ModelTrendPanel";
+import { BuyOrWaitCard } from "@/components/BuyOrWaitCard";
 import { MileagePriceScatter } from "@/components/MileagePriceScatter";
 import { SectionHeader } from "@/components/SectionHeader";
 import { NhtsaModelsCard } from "@/components/NhtsaModelsCard";
@@ -264,6 +265,7 @@ export default function MakeModelHub() {
           </div>
           <div className="mt-6">
             <ModelTrendPanel make={makeParam} model={modelParam} />
+            <BuyOrWaitCard make={makeParam} model={modelParam} className="mt-4" />
           </div>
         </div>
       </PageHero>

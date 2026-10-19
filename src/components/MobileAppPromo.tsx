@@ -1,121 +1,107 @@
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { useLocation, useNavigate } from "react-router-dom";
-import { Smartphone, Sparkles, X } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { Smartphone, X } from "lucide-react";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { springSoft } from "@/lib/motion";
 
 const SEEN_KEY = "motormila.mobile_promo_seen";
-/** Never nag on the pages where a floating card would be in the way. */
-const SUPPRESSED_PREFIXES = ["/mobile-app", "/compare", "/docs"];
+/**
+ * Never show where the strip would sit on top of task UI: listing detail
+ * (sticky price/seller panel), filtered search, tools and the app page itself.
+ */
+const SUPPRESSED_PREFIXES = [
+  "/mobile-app",
+  "/compare",
+  "/docs",
+  "/listing/",
+  "/calculator",
+  "/afford",
+  "/safe-transfer",
+  "/sign-in",
+  "/sign-up",
+];
+
+function readSeen(): boolean {
+  try {
+    return localStorage.getItem(SEEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markSeen() {
+  try {
+    localStorage.setItem(SEEN_KEY, "1");
+  } catch {
+    // Session-only then; acceptable.
+  }
+}
 
 /**
- * Once-per-visitor launch card for the Motormila Android release. Dismissing it
- * is remembered locally; the /mobile-app page stays reachable from the navbar
- * and footer afterwards.
+ * One-time, non-blocking announcement strip for the Android app.
+ *
+ * - Slim bar pinned to the bottom edge (above the mobile bottom nav), never a
+ *   floating card over filters or listing panels.
+ * - Shown at most once per browser: it is marked seen the moment it renders,
+ *   so it never comes back on the next visit even if the user ignores it.
+ * - Hidden on search (any query string on "/") and task pages.
  */
 export function MobileAppPromo() {
   const { t } = useAppPreferences();
-  const { pathname } = useLocation();
-  const navigate = useNavigate();
+  const { pathname, search } = useLocation();
   const [visible, setVisible] = useState(false);
 
-  const suppressed = SUPPRESSED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  const isFilteredSearch = pathname === "/" && search.length > 1;
+  const suppressed = isFilteredSearch || SUPPRESSED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
   useEffect(() => {
-    if (suppressed) return;
-    let seen = false;
-    try {
-      seen = localStorage.getItem(SEEN_KEY) === "1";
-    } catch {
-      seen = false;
+    if (suppressed) {
+      setVisible(false);
+      return;
     }
-    if (seen) return;
-
-    // Let the first paint settle before the card slides in.
-    const timer = window.setTimeout(() => setVisible(true), 6000);
+    if (readSeen()) return;
+    // Let the first paint settle before the strip appears.
+    const timer = window.setTimeout(() => {
+      setVisible(true);
+      markSeen();
+    }, 8000);
     return () => window.clearTimeout(timer);
   }, [suppressed]);
 
+  if (suppressed || !visible) return null;
+
   const dismiss = () => {
     setVisible(false);
-    try {
-      localStorage.setItem(SEEN_KEY, "1");
-    } catch {
-      // Session-only dismissal then; acceptable.
-    }
+    markSeen();
   };
-
-  const open = () => {
-    dismiss();
-    navigate("/mobile-app");
-  };
-
-  if (suppressed) return null;
 
   return (
-    <AnimatePresence>
-      {visible && (
-        <motion.aside
-          initial={{ opacity: 0, y: 24, scale: 0.97 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 18, scale: 0.98 }}
-          transition={springSoft}
-          aria-label={t("mobile.promoAria", "Motormila mobile app announcement")}
-          className="fixed bottom-[112px] left-3 right-3 z-[998] md:bottom-6 md:left-6 md:right-auto md:w-[368px]"
+    <aside
+      role="complementary"
+      aria-label={t("mobile.promoAria", "Motormila mobile app announcement")}
+      className="pointer-events-none fixed inset-x-0 bottom-[calc(88px+env(safe-area-inset-bottom))] z-40 flex justify-center px-3 md:bottom-4 md:justify-end md:px-4"
+    >
+      <div className="pointer-events-auto flex w-full max-w-md items-center gap-2.5 rounded-2xl border border-border bg-card/95 py-2 pl-3 pr-1.5 text-foreground shadow-soft-lg backdrop-blur-md motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
+        <Smartphone className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+        <p className="min-w-0 flex-1 text-[12.5px] leading-snug">
+          <span className="font-semibold">{t("mobile.promoTitleShort", "Motormila for Android")}</span>
+          <span className="text-muted-foreground"> · {t("mobile.promoBodyShort", "price-drop alerts and plate scan")}</span>
+        </p>
+        <Link
+          to="/mobile-app"
+          onClick={dismiss}
+          className="shrink-0 rounded-full bg-primary px-3 py-1.5 text-[12px] font-semibold text-primary-foreground no-underline transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
-          <div className="relative overflow-hidden rounded-3xl border border-white/12 bg-[linear-gradient(155deg,rgba(7,11,19,0.97),rgba(9,15,26,0.94))] p-4 shadow-[0_28px_80px_-30px_rgba(0,0,0,0.9)] backdrop-blur-2xl">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-[radial-gradient(circle,rgba(10,122,255,0.28),transparent_68%)] blur-[50px]"
-            />
-            <div className="relative flex items-start gap-3">
-              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#3D94FF]/30 bg-[#0A7AFF]/15">
-                <Smartphone className="h-4 w-4 text-[#5FAFFF]" aria-hidden />
-              </span>
-              <div className="min-w-0 flex-1">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-amber-200">
-                  <Sparkles className="h-2.5 w-2.5" aria-hidden />
-                  {t("mobile.releasingSoon", "Releasing soon")}
-                </span>
-                <p className="mt-2 text-[13.5px] font-semibold leading-snug text-white">
-                  {t("mobile.promoTitle", "Motormila is going mobile.")}
-                </p>
-                <p className="mt-1.5 text-[12px] leading-relaxed text-white/60">
-                  {t(
-                    "mobile.promoBody",
-                    "Live listings, deal scores, price-drop alerts and plate scanning — in an Android APK built for the road.",
-                  )}
-                </p>
-                <div className="mt-3.5 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={open}
-                    className="inline-flex h-9 items-center rounded-full bg-[#0A7AFF] px-4 text-[12px] font-semibold text-white outline-none transition-colors hover:bg-[#3D94FF] focus-visible:ring-2 focus-visible:ring-white/50"
-                  >
-                    {t("mobile.promoCta", "See what's coming")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={dismiss}
-                    className="inline-flex h-9 items-center rounded-full border border-white/12 px-3.5 text-[12px] font-medium text-white/60 outline-none transition-colors hover:border-white/25 hover:text-white focus-visible:ring-2 focus-visible:ring-white/40"
-                  >
-                    {t("mobile.promoDismiss", "Not now")}
-                  </button>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={dismiss}
-                aria-label={t("mobile.promoClose", "Dismiss announcement")}
-                className="-mr-1 -mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white/45 outline-none transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white/40"
-              >
-                <X className="h-3.5 w-3.5" aria-hidden />
-              </button>
-            </div>
-          </div>
-        </motion.aside>
-      )}
-    </AnimatePresence>
+          {t("mobile.promoCtaShort", "Get the app")}
+        </Link>
+        <button
+          type="button"
+          onClick={dismiss}
+          aria-label={t("mobile.promoClose", "Dismiss announcement")}
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <X className="h-4 w-4" aria-hidden />
+        </button>
+      </div>
+    </aside>
   );
 }

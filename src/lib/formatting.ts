@@ -1,3 +1,5 @@
+import { parseFlexibleTime } from "@/lib/parseTime";
+
 export const MIN_REASONABLE_LISTING_PRICE_LKR = 100_000;
 
 export function isReasonableListingPrice(price: number | null | undefined): boolean {
@@ -25,8 +27,9 @@ export function formatPriceTickMillions(value: number | string | null | undefine
 export function formatRelativeTime(iso: string | null | undefined, now: Date = new Date()): string {
   if (!iso) return "never";
 
-  const parsed = new Date(iso);
-  if (Number.isNaN(parsed.getTime())) return "never";
+  const ts = parseFlexibleTime(iso);
+  if (ts === null) return "never";
+  const parsed = new Date(ts);
 
   const diffMs = now.getTime() - parsed.getTime();
   if (diffMs < 0 || diffMs < 3600000) return "just now";
@@ -51,10 +54,10 @@ export function formatRelativeTimeI18n(
 ): string {
   if (!iso) return t("common.never", "never");
 
-  const parsed = new Date(iso);
-  if (Number.isNaN(parsed.getTime())) return t("common.never", "never");
+  const ts = parseFlexibleTime(iso);
+  if (ts === null) return t("common.never", "never");
 
-  const diffMs = now.getTime() - parsed.getTime();
+  const diffMs = now.getTime() - ts;
   if (diffMs < 0 || diffMs < 3600000) return t("common.justNow", "just now");
 
   const diffHours = Math.floor(diffMs / 3600000);

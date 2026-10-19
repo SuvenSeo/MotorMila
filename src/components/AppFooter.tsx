@@ -45,6 +45,8 @@ export function AppFooter() {
 
   const toolLinks = useMemo(
     () => [
+      { label: t("nav.afford", "What can I afford?"), to: "/afford" },
+      { label: t("nav.safeTransfer", "Safe-Transfer Kit"), to: "/safe-transfer" },
       { label: t("nav.evHub", "EV Hub"), to: "/ev-hub" },
       { label: t("nav.valuation", "Valuation"), to: "/estimate" },
       { label: t("nav.pricing", "Pricing"), to: "/pricing" },
