@@ -50,6 +50,9 @@ const POSITIVE_PATTERNS: RegExp[] = [
   // "balance 24 installments", "balance of the instalments", "remaining installments"
   /\bbalance\b[^.\n]{0,40}?\binstal+ments?\b/i,
   /\bremaining\s+(?:\d{1,3}\s+)?instal+ments?\b/i,
+  // "leasing balance 2.1M", "loan balance", "balance lease"
+  /\b(?:leas(?:e|ing)|loan|facility)\s+balance\b/i,
+  /\bbalance\s+(?:leas(?:e|ing)|loan)\b/i,
   // "Leasing 199,000*59", "lease rs.45,000 x 36"
   /\bleas(?:e|ing)\b[^.\n\d]{0,20}[\d,]{4,}(?:\.\d+)?\s*(?:\/=)?\s*[x×*]\s*\d{1,3}\b/i,
 ];

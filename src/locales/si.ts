@@ -850,7 +850,7 @@ export const si = {
   "picks.title": "Deal-score තෝරාගැනීම්.",
   "plan.alertsBody": "Pro ගැඹුරු ඇඟවීම් නිරීක්ෂණ, පොහොසත් ගැළපුම් නැවුම් කිරීම සහ WhatsApp දැනුම්දීම් අගුළු හරියි.",
   "plan.alertsTitle": "නොමිලේ ඇඟවීම් එකක් ඇතුළත්ය",
-  "plan.listingsBody": "ඔබට පළමු සජීවී ලැයිස්තු 12 පෙනේ. Pro සම්පූර්ණ වෙළඳපොළ feed, deal scores සහ අසීමිත පිටුකරණය අගුළු හරියි.",
+  "plan.listingsBody": "Browse every live listing free. Pro adds fair-price deal scores, price history depth, and more alerts.",
   "plan.listingsTitle": "නොමිලේ බ්‍රවුස් සීමාවට ළඟා විය",
   "plan.picksBody": "නොමිලේ කෙටි teaser කෙටි ලැයිස්තුවක් පෙන්වයි. Pro සම්පූර්ණ ශ්‍රේණිගත Best Picks පුවරුව සහ මිල-අඩු feed අගුළු හරියි.",
   "plan.picksTitle": "Pro හි තවත් elite ගනුදෙනු",
@@ -1645,7 +1645,7 @@ export const si = {
   "trust.title": "Trust Check",
   "trust.verifyTitle": "Before you pay, verify it yourself",
   // ui/data — trends, ticker, best picks (en fallback where no reviewed translation)
-  "chart.lakhsNote": "Axis in lakhs (1L = Rs 100,000)",
+  "chart.lakhsNote": "L = lakh (Rs 100,000) · Mn = million",
   "districtVelocity.listingsLabel": "Listings",
   "modelTrend.aria": "{make} {model} median asking price, {n} months, latest {price}",
   "picks.descFree": "{n} free teaser picks, {caption} — upgrade for the full deal-score board.",
@@ -1675,6 +1675,7 @@ export const si = {
   "trendTone.stable": "Stable (under {n}%)",
   "trendTone.stableShort": "ස්ථාවර",
   "trendTone.up": "මිල ඉහළට",
+  "deal.howWePrice": "How we price →",
 } as const;
 
 export type SiKey = keyof typeof si;

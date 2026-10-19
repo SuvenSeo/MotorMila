@@ -90,44 +90,44 @@ export function formatLkrShort(value: number): string {
 }
 
 /**
- * The single deal palette. Integration note: when the ui/design deal tokens
- * land, swap these in this one place — below→deal-good, fair→deal-fair,
- * above→deal-high, verify→deal-caution (lease stays informational/sky).
+ * The single deal palette, on the ui/design semantic tokens (src/styles/tokens.css):
+ * below→deal-good, fair→deal-fair, above→deal-high, verify→deal-caution.
+ * Lease stays informational (sky) — it is not a price verdict.
  *
- * The single deal palette. Solid-ish fills so the 11–12px text keeps contrast
- * on photo overlays as well as on cards (WCAG 1.4.3).
+ * Photo-overlay badges use the solid fill + its foreground so 11–12px text
+ * keeps contrast on any photo (WCAG 1.4.3).
  */
 export const DEAL_BADGE_CLASSES: Record<Exclude<DealBadgeKind, "none">, string> = {
-  below: "border-emerald-500/40 bg-emerald-950/85 text-emerald-200 dark:bg-emerald-950/85",
-  fair: "border-white/15 bg-zinc-900/85 text-zinc-100",
-  above: "border-rose-500/40 bg-rose-950/85 text-rose-200",
-  verify: "border-amber-400/50 bg-amber-950/90 text-amber-200",
+  below: "border-deal-good/40 bg-deal-good/95 text-deal-good-foreground",
+  fair: "border-deal-fair/40 bg-deal-fair/95 text-deal-fair-foreground",
+  above: "border-deal-high/40 bg-deal-high/95 text-deal-high-foreground",
+  verify: "border-deal-caution/50 bg-deal-caution/95 text-deal-caution-foreground",
   lease: "border-sky-400/40 bg-sky-950/90 text-sky-100",
 };
 
-/** Same kinds as soft pills on plain (non-photo) surfaces, theme-aware. */
+/** Same kinds as soft pills on plain (non-photo) surfaces, theme-aware via tokens. */
 export const DEAL_SOFT_CLASSES: Record<Exclude<DealBadgeKind, "none">, string> = {
-  below: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-  fair: "border-border bg-surface text-foreground",
-  above: "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300",
-  verify: "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-300",
+  below: "border-deal-good/30 bg-deal-good/10 text-deal-good-text",
+  fair: "border-deal-fair/30 bg-deal-fair/10 text-deal-fair-text",
+  above: "border-deal-high/30 bg-deal-high/10 text-deal-high-text",
+  verify: "border-deal-caution/40 bg-deal-caution/10 text-deal-caution-text",
   lease: "border-sky-500/30 bg-sky-500/10 text-sky-800 dark:text-sky-200",
 };
 
-/** Text tones for the same kinds on plain card surfaces (theme-aware). */
+/** Text tones for the same kinds on plain card surfaces (theme-aware via tokens). */
 export const DEAL_TEXT_CLASSES: Record<Exclude<DealBadgeKind, "none">, string> = {
-  below: "text-emerald-700 dark:text-emerald-400",
-  fair: "text-foreground",
-  above: "text-rose-700 dark:text-rose-400",
-  verify: "text-amber-700 dark:text-amber-400",
+  below: "text-deal-good-text",
+  fair: "text-deal-fair-text",
+  above: "text-deal-high-text",
+  verify: "text-deal-caution-text",
   lease: "text-sky-700 dark:text-sky-300",
 };
 
 export const DEAL_BAR_CLASSES: Record<Exclude<DealBadgeKind, "none">, string> = {
-  below: "bg-emerald-500",
-  fair: "bg-primary",
-  above: "bg-rose-500",
-  verify: "bg-amber-500",
+  below: "bg-deal-good",
+  fair: "bg-deal-fair",
+  above: "bg-deal-high",
+  verify: "bg-deal-caution",
   lease: "bg-sky-500",
 };
 

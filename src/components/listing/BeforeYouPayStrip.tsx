@@ -50,7 +50,7 @@ export function BeforeYouPayStrip({
   const heading = (
     <>
       <ShieldAlert aria-hidden className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-      <span>{t("safety.title", "Before you pay")}</span>
+      <span>{t("listing.beforeYouPayTitle", "Before you pay")}</span>
     </>
   );
   const shell = cn("rounded-2xl border border-amber-500/30 bg-amber-500/[0.06] p-4", className);

@@ -850,7 +850,7 @@ export const ta = {
   "picks.title": "ஒப்பந்த-மதிப்பெண் தேர்வுகள்.",
   "plan.alertsBody": "Pro ஆழமான விழிப்பூட்டல் கண்காணிப்புகள், செறிவான பொருத்த புதுப்பிப்பு மற்றும் WhatsApp அறிவிப்புகளை திறக்கிறது.",
   "plan.alertsTitle": "ஒரு இலவச விழிப்பூட்டல் அடங்கும்",
-  "plan.listingsBody": "முதல் 12 நேரடி பட்டியல்களை பார்க்கிறீர்கள். Pro முழு சந்தை ஊட்டம், ஒப்பந்த மதிப்பெண்கள் மற்றும் வரம்பற்ற பக்கமாக்கலை திறக்கிறது.",
+  "plan.listingsBody": "Browse every live listing free. Pro adds fair-price deal scores, price history depth, and more alerts.",
   "plan.listingsTitle": "இலவச உலாவல் வரம்பு எட்டப்பட்டது",
   "plan.picksBody": "இலவசம் குறுகிய டீசர் பட்டியலை காட்டுகிறது. Pro முழு தரவரிசை சிறந்த தேர்வுகள் பலகை மற்றும் விலை-குறைப்பு ஊட்டத்தை திறக்கிறது.",
   "plan.picksTitle": "Proஇல் மேலும் எலைட் ஒப்பந்தங்கள்",
@@ -1645,7 +1645,7 @@ export const ta = {
   "trust.title": "Trust Check",
   "trust.verifyTitle": "Before you pay, verify it yourself",
   // ui/data — trends, ticker, best picks (en fallback where no reviewed translation)
-  "chart.lakhsNote": "Axis in lakhs (1L = Rs 100,000)",
+  "chart.lakhsNote": "L = lakh (Rs 100,000) · Mn = million",
   "districtVelocity.listingsLabel": "Listings",
   "modelTrend.aria": "{make} {model} median asking price, {n} months, latest {price}",
   "picks.descFree": "{n} free teaser picks, {caption} — upgrade for the full deal-score board.",
@@ -1675,6 +1675,7 @@ export const ta = {
   "trendTone.stable": "Stable (under {n}%)",
   "trendTone.stableShort": "நிலையானது",
   "trendTone.up": "விலை உயர்வு",
+  "deal.howWePrice": "How we price →",
 } as const;
 
 export type TaKey = keyof typeof ta;

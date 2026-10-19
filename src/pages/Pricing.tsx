@@ -272,7 +272,7 @@ function ManualPayPanel({ plan, instructions, onClose }: { plan: string; instruc
 
 const COMPARE_ROW_DEFS = [
   { label: ["shell.pricing.row.search", "Search every source"], free: ["pricing.val.yes", "Yes"], pro: ["pricing.val.yes", "Yes"] },
-  { label: ["shell.pricing.row.results", "Results per search"], free: ["shell.pricing.val.first12", "First 12"], pro: ["shell.pricing.val.all", "All"] },
+  { label: ["shell.pricing.row.results", "Results per search"], free: ["shell.pricing.val.all", "All"], pro: ["shell.pricing.val.all", "All"] },
   { label: ["shell.pricing.row.dealScore", "Deal score on listings"], free: ["", "—"], pro: ["pricing.val.yes", "Yes"] },
   { label: ["shell.pricing.row.history", "Price trends"], free: ["shell.pricing.val.6months", "6 months"], pro: ["shell.pricing.val.fullHistory", "Full history"] },
   { label: ["shell.pricing.row.updates", "Tax & customs updates"], free: ["shell.pricing.val.latest6", "Latest 6"], pro: ["shell.pricing.val.all", "All"] },

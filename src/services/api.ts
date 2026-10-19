@@ -1699,6 +1699,51 @@ export const getLiveMarketStreamUrl = (): string => {
   return new URL(`${API_BASE}/stats/live/stream`, window.location.origin).toString();
 };
 
+/**
+ * "best_match" is a frontend-first sort: older/live backends validate `sort`
+ * against newest|deal_score|price_* and answer 422. When that happens we ask
+ * for `newest` instead (best match's own tie-break) and apply the best-match
+ * ranking to the page client-side. Remembered for the session so later pages
+ * skip the failing request.
+ */
+let backendRejectsBestMatch = false;
+
+function isClientError(error: unknown): boolean {
+  return error instanceof APIError && error.status >= 400 && error.status < 500;
+}
+
+async function fetchListingsPage(
+  params: QueryParams,
+): Promise<{ data: JsonRecord; clientRanked: boolean }> {
+  const wantsBestMatch = params.sort === "best_match";
+  if (wantsBestMatch && backendRejectsBestMatch) {
+    const data = await fetchJSON<JsonRecord>("/listings", { ...params, sort: "newest" });
+    return { data, clientRanked: true };
+  }
+  try {
+    const data = await fetchJSON<JsonRecord>("/listings", params);
+    return { data, clientRanked: false };
+  } catch (error) {
+    if (!wantsBestMatch || !isClientError(error)) throw error;
+    backendRejectsBestMatch = true;
+    const data = await fetchJSON<JsonRecord>("/listings", { ...params, sort: "newest" });
+    return { data, clientRanked: true };
+  }
+}
+
+/** Stable best-match order for one page of newest-first rows. */
+export function rankBestMatchPage(listings: CarListing[]): CarListing[] {
+  return listings
+    .map((listing, index) => ({ listing, index }))
+    .sort((a, b) => bestMatchRank(b.listing) - bestMatchRank(a.listing) || a.index - b.index)
+    .map((row) => row.listing);
+}
+
+/** Test hook: forget the remembered 4xx. */
+export function __resetBestMatchSupportForTests() {
+  backendRejectsBestMatch = false;
+}
+
 export const getListings = async (filters: FilterState): Promise<{ listings: CarListing[]; total: number }> => {
   const effectiveFilters: FilterState = {
     ...filters,
@@ -1708,12 +1753,13 @@ export const getListings = async (filters: FilterState): Promise<{ listings: Car
   // fallback for offline / SNAPSHOT_ONLY — not the primary catalog.
   if (!SNAPSHOT_ONLY) {
     try {
-      const data = await fetchJSON<JsonRecord>("/listings", {
+      const { data, clientRanked } = await fetchListingsPage({
         ...effectiveFilters,
         size: LISTINGS_PAGE_SIZE,
       });
       const items = Array.isArray(data.items) ? data.items : [];
       let listings = dedupeListings(items.map((item) => normalizeListing(asJsonRecord(item))));
+      if (clientRanked) listings = rankBestMatchPage(listings);
       // The backend may not support fresh_24h; apply it client-side to ensure
       // the "New in 24h" filter actually filters. We use the same matcher as
       // the snapshot path for consistency.
@@ -2927,15 +2973,16 @@ export const getListingsForExport = async (
     return { listings: [], total: 0 };
   }
 
-  const data = await fetchJSON<JsonRecord>("/listings", {
+  const { data, clientRanked } = await fetchListingsPage({
     ...filters,
     page: 1,
     size,
   });
 
   const items = Array.isArray(data.items) ? data.items : [];
+  const rows = items.map((item) => normalizeListing(asJsonRecord(item)));
   return {
-    listings: items.map((item) => normalizeListing(asJsonRecord(item))),
+    listings: clientRanked ? rankBestMatchPage(rows) : rows,
     total: Number(data.total || 0),
   };
 };

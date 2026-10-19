@@ -139,7 +139,6 @@ export const shellEn: Record<string, string> = {
   "shell.pricing.row.updates": "Tax & customs updates",
   "shell.pricing.row.alerts": "Price-drop alerts",
   "shell.pricing.row.exports": "CSV / PDF exports",
-  "shell.pricing.val.first12": "First 12",
   "shell.pricing.val.all": "All",
   "shell.pricing.val.6months": "6 months",
   "shell.pricing.val.fullHistory": "Full history",

@@ -841,7 +841,7 @@ export const en = {
   "picks.title": "Deal-score picks.",
   "plan.alertsBody": "Pro unlocks deeper alert watches, richer match refresh, and WhatsApp notifications.",
   "plan.alertsTitle": "One free alert included",
-  "plan.listingsBody": "You're seeing the first 12 live listings. Pro unlocks the full market feed, deal scores, and unlimited pagination.",
+  "plan.listingsBody": "Browse every live listing free. Pro adds fair-price deal scores, price history depth, and more alerts.",
   "plan.listingsTitle": "Free browse limit reached",
   "plan.picksBody": "Free shows a short teaser shortlist. Pro unlocks the full ranked Best Picks board and price-cut feed.",
   "plan.picksTitle": "More elite deals on Pro",
@@ -1645,7 +1645,7 @@ export const en = {
   "trust.title": "Trust Check",
   "trust.verifyTitle": "Before you pay, verify it yourself",
   // ui/data — trends, ticker, best picks
-  "chart.lakhsNote": "Axis in lakhs (1L = Rs 100,000)",
+  "chart.lakhsNote": "L = lakh (Rs 100,000) · Mn = million",
   "districtVelocity.listingsLabel": "Listings",
   "modelTrend.aria": "{make} {model} median asking price, {n} months, latest {price}",
   "picks.descFree": "{n} free teaser picks, {caption} — upgrade for the full deal-score board.",
@@ -1675,6 +1675,7 @@ export const en = {
   "trendTone.stable": "Stable (under {n}%)",
   "trendTone.stableShort": "Stable",
   "trendTone.up": "Price up",
+  "deal.howWePrice": "How we price →",
 } as const;
 
 export type EnKey = keyof typeof en;

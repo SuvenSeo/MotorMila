@@ -1,6 +1,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { AlertTriangle, FileWarning, Info, TrendingDown, TrendingUp, Minus, X } from "lucide-react";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { howWePriceHref } from "@/lib/howWePrice";
 import { useAppPreferences } from "@/lib/appPreferences";
 import {
   DEAL_BADGE_CLASSES,
@@ -148,7 +150,7 @@ export function DealBadge({ badge, tone = "soft", size = "sm", why, className }:
               <span className="block">{t("deal.whyMethod", "Method: {method}.", { method: t(methodCopy[0], methodCopy[1]) })}</span>
             )}
             {badge.kind === "verify" && (
-              <span className="block font-medium text-amber-700 dark:text-amber-300">
+              <span className="block font-medium text-deal-caution-text">
                 {t(
                   "deal.whyVerify",
                   "More than {pct}% under typical, or a weak estimate. Bait prices are a common scam — see the car and the CR book before paying anything.",
@@ -159,6 +161,13 @@ export function DealBadge({ badge, tone = "soft", size = "sm", why, className }:
             <span className="block text-[11px]">
               {t("deal.whyAsking", "These are asking prices on listing sites, not sale prices.")}
             </span>
+            <Link
+              to={howWePriceHref("fmv")}
+              onClick={() => setOpen(false)}
+              className="inline-flex min-h-[28px] items-center text-[12px] font-semibold text-primary-bright underline underline-offset-2 hover:text-foreground"
+            >
+              {t("deal.howWePrice", "How we price →")}
+            </Link>
           </span>
         </span>
       )}

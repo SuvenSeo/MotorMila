@@ -6,22 +6,22 @@
  * Pure functions only — covered by src/lib/dataSanity.test.ts.
  */
 
+import { detectLeaseTakeover } from "@/lib/leaseTakeover";
+import { compactLkrAmount, formatLkrFull } from "@/lib/price";
+
 /** A drop larger than this is treated as suspect unless independently confirmed. */
 export const MAX_UNCONFIRMED_DROP_PCT = 50;
 /** Price points (scans) needed to confirm a suspect drop. */
 export const MIN_CONFIRMING_POINTS = 2;
 
 /**
- * Minimal lease-takeover / installment-transfer detector. A lease takeover ad
- * lists the balance or the down payment, not the vehicle price, so a "cut"
- * from it is meaningless. (A shared src/lib/leaseTakeover.ts is being written
- * on another branch — the integrator may swap this for it.)
+ * Lease-takeover / installment-transfer ads list the balance or the down
+ * payment, not the vehicle price, so a "cut" from one is meaningless. Uses the
+ * shared detector in src/lib/leaseTakeover.ts (one source of truth with the
+ * listing card/detail badge).
  */
-const LEASE_TAKEOVER_RE =
-  /\b(lease|leasing|loan)\s*(take\s*-?\s*over|takeover|transfer|balance|settle|settlement)\b|\btake\s*-?\s*over\b|\bfacility\s*(balance|transfer)\b|\b(installment|instalment|monthly\s+rental)s?\s+(of|rs\.?|lkr)?\s*\d|\bbalance\s+(lease|loan|payment)\b|\bdown\s*payment\s+only\b/i;
-
 export function looksLikeLeaseTakeover(...texts: Array<string | null | undefined>): boolean {
-  return texts.some((t) => typeof t === "string" && t.length > 0 && LEASE_TAKEOVER_RE.test(t));
+  return detectLeaseTakeover(texts).isLeaseTakeover;
 }
 
 /**
@@ -201,32 +201,17 @@ function niceStep(raw: number): number {
 }
 
 /**
- * Sri Lankan axis label in lakhs (1 lakh = 100,000 LKR): 7,650,000 → "76.5L",
- * 12,000,000 → "120L". Below 1 lakh falls back to thousands ("85K").
+ * Short lakhs/Mn label via the canonical formatter (src/lib/price.ts):
+ * 7,650,000 → "76.5 L", 12,000,000 → "12 Mn", 85,000 → "85,000".
  */
 export function formatLakhs(lkr: number): string {
   if (!Number.isFinite(lkr)) return "";
-  const lakhs = lkr / 100_000;
-  if (Math.abs(lakhs) >= 1) {
-    const digits = Math.abs(lakhs) >= 100 ? 0 : Math.abs(lakhs) >= 10 ? 1 : 2;
-    return `${trimZeros(lakhs.toFixed(digits))}L`;
-  }
-  return `${Math.round(lkr / 1000)}K`;
+  return compactLkrAmount(lkr);
 }
 
-function trimZeros(s: string): string {
-  return s.includes(".") ? s.replace(/\.?0+$/, "") : s;
-}
-
-/** Whole-rupee LKR (no cents) for ticker/price display. */
-const LKR_WHOLE = new Intl.NumberFormat("en-LK", {
-  style: "currency",
-  currency: "LKR",
-  maximumFractionDigits: 0,
-  minimumFractionDigits: 0,
-});
+/** Whole-rupee LKR (no cents) for ticker/price display — canonical "Rs 477,589". */
 export function formatLkrWhole(v: number): string {
-  return Number.isFinite(v) ? LKR_WHOLE.format(Math.round(v)) : "—";
+  return formatLkrFull(v, "—");
 }
 
 /** VIN / chassis number off a listing payload, if the source exposed one. */

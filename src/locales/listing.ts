@@ -64,7 +64,7 @@ export const listingEn: Record<string, string> = {
   "safety.noAdvance": "Never pay an advance or “booking fee” before you see the car.",
   "safety.noOtp": "Don't share OTPs or open payment links the seller sends.",
   "safety.summary": "Never pay an advance",
-  "safety.title": "Before you pay",
+  "listing.beforeYouPayTitle": "Before you pay",
   "safety.transfer": "Ownership must be transferred within 14 days — don't accept open papers.",
   "safety.transferLink": "Safe transfer checklist",
 };
@@ -125,7 +125,7 @@ export const listingSi: Record<string, string> = {
   "safety.noAdvance": "Never pay an advance or “booking fee” before you see the car.",
   "safety.noOtp": "Don't share OTPs or open payment links the seller sends.",
   "safety.summary": "Never pay an advance",
-  "safety.title": "ගෙවීමට පෙර",
+  "listing.beforeYouPayTitle": "ගෙවීමට පෙර",
   "safety.transfer": "Ownership must be transferred within 14 days — don't accept open papers.",
   "safety.transferLink": "Safe transfer checklist",
 };
@@ -186,7 +186,7 @@ export const listingTa: Record<string, string> = {
   "safety.noAdvance": "Never pay an advance or “booking fee” before you see the car.",
   "safety.noOtp": "Don't share OTPs or open payment links the seller sends.",
   "safety.summary": "Never pay an advance",
-  "safety.title": "பணம் செலுத்தும் முன்",
+  "listing.beforeYouPayTitle": "பணம் செலுத்தும் முன்",
   "safety.transfer": "Ownership must be transferred within 14 days — don't accept open papers.",
   "safety.transferLink": "Safe transfer checklist",
 };

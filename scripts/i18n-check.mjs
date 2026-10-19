@@ -28,6 +28,25 @@ export function readLocale(lang) {
   return map;
 }
 
+/**
+ * Feature bundles (src/locales/<area>.ts, e.g. shell.ts / listing.ts / features.ts)
+ * are spread into DICTIONARIES by locales/index.ts, with the bundle's English
+ * entries as the si/ta fallback — so a key defined in any bundle counts as present
+ * for every language.
+ */
+export function readBundleKeys() {
+  const dir = path.join(SRC, "locales");
+  const keys = new Set();
+  for (const name of fs.readdirSync(dir)) {
+    if (!/\.ts$/.test(name) || ["index.ts", ...LOCALES.map((l) => `${l}.ts`)].includes(name)) continue;
+    for (const line of fs.readFileSync(path.join(dir, name), "utf8").split("\n")) {
+      const m = line.match(LINE_RE);
+      if (m) keys.add(JSON.parse(`"${m[1]}"`));
+    }
+  }
+  return keys;
+}
+
 function walk(dir, out = []) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     if (e.name === "node_modules" || e.name === "locales") continue;
@@ -78,7 +97,8 @@ function main() {
   // (a static entry would override the interpolated value) — report them separately.
   const dynamicKeys = [...used.keys()].filter((k) => used.get(k).dynamic && !used.get(k).fallback && !dicts.en.has(k)).sort();
   const checked = [...used.keys()].filter((k) => !dynamicKeys.includes(k));
-  const missing = Object.fromEntries(LOCALES.map((l) => [l, checked.filter((k) => !dicts[l].has(k)).sort()]));
+  const bundleKeys = readBundleKeys();
+  const missing = Object.fromEntries(LOCALES.map((l) => [l, checked.filter((k) => !dicts[l].has(k) && !bundleKeys.has(k)).sort()]));
   const noFallback = missing.en.filter((k) => !used.get(k).fallback);
 
   if (args.has("--write")) {

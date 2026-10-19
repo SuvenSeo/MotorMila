@@ -98,7 +98,7 @@ export const PRICING_TIERS: PricingTier[] = [
     audience: "Browsers and first-time buyers testing the market",
     features: [
       "Search listings from every source we track",
-      "First 12 results per search",
+      "Every search result, with full pagination",
       "Price range and history on every listing",
       "Import tax calculator",
       "6 months of price trends",
@@ -117,7 +117,6 @@ export const PRICING_TIERS: PricingTier[] = [
     audience: "Serious buyers, brokers and anyone who checks prices every week",
     features: [
       "Deal score on every listing",
-      "Every result, not just the first 12",
       "Full price history with district and condition filters",
       "All tax & customs updates",
       "More alerts, including WhatsApp",

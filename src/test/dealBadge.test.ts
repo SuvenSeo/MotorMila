@@ -30,9 +30,9 @@ describe("computeDealBadge", () => {
     const b = computeDealBadge({ askingLkr: 4_000_000, fmvLkr: 8_000_000, confidence: "high", compsCount: 80 });
     expect(b.kind).toBe("verify");
     expect(dealBadgeLabel(b, t)).toBe("Unusually low — verify first");
-    expect(DEAL_BADGE_CLASSES.verify).toMatch(/amber/);
-    expect(DEAL_BADGE_CLASSES.verify).not.toMatch(/emerald|green/);
-    expect(DEAL_SOFT_CLASSES.verify).not.toMatch(/emerald|green/);
+    expect(DEAL_BADGE_CLASSES.verify).toMatch(/deal-caution/);
+    expect(DEAL_BADGE_CLASSES.verify).not.toMatch(/emerald|green|deal-good/);
+    expect(DEAL_SOFT_CLASSES.verify).not.toMatch(/emerald|green|deal-good/);
   });
 
   it("treats a below-FMV call on a low-confidence estimate as verify", () => {

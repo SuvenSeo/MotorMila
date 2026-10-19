@@ -137,7 +137,7 @@ export function ModelTrendPanel({ make, model }: { make: string; model: string }
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <TrendToneLegend />
             <span className="text-[11px] font-medium text-muted-foreground">
-              {t("chart.lakhsNote", "Axis in lakhs (1L = Rs 100,000)")}
+              {t("chart.lakhsNote", "L = lakh (Rs 100,000) · Mn = million")}
             </span>
           </div>
         </>

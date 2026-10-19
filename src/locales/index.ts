@@ -8,10 +8,25 @@ import { featuresEn, featuresSi, featuresTa } from "./features";
 export type Language = "en" | "si" | "ta";
 export type Dictionary = Record<string, string>;
 
+/** A feature bundle for one language, with its English entries as the fallback for untranslated keys. */
+function bundle(enBundle: Dictionary, langBundle: Dictionary): Dictionary {
+  return { ...enBundle, ...langBundle };
+}
+
 export const DICTIONARIES: Record<Language, Dictionary> = {
   en: { ...(en as unknown as Dictionary), ...listingEn, ...shellEn, ...featuresEn },
-  si: { ...(si as unknown as Dictionary), ...listingSi, ...shellSi, ...featuresSi },
-  ta: { ...(ta as unknown as Dictionary), ...listingTa, ...shellTa, ...featuresTa },
+  si: {
+    ...(si as unknown as Dictionary),
+    ...bundle(listingEn, listingSi),
+    ...bundle(shellEn, shellSi),
+    ...bundle(featuresEn, featuresSi),
+  },
+  ta: {
+    ...(ta as unknown as Dictionary),
+    ...bundle(listingEn, listingTa),
+    ...bundle(shellEn, shellTa),
+    ...bundle(featuresEn, featuresTa),
+  },
 };
 
 export const LOCALE_TAGS: Record<Language, string> = {
