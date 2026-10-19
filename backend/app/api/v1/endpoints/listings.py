@@ -53,7 +53,10 @@ from app.models.schemas import (
 )
 from app.services.rate_limit import RateLimiter
 
-_listings_rate_limiter = RateLimiter(max_requests=300, window_seconds=60)
+_listings_rate_limiter = RateLimiter(max_requests=300, window_seconds=60, tier="listings")
+# Public (anonymous) valuation: own, tighter bucket so it cannot be used to
+# bulk-scrape price bands while sharing the generous browse budget.
+_estimate_rate_limiter = RateLimiter(max_requests=30, window_seconds=60, tier="listings-estimate")
 
 router = APIRouter(dependencies=[Depends(_listings_rate_limiter)])
 
@@ -82,6 +85,27 @@ def _request_live_access(
         except Exception:
             return None, None
     return str(payload.get("plan") or "free").strip().lower(), str(payload.get("role") or "user").strip().lower()
+
+
+def _user_listing_hidden(
+    listing: CarListing,
+    request: Optional[Request],
+    authorization: Optional[str],
+    role: Optional[str],
+) -> bool:
+    """Moderation: an unapproved user listing is visible only to its owner/admins."""
+    status = str(getattr(listing, "user_listing_status", "") or "scraped").lower()
+    if getattr(listing, "source", None) != "motormila_user" or status == "published":
+        return False
+    if (role or "").lower() == "admin":
+        return False
+    auth_value = authorization if isinstance(authorization, str) else None
+    token = (auth_value or "").removeprefix("Bearer ").strip()
+    if not token and request is not None:
+        token = str((getattr(request, "cookies", None) or {}).get("mm_session") or "").strip()
+    payload = verify_token(token) if token else None
+    email = str((payload or {}).get("email") or "").strip().lower()
+    return not email or email != str(listing.owner_user_id or "").strip().lower()
 
 
 def _request_plan(request: Optional[Request] = None, authorization: Optional[str] = None) -> Optional[str]:
@@ -1804,7 +1828,7 @@ def get_search_suggestions(
 ):
     return search_listing_suggestions(q=q, limit=limit, db=db)
 
-@router.get("/estimate")
+@router.get("/estimate", dependencies=[Depends(_estimate_rate_limiter)])
 def estimate_price(
     make: str,
     model: str,
@@ -2257,6 +2281,8 @@ def get_listing(
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found.")
     plan, role = _request_live_access(request, authorization, db)
+    if _user_listing_hidden(listing, request, authorization, role):
+        raise HTTPException(status_code=404, detail="Listing not found.")
     if _is_free_browse_plan(plan, role):
         listing.deal_score = None
         listing.market_median_lkr = None

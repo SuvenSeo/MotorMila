@@ -1,8 +1,11 @@
 """User-submitted listings — the sell-your-car flow.
 
 Signed-in users create, edit, and manage their own vehicle listings.
-Listings land with ``user_listing_status='pending'`` so an admin can
-publish them into the live market. Scraped rows (``owner_user_id IS NULL``)
+Moderation queue: listings land with ``user_listing_status='pending'`` and
+``is_active=False``; they are invisible to public browse/stats until an admin
+approves them (``POST /api/v1/admin/listings/{id}/approve`` sets
+``published`` + ``is_active=True``). Editing the content of a published
+listing sends it back to ``pending``. Scraped rows (``owner_user_id IS NULL``)
 are never touched by these endpoints.
 """
 
@@ -23,8 +26,14 @@ from db.session import get_db
 
 router = APIRouter()
 
-_write_limiter = RateLimiter(max_requests=30, window_seconds=60)
-_read_limiter = RateLimiter(max_requests=120, window_seconds=60)
+_write_limiter = RateLimiter(max_requests=30, window_seconds=60, tier="my-listings-write")
+_read_limiter = RateLimiter(max_requests=120, window_seconds=60, tier="my-listings-read")
+# Content fields whose change on a published listing requires re-review.
+_REVIEWED_FIELDS = {
+    "make", "model", "year", "price_lkr", "mileage", "fuel_type", "transmission",
+    "engine_capacity", "condition", "body_type", "vehicle_category", "district",
+    "city", "title", "description", "contact_name", "contact_phone", "image_urls",
+}
 
 # Status values for user listings.
 STATUS_DRAFT = "draft"
@@ -234,11 +243,19 @@ def create_my_listing(
         user_images=json.dumps(images) if images else None,
         owner_user_id=owner,
         user_listing_status=STATUS_PENDING,
-        is_active=True,
+        # Not live until an admin approves it (moderation queue).
+        is_active=False,
     )
     db.add(row)
     db.commit()
     db.refresh(row)
+    if not row.url:
+        # CarListingRead requires a url; scraped rows carry the source page,
+        # first-party listings point at their own MotorMila detail page
+        # (previously None, which 500'd GET /listings/{id}).
+        row.url = f"https://motormila.vercel.app/listing/{row.id}"
+        db.commit()
+        db.refresh(row)
     return _to_read(row)
 
 
@@ -258,6 +275,7 @@ def update_my_listing(
     row = _own_listing(db, listing_id, owner)
 
     updates = payload.model_dump(exclude_unset=True)
+    content_changed = bool(_REVIEWED_FIELDS.intersection(updates))
     if "status" in updates:
         new_status = str(updates.pop("status") or "").strip().lower()
         if new_status not in (STATUS_DRAFT, STATUS_PENDING, STATUS_REMOVED):
@@ -266,6 +284,12 @@ def update_my_listing(
                 detail="status must be draft, pending, or removed",
             )
         row.user_listing_status = new_status
+        # Only an admin approval makes a listing live.
+        row.is_active = False
+    elif content_changed and row.user_listing_status == STATUS_PUBLISHED:
+        # Edited after approval: back to the moderation queue.
+        row.user_listing_status = STATUS_PENDING
+        row.is_active = False
     if "image_urls" in updates:
         urls = updates.pop("image_urls") or []
         row.user_images = json.dumps(
