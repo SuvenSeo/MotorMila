@@ -1,417 +1,496 @@
-import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { APIError, estimatePrice, formatPrice, getMakes, getModels, getPriceTrends } from "@/services/api";
-import { PriceEstimate, PriceTrendPoint } from "@/types/car";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { AlertTriangle, ArrowLeft, ArrowRight, Check, Gauge, Info, RotateCcw, ShieldCheck } from "lucide-react";
+import { estimatePrice, getMakes, getModels, getSnapshotModelComps } from "@/services/api";
 import { SRI_LANKA_DISTRICTS } from "@/data/districts";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { SellerFairAskCard } from "@/components/SellerFairAskCard";
 import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
-import { PageHero } from "@/components/PageHero";
-import { FreePlanBanner } from "@/components/FreePlanBanner";
-import { UpgradePrompt } from "@/components/UpgradePrompt";
-import { ProFeatureLock } from "@/components/ProFeatureLock";
-import { AlertTriangle, BarChart3, Gauge, ShieldCheck, TrendingUp } from "lucide-react";
-import { revealContainer, revealItem } from "@/lib/motion";
+import { SellerFairAskCard } from "@/components/SellerFairAskCard";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { useAuth } from "@/lib/authContext";
-import { freePlanCopy, hasFullPlatformAccess } from "@/lib/planLimits";
-import { visuals } from "@/lib/visualAssets";
+import { hasFullPlatformAccess } from "@/lib/planLimits";
+import { howWePriceHref } from "@/lib/howWePrice";
+import { cn } from "@/lib/utils";
+import {
+  QUIZ_QUESTIONS,
+  estimateFromComps,
+  isUsableEstimate,
+  positionBand,
+  quizFlags,
+  rangePosition,
+  type EstimateProfile,
+  type QuizAnswers,
+  type QuizEstimate,
+  type QuizQuestion,
+  type Registration,
+} from "@/lib/estimateQuiz";
 
-type EstimateForm = {
-  make: string;
-  model: string;
-  year: number;
-  condition: "brand_new" | "reconditioned" | "used";
-  transmission: "automatic" | "manual" | "cvt" | "tiptronic";
-  fuel_type: "petrol" | "diesel" | "hybrid" | "electric" | "plugin_hybrid";
-  mileage_km: number;
-  district: string;
-};
+/**
+ * /estimate — valuation as a short quiz (ui/features).
+ * Car → mileage/registration → 5 one-tap condition questions → range.
+ * No sign-up. The estimate request starts as soon as step 2 is done, so the
+ * result is ready by the time the quiz ends. Live estimate API first, then
+ * saved snapshot comps through the offline FMV engine.
+ */
 
-type TrendProjection = {
-  annualizedRate: number;
-  oneYearValue: number;
-  threeYearValue: number;
-  windowMonths: number;
-};
+type Step = 0 | 1 | 2 | 3;
 
-function monthToIndex(value: string): number | null {
-  const [yearRaw, monthRaw] = String(value || "").split("-");
-  const year = Number(yearRaw);
-  const month = Number(monthRaw);
-  if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) return null;
-  return year * 12 + month;
+const NOW_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: NOW_YEAR + 1 - 1990 + 1 }, (_, i) => NOW_YEAR + 1 - i);
+
+const fieldClass =
+  "h-12 w-full rounded-xl border border-border bg-surface px-3 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50";
+const chipBase =
+  "inline-flex min-h-12 items-center justify-center rounded-xl border px-4 text-[14px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
+
+function slug(value: string): string {
+  return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
-function getTrendProjection(points: PriceTrendPoint[], baseMedian: number): TrendProjection | null {
-  if (!Number.isFinite(baseMedian) || baseMedian <= 0) return null;
-  const normalized = [...points]
-    .filter((p) => Number.isFinite(p.median_price) && p.median_price > 0)
-    .sort((a, b) => String(a.month).localeCompare(String(b.month)));
-  if (normalized.length < 2) return null;
-  const first = normalized[0];
-  const last = normalized[normalized.length - 1];
-  const fi = monthToIndex(first.month);
-  const li = monthToIndex(last.month);
-  if (fi === null || li === null || li <= fi) return null;
-  const window = li - fi;
-  const ratio = Number(last.median_price) / Number(first.median_price);
-  if (!Number.isFinite(ratio) || ratio <= 0) return null;
-  const rate = Math.pow(ratio, 12 / window) - 1;
-  if (!Number.isFinite(rate) || Math.abs(rate) > 0.75) return null;
-  const y1 = baseMedian * (1 + rate);
-  const y3 = baseMedian * Math.pow(1 + rate, 3);
-  if (!Number.isFinite(y1) || !Number.isFinite(y3) || y1 <= 0 || y3 <= 0) return null;
-  return { annualizedRate: rate, oneYearValue: y1, threeYearValue: y3, windowMonths: window };
+function lkr(n: number): string {
+  return `Rs ${Math.round(n).toLocaleString("en-LK")}`;
 }
-
-const selectClass = "h-11 rounded-xl border-border bg-surface text-sm text-foreground focus-visible:ring-2 focus-visible:ring-primary/40";
-const inputClass = "h-11 rounded-xl border-border bg-surface text-base md:text-sm text-foreground num focus-visible:ring-2 focus-visible:ring-primary/40";
 
 export default function Estimate() {
   const { t } = useAppPreferences();
   const { hasProAccess, isAdmin } = useAuth();
   const fullAccess = hasFullPlatformAccess({ hasProAccess, isAdmin });
+
+  const [step, setStep] = useState<Step>(0);
+  const [qIndex, setQIndex] = useState(0);
   const [makes, setMakes] = useState<{ make: string; count: number }[]>([]);
-  const [modelsList, setModelsList] = useState<{ model: string; count: number }[]>([]);
-  const [form, setForm] = useState<EstimateForm>({
-    make: "", model: "", year: 2021, condition: "reconditioned",
-    transmission: "automatic", fuel_type: "hybrid", mileage_km: 50_000, district: "Colombo",
-  });
-  const [result, setResult] = useState<PriceEstimate | null>(null);
-  const [colomboMedian, setColomboMedian] = useState<number | null>(null);
-  const [trendPoints, setTrendPoints] = useState<PriceTrendPoint[]>([]);
-  const [trendUnavailable, setTrendUnavailable] = useState(false);
+  const [models, setModels] = useState<{ model: string; count: number }[]>([]);
+  const [make, setMake] = useState("");
+  const [model, setModel] = useState("");
+  const [year, setYear] = useState<number>(NOW_YEAR - 6);
+  const [mileage, setMileage] = useState<string>("");
+  const [registration, setRegistration] = useState<Registration | "">("");
+  const [district, setDistrict] = useState("Colombo");
+  const [answers, setAnswers] = useState<QuizAnswers>({});
+  const [result, setResult] = useState<QuizEstimate | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const requestId = useRef(0);
+  const headingRef = useRef<HTMLHeadingElement>(null);
 
-  useEffect(() => { getMakes().then(setMakes).catch(() => setMakes([])); }, []);
   useEffect(() => {
-    if (!form.make) { setModelsList([]); return; }
-    getModels(form.make).then(setModelsList).catch(() => setModelsList([]));
-  }, [form.make]);
+    getMakes().then(setMakes).catch(() => setMakes([]));
+  }, []);
+  useEffect(() => {
+    setModels([]);
+    if (!make) return;
+    getModels(make).then(setModels).catch(() => setModels([]));
+  }, [make]);
 
-  const update = (patch: Partial<EstimateForm>) => setForm((prev) => ({ ...prev, ...patch }));
+  // Move focus to the step heading for screen readers / keyboard users.
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, [step, qIndex]);
 
-  const handleEstimate = async () => {
-    if (!form.make || !form.model) return;
-    setLoading(true); setError(null); setTrendUnavailable(false);
-    const fallback = t("estimate.errorFallback", "Unable to estimate. Try another model, year, or district.");
+  const mileageNum = Number(mileage.replace(/[^\d]/g, ""));
+  const step0Valid = Boolean(make && model && year);
+  const step1Valid = Boolean(registration) && (registration === "brand_new" || (Number.isFinite(mileageNum) && mileage !== ""));
+
+  const runEstimate = async () => {
+    const id = ++requestId.current;
+    const profile: EstimateProfile = {
+      make,
+      model,
+      year,
+      mileage_km: registration === "brand_new" && mileage === "" ? 0 : mileageNum,
+      condition: registration as Registration,
+      district,
+    };
+    setLoading(true);
+    setFailed(false);
+    setResult(null);
+    let estimate: QuizEstimate | null = null;
     try {
-      const [estimate, trends, colombo] = await Promise.all([
-        estimatePrice(form),
-        getPriceTrends(form.make, form.model, form.condition, form.district).catch(() => null),
-        // Sellers outside Colombo ask "what would this fetch in Colombo?" —
-        // run the same profile against the Colombo market for a delta line.
-        form.district !== "Colombo"
-          ? estimatePrice({ ...form, district: "Colombo" }).catch(() => null)
-          : Promise.resolve(null),
-      ]);
-      setResult(estimate);
-      setColomboMedian(colombo && colombo.median > 0 ? colombo.median : null);
-      setTrendPoints(Array.isArray(trends) ? trends : []);
-      setTrendUnavailable(trends === null);
-    } catch (err) {
-      setError(err instanceof APIError ? err.detail || fallback : err instanceof Error ? err.message || fallback : fallback);
-      setResult(null); setTrendPoints([]);
-    } finally { setLoading(false); }
+      const live = await estimatePrice({ ...profile });
+      if (isUsableEstimate(live)) estimate = { ...live, source: "live" };
+    } catch {
+      // Live API down or no match: fall through to the snapshot.
+    }
+    if (!estimate) {
+      try {
+        const comps = await getSnapshotModelComps(make, model);
+        estimate = estimateFromComps(comps, profile);
+      } catch {
+        estimate = null;
+      }
+    }
+    if (id !== requestId.current) return;
+    setResult(estimate);
+    setFailed(!estimate);
+    setLoading(false);
   };
 
-  const projection = useMemo(() => result ? getTrendProjection(trendPoints, result.median) : null, [result, trendPoints]);
+  const goToQuiz = () => {
+    if (!step1Valid) return;
+    void runEstimate();
+    setQIndex(0);
+    setStep(2);
+  };
+
+  const answer = (q: QuizQuestion, value: string) => {
+    setAnswers((prev) => ({ ...prev, [q]: value }));
+    if (qIndex < QUIZ_QUESTIONS.length - 1) setQIndex((i) => i + 1);
+    else setStep(3);
+  };
+
+  const skipQuestion = () => {
+    if (qIndex < QUIZ_QUESTIONS.length - 1) setQIndex((i) => i + 1);
+    else setStep(3);
+  };
+
+  const restart = () => {
+    requestId.current += 1;
+    setStep(0);
+    setQIndex(0);
+    setAnswers({});
+    setResult(null);
+    setFailed(false);
+    setLoading(false);
+  };
+
+  const QUESTIONS: Record<QuizQuestion, { title: string; options: Array<{ value: string; label: string }> }> = {
+    accidents: {
+      title: t("quiz.q.accidents", "Any accident repairs?"),
+      options: [
+        { value: "none", label: t("quiz.a.accidents.none", "None") },
+        { value: "minor", label: t("quiz.a.accidents.minor", "Minor (paint, panels)") },
+        { value: "major", label: t("quiz.a.accidents.major", "Major (structural, airbags)") },
+      ],
+    },
+    service: {
+      title: t("quiz.q.service", "Service records?"),
+      options: [
+        { value: "full", label: t("quiz.a.service.full", "Full history") },
+        { value: "partial", label: t("quiz.a.service.partial", "Some receipts") },
+        { value: "none", label: t("quiz.a.service.none", "None") },
+      ],
+    },
+    owners: {
+      title: t("quiz.q.owners", "Owners in Sri Lanka (on the CR)?"),
+      options: [
+        { value: "1", label: t("quiz.a.owners.1", "1st owner") },
+        { value: "2", label: t("quiz.a.owners.2", "2 owners") },
+        { value: "3plus", label: t("quiz.a.owners.3plus", "3 or more") },
+      ],
+    },
+    flood: {
+      title: t("quiz.q.flood", "Ever in a flood?"),
+      options: [
+        { value: "no", label: t("quiz.a.flood.no", "No") },
+        { value: "unsure", label: t("quiz.a.flood.unsure", "Not sure") },
+        { value: "yes", label: t("quiz.a.flood.yes", "Yes") },
+      ],
+    },
+    mods: {
+      title: t("quiz.q.mods", "Modifications?"),
+      options: [
+        { value: "none", label: t("quiz.a.mods.none", "Stock") },
+        { value: "minor", label: t("quiz.a.mods.minor", "Minor (wheels, audio)") },
+        { value: "major", label: t("quiz.a.mods.major", "Major (engine, body, suspension)") },
+      ],
+    },
+  };
+
+  const FLAG_TEXT: Record<QuizQuestion, string> = {
+    flood: t("quiz.flag.flood", "Flood exposure: buyers will discount heavily and many won't buy. Get a written inspection before you set a price."),
+    accidents: t("quiz.flag.accidents", "Accident repairs: keep repair invoices handy. Buyers will check panel gaps and paint depth."),
+    service: t("quiz.flag.service", "No service records: an independent inspection report helps make up for it."),
+    mods: t("quiz.flag.mods", "Major modifications narrow the buyer pool. Keep the original parts if you have them."),
+    owners: t("quiz.flag.owners", "Several owners: expect questions. A clean CR and receipts help."),
+  };
+
+  const position = rangePosition(answers);
+  const flags = quizFlags(answers);
+  const band = result ? positionBand(result.low, result.high, position) : null;
+  const confidenceLabel = result
+    ? {
+        high: t("quiz.conf.high", "High confidence"),
+        medium: t("quiz.conf.medium", "Medium confidence"),
+        low: t("quiz.conf.low", "Low confidence — rough guide"),
+      }[result.confidence]
+    : "";
+
+  const stepLabels = [
+    t("quiz.step.car", "Car"),
+    t("quiz.step.details", "Details"),
+    t("quiz.step.condition", "Condition"),
+    t("quiz.step.result", "Result"),
+  ];
+  const progressPct = step === 2 ? ((2 + qIndex / QUIZ_QUESTIONS.length) / 3) * 100 : (step / 3) * 100;
+
+  const hubHref = useMemo(
+    () => (make && model ? `/cars/${encodeURIComponent(slug(make))}/${encodeURIComponent(slug(model))}` : "/"),
+    [make, model],
+  );
 
   return (
-    <PageCanvas>
-      <PageHero
-        theme="valuation"
-        eyebrow={t("estimate.eyebrow", "Valuation workbench")}
-        eyebrowIcon={Gauge}
-        watermarkIcon={BarChart3}
-        title={<>{t("estimate.title", "What's your car worth?")}</>}
-        description={t("estimate.description", "District-aware fair value ranges, trend projection, and seller ask guidance from live Sri Lanka inventory.")}
-        media={visuals.alt2HeroOrangeSunset}
-        mediaPosition="center 40%"
-        mediaTone="brand"
-        highlights={[
-          { label: t("estimate.highlight.method", "Method"), value: t("estimate.highlight.methodValue", "Comps"), hint: t("estimate.highlight.methodHint", "Comparable listing median") },
-          { label: t("estimate.highlight.trend", "Trend aware"), value: t("estimate.highlight.trendValue", "12 mo"), hint: t("estimate.highlight.trendHint", "Price trajectory projection") },
-          { label: t("estimate.highlight.district", "District fit"), value: t("estimate.highlight.districtValue", "25+"), hint: t("estimate.highlight.districtHint", "Localized market lanes") },
-        ]}
-      />
+    <PageCanvas ambient="subtle">
+      <PageBody narrow className="max-w-xl py-8 sm:py-12">
+        <div className="mb-5">
+          <p className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-primary-bright">
+            <Gauge className="h-3.5 w-3.5" aria-hidden />
+            {t("quiz.eyebrow", "Free valuation · no sign-up")}
+          </p>
+          <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+            {t("quiz.title", "What's your car worth?")}
+          </h1>
+        </div>
 
-      <FreePlanBanner />
+        {/* Progress */}
+        <div className="mb-5" aria-label={t("quiz.progressAria", "Progress")}>
+          <ol className="mb-2 flex justify-between text-[11px] font-semibold text-muted-foreground">
+            {stepLabels.map((label, i) => (
+              <li key={label} aria-current={i === step ? "step" : undefined} className={cn(i <= step && "text-foreground")}>
+                {label}
+              </li>
+            ))}
+          </ol>
+          <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progressPct)}>
+            <div className="h-full rounded-full bg-primary transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${progressPct}%` }} />
+          </div>
+        </div>
 
-      <PageBody>
-        <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
-
-          {/* ── INPUT PANEL ──────────────────────────────────────── */}
-          <motion.div variants={revealItem} className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
-            <div className="mb-6 flex items-center gap-3 border-b border-border pb-5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-surface">
-                <Gauge className="h-4 w-4 text-primary" aria-hidden />
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
+          {step === 0 && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (step0Valid) setStep(1);
+              }}
+              className="space-y-4"
+            >
+              <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold text-foreground outline-none">
+                {t("quiz.s0.title", "Which car?")}
+              </h2>
+              <div>
+                <label htmlFor="q-make" className="mb-1.5 block text-[13px] font-semibold text-muted-foreground">{t("common.make", "Make")}</label>
+                <select id="q-make" className={fieldClass} value={make} onChange={(e) => { setMake(e.target.value); setModel(""); }}>
+                  <option value="">{t("common.selectMake", "Select make")}</option>
+                  {makes.map((m) => <option key={m.make} value={m.make}>{m.make}</option>)}
+                </select>
               </div>
               <div>
-                <p className="text-[12px] font-semibold text-muted-foreground">{t("estimate.step01", "Step 01")}</p>
-                <h2 className="text-sm font-bold text-foreground">{t("estimate.vehicleProfile", "Vehicle profile")}</h2>
+                <label htmlFor="q-model" className="mb-1.5 block text-[13px] font-semibold text-muted-foreground">{t("common.model", "Model")}</label>
+                <select id="q-model" className={fieldClass} value={model} onChange={(e) => setModel(e.target.value)} disabled={!make}>
+                  <option value="">{make && models.length === 0 ? t("quiz.loadingModels", "Loading models…") : t("common.selectModel", "Select model")}</option>
+                  {models.map((m) => <option key={m.model} value={m.model}>{m.model}</option>)}
+                </select>
               </div>
-            </div>
-
-            <div className="space-y-5">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label htmlFor="est-make" className="text-[12px] font-semibold text-muted-foreground">{t("common.make", "Make")}</label>
-                  <Select value={form.make} onValueChange={(v) => update({ make: v, model: "" })}>
-                    <SelectTrigger id="est-make" className={selectClass}><SelectValue placeholder={t("common.selectMake", "Select make")} /></SelectTrigger>
-                    <SelectContent className="border-border bg-popover text-popover-foreground">
-                      {makes.map((m) => <SelectItem key={m.make} value={m.make} className="focus:bg-primary/15 focus:text-foreground">{m.make} ({m.count})</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="est-model" className="text-[12px] font-semibold text-muted-foreground">{t("common.model", "Model")}</label>
-                  <Select value={form.model} onValueChange={(v) => update({ model: v })} disabled={!form.make || !modelsList.length}>
-                    <SelectTrigger id="est-model" className={`${selectClass} disabled:opacity-50`}><SelectValue placeholder={t("common.selectModel", "Select model")} /></SelectTrigger>
-                    <SelectContent className="border-border bg-popover text-popover-foreground">
-                      {modelsList.map((m) => <SelectItem key={m.model} value={m.model} className="focus:bg-primary/15 focus:text-foreground">{m.model} ({m.count})</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="est-year" className="text-[12px] font-semibold text-muted-foreground">{t("valuation.field.year", "Year")}</label>
-                  <Input id="est-year" type="number" min={1990} max={new Date().getFullYear() + 1} value={form.year} onChange={(e) => update({ year: Number(e.target.value) || 0 })} className={inputClass} />
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="est-cond" className="text-[12px] font-semibold text-muted-foreground">{t("valuation.field.condition", "Condition")}</label>
-                  <Select value={form.condition} onValueChange={(v: EstimateForm["condition"]) => update({ condition: v })}>
-                    <SelectTrigger id="est-cond" className={selectClass}><SelectValue /></SelectTrigger>
-                    <SelectContent className="border-border bg-popover text-popover-foreground">
-                      <SelectItem value="brand_new" className="focus:bg-primary/15 focus:text-foreground">{t("condition.brandNew", "Brand New")}</SelectItem>
-                      <SelectItem value="reconditioned" className="focus:bg-primary/15 focus:text-foreground">{t("condition.reconditioned", "Reconditioned")}</SelectItem>
-                      <SelectItem value="used" className="focus:bg-primary/15 focus:text-foreground">{t("condition.used", "Used")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="est-trans" className="text-[12px] font-semibold text-muted-foreground">{t("valuation.field.transmission", "Transmission")}</label>
-                  <Select value={form.transmission} onValueChange={(v: EstimateForm["transmission"]) => update({ transmission: v })}>
-                    <SelectTrigger id="est-trans" className={selectClass}><SelectValue /></SelectTrigger>
-                    <SelectContent className="border-border bg-popover text-popover-foreground">
-                      <SelectItem value="automatic" className="focus:bg-primary/15 focus:text-foreground">{t("trans.automatic", "Automatic")}</SelectItem>
-                      <SelectItem value="manual" className="focus:bg-primary/15 focus:text-foreground">{t("trans.manual", "Manual")}</SelectItem>
-                      <SelectItem value="cvt" className="focus:bg-primary/15 focus:text-foreground">{t("trans.cvt", "CVT")}</SelectItem>
-                      <SelectItem value="tiptronic" className="focus:bg-primary/15 focus:text-foreground">{t("trans.tiptronic", "Tiptronic")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="est-fuel" className="text-[12px] font-semibold text-muted-foreground">{t("valuation.field.fuel", "Fuel Type")}</label>
-                  <Select value={form.fuel_type} onValueChange={(v: EstimateForm["fuel_type"]) => update({ fuel_type: v })}>
-                    <SelectTrigger id="est-fuel" className={selectClass}><SelectValue /></SelectTrigger>
-                    <SelectContent className="border-border bg-popover text-popover-foreground">
-                      <SelectItem value="petrol" className="focus:bg-primary/15 focus:text-foreground">{t("fuel.petrol", "Petrol")}</SelectItem>
-                      <SelectItem value="diesel" className="focus:bg-primary/15 focus:text-foreground">{t("fuel.diesel", "Diesel")}</SelectItem>
-                      <SelectItem value="hybrid" className="focus:bg-primary/15 focus:text-foreground">{t("fuel.hybrid", "Hybrid")}</SelectItem>
-                      <SelectItem value="plugin_hybrid" className="focus:bg-primary/15 focus:text-foreground">{t("fuel.pluginHybrid", "Plug-in Hybrid")}</SelectItem>
-                      <SelectItem value="electric" className="focus:bg-primary/15 focus:text-foreground">{t("fuel.electric", "Electric")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="est-km" className="text-[12px] font-semibold text-muted-foreground">{t("valuation.field.mileage", "Mileage (KM)")}</label>
-                  <Input id="est-km" type="number" min={0} max={500000} value={form.mileage_km} onChange={(e) => update({ mileage_km: Number(e.target.value) || 0 })} className={inputClass} />
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="est-dist" className="text-[12px] font-semibold text-muted-foreground">{t("valuation.field.district", "District")}</label>
-                  <Select value={form.district} onValueChange={(v) => update({ district: v })}>
-                    <SelectTrigger id="est-dist" className={selectClass}><SelectValue /></SelectTrigger>
-                    <SelectContent className="border-border bg-popover text-popover-foreground">
-                      {SRI_LANKA_DISTRICTS.map((d) => <SelectItem key={d} value={d} className="focus:bg-primary/15 focus:text-foreground">{d}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div>
+                <label htmlFor="q-year" className="mb-1.5 block text-[13px] font-semibold text-muted-foreground">{t("quiz.year", "Year of manufacture")}</label>
+                <select id="q-year" className={fieldClass} value={year} onChange={(e) => setYear(Number(e.target.value))}>
+                  {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+                </select>
               </div>
+              <button type="submit" disabled={!step0Valid} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-[14px] font-semibold text-primary-foreground disabled:opacity-40">
+                {t("quiz.next", "Next")} <ArrowRight className="h-4 w-4" aria-hidden />
+              </button>
+            </form>
+          )}
 
-              <div className="border-t border-border pt-5">
-                <button type="button" onClick={handleEstimate} disabled={!form.make || !form.model || loading}
-                  className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-[12px] font-semibold text-primary-foreground shadow-soft transition-transform hover:bg-primary/95 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-40"
-                >
-                  <Gauge className="h-3.5 w-3.5" aria-hidden />
-                  {loading ? t("estimate.running", "Running...") : t("estimate.run", "Run valuation")}
+          {step === 1 && (
+            <form onSubmit={(e) => { e.preventDefault(); goToQuiz(); }} className="space-y-5">
+              <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold text-foreground outline-none">
+                {t("quiz.s1.title", "Mileage and registration")}
+              </h2>
+              <fieldset>
+                <legend className="mb-2 text-[13px] font-semibold text-muted-foreground">{t("quiz.registration", "Registration")}</legend>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {([
+                    ["used", t("quiz.reg.used", "Registered (used)")],
+                    ["reconditioned", t("quiz.reg.recon", "Unregistered (recondition)")],
+                    ["brand_new", t("quiz.reg.new", "Brand new")],
+                  ] as Array<[Registration, string]>).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={registration === value}
+                      onClick={() => setRegistration(value)}
+                      className={cn(chipBase, registration === value ? "border-primary bg-primary/15 text-foreground" : "border-border bg-surface text-foreground hover:border-primary/40")}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+              <div>
+                <label htmlFor="q-km" className="mb-1.5 block text-[13px] font-semibold text-muted-foreground">{t("quiz.mileage", "Mileage (km)")}</label>
+                <input
+                  id="q-km"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  placeholder={t("quiz.mileagePh", "e.g. 65000")}
+                  className={cn(fieldClass, "num")}
+                  value={mileage}
+                  onChange={(e) => setMileage(e.target.value.replace(/[^\d,]/g, ""))}
+                />
+              </div>
+              <div>
+                <label htmlFor="q-district" className="mb-1.5 block text-[13px] font-semibold text-muted-foreground">{t("quiz.district", "District")}</label>
+                <select id="q-district" className={fieldClass} value={district} onChange={(e) => setDistrict(e.target.value)}>
+                  {SRI_LANKA_DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setStep(0)} className="inline-flex h-12 items-center justify-center gap-1.5 rounded-full border border-border bg-card px-5 text-[14px] font-semibold text-foreground">
+                  <ArrowLeft className="h-4 w-4" aria-hidden /> {t("quiz.back", "Back")}
                 </button>
-                {!form.make || !form.model ? <p className="mt-2 text-center text-[11px] text-muted-foreground font-semibold">{t("estimate.selectToEnable", "Select make and model to enable.")}</p> : null}
-                {error && (
-                  <div role="alert" className="mt-3 flex items-start gap-2 rounded-xl border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-[11px] font-medium text-rose-600 dark:text-rose-400">
-                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden /> <span>{error}</span>
-                  </div>
-                )}
+                <button type="submit" disabled={!step1Valid} className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-primary text-[14px] font-semibold text-primary-foreground disabled:opacity-40">
+                  {t("quiz.next", "Next")} <ArrowRight className="h-4 w-4" aria-hidden />
+                </button>
               </div>
-            </div>
-          </motion.div>
+            </form>
+          )}
 
-          {/* ── OUTPUT PANEL ─────────────────────────────────────── */}
-          <motion.div variants={revealItem} className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6 lg:sticky lg:top-20">
-            <div className="mb-6 flex items-center justify-between gap-3 border-b border-border pb-5">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-surface">
-                  <TrendingUp className="h-4 w-4 text-primary" aria-hidden />
-                </div>
-                <div>
-                  <p className="text-[12px] font-semibold text-muted-foreground">{t("estimate.step02", "Step 02")}</p>
-                  <h2 className="text-sm font-bold text-foreground">{t("estimate.marketOutput", "Market output")}</h2>
-                </div>
-              </div>
-              {result && (
-                <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[12px] font-semibold text-primary-bright">
-                  {result.confidence}
-                </span>
-              )}
-            </div>
-
-            {!result && !loading && (
-              <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
-                <Gauge className="h-5 w-5 text-muted-foreground/40" aria-hidden />
-                <p className="max-w-xs text-[12px] font-medium text-muted-foreground">
-                  {t("estimate.empty", "Enter a vehicle profile and run valuation to see live median pricing and trajectory.")}
+          {step === 2 && (() => {
+            const q = QUIZ_QUESTIONS[qIndex];
+            const def = QUESTIONS[q];
+            return (
+              <div className="space-y-4">
+                <p className="text-[12px] font-semibold text-muted-foreground">
+                  {t("quiz.qCount", "Question {n} of {total}", { n: qIndex + 1, total: QUIZ_QUESTIONS.length })}
                 </p>
+                <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold text-foreground outline-none">{def.title}</h2>
+                <div className="grid gap-2">
+                  {def.options.map((o) => (
+                    <button
+                      key={o.value}
+                      type="button"
+                      onClick={() => answer(q, o.value)}
+                      aria-pressed={answers[q] === o.value}
+                      className={cn(chipBase, "justify-between", answers[q] === o.value ? "border-primary bg-primary/15" : "border-border bg-surface hover:border-primary/40", "text-foreground")}
+                    >
+                      {o.label}
+                      {answers[q] === o.value ? <Check className="h-4 w-4 text-primary" aria-hidden /> : null}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => (qIndex === 0 ? setStep(1) : setQIndex((i) => i - 1))}
+                    className="inline-flex min-h-11 items-center gap-1.5 text-[13px] font-semibold text-muted-foreground hover:text-foreground"
+                  >
+                    <ArrowLeft className="h-4 w-4" aria-hidden /> {t("quiz.back", "Back")}
+                  </button>
+                  <button type="button" onClick={skipQuestion} className="inline-flex min-h-11 items-center text-[13px] font-semibold text-muted-foreground hover:text-foreground">
+                    {t("quiz.skip", "Skip")}
+                  </button>
+                </div>
               </div>
-            )}
+            );
+          })()}
 
-            {loading && (
-              <div className="space-y-3" aria-busy="true">
-                <div className="h-24 rounded-xl border border-border bg-surface animate-pulse" />
-                <div className="h-16 rounded-xl border border-border bg-surface animate-pulse" />
-                <div className="h-20 rounded-xl border border-border bg-surface animate-pulse" />
-              </div>
-            )}
+          {step === 3 && (
+            <div className="space-y-4" aria-live="polite">
+              <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold text-foreground outline-none">
+                {year} {make} {model}
+              </h2>
 
-            {result && !loading && (
-              <motion.div initial="hidden" animate="show" variants={revealContainer} className="space-y-4">
-                {/* Median — featured hero of the output: larger, primary-tinted */}
-                <motion.div variants={revealItem} aria-live="polite" className="rounded-2xl border border-primary/20 bg-surface p-5 shadow-soft">
-                  <p className="text-[12px] font-semibold text-muted-foreground">{t("estimate.fairMarketRange", "Fair market range")}</p>
-                  <p className="num mt-2 text-4xl font-bold leading-none tracking-tight text-foreground sm:text-[2.75rem]">
-                    {formatPrice(result.low)} – {formatPrice(result.high)}
-                  </p>
-                  <p className="mt-3 text-[11px] text-muted-foreground font-medium">
-                    {t("estimate.medianBasedOn", "Median {median} · based on {count} comparable asking prices — a range, not a promise; actual sale prices in SL typically settle 5–15% under ask", {
-                      median: formatPrice(result.median),
-                      count: result.comparable_count.toLocaleString(),
-                    })}
-                  </p>
-                  {colomboMedian !== null && result.median > 0 && form.district !== "Colombo" && (
-                    <p className="mt-3 border-t border-border pt-3 text-[11px] text-muted-foreground font-medium">
-                      {t("estimate.sameProfileIn", "Same profile in")} <span className="font-bold text-foreground">Colombo</span>:{" "}
-                      <span className="num font-bold text-foreground">{formatPrice(colomboMedian)}</span>{" "}
-                      <span className={`num font-bold ${colomboMedian >= result.median ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-                        ({colomboMedian >= result.median ? "+" : ""}
-                        {(((colomboMedian - result.median) / result.median) * 100).toFixed(1)}% vs {form.district})
-                      </span>
+              {loading && (
+                <div className="space-y-2" aria-busy="true">
+                  <p className="text-[13px] text-muted-foreground">{t("quiz.loading", "Checking comparable listings…")}</p>
+                  <div className="h-20 animate-pulse rounded-xl bg-surface" />
+                </div>
+              )}
+
+              {!loading && failed && (
+                <div role="alert" className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[13px] text-foreground">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+                  <span>
+                    {t("quiz.noData", "We don't have enough comparable ads for this car to give an honest range. Try a nearby year, or check similar listings.")}
+                  </span>
+                </div>
+              )}
+
+              {!loading && result && band && (
+                <>
+                  <div className="rounded-2xl border border-primary/20 bg-surface p-4">
+                    <p className="text-[12px] font-semibold text-muted-foreground">{t("quiz.rangeLabel", "Typical asking range for similar cars")}</p>
+                    <p className="num mt-1 text-3xl font-bold leading-tight tracking-tight text-foreground">
+                      {lkr(result.low)} – {lkr(result.high)}
                     </p>
-                  )}
-                </motion.div>
-
-                {/* Range */}
-                <motion.div variants={revealItem} className="rounded-xl border border-border bg-surface p-4">
-                  <div className="flex items-center justify-between text-[12px] font-semibold text-muted-foreground">
-                    <span>{t("common.low", "Low")}</span><span>{t("common.high", "High")}</span>
+                    <div className="mt-3 flex flex-wrap gap-1.5 text-[11px] font-semibold">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-primary-bright">
+                        <ShieldCheck className="h-3 w-3" aria-hidden /> {confidenceLabel}
+                      </span>
+                      <span className="rounded-full border border-border bg-card px-2.5 py-1 text-muted-foreground">
+                        {t("quiz.comps", "{n} comparable ads", { n: result.comparable_count.toLocaleString() })}
+                      </span>
+                      {result.source === "snapshot" && (
+                        <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-amber-700 dark:text-amber-300">
+                          {t("quiz.snapshot", "From saved data — live service unavailable")}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                    <div className="h-full w-full rounded-full bg-gradient-to-r from-primary/60 via-primary to-primary/60" />
-                  </div>
-                  <div className="mt-2 flex items-center justify-between">
-                    <span className="num text-[13px] font-bold text-foreground">{formatPrice(result.low)}</span>
-                    <span className="num text-[13px] font-bold text-foreground">{formatPrice(result.high)}</span>
-                  </div>
-                </motion.div>
 
-                {/* Signals */}
-                <motion.div variants={revealItem} className="flex flex-wrap gap-1.5">
-                  <span className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary-bright">
-                    <ShieldCheck className="h-3 w-3" aria-hidden /> {result.confidence}
-                  </span>
-                  <span className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 text-[10px] font-bold text-muted-foreground transition-colors hover:text-foreground">
-                    <BarChart3 className="h-3 w-3" aria-hidden /> <span className="num">{result.comparable_count}</span> {t("estimate.comparables", "comparables")}
-                  </span>
-                  <span className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 text-[10px] font-bold text-muted-foreground transition-colors hover:text-foreground">
-                    <TrendingUp className="h-3 w-3" aria-hidden /> {t("estimate.mileageAdj", "Mileage adj: {yesNo}", { yesNo: result.mileage_adjusted ? t("common.yes", "Yes") : t("common.no", "No") })}
-                  </span>
-                </motion.div>
-
-                {/* Trajectory */}
-                <motion.div variants={revealItem} className="rounded-xl border border-border bg-surface p-4">
-                  <p className="text-[12px] font-semibold text-muted-foreground">{t("estimate.trajectory", "Trajectory")}</p>
-                  {fullAccess ? (
-                    projection ? (
-                      <div className="mt-3 space-y-3">
-                        <p className="text-[11px] text-muted-foreground font-medium">
-                          {t("estimate.derivedFrom", "Derived from {months} months of data for {make} {model}.", {
-                            months: projection.windowMonths,
-                            make: form.make,
-                            model: form.model,
-                          })}
-                        </p>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="rounded-2xl border border-border bg-card p-3">
-                            <p className="text-[10px] text-muted-foreground font-semibold">{t("estimate.oneYearProjected", "1Y projected")}</p>
-                            <p className="num mt-1 text-[13px] font-bold text-foreground">{formatPrice(projection.oneYearValue)}</p>
-                          </div>
-                          <div className="rounded-2xl border border-border bg-card p-3">
-                            <p className="text-[10px] text-muted-foreground font-semibold">{t("estimate.threeYearProjected", "3Y projected")}</p>
-                            <p className="num mt-1 text-[13px] font-bold text-foreground">{formatPrice(projection.threeYearValue)}</p>
-                          </div>
-                        </div>
-                        <p className="text-[11px] text-muted-foreground font-medium">
-                          {t("estimate.annualRate", "Annual rate:")}{" "}
-                          <span className={`num font-bold ${projection.annualizedRate >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-                            {projection.annualizedRate >= 0 ? "+" : ""}{(projection.annualizedRate * 100).toFixed(1)}%
-                          </span>
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="mt-2 text-[11px] text-muted-foreground font-medium">
-                        {trendUnavailable
-                          ? t("estimate.trendUnavailable", "Trend data temporarily unavailable.")
-                          : t("estimate.notEnoughHistory", "Not enough historical data for projection.")}
-                      </p>
-                    )
-                  ) : (
-                    <div className="mt-3">
-                      <UpgradePrompt
-                        title={freePlanCopy.estimateTitle}
-                        body={freePlanCopy.estimateBody}
-                        variant="strip"
+                  {/* Where this car sits in the range */}
+                  <div className="rounded-xl border border-border bg-surface p-4">
+                    <p className="text-[13px] font-semibold text-foreground">
+                      {position === "upper"
+                        ? t("quiz.pos.upper", "Your answers point to the upper part of the range")
+                        : position === "lower"
+                          ? t("quiz.pos.lower", "Your answers point to the lower part of the range")
+                          : t("quiz.pos.middle", "Your answers point to the middle of the range")}
+                    </p>
+                    <div className="relative mt-3 h-2 rounded-full bg-muted" aria-hidden>
+                      <div
+                        className="absolute inset-y-0 rounded-full bg-primary"
+                        style={{
+                          left: `${((band.from - result.low) / Math.max(1, result.high - result.low)) * 100}%`,
+                          width: `${((band.to - band.from) / Math.max(1, result.high - result.low)) * 100}%`,
+                        }}
                       />
                     </div>
-                  )}
-                </motion.div>
+                    <p className="num mt-2 text-[13px] font-semibold text-foreground">
+                      ≈ {lkr(band.from)} – {lkr(band.to)}
+                    </p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      {t("quiz.posNote", "A rule of thumb from your answers. It doesn't change the market range, which comes from real ads.")}
+                    </p>
+                  </div>
 
-                <motion.div variants={revealItem}>
-                  {fullAccess ? (
-                    <SellerFairAskCard
-                      marketMedian={result.median}
-                      make={form.make}
-                      model={form.model}
-                      year={form.year}
-                    />
-                  ) : (
-                    <ProFeatureLock label={freePlanCopy.estimateTitle}>
-                      <div className="rounded-xl border border-border bg-surface p-5">
-                        <p className="text-sm font-bold text-foreground">{t("estimate.sellerAsk", "Seller fair ask")}</p>
-                        <p className="mt-2 text-[12px] text-muted-foreground">{freePlanCopy.estimateBody}</p>
-                      </div>
-                    </ProFeatureLock>
+                  {flags.length > 0 && (
+                    <ul className="space-y-2">
+                      {flags.map((f) => (
+                        <li key={f.key} className={cn("flex items-start gap-2 rounded-xl border p-3 text-[13px]", f.severity === "high" ? "border-rose-500/30 bg-rose-500/10" : "border-amber-500/30 bg-amber-500/10")}>
+                          <AlertTriangle className={cn("mt-0.5 h-4 w-4 shrink-0", f.severity === "high" ? "text-rose-600" : "text-amber-600")} aria-hidden />
+                          <span className="text-foreground">{FLAG_TEXT[f.key]}</span>
+                        </li>
+                      ))}
+                    </ul>
                   )}
-                </motion.div>
 
-                {/* Methodology */}
-                <motion.div variants={revealItem} className="rounded-xl border border-border bg-surface p-4">
-                  <p className="text-[12px] font-semibold text-muted-foreground">{t("estimate.methodology", "Methodology")}</p>
-                  <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground font-medium">{result.methodology}</p>
-                </motion.div>
-              </motion.div>
-            )}
-          </motion.div>
+                  <p className="flex items-start gap-1.5 text-[12px] text-muted-foreground">
+                    <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <span>
+                      {t("quiz.honesty", "These are asking prices. Final sale prices are usually lower after negotiation.")}{" "}
+                      <a href={howWePriceHref("askingVsSale")} className="font-semibold text-primary-bright">{t("quiz.howLink", "How we score prices")}</a>
+                    </span>
+                  </p>
+
+                  {fullAccess && (
+                    <SellerFairAskCard marketMedian={result.median} make={make} model={model} year={year} />
+                  )}
+                </>
+              )}
+
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Link to={hubHref} className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-primary px-5 text-[13px] font-semibold text-primary-foreground no-underline hover:bg-primary/90">
+                  {t("quiz.seeSimilar", "See similar listings")} <ArrowRight className="h-4 w-4" aria-hidden />
+                </Link>
+                <button type="button" onClick={restart} className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-card px-5 text-[13px] font-semibold text-foreground">
+                  <RotateCcw className="h-4 w-4" aria-hidden /> {t("quiz.restart", "Start over")}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </PageBody>
     </PageCanvas>
