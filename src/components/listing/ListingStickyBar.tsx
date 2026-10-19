@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { ExternalLink } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import { useAppPreferences } from "@/lib/appPreferences";
@@ -29,7 +30,10 @@ export function ListingStickyBar({ priceLkr, badge, href, sourceName, listingId,
   if (!href) return null;
   // Long labels (lease / verify) don't fit beside price + CTA: show a short form.
   const compactBadge = badge.kind === "lease" || badge.kind === "verify" || badge.kind === "none" ? null : badge;
-  return (
+  // Portal to <body>: the route wrapper (.route-stage) has will-change: transform,
+  // which makes it the containing block for position:fixed descendants — rendered
+  // in place, the bar would sit at the bottom of the page instead of the viewport.
+  const bar = (
     <>
       <style>{FLOATING_OFFSET_CSS}</style>
       <div
@@ -68,4 +72,5 @@ export function ListingStickyBar({ priceLkr, badge, href, sourceName, listingId,
       </div>
     </>
   );
+  return typeof document === "undefined" ? bar : createPortal(bar, document.body);
 }
