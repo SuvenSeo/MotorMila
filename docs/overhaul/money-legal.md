@@ -80,5 +80,11 @@ PayHere sandbox end-to-end: create a sandbox merchant at sandbox.payhere.lk, add
 - Some Dealer tier features on the pricing page and one-pager (per-dealer lead inbox, multi-branch view, verified badge on listings) are roadmap. Ship them or soften the copy before selling Yard.
 - Android Pro / Play Billing is untouched (android area).
 - Consent text is duplicated in TS and Python, with no automated equality test.
+- **Test results on this branch:** new backend tests 26/26 pass. Full `pytest` gives 1130 pass and 2 fail, both of which also fail on base `97ffbee`. `npm test`: 465 pass and 30 fail, and the same 30 fail on base `97ffbee` (api / snapshot / fuel-mix / import-era / district-velocity / listing-card tests: an existing snapshot-vs-live mocking issue, not touched here). `tsc` is clean and `npm run build` succeeds.
+- **Merge notes for the integrator:**
+  - `backend/app/routers/__init__.py` is also added by the android branch (theirs holds only a docstring, plus `from .routers import play_billing` in main.py). Keep this branch's version. It is a superset, and `play_billing` imports still work.
+  - backend-sec rewrites the `billing.py` webhook (replay protection) and docstring. This branch changes only `_checkout_url`, `manual_pay_instructions` label set, `CheckoutIntentResponse` and `checkout_intent`, so take both sets of changes.
+  - web-perf touches `src/pages/Pricing.tsx` and `src/lib/pricingContent.ts` (branding / SEO). Expect manual merges there. Keep this branch's prices, `DEALER_TIERS`, `PLAN_PRICES` and `DealerPlans`.
+  - `main.py`: two adjacent `include_router` lines from different branches. Keep all of them.
 - Pre-existing failures on main (not caused by this branch): `test_new_source_parsers::test_carshop_builds_payload_from_current_detail_shape` and `test_public_browse_paths::test_gated_product_paths_stay_private`.
 - Note for backend-sec: `RateLimiter` keys on the bare IP, so every limiter shares one bucket per IP. The new routers namespace their own keys (`_common.scoped_limiter`).
