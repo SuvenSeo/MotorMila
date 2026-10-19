@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { isKnownRoutePath, isNoindexPath } from "@/components/RouteMeta";
+import { isKnownRoutePath, isNoindexPath } from "@/lib/routeIndexing";
 
 // vercel.json no longer rewrites *every* path to the SPA (that made unknown
 // URLs soft-404s). Every <Route> in App.tsx must therefore be covered by an
