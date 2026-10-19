@@ -71,6 +71,7 @@ export function ListingImageCarousel({
       <VehicleThumbnail
         src={null}
         alt={alt}
+        priority={priority}
         className={`h-full w-full object-cover${imageClassName ? ` ${imageClassName}` : ""}`}
       />
     );

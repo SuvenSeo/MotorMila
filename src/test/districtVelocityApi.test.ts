@@ -143,48 +143,22 @@ describe("getDistrictVelocity API helper", () => {
     expect(data.points).toHaveLength(0);
   });
 
-  it("retries district-velocity once after a transient 500", async () => {
-    vi.useFakeTimers();
-    const mockPayload = {
-      points: [
-        {
-          district: "Colombo",
-          lat: 6.9271,
-          lng: 79.8612,
-          listing_count: 10,
-          new_7d_count: 2,
-          velocity_score: 0.2,
-        },
-      ],
-      generated_at: "2026-04-19T12:00:00Z",
-    };
-
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        statusText: "Internal Server Error",
-        text: async () => "error on our side",
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockPayload,
-      });
+  it("fails fast on a 500 and short-circuits further live calls (snapshot mode)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      statusText: "Internal Server Error",
+      text: async () => "error on our side",
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     const api = await import("@/services/api");
-    const pending = (
-      api as Record<string, unknown> & {
-        getDistrictVelocity: () => Promise<{ points: unknown[] }>;
-      }
-    ).getDistrictVelocity();
+    await expect(api.getDistrictVelocity()).rejects.toMatchObject({ status: 500 });
+    // No retry loop on a broken backend: one call, then the breaker is open.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(api.isLiveApiDegraded()).toBe(true);
 
-    await vi.advanceTimersByTimeAsync(1500);
-    const data = await pending;
-
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(data.points).toHaveLength(1);
-    vi.useRealTimers();
+    await expect(api.getDistrictVelocity()).rejects.toMatchObject({ status: 503 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

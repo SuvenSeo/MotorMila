@@ -108,6 +108,8 @@ export function resolveFetchCredentials(apiBase: string = API_BASE): RequestCred
 
 function resolveSnapshotBase() {
   const configured = String(import.meta.env.VITE_SNAPSHOT_BASE_URL || "").trim();
+  // "off" disables snapshot reads entirely (live API only; used by unit tests).
+  if (/^(off|none|false|0)$/i.test(configured)) return "";
   // Same-origin snapshots are the natural default: every deployment bundles
   // public/snapshots/latest, so snapshot reads must not require an explicit base.
   return configured ? configured.replace(/\/+$/, "") : "/snapshots/latest";
