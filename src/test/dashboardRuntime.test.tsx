@@ -198,7 +198,7 @@ describe("Dashboard runtime safety", () => {
     renderDashboard();
 
     expect(
-      await screen.findByText(/listings temporarily unavailable/i),
+      await screen.findByText(/couldn't load listings/i),
     ).toBeInTheDocument();
     expect(screen.queryByText(/no results/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/widen your filters/i)).not.toBeInTheDocument();
@@ -209,6 +209,6 @@ describe("Dashboard runtime safety", () => {
     await waitFor(() => {
       expect(screen.getByText(/no results/i)).toBeInTheDocument();
     });
-    expect(screen.queryByText(/listings temporarily unavailable/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/couldn't load listings/i)).not.toBeInTheDocument();
   });
 });

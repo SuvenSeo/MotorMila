@@ -131,7 +131,7 @@ export const ListingCard = memo(function ListingCard({
       <Link
         to={`/listing/${listing.id}`}
         aria-label={t("listingCard.openAria", "Open {title}", { title: listingTitle || "vehicle listing" })}
-        className="absolute inset-0 z-10 rounded-3xl"
+        className="absolute inset-0 z-10 rounded-3xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       />
 
       <div className="pointer-events-none relative z-20 flex h-full flex-col">
@@ -144,7 +144,7 @@ export const ListingCard = memo(function ListingCard({
             source={listing.source}
             priority={priority}
             className="h-full w-full"
-            imageClassName="transition-transform duration-[800ms] ease-out group-hover:scale-[1.08]"
+            imageClassName="transition-transform duration-700 ease-out group-hover:scale-[1.06] motion-reduce:transform-none"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/82 via-black/25 to-transparent" />
 

@@ -515,7 +515,12 @@ export default function ListingDetail() {
 
               return (
                 <motion.div variants={revealItem} className="space-y-4">
-                  <h2 className="text-[12px] font-semibold text-muted-foreground">{t("listing.ownershipPlanning", "Ownership planning")}</h2>
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <h2 className="text-[12px] font-semibold text-muted-foreground">{t("listing.ownershipPlanning", "Ownership planning")}</h2>
+                    <Link to="/afford" className="text-[12px] font-semibold text-primary no-underline hover:underline">
+                      {t("listing.whatCanIAfford", "What else fits my budget?")}
+                    </Link>
+                  </div>
 
                   <CashToOwnStrip
                     priceLkr={listingPrice}

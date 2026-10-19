@@ -30,7 +30,7 @@ function escapeSvgText(value: string): string {
  * slow or blocked source never shows a blank tile) and as the final image when
  * the source refuses to serve it (riyasewana hot-link 403s, proxy 401s).
  */
-export function createFallbackThumbnailDataUri(label: string, source?: string | null): string {
+function createFallbackThumbnailDataUri(label: string, source?: string | null): string {
   const safeLabel = escapeSvgText(String(label || "Vehicle").trim().slice(0, 32) || "Vehicle");
   const sourceName = formatSourceName(source);
   const sourceLine = escapeSvgText(sourceName ? `Photos on ${sourceName}` : "Photo unavailable");
