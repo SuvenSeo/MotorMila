@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.ev
 
+import lk.motormila.app.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -73,7 +75,7 @@ fun EvChargersScreen(
                         )
                     }
                     item {
-                        Text("District", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MotormilaSecondaryText)
+                        Text(stringResource(R.string.ui_alerts_district), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MotormilaSecondaryText)
                         Spacer(Modifier.height(6.dp))
                         Row(
                             Modifier.horizontalScroll(rememberScrollState()),
@@ -90,7 +92,7 @@ fun EvChargersScreen(
                         }
                     }
                     item {
-                        Text("Radius", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MotormilaSecondaryText)
+                        Text(stringResource(R.string.ui_ev_radius), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MotormilaSecondaryText)
                         Spacer(Modifier.height(6.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             RadiusKm.forEach { km ->
@@ -106,7 +108,7 @@ fun EvChargersScreen(
                     if (state.stations.isEmpty()) {
                         item {
                             MotormilaSurface {
-                                Text("No chargers in this radius.", color = MotormilaSecondaryText)
+                                Text(stringResource(R.string.ui_ev_no_chargers_in_this_radius), color = MotormilaSecondaryText)
                             }
                         }
                     }

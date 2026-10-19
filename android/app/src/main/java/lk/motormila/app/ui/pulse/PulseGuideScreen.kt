@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.pulse
 
+import lk.motormila.app.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -41,7 +43,7 @@ fun PulseGuideScreen(
                     .padding(24.dp),
                 verticalArrangement = Arrangement.Center,
             ) {
-                Text("Guide not found", fontWeight = FontWeight.SemiBold, fontSize = 20.sp, color = MotormilaOnSurface)
+                Text(stringResource(R.string.ui_pulse_guide_not_found), fontWeight = FontWeight.SemiBold, fontSize = 20.sp, color = MotormilaOnSurface)
                 Spacer(Modifier.height(8.dp))
                 Text(
                     "That pulse guide key is not in the in-app catalog.",
@@ -74,21 +76,21 @@ fun PulseGuideScreen(
                 Text(guide.summary, fontSize = 14.sp, lineHeight = 21.sp, color = MotormilaSecondaryText)
             }
             MotormilaSurface(modifier = Modifier.motormilaReveal(delayMillis = 80)) {
-                Text("WHY IT MATTERS", fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp, color = MotormilaPrimaryBright)
+                Text(stringResource(R.string.ui_pulse_why_it_matters), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp, color = MotormilaPrimaryBright)
                 Spacer(Modifier.height(8.dp))
                 guide.whyItMatters.forEach {
                     Text("  ·  $it", fontSize = 14.sp, lineHeight = 21.sp, color = MotormilaOnSurface, modifier = Modifier.padding(vertical = 4.dp))
                 }
             }
             MotormilaSurface(modifier = Modifier.motormilaReveal(delayMillis = 140)) {
-                Text("HOW WE READ IT", fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp, color = MotormilaPrimaryBright)
+                Text(stringResource(R.string.ui_pulse_how_we_read_it), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp, color = MotormilaPrimaryBright)
                 Spacer(Modifier.height(8.dp))
                 guide.howWeReadIt.forEach {
                     Text("  ·  $it", fontSize = 14.sp, lineHeight = 21.sp, color = MotormilaOnSurface, modifier = Modifier.padding(vertical = 4.dp))
                 }
             }
             MotormilaSurface(highlighted = true, modifier = Modifier.motormilaReveal(delayMillis = 200)) {
-                Text("DEALER TIP", fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp, color = MotormilaPrimaryBright)
+                Text(stringResource(R.string.ui_pulse_dealer_tip), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp, color = MotormilaPrimaryBright)
                 Spacer(Modifier.height(8.dp))
                 Text(guide.dealerTip, fontSize = 14.sp, lineHeight = 22.sp, color = MotormilaOnSurface)
             }

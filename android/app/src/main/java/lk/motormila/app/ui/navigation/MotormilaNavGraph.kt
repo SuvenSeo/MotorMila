@@ -199,6 +199,7 @@ fun MotormilaNavGraph(
                         downloading = updateState.downloading,
                         onUpdate = { updateViewModel.downloadAndInstall(update) },
                         onDismiss = { updateViewModel.dismiss() },
+                        installPermissionRequested = updateState.installPermissionRequested,
                     )
                 }
                 MotormilaPredictiveBackTransform(
@@ -767,7 +768,9 @@ private fun SplashGate(
     var sessionReady by remember { mutableStateOf(false) }
     var splashDone by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        val session = sessionStore.snapshot()
+        // rehydrate() (not snapshot()) primes the interceptor's token and
+        // drops an expired session before any screen fires a request.
+        val session = runCatching { sessionStore.rehydrate() }.getOrNull()
         loggedIn = session != null && session.token.isNotBlank()
         sessionReady = true
     }
@@ -777,4 +780,4 @@ private fun SplashGate(
     }
 }
 
-private const val SUPPORT_MAILTO = "mailto:suvenseoras@gmail.com"
+private const val SUPPORT_MAILTO = lk.motormila.app.core.SupportContact.MAILTO

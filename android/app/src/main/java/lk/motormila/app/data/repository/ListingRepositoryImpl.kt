@@ -48,10 +48,23 @@ class ListingRepositoryImpl @Inject constructor(
     @IoDispatcher private val io: CoroutineDispatcher,
 ) : ListingRepository {
 
+    private val _pagingFromSnapshot = kotlinx.coroutines.flow.MutableStateFlow(false)
+    override val pagingFromSnapshot: kotlinx.coroutines.flow.StateFlow<Boolean> = _pagingFromSnapshot
+
     fun paging(query: ListingQuery, cached: Boolean): Flow<PagingData<Listing>> =
         if (!cached) {
             Pager(PagingConfig(pageSize = 20, enablePlaceholders = false)) {
-                ListingPagingSource(api, query)
+                ListingPagingSource(
+                    api = api,
+                    query = query,
+                    // Backend outage: page 1 falls back to the public snapshot
+                    // (same filter as searchPage) instead of a dead Search/Best Picks.
+                    snapshotFallback = {
+                        filterSnapshotListings(snapshots.liveMarket().latestListings, query)
+                            .map { it.toDomain() }
+                    },
+                    onSourceChanged = { fromSnapshot -> _pagingFromSnapshot.value = fromSnapshot },
+                )
             }.flow
         } else {
             @OptIn(ExperimentalPagingApi::class)

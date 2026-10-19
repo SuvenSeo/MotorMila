@@ -3,26 +3,29 @@ package lk.motormila.app.core.network
 import javax.inject.Inject
 import javax.inject.Provider
 import javax.inject.Singleton
+import lk.motormila.app.BuildConfig
 import lk.motormila.app.data.local.datastore.SessionStore
+import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
 import okhttp3.Response
 
 /**
- * Adds `Authorization: Bearer <token>` to every request when a token exists.
+ * Adds `Authorization: Bearer <token>` to MotorMila API requests only.
  *
- * Token sourcing (fast path first):
- * 1. In-memory `@Volatile` [cachedToken] — updated synchronously by
- *    [lk.motormila.app.data.repository.AuthRepositoryImpl] on login/logout/restore,
- *    so no DataStore read happens on the network thread.
- * 2. [SessionStore.cachedToken] snapshot (same in-memory value, survives process death
- *    via DataStore re-hydration at startup).
+ * - Single token source: [SessionStore.tokenForRequest], which restores the
+ *   persisted session on first use (cold start) before the first request
+ *   leaves the device.
+ * - Host allow-list: the bearer is attached only when the request host is the
+ *   configured API host ([BuildConfig.BASE_URL]). Image CDNs, the snapshot CDN
+ *   and any other third party never see the JWT.
+ * - On HTTP 401 **with a bearer token** the in-memory token is dropped at once
+ *   and [AuthEventBus] is notified; [lk.motormila.app.MotormilaApp] clears the
+ *   persisted session and the nav graph routes to Login. Anonymous 401s (gated
+ *   product routes while browsing) do not force re-login.
  *
  * [Provider] indirection breaks the Hilt cycle:
  * OkHttp -> Interceptor -> SessionStore -/-> ApiService -> OkHttp.
- *
- * On HTTP 401 **with a bearer token**, [AuthEventBus] is notified so the UI
- * can send the user to Login. Anonymous 401s (gated product routes while
- * browsing) still propagate to repositories but do not force re-login.
  */
 @Singleton
 class AuthInterceptor @Inject constructor(
@@ -30,38 +33,40 @@ class AuthInterceptor @Inject constructor(
     private val authEventBus: AuthEventBus,
 ) : Interceptor {
 
-    @Volatile
-    var cachedToken: String? = null
-        private set
+    private val apiHost: String? = BuildConfig.BASE_URL.toHttpUrlOrNull()?.host
 
-    /** Called by AuthRepositoryImpl immediately after login/logout/restore. */
+    /**
+     * Kept for call-site compatibility with AuthRepositoryImpl. The session
+     * store is the single source of truth; a null clears the in-memory token.
+     */
     fun updateToken(token: String?) {
-        cachedToken = token
+        if (token == null) runCatching { sessionStore.get().invalidateCachedToken() }
     }
 
     override fun intercept(chain: Interceptor.Chain): Response {
-        val token = cachedToken ?: runCatching { sessionStore.get().cachedToken }.getOrNull()
-        if (cachedToken == null && token != null) cachedToken = token
-
-        val request = if (!token.isNullOrBlank()) {
-            chain.request().newBuilder()
-                .header("Authorization", "Bearer $token")
-                .build()
+        val original = chain.request()
+        val token = if (isApiHost(original.url, apiHost)) {
+            runCatching { sessionStore.get().tokenForRequest() }.getOrNull()
         } else {
-            chain.request()
+            null
+        }
+        val request = if (!token.isNullOrBlank()) {
+            original.newBuilder().header("Authorization", "Bearer $token").build()
+        } else {
+            original
         }
         val response = chain.proceed(request)
         if (shouldForceReLogin(hadBearerToken = !token.isNullOrBlank(), statusCode = response.code)) {
-            // Drop the dead token from the in-memory cache so the next request
-            // cannot resurrect a revoked session. The DataStore clear happens
-            // in AuthViewModel / session observer when AuthEvent.Unauthorized
-            // lands (clear() is suspend and this interceptor is blocking).
-            updateToken(null)
+            runCatching { sessionStore.get().invalidateCachedToken() }
             authEventBus.post(AuthEvent.Unauthorized(request.url.encodedPath))
         }
         return response
     }
 }
+
+/** Bearer only for the exact MotorMila API host over HTTPS (or debug cleartext to the same host). */
+internal fun isApiHost(url: HttpUrl, apiHost: String?): Boolean =
+    apiHost != null && url.host.equals(apiHost, ignoreCase = true)
 
 /**
  * Only a rejected session token is a re-login event. Anonymous 401s are

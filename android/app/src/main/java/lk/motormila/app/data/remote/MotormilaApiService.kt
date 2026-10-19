@@ -113,13 +113,27 @@ import lk.motormila.app.data.remote.dto.AdminUsersResponseDto
 import lk.motormila.app.data.remote.dto.AlertChannelsUpdateDto
 import lk.motormila.app.data.remote.dto.SelfSignupRequestDto
 import lk.motormila.app.data.remote.dto.SelfSignupStatusDto
+import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.HTTP
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
+
+/**
+ * Account deletion route (backend-sec adds it). Single constant so the path
+ * can be changed in one place: DELETE {BASE_URL}/auth/me.
+ */
+const val ACCOUNT_DELETE_PATH = "auth/me"
+
+/** Server-side Google Play purchase verification (backend/app/routers/play_billing.py). */
+/** Public web page for deleting an account without the app (Play Data safety URL). */
+const val WEB_DELETE_ACCOUNT_URL = "https://motormila.pages.dev/delete-account"
+
+const val PLAY_VERIFY_PATH = "billing/play/verify"
 
 /**
  * Full Motormila backend contract. Base = BuildConfig.BASE_URL ("/api/v1").
@@ -151,6 +165,12 @@ interface MotormilaApiService {
 
     @POST("auth/logout")
     suspend fun logout(): OkResponse
+
+    /** Permanently deletes the signed-in account (Play account-deletion policy). */
+    @HTTP(method = "DELETE", path = ACCOUNT_DELETE_PATH, hasBody = true)
+    suspend fun deleteAccount(
+        @Body body: lk.motormila.app.data.remote.dto.DeleteAccountRequestDto,
+    ): Response<Unit>
 
     // -------------------------------------------------------------- listings
     @GET("listings")
@@ -451,6 +471,12 @@ interface MotormilaApiService {
     // ---------------------------------------------------------------- billing
     @POST("billing/checkout-intent")
     suspend fun checkoutIntent(@Body body: CheckoutIntentRequestDto): CheckoutIntentResponseDto
+
+    /** Verify a Play purchase token server-side; the server grants the plan + acknowledges. */
+    @POST(PLAY_VERIFY_PATH)
+    suspend fun verifyPlayPurchase(
+        @Body body: lk.motormila.app.data.remote.dto.PlayVerifyRequestDto,
+    ): lk.motormila.app.data.remote.dto.PlayVerifyResponseDto
 
     // ------------------------------------------------------------------ admin
     @GET("admin/overview")

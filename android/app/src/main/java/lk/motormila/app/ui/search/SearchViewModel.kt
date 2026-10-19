@@ -67,6 +67,9 @@ class SearchViewModel @Inject constructor(
     private val queryFlow = MutableStateFlow("")
     private val pagingKey = MutableStateFlow(ListingQuery())
 
+    /** True while results come from the offline snapshot (backend down). */
+    val fromSnapshot: kotlinx.coroutines.flow.StateFlow<Boolean> get() = getListingsPaging.fromSnapshot
+
     /** Paging3 stream; re-created on query/filter/sort change, cached in VM scope. */
     val paging: Flow<PagingData<Listing>> = pagingKey
         .flatMapLatest { getListingsPaging(it) }

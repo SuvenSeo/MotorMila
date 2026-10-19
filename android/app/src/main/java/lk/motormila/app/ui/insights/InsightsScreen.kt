@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.insights
 
+import lk.motormila.app.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -329,11 +331,11 @@ private fun TrendsTab(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             Box(Modifier.size(8.dp).clip(CircleShape).background(MotormilaPrimaryBright))
-                            Text("Median", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, color = MotormilaSecondaryText))
+                            Text(stringResource(R.string.ui_dealer_median), style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, color = MotormilaSecondaryText))
                         }
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             Box(Modifier.size(8.dp).clip(MotormilaRadius.pill).background(MotormilaPrimary.copy(alpha = 0.25f)))
-                            Text("±10% Band", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, color = MotormilaSecondaryText))
+                            Text(stringResource(R.string.ui_insights_10_band), style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, color = MotormilaSecondaryText))
                         }
                     }
                 }
@@ -834,9 +836,9 @@ private fun EvTab(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Icon(Icons.Filled.BatteryChargingFull, contentDescription = null, tint = MotormilaPrimaryBright)
-                            Text("Battery Health & Degradation", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
+                            Text(stringResource(R.string.ui_insights_battery_health_degradation), style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
                         }
-                        Text("01 • SOH", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = MotormilaPrimaryBright))
+                        Text(stringResource(R.string.ui_insights_01_soh), style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = MotormilaPrimaryBright))
                     }
                     Text(
                         text = "Insist on an OBD-II diagnostic report before placing a deposit. Maintain a 20%–30% reserve buffer for daily commuting. Japanese domestic imports (Leaf, e-Note, Ariya) degrade at ~2.1% per year under tropical humidity.",
@@ -853,9 +855,9 @@ private fun EvTab(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Icon(Icons.Filled.Shield, contentDescription = null, tint = MotormilaGood)
-                            Text("Duty & Import Concessions", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
+                            Text(stringResource(R.string.ui_insights_duty_import_concessions), style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
                         }
-                        Text("02 • TARIFF", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = MotormilaGood))
+                        Text(stringResource(R.string.ui_insights_02_tariff), style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = MotormilaGood))
                     }
                     Text(
                         text = "Customs duty on battery electric vehicles (BEVs) under 100kW motor capacity carries preferential rates over ICE equivalents. Zero luxury tax applies below statutory CIF thresholds. Confirm HS code customs gazette classification before clearing.",
@@ -872,9 +874,9 @@ private fun EvTab(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Icon(Icons.Filled.Power, contentDescription = null, tint = MotormilaWarn)
-                            Text("Home vs Public Charging Fit", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
+                            Text(stringResource(R.string.ui_insights_home_vs_public_charging_fit), style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
                         }
-                        Text("03 • RANGE", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = MotormilaWarn))
+                        Text(stringResource(R.string.ui_insights_03_range), style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = MotormilaWarn))
                     }
                     Text(
                         text = "Overnight 7kW AC home charging delivers ~LKR 6/km running cost (off-peak tariff) versus LKR 28/km for petrol. Public DC fast charging covers Expressway E01/E02 corridors and Kandy/Galle inter-city corridors.",

@@ -38,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -339,6 +340,7 @@ fun OfflineBanner(
     modifier: Modifier = Modifier,
     onDismiss: (() -> Unit)? = null,
     onRetry: (() -> Unit)? = null,
+    text: String? = null,
 ) {
     if (!visible) return
     Row(
@@ -355,7 +357,7 @@ fun OfflineBanner(
         Icon(Icons.Filled.WifiOff, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(8.dp))
         Text(
-            "Offline — showing cached data",
+            text ?: stringResource(lk.motormila.app.R.string.offline_cached_data),
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSecondaryContainer,

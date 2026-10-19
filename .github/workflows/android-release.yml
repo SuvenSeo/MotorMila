@@ -1,8 +1,9 @@
 # Publishes an installable Motormila APK as a GitHub Release.
 # Trigger: git tag android-v* (e.g. android-v1.0.0) or workflow_dispatch.
 #
-# The APK is sideload-signed (SDK debug key unless ANDROID_KEYSTORE_* secrets
-# are set). Not for Play Store. Enable "install unknown apps" on the device.
+# The APK is the "direct" (sideload) flavor, signed ONLY with the
+# ANDROID_KEYSTORE_* secrets (the run fails without them). The Play build is
+# the "play" flavor AAB (bundlePlayRelease), uploaded to Play Console manually.
 name: Android Release
 
 on:
@@ -69,32 +70,19 @@ jobs:
           ANDROID_KEYSTORE_FILE: ${{ secrets.ANDROID_KEYSTORE_FILE }}
         run: |
           set -euo pipefail
-          # The committed android/ci-signing.keystore gives every release the
-          # same signature, so in-app updates install over previous versions.
-          # (Before 1.5.1 a fresh debug key was generated per CI run, which
-          # blocked in-place upgrades — do not reintroduce key generation.)
-          #
-          # Stage the effective identity to one fixed path and hand that PATH
-          # to Gradle (blank-tolerant in build.gradle.kts). Previously the
-          # secret branch only echoed and never materialized the keystore, so
-          # a secret-keyed release would have silently shipped with the legacy
-          # signature.
+          # 2026-10 overhaul: the committed public keystore was removed. The
+          # release identity comes ONLY from the ANDROID_KEYSTORE_* secrets;
+          # without them the release fails here (and Gradle's signing guard
+          # would fail it again). See docs/overhaul/android.md "Signing".
           mkdir -p "$HOME/.android"
-          KEYSTORE="$HOME/.android/motormila-sideload.keystore"
-          if [ -n "${ANDROID_KEYSTORE_FILE:-}" ]; then
-            printf '%s' "$ANDROID_KEYSTORE_FILE" | base64 --decode > "$KEYSTORE"
-            echo "ANDROID_KEYSTORE_FILE secret present: using secret identity."
-          else
-            test -f android/ci-signing.keystore || {
-              echo "ERROR: android/ci-signing.keystore missing — release would get a new signature and block in-place updates"
-              exit 1
-            }
-            cp android/ci-signing.keystore "$KEYSTORE"
-            echo "WARNING: using committed sideload keystore (public, shared dev identity)."
-            echo "Migrate to ANDROID_KEYSTORE_FILE; see docs/ANDROID_SIGNING.md."
+          KEYSTORE="$HOME/.android/motormila-release.keystore"
+          if [ -z "${ANDROID_KEYSTORE_FILE:-}" ]; then
+            echo "ERROR: ANDROID_KEYSTORE_FILE secret is not set. Release signing is env/secret-only (docs/overhaul/android.md)."
+            exit 1
           fi
+          printf '%s' "$ANDROID_KEYSTORE_FILE" | base64 --decode > "$KEYSTORE"
           echo "MOTORMILA_KEYSTORE_PATH=$KEYSTORE" >> "$GITHUB_ENV"
-          echo "Using stable sideload signature."
+          echo "Using the ANDROID_KEYSTORE_FILE secret identity."
 
       - name: Assemble release APK
         env:
@@ -102,17 +90,18 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew :app:assembleRelease --stacktrace
+        # Sideload channel = the "direct" flavor (self-updater + SHA-256 check).
+        run: ./gradlew :app:assembleDirectRelease --stacktrace
 
       - name: Stage APK
         id: apk
         working-directory: .
         run: |
           set -euo pipefail
-          SRC="android/app/build/outputs/apk/release/app-release.apk"
+          SRC="android/app/build/outputs/apk/direct/release/app-direct-release.apk"
           if [[ ! -f "$SRC" ]]; then
             echo "ERROR: $SRC missing"
-            ls -la android/app/build/outputs/apk/release || true
+            ls -la android/app/build/outputs/apk/direct/release || true
             exit 1
           fi
           VERSION="$(echo "${GITHUB_REF_NAME}" | sed 's/^android-v//')"
@@ -147,7 +136,7 @@ jobs:
             echo
             echo "- Install: download the APK, enable **Install unknown apps**, open the file."
             echo "- API: production Hugging Face backend."
-            echo "- Signed with the stable Motormila sideload key (not a Play Store upload key). Future releases install over this one without uninstalling."
+            echo "- Signed with the MotorMila release key (from repository secrets). If you installed a build signed with the old public sideload key (1.6.5 or earlier), uninstall it once before installing this one."
             echo "- Guest browse works without signing in; Pro / alerts / dealer still need an invite."
             echo
             echo "Built from \`${GITHUB_SHA}\`."
@@ -191,6 +180,8 @@ jobs:
           # in-app updater via the site manifest below.
           APK_URL="https://pub-f15911ef9a914db9a44e1fd6b47dfe4e.r2.dev/app/${{ steps.apk.outputs.name }}"
           PUBLISHED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          # The in-app updater refuses to install without a matching SHA-256.
+          APK_SHA256="$(sha256sum "${{ steps.apk.outputs.path }}" | cut -d' ' -f1)"
           mkdir -p android public/app
           for DEST in android/latest-release.json public/app/latest-release.json; do
           cat > "$DEST" <<EOF
@@ -199,6 +190,7 @@ jobs:
             "version_code": ${VERSION_CODE},
             "apk_url": "${APK_URL}",
             "published_at": "${PUBLISHED_AT}",
+            "sha256": "${APK_SHA256}",
             "tag": "${GITHUB_REF_NAME}"
           }
           EOF

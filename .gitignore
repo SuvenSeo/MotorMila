@@ -100,7 +100,6 @@ android/*.status
 # git rm --cached it after the secret-keyed release reaches all devices.
 *.keystore
 *.jks
-!android/ci-signing.keystore
 
 # Database snapshots & checkpoints (contain live data — never commit)
 backend/db_snapshots/

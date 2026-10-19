@@ -1,4 +1,3 @@
-import java.util.Properties
 import org.gradle.api.tasks.testing.Test
 
 plugins {
@@ -11,20 +10,70 @@ plugins {
     alias(libs.plugins.paparazzi)
 }
 
+data class ReleaseSigning(
+    val storeFile: String,
+    val storePassword: String,
+    val keyAlias: String,
+    val keyPassword: String,
+)
+
+fun envOrNull(name: String): String? =
+    System.getenv(name)?.takeIf { it.isNotBlank() }
+
+/** All four values present and the keystore file exists, else null. */
+fun signingFromEnv(prefix: String): ReleaseSigning? {
+    val file = envOrNull("${prefix}_KEYSTORE_FILE") ?: return null
+    val storePassword = envOrNull("${prefix}_KEYSTORE_PASSWORD") ?: return null
+    val alias = envOrNull("${prefix}_KEY_ALIAS") ?: return null
+    val keyPassword = envOrNull("${prefix}_KEY_PASSWORD") ?: storePassword
+    if (!File(file).isFile) return null
+    return ReleaseSigning(file, storePassword, alias, keyPassword)
+}
+
+val directSigning: ReleaseSigning? = signingFromEnv("ANDROID")
+val playSigning: ReleaseSigning? = signingFromEnv("PLAY_UPLOAD") ?: directSigning
+val allowUnsignedRelease: Boolean =
+    (findProperty("motormilaAllowUnsignedRelease") as String?)?.toBoolean() == true
+
 android {
     namespace = "lk.motormila.app"
-    compileSdk = 35
+    // API 36 (Android 16): Play requires targetSdk 36 for updates from
+    // 1 Nov 2026 (extension deadline). AGP 8.9.1+ supports compileSdk 36.
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "lk.motormila.app"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 17
         versionName = "1.6.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
+        }
+    }
+
+    // Two distribution channels (see docs/overhaul/android.md):
+    // - play:   Google Play. Play Billing only; no self-updater, no
+    //           REQUEST_INSTALL_PACKAGES, no external (bank/WhatsApp/web) checkout.
+    // - direct: GitHub/R2 sideload. Self-updater with SHA-256 verification and
+    //           the external checkout path (Play Billing is unavailable there).
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("play") {
+            dimension = "distribution"
+            buildConfigField("String", "DISTRIBUTION", "\"play\"")
+            buildConfigField("boolean", "SELF_UPDATE_ENABLED", "false")
+            buildConfigField("boolean", "EXTERNAL_CHECKOUT_ENABLED", "false")
+            buildConfigField("boolean", "PLAY_BILLING_ENABLED", "true")
+        }
+        create("direct") {
+            dimension = "distribution"
+            buildConfigField("String", "DISTRIBUTION", "\"direct\"")
+            buildConfigField("boolean", "SELF_UPDATE_ENABLED", "true")
+            buildConfigField("boolean", "EXTERNAL_CHECKOUT_ENABLED", "true")
+            buildConfigField("boolean", "PLAY_BILLING_ENABLED", "false")
         }
     }
 
@@ -43,28 +92,37 @@ android {
         buildConfig = true
     }
 
+    // Release signing comes ONLY from the environment (GitHub Actions secrets
+    // or a local shell). Nothing secret is committed. Missing values make any
+    // release packaging task fail with a clear message (see bottom of file),
+    // unless -PmotormilaAllowUnsignedRelease=true is passed (CI R8 smoke build
+    // that is never published).
+    //   ANDROID_KEYSTORE_FILE      path to the keystore file (CI decodes the
+    //                              base64 secret to a temp path first)
+    //   ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+    // Play upload key (optional, falls back to the ANDROID_* values):
+    //   PLAY_UPLOAD_KEYSTORE_FILE, PLAY_UPLOAD_KEYSTORE_PASSWORD,
+    //   PLAY_UPLOAD_KEY_ALIAS, PLAY_UPLOAD_KEY_PASSWORD
     signingConfigs {
-        // Sideload / GitHub Release preview. Resolution order:
-        // 1. ANDROID_KEYSTORE_FILE env — a keystore FILE PATH staged by CI
-        //    (workflows base64-decode the ANDROID_KEYSTORE_FILE secret to a
-        //    fixed path first; the raw base64 blob is never passed here)
-        // 2. the committed ci-signing.keystore — one stable signature so every
-        //    release installs over the previous one (in-app self-update works)
-        // 3. the local SDK debug key (machine-local fallback)
-        create("sideload") {
-            // Blank-tolerant: CI passes unset secrets to Gradle as empty
-            // strings, and file("") throws IllegalArgumentException at
-            // configuration time (this broke the 2026-10-06 release build).
-            // Empty == absent for every signing input.
-            fun envOrNull(name: String): String? =
-                providers.environmentVariable(name).orNull?.takeIf { it.isNotBlank() }
-            val committedKey = rootProject.file("ci-signing.keystore").takeIf { it.exists() }
-            storeFile = envOrNull("ANDROID_KEYSTORE_FILE")?.let { file(it) }
-                ?: committedKey
-                ?: file("${System.getProperty("user.home")}/.android/debug.keystore")
-            storePassword = envOrNull("ANDROID_KEYSTORE_PASSWORD") ?: "android"
-            keyAlias = envOrNull("ANDROID_KEY_ALIAS") ?: "androiddebugkey"
-            keyPassword = envOrNull("ANDROID_KEY_PASSWORD") ?: "android"
+        directSigning?.let { cfg ->
+            create("directRelease") {
+                storeFile = file(cfg.storeFile)
+                storePassword = cfg.storePassword
+                keyAlias = cfg.keyAlias
+                keyPassword = cfg.keyPassword
+                enableV2Signing = true
+                enableV3Signing = true
+            }
+        }
+        playSigning?.let { cfg ->
+            create("playRelease") {
+                storeFile = file(cfg.storeFile)
+                storePassword = cfg.storePassword
+                keyAlias = cfg.keyAlias
+                keyPassword = cfg.keyPassword
+                enableV2Signing = true
+                enableV3Signing = true
+            }
         }
     }
 
@@ -91,9 +149,10 @@ android {
                 "BASE_URL",
                 "\"https://seo292-vehicle-platform-backend.hf.space/api/v1\"",
             )
-            signingConfig = signingConfigs.getByName("sideload")
-            isMinifyEnabled = false // v1: avoid R8 risk; proguard file kept for v2
-            isShrinkResources = false
+            // Per-flavor signing (env only) is wired below the android block.
+            signingConfig = null
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -129,6 +188,43 @@ android {
         testLogging {
             showStandardStreams = true
         }
+    }
+}
+
+ksp {
+    // Exported Room schemas back the migration tests (commit app/schemas/).
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+// Wire per-flavor release signing.
+android.productFlavors.getByName("direct").signingConfig =
+    android.signingConfigs.findByName("directRelease")
+android.productFlavors.getByName("play").signingConfig =
+    android.signingConfigs.findByName("playRelease")
+
+// Fail release packaging loudly when signing env is missing (never fall back
+// to a committed/public key again). Debug and unit-test tasks are unaffected.
+gradle.taskGraph.whenReady {
+    val releaseTaskRe = Regex("^(assemble|bundle|package)(Play|Direct)?Release$")
+    val releaseTasks = allTasks.filter { it.project == project && releaseTaskRe.matches(it.name) }
+    if (releaseTasks.isEmpty() || allowUnsignedRelease) return@whenReady
+    val needsDirect = releaseTasks.any { !it.name.contains("Play") }
+    val needsPlay = releaseTasks.any { !it.name.contains("Direct") }
+    val missing = buildList {
+        if (needsDirect && directSigning == null) {
+            add("direct (ANDROID_KEYSTORE_FILE, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD)")
+        }
+        if (needsPlay && playSigning == null) {
+            add("play (PLAY_UPLOAD_KEYSTORE_* or ANDROID_KEYSTORE_*)")
+        }
+    }
+    if (missing.isNotEmpty()) {
+        throw GradleException(
+            "MotorMila release signing is not configured for: ${missing.joinToString("; ")}. " +
+                "Set the env vars / GitHub secrets (see docs/overhaul/android.md, 'Signing'). " +
+                "The committed sideload keystore was removed on purpose. " +
+                "For a non-publishable R8 smoke build pass -PmotormilaAllowUnsignedRelease=true.",
+        )
     }
 }
 

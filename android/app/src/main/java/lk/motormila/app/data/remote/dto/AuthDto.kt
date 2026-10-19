@@ -83,3 +83,9 @@ data class InvitePreviewDto(
 data class OkResponse(
     val ok: Boolean = true,
 )
+
+/** DELETE /auth/me body: optional password re-check before hard delete. */
+@Serializable
+data class DeleteAccountRequestDto(
+    val password: String? = null,
+)

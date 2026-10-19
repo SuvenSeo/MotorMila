@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.components
 
+import lk.motormila.app.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -110,7 +112,7 @@ fun FilterSheet(
                 .padding(horizontal = 20.dp)
                 .navigationBarsPadding(),
         ) {
-            Text("Filters", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text(stringResource(R.string.ui_components_filters), fontWeight = FontWeight.Bold, fontSize = 18.sp)
             Spacer(Modifier.height(12.dp))
 
             SectionLabel("Make")

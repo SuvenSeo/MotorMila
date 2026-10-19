@@ -117,6 +117,8 @@ def _manifest_payload() -> Optional[dict]:
             "apk_url": apk_url,
             "notes": None,
             "published_at": data.get("published_at"),
+            # SHA-256 of the APK: the Android updater refuses to install without it.
+            "sha256": data.get("sha256"),
             "source": "site-manifest",
         }
     except Exception as exc:  # noqa: BLE001
