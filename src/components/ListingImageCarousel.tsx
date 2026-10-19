@@ -1,8 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import useEmblaCarousel from "embla-carousel-react";
 import { Camera, ChevronLeft, ChevronRight, Expand } from "lucide-react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { VehicleThumbnail } from "@/components/VehicleThumbnail";
 import { useAppPreferences } from "@/lib/appPreferences";
+import { formatSourceName } from "@/lib/sourceAttribution";
+
+// Lightbox JS + CSS load only when someone taps a photo (low-end Android first).
+const ListingLightbox = lazy(() => import("@/components/listing/ListingLightbox"));
 
 interface ListingImageCarouselProps {
   images: string[];
@@ -15,7 +19,7 @@ interface ListingImageCarouselProps {
   imageClassName?: string;
   /** First-screen images should load eagerly to protect LCP. */
   priority?: boolean;
-  /** Source marketplace, shown on the branded placeholder when a photo can't load. */
+  /** Source marketplace, shown on the branded placeholder and as photo credit. */
   source?: string | null;
 }
 
@@ -24,9 +28,14 @@ function stop(e: React.SyntheticEvent) {
   e.preventDefault();
 }
 
+function prefersReducedMotion(): boolean {
+  return typeof window !== "undefined" && Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
+}
+
 /**
- * Multi-photo carousel for listings. Listings whose scrapers only know the
- * thumbnail render exactly like before (single image, no controls).
+ * Multi-photo carousel for listings (Embla). Single-photo listings render a
+ * plain image with no carousel JS work. Photos are hotlinked from the source
+ * marketplace with credit; nothing is re-hosted.
  */
 export function ListingImageCarousel({
   images,
@@ -39,37 +48,67 @@ export function ListingImageCarousel({
   source,
 }: ListingImageCarouselProps) {
   const { t } = useAppPreferences();
+  const count = images.length;
+  const multi = count > 1;
+  const isDetail = variant === "detail";
+  const reduced = useMemo(prefersReducedMotion, []);
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    // Single-photo listings skip Embla's measuring work entirely.
+    active: multi,
+    loop: multi,
+    // Cards: arrows/dots only so a tap still opens the listing.
+    watchDrag: isDetail && multi,
+    duration: reduced ? 1 : 22,
+  });
   const [index, setIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const touchStartX = useRef<number | null>(null);
-  const count = images.length;
+  const [lightboxRequested, setLightboxRequested] = useState(false);
+  const sourceName = formatSourceName(source);
 
-  const goTo = useCallback(
-    (next: number) => setIndex(((next % count) + count) % count),
-    [count],
-  );
-  const prev = useCallback(() => goTo(index - 1), [goTo, index]);
-  const next = useCallback(() => goTo(index + 1), [goTo, index]);
+  useEffect(() => {
+    if (!emblaApi) return;
+    const onSelect = () => setIndex(emblaApi.selectedScrollSnap());
+    onSelect();
+    emblaApi.on("select", onSelect);
+    emblaApi.on("reInit", onSelect);
+    return () => {
+      emblaApi.off("select", onSelect);
+      emblaApi.off("reInit", onSelect);
+    };
+  }, [emblaApi]);
+
+  const goTo = useCallback((i: number) => emblaApi?.scrollTo(i, reduced), [emblaApi, reduced]);
+  const prev = useCallback(() => emblaApi?.scrollPrev(reduced), [emblaApi, reduced]);
+  const next = useCallback(() => emblaApi?.scrollNext(reduced), [emblaApi, reduced]);
 
   // Reset when the listing changes.
   const imagesKey = images.join("|");
-  useEffect(() => setIndex(0), [imagesKey]);
-
-  // Keyboard navigation (detail only); ignored while typing in a field.
   useEffect(() => {
-    if (variant !== "detail") return;
+    setIndex(0);
+    emblaApi?.reInit();
+    emblaApi?.scrollTo(0, true);
+  }, [imagesKey, emblaApi]);
+
+  // Keyboard navigation (detail only); ignored while typing or in the lightbox.
+  useEffect(() => {
+    if (!isDetail || !multi || lightboxOpen) return;
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
       if (e.key === "ArrowLeft") prev();
       if (e.key === "ArrowRight") next();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [variant, prev, next]);
+  }, [isDetail, multi, lightboxOpen, prev, next]);
+
+  const openLightbox = () => {
+    setLightboxRequested(true);
+    setLightboxOpen(true);
+  };
 
   if (count === 0) {
-    // No usable photo: same branded SVG fallback the single-image path showed.
+    // No usable photo: branded SVG placeholder (full lockup, overlay-safe).
     return (
       <VehicleThumbnail
         src={null}
@@ -80,82 +119,15 @@ export function ListingImageCarousel({
       />
     );
   }
-  const multi = count > 1;
+
   const label = (i: number) =>
     t("listingImage.photoLabel", "Photo {current} of {total}", {
       current: String(i + 1),
       total: String(count),
     });
 
-  const onTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0]?.clientX ?? null;
-  };
-  const onTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current === null) return;
-    const dx = (e.changedTouches[0]?.clientX ?? 0) - touchStartX.current;
-    touchStartX.current = null;
-    if (Math.abs(dx) > 32) {
-      stop(e);
-      if (dx < 0) next();
-      else prev();
-    }
-  };
-
-  const arrows = multi && (
-    <>
-      <button
-        type="button"
-        aria-label={t("listingImage.prev", "Previous photo")}
-        onClick={(e) => {
-          stop(e);
-          prev();
-        }}
-        className="pointer-events-auto absolute left-2 top-1/2 z-30 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/55 text-white opacity-0 backdrop-blur-md transition-all hover:bg-black/80 focus-visible:opacity-100 group-hover:opacity-100 max-sm:opacity-100"
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </button>
-      <button
-        type="button"
-        aria-label={t("listingImage.next", "Next photo")}
-        onClick={(e) => {
-          stop(e);
-          next();
-        }}
-        className="pointer-events-auto absolute right-2 top-1/2 z-30 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/55 text-white opacity-0 backdrop-blur-md transition-all hover:bg-black/80 focus-visible:opacity-100 group-hover:opacity-100 max-sm:opacity-100"
-      >
-        <ChevronRight className="h-4 w-4" />
-      </button>
-    </>
-  );
-
-  // Top-center: the bottom-right corner is occupied by card/detail overlay
-  // badges (deal-score "+N deal", source pill), which this used to overlap.
-  const counter = multi && (
-    <span className="pointer-events-auto absolute left-1/2 top-2.5 z-30 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/10 bg-black/60 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-white backdrop-blur-md">
-      <Camera aria-hidden className="h-3 w-3" />
-      {index + 1}/{count}
-    </span>
-  );
-
-  const dots = multi && variant === "card" && (
-    <span className="pointer-events-auto absolute bottom-2.5 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1">
-      {images.map((_, i) => (
-        <button
-          key={i}
-          type="button"
-          aria-label={label(i)}
-          aria-current={i === index}
-          onClick={(e) => {
-            stop(e);
-            goTo(i);
-          }}
-          className={`h-1.5 rounded-full transition-all ${
-            i === index ? "w-4 bg-white" : "w-1.5 bg-white/45 hover:bg-white/75"
-          }`}
-        />
-      ))}
-    </span>
-  );
+  const arrowClass =
+    "pointer-events-auto absolute top-1/2 z-30 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/55 text-white opacity-0 backdrop-blur-md transition-opacity hover:bg-black/80 focus-visible:opacity-100 group-hover:opacity-100 max-sm:opacity-100";
 
   return (
     <div
@@ -163,53 +135,118 @@ export function ListingImageCarousel({
       aria-roledescription="carousel"
       aria-label={t("listingImage.carousel", "Listing photos")}
       className={className}
-      onTouchStart={variant === "detail" ? onTouchStart : undefined}
-      onTouchEnd={variant === "detail" ? onTouchEnd : undefined}
     >
       <div className="relative h-full w-full overflow-hidden">
-        <div
-          className="flex h-full w-full transition-transform duration-500 ease-apple"
-          style={{ transform: multi ? `translateX(-${index * 100}%)` : undefined }}
-        >
-          {images.map((src, i) => (
-            <div
-              key={`${src}-${i}`}
-              className="h-full w-full shrink-0"
-              aria-hidden={multi && i !== index}
-            >
-              <VehicleThumbnail
-                src={src}
-                listingId={listingId}
-                alt={i === 0 ? alt : `${alt} — ${label(i)}`}
-                source={source}
-                priority={priority && i === 0}
-                className={`h-full w-full object-cover${imageClassName ? ` ${imageClassName}` : ""}`}
-              />
-            </div>
-          ))}
+        <div ref={emblaRef} className="h-full w-full overflow-hidden">
+          <div className="flex h-full w-full touch-pan-y">
+            {images.map((src, i) => (
+              <div
+                key={`${src}-${i}`}
+                className="h-full w-full min-w-0 shrink-0 grow-0 basis-full"
+                aria-hidden={multi && i !== index}
+              >
+                {isDetail ? (
+                  <button
+                    type="button"
+                    className="block h-full w-full cursor-zoom-in"
+                    aria-label={t("listingImage.openPhoto", "Open {label} full screen", { label: label(i) })}
+                    tabIndex={i === index ? 0 : -1}
+                    onClick={openLightbox}
+                  >
+                    <VehicleThumbnail
+                      src={src}
+                      listingId={listingId}
+                      alt={i === 0 ? alt : `${alt} — ${label(i)}`}
+                      source={source}
+                      priority={priority && i === 0}
+                      sizes="(max-width: 1024px) 100vw, 60vw"
+                      className={`h-full w-full object-cover${imageClassName ? ` ${imageClassName}` : ""}`}
+                    />
+                  </button>
+                ) : (
+                  <VehicleThumbnail
+                    src={src}
+                    listingId={listingId}
+                    alt={i === 0 ? alt : `${alt} — ${label(i)}`}
+                    source={source}
+                    priority={priority && i === 0}
+                    className={`h-full w-full object-cover${imageClassName ? ` ${imageClassName}` : ""}`}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
-        {arrows}
-        {counter}
-        {dots}
+        {multi && (
+          <>
+            <button
+              type="button"
+              aria-label={t("listingImage.prev", "Previous photo")}
+              onClick={(e) => {
+                stop(e);
+                prev();
+              }}
+              className={`${arrowClass} left-2`}
+            >
+              <ChevronLeft aria-hidden className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              aria-label={t("listingImage.next", "Next photo")}
+              onClick={(e) => {
+                stop(e);
+                next();
+              }}
+              className={`${arrowClass} right-2`}
+            >
+              <ChevronRight aria-hidden className="h-4 w-4" />
+            </button>
+            {/* Top-centre: bottom corners carry price / deal / source overlays. */}
+            <span className="pointer-events-none absolute left-1/2 top-2.5 z-30 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/10 bg-black/60 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-white backdrop-blur-md">
+              <Camera aria-hidden className="h-3 w-3" />
+              {index + 1}/{count}
+            </span>
+          </>
+        )}
 
-        {variant === "detail" && (
+        {multi && !isDetail && (
+          <span className="pointer-events-auto absolute bottom-12 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1">
+            {images.slice(0, 8).map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                aria-label={label(i)}
+                aria-current={i === index}
+                onClick={(e) => {
+                  stop(e);
+                  goTo(i);
+                }}
+                className={`h-1.5 rounded-full transition-all ${
+                  i === index ? "w-4 bg-white" : "w-1.5 bg-white/45 hover:bg-white/75"
+                }`}
+              />
+            ))}
+          </span>
+        )}
+
+        {isDetail && (
           <button
             type="button"
             aria-label={t("listingImage.expand", "View fullscreen")}
             onClick={(e) => {
               stop(e);
-              setLightboxOpen(true);
+              openLightbox();
             }}
-            className="absolute right-2.5 top-2.5 z-30 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/55 text-white backdrop-blur-md transition-all hover:bg-black/80"
+            className="absolute right-2.5 top-2.5 z-30 flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/55 text-white backdrop-blur-md transition-colors hover:bg-black/80"
           >
-            <Expand className="h-4 w-4" />
+            <Expand aria-hidden className="h-4 w-4" />
           </button>
         )}
       </div>
 
-      {variant === "detail" && multi && (
-        <div className="mt-2 flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label={t("listingImage.thumbs", "Photo thumbnails")}>
+      {isDetail && multi && (
+        <div className="mt-2 flex gap-2 overflow-x-auto px-1 pb-1" role="tablist" aria-label={t("listingImage.thumbs", "Photo thumbnails")}>
           {images.map((src, i) => (
             <button
               key={`thumb-${src}-${i}`}
@@ -218,54 +255,31 @@ export function ListingImageCarousel({
               aria-selected={i === index}
               aria-label={label(i)}
               onClick={() => goTo(i)}
-              className={`relative h-14 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${
+              className={`relative h-14 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition-opacity ${
                 i === index ? "border-primary" : "border-transparent opacity-60 hover:opacity-100"
               }`}
             >
-              <VehicleThumbnail src={src} listingId={listingId} alt="" source={source} className="h-full w-full object-cover" />
+              <VehicleThumbnail src={src} listingId={listingId} alt="" source={source} sizes="80px" className="h-full w-full object-cover" />
             </button>
           ))}
         </div>
       )}
 
-      {variant === "detail" && (
-        <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-          <DialogContent
-            className="max-w-[96vw] border-0 bg-black/95 p-0 sm:max-w-[1100px]"
-            aria-label={t("listingImage.lightbox", "Photo viewer")}
-          >
-            <div className="relative">
-              <img
-                src={images[index]}
-                alt={label(index)}
-                className="max-h-[86vh] w-full object-contain"
-              />
-              {multi && (
-                <>
-                  <button
-                    type="button"
-                    aria-label={t("listingImage.prev", "Previous photo")}
-                    onClick={prev}
-                    className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-md hover:bg-black/85"
-                  >
-                    <ChevronLeft className="h-5 w-5" />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={t("listingImage.next", "Next photo")}
-                    onClick={next}
-                    className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-md hover:bg-black/85"
-                  >
-                    <ChevronRight className="h-5 w-5" />
-                  </button>
-                  <span className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold tabular-nums text-white backdrop-blur-md">
-                    {index + 1} / {count}
-                  </span>
-                </>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
+      {isDetail && lightboxRequested && (
+        <Suspense fallback={null}>
+          <ListingLightbox
+            open={lightboxOpen}
+            index={index}
+            images={images}
+            alt={alt}
+            sourceName={sourceName}
+            creditLabel={sourceName ? t("listingImage.credit", "Photo: {source}", { source: sourceName }) : undefined}
+            onClose={() => setLightboxOpen(false)}
+            onIndexChange={(i) => {
+              if (i !== index) goTo(i);
+            }}
+          />
+        </Suspense>
       )}
     </div>
   );

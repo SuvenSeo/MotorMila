@@ -4,7 +4,7 @@ import {
   ArrowLeft, ExternalLink, MapPin, Calendar,
   Share2, Fuel, Gauge, Settings2, MessageCircle,
   Car as CarIcon, ArrowRight, Zap, Sparkles, ShieldCheck, Clock, Database, AlertTriangle, PlugZap, Scale,
-  Heart
+  Heart, TrendingDown, Layers
 } from 'lucide-react';
 import { getListing, getListingFmv, getListingGeo, getListingHistoryReport, getListingPriceHistory, getListingSafetyResearch, getSimilarListings, formatPrice } from '@/services/api';
 import { TrustCheckPanel } from '@/components/TrustCheckPanel';
@@ -23,7 +23,6 @@ import { NhtsaModelsCard } from '@/components/NhtsaModelsCard';
 import { SafetyResearchCard } from '@/components/SafetyResearchCard';
 import { listingVin } from '@/lib/dataSanity';
 import { ListingGeoCard } from '@/components/ListingGeoCard';
-import { FairPriceIndicator } from '@/components/FairPriceIndicator';
 import { FmvExplainer } from '@/components/FmvExplainer';
 import { useCompareTray } from '@/lib/compareTray';
 import { loadWatchlistIds, saveWatchlistIds, toggleWatchlistId } from '@/lib/watchlist';
@@ -49,13 +48,19 @@ import {
 } from '@/lib/planLimits';
 import type { ImportFuelType } from '@/lib/importTaxModel';
 import { motion } from 'motion/react';
-import { revealContainer, revealItem, springSnappy } from '@/lib/motion';
-import { AtmosphericImage } from '@/components/AtmosphericImage';
-import { visuals } from '@/lib/visualAssets';
+import { revealContainer, revealItem } from '@/lib/motion';
 import { trackEvent } from '@/lib/analytics';
 import { canonicalizeMake, canonicalizeModel } from '@/lib/makeNormalization';
 import { ListingLeadActions } from '@/components/money/ListingLeadActions';
-import { formatLkrFull } from "@/lib/price";
+import { formatLkrFull } from '@/lib/price';
+import { computeDealBadge, DEAL_TEXT_CLASSES } from '@/lib/dealBadge';
+import { detectListingLeaseTakeover } from '@/lib/leaseTakeover';
+import { estimateListingMonthly, formatMonthlyLkr } from '@/lib/listingFinance';
+import { DealBadge, type DealWhyData } from '@/components/listing/DealBadge';
+import { BeforeYouPayStrip } from '@/components/listing/BeforeYouPayStrip';
+import { ListingStickyBar } from '@/components/listing/ListingStickyBar';
+import { SimilarCarsStrip } from '@/components/listing/SimilarCarsStrip';
+import { AnimatedPrice } from '@/components/listing/AnimatedPrice';
 
 function formatToken(value: string | null | undefined): string {
   if (!value) return 'Unknown';
@@ -147,7 +152,7 @@ export default function ListingDetail() {
       district: listing.district,
       deal_score: typeof listing.deal_score === 'number' ? listing.deal_score : null,
     });
-    if (result.atCap) toast.error(t("listing.compareFull", "Compare tray is full (max 3) — remove one first"));
+    if (result.atCap) toast.error(t("listing.compareFull", "Compare tray is full (max 4) — remove one first"));
     else if (result.pinned) toast.success(t("listing.compareAdded", "Pinned to compare tray"));
   };
 
@@ -261,16 +266,11 @@ export default function ListingDetail() {
   // ── Derived data ───────────────────────────────────────────
   const attribution = getSourceAttribution(listing);
   const listingUrl = attribution.href;
+  const displayMake = canonicalizeMake(listing.make) || listing.make;
+  const displayModel = canonicalizeModel(listing.model) || listing.model;
+  const displayName = `${displayMake} ${displayModel}`;
   // Full gallery for the carousel (primary photo first).
   const galleryImages = getListingImageList(listing);
-  const specs = [
-    { label: t("common.year", "Year"), value: listing.year ? String(listing.year) : t("common.unknown", "Unknown"), icon: Calendar },
-    { label: t("common.mileage", "Mileage"), value: Number.isFinite(Number(listing.mileage_km)) && Number(listing.mileage_km) >= 0 ? `${Number(listing.mileage_km).toLocaleString()} KM` : t("common.unknown", "Unknown"), icon: Gauge },
-    { label: t("common.transmission", "Transmission"), value: formatToken(listing.transmission), icon: Settings2 },
-    { label: t("common.fuel", "Fuel"), value: formatToken(listing.fuel_type), icon: Fuel },
-    { label: t("common.condition", "Condition"), value: formatToken(listing.condition), icon: Sparkles },
-    { label: t("common.body", "Body"), value: formatToken(listing.body_type), icon: CarIcon },
-  ];
   const listingPrice = Number(listing.price_lkr || 0);
   const hasPrice = Number.isFinite(listingPrice) && listingPrice >= 100_000 && listingPrice <= 500_000_000;
   // Map the listing's fuel label onto the import-tax model's fuel classes.
@@ -281,33 +281,214 @@ export default function ListingDetail() {
     : fuelRaw.includes('diesel') ? 'diesel'
     : 'petrol';
 
-  // null = rating suppressed server-side (thin cohort / old vehicle / extreme price / free plan)
-  const hasDealScore = fullAccess && listing.deal_score !== null && listing.deal_score !== undefined;
-  const dealScore = listing.deal_score || 0;
+  const lease = detectListingLeaseTakeover(listing);
+  const median = Number(listing.market_median_lkr);
+  const hasMedian = Number.isFinite(median) && median > 0;
+  const fmvLkr = fmvDetail?.fmv_lkr && fmvDetail.fmv_lkr > 0 ? fmvDetail.fmv_lkr : hasMedian ? median : null;
+  // null deal_score = rating suppressed server-side (thin cohort / old vehicle / extreme price / free plan)
+  const ratingAllowed = fullAccess && listing.deal_score !== null && listing.deal_score !== undefined;
+  const deal = computeDealBadge({
+    askingLkr: hasPrice ? listingPrice : null,
+    fmvLkr,
+    confidence: fmvDetail?.confidence ?? null,
+    compsCount: fmvDetail ? fmvDetail.sample_size : null,
+    isLeaseTakeover: lease.isLeaseTakeover,
+    ratingAllowed,
+  });
+  const dealWhy: DealWhyData = {
+    fmvLkr,
+    askingLkr: hasPrice ? listingPrice : null,
+    compsCount: fmvDetail ? fmvDetail.sample_size : null,
+    confidence: fmvDetail?.confidence ?? null,
+    method: fmvDetail?.method ?? null,
+  };
+  const fmvSummary = hasPrice && fmvLkr && !lease.isLeaseTakeover ? summarizeFmv(listingPrice, fmvLkr) : null;
+  const fmvKind = deal.kind === 'verify' ? 'verify' : fmvSummary?.band === 'below' ? 'below' : fmvSummary?.band === 'above' ? 'above' : 'fair';
+  const monthly = hasPrice
+    ? estimateListingMonthly({
+        priceLkr: listingPrice,
+        condition: listing.condition,
+        fuelType: listing.fuel_type,
+        year: listing.year,
+        isLeaseTakeover: lease.isLeaseTakeover,
+      })
+    : null;
+
   const visibleSimilar = fullAccess ? similar : similar.slice(0, FREE_SIMILAR_LIMIT);
-  const fmvSummary =
-    hasPrice && Number.isFinite(Number(listing.market_median_lkr)) && Number(listing.market_median_lkr) > 0
-      ? summarizeFmv(listingPrice, Number(listing.market_median_lkr))
-      : null;
-  const dealTone = dealScore >= 5
-    ? 'text-emerald-600 dark:text-emerald-400'
-    : dealScore <= -6
-      ? 'text-rose-600 dark:text-rose-400'
-      : 'text-primary-bright';
-  const dealDelta = dealScore ? `${Math.abs(dealScore)}% ${dealScore > 0 ? 'below' : 'above'} median` : 'at median';
-  const sellerName = sellerProfile?.seller_name || listing.seller_name || `${listing.source} seller`;
+  const sellerName = sellerProfile?.seller_name || listing.seller_name || null;
   const sellerType = sellerProfile?.seller_type || (listing.is_dealer ? 'dealer' : 'unknown');
   const sellerHeadline = sellerType === 'dealer' ? t("listing.dealer", "Dealer") : sellerType === 'private' ? t("listing.privateSeller", "Private Seller") : t("listing.sourceSeller", "Source Seller");
-  const trustBadges = (sellerProfile?.verified_badges || []).slice(0, 2);
-  const ratingValue = sellerProfile?.rating;
-  const reviewCount = sellerProfile?.review_count;
-  const ratingStars = ratingValue ? Math.round(Math.max(1, Math.min(5, ratingValue))) : 0;
-  const trustMeta = [sellerProfile?.member_since ? `Since ${sellerProfile.member_since}` : null, sellerProfile?.listing_count != null ? `${sellerProfile.listing_count} listings` : null].filter(Boolean).join(' · ') || 'No extended seller history available.';
   const trackedDays = (() => { const ts = parseFlexibleTime(listing.first_seen_at); return ts !== null ? Math.max(1, Math.round((Date.now() - ts) / 86_400_000)) : null; })();
-  const trackedLabel = trackedDays ? `${trackedDays}d` : 'N/A';
   const listedDateTime = formatListedDateTime(listing.first_seen_at);
   const peerAges = visibleSimilar.map((s) => { const ts = parseFlexibleTime(s.first_seen_at); return ts !== null ? Math.max(1, Math.round((Date.now() - ts) / 86_400_000)) : null; }).filter((v): v is number => v !== null);
   const avgPeerDays = peerAges.length ? Math.round(peerAges.reduce((a, b) => a + b, 0) / peerAges.length) : null;
+
+  // Cross-source matches from the history service (confirmed/likely only).
+  const otherSources = new Set(
+    (relatedListings ?? [])
+      .filter((r) => !r.confidence || r.confidence === 'confirmed' || r.confidence === 'likely')
+      .map((r) => String(r.source || '').toLowerCase())
+      .filter((s) => s && s !== String(listing.source || '').toLowerCase()),
+  );
+  const seenOnSites = otherSources.size > 0 ? otherSources.size + 1 : null;
+
+  const knownToken = (v: string | null | undefined) => {
+    const s = formatToken(v);
+    return s === 'Unknown' || /^(n\/?a|none|other)$/i.test(s) ? null : s;
+  };
+  const engineCc = plausibleEngineCc(listing.engine_cc, listing.year);
+  const keySpecs = [
+    { label: t("common.year", "Year"), value: listing.year ? String(listing.year) : null, icon: Calendar },
+    { label: t("common.mileage", "Mileage"), value: Number.isFinite(Number(listing.mileage_km)) && Number(listing.mileage_km) > 0 ? `${Number(listing.mileage_km).toLocaleString()} km` : null, icon: Gauge },
+    { label: t("common.fuel", "Fuel"), value: knownToken(listing.fuel_type), icon: Fuel },
+    { label: t("common.transmission", "Transmission"), value: knownToken(listing.transmission), icon: Settings2 },
+    { label: t("listing.engine", "Engine"), value: engineCc ? `${Math.round(engineCc).toLocaleString()} cc` : null, icon: Zap },
+    { label: t("common.condition", "Condition"), value: knownToken(listing.condition), icon: Sparkles },
+    { label: t("common.body", "Body"), value: knownToken(listing.body_type), icon: CarIcon },
+  ].filter((s): s is { label: string; value: string; icon: typeof Calendar } => Boolean(s.value));
+
+  const priceCut = priceHistory && priceHistory.cut_count > 0 ? priceHistory : null;
+
+  // ── Blocks (some render in both the mobile flow and the desktop sidebar) ──
+  const renderPriceBlock = (placement: 'mobile' | 'desktop') => (
+    <div className={placement === 'desktop' ? 'rounded-[1.75rem] border border-border bg-card p-5 shadow-soft-lg' : ''}>
+      <h2 className="text-[12px] font-semibold text-muted-foreground">{t("listing.askingPrice", "Asking price")}</h2>
+      <p className={`num mt-1 font-extrabold leading-[1.05] tracking-tight text-foreground ${placement === 'desktop' ? 'text-[2.4rem]' : 'text-[2rem]'}`}>
+        {hasPrice ? <AnimatedPrice priceLkr={listingPrice} /> : t("listing.unlisted", "Unlisted")}
+      </p>
+      {deal.kind !== 'none' && (
+        <DealBadge badge={deal} tone="soft" size="md" why={deal.kind === 'lease' ? null : dealWhy} className="mt-3 flex-wrap" />
+      )}
+      {lease.isLeaseTakeover && lease.monthlyLkr && (
+        <p className="mt-2 text-[12.5px] leading-relaxed text-muted-foreground">
+          {lease.monthsRemaining
+            ? t("listing.leaseTerms", "The ad also mentions {months} instalments of {monthly} still to pay.", {
+                months: lease.monthsRemaining,
+                monthly: formatMonthlyLkr(lease.monthlyLkr),
+              })
+            : t("listing.leaseMonthly", "The ad also mentions instalments of {monthly} a month still to pay.", {
+                monthly: formatMonthlyLkr(lease.monthlyLkr),
+              })}
+        </p>
+      )}
+      {monthly && (
+        <p className="mt-2 text-[12.5px] text-muted-foreground num">
+          {t("listing.monthlyLine", "{amount} est. /mo", { amount: formatMonthlyLkr(monthly.monthlyLkr) })}
+          <span className="text-muted-foreground/80">
+            {' · '}
+            {t("listing.monthlyBasis", "{ltv}% loan (CBSL cap), {rate}% over {years} yrs", {
+              ltv: monthly.ltvPct,
+              rate: monthly.ratePct,
+              years: monthly.termYears,
+            })}
+          </span>
+        </p>
+      )}
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        {priceCut && (
+          <span
+            className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-1 text-[11px] font-semibold text-foreground"
+            title={t("listing.priceCutTitle", "Downward price moves since Motormila first saw this ad")}
+          >
+            <TrendingDown aria-hidden className="h-3 w-3 text-sky-600 dark:text-sky-400" />
+            {t("listing.priceCut", "Price cut {n}×", { n: priceCut.cut_count })}
+            {priceCut.change_pct !== null && priceCut.change_pct < 0 && <span className="num">({priceCut.change_pct}%)</span>}
+          </span>
+        )}
+        {seenOnSites && (
+          <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-1 text-[11px] font-semibold text-foreground num">
+            <Layers aria-hidden className="h-3 w-3" /> {t("listingCard.onSites", "On {n} sites", { n: seenOnSites })}
+          </span>
+        )}
+        <SellSpeedChip listing={listing} />
+        <AdvertHealthChip listing={listing} />
+        <HybridCliffBadge fuelType={listing.fuel_type} engineCc={engineCc} />
+      </div>
+
+      {placement === 'desktop' && (
+        <div className="mt-5 space-y-3 border-t border-border pt-4">
+          {listingUrl ? (
+            <a
+              href={listingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackEvent("contact_on_source_clicked", { listing_id: listing.id, source: listing.source, placement: "sidebar" })}
+              className="inline-flex h-12 w-full items-center justify-center gap-1.5 rounded-2xl bg-primary px-4 text-[14px] font-bold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.97]"
+            >
+              {t("listing.viewOnSource", "View on {source}", { source: attribution.sourceName })}
+              <ExternalLink aria-hidden className="h-4 w-4" />
+            </a>
+          ) : (
+            <p className="text-[12px] text-muted-foreground">{t("listing.noSourceLink", "The original ad link isn't available for this listing.")}</p>
+          )}
+          <p className="text-[11.5px] leading-relaxed text-muted-foreground">
+            {t("listing.contactNote", "Opens the original ad. Motormila doesn't share seller phone numbers.")}
+          </p>
+          <BeforeYouPayStrip idSuffix="desktop" />
+        </div>
+      )}
+    </div>
+  );
+
+  const renderFmvCard = () => (
+    <section aria-labelledby="fmv-card-title" className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
+      <h2 id="fmv-card-title" className="text-[12px] font-semibold text-muted-foreground">{t("listing.typicalPrice", "Typical asking price")}</h2>
+      {lease.isLeaseTakeover ? (
+        <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
+          {t("listing.leaseNoFmv", "This is a lease takeover, so the price shown isn't the full price. We don't compare it with typical prices or give it a deal rating.")}
+        </p>
+      ) : fmvSummary ? (
+        <>
+          <p className="num mt-1 text-[1.6rem] font-extrabold tracking-tight text-foreground">{formatLkrFull(fmvSummary.fmv_lkr)}</p>
+          <p className={`mt-0.5 text-[13px] font-bold ${DEAL_TEXT_CLASSES[fmvKind]}`}>{fmvSummary.label}</p>
+          {fmvDetail && fmvDetail.method !== "insufficient_data" && (
+            <p className="mt-1 text-[11.5px] text-muted-foreground">
+              {fmvDetail.sample_size > 0 ? t("listing.compsLine", "{n} comparable listings", { n: fmvDetail.sample_size }) : ""}
+              {fmvDetail.confidence !== "none" ? ` · ${t("listing.confidenceLine", "{level} confidence", { level: fmvDetail.confidence })}` : ""}
+            </p>
+          )}
+          {hasPrice && (
+            <div className="mt-3">
+              <DealLadder askingPrice={listingPrice} marketMedianLkr={fmvSummary.fmv_lkr} />
+            </div>
+          )}
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/70 pt-3">
+            <FmvExplainer
+              compsCount={fmvDetail?.sample_size ?? 0}
+              confidence={fmvDetail?.confidence ?? "none"}
+              method={fmvDetail?.method}
+              fmvLkr={fmvSummary.fmv_lkr}
+              updatedAt={fmvDetail?.updated_at}
+            />
+            <button
+              type="button"
+              onClick={handleComparePin}
+              aria-pressed={isPinnedForCompare(Number(listing.id))}
+              className="inline-flex min-h-[32px] items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[12px] font-semibold text-primary-bright transition-all hover:bg-primary/15 active:scale-[0.97]"
+            >
+              <Scale aria-hidden className="h-3 w-3" />
+              {isPinnedForCompare(Number(listing.id)) ? t("listing.pinned", "Pinned ✓") : t("listing.addToCompare", "Add to compare")}
+            </button>
+          </div>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            {t("deal.whyAsking", "These are asking prices on listing sites, not sale prices.")}
+          </p>
+        </>
+      ) : (
+        <p className="mt-2 text-[12px] text-muted-foreground">
+          {t("listing.noFmv", "Not enough comparable listings for a confident typical price on this vehicle.")}
+        </p>
+      )}
+    </section>
+  );
+
+  // Pro upsell sits *below* the FMV card, never between price and valuation.
+  const renderProUpsell = () =>
+    !fullAccess && !lease.isLeaseTakeover ? (
+      <UpgradePrompt title={freePlanCopy.scoresTitle} body={freePlanCopy.scoresBody} variant="strip" />
+    ) : null;
+
+  const actionBtn = "inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:text-foreground hover:bg-surface active:scale-[0.97]";
 
   // ── Render ─────────────────────────────────────────────────
   return (
@@ -315,44 +496,47 @@ export default function ListingDetail() {
       initial="hidden"
       animate="show"
       variants={revealContainer}
-      className="min-h-screen relative overflow-hidden bg-background"
+      className="relative min-h-screen overflow-hidden bg-background pb-44 lg:pb-0"
     >
-      {/* Decorative Blur Orbs — token-based, adapt to both themes */}
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        <AtmosphericImage
-          src={visuals.pageListingDetail.src}
-          srcSm={visuals.pageListingDetail.srcSm}
-          className="h-[28rem] w-full object-cover object-[center_30%] opacity-[0.18]"
-          sizes="100vw"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background to-background" />
-      </div>
-      <div aria-hidden className="pointer-events-none absolute top-[-10%] left-[-10%] h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px]" />
-      <div aria-hidden className="pointer-events-none absolute bottom-[20%] right-[-10%] h-[600px] w-[600px] rounded-full bg-primary/5 blur-[150px]" />
-
-      {/* Header — the editorial hero: eyebrow, towering title, ask + verdict */}
+      {/* Header — back + quiet actions, then one clear title */}
       <motion.section variants={revealItem} className="relative z-10 -mt-[var(--nav-offset)] border-b border-border bg-card/30 pt-[var(--nav-offset)] backdrop-blur-md">
-        <div className="mx-auto max-w-[1320px] px-5 py-8 sm:px-6 sm:py-10">
-          <button type="button" onClick={handleBack} className="group mb-5 inline-flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground">
-            <ArrowLeft aria-hidden className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" /> {t("common.back", "Back")}
-          </button>
-
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            <span className="section-eyebrow text-[10px] tracking-[0.18em]">{t("listing.inspection", "Inspection")}</span>
-            <span aria-hidden className="text-muted-foreground/40 text-xs">•</span>
-            <span className="text-[12px] font-medium tracking-tight text-muted-foreground">
-              {t("listing.listedOnSource", "Listed on {source}", { source: attribution.sourceName })}
-              {attribution.checkedAgo ? ` · ${t("listing.lastChecked", "last checked {ago}", { ago: attribution.checkedAgo })}` : ''}
-            </span>
+        <div className="mx-auto max-w-[1320px] px-5 py-6 sm:px-6 sm:py-8">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <button type="button" onClick={handleBack} className="group inline-flex min-h-[40px] items-center gap-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground">
+              <ArrowLeft aria-hidden className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" /> {t("common.back", "Back")}
+            </button>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={handleWhatsAppShare} className={actionBtn} aria-label={t("listing.shareWhatsApp", "Share on WhatsApp")} title={t("listing.shareWhatsApp", "Share on WhatsApp")}>
+                <MessageCircle aria-hidden className="h-4 w-4" />
+              </button>
+              <button type="button" onClick={handleShare} className={actionBtn} aria-label={t("listing.share", "Share")} title={t("listing.share", "Share")}>
+                <Share2 aria-hidden className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={handleWatchlistToggle}
+                aria-pressed={watchlisted}
+                aria-label={watchlisted ? t("listing.saved", "Saved ✓") : t("listing.save", "Save")}
+                title={watchlisted ? t("listing.saved", "Saved ✓") : t("listing.save", "Save")}
+                className={`${actionBtn} ${watchlisted ? "!border-rose-500/30 !bg-rose-500/10 !text-rose-600 dark:!text-rose-400" : ""}`}
+              >
+                <Heart aria-hidden className={`h-4 w-4 ${watchlisted ? "fill-current" : ""}`} />
+              </button>
+            </div>
           </div>
+
+          <p className="mb-2 text-[12px] font-medium tracking-tight text-muted-foreground">
+            {t("listing.listedOnSource", "Listed on {source}", { source: attribution.sourceName })}
+            {attribution.checkedAgo ? ` · ${t("listing.lastChecked", "last checked {ago}", { ago: attribution.checkedAgo })}` : ''}
+          </p>
           <SnapshotModeNotice className="mb-4 max-w-2xl" />
 
           {listing.is_active === false && (
-            <div className="mb-5 flex items-start gap-2.5 rounded-3xl border border-amber-500/25 bg-amber-400/[0.06] p-3.5 max-w-2xl">
-              <AlertTriangle aria-hidden className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="mb-4 flex max-w-2xl items-start gap-2.5 rounded-3xl border border-amber-500/25 bg-amber-400/[0.06] p-3.5">
+              <AlertTriangle aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
               <div>
                 <p className="text-xs font-bold text-amber-700 dark:text-amber-300">{t("listing.possiblySold", "Possibly sold or delisted")}</p>
-                <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground font-medium">
+                <p className="mt-0.5 text-[11px] font-medium leading-relaxed text-muted-foreground">
                   This ad has not been seen at {listing.source}
                   {parseFlexibleTime(listing.last_seen_at) !== null ? ` since ${new Date(parseFlexibleTime(listing.last_seen_at)!).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Colombo' })}` : ' recently'}.
                   Pricing below is kept for market reference and may be historical.
@@ -361,138 +545,102 @@ export default function ListingDetail() {
             </div>
           )}
 
-          <h1 className="display-1 max-w-4xl text-foreground">
-            {canonicalizeMake(listing.make) || listing.make} {canonicalizeModel(listing.model) || listing.model}{listing.year ? ` · ${listing.year}` : ''}
+          <h1 className="display-2 max-w-4xl text-foreground">
+            {displayName}{listing.year ? ` · ${listing.year}` : ''}
           </h1>
-
-          {/* Mobile: the sticky price sidebar stacks ~4 screens down — surface ask + verdict here */}
-          <div className="mt-4 flex flex-wrap items-center gap-3 lg:hidden">
-            <p className="num text-3xl font-extrabold tracking-tight text-foreground">
-              {hasPrice ? formatLkrFull(listingPrice) : t("listing.unlisted", "Unlisted")}
-            </p>
-            {hasDealScore && (
-              <span className="flex items-center gap-2">
-                <FairPriceIndicator score={dealScore} condition={listing.condition} size="sm" />
-                <span className={`num text-[11px] font-bold ${dealTone}`}>{dealDelta}</span>
-              </span>
-            )}
-          </div>
-
-          {listing.title && listing.title !== `${canonicalizeMake(listing.make) || listing.make} ${canonicalizeModel(listing.model) || listing.model}` && (
-            <p className="mt-3 max-w-2xl text-[14px] text-muted-foreground leading-relaxed font-medium">{listing.title}</p>
+          {listing.title && listing.title !== displayName && (
+            <p className="mt-2 max-w-2xl text-[14px] font-medium leading-relaxed text-muted-foreground">{listing.title}</p>
           )}
-
-          <div className="mt-6 flex flex-wrap items-center gap-2.5">
-            {listingUrl && (
-              <a href={listingUrl} target="_blank" rel="noopener noreferrer" className="flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-[12px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/95 hover:shadow-soft-lg active:scale-[0.97]">
-                {t("listing.viewOnSource", "View on {source}", { source: attribution.sourceName })} <ExternalLink aria-hidden className="h-3 w-3" />
-              </a>
-            )}
-            <button type="button" onClick={handleWhatsAppShare} className="flex h-9 items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3.5 text-[12px] font-semibold text-emerald-700 dark:text-emerald-400 transition-all hover:bg-emerald-500/15 active:scale-[0.97]">
-              <MessageCircle aria-hidden className="h-3 w-3" /> {t("listing.shareWhatsApp", "Share on WhatsApp")}
-            </button>
-            <button type="button" onClick={handleShare} className="flex h-9 items-center gap-1.5 rounded-full border border-border bg-card px-3.5 text-[12px] font-semibold text-muted-foreground transition-all hover:text-foreground hover:bg-surface active:scale-[0.97]">
-              <Share2 aria-hidden className="h-3 w-3" /> {t("listing.share", "Share")}
-            </button>
-            <button
-              type="button"
-              onClick={handleWatchlistToggle}
-              aria-pressed={watchlisted}
-              className={`flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[12px] font-semibold transition-all active:scale-[0.97] ${watchlisted ? "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/15" : "border-border bg-card text-muted-foreground hover:text-foreground hover:bg-surface"}`}
-            >
-              <Heart aria-hidden className={`h-3 w-3 ${watchlisted ? "fill-current" : ""}`} /> {watchlisted ? t("listing.saved", "Saved ✓") : t("listing.save", "Save")}
-            </button>
-            {importFuelType === 'electric' && (
-              <Link
-                to="/ev-hub"
-                className="flex h-9 items-center gap-1.5 rounded-full border border-border bg-card px-3.5 text-[12px] font-semibold text-muted-foreground no-underline transition-all hover:text-foreground hover:bg-surface active:scale-[0.97]"
-              >
-                <PlugZap aria-hidden className="h-3 w-3" /> {t("listing.chargersNearby", "Charging stations")}
-              </Link>
-            )}
-          </div>
         </div>
       </motion.section>
 
       {/* Content */}
-      <div className="mx-auto max-w-[1320px] px-5 py-8 sm:px-6 lg:py-12 relative z-10">
+      <div className="relative z-10 mx-auto max-w-[1320px] px-5 py-6 sm:px-6 lg:py-10">
         <div className="grid gap-6 lg:grid-cols-[1.75fr_1fr] lg:items-start lg:gap-8">
 
           {/* ── MAIN ──────────────────────────────────────────── */}
-          <div className="space-y-6">
+          <div className="min-w-0 space-y-6">
 
-            {/* Image — the car is the hero; overlays stay dark (they sit on the photo) */}
+            {/* 1. Gallery — the car is the hero; overlays stay dark (they sit on the photo) */}
             <motion.div variants={revealItem} className="overflow-hidden rounded-[2rem] border border-border bg-card shadow-soft">
-              <div className="relative aspect-[16/10] min-h-[220px] overflow-hidden bg-black/40 group">
-                {galleryImages.length > 0 ? (
-                  <ListingImageCarousel
-                    images={galleryImages}
-                    listingId={listing.id}
-                    alt={`${canonicalizeMake(listing.make) || listing.make} ${canonicalizeModel(listing.model) || listing.model}`}
-                    variant="detail"
-                    className="h-full w-full"
-                    imageClassName="transition-transform duration-700 ease-out group-hover:scale-[1.02]"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center"><CarIcon aria-hidden className="h-12 w-12 text-white/50" /></div>
-                )}
-                <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-
-                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between z-10">
-                  <span className="rounded-full border border-white/10 bg-black/60 px-2.5 py-1 text-[10px] font-semibold text-white backdrop-blur-md">{listing.make} {listing.model} · {listing.year || 'N/A'}</span>
-                  {/* Fixed bright blue: this badge sits on a black photo scrim, where the
-                      light-theme `--primary-bright` token is unreadable. */}
-                  <span className="flex items-center gap-1 rounded-full border border-white/10 bg-black/60 px-2.5 py-1 text-[10px] font-semibold text-[#6CB8FF] backdrop-blur-md"><Database aria-hidden className="h-3 w-3" /> {attribution.sourceName}</span>
-                </div>
+              <div className="group relative aspect-[16/10] min-h-[220px] overflow-hidden bg-black/40">
+                <ListingImageCarousel
+                  images={galleryImages}
+                  listingId={listing.id}
+                  alt={displayName}
+                  variant="detail"
+                  source={listing.source}
+                  priority
+                  className="h-full w-full"
+                  imageClassName="transition-transform duration-700 ease-out group-hover:scale-[1.02] motion-reduce:transform-none"
+                />
+                <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 to-transparent" />
+                {/* Source credit for hotlinked photos. Fixed bright blue: sits on a black scrim. */}
+                <span className="pointer-events-none absolute bottom-3 right-3 z-10 flex items-center gap-1 rounded-full border border-white/10 bg-black/60 px-2.5 py-1 text-[10px] font-semibold text-[#6CB8FF] backdrop-blur-md">
+                  <Database aria-hidden className="h-3 w-3" /> {t("listingImage.credit", "Photo: {source}", { source: attribution.sourceName })}
+                </span>
               </div>
-              <div className="flex flex-wrap items-center gap-4 border-t border-border px-4 py-3 bg-card">
-                <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground"><MapPin aria-hidden className="h-3.5 w-3.5 text-primary-bright" /> {listing.district || t("common.unknown", "Unknown")}, Sri Lanka</span>
-                <span aria-hidden className="text-muted-foreground/30 text-xs">•</span>
-                <span className="num flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground"><Clock aria-hidden className="h-3.5 w-3.5 text-primary-bright" /> {t("listing.tracked", "Tracked {days}", { days: trackedLabel })}</span>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border bg-card px-4 py-3">
+                {listing.district && (
+                  <span className="flex items-center gap-1.5 text-[11.5px] font-medium text-muted-foreground"><MapPin aria-hidden className="h-3.5 w-3.5 text-primary-bright" /> {listing.district}</span>
+                )}
+                {trackedDays && (
+                  <span className="num flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground"><Clock aria-hidden className="h-3.5 w-3.5 text-primary-bright" /> {t("listing.tracked", "Tracked {days}", { days: `${trackedDays}d` })}</span>
+                )}
                 {listedDateTime && (
-                  <>
-                    <span aria-hidden className="text-muted-foreground/30 text-xs">•</span>
-                    <span
-                      className="num flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground"
-                      title={t("listing.listedTitle", "When Motormila first spotted this ad — usually within hours of it going live on the source site.")}
-                    >
-                      <Calendar aria-hidden className="h-3.5 w-3.5 text-primary-bright" /> {t("listing.listed", "Listed {date}", { date: listedDateTime })}
-                    </span>
-                  </>
+                  <span
+                    className="num flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground"
+                    title={t("listing.listedTitle", "When Motormila first spotted this ad — usually within hours of it going live on the source site.")}
+                  >
+                    <Calendar aria-hidden className="h-3.5 w-3.5 text-primary-bright" /> {t("listing.listed", "Listed {date}", { date: listedDateTime })}
+                  </span>
                 )}
               </div>
             </motion.div>
 
-            {/* Specs Bento Grid */}
-            <motion.div variants={revealItem} className="space-y-3">
-              <h2 className="text-[12px] font-semibold text-muted-foreground">{t("listing.specifications", "Specifications")}</h2>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {specs.map((s) => (
-                  <motion.div
-                    key={s.label}
-                    whileHover={{ scale: 1.02, y: -3 }}
-                    transition={springSnappy}
-                    className="rounded-[1.6rem] border border-border bg-card p-4 transition-colors hover:border-primary/30 relative overflow-hidden group shadow-soft"
-                  >
-                    <div aria-hidden className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <s.icon aria-hidden className="mb-2 h-4 w-4 text-primary" />
-                    <p className="text-[10px] font-medium text-muted-foreground">{s.label}</p>
-                    <p className="mt-1 text-[14px] font-bold text-foreground num leading-tight">{s.value}</p>
-                  </motion.div>
-                ))}
-              </div>
+            {/* 2. Price + badge (mobile flow; desktop shows it in the sidebar) */}
+            <motion.div variants={revealItem} className="space-y-3 lg:hidden">
+              {renderPriceBlock('mobile')}
+              <BeforeYouPayStrip collapsible idSuffix="mobile" />
             </motion.div>
 
+            {/* 3. Key specs — only what we actually know */}
+            {keySpecs.length > 0 && (
+              <motion.section variants={revealItem} aria-labelledby="key-specs-title" className="space-y-3">
+                <h2 id="key-specs-title" className="text-[12px] font-semibold text-muted-foreground">{t("listing.keySpecs", "Key specs")}</h2>
+                <dl className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                  {keySpecs.map((s) => (
+                    <div key={s.label} className="flex items-center gap-3 rounded-2xl border border-border bg-card px-3.5 py-3">
+                      <s.icon aria-hidden className="h-4 w-4 shrink-0 text-primary" />
+                      <div className="min-w-0">
+                        <dt className="text-[10.5px] font-medium text-muted-foreground">{s.label}</dt>
+                        <dd className="num truncate text-[13.5px] font-bold leading-tight text-foreground">{s.value}</dd>
+                      </div>
+                    </div>
+                  ))}
+                </dl>
+                <MileageTrustChip mileageKm={listing.mileage_km} year={listing.year} />
+              </motion.section>
+            )}
+
+            {/* 4. FMV / why (mobile flow) + Pro upsell below it */}
+            <motion.div variants={revealItem} className="space-y-3 lg:hidden">
+              {renderFmvCard()}
+              {renderProUpsell()}
+            </motion.div>
+
+            {/* 5. Price history */}
             {priceHistory && priceHistory.points.length > 0 && (
               <motion.div variants={revealItem}>
                 <ListingPriceTimeline
                   history={priceHistory}
                   marketMedianLkr={listing.market_median_lkr}
-                  listingTitle={`${canonicalizeMake(listing.make) || listing.make} ${canonicalizeModel(listing.model) || listing.model}`}
+                  listingTitle={displayName}
                 />
               </motion.div>
             )}
 
+            {/* 6. Trust Check */}
             <motion.div variants={revealItem}>
               <TrustCheckPanel
                 listing={listing}
@@ -500,32 +648,26 @@ export default function ListingDetail() {
                 related={relatedListings}
               />
             </motion.div>
-
             {listing.id != null && <ListingHistoryReport listingId={listing.id} />}
 
-            <motion.div variants={revealItem}>
-              <ListingLeadActions
-                listingId={listing.id ?? undefined}
-                vehicle={[listing.year, canonicalizeMake(listing.make) || listing.make, canonicalizeModel(listing.model) || listing.model].filter(Boolean).join(' ')}
-                priceLkr={hasPrice ? listingPrice : undefined}
-                district={listing.district ?? undefined}
-              />
-            </motion.div>
-
-            {/* Description */}
-            <motion.div variants={revealItem} className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
-              <h2 className="mb-3.5 text-[12px] font-semibold text-muted-foreground">{t("listing.description", "Description")}</h2>
-              <p className="whitespace-pre-wrap text-[13px] leading-[1.8] text-muted-foreground font-medium">
-                {listing.description || t("listing.noDescription", "The seller didn't add a description. Open the original ad for full details.")}
-              </p>
-            </motion.div>
-
-            {hasPrice && (() => {
+            {/* 7. Finance planner */}
+            {hasPrice && (lease.isLeaseTakeover ? (
+              <motion.section variants={revealItem} className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
+                <h2 className="text-[12px] font-semibold text-muted-foreground">{t("listing.ownershipPlanning", "Ownership planning")}</h2>
+                <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
+                  {t("listing.leaseNoFinance", "Finance estimates are hidden: the price on a lease takeover isn't the full price. Ask the seller for the settlement letter from the finance company first.")}
+                </p>
+              </motion.section>
+            ) : (() => {
               // brand_new already covers API-normalized "unregistered"/new imports
               const isUnregistered =
                 listing.condition === 'brand_new' ||
                 (typeof listing.year === 'number' && listing.year >= 2025);
-
+              const financeClass = inferFinanceClass({
+                condition: listing.condition,
+                fuelType: listing.fuel_type,
+                year: listing.year,
+              });
               return (
                 <motion.div variants={revealItem} className="space-y-4">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -534,278 +676,125 @@ export default function ListingDetail() {
                       {t("listing.whatCanIAfford", "What else fits my budget?")}
                     </Link>
                   </div>
-
-                  <CashToOwnStrip
-                    priceLkr={listingPrice}
-                    financeClass={inferFinanceClass({
-                      condition: listing.condition,
-                      fuelType: listing.fuel_type,
-                      year: listing.year,
-                    })}
-                  />
-                <div className="grid gap-4 md:grid-cols-2 items-start">
-                  <LeaseCalculator
-                    price={listingPrice}
-                    financeClass={inferFinanceClass({
-                      condition: listing.condition,
-                      fuelType: listing.fuel_type,
-                      year: listing.year,
-                    })}
-                  />
-                  {isUnregistered ? (
-                    <TaxBreakdown
-                      price={listingPrice}
-                      engineCapacity={plausibleEngineCc(listing.engine_cc, listing.year)}
-                      initialFuelType={importFuelType}
-                    />
-                  ) : (
-                    <div className="page-panel flex flex-col justify-between gap-3 rounded-[1.75rem] p-6">
-                      <div>
-                        <h2 className="field-label text-foreground">{t("listing.importDutyTax", "Import duty and tax")}</h2>
-                        <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                          This vehicle is already registered in Sri Lanka, so import duty doesn't
-                          apply to buying it. Curious what importing the same spec fresh would cost
-                          under today's gazette?
-                        </p>
+                  <CashToOwnStrip priceLkr={listingPrice} financeClass={financeClass} />
+                  <div className="grid items-start gap-4 md:grid-cols-2">
+                    <LeaseCalculator price={listingPrice} financeClass={financeClass} />
+                    {isUnregistered ? (
+                      <TaxBreakdown
+                        price={listingPrice}
+                        engineCapacity={engineCc}
+                        initialFuelType={importFuelType}
+                      />
+                    ) : (
+                      <div className="page-panel flex flex-col justify-between gap-3 rounded-[1.75rem] p-6">
+                        <div>
+                          <h2 className="field-label text-foreground">{t("listing.importDutyTax", "Import duty and tax")}</h2>
+                          <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                            This vehicle is already registered in Sri Lanka, so import duty doesn't
+                            apply to buying it. Curious what importing the same spec fresh would cost
+                            under today's gazette?
+                          </p>
+                        </div>
+                        <Link
+                          to={`/calculator?tab=landed-cost&fuel=${importFuelType}${typeof listing.engine_cc === 'number' ? `&cc=${listing.engine_cc}` : ''}`}
+                          className="inline-flex w-fit items-center gap-1.5 rounded-2xl border border-primary/20 bg-primary/10 px-3 py-2 text-[12px] font-semibold text-primary-bright no-underline transition-all hover:bg-primary/15"
+                        >
+                          Model a fresh import <ArrowRight aria-hidden className="h-3 w-3" />
+                        </Link>
                       </div>
-                      <Link
-                        to={`/calculator?tab=landed-cost&fuel=${importFuelType}${typeof listing.engine_cc === 'number' ? `&cc=${listing.engine_cc}` : ''}`}
-                        className="inline-flex w-fit items-center gap-1.5 rounded-2xl border border-primary/20 bg-primary/10 px-3 py-2 text-[12px] font-semibold text-primary-bright no-underline transition-all hover:bg-primary/15"
-                      >
-                        Model a fresh import <ArrowRight aria-hidden className="h-3 w-3" />
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            )
-          })()}
-          </div>
-
-          {/* ── SIDEBAR ───────────────────────────────────────── */}
-          <aside className="space-y-5 lg:sticky lg:top-20">
-
-            {/* Price — the money hero: the number towers, verdict reads in signal colour */}
-            <motion.div
-              variants={revealItem}
-              className="rounded-[1.75rem] border border-border bg-card p-5 relative overflow-hidden shadow-soft-lg"
-              style={{ backgroundImage: 'radial-gradient(circle at 100% 0%, hsl(var(--primary) / 0.06) 0%, transparent 60%)' }}
-            >
-              <div aria-hidden className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary to-transparent" />
-              <h2 className="text-[12px] font-semibold text-muted-foreground">{t("listing.askingPrice", "Asking price")}</h2>
-              <p className="num mt-2 text-[2.5rem] font-extrabold leading-[1.05] tracking-tight text-foreground">{hasPrice ? formatLkrFull(listingPrice) : t("listing.unlisted", "Unlisted")}</p>
-
-              <div className="mt-4 flex flex-wrap items-center gap-1.5">
-                <HybridCliffBadge fuelType={listing.fuel_type} engineCc={plausibleEngineCc(listing.engine_cc, listing.year)} />
-                <MileageTrustChip mileageKm={listing.mileage_km} year={listing.year} />
-                <SellSpeedChip listing={listing} />
-                <AdvertHealthChip listing={listing} />
-                {priceHistory && priceHistory.cut_count > 0 && (
-                  <span
-                    className="inline-flex items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300"
-                    title={`Tracked since first sighting: ${priceHistory.cut_count} downward price ${priceHistory.cut_count === 1 ? 'move' : 'moves'}${priceHistory.change_pct !== null ? `, ${priceHistory.change_pct}% overall` : ''}`}
-                  >
-                    <Clock aria-hidden className="h-3 w-3" />
-                    Price cut {priceHistory.cut_count}×
-                    {priceHistory.change_pct !== null && priceHistory.change_pct < 0 && (
-                      <span className="num">({priceHistory.change_pct}%)</span>
                     )}
-                  </span>
-                )}
-              </div>
-
-              {hasDealScore ? (
-                <div className="mt-5 flex items-center gap-3">
-                  <FairPriceIndicator score={dealScore} condition={listing.condition} size="lg" className="num font-extrabold" />
-                  <span className={`num text-[11px] font-bold ${dealTone}`}>{dealDelta}</span>
-                </div>
-              ) : !fullAccess ? (
-                <div className="mt-5">
-                  <UpgradePrompt
-                    title={freePlanCopy.scoresTitle}
-                    body={freePlanCopy.scoresBody}
-                    variant="strip"
-                  />
-                </div>
-              ) : (
-                <p className="mt-5 text-[11px] font-semibold text-muted-foreground">
-                  No price rating — not enough comparable listings for a confident call on this vehicle.
-                </p>
-              )}
-
-              {fmvSummary && (
-                <div className="mt-3 rounded-3xl border border-border bg-surface px-3.5 py-3">
-                  <p className="text-[12px] font-semibold text-muted-foreground">
-                    {t("listing.fmv", "Fair market value")}
-                  </p>
-                  <p
-                    className={`mt-1 text-[13px] font-bold ${
-                      fmvSummary.band === "below"
-                        ? "text-emerald-700 dark:text-emerald-400"
-                        : fmvSummary.band === "above"
-                          ? "text-rose-700 dark:text-rose-400"
-                          : "text-foreground"
-                    }`}
-                  >
-                    {fmvSummary.label}
-                  </p>
-                  <p className="mt-0.5 text-[11px] font-medium text-muted-foreground num">
-                    FMV {formatPrice(fmvSummary.fmv_lkr)}
-                  </p>
-                  {fmvDetail && fmvDetail.method !== "insufficient_data" && (
-                    <p className="mt-1 text-[10px] text-muted-foreground">
-                      {fmvDetail.sample_size > 0 ? `${fmvDetail.sample_size} comps · ` : ""}
-                      {fmvDetail.method === "ols_comps" ? "OLS model" : fmvDetail.method === "adjusted_median" ? "Adj. median" : "Cohort median"}
-                      {fmvDetail.confidence !== "none" ? ` · ${fmvDetail.confidence} confidence` : ""}
-                    </p>
-                  )}
-                  <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-border/70 pt-2.5">
-                    <FmvExplainer
-                      compsCount={fmvDetail?.sample_size ?? 0}
-                      confidence={fmvDetail?.confidence ?? "none"}
-                      method={fmvDetail?.method}
-                      fmvLkr={fmvSummary.fmv_lkr}
-                      updatedAt={fmvDetail?.updated_at}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleComparePin}
-                      aria-pressed={isPinnedForCompare(Number(listing.id))}
-                      className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[12px] font-semibold text-primary-bright transition-all hover:bg-primary/15 active:scale-[0.97]"
-                    >
-                      <Scale aria-hidden className="h-3 w-3" />
-                      {isPinnedForCompare(Number(listing.id)) ? t("listing.pinned", "Pinned ✓") : t("listing.addToCompare", "Add to compare")}
-                    </button>
                   </div>
-                </div>
-              )}
+                </motion.div>
+              );
+            })())}
 
-              {hasPrice &&
-                Number.isFinite(Number(listing.market_median_lkr)) &&
-                Number(listing.market_median_lkr) > 0 && (
-                  <div className="mt-2">
-                    <DealLadder askingPrice={listingPrice} marketMedianLkr={Number(listing.market_median_lkr)} />
-                  </div>
-                )}
+            {/* 8. Details */}
+            <motion.div variants={revealItem} className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
+              <h2 className="mb-3 text-[12px] font-semibold text-muted-foreground">{t("listing.description", "Description")}</h2>
+              <p className="whitespace-pre-wrap text-[13px] font-medium leading-[1.8] text-muted-foreground">
+                {listing.description || t("listing.noDescription", "The seller didn't add a description. Open the original ad for full details.")}
+              </p>
             </motion.div>
 
-            {/* Seller */}
-            <motion.div variants={revealItem} className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
-              <div className="mb-3.5 flex items-center gap-2 border-b border-border pb-2.5">
+            {/* Seller — info only; the one contact CTA lives in the price card / sticky bar */}
+            <motion.section variants={revealItem} aria-labelledby="seller-title" className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
+              <div className="mb-3 flex items-center gap-2">
                 <ShieldCheck aria-hidden className="h-4 w-4 text-primary" />
-                <h2 className="text-[12px] font-semibold text-muted-foreground">{t("listing.sellerInfo", "Seller information")}</h2>
+                <h2 id="seller-title" className="text-[12px] font-semibold text-muted-foreground">{t("listing.sellerInfo", "Seller information")}</h2>
               </div>
-
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[14px] font-bold text-foreground leading-tight">{sellerHeadline}</p>
-                  <p className="mt-1 truncate text-[12px] text-muted-foreground font-medium">{sellerName}</p>
-                </div>
-                <span className="shrink-0 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium text-primary-bright">{trustBadges[0] || 'Source'}</span>
-              </div>
-
-              <p className="mt-3 text-[11px] text-muted-foreground font-medium">{trustMeta}</p>
-
-              {/* Contact happens on the source marketplace: Motormila doesn't
-                  republish seller phone numbers (privacy + source terms). */}
-              <div className="mt-4 space-y-2">
-                {listingUrl ? (
-                  <a
-                    href={listingUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => trackEvent("contact_on_source_clicked", { listing_id: listing.id, source: listing.source })}
-                    className="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-2xl bg-primary px-4 text-[13px] font-bold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.97]"
-                  >
-                    {t("listing.contactOnSource", "Contact seller on {source}", { source: attribution.sourceName })}
-                    <ExternalLink aria-hidden className="h-3.5 w-3.5" />
-                  </a>
-                ) : (
-                  <p className="text-[12px] text-muted-foreground">{t("listing.noSourceLink", "The original ad link isn't available for this listing.")}</p>
-                )}
-                <p className="text-[11.5px] leading-relaxed text-muted-foreground">
-                  {t("listing.contactNote", "Opens the original ad. Motormila doesn't share seller phone numbers.")}
-                </p>
-              </div>
-
-              {ratingValue ? (
-                <div className="mt-4 flex items-center justify-between border-t border-border pt-3.5">
-                  <div aria-hidden className="flex gap-0.5 text-primary">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <svg key={s} xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill={s <= ratingStars ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.5" className={s > ratingStars ? 'text-muted-foreground/30' : ''}>
-                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                      </svg>
-                    ))}
-                  </div>
-                  <span className="num text-[12px] font-bold text-foreground">{ratingValue.toFixed(1)}{reviewCount != null && <span className="text-muted-foreground font-medium"> ({reviewCount})</span>}</span>
-                </div>
-              ) : <p className="mt-4 border-t border-border pt-3 text-[11px] text-muted-foreground italic">{t("listing.noSellerRating", "No public seller rating synced.")}</p>}
-
-            </motion.div>
-
-            {/* Peers */}
-            <motion.div variants={revealItem} className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
-              <div className="mb-3.5 flex items-center justify-between border-b border-border pb-2.5">
-                <h2 className="text-[12px] font-semibold text-muted-foreground">{t("listing.marketPeers", "Market peers")}</h2>
-                <ArrowRight aria-hidden className="h-3.5 w-3.5 text-primary" />
-              </div>
-
-              {visibleSimilar.length > 0 ? (
-                <div className="space-y-2">
-                  {visibleSimilar.map((s) => (
-                    <Link
-                      key={s.id}
-                      to={`/listing/${s.id}`}
-                      className="group flex items-center justify-between rounded-2xl border border-border bg-surface px-3.5 py-2.5 no-underline transition-all hover:bg-card hover:border-primary/30 hover:translate-y-[-1px]"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-semibold text-muted-foreground group-hover:text-foreground transition-colors">{s.make} {s.model} · {s.year}</p>
-                        <p className="num mt-1 text-[13px] font-bold text-foreground group-hover:text-primary transition-colors">{formatPrice(s.price_lkr)}</p>
-                      </div>
-                      {fullAccess && typeof s.deal_score === 'number' && s.deal_score > 0 && (
-                        <span className="num text-[10px] font-bold text-emerald-700 dark:text-emerald-400 border border-emerald-500/25 bg-emerald-500/10 rounded px-1.5 py-0.5">{s.deal_score}%</span>
-                      )}
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <div className="py-6 text-center"><CarIcon aria-hidden className="mx-auto mb-2 h-5 w-5 text-muted-foreground/40" /><p className="text-[11px] text-muted-foreground">{t("listing.noPeers", "No active peers tracked.")}</p></div>
-              )}
-            </motion.div>
-
-            {listing.make && (
-              <motion.div variants={revealItem}>
-                <SafetyResearchCard research={safetyResearch} vin={listingVin(listing)} />
-              </motion.div>
-            )}
+              <p className="text-[14px] font-bold leading-tight text-foreground">{sellerHeadline}</p>
+              {sellerName && <p className="mt-1 truncate text-[12px] font-medium text-muted-foreground">{sellerName}</p>}
+              <p className="mt-2 text-[11.5px] leading-relaxed text-muted-foreground">
+                {t("listing.sellerContactNote", "Contact the seller through {source}. Motormila doesn't share seller phone numbers.", { source: attribution.sourceName })}
+              </p>
+            </motion.section>
 
             <motion.div variants={revealItem}>
-              <ListingGeoCard geo={listingGeo} />
+              <ListingLeadActions
+                listingId={listing.id ?? undefined}
+                vehicle={[listing.year, displayMake, displayModel].filter(Boolean).join(' ')}
+                priceLkr={hasPrice ? listingPrice : undefined}
+                district={listing.district ?? undefined}
+              />
             </motion.div>
 
-            {/* NHTSA catalog disclosure */}
+            <div className="grid gap-5 md:grid-cols-2">
+              {listing.make && (
+                <motion.div variants={revealItem}>
+                  <SafetyResearchCard research={safetyResearch} vin={listingVin(listing)} />
+                </motion.div>
+              )}
+              <motion.div variants={revealItem}>
+                <ListingGeoCard geo={listingGeo} />
+              </motion.div>
+            </div>
             {listing.make && (
               <motion.div variants={revealItem}>
                 <NhtsaModelsCard make={listing.make} model={listing.model ?? undefined} compact vin={listingVin(listing)} />
               </motion.div>
             )}
-
-            {/* Insight */}
-            <motion.div variants={revealItem} className="rounded-2xl border border-border bg-card p-5 shadow-soft relative overflow-hidden">
-              <div aria-hidden className="absolute top-0 left-0 h-full w-[2px] bg-primary" />
-              <div className="flex items-center gap-2 mb-2">
-                <Zap aria-hidden className="h-4 w-4 text-primary" />
-                <h2 className="text-[12px] font-bold text-foreground">{t("listing.insight", "Motormila Insight")}</h2>
-              </div>
-              <p className="text-[11px] leading-relaxed text-muted-foreground font-medium">
-                Tracked for <span className="num font-bold text-foreground">{trackedLabel}</span>.
-                {avgPeerDays && ` Peers average ${avgPeerDays}d.`}
-                {visibleSimilar.length > 0 && ` ${visibleSimilar.length} comparable listings active.`}
+            {trackedDays && (
+              <p className="text-[11.5px] leading-relaxed text-muted-foreground">
+                {t("listing.insightLine", "Tracked for {days} days.", { days: trackedDays })}
+                {avgPeerDays ? ` ${t("listing.insightPeers", "Similar ads average {days} days.", { days: avgPeerDays })}` : ''}
               </p>
+            )}
+
+            {/* 9. Similar */}
+            <motion.div variants={revealItem}>
+              <SimilarCarsStrip
+                listings={visibleSimilar}
+                fullAccess={fullAccess}
+                title={t("listing.similarTitle", "Similar vehicles")}
+              />
             </motion.div>
+          </div>
+
+          {/* ── SIDEBAR (desktop) ─────────────────────────────── */}
+          <aside className="hidden space-y-5 lg:sticky lg:top-20 lg:block">
+            <motion.div variants={revealItem}>{renderPriceBlock('desktop')}</motion.div>
+            <motion.div variants={revealItem}>{renderFmvCard()}</motion.div>
+            {renderProUpsell() && <motion.div variants={revealItem}>{renderProUpsell()}</motion.div>}
+            {importFuelType === 'electric' && (
+              <Link
+                to="/ev-hub"
+                className="flex h-10 items-center justify-center gap-1.5 rounded-2xl border border-border bg-card px-3.5 text-[12px] font-semibold text-muted-foreground no-underline transition-all hover:bg-surface hover:text-foreground"
+              >
+                <PlugZap aria-hidden className="h-3.5 w-3.5" /> {t("listing.chargersNearby", "Charging stations")}
+              </Link>
+            )}
           </aside>
         </div>
       </div>
+
+      <ListingStickyBar
+        priceLkr={hasPrice ? listingPrice : null}
+        badge={deal}
+        href={listingUrl}
+        sourceName={attribution.sourceName}
+        listingId={listing.id}
+        source={listing.source}
+      />
     </motion.div>
   );
 }

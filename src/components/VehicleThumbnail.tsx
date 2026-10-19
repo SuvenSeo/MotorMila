@@ -39,6 +39,12 @@ function createFallbackThumbnailDataUri(label: string, source?: string | null): 
   const safeLabel = escapeSvgText(rawLabel);
   const sourceName = formatSourceName(source);
   const sourceLine = escapeSvgText(sourceName ? `Photos on ${sourceName}` : "Photo unavailable");
+  // Layout keeps everything in the top ~60% of the 16:10 frame: card/detail
+  // overlays (price, deal badge, source credit) sit along the bottom edge and
+  // used to clip a bottom-anchored wordmark down to "RMILA".
+  // Lockup = Apex M vector (same geometry as the Android adaptive icon) + "otormila",
+  // mirroring /logo-wordmark.png (brand bible: the M *is* the first letter).
+  // textLength pins the word width because web fonts don't load inside <img> SVGs.
   // ~0.58em average glyph width: shrink long titles to the 560px safe width,
   // and pin it with textLength as a backstop for wide fallback fonts.
   const labelSize = Math.max(20, Math.min(34, Math.floor(560 / (rawLabel.length * 0.6))));
@@ -49,12 +55,14 @@ function createFallbackThumbnailDataUri(label: string, source?: string | null): 
   <g stroke="#ffffff" stroke-opacity="0.05">
     <path d="M0 150h960M0 300h960M0 450h960M240 0v600M480 0v600M720 0v600"/>
   </g>
-  <g transform="translate(378.4 92) scale(1.6)" fill="none" stroke="#0A7AFF" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M30 76V34l24 24 24-24v28l19-19M97 43h-9.5M97 43v9.5"/>
+  <g transform="translate(276 107) scale(1.2)" fill="none" stroke="#0A7AFF" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M30,76 L30,34 L54,58 L78,34 L78,62"/>
+    <path d="M78,62 L97,43"/>
+    <path d="M97,43 L87.5,43 M97,43 L97,52.5"/>
   </g>
-  <text x="480" y="286" font-family="Space Grotesk,Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-weight="700" font-size="46" letter-spacing="-1.6" text-anchor="middle" textLength="250" lengthAdjust="spacingAndGlyphs"><tspan fill="#FFFFFF">Motor</tspan><tspan fill="#3D94FF">mila</tspan></text>
-  <text x="480" y="384" fill="#FFFFFF" fill-opacity="0.86" font-family="Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-weight="600" font-size="${labelSize}" text-anchor="middle"${labelFit}>${safeLabel}</text>
-  <text x="480" y="432" fill="#FFFFFF" fill-opacity="0.6" font-family="Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="24" text-anchor="middle">${sourceLine}</text>
+  <text x="402" y="198" textLength="246" lengthAdjust="spacingAndGlyphs" fill="#FFFFFF" font-family="Space Grotesk,Inter,system-ui,sans-serif" font-weight="700" font-size="62">otormila</text>
+  <text x="480" y="282" fill="#FFFFFF" fill-opacity="0.86" font-family="Space Grotesk,Inter,system-ui,sans-serif" font-weight="700" font-size="${labelSize}" text-anchor="middle"${labelFit}>${safeLabel}</text>
+  <text x="480" y="326" fill="#FFFFFF" fill-opacity="0.55" font-family="Inter,system-ui,sans-serif" font-size="24" text-anchor="middle">${sourceLine}</text>
 </svg>`;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
