@@ -23,6 +23,20 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          // Tiny helpers used everywhere (vite's preload helper, commonjs
+          // interop, class-name utils). Without an explicit home rollup hoists
+          // them into whichever vendor chunk first imports them -- which made
+          // the entry statically import (and modulepreload) pdf-vendor and
+          // chart-vendor on every page.
+          if (
+            id.includes("vite/preload-helper") ||
+            id.includes("commonjsHelpers") ||
+            id.includes("node_modules/clsx") ||
+            id.includes("node_modules/tailwind-merge") ||
+            id.includes("node_modules/class-variance-authority")
+          ) {
+            return "core";
+          }
           if (
             id.includes("node_modules/react/") ||
             id.includes("node_modules/react-dom/") ||
