@@ -46,7 +46,7 @@ function statusFromError(error: unknown): AlertSyncStatus {
   return error instanceof APIError && error.status === 429 ? "limit" : "error";
 }
 
-/** A readable default name: "Toyota Aqua · Colombo · under Rs 85 L". */
+/** A readable default name: "Toyota Aqua · Colombo · under Rs 8.5 Mn". */
 export function savedSearchLabel(filters: Partial<FilterState>, fallback = "Current search"): string {
   const parts = [filters.make, filters.model, filters.district, filters.q ? `"${filters.q}"` : undefined].filter(Boolean);
   return parts.length ? parts.join(" · ") : fallback;

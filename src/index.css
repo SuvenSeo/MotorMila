@@ -2462,7 +2462,8 @@ body.cursor-custom-active * { cursor: auto; }
   animation: market-ticker-scroll 36s linear infinite;
   will-change: transform;
 }
-.market-ticker:hover .market-ticker__track {
+.market-ticker:hover .market-ticker__track,
+.market-ticker:focus-within .market-ticker__track {
   animation-play-state: paused;
 }
 @keyframes market-ticker-scroll {

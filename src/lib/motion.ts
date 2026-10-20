@@ -142,6 +142,7 @@ export const page: Variants = {
 export const listStagger: Variants = {
   hidden: {},
   show: { transition: { staggerChildren: STAGGER, delayChildren: 0.02 } },
+  exit: { transition: { staggerChildren: 0.02, staggerDirection: -1 } },
 };
 
 /** List item that self-caps the stagger: `<m.li variants={listItem} custom={i}>`. */

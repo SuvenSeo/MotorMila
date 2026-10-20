@@ -26,9 +26,10 @@ describe("parsePriceInput", () => {
     expect(parsePriceInput(input)).toBe(expected);
   });
 
-  it("reads bare small numbers as lakhs", () => {
-    expect(parsePriceInput("85")).toBe(8_500_000);
-    expect(parsePriceInput("72.5")).toBe(7_250_000);
+  it("reads bare small numbers as millions (the display unit)", () => {
+    expect(parsePriceInput("8.5")).toBe(8_500_000);
+    expect(parsePriceInput("12")).toBe(12_000_000);
+    expect(parsePriceInput("0.35")).toBe(350_000);
   });
 
   it("never returns cents", () => {

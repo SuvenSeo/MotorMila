@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { X } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { duration, ease, press, spring, useReducedMotionOrLowData } from "@/lib/motion";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { formatLkrRange } from "@/lib/price";
 import { resolveSearchAlias } from "@/lib/searchAliases";
@@ -125,6 +127,7 @@ function selectContentClass() {
 
 export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterPanelProps) {
   const { t } = useAppPreferences();
+  const motionStill = useReducedMotionOrLowData();
   const [makes, setMakes] = useState<{ make: string; count: number }[]>([]);
   const [modelsList, setModelsList] = useState<{ model: string; count: number }[]>([]);
   const [sourceOptions, setSourceOptions] = useState<ListingSourceStat[]>([]);
@@ -362,7 +365,10 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
     >
       <div className={`${touch ? "" : "sticky top-0 z-10 "}space-y-3 rounded-[1.75rem] border border-transparent bg-card/85 px-3.5 py-3 shadow-soft backdrop-blur-xl`}>
         {/* In the drawer the sheet header already shows "Filters" + "Clear all". */}
-        <div className={touch ? "hidden" : "flex items-center justify-between gap-2"}>
+        {/* Not rendered (rather than display:none) in the drawer: a hidden
+            child still got space-y margin and left a gap above "With price". */}
+        {touch ? null : (
+        <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-semibold tracking-tight text-foreground">{t("filter.title", "Filters")}</p>
           {activeChips.length > 0 ? (
             <button
@@ -374,20 +380,29 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
             </button>
           ) : null}
         </div>
+        )}
 
         {activeChips.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
-            {activeChips.map((chip) => (
-              <button
-                key={chip.key}
-                type="button"
-                onClick={chip.onRemove}
-                className="inline-flex max-w-full items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-caption font-medium text-primary-bright"
-              >
-                <span className="truncate">{chip.label}</span>
-                <X className="h-3 w-3 shrink-0 opacity-70" />
-              </button>
-            ))}
+            <AnimatePresence initial={false} mode="popLayout">
+              {activeChips.map((chip) => (
+                <motion.button
+                  key={chip.key}
+                  type="button"
+                  onClick={chip.onRemove}
+                  layout={!motionStill}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9, transition: { duration: duration.fast, ease: ease.exit } }}
+                  transition={spring.snappy}
+                  whileTap={motionStill ? undefined : press.whileTap}
+                  className="inline-flex max-w-full items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-caption font-medium text-primary-bright"
+                >
+                  <span className="truncate">{chip.label}</span>
+                  <X className="h-3 w-3 shrink-0 opacity-70" />
+                </motion.button>
+              ))}
+            </AnimatePresence>
           </div>
         ) : null}
 

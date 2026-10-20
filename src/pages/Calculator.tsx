@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { m, motion, AnimatePresence } from "motion/react";
+import { duration, ease, spring, useReducedMotionOrLowData } from "@/lib/motion";
 import { formatPrice, getPermits, getMacroContext, type LandedCostResult, type TcoResult, type PermitInfo, type MacroContext } from "@/services/api";
 import {
   calculateLandedCostResilient as calculateLandedCost,
@@ -31,7 +32,7 @@ import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
 import { PageHero } from "@/components/PageHero";
 import { FreePlanBanner } from "@/components/FreePlanBanner";
-import { SlidingNumber } from "@/components/ui/SlidingNumber";
+import { FlowLkr, FlowNumber } from "@/components/motion/FlowNumber";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { toast } from "sonner";
 import { getSurchargeCountdown } from "@/lib/importTaxModel";
@@ -160,6 +161,7 @@ export default function Calculator() {
   const [fxUserOverridden, setFxUserOverridden] = useState(() => searchParams.has("fx"));
   const [fxFocused, setFxFocused] = useState(false);
   const [fxText, setFxText] = useState("");
+  const motionStill = useReducedMotionOrLowData();
   const tabStripRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     // Keep the active tab fully visible in the mobile scroll strip.
@@ -494,7 +496,7 @@ export default function Calculator() {
                   <motion.div
                     layoutId="active-tab-indicator"
                     className="absolute inset-0 bg-primary rounded-full -z-10 shadow-soft"
-                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    transition={spring.snappy}
                   />
                 )}
                 {locked ? <Lock className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
@@ -720,7 +722,7 @@ export default function Calculator() {
                   </div>
                 ) : lcResult ? (
                   <div className={`space-y-5 transition-opacity duration-200 ${lcLoading ? "opacity-60" : "opacity-100"}`}>
-                    <div className="space-y-3 border-b border-border pb-4">
+                    <motion.div layout={!motionStill} transition={spring.gentle} className="space-y-3 border-b border-border pb-4">
                       <div className="flex justify-between text-xs text-muted-foreground">
                         <span>{t("calc.baseCif", "Base CIF LKR Equivalent")}</span>
                         <span className="font-semibold text-foreground num">{formatPrice(lcResult.cif_lkr)}</span>
@@ -745,33 +747,41 @@ export default function Calculator() {
                         <span>{t("calc.vat", "VAT (18% Compounded)")}</span>
                         <span className="font-semibold text-foreground num">{formatPrice(lcResult.vat)}</span>
                       </div>
-                      {lcResult.luxury_tax > 0 && (
-                        <div className="flex justify-between text-xs text-rose-600 dark:text-rose-400 font-semibold">
-                          <span>{t("calc.luxuryTax", "Luxury Tax (Excess Portion)")}</span>
-                          <span className="num">{formatPrice(lcResult.luxury_tax)}</span>
-                        </div>
-                      )}
-                    </div>
+                      <AnimatePresence initial={false}>
+                        {lcResult.luxury_tax > 0 && (
+                          <motion.div
+                            key="luxury"
+                            layout={!motionStill}
+                            initial={{ opacity: 0, y: -4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, transition: { duration: duration.fast, ease: ease.exit } }}
+                            transition={spring.gentle}
+                            className="flex justify-between text-xs text-rose-600 dark:text-rose-400 font-semibold"
+                          >
+                            <span>{t("calc.luxuryTax", "Luxury Tax (Excess Portion)")}</span>
+                            <span className="num">{formatPrice(lcResult.luxury_tax)}</span>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
 
                     {/* Featured readout — landed cost towers, total taxes demoted below it */}
-                    <div aria-live="polite" className="rounded-2xl border border-primary/25 bg-primary/5 p-5 sm:p-6 shadow-soft">
+                    <motion.div layout={!motionStill ? "position" : false} transition={spring.gentle} aria-live="polite" className="rounded-2xl border border-primary/25 bg-primary/5 p-5 sm:p-6 shadow-soft">
                       <span className="text-[12px] font-semibold text-primary-bright">{t("calc.estLanded", "Est. Landed Cost")}</span>
                       <div className="display-1 text-foreground num mt-2">
                         {lcResult.landed_cost == null || !Number.isFinite(lcResult.landed_cost) ? (
                           "N/A"
                         ) : (
-                          <span className="inline-flex items-baseline">
-                            <span>Rs.&nbsp;</span>
-                            <SlidingNumber value={Math.round((lcResult.landed_cost / 1_000_000) * 100) / 100} />
-                            <span>M</span>
-                          </span>
+                          <FlowLkr value={lcResult.landed_cost} label={formatPrice(lcResult.landed_cost)} />
                         )}
                       </div>
                       <div className="mt-4 flex items-center gap-3 border-t border-primary/15 pt-3">
                         <span className="text-[12px] font-medium text-muted-foreground">Total Taxes &amp; Duties</span>
-                        <span className="ml-auto text-sm font-bold text-primary num">+{formatPrice(lcResult.total_tax)}</span>
+                        <span className="ml-auto text-sm font-bold text-primary num">
+                          <FlowLkr value={lcResult.total_tax} prefixPlus label={`+${formatPrice(lcResult.total_tax)}`} />
+                        </span>
                       </div>
-                    </div>
+                    </motion.div>
 
                     <div className="rounded-2xl bg-surface border border-border p-3 flex gap-2">
                       <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
@@ -983,7 +993,9 @@ export default function Calculator() {
 
                     <div aria-live="polite" className="rounded-2xl border border-primary/25 bg-primary/5 p-6 text-center shadow-soft">
                       <span className="text-[12px] font-semibold text-primary-bright">{t("calc.tcoTotal", "Total ownership cost / month")}</span>
-                      <p className="display-1 text-foreground mt-2 num">{formatLkrMonthly(tcoResult.total_tco_monthly)}</p>
+                      <p className="display-1 text-foreground mt-2 num">
+                        <FlowNumber value={Math.round(tcoResult.total_tco_monthly)} prefix="Rs " suffix="/mo" label={formatLkrMonthly(tcoResult.total_tco_monthly)} />
+                      </p>
                     </div>
 
                     <div className="rounded-2xl bg-surface border border-border p-3 flex gap-2">

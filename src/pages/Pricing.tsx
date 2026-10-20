@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
-import { ArrowRight, BookOpen, Check, CreditCard, HelpCircle, Loader2, MessageCircle, Sparkles, Timer, Users } from "lucide-react";
+import { ArrowRight, BookOpen, ChevronDown, Check, CreditCard, HelpCircle, Loader2, MessageCircle, Sparkles, Timer, Users } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ParticleButton, type ParticleButtonHandle } from "@/components/ui/ParticleButton";
 import { BRAND } from "@/lib/brand";
@@ -11,7 +11,7 @@ import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
 import { PageHero } from "@/components/PageHero";
 import { AtmosphericImage } from "@/components/AtmosphericImage";
-import { revealItem } from "@/lib/motion";
+import { duration, ease, revealItem, spring, useReducedMotionOrLowData } from "@/lib/motion";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { useAuth } from "@/lib/authContext";
 import { visuals } from "@/lib/visualAssets";
@@ -505,8 +505,20 @@ function DealerPlans() {
   );
 }
 
+/** Scroll-triggered section reveal (once); breaks the PageCanvas mount stagger. */
+const onScrollReveal = {
+  inherit: false,
+  initial: "hidden",
+  whileInView: "show",
+  viewport: { once: true, amount: 0.12 },
+} as const;
+
 export default function Pricing() {
   const { t } = useAppPreferences();
+  const motionStill = useReducedMotionOrLowData();
+  const [dealersOpen, setDealersOpen] = useState(
+    () => typeof window !== "undefined" && window.location.hash === "#for-dealers",
+  );
   const cell = ([key, fb]: readonly [string, string]) => (key ? t(key, fb) : fb);
   const COMPARE_ROWS = COMPARE_ROW_DEFS.map((row) => ({
     label: cell(row.label),
@@ -545,7 +557,7 @@ export default function Pricing() {
       />
 
       <PageBody className="space-y-16 lg:space-y-20">
-        <motion.section variants={revealItem} aria-labelledby="tiers-heading">
+        <motion.section {...onScrollReveal} variants={revealItem} aria-labelledby="tiers-heading">
           <p className="section-eyebrow mb-3">{t("pricing.plansEyebrow", "Plans")}</p>
           <h2 id="tiers-heading" className="display-2 mb-8 text-foreground">
             {t("shell.pricing.tiersTitle", "Two plans. One is free.")}
@@ -591,7 +603,7 @@ export default function Pricing() {
           </div>
         </motion.section>
 
-        <motion.section variants={revealItem} aria-labelledby="compare-heading">
+        <motion.section {...onScrollReveal} variants={revealItem} aria-labelledby="compare-heading">
           <p className="section-eyebrow mb-3">{t("pricing.compare", "Compare")}</p>
           <h2 id="compare-heading" className="display-2 mb-6 text-foreground">
             {t("shell.pricing.compareTitle", "Free and Pro side by side.")}
@@ -620,7 +632,7 @@ export default function Pricing() {
           </div>
         </motion.section>
 
-        <motion.section variants={revealItem} aria-labelledby="faq-heading">
+        <motion.section {...onScrollReveal} variants={revealItem} aria-labelledby="faq-heading">
           <div className="mb-8 grid items-end gap-6 lg:grid-cols-[minmax(0,1fr)_220px]">
             <div>
               <p className="section-eyebrow mb-3 inline-flex items-center gap-2">
@@ -649,17 +661,53 @@ export default function Pricing() {
         </motion.section>
 
         {/* Dealers: real, sellable plans — kept off the main plan grid, one tap away. */}
-        <motion.details variants={revealItem} id="for-dealers" className="group scroll-mt-24 rounded-2xl border border-border bg-card/40 p-5 sm:p-6">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[15px] font-bold text-foreground">
+        {/* Accordion: height change via `layout` (no height tween); content
+            stays in the DOM (hidden) so dealer prices remain indexable. */}
+        <motion.div
+          {...onScrollReveal}
+          variants={revealItem}
+          layout={!motionStill}
+          transition={spring.gentle}
+          id="for-dealers"
+          style={{ borderRadius: 16 }}
+          className="scroll-mt-24 border border-border bg-card/40 p-5 sm:p-6"
+        >
+          <motion.button
+            layout={!motionStill ? "position" : false}
+            type="button"
+            aria-expanded={dealersOpen}
+            aria-controls="for-dealers-panel"
+            onClick={() => setDealersOpen((o) => !o)}
+            className="flex w-full cursor-pointer items-center justify-between gap-3 text-left text-[15px] font-bold text-foreground"
+          >
             <span className="inline-flex items-center gap-2">
               <Users aria-hidden className="h-4 w-4 text-primary" />
               {t("shell.pricing.forDealers", "For dealers")}
             </span>
-            <span className="text-[12px] font-medium text-muted-foreground group-open:hidden">
-              {t("shell.pricing.forDealersHint", "Plans priced by stock size, from LKR 2,990/mo")}
+            <span className="inline-flex items-center gap-2">
+              {!dealersOpen ? (
+                <span className="text-[12px] font-medium text-muted-foreground">
+                  {t("shell.pricing.forDealersHint", "Plans priced by stock size, from LKR 2,990/mo")}
+                </span>
+              ) : null}
+              <motion.span
+                aria-hidden
+                animate={{ rotate: dealersOpen ? 180 : 0 }}
+                transition={motionStill ? { duration: 0 } : spring.snappy}
+                className="inline-flex"
+              >
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </motion.span>
             </span>
-          </summary>
-          <div className="mt-6 space-y-8">
+          </motion.button>
+          <motion.div
+            id="for-dealers-panel"
+            hidden={!dealersOpen}
+            initial={false}
+            animate={dealersOpen ? { opacity: 1, y: 0 } : { opacity: 0, y: -6 }}
+            transition={{ duration: duration.base, ease: dealersOpen ? ease.emphasized : ease.exit }}
+            className="mt-6 space-y-8"
+          >
             <DealerPlans />
             <div className="grid gap-4 md:grid-cols-3">
               {DEALER_FAQ.map((item) => (
@@ -669,11 +717,13 @@ export default function Pricing() {
                 </div>
               ))}
             </div>
-          </div>
-        </motion.details>
+          </motion.div>
+        </motion.div>
 
         <motion.div
           id="get-started"
+          {...onScrollReveal}
+          layout={!motionStill ? "position" : false}
           variants={revealItem}
           className="flex scroll-mt-24 flex-col gap-4 rounded-2xl border border-primary/25 bg-primary/[0.06] p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8"
         >

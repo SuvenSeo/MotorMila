@@ -15,7 +15,7 @@ describe("computeDealBadge", () => {
     const b = computeDealBadge({ askingLkr: 7_580_000, fmvLkr: 8_000_000, confidence: "high", compsCount: 40 });
     expect(b.kind).toBe("below");
     expect(b.gapLkr).toBe(420_000);
-    expect(dealBadgeLabel(b, t)).toBe("Rs 4.2 L below typical");
+    expect(dealBadgeLabel(b, t)).toBe("Rs 0.42 Mn below typical");
   });
 
   it("calls near-FMV asks fair and expensive asks above", () => {
@@ -23,7 +23,7 @@ describe("computeDealBadge", () => {
     expect(computeDealBadge({ askingLkr: 7_700_000, fmvLkr: 8_000_000 }).kind).toBe("fair");
     const above = computeDealBadge({ askingLkr: 9_000_000, fmvLkr: 8_000_000 });
     expect(above.kind).toBe("above");
-    expect(dealBadgeLabel(above, t)).toBe("Rs 10 L above typical");
+    expect(dealBadgeLabel(above, t)).toBe("Rs 1 Mn above typical");
   });
 
   it("turns very cheap outliers amber, never green", () => {
@@ -70,11 +70,11 @@ describe("computeDealBadge", () => {
 });
 
 describe("formatLkrShort", () => {
-  it("formats lakhs, millions and thousands", () => {
-    expect(formatLkrShort(420_000)).toBe("Rs 4.2 L");
-    expect(formatLkrShort(1_000_000)).toBe("Rs 10 L");
+  it("formats gaps in millions only", () => {
+    expect(formatLkrShort(420_000)).toBe("Rs 0.42 Mn");
+    expect(formatLkrShort(1_000_000)).toBe("Rs 1 Mn");
     expect(formatLkrShort(12_500_000)).toBe("Rs 12.5 Mn");
-    expect(formatLkrShort(45_000)).toBe("Rs 45k");
-    expect(formatLkrShort(-300_000)).toBe("Rs 3 L");
+    expect(formatLkrShort(45_000)).toBe("Rs 0.045 Mn");
+    expect(formatLkrShort(-300_000)).toBe("Rs 0.3 Mn");
   });
 });

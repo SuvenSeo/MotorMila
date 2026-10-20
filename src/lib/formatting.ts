@@ -10,8 +10,8 @@ export function isReasonableListingPrice(price: number | null | undefined): bool
 
 /**
  * Compact card/list price. Delegates to the canonical formatter in
- * `@/lib/price` ("Rs 85 L" below 100 lakhs, "Rs 12.5 Mn" above, full
- * rupees under 1 lakh). The "Millions" name is historical: every
+ * `@/lib/price` (millions only: "Rs 0.35 Mn", "Rs 8.5 Mn", "Rs 12.5 Mn").
+ * Every
  * `formatPrice()` call in the app routes through here.
  * @deprecated import `formatLkrCompact` from `@/lib/price` in new code.
  */
@@ -19,12 +19,12 @@ export function formatPriceLkrMillions(price: number | null | undefined): string
   return formatLkrCompact(price, "N/A");
 }
 
-/** Lakhs-first compact price ("Rs 85 L"). Previously returned millions by mistake. */
+/** Compact price — millions only since Oct 2026 ("Rs 8.5 Mn"); name kept for callers. */
 export function formatPriceLkrLakhs(price: number | null | undefined): string {
   return formatLkrCompact(price, "N/A");
 }
 
-/** Chart-axis tick from a raw LKR value ("70 L", "15 Mn"). */
+/** Chart-axis tick from a raw LKR value ("7 Mn", "15 Mn"). */
 export function formatPriceTickMillions(value: number | string | null | undefined): string {
   return formatLkrAxis(value, "N/A");
 }

@@ -4,7 +4,7 @@ import {
   cleanDistrict,
   computedDropPct,
   formatChangePct,
-  formatLakhs,
+  formatMnShort,
   formatLkrWhole,
   isCountryLevelDistrict,
   isPlausiblePriceDrop,
@@ -133,10 +133,10 @@ describe("chart scales", () => {
     expect(d[1]).toBeGreaterThan(5);
     expect(paddedDomain([])).toBeNull();
   });
-  it("labels in lakhs", () => {
-    expect(formatLakhs(7_650_000)).toBe("76.5 L");
-    expect(formatLakhs(12_000_000)).toBe("12 Mn");
-    expect(formatLakhs(450_000)).toBe("4.5 L");
-    expect(formatLakhs(85_000)).toBe("85,000");
+  it("labels in millions", () => {
+    expect(formatMnShort(7_650_000)).toBe("7.65 Mn");
+    expect(formatMnShort(12_000_000)).toBe("12 Mn");
+    expect(formatMnShort(450_000)).toBe("0.45 Mn");
+    expect(formatMnShort(85_000)).toBe("0.085 Mn");
   });
 });

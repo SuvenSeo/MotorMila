@@ -8,8 +8,9 @@
  *   "850k", "850 K", "850 thousand"                              → 850,000
  *   "Rs 7,250,000", "Rs. 7,250,000", "LKR 7250000", "7250000/="  → 7,250,000
  *   Sinhala / Tamil units: "85 ලක්ෂ", "8.5 මිලියන", "85 லட்சம்", "8.5 மில்லியன்"
- *   A bare number under 1,000 ("85", "72.5") is read as lakhs — nobody
- *   lists a car for Rs 85, and "85" is how people say 85 lakhs.
+ *   A bare number under 1,000 ("8.5", "12") is read as millions — the unit
+ *   every price on the site is shown in (Oct 2026: millions only). Lakh
+ *   shorthand is still accepted when typed with its unit ("85L").
  *
  * Returns null for empty or unparseable input. Never returns cents.
  */
@@ -21,8 +22,8 @@ const UNIT_MULTIPLIERS: Array<{ re: RegExp; mult: number }> = [
   { re: /^(k|thousand|දහස|ஆயிரம்)$/u, mult: 1_000 },
 ];
 
-/** Bare numbers below this are interpreted as lakhs. */
-export const BARE_LAKH_CUTOFF = 1_000;
+/** Bare numbers below this are interpreted as millions (the display unit). */
+export const BARE_MN_CUTOFF = 1_000;
 
 export function parsePriceInput(input: string | null | undefined): number | null {
   if (input === null || input === undefined) return null;
@@ -50,7 +51,7 @@ export function parsePriceInput(input: string | null | undefined): number | null
     return Math.round(numeric * unit.mult);
   }
 
-  if (numeric > 0 && numeric < BARE_LAKH_CUTOFF) return Math.round(numeric * 100_000);
+  if (numeric > 0 && numeric < BARE_MN_CUTOFF) return Math.round(numeric * 1_000_000);
   return Math.round(numeric);
 }
 

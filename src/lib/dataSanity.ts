@@ -205,10 +205,10 @@ function niceStep(raw: number): number {
 }
 
 /**
- * Short lakhs/Mn label via the canonical formatter (src/lib/price.ts):
- * 7,650,000 → "76.5 L", 12,000,000 → "12 Mn", 85,000 → "85,000".
+ * Short millions label via the canonical formatter (src/lib/price.ts):
+ * 7,650,000 → "7.65 Mn", 12,000,000 → "12 Mn", 450,000 → "0.45 Mn".
  */
-export function formatLakhs(lkr: number): string {
+export function formatMnShort(lkr: number): string {
   if (!Number.isFinite(lkr)) return "";
   return compactLkrAmount(lkr);
 }

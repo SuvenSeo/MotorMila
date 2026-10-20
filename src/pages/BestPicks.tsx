@@ -6,7 +6,7 @@ import { ExternalLink, SearchX, Star, TrendingDown } from "lucide-react";
 import { getListings, getPriceDrops, formatPrice } from "@/services/api";
 import type { CarListing, FilterState, PriceDropItem } from "@/types/car";
 import { VehicleThumbnail } from "@/components/VehicleThumbnail";
-import { CardSkeleton } from "@/components/Skeleton";
+
 import { EmptyState } from "@/components/EmptyState";
 import { SectionHeader } from "@/components/SectionHeader";
 import { pickVehicleImageUrl } from "@/lib/listingImage";
@@ -16,7 +16,8 @@ import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
 import { PageHero } from "@/components/PageHero";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
-import { revealContainer, revealItem } from "@/lib/motion";
+import { duration, fadeUp, hoverLift, listStagger, press, revealItem, useReducedMotionOrLowData } from "@/lib/motion";
+import type { Variants } from "motion/react";
 import { useAuth } from "@/lib/authContext";
 import { useAppPreferences } from "@/lib/appPreferences";
 import {
@@ -145,8 +146,64 @@ function sortPicks(listings: CarListing[], mode: BestPicksSortMode): CarListing[
 
 const PICKS_TIMEOUT_MS = 15_000;
 
+/** Items past the stagger cap: plain fade, all together after the first 8. */
+const lateFade: Variants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { duration: duration.base, delay: 8 * 0.04 } },
+};
+
+/** Loading placeholder shaped like the final page: featured pick (image +
+ * text, 2 columns on desktop), then a shortlist of 16:10 tiles. */
+function PicksSkeleton() {
+  const bar = "skeleton-shimmer rounded-full";
+  return (
+    <div className="space-y-14 lg:space-y-20" aria-hidden>
+      <div className="grid overflow-hidden rounded-2xl border border-border bg-card lg:grid-cols-[1.1fr_1fr]">
+        <div className="skeleton-shimmer aspect-[16/10] lg:aspect-auto lg:min-h-[320px]" />
+        <div className="flex flex-col justify-between gap-6 p-6 sm:p-8">
+          <div className="space-y-4">
+            <div className={`${bar} h-3 w-24`} />
+            <div className={`${bar} h-9 w-3/4`} />
+            <div className={`${bar} h-3 w-32`} />
+            <div className="flex items-baseline justify-between border-t border-border pt-4">
+              <div className={`${bar} h-8 w-40`} />
+              <div className={`${bar} h-3 w-16`} />
+            </div>
+            <div className={`${bar} h-1 w-full`} />
+          </div>
+          <div className={`${bar} h-11 w-full`} />
+        </div>
+      </div>
+      <div>
+        <div className="mb-8 space-y-2">
+          <div className={`${bar} h-3 w-24`} />
+          <div className={`${bar} h-7 w-48`} />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card">
+              <div className="skeleton-shimmer aspect-[16/10]" />
+              <div className="flex flex-col gap-3 p-4">
+                <div className={`${bar} h-3 w-20`} />
+                <div className={`${bar} h-4 w-2/3`} />
+                <div className="flex justify-between">
+                  <div className={`${bar} h-4 w-24`} />
+                  <div className={`${bar} h-3 w-8`} />
+                </div>
+                <div className={`${bar} h-1 w-full`} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function BestPicks() {
   const { t } = useAppPreferences();
+  const motionStill = useReducedMotionOrLowData();
+  const canHoverLift = typeof window !== "undefined" && window.matchMedia?.("(hover: hover) and (pointer: fine)").matches === true;
   const { hasProAccess, isAdmin } = useAuth();
   const fullAccess = hasFullPlatformAccess({ hasProAccess, isAdmin });
   const [loading, setLoading] = useState(true);
@@ -338,7 +395,7 @@ export default function BestPicks() {
         {loading ? (
           <div role="status" aria-live="polite">
             <p className="mb-3 text-[13px] font-medium text-muted-foreground">{t("shell.picks.loading", "Finding the best-priced listings…")}</p>
-            <CardSkeleton />
+            <PicksSkeleton />
           </div>
         ) : timedOut ? (
           <m.div variants={revealItem}>
@@ -427,13 +484,27 @@ export default function BestPicks() {
                   className="mb-8"
                   actions={<span className="text-[11px] font-bold text-muted-foreground num">{t("picks.more", "{n} more", { n: rest.length })}</span>}
                 />
-                <m.div variants={revealContainer} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <m.div
+                  inherit={false}
+                  initial="hidden"
+                  whileInView="show"
+                  viewport={{ once: true, amount: 0.05 }}
+                  variants={listStagger}
+                  className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                >
                   {rest.map((listing, idx) => {
                     const score = Number(listing.deal_score || 0);
                     const pct = topScore > 0 ? Math.min(100, Math.round((score / topScore) * 100)) : 0;
                     const cashDown = minCashDownForPrice(Number(listing.price_lkr || 0));
                     return (
-                      <m.article key={listing.id} variants={revealItem} className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg" onMouseMove={setSpotlightVars}>
+                      <m.article
+                        key={listing.id}
+                        // Stagger the first 8; the rest arrive together.
+                        variants={idx < 8 ? fadeUp : lateFade}
+                        {...(motionStill ? {} : canHoverLift ? { ...hoverLift, whileTap: press.whileTap } : { whileTap: press.whileTap })}
+                        className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft backdrop-blur-md transition-[border-color,box-shadow] duration-300 hover:border-primary/30 hover:shadow-soft-lg"
+                        onMouseMove={setSpotlightVars}
+                      >
                         <CardSpotlightGlow />
                         <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-30 pointer-events-none" aria-hidden />
                         <Link to={`/listing/${listing.id}`} className="relative block aspect-[16/10] overflow-hidden bg-muted no-underline transition-transform duration-200 active:scale-[0.98]">

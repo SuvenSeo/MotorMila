@@ -17,13 +17,15 @@ import {
 } from "@/lib/priceSteps";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { cn } from "@/lib/utils";
+import { m } from "motion/react";
+import { duration, ease, useReducedMotionOrLowData } from "@/lib/motion";
 
-/** Local-step presets (lakhs first, Mn above 100 L). */
+/** Presets, labelled in millions like every price on the site. */
 const PRESETS: Array<{ key: string; fallback: string; min?: number; max?: number }> = [
-  { key: "search.presetUnder30L", fallback: "Under 30 L", max: 3_000_000 },
-  { key: "search.preset30to50L", fallback: "30–50 L", min: 3_000_000, max: 5_000_000 },
-  { key: "search.preset50to75L", fallback: "50–75 L", min: 5_000_000, max: 7_500_000 },
-  { key: "search.preset75to100L", fallback: "75–100 L", min: 7_500_000, max: 10_000_000 },
+  { key: "search.presetUnder30L", fallback: "Under 3 Mn", max: 3_000_000 },
+  { key: "search.preset30to50L", fallback: "3–5 Mn", min: 3_000_000, max: 5_000_000 },
+  { key: "search.preset50to75L", fallback: "5–7.5 Mn", min: 5_000_000, max: 7_500_000 },
+  { key: "search.preset75to100L", fallback: "7.5–10 Mn", min: 7_500_000, max: 10_000_000 },
   { key: "search.preset10MnPlus", fallback: "10 Mn+", min: 10_000_000 },
 ];
 
@@ -36,8 +38,13 @@ function useDebounced<T>(value: T, ms: number): T {
   return debounced;
 }
 
+/** Committed bound shown back in Mn when that is exact ("8.5 Mn"), else full rupees. */
 function inputText(value: number | undefined): string {
-  return value ? groupThousands(value) : "";
+  if (!value) return "";
+  const mn = value / 1_000_000;
+  return value >= 10_000 && Math.abs(Math.round(mn * 100) - mn * 100) < 1e-6
+    ? `${Number(mn.toFixed(2))} Mn`
+    : groupThousands(value);
 }
 
 export interface PriceRangeFilterProps {
@@ -50,11 +57,12 @@ export interface PriceRangeFilterProps {
 
 /**
  * Price filter: mini histogram of prices in the current results (a sample of
- * up to 100 recent matches), a lakh-stepped range slider, a live count while
- * dragging, and text boxes that accept "85L", "8.5Mn", "Rs 7,250,000".
+ * up to 100 recent matches), a Mn-stepped range slider, a live count while
+ * dragging, and text boxes that accept "8.5 Mn", "85L", "Rs 7,250,000" (shown back in Mn).
  */
 export function PriceRangeFilter({ filters, onCommit, touch = false }: PriceRangeFilterProps) {
   const { t } = useAppPreferences();
+  const motionStill = useReducedMotionOrLowData();
   const [range, setRange] = useState<[number, number]>(() => [
     priceToStepIndex(filters.price_min, "min"),
     priceToStepIndex(filters.price_max, "max"),
@@ -116,7 +124,7 @@ export function PriceRangeFilter({ filters, onCommit, touch = false }: PriceRang
     const min = minText.trim() ? parsePriceInput(minText) : undefined;
     const max = maxText.trim() ? parsePriceInput(maxText) : undefined;
     if (min === null || max === null) {
-      setInputError(t("search.priceInputError", "Try 85L, 8.5Mn or 7,250,000"));
+      setInputError(t("search.priceInputError", "Try 8.5 Mn, 85L or 7,250,000"));
       return;
     }
     setInputError(null);
@@ -151,10 +159,15 @@ export function PriceRangeFilter({ filters, onCommit, touch = false }: PriceRang
           {histogram.map((count, i) => {
             const inRange = i >= range[0] && i < Math.max(range[1], range[0] + 1);
             return (
-              <div
+              /* Bars grow up once on first paint (scaleY, transform-only); later
+                 data changes just snap to the new height. */
+              <m.div
                 key={i}
-                className={cn("flex-1 rounded-t-sm", inRange ? "bg-primary/55" : "bg-muted-foreground/20")}
+                className={cn("flex-1 origin-bottom rounded-t-sm transition-colors duration-200", inRange ? "bg-primary/55" : "bg-muted-foreground/20")}
                 style={{ height: `${count === 0 ? 0 : Math.max(8, (count / histMax) * 100)}%` }}
+                initial={motionStill ? false : { scaleY: 0 }}
+                animate={{ scaleY: 1 }}
+                transition={{ duration: duration.slow, ease: ease.emphasized, delay: Math.min(i, 8) * 0.02 }}
               />
             );
           })}
@@ -182,7 +195,13 @@ export function PriceRangeFilter({ filters, onCommit, touch = false }: PriceRang
           const hi = (value[1] ?? PRICE_STEP_LAST_INDEX) === PRICE_STEP_LAST_INDEX ? undefined : stepIndexToPrice(value[1]);
           commit(lo, hi);
         }}
-        className="py-1 [&>span:first-child]:h-2"
+        className={cn(
+          "py-1 [&>span:first-child]:h-2",
+          // Thumb grab "spring": scale with an overshoot curve (transform only;
+          // the primitive positions thumbs itself, which we never animate).
+          !motionStill &&
+            "[&_[role=slider]]:transition-transform [&_[role=slider]]:duration-300 [&_[role=slider]]:ease-[cubic-bezier(0.34,1.56,0.64,1)] [&_[role=slider]:active]:scale-125 [&_[role=slider]:focus-visible]:scale-110",
+        )}
       />
 
       {sampleSize >= 8 ? (
@@ -230,7 +249,7 @@ export function PriceRangeFilter({ filters, onCommit, touch = false }: PriceRang
           }}
           inputMode="text"
           autoComplete="off"
-          placeholder={t("search.minPricePlaceholder", "Min e.g. 50L")}
+          placeholder={t("search.minPricePlaceholder", "Min e.g. 5 Mn")}
           aria-label={t("filter.minPriceAria", "Minimum price")}
           aria-invalid={Boolean(inputError)}
           className={inputClass}
@@ -261,7 +280,7 @@ export function PriceRangeFilter({ filters, onCommit, touch = false }: PriceRang
           {inputError}
         </p>
       ) : (
-        <p className="text-[11px] text-muted-foreground">{t("search.priceInputHint", "Type 85L, 8.5Mn or Rs 7,250,000")}</p>
+        <p className="text-[11px] text-muted-foreground">{t("search.priceInputHint", "Type 8.5 Mn, 85L or Rs 7,250,000")}</p>
       )}
     </div>
   );
