@@ -78,7 +78,7 @@ fun MmBottomBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .background(c.surfaceOverlay)
+            .background(c.surfaceOverlay.copy(alpha = 0.97f)) // no real blur: keep content from bleeding through labels
             .drawBehind {
                 drawLine(c.outline, Offset(0f, 0f), Offset(size.width, 0f), strokeWidth = 1f)
             }

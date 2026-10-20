@@ -67,7 +67,7 @@ class MotormilaScreenshotsTest {
                     total = 325_984,
                     goodDeals = 1_284,
                     new24h = 342,
-                    avgPrice = "Rs. 8.45M",
+                    avgPrice = "Rs 8.45 Mn",
                     modifier = Modifier.padding(16.dp),
                 )
             }
@@ -82,7 +82,7 @@ class MotormilaScreenshotsTest {
                     total = 325_984,
                     goodDeals = 1_284,
                     new24h = 342,
-                    avgPrice = "Rs. 8.45M",
+                    avgPrice = "Rs 8.45 Mn",
                     modifier = Modifier.padding(16.dp),
                 )
             }

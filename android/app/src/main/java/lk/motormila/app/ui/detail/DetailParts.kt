@@ -415,7 +415,7 @@ fun DetailActionBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(c.surfaceOverlay)
+            .background(c.surfaceOverlay.copy(alpha = 0.97f))
             .drawBehind { drawLine(c.outline, Offset(0f, 0f), Offset(size.width, 0f), 1f) }
             .navigationBarsPadding()
             .padding(horizontal = MmSpacing.gutter, vertical = 12.dp),
