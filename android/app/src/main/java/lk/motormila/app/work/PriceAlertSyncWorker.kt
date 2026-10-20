@@ -48,6 +48,7 @@ class PriceAlertSyncWorker(
         fun api(): MotormilaApiService
         fun db(): MotormilaDatabase
         fun notifications(): NotificationHelper
+        fun sessionStore(): lk.motormila.app.data.local.datastore.SessionStore
     }
 
     private val entryPoint: AlertWorkerEntryPoint by lazy {
@@ -88,30 +89,35 @@ class PriceAlertSyncWorker(
     }
 
     override suspend fun doWork(): Result {
+        // Signed out (or session expired): never call the API, and stop the
+        // schedule so a stale periodic request cannot keep firing.
+        val session = runCatching { entryPoint.sessionStore().rehydrate() }.getOrNull()
+        if (session == null) {
+            runCatching { cancel(applicationContext) }
+            return Result.success()
+        }
         val api = entryPoint.api()
         val db = entryPoint.db()
         val notifications = entryPoint.notifications()
         val alerts = runCatching { db.alertDao().getAll().filter { it.active } }.getOrElse { emptyList() }
         if (alerts.isEmpty()) return Result.success()
         val match = runCatching { api.matchAlerts() }.getOrElse { e ->
-            // Auth/plan errors will not fix themselves: stop instead of retrying
-            // forever. Transient errors retry with backoff, capped.
-            val code = (e as? retrofit2.HttpException)?.code()
-            return if (code != null && code in 400..499) Result.success()
-            else if (runAttemptCount >= MAX_ATTEMPTS) Result.success()
-            else Result.retry()
+            if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+            return alertRetryDecision((e as? retrofit2.HttpException)?.code(), runAttemptCount, MAX_ATTEMPTS)
         }
         val seen = applicationContext.getSharedPreferences(SEEN_PREFS, Context.MODE_PRIVATE)
         val seenEditor = seen.edit()
         val res = applicationContext.resources
         match.results.forEach { row ->
             if (row.matchingCount <= 0 || alerts.none { it.id == row.alertId }) return@forEach
-            val first = row.listings.firstOrNull()
-            // Dedupe: notify only when the newest matching listing changed.
-            val fingerprint = "${first?.id ?: 0}:${row.matchingCount}"
-            val key = "alert_${row.alertId}"
-            if (seen.getString(key, null) == fingerprint) return@forEach
-            seenEditor.putString(key, fingerprint)
+            // Dedupe by listing id: notify only for listings this alert has
+            // never notified about (a count change alone is not news).
+            val key = "alert_ids_${row.alertId}"
+            val seenIds = seen.getStringSet(key, emptySet()).orEmpty()
+            val fresh = unseenListingIds(row.listings.map { it.id }, seenIds)
+            if (fresh.isEmpty()) return@forEach
+            seenEditor.putStringSet(key, rememberSeenIds(seenIds, fresh))
+            val first = row.listings.firstOrNull { it.id == fresh.first() } ?: row.listings.firstOrNull()
             notifications.notifyPriceDrop(
                 id = NOTIF_ID_BASE + row.alertId,
                 title = res.getString(
@@ -137,4 +143,30 @@ class PriceAlertSyncWorker(
 
     private fun contentIntentOf(alertId: Int, listingId: Int?): PendingIntent? =
         listingTapPendingIntent(applicationContext, listingId, alertId)
+}
+
+/** Max listing ids remembered per alert (oldest dropped first). */
+internal const val MAX_SEEN_IDS_PER_ALERT = 200
+
+/** Listing ids (in match order) this alert has not notified about yet. */
+internal fun unseenListingIds(matchIds: List<Int>, seenIds: Set<String>): List<Int> =
+    matchIds.filter { it > 0 && it.toString() !in seenIds }.distinct()
+
+/** Seen set after notifying [fresh]; bounded to [MAX_SEEN_IDS_PER_ALERT]. */
+internal fun rememberSeenIds(seenIds: Set<String>, fresh: List<Int>): Set<String> {
+    val merged = LinkedHashSet<String>(seenIds)
+    fresh.forEach { merged.add(it.toString()) }
+    return if (merged.size <= MAX_SEEN_IDS_PER_ALERT) merged
+    else merged.toList().takeLast(MAX_SEEN_IDS_PER_ALERT).toSet()
+}
+
+/**
+ * Bounded retry policy for POST /alerts/match failures:
+ * 4xx (auth, plan, not found) will not fix itself -> stop (success);
+ * 408/429 and network/5xx retry with backoff until [maxAttempts], then stop.
+ */
+internal fun alertRetryDecision(httpCode: Int?, runAttemptCount: Int, maxAttempts: Int): androidx.work.ListenableWorker.Result {
+    val transient = httpCode == null || httpCode == 408 || httpCode == 429 || httpCode >= 500
+    return if (transient && runAttemptCount < maxAttempts) androidx.work.ListenableWorker.Result.retry()
+    else androidx.work.ListenableWorker.Result.success()
 }

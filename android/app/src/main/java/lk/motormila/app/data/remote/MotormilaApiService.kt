@@ -119,6 +119,7 @@ import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.HTTP
 import retrofit2.http.PATCH
+import retrofit2.http.PUT
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -426,6 +427,10 @@ interface MotormilaApiService {
 
     @DELETE("alerts/{id}")
     suspend fun deleteAlert(@Path("id") id: Int)
+
+    /** In-place edit (same id). Older backends answer 405 — see AlertsRepositoryImpl.update. */
+    @PUT("alerts/{id}")
+    suspend fun updateAlert(@Path("id") id: Int, @Body body: CreateAlertRequestDto): AlertDto
 
     /** Matches ALL of the caller's alerts server-side; filter client-side by id. */
     @POST("alerts/match")
