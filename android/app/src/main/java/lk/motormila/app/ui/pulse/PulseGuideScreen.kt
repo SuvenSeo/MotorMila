@@ -52,7 +52,7 @@ fun PulseGuideScreen(
                 Spacer(Modifier.height(16.dp))
                 MotormilaGhostButton("Back to Official Pulse", onClick = onOpenPulse)
             }
-            return
+            return@Column
         }
         Column(
             Modifier
