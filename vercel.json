@@ -17,39 +17,39 @@
     },
     {
       "source": "/(admin|price-index|valuation|leasing)",
-      "destination": "/index.html"
+      "destination": "/"
     },
     {
       "source": "/listing/:id",
-      "destination": "/index.html"
+      "destination": "/"
     },
     {
       "source": "/cars/:make",
-      "destination": "/index.html"
+      "destination": "/"
     },
     {
       "source": "/cars/:make/:model",
-      "destination": "/index.html"
+      "destination": "/"
     },
     {
       "source": "/cars/:make/:model/:year",
-      "destination": "/index.html"
+      "destination": "/"
     },
     {
       "source": "/locations/:district",
-      "destination": "/index.html"
+      "destination": "/"
     },
     {
       "source": "/compare/:slug",
-      "destination": "/index.html"
+      "destination": "/"
     },
     {
       "source": "/official-pulse/:path*",
-      "destination": "/index.html"
+      "destination": "/"
     },
     {
       "source": "/checkout/return",
-      "destination": "/index.html"
+      "destination": "/"
     }
   ],
   "functions": {
