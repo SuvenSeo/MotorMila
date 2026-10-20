@@ -183,13 +183,13 @@ private fun MakeModelHubBody(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     MakeHubMetricCard(
                         label = stringResource(R.string.make_model_hub_min_price),
-                        value = insight?.minPriceLkr?.let { LkrFormat.price(it) } ?: na,
+                        value = insight?.minPriceLkr?.let { lk.motormila.app.ui.common.mn(it) } ?: na,
                         note = stringResource(R.string.make_model_hub_min_note),
                         modifier = Modifier.weight(1f),
                     )
                     MakeHubMetricCard(
                         label = stringResource(R.string.make_model_hub_max_price),
-                        value = insight?.maxPriceLkr?.let { LkrFormat.price(it) } ?: na,
+                        value = insight?.maxPriceLkr?.let { lk.motormila.app.ui.common.mn(it) } ?: na,
                         note = stringResource(R.string.make_model_hub_max_note),
                         modifier = Modifier.weight(1f),
                     )

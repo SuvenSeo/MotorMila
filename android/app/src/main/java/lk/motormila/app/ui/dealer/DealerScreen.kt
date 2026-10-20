@@ -228,8 +228,8 @@ private fun BenchmarkCard(state: DealerUiState, viewModel: DealerViewModel) {
             Spacer(Modifier.height(12.dp))
             BenchmarkRow("Dealer", b.dealerName.ifBlank { "Your yard" })
             BenchmarkRow("Live listings", b.listingCount.toString())
-            BenchmarkRow("Average", formatLkr(b.avgPriceLkr))
-            BenchmarkRow("Median", formatLkr(b.medianPriceLkr))
+            BenchmarkRow("Average", lk.motormila.app.ui.common.mn(b.avgPriceLkr))
+            BenchmarkRow("Median", lk.motormila.app.ui.common.mn(b.medianPriceLkr))
             BenchmarkRow("District", b.district ?: "—")
             b.avgDealScore?.let { score ->
                 Spacer(Modifier.height(4.dp))
@@ -289,7 +289,7 @@ private fun UrlBenchmarkRow(row: UrlBenchmarkResult) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(stringResource(R.string.ui_dealer_price), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(formatLkr(row.listingPrice), style = MaterialTheme.typography.titleSmall)
+            Text(lk.motormila.app.ui.common.mn(row.listingPrice), style = MaterialTheme.typography.titleSmall)
         }
         Row(
             Modifier.fillMaxWidth().heightIn(min = 48.dp),
@@ -297,7 +297,7 @@ private fun UrlBenchmarkRow(row: UrlBenchmarkResult) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(stringResource(R.string.ui_dealer_median), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(formatLkr(row.marketMedian), style = MaterialTheme.typography.titleSmall)
+            Text(lk.motormila.app.ui.common.mn(row.marketMedian), style = MaterialTheme.typography.titleSmall)
         }
         Row(
             Modifier.fillMaxWidth().heightIn(min = 48.dp),

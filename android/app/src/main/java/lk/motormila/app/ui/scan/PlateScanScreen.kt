@@ -221,7 +221,7 @@ fun PlateScanScreen(
                         else stringResource(R.string.scan_no_match),
                         style = MaterialTheme.typography.bodyMedium,
                     )
-                    r.fmvLkr?.let { Text("FMV ${formatLkr(it)}", style = MaterialTheme.typography.titleSmall) }
+                    r.fmvLkr?.let { Text("FMV ${lk.motormila.app.ui.common.mn(it)}", style = MaterialTheme.typography.titleSmall) }
                     Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         MotormilaChoiceChip(

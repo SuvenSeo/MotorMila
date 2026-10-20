@@ -499,7 +499,7 @@ private fun PermitsPane(state: OfficialPulseUiState) {
 
 @Composable
 private fun PermitCard(permit: Permit) {
-    val price = LkrFormat.full(permit.marketPriceLkr)
+    val price = lk.motormila.app.ui.common.mn(permit.marketPriceLkr)
     val cd = stringResource(R.string.hub_pulse_cd_permit, permit.name, price)
     MotormilaSurface(modifier = Modifier.semantics { contentDescription = cd }) {
         Row(
@@ -574,7 +574,7 @@ private fun formatPulseValue(signal: MarketSignal): String {
     val value = signal.valueNumeric ?: return stringResource(R.string.hub_na)
     val unit = signal.unit?.trim().orEmpty()
     if (unit.equals("lkr", ignoreCase = true) || signal.metric.contains("lkr", ignoreCase = true)) {
-        return LkrFormat.full(value)
+        return lk.motormila.app.ui.common.mn(value)
     }
     val number = if (value % 1.0 == 0.0) value.toLong().toString() else "%.1f".format(value)
     return if (unit.isBlank()) number else stringResource(R.string.hub_pulse_value_unit, number, unit)

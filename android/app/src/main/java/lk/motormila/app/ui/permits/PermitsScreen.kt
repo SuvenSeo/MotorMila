@@ -165,7 +165,7 @@ private fun PermitRowCard(permit: Permit, delayMillis: Int) {
                 )
             }
             Text(
-                LkrFormat.full(permit.marketPriceLkr),
+                lk.motormila.app.ui.common.mn(permit.marketPriceLkr),
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,

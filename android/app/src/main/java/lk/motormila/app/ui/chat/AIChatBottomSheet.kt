@@ -829,7 +829,7 @@ private fun EmbeddedVehicleCard(
             )
 
             Text(
-                text = listing.formattedPrice(),
+                text = lk.motormila.app.ui.common.mn(listing.priceLkr),
                 fontSize = 14.sp,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,

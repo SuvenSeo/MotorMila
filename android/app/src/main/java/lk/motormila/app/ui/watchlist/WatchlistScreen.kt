@@ -213,7 +213,7 @@ private fun WatchRow(
             MotormilaSurface(
                 modifier = Modifier
                     .padding(horizontal = 16.dp)
-                    .semantics { contentDescription = "Watched ${item.title} at ${formatLkr(item.priceLkr)}" },
+                    .semantics { contentDescription = "Watched ${item.title} at ${lk.motormila.app.ui.common.mn(item.priceLkr)}" },
                 onClick = onOpen,
                 highlighted = flash,
             ) {
@@ -231,7 +231,7 @@ private fun WatchRow(
                     Column(Modifier.weight(1f)) {
                         Text(item.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                         Text(
-                            "${formatLkr(item.priceLkr)} · ${item.district}",
+                            "${lk.motormila.app.ui.common.mn(item.priceLkr)} · ${item.district}",
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         // Price-drop badge vs the add-price baseline (WatchItem.dropPct).
@@ -264,7 +264,7 @@ private fun WatchRow(
                             )
                         } else if (item.fmvLkr != null) {
                             Text(
-                                "FMV ${formatLkr(item.fmvLkr)}",
+                                "FMV ${lk.motormila.app.ui.common.mn(item.fmvLkr)}",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

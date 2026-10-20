@@ -227,7 +227,7 @@ private fun MakeHubModelRow(
     onClick: (String, String) -> Unit,
 ) {
     val make = entry.make.ifBlank { fallbackMake }
-    val price = LkrFormat.price(entry.avgPriceLkr)
+    val price = lk.motormila.app.ui.common.mn(entry.avgPriceLkr)
     val rowCd = stringResource(R.string.make_hub_cd_model, make, entry.model)
     MotormilaSurface(
         onClick = { onClick(make, entry.model) },

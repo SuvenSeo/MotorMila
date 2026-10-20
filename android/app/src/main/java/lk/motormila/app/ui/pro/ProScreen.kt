@@ -247,8 +247,8 @@ private fun ProContent(
             ) {
                 if (snap != null) {
                     KpiChip("Listings", snap.totalListings.toString())
-                    KpiChip("Avg", formatLkr(snap.avgPriceLkr))
-                    KpiChip("Median", formatLkr(snap.medianPriceLkr))
+                    KpiChip("Avg", lk.motormila.app.ui.common.mn(snap.avgPriceLkr))
+                    KpiChip("Median", lk.motormila.app.ui.common.mn(snap.medianPriceLkr))
                     KpiChip("New 7d", snap.newListings7d.toString())
                     KpiChip("Hot deals", snap.hotDealCount.toString())
                     KpiChip("Districts", snap.districtsCovered.toString())
@@ -290,7 +290,7 @@ private fun ProContent(
                         Column(Modifier.weight(1f)) {
                             Text(laneName, style = MaterialTheme.typography.titleSmall)
                             Text(
-                                "${lane.listingCount} listings · median ${formatLkr(lane.medianPriceLkr)}",
+                                "${lane.listingCount} listings · median ${lk.motormila.app.ui.common.mn(lane.medianPriceLkr)}",
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }
@@ -310,7 +310,7 @@ private fun ProContent(
                             state.laneDetail != null -> {
                                 val d = state.laneDetail!!
                                 Spacer(Modifier.height(8.dp))
-                                LaneDetailRow("Range", "${formatLkr(d.minPriceLkr)} – ${formatLkr(d.maxPriceLkr)}")
+                                LaneDetailRow("Range", "${lk.motormila.app.ui.common.mn(d.minPriceLkr)} – ${lk.motormila.app.ui.common.mn(d.maxPriceLkr)}")
                                 LaneDetailRow("Districts / sources", "${d.districtCount} / ${d.sourceCount}")
                                 LaneDetailRow(
                                     "Top district / source",
@@ -347,7 +347,7 @@ private fun ProContent(
                     ) {
                         Text(d.district, style = MaterialTheme.typography.bodyLarge)
                         Text(
-                            "${d.listingCount} · median ${formatLkr(d.medianPriceLkr)}",
+                            "${d.listingCount} · median ${lk.motormila.app.ui.common.mn(d.medianPriceLkr)}",
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
@@ -370,7 +370,7 @@ private fun ProContent(
                                 )
                                 state.districtDetail != null -> {
                                     val dd = state.districtDetail!!
-                                    LaneDetailRow("Average", formatLkr(dd.avgPriceLkr))
+                                    LaneDetailRow("Average", lk.motormila.app.ui.common.mn(dd.avgPriceLkr))
                                     LaneDetailRow("Sources", dd.sourceCount.toString())
                                     LaneDetailRow(
                                         "Top make / model",
@@ -438,7 +438,7 @@ private fun ProContent(
                         }
                     }
                     Text(
-                        "Spread ${formatLkr(a.sellMedianLkr - a.buyMedianLkr)} · ${formatPct(a.gapPct)}",
+                        "Spread ${lk.motormila.app.ui.common.mn(a.sellMedianLkr - a.buyMedianLkr)} · ${formatPct(a.gapPct)}",
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.primary,
                     )

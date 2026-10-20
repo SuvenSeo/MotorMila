@@ -410,7 +410,7 @@ private fun AlertRow(
     val channels = parseNotifyChannels(alert.notifyChannels)
     MotormilaSurface(
         modifier = Modifier.semantics {
-            contentDescription = "Alert ${alert.title} under ${formatLkr(alert.maxPriceLkr)}"
+            contentDescription = "Alert ${alert.title} under ${lk.motormila.app.ui.common.mn(alert.maxPriceLkr)}"
         },
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -420,7 +420,7 @@ private fun AlertRow(
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(
-                    "${alert.district ?: "Any district"} · triggers ≤ ${formatLkr(alert.maxPriceLkr)} · ${alert.notifyChannels ?: "push"}",
+                    "${alert.district ?: "Any district"} · triggers ≤ ${lk.motormila.app.ui.common.mn(alert.maxPriceLkr)} · ${alert.notifyChannels ?: "push"}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -507,7 +507,7 @@ private fun AlertRow(
                         )
                         Text(
                             buildString {
-                                append(m.priceLkr?.let { formatLkr(it) } ?: "Price on request")
+                                append(m.priceLkr?.let { lk.motormila.app.ui.common.mn(it) } ?: "Price on request")
                                 append(" · ${m.district ?: "—"}")
                                 m.dealScore?.let { append(" ★ %.1f".format(it)) }
                                 if (underPct != null && underPct >= 0) {

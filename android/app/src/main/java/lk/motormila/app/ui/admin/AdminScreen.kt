@@ -508,8 +508,8 @@ private fun AnalyticsPane(state: AdminUiState) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         MotormilaMetricTile(
                             label = "AVG ASK",
-                            value = LkrFormat.price(analytics.listings.avgPriceLkr),
-                            note = "${LkrFormat.price(analytics.listings.minPriceLkr)} – ${LkrFormat.price(analytics.listings.maxPriceLkr)}",
+                            value = lk.motormila.app.ui.common.mn(analytics.listings.avgPriceLkr),
+                            note = "${lk.motormila.app.ui.common.mn(analytics.listings.minPriceLkr)} – ${lk.motormila.app.ui.common.mn(analytics.listings.maxPriceLkr)}",
                             modifier = Modifier.weight(1f),
                         )
                         MotormilaMetricTile(
@@ -725,7 +725,7 @@ private fun PermitsPane(state: AdminUiState, viewModel: AdminViewModel) {
                 Text(permit.permitName, fontWeight = FontWeight.SemiBold, color = MotormilaOnSurface)
                 Text(permit.permitType, fontSize = 12.sp, color = MotormilaSecondaryText)
                 Text(
-                    LkrFormat.full(permit.marketPriceLkr),
+                    lk.motormila.app.ui.common.mn(permit.marketPriceLkr),
                     fontFamily = FontFamily.Monospace,
                     color = MotormilaPrimaryBright,
                 )

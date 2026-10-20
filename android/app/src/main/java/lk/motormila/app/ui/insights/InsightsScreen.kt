@@ -448,7 +448,7 @@ private fun SummaryKpiFlow(summary: lk.motormila.app.domain.model.StatsSummary) 
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         MotormilaMetricTile(label = "Live", value = summary.totalListings.toString())
-        MotormilaMetricTile(label = "Avg price", value = formatLkrCompact(summary.avgPriceLkr))
+        MotormilaMetricTile(label = "Avg price", value = lk.motormila.app.ui.common.mn(summary.avgPriceLkr))
         MotormilaMetricTile(label = "Good deals", value = summary.goodDealsCount.toString())
         MotormilaMetricTile(label = "New / 7d", value = summary.listingsThisWeek.toString())
         summary.priceChangeMom?.let {
@@ -535,7 +535,7 @@ private fun PriceDropCard(drop: PriceDrop) {
             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
         )
         Text(
-            "${formatLkr(drop.previousPriceLkr)} → ${formatLkr(drop.newPriceLkr)} · −${formatPct(drop.dropPct, 0).trimStart('+')}",
+            "${lk.motormila.app.ui.common.mn(drop.previousPriceLkr)} → ${lk.motormila.app.ui.common.mn(drop.newPriceLkr)} · −${formatPct(drop.dropPct, 0).trimStart('+')}",
             style = MaterialTheme.typography.bodyMedium.copy(
                 fontFamily = FontFamily.Monospace,
                 color = MotormilaGood,
@@ -570,7 +570,7 @@ private fun LiveTicker(live: List<Listing>) {
             live.take(8).forEach { listing ->
                 MotormilaMetricTile(
                     label = listing.displayName,
-                    value = formatLkrCompact(listing.priceLkr),
+                    value = lk.motormila.app.ui.common.mn(listing.priceLkr),
                 )
             }
         }
@@ -718,7 +718,7 @@ private fun EvTab(
                             ),
                         )
                         Text(
-                            text = ev?.medianLkr?.let { formatLkrCompact(it) } ?: "LKR 14.5M",
+                            text = ev?.medianLkr?.let { lk.motormila.app.ui.common.mn(it) } ?: "LKR 14.5M",
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 fontWeight = FontWeight.Bold,
                                 fontFamily = FontFamily.Monospace,
@@ -726,7 +726,7 @@ private fun EvTab(
                             ),
                         )
                         Text(
-                            text = "Hybrid benchmark: ${ev?.aquaMedianLkr?.let { formatLkrCompact(it) } ?: "LKR 11.2M"}",
+                            text = "Hybrid benchmark: ${ev?.aquaMedianLkr?.let { lk.motormila.app.ui.common.mn(it) } ?: "LKR 11.2M"}",
                             style = MaterialTheme.typography.labelSmall.copy(color = MotormilaSecondaryText, fontSize = 10.sp),
                         )
                     }
@@ -745,7 +745,7 @@ private fun EvTab(
                             ),
                         )
                         Text(
-                            text = ev?.savingsPerYearLkr?.let { formatLkrCompact(it) } ?: "LKR 440K/yr",
+                            text = ev?.savingsPerYearLkr?.let { lk.motormila.app.ui.common.mn(it) } ?: "LKR 440K/yr",
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 fontWeight = FontWeight.Bold,
                                 fontFamily = FontFamily.Monospace,
@@ -1020,7 +1020,7 @@ private fun DistrictRow(d: DistrictStat, onDrill: () -> Unit) {
     MotormilaSurface(
         onClick = onDrill,
         modifier = Modifier.semantics {
-            contentDescription = "${d.district}, median ${formatLkr(d.medianPriceLkr)}, ${d.count} listings"
+            contentDescription = "${d.district}, median ${lk.motormila.app.ui.common.mn(d.medianPriceLkr)}, ${d.count} listings"
         },
     ) {
         Row(
@@ -1030,7 +1030,7 @@ private fun DistrictRow(d: DistrictStat, onDrill: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text(d.district, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
                 Text(
-                    "${formatLkrCompact(d.medianPriceLkr)} median · ${d.count} listings",
+                    "${lk.motormila.app.ui.common.mn(d.medianPriceLkr)} median · ${d.count} listings",
                     style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                     color = MotormilaSecondaryText,
                 )

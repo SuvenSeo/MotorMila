@@ -79,3 +79,6 @@ object Mn {
 
     fun range(low: Double?, high: Double?): String = "${compact(low)} – ${compact(high)}"
 }
+
+/** Compact millions price for screen lists/cards ("Rs 8.5 Mn"); "—" when missing. */
+fun mn(value: Number?): String = Mn.compactPrice(value?.toDouble())

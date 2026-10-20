@@ -254,7 +254,7 @@ private fun EvHero() {
 private fun EvStatsGrid(count: Int, sharePct: Double, medianLkr: Double?) {
     val countCd = stringResource(R.string.hub_ev_cd_stat_count, count)
     val shareCd = stringResource(R.string.hub_ev_cd_stat_share, sharePct)
-    val medianText = medianLkr?.let { LkrFormat.price(it) } ?: stringResource(R.string.hub_na)
+    val medianText = medianLkr?.let { lk.motormila.app.ui.common.mn(it) } ?: stringResource(R.string.hub_na)
     val medianCd = stringResource(R.string.hub_ev_cd_stat_median, medianText)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         MotormilaMetricTile(
@@ -355,7 +355,7 @@ private fun TopModelsSection(
 
 @Composable
 private fun TcoCard(state: EvHubUiState) {
-    val saving = LkrFormat.price(state.annualFuelSavingLkr)
+    val saving = lk.motormila.app.ui.common.mn(state.annualFuelSavingLkr)
     MotormilaSurface(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Icon(Icons.Filled.TrendingDown, contentDescription = null, tint = MotormilaPrimary)

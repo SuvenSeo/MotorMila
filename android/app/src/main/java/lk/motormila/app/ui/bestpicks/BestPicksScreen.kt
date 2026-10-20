@@ -414,7 +414,7 @@ private fun CutRow(drop: PriceDrop, onClick: () -> Unit) {
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                LkrFormat.price(drop.previousPriceLkr),
+                lk.motormila.app.ui.common.mn(drop.previousPriceLkr),
                 style = MaterialTheme.typography.labelSmall.copy(
                     color = MotormilaSecondaryText,
                     textDecoration = TextDecoration.LineThrough,
@@ -422,7 +422,7 @@ private fun CutRow(drop: PriceDrop, onClick: () -> Unit) {
                 ),
             )
             Text(
-                LkrFormat.price(drop.newPriceLkr),
+                lk.motormila.app.ui.common.mn(drop.newPriceLkr),
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace,

@@ -291,8 +291,8 @@ private fun DistrictHero(displayName: String) {
 private fun DistrictStatsGrid(insight: DistrictInsight?) {
     val na = stringResource(R.string.district_hub_na)
     val countText = insight?.listingCount?.let { LkrFormat.count(it) } ?: na
-    val avgText = insight?.avgPriceLkr?.takeIf { it > 0 }?.let { LkrFormat.price(it) } ?: na
-    val medianText = insight?.medianPriceLkr?.takeIf { it > 0 }?.let { LkrFormat.price(it) } ?: na
+    val avgText = insight?.avgPriceLkr?.takeIf { it > 0 }?.let { lk.motormila.app.ui.common.mn(it) } ?: na
+    val medianText = insight?.medianPriceLkr?.takeIf { it > 0 }?.let { lk.motormila.app.ui.common.mn(it) } ?: na
     val countCd = stringResource(R.string.district_hub_cd_stat_count, countText)
     val avgCd = stringResource(R.string.district_hub_cd_stat_avg, avgText)
     val medianCd = stringResource(R.string.district_hub_cd_stat_median, medianText)
@@ -394,7 +394,7 @@ private fun NearbyDistrictChip(
     item: NearbyDistrict,
     onClick: () -> Unit,
 ) {
-    val price = item.avgPriceLkr?.takeIf { it > 0 }?.let { LkrFormat.price(it) }
+    val price = item.avgPriceLkr?.takeIf { it > 0 }?.let { lk.motormila.app.ui.common.mn(it) }
         ?: stringResource(R.string.district_hub_na)
     val chipCd = stringResource(R.string.district_hub_cd_nearby, item.district)
     MotormilaSurface(
@@ -464,7 +464,7 @@ private fun TopModelCard(
     entry: HubTopModel,
     onClick: () -> Unit,
 ) {
-    val price = entry.avgPriceLkr.takeIf { it > 0 }?.let { LkrFormat.price(it) }
+    val price = entry.avgPriceLkr.takeIf { it > 0 }?.let { lk.motormila.app.ui.common.mn(it) }
         ?: stringResource(R.string.district_hub_price_na)
     val modelCd = stringResource(
         R.string.district_hub_cd_model,
