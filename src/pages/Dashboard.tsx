@@ -657,9 +657,12 @@ export default function Dashboard() {
   // ═════════════════════════════════════════════════════════════════
 
   return (
-    <div className="min-h-screen">
-      <FreePlanBanner />
-      <AnnouncementBanner />
+    <div className="relative min-h-screen">
+      {/* Banners float over the hero (which runs under the transparent header), so no strip appears above it. */}
+      <div className="hero-banners">
+        <FreePlanBanner />
+        <AnnouncementBanner />
+      </div>
       {showHeroLab ? (
         <HeroVariantPicker activeId={heroVariant.id} onSelect={setHeroVariantId} />
       ) : null}

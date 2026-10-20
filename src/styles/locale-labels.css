@@ -1,0 +1,25 @@
+/* Language-picker labels render in their own script at full size even before
+   the full Noto Sinhala/Tamil fonts load (those load only after switching).
+   These are ~3KB subsets holding just the glyphs of "සිංහල/සිං" and
+   "தமிழ்/தமி" (Noto Sans 600, OFL-1.1). Only fetched when a label renders. */
+@font-face {
+  font-family: "MM Locale Label";
+  src: url("/fonts/locale-label-si.woff") format("woff");
+  font-weight: 400 700;
+  font-display: swap;
+  unicode-range: U+0D80-0DFF, U+200C-200D;
+}
+@font-face {
+  font-family: "MM Locale Label";
+  src: url("/fonts/locale-label-ta.woff") format("woff");
+  font-weight: 400 700;
+  font-display: swap;
+  unicode-range: U+0B80-0BFF, U+200C-200D;
+}
+.locale-script-label {
+  font-family: "MM Locale Label", "Noto Sans Sinhala", "Noto Sans Tamil", "Nirmala UI",
+    "Iskoola Pota", "Latha", "Sinhala Sangam MN", "Tamil Sangam MN", var(--font-sans);
+  /* Sinhala/Tamil glyphs sit small on the Latin em box; nudge up to match. */
+  font-size: 1.08em;
+  line-height: 1;
+}
