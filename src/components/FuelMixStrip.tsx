@@ -1,3 +1,4 @@
+import { useAppPreferences } from "@/lib/appPreferences";
 import { useQuery } from "@tanstack/react-query";
 import { Zap } from "lucide-react";
 import { getFuelMix, getHybridBands, formatPrice } from "@/services/api";
@@ -66,6 +67,7 @@ function HybridBandRow({ band, maxCount }: { band: HybridBand; maxCount: number 
 }
 
 export function FuelMixStrip() {
+  const { t } = useAppPreferences();
   const fuelMixQuery = useQuery({
     queryKey: ["fuel-mix"],
     queryFn: getFuelMix,
@@ -100,16 +102,16 @@ export function FuelMixStrip() {
   return (
     <section
       className="rounded-2xl border border-border bg-surface p-5 shadow-soft transition-shadow duration-300 hover:shadow-soft-lg sm:p-6"
-      aria-label="EV and hybrid market share"
+      aria-label={t("fuelmix.aria", "EV and hybrid market share")}
     >
       <div className="mb-5 flex items-center gap-2">
         <Zap className="h-4 w-4 text-emerald-600/80 dark:text-emerald-400/80" />
         <div>
           <p className="text-[12px] font-medium text-muted-foreground">
-            Fuel mix
+            {t("fuelmix.kicker", "Fuel mix")}
           </p>
           <h2 className="text-sm font-semibold text-foreground">
-            EV &amp; hybrid share tracker
+            {t("fuelmix.title", "EV & hybrid share tracker")}
           </h2>
         </div>
       </div>
@@ -134,16 +136,14 @@ export function FuelMixStrip() {
                 ))}
               </div>
               <p className="text-[10px] text-muted-foreground num">
-                {fuelMix.total.toLocaleString()} total listings
+                {t("fuelmix.total", "{n} total listings", { n: fuelMix.total.toLocaleString() })}
               </p>
             </>
           )}
 
           {fuelMix && fuelMix.total > 0 && !mixMeaningful && (
             <p className="text-[12px] leading-relaxed text-muted-foreground">
-              Fuel-type classification is still in progress — only{" "}
-              {Math.round(100 - otherPct)}% of listings are classified so far, so
-              a mix chart would mislead. Hybrid bands below use verified data.
+              {t("fuelmix.partial", "Fuel-type classification is still in progress — only {pct}% of listings are classified so far, so a mix chart would mislead. Hybrid bands below use verified data.", { pct: Math.round(100 - otherPct) })}
             </p>
           )}
 
@@ -151,17 +151,17 @@ export function FuelMixStrip() {
             <div className="mt-2 space-y-2 border-t border-border pt-4">
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-[12px] font-medium text-muted-foreground">
-                  Hybrid engine bands
+                  {t("fuelmix.bands", "Hybrid engine bands")}
                 </p>
                 <p className="text-[10px] text-muted-foreground num">
-                  {hybridBands.total_hybrids.toLocaleString()} hybrids
+                  {t("fuelmix.hybrids", "{n} hybrids", { n: hybridBands.total_hybrids.toLocaleString() })}
                 </p>
               </div>
               <div className="mb-1 flex items-center gap-3">
-                <span className="w-28 shrink-0 text-[10px] text-muted-foreground">Band</span>
-                <span className="flex-1 text-[10px] text-muted-foreground">Listings</span>
+                <span className="w-28 shrink-0 text-[10px] text-muted-foreground">{t("fuelmix.band", "Band")}</span>
+                <span className="flex-1 text-[10px] text-muted-foreground">{t("common.listings", "Listings")}</span>
                 <span className="w-28 shrink-0 text-right text-[10px] text-muted-foreground">
-                  Median price
+                  {t("fuelmix.median", "Median price")}
                 </span>
               </div>
               {hybridBands.bands.map((band) => (
@@ -172,7 +172,7 @@ export function FuelMixStrip() {
 
           {!fuelMix?.total && !hybridBands?.total_hybrids && (
             <p className="text-sm text-muted-foreground">
-              Fuel-type data will appear here once listings are classified.
+              {t("fuelmix.empty", "Fuel-type data will appear here once listings are classified.")}
             </p>
           )}
         </div>

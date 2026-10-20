@@ -161,9 +161,9 @@ export default function Trends() {
         mediaPosition="center"
         mediaTone="brand"
         highlights={[
-          { label: "Coverage", value: "All LK", hint: "District-level price lanes" },
-          { label: "Hybrid lens", value: "Tax bands", hint: "Excise cliff intelligence" },
-          { label: "History", value: "Monthly", hint: "Median price trajectories" },
+          { label: t("trends.hl.coverage", "Coverage"), value: t("trends.hl.coverageValue", "All LK"), hint: t("trends.hl.coverageHint", "District-level price lanes") },
+          { label: t("trends.hl.hybrid", "Hybrid lens"), value: t("trends.hl.hybridValue", "Tax bands"), hint: t("trends.hl.hybridHint", "Excise cliff intelligence") },
+          { label: t("trends.hl.history", "History"), value: t("trends.hl.historyValue", "Monthly"), hint: t("trends.hl.historyHint", "Median price trajectories") },
         ]}
       />
 
@@ -383,7 +383,7 @@ function HybridTaxArbitrageSection({ data, loading, error }: HybridTaxArbitrageS
       )}
 
       {!loading && !error && bands.length > 0 && (
-        <div className="space-y-4" role="list" aria-label="Hybrid engine bands">
+        <div className="space-y-4" role="list" aria-label={t("fuelmix.bands", "Hybrid engine bands")}>
           {bands.map((band, idx) => {
             const colors = bandColor(idx);
             const barPct = band.median_price_lkr

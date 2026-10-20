@@ -1,3 +1,4 @@
+import { useAppPreferences } from "@/lib/appPreferences";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "motion/react";
@@ -37,6 +38,7 @@ function FlagRow({ flag }: { flag: HistoryReportFlag }) {
 }
 
 export function ListingHistoryReport({ listingId }: { listingId: number | string }) {
+  const { t } = useAppPreferences();
   const [report, setReport] = useState<HistoryReport | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -75,23 +77,23 @@ export function ListingHistoryReport({ listingId }: { listingId: number | string
           <History className="h-4 w-4 text-primary-bright" />
         </div>
         <div>
-          <h2 className="text-[13px] font-bold text-foreground">Listing history</h2>
-          <p className="text-[10px] text-muted-foreground font-semibold">What our archive knows about this ad</p>
+          <h2 className="text-[13px] font-bold text-foreground">{t("lh.title", "Listing history")}</h2>
+          <p className="text-[10px] text-muted-foreground font-semibold">{t("lh.subtitle", "What our archive knows about this ad")}</p>
         </div>
       </div>
 
       {/* Timeline facts */}
       <div className="grid grid-cols-3 gap-2 border-b border-border pb-4">
         <div>
-          <p className="text-[11px] font-medium text-muted-foreground">First seen</p>
+          <p className="text-[11px] font-medium text-muted-foreground">{t("lh.firstSeen", "First seen")}</p>
           <p className="mt-1 text-[12px] font-bold text-foreground">{formatDate(report.first_seen_at)}</p>
         </div>
         <div>
-          <p className="text-[11px] font-medium text-muted-foreground">Days on market</p>
+          <p className="text-[11px] font-medium text-muted-foreground">{t("lh.days", "Days on market")}</p>
           <p className="mt-1 text-[12px] font-bold text-foreground num">{report.days_on_market ?? "—"}</p>
         </div>
         <div>
-          <p className="text-[11px] font-medium text-muted-foreground">Price cuts</p>
+          <p className="text-[11px] font-medium text-muted-foreground">{t("lh.cuts", "Price cuts")}</p>
           <p className="mt-1 text-[12px] font-bold text-foreground num">
             {report.price_cuts}
             {report.total_change_pct !== null && report.total_change_pct < 0 && (
@@ -112,7 +114,7 @@ export function ListingHistoryReport({ listingId }: { listingId: number | string
       {report.related_listings.length > 0 && (
         <div className="mt-4">
           <p className="mb-2 text-[12px] font-medium text-muted-foreground">
-            Same vehicle in other ads ({report.related_listings.length})
+            {t("lh.related", "Same vehicle in other ads ({n})", { n: report.related_listings.length })}
           </p>
           <div className="space-y-1.5">
             {report.related_listings.map((r) => (

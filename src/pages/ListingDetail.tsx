@@ -546,9 +546,10 @@ export default function ListingDetail() {
               <div>
                 <p className="text-xs font-bold text-amber-700 dark:text-amber-300">{t("listing.possiblySold", "Possibly sold or delisted")}</p>
                 <p className="mt-0.5 text-[11px] font-medium leading-relaxed text-muted-foreground">
-                  This ad has not been seen at {listing.source}
-                  {parseFlexibleTime(listing.last_seen_at) !== null ? ` since ${new Date(parseFlexibleTime(listing.last_seen_at)!).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Colombo' })}` : ' recently'}.
-                  Pricing below is kept for market reference and may be historical.
+                  {parseFlexibleTime(listing.last_seen_at) !== null
+                    ? t("ld.notSeenSince", "This ad has not been seen at {source} since {date}.", { source: listing.source, date: new Date(parseFlexibleTime(listing.last_seen_at)!).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Colombo' }) })
+                    : t("ld.notSeenRecently", "This ad has not been seen at {source} recently.", { source: listing.source })}{" "}
+                  {t("ld.historicalPricing", "Pricing below is kept for market reference and may be historical.")}
                 </p>
               </div>
             </div>
@@ -699,9 +700,7 @@ export default function ListingDetail() {
                         <div>
                           <h2 className="field-label text-foreground">{t("listing.importDutyTax", "Import duty and tax")}</h2>
                           <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                            This vehicle is already registered in Sri Lanka, so import duty doesn't
-                            apply to buying it. Curious what importing the same spec fresh would cost
-                            under today's gazette?
+                            {t("ld.registeredNoDuty", "This vehicle is already registered in Sri Lanka, so import duty doesn't apply to buying it. Curious what importing the same spec fresh would cost under today's gazette?")}
                           </p>
                         </div>
                         <Link

@@ -1100,10 +1100,10 @@ export default function Dashboard() {
 
           {newLiveListingsAvailable && (
             <div className="mb-5 flex items-center justify-between rounded-2xl border border-primary/15 bg-primary/5 px-4 py-2.5">
-              <span className="text-[12px] font-semibold text-primary-bright">New listings available</span>
+              <span className="text-[12px] font-semibold text-primary-bright">{t("home.newListingsAvailable", "New listings available")}</span>
               <button type="button" onClick={() => { setFilters((p) => ({ ...p, sort: "newest", page: 1 })); setNewLiveListingsAvailable(false); }}
                 className="text-[12px] font-semibold text-primary-bright transition-colors hover:text-primary-bright"
-              >Refresh</button>
+              >{t("common.refresh", "Refresh")}</button>
             </div>
           )}
 
@@ -1146,7 +1146,7 @@ export default function Dashboard() {
                     onClick={retryListings}
                     className="min-h-11 rounded-2xl border border-border bg-card px-5 py-3 text-[13px] font-medium text-foreground transition-colors hover:border-primary/30 hover:text-primary-bright"
                   >
-                    Retry
+                    {t("shell.picks.retry", "Try again")}
                   </button>
                 </div>
               ) : listings.length === 0 ? (
@@ -1193,7 +1193,7 @@ export default function Dashboard() {
                               </p>
                             )}
                             {!fullAccess && (
-                              <p className="mt-0.5 text-[10px] font-semibold text-muted-foreground/70">Pro score</p>
+                              <p className="mt-0.5 text-[10px] font-semibold text-muted-foreground/70">{t("home.proScore", "Pro score")}</p>
                             )}
                           </div>
                           <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
@@ -1268,10 +1268,10 @@ export default function Dashboard() {
             <div>
               <div className="mb-5 flex items-center justify-between">
                 <h3 className="font-display text-base font-semibold tracking-tight text-foreground flex items-center gap-2">
-                  <Flame className="h-4 w-4 text-primary/70" /> Best deals
+                  <Flame className="h-4 w-4 text-primary/70" /> {t("shell.nav.bestDeals", "Best deals")}
                 </h3>
                 <Link to="/best-picks" className="flex items-center gap-1 text-[12px] font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright">
-                  All picks <ArrowUpRight className="h-3.5 w-3.5" />
+                  {t("home.allPicks", "All picks")} <ArrowUpRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
               {hotDeals.length ? (
@@ -1302,10 +1302,10 @@ export default function Dashboard() {
             <div>
               <div className="mb-5 flex items-center justify-between">
                 <h3 className="font-display text-base font-semibold tracking-tight text-foreground flex items-center gap-2">
-                  <TrendingDown className="h-4 w-4 text-emerald-500" /> Price cuts &middot; 7d
+                  <TrendingDown className="h-4 w-4 text-emerald-500" /> {t("home.cuts7d", "Price cuts · 7d")}
                 </h3>
                 <Link to="/best-picks" className="flex items-center gap-1 text-[12px] font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright">
-                  All cuts <ArrowUpRight className="h-3.5 w-3.5" />
+                  {t("home.allCuts", "All cuts")} <ArrowUpRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
               {(dropsQuery.data || []).length ? (
@@ -1476,14 +1476,14 @@ export default function Dashboard() {
       <Dialog open={showMarketAlerts} onOpenChange={setShowMarketAlerts}>
         <DialogContent className="max-h-[86vh] max-w-2xl overflow-y-auto rounded-3xl border-white/40 bg-card/80 text-foreground backdrop-blur-2xl">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-semibold tracking-tight">Market alerts</DialogTitle>
+            <DialogTitle className="font-display text-lg font-semibold tracking-tight">{t("alerts.title", "Market alerts")}</DialogTitle>
           </DialogHeader>
           <div className="rounded-2xl border border-border bg-surface p-4">
             <p className="text-[11px] font-medium text-muted-foreground">{t("shell.home.currentSearch", "Current search")}</p>
             <p className="mt-1.5 text-[13px] font-semibold text-foreground">{currentAlertSummary}</p>
             <div className="mt-3 flex gap-2">
-              <Input value={alertPriceInput} onChange={(e) => setAlertPriceInput(e.target.value.replace(/[^\d]/g, ""))} inputMode="numeric" placeholder="Target max price (LKR)" className="h-9 flex-1 rounded-2xl border-border bg-transparent text-base md:text-sm" />
-              <button type="button" onClick={saveCurrentMarketAlert} className="h-9 rounded-full bg-primary px-4 text-[12px] font-semibold text-white transition-all hover:bg-primary/95 active:scale-[0.97]">Save</button>
+              <Input value={alertPriceInput} onChange={(e) => setAlertPriceInput(e.target.value.replace(/[^\d]/g, ""))} inputMode="numeric" placeholder={t("home.alertTarget", "Target max price (LKR)")} className="h-9 flex-1 rounded-2xl border-border bg-transparent text-base md:text-sm" />
+              <button type="button" onClick={saveCurrentMarketAlert} className="h-9 rounded-full bg-primary px-4 text-[12px] font-semibold text-white transition-all hover:bg-primary/95 active:scale-[0.97]">{t("common.save", "Save")}</button>
             </div>
           </div>
           {marketAlerts.length ? (
@@ -1492,25 +1492,25 @@ export default function Dashboard() {
                 <div key={alert.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-3">
                   <div className="min-w-0">
                     <p className="truncate text-[13px] font-semibold text-foreground">{alert.label}</p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">{alert.target_price_lkr ? `Under ${formatPrice(alert.target_price_lkr)}` : t("home.newListingsAvailable", "New listings available")}</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">{alert.target_price_lkr ? t("home.alertUnder", "Under {price}", { price: formatPrice(alert.target_price_lkr) }) : t("home.newListingsAvailable", "New listings available")}</p>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <button type="button" onClick={() => { setFilters({ ...(alert.filters as FilterState), sort: alert.filters.sort || DEFAULT_SORT, page: 1 }); setShowMarketAlerts(false); scrollToMarket(); }}
-                      className="h-7 rounded-full border border-primary/15 bg-primary/5 px-2.5 text-[10px] font-semibold text-primary-bright transition-all hover:bg-primary/10 active:scale-[0.95]">Open</button>
+                      className="h-7 rounded-full border border-primary/15 bg-primary/5 px-2.5 text-[10px] font-semibold text-primary-bright transition-all hover:bg-primary/10 active:scale-[0.95]">{t("common.open", "Open")}</button>
                     <button type="button" onClick={() => deleteMarketAlert(alert.id)}
-                      className="h-7 rounded-full border border-border px-2.5 text-[10px] font-semibold text-muted-foreground transition-all hover:text-foreground active:scale-[0.95]">Delete</button>
+                      className="h-7 rounded-full border border-border px-2.5 text-[10px] font-semibold text-muted-foreground transition-all hover:text-foreground active:scale-[0.95]">{t("profile.delete", "Delete")}</button>
                   </div>
                 </div>
               ))}
             </div>
-          ) : <p className="py-6 text-center text-[11px] text-muted-foreground">No alerts saved</p>}
+          ) : <p className="py-6 text-center text-[11px] text-muted-foreground">{t("home.noAlerts", "No alerts saved")}</p>}
         </DialogContent>
       </Dialog>
 
       <Dialog open={showSavedListings} onOpenChange={setShowSavedListings}>
         <DialogContent className="max-h-[86vh] max-w-2xl overflow-y-auto rounded-3xl border-white/40 bg-card/80 text-foreground backdrop-blur-2xl">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-semibold tracking-tight">Saved listings</DialogTitle>
+            <DialogTitle className="font-display text-lg font-semibold tracking-tight">{t("home.savedListings", "Saved listings")}</DialogTitle>
           </DialogHeader>
           {savedListingsLoading ? (
             <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="skeleton-shimmer h-16 rounded-2xl" />)}</div>
@@ -1525,7 +1525,7 @@ export default function Dashboard() {
                   <div className="flex items-center gap-1.5">
                     <button type="button" onClick={() => toggleWatchlist(listing)} className="h-7 rounded-full border border-primary/15 bg-primary/5 px-2.5 text-[10px] font-semibold text-primary-bright transition-all hover:bg-primary/10 active:scale-[0.95]">{t("home.remove", "Remove")}</button>
                     <Link to={`/listing/${listing.id}`} onClick={() => setShowSavedListings(false)} className="flex h-7 items-center gap-1 rounded-full border border-border px-2.5 text-[10px] font-semibold text-muted-foreground no-underline transition-all hover:text-foreground active:scale-[0.95]">
-                      Open <ExternalLink className="h-2.5 w-2.5" />
+                      {t("common.open", "Open")} <ExternalLink className="h-2.5 w-2.5" />
                     </Link>
                   </div>
                 </div>

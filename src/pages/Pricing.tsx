@@ -379,6 +379,7 @@ function PayherePanel({
 }
 
 function DealerPlans() {
+  const { t } = useAppPreferences();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [period, setPeriod] = useState<Period>("monthly");
@@ -405,7 +406,7 @@ function DealerPlans() {
       const intent = await fetchCheckoutIntent(code);
       if (intent.provider === "payhere" && intent.payhere_checkout_endpoint) {
         if (!user) {
-          toast.message("Sign in first so we know which account to upgrade.");
+          toast.message(t("pricing.signInFirst", "Sign in first so we know which account to upgrade."));
           navigate("/sign-in", { state: { from: { pathname: "/pricing" } } });
           return;
         }
@@ -418,7 +419,7 @@ function DealerPlans() {
       }
       if (intent.manual_pay) setManualPay({ plan: code, instructions: intent.manual_pay });
     } catch {
-      toast.error("Couldn't load payment options. Email us and we'll set you up.");
+      toast.error(t("pricing.payOptionsError", "Couldn't load payment options. Email us and we'll set you up."));
     } finally {
       setLoading(null);
     }
@@ -429,7 +430,7 @@ function DealerPlans() {
       const res = await fetch(`${API_BASE}/billing/manual-pay?plan=${encodeURIComponent(code)}`, { headers: { Accept: "application/json" } });
       if (res.ok) setManualPay({ plan: code, instructions: (await res.json()) as ManualPayInstructions });
     } catch {
-      toast.error("Couldn't load bank transfer details.");
+      toast.error(t("pricing.bankError", "Couldn't load bank transfer details."));
     }
     setPayhere(null);
   };
@@ -438,11 +439,11 @@ function DealerPlans() {
     <motion.section id="dealer-plans" variants={revealItem} aria-labelledby="dealer-plans-heading" className="scroll-mt-24">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="section-eyebrow mb-3">Dealer plans</p>
-          <h2 id="dealer-plans-heading" className="display-2 text-foreground">Priced by the size of your stock.</h2>
-          <p className="mt-2 text-[13px] text-muted-foreground">{ANNUAL_SAVE_NUDGE.dealer}. Market comparisons are shown as medians and ranges, never copies of other sellers' ads.</p>
+          <p className="section-eyebrow mb-3">{t("dealer.plans", "Dealer plans")}</p>
+          <h2 id="dealer-plans-heading" className="display-2 text-foreground">{t("pricing.dealerTitle", "Priced by the size of your stock.")}</h2>
+          <p className="mt-2 text-[13px] text-muted-foreground">{t("pricing.dealerNudge", "Dealer annual saves 2 months: from LKR 29,900/yr vs LKR 2,990/mo. Market comparisons are shown as medians and ranges, never copies of other sellers' ads.")}</p>
         </div>
-        <div role="radiogroup" aria-label="Billing period" className="inline-flex rounded-full border border-border bg-card p-1">
+        <div role="radiogroup" aria-label={t("pricing.billingPeriod", "Billing period")} className="inline-flex rounded-full border border-border bg-card p-1">
           {(["monthly", "yearly"] as const).map((p) => (
             <button
               key={p}
@@ -452,7 +453,7 @@ function DealerPlans() {
               onClick={() => setPeriod(p)}
               className={`h-9 rounded-full px-4 text-[12px] font-semibold ${period === p ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
             >
-              {p === "monthly" ? "Monthly" : "Yearly (2 months free)"}
+              {p === "monthly" ? t("afford.monthly", "Monthly") : t("pricing.yearlyFree", "Yearly (2 months free)")}
             </button>
           ))}
         </div>
@@ -460,29 +461,29 @@ function DealerPlans() {
       <div className="grid gap-5 md:grid-cols-3">
         {DEALER_TIERS.map((tier) => (
           <div key={tier.code} className={`flex flex-col rounded-2xl border p-6 ${tier.highlight ? "border-primary/40 bg-primary/[0.07] shadow-soft" : "border-border bg-card/50"}`}>
-            <p className="text-[12px] font-semibold text-muted-foreground">Dealer {tier.name}</p>
+            <p className="text-[12px] font-semibold text-muted-foreground">{t("pricing.dealerTierName", "Dealer {name}", { name: tier.name })}</p>
             <div className="mt-3 flex items-baseline gap-1.5">
               <span className="num text-2xl font-bold text-foreground">{formatLkr(PLAN_PRICES[tier.code][period])}</span>
-              <span className="text-[12px] text-muted-foreground">/{period === "yearly" ? "yr" : "mo"}</span>
+              <span className="text-[12px] text-muted-foreground">/{period === "yearly" ? t("pricing.perYr", "yr") : t("pricing.perMo", "mo")}</span>
             </div>
-            <p className="mt-1 text-[11px] font-medium text-muted-foreground">{tier.stock}</p>
+            <p className="mt-1 text-[11px] font-medium text-muted-foreground">{t(`pricing.dealerTier.${tier.code}.stock`, tier.stock)}</p>
             <ul className="mt-5 flex-1 space-y-2.5 border-t border-border pt-5">
-              {tier.features.map((f) => (
+              {tier.features.map((f, i) => (
                 <li key={f} className="flex gap-2 text-[12px] leading-snug text-foreground/85">
                   <Check aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                  <span>{f}</span>
+                  <span>{t(`pricing.dealerTier.${tier.code}.f${i}`, f)}</span>
                 </li>
               ))}
             </ul>
             <button type="button" disabled={loading === tier.code} onClick={() => void choose(tier.code)} className={CTA_CLASS(tier.highlight)}>
               {loading === tier.code ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" aria-hidden /> : null}
-              Choose {tier.name}
+              {t("pricing.choose", "Choose {name}", { name: tier.name })}
             </button>
           </div>
         ))}
       </div>
       <p className="mt-4 text-[11px] text-muted-foreground">
-        {config?.enabled ? "Card and wallet payments by PayHere." : "Pay by bank transfer or KOKO; card payments by PayHere are coming soon."} Prices in LKR. Cancel any time; your plan runs to the end of the paid period.
+        {config?.enabled ? t("pricing.payNoteOn", "Card and wallet payments by PayHere.") : t("pricing.payNoteOff", "Pay by bank transfer or KOKO; card payments by PayHere are coming soon.")} {t("pricing.payNoteTail", "Prices in LKR. Cancel any time; your plan runs to the end of the paid period.")}
       </p>
       {payhere && config && (
         <div className="mt-6">
@@ -570,22 +571,22 @@ export default function Pricing() {
                   tier.id === "free" ? "border-primary/40 bg-primary/[0.07] shadow-soft" : "border-border bg-card/50"
                 }`}
               >
-                <p className="text-[12px] font-semibold text-muted-foreground">{tier.name}</p>
+                <p className="text-[12px] font-semibold text-muted-foreground">{t(`pricing.tier.${tier.id}.name`, tier.name)}</p>
                 <div className="mt-3 flex items-baseline gap-1.5">
-                  <span className="num text-2xl font-bold text-foreground">{tier.priceLkr}</span>
-                  {tier.priceNote ? <span className="text-[12px] text-muted-foreground">{tier.priceNote}</span> : null}
+                  <span className="num text-2xl font-bold text-foreground">{t(`pricing.tier.${tier.id}.priceLkr`, tier.priceLkr)}</span>
+                  {tier.priceNote ? <span className="text-[12px] text-muted-foreground">{t(`pricing.tier.${tier.id}.priceNote`, tier.priceNote)}</span> : null}
                 </div>
                 {tier.id === "free" ? (
                   <p className="mt-1 text-[11px] font-medium text-muted-foreground">{t("shell.pro.freeBeta", "Free during beta")}</p>
                 ) : tier.annualNote ? (
-                  <p className="mt-1 text-[11px] font-medium text-muted-foreground">{tier.annualNote}</p>
+                  <p className="mt-1 text-[11px] font-medium text-muted-foreground">{t(`pricing.tier.${tier.id}.annualNote`, tier.annualNote)}</p>
                 ) : null}
-                <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">{tier.audience}</p>
+                <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">{t(`pricing.tier.${tier.id}.audience`, tier.audience)}</p>
                 <ul className="mt-5 flex-1 space-y-2.5 border-t border-border pt-5">
-                  {tier.features.map((feature) => (
+                  {tier.features.map((feature, i) => (
                     <li key={feature} className="flex gap-2 text-[12px] leading-snug text-foreground/85">
                       <Check aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                      <span>{feature}</span>
+                      <span>{t(`pricing.tier.${tier.id}.f${i}`, feature)}</span>
                     </li>
                   ))}
                 </ul>
@@ -595,7 +596,7 @@ export default function Pricing() {
                   </div>
                 ) : (
                   <Link to={tier.ctaTo} className={CTA_CLASS(true)}>
-                    {tier.ctaLabel}
+                    {t(`pricing.tier.${tier.id}.ctaLabel`, tier.ctaLabel)}
                   </Link>
                 )}
               </div>
@@ -651,10 +652,10 @@ export default function Pricing() {
             />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            {PRICING_FAQ.map((item) => (
+            {PRICING_FAQ.map((item, i) => (
               <div key={item.q} className="rounded-2xl border border-border bg-card/40 p-5">
-                <h3 className="text-[14px] font-bold text-foreground">{item.q}</h3>
-                <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">{item.a}</p>
+                <h3 className="text-[14px] font-bold text-foreground">{t(`pricing.faqItem.${i}.q`, item.q)}</h3>
+                <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">{t(`pricing.faqItem.${i}.a`, item.a)}</p>
               </div>
             ))}
           </div>
@@ -710,10 +711,10 @@ export default function Pricing() {
           >
             <DealerPlans />
             <div className="grid gap-4 md:grid-cols-3">
-              {DEALER_FAQ.map((item) => (
+              {DEALER_FAQ.map((item, i) => (
                 <div key={item.q} className="rounded-2xl border border-border bg-card/40 p-5">
-                  <h3 className="text-[14px] font-bold text-foreground">{item.q}</h3>
-                  <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">{item.a}</p>
+                  <h3 className="text-[14px] font-bold text-foreground">{t(`pricing.dealerFaq.${i}.q`, item.q)}</h3>
+                  <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">{t(`pricing.dealerFaq.${i}.a`, item.a)}</p>
                 </div>
               ))}
             </div>

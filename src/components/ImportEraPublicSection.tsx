@@ -1,3 +1,4 @@
+import { useAppPreferences } from "@/lib/appPreferences";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRightLeft, Crown } from "lucide-react";
@@ -5,6 +6,7 @@ import { formatPrice, getImportEraSplit } from "@/services/api";
 import type { ImportEraSplitData } from "@/types/car";
 
 export function ImportEraPublicSection() {
+  const { t } = useAppPreferences();
   const [data, setData] = useState<ImportEraSplitData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +19,7 @@ export function ImportEraPublicSection() {
         if (!cancelled) setData(payload);
       })
       .catch(() => {
-        if (!cancelled) setError("Import-era data temporarily unavailable.");
+        if (!cancelled) setError("unavailable");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -31,15 +33,15 @@ export function ImportEraPublicSection() {
     <section className="rounded-3xl border border-border/80 bg-card/85 p-5 sm:p-6 shadow-soft backdrop-blur-xl" aria-labelledby="import-era-heading">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[12px] font-medium text-primary/70">Post-freeze market</p>
+          <p className="text-[12px] font-medium text-primary/70">{t("era.kicker", "Post-freeze market")}</p>
           <h2 id="import-era-heading" className="mt-1 text-sm font-semibold text-foreground">
-            Pre-freeze vs post-freeze price cohorts
+            {t("era.title", "Pre-freeze vs post-freeze price cohorts")}
           </h2>
           <p className="mt-1 max-w-2xl text-[12px] text-muted-foreground">
-            Median asking prices for top makes before and after the 2025 import reopening — the two-tier used market in one view.
+            {t("era.desc", "Median asking prices for top makes before and after the 2025 import reopening — the two-tier used market in one view.")}
           </p>
         </div>
-        <span className="text-[12px] font-medium text-cyan-400/70">Public</span>
+        <span className="text-[12px] font-medium text-cyan-400/70">{t("era.public", "Public")}</span>
       </div>
 
       {loading ? (
@@ -49,9 +51,9 @@ export function ImportEraPublicSection() {
           ))}
         </div>
       ) : error ? (
-        <p className="text-sm text-muted-foreground">{error}</p>
+        <p className="text-sm text-muted-foreground">{t("era.error", "Import-era data temporarily unavailable.")}</p>
       ) : !data?.makes?.length ? (
-        <p className="text-sm text-muted-foreground">Not enough year-tagged listings to build era cohorts yet.</p>
+        <p className="text-sm text-muted-foreground">{t("era.empty", "Not enough year-tagged listings to build era cohorts yet.")}</p>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {data.makes.slice(0, 6).map((row) => {
@@ -64,23 +66,23 @@ export function ImportEraPublicSection() {
                 <p className="text-sm font-semibold text-foreground">{row.make}</p>
                 <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
                   <div>
-                    <p className="text-muted-foreground">Pre-freeze</p>
+                    <p className="text-muted-foreground">{t("era.pre", "Pre-freeze")}</p>
                     <p className="mt-0.5 font-semibold num text-amber-700 dark:text-amber-300">
                       {pre != null ? formatPrice(pre) : "—"}
                     </p>
-                    <p className="text-[10px] text-muted-foreground">{row.pre_freeze.count} listings</p>
+                    <p className="text-[10px] text-muted-foreground">{t("era.count", "{n} listings", { n: row.pre_freeze.count })}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Post-freeze</p>
+                    <p className="text-muted-foreground">{t("era.post", "Post-freeze")}</p>
                     <p className="mt-0.5 font-semibold num text-sky-700 dark:text-sky-300">
                       {post != null ? formatPrice(post) : "—"}
                     </p>
-                    <p className="text-[10px] text-muted-foreground">{row.post_freeze.count} listings</p>
+                    <p className="text-[10px] text-muted-foreground">{t("era.count", "{n} listings", { n: row.post_freeze.count })}</p>
                   </div>
                 </div>
                 {premium != null ? (
                   <p className="mt-2 text-[10px] text-muted-foreground">
-                    Post-freeze premium{" "}
+                    {t("era.premium", "Post-freeze premium")}{" "}
                     <span className="font-semibold text-foreground num">
                       {premium >= 0 ? "+" : ""}
                       {premium}%
@@ -97,9 +99,9 @@ export function ImportEraPublicSection() {
         <div className="flex items-start gap-3">
           <Crown className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
           <div>
-            <p className="text-sm font-semibold text-foreground">Pro district arbitrage</p>
+            <p className="text-sm font-semibold text-foreground">{t("era.proTitle", "Pro district arbitrage")}</p>
             <p className="mt-0.5 text-[12px] text-muted-foreground">
-              See buy-here / sell-there median gaps by make and model across Sri Lanka districts.
+              {t("era.proBody", "See buy-here / sell-there median gaps by make and model across Sri Lanka districts.")}
             </p>
           </div>
         </div>
@@ -108,7 +110,7 @@ export function ImportEraPublicSection() {
           className="inline-flex h-9 items-center gap-1.5 self-start rounded-2xl border border-border px-3 text-[12px] font-medium text-foreground no-underline hover:bg-foreground/[0.03]"
         >
           <ArrowRightLeft className="h-3.5 w-3.5" />
-          Open Pro lanes
+          {t("era.proCta", "Open Pro lanes")}
         </Link>
       </div>
     </section>

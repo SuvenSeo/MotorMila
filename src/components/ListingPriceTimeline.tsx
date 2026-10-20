@@ -1,3 +1,4 @@
+import { useAppPreferences } from "@/lib/appPreferences";
 import { useMemo, useRef } from "react";
 import { useInView } from "motion/react";
 import type { AnimationTiming } from "recharts/types/util/types";
@@ -49,6 +50,7 @@ export function ListingPriceTimeline({
   listingTitle,
   isLoading = false,
 }: ListingPriceTimelineProps) {
+  const { t } = useAppPreferences();
   const points = useMemo(() => history?.points ?? [], [history?.points]);
   const hasChart = points.length >= 2;
   // The line draws in once, the first time the chart scrolls into view
@@ -102,9 +104,9 @@ export function ListingPriceTimeline({
             <LineChart className="h-4 w-4 text-primary-bright" />
           </div>
           <div>
-            <h2 className="text-[13px] font-bold text-foreground">Price timeline</h2>
+            <h2 className="text-[13px] font-bold text-foreground">{t("pt.title", "Price timeline")}</h2>
             <p className="text-[10px] font-semibold text-muted-foreground">
-              Scan-over-scan tracking{listingTitle ? ` · ${listingTitle}` : ""}
+              {t("pt.subtitle", "Scan-over-scan tracking")}{listingTitle ? ` · ${listingTitle}` : ""}
             </p>
           </div>
         </div>
@@ -114,14 +116,14 @@ export function ListingPriceTimeline({
             className="inline-flex items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-[12px] font-semibold text-emerald-700 no-underline transition-colors hover:bg-emerald-500/15 dark:text-emerald-300"
           >
             <TrendingDown className="h-3 w-3" />
-            {cutCount} cut{cutCount === 1 ? "" : "s"} recorded
+            {cutCount === 1 ? t("pt.cutsOne", "{n} cut recorded", { n: cutCount }) : t("pt.cutsMany", "{n} cuts recorded", { n: cutCount })}
           </Link>
         )}
       </div>
 
       <div className="grid grid-cols-2 gap-2 border-b border-border pb-4 sm:grid-cols-4">
         <div className="rounded-2xl border border-border bg-surface p-3">
-          <p className="text-[11px] font-medium text-muted-foreground">Opening ask</p>
+          <p className="text-[11px] font-medium text-muted-foreground">{t("pt.opening", "Opening ask")}</p>
           <p className="mt-1 text-[13px] font-bold text-foreground num">
             {history.first_price_lkr ? formatPrice(history.first_price_lkr) : "—"}
           </p>
@@ -130,16 +132,16 @@ export function ListingPriceTimeline({
           ) : null}
         </div>
         <div className="rounded-2xl border border-border bg-surface p-3">
-          <p className="text-[11px] font-medium text-muted-foreground">Current ask</p>
+          <p className="text-[11px] font-medium text-muted-foreground">{t("pt.current", "Current ask")}</p>
           <p className="mt-1 text-[13px] font-bold text-foreground num">
             {history.current_price_lkr ? formatPrice(history.current_price_lkr) : "—"}
           </p>
           {lastChangeAt ? (
-            <p className="mt-0.5 text-[10px] text-muted-foreground">Updated {formatFullDate(lastChangeAt)}</p>
+            <p className="mt-0.5 text-[10px] text-muted-foreground">{t("pt.updated", "Updated {date}", { date: formatFullDate(lastChangeAt) })}</p>
           ) : null}
         </div>
         <div className="rounded-2xl border border-border bg-surface p-3">
-          <p className="text-[11px] font-medium text-muted-foreground">Total move</p>
+          <p className="text-[11px] font-medium text-muted-foreground">{t("pt.totalMove", "Total move")}</p>
           <div
             className={`mt-1 inline-flex items-center gap-1 text-[13px] font-bold num ${
               isDrop
@@ -154,7 +156,7 @@ export function ListingPriceTimeline({
           </div>
         </div>
         <div className="rounded-2xl border border-border bg-surface p-3">
-          <p className="text-[11px] font-medium text-muted-foreground">Price moves</p>
+          <p className="text-[11px] font-medium text-muted-foreground">{t("pt.moves", "Price moves")}</p>
           <p className="mt-1 text-[13px] font-bold text-foreground num">
             {cutCount > 0 || raiseCount > 0 ? (
               <>
@@ -163,10 +165,10 @@ export function ListingPriceTimeline({
                 {raiseCount > 0 ? `${raiseCount}↑` : null}
               </>
             ) : (
-              "Stable"
+              t("pt.stable", "Stable")
             )}
           </p>
-          <p className="mt-0.5 text-[10px] text-muted-foreground">{points.length} tracked point{points.length === 1 ? "" : "s"}</p>
+          <p className="mt-0.5 text-[10px] text-muted-foreground">{t("pt.points", "{n} tracked points", { n: points.length })}</p>
         </div>
       </div>
 
@@ -175,7 +177,7 @@ export function ListingPriceTimeline({
           <div
             ref={chartRef}
             role="img"
-            aria-label={`Price timeline with ${points.length} recorded asking prices`}
+            aria-label={t("pt.chartAria", "Price timeline with {n} recorded asking prices", { n: points.length })}
             className="h-full w-full"
           >
             <ResponsiveContainer width="100%" height="100%">
@@ -203,7 +205,7 @@ export function ListingPriceTimeline({
                   width={52}
                 />
                 <Tooltip
-                  formatter={(value: number) => [formatPriceLkrMillions(Number(value) * 1_000_000), "Asking price"]}
+                  formatter={(value: number) => [formatPriceLkrMillions(Number(value) * 1_000_000), t("pt.asking", "Asking price")]}
                   labelFormatter={(_, payload) => {
                     const row = Array.isArray(payload) ? payload[0]?.payload : null;
                     return row?.scraped_at ? formatFullDate(String(row.scraped_at)) : "";
@@ -222,7 +224,7 @@ export function ListingPriceTimeline({
                     strokeDasharray="6 6"
                     strokeOpacity={0.55}
                     label={{
-                      value: "Market median",
+                      value: t("pt.marketMedian", "Market median"),
                       position: "insideTopRight",
                       fill: "hsl(var(--muted-foreground))",
                       fontSize: 10,
@@ -238,7 +240,7 @@ export function ListingPriceTimeline({
                   animationEasing={"cubic-bezier(0.2,0,0,1)" as unknown as AnimationTiming}
                   type="stepAfter"
                   dataKey="price_million"
-                  name="Asking price"
+                  name={t("pt.asking", "Asking price")}
                   stroke="var(--gold)"
                   strokeWidth={2.5}
                   fill="url(#listingPriceGradient)"
@@ -251,16 +253,16 @@ export function ListingPriceTimeline({
           </div>
         ) : (
           <div className="flex h-full flex-col items-center justify-center rounded-xl border border-dashed border-border bg-surface px-6 text-center">
-            <p className="text-[12px] font-semibold text-foreground">Tracking started</p>
+            <p className="text-[12px] font-semibold text-foreground">{t("pt.started", "Tracking started")}</p>
             <p className="mt-1 max-w-sm text-[11px] leading-relaxed text-muted-foreground">
-              We recorded the opening ask at {formatPrice(points[0].price_lkr)}. The chart fills in when the seller changes their price on a future scan.
+              {t("pt.startedBody", "We recorded the opening ask at {price}. The chart fills in when the seller changes their price on a future scan.", { price: formatPrice(points[0].price_lkr) })}
             </p>
           </div>
         )}
       </div>
 
       <p className="mt-3 text-[10px] leading-relaxed text-muted-foreground">
-        Prices update when our scans detect a change at the source — unchanged asks do not add duplicate points.
+        {t("pt.footnote", "Prices update when our scans detect a change at the source — unchanged asks do not add duplicate points.")}
       </p>
     </section>
   );

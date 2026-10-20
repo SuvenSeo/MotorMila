@@ -1,3 +1,4 @@
+import { useAppPreferences } from "@/lib/appPreferences";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowUpRight, Landmark } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -45,6 +46,7 @@ function SignalCard({ signal }: { signal: MarketSignal }) {
 }
 
 export function MarketSignalsStrip() {
+  const { t } = useAppPreferences();
   const { data, isLoading, isError } = useQuery({
     queryKey: ["market-signals", 6],
     queryFn: () => getMarketSignals(6),
@@ -55,20 +57,20 @@ export function MarketSignalsStrip() {
   if (isError) return null;
 
   return (
-    <section className="rounded-[2rem] border border-border bg-surface/80 p-5 sm:p-6" aria-label="Official market signals">
+    <section className="rounded-[2rem] border border-border bg-surface/80 p-5 sm:p-6" aria-label={t("signals.aria", "Official market signals")}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Landmark className="h-4 w-4 text-primary/80" />
           <div>
-            <p className="text-[12px] font-medium text-muted-foreground">Official pulse</p>
-            <h2 className="text-sm font-semibold text-foreground">Government & import market signals</h2>
+            <p className="text-[12px] font-medium text-muted-foreground">{t("nav.officialPulse", "Official pulse")}</p>
+            <h2 className="text-sm font-semibold text-foreground">{t("signals.title", "Government & import market signals")}</h2>
           </div>
         </div>
         <Link
           to="/official-pulse"
           className="text-[11px] font-semibold text-primary no-underline transition-colors hover:text-primary/80"
         >
-          Open pulse desk →
+          {t("signals.open", "Open pulse desk →")}
         </Link>
       </div>
 
@@ -86,9 +88,9 @@ export function MarketSignalsStrip() {
         </div>
       ) : (
         <p className="text-sm text-muted-foreground">
-          Official registration and import-cost signals will appear here after the market-signals sync runs.{" "}
+          {t("signals.empty", "Official registration and import-cost signals will appear here after the market-signals sync runs.")}{" "}
           <Link to="/official-pulse" className="font-medium text-primary no-underline hover:underline">
-            Read what each signal means
+            {t("signals.readMore", "Read what each signal means")}
           </Link>
           .
         </p>

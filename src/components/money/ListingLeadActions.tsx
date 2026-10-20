@@ -1,13 +1,14 @@
+import { useAppPreferences } from "@/lib/appPreferences";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Banknote, ClipboardCheck, ShieldCheck } from "lucide-react";
 import { LeadRequestForm } from "./LeadRequestForm";
 import { LEAD_COPY, type LeadKind } from "@/lib/leadConsent";
 
-const TABS: { kind: LeadKind; label: string; icon: typeof Banknote }[] = [
-  { kind: "finance", label: "Leasing quote", icon: Banknote },
-  { kind: "inspection", label: "Inspection", icon: ClipboardCheck },
-  { kind: "insurance", label: "Insurance", icon: ShieldCheck },
+const TABS: { kind: LeadKind; label: string; labelKey: string; icon: typeof Banknote }[] = [
+  { kind: "finance", label: "Leasing quote", labelKey: "lead.tab.finance", icon: Banknote },
+  { kind: "inspection", label: "Inspection", labelKey: "lead.tab.inspection", icon: ClipboardCheck },
+  { kind: "insurance", label: "Insurance", labelKey: "lead.tab.insurance", icon: ShieldCheck },
 ];
 
 /** "Next steps" card on a listing: leasing quote, inspection, insurance quote. */
@@ -22,11 +23,12 @@ export function ListingLeadActions({
   priceLkr?: number;
   district?: string;
 }) {
+  const { t } = useAppPreferences();
   const [kind, setKind] = useState<LeadKind | null>(null);
   return (
     <section aria-labelledby="listing-next-steps" className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
-      <h2 id="listing-next-steps" className="text-[12px] font-semibold text-muted-foreground">Next steps for this vehicle</h2>
-      <div role="tablist" aria-label="Request type" className="mt-3 flex flex-wrap gap-2">
+      <h2 id="listing-next-steps" className="text-[12px] font-semibold text-muted-foreground">{t("lead.nextSteps", "Next steps for this vehicle")}</h2>
+      <div role="tablist" aria-label={t("lead.requestType", "Request type")} className="mt-3 flex flex-wrap gap-2">
         {TABS.map((tab) => (
           <button
             key={tab.kind}
@@ -39,7 +41,7 @@ export function ListingLeadActions({
             }`}
           >
             <tab.icon aria-hidden className="h-3.5 w-3.5" />
-            {tab.label}
+            {t(tab.labelKey, tab.label)}
           </button>
         ))}
       </div>
@@ -55,12 +57,12 @@ export function ListingLeadActions({
         </div>
       )}
       <p className="mt-4 text-[11px] text-muted-foreground">
-        Is this your ad, or does it show your details?{" "}
+        {t("lead.yourAd", "Is this your ad, or does it show your details?")}{" "}
         <Link
           to={`/removal?url=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "")}`}
           className="underline underline-offset-2"
         >
-          Ask us to remove it
+          {t("lead.removeIt", "Ask us to remove it")}
         </Link>
         .
       </p>

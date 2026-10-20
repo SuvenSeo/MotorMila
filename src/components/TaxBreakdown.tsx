@@ -1,3 +1,4 @@
+import { useAppPreferences } from "@/lib/appPreferences";
 import { useState } from "react";
 import { AlertTriangle, ArrowRight, Leaf } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
@@ -10,14 +11,15 @@ import {
   type ImportFuelType,
 } from "@/lib/importTaxModel";
 
-const FUEL_OPTIONS: { value: ImportFuelType; label: string }[] = [
-  { value: "petrol", label: "Petrol" },
-  { value: "diesel", label: "Diesel" },
-  { value: "hybrid", label: "Hybrid" },
-  { value: "electric", label: "Electric" },
+const FUEL_OPTIONS: { value: ImportFuelType; label: string; key: string }[] = [
+  { value: "petrol", label: "Petrol", key: "fuel.petrol" },
+  { value: "diesel", label: "Diesel", key: "fuel.diesel" },
+  { value: "hybrid", label: "Hybrid", key: "fuel.hybrid" },
+  { value: "electric", label: "Electric", key: "fuel.electric" },
 ];
 
 function HybridTaxAdvantageCallout({ engineCapacity, fuelType }: { engineCapacity: number; fuelType: ImportFuelType }) {
+  const { t } = useAppPreferences();
   const location = useLocation();
   const insight = getHybridExciseCliffInsight();
   const onCalculator = location.pathname.startsWith("/calculator");
@@ -27,7 +29,7 @@ function HybridTaxAdvantageCallout({ engineCapacity, fuelType }: { engineCapacit
     <div className="flex gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.06] p-3">
       <Leaf className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" aria-hidden="true" />
       <div className="min-w-0 space-y-1.5">
-        <p className="text-[11px] font-semibold text-emerald-300">Hybrid tax advantage</p>
+        <p className="text-[11px] font-semibold text-emerald-300">{t("tax.hybridAdv", "Hybrid tax advantage")}</p>
         <p className="text-[11px] leading-relaxed text-muted-foreground">
           Hybrid excise is charged per cm³ in capacity bands. At{" "}
           <span className="num font-medium text-foreground">{insight.cliffCc.toLocaleString()} cc</span> the rate is Rs.{" "}
@@ -51,7 +53,7 @@ function HybridTaxAdvantageCallout({ engineCapacity, fuelType }: { engineCapacit
             to={`/calculator?tab=landed-cost&fuel=${fuelType}&cc=${engineCapacity}`}
             className="inline-flex items-center gap-1 text-[12px] font-medium text-emerald-300 no-underline transition-colors hover:text-emerald-200"
           >
-            Model import duty in calculator
+            {t("tax.modelInCalc", "Model import duty in calculator")}
             <ArrowRight className="h-3 w-3" aria-hidden="true" />
           </Link>
         )}
@@ -71,6 +73,7 @@ export function TaxBreakdown({
   /** Seed from the listing's known fuel type so a hybrid doesn't open on petrol excise. */
   initialFuelType?: ImportFuelType;
 }) {
+  const { t } = useAppPreferences();
   const [fuelType, setFuelType] = useState<ImportFuelType>(initialFuelType ?? "petrol");
   const [motorKw, setMotorKw] = useState(110);
   const [ccInput, setCcInput] = useState<string>(engineCapacity != null ? String(engineCapacity) : "");
@@ -92,15 +95,15 @@ export function TaxBreakdown({
   return (
     <div className="page-panel space-y-4 rounded-xl p-6">
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="field-label text-foreground">Import duty and tax</h3>
+        <h3 className="field-label text-foreground">{t("listing.importDutyTax", "Import duty and tax")}</h3>
         <span className="rounded-2xl border border-primary/20 bg-primary/10 px-2 py-0.5 text-label font-mono font-bold text-primary-bright">
-          Indicative
+          {t("tax.indicative", "Indicative")}
         </span>
       </div>
 
       {/* Fuel type + EV power input */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex gap-1" role="group" aria-label="Fuel type">
+        <div className="flex gap-1" role="group" aria-label={t("common.fuelType", "Fuel type")}>
           {FUEL_OPTIONS.map((option) => (
             <button
               key={option.value}
@@ -112,20 +115,20 @@ export function TaxBreakdown({
                   : "border-border text-muted-foreground hover:text-foreground"
               }`}
             >
-              {option.label}
+              {t(option.key, option.label)}
             </button>
           ))}
         </div>
         {fuelType === "electric" && (
           <label className="flex items-center gap-2 text-[11px] text-muted-foreground">
-            Motor power
+            {t("tax.motorPower", "Motor power")}
             <input
               type="number"
               min={0}
               value={motorKw}
               onChange={(e) => setMotorKw(Number(e.target.value))}
               className="w-20 rounded-full border border-border bg-surface px-2 py-1 text-xs font-semibold text-foreground outline-none focus:ring-1 focus:ring-primary/50 num"
-              aria-label="Motor power in kilowatts"
+              aria-label={t("tax.motorPowerAria", "Motor power in kilowatts")}
             />
             kW
           </label>
@@ -137,7 +140,7 @@ export function TaxBreakdown({
       {!knownCc && (
         <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-surface p-3">
           <label htmlFor="tax-cc-input" className="text-xs font-medium text-muted-foreground">
-            Engine capacity
+            {t("tax.engineCc", "Engine capacity")}
           </label>
           <input
             id="tax-cc-input"
@@ -145,26 +148,26 @@ export function TaxBreakdown({
             min={1}
             value={ccInput}
             onChange={(e) => setCcInput(e.target.value)}
-            placeholder="e.g. 1496"
+            placeholder={t("tax.ccPh", "e.g. 1496")}
             className="w-28 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-primary/50 num"
             aria-describedby="tax-cc-hint"
           />
           <span className="text-xs text-muted-foreground">cc</span>
           <p id="tax-cc-hint" className="w-full text-[11px] text-muted-foreground">
-            This listing doesn't carry a verified engine capacity — enter it to get an indicative duty figure.
+            {t("tax.ccHint", "This listing doesn't carry a verified engine capacity — enter it to get an indicative duty figure.")}
           </p>
         </div>
       )}
 
       {effectiveCc == null ? (
         <p className="text-xs text-muted-foreground">
-          Enter the engine capacity above to see the indicative import-duty breakdown.
+          {t("tax.ccPrompt", "Enter the engine capacity above to see the indicative import-duty breakdown.")}
         </p>
       ) : (
         <>
       <div className="space-y-3">
         <div className="flex justify-between border-b border-border pb-2 text-xs text-muted-foreground">
-          <span>Base Value (CIF est.)</span>
+          <span>{t("tax.base", "Base Value (CIF est.)")}</span>
           <span className="font-medium text-foreground num">{formatPrice(price)}</span>
         </div>
 
@@ -183,12 +186,12 @@ export function TaxBreakdown({
 
       <div className="space-y-2 border-t border-border pt-4">
         <div className="flex items-center justify-between rounded-xl border border-border bg-surface p-3">
-          <span className="text-xs font-medium text-muted-foreground">Total Est. Taxes</span>
+          <span className="text-xs font-medium text-muted-foreground">{t("tax.total", "Total Est. Taxes")}</span>
           <span className="text-sm font-bold text-primary num">+{formatPrice(result.totalTax)}</span>
         </div>
 
         <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/10 p-4">
-          <span className="text-xs font-semibold text-primary-bright">Estimated landed cost</span>
+          <span className="text-xs font-semibold text-primary-bright">{t("tax.landed", "Estimated landed cost")}</span>
           <span className="text-lg font-bold tracking-tight text-foreground num">{formatPrice(result.totalOnRoad)}</span>
         </div>
       </div>
@@ -198,9 +201,7 @@ export function TaxBreakdown({
       <div className="flex gap-2 rounded-2xl border border-deal-amber/30 bg-deal-amber/10 p-3">
         <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-deal-amber" />
         <p className="text-[11px] leading-relaxed text-muted-foreground">
-          Indicative model of the post-2025 import regime (per-cm³/per-kW excise bands, luxury tax above the CIF
-          threshold, VAT on the duty-inclusive value). Band rates last reviewed {TAX_MODEL_REVIEWED} — actual duty
-          changes by gazette, so verify with Sri Lanka Customs or your clearing agent before committing to an import.
+          {t("tax.disclaimer", "Indicative model of the post-2025 import regime (per-cm³/per-kW excise bands, luxury tax above the CIF threshold, VAT on the duty-inclusive value). Band rates last reviewed {date} — actual duty changes by gazette, so verify with Sri Lanka Customs or your clearing agent before committing to an import.", { date: TAX_MODEL_REVIEWED })}
         </p>
       </div>
     </div>
