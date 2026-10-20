@@ -110,6 +110,8 @@ class MotormilaApp : Application(), SingletonImageLoader.Factory, Configuration.
         ImageLoader.Builder(context)
             .components {
                 add(OkHttpNetworkFetcherFactory(callFactory = { imageClient }))
+                // Settings → Low-data mode: cache-only images (android/screens).
+                add(lk.motormila.app.ui.common.LowDataImageInterceptor(this@MotormilaApp))
             }
             .memoryCache {
                 MemoryCache.Builder()

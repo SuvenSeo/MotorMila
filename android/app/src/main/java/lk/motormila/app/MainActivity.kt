@@ -18,6 +18,10 @@ import kotlinx.coroutines.launch
 import lk.motormila.app.billing.PlayBillingDataSource
 import lk.motormila.app.ui.navigation.MotormilaNavGraph
 import lk.motormila.app.ui.theme.MotormilaTheme
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
+import kotlinx.coroutines.flow.map
 
 /**
  * Launcher activity. Forwards share intents and VIEW deep links into the nav graph.
@@ -35,6 +39,9 @@ class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var billing: PlayBillingDataSource
 
+    @Inject
+    lateinit var settingsStore: lk.motormila.app.data.local.datastore.SettingsStore
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
@@ -48,7 +55,15 @@ class MainActivity : AppCompatActivity() {
             runCatching { billing.syncPlayEntitlement() }
         }
         setContent {
-            MotormilaTheme {
+            // Settings → Appearance (android/screens): dark-first; "system" follows the device.
+            val themePref by remember { settingsStore.observe().map { it.theme } }
+                .collectAsState(initial = "dark")
+            val dark = when (themePref) {
+                "light" -> false
+                "system" -> isSystemInDarkTheme()
+                else -> true
+            }
+            MotormilaTheme(darkTheme = dark) {
                 MotormilaNavGraph(
                     sharedUrl = sharedUrl,
                     startDeepLink = startDeepLink,

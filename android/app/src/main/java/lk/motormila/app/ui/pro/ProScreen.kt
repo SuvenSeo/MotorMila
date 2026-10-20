@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -46,6 +47,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.io.File
 import lk.motormila.app.BuildConfig
 import lk.motormila.app.R
+import lk.motormila.app.ui.common.MmScreen
+import lk.motormila.app.ui.common.PRO_COMING_SOON
 import lk.motormila.app.billing.BillingState
 import lk.motormila.app.core.format.formatLkr
 import lk.motormila.app.core.format.formatPct
@@ -119,12 +122,20 @@ fun ProScreen(
             else -> Unit
         }
     }
-    // Non-Pro users land on the paywall sheet (dismissible to peek blurred previews).
+    // Paid plans aren't on sale yet: non-Pro users get an honest "coming soon"
+    // page with the launch list (no checkout, no blurred placeholder data).
+    if (PRO_COMING_SOON && !state.isLoading && !state.isPro) {
+        MmScreen(title = stringResource(R.string.scr_pro_title), snackbarHostState = snacks) {
+            ProComingSoon()
+        }
+        return
+    }
+    // Legacy paywall path (only reachable once PRO_COMING_SOON is false).
     LaunchedEffect(state.isPro, state.isLoading) {
-        if (!state.isLoading && !state.isPro) paywallOpen = true
+        if (!PRO_COMING_SOON && !state.isLoading && !state.isPro) paywallOpen = true
     }
 
-    MotormilaPage(title = "Pro intelligence", snackbarHostState = snacks) {
+    MmScreen(title = stringResource(R.string.scr_pro_title), snackbarHostState = snacks) {
         PullToRefreshBox(
             isRefreshing = false,
             onRefresh = { viewModel.onEvent(ProUiEvent.Refresh) },
@@ -160,7 +171,7 @@ fun ProScreen(
             }
         }
 
-        if (paywallOpen && !state.isPro) {
+        if (!PRO_COMING_SOON && paywallOpen && !state.isPro) {
             ModalBottomSheet(
                 onDismissRequest = { paywallOpen = false },
                 sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -572,4 +583,46 @@ private fun shareProCsv(context: android.content.Context, state: ProUiState) {
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
     context.startActivity(Intent.createChooser(intent, "Share Pro CSV"))
+}
+
+
+/** Non-Pro view while paid plans are not on sale: what Pro will add + launch list. */
+@Composable
+private fun ProComingSoon() {
+    val c = lk.motormila.app.ui.theme.MmColors.current
+    val type = lk.motormila.app.ui.theme.MmType.current
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = lk.motormila.app.ui.common.ScreenPadding,
+        verticalArrangement = Arrangement.spacedBy(lk.motormila.app.ui.theme.MmSpacing.cardGap),
+    ) {
+        item {
+            lk.motormila.app.ui.common.MmTag(
+                stringResource(R.string.scr_price_badge),
+                color = c.onDealGreat,
+                container = c.dealGreatContainer,
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(stringResource(R.string.scr_pro_soon_title), style = type.displayM, color = c.textPrimary)
+            Spacer(Modifier.height(8.dp))
+            Text(stringResource(R.string.scr_pro_soon_body), style = type.bodyM, color = c.textSecondary)
+        }
+        item {
+            lk.motormila.app.ui.components.MmCard(Modifier.fillMaxWidth()) {
+                lk.motormila.app.ui.pricing.PricingCatalog.proFeatures.forEach { f ->
+                    Row(Modifier.padding(vertical = 4.dp)) {
+                        Icon(
+                            androidx.compose.material.icons.Icons.Filled.Check,
+                            contentDescription = null,
+                            tint = c.success,
+                        )
+                        Spacer(Modifier.padding(start = 8.dp))
+                        Text(stringResource(f), style = type.bodyM, color = c.textPrimary)
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                lk.motormila.app.ui.common.ProNotifyBlock()
+            }
+        }
+    }
 }
