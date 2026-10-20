@@ -45,6 +45,7 @@ object LowDataMode {
     /** Current value for composables (recomposes when toggled). */
     @Composable
     fun current(): Boolean {
+        if (androidx.compose.ui.platform.LocalInspectionMode.current) return false
         val context = LocalContext.current
         val v by flow(context).collectAsState()
         return v ?: false
