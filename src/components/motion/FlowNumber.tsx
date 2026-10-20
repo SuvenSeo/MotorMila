@@ -73,8 +73,21 @@ export function compactLkrParts(n: number): { value: number; suffix: string; for
 }
 
 /** Compact LKR price that rolls on change. */
-export function FlowLkr({ value, className, label, countUp = false }: { value: number; className?: string; label: string; countUp?: boolean }) {
+export function FlowLkr({
+  value,
+  className,
+  label,
+  countUp = false,
+  prefixPlus = false,
+}: {
+  value: number;
+  className?: string;
+  label: string;
+  countUp?: boolean;
+  /** Prefix "+" (e.g. taxes added on top). */
+  prefixPlus?: boolean;
+}) {
   const parts = compactLkrParts(value);
   const Comp = countUp ? CountUpOnView : FlowNumber;
-  return <Comp value={parts.value} prefix="Rs " suffix={parts.suffix} format={parts.format} className={className} label={label} />;
+  return <Comp value={parts.value} prefix={prefixPlus ? "+Rs " : "Rs "} suffix={parts.suffix} format={parts.format} className={className} label={label} />;
 }
