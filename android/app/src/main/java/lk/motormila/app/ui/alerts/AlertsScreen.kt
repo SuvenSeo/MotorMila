@@ -58,7 +58,6 @@ import lk.motormila.app.domain.model.Alert
 import lk.motormila.app.domain.model.AlertMatch
 import lk.motormila.app.ui.components.MotormilaChoiceChip
 import lk.motormila.app.ui.components.MotormilaGhostButton
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.components.OfflineBanner
@@ -111,7 +110,7 @@ fun AlertsScreen(
     }
     // Consume the confetti burst after it plays.
 
-    MotormilaPage(
+    lk.motormila.app.ui.common.MmScreen(
         title = if (state.unreadCount > 0) "Price alerts (${state.unreadCount})" else "Price alerts",
         snackbarHostState = snacks,
     ) {
@@ -227,6 +226,8 @@ private fun CreateForm(state: AlertsUiState, viewModel: AlertsViewModel, onUpgra
                 modifier = Modifier.weight(1f).heightIn(min = 48.dp),
             )
         }
+        // Pro-only channels: hidden (not teased) while Pro isn't on sale.
+        if (!proLocked) {
         OutlinedTextField(
             value = f.whatsappPhone,
             onValueChange = { viewModel.onEvent(AlertsUiEvent.FormChanged(f.copy(whatsappPhone = it))) },
@@ -243,6 +244,7 @@ private fun CreateForm(state: AlertsUiState, viewModel: AlertsViewModel, onUpgra
             supportingText = { Text(stringResource(R.string.ui_alerts_chat_id_or_username_pro)) },
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
         )
+        }
         Text(
             "Notify via",
             style = MaterialTheme.typography.labelMedium,
@@ -253,9 +255,9 @@ private fun CreateForm(state: AlertsUiState, viewModel: AlertsViewModel, onUpgra
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             ChannelChoiceChip(
-                label = "In-app",
+                label = stringResource(R.string.scr_alerts_inapp),
                 selected = f.inapp,
-                locked = proLocked,
+                locked = false,
                 onUpgrade = onUpgrade,
                 onToggle = { viewModel.onEvent(AlertsUiEvent.FormChanged(f.copy(inapp = !f.inapp))) },
             )
@@ -264,14 +266,14 @@ private fun CreateForm(state: AlertsUiState, viewModel: AlertsViewModel, onUpgra
                 selected = f.email,
                 onClick = { viewModel.onEvent(AlertsUiEvent.FormChanged(f.copy(email = !f.email))) },
             )
-            ChannelChoiceChip(
+            if (!proLocked) ChannelChoiceChip(
                 label = "WhatsApp",
                 selected = f.whatsapp,
                 locked = proLocked,
                 onUpgrade = onUpgrade,
                 onToggle = { viewModel.onEvent(AlertsUiEvent.FormChanged(f.copy(whatsapp = !f.whatsapp))) },
             )
-            ChannelChoiceChip(
+            if (!proLocked) ChannelChoiceChip(
                 label = "Telegram",
                 selected = f.telegram,
                 locked = proLocked,
@@ -284,6 +286,7 @@ private fun CreateForm(state: AlertsUiState, viewModel: AlertsViewModel, onUpgra
                 onClick = { viewModel.onEvent(AlertsUiEvent.FormChanged(f.copy(push = !f.push))) },
             )
         }
+        if (!proLocked) {
         Text(
             "Delivery",
             style = MaterialTheme.typography.labelMedium,
@@ -325,7 +328,8 @@ private fun CreateForm(state: AlertsUiState, viewModel: AlertsViewModel, onUpgra
                 modifier = Modifier.semantics { contentDescription = "Quiet hours" },
             )
         }
-        Text(
+        }
+        if (!proLocked) Text(
             "Email, WhatsApp, Telegram and push queue for the 07:00 digest. In-app always delivers.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -335,12 +339,12 @@ private fun CreateForm(state: AlertsUiState, viewModel: AlertsViewModel, onUpgra
                 Icon(Icons.Filled.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.size(8.dp))
                 Text(
-                    "Free plan: 1 alert used. Upgrade for unlimited.",
+                    stringResource(R.string.scr_alerts_cap),
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.weight(1f),
                 )
                 MotormilaGhostButton(
-                    label = "Go Pro",
+                    label = stringResource(R.string.scr_alerts_cap_cta),
                     fillMaxWidth = false,
                     onClick = onUpgrade,
                 )

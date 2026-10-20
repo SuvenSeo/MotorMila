@@ -28,7 +28,6 @@ import lk.motormila.app.domain.model.MarketSignal
 import lk.motormila.app.ui.components.ErrorState
 import lk.motormila.app.ui.components.LoadingSkeletonCard
 import lk.motormila.app.ui.components.MotormilaGhostButton
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.theme.MotormilaPrimaryBright
@@ -46,7 +45,7 @@ fun OfficialPulseDetailScreen(
     val reducedMotion = rememberReducedMotion()
     val haptics = rememberHaptics()
 
-    MotormilaPage(
+    lk.motormila.app.ui.common.MmScreen(
         title = stringResource(R.string.hub_pulse_detail_title),
         onBack = {
             if (!reducedMotion) haptics.tick()

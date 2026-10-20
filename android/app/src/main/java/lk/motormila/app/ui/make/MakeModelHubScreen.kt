@@ -40,7 +40,6 @@ import lk.motormila.app.domain.model.Listing
 import lk.motormila.app.ui.components.BrandLogo
 import lk.motormila.app.ui.components.BrandLogoSize
 import lk.motormila.app.ui.components.MotormilaGhostButton
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.EmptyState
 import lk.motormila.app.ui.components.ErrorState
 import lk.motormila.app.ui.components.ListingCard
@@ -74,7 +73,7 @@ fun MakeModelHubScreen(
         }
     }
 
-    MotormilaPage(
+    lk.motormila.app.ui.common.MmScreen(
         title = state.vehicleLabel.ifBlank { stringResource(R.string.make_model_hub_eyebrow) },
         onBack = {
             if (!reducedMotion) haptics.tick()

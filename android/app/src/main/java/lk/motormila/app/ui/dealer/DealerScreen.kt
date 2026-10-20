@@ -40,7 +40,6 @@ import lk.motormila.app.core.ui.ErrorRetry
 import lk.motormila.app.core.ui.SectionTitle
 import lk.motormila.app.domain.model.UrlBenchmarkResult
 import lk.motormila.app.ui.components.MotormilaGhostButton
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.components.OfflineBanner
@@ -70,7 +69,7 @@ fun DealerScreen(
         }
     }
 
-    MotormilaPage(title = "Dealer tools", snackbarHostState = snacks) {
+    lk.motormila.app.ui.common.MmScreen(title = "Dealer tools", snackbarHostState = snacks) {
         PullToRefreshBox(
             isRefreshing = state.refreshing,
             onRefresh = { viewModel.onEvent(DealerUiEvent.RefreshClaim) },

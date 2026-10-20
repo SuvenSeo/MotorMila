@@ -22,7 +22,6 @@ import lk.motormila.app.R
 import lk.motormila.app.ui.components.EmptyState
 import lk.motormila.app.core.ui.PrimaryAction
 import lk.motormila.app.domain.repository.ListingQuery
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaSurface
 
 /**
@@ -52,7 +51,7 @@ fun ShareImportScreen(
         }
     }
 
-    MotormilaPage(title = stringResource(R.string.share_title)) {
+    lk.motormila.app.ui.common.MmScreen(title = stringResource(R.string.share_title)) {
         Column(
             Modifier.fillMaxSize().padding(24.dp),
             verticalArrangement = Arrangement.Center,

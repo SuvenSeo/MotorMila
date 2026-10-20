@@ -53,7 +53,6 @@ import lk.motormila.app.domain.repository.CostLine
 import lk.motormila.app.domain.repository.LandedCost
 import lk.motormila.app.domain.repository.Tco
 import lk.motormila.app.ui.components.MotormilaChoiceChip
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaPillTabs
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface as MotormilaPane
@@ -93,7 +92,7 @@ fun CalculatorScreen(
         }
     }
 
-    MotormilaPage(
+    lk.motormila.app.ui.common.MmScreen(
         title = stringResource(R.string.calc_title),
         onBack = {
             if (!reducedMotion) haptics.tick()

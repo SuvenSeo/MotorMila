@@ -58,7 +58,6 @@ import lk.motormila.app.ui.components.BrandLogo
 import lk.motormila.app.ui.components.BrandLogoSize
 import lk.motormila.app.ui.components.MotormilaEyebrow
 import lk.motormila.app.ui.components.MotormilaGhostButton
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaPillTabs
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface
@@ -120,7 +119,7 @@ fun LoginScreen(
         }
     }
 
-    MotormilaPage(title = "Sign in", snackbarHostState = snacks) {
+    lk.motormila.app.ui.common.MmScreen(title = "Sign in", snackbarHostState = snacks) {
         Column(
             Modifier
                 .fillMaxSize()

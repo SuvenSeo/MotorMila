@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.sp
 import lk.motormila.app.ui.components.MotormilaEyebrow
 import lk.motormila.app.ui.components.MotormilaGhostButton
 import lk.motormila.app.ui.components.MotormilaHairline
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.theme.MotormilaOnSurface
 import lk.motormila.app.ui.theme.MotormilaPrimaryBright
@@ -31,7 +30,7 @@ fun LegalScreen(
     onOpenOther: () -> Unit,
 ) {
     val document = LegalCatalog.byId(documentId)
-    MotormilaPage(title = if (documentId == "terms") "Terms" else "Privacy", onBack = onBack) {
+    lk.motormila.app.ui.common.MmScreen(title = if (documentId == "terms") "Terms" else "Privacy", onBack = onBack) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp),

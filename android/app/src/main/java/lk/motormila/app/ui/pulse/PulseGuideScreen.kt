@@ -19,7 +19,6 @@ import androidx.compose.ui.unit.sp
 import lk.motormila.app.ui.components.MotormilaEyebrow
 import lk.motormila.app.ui.components.MotormilaGhostButton
 import lk.motormila.app.ui.components.MotormilaSurface
-import lk.motormila.app.ui.components.MotormilaTopBar
 import lk.motormila.app.ui.theme.MotormilaOnSurface
 import lk.motormila.app.ui.theme.MotormilaPrimaryBright
 import lk.motormila.app.ui.theme.MotormilaSecondaryText
@@ -34,8 +33,8 @@ fun PulseGuideScreen(
 ) {
     val guide = PulseGuides.byKey(guideKey)
 
+    lk.motormila.app.ui.common.MmScreen(title = "Pulse guide", onBack = onBack) {
     Column(Modifier.fillMaxSize()) {
-        MotormilaTopBar(title = "Pulse guide", onBack = onBack)
         if (guide == null) {
             Column(
                 Modifier
@@ -98,5 +97,6 @@ fun PulseGuideScreen(
             MotormilaGhostButton("Open import calculator", onClick = onOpenCalculator)
             Spacer(Modifier.height(24.dp))
         }
+    }
     }
 }

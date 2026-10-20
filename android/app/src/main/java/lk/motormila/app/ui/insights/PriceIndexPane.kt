@@ -19,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
@@ -139,21 +140,25 @@ fun PriceIndexPane(
             }
             item {
                 MotormilaSurface(modifier = Modifier.motormilaReveal(delayMillis = 90)) {
+                    val trend = lk.motormila.app.ui.common.trendOf(change)
                     Text(
-                        if (up) "Rising" else "Easing",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (up) MotormilaGoodText else MotormilaPrimaryBright,
+                        stringResource(
+                            when (trend) {
+                                lk.motormila.app.ui.common.Trend.UP -> R.string.scr_trend_rising
+                                lk.motormila.app.ui.common.Trend.DOWN -> R.string.scr_trend_easing
+                                lk.motormila.app.ui.common.Trend.STABLE -> R.string.scr_trend_stable
+                            },
+                        ),
+                        style = lk.motormila.app.ui.theme.MmType.current.label,
+                        color = lk.motormila.app.ui.common.trendColor(trend),
                     )
                     Spacer(Modifier.height(10.dp))
-                    PriceIndexAreaChart(
-                        points = points,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(220.dp)
-                            .semantics {
-                                contentDescription = "Price index area chart, ${points.size} months, currently ${latest?.indexValue}"
-                            },
+                    lk.motormila.app.ui.common.TrendLineChart(
+                        values = points.map { it.indexValue },
+                        xLabels = points.map { PriceIndexFormat.periodLabel(it.period) },
+                        yLabel = { formatIndexValue(it) },
+                        contentDescription = "Price index chart, ${points.size} months, currently ${latest?.indexValue?.let { formatIndexValue(it) }}",
+                        trend = trend,
                     )
                 }
             }
@@ -161,17 +166,22 @@ fun PriceIndexPane(
                 MotormilaSurface(modifier = Modifier.motormilaReveal(delayMillis = 110)) {
                     Text(stringResource(R.string.ui_insights_month_on_month), fontWeight = FontWeight.SemiBold, color = MotormilaOnSurface)
                     Spacer(Modifier.height(10.dp))
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        points.takeLast(6).forEach { point ->
-                            MotormilaChoiceChip(
-                                label = "${PriceIndexFormat.periodLabel(point.period)}  ${PriceIndexFormat.pct(point.momChangePct)}",
-                                selected = false,
-                                compact = true,
-                                enabled = false,
-                                onClick = {},
+                    points.takeLast(6).reversed().forEach { point ->
+                        val t = lk.motormila.app.ui.common.trendOf(point.momChangePct)
+                        Row(
+                            Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                PriceIndexFormat.periodLabel(point.period),
+                                style = lk.motormila.app.ui.theme.MmType.current.bodyM,
+                                color = MotormilaSecondaryText,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(
+                                PriceIndexFormat.pct(point.momChangePct),
+                                style = lk.motormila.app.ui.theme.MmType.current.numeric,
+                                color = lk.motormila.app.ui.common.trendColor(t),
                             )
                         }
                     }
@@ -188,7 +198,7 @@ fun PriceIndexPane(
             }
         }
         item {
-            MotormilaGhostButton("Unlock longer history on Pro", onClick = onOpenPro)
+            // Longer history is a Pro feature; Pro isn't on sale yet, so no upsell button here.
         }
     }
 }

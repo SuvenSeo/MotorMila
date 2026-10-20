@@ -60,7 +60,6 @@ import lk.motormila.app.core.format.formatLkr
 import lk.motormila.app.core.motion.rememberReducedMotion
 import lk.motormila.app.core.ui.PrimaryAction
 import lk.motormila.app.ui.components.MotormilaChoiceChip
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.theme.rememberHaptics
 
@@ -131,7 +130,7 @@ fun PlateScanScreen(
         }
     }
 
-    MotormilaPage(
+    lk.motormila.app.ui.common.MmScreen(
         title = stringResource(R.string.scan_title),
         snackbarHostState = snacks,
     ) {

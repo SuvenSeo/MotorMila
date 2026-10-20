@@ -56,7 +56,6 @@ import lk.motormila.app.core.ui.SkeletonList
 import lk.motormila.app.core.ui.SteeringWheelGraphic
 import lk.motormila.app.domain.model.WatchItem
 import lk.motormila.app.ui.components.MotormilaIconAction
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.components.cascadeDelay
 import lk.motormila.app.ui.theme.MotormilaGoodContainer
@@ -82,8 +81,9 @@ fun WatchlistScreen(
         }
     }
 
-    MotormilaPage(
+    lk.motormila.app.ui.common.MmScreen(
         title = if (state.items.isEmpty()) "Watchlist" else "Watchlist (${state.items.size})",
+        showBack = false,
         snackbarHostState = snacks,
         actions = {
             MotormilaIconAction(

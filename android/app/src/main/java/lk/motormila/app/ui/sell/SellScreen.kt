@@ -31,7 +31,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import lk.motormila.app.R
 import lk.motormila.app.ui.components.ErrorState
 import lk.motormila.app.ui.components.MotormilaChoiceChip
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.theme.MotormilaGood
@@ -56,7 +55,7 @@ fun SellScreen(
     val loggedIn by viewModel.loggedIn.collectAsStateWithLifecycle()
     val haptics = rememberHaptics()
 
-    MotormilaPage(
+    lk.motormila.app.ui.common.MmScreen(
         title = stringResource(R.string.sell_title),
         onBack = onBack,
     ) {

@@ -199,4 +199,17 @@
     <string name="scr_cmp_above_market">%1$s%% above</string>
     <string name="scr_cmp_at_market">At market</string>
     <string name="scr_cmp_note">Green marks the best value in a row. Asking prices from the original ads; final prices are usually lower after negotiation.</string>
+    <!-- Insights / charts -->
+    <string name="scr_ins_title">Insights</string>
+    <string name="scr_ins_median_movement">MEDIAN ASKING PRICE BY MONTH</string>
+    <string name="scr_ins_chart_cd">Median asking price chart, %1$d months</string>
+    <string name="scr_ins_chart_sparse">Not enough months of data for a trend yet.</string>
+    <string name="scr_trend_rising">Rising</string>
+    <string name="scr_trend_easing">Easing</string>
+    <string name="scr_trend_stable">Stable</string>
+
+    <!-- Alerts -->
+    <string name="scr_alerts_inapp">In-app</string>
+    <string name="scr_alerts_cap">Free plan: 1 alert. More alerts come with Pro, which is coming soon.</string>
+    <string name="scr_alerts_cap_cta">Get notified</string>
 </resources>

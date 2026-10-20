@@ -43,7 +43,6 @@ import lk.motormila.app.ui.components.MotormilaChoiceChip
 import lk.motormila.app.ui.components.MotormilaEyebrow
 import lk.motormila.app.ui.components.MotormilaGhostButton
 import lk.motormila.app.ui.components.MotormilaMetricTile
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.theme.MotormilaGoodText
@@ -75,7 +74,7 @@ fun AdminScreen(
         viewModel.onEvent(AdminUiEvent.DismissNotice)
     }
 
-    MotormilaPage(title = "Admin", onBack = onBack, snackbarHostState = snacks) {
+    lk.motormila.app.ui.common.MmScreen(title = "Admin", onBack = onBack, snackbarHostState = snacks) {
         when {
             !state.isAdmin && !state.isLoading -> {
                 Column(

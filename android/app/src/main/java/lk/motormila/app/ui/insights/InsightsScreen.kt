@@ -130,7 +130,7 @@ fun InsightsScreen(
         }
     }
 
-    MotormilaPage(title = "Insights", snackbarHostState = snacks) {
+    lk.motormila.app.ui.common.MmScreen(title = stringResource(R.string.scr_ins_title), showBack = false, snackbarHostState = snacks) {
         Column(Modifier.fillMaxSize()) {
             MotormilaChipTabs(
                 tabs = tabs,
@@ -318,26 +318,13 @@ private fun TrendsTab(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "MEDIAN PRICE MOVEMENT (±10% BAND)",
+                        text = stringResource(R.string.scr_ins_median_movement),
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.8.sp,
                             color = MotormilaSecondaryText,
                         ),
                     )
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Box(Modifier.size(8.dp).clip(CircleShape).background(MotormilaPrimaryBright))
-                            Text(stringResource(R.string.ui_dealer_median), style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, color = MotormilaSecondaryText))
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Box(Modifier.size(8.dp).clip(MotormilaRadius.pill).background(MotormilaPrimary.copy(alpha = 0.25f)))
-                            Text(stringResource(R.string.ui_insights_10_band), style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, color = MotormilaSecondaryText))
-                        }
-                    }
                 }
 
                 // Key metric callout
@@ -351,7 +338,7 @@ private fun TrendsTab(
                     ) {
                         Column {
                             Text(
-                                text = formatLkr(med),
+                                text = lk.motormila.app.ui.components.MmPriceFormat.compact(med),
                                 style = MaterialTheme.typography.titleLarge.copy(
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = FontFamily.Monospace,
@@ -372,13 +359,23 @@ private fun TrendsTab(
 
                 Spacer(Modifier.height(4.dp))
 
-                BandChart(
-                    points = state.trends,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(220.dp)
-                        .semantics { contentDescription = "Price trend chart, ${state.trends.size} points" },
-                )
+                val trendValues = state.trends.mapNotNull { p -> (p.medianPriceLkr ?: p.avgPriceLkr)?.takeIf { it > 0 } }
+                val trendLabels = state.trends.filter { p -> ((p.medianPriceLkr ?: p.avgPriceLkr) ?: 0.0) > 0 }
+                    .map { p -> lk.motormila.app.ui.common.monthLabel(p.year, p.month) }
+                if (trendValues.size >= 2) {
+                    lk.motormila.app.ui.common.TrendLineChart(
+                        values = trendValues,
+                        xLabels = trendLabels,
+                        yLabel = { lk.motormila.app.ui.components.MmPriceFormat.compactAmount(it).removeSuffix(" Mn") + " Mn" },
+                        contentDescription = stringResource(R.string.scr_ins_chart_cd, trendValues.size),
+                        height = 200.dp,
+                    )
+                } else {
+                    Text(
+                        stringResource(R.string.scr_ins_chart_sparse),
+                        style = MaterialTheme.typography.bodySmall.copy(color = MotormilaSecondaryText),
+                    )
+                }
 
                 state.trendCoverageNote?.let {
                     Surface(
@@ -439,52 +436,6 @@ private fun InsightTextField(
             .fillMaxWidth()
             .heightIn(min = 48.dp),
     )
-}
-
-/** Median line + shaded ±10% band with bounding guides. */
-@Composable
-private fun BandChart(points: List<TrendPoint>, modifier: Modifier = Modifier) {
-    val medianColor = MotormilaPrimary
-    val bandColor = MotormilaPrimary.copy(alpha = 0.16f)
-    val boundaryColor = MotormilaPrimary.copy(alpha = 0.35f)
-
-    Canvas(modifier) {
-        if (points.size < 2) return@Canvas
-        fun med(p: TrendPoint): Float = ((p.medianPriceLkr ?: p.avgPriceLkr ?: 0.0)).toFloat()
-        val meds = points.map { med(it) }
-        val p75 = meds.map { it * 1.10f }
-        val p25 = meds.map { it * 0.90f }
-        val all = meds + p75 + p25
-        val min = (all.minOrNull() ?: 0f)
-        val max = (all.maxOrNull() ?: 1f)
-        val span = (max - min).takeIf { it > 0 } ?: 1f
-        fun x(i: Int) = size.width * i / (points.size - 1)
-        fun y(v: Float) = size.height - ((v - min) / span) * size.height
-
-        // Band polygon
-        val bandPath = Path().apply {
-            p75.forEachIndexed { i, v -> if (i == 0) moveTo(x(i), y(v)) else lineTo(x(i), y(v)) }
-            p25.indices.reversed().forEach { r -> lineTo(x(r), y(p25[r])) }
-            close()
-        }
-        drawPath(bandPath, bandColor)
-
-        // Upper and lower boundary lines
-        for (i in 1 until points.size) {
-            drawLine(boundaryColor, Offset(x(i - 1), y(p75[i - 1])), Offset(x(i), y(p75[i])), strokeWidth = 1.5f)
-            drawLine(boundaryColor, Offset(x(i - 1), y(p25[i - 1])), Offset(x(i), y(p25[i])), strokeWidth = 1.5f)
-        }
-
-        // Median line
-        for (i in 1 until points.size) {
-            drawLine(medianColor, Offset(x(i - 1), y(meds[i - 1])), Offset(x(i), y(meds[i])), strokeWidth = 4.5f)
-        }
-
-        // Node points on median
-        meds.forEachIndexed { i, v ->
-            drawCircle(color = MotormilaPrimaryBright, radius = 4f, center = Offset(x(i), y(v)))
-        }
-    }
 }
 
 // ---------- Shared market-data sections (summary / velocity / fuel / drops / live) ----------
