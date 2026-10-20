@@ -88,6 +88,10 @@ export function navigateWithHeroTransition(navigate: () => void, cardImage: HTML
   try {
     const vt = doc.startViewTransition!(async () => {
       if (cardImage) cardImage.style.removeProperty("view-transition-name");
+      // Tells RouteTransition to swap pages instantly: the View Transition is
+      // the animation, and a framer cross-fade (mode="wait") would hold the old
+      // page on screen past the hero wait and double-animate.
+      html.setAttribute(VT_ATTR, "pending");
       flushSync(navigate);
       hero = cardImage ? await waitForHero(180) : null;
       if (hero) {

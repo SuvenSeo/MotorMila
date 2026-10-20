@@ -1,4 +1,4 @@
-import { memo, useMemo, useRef } from "react";
+import { memo, useEffect, useMemo, useRef } from "react";
 import { m } from "motion/react";
 import { CarListing } from "@/types/car";
 import { formatPrice } from "@/services/api";
@@ -96,6 +96,19 @@ export const ListingCard = memo(function ListingCard({
   const fullAccess = hasFullPlatformAccess({ hasProAccess, isAdmin });
   const navigate = useNavigate();
   const cardRef = useRef<HTMLElement>(null);
+  const controlsRef = useRef<HTMLDivElement>(null);
+  // Motion's whileTap listens with a *native* pointerdown on the <article>, so a
+  // React stopPropagation can't keep the card from pressing when the heart /
+  // compare / gallery buttons are tapped. Stop it natively one level below.
+  useEffect(() => {
+    const el = controlsRef.current;
+    if (!el) return;
+    const stop = (e: PointerEvent) => {
+      if ((e.target as Element | null)?.closest?.("button, [role='button'], input, select")) e.stopPropagation();
+    };
+    el.addEventListener("pointerdown", stop);
+    return () => el.removeEventListener("pointerdown", stop);
+  }, []);
   const calm = useReducedMotionOrLowData();
   const canHover = useCanHover();
   // Scroll-in reveal (once). Reduced motion / low data: opacity only.
@@ -198,7 +211,7 @@ export const ListingCard = memo(function ListingCard({
         className="absolute inset-0 z-10 rounded-3xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       />
 
-      <div className="pointer-events-none relative z-20 flex h-full flex-col">
+      <div ref={controlsRef} className="pointer-events-none relative z-20 flex h-full flex-col">
         <div className="listing-card-photo relative aspect-[16/10] overflow-hidden bg-muted">
           <ListingImageCarousel
             images={galleryImages}

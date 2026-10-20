@@ -1158,18 +1158,12 @@ export default function Dashboard() {
                   isSignedIn={isAuthenticated}
                 />
               ) : marketView === "grid" ? (
-                <motion.div
-                  initial="hidden"
-                  animate="show"
-                  variants={cardContainerVariants}
-                  className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3"
-                >
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+                  {/* Cards self-reveal on scroll (ListingCard revealIndex caps the stagger). */}
                   {listings.map((listing, index) => (
-                    <motion.div key={listing.id} variants={cardItemVariants}>
-                      <ListingCard listing={listing} priority={index < 6} onCompareToggle={toggleCompare} isComparing={compareIdSet.has(listing.id)} onWatchlistToggle={toggleWatchlist} isWatchlisted={watchlistIdSet.has(listing.id)} />
-                    </motion.div>
+                    <ListingCard key={listing.id} listing={listing} priority={index < 6} revealIndex={index} onCompareToggle={toggleCompare} isComparing={compareIdSet.has(listing.id)} onWatchlistToggle={toggleWatchlist} isWatchlisted={watchlistIdSet.has(listing.id)} />
                   ))}
-                </motion.div>
+                </div>
               ) : (
                 <motion.div
                   initial="hidden"
