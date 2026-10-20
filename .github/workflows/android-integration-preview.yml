@@ -1,6 +1,8 @@
-# TEMPORARY (android/integration branch only, never merge to main).
-# Builds the sideload preview APK + review screenshots. Publishes nothing:
-# no tag, no release, no R2, no manifest push.
+# TEMPORARY (android/integration branch only, deleted before merging to main).
+# Compiles + tests both flavors, re-records the Paparazzi goldens that main's
+# android.yml verifies (verifyPaparazziPlayDebug), commits them back to this
+# branch, then runs verify + the unsigned R8 smoke build.
+# Publishes nothing: no tag, no release, no R2, no manifest push.
 name: Android integration preview (temp)
 
 on:
@@ -12,12 +14,13 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
+    if: "!contains(github.event.head_commit.message, '[goldens]')"
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: android
@@ -38,66 +41,46 @@ jobs:
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           [ -x "$SDKMANAGER" ] || exit 0
           yes | "$SDKMANAGER" --licenses >/dev/null || true
-          "$SDKMANAGER" "platforms;android-35" >/dev/null || true
+          "$SDKMANAGER" "platforms;android-36" >/dev/null || true
       - run: chmod +x gradlew
       - name: Compile direct + play
         run: ./gradlew :app:compileDirectDebugKotlin :app:compilePlayDebugKotlin --stacktrace
-      - name: Unit tests (direct)
-        run: ./gradlew :app:testDirectDebugUnitTest --stacktrace
-      - name: Upload test reports
-        if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: test-reports
-          path: android/app/build/reports/tests/
-          if-no-files-found: ignore
-      - name: Decode sideload keystore
-        working-directory: .
-        env:
-          ANDROID_KEYSTORE_FILE: ${{ secrets.ANDROID_KEYSTORE_FILE }}
+      - name: Unit tests (play + direct)
+        run: ./gradlew :app:testPlayDebugUnitTest :app:testDirectDebugUnitTest --stacktrace
+      - name: Re-record Paparazzi goldens (play debug, same set main verifies)
         run: |
           set -euo pipefail
-          if [ -z "${ANDROID_KEYSTORE_FILE:-}" ]; then echo "SIGNING=none" >> "$GITHUB_ENV"; exit 0; fi
-          mkdir -p "$HOME/.android"
-          printf '%s' "$ANDROID_KEYSTORE_FILE" | base64 --decode > "$HOME/.android/mm.keystore"
-          echo "MM_KS=$HOME/.android/mm.keystore" >> "$GITHUB_ENV"
-          echo "SIGNING=release" >> "$GITHUB_ENV"
-      - name: Assemble direct release APK (signed)
-        if: env.SIGNING == 'release'
-        env:
-          ANDROID_KEYSTORE_FILE: ${{ env.MM_KS }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew :app:assembleDirectRelease --stacktrace
-      - name: Assemble direct debug APK (no signing secrets)
-        if: env.SIGNING != 'release'
-        run: ./gradlew :app:assembleDirectDebug --stacktrace
-      - name: Signer + version
+          rm -rf app/src/test/snapshots/images
+          ./gradlew :app:recordPaparazziPlayDebug --stacktrace
+          ls app/src/test/snapshots/images | wc -l
+      - name: Verify Paparazzi goldens
+        run: ./gradlew :app:verifyPaparazziPlayDebug --stacktrace
+      - name: Commit goldens back to the branch
+        working-directory: .
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A android/app/src/test/snapshots
+          if git diff --cached --quiet; then echo "goldens unchanged"; exit 0; fi
+          git commit -m "test(android): re-record Paparazzi goldens (compileSdk 36, Paparazzi 2.0.0-alpha02) [goldens]"
+          git push origin HEAD:android/integration
+      - name: R8 release smoke build (unsigned, never published)
+        run: >-
+          ./gradlew :app:assemblePlayRelease :app:assembleDirectRelease :app:bundlePlayRelease
+          -PmotormilaAllowUnsignedRelease=true --stacktrace
+      - name: SDK levels
         working-directory: .
         run: |
           BT="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)"
-          for a in android/app/build/outputs/apk/direct/*/*.apk; do
-            echo "== $a"; "$BT/apksigner" verify --print-certs "$a" | head -5
-            "$BT/aapt2" dump badging "$a" | head -1
-          done
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: sideload-apk
-          path: android/app/build/outputs/apk/direct/
-          retention-days: 7
-      - name: Paparazzi record (review shots)
+          "$BT/aapt2" dump badging android/app/build/outputs/apk/play/release/*.apk | grep -E "sdkVersion|targetSdkVersion|compileSdkVersion"
+      - name: Upload reports
         if: always()
-        continue-on-error: true
-        env:
-          MM_SCREENS_SHOTS: "1"
-        run: ./gradlew :app:recordPaparazziDirectDebug --stacktrace
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: paparazzi-pngs
+          name: reports
           path: |
+            android/app/build/reports/
             android/app/src/test/snapshots/images/
-            android/app/build/reports/paparazzi/
           if-no-files-found: ignore
           retention-days: 7
