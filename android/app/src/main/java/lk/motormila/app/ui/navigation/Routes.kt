@@ -225,10 +225,14 @@ internal fun resolveParsedDeepLink(parsed: ParsedDeepLink): Any? {
             "trends" -> Insights
             "ev-chargers" -> EvChargers
             "ev-hub" -> EvHub
-            "estimate" -> Valuation(
+            "estimate", "valuation" -> Valuation(
                 make = parsed.queryOrNull("make"),
                 model = parsed.queryOrNull("model"),
             )
+            "profile" -> Profile
+            // Web /delete-account (Play's account-deletion URL) → Settings,
+            // where "Delete account" calls DELETE /api/v1/auth/me.
+            "delete-account" -> Settings
             "best-picks" -> BestPicks
             "dealer" -> Dealer
             "settings" -> Settings

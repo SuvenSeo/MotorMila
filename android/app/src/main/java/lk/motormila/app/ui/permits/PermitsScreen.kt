@@ -166,7 +166,7 @@ private fun PermitRowCard(permit: Permit, delayMillis: Int) {
                 )
             }
             Text(
-                LkrFormat.full(permit.marketPriceLkr),
+                LkrFormat.compact(permit.marketPriceLkr),
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,

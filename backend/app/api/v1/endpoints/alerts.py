@@ -200,6 +200,69 @@ def delete_alert(
     db.commit()
 
 
+@router.put("/{alert_id}", response_model=MarketAlertRead)
+def update_alert(
+    alert_id: int,
+    payload: MarketAlertCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(default=None),
+    x_alert_token: Optional[str] = Header(default=None, alias="X-Alert-Token"),
+):
+    """Edit an alert in place (same id, same created_at, match history kept).
+
+    Full replacement of the criteria (make/model/max_price/district) and the
+    notify targets, same validation and Pro gates as create. delivery_mode /
+    quiet_hours_enabled change only when sent. Replaces the old client-side
+    delete-then-create edit, which lost the alert when the create failed.
+    """
+    owner, live = _resolve_alert_identity(request, authorization, x_alert_token, db)
+    alert = (
+        db.query(MarketAlert)
+        .filter(
+            MarketAlert.id == alert_id,
+            MarketAlert.user_token == owner,
+            MarketAlert.active.is_(True),
+        )
+        .first()
+    )
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+
+    notify_phone = (payload.notify_phone or "").strip() or None
+    notify_email = (payload.notify_email or "").strip() or None
+    notify_telegram_chat_id = (payload.notify_telegram_chat_id or "").strip() or None
+    notify_channels = (payload.notify_channels or "").strip() or None
+    if live is None or is_free_browse_plan(live.get("plan"), role=live.get("role")):
+        if notify_phone or notify_email or notify_telegram_chat_id or notify_channels:
+            raise HTTPException(
+                status_code=403,
+                detail="WhatsApp, email, Telegram and multi-channel alert notifications require a signed-in Pro plan.",
+            )
+
+    alert.make = (payload.make or "").strip() or None
+    alert.model = (payload.model or "").strip() or None
+    alert.max_price = payload.max_price if payload.max_price and payload.max_price > 0 else None
+    alert.district = (payload.district or "").strip() or None
+    alert.notify_phone = notify_phone
+    alert.notify_email = notify_email
+    alert.notify_telegram_chat_id = notify_telegram_chat_id
+    alert.notify_channels = notify_channels
+    if payload.delivery_mode is not None:
+        try:
+            alert.delivery_mode = payload.delivery_mode
+        except Exception:
+            pass
+    if payload.quiet_hours_enabled is not None:
+        try:
+            alert.quiet_hours_enabled = bool(payload.quiet_hours_enabled)
+        except Exception:
+            pass
+    db.commit()
+    db.refresh(alert)
+    return alert
+
+
 @router.patch("/{alert_id}/channels", response_model=MarketAlertRead)
 def update_alert_channels(
     alert_id: int,

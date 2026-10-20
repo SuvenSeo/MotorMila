@@ -58,7 +58,7 @@ import lk.motormila.app.ui.components.MotormilaPillTabs
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface as MotormilaPane
 import lk.motormila.app.ui.components.OfflineBanner
-import lk.motormila.app.ui.components.SlidingNumber
+import lk.motormila.app.ui.components.SlidingLkr
 import lk.motormila.app.ui.theme.MotormilaOnPrimary
 import lk.motormila.app.ui.theme.MotormilaOnSurface
 import lk.motormila.app.ui.theme.MotormilaOutline
@@ -563,14 +563,13 @@ private fun LandedResultCard(result: LandedCost?, calculating: Boolean) {
                                     color = MotormilaPrimaryBright,
                                 ),
                             )
-                            SlidingNumber(
-                                value = result.totalLkr.toLong(),
+                            SlidingLkr(
+                                valueLkr = result.totalLkr.toDouble(),
                                 style = MaterialTheme.typography.headlineMedium.copy(
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = FontFamily.Monospace,
                                 ),
                                 color = MotormilaOnSurface,
-                                prefix = "Rs. ",
                             )
                             Row(
                                 Modifier.fillMaxWidth(),
@@ -581,7 +580,7 @@ private fun LandedResultCard(result: LandedCost?, calculating: Boolean) {
                                     style = MaterialTheme.typography.labelSmall.copy(color = MotormilaSecondaryText),
                                 )
                                 Text(
-                                    "+${LkrFormat.full(result.dutyLkr + result.vatLkr + result.palLkr)}",
+                                    "+${LkrFormat.compact(result.dutyLkr + result.vatLkr + result.palLkr)}",
                                     style = MaterialTheme.typography.labelMedium.copy(
                                         fontWeight = FontWeight.Bold,
                                         fontFamily = FontFamily.Monospace,
@@ -652,7 +651,7 @@ private fun TcoResultCard(result: Tco?, calculating: Boolean) {
                                 ),
                             )
                             Text(
-                                LkrFormat.full(result.monthlyLkr),
+                                LkrFormat.monthly(result.monthlyLkr),
                                 style = MaterialTheme.typography.headlineMedium.copy(
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = FontFamily.Monospace,
@@ -668,7 +667,7 @@ private fun TcoResultCard(result: Tco?, calculating: Boolean) {
                                     style = MaterialTheme.typography.labelSmall.copy(color = MotormilaSecondaryText),
                                 )
                                 Text(
-                                    LkrFormat.full(result.totalLkr),
+                                    LkrFormat.compact(result.totalLkr),
                                     style = MaterialTheme.typography.titleSmall.copy(
                                         fontWeight = FontWeight.Bold,
                                         fontFamily = FontFamily.Monospace,
@@ -899,7 +898,7 @@ private fun PermitsPane(
                             style = MaterialTheme.typography.labelSmall.copy(color = MotormilaSecondaryText),
                         )
                         Text(
-                            LkrFormat.full(permit.marketPriceLkr),
+                            LkrFormat.compact(permit.marketPriceLkr),
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 fontFamily = FontFamily.Monospace,
                                 fontWeight = FontWeight.Bold,
@@ -965,7 +964,7 @@ private fun CostLineRow(label: String, amountLkr: Double) {
     ) {
         Text(label, style = MaterialTheme.typography.bodyMedium.copy(color = MotormilaSecondaryText))
         Text(
-            LkrFormat.full(amountLkr),
+            LkrFormat.compact(amountLkr),
             style = MaterialTheme.typography.bodyMedium.copy(
                 fontWeight = FontWeight.SemiBold,
                 fontFamily = FontFamily.Monospace,
@@ -1028,7 +1027,7 @@ private fun validationMessage(reason: CalculatorValidation?): String? {
 private fun AmountPreview(raw: String) {
     val amount = CalculatorInputs.parsePositiveAmount(raw) ?: return
     Text(
-        text = LkrFormat.full(amount),
+        text = LkrFormat.compact(amount),
         style = MaterialTheme.typography.labelSmall.copy(
             fontFamily = FontFamily.Monospace,
             color = MotormilaSecondaryText,

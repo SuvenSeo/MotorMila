@@ -130,6 +130,9 @@
                 <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/ev-hub" />
                 <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/notifications" />
                 <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/sell" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/valuation" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/profile" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/delete-account" />
             </intent-filter>
             <meta-data
                 android:name="android.app.shortcuts"

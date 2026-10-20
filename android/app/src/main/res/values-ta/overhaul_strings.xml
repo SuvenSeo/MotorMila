@@ -30,7 +30,7 @@
         <item quantity="one">%1$d matching listing</item>
         <item quantity="other">%1$d matching listings</item>
     </plurals>
-    <string name="notif_alert_match_from">from Rs. %1$s</string>
+    <string name="notif_alert_match_from">%1$s முதல்</string>
     <string name="notif_alert_match_title">New match: %1$s</string>
     <string name="notif_alert_your_alert">your alert</string>
     <string name="notif_permission_allow">Allow</string>

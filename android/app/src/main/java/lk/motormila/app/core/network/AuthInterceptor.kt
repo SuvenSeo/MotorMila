@@ -57,8 +57,8 @@ class AuthInterceptor @Inject constructor(
         }
         val response = chain.proceed(request)
         if (shouldForceReLogin(hadBearerToken = !token.isNullOrBlank(), statusCode = response.code)) {
-            runCatching { sessionStore.get().invalidateCachedToken() }
-            authEventBus.post(AuthEvent.Unauthorized(request.url.encodedPath))
+            runCatching { sessionStore.get().invalidateCachedToken(rejectedToken = token) }
+            authEventBus.post(AuthEvent.Unauthorized(request.url.encodedPath, rejectedToken = token))
         }
         return response
     }

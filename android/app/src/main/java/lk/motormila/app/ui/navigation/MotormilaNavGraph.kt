@@ -143,7 +143,8 @@ fun MotormilaNavGraph(
 
     LaunchedEffect(Unit) {
         viewModel.authEventBus.events.collect { event ->
-            if (event is AuthEvent.Unauthorized) {
+            // Only after SessionGuard really cleared the rejected session.
+            if (event is AuthEvent.SessionEnded) {
                 navController.navigate(Login()) {
                     launchSingleTop = true
                 }

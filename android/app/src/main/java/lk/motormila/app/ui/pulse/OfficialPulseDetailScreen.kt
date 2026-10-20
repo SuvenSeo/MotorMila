@@ -136,7 +136,7 @@ private fun signalDetailValue(signal: MarketSignal): String {
     val value = signal.valueNumeric ?: return "N/A"
     val unit = signal.unit?.trim().orEmpty()
     if (unit.equals("lkr", ignoreCase = true) || signal.metric.contains("lkr", ignoreCase = true)) {
-        return LkrFormat.full(value)
+        return LkrFormat.compact(value)
     }
     val number = if (value % 1.0 == 0.0) value.toLong().toString() else "%.1f".format(value)
     return if (unit.isBlank()) number else "$number $unit"

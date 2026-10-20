@@ -5,6 +5,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import lk.motormila.app.data.remote.MotormilaApiService
+import lk.motormila.app.data.remote.SnapshotApiService
 import lk.motormila.app.data.remote.mapper.toDomain
 import lk.motormila.app.di.IoDispatcher
 import lk.motormila.app.domain.model.ChargingStation
@@ -22,10 +23,15 @@ import lk.motormila.app.domain.repository.InsightsRepository
 /**
  * Insights aggregates over stats/market/EV/calculator endpoints.
  * Errors propagate; the ViewModel isolates per-section failures.
+ * Index / districts / velocity / fuel mix / permits / unfiltered trends fall
+ * back to the public snapshot (same builders, same DTOs) when the live API
+ * throws, so Insights, Price Index, Permits and EV hub survive a backend
+ * outage. Filtered trends have no snapshot equivalent and still throw.
  */
 @Singleton
 class InsightsRepositoryImpl @Inject constructor(
     private val api: MotormilaApiService,
+    private val snapshots: SnapshotApiService,
     @IoDispatcher private val io: CoroutineDispatcher,
 ) : InsightsRepository {
 
@@ -36,29 +42,38 @@ class InsightsRepositoryImpl @Inject constructor(
         district: String?,
         months: Int,
     ): TrendSeries = withContext(io) {
-        api.trends(
-            make = make?.ifBlank { null },
-            model = model?.ifBlank { null },
-            condition = condition?.ifBlank { null },
-            district = district?.ifBlank { null },
-            months = months,
-        ).toDomain()
+        val unfiltered = make.isNullOrBlank() && model.isNullOrBlank() &&
+            condition.isNullOrBlank() && district.isNullOrBlank()
+        val live = suspend {
+            api.trends(
+                make = make?.ifBlank { null },
+                model = model?.ifBlank { null },
+                condition = condition?.ifBlank { null },
+                district = district?.ifBlank { null },
+                months = months,
+            ).toDomain()
+        }
+        // The snapshot is the market-wide series only; never pass it off as a
+        // make/model/district trend.
+        if (unfiltered) withSnapshotFallback(live, { snapshots.priceTrends().toDomain() }) else live()
     }
 
     override suspend fun index(): PriceIndex = withContext(io) {
-        api.priceIndex().toDomain()
+        withSnapshotFallback({ api.priceIndex().toDomain() }, { snapshots.priceIndex().toDomain() })
     }
 
     override suspend fun districts(): List<DistrictStat> = withContext(io) {
-        api.districtPrices().points.map { it.toDomain() }
+        withSnapshotFallback({ api.districtPrices().points }, { snapshots.districtPrices().points })
+            .map { it.toDomain() }
     }
 
     override suspend fun velocities(): List<DistrictVelocity> = withContext(io) {
-        api.districtVelocity().points.map { it.toDomain() }
+        withSnapshotFallback({ api.districtVelocity().points }, { snapshots.districtVelocity().points })
+            .map { it.toDomain() }
     }
 
     override suspend fun fuelMix(): List<FuelMixBucket> = withContext(io) {
-        val rows = api.fuelMix().buckets
+        val rows = withSnapshotFallback({ api.fuelMix().buckets }, { snapshots.fuelMix().buckets })
         val total = rows.sumOf { it.count }.coerceAtLeast(1)
         rows.map { it.toDomain(total) }
     }
@@ -98,7 +113,7 @@ class InsightsRepositoryImpl @Inject constructor(
     override suspend fun evStats(): EvStats = withContext(io) {
         val ev = api.evInsight()
         val mix = runCatching {
-            val rows = api.fuelMix().buckets
+            val rows = withSnapshotFallback({ api.fuelMix().buckets }, { snapshots.fuelMix().buckets })
             val total = rows.sumOf { it.count }.coerceAtLeast(1)
             rows.map { it.toDomain(total) }
         }.getOrDefault(emptyList())
@@ -114,7 +129,7 @@ class InsightsRepositoryImpl @Inject constructor(
     }
 
     override suspend fun permits(): List<Permit> = withContext(io) {
-        api.permits().map { dto ->
+        withSnapshotFallback({ api.permits() }, { snapshots.permits().items }).map { dto ->
             Permit(
                 id = dto.id,
                 name = dto.permitName,

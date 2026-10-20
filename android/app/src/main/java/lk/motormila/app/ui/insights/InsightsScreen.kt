@@ -767,7 +767,7 @@ private fun EvTab(
                             ),
                         )
                         Text(
-                            text = ev?.medianLkr?.let { formatLkrCompact(it) } ?: "LKR 14.5M",
+                            text = ev?.medianLkr?.takeIf { it > 0 }?.let { formatLkrCompact(it) } ?: "—",
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 fontWeight = FontWeight.Bold,
                                 fontFamily = FontFamily.Monospace,
@@ -775,7 +775,7 @@ private fun EvTab(
                             ),
                         )
                         Text(
-                            text = "Hybrid benchmark: ${ev?.aquaMedianLkr?.let { formatLkrCompact(it) } ?: "LKR 11.2M"}",
+                            text = "Hybrid benchmark: ${ev?.aquaMedianLkr?.takeIf { it > 0 }?.let { formatLkrCompact(it) } ?: "—"}",
                             style = MaterialTheme.typography.labelSmall.copy(color = MotormilaSecondaryText, fontSize = 10.sp),
                         )
                     }
@@ -794,7 +794,7 @@ private fun EvTab(
                             ),
                         )
                         Text(
-                            text = ev?.savingsPerYearLkr?.let { formatLkrCompact(it) } ?: "LKR 440K/yr",
+                            text = ev?.savingsPerYearLkr?.takeIf { it > 0 }?.let { "${formatLkrCompact(it)}/yr" } ?: "—",
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 fontWeight = FontWeight.Bold,
                                 fontFamily = FontFamily.Monospace,

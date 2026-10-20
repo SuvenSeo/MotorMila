@@ -24,7 +24,8 @@ import lk.motormila.app.domain.repository.AlertsRepository
 
 /**
  * Alerts + notifications. Backend gaps handled client-side:
- * - update(): DELETE + POST (no PUT /alerts).
+ * - update(): PUT /alerts/{id} in place; only a pre-PUT backend (405) falls
+ *   back to create-then-delete.
  * - setActive(): local Room toggle flagged dirty; reconciled on next refresh().
  * - match(id): POST /alerts/match matches ALL alerts; filtered by alertId.
  */
@@ -64,14 +65,28 @@ class AlertsRepositoryImpl @Inject constructor(
     }
 
     /**
-     * The backend has no full-alert PATCH, so an edit is create-then-delete:
-     * the replacement is created FIRST and the old alert is removed only after
-     * that succeeded. A failed create (offline, plan limit, 5xx) throws and the
-     * original alert is left untouched — an edit can never lose the alert.
-     * If the old delete fails, the new alert still exists and the stale one is
-     * cleaned up on the next refresh().
+     * Edit in place via PUT /alerts/{id}: same id, created_at and match
+     * history, no window where the alert does not exist, no plan-cap clash.
+     * Only when the deployed backend predates PUT (HTTP 405) do we fall back
+     * to [legacyReplace]. Every other error propagates with the original
+     * alert untouched.
      */
     override suspend fun update(id: Int, input: AlertInput): Alert = withContext(io) {
+        val updated = try {
+            api.updateAlert(id, input.toRequest()).toDomain()
+        } catch (e: retrofit2.HttpException) {
+            if (!isUpdateUnsupported(e.code())) throw e
+            return@withContext legacyReplace(id, input)
+        }
+        db.alertDao().upsert(updated.toEntity())
+        updated
+    }
+
+    /**
+     * Pre-PUT backends only: create the replacement FIRST and delete the old
+     * alert only after that succeeded, so a failed create never loses it.
+     */
+    private suspend fun legacyReplace(id: Int, input: AlertInput): Alert {
         val original = db.alertDao().getAll().firstOrNull { it.id == id }?.toDomain()
         val replacement = try {
             create(input)
@@ -79,14 +94,14 @@ class AlertsRepositoryImpl @Inject constructor(
             // Plan cap (e.g. Free = 1 alert) rejects the extra alert. Swap in
             // place instead, rolling back to the original on failure.
             if (e.code() == 401 || e.code() !in 400..499 || original == null) throw e
-            return@withContext swapWithRollback(id, original, input)
+            return swapWithRollback(id, original, input)
         }
         if (replacement.id != id) {
             runCatching { api.deleteAlert(id) }
             db.alertDao().delete(id)
             deliveryExtras.remove(id)
         }
-        replacement
+        return replacement
     }
 
     private suspend fun swapWithRollback(id: Int, original: Alert, input: AlertInput): Alert {
@@ -220,3 +235,6 @@ class AlertsRepositoryImpl @Inject constructor(
         )
     }
 }
+
+/** PUT /alerts/{id} missing on the deployed backend (route exists only for DELETE). */
+internal fun isUpdateUnsupported(code: Int): Boolean = code == 405 || code == 501

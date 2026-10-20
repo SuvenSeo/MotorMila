@@ -256,10 +256,19 @@ fun ProfileScreen(
                                 MotormilaGroupRow("Dealer tools", onClick = { navTap(onDealerClick) })
                                 MotormilaGroupRow("Price alerts", onClick = { navTap(onAlertsClick) })
                                 MotormilaGroupRow("Notifications", onClick = { navTap(onNotificationsClick) })
-                                MotormilaGroupRow(
-                                    "${stringResource(R.string.profile_app_version)} ${BuildConfig.VERSION_NAME} — ${stringResource(R.string.profile_check_updates)}",
-                                    onClick = { navTap { updateViewModel.manualCheck(BuildConfig.VERSION_CODE) } },
-                                )
+                                if (BuildConfig.SELF_UPDATE_ENABLED) {
+                                    MotormilaGroupRow(
+                                        "${stringResource(R.string.profile_app_version)} ${BuildConfig.VERSION_NAME} — ${stringResource(R.string.profile_check_updates)}",
+                                        onClick = { navTap { updateViewModel.manualCheck(BuildConfig.VERSION_CODE) } },
+                                    )
+                                } else {
+                                    // Play flavor: updates come from Google Play, never a sideload check.
+                                    val ctx = androidx.compose.ui.platform.LocalContext.current
+                                    MotormilaGroupRow(
+                                        "${stringResource(R.string.profile_app_version)} ${BuildConfig.VERSION_NAME}",
+                                        onClick = { navTap { lk.motormila.app.core.updates.openPlayStoreListing(ctx) } },
+                                    )
+                                }
                                 if (p.isAdmin) MotormilaGroupRow("Admin console", onClick = { navTap(onAdminClick) })
                                 MotormilaGroupRow("Privacy", onClick = { navTap(onPrivacyClick) })
                                 MotormilaGroupRow("Terms", onClick = { navTap(onTermsClick) }, showDivider = p.loggedIn.not())

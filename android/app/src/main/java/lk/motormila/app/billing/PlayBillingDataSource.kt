@@ -73,6 +73,11 @@ class PlayBillingDataSource @Inject constructor(
 
     /** Direct (sideload) flavor only: server checkout-intent (manual / web URL). */
     override suspend fun checkoutIntent(plan: String): CheckoutInfo = withContext(Dispatchers.IO) {
+        // Play policy: no external payment links for digital goods. Enforced
+        // here too (not only in the UI) so no caller can surface one.
+        if (!BuildConfig.EXTERNAL_CHECKOUT_ENABLED) {
+            return@withContext CheckoutInfo(provider = "play", checkoutUrl = null, message = "")
+        }
         val res = api.checkoutIntent(CheckoutIntentRequestDto(plan))
         CheckoutInfo(provider = res.provider, checkoutUrl = res.checkoutUrl, message = res.message)
     }

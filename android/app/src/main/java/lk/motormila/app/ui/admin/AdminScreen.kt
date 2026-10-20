@@ -726,7 +726,7 @@ private fun PermitsPane(state: AdminUiState, viewModel: AdminViewModel) {
                 Text(permit.permitName, fontWeight = FontWeight.SemiBold, color = MotormilaOnSurface)
                 Text(permit.permitType, fontSize = 12.sp, color = MotormilaSecondaryText)
                 Text(
-                    LkrFormat.full(permit.marketPriceLkr),
+                    LkrFormat.compact(permit.marketPriceLkr),
                     fontFamily = FontFamily.Monospace,
                     color = MotormilaPrimaryBright,
                 )
