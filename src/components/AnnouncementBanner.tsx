@@ -11,11 +11,11 @@ export function AnnouncementBanner() {
   const { t } = useAppPreferences();
   const [open, setOpen] = useState(true);
   if (!open) return null;
-  // Always an ink bar: `theme-dark` scopes the dark tokens to this strip so
-  // colours stay theme-aware (and AA) in light mode too.
+  // Translucent ink card floating over the hero: `theme-dark` scopes the dark
+  // tokens so colours stay AA in light mode too.
   return (
-    <div className="theme-dark bg-background text-foreground">
-      <div className="mx-auto flex max-w-[1560px] items-center gap-3 px-5 py-2.5 sm:px-6">
+    <div className="theme-dark text-foreground">
+      <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-background/65 px-3.5 py-2 shadow-soft backdrop-blur-md sm:px-4">
         <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-deal-good/15">
           <TrendingDown className="h-4 w-4 text-deal-good-text" aria-hidden />
         </span>

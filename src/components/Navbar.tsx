@@ -1,13 +1,12 @@
 import { BrandLogo } from "@/components/BrandLogo";
-import { scrollBehavior } from "@/lib/motion";
+import { scrollBehavior, spring, transition as motionTransition, usePrefersReducedMotionOrLowData } from "@/lib/motion";
 import { prefetchRoute } from "@/lib/routePrefetch";
-import { useEffect, useState } from "react";
-import { motion, useReducedMotion } from "motion/react";
-import { ChevronDown, Crown, LogOut, Menu, Search, Settings, UserCircle2, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, LayoutGroup, m, motion } from "motion/react";
+import { ChevronDown, Crown, LayoutGrid, LogOut, Menu, Search, Settings, UserCircle2, X } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { SignInPortalModal } from "@/components/SignInPortalModal";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,35 +22,53 @@ import { openCommandPalette } from "@/lib/commandPalette";
 import { openFeedbackDialog } from "@/lib/feedbackEvents";
 import { FEEDBACK_LINK, MORE_LINKS, NAV_DESTINATIONS, isDestinationActive, type NavLinkItem } from "@/lib/siteNav";
 import { NavFreshnessIndicator } from "@/components/NavFreshnessIndicator";
+import { cn } from "@/lib/utils";
+
+const SCROLLED_AT = 24;
+const HIDE_AFTER = 96;
+const HIDE_DELTA = 6;
 
 /**
- * Site header (ui/shell).
+ * Site header (polish/shell).
  *
- * Desktop: brand · five destinations (Buy, Prices, Tools, Sell, Saved) · search ·
- * data-freshness hint (only when data is behind) · language · account · menu.
- * Mobile: brand · search · menu — the five destinations live in the bottom nav.
- * Every other route is in the menu panel (grouped under its destination) and the
- * footer.
+ * One 64px row on a 3-column grid: brand left · five destinations centred on
+ * the viewport (lg+) with a "More" button for every other route · actions
+ * right (search, freshness hint, language, bell, account), all 36px controls.
+ * Below lg the destinations live in the bottom nav (mobile) / menu panel and a
+ * hamburger replaces "More".
+ *
+ * Transparent at the top so page heroes run underneath it; a translucent
+ * blurred background + hairline fade in once the page scrolls. On phones the
+ * header slides away while scrolling down and returns on scroll up.
  */
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [signInOpen, setSignInOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [hidden, setHidden] = useState(false);
   const { user, logout, isAuthenticated, hasProAccess } = useAuth();
   const { t } = useAppPreferences();
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const reducedMotion = useReducedMotion() ?? false;
-  const navSpring = reducedMotion
-    ? { duration: 0.2 }
-    : { type: "spring" as const, stiffness: 260, damping: 32, mass: 0.7, restDelta: 0.0008 };
+  const calm = usePrefersReducedMotionOrLowData();
+  const menuOpenRef = useRef(menuOpen);
+  menuOpenRef.current = menuOpen;
 
   useEffect(() => {
     let frame = 0;
+    let lastY = window.scrollY;
+    const mobile = window.matchMedia?.("(max-width: 767px)");
     const update = () => {
       frame = 0;
-      const next = window.scrollY > 24;
+      const y = window.scrollY;
+      const next = y > SCROLLED_AT;
       setIsScrolled((cur) => (cur === next ? cur : next));
+      const delta = y - lastY;
+      if (Math.abs(delta) >= HIDE_DELTA || y <= SCROLLED_AT) {
+        const hide = Boolean(mobile?.matches) && !menuOpenRef.current && delta > 0 && y > HIDE_AFTER;
+        setHidden((cur) => (cur === hide ? cur : hide));
+        lastY = y;
+      }
     };
     const onScroll = () => {
       if (frame) return;
@@ -67,10 +84,15 @@ export function Navbar() {
     };
   }, []);
 
-  // Close the menu panel on navigation.
+  // Close the menu panel on navigation; always reveal the header on a new page.
   useEffect(() => {
     setMenuOpen(false);
+    setHidden(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (menuOpen) setHidden(false);
+  }, [menuOpen]);
 
   const goTo = (href: string) => {
     setMenuOpen(false);
@@ -93,243 +115,231 @@ export function Navbar() {
   };
 
   const label = (item: { labelKey: string; fallback: string }) => t(item.labelKey, item.fallback);
+  const menuLabel = menuOpen ? t("nav.closeMenu", "Close menu") : t("nav.openMenu", "Open menu");
 
   return (
     <header
-      className="site-nav-header fixed inset-x-0 top-0 z-header pointer-events-none"
+      className="site-nav-header fixed inset-x-0 top-0 z-header"
       data-scrolled={isScrolled}
       data-nav-mode={isScrolled ? "compact" : "full"}
+      data-hidden={hidden}
+      data-menu-open={menuOpen}
     >
-      <div
-        aria-hidden
-        className="site-nav-fade absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-background via-background/75 to-transparent"
-      />
-      <motion.div
-        className="site-nav-offset relative flex justify-center"
-        initial={false}
-        animate={{
-          paddingTop: isScrolled ? 16 : 0,
-          paddingLeft: isScrolled ? 16 : 0,
-          paddingRight: isScrolled ? 16 : 0,
-        }}
-        transition={navSpring}
-      >
-        <motion.nav
-          className="site-nav nav-glass pointer-events-auto overflow-visible"
-          initial={false}
-          animate={{ maxWidth: isScrolled ? 1080 : 1480, borderRadius: isScrolled ? 28 : 0 }}
-          transition={navSpring}
-          aria-label={t("nav.primaryNavigation", "Primary navigation")}
-        >
-          <motion.div
-            className="site-nav__inner relative flex items-center gap-2 px-2 sm:px-3"
-            initial={false}
-            animate={{
-              height: isScrolled ? 64 : 80,
-              paddingTop: isScrolled ? 4 : 6,
-              paddingBottom: isScrolled ? 4 : 6,
-            }}
-            transition={navSpring}
+      <div aria-hidden className="site-nav-bg" />
+      <nav className="site-nav" aria-label={t("nav.primaryNavigation", "Primary navigation")}>
+        {/* Brand */}
+        <div className="flex min-w-0 items-center justify-self-start">
+          <Link
+            to="/"
+            className="site-nav__brand-link group flex shrink-0 items-center rounded-xl no-underline outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary/50"
+            aria-label={t("nav.homeAria", "Motormila home")}
           >
-            {/* Brand */}
-            <Link
-              to="/"
-              className="site-nav__brand-link group flex shrink-0 items-center rounded-full px-2 no-underline outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary/50 sm:px-2.5"
-              aria-label={t("nav.homeAria", "Motormila home")}
-            >
-              <BrandLogo className="site-nav__brand-logo" size="nav" showTagline={false} />
-            </Link>
+            <BrandLogo className="site-nav__brand-logo" markClassName="h-9 w-9 sm:h-9 sm:w-9" size="nav" showTagline={false} />
+          </Link>
+        </div>
 
-            {/* Five destinations (desktop) */}
-            <div className="hidden min-w-0 flex-1 justify-center lg:flex">
-              <div className="inline-flex items-center gap-0.5 rounded-full border border-border bg-foreground/[0.03] p-1 shadow-inner">
-                {NAV_DESTINATIONS.map((dest) => {
-                  const active = isDestinationActive(dest, pathname);
-                  return (
-                    <Link
-                      key={dest.id}
-                      to={dest.href}
-                      onPointerEnter={() => prefetchRoute(dest.href)}
-                      onFocus={() => prefetchRoute(dest.href)}
-                      onClick={(e) => {
-                        if (dest.href === "/" && pathname === "/") {
-                          e.preventDefault();
-                          window.scrollTo({ top: 0, behavior: scrollBehavior() });
-                        }
-                      }}
-                      aria-current={active ? "page" : undefined}
-                      data-active={active}
-                      className={`relative min-w-[4.25rem] max-w-[9rem] truncate rounded-full px-3.5 py-1.5 text-center text-[13px] font-medium tracking-tight no-underline outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-primary/50 ${
-                        active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      {active && (
-                        <motion.span
-                          layoutId="desktop-nav-pill"
-                          className="absolute inset-0 rounded-full bg-card shadow-soft"
-                          transition={{ type: "spring", bounce: 0, duration: 0.32 }}
-                          aria-hidden
-                        />
-                      )}
-                      <span className="relative z-10">{label(dest)}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Right actions */}
-            <div className="ml-auto flex shrink-0 items-center gap-1.5">
-              <button
-                type="button"
-                onClick={openCommandPalette}
-                className="inline-flex h-9 w-9 items-center justify-center gap-1.5 rounded-full border border-border bg-foreground/[0.03] text-muted-foreground outline-none transition-colors hover:bg-foreground/[0.06] hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/50 xl:w-auto xl:px-3"
-                aria-label={t("nav.search", "Search")}
-                title={t("nav.searchHint", "Search (Ctrl+K)")}
-              >
-                <Search className="h-4 w-4" aria-hidden />
-                <span className="hidden text-[13px] font-medium tracking-tight xl:inline">{t("nav.search", "Search")}</span>
-              </button>
-
-              <NavFreshnessIndicator />
-
-              <div className="hidden md:flex">
-                <LocaleSwitcher compact />
-              </div>
-
-              <NotificationBell />
-
-              {isAuthenticated && user ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      className="hidden h-9 items-center gap-1.5 rounded-full border border-border bg-foreground/[0.03] pl-2 pr-2.5 text-foreground/85 outline-none transition-colors hover:bg-foreground/[0.06] focus-visible:ring-2 focus-visible:ring-primary/50 sm:inline-flex"
-                      aria-label={t("shell.nav.account", "Your account")}
-                    >
-                      <UserCircle2 className="h-4 w-4" aria-hidden />
-                      <span className="max-w-[7rem] truncate text-[13px] font-medium">{user.name || t("shell.nav.account", "Your account")}</span>
-                      <ChevronDown className="h-3 w-3 text-muted-foreground" aria-hidden />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" sideOffset={10} className="w-56 rounded-2xl">
-                    <DropdownMenuLabel className="text-[12px] font-medium text-muted-foreground">
-                      {hasProAccess ? t("common.pro", "Pro") : t("shell.nav.freePlan", "Free plan")}
-                    </DropdownMenuLabel>
-                    {hasProAccess ? (
-                      <DropdownMenuItem onSelect={() => navigate("/pro")}>
-                        <Crown className="mr-2 h-3.5 w-3.5" aria-hidden /> {t("nav.proDashboard", "Pro Dashboard")}
-                      </DropdownMenuItem>
-                    ) : null}
-                    <DropdownMenuItem onSelect={() => navigate("/profile")}>
-                      <UserCircle2 className="mr-2 h-3.5 w-3.5" aria-hidden /> {t("nav.myListings", "My listings")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => navigate("/settings")}>
-                      <Settings className="mr-2 h-3.5 w-3.5" aria-hidden /> {t("nav.settings", "Settings")}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onSelect={handleLogout} className="text-destructive focus:text-destructive">
-                      <LogOut className="mr-2 h-3.5 w-3.5" aria-hidden /> {t("nav.signOut", "Sign out")}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={openSignIn}
-                  className="hidden h-9 gap-1.5 rounded-full border-border bg-transparent px-4 text-foreground/85 hover:bg-foreground/[0.04] hover:text-foreground sm:inline-flex"
+        {/* Five destinations + More (desktop), centred on the viewport */}
+        <LayoutGroup id="desktop-nav">
+          <div className="site-nav__center hidden lg:flex">
+            {NAV_DESTINATIONS.map((dest) => {
+              const active = isDestinationActive(dest, pathname);
+              return (
+                <Link
+                  key={dest.id}
+                  to={dest.href}
+                  onPointerEnter={() => prefetchRoute(dest.href)}
+                  onFocus={() => prefetchRoute(dest.href)}
+                  onClick={(e) => {
+                    if (dest.href === "/" && pathname === "/") {
+                      e.preventDefault();
+                      window.scrollTo({ top: 0, behavior: scrollBehavior() });
+                    }
+                  }}
+                  aria-current={active ? "page" : undefined}
+                  data-active={active}
+                  className="site-nav__link"
                 >
-                  <UserCircle2 className="h-3.5 w-3.5" aria-hidden />
-                  <span className="text-[13px] font-medium tracking-tight">{t("nav.signIn", "Sign In")}</span>
-                </Button>
-              )}
+                  {active && (
+                    <motion.span
+                      layoutId="desktop-nav-pill"
+                      className="site-nav__pill"
+                      transition={calm ? { duration: 0 } : spring.snappy}
+                      aria-hidden
+                    />
+                  )}
+                  <span className="relative z-10">{label(dest)}</span>
+                </Link>
+              );
+            })}
+            <span aria-hidden className="mx-1 h-4 w-px bg-border" />
+            <button
+              type="button"
+              onClick={() => setMenuOpen((open) => !open)}
+              className="site-nav__link gap-1"
+              data-active={false}
+              aria-expanded={menuOpen}
+              aria-controls="site-menu"
+              aria-label={menuOpen ? t("nav.closeMenu", "Close menu") : t("nav.more", "More")}
+            >
+              <span className="relative z-10">{t("nav.more", "More")}</span>
+              <ChevronDown
+                className={cn("relative z-10 h-3.5 w-3.5 opacity-70 transition-transform duration-200", menuOpen && "rotate-180")}
+                aria-hidden
+              />
+            </button>
+          </div>
+        </LayoutGroup>
 
-              <button
-                type="button"
-                onClick={() => setMenuOpen((open) => !open)}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") setMenuOpen(false);
-                }}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-foreground/85 outline-none transition-colors hover:bg-foreground/[0.04] hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/50"
-                aria-label={menuOpen ? t("nav.closeMenu", "Close menu") : t("nav.openMenu", "Open menu")}
-                aria-expanded={menuOpen}
-                aria-controls="site-menu"
-              >
-                {menuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-              </button>
-            </div>
-          </motion.div>
-        </motion.nav>
-      </motion.div>
+        {/* Actions */}
+        <div className="flex min-w-0 items-center justify-end gap-1.5 justify-self-end">
+          <button
+            type="button"
+            onClick={openCommandPalette}
+            className="nav-control nav-control--icon xl:w-auto xl:gap-2 xl:pl-3 xl:pr-3.5"
+            aria-label={t("nav.search", "Search")}
+            title={t("nav.searchHint", "Search (Ctrl+K)")}
+          >
+            <Search className="h-4 w-4" aria-hidden />
+            <span className="hidden xl:inline">{t("nav.search", "Search")}</span>
+            <kbd className="hidden rounded-md border border-border px-1.5 text-[10.5px] font-medium text-muted-foreground 2xl:inline">
+              Ctrl K
+            </kbd>
+          </button>
+
+          <NavFreshnessIndicator />
+
+          <div className="hidden md:flex">
+            <LocaleSwitcher />
+          </div>
+
+          <NotificationBell />
+
+          {isAuthenticated && user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="nav-control hidden gap-1.5 pl-2 pr-2.5 sm:inline-flex"
+                  aria-label={t("shell.nav.account", "Your account")}
+                >
+                  <UserCircle2 className="h-[18px] w-[18px]" aria-hidden />
+                  <span className="hidden max-w-[7rem] truncate xl:inline">{user.name || t("shell.nav.account", "Your account")}</span>
+                  <ChevronDown className="h-3 w-3 opacity-60" aria-hidden />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" sideOffset={8} className="w-56">
+                <DropdownMenuLabel className="text-[12px] font-medium text-muted-foreground">
+                  {user.name ? <span className="block truncate text-[13px] font-semibold text-foreground">{user.name}</span> : null}
+                  {hasProAccess ? t("common.pro", "Pro") : t("shell.nav.freePlan", "Free plan")}
+                </DropdownMenuLabel>
+                {hasProAccess ? (
+                  <DropdownMenuItem onSelect={() => navigate("/pro")}>
+                    <Crown className="mr-2 h-3.5 w-3.5" aria-hidden /> {t("nav.proDashboard", "Pro Dashboard")}
+                  </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuItem onSelect={() => navigate("/profile")}>
+                  <UserCircle2 className="mr-2 h-3.5 w-3.5" aria-hidden /> {t("nav.myListings", "My listings")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => navigate("/settings")}>
+                  <Settings className="mr-2 h-3.5 w-3.5" aria-hidden /> {t("nav.settings", "Settings")}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={handleLogout} className="text-destructive focus:text-destructive">
+                  <LogOut className="mr-2 h-3.5 w-3.5" aria-hidden /> {t("nav.signOut", "Sign out")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <button type="button" onClick={openSignIn} className="nav-control hidden gap-1.5 px-3.5 sm:inline-flex">
+              <UserCircle2 className="h-4 w-4" aria-hidden />
+              <span>{t("nav.signIn", "Sign In")}</span>
+            </button>
+          )}
+
+          {/* Hamburger only where the centre nav is collapsed */}
+          <button
+            type="button"
+            onClick={() => setMenuOpen((open) => !open)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setMenuOpen(false);
+            }}
+            className="nav-control nav-control--icon lg:hidden"
+            aria-label={menuLabel}
+            aria-expanded={menuOpen}
+            aria-controls="site-menu"
+          >
+            {menuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          </button>
+        </div>
+      </nav>
 
       {/* Menu panel — every route, grouped under its destination */}
-      {menuOpen && (
-        <div
-          id="site-menu"
-          className="pointer-events-auto mx-auto mt-2 w-[min(1480px,calc(100vw-16px))] px-2 sm:px-3"
-          aria-label={t("nav.navigationMenu", "Navigation menu")}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") setMenuOpen(false);
-          }}
-        >
-          <div className="ml-auto max-h-[min(78vh,720px)] overflow-y-auto overscroll-contain rounded-3xl border border-border bg-popover/[0.98] p-3.5 shadow-soft-lg md:max-w-[760px]">
-            <div className="grid gap-4 sm:grid-cols-2">
-              {NAV_DESTINATIONS.map((dest) => (
-                <MenuGroup
-                  key={dest.id}
-                  title={label(dest)}
-                  items={dest.items}
-                  pathname={pathname}
-                  onPick={goTo}
-                  t={t}
-                />
-              ))}
-              <div>
-                <MenuGroup title={t("footer.more", "More")} items={MORE_LINKS} pathname={pathname} onPick={goTo} t={t} />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    openFeedbackDialog();
-                  }}
-                  className="mt-1 flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary/50"
-                >
-                  <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border bg-foreground/[0.03] text-muted-foreground">
-                    <FEEDBACK_LINK.icon className="h-3.5 w-3.5" aria-hidden />
-                  </span>
-                  <span className="text-[12.5px] font-semibold tracking-tight text-foreground">{label(FEEDBACK_LINK)}</span>
-                </button>
+      <AnimatePresence>
+        {menuOpen && (
+          <m.div
+            key="site-menu"
+            id="site-menu"
+            className="site-menu-panel-wrap"
+            aria-label={t("nav.navigationMenu", "Navigation menu")}
+            initial={calm ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: -4 }}
+            animate={{ opacity: 1, scale: 1, y: 0, transition: motionTransition.fast }}
+            exit={calm ? { opacity: 0 } : { opacity: 0, scale: 0.98, y: -4, transition: motionTransition.exit }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setMenuOpen(false);
+            }}
+          >
+            <div className="max-h-[min(78vh,720px)] overflow-y-auto overscroll-contain rounded-3xl border border-border bg-popover/[0.98] p-3.5 shadow-soft-lg">
+              <div className="grid gap-4 sm:grid-cols-2">
+                {NAV_DESTINATIONS.map((dest) => (
+                  <MenuGroup key={dest.id} title={label(dest)} items={dest.items} pathname={pathname} onPick={goTo} t={t} />
+                ))}
+                <div>
+                  <MenuGroup title={t("footer.more", "More")} items={MORE_LINKS} pathname={pathname} onPick={goTo} t={t} />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      openFeedbackDialog();
+                    }}
+                    className="mt-1 flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary/50"
+                  >
+                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border bg-foreground/[0.03] text-muted-foreground">
+                      <FEEDBACK_LINK.icon className="h-3.5 w-3.5" aria-hidden />
+                    </span>
+                    <span className="text-[12.5px] font-semibold tracking-tight text-foreground">{label(FEEDBACK_LINK)}</span>
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
-              <div className="md:hidden">
-                <LocaleSwitcher compact />
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
+                <div className="flex items-center gap-2 md:hidden">
+                  <LocaleSwitcher showName />
+                  <NavFreshnessIndicator className="!inline-flex" />
+                </div>
+                <span className="hidden items-center gap-1.5 text-[11.5px] text-muted-foreground md:inline-flex">
+                  <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
+                  {t("nav.navigationMenu", "Navigation menu")}
+                </span>
+                {isAuthenticated && user ? (
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="nav-control gap-2 px-4 hover:border-destructive/30 hover:text-destructive sm:hidden"
+                  >
+                    <LogOut className="h-3.5 w-3.5" aria-hidden />
+                    {t("nav.signOut", "Sign out")}
+                  </button>
+                ) : (
+                  <button type="button" onClick={openSignIn} className="nav-control gap-2 px-4 sm:hidden">
+                    <UserCircle2 className="h-3.5 w-3.5" aria-hidden />
+                    {t("nav.signIn", "Sign In")}
+                  </button>
+                )}
               </div>
-              {isAuthenticated && user ? (
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="inline-flex h-10 items-center gap-2 rounded-full border border-border px-4 text-[13px] font-medium text-muted-foreground outline-none transition-colors hover:border-destructive/30 hover:text-destructive focus-visible:ring-2 focus-visible:ring-destructive/40 sm:hidden"
-                >
-                  <LogOut className="h-3.5 w-3.5" aria-hidden />
-                  {t("nav.signOut", "Sign out")}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={openSignIn}
-                  className="inline-flex h-10 items-center gap-2 rounded-full border border-border px-4 text-[13px] font-medium text-foreground/85 outline-none transition-colors hover:bg-foreground/[0.04] focus-visible:ring-2 focus-visible:ring-primary/50 sm:hidden"
-                >
-                  <UserCircle2 className="h-3.5 w-3.5" aria-hidden />
-                  {t("nav.signIn", "Sign In")}
-                </button>
-              )}
             </div>
-          </div>
-        </div>
-      )}
+          </m.div>
+        )}
+      </AnimatePresence>
 
       <SignInPortalModal open={signInOpen} onOpenChange={setSignInOpen} />
     </header>

@@ -60,7 +60,8 @@
     --ring: 213 100% 45%;
 
     --radius: 12px;                      /* cards; full scale in styles/tokens.css */
-    --nav-offset: 4.75rem;
+    --nav-height: 4rem;
+    --nav-offset: 4rem;
 
     /* ── Semantic signals ─────────────────────────────────────────────── */
     --signal-green: 145 63% 38%;
@@ -1074,7 +1075,6 @@
     inset: 0;
     pointer-events: none;
     box-shadow:
-      inset 0 72px 64px -36px rgba(6, 4, 3, 0.72),
       inset 0 -88px 80px -28px rgba(6, 4, 3, 0.82);
   }
 
@@ -1422,122 +1422,215 @@
     border-radius: 999px;
   }
 
-  .site-nav-fade {
-    opacity: 0.85;
-    transform: scaleY(1);
-    transform-origin: top center;
-    transition:
-      opacity 420ms cubic-bezier(0.16, 1, 0.3, 1),
-      transform 420ms cubic-bezier(0.16, 1, 0.3, 1);
+  /* ── Site header (polish/shell) ─────────────────────────────────
+     Transparent at the top so heroes run underneath; a translucent
+     blurred layer + hairline fades in on scroll (opacity only). */
+  .site-nav-header {
+    transform: translate3d(0, 0, 0);
+    transition: transform var(--dur-base) var(--ease-standard);
   }
 
-  .site-nav-offset {
-    padding: 0;
+  .site-nav-header[data-hidden="true"] {
+    transform: translate3d(0, -100%, 0);
+  }
+
+  .site-nav-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    background: hsl(var(--background) / 0.72);
+    border-bottom: 1px solid hsl(var(--border) / 0.7);
+    backdrop-filter: blur(12px) saturate(1.6);
+    -webkit-backdrop-filter: blur(12px) saturate(1.6);
+    transition: opacity var(--dur-base) var(--ease-standard);
+  }
+
+  .site-nav-header[data-scrolled="true"] .site-nav-bg,
+  .site-nav-header[data-menu-open="true"] .site-nav-bg {
+    opacity: 1;
+  }
+
+  html.low-data .site-nav-bg {
+    background: hsl(var(--background) / 0.96);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
   .site-nav {
-    width: 100%;
-    max-width: 1480px;
-    border-color: transparent;
-    background: transparent;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    box-shadow: none;
-    border-radius: 0;
-    transform: translate3d(0, 0, 0);
-    transform-origin: top center;
-    /* Background/border/shadow fade in via CSS; geometry (max-width,
-       border-radius, height) is driven solely by framer-motion so the
-       two systems don't fight and the transform stays buttery. */
-    transition:
-      background-color 380ms cubic-bezier(0.22, 1, 0.36, 1),
-      border-color 380ms cubic-bezier(0.22, 1, 0.36, 1),
-      box-shadow 380ms cubic-bezier(0.22, 1, 0.36, 1),
-      backdrop-filter 380ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  .site-nav__inner {
-    height: 80px;
-    padding-block: 6px;
-    column-gap: 8px;
-  }
-
-  .site-nav__brand-link {
-    padding-block: 0.375rem;
-    /* Keep the mark optically centered as the wordmark collapses. */
-    display: flex;
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    justify-content: center;
-  }
-
-  .site-nav__brand-logo {
-    height: 44px;
-    display: flex;
-    align-items: center;
-  }
-
-  .site-nav__brand-logo .brand-wordmark {
-    max-width: 10rem;
-    overflow: hidden;
-    white-space: nowrap;
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-    transition:
-      max-width 380ms cubic-bezier(0.22, 1, 0.36, 1),
-      opacity 220ms ease,
-      transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  .site-nav__status {
-    max-width: 12rem;
-    overflow: hidden;
-    opacity: 1;
-    transition:
-      max-width 420ms cubic-bezier(0.16, 1, 0.3, 1),
-      opacity 240ms ease,
-      padding-inline 420ms cubic-bezier(0.16, 1, 0.3, 1),
-      border-color 420ms cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .site-nav-header[data-scrolled="true"] .site-nav-fade {
-    opacity: 0.28;
-    transform: scaleY(0.42);
-  }
-
-  .site-nav-header[data-scrolled="true"] .site-nav-offset {
-    padding-top: 1rem;
-  }
-
-  .site-nav-header[data-scrolled="true"] .site-nav {
-    background-color: hsl(var(--background) / 0.9);
-    border-color: transparent;
-    backdrop-filter: blur(18px) saturate(1.8);
-    -webkit-backdrop-filter: blur(18px) saturate(1.8);
-    box-shadow: var(--shadow-md), inset 0 1px 0 var(--glass-top);
-  }
-
-  .site-nav-header[data-scrolled="true"] .site-nav__brand-link {
-    padding-block: 0.125rem;
-  }
-
-  .site-nav-header[data-scrolled="true"] .site-nav__brand-logo .brand-wordmark {
-    max-width: 0;
-    opacity: 0;
-    transform: translate3d(-8px, 0, 0);
-  }
-
-  .site-nav-header[data-scrolled="true"] .site-nav__status {
-    max-width: 0;
-    padding-inline: 0;
-    border-color: transparent;
-    opacity: 0;
+    column-gap: 12px;
+    height: var(--nav-height);
+    max-width: 1560px;
+    margin-inline: auto;
+    padding-inline: 12px;
   }
 
   @media (min-width: 640px) {
-    .site-nav__brand-logo {
-      height: 48px;
-    }
+    .site-nav { padding-inline: 20px; }
   }
+
+  @media (min-width: 1024px) {
+    /* Equal side columns keep the centre group centred on the viewport. */
+    .site-nav { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+  }
+
+  .site-nav__brand-logo .brand-wordmark {
+    white-space: nowrap;
+  }
+
+  .site-nav__center {
+    align-items: center;
+    gap: 2px;
+    height: 40px;
+    padding: 2px;
+    border-radius: 9999px;
+    border: 1px solid hsl(var(--border) / 0.8);
+    background: hsl(var(--foreground) / 0.04);
+  }
+
+  .site-nav__link {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 34px;
+    min-width: 4.25rem;
+    max-width: 9rem;
+    padding-inline: 14px;
+    border-radius: 9999px;
+    font-size: 13.5px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    color: hsl(var(--foreground) / 0.66);
+    text-decoration: none;
+    outline: none;
+    transition: color var(--dur-fast) var(--ease-standard), background-color var(--dur-fast) var(--ease-standard);
+  }
+
+  @media (min-width: 1024px) and (max-width: 1279px) {
+    .site-nav__link { min-width: 0; padding-inline: 11px; }
+  }
+
+  .site-nav__link:hover { color: hsl(var(--foreground)); background: hsl(var(--foreground) / 0.05); }
+  .site-nav__link[data-active="true"] { color: hsl(var(--foreground)); font-weight: 600; background: transparent; }
+  .site-nav__link[aria-expanded="true"] { color: hsl(var(--foreground)); background: hsl(var(--foreground) / 0.07); }
+  .site-nav__link:focus-visible { box-shadow: 0 0 0 2px hsl(var(--primary) / 0.55); }
+
+  .site-nav__pill {
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: hsl(var(--primary) / 0.16);
+    box-shadow: inset 0 0 0 1px hsl(var(--primary) / 0.38), 0 1px 2px rgb(0 0 0 / 0.12);
+  }
+
+  /* One control style for every header button: 36px, pill, hairline. */
+  .nav-control {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: 9999px;
+    border: 1px solid hsl(var(--border) / 0.9);
+    background: hsl(var(--foreground) / 0.04);
+    color: hsl(var(--foreground) / 0.82);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    outline: none;
+    transition:
+      background-color var(--dur-fast) var(--ease-standard),
+      color var(--dur-fast) var(--ease-standard),
+      border-color var(--dur-fast) var(--ease-standard),
+      box-shadow var(--dur-fast) var(--ease-standard),
+      transform var(--dur-instant) var(--ease-standard);
+  }
+
+  .nav-control:hover,
+  .nav-control[data-state="open"],
+  .nav-control[aria-expanded="true"] {
+    background: hsl(var(--foreground) / 0.08);
+    color: hsl(var(--foreground));
+  }
+
+  .nav-control:active { transform: scale(0.97); }
+  .nav-control:focus-visible { box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary) / 0.55); }
+  .nav-control--icon { width: 36px; padding: 0; }
+
+  .site-menu-panel-wrap {
+    position: relative;
+    margin: 4px auto 0;
+    width: min(1560px, 100vw);
+    padding-inline: 8px;
+    display: flex;
+    justify-content: flex-end;
+    transform-origin: top right;
+  }
+
+  .site-menu-panel-wrap > div { width: 100%; }
+
+  @media (min-width: 640px) {
+    .site-menu-panel-wrap { padding-inline: 20px; }
+  }
+
+  @media (min-width: 768px) {
+    .site-menu-panel-wrap > div { max-width: 760px; }
+  }
+
+  @media (min-width: 1024px) {
+    /* Opened from "More" in the centre group. */
+    .site-menu-panel-wrap { justify-content: center; transform-origin: top center; }
+  }
+
+  /* Home banners float over the hero just under the header. */
+  .hero-banners {
+    position: absolute;
+    inset-inline: 0;
+    /* The hero's -mt collapses through the page root, so the root starts at
+       y=0: sit just below the header. */
+    top: var(--nav-offset);
+    z-index: 20;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    max-width: 1560px;
+    margin-inline: auto;
+    padding: 8px 12px 0;
+    pointer-events: none;
+  }
+
+  .hero-banners > * { pointer-events: auto; }
+  /* Keep hero content clear of the floating banners. */
+  .hero-banners:has(> :only-child) ~ .hero-cinematic { padding-top: calc(var(--nav-offset) + 64px); }
+  .hero-banners:has(> :nth-child(2)) ~ .hero-cinematic { padding-top: calc(var(--nav-offset) + 124px); }
+  .hero-banners:empty { display: none; }
+
+  @media (min-width: 640px) {
+    .hero-banners { padding-inline: 20px; }
+  }
+
+  .mm-pop-in {
+    animation: mm-pop-in var(--dur-fast) var(--ease-standard) both;
+  }
+
+  @keyframes mm-pop-in {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .site-nav-header { transition: none; }
+    .mm-pop-in { animation-name: mm-fade-in; }
+  }
+
+  @keyframes mm-fade-in { from { opacity: 0; } to { opacity: 1; } }
 
   .nav-command-panel,
   .mobile-menu-panel {
@@ -1918,9 +2011,11 @@
 
 .animate-fade-up { animation: fade-up var(--duration-slow) var(--ease-out) both; }
 
+/* No persistent will-change/contain here: both make .route-stage the
+   containing block for position:fixed descendants (sticky bars, sheets).
+   motion/react promotes the layer only while a transition runs. */
 .route-stage {
-  will-change: opacity, transform;
-  contain: layout style;
+  min-height: 1px;
 }
 
 @view-transition {

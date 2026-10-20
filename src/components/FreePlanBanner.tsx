@@ -10,8 +10,8 @@ export function FreePlanBanner() {
   if (!user || hasProAccess || isAdmin) return null;
 
   return (
-    <div className="relative border-b border-primary/15 bg-[linear-gradient(90deg,hsl(var(--primary)/0.08),hsl(var(--primary)/0.03)_45%,hsl(var(--primary)/0.08))]">
-      <div className="mx-auto flex max-w-[1560px] flex-wrap items-center justify-between gap-3 px-5 py-3 sm:px-6">
+    <div className="relative">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-background/70 px-3.5 py-2 shadow-soft backdrop-blur-md sm:px-4">
         <p className="flex items-center gap-2.5 text-[12px] font-medium text-foreground">
           <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-primary/20 bg-primary/10">
             <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
