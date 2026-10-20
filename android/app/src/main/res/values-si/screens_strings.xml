@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- android/screens: short, high-confidence Sinhala labels only; everything else falls back to English. -->
+<resources>
+    <string name="scr_back">ආපසු</string>
+    <string name="scr_back_label">ආපසු</string>
+    <string name="scr_next">ඊළඟ</string>
+    <string name="scr_retry">නැවත උත්සාහ කරන්න</string>
+    <string name="scr_search_hint">සොයන්න</string>
+    <string name="scr_make">නිෂ්පාදකයා</string>
+    <string name="scr_model">මාදිලිය</string>
+    <string name="scr_district">දිස්ත්‍රික්කය</string>
+    <string name="scr_val_a_no">නැත</string>
+    <string name="scr_val_a_yes">ඔව්</string>
+    <string name="scr_cmp_title">සසඳන්න</string>
+    <string name="scr_price_title">මිල ගණන්</string>
+    <string name="scr_price_free">නොමිලේ</string>
+    <string name="scr_profile_title">ඔබ</string>
+    <string name="scr_set_data">දත්ත</string>
+    <string name="scr_cmp_year">වර්ෂය</string>
+</resources>
