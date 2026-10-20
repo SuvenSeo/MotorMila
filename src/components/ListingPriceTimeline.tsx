@@ -1,4 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
+import { useInView } from "motion/react";
+import type { AnimationTiming } from "recharts/types/util/types";
+import { useReducedMotionOrLowData } from "@/lib/motion";
 import { Link } from "react-router-dom";
 import {
   Area,
@@ -14,6 +17,7 @@ import { ArrowDownRight, ArrowUpRight, LineChart, TrendingDown } from "lucide-re
 import { formatPrice } from "@/services/api";
 import { formatPriceLkrMillions } from "@/lib/formatting";
 import type { PriceHistoryInfo } from "@/types/car";
+import { formatLkrAxisFromMillions } from "@/lib/price";
 
 interface ListingPriceTimelineProps {
   history: PriceHistoryInfo | null;
@@ -47,6 +51,12 @@ export function ListingPriceTimeline({
 }: ListingPriceTimelineProps) {
   const points = useMemo(() => history?.points ?? [], [history?.points]);
   const hasChart = points.length >= 2;
+  // The line draws in once, the first time the chart scrolls into view
+  // (600ms, spec "standard" easing). Off in reduced motion / low data.
+  const chartRef = useRef<HTMLDivElement>(null);
+  const seen = useInView(chartRef, { once: true, amount: 0.35 });
+  const calm = useReducedMotionOrLowData();
+  const lineVisible = calm || seen || typeof IntersectionObserver === "undefined";
 
   const chartData = useMemo(() => {
     return points.map((point, index) => ({
@@ -163,6 +173,7 @@ export function ListingPriceTimeline({
       <div className="mt-4 h-[220px] w-full sm:h-[260px]">
         {hasChart ? (
           <div
+            ref={chartRef}
             role="img"
             aria-label={`Price timeline with ${points.length} recorded asking prices`}
             className="h-full w-full"
@@ -188,7 +199,7 @@ export function ListingPriceTimeline({
                   tickLine={false}
                   domain={yDomain}
                   tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10, fontWeight: 600 }}
-                  tickFormatter={(value: number) => `${value.toFixed(1)}M`}
+                  tickFormatter={(value: number) => formatLkrAxisFromMillions(value)}
                   width={52}
                 />
                 <Tooltip
@@ -220,6 +231,11 @@ export function ListingPriceTimeline({
                   />
                 ) : null}
                 <Area
+                  key={lineVisible ? "drawn" : "waiting"}
+                  hide={!lineVisible}
+                  isAnimationActive={!calm}
+                  animationDuration={600}
+                  animationEasing={"cubic-bezier(0.2,0,0,1)" as unknown as AnimationTiming}
                   type="stepAfter"
                   dataKey="price_million"
                   name="Asking price"

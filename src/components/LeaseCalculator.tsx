@@ -6,6 +6,7 @@ import {
   minDownPaymentPctForClass,
   type VehicleFinanceClass,
 } from "@/lib/cashToOwn";
+import { formatLkrFull } from "@/lib/price";
 
 export function LeaseCalculator({
   price,
@@ -111,7 +112,7 @@ export function LeaseCalculator({
         <div className="flex flex-col rounded-xl border border-primary/20 bg-primary/10 p-5 sm:flex-row sm:items-center sm:justify-between">
           <span className="mb-1 text-sm font-semibold tracking-tight text-primary sm:mb-0">Est. monthly payment</span>
           <span className="text-2xl font-bold text-foreground tracking-tight num">
-            {formatPrice(monthlyPayment)}
+            {formatLkrFull(monthlyPayment)}
             <span className="ml-1 text-sm font-normal text-muted-foreground">/mo</span>
           </span>
         </div>

@@ -6,7 +6,7 @@ import { isKnownRoutePath, isNoindexPath } from "@/lib/routeIndexing";
 // vercel.json no longer rewrites *every* path to the SPA (that made unknown
 // URLs soft-404s, and the static rewrites shadowed the prerendered SEO
 // shells). Every <Route> in App.tsx must therefore be covered by either:
-//   - an explicit SPA rewrite to /index.html (dynamic routes), or
+//   - an explicit SPA rewrite to "/" (dynamic routes), or
 //   - a prerendered shell from scripts/prerender-seo.mjs STATIC_ROUTES
 //     (served via cleanUrls as dist/<route>.html — it IS the SPA shell,
 //     with per-route SEO meta, and React boots over it).
@@ -26,8 +26,10 @@ function sourceToRegex(source: string): RegExp {
   return new RegExp(`^${pattern}/?$`);
 }
 
+// With cleanUrls on, Vercel has no "/index.html" route (it 308s to "/"), so a
+// rewrite to "/index.html" 404s on production. SPA rewrites must target "/".
 const spaRules = vercel.rewrites
-  .filter((r) => r.destination === "/index.html" && !r.has)
+  .filter((r) => r.destination === "/" && !r.has)
   .map((r) => sourceToRegex(r.source));
 
 // Static routes with a prerendered SEO shell (STATIC_ROUTES keys), served via
@@ -43,6 +45,13 @@ const routePaths = [...appSource.matchAll(/<Route\s+path="([^"]+)"/g)]
 const sample = (p: string) => p.replace(/:year/g, "2018").replace(/:[a-zA-Z]+/g, "sample");
 
 describe("vercel SPA routing", () => {
+  it("never rewrites to /index.html while cleanUrls is on (it 404s on Vercel)", () => {
+    const cfg = vercel as unknown as { cleanUrls?: boolean };
+    if (cfg.cleanUrls) {
+      expect(vercel.rewrites.filter((r) => /\.html$/.test(r.destination))).toEqual([]);
+    }
+  });
+
   it("found the App routes", () => {
     expect(routePaths.length).toBeGreaterThan(20);
   });

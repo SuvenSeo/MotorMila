@@ -86,7 +86,7 @@ describe("ListingCard render states and interactions", () => {
     expect(card.querySelector("button")).not.toBeInTheDocument();
   });
 
-  it("renders fallback metadata when fields are missing", () => {
+  it("hides Unknown / N/A pills when fields are missing", () => {
     const listing = buildListing({
       year: 0,
       mileage_km: Number.NaN,
@@ -97,8 +97,8 @@ describe("ListingCard render states and interactions", () => {
 
     renderCard(<ListingCard listing={listing} />);
 
-    expect(screen.getByText("District N/A")).toBeInTheDocument();
-    expect(screen.getByText("Mileage N/A")).toBeInTheDocument();
+    expect(screen.queryByText(/N\/A/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/unknown/i)).not.toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Toyota Aqua" })).toHaveAttribute("loading", "lazy");
   });
 
@@ -125,8 +125,40 @@ describe("ListingCard render states and interactions", () => {
 
     renderCard(<ListingCard listing={listing} />);
 
-    expect(screen.getByText(/fair market value/i)).toBeInTheDocument();
+    expect(screen.getByText(/typical rs/i)).toBeInTheDocument();
     expect(screen.getByText(/% below fmv/i)).toBeInTheDocument();
+    // Rupee gap badge: 9.5M - 8.9M = Rs 0.6 Mn.
+    expect(screen.getByText("Rs 0.6 Mn below typical")).toBeInTheDocument();
+  });
+
+  it("paints very cheap outliers amber, never green", () => {
+    renderCard(<ListingCard listing={buildListing({ market_median_lkr: 9_000_000, price_lkr: 4_000_000, deal_score: 55 })} />);
+    const badge = screen.getByText(/unusually low/i).closest("[data-deal-kind]");
+    expect(badge).toHaveAttribute("data-deal-kind", "verify");
+    expect(badge?.className).not.toMatch(/emerald|green/);
+  });
+
+  it("labels lease takeovers and gives them no deal score or monthly estimate", () => {
+    renderCard(
+      <ListingCard
+        listing={buildListing({ market_median_lkr: 9_000_000, price_lkr: 2_175_000, description: "Leasing 199,000*59 takeover" })}
+      />,
+    );
+    expect(screen.getByText(/lease takeover — price shown isn't full price/i)).toBeInTheDocument();
+    expect(screen.queryByText(/below typical/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/est\. \/mo/i)).not.toBeInTheDocument();
+  });
+
+  it("shows a small monthly estimate and an on-N-sites chip only when data exists", () => {
+    const { rerender } = renderCard(<ListingCard listing={buildListing({ year: 2017 })} />);
+    expect(screen.getByText(/est\. \/mo/i)).toBeInTheDocument();
+    expect(screen.queryByText(/on \d+ sites/i)).not.toBeInTheDocument();
+    rerender(
+      <AuthProvider>
+        <TestRouter><ListingCard listing={buildListing({ year: 2017 })} seenOnSites={3} /></TestRouter>
+      </AuthProvider>,
+    );
+    expect(screen.getByText("On 3 sites")).toBeInTheDocument();
   });
 
   it("keeps compare and watchlist actions compatible", () => {

@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, BookOpen } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "motion/react";
 import { getNhtsaModels } from "@/services/api";
 import type { NhtsaModel } from "@/services/api";
 import { useAppPreferences } from "@/lib/appPreferences";
+import { isUsStyleVin } from "@/lib/dataSanity";
 
 interface NhtsaModelsCardProps {
   make: string;
@@ -12,16 +13,23 @@ interface NhtsaModelsCardProps {
   model?: string;
   /** Compact variant — used on ListingDetail sidebar. */
   compact?: boolean;
+  /**
+   * Listing VIN / chassis number when known. The NHTSA (US) catalog is only
+   * relevant to US-market cars with a 17-char VIN; JDM/recon chassis numbers
+   * (or no number at all, when this prop is passed) hide the card.
+   */
+  vin?: string | null;
 }
 
-export function NhtsaModelsCard({ make, model, compact = false }: NhtsaModelsCardProps) {
+export function NhtsaModelsCard({ make, model, compact = false, vin }: NhtsaModelsCardProps) {
   const { t } = useAppPreferences();
   const [open, setOpen] = useState(false);
+  const usMarket = vin === undefined || isUsStyleVin(vin);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["nhtsa-models", make],
     queryFn: () => getNhtsaModels(make),
-    enabled: Boolean(make) && open,
+    enabled: Boolean(make) && open && usMarket,
     staleTime: 5 * 60 * 1000,
     retry: 1,
   });
@@ -35,6 +43,8 @@ export function NhtsaModelsCard({ make, model, compact = false }: NhtsaModelsCar
       )
     : allModels;
   const displayModels = matchedModels.length > 0 ? matchedModels : allModels;
+
+  if (!usMarket) return null;
 
   const label = model
     ? t("nhtsa.cardLabelModel", "NHTSA catalog — {make} · {model}", { make, model })
@@ -62,7 +72,7 @@ export function NhtsaModelsCard({ make, model, compact = false }: NhtsaModelsCar
 
       <AnimatePresence initial={false}>
         {open && (
-          <motion.div
+          <m.div
             key="nhtsa-body"
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
@@ -123,7 +133,7 @@ export function NhtsaModelsCard({ make, model, compact = false }: NhtsaModelsCar
                 </>
               )}
             </div>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>

@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Smartphone, X } from "lucide-react";
 import { useAppPreferences } from "@/lib/appPreferences";
+import { DOCK_TEASER_EVENT, claimDockTeaser, getDockTeaser, releaseDockTeaser, setDockExtra } from "@/lib/dock";
 
 const SEEN_KEY = "motormila.mobile_promo_seen";
 /**
@@ -44,41 +45,107 @@ function markSeen() {
  * - Shown at most once per browser: it is marked seen the moment it renders,
  *   so it never comes back on the next visit even if the user ignores it.
  * - Hidden on search (any query string on "/") and task pages.
+ * - Never over the hero: it waits until the page is scrolled past the fold
+ *   and steps away near the top; it also waits while the chat "Ask Copilot"
+ *   bubble owns the bottom corner (one corner teaser at a time).
  */
 export function MobileAppPromo() {
   const { t } = useAppPreferences();
   const { pathname, search } = useLocation();
   const [visible, setVisible] = useState(false);
+  const stripRef = useRef<HTMLElement>(null);
 
   const isFilteredSearch = pathname === "/" && search.length > 1;
   const suppressed = isFilteredSearch || SUPPRESSED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+
+  // Due: 8s after the first paint settles, at most once per browser.
+  const [due, setDue] = useState(false);
+  // Past the fold: never over the hero at the top of a page — the strip only
+  // appears once the reader has scrolled, and steps away again near the top.
+  const [pastFold, setPastFold] = useState(false);
+  // The bottom corner is free (the chat "Ask Copilot" bubble isn't showing).
+  const [cornerFree, setCornerFree] = useState(() => getDockTeaser() !== "chat");
 
   useEffect(() => {
     if (suppressed) {
       setVisible(false);
       return;
     }
-    if (readSeen()) return;
-    // Let the first paint settle before the strip appears.
-    const timer = window.setTimeout(() => {
-      setVisible(true);
-      markSeen();
-    }, 8000);
+    if (visible || readSeen()) return;
+    const timer = window.setTimeout(() => setDue(true), 8000);
     return () => window.clearTimeout(timer);
-  }, [suppressed]);
+  }, [suppressed, visible]);
 
-  if (suppressed || !visible) return null;
+  useEffect(() => {
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const next = window.scrollY > Math.min(window.innerHeight * 0.75, 640);
+      setPastFold((cur) => (cur === next ? cur : next));
+    };
+    const onScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, [pathname]);
+
+  useEffect(() => {
+    const sync = () => setCornerFree(getDockTeaser() !== "chat");
+    window.addEventListener(DOCK_TEASER_EVENT, sync);
+    return () => window.removeEventListener(DOCK_TEASER_EVENT, sync);
+  }, []);
+
+  // Becomes visible once due, past the fold and with the corner free.
+  useEffect(() => {
+    if (suppressed || visible || !due || !pastFold || !cornerFree) return;
+    setVisible(true);
+    markSeen();
+  }, [suppressed, visible, due, pastFold, cornerFree]);
+
+  const shown = !suppressed && visible && pastFold;
+
+  useEffect(() => {
+    if (!shown) return;
+    claimDockTeaser("promo");
+    return () => releaseDockTeaser("promo");
+  }, [shown]);
+
+  // Claim dock height while shown so the chat button / compare tray stack
+  // above the strip instead of overlapping it.
+  useLayoutEffect(() => {
+    if (!shown) {
+      setDockExtra(0);
+      return;
+    }
+    const el = stripRef.current;
+    const measure = () => setDockExtra((el?.offsetHeight ?? 0) + 12);
+    measure();
+    window.addEventListener("resize", measure);
+    return () => {
+      window.removeEventListener("resize", measure);
+      setDockExtra(0);
+    };
+  }, [shown]);
+
+  if (!shown) return null;
 
   const dismiss = () => {
     setVisible(false);
+    setDue(false);
     markSeen();
   };
 
   return (
     <aside
+      ref={stripRef}
       role="complementary"
       aria-label={t("mobile.promoAria", "Motormila mobile app announcement")}
-      className="pointer-events-none fixed inset-x-0 bottom-[calc(88px+env(safe-area-inset-bottom))] z-40 flex justify-center px-3 md:bottom-4 md:justify-end md:px-4"
+      className="dock-strip pointer-events-none inset-x-0 flex justify-center px-3 md:justify-end md:px-6"
     >
       <div className="pointer-events-auto flex w-full max-w-md items-center gap-2.5 rounded-2xl border border-border bg-card/95 py-2 pl-3 pr-1.5 text-foreground shadow-soft-lg backdrop-blur-md motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
         <Smartphone className="h-4 w-4 shrink-0 text-primary" aria-hidden />
