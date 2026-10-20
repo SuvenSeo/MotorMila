@@ -127,7 +127,7 @@ export const TickerSymbol = memo(
 TickerSymbol.displayName = "TickerSymbol";
 
 export type TickerPriceProps = HTMLAttributes<HTMLSpanElement> & {
-  price: number;
+  price: number | null | undefined;
 };
 
 export const TickerPrice = memo(
@@ -135,7 +135,10 @@ export const TickerPrice = memo(
     const context = useTickerContext();
 
     const formattedPrice = useMemo(
-      () => context.formatter.format(price),
+      () =>
+        typeof price === "number" && Number.isFinite(price)
+          ? context.formatter.format(price)
+          : "\u2014",
       [price, context],
     );
 
@@ -149,33 +152,40 @@ export const TickerPrice = memo(
 TickerPrice.displayName = "TickerPrice";
 
 export type TickerPriceChangeProps = HTMLAttributes<HTMLSpanElement> & {
-  change: number;
+  /** null/undefined/NaN = no movement data (e.g. snapshot-derived insights). */
+  change: number | null | undefined;
   isPercent?: boolean;
 };
 
 export const TickerPriceChange = memo(
-  ({ change, isPercent, className, ...props }: TickerPriceChangeProps) => {
+  ({ change: rawChange, isPercent, className, ...props }: TickerPriceChangeProps) => {
+    const hasChange = typeof rawChange === "number" && Number.isFinite(rawChange);
+    const change = hasChange ? (rawChange as number) : 0;
     const isPositiveChange = useMemo(() => change >= 0, [change]);
     const context = useTickerContext();
 
     const changeFormatted = useMemo(() => {
+      if (!hasChange) return "\u2014";
       if (isPercent) {
         return `${change >= 0 ? "+" : ""}${change.toFixed(2)}%`;
       }
       return context.formatter.format(change);
-    }, [change, isPercent, context]);
+    }, [hasChange, change, isPercent, context]);
 
     return (
       <span
         className={cn(
           "flex items-center gap-0.5",
-          isPositiveChange
-            ? "text-green-600 dark:text-green-500"
-            : "text-red-600 dark:text-red-500",
+          !hasChange
+            ? "text-muted-foreground"
+            : isPositiveChange
+              ? "text-green-600 dark:text-green-500"
+              : "text-red-600 dark:text-red-500",
           className,
         )}
         {...props}
       >
+        {hasChange && (
         <svg
           aria-labelledby="ticker-change-icon-title"
           className={isPositiveChange ? "" : "rotate-180"}
@@ -191,6 +201,7 @@ export const TickerPriceChange = memo(
           </title>
           <path d="M24 22h-24l12-20z" />
         </svg>
+        )}
         {changeFormatted}
       </span>
     );

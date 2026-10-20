@@ -12,7 +12,8 @@ export interface MarketTickerRow {
   make: string;
   model: string;
   avg_price_lkr: number;
-  movement_pct: number;
+  /** null when the source has no month-on-month movement (snapshot fallback). */
+  movement_pct: number | null;
   listing_count: number;
   thumbnail_url?: string | null;
 }
@@ -27,6 +28,12 @@ const lkr0 = new Intl.NumberFormat("en-LK", {
   currency: "LKR",
   maximumFractionDigits: 0,
 });
+
+/** Screen-reader text for a movement value that may be missing. */
+export function describeMovement(pct: number | null | undefined): string {
+  if (typeof pct !== "number" || !Number.isFinite(pct)) return "no recent change data";
+  return `${pct >= 0 ? "up" : "down"} ${Math.abs(pct).toFixed(1)} percent`;
+}
 
 /** Shared inner markup so the live track and its loop clone measure identically. */
 function TickerItemInner({ row }: { row: MarketTickerRow }) {
@@ -67,7 +74,7 @@ export const MarketTicker = memo(function MarketTicker({ rows, onSelect }: Marke
                   locale="en-LK"
                   onClick={() => onSelect?.(row)}
                   className={cn(itemClass, "transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-primary")}
-                  aria-label={`${row.make} ${row.model}, average ${lkr0.format(row.avg_price_lkr)}, ${row.movement_pct >= 0 ? "up" : "down"} ${Math.abs(row.movement_pct).toFixed(1)} percent`}
+                  aria-label={`${row.make} ${row.model}, average ${lkr0.format(row.avg_price_lkr)}, ${describeMovement(row.movement_pct)}`}
                 >
                   <TickerItemInner row={row} />
                 </Ticker>
