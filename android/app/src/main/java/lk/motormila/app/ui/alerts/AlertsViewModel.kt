@@ -357,7 +357,11 @@ class AlertsViewModel @Inject constructor(
         }
     }
 
-    /** Update workaround (DATA_CONTRACT §2): delete + create on the backend. */
+    /**
+     * In-place edit via [AlertsRepository.update] (PUT /alerts/{id}; legacy
+     * create-then-delete only on pre-PUT backends). On failure the form stays
+     * open and the error is surfaced; the original alert is left as it was.
+     */
     private fun update() {
         val id = _state.value.editingId ?: return
         val input = buildInput(_state.value.form)
@@ -369,20 +373,23 @@ class AlertsViewModel @Inject constructor(
             _state.update { it.copy(updating = true, error = null, offline = false) }
             runCatching { repository.update(id, input) }
                 .onSuccess { alert ->
-                    lastMatchedIds = emptyList() // force match reload (new id after delete+create)
+                    lastMatchedIds = emptyList() // force match reload (criteria changed; id may differ on legacy backends)
                     _state.update {
                         it.copy(updating = false, editingId = null, form = AlertForm(), justCreatedId = alert.id)
                     }
                 }
                 .onFailure { e ->
+                    if (e is kotlin.coroutines.cancellation.CancellationException) throw e
                     val mapped = ErrorMapper.map(e)
                     _state.update {
                         it.copy(
                             updating = false,
                             offline = mapped is AppError.Network,
-                            error = mapped.message,
+                            error = "Couldn't save your changes — the alert is unchanged. ${mapped.message}".trim(),
                         )
                     }
+                    // Re-sync so the list reflects the server (legacy swap paths may have re-created it).
+                    runCatching { repository.refresh() }
                 }
         }
     }

@@ -151,6 +151,9 @@ fun SearchScreen(
             }
     }
 
+    // Android 13+: ask for notification permission right after an alert is
+    // saved from search (rationale first; never on cold start).
+    lk.motormila.app.core.notifications.NotificationPermissionPrompt(trigger = state.alertSaved)
     LaunchedEffect(state.alertSaved) {
         if (state.alertSaved) {
             snackbar.showSnackbar("Alert saved — we'll notify you of matches")

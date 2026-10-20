@@ -128,7 +128,7 @@ fun PricingContent(
         item(key = "free") {
             PlanCard(
                 name = stringResource(R.string.scr_price_free),
-                price = "LKR 0",
+                price = "Rs 0",
                 note = stringResource(R.string.scr_price_free_note),
                 features = PricingCatalog.freeFeatures.map { stringResource(it) },
                 highlighted = true,

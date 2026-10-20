@@ -104,7 +104,12 @@ class ScreensScreenshotsTest {
         )
     }
 
-    @Test fun settings_groups_dark() = shot {
+    @Test fun settings_groups_dark() = shot { SettingsSample() }
+
+    @Test fun settings_groups_light() = shot(dark = false) { SettingsSample() }
+
+    @androidx.compose.runtime.Composable
+    private fun SettingsSample() {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             InsetGroup(header = "Appearance") {
                 Box(Modifier.padding(12.dp)) { MmSegmented(listOf("Dark", "Light", "System"), 0, {}) }
@@ -139,7 +144,12 @@ class ScreensScreenshotsTest {
         detailUrl = null, externalUrl = null, engineCc = 1500.0,
     )
 
-    @Test fun compare_dark() = shot {
+    @Test fun compare_dark() = shot { CompareSample() }
+
+    @Test fun compare_light() = shot(dark = false) { CompareSample() }
+
+    @androidx.compose.runtime.Composable
+    private fun CompareSample() {
         CompareMatrix(
             items = listOf(
                 car(1, "Toyota", "Aqua", 2015, 6_950_000.0, 92_000.0, "Hybrid", "Auto"),
