@@ -27,6 +27,16 @@ function usePageVisible(): boolean {
 const letterStagger = 0.028;
 
 /**
+ * Animation units for a word. Latin text animates letter by letter; Sinhala and
+ * Tamil must never be split per code point (vowel signs and conjuncts would
+ * detach into dotted circles), so non-Latin text animates whole words.
+ */
+function animationUnits(text: string): string[] {
+  if (/[^\u0020-\u024F\u2000-\u206F\s]/.test(text)) return text.split(/(\s+)/).filter(Boolean);
+  return Array.from(text);
+}
+
+/**
  * Rotating accent word for the home hero. Every word is laid into the same
  * grid cell (invisible sizers), so the box is always as wide as the widest
  * word and the surrounding headline never reflows. Letters blur + rise in;
@@ -92,7 +102,7 @@ export function HeroFlipWords({ words, interval = 2800, align = "start", classNa
             },
           }}
         >
-          {Array.from(current).map((ch, i) => (
+          {animationUnits(current).map((ch, i) => (
             <m.span
               key={`${ch}-${i}`}
               className="inline-block"
@@ -106,7 +116,7 @@ export function HeroFlipWords({ words, interval = 2800, align = "start", classNa
                 },
               }}
             >
-              {ch === " " ? "\u00a0" : ch}
+              {/^\s+$/.test(ch) ? "\u00a0" : ch}
             </m.span>
           ))}
         </m.span>

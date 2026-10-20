@@ -718,6 +718,33 @@
     margin-top: 0.08em;
   }
 
+  /* Sinhala / Tamil words run far longer than English at hero sizes: scale the
+     display down, drop negative tracking (it collides vowel signs) and give
+     the taller glyphs room so nothing clips or overflows on a 390px phone. */
+  :root:lang(si) .display-hero,
+  :root:lang(ta) .display-hero {
+    letter-spacing: 0;
+    line-height: 1.16;
+    overflow-wrap: break-word;
+  }
+  :root:lang(si) .display-hero {
+    font-size: clamp(2.1rem, 5.2vw + 0.3rem, 4.6rem);
+  }
+  :root:lang(ta) .display-hero {
+    font-size: clamp(1.85rem, 4.4vw + 0.3rem, 3.9rem);
+  }
+  :root:lang(si) .display-hero--lockup {
+    font-size: clamp(2.3rem, 5.8vw + 0.4rem, 5.4rem);
+    max-width: 12em;
+  }
+  :root:lang(ta) .display-hero--lockup {
+    font-size: clamp(1.95rem, 4.6vw + 0.4rem, 4.4rem);
+    max-width: 13em;
+  }
+  :root:lang(ta) .display-hero--lockup .display-hero__accent {
+    font-size: 0.86em;
+  }
+
   .display-1 {
     font-family: var(--font-display);
     font-weight: 600;

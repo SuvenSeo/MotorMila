@@ -458,9 +458,9 @@ function DealerPlans() {
           ))}
         </div>
       </div>
-      <div className="grid gap-5 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
         {DEALER_TIERS.map((tier) => (
-          <div key={tier.code} className={`flex flex-col rounded-2xl border p-6 ${tier.highlight ? "border-primary/40 bg-primary/[0.07] shadow-soft" : "border-border bg-card/50"}`}>
+          <div key={tier.code} className={`flex min-w-0 flex-col rounded-2xl border p-6 ${tier.highlight ? "border-primary/40 bg-primary/[0.07] shadow-soft" : "border-border bg-card/50"}`}>
             <p className="text-[12px] font-semibold text-muted-foreground">{t("pricing.dealerTierName", "Dealer {name}", { name: tier.name })}</p>
             <div className="mt-3 flex items-baseline gap-1.5">
               <span className="num text-2xl font-bold text-foreground">{formatLkr(PLAN_PRICES[tier.code][period])}</span>
@@ -563,11 +563,11 @@ export default function Pricing() {
           <h2 id="tiers-heading" className="display-2 mb-8 text-foreground">
             {t("shell.pricing.tiersTitle", "Two plans. One is free.")}
           </h2>
-          <div className="grid gap-5 md:grid-cols-2 lg:max-w-4xl">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:max-w-4xl">
             {tiers.map((tier) => (
               <div
                 key={tier.id}
-                className={`relative flex flex-col rounded-2xl border p-6 ${
+                className={`relative flex min-w-0 flex-col rounded-2xl border p-6 ${
                   tier.id === "free" ? "border-primary/40 bg-primary/[0.07] shadow-soft" : "border-border bg-card/50"
                 }`}
               >
@@ -651,7 +651,7 @@ export default function Pricing() {
               sizes="220px"
             />
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {PRICING_FAQ.map((item, i) => (
               <div key={item.q} className="rounded-2xl border border-border bg-card/40 p-5">
                 <h3 className="text-[14px] font-bold text-foreground">{t(`pricing.faqItem.${i}.q`, item.q)}</h3>
@@ -710,7 +710,7 @@ export default function Pricing() {
             className="mt-6 space-y-8"
           >
             <DealerPlans />
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {DEALER_FAQ.map((item, i) => (
                 <div key={item.q} className="rounded-2xl border border-border bg-card/40 p-5">
                   <h3 className="text-[14px] font-bold text-foreground">{t(`pricing.dealerFaq.${i}.q`, item.q)}</h3>

@@ -827,7 +827,7 @@ export default function Dashboard() {
                     )}
                   >
                     <Search aria-hidden className={`ml-3.5 h-5 w-5 shrink-0 ${heroFilmTone === "cinematic" ? "text-white/55" : "text-muted-foreground"}`} />
-                    <label htmlFor="hero-search" className="sr-only">{t("common.search", "Search")} vehicles</label>
+                    <label htmlFor="hero-search" className="sr-only">{t("notFound.searchLabel", "Search vehicles")}</label>
                     <input
                       id="hero-search"
                       value={heroSearch}

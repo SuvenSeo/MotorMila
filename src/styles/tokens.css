@@ -91,11 +91,14 @@
   --font-body: 'Inter', 'Noto Sans Sinhala', system-ui, sans-serif;
   --font-sans: 'Inter', 'Noto Sans Sinhala', system-ui, sans-serif;
   --font-display: 'Space Grotesk', 'Noto Sans Sinhala', 'Inter', sans-serif;
+  /* Numeric faces carry words too ("Coming soon" in a price slot) — never tofu. */
+  --font-numeric: 'Inter', 'Noto Sans Sinhala', system-ui, sans-serif;
 }
 :root:lang(ta) {
   --font-body: 'Inter', 'Noto Sans Tamil', system-ui, sans-serif;
   --font-sans: 'Inter', 'Noto Sans Tamil', system-ui, sans-serif;
   --font-display: 'Space Grotesk', 'Noto Sans Tamil', 'Inter', sans-serif;
+  --font-numeric: 'Inter', 'Noto Sans Tamil', system-ui, sans-serif;
 }
 /* Sinhala/Tamil glyphs need more vertical room than Latin. */
 :root:lang(si) body,
