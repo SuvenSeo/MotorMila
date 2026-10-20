@@ -11,6 +11,9 @@ import { useAuth } from "@/lib/authContext";
 import { hasFullPlatformAccess } from "@/lib/planLimits";
 import { howWePriceHref } from "@/lib/howWePrice";
 import { cn } from "@/lib/utils";
+import { AnimatePresence, m, type Variants } from "motion/react";
+import { duration, ease, press, spring, useReducedMotionOrLowData } from "@/lib/motion";
+import { formatLkrCompact } from "@/lib/price";
 import {
   QUIZ_QUESTIONS,
   estimateFromComps,
@@ -47,12 +50,26 @@ function slug(value: string): string {
   return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
+/** Compact, millions-only (site-wide rule): "Rs 6.85 Mn". */
 function lkr(n: number): string {
-  return `Rs ${Math.round(n).toLocaleString("en-LK")}`;
+  return formatLkrCompact(n);
 }
+
+/** Direction-aware horizontal step slide (dir 1 = forward, -1 = back). */
+const stepSlide: Variants = {
+  enter: (dir: number) => ({ opacity: 0, x: dir * 28 }),
+  center: { opacity: 1, x: 0, transition: { duration: duration.base, ease: ease.emphasized } },
+  exit: (dir: number) => ({ opacity: 0, x: dir * -28, transition: { duration: duration.fast, ease: ease.exit } }),
+};
+const stepFade: Variants = {
+  enter: { opacity: 0 },
+  center: { opacity: 1, transition: { duration: duration.fast } },
+  exit: { opacity: 0, transition: { duration: duration.instant } },
+};
 
 export default function Estimate() {
   const { t } = useAppPreferences();
+  const motionStill = useReducedMotionOrLowData();
   const { hasProAccess, isAdmin } = useAuth();
   const fullAccess = hasFullPlatformAccess({ hasProAccess, isAdmin });
 
@@ -221,6 +238,10 @@ export default function Estimate() {
     t("quiz.step.condition", "Condition"),
     t("quiz.step.result", "Result"),
   ];
+  // Track navigation direction for the slide (forward vs back).
+  const navPos = step * 10 + (step === 2 ? qIndex : 0);
+  const [nav, setNav] = useState({ pos: navPos, dir: 1 });
+  if (nav.pos !== navPos) setNav({ pos: navPos, dir: navPos > nav.pos ? 1 : -1 });
   const progressPct = step === 2 ? ((2 + qIndex / QUIZ_QUESTIONS.length) / 3) * 100 : (step / 3) * 100;
 
   const hubHref = useMemo(
@@ -251,11 +272,26 @@ export default function Estimate() {
             ))}
           </ol>
           <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progressPct)}>
-            <div className="h-full rounded-full bg-primary transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${progressPct}%` }} />
+            {/* scaleX (transform-only) with a spring instead of animating width. */}
+            <m.div
+              className="h-full w-full origin-left rounded-full bg-primary"
+              initial={false}
+              animate={{ scaleX: progressPct / 100 }}
+              transition={motionStill ? { duration: 0 } : spring.gentle}
+            />
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
+          <AnimatePresence mode="wait" initial={false} custom={nav.dir}>
+          <m.div
+            key={navPos}
+            custom={nav.dir}
+            variants={motionStill ? stepFade : stepSlide}
+            initial="enter"
+            animate="center"
+            exit="exit"
+          >
           {step === 0 && (
             <form
               onSubmit={(e) => {
@@ -358,16 +394,26 @@ export default function Estimate() {
                 <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold text-foreground outline-none">{def.title}</h2>
                 <div className="grid gap-2">
                   {def.options.map((o) => (
-                    <button
+                    <m.button
                       key={o.value}
                       type="button"
+                      {...(motionStill ? {} : press)}
                       onClick={() => answer(q, o.value)}
                       aria-pressed={answers[q] === o.value}
                       className={cn(chipBase, "justify-between", answers[q] === o.value ? "border-primary bg-primary/15" : "border-border bg-surface hover:border-primary/40", "text-foreground")}
                     >
                       {o.label}
-                      {answers[q] === o.value ? <Check className="h-4 w-4 text-primary" aria-hidden /> : null}
-                    </button>
+                      {answers[q] === o.value ? (
+                        <m.span
+                          initial={motionStill ? false : { scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={spring.bouncy}
+                          className="inline-flex"
+                        >
+                          <Check className="h-4 w-4 text-primary" aria-hidden />
+                        </m.span>
+                      ) : null}
+                    </m.button>
                   ))}
                 </div>
                 <div className="flex items-center justify-between">
@@ -440,8 +486,11 @@ export default function Estimate() {
                           : t("quiz.pos.middle", "Your answers point to the middle of the range")}
                     </p>
                     <div className="relative mt-3 h-2 rounded-full bg-muted" aria-hidden>
-                      <div
+                      <m.div
                         className="absolute inset-y-0 rounded-full bg-primary"
+                        initial={motionStill ? false : { opacity: 0, scaleX: 0.2 }}
+                        animate={{ opacity: 1, scaleX: 1 }}
+                        transition={{ ...spring.gentle, delay: 0.15 }}
                         style={{
                           left: `${((band.from - result.low) / Math.max(1, result.high - result.low)) * 100}%`,
                           width: `${((band.to - band.from) / Math.max(1, result.high - result.low)) * 100}%`,
@@ -491,6 +540,8 @@ export default function Estimate() {
               </div>
             </div>
           )}
+          </m.div>
+          </AnimatePresence>
         </div>
       </PageBody>
     </PageCanvas>
