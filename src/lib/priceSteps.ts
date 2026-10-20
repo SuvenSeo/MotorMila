@@ -1,7 +1,7 @@
 /**
- * Price slider scale in the steps Sri Lankan buyers think in: 5-lakh steps
- * up to 1 crore-ish (100 L = 10 Mn), then coarser Mn steps. A slider over
- * the step *index* keeps the crowded 30–100 L band usable instead of
+ * Price slider scale: Rs 0.5 Mn steps up to 10 Mn, then coarser Mn steps
+ * (labels are always shown in Mn). A slider over the step *index* keeps the
+ * crowded 3–10 Mn band usable instead of
  * squeezing it into the left 10% of a linear 0.5–100 Mn track.
  */
 import { LAKH, MILLION } from "@/lib/price";
@@ -13,7 +13,7 @@ function range(start: number, end: number, step: number): number[] {
 }
 
 export const PRICE_STEPS: readonly number[] = [
-  ...range(5 * LAKH, 100 * LAKH, 5 * LAKH), // 5 L … 100 L (20 steps)
+  ...range(5 * LAKH, 100 * LAKH, 5 * LAKH), // 0.5 … 10 Mn (20 steps)
   ...range(12 * MILLION, 20 * MILLION, 2 * MILLION), // 12 … 20 Mn
   25 * MILLION,
   30 * MILLION,

@@ -274,7 +274,7 @@ export function PriceHistoryChart({
           </div>
 
           <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 tech-label text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-            <span className="flex flex-wrap items-center gap-3">Median advertised listings · axis in lakhs <TrendToneLegend className="normal-case tracking-normal" /></span>
+            <span className="flex flex-wrap items-center gap-3">Median advertised listings · axis in millions (Mn) <TrendToneLegend className="normal-case tracking-normal" /></span>
             <span className="num">{formatSampleCount(totalSamples)} tracked across this range</span>
           </div>
         </section>

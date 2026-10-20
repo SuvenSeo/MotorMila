@@ -1,9 +1,10 @@
+import { formatLkrCompact } from "@/lib/price";
 /**
  * Deal badge logic for listing cards and detail — one rule set, one palette.
  *
  * Compares the asking price with the FMV (cohort/model estimate of typical
  * *asking* prices — never "market value" or a sale price) and turns the gap
- * into a rupee figure buyers read in lakhs ("Rs 4.2 L below typical").
+ * into a rupee figure in millions ("Rs 0.42 Mn below typical").
  *
  * Honesty rules:
  * - Lease takeovers get no deal call at all (the price isn't the full price).
@@ -77,16 +78,13 @@ export function computeDealBadge(input: DealBadgeInput): DealBadge {
 }
 
 /**
- * Compact LKR in the units Sri Lankans quote: lakhs below 1 crore-ish
- * ("Rs 4.2 L"), millions above ("Rs 12.5 Mn"). Thousands for tiny gaps.
+ * Compact gap in millions, like every compact price on the site:
+ * "Rs 0.42 Mn", "Rs 1.2 Mn", "Rs 12.5 Mn". Gaps under Rs 10,000 stay full.
  */
 export function formatLkrShort(value: number): string {
   const v = Math.abs(Number(value));
   if (!Number.isFinite(v)) return "Rs —";
-  if (v >= 10_000_000) return `Rs ${(v / 1_000_000).toFixed(1).replace(/\.0$/, "")} Mn`;
-  if (v >= 100_000) return `Rs ${(v / 100_000).toFixed(1).replace(/\.0$/, "")} L`;
-  if (v >= 1_000) return `Rs ${Math.round(v / 1_000)}k`;
-  return `Rs ${Math.round(v)}`;
+  return formatLkrCompact(v, "Rs —");
 }
 
 /**

@@ -14,12 +14,12 @@ describe("api module", () => {
     expect(typeof api.sendChatMessage).toBe("function");
   });
 
-  it("formats prices in lakhs / Mn", async () => {
+  it("formats prices in Mn", async () => {
     const { formatPrice } = await import("@/services/api");
 
     expect(formatPrice(null)).toBe("N/A");
-    expect(formatPrice(925000)).toBe("Rs 9.3 L");
-    expect(formatPrice(2500000)).toBe("Rs 25 L");
+    expect(formatPrice(925000)).toBe("Rs 0.93 Mn");
+    expect(formatPrice(2500000)).toBe("Rs 2.5 Mn");
   });
 
   it("posts chat payloads to the backend api", async () => {

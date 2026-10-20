@@ -31,7 +31,7 @@ import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
 import { PageHero } from "@/components/PageHero";
 import { FreePlanBanner } from "@/components/FreePlanBanner";
-import { SlidingNumber } from "@/components/ui/SlidingNumber";
+import { FlowLkr, FlowNumber } from "@/components/motion/FlowNumber";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { toast } from "sonner";
 import { getSurchargeCountdown } from "@/lib/importTaxModel";
@@ -760,11 +760,7 @@ export default function Calculator() {
                         {lcResult.landed_cost == null || !Number.isFinite(lcResult.landed_cost) ? (
                           "N/A"
                         ) : (
-                          <span className="inline-flex items-baseline">
-                            <span>Rs.&nbsp;</span>
-                            <SlidingNumber value={Math.round((lcResult.landed_cost / 1_000_000) * 100) / 100} />
-                            <span>M</span>
-                          </span>
+                          <FlowLkr value={lcResult.landed_cost} label={formatPrice(lcResult.landed_cost)} />
                         )}
                       </div>
                       <div className="mt-4 flex items-center gap-3 border-t border-primary/15 pt-3">

@@ -7,7 +7,7 @@ import { QUERY_STALE } from "@/lib/queryPolicy";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { cn } from "@/lib/utils";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { changeTone, formatChangePct, formatLakhs, paddedDomain, TONE_STYLES } from "@/lib/dataSanity";
+import { changeTone, formatChangePct, formatMnShort, paddedDomain, TONE_STYLES } from "@/lib/dataSanity";
 import { TrendToneLegend } from "@/components/data/TrendToneLegend";
 
 /** "2026-03" → "Mar 26" — short enough that 12 ticks never overprint. */
@@ -20,7 +20,7 @@ export function shortMonth(key: string): string {
 /**
  * Per-model 12-month price trend — shadcn chart on Recharts v3, wired to the
  * real trend API. Y-axis is a padded domain (never forced to zero) labelled in
- * lakhs; colour follows the buyer-neutral tone (down green, up amber, stable grey).
+ * millions; colour follows the buyer-neutral tone (down green, up amber, stable grey).
  */
 export function ModelTrendPanel({ make, model }: { make: string; model: string }) {
   const { t } = useAppPreferences();
@@ -105,7 +105,7 @@ export function ModelTrendPanel({ make, model }: { make: string; model: string }
               />
               <YAxis
                 domain={domain ?? ["auto", "auto"]}
-                tickFormatter={(v: number) => formatLakhs(v)}
+                tickFormatter={(v: number) => formatMnShort(v)}
                 tickLine={false}
                 axisLine={false}
                 tickCount={4}
@@ -137,7 +137,7 @@ export function ModelTrendPanel({ make, model }: { make: string; model: string }
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <TrendToneLegend />
             <span className="text-[11px] font-medium text-muted-foreground">
-              {t("chart.lakhsNote", "L = lakh (Rs 100,000) · Mn = million")}
+              {t("chart.mnNote", "Mn = million rupees (Rs 1,000,000)")}
             </span>
           </div>
         </>

@@ -3,7 +3,7 @@ import { Area, AreaChart, YAxis } from "recharts";
 import { Minus, TrendingDown, TrendingUp } from "lucide-react";
 import type { PriceTrendPoint } from "@/types/car";
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
-import { changeTone, formatChangePct, formatLakhs, paddedDomain, TONE_STYLES } from "@/lib/dataSanity";
+import { changeTone, formatChangePct, formatMnShort, paddedDomain, TONE_STYLES } from "@/lib/dataSanity";
 import { formatPriceLkrMillions } from "@/lib/formatting";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { cn } from "@/lib/utils";
@@ -44,7 +44,7 @@ export function TrendKpis({ points }: { points: PriceTrendPoint[] }) {
       label: t("trendKpis.medianNow", "Median now"),
       value: formatPriceLkrMillions(kpis.last.median_price),
       animated: <FlowLkr countUp value={kpis.last.median_price} label={formatPriceLkrMillions(kpis.last.median_price)} />,
-      sub: `${formatLakhs(kpis.last.median_price)} · ${kpis.last.month}`,
+      sub: `${formatMnShort(kpis.last.median_price)} · ${kpis.last.month}`,
     },
     {
       label: t("trendKpis.changeVs", "Change vs {month}", { month: kpis.first.month }),

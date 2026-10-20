@@ -1,7 +1,7 @@
 import { lazy, Suspense, useRef, type ComponentProps } from "react";
 import { useInView } from "motion/react";
 import { useReducedMotionOrLowData } from "@/lib/motion";
-import { LAKH, LAKH_TO_MN_THRESHOLD, MILLION } from "@/lib/price";
+import { MN_DISPLAY_MIN, mnNumber } from "@/lib/price";
 
 // number-flow is a small custom element, but keep it off the critical path:
 // the plain formatted text is the Suspense fallback (and the SSR/test output).
@@ -64,16 +64,12 @@ export function CountUpOnView(props: FlowNumberProps) {
   );
 }
 
-/** Split an LKR amount the way formatLkrCompact does ("Rs 72.5 L", "Rs 12.5 Mn")
- * so number-flow can animate the numeric part. */
+/** Split an LKR amount the way formatLkrCompact does ("Rs 8.5 Mn",
+ * "Rs 0.35 Mn") so number-flow can animate the numeric part. */
 export function compactLkrParts(n: number): { value: number; suffix: string; format: NumberFlowFormat } {
-  const abs = Math.abs(n);
-  if (abs < LAKH) return { value: Math.round(n), suffix: "", format: { maximumFractionDigits: 0, useGrouping: true } };
-  const lakhs = abs / LAKH;
-  if (abs < LAKH_TO_MN_THRESHOLD && Number(lakhs.toFixed(1)) < 100) {
-    return { value: Math.sign(n) * Number(lakhs.toFixed(1)), suffix: " L", format: { maximumFractionDigits: 1 } };
-  }
-  return { value: Math.sign(n) * Number((abs / MILLION).toFixed(2)), suffix: " Mn", format: { maximumFractionDigits: 2 } };
+  if (Math.abs(n) < MN_DISPLAY_MIN) return { value: Math.round(n), suffix: "", format: { maximumFractionDigits: 0, useGrouping: true } };
+  const v = Number(mnNumber(Math.abs(n))) * Math.sign(n);
+  return { value: v, suffix: " Mn", format: { maximumFractionDigits: 3 } };
 }
 
 /** Compact LKR price that rolls on change. */

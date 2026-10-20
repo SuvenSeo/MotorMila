@@ -127,8 +127,8 @@ describe("ListingCard render states and interactions", () => {
 
     expect(screen.getByText(/typical rs/i)).toBeInTheDocument();
     expect(screen.getByText(/% below fmv/i)).toBeInTheDocument();
-    // Rupee gap badge: 9.5M - 8.9M = Rs 6 L.
-    expect(screen.getByText("Rs 6 L below typical")).toBeInTheDocument();
+    // Rupee gap badge: 9.5M - 8.9M = Rs 0.6 Mn.
+    expect(screen.getByText("Rs 0.6 Mn below typical")).toBeInTheDocument();
   });
 
   it("paints very cheap outliers amber, never green", () => {
