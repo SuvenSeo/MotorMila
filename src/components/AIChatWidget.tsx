@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { type ChatListingResult, type ChatWebSource, sendChatMessage, formatPrice } from "@/services/api";
 import { useAppPreferences } from "@/lib/appPreferences";
+import { claimDockTeaser, releaseDockTeaser } from "@/lib/dock";
 import { useAuth } from "@/lib/authContext";
 import { hasFullPlatformAccess } from "@/lib/planLimits";
 import { safeExternalUrl } from "@/lib/safeExternalUrl";
@@ -318,6 +319,7 @@ export function AIChatWidget() {
     window.setTimeout(() => {
       setShowTooltip(false);
       setTooltipOut(false);
+      releaseDockTeaser("chat");
     }, 200);
     try {
       localStorage.setItem(TOOLTIP_KEY, "1");
@@ -350,8 +352,16 @@ export function AIChatWidget() {
 
     const seen = localStorage.getItem(TOOLTIP_KEY);
     if (!seen) {
-      const timer = window.setTimeout(() => setShowTooltip(true), 2000);
-      return () => window.clearTimeout(timer);
+      // The bubble is desktop-only (hidden below sm) and shares the corner
+      // with the app strip: show it only when it can own the corner.
+      const timer = window.setTimeout(() => {
+        if (!window.matchMedia?.("(min-width: 640px)").matches) return;
+        if (claimDockTeaser("chat")) setShowTooltip(true);
+      }, 2000);
+      return () => {
+        window.clearTimeout(timer);
+        releaseDockTeaser("chat");
+      };
     }
   }, []);
 

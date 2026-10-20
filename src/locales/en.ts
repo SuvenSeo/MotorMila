@@ -1676,6 +1676,8 @@ export const en = {
   "trendTone.stableShort": "Stable",
   "trendTone.up": "Price up",
   "deal.howWePrice": "How we price →",
+  "trends.lock.conditionFilter": "Condition filter",
+  "trends.lock.districtFilter": "District filter",
 } as const;
 
 export type EnKey = keyof typeof en;

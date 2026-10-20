@@ -204,7 +204,7 @@ export default function Trends() {
               ) : (
                 <ProFeatureLock
                   density="compact"
-                  label={t("pro.lock.short", "Pro")}
+                  label={t("trends.lock.conditionFilter", "Condition filter")}
                   className="min-h-[2.75rem] rounded-full"
                 >
                   <div className={`${selectTriggerClass} flex h-10 items-center px-3 text-sm text-muted-foreground`}>
@@ -226,7 +226,7 @@ export default function Trends() {
               ) : (
                 <ProFeatureLock
                   density="compact"
-                  label={t("pro.lock.short", "Pro")}
+                  label={t("trends.lock.districtFilter", "District filter")}
                   className="min-h-[2.75rem] rounded-full"
                 >
                   <div className={`${selectTriggerClass} flex h-10 items-center px-3 text-sm text-muted-foreground`}>

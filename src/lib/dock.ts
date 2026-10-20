@@ -45,3 +45,35 @@ export function setDockExtra(px: number) {
   if (typeof document === "undefined") return;
   document.documentElement.style.setProperty("--dock-extra", `${Math.max(0, Math.round(px))}px`);
 }
+
+/* ── Corner teaser arbitration (polish/round2) ────────────────────────────
+ * Only one transient bottom-corner teaser at a time: the chat "Ask Motormila
+ * Copilot" bubble or the Android app strip. Whoever holds the slot owns the
+ * corner; the other waits (or skips this visit). */
+export type DockTeaser = "chat" | "promo";
+export const DOCK_TEASER_EVENT = "mm:dock-teaser";
+
+export function getDockTeaser(): DockTeaser | null {
+  if (typeof document === "undefined") return null;
+  const v = document.documentElement.dataset.dockTeaser;
+  return v === "chat" || v === "promo" ? v : null;
+}
+
+/** Claim the corner; returns false when the other teaser already holds it. */
+export function claimDockTeaser(owner: DockTeaser): boolean {
+  if (typeof document === "undefined") return false;
+  const cur = getDockTeaser();
+  if (cur && cur !== owner) return false;
+  if (cur !== owner) {
+    document.documentElement.dataset.dockTeaser = owner;
+    window.dispatchEvent(new Event(DOCK_TEASER_EVENT));
+  }
+  return true;
+}
+
+export function releaseDockTeaser(owner: DockTeaser) {
+  if (typeof document === "undefined") return;
+  if (getDockTeaser() !== owner) return;
+  delete document.documentElement.dataset.dockTeaser;
+  window.dispatchEvent(new Event(DOCK_TEASER_EVENT));
+}

@@ -1425,16 +1425,44 @@
     border-radius: 999px;
   }
 
-  /* ── Site header (polish/shell) ─────────────────────────────────
-     Transparent at the top so heroes run underneath; a translucent
-     blurred layer + hairline fades in on scroll (opacity only). */
+  /* ── Site header (polish/round2) ────────────────────────────────
+     At the top: transparent, full-width, heroes run underneath.
+     Scrolled: the header morphs into a floating rounded capsule — an
+     inset, translucent blurred pill with a hairline and soft shadow.
+     The morph is driven by the data-scrolled state (not per-pixel):
+       · the capsule (.site-nav-bg, an empty decorative layer) eases its
+         inset + radius from full-bleed to the pill;
+       · brand / actions slide inward with translateX (transform only),
+         the row rises 2px so it sits centred in the shorter pill.
+     The header box stays 64px tall, so nothing below it reflows. */
   .site-nav-header {
+    --nav-morph-dur: 380ms;
+    --nav-morph-ease: cubic-bezier(0.32, 0.72, 0, 1);
+    /* Capsule geometry */
+    --cap-max: 1240px;
+    --cap-gap: 10px;       /* min distance from the viewport edge */
+    --cap-top: 8px;
+    --cap-bottom: 4px;     /* 64 - 8 - 4 = 52px tall pill */
+    --cap-pad: 8px;        /* content inset inside the pill */
+    --row-pad: 12px;       /* .site-nav padding-inline (mirrors below) */
+    --row-max: 1560px;
+    --hdr-w: 100vw;
+    container-type: inline-size;
     transform: translate3d(0, 0, 0);
     transition: transform var(--dur-base) var(--ease-standard);
   }
 
+  @supports (width: 1cqw) {
+    .site-nav-header > * { --hdr-w: 100cqw; }
+  }
+
+  @media (min-width: 640px) {
+    .site-nav-header { --row-pad: 20px; --cap-gap: 16px; --cap-pad: 10px; }
+  }
+
   .site-nav-header[data-hidden="true"] {
-    transform: translate3d(0, -100%, 0);
+    /* Clear the capsule's top gap too. */
+    transform: translate3d(0, calc(-100% - 12px), 0);
   }
 
   .site-nav-bg {
@@ -1442,23 +1470,97 @@
     inset: 0;
     pointer-events: none;
     opacity: 0;
-    background: hsl(var(--background) / 0.72);
-    border-bottom: 1px solid hsl(var(--border) / 0.7);
-    backdrop-filter: blur(12px) saturate(1.6);
-    -webkit-backdrop-filter: blur(12px) saturate(1.6);
-    transition: opacity var(--dur-base) var(--ease-standard);
+    border-radius: 0;
+    border: 1px solid transparent;
+    background: hsl(var(--background) / 0.7);
+    backdrop-filter: blur(16px) saturate(1.7);
+    -webkit-backdrop-filter: blur(16px) saturate(1.7);
+    box-shadow: none;
+    transition:
+      inset var(--nav-morph-dur) var(--nav-morph-ease),
+      border-radius var(--nav-morph-dur) var(--nav-morph-ease),
+      opacity calc(var(--nav-morph-dur) * 0.6) var(--ease-standard),
+      border-color var(--nav-morph-dur) var(--ease-standard),
+      box-shadow var(--nav-morph-dur) var(--ease-standard);
   }
 
   .site-nav-header[data-scrolled="true"] .site-nav-bg,
   .site-nav-header[data-menu-open="true"] .site-nav-bg {
     opacity: 1;
+    inset:
+      var(--cap-top)
+      max(var(--cap-gap), calc((var(--hdr-w) - var(--cap-max)) / 2))
+      var(--cap-bottom);
+    border-radius: 9999px;
+    border-color: hsl(var(--foreground) / 0.09);
+    box-shadow:
+      0 10px 30px -10px rgb(0 0 0 / 0.18),
+      0 2px 6px -2px rgb(0 0 0 / 0.08),
+      inset 0 1px 0 rgb(255 255 255 / 0.55);
+  }
+
+  .theme-dark .site-nav-header[data-scrolled="true"] .site-nav-bg,
+  .theme-dark .site-nav-header[data-menu-open="true"] .site-nav-bg {
+    background: hsl(var(--card) / 0.66);
+    border-color: hsl(var(--foreground) / 0.1);
+    box-shadow:
+      0 14px 40px -12px rgb(0 0 0 / 0.7),
+      0 2px 8px -2px rgb(0 0 0 / 0.45),
+      inset 0 1px 0 hsl(var(--foreground) / 0.07);
   }
 
   html.low-data .site-nav-bg {
-    background: hsl(var(--background) / 0.96);
+    background: hsl(var(--background) / 0.97);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
+
+  /* Content glides inward to sit inside the capsule. shift = capsule inner
+     edge − the row's own content edge (both clamp at small widths). */
+  .site-nav-header .site-nav > * {
+    --nav-shift: calc(
+      max(var(--cap-gap), (var(--hdr-w) - var(--cap-max)) / 2) + var(--cap-pad)
+      - max(var(--row-pad), (var(--hdr-w) - var(--row-max)) / 2 + var(--row-pad))
+    );
+    transition: transform var(--nav-morph-dur) var(--nav-morph-ease);
+  }
+
+  .site-nav-header[data-scrolled="true"] .site-nav > *,
+  .site-nav-header[data-menu-open="true"] .site-nav > * {
+    transform: translate3d(0, 2px, 0);
+  }
+
+  .site-nav-header[data-scrolled="true"] .site-nav > :first-child,
+  .site-nav-header[data-menu-open="true"] .site-nav > :first-child {
+    transform: translate3d(max(0px, var(--nav-shift)), 2px, 0);
+  }
+
+  .site-nav-header[data-scrolled="true"] .site-nav > :last-child,
+  .site-nav-header[data-menu-open="true"] .site-nav > :last-child {
+    transform: translate3d(min(0px, calc(-1 * var(--nav-shift))), 2px, 0);
+  }
+
+  /* Inside the pill the centre group drops its own tray so the pill
+     reads as one surface. */
+  .site-nav-header .site-nav__center {
+    transition:
+      background-color var(--nav-morph-dur) var(--ease-standard),
+      border-color var(--nav-morph-dur) var(--ease-standard);
+  }
+
+  .site-nav-header[data-scrolled="true"] .site-nav__center {
+    background: transparent;
+    border-color: transparent;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .site-nav-bg,
+    .site-nav-header .site-nav > *,
+    .site-nav-header .site-nav__center { transition: none !important; }
+  }
+
+  html.low-data .site-nav-bg,
+  html.low-data .site-nav-header .site-nav > * { transition: none; }
 
   .site-nav {
     position: relative;

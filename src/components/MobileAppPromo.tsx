@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Smartphone, X } from "lucide-react";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { setDockExtra } from "@/lib/dock";
+import { DOCK_TEASER_EVENT, claimDockTeaser, getDockTeaser, releaseDockTeaser, setDockExtra } from "@/lib/dock";
 
 const SEEN_KEY = "motormila.mobile_promo_seen";
 /**
@@ -45,6 +45,9 @@ function markSeen() {
  * - Shown at most once per browser: it is marked seen the moment it renders,
  *   so it never comes back on the next visit even if the user ignores it.
  * - Hidden on search (any query string on "/") and task pages.
+ * - Never over the hero: it waits until the page is scrolled past the fold
+ *   and steps away near the top; it also waits while the chat "Ask Copilot"
+ *   bubble owns the bottom corner (one corner teaser at a time).
  */
 export function MobileAppPromo() {
   const { t } = useAppPreferences();
@@ -55,21 +58,62 @@ export function MobileAppPromo() {
   const isFilteredSearch = pathname === "/" && search.length > 1;
   const suppressed = isFilteredSearch || SUPPRESSED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
+  // Due: 8s after the first paint settles, at most once per browser.
+  const [due, setDue] = useState(false);
+  // Past the fold: never over the hero at the top of a page — the strip only
+  // appears once the reader has scrolled, and steps away again near the top.
+  const [pastFold, setPastFold] = useState(false);
+  // The bottom corner is free (the chat "Ask Copilot" bubble isn't showing).
+  const [cornerFree, setCornerFree] = useState(() => getDockTeaser() !== "chat");
+
   useEffect(() => {
     if (suppressed) {
       setVisible(false);
       return;
     }
-    if (readSeen()) return;
-    // Let the first paint settle before the strip appears.
-    const timer = window.setTimeout(() => {
-      setVisible(true);
-      markSeen();
-    }, 8000);
+    if (visible || readSeen()) return;
+    const timer = window.setTimeout(() => setDue(true), 8000);
     return () => window.clearTimeout(timer);
-  }, [suppressed]);
+  }, [suppressed, visible]);
 
-  const shown = !suppressed && visible;
+  useEffect(() => {
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const next = window.scrollY > Math.min(window.innerHeight * 0.75, 640);
+      setPastFold((cur) => (cur === next ? cur : next));
+    };
+    const onScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, [pathname]);
+
+  useEffect(() => {
+    const sync = () => setCornerFree(getDockTeaser() !== "chat");
+    window.addEventListener(DOCK_TEASER_EVENT, sync);
+    return () => window.removeEventListener(DOCK_TEASER_EVENT, sync);
+  }, []);
+
+  // Becomes visible once due, past the fold and with the corner free.
+  useEffect(() => {
+    if (suppressed || visible || !due || !pastFold || !cornerFree) return;
+    setVisible(true);
+    markSeen();
+  }, [suppressed, visible, due, pastFold, cornerFree]);
+
+  const shown = !suppressed && visible && pastFold;
+
+  useEffect(() => {
+    if (!shown) return;
+    claimDockTeaser("promo");
+    return () => releaseDockTeaser("promo");
+  }, [shown]);
 
   // Claim dock height while shown so the chat button / compare tray stack
   // above the strip instead of overlapping it.
@@ -79,7 +123,7 @@ export function MobileAppPromo() {
       return;
     }
     const el = stripRef.current;
-    const measure = () => setDockExtra((el?.offsetHeight ?? 0) + 8);
+    const measure = () => setDockExtra((el?.offsetHeight ?? 0) + 12);
     measure();
     window.addEventListener("resize", measure);
     return () => {
@@ -92,6 +136,7 @@ export function MobileAppPromo() {
 
   const dismiss = () => {
     setVisible(false);
+    setDue(false);
     markSeen();
   };
 
