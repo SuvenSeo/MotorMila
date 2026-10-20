@@ -157,12 +157,58 @@ fun HomeScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val live by viewModel.liveStrip.collectAsStateWithLifecycle()
+    HomeContent(
+        state = state,
+        live = live,
+        onRefresh = viewModel::refresh,
+        onRetry = viewModel::retry,
+        onDismissCached = viewModel::dismissCachedBadge,
+        banner = { AnnouncementBanner(onViewDeals = onBestPicksClick) },
+        onListingClick = onListingClick,
+        onSearchClick = onSearchClick,
+        onAlertsClick = onAlertsClick,
+        onSeeAll = onSeeAll,
+        onLoginClick = onLoginClick,
+        onEvHubClick = onEvHubClick,
+        onBestPicksClick = onBestPicksClick,
+        onPulseClick = onPulseClick,
+        onMakeModelClick = onMakeModelClick,
+        onDistrictClick = onDistrictClick,
+        onCalculatorClick = onCalculatorClick,
+        onPriceIndexClick = onPriceIndexClick,
+        onPermitsClick = onPermitsClick,
+    )
+}
+
+/** Stateless Home body (previewable / Paparazzi-renderable). */
+@Composable
+fun HomeContent(
+    state: HomeUiState,
+    live: List<lk.motormila.app.domain.model.Listing>,
+    onRefresh: () -> Unit,
+    onRetry: () -> Unit,
+    onDismissCached: () -> Unit,
+    banner: @Composable () -> Unit,
+    onListingClick: (Int) -> Unit,
+    onSearchClick: () -> Unit,
+    onAlertsClick: () -> Unit,
+    onSeeAll: (String) -> Unit,
+    onLoginClick: () -> Unit = {},
+    onEvHubClick: () -> Unit = {},
+    onBestPicksClick: () -> Unit = {},
+    onPulseClick: () -> Unit = {},
+    onMakeModelClick: (make: String, model: String) -> Unit = { _, _ -> },
+    onDistrictClick: (district: String) -> Unit = {},
+    onCalculatorClick: () -> Unit = {},
+    onPriceIndexClick: () -> Unit = {},
+    onPermitsClick: () -> Unit = {},
+) {
     val haptics = rememberHaptics()
     val reducedMotion = rememberReducedMotion()
 
     MmPullToRefresh(
         isRefreshing = state.isRefreshing,
-        onRefresh = viewModel::refresh,
+        onRefresh = onRefresh,
         modifier = Modifier.fillMaxSize(),
     ) {
         LazyColumn(
@@ -176,7 +222,7 @@ fun HomeScreen(
         ) {
             // 0. Announcement banner (market updates, dismissible, persisted)
             item {
-                AnnouncementBanner(onViewDeals = onBestPicksClick)
+                banner()
             }
 
             // 1. Top row (lockup + alerts) — design v2
@@ -185,8 +231,8 @@ fun HomeScreen(
                     if (state.isOffline || state.showCachedBadge) {
                         OfflineBanner(
                             visible = true,
-                            onDismiss = viewModel::dismissCachedBadge,
-                            onRetry = viewModel::retry,
+                            onDismiss = onDismissCached,
+                            onRetry = onRetry,
                         )
                     }
                     HomeTopRow(onAlertsClick = onAlertsClick)
@@ -215,7 +261,7 @@ fun HomeScreen(
                 ) {
                     ErrorState(
                         message = state.error ?: "Unknown error",
-                        onRetry = viewModel::retry,
+                        onRetry = onRetry,
                         cachedAvailable = false,
                         onLogin = onLoginClick,
                         modifier = Modifier.padding(horizontal = 16.dp),

@@ -62,15 +62,7 @@ fun MmSheet(
         contentColor = c.textPrimary,
         scrimColor = c.scrim,
         tonalElevation = 0.dp,
-        dragHandle = {
-            Box(
-                Modifier
-                    .padding(top = 10.dp, bottom = 6.dp)
-                    .size(width = 36.dp, height = 5.dp)
-                    .clip(MmShapes.pill)
-                    .background(c.outlineStrong),
-            )
-        },
+        dragHandle = { MmSheetHandle() },
     ) {
         Column(
             modifier = Modifier
@@ -96,5 +88,51 @@ fun MmSheet(
             }
             content()
         }
+    }
+}
+
+@Composable
+private fun MmSheetHandle() {
+    Box(
+        Modifier
+            .padding(top = 10.dp, bottom = 6.dp)
+            .size(width = 36.dp, height = 5.dp)
+            .clip(MmShapes.pill)
+            .background(MmColors.current.outlineStrong),
+    )
+}
+
+/**
+ * Static sheet frame (same shape/handle/title as [MmSheet]) for previews and
+ * screenshot tests, where a real ModalBottomSheet window can't render.
+ */
+@Composable
+fun MmSheetFrame(
+    modifier: Modifier = Modifier,
+    title: String? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val c = MmColors.current
+    Column(
+        modifier
+            .fillMaxWidth()
+            .clip(MmShapes.sheet)
+            .background(c.surfaceRaised)
+            .padding(bottom = MmSpacing.lg),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        MmSheetHandle()
+        if (title != null) {
+            Text(
+                title,
+                style = MmType.current.titleM,
+                color = c.textPrimary,
+                modifier = Modifier
+                    .padding(horizontal = MmSpacing.gutter)
+                    .padding(top = 4.dp, bottom = MmSpacing.lg)
+                    .align(Alignment.Start),
+            )
+        }
+        Column(Modifier.fillMaxWidth()) { content() }
     }
 }

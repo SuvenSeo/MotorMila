@@ -367,7 +367,7 @@ fun SearchScreen(
 }
 
 @Composable
-private fun SortFilterRow(
+internal fun SortFilterRow(
     sort: String,
     onSort: (String) -> Unit,
     onFilters: () -> Unit,
