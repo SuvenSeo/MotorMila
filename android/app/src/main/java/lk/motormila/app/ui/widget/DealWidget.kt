@@ -209,7 +209,7 @@ fun dealRemoteViews(context: Context, state: DealWidgetState): RemoteViews =
         setTextViewText(R.id.widget_deal_title, state.dealTitle)
         setTextViewText(
             R.id.widget_deal_price,
-            state.dealPriceLkr?.let { formatLkr(it) }.orEmpty(),
+            state.dealPriceLkr?.let { lk.motormila.app.ui.common.mn(it) }.orEmpty(),
         )
         setOnClickPendingIntent(
             R.id.widget_deal_title,
@@ -232,7 +232,7 @@ fun DealWidgetContent(state: DealWidgetState, modifier: Modifier = Modifier) {
         }
         Text(state.dealTitle, style = MaterialTheme.typography.bodyMedium, maxLines = 2)
         state.dealPriceLkr?.let {
-            Text(formatLkr(it), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            Text(lk.motormila.app.ui.common.mn(it), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
         }
     }
 }

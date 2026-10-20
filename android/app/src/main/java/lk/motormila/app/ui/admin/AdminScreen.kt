@@ -43,7 +43,6 @@ import lk.motormila.app.ui.components.MotormilaChoiceChip
 import lk.motormila.app.ui.components.MotormilaEyebrow
 import lk.motormila.app.ui.components.MotormilaGhostButton
 import lk.motormila.app.ui.components.MotormilaMetricTile
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.theme.MotormilaGoodText
@@ -75,7 +74,7 @@ fun AdminScreen(
         viewModel.onEvent(AdminUiEvent.DismissNotice)
     }
 
-    MotormilaPage(title = "Admin", onBack = onBack, snackbarHostState = snacks) {
+    lk.motormila.app.ui.common.MmScreen(title = "Admin", onBack = onBack, snackbarHostState = snacks) {
         when {
             !state.isAdmin && !state.isLoading -> {
                 Column(
@@ -509,8 +508,8 @@ private fun AnalyticsPane(state: AdminUiState) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         MotormilaMetricTile(
                             label = "AVG ASK",
-                            value = LkrFormat.price(analytics.listings.avgPriceLkr),
-                            note = "${LkrFormat.price(analytics.listings.minPriceLkr)} – ${LkrFormat.price(analytics.listings.maxPriceLkr)}",
+                            value = lk.motormila.app.ui.common.mn(analytics.listings.avgPriceLkr),
+                            note = "${lk.motormila.app.ui.common.mn(analytics.listings.minPriceLkr)} – ${lk.motormila.app.ui.common.mn(analytics.listings.maxPriceLkr)}",
                             modifier = Modifier.weight(1f),
                         )
                         MotormilaMetricTile(
@@ -726,7 +725,7 @@ private fun PermitsPane(state: AdminUiState, viewModel: AdminViewModel) {
                 Text(permit.permitName, fontWeight = FontWeight.SemiBold, color = MotormilaOnSurface)
                 Text(permit.permitType, fontSize = 12.sp, color = MotormilaSecondaryText)
                 Text(
-                    LkrFormat.compact(permit.marketPriceLkr),
+                    lk.motormila.app.ui.common.mn(permit.marketPriceLkr),
                     fontFamily = FontFamily.Monospace,
                     color = MotormilaPrimaryBright,
                 )

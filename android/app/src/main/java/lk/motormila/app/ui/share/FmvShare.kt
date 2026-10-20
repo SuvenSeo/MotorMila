@@ -80,7 +80,7 @@ object FmvShare {
         "https://motormila.pages.dev/listing/$listingId"
 
     fun listingShareText(listing: Listing): String =
-        "${listing.displayName} — ${listing.formattedPrice()} (Motormila: ${listingShareUrl(listing.id)})"
+        "${listing.displayName} — ${lk.motormila.app.ui.common.mn(listing.priceLkr)} (Motormila: ${listingShareUrl(listing.id)})"
 
     private fun startImageShare(
         context: Context,
@@ -176,7 +176,7 @@ object FmvShare {
             y += 28f
         }
 
-        canvas.drawText(listing.formattedPrice(), pad, y, textPaint(brandBlue, 72f, bold = true))
+        canvas.drawText(lk.motormila.app.ui.common.mn(listing.priceLkr), pad, y, textPaint(brandBlue, 72f, bold = true))
         y += 68f
 
         val fmvLine = fmvPriceCaption(context, fmv)
@@ -204,7 +204,7 @@ object FmvShare {
     private fun fmvPriceCaption(context: Context, fmv: Fmv?): String? {
         if (fmv == null || !fmv.hasSignal) return null
         val value = fmv.fmvLkr ?: return null
-        return context.getString(R.string.share_card_fmv, LkrFormat.price(value))
+        return context.getString(R.string.share_card_fmv, lk.motormila.app.ui.common.mn(value))
     }
 
     private fun fmvBandCaption(context: Context, fmv: Fmv?): String? {

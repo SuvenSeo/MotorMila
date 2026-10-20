@@ -59,7 +59,6 @@ import lk.motormila.app.domain.model.HubTopModel
 import lk.motormila.app.domain.model.Listing
 import lk.motormila.app.ui.components.BrandLogo
 import lk.motormila.app.ui.components.BrandLogoSize
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.components.EmptyState
@@ -103,7 +102,7 @@ fun DistrictHubScreen(
         }
     }
 
-    MotormilaPage(
+    lk.motormila.app.ui.common.MmScreen(
         title = state.displayName.ifBlank { stringResource(R.string.district_hub_title) },
         onBack = {
             if (!reducedMotion) haptics.tick()
@@ -292,8 +291,8 @@ private fun DistrictHero(displayName: String) {
 private fun DistrictStatsGrid(insight: DistrictInsight?) {
     val na = stringResource(R.string.district_hub_na)
     val countText = insight?.listingCount?.let { LkrFormat.count(it) } ?: na
-    val avgText = insight?.avgPriceLkr?.takeIf { it > 0 }?.let { LkrFormat.price(it) } ?: na
-    val medianText = insight?.medianPriceLkr?.takeIf { it > 0 }?.let { LkrFormat.price(it) } ?: na
+    val avgText = insight?.avgPriceLkr?.takeIf { it > 0 }?.let { lk.motormila.app.ui.common.mn(it) } ?: na
+    val medianText = insight?.medianPriceLkr?.takeIf { it > 0 }?.let { lk.motormila.app.ui.common.mn(it) } ?: na
     val countCd = stringResource(R.string.district_hub_cd_stat_count, countText)
     val avgCd = stringResource(R.string.district_hub_cd_stat_avg, avgText)
     val medianCd = stringResource(R.string.district_hub_cd_stat_median, medianText)
@@ -323,7 +322,7 @@ private fun DistrictStatsGrid(insight: DistrictInsight?) {
                 text = stringResource(R.string.district_hub_change_30d, changeText),
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontWeight = FontWeight.Bold,
-                    color = if (change < 0) MotormilaGood else MotormilaPrimaryBright,
+                    color = lk.motormila.app.ui.common.trendColor(lk.motormila.app.ui.common.trendOf(change)),
                 ),
             )
         }
@@ -395,7 +394,7 @@ private fun NearbyDistrictChip(
     item: NearbyDistrict,
     onClick: () -> Unit,
 ) {
-    val price = item.avgPriceLkr?.takeIf { it > 0 }?.let { LkrFormat.price(it) }
+    val price = item.avgPriceLkr?.takeIf { it > 0 }?.let { lk.motormila.app.ui.common.mn(it) }
         ?: stringResource(R.string.district_hub_na)
     val chipCd = stringResource(R.string.district_hub_cd_nearby, item.district)
     MotormilaSurface(
@@ -465,7 +464,7 @@ private fun TopModelCard(
     entry: HubTopModel,
     onClick: () -> Unit,
 ) {
-    val price = entry.avgPriceLkr.takeIf { it > 0 }?.let { LkrFormat.price(it) }
+    val price = entry.avgPriceLkr.takeIf { it > 0 }?.let { lk.motormila.app.ui.common.mn(it) }
         ?: stringResource(R.string.district_hub_price_na)
     val modelCd = stringResource(
         R.string.district_hub_cd_model,

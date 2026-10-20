@@ -9,13 +9,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import lk.motormila.app.BuildConfig
 import lk.motormila.app.billing.PlayBillingDataSource
 import lk.motormila.app.core.network.ErrorMapper
 import lk.motormila.app.domain.usecase.ObserveSessionUseCase
 
 data class PricingUiState(
     val loggedIn: Boolean = false,
-    val busyPlan: String? = null,
+    val isPro: Boolean = false,
+    val busyDealer: Boolean = false,
     val message: String? = null,
 )
 
@@ -31,26 +33,39 @@ class PricingViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             observeSession().collect { session ->
-                _state.update { it.copy(loggedIn = session != null && !session.token.isNullOrBlank()) }
+                _state.update {
+                    it.copy(
+                        loggedIn = session != null && session.token.isNotBlank(),
+                        isPro = session?.isPro == true,
+                    )
+                }
             }
         }
     }
 
-    fun checkout(plan: String, onOpenUrl: (String) -> Unit, fallback: () -> Unit) {
+    /**
+     * Dealer checkout — direct (sideload) flavor only; the Play flavor never
+     * reaches here (no external payment for digital goods on Play).
+     */
+    fun dealerCheckout(onOpenUrl: (String) -> Unit, fallback: () -> Unit) {
+        if (!BuildConfig.EXTERNAL_CHECKOUT_ENABLED) {
+            fallback()
+            return
+        }
         viewModelScope.launch {
-            _state.update { it.copy(busyPlan = plan, message = null) }
-            runCatching { billing.checkoutIntent(plan) }
+            _state.update { it.copy(busyDealer = true, message = null) }
+            runCatching { billing.checkoutIntent("dealer") }
                 .onSuccess { info ->
-                    _state.update { it.copy(busyPlan = null, message = info.message.takeIf { msg -> msg.isNotBlank() }) }
+                    _state.update { it.copy(busyDealer = false, message = info.message.takeIf { m -> m.isNotBlank() }) }
                     val url = info.checkoutUrl
                     if (info.hasUrl && url != null) onOpenUrl(url) else fallback()
                 }
-                .onFailure { error ->
-                    _state.update {
-                        it.copy(busyPlan = null, message = ErrorMapper.map(error).message)
-                    }
+                .onFailure { e ->
+                    _state.update { it.copy(busyDealer = false, message = ErrorMapper.map(e).message) }
                     fallback()
                 }
         }
     }
+
+    fun consumeMessage() = _state.update { it.copy(message = null) }
 }

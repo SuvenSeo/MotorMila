@@ -35,7 +35,6 @@ import lk.motormila.app.ui.components.LoadingSkeletonList
 import lk.motormila.app.ui.components.cascadeEntrance
 import lk.motormila.app.domain.model.AppNotification
 import lk.motormila.app.ui.components.MotormilaGhostButton
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.components.OfflineBanner
 import lk.motormila.app.ui.theme.rememberHaptics
@@ -59,7 +58,7 @@ fun NotificationsScreen(
         }
     }
 
-    MotormilaPage(
+    lk.motormila.app.ui.common.MmScreen(
         title = if (state.unreadCount > 0) "Inbox (${state.unreadCount})" else "Inbox",
         snackbarHostState = snacks,
         actions = {

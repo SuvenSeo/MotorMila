@@ -58,7 +58,6 @@ import lk.motormila.app.ui.components.BrandLogo
 import lk.motormila.app.ui.components.BrandLogoSize
 import lk.motormila.app.ui.components.MotormilaEyebrow
 import lk.motormila.app.ui.components.MotormilaGhostButton
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaPillTabs
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface
@@ -120,7 +119,7 @@ fun LoginScreen(
         }
     }
 
-    MotormilaPage(title = "Sign in", snackbarHostState = snacks) {
+    lk.motormila.app.ui.common.MmScreen(title = "Sign in", snackbarHostState = snacks) {
         Column(
             Modifier
                 .fillMaxSize()
@@ -247,34 +246,7 @@ fun LoginScreen(
             // No credentials are ever baked into the release build: earlier
             // revisions shipped a one-tap demo sign-in with a hardcoded review
             // account, which is a live account leak on a store/release APK.
-            if (biometricEnabled) {
-                Spacer(Modifier.height(12.dp))
-                MotormilaSurface(
-                    onClick = {
-                        onBiometricAuth(
-                            { viewModel.onEvent(AuthUiEvent.BiometricSuccess) },
-                            { msg -> scope.launch { snacks.showSnackbar(msg) } },
-                        )
-                    },
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Filled.Fingerprint,
-                            contentDescription = null,
-                            tint = MotormilaPrimaryBright,
-                            modifier = Modifier.size(22.dp),
-                        )
-                        Spacer(Modifier.width(10.dp))
-                        Text(
-                            "Unlock with biometrics",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MotormilaOnSurface,
-                            modifier = Modifier.semantics { contentDescription = "Unlock with biometrics" },
-                        )
-                    }
-                }
-            }
+            // Biometric unlock removed: it gated nothing (the session persists anyway).
             Spacer(Modifier.height(16.dp))
             Text(
                 stringResource(R.string.login_invite_hint),

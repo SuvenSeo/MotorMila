@@ -121,9 +121,9 @@ class InsightsRepositoryImpl @Inject constructor(
         EvStats(
             count = ev.listingCount,
             sharePct = electricShare,
-            medianLkr = ev.avgPriceLkr,
+            avgPriceLkr = ev.avgPriceLkr?.takeIf { it > 0 },
+            // No hybrid benchmark or savings figure from the backend yet: show nothing rather than a made-up number.
             aquaMedianLkr = null,
-            savingsPerYearLkr = (300.0 / 12 - 6) * 50 * 365,
             topModels = ev.topModels.map { "${it.make} ${it.model}".trim() },
         )
     }

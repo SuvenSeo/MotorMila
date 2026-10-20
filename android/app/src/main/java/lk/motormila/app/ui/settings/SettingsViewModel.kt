@@ -29,6 +29,7 @@ data class SettingsUiState(
     val sendingFeedback: Boolean = false,
     val feedbackSent: Boolean = false,
     val clearingCache: Boolean = false,
+    val cacheCleared: Boolean = false,
     val loggingOut: Boolean = false,
     val loggedOut: Boolean = false,
     val offline: Boolean = false,
@@ -53,6 +54,7 @@ sealed interface SettingsUiEvent {
     data object ConfirmDeleteAccount : SettingsUiEvent
     data object SendFeedback : SettingsUiEvent
     data object ClearCache : SettingsUiEvent
+    data object ConsumeCacheCleared : SettingsUiEvent
     data object Logout : SettingsUiEvent
     data object ConsumeLoggedOut : SettingsUiEvent
     data object DismissError : SettingsUiEvent
@@ -122,6 +124,7 @@ class SettingsViewModel @Inject constructor(
                 _state.update { it.copy(feedbackDraft = event.text, feedbackSent = false) }
             SettingsUiEvent.SendFeedback -> sendFeedback()
             SettingsUiEvent.ClearCache -> clearCache()
+            SettingsUiEvent.ConsumeCacheCleared -> _state.update { it.copy(cacheCleared = false) }
             SettingsUiEvent.Logout -> logout()
             SettingsUiEvent.OpenDeleteAccount ->
                 _state.update { it.copy(deleteDialogOpen = true, deletePassword = "") }
@@ -170,12 +173,16 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    /** Clears Coil's memory + disk image caches (real eviction, not a placebo). */
     private fun clearCache() {
-        // SettingsStore has no cache-clear API; image/stats caches are Room/Coil-owned.
-        // Acknowledge the tap so the UI settles (wired to Coil/Room eviction in v2).
         viewModelScope.launch {
             _state.update { it.copy(clearingCache = true) }
-            _state.update { it.copy(clearingCache = false) }
+            runCatching {
+                val loader = coil3.SingletonImageLoader.get(context)
+                loader.memoryCache?.clear()
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { loader.diskCache?.clear() }
+            }
+            _state.update { it.copy(clearingCache = false, cacheCleared = true) }
         }
     }
 

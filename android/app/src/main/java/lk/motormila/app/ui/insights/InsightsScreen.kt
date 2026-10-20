@@ -130,7 +130,7 @@ fun InsightsScreen(
         }
     }
 
-    MotormilaPage(title = "Insights", snackbarHostState = snacks) {
+    lk.motormila.app.ui.common.MmScreen(title = stringResource(R.string.scr_ins_title), showBack = false, snackbarHostState = snacks) {
         Column(Modifier.fillMaxSize()) {
             MotormilaChipTabs(
                 tabs = tabs,
@@ -309,7 +309,7 @@ private fun TrendsTab(
             }
         }
 
-        // Median Price Movement Chart with ±10% Confidence Band
+        // Median price movement chart (real tracked points only; no synthetic band)
         item {
             MotormilaSurface(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(
@@ -318,26 +318,13 @@ private fun TrendsTab(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "MEDIAN PRICE MOVEMENT (±10% BAND)",
+                        text = stringResource(R.string.scr_ins_median_movement),
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.8.sp,
                             color = MotormilaSecondaryText,
                         ),
                     )
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Box(Modifier.size(8.dp).clip(CircleShape).background(MotormilaPrimaryBright))
-                            Text(stringResource(R.string.ui_dealer_median), style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, color = MotormilaSecondaryText))
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Box(Modifier.size(8.dp).clip(MotormilaRadius.pill).background(MotormilaPrimary.copy(alpha = 0.25f)))
-                            Text(stringResource(R.string.ui_insights_10_band), style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, color = MotormilaSecondaryText))
-                        }
-                    }
                 }
 
                 // Key metric callout
@@ -351,7 +338,7 @@ private fun TrendsTab(
                     ) {
                         Column {
                             Text(
-                                text = formatLkr(med),
+                                text = lk.motormila.app.ui.components.MmPriceFormat.compact(med),
                                 style = MaterialTheme.typography.titleLarge.copy(
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = FontFamily.Monospace,
@@ -372,13 +359,23 @@ private fun TrendsTab(
 
                 Spacer(Modifier.height(4.dp))
 
-                BandChart(
-                    points = state.trends,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(220.dp)
-                        .semantics { contentDescription = "Price trend chart, ${state.trends.size} points" },
-                )
+                val trendValues = state.trends.mapNotNull { p -> (p.medianPriceLkr ?: p.avgPriceLkr)?.takeIf { it > 0 } }
+                val trendLabels = state.trends.filter { p -> ((p.medianPriceLkr ?: p.avgPriceLkr) ?: 0.0) > 0 }
+                    .map { p -> lk.motormila.app.ui.common.monthLabel(p.year, p.month) }
+                if (trendValues.size >= 2) {
+                    lk.motormila.app.ui.common.TrendLineChart(
+                        values = trendValues,
+                        xLabels = trendLabels,
+                        yLabel = { lk.motormila.app.ui.components.MmPriceFormat.compactAmount(it).removeSuffix(" Mn") + " Mn" },
+                        contentDescription = stringResource(R.string.scr_ins_chart_cd, trendValues.size),
+                        height = 200.dp,
+                    )
+                } else {
+                    Text(
+                        stringResource(R.string.scr_ins_chart_sparse),
+                        style = MaterialTheme.typography.bodySmall.copy(color = MotormilaSecondaryText),
+                    )
+                }
 
                 state.trendCoverageNote?.let {
                     Surface(
@@ -441,52 +438,6 @@ private fun InsightTextField(
     )
 }
 
-/** Median line + shaded ±10% band with bounding guides. */
-@Composable
-private fun BandChart(points: List<TrendPoint>, modifier: Modifier = Modifier) {
-    val medianColor = MotormilaPrimary
-    val bandColor = MotormilaPrimary.copy(alpha = 0.16f)
-    val boundaryColor = MotormilaPrimary.copy(alpha = 0.35f)
-
-    Canvas(modifier) {
-        if (points.size < 2) return@Canvas
-        fun med(p: TrendPoint): Float = ((p.medianPriceLkr ?: p.avgPriceLkr ?: 0.0)).toFloat()
-        val meds = points.map { med(it) }
-        val p75 = meds.map { it * 1.10f }
-        val p25 = meds.map { it * 0.90f }
-        val all = meds + p75 + p25
-        val min = (all.minOrNull() ?: 0f)
-        val max = (all.maxOrNull() ?: 1f)
-        val span = (max - min).takeIf { it > 0 } ?: 1f
-        fun x(i: Int) = size.width * i / (points.size - 1)
-        fun y(v: Float) = size.height - ((v - min) / span) * size.height
-
-        // Band polygon
-        val bandPath = Path().apply {
-            p75.forEachIndexed { i, v -> if (i == 0) moveTo(x(i), y(v)) else lineTo(x(i), y(v)) }
-            p25.indices.reversed().forEach { r -> lineTo(x(r), y(p25[r])) }
-            close()
-        }
-        drawPath(bandPath, bandColor)
-
-        // Upper and lower boundary lines
-        for (i in 1 until points.size) {
-            drawLine(boundaryColor, Offset(x(i - 1), y(p75[i - 1])), Offset(x(i), y(p75[i])), strokeWidth = 1.5f)
-            drawLine(boundaryColor, Offset(x(i - 1), y(p25[i - 1])), Offset(x(i), y(p25[i])), strokeWidth = 1.5f)
-        }
-
-        // Median line
-        for (i in 1 until points.size) {
-            drawLine(medianColor, Offset(x(i - 1), y(meds[i - 1])), Offset(x(i), y(meds[i])), strokeWidth = 4.5f)
-        }
-
-        // Node points on median
-        meds.forEachIndexed { i, v ->
-            drawCircle(color = MotormilaPrimaryBright, radius = 4f, center = Offset(x(i), y(v)))
-        }
-    }
-}
-
 // ---------- Shared market-data sections (summary / velocity / fuel / drops / live) ----------
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -497,7 +448,7 @@ private fun SummaryKpiFlow(summary: lk.motormila.app.domain.model.StatsSummary) 
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         MotormilaMetricTile(label = "Live", value = summary.totalListings.toString())
-        MotormilaMetricTile(label = "Avg price", value = formatLkrCompact(summary.avgPriceLkr))
+        MotormilaMetricTile(label = "Avg price", value = lk.motormila.app.ui.common.mn(summary.avgPriceLkr))
         MotormilaMetricTile(label = "Good deals", value = summary.goodDealsCount.toString())
         MotormilaMetricTile(label = "New / 7d", value = summary.listingsThisWeek.toString())
         summary.priceChangeMom?.let {
@@ -584,7 +535,7 @@ private fun PriceDropCard(drop: PriceDrop) {
             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
         )
         Text(
-            "${formatLkr(drop.previousPriceLkr)} → ${formatLkr(drop.newPriceLkr)} · −${formatPct(drop.dropPct, 0).trimStart('+')}",
+            "${lk.motormila.app.ui.common.mn(drop.previousPriceLkr)} → ${lk.motormila.app.ui.common.mn(drop.newPriceLkr)} · −${formatPct(drop.dropPct, 0).trimStart('+')}",
             style = MaterialTheme.typography.bodyMedium.copy(
                 fontFamily = FontFamily.Monospace,
                 color = MotormilaGood,
@@ -619,7 +570,7 @@ private fun LiveTicker(live: List<Listing>) {
             live.take(8).forEach { listing ->
                 MotormilaMetricTile(
                     label = listing.displayName,
-                    value = formatLkrCompact(listing.priceLkr),
+                    value = lk.motormila.app.ui.common.mn(listing.priceLkr),
                 )
             }
         }
@@ -749,60 +700,30 @@ private fun EvTab(
                     }
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                // Only real backend data: mean asking price of live EV listings. The
+                // hybrid benchmark shows only when served; no estimated savings/payback here.
+                MotormilaSurface(
+                    contentPadding = PaddingValues(14.dp),
                 ) {
-                    MotormilaSurface(
-                        modifier = Modifier.weight(1f),
-                        fillMaxWidth = false,
-                        contentPadding = PaddingValues(14.dp),
-                    ) {
+                    Text(
+                        text = "AVERAGE EV PRICE",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.sp,
+                            color = MotormilaSecondaryText,
+                        ),
+                    )
+                    Text(
+                        text = ev?.avgPriceLkr?.let { lk.motormila.app.ui.common.mn(it) } ?: "—",
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace,
+                            color = MotormilaOnSurface,
+                        ),
+                    )
+                    ev?.aquaMedianLkr?.takeIf { it > 0 }?.let { aqua ->
                         Text(
-                            text = "MEDIAN EV PRICE",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 10.sp,
-                                color = MotormilaSecondaryText,
-                            ),
-                        )
-                        Text(
-                            text = ev?.medianLkr?.takeIf { it > 0 }?.let { formatLkrCompact(it) } ?: "—",
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = FontFamily.Monospace,
-                                color = MotormilaOnSurface,
-                            ),
-                        )
-                        Text(
-                            text = "Hybrid benchmark: ${ev?.aquaMedianLkr?.takeIf { it > 0 }?.let { formatLkrCompact(it) } ?: "—"}",
-                            style = MaterialTheme.typography.labelSmall.copy(color = MotormilaSecondaryText, fontSize = 10.sp),
-                        )
-                    }
-
-                    MotormilaSurface(
-                        modifier = Modifier.weight(1f),
-                        fillMaxWidth = false,
-                        contentPadding = PaddingValues(14.dp),
-                    ) {
-                        Text(
-                            text = "ANNUAL FUEL SAVINGS",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 10.sp,
-                                color = MotormilaSecondaryText,
-                            ),
-                        )
-                        Text(
-                            text = ev?.savingsPerYearLkr?.takeIf { it > 0 }?.let { "${formatLkrCompact(it)}/yr" } ?: "—",
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = FontFamily.Monospace,
-                                color = MotormilaGood,
-                            ),
-                        )
-                        Text(
-                            text = "Payback recovery ~2.5 yrs",
+                            text = "Hybrid benchmark (median): ${lk.motormila.app.ui.common.mn(aqua)}",
                             style = MaterialTheme.typography.labelSmall.copy(color = MotormilaSecondaryText, fontSize = 10.sp),
                         )
                     }
@@ -1069,7 +990,7 @@ private fun DistrictRow(d: DistrictStat, onDrill: () -> Unit) {
     MotormilaSurface(
         onClick = onDrill,
         modifier = Modifier.semantics {
-            contentDescription = "${d.district}, median ${formatLkr(d.medianPriceLkr)}, ${d.count} listings"
+            contentDescription = "${d.district}, median ${lk.motormila.app.ui.common.mn(d.medianPriceLkr)}, ${d.count} listings"
         },
     ) {
         Row(
@@ -1079,7 +1000,7 @@ private fun DistrictRow(d: DistrictStat, onDrill: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text(d.district, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
                 Text(
-                    "${formatLkrCompact(d.medianPriceLkr)} median · ${d.count} listings",
+                    "${lk.motormila.app.ui.common.mn(d.medianPriceLkr)} median · ${d.count} listings",
                     style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                     color = MotormilaSecondaryText,
                 )

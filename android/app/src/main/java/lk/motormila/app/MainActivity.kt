@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 import lk.motormila.app.billing.PlayBillingDataSource
 import lk.motormila.app.ui.navigation.MotormilaNavGraph
 import lk.motormila.app.ui.theme.MotormilaTheme
+import androidx.compose.foundation.isSystemInDarkTheme
 
 /**
  * Launcher activity. Forwards share intents and VIEW deep links into the nav graph.
@@ -60,14 +61,14 @@ class MainActivity : AppCompatActivity() {
             runCatching { billing.syncPlayEntitlement() }
         }
         setContent {
-            // Theme follows Settings ("system" | "light" | "dark"); dark-first
-            // default. Dynamic colour stays off (brand consistency).
+            // Settings → Appearance: dark-first default; "system" follows the device.
             val themePref by remember { settingsStore.observe().map { it.theme } }
-                .collectAsState(initial = "system")
-            // Dark-first: only an explicit "light" choice switches the app to
-            // the light scheme ("system" stays dark until every screen is on
-            // MmColors; flip to isSystemInDarkTheme() then).
-            val dark = themePref != "light"
+                .collectAsState(initial = "dark")
+            val dark = when (themePref) {
+                "light" -> false
+                "system" -> isSystemInDarkTheme()
+                else -> true
+            }
 
             LaunchedEffect(dark) {
                 // Translucent system bars: transparent scrim, icon colour

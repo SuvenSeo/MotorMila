@@ -40,7 +40,6 @@ import lk.motormila.app.domain.model.Listing
 import lk.motormila.app.ui.components.BrandLogo
 import lk.motormila.app.ui.components.BrandLogoSize
 import lk.motormila.app.ui.components.MotormilaGhostButton
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.EmptyState
 import lk.motormila.app.ui.components.ErrorState
 import lk.motormila.app.ui.components.ListingCard
@@ -74,7 +73,7 @@ fun MakeModelHubScreen(
         }
     }
 
-    MotormilaPage(
+    lk.motormila.app.ui.common.MmScreen(
         title = state.vehicleLabel.ifBlank { stringResource(R.string.make_model_hub_eyebrow) },
         onBack = {
             if (!reducedMotion) haptics.tick()
@@ -184,13 +183,13 @@ private fun MakeModelHubBody(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     MakeHubMetricCard(
                         label = stringResource(R.string.make_model_hub_min_price),
-                        value = insight?.minPriceLkr?.let { LkrFormat.price(it) } ?: na,
+                        value = insight?.minPriceLkr?.let { lk.motormila.app.ui.common.mn(it) } ?: na,
                         note = stringResource(R.string.make_model_hub_min_note),
                         modifier = Modifier.weight(1f),
                     )
                     MakeHubMetricCard(
                         label = stringResource(R.string.make_model_hub_max_price),
-                        value = insight?.maxPriceLkr?.let { LkrFormat.price(it) } ?: na,
+                        value = insight?.maxPriceLkr?.let { lk.motormila.app.ui.common.mn(it) } ?: na,
                         note = stringResource(R.string.make_model_hub_max_note),
                         modifier = Modifier.weight(1f),
                     )

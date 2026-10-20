@@ -56,7 +56,6 @@ import lk.motormila.app.ui.components.EmptyState
 import lk.motormila.app.ui.components.ErrorState
 import lk.motormila.app.ui.components.MotormilaChoiceChip
 import lk.motormila.app.ui.components.MotormilaEyebrow
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.components.ListingCard
@@ -107,7 +106,7 @@ fun BestPicksScreen(
         }
     }
 
-    MotormilaPage(
+    lk.motormila.app.ui.common.MmScreen(
         title = stringResource(R.string.hub_picks_title),
         onBack = {
             if (!reducedMotion) haptics.tick()
@@ -415,7 +414,7 @@ private fun CutRow(drop: PriceDrop, onClick: () -> Unit) {
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                LkrFormat.price(drop.previousPriceLkr),
+                lk.motormila.app.ui.common.mn(drop.previousPriceLkr),
                 style = MaterialTheme.typography.labelSmall.copy(
                     color = MotormilaSecondaryText,
                     textDecoration = TextDecoration.LineThrough,
@@ -423,7 +422,7 @@ private fun CutRow(drop: PriceDrop, onClick: () -> Unit) {
                 ),
             )
             Text(
-                LkrFormat.price(drop.newPriceLkr),
+                lk.motormila.app.ui.common.mn(drop.newPriceLkr),
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace,

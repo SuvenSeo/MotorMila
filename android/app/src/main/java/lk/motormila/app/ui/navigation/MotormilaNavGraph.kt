@@ -410,6 +410,7 @@ fun MotormilaNavGraph(
                     ) {
                         ValuationScreen(
                             onOpenListing = { id -> navController.navigate(ListingDetail(id)) },
+                            onSeeSimilar = { make, model -> navController.navigate(MakeModelHub(make, model)) },
                         )
                     }
                     motormilaComposable<Alerts>(
