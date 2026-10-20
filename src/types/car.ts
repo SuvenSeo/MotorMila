@@ -34,7 +34,7 @@ export type VehicleCategory =
  * first, then by recency — so priceless / photoless rows sink. Neutral:
  * nothing is paid placement.
  */
-export type SortOption = "best_match" | "newest" | "deal_score" | "price_asc" | "price_desc" | "mileage_asc";
+export type SortOption = "best_match" | "newest" | "oldest" | "deal_score" | "price_asc" | "price_desc" | "mileage_asc";
 export type PriceAvailability = "priced" | "unavailable";
 
 export interface CarListing {
@@ -551,6 +551,7 @@ export interface FilterState {
   price_availability?: PriceAvailability;
   /** Only listings first seen in the last 24h (the "New in 24h" hero chip). */
   fresh_24h?: boolean;
+  include_archive?: boolean;
   sort: SortOption;
   page: number;
 }

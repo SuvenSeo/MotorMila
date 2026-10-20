@@ -1239,6 +1239,7 @@ function matchesSnapshotFilters(listing: CarListing, filters: FilterState): bool
     const wantedModel = canonicalizeModel(filters.model);
     if (wantedModel && canonicalizeModel(listing.model) !== wantedModel) return false;
   }
+  if (!filters.include_archive && listing.is_active === false) return false;
   if (filters.district && String(listing.district || "").toLowerCase() !== String(filters.district).toLowerCase()) return false;
   if (filters.fresh_24h && listingTimestamp(listing) < Date.now() - 24 * 60 * 60 * 1000) return false;
   if (filters.year_min && Number(listing.year || 0) < filters.year_min) return false;
@@ -1307,6 +1308,10 @@ function sortSnapshotListings(listings: CarListing[], sort: FilterState["sort"])
     if (sort === "mileage_asc") {
       return (toNumberOrNull(a.mileage_km) ?? Infinity) - (toNumberOrNull(b.mileage_km) ?? Infinity)
         || listingTimestamp(b) - listingTimestamp(a);
+    }
+    if (sort === "oldest") {
+      return listingTimestamp(a) - listingTimestamp(b)
+        || Number(a.id || 0) - Number(b.id || 0);
     }
     return listingTimestamp(b) - listingTimestamp(a) || Number(b.id || 0) - Number(a.id || 0);
   });

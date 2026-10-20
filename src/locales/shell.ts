@@ -86,6 +86,7 @@ export const shellEn: Record<string, string> = {
   "shell.home.proBelow": "More with Pro",
   "shell.home.kicker": "Every vehicle ad in Sri Lanka, one search",
   "shell.home.body": "vehicle ads from {sources} Sri Lankan sites, with price history and a fair-price range for each.",
+  "shell.home.bodyDual": "{live} live vehicle ads · 360,000+ historical records tracked across {sources} Sri Lankan sites, with price history and a fair-price range for each.",
   "shell.home.bodyNoCount": "Vehicle ads from Sri Lanka's marketplaces in one search, with price history and a fair-price range for each.",
   "shell.home.marketOverviewLock": "Full market overview",
   "shell.home.moreData": "More market data",
@@ -179,6 +180,7 @@ export const shellSi: Record<string, string> = {
   "shell.home.cat.threeWheelers": "ත්‍රීවීල්",
   "shell.home.cat.vans": "වෑන්",
   "shell.home.cat.lorries": "ලොරි",
+  "shell.home.bodyDual": "{live} සජීවී වාහන දැන්වීම් · ශ්‍රී ලංකාවේ වෙබ් අඩවි {sources}කින් නිරීක්ෂණය කරන ලද 360,000+ ඓතිහාසික වාර්තා, මිල ඉතිහාසය සහ සාධාරණ මිල පරාසය සමඟ.",
 };
 
 export const shellTa: Record<string, string> = {
@@ -193,4 +195,5 @@ export const shellTa: Record<string, string> = {
   "shell.home.cat.threeWheelers": "முச்சக்கர வண்டிகள்",
   "shell.home.cat.vans": "வேன்கள்",
   "shell.home.cat.lorries": "லாரிகள்",
+  "shell.home.bodyDual": "{live} நேரடி வாகன விளம்பரங்கள் · {sources} இலங்கை தளங்களில் கண்காணிக்கப்பட்ட 360,000+ வரலாற்றுப் பதிவுகள், விலை வரலாறு மற்றும் நியாயமான விலை வரம்புடன்.",
 };

@@ -18,6 +18,7 @@ export const DEFAULT_SORT: SortOption = "best_match";
 export const SORT_VALUES: readonly SortOption[] = [
   "best_match",
   "newest",
+  "oldest",
   "deal_score",
   "price_asc",
   "price_desc",
@@ -57,6 +58,7 @@ export const FILTER_PARAM_KEYS = [
   "vehicle_category",
   "price_availability",
   "fresh_24h",
+  "include_archive",
   "sort",
   "page",
 ] as const;
@@ -111,6 +113,7 @@ export function parseFiltersFromParams(params: URLSearchParams): FilterState {
     vehicle_category: vehicleCategory && VEHICLE_CATEGORIES.has(vehicleCategory) ? vehicleCategory : "cars",
     price_availability: params.get("price_availability") === "unavailable" ? "unavailable" : undefined,
     fresh_24h: params.get("fresh_24h") === "1" ? true : undefined,
+    include_archive: params.get("include_archive") === "1" || params.get("include_archive") === "true" ? true : undefined,
     sort: isSortValue(sort) ? sort : DEFAULT_SORT,
     page: Math.max(1, Math.floor(parseOptionalNumber(params.get("page")) || 1)),
   };
@@ -144,6 +147,7 @@ export function serializeFiltersToParams(filters: FilterState, base?: URLSearchP
   if (filters.vehicle_category && filters.vehicle_category !== "cars") set("vehicle_category", filters.vehicle_category);
   if (filters.price_availability === "unavailable") set("price_availability", "unavailable");
   if (filters.fresh_24h) set("fresh_24h", "1");
+  if (filters.include_archive) set("include_archive", "1");
   if (filters.sort && filters.sort !== DEFAULT_SORT) set("sort", filters.sort);
   if (filters.page > 1) set("page", filters.page);
   return params;

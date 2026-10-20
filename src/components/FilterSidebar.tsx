@@ -11,6 +11,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { duration, ease, press, spring, useReducedMotionOrLowData } from "@/lib/motion";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { formatLkrRange } from "@/lib/price";
+import { cn } from "@/lib/utils";
 import { resolveSearchAlias } from "@/lib/searchAliases";
 import { EMPTY_FILTERS } from "@/lib/searchUrlState";
 import { PriceRangeFilter } from "@/components/search/PriceRangeFilter";
@@ -329,6 +330,13 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
     if (priceAvailability === "unavailable") {
       chips.push({ key: "inv", label: t("filter.noPrice", "No price"), onRemove: () => setInventoryMode("priced") });
     }
+    if (filters.include_archive) {
+      chips.push({
+        key: "archive",
+        label: t("filter.archiveChip", "360K+ Archive"),
+        onRemove: () => update({ include_archive: false }),
+      });
+    }
     if (filters.year_min || filters.year_max) {
       chips.push({
         key: "year",
@@ -426,6 +434,37 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
             {t("filter.noPrice", "No price")}
           </button>
         </div>
+
+        <button
+          type="button"
+          onClick={() => update({ include_archive: !filters.include_archive })}
+          className={cn(
+            "flex w-full items-center justify-between rounded-full border px-3 py-1.5 text-caption font-medium transition-all",
+            filters.include_archive
+              ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold shadow-xs"
+              : "border-border/60 bg-surface/80 text-muted-foreground hover:text-foreground hover:border-border",
+          )}
+        >
+          <span className="flex items-center gap-1.5">
+            <span
+              className={cn(
+                "h-2 w-2 rounded-full",
+                filters.include_archive ? "bg-amber-500" : "bg-muted-foreground/40",
+              )}
+            />
+            {t("filter.includeArchive", "Include 360K+ price archive")}
+          </span>
+          <span
+            className={cn(
+              "rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+              filters.include_archive
+                ? "bg-amber-500/20 text-amber-700 dark:text-amber-300"
+                : "bg-muted/50 text-muted-foreground",
+            )}
+          >
+            {filters.include_archive ? t("common.on", "On") : t("common.off", "Off")}
+          </span>
+        </button>
       </div>
 
       <FilterGroup label={t("filter.vehicle", "Vehicle")}>

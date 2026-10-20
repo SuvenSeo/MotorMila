@@ -303,8 +303,13 @@ export const ListingCard = memo(function ListingCard({
 
           {deal.kind !== "none" && <DealBadge badge={deal} tone="soft" className="self-start" />}
 
-          {(showDropBadge || daysOnMarketLabel || showSites) && (
+          {(listing.is_active === false || showDropBadge || daysOnMarketLabel || showSites) && (
             <div className="flex flex-wrap gap-1.5">
+              {listing.is_active === false && (
+                <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                  {t("listingCard.archived", "Archived / Past ad")}
+                </span>
+              )}
               {showDropBadge && (
                 <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] font-semibold text-foreground">
                   <TrendingDown className="h-3 w-3 text-sky-600 dark:text-sky-400" aria-hidden />

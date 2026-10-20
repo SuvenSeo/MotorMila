@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Header, Query, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session, load_only
-from sqlalchemy import String, case, cast, func, desc, and_, or_
+from sqlalchemy import String, case, cast, func, desc, asc, and_, or_
 from typing import Optional, List, Dict, Any, Annotated
 from statistics import median
 from datetime import datetime, timedelta, timezone
@@ -17,7 +17,7 @@ from urllib.parse import urljoin, urlparse
 import httpx
 from bs4 import BeautifulSoup
 from db.session import get_db
-from db.models import CarListing, ScrapeRun, VehiclePriceHistory, live_listing_filter
+from db.models import CarListing, ScrapeRun, VehiclePriceHistory, live_listing_filter, LIVE_LISTING_STATUSES
 from app.services.nhtsa_specs import fetch_models_for_make as _nhtsa_fetch_models
 from app.services.safety_research import combined_research
 from app.services.geo_service import enrich_listing
@@ -855,7 +855,8 @@ def search_listings(
         max_length=40,
     ),
     price_availability: str = Query("priced", pattern="^(priced|unavailable)$"),
-    sort: str = Query("newest", pattern="^(best_match|newest|deal_score|price_asc|price_desc|mileage_asc)$"),
+    sort: str = Query("newest", pattern="^(best_match|newest|oldest|deal_score|price_asc|price_desc|mileage_asc)$"),
+    include_archive: bool = Query(False, description="Include delisted/sold historical listings"),
     page: int = Query(1, ge=1),
     size: int = Query(10, ge=1, le=100),
     authorization: Optional[str] = Header(default=None),
@@ -864,7 +865,7 @@ def search_listings(
     keyword_text = _optional_text_param(keyword)
     if price_availability not in {"priced", "unavailable"}:
         price_availability = "priced"
-    if sort not in {"best_match", "newest", "deal_score", "price_asc", "price_desc", "mileage_asc"}:
+    if sort not in {"best_match", "newest", "oldest", "deal_score", "price_asc", "price_desc", "mileage_asc"}:
         sort = "newest"
     if not isinstance(page, int) or page < 1:
         page = 1
@@ -912,7 +913,13 @@ def search_listings(
                 CarListing.is_outlier,
             )
         )
-        .filter(live_listing_filter())
+        .filter(
+            and_(
+                CarListing.is_outlier == False,  # noqa: E712
+                CarListing.is_duplicate == False,  # noqa: E712
+                CarListing.user_listing_status.in_(LIVE_LISTING_STATUSES),
+            ) if include_archive else live_listing_filter()
+        )
     )
 
     browse_category = None
@@ -1012,6 +1019,8 @@ def search_listings(
         q = q.order_by(desc(has_price), desc(has_photo), desc(CarListing.first_seen_at))
     elif sort == "newest":
         q = q.order_by(desc(CarListing.first_seen_at))
+    elif sort == "oldest":
+        q = q.order_by(asc(CarListing.first_seen_at))
     elif sort == "deal_score":
         q = q.filter(CarListing.deal_score.isnot(None)).order_by(desc(CarListing.deal_score))
     elif sort == "price_asc":

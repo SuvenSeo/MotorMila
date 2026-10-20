@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 const SORTS: Array<{ value: SortOption; key: string; fallback: string; needsPrice?: boolean; pro?: boolean }> = [
   { value: "best_match", key: "search.sortBestMatch", fallback: "Best match" },
   { value: "newest", key: "filter.sortNewest", fallback: "Newest" },
+  { value: "oldest", key: "filter.sortOldest", fallback: "Oldest" },
   { value: "price_asc", key: "search.sortPriceLow", fallback: "Price: low to high", needsPrice: true },
   { value: "price_desc", key: "search.sortPriceHigh", fallback: "Price: high to low", needsPrice: true },
   { value: "mileage_asc", key: "filter.sortLowMileage", fallback: "Low mileage" },

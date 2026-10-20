@@ -793,18 +793,14 @@ export default function Dashboard() {
             >
               {/* Never invent market size: when the feed has no numbers yet the
                   hero drops the count instead of printing a marketing figure. */}
-              {marketPulseListings > 0 ? (
-                <>
-                  <span className={`font-semibold num ${heroCopyTone}`}>
-                    {marketPulseListings.toLocaleString()}
-                  </span>{" "}
-                </>
-              ) : null}
-              {marketPulseSources > 0
+              {marketPulseListings > 0
                 ? t(
-                    "shell.home.body",
-                    "vehicle ads from {sources} Sri Lankan sites, with price history and a fair-price range for each.",
-                    { sources: marketPulseSources },
+                    "shell.home.bodyDual",
+                    "{live} live vehicle ads · 360,000+ historical records tracked across {sources} Sri Lankan sites, with price history and a fair-price range for each.",
+                    {
+                      live: marketPulseListings.toLocaleString(),
+                      sources: marketPulseSources || 12,
+                    },
                   )
                 : t(
                     "shell.home.bodyNoCount",
