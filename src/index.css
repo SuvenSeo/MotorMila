@@ -122,6 +122,15 @@
     --duration-base: 240ms;
     --duration-slow: 420ms;
     --duration-cinematic: 640ms;
+    /* Motion system tokens (src/lib/motion.ts mirrors these) */
+    --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+    --ease-emphasized: cubic-bezier(0.3, 0, 0, 1);
+    --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+    --dur-instant: 100ms;
+    --dur-fast: 180ms;
+    --dur-base: 280ms;
+    --dur-slow: 450ms;
+    --dur-page: 350ms;
 
     /* ── Spacing grid ─────────────────────────────────────────────────── */
     --space-1: 0.25rem;  --space-2: 0.5rem;   --space-3: 0.75rem;
