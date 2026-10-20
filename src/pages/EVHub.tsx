@@ -19,7 +19,7 @@ import { PageCanvas } from "@/components/PageCanvas";
 import { PageHero } from "@/components/PageHero";
 import { FreePlanBanner } from "@/components/FreePlanBanner";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
-import { revealItem } from "@/lib/motion";
+import { fadeUp, listStagger, revealItem } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { useAppPreferences } from "@/lib/appPreferences";
@@ -163,24 +163,39 @@ export default function EVHub() {
         {(pending || topModels.length > 0) && (
           <m.section variants={revealItem}>
             <SectionHeader title={t("ev.topModels", "Top EV models")} className="mb-8" />
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <m.div
+              key={pending ? "loading" : "loaded"}
+              inherit={false}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.05 }}
+              variants={listStagger}
+              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+            >
               {pending
                 ? Array.from({ length: 5 }).map((_, i) => (
+                    /* Shimmer shaped like the real card: icon + name, price, count. */
                     <div
                       key={i}
-                      className={cn("data-card p-6 animate-pulse", i === 0 && "xl:col-span-2")}
+                      aria-hidden
+                      className={cn("data-card p-6", i === 0 && "xl:col-span-2 xl:flex xl:flex-col xl:justify-between")}
                     >
-                      <div className="mb-3 h-3 w-2/3 rounded bg-muted" />
-                      <div className="h-5 w-1/2 rounded bg-muted" />
+                      <div className="mb-4 flex items-center gap-2">
+                        <div className={cn("skeleton-shimmer rounded-2xl", i === 0 ? "h-10 w-10" : "h-8 w-8")} />
+                        <div className="skeleton-shimmer h-3.5 w-2/3 rounded-full" />
+                      </div>
+                      <div className={cn("skeleton-shimmer rounded-full", i === 0 ? "h-8 w-1/2" : "h-5 w-1/2")} />
+                      <div className="skeleton-shimmer mt-2 h-2.5 w-1/3 rounded-full" />
                     </div>
                   ))
-                : topModels.map((m, i) => {
+                : topModels.map((model, i) => {
                     const featured = i === 0;
                     return (
-                      <div
-                        key={`${m.make}-${m.model}`}
+                      <m.div
+                        key={`${model.make}-${model.model}`}
+                        variants={fadeUp}
                         className={cn(
-                          "data-card group p-6 transition-all hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg",
+                          "data-card group p-6 transition-[border-color,box-shadow] hover:border-primary/30 hover:shadow-soft-lg",
                           featured && "xl:col-span-2 xl:flex xl:flex-col xl:justify-between",
                         )}
                       >
@@ -192,19 +207,19 @@ export default function EVHub() {
                             <Zap className={cn("text-primary", featured ? "h-5 w-5" : "h-3.5 w-3.5")} aria-hidden />
                           </div>
                           <p className={cn("font-bold leading-tight text-foreground", featured ? "text-[15px]" : "text-[13px]")}>
-                            {m.make} {m.model}
+                            {model.make} {model.model}
                           </p>
                         </div>
                         <p className={cn("num font-bold text-foreground", featured ? "text-3xl tracking-tight" : "text-lg")}>
-                          {m.median_price_lkr !== null ? formatPrice(m.median_price_lkr) : "—"}
+                          {model.median_price_lkr !== null ? formatPrice(model.median_price_lkr) : "—"}
                         </p>
                         <p className="mt-1.5 text-[11px] font-medium text-muted-foreground">
-                          {m.listing_count} listing{m.listing_count !== 1 ? "s" : ""} · median
+                          {model.listing_count} listing{model.listing_count !== 1 ? "s" : ""} · median
                         </p>
-                      </div>
+                      </m.div>
                     );
                   })}
-            </div>
+            </m.div>
             {!fullAccess && !pending && (hiddenModelCount > 0 || topModels.length > 0) ? (
               <UpgradePrompt
                 className="mt-6"
