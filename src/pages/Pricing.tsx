@@ -4,7 +4,7 @@ import { ArrowRight, BookOpen, ChevronDown, Check, CreditCard, HelpCircle, Loade
 import { useEffect, useRef, useState } from "react";
 import { ParticleButton, type ParticleButtonHandle } from "@/components/ui/ParticleButton";
 import { BRAND } from "@/lib/brand";
-import { ANNUAL_SAVE_NUDGE, DEALER_FAQ, DEALER_TIERS, PLAN_PRICES, PRICING_COMING_SOON, PRICING_FAQ, PRICING_TIERS, PRO_FREE_DURING_BETA, TRIAL_OFFER, formatLkr } from "@/lib/pricingContent";
+import { DEALER_FAQ, DEALER_TIERS, PLAN_PRICES, PRICING_COMING_SOON, PRICING_FAQ, PRICING_TIERS, PRO_FREE_DURING_BETA, TRIAL_OFFER, formatLkr } from "@/lib/pricingContent";
 import type { DealerTierCode } from "@/lib/pricingContent";
 import { createPayhereCheckout, getPayhereConfig, submitPayhereForm, type PayhereConfig } from "@/lib/moneyApi";
 import { PageBody } from "@/components/PageBody";

@@ -1146,7 +1146,7 @@ export default function Dashboard() {
                     onClick={retryListings}
                     className="min-h-11 rounded-2xl border border-border bg-card px-5 py-3 text-[13px] font-medium text-foreground transition-colors hover:border-primary/30 hover:text-primary-bright"
                   >
-                    {t("shell.picks.retry", "Try again")}
+                    {t("common.retry", "Retry")}
                   </button>
                 </div>
               ) : listings.length === 0 ? (
