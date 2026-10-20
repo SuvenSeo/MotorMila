@@ -870,7 +870,7 @@ export const si = {
   "pricing.ctaBanner": "රැඳී සිටින්නන්ගේ ලැයිස්තුවට එක්වන්න, Dealer විවෘත කරන්න, හෝ ලේඛන කියවන්න.",
   "pricing.dealerWorkspace": "වෙළෙන්දා වැඩබිම",
   "pricing.eyebrow": "සැලසුම්",
-  "pricing.faq": "FAQ",
+  "pricing.faq": "නිතර අසන ප්‍රශ්න",
   "pricing.faqTitle": "පොදු ප්‍රශ්න.",
   "pricing.featureSnapshot": "විශේෂාංග සාරාංශය.",
   "pricing.getStarted": "ආරම්භ කරන්න",

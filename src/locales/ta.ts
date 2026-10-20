@@ -870,7 +870,7 @@ export const ta = {
   "pricing.ctaBanner": "காத்திருப்பு பட்டியலில் சேரவும், டீலரை திறக்கவும் அல்லது ஆவணங்களை படிக்கவும்.",
   "pricing.dealerWorkspace": "டீலர் பணியிடம்",
   "pricing.eyebrow": "திட்டங்கள்",
-  "pricing.faq": "FAQ",
+  "pricing.faq": "அடிக்கடி கேட்கும் கேள்விகள்",
   "pricing.faqTitle": "பொதுவான கேள்விகள்.",
   "pricing.featureSnapshot": "அம்ச ஸ்னாப்ஷாட்.",
   "pricing.getStarted": "தொடங்குங்கள்",
