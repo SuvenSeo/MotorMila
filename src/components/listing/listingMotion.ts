@@ -60,13 +60,16 @@ export function visibleCardImage(root: Element | null): HTMLImageElement | null 
 }
 
 function waitForHero(timeoutMs: number): Promise<HTMLImageElement | null> {
+  // setTimeout, not requestAnimationFrame: Chromium suppresses rendering (and
+  // with it rAF) while a View Transition's update callback runs, so a rAF poll
+  // froze the old page for seconds before the transition could finish.
   const start = performance.now();
   return new Promise((resolve) => {
     const tick = () => {
       const hero = document.querySelector<HTMLImageElement>("img[data-listing-hero]");
       if (hero && hero.complete && hero.naturalWidth > 0) return resolve(hero);
       if (performance.now() - start > timeoutMs) return resolve(null);
-      requestAnimationFrame(tick);
+      window.setTimeout(tick, 16);
     };
     tick();
   });
