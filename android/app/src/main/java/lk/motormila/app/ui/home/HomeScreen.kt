@@ -83,7 +83,7 @@ import lk.motormila.app.ui.components.BrandLogoSize
 import lk.motormila.app.ui.components.AnnouncementBanner
 import lk.motormila.app.ui.components.HowItWorksBand
 import lk.motormila.app.ui.components.NumberTicker
-import lk.motormila.app.ui.components.SlidingNumber
+import lk.motormila.app.ui.components.SlidingLkr
 import lk.motormila.app.ui.components.EmptyState
 import lk.motormila.app.ui.components.ErrorState
 import lk.motormila.app.ui.components.LivePulse
@@ -1437,9 +1437,8 @@ private fun HotDealCard(
             Column(Modifier.padding(12.dp)) {
                 Text(title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1)
                 if (priceLkr > 0) {
-                    SlidingNumber(
-                        value = if (priceShown) priceLkr.toLong() else 0L,
-                        prefix = "Rs. ",
+                    SlidingLkr(
+                        valueLkr = if (priceShown) priceLkr.toDouble() else 0.0,
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             fontFamily = FontFamily.Monospace,

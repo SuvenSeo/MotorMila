@@ -85,7 +85,7 @@ import lk.motormila.app.ui.components.MotormilaMetricTile
 import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface
-import lk.motormila.app.ui.components.SlidingNumber
+import lk.motormila.app.ui.components.SlidingLkr
 import lk.motormila.app.ui.components.rememberReducedMotion
 import lk.motormila.app.ui.components.shimmer
 import lk.motormila.app.ui.theme.MotionTokens
@@ -946,9 +946,8 @@ private fun Step03ValuationGuidance(
                     }
 
                     // Large Monospace Price — counts up via NumberTicker on each reveal.
-                    SlidingNumber(
-                        value = shownMedianLkr,
-                        prefix = "Rs. ",
+                    SlidingLkr(
+                        valueLkr = shownMedianLkr.toDouble(),
                         style = MaterialTheme.typography.displayMedium.copy(
                             fontWeight = FontWeight.Bold,
                         ),

@@ -32,21 +32,8 @@ data class Listing(
     val externalUrl: String?,
     val engineCc: Double?,
 ) {
-    /**
-     * LKR display: "Rs. 12.45M" for >= 1M, else "Rs. 8,950,000".
-     * Duplicated in UI core/format/LkrFormat for list-level use; kept here so
-     * domain consumers (notifications, share text) need no UI import.
-     */
-    fun formattedPrice(): String {
-        val price = priceLkr ?: return "Price on request"
-        return if (price >= 1_000_000) {
-            val m = price / 1_000_000.0
-            val text = if (m >= 100) "%.1f".format(m) else "%.2f".format(m)
-            "Rs. ${text.trimEnd('0').trimEnd('.')}M"
-        } else {
-            "Rs. ${"%,.0f".format(price)}"
-        }
-    }
+    /** Compact LKR display ("Rs 12.45 Mn"), or "Price on request". */
+    fun formattedPrice(): String = lk.motormila.app.core.format.LkrFormat.price(priceLkr)
 
     /**
      * Deal band for badges/rings.

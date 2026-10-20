@@ -244,3 +244,23 @@ class AppUpdateChecker @Inject constructor(
         }
     }
 }
+
+/**
+ * Play flavor: open this app's Google Play listing (updates are Play's job).
+ * Falls back to the web listing when the Play Store app is missing.
+ */
+fun openPlayStoreListing(context: Context) {
+    val pkg = context.packageName.removeSuffix(".debug")
+    val market = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$pkg"))
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    try {
+        context.startActivity(market)
+    } catch (_: ActivityNotFoundException) {
+        runCatching {
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$pkg"))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }
+    }
+}

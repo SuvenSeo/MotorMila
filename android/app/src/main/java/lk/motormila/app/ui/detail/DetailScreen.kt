@@ -103,7 +103,7 @@ import lk.motormila.app.ui.components.EmptyState
 import lk.motormila.app.ui.components.ErrorState
 import lk.motormila.app.ui.components.FmvGauge
 import lk.motormila.app.ui.components.ListingImage
-import lk.motormila.app.ui.components.SlidingNumber
+import lk.motormila.app.ui.components.SlidingLkr
 import lk.motormila.app.ui.components.listingCardKey
 import lk.motormila.app.ui.components.listingPriceKey
 import lk.motormila.app.ui.components.rememberReducedMotion
@@ -585,7 +585,7 @@ private fun PriceSlot(
             if (activeDrop != null) {
                 PriceDropTicker(drop = activeDrop, priceStyle = priceStyle)
             } else {
-                Text(text = listing.formattedPrice(), style = priceStyle)
+                Text(text = LkrFormat.priceFull(listing.priceLkr), style = priceStyle)
             }
         }
     }
@@ -644,7 +644,7 @@ private fun PriceDropTicker(
             animationSpec = tween(durationMillis = 200),
             label = "price-drop-reduced",
         ) { price ->
-            Text(text = LkrFormat.price(price), style = priceStyle, modifier = modifier)
+            Text(text = LkrFormat.priceFull(price), style = priceStyle, modifier = modifier)
         }
         return
     }
@@ -686,10 +686,10 @@ private fun PriceDropTicker(
                 }
             }
             Spacer(Modifier.width(8.dp))
-            SlidingNumber(
-                value = (if (started) drop.newPriceLkr else drop.oldPriceLkr).toLong(),
+            SlidingLkr(
+                valueLkr = if (started) drop.newPriceLkr else drop.oldPriceLkr,
                 style = priceStyle,
-                prefix = "Rs. ",
+                full = true,
             )
         }
         if (flash.value > 0.005f) {

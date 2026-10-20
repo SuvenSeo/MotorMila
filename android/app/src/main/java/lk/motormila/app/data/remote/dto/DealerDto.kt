@@ -49,8 +49,17 @@ data class DealerClaimResponseDto(
     @SerialName("matched_listings") val matchedListings: Int? = null,
 )
 
+/**
+ * POST /dealer/verify body — mirrors backend `DealerVerifyRequest`
+ * (backend/app/api/v1/endpoints/dealer.py): claim_token + optional billing
+ * fields, gated by the ops-only `admin_token` (DEALER_ADMIN_TOKEN). There is
+ * no dealer-side verification code; dealers never call this.
+ */
 @Serializable
 data class DealerVerifyRequestDto(
     @SerialName("claim_token") val claimToken: String,
-    val code: String? = null,
+    val plan: String? = null,
+    @SerialName("subscription_status") val subscriptionStatus: String? = null,
+    @SerialName("billing_email") val billingEmail: String? = null,
+    @SerialName("admin_token") val adminToken: String? = null,
 )
