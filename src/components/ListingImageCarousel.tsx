@@ -1,9 +1,11 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useState } from "react";
+import { m, motion } from "motion/react";
 import useEmblaCarousel from "embla-carousel-react";
 import { Camera, ChevronLeft, ChevronRight, Expand } from "lucide-react";
 import { VehicleThumbnail } from "@/components/VehicleThumbnail";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { formatSourceName } from "@/lib/sourceAttribution";
+import { spring, useReducedMotionOrLowData } from "@/lib/motion";
 
 // Lightbox JS + CSS load only when someone taps a photo (low-end Android first).
 const ListingLightbox = lazy(() => import("@/components/listing/ListingLightbox"));
@@ -52,14 +54,22 @@ export function ListingImageCarousel({
   const multi = count > 1;
   const isDetail = variant === "detail";
   const reduced = useMemo(prefersReducedMotion, []);
+  const calm = useReducedMotionOrLowData();
+  const ringId = useId();
   const [emblaRef, emblaApi] = useEmblaCarousel({
     // Single-photo listings skip Embla's measuring work entirely.
     active: multi,
-    loop: multi,
+    // Detail: no loop so the first/last photo rubber-bands against the edge
+    // (Embla's built-in edge resistance); cards keep looping arrows.
+    loop: multi && !isDetail,
     // Cards: arrows/dots only so a tap still opens the listing.
     watchDrag: isDetail && multi,
-    duration: reduced ? 1 : 22,
+    // Momentum: a flick carries to the next snap on Embla's scroll physics.
+    dragThreshold: 6,
+    skipSnaps: false,
+    duration: reduced ? 1 : isDetail ? 26 : 22,
   });
+  const [lightboxOrigin, setLightboxOrigin] = useState<{ x: number; y: number } | null>(null);
   const [index, setIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxRequested, setLightboxRequested] = useState(false);
@@ -102,7 +112,9 @@ export function ListingImageCarousel({
     return () => window.removeEventListener("keydown", onKey);
   }, [isDetail, multi, lightboxOpen, prev, next]);
 
-  const openLightbox = () => {
+  const openLightbox = (from?: Element | null) => {
+    const r = from?.getBoundingClientRect();
+    setLightboxOrigin(r && r.width > 0 ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null);
     setLightboxRequested(true);
     setLightboxOpen(true);
   };
@@ -151,7 +163,7 @@ export function ListingImageCarousel({
                     className="block h-full w-full cursor-zoom-in"
                     aria-label={t("listingImage.openPhoto", "Open {label} full screen", { label: label(i) })}
                     tabIndex={i === index ? 0 : -1}
-                    onClick={openLightbox}
+                    onClick={(e) => openLightbox(e.currentTarget)}
                   >
                     <VehicleThumbnail
                       src={src}
@@ -160,6 +172,8 @@ export function ListingImageCarousel({
                       source={source}
                       priority={priority && i === 0}
                       sizes="(max-width: 1024px) 100vw, 60vw"
+                      marker={i === 0 ? "hero" : undefined}
+                      fadeIn
                       className={`h-full w-full object-cover${imageClassName ? ` ${imageClassName}` : ""}`}
                     />
                   </button>
@@ -170,6 +184,8 @@ export function ListingImageCarousel({
                     alt={i === 0 ? alt : `${alt} — ${label(i)}`}
                     source={source}
                     priority={priority && i === 0}
+                    marker="card"
+                    fadeIn
                     className={`h-full w-full object-cover${imageClassName ? ` ${imageClassName}` : ""}`}
                   />
                 )}
@@ -212,6 +228,16 @@ export function ListingImageCarousel({
 
         {multi && !isDetail && (
           <span className="pointer-events-auto absolute bottom-12 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1">
+            {/* Sliding indicator: one dot moves by transform (dots are 6px + 4px gap). */}
+            {index < 8 && (
+              <m.span
+                aria-hidden
+                className="pointer-events-none absolute left-0 top-1/2 h-1.5 w-1.5 -mt-[3px] rounded-full bg-white shadow-[0_0_0_1.5px_rgba(255,255,255,0.35)]"
+                initial={false}
+                animate={{ x: index * 10 }}
+                transition={calm ? { duration: 0 } : spring.snappy}
+              />
+            )}
             {images.slice(0, 8).map((_, i) => (
               <button
                 key={i}
@@ -222,9 +248,7 @@ export function ListingImageCarousel({
                   stop(e);
                   goTo(i);
                 }}
-                className={`h-1.5 rounded-full transition-all ${
-                  i === index ? "w-4 bg-white" : "w-1.5 bg-white/45 hover:bg-white/75"
-                }`}
+                className="h-1.5 w-1.5 rounded-full bg-white/45 transition-opacity hover:bg-white/75"
               />
             ))}
           </span>
@@ -236,7 +260,7 @@ export function ListingImageCarousel({
             aria-label={t("listingImage.expand", "View fullscreen")}
             onClick={(e) => {
               stop(e);
-              openLightbox();
+              openLightbox(e.currentTarget.parentElement);
             }}
             className="absolute right-2.5 top-2.5 z-30 flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/55 text-white backdrop-blur-md transition-colors hover:bg-black/80"
           >
@@ -255,11 +279,20 @@ export function ListingImageCarousel({
               aria-selected={i === index}
               aria-label={label(i)}
               onClick={() => goTo(i)}
-              className={`relative h-14 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition-opacity ${
-                i === index ? "border-primary" : "border-transparent opacity-60 hover:opacity-100"
+              className={`relative h-14 w-20 shrink-0 overflow-hidden rounded-xl transition-opacity ${
+                i === index ? "" : "opacity-60 hover:opacity-100"
               }`}
             >
               <VehicleThumbnail src={src} listingId={listingId} alt="" source={source} sizes="80px" className="h-full w-full object-cover" />
+              {i === index && (
+                // Active ring glides between thumbnails (shared layout id).
+                <motion.span
+                  aria-hidden
+                  layoutId={`thumb-ring-${ringId}`}
+                  transition={calm ? { duration: 0 } : spring.snappy}
+                  className="pointer-events-none absolute inset-0 rounded-xl border-2 border-primary"
+                />
+              )}
             </button>
           ))}
         </div>
@@ -273,6 +306,7 @@ export function ListingImageCarousel({
             images={images}
             alt={alt}
             sourceName={sourceName}
+            origin={lightboxOrigin}
             creditLabel={sourceName ? t("listingImage.credit", "Photo: {source}", { source: sourceName }) : undefined}
             onClose={() => setLightboxOpen(false)}
             onIndexChange={(i) => {

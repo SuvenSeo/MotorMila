@@ -4,7 +4,7 @@ import {
   ArrowLeft, ExternalLink, MapPin, Calendar,
   Share2, Fuel, Gauge, Settings2, MessageCircle,
   Car as CarIcon, ArrowRight, Zap, Sparkles, ShieldCheck, Clock, Database, AlertTriangle, PlugZap, Scale,
-  Heart, TrendingDown, Layers
+  TrendingDown, Layers
 } from 'lucide-react';
 import { getListing, getListingFmv, getListingGeo, getListingHistoryReport, getListingPriceHistory, getListingSafetyResearch, getSimilarListings, formatPrice } from '@/services/api';
 import { TrustCheckPanel } from '@/components/TrustCheckPanel';
@@ -48,7 +48,8 @@ import {
 } from '@/lib/planLimits';
 import type { ImportFuelType } from '@/lib/importTaxModel';
 import { motion } from 'motion/react';
-import { revealContainer, revealItem } from '@/lib/motion';
+import { fadeIn, fadeUp, revealContainer, revealItem, useReducedMotionOrLowData } from '@/lib/motion';
+import { SaveHeartIcon } from '@/components/listing/SaveHeart';
 import { trackEvent } from '@/lib/analytics';
 import { canonicalizeMake, canonicalizeModel } from '@/lib/makeNormalization';
 import { ListingLeadActions } from '@/components/money/ListingLeadActions';
@@ -70,6 +71,14 @@ function formatToken(value: string | null | undefined): string {
 export default function ListingDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const motionCalm = useReducedMotionOrLowData();
+  // Below-the-fold sections reveal once as they scroll in (opacity only when calm).
+  const onScroll = {
+    initial: 'hidden',
+    whileInView: 'show',
+    viewport: { once: true, margin: '0px 0px -8% 0px' },
+    variants: motionCalm ? fadeIn : fadeUp,
+  } as const;
   const { t } = useAppPreferences();
   const { hasProAccess, isAdmin } = useAuth();
   const fullAccess = hasFullPlatformAccess({ hasProAccess, isAdmin });
@@ -520,7 +529,7 @@ export default function ListingDetail() {
                 title={watchlisted ? t("listing.saved", "Saved ✓") : t("listing.save", "Save")}
                 className={`${actionBtn} ${watchlisted ? "!border-rose-500/30 !bg-rose-500/10 !text-rose-600 dark:!text-rose-400" : ""}`}
               >
-                <Heart aria-hidden className={`h-4 w-4 ${watchlisted ? "fill-current" : ""}`} />
+                <SaveHeartIcon saved={watchlisted} className="h-4 w-4" />
               </button>
             </div>
           </div>
@@ -562,7 +571,7 @@ export default function ListingDetail() {
           <div className="min-w-0 space-y-6">
 
             {/* 1. Gallery — the car is the hero; overlays stay dark (they sit on the photo) */}
-            <motion.div variants={revealItem} className="overflow-hidden rounded-[2rem] border border-border bg-card shadow-soft">
+            <motion.div variants={revealItem} data-listing-gallery className="overflow-hidden rounded-[2rem] border border-border bg-card shadow-soft">
               <div className="group relative aspect-[16/10] min-h-[220px] overflow-hidden bg-black/40">
                 <ListingImageCarousel
                   images={galleryImages}
@@ -606,7 +615,7 @@ export default function ListingDetail() {
 
             {/* 3. Key specs — only what we actually know */}
             {keySpecs.length > 0 && (
-              <motion.section variants={revealItem} aria-labelledby="key-specs-title" className="space-y-3">
+              <motion.section {...onScroll} aria-labelledby="key-specs-title" className="space-y-3">
                 <h2 id="key-specs-title" className="text-[12px] font-semibold text-muted-foreground">{t("listing.keySpecs", "Key specs")}</h2>
                 <dl className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                   {keySpecs.map((s) => (
@@ -624,14 +633,14 @@ export default function ListingDetail() {
             )}
 
             {/* 4. FMV / why (mobile flow) + Pro upsell below it */}
-            <motion.div variants={revealItem} className="space-y-3 lg:hidden">
+            <motion.div {...onScroll} className="space-y-3 lg:hidden">
               {renderFmvCard()}
               {renderProUpsell()}
             </motion.div>
 
             {/* 5. Price history */}
             {priceHistory && priceHistory.points.length > 0 && (
-              <motion.div variants={revealItem}>
+              <motion.div {...onScroll}>
                 <ListingPriceTimeline
                   history={priceHistory}
                   marketMedianLkr={listing.market_median_lkr}
@@ -641,7 +650,7 @@ export default function ListingDetail() {
             )}
 
             {/* 6. Trust Check */}
-            <motion.div variants={revealItem}>
+            <motion.div {...onScroll}>
               <TrustCheckPanel
                 listing={listing}
                 pricePoints={priceHistory?.points ?? null}
@@ -652,7 +661,7 @@ export default function ListingDetail() {
 
             {/* 7. Finance planner */}
             {hasPrice && (lease.isLeaseTakeover ? (
-              <motion.section variants={revealItem} className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
+              <motion.section {...onScroll} className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
                 <h2 className="text-[12px] font-semibold text-muted-foreground">{t("listing.ownershipPlanning", "Ownership planning")}</h2>
                 <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
                   {t("listing.leaseNoFinance", "Finance estimates are hidden: the price on a lease takeover isn't the full price. Ask the seller for the settlement letter from the finance company first.")}
@@ -669,7 +678,7 @@ export default function ListingDetail() {
                 year: listing.year,
               });
               return (
-                <motion.div variants={revealItem} className="space-y-4">
+                <motion.div {...onScroll} className="space-y-4">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <h2 className="text-[12px] font-semibold text-muted-foreground">{t("listing.ownershipPlanning", "Ownership planning")}</h2>
                     <Link to="/afford" className="text-[12px] font-semibold text-primary no-underline hover:underline">
@@ -709,7 +718,7 @@ export default function ListingDetail() {
             })())}
 
             {/* 8. Details */}
-            <motion.div variants={revealItem} className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
+            <motion.div {...onScroll} className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
               <h2 className="mb-3 text-[12px] font-semibold text-muted-foreground">{t("listing.description", "Description")}</h2>
               <p className="whitespace-pre-wrap text-[13px] font-medium leading-[1.8] text-muted-foreground">
                 {listing.description || t("listing.noDescription", "The seller didn't add a description. Open the original ad for full details.")}
@@ -717,7 +726,7 @@ export default function ListingDetail() {
             </motion.div>
 
             {/* Seller — info only; the one contact CTA lives in the price card / sticky bar */}
-            <motion.section variants={revealItem} aria-labelledby="seller-title" className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
+            <motion.section {...onScroll} aria-labelledby="seller-title" className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
               <div className="mb-3 flex items-center gap-2">
                 <ShieldCheck aria-hidden className="h-4 w-4 text-primary" />
                 <h2 id="seller-title" className="text-[12px] font-semibold text-muted-foreground">{t("listing.sellerInfo", "Seller information")}</h2>
@@ -729,7 +738,7 @@ export default function ListingDetail() {
               </p>
             </motion.section>
 
-            <motion.div variants={revealItem}>
+            <motion.div {...onScroll}>
               <ListingLeadActions
                 listingId={listing.id ?? undefined}
                 vehicle={[listing.year, displayMake, displayModel].filter(Boolean).join(' ')}
@@ -740,16 +749,16 @@ export default function ListingDetail() {
 
             <div className="grid gap-5 md:grid-cols-2">
               {listing.make && (
-                <motion.div variants={revealItem}>
+                <motion.div {...onScroll}>
                   <SafetyResearchCard research={safetyResearch} vin={listingVin(listing)} />
                 </motion.div>
               )}
-              <motion.div variants={revealItem}>
+              <motion.div {...onScroll}>
                 <ListingGeoCard geo={listingGeo} />
               </motion.div>
             </div>
             {listing.make && (
-              <motion.div variants={revealItem}>
+              <motion.div {...onScroll}>
                 <NhtsaModelsCard make={listing.make} model={listing.model ?? undefined} compact vin={listingVin(listing)} />
               </motion.div>
             )}
@@ -761,7 +770,7 @@ export default function ListingDetail() {
             )}
 
             {/* 9. Similar */}
-            <motion.div variants={revealItem}>
+            <motion.div {...onScroll}>
               <SimilarCarsStrip
                 listings={visibleSimilar}
                 fullAccess={fullAccess}

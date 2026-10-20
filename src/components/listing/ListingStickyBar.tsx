@@ -1,4 +1,7 @@
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { m } from "motion/react";
+import { duration, ease, spring, useReducedMotionOrLowData } from "@/lib/motion";
 import { ExternalLink } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import { useAppPreferences } from "@/lib/appPreferences";
@@ -25,8 +28,42 @@ const FLOATING_OFFSET_CSS = `
 @media (min-width: 768px) and (max-width: 1023px) { .aw-fab-wrapper { bottom: 6rem !important; } }
 `;
 
+/**
+ * Shown once the hero gallery ([data-listing-gallery]) has scrolled away and
+ * hidden again when the footer comes near, so it never covers either. Without
+ * IntersectionObserver it simply stays up.
+ */
+function useStickyBarVisible(): boolean {
+  const [heroGone, setHeroGone] = useState(() => typeof IntersectionObserver === "undefined");
+  const [footerNear, setFooterNear] = useState(false);
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") return;
+    const hero = document.querySelector("[data-listing-gallery]");
+    const footer = document.querySelector("footer");
+    const observers: IntersectionObserver[] = [];
+    if (hero) {
+      const io = new IntersectionObserver(([e]) => setHeroGone(!e.isIntersecting && e.boundingClientRect.top < 0), {
+        threshold: 0,
+      });
+      io.observe(hero);
+      observers.push(io);
+    } else {
+      setHeroGone(true);
+    }
+    if (footer) {
+      const io = new IntersectionObserver(([e]) => setFooterNear(e.isIntersecting), { rootMargin: "0px 0px 96px 0px" });
+      io.observe(footer);
+      observers.push(io);
+    }
+    return () => observers.forEach((o) => o.disconnect());
+  }, []);
+  return heroGone && !footerNear;
+}
+
 export function ListingStickyBar({ priceLkr, badge, href, sourceName, listingId, source }: ListingStickyBarProps) {
   const { t } = useAppPreferences();
+  const visible = useStickyBarVisible();
+  const calm = useReducedMotionOrLowData();
   if (!href) return null;
   // Long labels (lease / verify) don't fit beside price + CTA: show a short form.
   const compactBadge = badge.kind === "lease" || badge.kind === "verify" || badge.kind === "none" ? null : badge;
@@ -36,10 +73,22 @@ export function ListingStickyBar({ priceLkr, badge, href, sourceName, listingId,
   const bar = (
     <>
       <style>{FLOATING_OFFSET_CSS}</style>
-      <div
+      <m.div
         className="fixed inset-x-3 z-[60] lg:hidden bottom-[calc(5.5rem+env(safe-area-inset-bottom))] md:bottom-3"
         role="region"
         aria-label={t("listing.sticky.aria", "Price and contact")}
+        data-visible={visible ? "true" : "false"}
+        // Off-screen = inert (out of tab order / a11y tree) but still mounted.
+        {...({ inert: visible ? undefined : "" } as Record<string, string | undefined>)}
+        initial={false}
+        animate={
+          calm
+            ? { opacity: visible ? 1 : 0, y: visible ? 0 : 160, transition: { duration: visible ? duration.fast : 0 } }
+            : visible
+              ? { opacity: 1, y: 0, transition: spring.gentle }
+              : { opacity: 0, y: 160, transition: { duration: duration.base, ease: ease.exit } }
+        }
+        style={{ pointerEvents: visible ? undefined : "none" }}
       >
         <div className="flex items-center gap-3 rounded-2xl border border-border bg-card/95 p-2.5 pl-4 shadow-soft-xl backdrop-blur-md">
           <div className="min-w-0 flex-1">
@@ -69,7 +118,7 @@ export function ListingStickyBar({ priceLkr, badge, href, sourceName, listingId,
             <ExternalLink aria-hidden className="h-3.5 w-3.5" />
           </a>
         </div>
-      </div>
+      </m.div>
     </>
   );
   return typeof document === "undefined" ? bar : createPortal(bar, document.body);

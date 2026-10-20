@@ -14,6 +14,9 @@ import { howWePriceHref } from "@/lib/howWePrice";
 import { useLowData } from "@/hooks/useLowData";
 import { cn } from "@/lib/utils";
 import { useCompare } from "@/components/compare/CompareContext";
+import { AnimatePresence, motion } from "motion/react";
+import { duration, ease, spring, useReducedMotionOrLowData } from "@/lib/motion";
+import "@/styles/listing-motion.css";
 import { SellSpeedBadge } from "@/components/SellSpeedBadge";
 import {
   COMPARE_ROWS,
@@ -56,6 +59,7 @@ export default function Compare() {
   const [error, setError] = useState<string | null>(null);
   const [highlight, setHighlight] = useState(true);
   const [onlyDiff, setOnlyDiff] = useState(false);
+  const motionCalm = useReducedMotionOrLowData();
 
   const rawIds = searchParams.get("ids") ?? "";
   const urlIds = useMemo(
@@ -400,34 +404,48 @@ export default function Compare() {
                   ))}
                 </thead>
                 <tbody>
+                  {/* "Hide identical rows" fades rows out/in; the rest glide into place (layout). */}
+                  <AnimatePresence initial={false}>
                   {table.getRowModel().rows.map((row) => {
                     const r = row.original;
                     const dim = highlight && !r.differs;
                     const tint = highlight && r.differs;
                     return (
-                      <tr key={row.id} className={cn(dim && "text-muted-foreground")}>
+                      <motion.tr
+                        key={r.def.key}
+                        layout={motionCalm ? false : "position"}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1, transition: { duration: motionCalm ? 0 : duration.base, ease: ease.standard } }}
+                        exit={{ opacity: 0, transition: { duration: motionCalm ? 0 : duration.fast, ease: ease.exit } }}
+                        transition={motionCalm ? { duration: 0 } : spring.snappy}
+                        className={cn("transition-colors duration-200", dim && "text-muted-foreground")}
+                      >
                         {row.getVisibleCells().map((cell, i) =>
                           i === 0 ? (
                             <th
                               key={cell.id}
                               scope="row"
                               className={cn(
-                                "sticky left-0 border-b border-border/70 p-3 text-[12px] font-semibold",
-                                tint ? "bg-primary/[0.07] text-foreground" : "bg-card text-muted-foreground",
+                                "sticky left-0 border-b border-border/70 bg-card p-3 text-[12px] font-semibold transition-colors duration-200",
+                                tint ? "text-foreground" : "text-muted-foreground",
                               )}
                               style={{ zIndex: "var(--z-base, 1)" as unknown as number }}
                             >
-                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              {/* Highlight tint fades (opacity) instead of snapping. */}
+                              <span aria-hidden className="cmp-tint bg-primary/[0.07]" data-on={tint ? "true" : "false"} />
+                              <span className="relative">{flexRender(cell.column.columnDef.cell, cell.getContext())}</span>
                             </th>
                           ) : (
-                            <td key={cell.id} className={cn("num border-b border-border/70 p-3 align-top", tint ? "bg-primary/[0.04] text-foreground" : "")}>
-                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            <td key={cell.id} className={cn("num relative border-b border-border/70 p-3 align-top", tint ? "text-foreground" : "")}>
+                              <span aria-hidden className="cmp-tint bg-primary/[0.04]" data-on={tint ? "true" : "false"} />
+                              <span className="relative block">{flexRender(cell.column.columnDef.cell, cell.getContext())}</span>
                             </td>
                           ),
                         )}
-                      </tr>
+                      </motion.tr>
                     );
                   })}
+                  </AnimatePresence>
                 </tbody>
               </table>
             </div>

@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { formatSourceName } from "@/lib/sourceAttribution";
 
 interface VehicleThumbnailProps {
@@ -13,6 +13,10 @@ interface VehicleThumbnailProps {
   /** First-screen images should load eagerly to protect LCP. */
   priority?: boolean;
   sizes?: string;
+  /** Fade the real photo in once decoded (placeholder colour shows underneath). Skipped for priority images (LCP). */
+  fadeIn?: boolean;
+  /** Motion hooks: "card" = card photo (view-transition source), "hero" = detail hero (target). */
+  marker?: "card" | "hero";
 }
 
 function escapeSvgText(value: string): string {
@@ -75,6 +79,8 @@ export const VehicleThumbnail = memo(function VehicleThumbnail({
   className,
   priority = false,
   sizes = "(max-width: 768px) 100vw, 33vw",
+  fadeIn = false,
+  marker,
 }: VehicleThumbnailProps) {
   const fallbackSrc = useMemo(() => createFallbackThumbnailDataUri(alt, source), [alt, source]);
   // The thumbnail proxy is retired (410) - photos are only hotlinked with
@@ -97,9 +103,18 @@ export const VehicleThumbnail = memo(function VehicleThumbnail({
 
   const imageSrc = candidates[Math.min(attempt, candidates.length - 1)];
   const isPlaceholder = imageSrc === fallbackSrc;
+  const fade = fadeIn && !priority && !isPlaceholder;
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    // Cached photos can finish before React attaches onLoad.
+    const el = imgRef.current;
+    setLoaded(Boolean(el && el.complete && el.naturalWidth > 0));
+  }, [imageSrc]);
 
   return (
     <img
+      ref={imgRef}
       src={imageSrc}
       alt={alt}
       width={480}
@@ -109,8 +124,13 @@ export const VehicleThumbnail = memo(function VehicleThumbnail({
       decoding="async"
       sizes={sizes}
       data-placeholder={isPlaceholder ? "true" : undefined}
+      data-fade-in={fade ? "" : undefined}
+      data-loaded={fade ? String(loaded) : undefined}
+      data-card-photo={marker === "card" ? "" : undefined}
+      data-listing-hero={marker === "hero" ? "" : undefined}
+      onLoad={fade ? () => setLoaded(true) : undefined}
       // The placeholder paints underneath until the real photo arrives: no blank tiles.
-      style={isPlaceholder ? undefined : { backgroundImage: `url("${fallbackSrc}")`, backgroundSize: "cover", backgroundPosition: "center" }}
+      style={isPlaceholder || fade ? undefined : { backgroundImage: `url("${fallbackSrc}")`, backgroundSize: "cover", backgroundPosition: "center" }}
       onError={() => {
         if (!isPlaceholder) setAttempt((a) => a + 1);
       }}
