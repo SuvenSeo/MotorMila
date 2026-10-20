@@ -1,7 +1,7 @@
 import { BrandLogo } from "@/components/BrandLogo";
 import { scrollBehavior, spring, transition as motionTransition, usePrefersReducedMotionOrLowData } from "@/lib/motion";
 import { prefetchRoute } from "@/lib/routePrefetch";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, LayoutGroup, m, motion } from "motion/react";
 import { ChevronDown, Crown, LayoutGrid, LogOut, Menu, Search, Settings, UserCircle2, X } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -23,10 +23,12 @@ import { openFeedbackDialog } from "@/lib/feedbackEvents";
 import { FEEDBACK_LINK, MORE_LINKS, NAV_DESTINATIONS, isDestinationActive, type NavLinkItem } from "@/lib/siteNav";
 import { NavFreshnessIndicator } from "@/components/NavFreshnessIndicator";
 import { cn } from "@/lib/utils";
+import { fitNav } from "@/lib/navFit";
 
 const SCROLLED_AT = 24;
 const HIDE_AFTER = 96;
 const HIDE_DELTA = 6;
+const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 /**
  * Site header (polish/shell).
@@ -47,12 +49,40 @@ export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [hidden, setHidden] = useState(false);
   const { user, logout, isAuthenticated, hasProAccess } = useAuth();
-  const { t } = useAppPreferences();
+  const { t, language } = useAppPreferences();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const calm = usePrefersReducedMotionOrLowData();
   const menuOpenRef = useRef(menuOpen);
   menuOpenRef.current = menuOpen;
+  const headerRef = useRef<HTMLElement>(null);
+  const capsule = isScrolled || menuOpen;
+  const capsuleRef = useRef(capsule);
+  capsuleRef.current = capsule;
+
+  // Keep the three clusters from ever overlapping: re-fit on resize, on the
+  // top ↔ capsule switch, and whenever the clusters' content can change
+  // (sign-in state, user name, language, fonts).
+  useIsoLayoutEffect(() => {
+    const header = headerRef.current;
+    if (header) fitNav(header, capsule);
+  }, [capsule, isAuthenticated, user?.name, language]);
+
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    const refit = () => fitNav(header, capsuleRef.current);
+    // Header width changes (resize) and cluster content changes that arrive
+    // after mount (bell / freshness hint loading, name truncation, fonts).
+    // fitNav ends on the same sizes it started from, so this cannot loop.
+    const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(refit);
+    const nav = header.querySelector(".site-nav");
+    ro?.observe(header);
+    if (nav?.firstElementChild) ro?.observe(nav.firstElementChild);
+    if (nav?.lastElementChild) ro?.observe(nav.lastElementChild);
+    void document.fonts?.ready.then(refit).catch(() => undefined);
+    return () => ro?.disconnect();
+  }, []);
 
   useEffect(() => {
     let frame = 0;
@@ -119,11 +149,13 @@ export function Navbar() {
 
   return (
     <header
+      ref={headerRef}
       className="site-nav-header fixed inset-x-0 top-0 z-header"
       data-scrolled={isScrolled}
       data-nav-mode={isScrolled ? "compact" : "full"}
       data-hidden={hidden}
       data-menu-open={menuOpen}
+      data-fit="0"
     >
       <div aria-hidden className="site-nav-bg" />
       <nav className="site-nav" aria-label={t("nav.primaryNavigation", "Primary navigation")}>
@@ -157,6 +189,7 @@ export function Navbar() {
                   }}
                   aria-current={active ? "page" : undefined}
                   data-active={active}
+                  data-dest={dest.id}
                   className="site-nav__link"
                 >
                   {active && (
@@ -195,13 +228,13 @@ export function Navbar() {
           <button
             type="button"
             onClick={openCommandPalette}
-            className="nav-control nav-control--icon xl:w-auto xl:gap-2 xl:pl-3 xl:pr-3.5"
+            className="nav-control nav-search"
             aria-label={t("nav.search", "Search")}
             title={t("nav.searchHint", "Search (Ctrl+K)")}
           >
             <Search className="h-4 w-4" aria-hidden />
-            <span className="hidden xl:inline">{t("nav.search", "Search")}</span>
-            <kbd className="hidden rounded-md border border-border px-1.5 text-[10.5px] font-medium text-muted-foreground 2xl:inline">
+            <span className="nav-search__label">{t("nav.search", "Search")}</span>
+            <kbd className="nav-search__kbd rounded-md border border-border px-1.5 text-[10.5px] font-medium text-muted-foreground">
               Ctrl K
             </kbd>
           </button>
@@ -219,11 +252,11 @@ export function Navbar() {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="nav-control hidden gap-1.5 pl-2 pr-2.5 sm:inline-flex"
+                  className="nav-control nav-account hidden gap-1.5 pl-2 pr-2.5 sm:inline-flex"
                   aria-label={t("shell.nav.account", "Your account")}
                 >
                   <UserCircle2 className="h-[18px] w-[18px]" aria-hidden />
-                  <span className="hidden max-w-[7rem] truncate xl:inline">{user.name || t("shell.nav.account", "Your account")}</span>
+                  <span className="nav-account__name max-w-[7rem] truncate">{user.name || t("shell.nav.account", "Your account")}</span>
                   <ChevronDown className="h-3 w-3 opacity-60" aria-hidden />
                 </button>
               </DropdownMenuTrigger>
