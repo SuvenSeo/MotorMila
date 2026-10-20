@@ -1,8 +1,8 @@
-import { scrollBehavior } from "@/lib/motion";
+import { scrollBehavior, duration, ease, spring, press, useReducedMotionOrLowData } from "@/lib/motion";
 import { startTransition, useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
-import { motion } from "motion/react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { AnimatePresence, m, motion } from "motion/react";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { FilterState, CarListing, DashboardInsights, DistrictVelocityPoint } from "@/types/car";
 import { getPriceDrops,
@@ -69,6 +69,9 @@ import { saveSearchWithAlert, savedSearchLabel } from "@/lib/savedSearchAlerts";
 import { SortControl } from "@/components/search/SortControl";
 import { SearchPagination } from "@/components/search/SearchPagination";
 import { NoResultsState, type AlertStatus } from "@/components/search/NoResultsState";
+import { FlowNumber } from "@/components/motion/FlowNumber";
+import { Reveal } from "@/components/motion/Reveal";
+import { HeroFlipWords } from "@/components/motion/HeroFlipWords";
 
 const heroContainerVariants = {
   hidden: { opacity: 0 },
@@ -93,6 +96,37 @@ const heroItemVariants = {
     }
   }
 } as const;
+
+/** Hero headline: words fade + rise in sequence, once on mount. */
+const heroHeadlineVariants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.06, delayChildren: 0.04 } },
+} as const;
+const heroWordVariants = {
+  hidden: { opacity: 0, y: "0.4em" },
+  show: { opacity: 1, y: 0, transition: { duration: duration.slow, ease: ease.emphasized } },
+} as const;
+const heroWordVariantsStill = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { duration: duration.base } },
+} as const;
+
+/** Render a phrase as inline-block words so each can animate on its own. */
+function HeroWords({ text, still }: { text: string; still: boolean }) {
+  const words = text.split(/\s+/).filter(Boolean);
+  return (
+    <>
+      {words.map((word, i) => (
+        <span key={`${word}-${i}`}>
+          <m.span className="inline-block" variants={still ? heroWordVariantsStill : heroWordVariants}>
+            {word}
+          </m.span>
+          {i < words.length - 1 ? " " : null}
+        </span>
+      ))}
+    </>
+  );
+}
 
 const cardContainerVariants = {
   hidden: { opacity: 0 },
@@ -202,6 +236,8 @@ export default function Dashboard() {
   const [heroActiveIdx, setHeroActiveIdx] = useState(-1);
   const [heroSuggestions, setHeroSuggestions] = useState<ListingSearchSuggestion[]>([]);
   const [heroSuggestionsOpen, setHeroSuggestionsOpen] = useState(false);
+  const [heroFocused, setHeroFocused] = useState(false);
+  const motionStill = useReducedMotionOrLowData();
   const [heroSuggestionsLoading, setHeroSuggestionsLoading] = useState(false);
   const [showSavedListings, setShowSavedListings] = useState(false);
   const [savedListings, setSavedListings] = useState<CarListing[]>([]);
@@ -254,6 +290,9 @@ export default function Dashboard() {
     queryKey: ["listings", listingFilters],
     queryFn: () => getListings(listingFilters),
     staleTime: QUERY_STALE.listings,
+    // Keep the current grid on screen while the next filter/sort loads, then
+    // crossfade — no skeleton flash, no scroll jump.
+    placeholderData: keepPreviousData,
   });
   const { refetch: refetchListings } = listingsQuery;
   const retryListings = useCallback(() => {
@@ -266,6 +305,7 @@ export default function Dashboard() {
   const listings = useMemo(() => listingsQuery.data?.listings ?? [], [listingsQuery.data]);
   const total = listingsQuery.data?.total ?? 0;
   const loadingListings = listingsQuery.isPending;
+  const refreshingListings = listingsQuery.isPlaceholderData && listingsQuery.isFetching;
   const listingsFailed = listingsQuery.isError;
 
   const serverAlerts = useServerMarketAlerts();
@@ -712,7 +752,7 @@ export default function Dashboard() {
             </motion.p>
 
             <motion.h1
-              variants={heroItemVariants}
+              variants={heroHeadlineVariants}
               className={cn(
                 "display-hero mt-6",
                 heroCentered ? "display-hero--lockup" : "max-w-3xl",
@@ -720,11 +760,23 @@ export default function Dashboard() {
               )}
             >
               <span className={heroCentered ? "display-hero__lead" : undefined}>
-                {t("hero.title", "Sri Lanka's entire vehicle market,")}
+                <HeroWords text={t("hero.title", "Sri Lanka's entire vehicle market,")} still={motionStill} />
               </span>
               <span className={cn("italic text-primary", heroCentered ? "display-hero__accent" : undefined)}>
                 {heroCentered ? null : " "}
-                {t("hero.accentWord2", "priced.")}
+                {/* Rotating accent word — fixed-width box, pauses offscreen/hidden tab,
+                    static "priced." under reduced motion or low-data mode. */}
+                <m.span className="inline-block" variants={motionStill ? heroWordVariantsStill : heroWordVariants}>
+                  <HeroFlipWords
+                    align={heroCentered ? "center" : "start"}
+                    words={[
+                      t("hero.accentWord2", "priced."),
+                      t("hero.accentWord3", "tracked."),
+                      t("hero.accentWord4", "compared."),
+                      t("hero.titleAccent", "decoded."),
+                    ]}
+                  />
+                </m.span>
               </span>
             </motion.h1>
 
@@ -762,15 +814,23 @@ export default function Dashboard() {
               className={cn("mt-9 w-full max-w-2xl", heroCentered ? "mx-auto" : "text-left")}
             >
                 <div className="relative">
-                  <div className={`flex items-center gap-2 rounded-full border p-1.5 transition-all ${heroSearchShellClass}`}>
+                  <m.div
+                    animate={{ scale: heroFocused && !motionStill ? 1.015 : 1 }}
+                    transition={spring.gentle}
+                    className={cn(
+                      "flex items-center gap-2 rounded-full border p-1.5 transition-[border-color,box-shadow] duration-300",
+                      heroSearchShellClass,
+                      heroFocused && "hero-search--focused",
+                    )}
+                  >
                     <Search aria-hidden className={`ml-3.5 h-5 w-5 shrink-0 ${heroFilmTone === "cinematic" ? "text-white/55" : "text-muted-foreground"}`} />
                     <label htmlFor="hero-search" className="sr-only">{t("common.search", "Search")} vehicles</label>
                     <input
                       id="hero-search"
                       value={heroSearch}
                       onChange={(e) => { setHeroSearch(e.target.value); setHeroSearchMessage(null); setHeroActiveIdx(-1); }}
-                      onFocus={() => setHeroSuggestionsOpen(true)}
-                      onBlur={() => { window.setTimeout(() => { setHeroSuggestionsOpen(false); setHeroActiveIdx(-1); }, 120); }}
+                      onFocus={() => { setHeroSuggestionsOpen(true); setHeroFocused(true); }}
+                      onBlur={() => { setHeroFocused(false); window.setTimeout(() => { setHeroSuggestionsOpen(false); setHeroActiveIdx(-1); }, 120); }}
                       onKeyDown={(e) => {
                         if (showHeroPopular) {
                           if (e.key === "ArrowDown") {
@@ -827,7 +887,7 @@ export default function Dashboard() {
                     <button type="button" onClick={runHeroSearch} className="mr-0.5 h-11 rounded-full bg-primary px-6 text-[13px] font-semibold tracking-[-0.005em] text-white shadow-soft transition-all hover:bg-primary/95 active:scale-[0.97]">
                       {t("common.search", "Search")}
                     </button>
-                  </div>
+                  </m.div>
 
                   {showHeroPopular ? (
                     <div id="hero-suggestions" role="listbox" className="absolute inset-x-0 bottom-full z-50 mb-2 overflow-hidden rounded-[1.75rem] border border-border bg-card/95 p-1.5 shadow-soft-xl backdrop-blur-xl">
@@ -903,24 +963,37 @@ export default function Dashboard() {
                   {HOME_CATEGORIES.map((cat) => {
                     const active = (filters.vehicle_category || "cars") === cat.value;
                     return (
-                      <button
+                      <m.button
                         key={cat.value}
                         type="button"
                         onClick={() => browseCategory(cat.value)}
                         aria-pressed={active}
+                        {...(motionStill ? {} : press)}
                         className={cn(
-                          "inline-flex min-h-10 items-center rounded-full border px-4 text-[13px] font-semibold transition-colors active:scale-[0.97]",
+                          "relative isolate inline-flex min-h-10 items-center rounded-full border px-4 text-[13px] font-semibold transition-colors",
                           heroFilmTone === "cinematic"
                             ? active
-                              ? "border-white/40 bg-white/20 text-white"
+                              ? "border-transparent text-white"
                               : "border-white/20 bg-black/30 text-white/90 hover:bg-white/15"
                             : active
-                              ? "border-primary/40 bg-primary/10 text-primary-bright"
+                              ? "border-transparent text-primary-bright"
                               : "border-border bg-card/80 text-foreground hover:border-primary/30",
                         )}
                       >
+                        {active ? (
+                          /* Selected pill slides between chips (layoutId needs motion.*). */
+                          <motion.span
+                            aria-hidden
+                            layoutId="home-category-pill"
+                            transition={motionStill ? { duration: 0 } : spring.snappy}
+                            className={cn(
+                              "absolute inset-0 -z-10 rounded-full border",
+                              heroFilmTone === "cinematic" ? "border-white/40 bg-white/20" : "border-primary/40 bg-primary/10",
+                            )}
+                          />
+                        ) : null}
                         {t(cat.labelKey, cat.fallback)}
-                      </button>
+                      </m.button>
                     );
                   })}
                 </nav>
@@ -934,7 +1007,7 @@ export default function Dashboard() {
 
           {/* Toolbar */}
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-col gap-2 sm:gap-2.5">
+            <Reveal className="flex flex-col gap-2 sm:gap-2.5">
               <div className="flex items-baseline gap-2.5">
                 <h2 className="text-[15px] font-semibold tracking-tight text-foreground">
                   {isPriceUnavailableMode ? t("common.unpricedInventory", "Unpriced inventory") : t("common.inventory", "Inventory")}
@@ -943,7 +1016,7 @@ export default function Dashboard() {
                   <span className="inline-block h-4 w-14 animate-pulse rounded bg-foreground/[0.03]" aria-hidden />
                 ) : (
                   <span className="text-[13px] font-medium text-muted-foreground num" aria-live="polite">
-                    {total.toLocaleString()}
+                    <FlowNumber value={total} label={total.toLocaleString()} />
                     {!isPriceUnavailableMode && activeFilterLabels.length === 0 ? (
                       <span className="ml-1 text-muted-foreground">priced</span>
                     ) : null}
@@ -958,7 +1031,7 @@ export default function Dashboard() {
                   className="normal-case tracking-normal"
                 />
               ) : null}
-            </div>
+            </Reveal>
             <div className="flex flex-wrap items-center gap-2">
               <SortControl
                 value={filters.sort}
@@ -1003,12 +1076,22 @@ export default function Dashboard() {
           {/* Active filters */}
           {activeFilterLabels.length > 0 && (
             <div className="mb-5 flex flex-wrap items-center gap-1.5">
-              {activeFilterLabels.map((label) => (
-                <span key={label} className="rounded-full border border-border bg-foreground/[0.03] px-2.5 py-1 text-[11px] font-medium text-muted-foreground">{label}</span>
-              ))}
-              <button type="button" onClick={() => setFilters({ ...EMPTY_FILTERS })}
-                className="rounded-full px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >{t("common.clearAll", "Clear all")}</button>
+              <AnimatePresence initial={false} mode="popLayout">
+                {activeFilterLabels.map((label) => (
+                  <motion.span
+                    key={label}
+                    layout={!motionStill}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9, transition: { duration: duration.fast, ease: ease.exit } }}
+                    transition={spring.snappy}
+                    className="rounded-full border border-border bg-foreground/[0.03] px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
+                  >{label}</motion.span>
+                ))}
+                <motion.button key="__clear" layout={!motionStill} transition={spring.snappy} type="button" onClick={() => setFilters({ ...EMPTY_FILTERS })}
+                  className="rounded-full px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >{t("common.clearAll", "Clear all")}</motion.button>
+              </AnimatePresence>
             </div>
           )}
 
@@ -1035,7 +1118,12 @@ export default function Dashboard() {
               <FilterSidebar filters={filters} onFiltersChange={setFilters} />
             </div>
 
-            <div className="min-w-0 flex-1">
+            <m.div
+              className="min-w-0 flex-1"
+              animate={{ opacity: refreshingListings ? 0.55 : 1 }}
+              transition={{ duration: refreshingListings ? duration.fast : duration.base, ease: ease.standard }}
+              aria-busy={refreshingListings || undefined}
+            >
               {loadingListings ? (
                 <div className={marketView === "grid" ? "grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3" : "space-y-3"}>
                   {Array.from({ length: marketView === "grid" ? 9 : 6 }).map((_, i) => (
@@ -1138,7 +1226,7 @@ export default function Dashboard() {
                   />
                 </div>
               ) : null}
-            </div>
+            </m.div>
           </div>
         </div>
       </section>
