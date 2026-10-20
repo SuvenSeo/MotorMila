@@ -54,6 +54,19 @@ import lk.motormila.app.ui.theme.MmSpacing
 import lk.motormila.app.ui.theme.MmType
 import lk.motormila.app.ui.theme.MotormilaTheme
 import lk.motormila.app.ui.tools.ToolsScreen
+import lk.motormila.app.ui.home.HomeContent
+import lk.motormila.app.ui.home.HomeUiState
+import lk.motormila.app.ui.search.SortFilterRow
+import lk.motormila.app.ui.components.SearchBar
+import lk.motormila.app.ui.components.FilterDraft
+import lk.motormila.app.ui.components.FilterSheetBody
+import lk.motormila.app.ui.components.MmSheetFrame
+import lk.motormila.app.domain.model.StatsSummary
+import lk.motormila.app.domain.model.Insights
+import lk.motormila.app.domain.model.HotDeal
+import lk.motormila.app.domain.model.PriceDrop
+import lk.motormila.app.domain.model.TrendingModel
+import lk.motormila.app.domain.model.DistrictStat
 import org.junit.Rule
 import org.junit.Test
 
@@ -206,4 +219,101 @@ class DesignSystemScreenshotsTest {
     }
 
     @Test fun splash_dark() = paparazzi.snapshot { Page(true) { SplashScreen(onDone = {}) } }
+
+    // ---------------- Home / Search / Filters (screenshot-only fixtures) ----------------
+
+    private fun homeState() = HomeUiState(
+        isLoading = false,
+        summary = StatsSummary(totalListings = 48_210, avgPriceLkr = 8_450_000.0, goodDealsCount = 1_284, sourceCount = 6),
+        insights = Insights(
+            newListings24h = 342,
+            trendingModels = listOf(
+                TrendingModel("Toyota", "Aqua", 2_140, 6_900_000.0, -1.2, null),
+                TrendingModel("Suzuki", "Wagon R", 1_870, 5_600_000.0, 0.4, null),
+                TrendingModel("Honda", "Vezel", 1_220, 11_300_000.0, 2.1, null),
+            ),
+            hotDeals = listOf(
+                HotDeal(1, "Toyota", "Aqua", 2017, "Colombo", "ikman", 6_450_000.0, 10.4, null),
+                HotDeal(2, "Honda", "Fit", 2015, "Gampaha", "riyasewana", 5_200_000.0, 7.8, null),
+                HotDeal(3, "Nissan", "Leaf", 2018, "Kandy", "patpat", 4_900_000.0, 6.1, null),
+            ),
+        ),
+        priceDrops = listOf(
+            PriceDrop(listing(5, "Toyota Prius S", 8_900_000.0, 9_300_000.0, 4.0), 9_400_000.0, 8_900_000.0, 5.3, "2026-10-18"),
+            PriceDrop(listing(6, "Suzuki Swift RS", 6_100_000.0, 6_300_000.0, 3.0), 6_450_000.0, 6_100_000.0, 5.4, "2026-10-17"),
+        ),
+        districts = listOf(
+            DistrictStat("Colombo", 6.9, 79.8, 14_200, 9_100_000.0, 8_200_000.0),
+            DistrictStat("Gampaha", 7.0, 80.0, 8_100, 7_600_000.0, 7_000_000.0),
+            DistrictStat("Kandy", 7.3, 80.6, 4_300, 7_200_000.0, 6_700_000.0),
+        ),
+    )
+
+    @Composable
+    private fun HomeSample() {
+        Box(Modifier.fillMaxSize()) {
+            HomeContent(
+                state = homeState(), live = emptyList(), onRefresh = {}, onRetry = {}, onDismissCached = {},
+                banner = {}, onListingClick = {}, onSearchClick = {}, onAlertsClick = {}, onSeeAll = {},
+            )
+            MmBottomBar(motormilaTabItems(emptyMap()), MotormilaTabs.BUY, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter))
+        }
+    }
+
+    @Test fun home_dark() = paparazzi.snapshot { Page(true) { HomeSample() } }
+
+    @Test fun home_light() = paparazzi.snapshot { Page(false) { HomeSample() } }
+
+    @Composable
+    private fun SearchSample() {
+        Box(Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize()) {
+                SearchBar(
+                    query = "", onQueryChange = {}, onSearch = {}, suggestions = emptyList(), recentSearches = emptyList(),
+                    onSuggestionClick = {}, onRecentClick = {}, onVoiceClick = {},
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), showDropdown = false,
+                )
+                SortFilterRow(sort = "newest", onSort = {}, onFilters = {}, onCreateAlert = {}, gridMode = true, onToggleLayout = {})
+                CardsGrid()
+            }
+            MmBottomBar(motormilaTabItems(emptyMap()), MotormilaTabs.BUY, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter))
+        }
+    }
+
+    @Test fun search_dark() = paparazzi.snapshot { Page(true) { SearchSample() } }
+
+    @Test fun search_light() = paparazzi.snapshot { Page(false) { SearchSample() } }
+
+    @Composable
+    private fun FilterSample() {
+        Box(Modifier.fillMaxSize()) {
+            SearchSample()
+            Box(Modifier.fillMaxSize().background(MmColors.current.scrim))
+            MmSheetFrame(title = "Filters", modifier = Modifier.align(Alignment.BottomCenter)) {
+                FilterSheetBody(
+                    draft = FilterDraft(make = "Toyota", priceMaxLkr = 9_500_000f, fuelType = "hybrid", condition = "reconditioned"),
+                    onDraftChange = {},
+                    makes = listOf("Toyota", "Honda", "Suzuki", "Nissan"),
+                    districts = listOf("Colombo", "Gampaha", "Kandy", "Kurunegala", "Galle", "Kalutara"),
+                    onReset = {},
+                    onApply = {},
+                )
+            }
+        }
+    }
+
+    @Test fun filter_sheet_dark() = paparazzi.snapshot { Page(true) { FilterSample() } }
+
+    @Test fun filter_sheet_light() = paparazzi.snapshot { Page(false) { FilterSample() } }
+
+    @Test fun splash_light() = paparazzi.snapshot { Page(false) { SplashScreen(onDone = {}) } }
+
+    @Test fun tools_light() = paparazzi.snapshot {
+        Page(false) {
+            Box(Modifier.fillMaxSize()) {
+                ToolsScreen({}, {}, {}, {}, {}, {}, {}, {}, {})
+                MmBottomBar(motormilaTabItems(mapOf("watchlist" to 3)), MotormilaTabs.TOOLS, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter))
+            }
+        }
+    }
 }
