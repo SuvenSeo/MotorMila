@@ -742,7 +742,7 @@ private fun LeasePane(
         state.lease?.let { quote ->
             MotormilaPane(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 CostLineRow(stringResource(R.string.calc_lease_principal), quote.principalLkr)
-                CostLineRow(stringResource(R.string.calc_lease_monthly), quote.monthlyLkr)
+                CostLineRow(stringResource(R.string.calc_lease_monthly), quote.monthlyLkr, monthly = true)
                 CostLineRow(stringResource(R.string.calc_lease_interest), quote.totalInterestLkr)
                 CostLineRow(stringResource(R.string.calc_lease_total_paid), quote.totalPaidLkr)
                 if (quote.ltvBreached) {
@@ -957,7 +957,7 @@ private fun DepreciationPane(
 }
 
 @Composable
-private fun CostLineRow(label: String, amountLkr: Double) {
+private fun CostLineRow(label: String, amountLkr: Double, monthly: Boolean = false) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -967,7 +967,8 @@ private fun CostLineRow(label: String, amountLkr: Double) {
     ) {
         Text(label, style = MaterialTheme.typography.bodyMedium.copy(color = MotormilaSecondaryText))
         Text(
-            lk.motormila.app.ui.components.MmPriceFormat.compact(amountLkr),
+            if (monthly) lk.motormila.app.ui.components.MmPriceFormat.monthly(amountLkr)
+            else lk.motormila.app.ui.components.MmPriceFormat.compact(amountLkr),
             style = MaterialTheme.typography.bodyMedium.copy(
                 fontWeight = FontWeight.SemiBold,
                 fontFamily = FontFamily.Monospace,
