@@ -174,4 +174,29 @@
     <string name="scr_set_support">Support</string>
     <string name="scr_set_contact">Contact us</string>
     <string name="scr_set_feedback_min">At least 10 characters. We read every message.</string>
+    <!-- Compare -->
+    <string name="scr_cmp_title">Compare</string>
+    <string name="scr_cmp_add">Add a car</string>
+    <string name="scr_cmp_remove">Remove %1$s</string>
+    <string name="scr_cmp_count">%1$d of %2$d cars</string>
+    <string name="scr_cmp_only_diff">Only differences</string>
+    <string name="scr_cmp_empty_title">Compare up to 4 cars</string>
+    <string name="scr_cmp_empty_body">Tap Compare on any listing to add it here. Specs line up side by side, with the best values highlighted.</string>
+    <string name="scr_cmp_browse">Browse listings</string>
+    <string name="scr_cmp_price">Asking price</string>
+    <string name="scr_cmp_vs_market">vs market</string>
+    <string name="scr_cmp_year">Year</string>
+    <string name="scr_cmp_mileage">Mileage</string>
+    <string name="scr_cmp_fuel">Fuel</string>
+    <string name="scr_cmp_transmission">Gearbox</string>
+    <string name="scr_cmp_engine">Engine</string>
+    <string name="scr_cmp_body">Body</string>
+    <string name="scr_cmp_condition">Condition</string>
+    <string name="scr_cmp_district">District</string>
+    <string name="scr_cmp_source">Source</string>
+    <string name="scr_cmp_deal">Deal</string>
+    <string name="scr_cmp_below_market">%1$s%% below</string>
+    <string name="scr_cmp_above_market">%1$s%% above</string>
+    <string name="scr_cmp_at_market">At market</string>
+    <string name="scr_cmp_note">Green marks the best value in a row. Asking prices from the original ads; final prices are usually lower after negotiation.</string>
 </resources>
