@@ -1,8 +1,9 @@
-import { memo, useMemo } from "react";
+import { memo, useMemo, useRef } from "react";
+import { m } from "motion/react";
 import { CarListing } from "@/types/car";
 import { formatPrice } from "@/services/api";
-import { Gauge, MapPin, ArrowRight, Heart, Check, Plus, TrendingDown, Clock, Layers } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Gauge, MapPin, ArrowRight, TrendingDown, Clock, Layers } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { ListingImageCarousel } from "@/components/ListingImageCarousel";
 import { PriceUnavailableBadge } from "@/components/PriceUnavailableBadge";
 import { isReasonableListingPrice } from "@/lib/formatting";
@@ -26,6 +27,9 @@ import { computeDealBadge, DEAL_BAR_CLASSES, DEAL_TEXT_CLASSES } from "@/lib/dea
 import { isLeaseTakeoverListing } from "@/lib/leaseTakeover";
 import { estimateListingMonthly, formatMonthlyLkr } from "@/lib/listingFinance";
 import { DealBadge } from "@/components/listing/DealBadge";
+import { CompareGlyph, SaveHeartIcon } from "@/components/listing/SaveHeart";
+import { fadeIn, fadeUp, hoverLift, press, useReducedMotionOrLowData } from "@/lib/motion";
+import { navigateWithHeroTransition, revealDelay, useCanHover, visibleCardImage, withShowDelay } from "@/components/listing/listingMotion";
 
 interface ListingCardProps {
   listing: CarListing;
@@ -40,6 +44,8 @@ interface ListingCardProps {
    * hidden when absent or below 2.
    */
   seenOnSites?: number | null;
+  /** Position in its grid: the first 8 cards stagger in (40ms apart), the rest appear together. */
+  revealIndex?: number;
 }
 
 /** Title-cases an enum token; returns null for empty/unknown so the pill is hidden. */
@@ -83,10 +89,20 @@ export const ListingCard = memo(function ListingCard({
   isWatchlisted,
   priority = false,
   seenOnSites,
+  revealIndex,
 }: ListingCardProps) {
   const { t } = useAppPreferences();
   const { hasProAccess, isAdmin } = useAuth();
   const fullAccess = hasFullPlatformAccess({ hasProAccess, isAdmin });
+  const navigate = useNavigate();
+  const cardRef = useRef<HTMLElement>(null);
+  const calm = useReducedMotionOrLowData();
+  const canHover = useCanHover();
+  // Scroll-in reveal (once). Reduced motion / low data: opacity only.
+  const revealVariants = useMemo(
+    () => withShowDelay(calm ? fadeIn : fadeUp, calm ? 0 : revealDelay(revealIndex)),
+    [calm, revealIndex],
+  );
   // Full photo set (primary first); single-image listings behave exactly as before.
   const galleryImages = getListingImageList(listing);
   const daysOnMarketLabel = getListingDaysOnMarketLabel(listing.first_seen_at || listing.scraped_at);
@@ -153,10 +169,17 @@ export const ListingCard = memo(function ListingCard({
   const mileageKnown = computeMileageTrust({ mileageKm: listing.mileage_km, year: listing.year }).risk !== "unknown";
 
   return (
-    <article
+    <m.article
+      ref={cardRef}
       role="article"
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true, amount: 0.15 }}
+      variants={revealVariants}
+      {...(calm ? {} : press)}
+      {...(canHover && !calm ? hoverLift : {})}
       aria-label={t("listingCard.aria", "{title} listing card", { title: listingTitle || "Vehicle" })}
-      className="liquid-panel vehicle-card group relative isolate h-full overflow-hidden rounded-3xl border border-transparent shadow-soft transition-all duration-500 ease-apple hover:-translate-y-2 hover:border-primary/35 hover:shadow-soft-xl active:scale-[0.985] active:shadow-soft motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+      className="liquid-panel vehicle-card group relative isolate h-full overflow-hidden rounded-3xl border border-transparent shadow-soft transition-[border-color,box-shadow] duration-300 ease-apple hover:border-primary/35 hover:shadow-soft-xl motion-reduce:transition-none"
       onPointerEnter={() => {
         // Only warm the route chunk. Data prefetch on hover used to pull the
         // whole snapshot catalogue (tens of MB) the first time a card was hovered.
@@ -166,11 +189,17 @@ export const ListingCard = memo(function ListingCard({
       <Link
         to={`/listing/${listing.id}`}
         aria-label={t("listingCard.openAria", "Open {title}", { title: listingTitle || "vehicle listing" })}
+        onClick={(e) => {
+          // Card → detail photo continuity (View Transitions, feature-detected).
+          if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+          const to = `/listing/${listing.id}`;
+          if (navigateWithHeroTransition(() => navigate(to), visibleCardImage(cardRef.current))) e.preventDefault();
+        }}
         className="absolute inset-0 z-10 rounded-3xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       />
 
       <div className="pointer-events-none relative z-20 flex h-full flex-col">
-        <div className="relative aspect-[16/10] overflow-hidden bg-muted">
+        <div className="listing-card-photo relative aspect-[16/10] overflow-hidden bg-muted">
           <ListingImageCarousel
             images={galleryImages}
             listingId={listing.id}
@@ -179,7 +208,6 @@ export const ListingCard = memo(function ListingCard({
             source={listing.source}
             priority={priority}
             className="h-full w-full"
-            imageClassName="transition-transform duration-700 ease-out group-hover:scale-[1.06] motion-reduce:transform-none"
           />
           {/* Bottom-only scrim: keeps the price legible without dimming the
               placeholder lockup, which lives in the top 60% of the frame. */}
@@ -198,28 +226,28 @@ export const ListingCard = memo(function ListingCard({
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onWatchlistToggle(listing); }}
-                className={`pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur-md transition-all ${
+                className={`pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur-md transition-[background-color,border-color,color,transform] duration-150 active:scale-90 motion-reduce:active:scale-100 ${
                   isWatchlisted
                     ? "bg-primary text-primary-foreground border-primary"
                     : "bg-black/60 text-white/90 border-white/8 hover:text-white hover:bg-black/75"
                 }`}
                 aria-label={isWatchlisted ? t("listingCard.removeWatchlist", "Remove from watchlist") : t("listingCard.addWatchlist", "Add to watchlist")}
               >
-                <Heart className={`w-3.5 h-3.5 ${isWatchlisted ? "fill-current" : ""}`} />
+                <SaveHeartIcon saved={Boolean(isWatchlisted)} className="w-3.5 h-3.5" />
               </button>
             )}
             {onCompareToggle && (
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onCompareToggle(listing); }}
-                className={`pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur-md transition-all ${
+                className={`pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur-md transition-[background-color,border-color,color,transform] duration-150 active:scale-90 motion-reduce:active:scale-100 ${
                   isComparing
                     ? "bg-primary text-primary-foreground border-primary"
                     : "bg-black/60 text-white/90 border-white/8 hover:text-white hover:bg-black/75"
                 }`}
                 aria-label={isComparing ? t("listingCard.removeCompare", "Remove from comparison") : t("listingCard.addCompare", "Add to comparison")}
               >
-                {isComparing ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                <CompareGlyph active={Boolean(isComparing)} className="h-3 w-3" />
               </button>
             )}
           </div>
@@ -365,7 +393,7 @@ export const ListingCard = memo(function ListingCard({
           </div>
         </div>
       </div>
-    </article>
+    </m.article>
   );
 });
 

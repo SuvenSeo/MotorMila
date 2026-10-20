@@ -1,0 +1,102 @@
+/* Listing-area motion (polish/listing). Transform + opacity only.
+ * Falls back to the spec values when the shared CSS vars aren't defined. */
+
+/* ── Card → detail View Transition ─────────────────────────────────────── */
+::view-transition-group(listing-hero) {
+  animation-duration: 0.35s;
+  animation-timing-function: var(--ease-emphasized, cubic-bezier(0.3, 0, 0, 1));
+}
+::view-transition-old(listing-hero),
+::view-transition-new(listing-hero) {
+  /* Both are photos of the same car: no double-exposure, keep it crisp. */
+  height: 100%;
+  object-fit: cover;
+  overflow: clip;
+}
+html[data-listing-vt] ::view-transition-old(root),
+html[data-listing-vt] ::view-transition-new(root) {
+  animation-duration: 0.18s;
+  animation-timing-function: var(--ease-standard, cubic-bezier(0.2, 0, 0, 1));
+}
+/* While the hero morph is captured, show the new route at rest (the route
+ * cross-fade would otherwise snapshot it at opacity 0) and drop the old one. */
+html[data-listing-vt="hero"] .route-stage:has(img[data-listing-hero]) {
+  opacity: 1 !important;
+  transform: none !important;
+}
+html[data-listing-vt="hero"] .route-stage:not(:has(img[data-listing-hero])) {
+  display: none !important;
+}
+
+/* ── Photo fade-in on load (placeholder colour shows underneath) ───────── */
+img[data-fade-in] {
+  opacity: 0;
+  transition: opacity var(--dur-base, 0.28s) var(--ease-standard, cubic-bezier(0.2, 0, 0, 1));
+}
+img[data-fade-in][data-loaded="true"] {
+  opacity: 1;
+}
+
+/* ── Card photo hover zoom (desktop only, inside the clipped frame) ────── */
+@media (hover: hover) and (pointer: fine) {
+  .listing-card-photo img {
+    transition:
+      transform 0.45s var(--ease-standard, cubic-bezier(0.2, 0, 0, 1)),
+      opacity var(--dur-base, 0.28s) var(--ease-standard, cubic-bezier(0.2, 0, 0, 1));
+  }
+  .group:hover .listing-card-photo img {
+    transform: scale(1.03);
+  }
+}
+
+/* ── Save heart burst ring (particle-free) ─────────────────────────────── */
+.save-burst {
+  position: absolute;
+  inset: -10px;
+  border-radius: 9999px;
+  border: 2px solid currentColor;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.6);
+}
+.save-burst[data-play="true"] {
+  animation: save-burst 0.45s var(--ease-standard, cubic-bezier(0.2, 0, 0, 1)) forwards;
+}
+@keyframes save-burst {
+  0% { opacity: 0.55; transform: scale(0.6); }
+  100% { opacity: 0; transform: scale(1.6); }
+}
+
+/* ── Lightbox zoom-from-thumbnail ───────────────────────────────────────── */
+.mm-lightbox-zoom .yarl__carousel {
+  transform-origin: var(--mm-lb-ox, 50%) var(--mm-lb-oy, 50%);
+  animation: mm-lb-zoom 0.32s var(--ease-emphasized, cubic-bezier(0.3, 0, 0, 1)) both;
+}
+@keyframes mm-lb-zoom {
+  from { opacity: 0; transform: scale(0.55); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ── Compare page row tint (opacity overlay, no colour animation) ──────── */
+.cmp-tint {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-base, 0.28s) var(--ease-standard, cubic-bezier(0.2, 0, 0, 1));
+}
+.cmp-tint[data-on="true"] {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  img[data-fade-in] { transition: none; }
+  .group:hover .listing-card-photo img { transform: none; }
+  .save-burst[data-play="true"] { animation: none; }
+  .mm-lightbox-zoom .yarl__carousel { animation: none; }
+  .cmp-tint { transition: none; }
+}
+html.low-data img[data-fade-in] { opacity: 1; transition: none; }
+html.low-data .save-burst[data-play="true"],
+html.low-data .mm-lightbox-zoom .yarl__carousel { animation: none; }
+html.low-data .group:hover .listing-card-photo img { transform: none; }
