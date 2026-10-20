@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import { m } from "motion/react";
+import { duration, ease, fadeIn, scaleIn } from "@/lib/motion";
 import { Link } from "react-router-dom";
 import { Bell, MapPin, SearchX, Wallet, X } from "lucide-react";
 import type { FilterState } from "@/types/car";
@@ -58,8 +60,19 @@ export function NoResultsState({ filters, onFiltersChange, onCreateAlert, alertS
     "inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-card px-3.5 text-[13px] font-medium text-foreground transition-colors hover:border-primary/40 hover:text-primary-bright active:scale-[0.98] sm:min-h-9";
 
   return (
-    <div className="rounded-[2rem] border border-dashed border-border px-5 py-10 text-center sm:px-8">
-      <SearchX aria-hidden className="mx-auto h-8 w-8 text-muted-foreground" />
+    <m.div
+      initial="hidden"
+      animate="show"
+      variants={fadeIn}
+      className="rounded-[2rem] border border-dashed border-border px-5 py-10 text-center sm:px-8"
+    >
+      <m.span
+        className="block"
+        variants={scaleIn}
+        transition={{ duration: duration.slow, ease: ease.emphasized }}
+      >
+        <SearchX aria-hidden className="mx-auto h-8 w-8 text-muted-foreground" />
+      </m.span>
       <p className="mt-3 text-[15px] font-semibold text-foreground">{t("search.noResultsTitle", "No listings match all of these filters")}</p>
       <p className="mx-auto mt-1.5 max-w-md text-sm text-muted-foreground">
         {t("search.noResultsBody", "Try one of these, or get an alert when a match is listed.")}
@@ -152,6 +165,6 @@ export function NoResultsState({ filters, onFiltersChange, onCreateAlert, alertS
           {t("search.alertSavedLocal", "Saved on this device. We couldn't reach the alert server just now.")}
         </p>
       ) : null}
-    </div>
+    </m.div>
   );
 }

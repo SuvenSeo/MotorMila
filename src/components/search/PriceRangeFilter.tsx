@@ -17,6 +17,8 @@ import {
 } from "@/lib/priceSteps";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { cn } from "@/lib/utils";
+import { m } from "motion/react";
+import { duration, ease, useReducedMotionOrLowData } from "@/lib/motion";
 
 /** Local-step presets (lakhs first, Mn above 100 L). */
 const PRESETS: Array<{ key: string; fallback: string; min?: number; max?: number }> = [
@@ -55,6 +57,7 @@ export interface PriceRangeFilterProps {
  */
 export function PriceRangeFilter({ filters, onCommit, touch = false }: PriceRangeFilterProps) {
   const { t } = useAppPreferences();
+  const motionStill = useReducedMotionOrLowData();
   const [range, setRange] = useState<[number, number]>(() => [
     priceToStepIndex(filters.price_min, "min"),
     priceToStepIndex(filters.price_max, "max"),
@@ -151,10 +154,15 @@ export function PriceRangeFilter({ filters, onCommit, touch = false }: PriceRang
           {histogram.map((count, i) => {
             const inRange = i >= range[0] && i < Math.max(range[1], range[0] + 1);
             return (
-              <div
+              /* Bars grow up once on first paint (scaleY, transform-only); later
+                 data changes just snap to the new height. */
+              <m.div
                 key={i}
-                className={cn("flex-1 rounded-t-sm", inRange ? "bg-primary/55" : "bg-muted-foreground/20")}
+                className={cn("flex-1 origin-bottom rounded-t-sm transition-colors duration-200", inRange ? "bg-primary/55" : "bg-muted-foreground/20")}
                 style={{ height: `${count === 0 ? 0 : Math.max(8, (count / histMax) * 100)}%` }}
+                initial={motionStill ? false : { scaleY: 0 }}
+                animate={{ scaleY: 1 }}
+                transition={{ duration: duration.slow, ease: ease.emphasized, delay: Math.min(i, 8) * 0.02 }}
               />
             );
           })}
@@ -182,7 +190,13 @@ export function PriceRangeFilter({ filters, onCommit, touch = false }: PriceRang
           const hi = (value[1] ?? PRICE_STEP_LAST_INDEX) === PRICE_STEP_LAST_INDEX ? undefined : stepIndexToPrice(value[1]);
           commit(lo, hi);
         }}
-        className="py-1 [&>span:first-child]:h-2"
+        className={cn(
+          "py-1 [&>span:first-child]:h-2",
+          // Thumb grab "spring": scale with an overshoot curve (transform only;
+          // the primitive positions thumbs itself, which we never animate).
+          !motionStill &&
+            "[&_[role=slider]]:transition-transform [&_[role=slider]]:duration-300 [&_[role=slider]]:ease-[cubic-bezier(0.34,1.56,0.64,1)] [&_[role=slider]:active]:scale-125 [&_[role=slider]:focus-visible]:scale-110",
+        )}
       />
 
       {sampleSize >= 8 ? (

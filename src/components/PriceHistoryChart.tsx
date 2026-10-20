@@ -1,4 +1,6 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { m } from "motion/react";
+import { fadeIn, useReducedMotionOrLowData } from "@/lib/motion";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { ArrowDownRight, ArrowUpRight, BarChart3, Gauge } from "lucide-react";
 import { formatPriceLkrMillions } from "@/lib/formatting";
@@ -56,6 +58,16 @@ export function PriceHistoryChart({
   emptyActionLabel,
   onEmptyAction,
 }: PriceHistoryChartProps) {
+  const motionStill = useReducedMotionOrLowData();
+  // Recharts animates every data change; we only want the first draw.
+  const drewOnce = useRef(false);
+  const animateDraw = !motionStill && !drewOnce.current;
+  useEffect(() => {
+    if (!isLoading && points.length > 0) {
+      const id = window.setTimeout(() => { drewOnce.current = true; }, 650);
+      return () => window.clearTimeout(id);
+    }
+  }, [isLoading, points.length]);
   const normalizedPoints = useMemo(() => {
     return [...points]
       .filter((point) => Number.isFinite(Number(point?.median_price)) && Number(point?.median_price) > 0)
@@ -185,7 +197,11 @@ export function PriceHistoryChart({
                 ) : null}
               </div>
             ) : (
-              <div
+              <m.div
+                key={title}
+                initial="hidden"
+                animate="show"
+                variants={fadeIn}
                 role="img"
                 aria-label={`${title || "Price trend"}: ${chartData.length} months of median asking prices${chartData.length ? `, latest ${formatMonthLabel(chartData[chartData.length - 1]?.month || "")}` : ""}`}
                 className="h-full w-full"
@@ -245,10 +261,15 @@ export function PriceHistoryChart({
                     dot={chartData.length <= 14 ? { r: 2.5, strokeWidth: 2, fill: "hsl(var(--card))", stroke: toneStyle.stroke } : false}
                     activeDot={{ r: 5, strokeWidth: 2, fill: toneStyle.stroke, stroke: "hsl(var(--card))" }}
                     connectNulls
+                    // Draw in once (600ms) on first render only; lane changes
+                    // crossfade instead. Off under reduced motion / low data.
+                    isAnimationActive={animateDraw}
+                    animationDuration={600}
+                    animationEasing="ease-out"
                   />
                 </AreaChart>
               </ResponsiveContainer>
-              </div>
+              </m.div>
             )}
           </div>
 

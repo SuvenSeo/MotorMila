@@ -1,4 +1,6 @@
-import { memo } from "react";
+import { memo, useEffect, useRef, useState } from "react";
+import { useInView } from "motion/react";
+import { useReducedMotionOrLowData } from "@/lib/motion";
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import {
   Ticker,
@@ -67,16 +69,34 @@ function ariaChange(pct: number | null, t: (k: string, f?: string, v?: Record<st
  */
 export const MarketTicker = memo(function MarketTicker({ rows, onSelect }: MarketTickerProps) {
   const { t } = useAppPreferences();
+  const ref = useRef<HTMLElement>(null);
+  // Continuous CSS loop, but paused when off screen, while hovered/focused
+  // (CSS), when the tab is hidden, and never running under reduced motion /
+  // low-data mode.
+  const inView = useInView(ref, { amount: 0 });
+  const still = useReducedMotionOrLowData();
+  const [tabVisible, setTabVisible] = useState(true);
+  useEffect(() => {
+    const onChange = () => setTabVisible(document.visibilityState !== "hidden");
+    document.addEventListener("visibilitychange", onChange);
+    return () => document.removeEventListener("visibilitychange", onChange);
+  }, []);
   if (!rows.length) return null;
+  const trackStyle = still
+    ? { animation: "none" }
+    : !inView || !tabVisible
+      ? { animationPlayState: "paused" as const }
+      : undefined;
   const stableLabel = t("ticker.stable", "stable");
   const itemClass = "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-1 py-0.5 align-middle text-[12px]";
   return (
-    <section aria-label="Trending models ticker" className="market-ticker border-b border-border bg-surface/60">
+    <section ref={ref} aria-label="Trending models ticker" className="market-ticker border-b border-border bg-surface/60">
       <div className="market-ticker__viewport relative flex overflow-hidden">
         {[0, 1].map((copy) => (
           <div
             key={copy}
             aria-hidden={copy === 1}
+            style={trackStyle}
             className="market-ticker__track flex w-max shrink-0 items-center gap-8 py-2.5 pl-8"
           >
             {rows.map((row) =>

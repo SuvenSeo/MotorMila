@@ -7,6 +7,8 @@ import { changeTone, formatChangePct, formatLakhs, paddedDomain, TONE_STYLES } f
 import { formatPriceLkrMillions } from "@/lib/formatting";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { cn } from "@/lib/utils";
+import type { ReactNode } from "react";
+import { CountUpOnView, FlowLkr } from "@/components/motion/FlowNumber";
 
 /**
  * KPI strip for the Trends page. Three cards with mini sparklines (shadcn
@@ -36,21 +38,34 @@ export function TrendKpis({ points }: { points: PriceTrendPoint[] }) {
     median: { label: t("trendKpis.median", "Median"), color: TONE_STYLES[tone].stroke },
   } satisfies ChartConfig;
 
-  const cards = [
+  const changeRounded = Math.round(kpis.changePct * 10) / 10;
+  const cards: Array<{ label: string; value: string; sub: string; delta?: boolean; animated?: ReactNode }> = [
     {
       label: t("trendKpis.medianNow", "Median now"),
       value: formatPriceLkrMillions(kpis.last.median_price),
+      animated: <FlowLkr countUp value={kpis.last.median_price} label={formatPriceLkrMillions(kpis.last.median_price)} />,
       sub: `${formatLakhs(kpis.last.median_price)} · ${kpis.last.month}`,
     },
     {
       label: t("trendKpis.changeVs", "Change vs {month}", { month: kpis.first.month }),
       value: tone === "stable" ? t("trendTone.stableShort", "Stable") : formatChangePct(kpis.changePct),
+      animated:
+        tone === "stable" ? undefined : (
+          <CountUpOnView
+            value={Math.abs(changeRounded)}
+            prefix={changeRounded > 0 ? "+" : changeRounded < 0 ? "\u2212" : ""}
+            suffix="%"
+            format={{ minimumFractionDigits: 1, maximumFractionDigits: 1 }}
+            label={formatChangePct(kpis.changePct)}
+          />
+        ),
       sub: t("trendKpis.window", "Across the visible window"),
       delta: true,
     },
     {
       label: t("trendKpis.sampled", "Listings sampled"),
       value: kpis.totalSamples.toLocaleString("en-LK"),
+      animated: <CountUpOnView value={kpis.totalSamples} label={kpis.totalSamples.toLocaleString("en-LK")} />,
       sub: t("trendKpis.months", "{n} months of history", { n: kpis.months }),
     },
   ];
@@ -61,7 +76,7 @@ export function TrendKpis({ points }: { points: PriceTrendPoint[] }) {
         <div key={c.label} className="rounded-2xl border border-border bg-card p-4 shadow-soft">
           <p className="text-[12px] font-semibold text-muted-foreground">{c.label}</p>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <p className="num text-[1.5rem] font-bold leading-tight tracking-tight text-foreground">{c.value}</p>
+            <p className="num text-[1.5rem] font-bold leading-tight tracking-tight text-foreground">{c.animated ?? c.value}</p>
             {c.delta && (
               <span className={cn("inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-bold", TONE_STYLES[tone].chip)}>
                 <DeltaIcon className="h-3 w-3" aria-hidden />
