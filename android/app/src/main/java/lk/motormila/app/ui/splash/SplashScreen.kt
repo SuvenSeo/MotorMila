@@ -2,6 +2,7 @@ package lk.motormila.app.ui.splash
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -45,7 +46,7 @@ fun SplashScreen(
         onDone()
     }
 
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize().background(colors.background), contentAlignment = Alignment.Center) {
         Image(
             painter = painterResource(
                 if (colors.isDark) R.drawable.logo_wordmark_on_dark else R.drawable.logo_wordmark_on_light,

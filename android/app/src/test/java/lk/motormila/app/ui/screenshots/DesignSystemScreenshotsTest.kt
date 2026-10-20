@@ -91,7 +91,7 @@ class DesignSystemScreenshotsTest {
     @Composable
     private fun Page(dark: Boolean, content: @Composable () -> Unit) {
         MotormilaTheme(darkTheme = dark, reducedMotion = true, languageTag = "en") {
-            Box(Modifier.fillMaxSize().statusBarsPadding()) { content() }
+            Box(Modifier.fillMaxSize().background(MmColors.current.background).statusBarsPadding()) { content() }
         }
     }
 
