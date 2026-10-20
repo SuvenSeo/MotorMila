@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Reveal } from "@/components/motion/Reveal";
 import { AlertTriangle, BarChart3, Clock, Database, Gauge, Info, Scale, ShieldCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { PageBody } from "@/components/PageBody";
@@ -36,7 +37,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-24 rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
+    <Reveal as="section" id={id} aria-labelledby={`${id}-title`} className="scroll-mt-24 rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
       <div className="mb-3 flex items-center gap-3">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-surface">
           <Icon className="h-4 w-4 text-primary" aria-hidden />
@@ -46,7 +47,7 @@ function Section({
         </h2>
       </div>
       <div className="space-y-3 text-[14px] leading-relaxed text-foreground/85">{children}</div>
-    </section>
+    </Reveal>
   );
 }
 

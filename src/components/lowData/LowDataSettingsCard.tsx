@@ -2,12 +2,15 @@ import { Feather } from "lucide-react";
 import { useLowData } from "@/hooks/useLowData";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { cn } from "@/lib/utils";
+import { m } from "motion/react";
+import { spring, useReducedMotionOrLowData } from "@/lib/motion";
 import { LowDataSuggestion } from "./LowDataSuggestion";
 
 /** Settings card: low-data mode toggle (+ Data Saver suggestion). */
 export function LowDataSettingsCard({ className }: { className?: string }) {
   const { lowData, setLowData } = useLowData();
   const { t } = useAppPreferences();
+  const motionStill = useReducedMotionOrLowData();
   const id = "settings-low-data";
   return (
     <section
@@ -40,14 +43,17 @@ export function LowDataSettingsCard({ className }: { className?: string }) {
             lowData ? "border-primary bg-primary" : "border-border bg-surface",
           )}
         >
-          <span
+          {/* Knob springs across (bouncy, toggles only); instant once low-data
+              is on, since that mode turns animation off. */}
+          <m.span
             aria-hidden
-            className={cn(
-              "inline-block h-5 w-5 rounded-full bg-background shadow transition-transform",
-              lowData ? "translate-x-6" : "translate-x-1",
-            )}
+            initial={false}
+            animate={{ x: lowData ? 24 : 4 }}
+            transition={motionStill ? { duration: 0 } : spring.bouncy}
+            className="inline-block h-5 w-5 rounded-full bg-background shadow"
           />
-        </button>      </div>
+        </button>
+      </div>
       <ul className="mt-4 grid gap-1.5 text-[12px] text-muted-foreground sm:grid-cols-2">
         <li>• {t("lowData.point.images", "Small thumbnail photos only")}</li>
         <li>• {t("lowData.point.carousel", "Photo carousels don't auto-play")}</li>

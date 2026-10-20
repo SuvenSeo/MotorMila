@@ -6,13 +6,14 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
 import { PageHero } from "@/components/PageHero";
-import { revealItem, springSnappy } from "@/lib/motion";
+import { fadeUp, hoverLift, listStagger, press, revealItem, useReducedMotionOrLowData } from "@/lib/motion";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { visuals } from "@/lib/visualAssets";
 import { NotFoundSearch } from "@/components/notFound/NotFoundSearch";
 
 const NotFound = () => {
   const { t } = useAppPreferences();
+  const motionStill = useReducedMotionOrLowData();
 
   const links = [
     {
@@ -72,16 +73,21 @@ const NotFound = () => {
             />
           </motion.div>
 
-          <div className="mt-8 grid gap-4 lg:grid-cols-3">
+          <motion.div
+            className="mt-8 grid gap-4 lg:grid-cols-3"
+            inherit={false}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.1 }}
+            variants={listStagger}
+          >
             {links.map((l) => {
               const Icon = l.icon;
               return (
                 <motion.div
                   key={l.to}
-                  variants={revealItem}
-                  whileHover={{ y: -3 }}
-                  whileTap={{ scale: 0.99 }}
-                  transition={springSnappy}
+                  variants={fadeUp}
+                  {...(motionStill ? {} : { ...hoverLift, whileTap: press.whileTap })}
                   className={l.featured ? "lg:col-span-3" : ""}
                 >
                   <Link
@@ -128,7 +134,7 @@ const NotFound = () => {
                 </motion.div>
               );
             })}
-          </div>
+          </motion.div>
       </PageBody>
     </PageCanvas>
   );

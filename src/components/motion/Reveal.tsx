@@ -11,13 +11,14 @@ export interface RevealProps {
   /** Seconds. */
   delay?: number;
   id?: string;
+  "aria-labelledby"?: string;
 }
 
 /**
  * Fade + 8px rise the first time the block scrolls into view (once).
  * Opacity-only under reduced motion / low-data mode.
  */
-export function Reveal({ children, className, as = "div", delay = 0, id }: RevealProps) {
+export function Reveal({ children, className, as = "div", delay = 0, id, "aria-labelledby": labelledBy }: RevealProps) {
   const still = useReducedMotionOrLowData();
   const Comp = m[as];
   const base = still ? fadeIn : fadeUp;
@@ -27,7 +28,10 @@ export function Reveal({ children, className, as = "div", delay = 0, id }: Revea
   return (
     <Comp
       id={id}
+      aria-labelledby={labelledBy}
       className={className}
+      // Own trigger: don't inherit a parent's mount-time "show".
+      inherit={false}
       initial="hidden"
       whileInView="show"
       viewport={{ once: true, amount: 0.15, margin: "0px 0px -6% 0px" }}
