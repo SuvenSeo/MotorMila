@@ -1,0 +1,103 @@
+# TEMPORARY (android/integration branch only, never merge to main).
+# Builds the sideload preview APK + review screenshots. Publishes nothing:
+# no tag, no release, no R2, no manifest push.
+name: Android integration preview (temp)
+
+on:
+  push:
+    branches: [android/integration]
+
+concurrency:
+  group: android-integration-preview
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - name: Android SDK
+        working-directory: .
+        run: |
+          set -euo pipefail
+          : "${ANDROID_HOME:=${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKMANAGER" ] || exit 0
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-35" >/dev/null || true
+      - run: chmod +x gradlew
+      - name: Compile direct + play
+        run: ./gradlew :app:compileDirectDebugKotlin :app:compilePlayDebugKotlin --stacktrace
+      - name: Unit tests (direct)
+        run: ./gradlew :app:testDirectDebugUnitTest --stacktrace
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: test-reports
+          path: android/app/build/reports/tests/
+          if-no-files-found: ignore
+      - name: Decode sideload keystore
+        working-directory: .
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ secrets.ANDROID_KEYSTORE_FILE }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ANDROID_KEYSTORE_FILE:-}" ]; then echo "SIGNING=none" >> "$GITHUB_ENV"; exit 0; fi
+          mkdir -p "$HOME/.android"
+          printf '%s' "$ANDROID_KEYSTORE_FILE" | base64 --decode > "$HOME/.android/mm.keystore"
+          echo "MM_KS=$HOME/.android/mm.keystore" >> "$GITHUB_ENV"
+          echo "SIGNING=release" >> "$GITHUB_ENV"
+      - name: Assemble direct release APK (signed)
+        if: env.SIGNING == 'release'
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ env.MM_KS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew :app:assembleDirectRelease --stacktrace
+      - name: Assemble direct debug APK (no signing secrets)
+        if: env.SIGNING != 'release'
+        run: ./gradlew :app:assembleDirectDebug --stacktrace
+      - name: Signer + version
+        working-directory: .
+        run: |
+          BT="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)"
+          for a in android/app/build/outputs/apk/direct/*/*.apk; do
+            echo "== $a"; "$BT/apksigner" verify --print-certs "$a" | head -5
+            "$BT/aapt2" dump badging "$a" | head -1
+          done
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sideload-apk
+          path: android/app/build/outputs/apk/direct/
+          retention-days: 7
+      - name: Paparazzi record (review shots)
+        if: always()
+        continue-on-error: true
+        env:
+          MM_SCREENS_SHOTS: "1"
+        run: ./gradlew :app:recordPaparazziDirectDebug --stacktrace
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: paparazzi-pngs
+          path: |
+            android/app/src/test/snapshots/images/
+            android/app/build/reports/paparazzi/
+          if-no-files-found: ignore
+          retention-days: 7
