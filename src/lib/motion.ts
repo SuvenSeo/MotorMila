@@ -52,3 +52,74 @@ export const pageExit = {
   scale: 0.995,
   transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] },
 } as const;
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * TEMPORARY (polish/listing): motion tokens per MOTION_SPEC.md. The
+ * integrator replaces this block with the canonical one (same names).
+ * Variant labels: hidden / show / exit.
+ * ════════════════════════════════════════════════════════════════════════ */
+import { useEffect as useMotionEffect, useState as useMotionState } from "react";
+import { useReducedMotion } from "motion/react";
+import type { Transition, Variants } from "motion/react";
+import { LOW_DATA_CLASS, LOW_DATA_EVENT, readLowData } from "@/hooks/useLowData";
+
+export const duration = { instant: 0.1, fast: 0.18, base: 0.28, slow: 0.45, page: 0.35 } as const;
+
+export const ease = {
+  standard: [0.2, 0, 0, 1],
+  emphasized: [0.3, 0, 0, 1],
+  exit: [0.4, 0, 1, 1],
+} as const satisfies Record<string, [number, number, number, number]>;
+
+export const spring = {
+  snappy: { type: "spring", stiffness: 500, damping: 35, mass: 0.8 },
+  gentle: { type: "spring", stiffness: 260, damping: 30 },
+  bouncy: { type: "spring", stiffness: 400, damping: 22 },
+} as const satisfies Record<string, Transition>;
+
+export const fadeIn: Variants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { duration: duration.base, ease: ease.standard } },
+  exit: { opacity: 0, transition: { duration: duration.fast, ease: ease.exit } },
+};
+
+export const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 8 },
+  show: { opacity: 1, y: 0, transition: { duration: duration.base, ease: ease.standard } },
+  exit: { opacity: 0, y: 4, transition: { duration: duration.fast, ease: ease.exit } },
+};
+
+export const scaleIn: Variants = {
+  hidden: { opacity: 0, scale: 0.96 },
+  show: { opacity: 1, scale: 1, transition: { duration: duration.fast, ease: ease.standard } },
+  exit: { opacity: 0, scale: 0.96, transition: { duration: duration.fast, ease: ease.exit } },
+};
+
+/** Container: 40ms stagger. Cap at 8 by giving later children no extra delay. */
+export const listStagger: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.04, delayChildren: 0.02 } },
+};
+
+export const press = { whileTap: { scale: 0.97 } } as const;
+
+export const hoverLift = { whileHover: { y: -2 }, transition: spring.snappy } as const;
+
+/** True when the OS asks for reduced motion OR low-data mode is on. */
+export function useReducedMotionOrLowData(): boolean {
+  const reduced = useReducedMotion();
+  const [lowData, setLowData] = useMotionState<boolean>(() => {
+    if (typeof document !== "undefined" && document.documentElement.classList.contains(LOW_DATA_CLASS)) return true;
+    return readLowData();
+  });
+  useMotionEffect(() => {
+    const sync = () => setLowData(readLowData());
+    window.addEventListener(LOW_DATA_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(LOW_DATA_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+  return reduced === true || lowData;
+}
