@@ -72,6 +72,28 @@ fun SlidingNumber(
     )
 }
 
+/**
+ * Rolling LKR price using the app formatter ([lk.motormila.app.core.format.LkrFormat]):
+ * compact millions ("Rs 8.5 Mn") by default, full rupees ("Rs 7,250,000")
+ * only where [full] is set (listing detail).
+ */
+@Composable
+fun SlidingLkr(
+    valueLkr: Double,
+    modifier: Modifier = Modifier,
+    style: TextStyle = LocalTextStyle.current,
+    color: Color = Color.Unspecified,
+    full: Boolean = false,
+) {
+    RollingDigits(
+        text = if (full) lk.motormila.app.core.format.LkrFormat.full(valueLkr)
+        else lk.motormila.app.core.format.LkrFormat.compact(valueLkr),
+        modifier = modifier,
+        style = style,
+        color = color,
+    )
+}
+
 @Composable
 private fun RollingDigits(
     text: String,

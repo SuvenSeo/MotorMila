@@ -19,7 +19,6 @@ import lk.motormila.app.domain.model.SelfSignupStatus
 import lk.motormila.app.domain.model.UserSession
 import lk.motormila.app.domain.repository.AuthRepository
 import lk.motormila.app.work.PriceAlertSyncWorker
-import lk.motormila.app.work.SnapshotRefreshWorker
 
 /**
  * Auth: login/signup/me/logout against the POST and GET auth endpoints, session persisted in
@@ -118,15 +117,18 @@ class AuthRepositoryImpl @Inject constructor(
         authInterceptor.updateToken(null)
         // Stop background workers — otherwise they keep hitting /alerts/match
         // with a cleared token after logout.
+        // (SnapshotRefreshWorker keeps running: public market data for guests too.)
         runCatching { PriceAlertSyncWorker.cancel(context) }
-        runCatching { SnapshotRefreshWorker.cancel(context) }
         Unit
     }
 
-    override suspend fun clearRejectedSession(): Unit = withContext(io) {
-        sessionStore.clear()
-        runCatching { PriceAlertSyncWorker.cancel(context) }
-        Unit
+    override suspend fun clearRejectedSession(rejectedToken: String?): Boolean = withContext(io) {
+        val cleared = sessionStore.clearIfRejected(rejectedToken)
+        if (cleared) {
+            authInterceptor.updateToken(null)
+            runCatching { PriceAlertSyncWorker.cancel(context) }
+        }
+        cleared
     }
 
     override suspend fun deleteAccount(password: String?): Unit = withContext(io) {

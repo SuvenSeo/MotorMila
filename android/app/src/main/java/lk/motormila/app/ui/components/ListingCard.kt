@@ -3,6 +3,15 @@
 package lk.motormila.app.ui.components
 
 import androidx.compose.animation.BoundsTransform
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.ui.res.stringResource
+import lk.motormila.app.ui.theme.MmColors
+import lk.motormila.app.ui.theme.MmHaptics
+import lk.motormila.app.ui.theme.MmMotion
+import lk.motormila.app.ui.theme.MmType
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -67,10 +76,11 @@ import lk.motormila.app.ui.theme.MotormilaSurfaceHigh
 import lk.motormila.app.ui.theme.fluidSpring
 
 /**
- * 28dp card, 16:10 Coil image, source badge, 48dp heart with burst scale,
- * mono price + delta chip, [DealBadge]/[DealRing], meta line.
- * Press scale 0.97. Hero image uses shared-element transitions when the
- * navigation graph provides [LocalSharedTransitionScope].
+ * Listing card (design v2): 4:3 photo with a deal verdict pill (same rules
+ * as web: asking vs typical asking, lease takeovers get no verdict, very
+ * cheap → amber "verify") and a glass save button; below, title, compact
+ * price in MILLIONS ("Rs 8.5 Mn") and one quiet meta line. Press-scale 0.97,
+ * save haptic, hero image shared-element → detail gallery.
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -83,15 +93,10 @@ fun ListingCard(
     showDeal: Boolean = true,
     sharedElementModifier: Modifier = Modifier,
 ) {
-    val reducedMotion = rememberReducedMotion()
-    val haptics = LocalHapticFeedback.current
-    val watchScale by animateFloatAsState(
-        targetValue = if (isWatched) 1.15f else 1f,
-        animationSpec = fluidSpring(),
-        label = "heart-burst",
-    )
-    val band = listing.dealBand()
-    val delta = listing.deltaVsMedianPct()
+    val c = MmColors.current
+    val t = MmType.current
+    val haptics = MmHaptics.current
+    val reduced = MmMotion.reduced
     val sharedScope = LocalSharedTransitionScope.current
     val animatedScope = LocalNavAnimatedVisibilityScope.current
     val heroShared = if (sharedScope != null && animatedScope != null) {
@@ -99,14 +104,12 @@ fun ListingCard(
             Modifier.sharedElement(
                 rememberSharedContentState(key = listingHeroKey(listing.id)),
                 animatedScope,
+                boundsTransform = { _, _ -> MmMotion.gentle() },
             )
         }
     } else {
         sharedElementModifier
     }
-    // Spec §3: price text morphs card → detail (sharedBounds — text changes
-    // size, never sharedElement on text), and the whole card container morphs
-    // into the detail price section.
     val priceShared = if (sharedScope != null && animatedScope != null) {
         with(sharedScope) {
             Modifier.sharedBounds(
@@ -118,131 +121,133 @@ fun ListingCard(
     } else {
         Modifier
     }
-    val cardShared = if (sharedScope != null && animatedScope != null) {
-        with(sharedScope) {
-            Modifier.sharedBounds(
-                rememberSharedContentState(key = listingCardKey(listing.id)),
-                animatedScope,
-                boundsTransform = motormilaSharedBoundsTransform(),
-            )
-        }
-    } else {
-        Modifier
+    val verdict = remember(listing.id, listing.priceLkr, listing.marketMedianLkr) {
+        MmDealVerdict.compute(
+            askingLkr = listing.priceLkr,
+            typicalLkr = listing.marketMedianLkr,
+            isLeaseTakeover = MmLeaseTakeover.detect(listing.title, listing.model),
+            ratingAllowed = listing.dealScore != null,
+        )
     }
+    val priceText = MmPriceFormat.compact(listing.priceLkr, stringResource(R.string.mm_price_on_request))
 
-    MotormilaGlass(
+    MmCard(
         onClick = onClick,
+        contentPadding = PaddingValues(0.dp),
         modifier = modifier
             .fillMaxWidth()
-            .then(cardShared)
-            .semantics { contentDescription = "${listing.displayName}, ${listing.formattedPrice()}" },
+            .semantics(mergeDescendants = false) { contentDescription = "${listing.displayName}, $priceText" },
     ) {
-        Column {
-            Box {
-                ListingImage(
-                    model = listing.heroImageUrl,
-                    contentDescription = "Photo of ${listing.displayName}",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(16f / 10f)
-                        .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                        .then(heroShared),
-                )
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .background(
-                            Brush.verticalGradient(
-                                0f to Color.Transparent,
-                                0.55f to Color.Transparent,
-                                1f to Color(0xCC09090B),
-                            ),
-                        ),
-                )
-                if (!listing.source.isNullOrBlank()) {
-                    Text(
-                        text = listing.source.uppercase(),
-                        fontSize = 9.5.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White,
+        Box {
+            MmImage(
+                url = listing.heroImageUrl,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(4f / 3f)
+                    .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                    .then(heroShared),
+            )
+            if (showDeal) {
+                val label = verdict.label()
+                if (label != null) {
+                    MmDealBadge(
+                        label = if (verdict.kind == MmDealVerdict.Kind.LEASE) stringResource(R.string.mm_lease_short) else label,
+                        tone = verdict.tone,
+                        onImage = true,
                         modifier = Modifier
                             .align(Alignment.TopStart)
-                            .padding(8.dp)
-                            .clip(MotormilaRadius.pill)
-                            .background(Color(0xCC09090B))
-                            .border(1.dp, Color(0x44FFFFFF), MotormilaRadius.pill)
-                            .padding(horizontal = 7.dp, vertical = 3.dp),
+                            .padding(10.dp),
+                    )
+                } else if (listing.dealBand() == DealBand.LOCKED && listing.priceLkr != null) {
+                    MmDealBadge(
+                        band = DealBand.LOCKED,
+                        onImage = true,
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(10.dp),
                     )
                 }
-                IconButton(
-                    onClick = {
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onWatchToggle()
+            }
+            SaveButton(
+                saved = isWatched,
+                reduced = reduced,
+                onToggle = {
+                    if (isWatched) haptics.unsave() else haptics.save()
+                    onWatchToggle()
+                },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(4.dp),
+            )
+        }
+        Column(Modifier.padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 14.dp)) {
+            Text(
+                text = listing.displayName,
+                style = t.label.copy(fontSize = 15.sp, lineHeight = 20.sp),
+                color = c.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = priceText,
+                style = t.priceM,
+                color = c.textPrimary,
+                maxLines = 1,
+                modifier = Modifier.then(priceShared),
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = metaLine(listing),
+                style = t.caption,
+                color = c.textSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SaveButton(
+    saved: Boolean,
+    reduced: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scale by animateFloatAsState(
+        targetValue = if (saved && !reduced) 1f else 0.9f,
+        animationSpec = if (reduced) androidx.compose.animation.core.snap() else MmMotion.bouncy(),
+        label = "save-scale",
+    )
+    val label = if (saved) "Remove from saved" else "Save"
+    Box(
+        modifier
+            .size(48.dp)
+            .clip(RoundedCornerShape(percent = 50))
+            .clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = label, onClick = onToggle)
+            .semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            Modifier
+                .size(34.dp)
+                .clip(RoundedCornerShape(percent = 50))
+                .background(Color(0x8C000000)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = if (saved) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier
+                    .size(18.dp)
+                    .graphicsLayer {
+                        scaleX = scale + 0.1f
+                        scaleY = scale + 0.1f
                     },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .size(48.dp)
-                        .semantics {
-                            contentDescription = if (isWatched) "Remove from watchlist" else "Add to watchlist"
-                        },
-                ) {
-                    Icon(
-                        imageVector = if (isWatched) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                        contentDescription = null,
-                        tint = if (isWatched) MotormilaBad else Color.White,
-                        modifier = Modifier.graphicsLayer {
-                            val s = if (reducedMotion) 1f else watchScale
-                            scaleX = s
-                            scaleY = s
-                        },
-                    )
-                }
-            }
-            Column(Modifier.padding(12.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = listing.displayName,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp,
-                        color = MotormilaOnSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                    )
-                    if (showDeal && band == DealBand.LOCKED) {
-                        DealBadge(band = band, score = null)
-                    } else if (showDeal) {
-                        DealRing(score = listing.dealScore, band = band)
-                    }
-                }
-                Spacer(Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = listing.formattedPrice(),
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = MotormilaOnSurface,
-                        modifier = Modifier.then(priceShared),
-                    )
-                    if (delta != null && band != DealBand.LOCKED) {
-                        Spacer(Modifier.size(8.dp))
-                        DeltaChip(deltaPct = delta)
-                    }
-                }
-                if (showDeal && band != DealBand.LOCKED) {
-                    Spacer(Modifier.height(6.dp))
-                    DealBadge(band = band, score = listing.dealScore)
-                }
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = metaLine(listing),
-                    fontSize = 12.sp,
-                    color = MotormilaSecondaryText,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
+            )
         }
     }
 }

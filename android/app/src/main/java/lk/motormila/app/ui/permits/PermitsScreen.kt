@@ -32,7 +32,6 @@ import lk.motormila.app.domain.model.Permit
 import lk.motormila.app.ui.components.MotormilaEyebrow
 import lk.motormila.app.ui.components.MotormilaGhostButton
 import lk.motormila.app.ui.components.MotormilaMetricTile
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.theme.MotormilaOnSurface
 import lk.motormila.app.ui.theme.MotormilaPrimaryBright
@@ -47,7 +46,7 @@ fun PermitsScreen(
     viewModel: PermitsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    MotormilaPage(title = "Permit market", onBack = onBack) {
+    lk.motormila.app.ui.common.MmScreen(title = "Permit market", onBack = onBack) {
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
             onRefresh = { viewModel.onEvent(PermitsUiEvent.Refresh) },
@@ -166,7 +165,7 @@ private fun PermitRowCard(permit: Permit, delayMillis: Int) {
                 )
             }
             Text(
-                LkrFormat.full(permit.marketPriceLkr),
+                lk.motormila.app.ui.common.mn(permit.marketPriceLkr),
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,

@@ -147,3 +147,12 @@ fun priceHistoryFromSparklines(dto: PriceSparklinesDto, listingId: Int): PriceHi
         trackedPoints = prices.size,
     )
 }
+
+/** Case-insensitive make lookup in the snapshot's make -> models map. */
+fun modelsForMake(
+    byMake: Map<String, List<lk.motormila.app.data.remote.dto.ModelRowDto>>,
+    make: String,
+): List<lk.motormila.app.data.remote.dto.ModelRowDto> {
+    val key = make.trim()
+    return byMake[key] ?: byMake.entries.firstOrNull { it.key.equals(key, ignoreCase = true) }?.value.orEmpty()
+}

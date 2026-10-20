@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.asSharedFlow
  */
 @Singleton
 class AuthEventBus @Inject constructor() {
-    private val _events = MutableSharedFlow<AuthEvent>(extraBufferCapacity = 1)
+    private val _events = MutableSharedFlow<AuthEvent>(extraBufferCapacity = 8)
     val events: SharedFlow<AuthEvent> = _events.asSharedFlow()
 
     fun post(event: AuthEvent) {
@@ -22,6 +22,15 @@ class AuthEventBus @Inject constructor() {
 }
 
 sealed interface AuthEvent {
-    /** Access token rejected (401). Payload arg = request path that failed. */
-    data class Unauthorized(val path: String? = null) : AuthEvent
+    /**
+     * Access token rejected (401). [path] = request path that failed;
+     * [rejectedToken] = the bearer that was rejected (in-memory only, never
+     * logged) so a late 401 for an OLD token cannot sign out a NEW session.
+     */
+    data class Unauthorized(val path: String? = null, val rejectedToken: String? = null) : AuthEvent {
+        override fun toString(): String = "Unauthorized(path=$path)"
+    }
+
+    /** The rejected session was actually cleared: UI routes to Login. */
+    data object SessionEnded : AuthEvent
 }

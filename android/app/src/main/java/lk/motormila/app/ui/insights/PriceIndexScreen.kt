@@ -10,7 +10,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import lk.motormila.app.core.ui.ErrorRetry
 import lk.motormila.app.core.ui.SkeletonList
-import lk.motormila.app.ui.components.MotormilaPage
 
 @Composable
 fun PriceIndexScreen(
@@ -19,7 +18,7 @@ fun PriceIndexScreen(
     viewModel: PriceIndexViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    MotormilaPage(title = "Price Index", onBack = onBack) {
+    lk.motormila.app.ui.common.MmScreen(title = "Price Index", onBack = onBack) {
         when {
             state.isLoading -> SkeletonList()
             state.error != null && state.index.points.isEmpty() ->

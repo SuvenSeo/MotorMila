@@ -163,16 +163,26 @@ class ListingRepositoryImpl @Inject constructor(
         api.getSellerProfile(id).toDomain()
     }
 
+    // Filter dropdowns: live, then the public snapshot lists, then empty.
     override suspend fun sources(): List<String> = withContext(io) {
-        runCatching { api.getSources().map { it.source } }.getOrElse { emptyList() }
+        runCatching {
+            withSnapshotFallback({ api.getSources() }, { snapshots.listingSources() }).map { it.source }
+        }.getOrElse { emptyList() }.filter { it.isNotBlank() }
     }
 
     override suspend fun makes(): List<String> = withContext(io) {
-        runCatching { api.getMakes().map { it.make } }.getOrElse { emptyList() }
+        runCatching {
+            withSnapshotFallback({ api.getMakes() }, { snapshots.listingMakes() }).map { it.make }
+        }.getOrElse { emptyList() }.filter { it.isNotBlank() }
     }
 
     override suspend fun models(make: String): List<String> = withContext(io) {
-        runCatching { api.getModels(make).map { it.model } }.getOrElse { emptyList() }
+        runCatching {
+            withSnapshotFallback(
+                { api.getModels(make) },
+                { modelsForMake(snapshots.listingModels(), make) },
+            ).map { it.model }
+        }.getOrElse { emptyList() }.filter { it.isNotBlank() }
     }
 
     override suspend fun suggestions(query: String, limit: Int): List<Listing> = withContext(io) {

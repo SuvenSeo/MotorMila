@@ -31,7 +31,6 @@ import lk.motormila.app.ui.components.MotormilaChoiceChip
 import lk.motormila.app.ui.components.MotormilaEyebrow
 import lk.motormila.app.ui.components.MotormilaGhostButton
 import lk.motormila.app.ui.components.MotormilaSurface
-import lk.motormila.app.ui.components.MotormilaTopBar
 import lk.motormila.app.ui.theme.MotormilaGoodText
 import lk.motormila.app.ui.theme.MotormilaOnSurface
 import lk.motormila.app.ui.theme.MotormilaSecondaryText
@@ -46,8 +45,8 @@ fun EvChargersScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
+    lk.motormila.app.ui.common.MmScreen(title = "EV chargers", onBack = onBack) {
     Column(Modifier.fillMaxSize()) {
-        MotormilaTopBar(title = "EV chargers", onBack = onBack)
         when {
             state.isLoading && state.stations.isEmpty() -> SkeletonList()
             state.error != null && state.stations.isEmpty() ->
@@ -119,6 +118,7 @@ fun EvChargersScreen(
                 }
             }
         }
+    }
     }
 }
 

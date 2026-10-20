@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mm_back">பின்செல்</string>
+    <string name="mm_close">மூடு</string>
+    <string name="mm_deal_why">ஏன்?</string>
+    <string name="mm_deal_great">சிறந்த விலை</string>
+    <string name="mm_deal_fair">வழக்கமான விலைக்கு அருகில்</string>
+    <string name="mm_deal_high">வழக்கமான விலையை விட அதிகம்</string>
+    <string name="mm_deal_locked">Pro</string>
+    <string name="mm_deal_below_typical">வழக்கமான விலையை விட %1$s குறைவு</string>
+    <string name="mm_deal_above_typical">வழக்கமான விலையை விட %1$s அதிகம்</string>
+    <string name="mm_deal_near_typical">வழக்கமான விலைக்கு அருகில்</string>
+    <string name="mm_deal_verify">வழக்கத்துக்கு மாறாகக் குறைவு — முதலில் சரிபார்க்கவும்</string>
+    <string name="mm_deal_lease">லீசிங் பொறுப்பேற்பு — காட்டப்படும் விலை முழு விலை அல்ல</string>
+    <string name="mm_nav_buy">வாங்க</string>
+    <string name="mm_nav_prices">விலைகள்</string>
+    <string name="mm_nav_tools">கருவிகள்</string>
+    <string name="mm_nav_sell">விற்க</string>
+    <string name="mm_nav_saved">சேமித்தவை</string>
+    <string name="mm_tools_title">கருவிகள்</string>
+    <string name="mm_tools_subtitle">விலையைச் சரிபாருங்கள், செலவைக் கணக்கிடுங்கள், பணம் செலுத்தும் முன் பாதுகாப்பாக இருங்கள்.</string>
+    <string name="mm_tools_section_price">விலை சரிபார்ப்பு</string>
+    <string name="mm_tools_section_cost">செலவுகள் மற்றும் ஆவணங்கள்</string>
+    <string name="mm_tools_section_more">மேலும்</string>
+    <string name="mm_tools_scan">எண் தகட்டை ஸ்கேன் செய்யவும்</string>
+    <string name="mm_tools_compare">வாகனங்களை ஒப்பிடுக</string>
+    <string name="mm_tools_calculator">செலவுக் கணிப்பான்கள்</string>
+    <string name="mm_tools_permits">வாகன அனுமதிப்பத்திரங்கள்</string>
+    <string name="mm_tools_ev">EV மையம்</string>
+    <string name="mm_tools_alerts">விலை எச்சரிக்கைகள்</string>
+    <string name="mm_tools_account">கணக்கு மற்றும் அமைப்புகள்</string>
+    <string name="mm_assistant">MotorMila AI இடம் கேளுங்கள்</string>
+    <string name="mm_detail_asking">கேட்கும் விலை</string>
+    <string name="mm_why_this_car">இந்த வாகனம்</string>
+    <string name="mm_pay_title">பணம் செலுத்தும் முன்</string>
+    <string name="mm_pay_1">வாகனத்தை நேரில் பார்ப்பதற்கு முன் ஒருபோதும் வைப்புத்தொகையோ முன்பணமோ செலுத்த வேண்டாம்.</string>
+    <string name="mm_lease_short">லீசிங் பொறுப்பேற்பு</string>
+    <string name="mm_home_title">நியாயமான விலையைக் கண்டறியுங்கள்.</string>
+    <string name="mm_home_search_hint">தயாரிப்பு, மாடல் அல்லது இணைப்பை ஒட்டவும்</string>
+</resources>

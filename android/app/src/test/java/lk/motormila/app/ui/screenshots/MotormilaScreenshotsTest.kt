@@ -31,10 +31,9 @@ class MotormilaScreenshotsTest {
         deviceConfig = DeviceConfig.PIXEL_6,
         // Fail loudly on missing goldens instead of silently recording.
         // (Record via the recordPaparazziDebug task.)
-        // NOTE: Paparazzi 1.3.5's Environment has no platformDir (it was
-        // removed); layoutlib comes from the Gradle plugin, so there is
-        // nothing to override here. Keep this block identical to main or
-        // re-record the goldens.
+        // Layoutlib + platform come from the Paparazzi Gradle plugin
+        // (renders against compileSdk 36). Changing this block means
+        // re-recording the goldens.
     )
 
     // ------------------------------------------------------------------
@@ -67,7 +66,7 @@ class MotormilaScreenshotsTest {
                     total = 325_984,
                     goodDeals = 1_284,
                     new24h = 342,
-                    avgPrice = "Rs. 8.45M",
+                    avgPrice = "Rs 8.45 Mn",
                     modifier = Modifier.padding(16.dp),
                 )
             }
@@ -82,7 +81,7 @@ class MotormilaScreenshotsTest {
                     total = 325_984,
                     goodDeals = 1_284,
                     new24h = 342,
-                    avgPrice = "Rs. 8.45M",
+                    avgPrice = "Rs 8.45 Mn",
                     modifier = Modifier.padding(16.dp),
                 )
             }

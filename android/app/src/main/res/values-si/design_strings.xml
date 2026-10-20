@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mm_back">ආපසු</string>
+    <string name="mm_close">වසන්න</string>
+    <string name="mm_deal_why">ඇයි?</string>
+    <string name="mm_deal_great">විශිෂ්ට මිලක්</string>
+    <string name="mm_deal_fair">සාමාන්‍ය මිලට ආසන්නයි</string>
+    <string name="mm_deal_high">සාමාන්‍ය මිලට වඩා වැඩියි</string>
+    <string name="mm_deal_locked">Pro</string>
+    <string name="mm_deal_below_typical">සාමාන්‍ය මිලට වඩා %1$s අඩුයි</string>
+    <string name="mm_deal_above_typical">සාමාන්‍ය මිලට වඩා %1$s වැඩියි</string>
+    <string name="mm_deal_near_typical">සාමාන්‍ය මිලට ආසන්නයි</string>
+    <string name="mm_deal_verify">අසාමාන්‍ය ලෙස අඩුයි — පළමුව තහවුරු කරන්න</string>
+    <string name="mm_deal_lease">ලීසිං භාරගැනීමක් — පෙන්වන මිල සම්පූර්ණ මිල නොවේ</string>
+    <string name="mm_nav_buy">මිලදී ගන්න</string>
+    <string name="mm_nav_prices">මිල ගණන්</string>
+    <string name="mm_nav_tools">මෙවලම්</string>
+    <string name="mm_nav_sell">විකුණන්න</string>
+    <string name="mm_nav_saved">සුරැකි</string>
+    <string name="mm_tools_title">මෙවලම්</string>
+    <string name="mm_tools_subtitle">මිල පරීක්ෂා කරන්න, වියදම ගණනය කරන්න, ගෙවීමට පෙර ආරක්ෂිතව සිටින්න.</string>
+    <string name="mm_tools_section_price">මිල පරීක්ෂා</string>
+    <string name="mm_tools_section_cost">වියදම් සහ ලේඛන</string>
+    <string name="mm_tools_section_more">තවත්</string>
+    <string name="mm_tools_scan">අංක තහඩුවක් ස්කෑන් කරන්න</string>
+    <string name="mm_tools_compare">වාහන සසඳන්න</string>
+    <string name="mm_tools_calculator">වියදම් ගණක</string>
+    <string name="mm_tools_permits">වාහන බලපත්‍ර</string>
+    <string name="mm_tools_ev">EV මධ්‍යස්ථානය</string>
+    <string name="mm_tools_alerts">මිල ඇඟවීම්</string>
+    <string name="mm_tools_account">ගිණුම සහ සැකසුම්</string>
+    <string name="mm_assistant">MotorMila AI ගෙන් අසන්න</string>
+    <string name="mm_detail_asking">ඉල්ලන මිල</string>
+    <string name="mm_why_this_car">මෙම වාහනය</string>
+    <string name="mm_pay_title">ගෙවීමට පෙර</string>
+    <string name="mm_pay_1">වාහනය පෞද්ගලිකව දැකීමට පෙර කිසිවිටෙක තැන්පතුවක් හෝ අත්තිකාරමක් ගෙවන්න එපා.</string>
+    <string name="mm_lease_short">ලීසිං භාරගැනීම</string>
+    <string name="mm_home_title">සාධාරණ මිලක් සොයන්න.</string>
+    <string name="mm_home_search_hint">නිෂ්පාදකයා, මාදිලිය හෝ සබැඳියක් අලවන්න</string>
+</resources>

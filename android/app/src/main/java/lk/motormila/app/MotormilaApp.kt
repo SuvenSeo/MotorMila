@@ -21,8 +21,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 import lk.motormila.app.core.locale.LocaleHelper
-import lk.motormila.app.core.network.AuthEvent
-import lk.motormila.app.core.network.AuthEventBus
+import lk.motormila.app.data.auth.SessionGuard
 import lk.motormila.app.data.local.datastore.SettingsStore
 import lk.motormila.app.domain.repository.AuthRepository
 import lk.motormila.app.ui.widget.enqueueDealWidgetRefresh
@@ -46,7 +45,7 @@ class MotormilaApp : Application(), SingletonImageLoader.Factory, Configuration.
     lateinit var authRepository: AuthRepository
 
     @Inject
-    lateinit var authEventBus: AuthEventBus
+    lateinit var sessionGuard: SessionGuard
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -60,15 +59,10 @@ class MotormilaApp : Application(), SingletonImageLoader.Factory, Configuration.
         // restores lazily on its first request, so no request can ever leave
         // without the bearer even if this hasn't finished yet).
         appScope.launch { runCatching { authRepository.restore() } }
-        // A rejected bearer (HTTP 401) clears the persisted session; the nav
-        // graph separately routes to Login.
-        appScope.launch {
-            authEventBus.events.collect { event ->
-                if (event is AuthEvent.Unauthorized) {
-                    runCatching { authRepository.clearRejectedSession() }
-                }
-            }
-        }
+        // A rejected bearer (HTTP 401) is a real logout: SessionGuard clears
+        // the persisted session + token, then posts SessionEnded so the nav
+        // graph routes to Login.
+        sessionGuard.start(appScope)
         // Alert matching only runs while signed in.
         appScope.launch {
             runCatching {
@@ -110,6 +104,8 @@ class MotormilaApp : Application(), SingletonImageLoader.Factory, Configuration.
         ImageLoader.Builder(context)
             .components {
                 add(OkHttpNetworkFetcherFactory(callFactory = { imageClient }))
+                // Settings → Low-data mode: cache-only images (android/screens).
+                add(lk.motormila.app.ui.common.LowDataImageInterceptor(this@MotormilaApp))
             }
             .memoryCache {
                 MemoryCache.Builder()

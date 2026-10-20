@@ -53,12 +53,11 @@ import lk.motormila.app.domain.repository.CostLine
 import lk.motormila.app.domain.repository.LandedCost
 import lk.motormila.app.domain.repository.Tco
 import lk.motormila.app.ui.components.MotormilaChoiceChip
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaPillTabs
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface as MotormilaPane
 import lk.motormila.app.ui.components.OfflineBanner
-import lk.motormila.app.ui.components.SlidingNumber
+import lk.motormila.app.ui.components.SlidingLkr
 import lk.motormila.app.ui.theme.MotormilaOnPrimary
 import lk.motormila.app.ui.theme.MotormilaOnSurface
 import lk.motormila.app.ui.theme.MotormilaOutline
@@ -93,7 +92,7 @@ fun CalculatorScreen(
         }
     }
 
-    MotormilaPage(
+    lk.motormila.app.ui.common.MmScreen(
         title = stringResource(R.string.calc_title),
         onBack = {
             if (!reducedMotion) haptics.tick()
@@ -119,7 +118,7 @@ fun CalculatorScreen(
             ) {
                 item { CalculatorHero() }
                 item {
-                    when (state.tab) {
+                    when (state.tab.takeIf { it in calculatorTabsFor(state.unlocked) } ?: CalculatorTab.LANDED) {
                         CalculatorTab.LANDED -> LandedPane(
                             state = state,
                             onForm = { viewModel.onEvent(CalculatorUiEvent.LandedFormChanged(it)) },
@@ -221,14 +220,20 @@ private fun CalculatorTabs(
     unlocked: Boolean,
     onSelect: (CalculatorTab) -> Unit,
 ) {
-    val tabs = listOf(
-        CalculatorTab.LANDED to stringResource(R.string.calc_tab_landed),
-        CalculatorTab.TCO to tabLabel(stringResource(R.string.calc_tab_tco), unlocked),
-        CalculatorTab.LEASE to tabLabel(stringResource(R.string.calc_tab_lease), unlocked),
-        CalculatorTab.OWNERSHIP to tabLabel(stringResource(R.string.calc_tab_ownership), unlocked),
-        CalculatorTab.PERMITS to tabLabel(stringResource(R.string.calc_tab_permits), unlocked),
-        CalculatorTab.DEPRECIATION to tabLabel(stringResource(R.string.calc_tab_depreciation), unlocked),
-    )
+    // Web parity (Calculator.tsx visibleTabsFor): locked tabs are hidden, not
+    // teased (Pro isn't on sale), and Permits/Depreciation stay hidden for
+    // everyone — they are hard-coded benchmark tables, not real calculators.
+    val tabs = calculatorTabsFor(unlocked).map { tab ->
+        tab to when (tab) {
+            CalculatorTab.LANDED -> stringResource(R.string.calc_tab_landed)
+            CalculatorTab.TCO -> stringResource(R.string.calc_tab_tco)
+            CalculatorTab.LEASE -> stringResource(R.string.calc_tab_lease)
+            CalculatorTab.OWNERSHIP -> stringResource(R.string.calc_tab_ownership)
+            CalculatorTab.PERMITS -> stringResource(R.string.calc_tab_permits)
+            CalculatorTab.DEPRECIATION -> stringResource(R.string.calc_tab_depreciation)
+        }
+    }
+    if (tabs.size < 2) return
     val selectedIndex = tabs.indexOfFirst { it.first == selected }.coerceAtLeast(0)
     MotormilaPillTabs(
         tabs = tabs.map { it.second },
@@ -277,9 +282,10 @@ private fun CalculatorHero() {
     }
 }
 
-@Composable
-private fun tabLabel(label: String, unlocked: Boolean): String =
-    if (unlocked) label else "$label · Pro"
+/** Visible calculator tabs for a plan (unit-tested). */
+internal fun calculatorTabsFor(unlocked: Boolean): List<CalculatorTab> =
+    if (unlocked) listOf(CalculatorTab.LANDED, CalculatorTab.LEASE, CalculatorTab.TCO, CalculatorTab.OWNERSHIP)
+    else listOf(CalculatorTab.LANDED)
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -563,14 +569,10 @@ private fun LandedResultCard(result: LandedCost?, calculating: Boolean) {
                                     color = MotormilaPrimaryBright,
                                 ),
                             )
-                            SlidingNumber(
-                                value = result.totalLkr.toLong(),
-                                style = MaterialTheme.typography.headlineMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Monospace,
-                                ),
-                                color = MotormilaOnSurface,
-                                prefix = "Rs. ",
+                            // Animated digits in millions (web parity: number-flow in Mn).
+                            lk.motormila.app.ui.components.MmPrice(
+                                value = result.totalLkr,
+                                style = lk.motormila.app.ui.theme.MmType.current.priceL,
                             )
                             Row(
                                 Modifier.fillMaxWidth(),
@@ -581,7 +583,7 @@ private fun LandedResultCard(result: LandedCost?, calculating: Boolean) {
                                     style = MaterialTheme.typography.labelSmall.copy(color = MotormilaSecondaryText),
                                 )
                                 Text(
-                                    "+${LkrFormat.full(result.dutyLkr + result.vatLkr + result.palLkr)}",
+                                    "+${lk.motormila.app.ui.components.MmPriceFormat.compact(result.dutyLkr + result.vatLkr + result.palLkr)}",
                                     style = MaterialTheme.typography.labelMedium.copy(
                                         fontWeight = FontWeight.Bold,
                                         fontFamily = FontFamily.Monospace,
@@ -652,7 +654,7 @@ private fun TcoResultCard(result: Tco?, calculating: Boolean) {
                                 ),
                             )
                             Text(
-                                LkrFormat.full(result.monthlyLkr),
+                                lk.motormila.app.ui.components.MmPriceFormat.monthly(result.monthlyLkr),
                                 style = MaterialTheme.typography.headlineMedium.copy(
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = FontFamily.Monospace,
@@ -668,7 +670,7 @@ private fun TcoResultCard(result: Tco?, calculating: Boolean) {
                                     style = MaterialTheme.typography.labelSmall.copy(color = MotormilaSecondaryText),
                                 )
                                 Text(
-                                    LkrFormat.full(result.totalLkr),
+                                    lk.motormila.app.ui.components.MmPriceFormat.compact(result.totalLkr),
                                     style = MaterialTheme.typography.titleSmall.copy(
                                         fontWeight = FontWeight.Bold,
                                         fontFamily = FontFamily.Monospace,
@@ -740,7 +742,7 @@ private fun LeasePane(
         state.lease?.let { quote ->
             MotormilaPane(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 CostLineRow(stringResource(R.string.calc_lease_principal), quote.principalLkr)
-                CostLineRow(stringResource(R.string.calc_lease_monthly), quote.monthlyLkr)
+                CostLineRow(stringResource(R.string.calc_lease_monthly), quote.monthlyLkr, monthly = true)
                 CostLineRow(stringResource(R.string.calc_lease_interest), quote.totalInterestLkr)
                 CostLineRow(stringResource(R.string.calc_lease_total_paid), quote.totalPaidLkr)
                 if (quote.ltvBreached) {
@@ -899,7 +901,7 @@ private fun PermitsPane(
                             style = MaterialTheme.typography.labelSmall.copy(color = MotormilaSecondaryText),
                         )
                         Text(
-                            LkrFormat.full(permit.marketPriceLkr),
+                            lk.motormila.app.ui.components.MmPriceFormat.compact(permit.marketPriceLkr),
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 fontFamily = FontFamily.Monospace,
                                 fontWeight = FontWeight.Bold,
@@ -955,7 +957,7 @@ private fun DepreciationPane(
 }
 
 @Composable
-private fun CostLineRow(label: String, amountLkr: Double) {
+private fun CostLineRow(label: String, amountLkr: Double, monthly: Boolean = false) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -965,7 +967,8 @@ private fun CostLineRow(label: String, amountLkr: Double) {
     ) {
         Text(label, style = MaterialTheme.typography.bodyMedium.copy(color = MotormilaSecondaryText))
         Text(
-            LkrFormat.full(amountLkr),
+            if (monthly) lk.motormila.app.ui.components.MmPriceFormat.monthly(amountLkr)
+            else lk.motormila.app.ui.components.MmPriceFormat.compact(amountLkr),
             style = MaterialTheme.typography.bodyMedium.copy(
                 fontWeight = FontWeight.SemiBold,
                 fontFamily = FontFamily.Monospace,
@@ -1028,7 +1031,7 @@ private fun validationMessage(reason: CalculatorValidation?): String? {
 private fun AmountPreview(raw: String) {
     val amount = CalculatorInputs.parsePositiveAmount(raw) ?: return
     Text(
-        text = LkrFormat.full(amount),
+        text = "= " + lk.motormila.app.ui.components.MmPriceFormat.compact(amount),
         style = MaterialTheme.typography.labelSmall.copy(
             fontFamily = FontFamily.Monospace,
             color = MotormilaSecondaryText,

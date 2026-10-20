@@ -5,86 +5,73 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.util.Calendar
 import javax.inject.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import lk.motormila.app.domain.model.Valuation
+import lk.motormila.app.domain.model.Comparable
 import lk.motormila.app.domain.model.ValuationInput
 import lk.motormila.app.domain.repository.ListingRepository
 import lk.motormila.app.ui.navigation.Valuation as ValuationRoute
+import lk.motormila.app.ui.valuation.ValuationQuiz.Question
+import lk.motormila.app.ui.valuation.ValuationQuiz.Registration
 
-data class ValuationForm(
-    val make: String = "",
-    val model: String = "",
-    val year: String = "",
-    val condition: String = "Used",
-    val transmission: String = "Automatic",
-    val fuel: String = "Petrol",
-    val mileageKm: String = "",
-    val district: String = "Colombo",
-)
-
-data class LandedCostInput(
-    val cifUsd: String = "",
-    val engineCc: String = "",
-    val fuel: String = "Petrol",
-    val electricKw: String = "",
-    val includeClearing: Boolean = true,
-    val includeRegistration: Boolean = true,
-)
-
-data class LandedCostResult(
-    val fxUsed: Double = 0.0,
-    val cifLkr: Double = 0.0,
-    val exciseLkr: Double = 0.0,
-    val vatLkr: Double = 0.0,
-    val clearingLkr: Double = 0.0,
-    val registrationLkr: Double = 0.0,
-    val totalLkr: Double = 0.0,
-)
-
-data class LeaseInput(
-    val priceLkr: String = "",
-    val downPct: String = "20",
-    val ratePct: String = "18",
-    val years: String = "5",
-)
-
-data class TcoInput(
-    val kmPerDay: String = "50",
-    val kmPerLitre: String = "12",
-    val fuelPriceLkr: String = "340",
-    val servicePerYearLkr: String = "120000",
-    val insurancePerYearLkr: String = "180000",
+/** Result shown at the end of the quiz (live estimate API only — no invented fallback). */
+data class QuizResult(
+    val low: Double,
+    val median: Double,
+    val high: Double,
+    /** "high" | "medium" | "low" */
+    val confidence: String,
+    val comparableCount: Int,
+    val methodology: String,
+    val comparables: List<Comparable>,
 )
 
 data class ValuationUiState(
-    val form: ValuationForm = ValuationForm(),
-    val estimating: Boolean = false,
-    val result: Valuation? = null,
-    val estimateError: String? = null,
-    val fxRate: Double? = null,
-    val landedInput: LandedCostInput = LandedCostInput(),
-    val landed: LandedCostResult? = null,
-    val leaseInput: LeaseInput = LeaseInput(),
-    val tcoInput: TcoInput = TcoInput(),
-    val bundleClass: String = "Car <1000cc",
-    val bundleFuel: String = "Petrol",
-    val error: String? = null,
-)
+    /** 0 car · 1 details · 2 condition questions · 3 result */
+    val step: Int = 0,
+    val questionIndex: Int = 0,
+    val makes: List<String> = emptyList(),
+    val makesLoading: Boolean = true,
+    val models: List<String> = emptyList(),
+    val modelsLoading: Boolean = false,
+    val make: String = "",
+    val model: String = "",
+    val year: Int = Calendar.getInstance().get(Calendar.YEAR) - 6,
+    val mileage: String = "",
+    val registration: Registration? = null,
+    val district: String = "Colombo",
+    val answers: Map<Question, String> = emptyMap(),
+    val loading: Boolean = false,
+    val result: QuizResult? = null,
+    /** Live service failed or returned no usable range. */
+    val failed: Boolean = false,
+) {
+    val step0Valid: Boolean get() = make.isNotBlank() && model.isNotBlank()
+    val step1Valid: Boolean get() = ValuationQuiz.step1Valid(registration, mileage)
+    val progress: Float get() = ValuationQuiz.progress(step, questionIndex)
+    val position: ValuationQuiz.Position get() = ValuationQuiz.position(answers)
+    val flags: List<ValuationQuiz.Flag> get() = ValuationQuiz.flags(answers)
+}
 
 sealed interface ValuationUiEvent {
-    data class FormChanged(val form: ValuationForm) : ValuationUiEvent
-    data object Estimate : ValuationUiEvent
-    data class LandedChanged(val input: LandedCostInput) : ValuationUiEvent
-    data object CalcLanded : ValuationUiEvent
-    data class LeaseChanged(val input: LeaseInput) : ValuationUiEvent
-    data class TcoChanged(val input: TcoInput) : ValuationUiEvent
-    data class BundleChanged(val klass: String, val fuel: String) : ValuationUiEvent
-    data object DismissError : ValuationUiEvent
+    data class MakeChanged(val make: String) : ValuationUiEvent
+    data class ModelChanged(val model: String) : ValuationUiEvent
+    data class YearChanged(val year: Int) : ValuationUiEvent
+    data class MileageChanged(val mileage: String) : ValuationUiEvent
+    data class RegistrationChanged(val registration: Registration) : ValuationUiEvent
+    data class DistrictChanged(val district: String) : ValuationUiEvent
+    data object Next : ValuationUiEvent
+    data object Back : ValuationUiEvent
+    data class Answer(val question: Question, val value: String) : ValuationUiEvent
+    data object Skip : ValuationUiEvent
+    data object Restart : ValuationUiEvent
+    data object Retry : ValuationUiEvent
 }
 
 @HiltViewModel
@@ -96,167 +83,121 @@ class ValuationViewModel @Inject constructor(
     private val _state = MutableStateFlow(ValuationUiState())
     val state: StateFlow<ValuationUiState> = _state.asStateFlow()
 
+    private var estimateJob: Job? = null
+    private var modelsJob: Job? = null
+
     init {
-        // UI talks to repository interfaces only (no Retrofit in ui/).
-        // Live FX lives inside ValuationRepositoryImpl (macro fetch, fallback 300);
-        // the local landed-cost model below uses the same offline default so the
-        // Landed tab stays usable without network. The data builder may expose a
-        // dedicated fxRate() on ValuationRepository if live FX display is needed.
         val route = runCatching { savedStateHandle.toRoute<ValuationRoute>() }.getOrNull()
         val make = route?.make?.trim().orEmpty()
         val model = route?.model?.trim().orEmpty()
-        _state.update { current ->
-            val form = if (make.isNotBlank() || model.isNotBlank()) {
-                current.form.copy(make = make, model = model)
-            } else {
-                current.form
-            }
-            current.copy(form = form, fxRate = DEFAULT_FX_LKR_PER_USD)
+        _state.update { it.copy(make = make, model = model) }
+        viewModelScope.launch {
+            val makes = runCatching { listings.makes() }.getOrDefault(emptyList())
+            _state.update { it.copy(makes = makes.filter { m -> m.isNotBlank() }.distinct(), makesLoading = false) }
         }
+        if (make.isNotBlank()) loadModels(make)
     }
 
     fun onEvent(event: ValuationUiEvent) {
         when (event) {
-            is ValuationUiEvent.FormChanged -> _state.update { it.copy(form = event.form, result = null) }
-            ValuationUiEvent.Estimate -> estimate()
-            is ValuationUiEvent.LandedChanged -> _state.update { it.copy(landedInput = event.input, landed = null) }
-            ValuationUiEvent.CalcLanded -> calcLanded()
-            is ValuationUiEvent.LeaseChanged -> _state.update { it.copy(leaseInput = event.input) }
-            is ValuationUiEvent.TcoChanged -> _state.update { it.copy(tcoInput = event.input) }
-            is ValuationUiEvent.BundleChanged -> _state.update { it.copy(bundleClass = event.klass, bundleFuel = event.fuel) }
-            ValuationUiEvent.DismissError -> _state.update { it.copy(error = null, estimateError = null) }
-        }
-    }
-
-    private fun estimate() {
-        val f = _state.value.form
-        val year = f.year.toIntOrNull()
-        val mileage = f.mileageKm.replace(",", "").toIntOrNull()
-        if (f.make.isBlank() || f.model.isBlank() || year == null || mileage == null) {
-            _state.update { it.copy(estimateError = "Fill make, model, year and mileage to estimate.") }
-            return
-        }
-        viewModelScope.launch {
-            _state.update { it.copy(estimating = true, estimateError = null) }
-            // Full custom estimate carries transmission/fuel/district (quick estimate drops them).
-            runCatching {
-                listings.customEstimate(
-                    ValuationInput(
-                        make = f.make.trim(),
-                        model = f.model.trim(),
-                        year = year,
-                        condition = f.condition,
-                        transmission = f.transmission,
-                        fuelType = f.fuel,
-                        mileageKm = mileage,
-                        district = f.district,
-                    ),
-                )
-            }.onSuccess { r -> _state.update { it.copy(estimating = false, result = r) } }
-                .onFailure { e ->
-                    _state.update { it.copy(estimating = false, estimateError = e.message ?: "Estimate failed.") }
+            is ValuationUiEvent.MakeChanged -> {
+                _state.update { it.copy(make = event.make, model = "", models = emptyList()) }
+                if (event.make.isNotBlank()) loadModels(event.make)
+            }
+            is ValuationUiEvent.ModelChanged -> _state.update { it.copy(model = event.model) }
+            is ValuationUiEvent.YearChanged -> _state.update { it.copy(year = event.year) }
+            is ValuationUiEvent.MileageChanged ->
+                _state.update { it.copy(mileage = event.mileage.filter { c -> c.isDigit() || c == ',' }.take(9)) }
+            is ValuationUiEvent.RegistrationChanged -> _state.update { it.copy(registration = event.registration) }
+            is ValuationUiEvent.DistrictChanged -> _state.update { it.copy(district = event.district) }
+            ValuationUiEvent.Next -> next()
+            ValuationUiEvent.Back -> back()
+            is ValuationUiEvent.Answer -> answer(event.question, event.value)
+            ValuationUiEvent.Skip -> advanceQuestion()
+            ValuationUiEvent.Restart -> {
+                estimateJob?.cancel()
+                _state.update {
+                    ValuationUiState(makes = it.makes, makesLoading = false)
                 }
+            }
+            ValuationUiEvent.Retry -> runEstimate()
         }
     }
 
-    /**
-     * Simplified landed-cost model (documented, review with tax tables before release):
-     * excise = cifLkr * rate(cc, fuel) ; VAT = 18% of (cif + excise).
-     */
-    private fun calcLanded() {
-        val i = _state.value.landedInput
-        val fx = _state.value.fxRate ?: DEFAULT_FX_LKR_PER_USD
-        val cifUsd = i.cifUsd.toDoubleOrNull() ?: 0.0
-        val cc = i.engineCc.toIntOrNull() ?: 0
-        val kw = i.electricKw.toDoubleOrNull() ?: 0.0
-        if (cifUsd <= 0) {
-            _state.update { it.copy(error = "Enter a valid CIF in USD.") }
-            return
+    private fun next() {
+        val s = _state.value
+        when (s.step) {
+            0 -> if (s.step0Valid) _state.update { it.copy(step = 1) }
+            1 -> if (s.step1Valid) {
+                // Start the estimate now so it's ready when the quiz ends (as on web).
+                runEstimate()
+                _state.update { it.copy(step = 2, questionIndex = 0) }
+            }
         }
-        val cifLkr = cifUsd * fx
-        val exciseRate = when {
-            i.fuel == "Electric" -> if (kw <= 100) 0.30 else 0.60
-            cc <= 1000 -> 1.00
-            cc <= 1500 -> 1.50
-            cc <= 2000 -> 2.00
-            else -> 2.50
+    }
+
+    private fun back() {
+        _state.update { s ->
+            when {
+                s.step == 2 && s.questionIndex > 0 -> s.copy(questionIndex = s.questionIndex - 1)
+                s.step == 3 -> s.copy(step = 2, questionIndex = ValuationQuiz.questions.lastIndex)
+                s.step > 0 -> s.copy(step = s.step - 1)
+                else -> s
+            }
         }
-        val excise = cifLkr * exciseRate
-        val vat = (cifLkr + excise) * 0.18
-        val clearing = if (i.includeClearing) 450_000.0 else 0.0
-        val registration = if (i.includeRegistration) 250_000.0 else 0.0
-        _state.update {
-            it.copy(
-                landed = LandedCostResult(
-                    fxUsed = fx,
-                    cifLkr = cifLkr,
-                    exciseLkr = excise,
-                    vatLkr = vat,
-                    clearingLkr = clearing,
-                    registrationLkr = registration,
-                    totalLkr = cifLkr + excise + vat + clearing + registration,
-                ),
+    }
+
+    private fun answer(q: Question, value: String) {
+        _state.update { it.copy(answers = it.answers + (q to value)) }
+        advanceQuestion()
+    }
+
+    private fun advanceQuestion() {
+        _state.update { s ->
+            if (s.questionIndex < ValuationQuiz.questions.lastIndex) s.copy(questionIndex = s.questionIndex + 1)
+            else s.copy(step = 3)
+        }
+    }
+
+    private fun loadModels(make: String) {
+        modelsJob?.cancel()
+        modelsJob = viewModelScope.launch {
+            _state.update { it.copy(modelsLoading = true) }
+            val models = runCatching { listings.models(make) }.getOrDefault(emptyList())
+            _state.update {
+                if (it.make != make) it
+                else it.copy(models = models.filter { m -> m.isNotBlank() }.distinct(), modelsLoading = false)
+            }
+        }
+    }
+
+    private fun runEstimate() {
+        val s = _state.value
+        estimateJob?.cancel()
+        estimateJob = viewModelScope.launch {
+            _state.update { it.copy(loading = true, failed = false, result = null) }
+            val input = ValuationInput(
+                make = s.make.trim(),
+                model = s.model.trim(),
+                year = s.year,
+                mileageKm = ValuationQuiz.mileageKm(s.registration, s.mileage),
+                condition = s.registration?.apiValue,
+                district = s.district,
             )
+            val result = runCatching { listings.customEstimate(input) }.getOrNull()
+                ?.takeIf { ValuationQuiz.usable(it.lowLkr, it.medianLkr, it.highLkr) }
+                ?.let { v ->
+                    QuizResult(
+                        low = v.lowLkr,
+                        median = v.medianLkr,
+                        high = v.highLkr,
+                        confidence = v.confidence.lowercase().let { c -> if (c in setOf("high", "medium")) c else "low" },
+                        comparableCount = v.comparableCount,
+                        methodology = v.methodology,
+                        comparables = v.comparables.take(5),
+                    )
+                }
+            _state.update { it.copy(loading = false, result = result, failed = result == null) }
         }
-    }
-
-    // ---- Pure calculator helpers (used by the Screen, unit-testable) ----
-
-    fun leaseMonthly(): Double {
-        val i = _state.value.leaseInput
-        val price = i.priceLkr.replace(",", "").toDoubleOrNull() ?: 0.0
-        val downPct = i.downPct.toDoubleOrNull() ?: 0.0
-        val rate = i.ratePct.toDoubleOrNull() ?: 0.0
-        val months = (i.years.toIntOrNull() ?: 0) * 12
-        // LTV guard: warn downstream when loan exceeds 80% of price.
-        val principal = price * (1 - downPct / 100.0)
-        return amortizedMonthly(principal, rate, months)
-    }
-
-    /** Standard amortizing-loan payment (no core.format helper exists in this build). */
-    private fun amortizedMonthly(principal: Double, annualRatePct: Double, months: Int): Double {
-        if (principal <= 0 || months <= 0) return 0.0
-        if (annualRatePct <= 0) return principal / months
-        val r = annualRatePct / 100.0 / 12.0
-        return principal * r / (1 - Math.pow(1 + r, -months.toDouble()))
-    }
-
-    fun leaseLtvBreached(): Boolean {
-        val down = _state.value.leaseInput.downPct.toDoubleOrNull() ?: 0.0
-        return down < 20.0
-    }
-
-    fun tcoMonthly(): Double {
-        val i = _state.value.tcoInput
-        val kmDay = i.kmPerDay.toDoubleOrNull() ?: 0.0
-        val kmpl = i.kmPerLitre.toDoubleOrNull() ?: 0.0
-        val fuelPrice = i.fuelPriceLkr.toDoubleOrNull() ?: 0.0
-        val fuel = if (kmpl > 0) (kmDay * 30 / kmpl) * fuelPrice else 0.0
-        val fixed = ((i.servicePerYearLkr.toDoubleOrNull() ?: 0.0) + (i.insurancePerYearLkr.toDoubleOrNull() ?: 0.0)) / 12
-        return fuel + fixed
-    }
-
-    /** Statutory ownership bundle total for class/fuel (simplified schedule). */
-    fun ownershipTotal(): Double = when (_state.value.bundleClass) {
-        "Motorcycle" -> 28_000.0
-        "Car <1000cc" -> 95_000.0
-        "Car 1000–1500cc" -> 135_000.0
-        "Car >1500cc" -> 185_000.0
-        "SUV / Dual purpose" -> 210_000.0
-        else -> 95_000.0
-    } + if (_state.value.bundleFuel == "Diesel") 25_000.0 else 0.0
-
-    fun depreciationSchedule(priceLkr: Double): List<Pair<String, Double>> {
-        // Straight-line-ish: 12% y1, 9% y2, 8% y3 on written-down value.
-        var v = priceLkr
-        return listOf(0.12, 0.09, 0.08).mapIndexed { idx, rate ->
-            v *= (1 - rate)
-            "Year ${idx + 1}" to v
-        }
-    }
-
-    companion object {
-        /** Offline FX default shared with ValuationRepositoryImpl's macro fallback. */
-        const val DEFAULT_FX_LKR_PER_USD = 300.0
     }
 }

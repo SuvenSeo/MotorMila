@@ -34,6 +34,9 @@ import lk.motormila.app.core.motion.rememberReducedMotion
 import lk.motormila.app.core.network.AuthEvent
 import lk.motormila.app.data.local.datastore.SessionStore
 import lk.motormila.app.ui.MotormilaScaffold
+import lk.motormila.app.ui.MotormilaTabs
+import lk.motormila.app.ui.tools.ToolsScreen
+import androidx.compose.foundation.layout.consumeWindowInsets
 import lk.motormila.app.ui.updates.AppUpdateDialog
 import lk.motormila.app.ui.updates.AppUpdateViewModel
 import lk.motormila.app.ui.admin.AdminScreen
@@ -105,16 +108,17 @@ fun MotormilaNavGraph(
     val isWatchlist = currentDestination?.hasRoute<Watchlist>() == true
     val isInsights = currentDestination?.hasRoute<Insights>() == true
     val isProfile = currentDestination?.hasRoute<Profile>() == true
-    val showBottomBar = isHome || isSearch || isWatchlist || isInsights || isProfile
-    // Predictive-back follow-finger transform applies to detail/full-screen
-    // routes only — tab destinations keep the system default (back exits).
-    val isFullScreenRoute = !(isHome || isSearch || isWatchlist || isInsights || isProfile)
+    val isTools = currentDestination?.hasRoute<Tools>() == true
+    val isSell = currentDestination?.hasRoute<Sell>() == true
+    // Design v2 tabs: Buy (Home + Search), Prices (Insights), Tools (Tools +
+    // Profile/account), Sell, Saved (Watchlist).
+    val showBottomBar = isHome || isSearch || isWatchlist || isInsights || isProfile || isTools || isSell
     val selectedTab = when {
-        isHome -> "home"
-        isSearch -> "search"
-        isWatchlist -> "watchlist"
-        isInsights -> "insights"
-        isProfile -> "profile"
+        isHome || isSearch -> MotormilaTabs.BUY
+        isInsights -> MotormilaTabs.PRICES
+        isTools || isProfile -> MotormilaTabs.TOOLS
+        isSell -> MotormilaTabs.SELL
+        isWatchlist -> MotormilaTabs.SAVED
         else -> ""
     }
     val reducedMotion = rememberReducedMotion()
@@ -139,7 +143,8 @@ fun MotormilaNavGraph(
 
     LaunchedEffect(Unit) {
         viewModel.authEventBus.events.collect { event ->
-            if (event is AuthEvent.Unauthorized) {
+            // Only after SessionGuard really cleared the rejected session.
+            if (event is AuthEvent.SessionEnded) {
                 navController.navigate(Login()) {
                     launchSingleTop = true
                 }
@@ -170,10 +175,12 @@ fun MotormilaNavGraph(
             showBottomBar = showBottomBar,
             onNavigate = { routeKey ->
                 val target: Any = when (routeKey) {
-                    "home" -> Home
+                    MotormilaTabs.BUY, "home" -> Home
+                    MotormilaTabs.PRICES, "insights" -> Insights
+                    MotormilaTabs.TOOLS -> Tools
+                    MotormilaTabs.SELL -> Sell
+                    MotormilaTabs.SAVED, "watchlist" -> Watchlist
                     "search" -> Search()
-                    "watchlist" -> Watchlist
-                    "insights" -> Insights
                     "profile" -> Profile
                     else -> Home
                 }
@@ -192,6 +199,9 @@ fun MotormilaNavGraph(
                 Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
+                    // Children must not re-apply the insets the shell already
+                    // padded (avoids a double status-bar gap under MmTopBar).
+                    .consumeWindowInsets(innerPadding)
             ) {
                 updateState.available?.let { update ->
                     AppUpdateDialog(
@@ -202,10 +212,9 @@ fun MotormilaNavGraph(
                         installPermissionRequested = updateState.installPermissionRequested,
                     )
                 }
-                MotormilaPredictiveBackTransform(
-                    enabled = isFullScreenRoute && !reducedMotion,
-                    modifier = Modifier.fillMaxSize(),
-                ) {
+                // Predictive back: Navigation-Compose 2.8 seeks the pop
+                // transitions with the back-gesture progress (fade-through +
+                // scale from MmMotion), so no custom PredictiveBackHandler here.
                 NavHost(
                     navController = navController,
                     startDestination = if (sharedUrl != null) ShareImport(sharedUrl) else Splash,
@@ -401,6 +410,7 @@ fun MotormilaNavGraph(
                     ) {
                         ValuationScreen(
                             onOpenListing = { id -> navController.navigate(ListingDetail(id)) },
+                            onSeeSimilar = { make, model -> navController.navigate(MakeModelHub(make, model)) },
                         )
                     }
                     motormilaComposable<Alerts>(
@@ -645,6 +655,19 @@ fun MotormilaNavGraph(
                             onOpenUrl = { url -> uriHandler.openUri(url) },
                         )
                     }
+                    motormilaComposable<Tools> {
+                        ToolsScreen(
+                            onValuation = { navController.navigate(Valuation()) },
+                            onScan = { navController.navigate(PlateScan) },
+                            onCompare = { navController.navigate(Compare(emptyList())) },
+                            onCalculator = { navController.navigate(Calculator) },
+                            onPermits = { navController.navigate(Permits) },
+                            onDocs = { navController.navigate(Docs) },
+                            onEvHub = { navController.navigate(EvHub) },
+                            onAlerts = { navController.navigate(Alerts()) },
+                            onAccount = { navController.navigate(Profile) },
+                        )
+                    }
                     motormilaComposable<Sell>(
                         deepLinks = listOf(
                             navDeepLink { uriPattern = "motormila://sell" },
@@ -746,7 +769,6 @@ fun MotormilaNavGraph(
                             onOpenPro = { navController.navigate(Pro) },
                         )
                     }
-                }
                 }
             }
         }

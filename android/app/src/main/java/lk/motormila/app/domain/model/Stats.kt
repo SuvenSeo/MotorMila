@@ -164,9 +164,10 @@ data class VehicleNews(
 data class EvStats(
     val count: Int,
     val sharePct: Double,
-    val medianLkr: Double?,
+    /** Mean asking price of live EV listings (backend `avg_price_lkr`) — an average, not a median. */
+    val avgPriceLkr: Double?,
+    /** Hybrid (Aqua) benchmark median; null until the backend serves it. */
     val aquaMedianLkr: Double?,
-    val savingsPerYearLkr: Double?,
     val topModels: List<String>,
 )
 

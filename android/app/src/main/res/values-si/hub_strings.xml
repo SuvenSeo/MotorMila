@@ -37,7 +37,7 @@
     <string name="hub_ev_count_note">සියලු මූලාශ්‍රවල සක්‍රීය EV තොගය නිරීක්ෂණය කෙරේ</string>
     <string name="hub_ev_share_label">EV වෙළඳපොළ කොටස</string>
     <string name="hub_ev_share_note">නිරීක්ෂණය කළ සියලු ලැයිස්තු අතර විදුලි කොටස</string>
-    <string name="hub_ev_median_label">EV මධ්‍යස්ථ මිල</string>
+    <string name="hub_ev_median_label">EV සාමාන්‍ය මිල</string>
     <string name="hub_ev_median_note">මිල ඇති සියලු EV ලැයිස්තුවල මධ්‍යස්ථ මිල</string>
     <string name="hub_ev_share_value">%1$.1f%%</string>
     <string name="hub_ev_top_models">ඉහළ EV මාදිලි</string>
@@ -93,7 +93,7 @@
     <string name="hub_ev_empty_body">ඊළඟ වෙළඳපොළ සමමුහුර්තයෙන් පසු විදුලි තොගය සහ චාර්ජ් ස්ථාන පෙනේ.</string>
     <string name="hub_ev_cd_stat_count">සජීවී විදුලි ලැයිස්තු, %1$d</string>
     <string name="hub_ev_cd_stat_share">EV වෙළඳපොළ කොටස, සියයට %1$.1f</string>
-    <string name="hub_ev_cd_stat_median">EV මධ්‍යස්ථ මිල, %1$s</string>
+    <string name="hub_ev_cd_stat_median">EV සාමාන්‍ය මිල, %1$s</string>
     <string name="hub_ev_cd_charger">චාර්ජ් ස්ථානය %1$s, %2$s</string>
     <string name="hub_ev_cd_refresh">EV Hub නැවුම් කරන්න</string>
 

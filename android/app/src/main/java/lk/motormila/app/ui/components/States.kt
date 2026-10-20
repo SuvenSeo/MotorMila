@@ -392,18 +392,8 @@ fun OfflineBanner(
 /** Pulsing live dot; static dot when reduced motion. */
 @Composable
 fun LivePulse(modifier: Modifier = Modifier) {
-    val reduced = rememberReducedMotion()
-    val color = MaterialTheme.colorScheme.primary
-    if (reduced) {
-        Box(modifier.size(8.dp).background(color, CircleShape))
-        return
-    }
-    val transition = rememberInfiniteTransition(label = "live-pulse")
-    val alpha by transition.animateFloat(1f, 0.35f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "pulse")
-    Box(
-        modifier
-            .size(8.dp)
-            .background(color.copy(alpha = alpha), CircleShape)
-            .semantics { contentDescription = "Live" },
-    )
+    // Static dot: motion rules allow no infinite animation except skeletons
+    // (low-end devices / battery). The colour alone says "live".
+    val color = MaterialTheme.colorScheme.tertiary
+    Box(modifier.size(8.dp).background(color, CircleShape))
 }

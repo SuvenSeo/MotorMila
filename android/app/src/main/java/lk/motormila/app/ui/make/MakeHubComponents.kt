@@ -152,8 +152,8 @@ internal fun MakeHubStatsGrid(
 ) {
     val na = stringResource(R.string.make_hub_na)
     val countText = listingCount?.let { LkrFormat.count(it) } ?: na
-    val avgText = avgPriceLkr?.let { LkrFormat.price(it) } ?: na
-    val medianText = medianPriceLkr?.let { LkrFormat.price(it) } ?: na
+    val avgText = avgPriceLkr?.let { lk.motormila.app.ui.common.mn(it) } ?: na
+    val medianText = medianPriceLkr?.let { lk.motormila.app.ui.common.mn(it) } ?: na
     val countCd = stringResource(R.string.make_hub_cd_stat_listings, countText)
     val avgCd = stringResource(R.string.make_hub_cd_stat_avg, avgText)
     val medianCd = stringResource(R.string.make_hub_cd_stat_median, medianText)
@@ -230,7 +230,7 @@ internal fun MakeHubTrendSection(
 @Composable
 private fun MakeHubTrendRow(point: TrendPoint) {
     val period = stringResource(R.string.make_hub_trend_period, point.periodKey)
-    val price = LkrFormat.price(trendPointPrice(point))
+    val price = lk.motormila.app.ui.common.mn(trendPointPrice(point))
     val count = stringResource(R.string.make_hub_trend_count, point.listingCount)
     val rowCd = stringResource(R.string.make_hub_cd_trend, period, price)
     Surface(

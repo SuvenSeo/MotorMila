@@ -37,20 +37,17 @@ val allowUnsignedRelease: Boolean =
 
 android {
     namespace = "lk.motormila.app"
-    // Play requires targetSdk 36 for updates from 1 Nov 2026 (extension
-    // deadline). compileSdk stays at 35 because Paparazzi 1.3.5's
-    // Renderer.configureBuildProperties() crashes on API 36's
-    // android.os.Build (new nested class VERSION_CODES_FULL ->
-    // NoSuchElementException), breaking all screenshot tests. Revisit when
-    // Paparazzi is upgraded to 2.x (needs Gradle/AGP/Kotlin bump too).
-    compileSdk = 35
+    // Play requires targetSdk 36 for updates from 1 Nov 2026. compileSdk 36
+    // needs Paparazzi 2.x (1.3.5 crashed in Renderer.configureBuildProperties
+    // on API 36's android.os.Build.VERSION_CODES_FULL) and AGP 8.10+.
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "lk.motormila.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 17
-        versionName = "1.6.5"
+        versionCode = 18
+        versionName = "1.7.0-preview"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

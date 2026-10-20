@@ -4,30 +4,29 @@ package lk.motormila.app.core.format
  * Top-level shims over [LkrFormat] for call sites that import plain
  * `formatLkr` / `formatPct` / `parseLkrShorthand` functions.
  */
+/** Compact asking price ("Rs 8.5 Mn"), or "Price on request". See [LkrFormat]. */
 fun formatLkr(value: Double?): String = LkrFormat.price(value)
 
 fun formatLkr(value: Long?): String = LkrFormat.price(value?.toDouble())
 
 fun formatLkr(value: Int?): String = LkrFormat.price(value?.toDouble())
 
-/** "Rs. 12.4M" (1-decimal) at/above 1M, else grouped rupees. */
-fun formatLkrCompact(value: Double?): String {
-    if (value == null || value <= 0) return LkrFormat.price(value)
-    return if (value >= 1_000_000) {
-        val m = value / 1_000_000.0
-        "Rs. ${"%.1f".format(m).trimEnd('0').trimEnd('.')}M"
-    } else {
-        LkrFormat.full(value)
-    }
-}
+/** Compact millions ("Rs 0.35 Mn", "Rs 12.5 Mn"); "Price on request" for null/<= 0. */
+fun formatLkrCompact(value: Double?): String = LkrFormat.price(value)
 
-/** "Rs. 12.4M" (1-decimal) at/above 1M, else grouped rupees. */
-fun formatLkrCompact(value: Long?): String = formatLkrCompact(value?.toDouble())
+/** Compact millions ("Rs 0.35 Mn", "Rs 12.5 Mn"); "Price on request" for null/<= 0. */
+fun formatLkrCompact(value: Long?): String = LkrFormat.price(value?.toDouble())
 
-/** Signed grouped delta, e.g. "-Rs. 250,000". Blank when null/zero. */
+/** Full rupees ("Rs 7,250,000") — listing detail only. */
+fun formatLkrFull(value: Double?): String = LkrFormat.full(value)
+
+/** Monthly full rupees ("Rs 85,400/mo"). */
+fun formatLkrMonthly(value: Double?): String = LkrFormat.monthly(value)
+
+/** Signed compact delta, e.g. "−Rs 0.25 Mn". Blank when null/zero. */
 fun formatLkrDelta(value: Double?): String = LkrFormat.deltaLkr(value)
 
-/** Signed grouped delta, e.g. "-Rs. 250,000". Blank when null/zero. */
+/** Signed compact delta, e.g. "−Rs 0.25 Mn". Blank when null/zero. */
 fun formatLkrDelta(value: Long?): String = LkrFormat.deltaLkr(value?.toDouble())
 
 /** Signed percent with [digits] decimals, e.g. "+2.5%". Null renders as "—". */

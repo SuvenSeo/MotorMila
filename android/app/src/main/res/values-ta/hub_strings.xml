@@ -37,7 +37,7 @@
     <string name="hub_ev_count_note">அனைத்து மூலங்களிலும் செயலில் உள்ள EV சரக்கு கண்காணிக்கப்படுகிறது</string>
     <string name="hub_ev_share_label">EV சந்தை பங்கு</string>
     <string name="hub_ev_share_note">கண்காணிக்கப்பட்ட அனைத்து பட்டியல்களிலும் மின்சார பங்கு</string>
-    <string name="hub_ev_median_label">EV மத்திய விலை</string>
+    <string name="hub_ev_median_label">EV சராசரி விலை</string>
     <string name="hub_ev_median_note">விலையிடப்பட்ட அனைத்து EV பட்டியல்களின் மத்திய விலை</string>
     <string name="hub_ev_share_value">%1$.1f%%</string>
     <string name="hub_ev_top_models">முதன்மை EV மாடல்கள்</string>
@@ -93,7 +93,7 @@
     <string name="hub_ev_empty_body">அடுத்த சந்தை ஒத்திசைவுக்குப் பிறகு மின் சரக்கும் சார்ஜிங் நிலையங்களும் தோன்றும்.</string>
     <string name="hub_ev_cd_stat_count">நேரடி மின் பட்டியல்கள், %1$d</string>
     <string name="hub_ev_cd_stat_share">EV சந்தை பங்கு, %1$.1f சதவீதம்</string>
-    <string name="hub_ev_cd_stat_median">EV மத்திய விலை, %1$s</string>
+    <string name="hub_ev_cd_stat_median">EV சராசரி விலை, %1$s</string>
     <string name="hub_ev_cd_charger">சார்ஜிங் நிலையம் %1$s, %2$s</string>
     <string name="hub_ev_cd_refresh">EV மையத்தைப் புதுப்பி</string>
 

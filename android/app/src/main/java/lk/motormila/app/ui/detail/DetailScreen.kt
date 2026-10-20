@@ -100,10 +100,15 @@ import lk.motormila.app.domain.model.SellerProfile
 import lk.motormila.app.ui.components.DealBadge
 import lk.motormila.app.ui.components.DealRing
 import lk.motormila.app.ui.components.EmptyState
+import lk.motormila.app.ui.components.MmDealVerdict
+import lk.motormila.app.ui.components.MmLeaseTakeover
+import lk.motormila.app.ui.components.MmPriceChart
+import lk.motormila.app.ui.components.MmPullToRefresh
+import lk.motormila.app.ui.components.MmDetailSkeleton
 import lk.motormila.app.ui.components.ErrorState
 import lk.motormila.app.ui.components.FmvGauge
 import lk.motormila.app.ui.components.ListingImage
-import lk.motormila.app.ui.components.SlidingNumber
+import lk.motormila.app.ui.components.SlidingLkr
 import lk.motormila.app.ui.components.listingCardKey
 import lk.motormila.app.ui.components.listingPriceKey
 import lk.motormila.app.ui.components.rememberReducedMotion
@@ -169,6 +174,9 @@ fun ListingDetailScreen(
     val context = LocalContext.current
     val haptics = LocalHapticFeedback.current
     var showFmvExplain by remember { mutableStateOf(false) }
+    var viewerPage by remember { mutableStateOf<Int?>(null) }
+    val mmHaptics = lk.motormila.app.ui.theme.MmHaptics.current
+    var showWhy by remember { mutableStateOf(false) }
 
     LaunchedEffect(listingId) {
         if (listingId > 0) {
@@ -183,7 +191,10 @@ fun ListingDetailScreen(
             MotormilaIconAction(
                 icon = if (state.isWatched) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                 contentDescription = if (state.isWatched) "Remove from watchlist" else "Save to watchlist",
-                onClick = { viewModel.toggleWatch() },
+                onClick = {
+                    if (state.isWatched) mmHaptics.unsave() else mmHaptics.save()
+                    viewModel.toggleWatch()
+                },
                 tint = if (state.isWatched) MaterialTheme.colorScheme.error else MotormilaOnSurface,
             )
             MotormilaIconAction(
@@ -193,17 +204,14 @@ fun ListingDetailScreen(
             )
         },
     ) {
-        PullToRefreshBox(
-            isRefreshing = state.isLoading,
+        MmPullToRefresh(
+            isRefreshing = state.isLoading && state.listing != null,
             onRefresh = viewModel::retry,
             modifier = Modifier.fillMaxSize(),
         ) {
             when {
                 state.isLoading && state.listing == null -> {
-                    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        item { LoadingSkeletonCard() }
-                        item { LoadingSkeletonChart() }
-                    }
+                    MmDetailSkeleton()
                 }
                 state.listing == null -> {
                     ErrorState(
@@ -215,19 +223,41 @@ fun ListingDetailScreen(
                 }
                 else -> {
                     val listing = state.listing!!
+                    val galleryImages = listing.images.ifEmpty { listOfNotNull(listing.thumbnailUrl) }
+                    val sourceUrl = listing.externalUrl ?: listing.detailUrl
+                    Box(Modifier.fillMaxSize()) {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 28.dp),
+                        // Room for the sticky price / "View on source" bar.
+                        contentPadding = PaddingValues(bottom = 120.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         if (state.isOffline) {
                             item { OfflineBanner(visible = true) }
                         }
                         item {
-                            GalleryPager(
-                                images = listing.images.ifEmpty { listOfNotNull(listing.thumbnailUrl) },
+                            DetailGallery(
+                                images = galleryImages,
                                 title = listing.displayName,
                                 listingId = listing.id,
+                                onOpenViewer = { page -> viewerPage = page },
+                            )
+                        }
+                        item {
+                            val verdict = remember(listing.id, listing.priceLkr, state.fmv) {
+                                MmDealVerdict.compute(
+                                    askingLkr = listing.priceLkr,
+                                    typicalLkr = state.fmv?.fmvLkr ?: listing.marketMedianLkr,
+                                    isLeaseTakeover = MmLeaseTakeover.detect(listing.title, listing.model),
+                                    weakEstimate = state.fmv?.confidence?.equals("low", ignoreCase = true) == true,
+                                    compsCount = state.fmv?.sampleCount?.takeIf { it > 0 },
+                                    ratingAllowed = listing.dealScore != null || state.fmv?.hasSignal == true,
+                                )
+                            }
+                            DealVerdictRow(
+                                verdict = verdict,
+                                onWhy = { showWhy = true },
+                                modifier = Modifier.padding(horizontal = 16.dp),
                             )
                         }
                         item {
@@ -312,7 +342,7 @@ fun ListingDetailScreen(
                             )
                         }
                         item {
-                            SafetyCard(Modifier.padding(horizontal = 16.dp))
+                            BeforeYouPayCard(Modifier.padding(horizontal = 16.dp))
                         }
                         item {
                             DeepLinksRow(
@@ -364,16 +394,6 @@ fun ListingDetailScreen(
                                     .padding(horizontal = 16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
-                                MotormilaPrimaryButton(
-                                    label = stringResource(R.string.listing_view_on_source, sourceDisplayName(listing.source)),
-                                    onClick = {
-                                        val url = listing.externalUrl ?: listing.detailUrl
-                                        if (url != null) openUrl(context, url)
-                                    },
-                                    fillMaxWidth = false,
-                                    leadingIcon = Icons.AutoMirrored.Filled.OpenInNew,
-                                    modifier = Modifier.weight(1f),
-                                )
                                 MotormilaGhostButton(
                                     label = stringResource(R.string.listing_share_whatsapp),
                                     onClick = { shareWhatsApp(context, listing, state.fmv) },
@@ -384,9 +404,49 @@ fun ListingDetailScreen(
                             }
                         }
                     }
+                    DetailActionBar(
+                        priceLkr = listing.priceLkr,
+                        sourceName = sourceDisplayName(listing.source),
+                        onViewSource = sourceUrl?.let { url -> { openUrl(context, url) } },
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                    )
+                    }
                 }
             }
         }
+    }
+
+    val viewerListing = state.listing
+    if (viewerPage != null && viewerListing != null) {
+        val imgs = viewerListing.images.ifEmpty { listOfNotNull(viewerListing.thumbnailUrl) }
+        if (imgs.isNotEmpty()) {
+            FullScreenGallery(
+                images = imgs,
+                startPage = viewerPage ?: 0,
+                title = viewerListing.displayName,
+                onDismiss = { viewerPage = null },
+            )
+        }
+    }
+    if (showWhy && viewerListing != null) {
+        val typical = state.fmv?.fmvLkr ?: viewerListing.marketMedianLkr
+        DealWhySheet(
+            verdict = MmDealVerdict.compute(
+                askingLkr = viewerListing.priceLkr,
+                typicalLkr = typical,
+                isLeaseTakeover = MmLeaseTakeover.detect(viewerListing.title, viewerListing.model),
+                weakEstimate = state.fmv?.confidence?.equals("low", ignoreCase = true) == true,
+                compsCount = state.fmv?.sampleCount?.takeIf { it > 0 },
+            ),
+            askingLkr = viewerListing.priceLkr,
+            typicalLkr = typical,
+            comparables = state.fmv?.sampleCount,
+            onDismiss = { showWhy = false },
+            onFullEstimate = {
+                showWhy = false
+                onEstimate()
+            },
+        )
     }
 
     if (showFmvExplain && state.fmv != null) {
@@ -407,71 +467,6 @@ fun ListingDetailScreen(
                 Spacer(Modifier.height(16.dp))
                 MotormilaPrimaryButton(label = "Get full estimate", onClick = onEstimate)
                 Spacer(Modifier.height(12.dp))
-            }
-        }
-    }
-}
-
-/** Gallery pager with parallax dots (dots scale/translate with page offset). */
-@OptIn(ExperimentalSharedTransitionApi::class)
-@Composable
-private fun GalleryPager(images: List<String>, title: String, listingId: Int) {
-    if (images.isEmpty()) {
-        EmptyState(
-            title = "No photos",
-            body = "The seller didn't include photos for this listing.",
-            ctaLabel = null,
-            onCta = null,
-        )
-        return
-    }
-    val pagerState = rememberPagerState(pageCount = { images.size })
-    val sharedScope = LocalSharedTransitionScope.current
-    val animatedScope = LocalNavAnimatedVisibilityScope.current
-    Column {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(16f / 10f)
-                .semantics { contentDescription = "Photos of $title, ${images.size} photos" },
-        ) { page ->
-            val heroModifier = if (page == 0 && sharedScope != null && animatedScope != null) {
-                with(sharedScope) {
-                    Modifier.sharedElement(
-                        rememberSharedContentState(key = listingHeroKey(listingId)),
-                        animatedScope,
-                    )
-                }
-            } else {
-                Modifier
-            }
-            ListingImage(
-                model = images[page],
-                contentDescription = "Photo ${page + 1} of $title",
-                modifier = Modifier.fillMaxSize().then(heroModifier),
-            )
-        }
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp),
-            horizontalArrangement = Arrangement.Center,
-        ) {
-            repeat(images.size) { i ->
-                val offset = (pagerState.currentPage - i + pagerState.currentPageOffsetFraction).absoluteValue
-                val scale = lerp(1f, 0.6f, offset.coerceIn(0f, 1f))
-                Box(
-                    Modifier
-                        .padding(horizontal = 3.dp)
-                        .size(8.dp * scale)
-                        .clip(CircleShape)
-                        .background(
-                            if (i == pagerState.currentPage) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.outlineVariant,
-                        )
-                        .graphicsLayer { translationX = pagerState.currentPageOffsetFraction * 12f },
-                )
             }
         }
     }
@@ -585,7 +580,7 @@ private fun PriceSlot(
             if (activeDrop != null) {
                 PriceDropTicker(drop = activeDrop, priceStyle = priceStyle)
             } else {
-                Text(text = listing.formattedPrice(), style = priceStyle)
+                Text(text = LkrFormat.priceFull(listing.priceLkr), style = priceStyle)
             }
         }
     }
@@ -644,7 +639,7 @@ private fun PriceDropTicker(
             animationSpec = tween(durationMillis = 200),
             label = "price-drop-reduced",
         ) { price ->
-            Text(text = LkrFormat.price(price), style = priceStyle, modifier = modifier)
+            Text(text = LkrFormat.priceFull(price), style = priceStyle, modifier = modifier)
         }
         return
     }
@@ -686,10 +681,10 @@ private fun PriceDropTicker(
                 }
             }
             Spacer(Modifier.width(8.dp))
-            SlidingNumber(
-                value = (if (started) drop.newPriceLkr else drop.oldPriceLkr).toLong(),
+            SlidingLkr(
+                valueLkr = if (started) drop.newPriceLkr else drop.oldPriceLkr,
                 style = priceStyle,
-                prefix = "Rs. ",
+                full = true,
             )
         }
         if (flash.value > 0.005f) {
@@ -1656,7 +1651,7 @@ private fun HistorySection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            PriceChart(points = history.points, fmvLkr = fmvLkr, modifier = Modifier.fillMaxWidth())
+            MmPriceChart(points = history.points, typicalLkr = fmvLkr, modifier = Modifier.fillMaxWidth())
             val change = history.changePct
             if (change != null) {
                 Spacer(Modifier.height(4.dp))
@@ -1834,21 +1829,6 @@ private fun SellerCard(
                 label = stringResource(R.string.listing_view_on_source, sourceName),
                 leadingIcon = Icons.AutoMirrored.Filled.OpenInNew,
                 onClick = onViewSource,
-            )
-        }
-    }
-}
-
-@Composable
-private fun SafetyCard(modifier: Modifier = Modifier) {
-    MotormilaSurface(modifier = modifier) {
-        Row(verticalAlignment = Alignment.Top) {
-            Icon(Icons.Filled.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
-            Spacer(Modifier.width(8.dp))
-            Text(
-                "Meet in a public place, verify the CR book and chassis number, and never pay in advance.",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
