@@ -1,17 +1,10 @@
 import type { FilterState } from "@/types/car";
 
-/** Alert cadence for a saved search. "daily" maps to the backend's 07:00 digest. */
-export type SavedSearchFrequency = "instant" | "daily" | "off";
-
 export interface SavedSearch {
   id: string;
   name: string;
   createdAt: string;
   filters: Partial<FilterState>;
-  /** Alert cadence; undefined on searches saved before Oct 2026 (treated as "off"). */
-  frequency?: SavedSearchFrequency;
-  /** Server-side market alert backing this search, when frequency is not "off". */
-  serverAlertId?: number;
 }
 
 const STORAGE_KEY = "motormila:saved-searches:v1";
@@ -101,38 +94,16 @@ export function listSavedSearches(): SavedSearch[] {
 }
 
 /** Save a filter combo under a display name. Returns the created entry. */
-export function saveSavedSearch(
-  name: string,
-  filters: Partial<FilterState>,
-  extra: Pick<SavedSearch, "frequency" | "serverAlertId"> = {},
-): SavedSearch {
+export function saveSavedSearch(name: string, filters: Partial<FilterState>): SavedSearch {
   const entry: SavedSearch = {
     id: makeId(),
     name: name.trim() || "Untitled search",
     createdAt: new Date().toISOString(),
-    filters: cleanFilters({ ...filters, page: undefined }),
-    ...extra,
+    filters: cleanFilters(filters),
   };
   const rows = [entry, ...readAll()].slice(0, MAX_SAVED_SEARCHES);
   writeAll(rows);
   return entry;
-}
-
-/** Patch one saved search (frequency / server alert id). Returns the updated entry. */
-export function updateSavedSearch(
-  id: string,
-  patch: Partial<Pick<SavedSearch, "name" | "frequency" | "serverAlertId">>,
-): SavedSearch | null {
-  const rows = readAll();
-  let updated: SavedSearch | null = null;
-  const next = rows.map((row) => {
-    if (row.id !== id) return row;
-    updated = { ...row, ...patch };
-    return updated;
-  });
-  if (!updated) return null;
-  writeAll(next);
-  return updated;
 }
 
 /** Delete one saved search by id. Returns true when something was removed. */

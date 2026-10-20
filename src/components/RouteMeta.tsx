@@ -159,8 +159,8 @@ export function RouteMeta() {
   useEffect(() => {
     const siteVars = { site: SITE };
     const defaultDescription = t(
-      "shell.copy.seoDefault",
-      "Search every vehicle ad in Sri Lanka in one place, with price history, fair-price ranges and an import tax calculator.",
+      "seo.defaultDescription",
+      "Track Sri Lankan vehicle prices, trends, deal signals, and valuation tools in one market intelligence cockpit.",
     );
 
     const routeMeta: Record<string, Meta> = {
@@ -180,13 +180,6 @@ export function RouteMeta() {
         description: t(
           "seo.estimateDesc",
           "Estimate a fair market price for any Sri Lankan vehicle from live listing data.",
-        ),
-      },
-      "/how-we-price": {
-        title: t("seo.howWePriceTitle", "How we score prices — {site}", siteVars),
-        description: t(
-          "seo.howWePriceDesc",
-          "How MotorMila estimates fair market value from comparable Sri Lankan listings, what confidence levels and deal badges mean, and the limits of asking-price data.",
         ),
       },
       "/calculator": {

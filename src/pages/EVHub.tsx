@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { m } from "motion/react";
+import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
@@ -19,7 +19,7 @@ import { PageCanvas } from "@/components/PageCanvas";
 import { PageHero } from "@/components/PageHero";
 import { FreePlanBanner } from "@/components/FreePlanBanner";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
-import { fadeUp, listStagger, revealItem } from "@/lib/motion";
+import { revealItem } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { useAppPreferences } from "@/lib/appPreferences";
@@ -29,7 +29,6 @@ import {
   hasFullPlatformAccess,
 } from "@/lib/planLimits";
 import { visuals } from "@/lib/visualAssets";
-import { groupThousands } from "@/lib/price";
 
 const EV_MODULE_DEFS = [
   { icon: Battery, step: "01", titleKey: "ev.module.battery", titleFb: "Battery health", descFb: "Degradation patterns, SoH benchmarks, and what to inspect before buying." },
@@ -125,8 +124,7 @@ export default function EVHub() {
         media={visuals.alt2HeroUltrawidePanorama}
         mediaPosition="center 45%"
         mediaTone="brand"
-        // Real numbers only: no "…" placeholders or N/A tiles in the hero.
-        highlights={pending ? undefined : liveStats.filter((stat) => stat.value !== na).slice(0, 3).map((stat) => ({
+        highlights={liveStats.slice(0, 3).map((stat) => ({
           label: stat.label,
           value: stat.value,
           hint: stat.note,
@@ -137,7 +135,7 @@ export default function EVHub() {
 
       <PageBody className="space-y-16 lg:space-y-24">
         {/* Live inventory pulse — one number towers */}
-        <m.section variants={revealItem}>
+        <motion.section variants={revealItem}>
           <SectionHeader title={t("ev.liveInventory", "Live EV inventory")} className="mb-8" />
           <div className="space-y-3">
             <div className="data-card flex flex-col gap-4 p-6 sm:flex-row sm:items-end sm:justify-between sm:p-8">
@@ -157,45 +155,30 @@ export default function EVHub() {
               ))}
             </div>
           </div>
-        </m.section>
+        </motion.section>
 
         {/* Top EV models — feature the leading model */}
         {(pending || topModels.length > 0) && (
-          <m.section variants={revealItem}>
+          <motion.section variants={revealItem}>
             <SectionHeader title={t("ev.topModels", "Top EV models")} className="mb-8" />
-            <m.div
-              key={pending ? "loading" : "loaded"}
-              inherit={false}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true, amount: 0.05 }}
-              variants={listStagger}
-              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-            >
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {pending
                 ? Array.from({ length: 5 }).map((_, i) => (
-                    /* Shimmer shaped like the real card: icon + name, price, count. */
                     <div
                       key={i}
-                      aria-hidden
-                      className={cn("data-card p-6", i === 0 && "xl:col-span-2 xl:flex xl:flex-col xl:justify-between")}
+                      className={cn("data-card p-6 animate-pulse", i === 0 && "xl:col-span-2")}
                     >
-                      <div className="mb-4 flex items-center gap-2">
-                        <div className={cn("skeleton-shimmer rounded-2xl", i === 0 ? "h-10 w-10" : "h-8 w-8")} />
-                        <div className="skeleton-shimmer h-3.5 w-2/3 rounded-full" />
-                      </div>
-                      <div className={cn("skeleton-shimmer rounded-full", i === 0 ? "h-8 w-1/2" : "h-5 w-1/2")} />
-                      <div className="skeleton-shimmer mt-2 h-2.5 w-1/3 rounded-full" />
+                      <div className="mb-3 h-3 w-2/3 rounded bg-muted" />
+                      <div className="h-5 w-1/2 rounded bg-muted" />
                     </div>
                   ))
-                : topModels.map((model, i) => {
+                : topModels.map((m, i) => {
                     const featured = i === 0;
                     return (
-                      <m.div
-                        key={`${model.make}-${model.model}`}
-                        variants={fadeUp}
+                      <div
+                        key={`${m.make}-${m.model}`}
                         className={cn(
-                          "data-card group p-6 transition-[border-color,box-shadow] hover:border-primary/30 hover:shadow-soft-lg",
+                          "data-card group p-6 transition-all hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg",
                           featured && "xl:col-span-2 xl:flex xl:flex-col xl:justify-between",
                         )}
                       >
@@ -207,19 +190,19 @@ export default function EVHub() {
                             <Zap className={cn("text-primary", featured ? "h-5 w-5" : "h-3.5 w-3.5")} aria-hidden />
                           </div>
                           <p className={cn("font-bold leading-tight text-foreground", featured ? "text-[15px]" : "text-[13px]")}>
-                            {model.make} {model.model}
+                            {m.make} {m.model}
                           </p>
                         </div>
                         <p className={cn("num font-bold text-foreground", featured ? "text-3xl tracking-tight" : "text-lg")}>
-                          {model.median_price_lkr !== null ? formatPrice(model.median_price_lkr) : "—"}
+                          {m.median_price_lkr !== null ? formatPrice(m.median_price_lkr) : "—"}
                         </p>
                         <p className="mt-1.5 text-[11px] font-medium text-muted-foreground">
-                          {model.listing_count} listing{model.listing_count !== 1 ? "s" : ""} · median
+                          {m.listing_count} listing{m.listing_count !== 1 ? "s" : ""} · median
                         </p>
-                      </m.div>
+                      </div>
                     );
                   })}
-            </m.div>
+            </div>
             {!fullAccess && !pending && (hiddenModelCount > 0 || topModels.length > 0) ? (
               <UpgradePrompt
                 className="mt-6"
@@ -228,11 +211,11 @@ export default function EVHub() {
                 variant="strip"
               />
             ) : null}
-          </m.section>
+          </motion.section>
         )}
 
         {/* TCO comparison callout */}
-        <m.section variants={revealItem}>
+        <motion.section variants={revealItem}>
           <div className="surface--glass rounded-2xl p-6 sm:p-8">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10">
@@ -245,7 +228,7 @@ export default function EVHub() {
                 </p>
                 <h3 className="mt-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">{t("ev.tcoTitle", "EV vs. Toyota Aqua hybrid — real running cost")}</h3>
                 <p className="mt-3 max-w-2xl text-[14px] font-medium leading-relaxed text-muted-foreground">
-                  Fuel saving estimated at <span className="num font-bold text-foreground">Rs {groupThousands(annualFuelSavingLkr)}/yr</span> (LKR {TCO_FUEL_COST_PER_KM_EV_LKR} vs LKR {TCO_FUEL_COST_PER_KM_PETROL_LKR} per km, {(TCO_KM_PER_YEAR / 1000).toFixed(0)}k km/yr).
+                  Fuel saving estimated at <span className="num font-bold text-foreground">Rs.{annualFuelSavingLkr.toLocaleString()}/yr</span> (LKR {TCO_FUEL_COST_PER_KM_EV_LKR} vs LKR {TCO_FUEL_COST_PER_KM_PETROL_LKR} per km, {(TCO_KM_PER_YEAR / 1000).toFixed(0)}k km/yr).
                 </p>
                 <div className="mt-6 grid gap-3 sm:grid-cols-3">
                   <div className="metric-tile p-4">
@@ -287,10 +270,10 @@ export default function EVHub() {
               </div>
             </div>
           </div>
-        </m.section>
+        </motion.section>
 
         {/* Decision modules */}
-        <m.section variants={revealItem}>
+        <motion.section variants={revealItem}>
           <SectionHeader title={t("ev.decisionModules", "Decision modules")} className="mb-8" />
           <div className="grid gap-3 md:grid-cols-3">
             {evModules.map((m) => {
@@ -309,10 +292,10 @@ export default function EVHub() {
               );
             })}
           </div>
-        </m.section>
+        </motion.section>
 
         {/* Market action */}
-        <m.section variants={revealItem} className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
+        <motion.section variants={revealItem} className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
           <div className="data-card p-6 sm:p-8">
             <p className="text-[12px] font-semibold text-muted-foreground/80">{t("ev.ownershipChecks", "Ownership checks")}</p>
             <h3 className="mt-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">{t("ev.buyerGuidelines", "Buyer guidelines")}</h3>
@@ -350,7 +333,7 @@ export default function EVHub() {
               </Link>
             </Button>
           </div>
-        </m.section>
+        </motion.section>
       </PageBody>
     </PageCanvas>
   );

@@ -92,7 +92,7 @@ describe("BestPicks price guard", () => {
 
     expect(screen.queryByText(/Zero Price/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Tiny Price/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/vehicles priced well below similar ads/i)).toBeInTheDocument();
+    expect(screen.getByText(/vehicles scored/i)).toBeInTheDocument();
     expect(screen.getByText(/ranked by deal strength/i)).toBeInTheDocument();
   });
 
@@ -114,33 +114,5 @@ describe("BestPicks price guard", () => {
       .filter((h) => !/biggest cuts/i.test(h.textContent || ""));
     expect(pickHeadings[0]).toHaveTextContent(/Honda Fit/i);
     expect(screen.getByText(/Lowest cash down/i)).toBeInTheDocument();
-  });
-});
-
-describe("BestPicks loading states (ui/shell)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    installProAuth();
-  });
-
-  it("shows a proper loading line, then a timeout state with retry instead of hanging", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    vi.mocked(api.getListings).mockImplementation(() => new Promise(() => {}));
-    renderBestPicks();
-    expect(screen.getAllByText(/finding the best-priced listings/i).length).toBeGreaterThan(0);
-    expect(screen.queryByText("…")).not.toBeInTheDocument();
-    expect(screen.queryByText(/scanning inventory/i)).not.toBeInTheDocument();
-
-    await vi.advanceTimersByTimeAsync(16_000);
-    expect(await screen.findByText(/taking longer than usual/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /try again/i })).toBeInTheDocument();
-    vi.useRealTimers();
-  });
-
-  it("shows a plain empty state with no developer hints", async () => {
-    vi.mocked(api.getListings).mockResolvedValue({ listings: [], total: 0 } as never);
-    renderBestPicks();
-    expect(await screen.findByText(/no standout deals right now/i)).toBeInTheDocument();
-    expect(screen.queryByText(/seed-demo/i)).not.toBeInTheDocument();
   });
 });

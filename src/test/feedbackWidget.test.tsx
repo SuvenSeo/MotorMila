@@ -1,24 +1,24 @@
-import { act, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { TestRouter } from "@/test/testUtils";
 import { describe, expect, it, vi } from "vitest";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
-import { openFeedbackDialog } from "@/lib/feedbackEvents";
 
 vi.mock("@/services/api", () => ({
   sendFeedback: vi.fn(),
 }));
 
 describe("FeedbackWidget", () => {
-  it("has no floating trigger and opens from openFeedbackDialog()", async () => {
+  it("opens the feedback dialog from the fixed feedback action", async () => {
     render(
       <TestRouter initialEntries={["/?q=Toyota+Axio"]}>
         <FeedbackWidget />
       </TestRouter>,
     );
 
-    expect(screen.queryByRole("button", { name: /send feedback/i })).not.toBeInTheDocument();
+    const action = screen.getByRole("button", { name: /send feedback/i });
+    expect(action).toHaveClass("bottom-20");
 
-    act(() => openFeedbackDialog());
+    fireEvent.click(action);
 
     expect(await screen.findByRole("dialog", { name: /send feedback/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /data issue/i })).toBeInTheDocument();

@@ -1,4 +1,3 @@
-import { isCountryLevelDistrict } from "@/lib/dataSanity";
 export const SRI_LANKA_DISTRICTS = [
   "Colombo", "Gampaha", "Kalutara", "Kandy", "Matale", "Nuwara Eliya",
   "Galle", "Matara", "Hambantota", "Jaffna", "Kilinochchi", "Mannar",
@@ -50,7 +49,7 @@ export function normalizeDistrictName(value: string | null | undefined): string 
   const cleaned = String(value).trim().replace(/[-_]+/g, " ").replace(/\s+/g, " ");
   if (!cleaned) return null;
   // "Sri Lanka" is the country, not a district — never surface it as one.
-  if (/^sri\s*lanka$/i.test(cleaned) || isCountryLevelDistrict(cleaned)) return null;
+  if (/^sri\s*lanka$/i.test(cleaned)) return null;
   const alias = DISTRICT_ALIASES[cleaned.toLowerCase()];
   if (alias) return alias;
   const title = cleaned.replace(/\w\S*/g, (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase());

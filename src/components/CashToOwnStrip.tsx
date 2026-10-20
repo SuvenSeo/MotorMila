@@ -5,7 +5,6 @@ import {
   type CashToOwnResult,
   type VehicleFinanceClass,
 } from "@/lib/cashToOwn";
-import { formatLkrMonthly } from "@/lib/price";
 
 interface CashToOwnStripProps {
   priceLkr: number;
@@ -46,7 +45,7 @@ export function CashToOwnStrip({
         <Metric label="Min cash today" value={formatPrice(result.trueCashTodayLkr)} emphasize />
         <Metric label="Down (LTV)" value={formatPrice(result.minCashDownLkr)} />
         <Metric label="Max finance" value={formatPrice(result.maxFinanceLkr)} />
-        <Metric label={`Monthly · ${termYears}y`} value={formatLkrMonthly(result.monthlyPaymentLkr)} />
+        <Metric label={`Monthly · ${termYears}y`} value={formatPrice(result.monthlyPaymentLkr)} />
       </div>
       <p className="mt-3 text-[10px] leading-relaxed text-muted-foreground">
         True drive-away: down + stamp (~{Math.round((result.stampDutyLkr / Math.max(result.maxFinanceLkr, 1)) * 100)}% of loan) +

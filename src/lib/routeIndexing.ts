@@ -25,7 +25,7 @@ const NOINDEX_PREFIXES = [
 /** Mirrors the <Route> table in App.tsx (and the SPA allowlist in vercel.json). */
 const KNOWN_ROUTE_PATTERNS: RegExp[] = [
   /^\/$/,
-  /^\/(trends|estimate|calculator|ev-hub|ev-chargers|best-picks|sell|price-index|docs|pricing|privacy|terms|compare|valuation|permits|mobile-app|dealer|settings|alerts|profile|sign-in|sign-up|hero-lab|admin|pro|pro-preview|official-pulse|afford|safe-transfer|finance|leasing|inspection|insurance|cookies|removal|delete-account|how-we-price|bot)\/?$/,
+  /^\/(trends|estimate|calculator|ev-hub|ev-chargers|best-picks|sell|price-index|docs|pricing|privacy|terms|compare|valuation|permits|mobile-app|dealer|settings|alerts|profile|sign-in|sign-up|hero-lab|admin|pro|pro-preview|official-pulse|afford|safe-transfer|finance|leasing|inspection|insurance|cookies|removal|delete-account|bot)\/?$/,
   /^\/checkout\/return\/?$/,
   /^\/listing\/[^/]+\/?$/,
   /^\/cars\/[^/]+(\/[^/]+(\/\d{4})?)?\/?$/,

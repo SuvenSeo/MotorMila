@@ -11,7 +11,7 @@ export function HeroVariantPicker({
   onSelect: (id: HeroVariantId) => void;
 }) {
   return (
-    <div className="pointer-events-none fixed bottom-4 left-4 right-4 z-devtools flex justify-center sm:left-auto sm:right-4 sm:justify-end">
+    <div className="pointer-events-none fixed bottom-4 left-4 right-4 z-[80] flex justify-center sm:left-auto sm:right-4 sm:justify-end">
       <div className="pointer-events-auto max-w-md rounded-2xl border border-border bg-card/95 p-3 shadow-soft-xl backdrop-blur-xl">
         <p className="text-[12px] font-medium text-muted-foreground">
           Hero lab · local only

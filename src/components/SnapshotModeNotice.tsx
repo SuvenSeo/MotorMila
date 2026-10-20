@@ -4,7 +4,6 @@ import { API_BASE, SNAPSHOT_ONLY, fetchSnapshotJSON } from "@/services/api";
 import { relativeAgo, parseFlexibleTime } from "@/lib/parseTime";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { cn } from "@/lib/utils";
-import { useStaleBannerSlot } from "@/lib/staleBannerSlot";
 
 interface SnapshotState {
   /** True when the live API is unreachable/degraded (or the build is snapshot-only). */
@@ -61,10 +60,7 @@ export function SnapshotModeNotice({ className }: { className?: string }) {
     };
   }, []);
 
-  // Shares the page's single stale-data banner slot; outranks the freshness banner.
-  const ownsBannerSlot = useStaleBannerSlot(Boolean(state?.snapshotMode), 1);
-
-  if (!state?.snapshotMode || !ownsBannerSlot) return null;
+  if (!state?.snapshotMode) return null;
   const ago = relativeAgo(state.generatedAt);
   const ts = parseFlexibleTime(state.generatedAt);
   const absolute =

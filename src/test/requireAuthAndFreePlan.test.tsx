@@ -57,7 +57,7 @@ describe("RequireAuth + free plan locks", () => {
     expect(screen.queryByText(/private home/i)).not.toBeInTheDocument();
   });
 
-  it("shows free-plan banner and a 'Pro coming soon' line (no blurred teaser) for free users", () => {
+  it("shows free-plan banner and blurs locked content for free users", () => {
     installLocalStorage({
       email: "free@example.com",
       name: "Free User",
@@ -80,14 +80,15 @@ describe("RequireAuth + free plan locks", () => {
       </AppPreferencesProvider>,
     );
 
-    // One Pro voice: free during beta, Pro coming soon, notify me.
-    expect(screen.getAllByText(/free during beta/i).length).toBeGreaterThan(0);
+    // B1/B2 copy: en.ts freeBanner.body + FreePlanBanner Upgrade CTA + ProFeatureLock trial lock.
+    expect(screen.getByText(/you're on the free plan/i)).toBeInTheDocument();
     expect(screen.getAllByText(/lane intelligence/i).length).toBeGreaterThan(0);
-    expect(screen.queryByText(/secret analytics/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/join the waitlist|upgrade to pro/i)).not.toBeInTheDocument();
-    const notify = screen.getAllByRole("link", { name: /notify me/i });
-    expect(notify.length).toBe(2);
-    notify.forEach((link) => expect(link).toHaveAttribute("href", "/pricing#get-started"));
+    expect(screen.getByRole("link", { name: /^upgrade$/i })).toHaveAttribute("href", "/pricing");
+    expect(screen.getAllByText(/join the waitlist/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: /join the waitlist/i })).toHaveAttribute(
+      "href",
+      "/pricing",
+    );
   });
 
   it("does not blur content for pro users", () => {

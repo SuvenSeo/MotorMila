@@ -1,16 +1,13 @@
-import { useMemo } from "react";
+import BarList from "@tremor/react/dist/components/vis-elements/BarList/BarList.js";
 import { useQuery } from "@tanstack/react-query";
-import { Bar, BarChart, LabelList, XAxis, YAxis } from "recharts";
 import { getDistrictVelocity } from "@/services/api";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { cleanDistrict } from "@/lib/dataSanity";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 
 /**
- * District listing-volume breakdown — horizontal bar chart (shadcn chart on
- * Recharts), wired to the real district-velocity API. Country-level rows
- * ("Sri Lanka") are not districts and are dropped.
+ * District sales-velocity breakdown — Tremor BarList (its exact design case),
+ * wired to the real district-velocity API. Deep import keeps recharts out of
+ * the main chunk.
  */
 export function DistrictVelocityList() {
   const { t } = useAppPreferences();
@@ -20,24 +17,15 @@ export function DistrictVelocityList() {
     staleTime: QUERY_STALE.hub,
   });
 
-  const rows = useMemo(
-    () =>
-      [...(data?.points ?? [])]
-        .filter((p) => cleanDistrict(p.district))
-        .sort((a, b) => Number(b.listing_count || 0) - Number(a.listing_count || 0))
-        .slice(0, 8)
-        .map((p) => ({ name: String(p.district), value: Number(p.listing_count || 0) })),
-    [data],
-  );
+  const rows = [...(data?.points ?? [])]
+    .sort((a, b) => Number(b.listing_count || 0) - Number(a.listing_count || 0))
+    .slice(0, 8)
+    .map((p) => ({ name: p.district, value: Number(p.listing_count || 0) }));
 
   if (!isLoading && rows.length === 0) return null;
 
-  const chartConfig = {
-    value: { label: t("districtVelocity.listingsLabel", "Listings"), color: "hsl(var(--primary))" },
-  } satisfies ChartConfig;
-
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
+    <div className="apex rounded-2xl border border-border bg-card p-6 shadow-soft">
       <p className="text-[12px] font-semibold text-muted-foreground">
         {t("districtVelocity.eyebrow", "Market pulse")}
       </p>
@@ -54,44 +42,14 @@ export function DistrictVelocityList() {
           ))}
         </div>
       ) : (
-        <>
-          <ChartContainer
-            config={chartConfig}
-            className="mt-5 aspect-auto w-full"
-            style={{ height: rows.length * 38 + 8 }}
-            aria-hidden
-          >
-            <BarChart data={rows} layout="vertical" margin={{ top: 0, right: 56, bottom: 0, left: 0 }} barCategoryGap={6}>
-              <XAxis type="number" hide domain={[0, "dataMax"]} />
-              <YAxis
-                type="category"
-                dataKey="name"
-                tickLine={false}
-                axisLine={false}
-                width={96}
-                fontSize={12}
-              />
-              <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel={false} />} />
-              <Bar dataKey="value" fill="var(--color-value)" fillOpacity={0.85} radius={6} isAnimationActive={false}>
-                <LabelList
-                  dataKey="value"
-                  position="right"
-                  className="fill-foreground"
-                  fontSize={12}
-                  formatter={(v: unknown) => Number(v).toLocaleString("en-LK")}
-                />
-              </Bar>
-            </BarChart>
-          </ChartContainer>
-          {/* Screen-reader equivalent of the chart */}
-          <ul className="sr-only">
-            {rows.map((r) => (
-              <li key={r.name}>
-                {r.name}: {t("districtVelocity.listings", "{count} listings", { count: r.value })}
-              </li>
-            ))}
-          </ul>
-        </>
+        <BarList
+          className="mt-6"
+          data={rows}
+          color="blue"
+          valueFormatter={(v: number) =>
+            t("districtVelocity.listings", "{count} listings", { count: v })
+          }
+        />
       )}
     </div>
   );

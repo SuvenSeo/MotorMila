@@ -82,17 +82,6 @@ describe("DataFreshnessIndicator", () => {
     expect(screen.getByRole("status")).toHaveTextContent(/Listing data is 9h old/i);
     expect(screen.getByText(/Data as of 9h ago/i)).toBeInTheDocument();
   });
-
-  it("renders only one stale banner when several ask to show", () => {
-    render(
-      <>
-        <DataFreshnessIndicator lastUpdated={staleStats.last_updated} variant="banner" now={now} />
-        <DataFreshnessIndicator lastUpdated={staleStats.last_updated} variant="banner" now={now} />
-      </>,
-    );
-
-    expect(screen.getAllByText(/Listing data is 9h old/i)).toHaveLength(1);
-  });
 });
 
 describe("MarketIntelligencePanel freshness", () => {

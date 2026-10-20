@@ -113,15 +113,14 @@ export function NotificationBell() {
   if (!isAuthenticated) return null;
 
   return (
-    <div ref={dropdownRef} className="relative hidden sm:flex">
+    <div ref={dropdownRef} className="relative hidden sm:block">
       <button
         type="button"
         onClick={handleOpen}
         aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
-        aria-expanded={open}
-        className="nav-control nav-control--icon relative"
+        className="relative inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-foreground/[0.03] text-muted-foreground outline-none transition-colors hover:bg-foreground/[0.06] hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/50"
       >
-        <Bell className="h-4 w-4" />
+        <Bell className="h-3.5 w-3.5" />
         {unreadCount > 0 && (
           <span
             aria-hidden
@@ -133,7 +132,7 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="mm-pop-in absolute right-0 top-11 z-10 w-80 origin-top-right overflow-hidden rounded-2xl border border-border bg-popover/95 shadow-soft-lg backdrop-blur-2xl">
+        <div className="absolute right-0 top-10 z-[1100] w-80 overflow-hidden rounded-3xl border border-border bg-popover/95 shadow-soft-lg backdrop-blur-2xl">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <p className="text-[12px] font-semibold text-foreground">Notifications</p>

@@ -26,24 +26,31 @@ describe("Docs and Pricing pages", () => {
     expect(document.getElementById("dealer-workspace")).toBeTruthy();
   });
 
-  it("shows only Free + an honest Pro (coming soon, notify me); dealers tucked away", () => {
+  it("renders pricing tiers and ICP personas", () => {
     wrap(<Pricing />);
-    expect(screen.getByRole("heading", { name: /free while we're in beta/i })).toBeInTheDocument();
-    expect(screen.queryByText(/funds the pipeline/i)).toBeNull();
-    // Plan grid: Free and Pro only
-    expect(screen.getByRole("heading", { name: /two plans/i })).toBeInTheDocument();
-    expect(screen.queryByText(/^Custom$/)).toBeNull();
-    expect(screen.queryByText(/SLA/i)).toBeNull();
-    expect(screen.getAllByText(/coming soon/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("button", { name: /notify me/i }).length).toBeGreaterThan(0);
-    // One Pro voice
-    expect(screen.queryByText(/join the waitlist|upgrade to pro/i)).toBeNull();
-    expect(screen.getAllByText(/free during beta/i).length).toBeGreaterThan(0);
-    // Dealer plans still reachable, inside "For dealers"
-    expect(screen.getByText(/^for dealers$/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Pricing that funds the pipeline/i })).toBeInTheDocument();
+    // Live LKR prices are shown; Pro is labelled free during beta, Dealer from LKR 2,990.
+    expect(screen.getByText("LKR 999")).toBeInTheDocument();
     expect(screen.getAllByText("LKR 2,990").length).toBeGreaterThan(0);
-    expect(PRICING_COMING_SOON).toBe(true);
+    expect(screen.getByText("LKR 6,990")).toBeInTheDocument();
+    expect(screen.getByText("LKR 14,990")).toBeInTheDocument();
+    if (PRICING_COMING_SOON) {
+      expect(screen.getAllByText(/free during beta/i).length).toBeGreaterThan(0);
+    }
     expect(screen.queryByText(/stripe/i)).toBeNull();
+    expect(screen.getByText("Dealers")).toBeInTheDocument();
+    if (PRICING_COMING_SOON) {
+      // Trial CTA is an honest waitlist form while paid plans are coming soon
+      // (not a link to invite-gated signup that would error).
+      expect(screen.getAllByPlaceholderText(/email for launch invite/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole("button", { name: /notify me/i }).length).toBeGreaterThan(0);
+    } else {
+      expect(screen.getAllByRole("link", { name: /join the waitlist/i })[0]).toHaveAttribute(
+        "href",
+        "#get-started",
+      );
+    }
+    expect(screen.getAllByRole("link", { name: /Message us/i }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: /Message us/i })[0]).toHaveAttribute(
       "href",
       expect.stringContaining("mailto:"),

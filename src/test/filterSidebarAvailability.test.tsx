@@ -1,6 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactElement } from "react";
-import { fireEvent, render as rtlRender, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { FilterSidebar } from "@/components/FilterSidebar";
 import type { FilterState } from "@/types/car";
@@ -8,23 +6,9 @@ import type { FilterState } from "@/types/car";
 vi.mock("@/services/api", () => ({
   getListingSources: vi.fn().mockResolvedValue([]),
   getMakes: vi.fn().mockResolvedValue([{ make: "Toyota", count: 120 }]),
-  getListings: vi.fn().mockResolvedValue({ listings: [], total: 42 }),
-  getListingPriceSample: vi.fn().mockResolvedValue({ prices: [], total: 0 }),
-  APIError: class APIError extends Error {
-    status = 500;
-  },
-  createAlert: vi.fn(),
-  deleteAlert: vi.fn(),
-  updateAlertChannels: vi.fn(),
-  getOrCreateAlertToken: vi.fn().mockReturnValue("t"),
   getModels: vi.fn().mockResolvedValue([{ model: "Vitz", count: 40 }]),
   formatPrice: (value: number | null) => (value == null ? "N/A" : `Rs. ${value}`),
 }));
-
-function render(ui: ReactElement) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return rtlRender(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
-}
 
 function createFilters(overrides: Partial<FilterState> = {}): FilterState {
   return {
@@ -66,27 +50,9 @@ describe("FilterSidebar price availability controls", () => {
         price_availability: "unavailable",
         price_min: undefined,
         price_max: undefined,
-        sort: "best_match",
+        sort: "newest",
         page: 1,
       }),
     );
-  });
-});
-
-describe("FilterSidebar price input parsing", () => {
-  it("accepts lakh shorthand in the price box", async () => {
-    const onFiltersChange = vi.fn();
-    render(<FilterSidebar filters={createFilters()} onFiltersChange={onFiltersChange} />);
-    const max = await screen.findByLabelText(/^maximum price$/i);
-    fireEvent.change(max, { target: { value: "85L" } });
-    fireEvent.keyDown(max, { key: "Enter" });
-    expect(onFiltersChange).toHaveBeenCalledWith(expect.objectContaining({ price_max: 8_500_000, page: 1 }));
-  });
-
-  it("shows thousands separators while typing a plain number", async () => {
-    render(<FilterSidebar filters={createFilters()} onFiltersChange={vi.fn()} />);
-    const min = await screen.findByLabelText(/^minimum price$/i);
-    fireEvent.change(min, { target: { value: "7250000" } });
-    expect(min).toHaveValue("7,250,000");
   });
 });

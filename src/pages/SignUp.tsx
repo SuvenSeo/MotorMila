@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -170,11 +170,11 @@ export default function SignUp() {
   const planMeta = {
     free: {
       title: t("signup.plan.free.title", "Free access"),
-      detail: t("shell.copy.signupFree", "Search every listing, price ranges and the import tax calculator. Free during beta."),
+      detail: t("signup.plan.free.detail", "Browse every page with soft limits. Scores, full history, and deep tools unlock on Pro."),
     },
     pro: {
       title: t("signup.plan.pro.title", "Pro access"),
-      detail: t("shell.copy.signupPro", "Coming soon: deal scores on every listing, full price history and exports."),
+      detail: t("signup.plan.pro.detail", "Full terminal — lane intelligence, district depth, and export packs."),
     },
     dealer: {
       title: t("signup.plan.dealer.title", "Dealer access"),

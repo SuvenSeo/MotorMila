@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import { Link } from "react-router-dom";
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
 import { PageHero } from "@/components/PageHero";

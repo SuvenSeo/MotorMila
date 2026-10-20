@@ -41,7 +41,7 @@ describe("ProPreview", () => {
     expect(screen.getByRole("heading", { name: /Pro workspace preview/i })).toBeInTheDocument();
     expect(screen.getAllByText(/unlock with pro/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/report formats/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("link", { name: /notify me/i })[0]).toHaveAttribute("href", "/pricing#get-started");
+    expect(screen.getAllByRole("link", { name: /join the waitlist/i })[0]).toHaveAttribute("href", "/pricing");
     expect(localStorage.getItem("motormila.auth_user")).toBeNull();
   });
 });

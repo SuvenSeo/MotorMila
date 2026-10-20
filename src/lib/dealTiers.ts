@@ -10,9 +10,6 @@ import { BadgeCheck, Minus, TrendingUp, Zap } from "lucide-react";
  * - Great:      score >= 8   (Good Deal band)
  * - Fair:       score > -5   (within FMV band)
  * - Overpriced: score <= -5
- *
- * Colours: one semantic token per tier (src/styles/TOKENS.md) —
- * steal→deal-great, great→deal-good, fair→deal-fair, overpriced→deal-high.
  */
 export type DealTier = "steal" | "great" | "fair" | "overpriced";
 
@@ -36,23 +33,23 @@ export const DEAL_TIER_META: Record<
   steal: {
     label: "Steal",
     classes:
-      "border-deal-great/40 bg-deal-great/15 text-deal-great-text",
+      "border-emerald-500/40 bg-emerald-500/20 text-emerald-700 dark:text-emerald-300",
     Icon: Zap,
   },
   great: {
     label: "Great",
     classes:
-      "border-deal-good/30 bg-deal-good/10 text-deal-good-text",
+      "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
     Icon: BadgeCheck,
   },
   fair: {
     label: "Fair",
-    classes: "border-deal-fair/30 bg-deal-fair/10 text-deal-fair-text",
+    classes: "border-primary/20 bg-primary/10 text-primary-bright",
     Icon: Minus,
   },
   overpriced: {
     label: "Overpriced",
-    classes: "border-deal-high/30 bg-deal-high/10 text-deal-high-text",
+    classes: "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400",
     Icon: TrendingUp,
   },
 };

@@ -63,7 +63,6 @@ const STATIC_ROUTES = {
   // company is registered and a lawyer reviews the wording. Flip back to true after.
   "/privacy": [`Privacy Policy — ${SITE}`, "How Motormila collects, uses and protects personal data.", false],
   "/terms": [`Terms of Service — ${SITE}`, "The terms that govern use of Motormila.", false],
-  "/how-we-price": [`How We Price — ${SITE}`, "How MotorMila estimates fair market value from Sri Lankan asking prices: comparable listings, confidence, and the limits of the data.", true],
   "/compare": [`Compare Vehicles — ${SITE}`, "Side-by-side Sri Lankan vehicle comparison: price, mileage, district and fair-value verdict.", true],
   "/permits": [`Vehicle Permits — ${SITE}`, "Sri Lankan vehicle import permit types and current market prices.", true],
   "/mobile-app": [`Android App — ${SITE}`, "Download the MotorMila Android app: Sri Lankan vehicle prices, deal alerts and valuations on your phone.", true],

@@ -10,7 +10,6 @@
 // not this file, when a gazette changes rates.
 
 import taxRates from "@/data/importTaxRates.json";
-import { formatLkrCompact } from "@/lib/price";
 
 export const TAX_MODEL_REVIEWED = taxRates.reviewed;
 
@@ -177,7 +176,7 @@ export function getHybridCliffBadge(
       kind: nearCliff ? "at_cliff" : "tax_safe",
       label: nearCliff ? "Near 1,500cc cliff" : "Tax-safe ≤1,500cc HV",
       detail: nearCliff
-        ? `Hybrid at ${cc.toLocaleString()}cc sits at the preferred ≤${HYBRID_EXCISE_CLIFF_CC}cc excise band (≈ Rs. ${insight.rateAtOrBelowCliff.toLocaleString()}/cc). Crossing adds roughly ${formatLkrCompact(insight.exciseStepUp)}+.`
+        ? `Hybrid at ${cc.toLocaleString()}cc sits at the preferred ≤${HYBRID_EXCISE_CLIFF_CC}cc excise band (≈ Rs. ${insight.rateAtOrBelowCliff.toLocaleString()}/cc). Crossing adds roughly Rs. ${Math.round(insight.exciseStepUp / 1_000_000)}M+.`
         : `Hybrid ${cc.toLocaleString()}cc is inside the ≤${HYBRID_EXCISE_CLIFF_CC}cc band (≈ Rs. ${insight.rateAtOrBelowCliff.toLocaleString()}/cc).`,
       engineCc: cc,
     };
@@ -237,7 +236,7 @@ export function computeImportTaxes(input: ImportTaxInput): ImportTaxResult {
   if (luxuryTax > 0) {
     lines.push({
       key: "luxury",
-      label: `Luxury Tax (${Math.round(luxury.rateOnExcess * 100)}% of CIF above ${formatLkrCompact(luxury.thresholdLkr)})`,
+      label: `Luxury Tax (${Math.round(luxury.rateOnExcess * 100)}% of CIF above Rs. ${(luxury.thresholdLkr / 1_000_000).toFixed(1)}M)`,
       amount: luxuryTax,
     });
   }

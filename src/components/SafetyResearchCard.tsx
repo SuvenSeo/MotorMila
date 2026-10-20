@@ -1,16 +1,9 @@
 import { ShieldAlert } from "lucide-react";
 import { useAppPreferences } from "@/lib/appPreferences";
 import type { SafetyResearchResponse } from "@/services/api";
-import { isUsStyleVin } from "@/lib/dataSanity";
 
 interface SafetyResearchCardProps {
   research?: SafetyResearchResponse | null;
-  /**
-   * The listing's VIN / chassis number when known. US NHTSA research only
-   * applies to US-market cars (17-char VIN); JDM/recon chassis numbers hide
-   * the card. Omit on model hubs (no single vehicle).
-   */
-  vin?: string | null;
   isLoading?: boolean;
   isError?: boolean;
 }
@@ -25,16 +18,12 @@ export function SafetyResearchCard({
   research,
   isLoading = false,
   isError = false,
-  vin,
 }: SafetyResearchCardProps) {
   const { t } = useAppPreferences();
-  const usMarket = vin === undefined || isUsStyleVin(vin);
   const safety = research?.safety;
   const reliability = research?.reliability;
   const safetyOn = safety?.available === true && safety.data;
   const reliabilityOn = reliability?.available === true && reliability.data;
-
-  if (!usMarket) return null;
 
   if (isLoading) {
     return (
@@ -45,9 +34,28 @@ export function SafetyResearchCard({
     );
   }
 
-  // No US research for this vehicle (typical for JDM/recon imports): render
-  // nothing rather than a "US research not available" dead end.
-  if (isError || !research || (!safetyOn && !reliabilityOn)) return null;
+  if (isError || !research || (!safetyOn && !reliabilityOn)) {
+    const limitation =
+      safety?.limitation ||
+      reliability?.limitation ||
+      t(
+        "safety.unavailable",
+        "US safety and known-issues research is not available for this year, make, and model.",
+      );
+    return (
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-soft">
+        <div className="mb-2 flex items-center gap-2">
+          <ShieldAlert className="h-4 w-4 text-muted-foreground" aria-hidden />
+          <h2 className="text-[12px] font-semibold text-muted-foreground">
+            {t("safety.title", "Safety & known issues")}
+          </h2>
+        </div>
+        <p className="text-[11px] font-medium leading-relaxed text-muted-foreground">
+          {t("safety.notAvailable", "US research not available.")} {limitation}
+        </p>
+      </div>
+    );
+  }
 
   const rating = safetyOn ? (safety.data as { rating?: { overall?: string | null } }).rating : null;
   const recalls = safetyOn

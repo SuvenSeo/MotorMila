@@ -2,7 +2,6 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Info, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatPriceLkrMillions } from "@/lib/formatting";
-import { howWePriceHref } from "@/lib/howWePrice";
 
 export type FmvConfidence = "high" | "medium" | "low" | "none";
 export type FmvLocale = "en" | "si" | "ta";
@@ -34,7 +33,6 @@ type Copy = {
   districtMissing: string;
   updated: (v: string) => string;
   close: string;
-  howLink: string;
 };
 
 const STRINGS: Record<FmvLocale, Copy> = {
@@ -55,7 +53,6 @@ const STRINGS: Record<FmvLocale, Copy> = {
     districtMissing: "Location is already factored into the model average.",
     updated: (v) => `Updated ${v}.`,
     close: "Close",
-    howLink: "How we score prices →",
   },
   // STUB (si): core keys translated, detail rows fall back to English until localised.
   si: {
@@ -75,7 +72,6 @@ const STRINGS: Record<FmvLocale, Copy> = {
     districtMissing: "Location is already factored into the model average. [si stub]",
     updated: (v) => `Updated ${v}. [si stub]`,
     close: "වසන්න",
-    howLink: "How we score prices →",
   },
   // STUB (ta): core keys translated, detail rows fall back to English until localised.
   ta: {
@@ -95,7 +91,6 @@ const STRINGS: Record<FmvLocale, Copy> = {
     districtMissing: "Location is already factored into the model average. [ta stub]",
     updated: (v) => `Updated ${v}. [ta stub]`,
     close: "மூடு",
-    howLink: "How we score prices →",
   },
 };
 
@@ -212,10 +207,6 @@ export function FmvExplainer({
             )}
             {updatedLabel && <li>• {t.updated(updatedLabel)}</li>}
           </ul>
-          {/* Plain anchor (not <Link>) so the explainer also renders outside a Router. */}
-          <a href={howWePriceHref("fmv")} className="mt-2 inline-block text-[11px] font-semibold text-primary-bright">
-            {t.howLink}
-          </a>
         </div>
       )}
     </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { m } from "motion/react";
+import { motion } from "framer-motion";
 import { getMakes, getModels, getPriceTrendSeries, getHybridBands, formatPrice } from "@/services/api";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -169,7 +169,7 @@ export default function Trends() {
 
       <PageBody className="space-y-6">
         {/* Controls */}
-        <m.div variants={revealItem} className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
+        <motion.div variants={revealItem} className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-1.5">
               <label htmlFor="t-make" className={fieldLabelClass}>{t("common.make", "Make")}</label>
@@ -204,8 +204,8 @@ export default function Trends() {
               ) : (
                 <ProFeatureLock
                   density="compact"
-                  label={t("trends.lock.conditionFilter", "Condition filter")}
-                  className="flex min-h-[2.75rem] w-full justify-start rounded-full"
+                  label={t("pro.lock.short", "Pro")}
+                  className="min-h-[2.75rem] rounded-full"
                 >
                   <div className={`${selectTriggerClass} flex h-10 items-center px-3 text-sm text-muted-foreground`}>
                     {t("common.any", "Any")}
@@ -226,8 +226,8 @@ export default function Trends() {
               ) : (
                 <ProFeatureLock
                   density="compact"
-                  label={t("trends.lock.districtFilter", "District filter")}
-                  className="flex min-h-[2.75rem] w-full justify-start rounded-full"
+                  label={t("pro.lock.short", "Pro")}
+                  className="min-h-[2.75rem] rounded-full"
                 >
                   <div className={`${selectTriggerClass} flex h-10 items-center px-3 text-sm text-muted-foreground`}>
                     {t("common.allDistricts", "All districts")}
@@ -259,15 +259,15 @@ export default function Trends() {
               </Button>
             )}
           </div>
-        </m.div>
+        </motion.div>
 
         {/* KPI strip — Tremor cards + sparklines from the real series (#7 UI review) */}
-        <m.div variants={revealItem}>
+        <motion.div variants={revealItem}>
           <TrendKpis points={visibleTrendData} />
-        </m.div>
+        </motion.div>
 
         {/* Chart — PriceHistoryChart owns its own theme-aware surface + Recharts */}
-        <m.div variants={revealItem}>
+        <motion.div variants={revealItem}>
           <PriceHistoryChart title={chartTitle} points={visibleTrendData} isLoading={loading} coverageNote={coverageNote} emptyMessage={emptyMessage} emptyActionLabel={hasNarrow ? t("trends.broadenFilters", "Broaden filters") : undefined} onEmptyAction={hasNarrow ? () => { setDistrict("all"); setCondition("all"); } : undefined} />
           {!fullAccess ? (
             <UpgradePrompt
@@ -277,19 +277,19 @@ export default function Trends() {
               variant="strip"
             />
           ) : null}
-        </m.div>
+        </motion.div>
 
-        <m.div variants={revealItem} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3">
+        <motion.div variants={revealItem} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3">
           <p className="text-[11px] font-medium text-muted-foreground">
             {selectedMake && selectedModel
               ? t("trends.medianNote", "Median advertised prices grouped by month from the public Sri Lanka snapshot.")
               : t("trends.chooseLane", "Choose a make and model to render the trajectory.")}
           </p>
           <span className="shrink-0 text-[10px] font-semibold text-primary-bright num">{t("common.publicData", "Public data")}</span>
-        </m.div>
+        </motion.div>
 
         {/* ── HYBRID TAX ARBITRAGE (Pro depth) ─────────────────── */}
-        <m.div variants={revealItem}>
+        <motion.div variants={revealItem}>
           {fullAccess ? (
             <HybridTaxArbitrageSection
               data={hybridBands}
@@ -307,11 +307,11 @@ export default function Trends() {
               </div>
             </ProFeatureLock>
           )}
-        </m.div>
+        </motion.div>
 
-        <m.div variants={revealItem}>
+        <motion.div variants={revealItem}>
           <ImportEraPublicSection />
-        </m.div>
+        </motion.div>
       </PageBody>
     </PageCanvas>
   );

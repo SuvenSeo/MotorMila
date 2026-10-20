@@ -7,8 +7,8 @@ from __future__ import annotations
 
 from typing import Optional
 
-FREE_LISTINGS_MAX_SIZE = 12  # retired Oct 2026 with the page clamp (kept for imports)
-FREE_LISTINGS_MAX_PAGE = 1  # retired Oct 2026: /listings no longer clamps free pagination (kept for imports)
+FREE_LISTINGS_MAX_SIZE = 12
+FREE_LISTINGS_MAX_PAGE = 1
 FREE_BEST_PICKS_LIMIT = 6
 FREE_ALERTS_LIMIT = 1
 FREE_PRICE_DROPS_LIMIT = 3

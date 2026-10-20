@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Header, Query, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session, load_only
-from sqlalchemy import String, case, cast, func, desc, and_, or_
+from sqlalchemy import String, cast, func, desc, and_, or_
 from typing import Optional, List, Dict, Any, Annotated
 from statistics import median
 from datetime import datetime, timedelta, timezone
@@ -34,6 +34,8 @@ from app.api.v1.endpoints.auth import (
     verify_token,
 )
 from app.utils.plan_limits import (
+    FREE_LISTINGS_MAX_PAGE,
+    FREE_LISTINGS_MAX_SIZE,
     FREE_PRICE_DROPS_LIMIT,
     FREE_SIMILAR_LIMIT,
     is_free_browse_plan,
@@ -855,7 +857,7 @@ def search_listings(
         max_length=40,
     ),
     price_availability: str = Query("priced", pattern="^(priced|unavailable)$"),
-    sort: str = Query("newest", pattern="^(best_match|newest|deal_score|price_asc|price_desc|mileage_asc)$"),
+    sort: str = Query("newest", pattern="^(newest|deal_score|price_asc|price_desc|mileage_asc)$"),
     page: int = Query(1, ge=1),
     size: int = Query(10, ge=1, le=100),
     authorization: Optional[str] = Header(default=None),
@@ -864,7 +866,7 @@ def search_listings(
     keyword_text = _optional_text_param(keyword)
     if price_availability not in {"priced", "unavailable"}:
         price_availability = "priced"
-    if sort not in {"best_match", "newest", "deal_score", "price_asc", "price_desc", "mileage_asc"}:
+    if sort not in {"newest", "deal_score", "price_asc", "price_desc", "mileage_asc"}:
         sort = "newest"
     if not isinstance(page, int) or page < 1:
         page = 1
@@ -875,11 +877,11 @@ def search_listings(
     plan, role = _request_live_access(request, authorization, db)
     free_browse = _is_free_browse_plan(plan, role)
     if free_browse:
-        # Guests / free plan get normal pagination (UI refresh, Oct 2026) —
-        # the browse feed is the product's front door, not a Pro teaser.
-        # Deal scores stay Pro: no deal-score sort, scores stripped below.
+        # Free teaser: first page only, capped page size, no deal-score sort.
+        page = min(page, FREE_LISTINGS_MAX_PAGE)
+        size = min(size, FREE_LISTINGS_MAX_SIZE)
         if sort == "deal_score":
-            sort = "best_match"
+            sort = "newest"
 
     q = (
         db.query(CarListing)
@@ -998,19 +1000,9 @@ def search_listings(
 
     # Sorting
     if price_availability == "unavailable" and sort in {"deal_score", "price_asc", "price_desc"}:
-        sort = "best_match"
+        sort = "newest"
 
-    if sort == "best_match":
-        # Neutral "best match": rows with a real price and a photo first,
-        # then recency. Priceless / photoless rows (e.g. Hitad) sink.
-        # Nothing here is paid placement.
-        has_photo = case(
-            (and_(CarListing.thumbnail_url.isnot(None), CarListing.thumbnail_url != ""), 1),
-            else_=0,
-        )
-        has_price = case((CarListing.price_lkr >= MIN_REASONABLE_PRICE_LKR, 1), else_=0)
-        q = q.order_by(desc(has_price), desc(has_photo), desc(CarListing.first_seen_at))
-    elif sort == "newest":
+    if sort == "newest":
         q = q.order_by(desc(CarListing.first_seen_at))
     elif sort == "deal_score":
         q = q.filter(CarListing.deal_score.isnot(None)).order_by(desc(CarListing.deal_score))

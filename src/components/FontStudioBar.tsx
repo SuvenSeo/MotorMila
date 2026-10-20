@@ -11,13 +11,6 @@ export interface FontPreset {
 
 export const FONT_PRESETS: FontPreset[] = [
   {
-    id: "brand",
-    name: "Space Grotesk + Inter",
-    badge: "Brand guide • Production",
-    description: "Space Grotesk 700 display (−3.5% tracking) + Inter UI, per MOTORMILA-BRAND.md.",
-    displayFamily: "'Space Grotesk', sans-serif",
-  },
-  {
     id: "satoshi-inter",
     name: "Satoshi + Inter",
     badge: "Top Pick • 2026 Standard",
@@ -68,20 +61,20 @@ export const FONT_PRESETS: FontPreset[] = [
   },
   {
     id: "nofex",
-    name: "Russo One + Inter",
+    name: "Nofex + Inter",
     badge: "Heavy Drag-Race",
-    description: "Heavy racing display titles (Russo One, OFL — replaces demo-licensed Nofex) with clean Inter UI.",
-    displayFamily: "'Russo One', sans-serif",
+    description: "Ultra-heavy drag racing display titles paired with clean Inter UI.",
+    displayFamily: "'Nofex', sans-serif",
   },
 ];
 
 export function FontStudioBar() {
-  const [currentFont, setCurrentFont] = useState<string>("brand");
+  const [currentFont, setCurrentFont] = useState<string>("satoshi-inter");
   const [currentScope, setCurrentScope] = useState<"hybrid" | "full">("hybrid");
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
   useEffect(() => {
-    const savedFont = localStorage.getItem("motormila_font_choice") || "brand";
+    const savedFont = localStorage.getItem("motormila_font_choice") || "satoshi-inter";
     const savedScope = (localStorage.getItem("motormila_font_scope") as "hybrid" | "full") || "hybrid";
     setCurrentFont(savedFont);
     setCurrentScope(savedScope);
@@ -106,7 +99,7 @@ export function FontStudioBar() {
   if (!import.meta.env.DEV) return null;
 
   return (
-    <div className="fixed bottom-5 left-5 z-devtools flex flex-col items-start gap-2 print:hidden font-sans">
+    <div className="fixed bottom-5 left-5 z-[9999] flex flex-col items-start gap-2 print:hidden font-sans">
       {/* Floating control dock */}
       <div
         className={`overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/90 shadow-2xl backdrop-blur-xl transition-all duration-300 ${

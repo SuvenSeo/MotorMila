@@ -19,21 +19,21 @@ const BRAND_SIZE_STYLES = {
   default: {
     mark: "h-10 w-10",
     markPx: 40,
-    text: "text-lg",
+    text: "text-[17px]",
     gap: "gap-2.5",
     useCompactMark: false,
   },
   compact: {
     mark: "h-8 w-8",
     markPx: 32,
-    text: "text-base",
+    text: "text-[15px]",
     gap: "gap-2.5",
     useCompactMark: true,
   },
   nav: {
     mark: "h-11 w-11 sm:h-12 sm:w-12",
     markPx: 48,
-    text: "text-lg sm:text-xl",
+    text: "text-[18px] sm:text-[20px]",
     gap: "gap-2.5 sm:gap-3",
     useCompactMark: true,
   },
@@ -111,7 +111,7 @@ export function BrandLogo({
             Motor<span className="text-primary">mila</span>
           </span>
           {showTagline && (
-            <span className="mt-1.5 block max-w-[16rem] truncate text-2xs font-medium tracking-[-0.005em] text-muted-foreground">
+            <span className="mt-1.5 block max-w-[16rem] truncate text-[10px] font-medium tracking-[-0.005em] text-muted-foreground">
               {tagline}
             </span>
           )}

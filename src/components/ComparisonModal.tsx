@@ -1,6 +1,6 @@
 import { memo, useMemo, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 import {
   ArrowUpRight,
   BadgeCheck,

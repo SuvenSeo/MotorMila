@@ -11,15 +11,14 @@ describe("formatting helpers", () => {
     expect(formatPriceLkrMillions(null)).toBe("N/A");
   });
 
-  it("formats prices in millions only", () => {
-    expect(formatPriceLkrMillions(747000)).toBe("Rs 0.75 Mn");
-    expect(formatPriceLkrMillions(7250000)).toBe("Rs 7.25 Mn");
-    expect(formatPriceLkrMillions(14990000)).toBe("Rs 14.99 Mn");
+  it("formats prices using million notation", () => {
+    expect(formatPriceLkrMillions(747000)).toBe("Rs. 0.75M");
+    expect(formatPriceLkrMillions(7250000)).toBe("Rs. 7.25M");
   });
 
-  it("formats axis ticks in Mn", () => {
-    expect(formatPriceTickMillions(7250000)).toBe("7.25 Mn");
-    expect(formatPriceTickMillions(14990000)).toBe("15 Mn");
+  it("formats axis ticks in million units", () => {
+    expect(formatPriceTickMillions(7250000)).toBe("7M");
+    expect(formatPriceTickMillions(14990000)).toBe("15M");
   });
 
   it("formats relative timestamps in hour/day buckets", () => {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { m } from "motion/react";
+import { motion } from "framer-motion";
 import NumberFlow from "@number-flow/react";
 import { BarChart } from "@/components/charts/bar-chart";
 import { Bar } from "@/components/charts/bar";
@@ -89,7 +89,7 @@ export default function PriceIndexPage() {
   const up = (totalChange ?? 0) >= 0;
 
   return (
-    <m.div initial="hidden" animate="show" variants={containerVariants} className="min-h-screen relative overflow-hidden bg-background">
+    <motion.div initial="hidden" animate="show" variants={containerVariants} className="min-h-screen relative overflow-hidden bg-background">
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <AtmosphericImage
           src={visuals.priceIntelligenceBg.src}
@@ -101,7 +101,7 @@ export default function PriceIndexPage() {
       </div>
       <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
 
-      <m.section variants={itemVariants} className="border-b border-border bg-surface/40 backdrop-blur-md relative z-10">
+      <motion.section variants={itemVariants} className="border-b border-border bg-surface/40 backdrop-blur-md relative z-10">
         <div className="mx-auto max-w-[1320px] px-5 py-10 sm:px-6 sm:py-12">
           <p className="text-[12px] font-semibold text-primary-bright">{t("index.eyebrow", "Market benchmark")}</p>
           <h1 className="mt-3 font-display text-[2rem] font-bold tracking-tight leading-[1.05] text-white sm:text-[2.75rem] lg:text-[3rem]">
@@ -111,7 +111,7 @@ export default function PriceIndexPage() {
             {t("index.description", "One number for the whole used-car market, mix-adjusted so it tracks real price movement — not whichever cars happened to be for sale that month.")}
           </p>
         </div>
-      </m.section>
+      </motion.section>
 
       <FreePlanBanner />
 
@@ -141,7 +141,7 @@ export default function PriceIndexPage() {
         ) : (
           <>
             {/* Headline stats */}
-            <m.div variants={itemVariants} className="grid gap-4 sm:grid-cols-3">
+            <motion.div variants={itemVariants} className="grid gap-4 sm:grid-cols-3">
               <div className="rounded-xl border border-primary/20 bg-primary/5 p-5">
                 <p className="text-[12px] font-semibold text-muted-foreground">{t("index.current", "Current index")}</p>
                 <p className="num mt-2 text-3xl font-bold text-white">
@@ -180,7 +180,7 @@ export default function PriceIndexPage() {
                   latest: {latest ? formatPeriod(latest.period) : "—"}
                 </p>
               </div>
-            </m.div>
+            </motion.div>
 
             {/* Segment switcher — Free stays on overall; Pro unlocks segments */}
             {segmentKeys.length > 1 && (
@@ -214,7 +214,7 @@ export default function PriceIndexPage() {
             )}
 
             {/* Chart */}
-            <m.div variants={itemVariants} className="rounded-xl border border-white/5 bg-white/[0.01] p-5 backdrop-blur-md">
+            <motion.div variants={itemVariants} className="rounded-xl border border-white/5 bg-white/[0.01] p-5 backdrop-blur-md">
               <div
                 role="img"
                 aria-label={`${activeSegment === "overall" ? "Overall" : activeSegment} price index: ${chartData.length} months, currently ${latest?.index_value.toFixed(1)} (${formatPct(totalChange)} since base)`}
@@ -243,10 +243,10 @@ export default function PriceIndexPage() {
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
-            </m.div>
+            </motion.div>
 
             {/* Month-on-month momentum — Bklit bar chart (#14 UI review) */}
-            <m.div variants={itemVariants} className="rounded-xl border border-white/5 bg-white/[0.01] p-5 backdrop-blur-md">
+            <motion.div variants={itemVariants} className="rounded-xl border border-white/5 bg-white/[0.01] p-5 backdrop-blur-md">
               <div className="mb-1 flex items-baseline justify-between">
                 <h2 className="text-[13px] font-bold text-white">{t("index.momTitle", "Monthly momentum")}</h2>
                 <p className="text-[11px] text-muted-foreground font-medium">{t("index.momHint", "month-on-month index change")}</p>
@@ -259,7 +259,7 @@ export default function PriceIndexPage() {
                   <ChartTooltip />
                 </BarChart>
               </div>
-            </m.div>
+            </motion.div>
 
             {!fullAccess ? (
               <UpgradePrompt
@@ -270,7 +270,7 @@ export default function PriceIndexPage() {
             ) : null}
 
             {/* Methodology */}
-            <m.div variants={itemVariants} className="rounded-xl border border-white/5 bg-white/[0.01] p-5">
+            <motion.div variants={itemVariants} className="rounded-xl border border-white/5 bg-white/[0.01] p-5">
               <div className="flex items-start gap-2.5">
                 <Info className="h-4 w-4 text-primary-bright shrink-0 mt-0.5" />
                 <div>
@@ -278,10 +278,10 @@ export default function PriceIndexPage() {
                   <p className="mt-1.5 text-[12px] leading-relaxed text-muted-foreground font-medium">{data.methodology}</p>
                 </div>
               </div>
-            </m.div>
+            </motion.div>
           </>
         )}
       </div>
-    </m.div>
+    </motion.div>
   );
 }

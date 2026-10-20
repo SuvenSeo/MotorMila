@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, BarChart2, Car, TrendingUp } from "lucide-react";
 import { getMakeModelInsight, getListings, getListingsForExport, getVehicleSafetyResearch, formatPrice } from "@/services/api";
@@ -382,13 +382,9 @@ export default function MakeModelHub() {
             isError={safetyQuery.isError}
           />
         </motion.div>
-        {/* US NHTSA catalog only when US research exists for this model —
-            most Sri Lankan stock is JDM/recon, not US-market. */}
-        {safetyQuery.data?.safety?.available === true && (
         <motion.div variants={revealItem}>
           <NhtsaModelsCard make={makeParam} model={modelParam} />
         </motion.div>
-        )}
 
         <motion.div variants={revealContainer} className="grid gap-4 lg:grid-cols-3">
           <motion.div

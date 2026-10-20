@@ -3,17 +3,11 @@ import { Check, Loader2, UserX } from "lucide-react";
 import { LegalPageShell, LegalSection, PRIVACY_EMAIL } from "@/components/money/LegalPageShell";
 import { HONEYPOT_STYLE, INPUT_CLASS, LABEL_CLASS, PRIMARY_BUTTON_CLASS, TEXTAREA_CLASS } from "@/components/money/formStyles";
 import { submitAccountDeletion, type LegalReceipt } from "@/lib/moneyApi";
-import { BACKEND_AUTH_ENABLED, useAuth } from "@/lib/authContext";
-import { SelfServeDeletion } from "@/components/account/SelfServeDeletion";
-import { useAppPreferences } from "@/lib/appPreferences";
+import { useAuth } from "@/lib/authContext";
 
 export default function AccountDeletion() {
   const uid = useId();
   const { user } = useAuth();
-  const { t } = useAppPreferences();
-  // Stays true after a successful self-serve delete (logout clears `user`).
-  const [selfDeleted, setSelfDeleted] = useState(false);
-  const selfServe = Boolean(user && BACKEND_AUTH_ENABLED) || selfDeleted;
   const [email, setEmail] = useState(user?.email ?? "");
   const [details, setDetails] = useState("");
   const [confirm, setConfirm] = useState(false);
@@ -41,18 +35,10 @@ export default function AccountDeletion() {
           account. Anything already sent to a partner at your request is covered by that partner's privacy policy.
           We'll ask them to delete it too.
         </p>
-        <p>
-          {selfServe
-            ? t("deleteAcct.instantNote", "Because you're signed in, you can delete your account right now below.")
-            : t("deleteAcct.emailNote", "We confirm by email that the request is yours, then finish within 14 days. Signed-in users can delete instantly.")}
-        </p>
+        <p>We confirm by email that the request is yours, then finish within 14 days.</p>
       </LegalSection>
 
-      {/* Signed in against the live API: delete instantly via DELETE /auth/me.
-          Signed out (or preview builds): the emailed request form below. */}
-      {selfServe ? (
-        <SelfServeDeletion onDeleted={() => setSelfDeleted(true)} />
-      ) : receipt ? (
+      {receipt ? (
         <div role="status" className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-5">
           <p className="flex items-center gap-2 text-[14px] font-semibold text-emerald-700 dark:text-emerald-400">
             <Check aria-hidden className="h-4 w-4" /> Request received · ref {receipt.reference}

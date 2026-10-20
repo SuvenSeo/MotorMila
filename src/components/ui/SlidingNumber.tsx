@@ -5,7 +5,7 @@ import {
   useSpring,
   useTransform,
   motionValue,
-} from "motion/react";
+} from "framer-motion";
 import useMeasure from "react-use-measure";
 
 const TRANSITION = {

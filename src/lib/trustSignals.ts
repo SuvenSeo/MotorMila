@@ -7,7 +7,6 @@
  * history report with cross-site links). No extra network calls.
  */
 import { parseFlexibleTime } from "@/lib/parseTime";
-import { formatLkrCompact } from "@/lib/price";
 
 export type SignalLevel = "high" | "medium" | "info" | "ok";
 
@@ -78,7 +77,8 @@ const SCAM_PATTERNS: Array<{ re: RegExp; label: string }> = [
 ];
 
 function fmtLkr(n: number): string {
-  return formatLkrCompact(n);
+  if (n >= 1_000_000) return `Rs ${(n / 1_000_000).toFixed(n >= 10_000_000 ? 1 : 2).replace(/\.?0+$/, "")}M`;
+  return `Rs ${Math.round(n).toLocaleString("en-LK")}`;
 }
 
 export function buildTrustReport(input: TrustInput): TrustReport {

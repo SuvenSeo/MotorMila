@@ -1,17 +1,17 @@
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "motion/react";
-import { ArrowRight, BookOpen, ChevronDown, Check, CreditCard, HelpCircle, Loader2, MessageCircle, Sparkles, Timer, Users } from "lucide-react";
+import { motion } from "framer-motion";
+import { ArrowRight, BookOpen, Check, CreditCard, HelpCircle, Loader2, MessageCircle, Sparkles, Timer, Users } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ParticleButton, type ParticleButtonHandle } from "@/components/ui/ParticleButton";
 import { BRAND } from "@/lib/brand";
-import { ANNUAL_SAVE_NUDGE, DEALER_FAQ, DEALER_TIERS, PLAN_PRICES, PRICING_COMING_SOON, PRICING_FAQ, PRICING_TIERS, PRO_FREE_DURING_BETA, TRIAL_OFFER, formatLkr } from "@/lib/pricingContent";
+import { ANNUAL_SAVE_NUDGE, COMING_SOON_COPY, DEALER_TIERS, ICP_PERSONAS, PLAN_PRICES, PRICING_COMING_SOON, PRICING_FAQ, PRICING_TIERS, TRIAL_OFFER, formatLkr } from "@/lib/pricingContent";
 import type { DealerTierCode } from "@/lib/pricingContent";
 import { createPayhereCheckout, getPayhereConfig, submitPayhereForm, type PayhereConfig } from "@/lib/moneyApi";
 import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
 import { PageHero } from "@/components/PageHero";
 import { AtmosphericImage } from "@/components/AtmosphericImage";
-import { duration, ease, revealItem, spring, useReducedMotionOrLowData } from "@/lib/motion";
+import { revealItem } from "@/lib/motion";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { useAuth } from "@/lib/authContext";
 import { visuals } from "@/lib/visualAssets";
@@ -93,7 +93,7 @@ export function TrialCta({ className, label }: { className?: string; label?: str
     return (
       <p className="inline-flex h-11 items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-6 text-[13px] font-semibold text-emerald-700 dark:text-emerald-400">
         <Check aria-hidden className="h-4 w-4" />
-        {t("shell.pricing.done", "Done — we'll email you when Pro launches.")}
+        {t("pricing.waitlistDone", "You're on the list — we'll email you at launch.")}
       </p>
     );
   }
@@ -116,7 +116,7 @@ export function TrialCta({ className, label }: { className?: string; label?: str
           burstRef.current?.burst();
           setDone(true);
         } catch {
-          toast.error(t("shell.pricing.failed", "Couldn't save your email — try again."));
+          toast.error(t("pricing.waitlistFailed", "Couldn't join the waitlist — try again."));
         } finally {
           setSending(false);
         }
@@ -126,8 +126,8 @@ export function TrialCta({ className, label }: { className?: string; label?: str
         type="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        placeholder={t("shell.pricing.emailPlaceholder", "Your email")}
-        aria-label={t("shell.pricing.emailAria", "Email for the Pro launch")}
+        placeholder={t("pricing.waitlistPlaceholder", "Email for launch invite")}
+        aria-label={t("pricing.waitlistPlaceholder", "Email for launch invite")}
         className="h-11 min-w-0 flex-1 rounded-full border border-border bg-card px-4 text-[13px] text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none"
       />
       <ParticleButton
@@ -137,7 +137,7 @@ export function TrialCta({ className, label }: { className?: string; label?: str
         className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-primary px-5 text-[13px] font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60"
       >
         {sending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : null}
-        {t("shell.pro.notify", "Notify me")}
+        {t("pricing.waitlistCta", "Notify me")}
       </ParticleButton>
     </form>
   );
@@ -179,8 +179,7 @@ export function TrialCountdownBanner() {
     };
   }, [user]);
 
-  if (user?.subscriptionStatus === "trialing") {
-    const days = trialDays ?? trialDaysLeftFromIso(trialEndsAt);
+  if (user?.subscriptionStatus === "trialing") {    const days = trialDays ?? trialDaysLeftFromIso(trialEndsAt);
     return (
       <div
         role="status"
@@ -188,14 +187,19 @@ export function TrialCountdownBanner() {
       >
         <p className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
           <Timer aria-hidden className="h-4 w-4 text-primary" />
-          {PRO_FREE_DURING_BETA
-            ? t("shell.trial.beta", "You have Pro access during the beta. Nothing is charged; we'll email you before anything changes.")
-            : days === null
-              ? t("shell.trial.active", "Your Pro trial is active.")
-              : days <= 0
-                ? t("shell.trial.ended", "Your Pro trial has ended. Your free account still works.")
-                : t("shell.trial.daysLeft", "{n} days left in your Pro trial.", { n: days })}
+          {days === null
+            ? "Your 7-day free trial is active — annual saves 2 months."
+            : days <= 0
+              ? "Your free trial ended — pay manually to keep Pro (2-hour activation)."
+              : `${days} day${days === 1 ? "" : "s"} left in your free trial — annual saves 2 months.`}
         </p>
+        <Link
+          to="/pricing"
+          className="inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-[12px] font-semibold text-primary-foreground no-underline"
+        >
+          Keep Pro
+          <ArrowRight aria-hidden className="h-3.5 w-3.5" />
+        </Link>
       </div>
     );
   }
@@ -208,7 +212,9 @@ export function TrialCountdownBanner() {
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/25 bg-primary/[0.07] px-5 py-4">
       <p className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
         <Sparkles aria-hidden className="h-4 w-4 text-primary" />
-        {t("shell.pricing.notifyBanner", "MotorMila is free during beta. Pro is coming soon — get an email when it launches.")}
+        {PRICING_COMING_SOON
+          ? t("pricing.waitlistBanner", "Pro is coming soon — join the waitlist for a launch invite.")
+          : `${TRIAL_OFFER.cta} — no invite needed. Annual saves 2 months.`}
       </p>
       <TrialCta className="inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-[12px] font-semibold text-primary-foreground no-underline transition-all hover:bg-primary/90" />
     </div>
@@ -271,13 +277,14 @@ function ManualPayPanel({ plan, instructions, onClose }: { plan: string; instruc
 }
 
 const COMPARE_ROW_DEFS = [
-  { label: ["shell.pricing.row.search", "Search every source"], free: ["pricing.val.yes", "Yes"], pro: ["pricing.val.yes", "Yes"] },
-  { label: ["shell.pricing.row.results", "Results per search"], free: ["shell.pricing.val.all", "All"], pro: ["shell.pricing.val.all", "All"] },
-  { label: ["shell.pricing.row.dealScore", "Deal score on listings"], free: ["", "—"], pro: ["pricing.val.yes", "Yes"] },
-  { label: ["shell.pricing.row.history", "Price trends"], free: ["shell.pricing.val.6months", "6 months"], pro: ["shell.pricing.val.fullHistory", "Full history"] },
-  { label: ["shell.pricing.row.updates", "Tax & customs updates"], free: ["shell.pricing.val.latest6", "Latest 6"], pro: ["shell.pricing.val.all", "All"] },
-  { label: ["shell.pricing.row.alerts", "Price-drop alerts"], free: ["shell.pricing.val.one", "1"], pro: ["shell.pricing.val.more", "More, incl. WhatsApp"] },
-  { label: ["shell.pricing.row.exports", "CSV / PDF exports"], free: ["", "—"], pro: ["pricing.val.yes", "Yes"] },
+  { labelKey: "pricing.compare.dashboard", labelFb: "Dashboard browse", freeKey: "pricing.val.yes", freeFb: "Yes", proKey: "pricing.val.yes", proFb: "Yes", dealerKey: "pricing.val.yes", dealerFb: "Yes", enterpriseKey: "pricing.val.yes", enterpriseFb: "Yes" },
+  { labelKey: "pricing.compare.pulse", labelFb: "Official Pulse", freeKey: "pricing.val.limited", freeFb: "Limited", proKey: "pricing.val.history", proFb: "History", dealerKey: "pricing.val.history", dealerFb: "History", enterpriseKey: "pricing.val.custom", enterpriseFb: "Custom" },
+  { labelKey: "pricing.compare.terminal", labelFb: "Pro terminal", freeKey: "", freeFb: "—", proKey: "pricing.val.full", proFb: "Full", dealerKey: "pricing.val.full", dealerFb: "Full", enterpriseKey: "pricing.val.full", enterpriseFb: "Full" },
+  { labelKey: "pricing.compare.alerts", labelFb: "Alerts depth", freeKey: "pricing.val.basic", freeFb: "Basic", proKey: "pricing.val.deep", proFb: "Deep", dealerKey: "pricing.val.deep", dealerFb: "Deep", enterpriseKey: "pricing.val.custom", enterpriseFb: "Custom" },
+  { labelKey: "pricing.compare.exports", labelFb: "Exports", freeKey: "", freeFb: "—", proKey: "pricing.val.yes", proFb: "Yes", dealerKey: "pricing.val.yes", dealerFb: "Yes", enterpriseKey: "pricing.val.yes", enterpriseFb: "Yes" },
+  { labelKey: "pricing.compare.dealer", labelFb: "Dealer workspace", freeKey: "", freeFb: "—", proKey: "", proFb: "—", dealerKey: "pricing.val.full", dealerFb: "Full", enterpriseKey: "pricing.val.full", enterpriseFb: "Full" },
+  { labelKey: "pricing.compare.seats", labelFb: "Team seats", freeKey: "", freeFb: "—", proKey: "", proFb: "—", dealerKey: "pricing.val.yes", dealerFb: "Yes", enterpriseKey: "pricing.val.packs", enterpriseFb: "Packs" },
+  { labelKey: "pricing.compare.sla", labelFb: "SLA / feeds", freeKey: "", freeFb: "—", proKey: "", proFb: "—", dealerKey: "", dealerFb: "—", enterpriseKey: "pricing.val.yes", enterpriseFb: "Yes" },
 ] as const;
 
 const CTA_CLASS = (highlight?: boolean) =>
@@ -505,28 +512,16 @@ function DealerPlans() {
   );
 }
 
-/** Scroll-triggered section reveal (once); breaks the PageCanvas mount stagger. */
-const onScrollReveal = {
-  inherit: false,
-  initial: "hidden",
-  whileInView: "show",
-  viewport: { once: true, amount: 0.12 },
-} as const;
-
 export default function Pricing() {
   const { t } = useAppPreferences();
-  const motionStill = useReducedMotionOrLowData();
-  const [dealersOpen, setDealersOpen] = useState(
-    () => typeof window !== "undefined" && window.location.hash === "#for-dealers",
-  );
-  const cell = ([key, fb]: readonly [string, string]) => (key ? t(key, fb) : fb);
+  const cell = (key: string, fb: string) => (key ? t(key, fb) : fb);
   const COMPARE_ROWS = COMPARE_ROW_DEFS.map((row) => ({
-    label: cell(row.label),
-    free: cell(row.free),
-    pro: cell(row.pro),
+    label: t(row.labelKey, row.labelFb),
+    free: cell(row.freeKey, row.freeFb),
+    pro: cell(row.proKey, row.proFb),
+    dealer: cell(row.dealerKey, row.dealerFb),
+    enterprise: cell(row.enterpriseKey, row.enterpriseFb),
   }));
-  // Free + one honest Pro card. Dealer plans live in their own section below.
-  const tiers = PRICING_TIERS.filter((tier) => tier.id === "free" || tier.id === "pro");
   return (
     <PageCanvas>
       <PageHero
@@ -534,14 +529,15 @@ export default function Pricing() {
         eyebrow={t("pricing.eyebrow", "Plans")}
         eyebrowIcon={Sparkles}
         watermarkIcon={Users}
-        title={<>{t("shell.pricing.title", "Free while we're in beta")}<span className="text-sheen">.</span></>}
-        description={t("shell.pricing.body", "Search, price ranges, price history and the import tax calculator are free. Pro is coming soon — leave your email and we'll tell you before it launches.")}
+        title={<>{t("pricing.title", "Pricing that funds the pipeline")}<span className="text-sheen">.</span></>}
+        description={t("pricing.body", PRICING_COMING_SOON ? "Browsing is free. Pro is free during the beta. Dealer plans start at LKR 2,990 a month, paid by card, wallet, bank transfer or KOKO." : "Free browse stays free. Start a 7-day free Pro trial — then keep Pro with bank, KOKO, or WhatsApp manual pay.")}
         media={visuals.alt2PagePricingBg}
         mediaPosition="center 40%"
         mediaTone="brand"
         highlights={[
-          { label: t("common.free", "Free"), value: "LKR 0", hint: t("shell.pro.freeBeta", "Free during beta") },
-          { label: t("common.pro", "Pro"), value: t("shell.pricing.soon", "Soon"), hint: t("shell.pricing.soonHint", "We'll email you first") },
+          { label: "Pro", value: "Free", hint: "During the beta" },
+          { label: "Dealer", value: "2,990", hint: "LKR / month, from" },
+          { label: "Annual", value: "-2 mo", hint: "Annual saves 2 months" },
         ]}
         actions={
           <>
@@ -550,36 +546,98 @@ export default function Pricing() {
               to="/pro-preview"
               className="inline-flex h-11 items-center rounded-full border border-border bg-card px-6 text-[13px] font-semibold text-foreground no-underline transition-all hover:border-primary/40 hover:bg-surface active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
-              {t("shell.pricing.whatPro", "What Pro will include")}
+              {t("pricing.liveSample", "See live sample")}
+            </Link>
+            <Link
+              to="/docs"
+              className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-card px-6 text-[13px] font-semibold text-foreground no-underline transition-all hover:border-primary/40 hover:bg-surface active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
+              <BookOpen aria-hidden className="h-4 w-4" />
+              {t("common.docs", "Docs")}
             </Link>
           </>
         }
       />
 
       <PageBody className="space-y-16 lg:space-y-20">
-        <motion.section {...onScrollReveal} variants={revealItem} aria-labelledby="tiers-heading">
+        <TrialCountdownBanner />
+
+        {PRICING_COMING_SOON && (
+          <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/25 bg-primary/[0.07] px-5 py-4">
+            <p className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
+              <Sparkles aria-hidden className="h-4 w-4 text-primary" />
+              {COMING_SOON_COPY.badge} — {COMING_SOON_COPY.note} Contact{" "}
+              <a href={`mailto:${BRAND.contactEmail}`} className="underline decoration-primary/40 underline-offset-2">{BRAND.contactEmail}</a>
+              {BRAND.contactPhone ? (
+                <>
+                  {" "}·{" "}
+                  <a href={BRAND.contactPhoneHref} className="underline decoration-primary/40 underline-offset-2">{BRAND.contactPhone}</a>
+                </>
+              ) : null}
+            </p>
+          </div>
+        )}
+
+        <motion.section variants={revealItem} aria-labelledby="icp-heading">
+          <div className="mb-8 flex items-end justify-between gap-4">
+            <div>
+              <p className="section-eyebrow mb-3 inline-flex items-center gap-2">
+                <Users aria-hidden className="h-3.5 w-3.5" />
+                {t("pricing.whoFor", "Who it's for")}
+              </p>
+              <h2 id="icp-heading" className="display-2 text-foreground">
+                {t("pricing.icpTitle", "Built around real Sri Lanka operators.")}
+              </h2>
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {ICP_PERSONAS.map((persona) => (
+              <div
+                key={persona.title}
+                className="rounded-2xl border border-border bg-card/50 p-5 transition-colors hover:border-primary/25"
+              >
+                <h3 className="text-[15px] font-bold text-foreground">{persona.title}</h3>
+                <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground">{persona.pain}</p>
+                <p className="mt-3 border-t border-border pt-3 text-[12px] font-medium leading-relaxed text-foreground/80">
+                  {persona.fit}
+                </p>
+              </div>
+            ))}
+          </div>
+        </motion.section>
+
+        <motion.section variants={revealItem} aria-labelledby="tiers-heading">
           <p className="section-eyebrow mb-3">{t("pricing.plansEyebrow", "Plans")}</p>
-          <h2 id="tiers-heading" className="display-2 mb-8 text-foreground">
-            {t("shell.pricing.tiersTitle", "Two plans. One is free.")}
+          <h2 id="tiers-heading" className="display-2 mb-3 text-foreground">
+            {t("pricing.tiersTitle", "Choose the depth you need.")}
           </h2>
-          <div className="grid gap-5 md:grid-cols-2 lg:max-w-4xl">
-            {tiers.map((tier) => (
+          <p className="mb-8 inline-flex flex-wrap items-center gap-2 rounded-full border border-primary/20 bg-primary/[0.06] px-4 py-2 text-[12px] font-semibold text-foreground">
+            <Sparkles aria-hidden className="h-3.5 w-3.5 text-primary" />
+            {t("pricing.annualNudge", PRICING_COMING_SOON ? `${COMING_SOON_COPY.badge} — ${COMING_SOON_COPY.note}` : `Annual saves 2 months — ${ANNUAL_SAVE_NUDGE.pro} · ${ANNUAL_SAVE_NUDGE.dealer}`)}
+          </p>
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+            {PRICING_TIERS.map((tier) => (
               <div
                 key={tier.id}
                 className={`relative flex flex-col rounded-2xl border p-6 ${
-                  tier.id === "free" ? "border-primary/40 bg-primary/[0.07] shadow-soft" : "border-border bg-card/50"
+                  tier.highlight
+                    ? "border-primary/40 bg-primary/[0.07] shadow-soft"
+                    : "border-border bg-card/50"
                 }`}
               >
+                {tier.highlight && (
+                  <span className="absolute -top-2.5 right-4 rounded-full border border-primary/30 bg-primary/15 px-2.5 py-0.5 text-[11px] font-medium text-primary-bright">
+                    {t("pricing.recommended", "Recommended")}
+                  </span>
+                )}
                 <p className="text-[12px] font-semibold text-muted-foreground">{tier.name}</p>
                 <div className="mt-3 flex items-baseline gap-1.5">
                   <span className="num text-2xl font-bold text-foreground">{tier.priceLkr}</span>
-                  {tier.priceNote ? <span className="text-[12px] text-muted-foreground">{tier.priceNote}</span> : null}
+                  <span className="text-[12px] text-muted-foreground">{tier.priceNote}</span>
                 </div>
-                {tier.id === "free" ? (
-                  <p className="mt-1 text-[11px] font-medium text-muted-foreground">{t("shell.pro.freeBeta", "Free during beta")}</p>
-                ) : tier.annualNote ? (
+                {tier.annualNote && (
                   <p className="mt-1 text-[11px] font-medium text-muted-foreground">{tier.annualNote}</p>
-                ) : null}
+                )}
                 <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">{tier.audience}</p>
                 <ul className="mt-5 flex-1 space-y-2.5 border-t border-border pt-5">
                   {tier.features.map((feature) => (
@@ -589,12 +647,16 @@ export default function Pricing() {
                     </li>
                   ))}
                 </ul>
-                {tier.id === "pro" ? (
-                  <div className="mt-6">
-                    <TrialCta />
-                  </div>
+                {tier.ctaTo.startsWith("#") ? (
+                  <a href={tier.ctaTo} className={CTA_CLASS(tier.highlight)}>
+                    {tier.ctaLabel}
+                  </a>
+                ) : tier.external ? (
+                  <a href={tier.ctaTo} className={CTA_CLASS(tier.highlight)}>
+                    {tier.ctaLabel}
+                  </a>
                 ) : (
-                  <Link to={tier.ctaTo} className={CTA_CLASS(true)}>
+                  <Link to={tier.ctaTo} className={CTA_CLASS(tier.highlight)}>
                     {tier.ctaLabel}
                   </Link>
                 )}
@@ -603,28 +665,32 @@ export default function Pricing() {
           </div>
         </motion.section>
 
-        <motion.section {...onScrollReveal} variants={revealItem} aria-labelledby="compare-heading">
+        <DealerPlans />
+
+        <motion.section variants={revealItem} aria-labelledby="compare-heading">
           <p className="section-eyebrow mb-3">{t("pricing.compare", "Compare")}</p>
           <h2 id="compare-heading" className="display-2 mb-6 text-foreground">
-            {t("shell.pricing.compareTitle", "Free and Pro side by side.")}
+            {t("pricing.featureSnapshot", "Feature snapshot.")}
           </h2>
-          <div className="overflow-x-auto rounded-2xl border border-border lg:max-w-4xl">
-            <table className="w-full min-w-[420px] text-left text-[12px]">
+          <div className="overflow-x-auto rounded-2xl border border-border">
+            <table className="w-full min-w-[640px] text-left text-[12px]">
               <thead>
                 <tr className="bg-surface">
                   <th className="px-4 py-3 font-semibold tracking-tight text-muted-foreground">{t("pricing.capability", "Capability")}</th>
-                  <th className="px-4 py-3 font-semibold tracking-tight text-primary-bright">{t("common.free", "Free")}</th>
-                  <th className="px-4 py-3 font-semibold tracking-tight text-muted-foreground">
-                    {t("common.pro", "Pro")} <span className="font-normal">· {t("shell.pricing.soon", "Soon")}</span>
-                  </th>
+                  <th className="px-4 py-3 font-semibold tracking-tight text-muted-foreground">{t("common.free", "Free")}</th>
+                  <th className="px-4 py-3 font-semibold tracking-tight text-muted-foreground">{t("common.pro", "Pro")}</th>
+                  <th className="px-4 py-3 font-semibold tracking-tight text-primary-bright">{t("nav.dealer", "Dealer")}</th>
+                  <th className="px-4 py-3 font-semibold tracking-tight text-muted-foreground">{t("pricing.val.custom", "Custom")}</th>
                 </tr>
               </thead>
               <tbody>
                 {COMPARE_ROWS.map((row) => (
                   <tr key={row.label} className="border-t border-border">
                     <td className="px-4 py-3 font-semibold text-foreground">{row.label}</td>
-                    <td className="px-4 py-3 font-medium text-foreground">{row.free}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{row.free}</td>
                     <td className="px-4 py-3 text-muted-foreground">{row.pro}</td>
+                    <td className="px-4 py-3 font-medium text-foreground">{row.dealer}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{row.enterprise}</td>
                   </tr>
                 ))}
               </tbody>
@@ -632,7 +698,7 @@ export default function Pricing() {
           </div>
         </motion.section>
 
-        <motion.section {...onScrollReveal} variants={revealItem} aria-labelledby="faq-heading">
+        <motion.section variants={revealItem} aria-labelledby="faq-heading">
           <div className="mb-8 grid items-end gap-6 lg:grid-cols-[minmax(0,1fr)_220px]">
             <div>
               <p className="section-eyebrow mb-3 inline-flex items-center gap-2">
@@ -660,79 +726,29 @@ export default function Pricing() {
           </div>
         </motion.section>
 
-        {/* Dealers: real, sellable plans — kept off the main plan grid, one tap away. */}
-        {/* Accordion: height change via `layout` (no height tween); content
-            stays in the DOM (hidden) so dealer prices remain indexable. */}
-        <motion.div
-          {...onScrollReveal}
-          variants={revealItem}
-          layout={!motionStill}
-          transition={spring.gentle}
-          id="for-dealers"
-          style={{ borderRadius: 16 }}
-          className="scroll-mt-24 border border-border bg-card/40 p-5 sm:p-6"
-        >
-          <motion.button
-            layout={!motionStill ? "position" : false}
-            type="button"
-            aria-expanded={dealersOpen}
-            aria-controls="for-dealers-panel"
-            onClick={() => setDealersOpen((o) => !o)}
-            className="flex w-full cursor-pointer items-center justify-between gap-3 text-left text-[15px] font-bold text-foreground"
-          >
-            <span className="inline-flex items-center gap-2">
-              <Users aria-hidden className="h-4 w-4 text-primary" />
-              {t("shell.pricing.forDealers", "For dealers")}
-            </span>
-            <span className="inline-flex items-center gap-2">
-              {!dealersOpen ? (
-                <span className="text-[12px] font-medium text-muted-foreground">
-                  {t("shell.pricing.forDealersHint", "Plans priced by stock size, from LKR 2,990/mo")}
-                </span>
-              ) : null}
-              <motion.span
-                aria-hidden
-                animate={{ rotate: dealersOpen ? 180 : 0 }}
-                transition={motionStill ? { duration: 0 } : spring.snappy}
-                className="inline-flex"
-              >
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              </motion.span>
-            </span>
-          </motion.button>
-          <motion.div
-            id="for-dealers-panel"
-            hidden={!dealersOpen}
-            initial={false}
-            animate={dealersOpen ? { opacity: 1, y: 0 } : { opacity: 0, y: -6 }}
-            transition={{ duration: duration.base, ease: dealersOpen ? ease.emphasized : ease.exit }}
-            className="mt-6 space-y-8"
-          >
-            <DealerPlans />
-            <div className="grid gap-4 md:grid-cols-3">
-              {DEALER_FAQ.map((item) => (
-                <div key={item.q} className="rounded-2xl border border-border bg-card/40 p-5">
-                  <h3 className="text-[14px] font-bold text-foreground">{item.q}</h3>
-                  <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">{item.a}</p>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        </motion.div>
-
         <motion.div
           id="get-started"
-          {...onScrollReveal}
-          layout={!motionStill ? "position" : false}
           variants={revealItem}
           className="flex scroll-mt-24 flex-col gap-4 rounded-2xl border border-primary/25 bg-primary/[0.06] p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8"
         >
           <div>
-            <p className="section-eyebrow mb-2">{t("common.pro", "Pro")}</p>
-            <h3 className="text-lg font-bold text-foreground">{t("shell.pricing.ctaTitle", "Get an email when Pro launches.")}</h3>
+            <p className="section-eyebrow mb-2">{t("pricing.getStarted", "Get started")}</p>
+            <h3 className="text-lg font-bold text-foreground">{t("pricing.ctaBanner", "Join the waitlist, open Dealer, or read the docs.")}</h3>
           </div>
           <div className="flex flex-wrap gap-2">
             <TrialCta className="inline-flex h-10 items-center rounded-full bg-primary px-5 text-[12px] font-semibold text-primary-foreground no-underline transition-all hover:bg-primary/90" />
+            <Link
+              to="/dealer"
+              className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-[12px] font-semibold text-foreground no-underline"
+            >
+              {t("pricing.dealerWorkspace", "Dealer workspace")}
+            </Link>
+            <Link
+              to="/docs"
+              className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-[12px] font-semibold text-foreground no-underline"
+            >
+              {t("common.docs", "Docs")}
+            </Link>
             <a
               href={BRAND.contactMailto}
               className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-[12px] font-semibold text-foreground no-underline"

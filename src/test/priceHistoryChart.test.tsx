@@ -14,7 +14,7 @@ describe("PriceHistoryChart", () => {
       />,
     );
 
-    expect(screen.getByText("Rs 12 Mn")).toBeInTheDocument();
+    expect(screen.getByText("Rs. 12.00M")).toBeInTheDocument();
     expect(screen.getByText("+20.0%")).toBeInTheDocument();
   });
 

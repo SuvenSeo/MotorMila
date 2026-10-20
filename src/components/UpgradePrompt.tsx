@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Bell, Sparkles } from "lucide-react";
+import { ArrowRight, Crown, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { trackEvent } from "@/lib/analytics";
@@ -14,7 +14,7 @@ type UpgradePromptProps = {
   ctaLabel?: string;
 };
 
-/** Free-plan ceiling note in the site-wide Pro voice: Pro is coming soon, notify me. */
+/** Premium upgrade nudge used at free-plan ceilings. */
 export function UpgradePrompt({
   title,
   body,
@@ -23,7 +23,7 @@ export function UpgradePrompt({
   ctaLabel,
 }: UpgradePromptProps) {
   const { t } = useAppPreferences();
-  const resolvedCta = ctaLabel ?? t("shell.pro.notify", "Notify me");
+  const resolvedCta = ctaLabel ?? t("upgrade.cta", "Join the waitlist");
 
   // Paywall funnel: one view event per prompt mount.
   useEffect(() => {
@@ -31,7 +31,7 @@ export function UpgradePrompt({
   }, [variant, title]);
 
   const onCtaClick = () => {
-    trackEvent("paywall_click", { source: "upgrade_prompt", variant, title, cta: "notify_me" });
+    trackEvent("paywall_click", { source: "upgrade_prompt", variant, title, cta: "join_waitlist" });
   };
 
   if (variant === "strip") {
@@ -52,11 +52,11 @@ export function UpgradePrompt({
           </div>
         </div>
         <Link
-          to="/pricing#get-started"
+          to="/pricing"
           onClick={onCtaClick}
           className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-[12px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/95 active:scale-[0.98]"
         >
-          <Bell className="h-3.5 w-3.5" aria-hidden />
+          <Crown className="h-3.5 w-3.5" aria-hidden />
           {resolvedCta}
           <ArrowRight className="h-3.5 w-3.5" aria-hidden />
         </Link>
@@ -67,13 +67,13 @@ export function UpgradePrompt({
   return (
     <div className={cn("premium-surface p-6 text-center shadow-soft-lg sm:p-8", className)}>
       <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[12px] font-semibold text-primary-bright">
-        <Sparkles className="h-3 w-3" aria-hidden />
-        {t("shell.pro.badge", "Pro · coming soon")}
+        <Crown className="h-3 w-3" aria-hidden />
+        {t("upgrade.proUnlock", "Pro unlock")}
       </span>
       <h3 className="mt-4 font-display text-xl font-semibold tracking-tight text-foreground sm:text-2xl">{title}</h3>
       <p className="mx-auto mt-2 max-w-md text-[13px] leading-relaxed text-muted-foreground">{body}</p>
       <Link
-        to="/pricing#get-started"
+        to="/pricing"
         onClick={onCtaClick}
         className="mt-5 inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-[13px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/95 active:scale-[0.98]"
       >

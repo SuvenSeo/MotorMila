@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 import {
   ArrowLeft,
   ChevronDown,

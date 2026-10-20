@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 import { ArrowLeft, Eye, EyeOff, Fingerprint, KeyRound, Lock, ShieldCheck, Timer } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

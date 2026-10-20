@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, BarChart2, Car, MapPin, Search } from "lucide-react";
 import { getMakeInsight, getListings, getModels, formatPrice } from "@/services/api";

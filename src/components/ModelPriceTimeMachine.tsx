@@ -14,7 +14,6 @@ import { LineChart } from "lucide-react";
 import { formatPrice, getModelPriceHistory } from "@/services/api";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { SectionHeader } from "@/components/SectionHeader";
-import { formatLkrAxis } from "@/lib/price";
 
 type Mode = "calendar" | "yom";
 
@@ -170,7 +169,7 @@ export function ModelPriceTimeMachine({
                 <XAxis dataKey="label" tick={{ fontSize: 11 }} minTickGap={28} />
                 <YAxis
                   tick={{ fontSize: 11 }}
-                  tickFormatter={(v: number) => formatLkrAxis(v)}
+                  tickFormatter={(v: number) => `${(v / 1_000_000).toFixed(1)}M`}
                   width={52}
                 />
                 <Tooltip
@@ -216,7 +215,7 @@ export function ModelPriceTimeMachine({
                 <XAxis dataKey="label" tick={{ fontSize: 11 }} minTickGap={20} />
                 <YAxis
                   tick={{ fontSize: 11 }}
-                  tickFormatter={(v: number) => formatLkrAxis(v)}
+                  tickFormatter={(v: number) => `${(v / 1_000_000).toFixed(1)}M`}
                   width={52}
                 />
                 <Tooltip

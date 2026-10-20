@@ -11,15 +11,13 @@ export function AnnouncementBanner() {
   const { t } = useAppPreferences();
   const [open, setOpen] = useState(true);
   if (!open) return null;
-  // Translucent ink card floating over the hero: `theme-dark` scopes the dark
-  // tokens so colours stay AA in light mode too.
   return (
-    <div className="theme-dark text-foreground">
-      <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-background/65 px-3.5 py-2 shadow-soft backdrop-blur-md sm:px-4">
-        <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-deal-good/15">
-          <TrendingDown className="h-4 w-4 text-deal-good-text" aria-hidden />
+    <div className="bg-[#09090B] text-white">
+      <div className="mx-auto flex max-w-[1560px] items-center gap-3 px-5 py-2.5 sm:px-6">
+        <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-deal-green/15">
+          <TrendingDown className="h-4 w-4 text-deal-green" aria-hidden />
         </span>
-        <p className="min-w-0 flex-1 truncate text-sm font-medium">
+        <p className="min-w-0 flex-1 truncate text-[13px] font-medium">
           {t(
             "banner.marketUpdate",
             "Market update — fresh underpriced listings flagged daily across ikman, riyasewana and patpat.",
@@ -27,7 +25,7 @@ export function AnnouncementBanner() {
         </p>
         <Link
           to="/best-picks"
-          className="hidden shrink-0 rounded-full bg-primary px-3.5 py-1.5 text-sm font-semibold text-primary-foreground no-underline transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:inline-block"
+          className="hidden shrink-0 rounded-full bg-primary px-3.5 py-1.5 text-[13px] font-semibold text-white no-underline transition hover:bg-primary/90 sm:inline-block"
         >
           {t("banner.viewDeals", "View deals")}
         </Link>
@@ -35,7 +33,7 @@ export function AnnouncementBanner() {
           type="button"
           onClick={() => setOpen(false)}
           aria-label={t("banner.dismiss", "Dismiss announcement")}
-          className="shrink-0 rounded-full p-1.5 text-muted-foreground transition hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="shrink-0 rounded-full p-1.5 text-white/70 transition hover:bg-white/10 hover:text-white"
         >
           <X className="h-4 w-4" aria-hidden />
         </button>

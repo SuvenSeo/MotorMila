@@ -26,9 +26,8 @@ function installLocalStorage(seed?: Record<string, unknown>) {
 describe("Free plan limits", () => {
   beforeEach(() => installLocalStorage());
 
-  it("lets free and signed-out visitors browse every listing", () => {
-    expect(FREE_LISTINGS_PAGE_SIZE).toBe(12);
-    expect(freeListingsVisibleTotal(500)).toBe(500);
+  it("caps free listing visibility at one page", () => {
+    expect(freeListingsVisibleTotal(500)).toBe(FREE_LISTINGS_PAGE_SIZE);
     expect(freeListingsVisibleTotal(3)).toBe(3);
     expect(hasFullPlatformAccess({ hasProAccess: false, isAdmin: false })).toBe(false);
     expect(hasFullPlatformAccess({ hasProAccess: true })).toBe(true);
@@ -66,6 +65,6 @@ describe("Free plan limits", () => {
     );
 
     expect(screen.getByText(/free browse limit reached/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /notify me/i })).toHaveAttribute("href", "/pricing#get-started");
+    expect(screen.getByRole("link", { name: /upgrade to pro/i })).toHaveAttribute("href", "/pricing");
   });
 });

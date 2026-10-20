@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
-import { m } from "motion/react";
+import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, MapPin } from "lucide-react";
 import { getDistrictQuickInsight, getDistrictPrices, getListings, formatPrice } from "@/services/api";
@@ -125,7 +125,7 @@ export default function DistrictHub() {
           </div>
         </section>
 
-        <m.section variants={revealItem}>
+        <motion.section variants={revealItem}>
           <SectionHeader
             eyebrow={t("districtHub.priceMapEyebrow", "District price map")}
             title={t("districtHub.priceMapTitle", "Sri Lanka price landscape")}
@@ -138,12 +138,12 @@ export default function DistrictHub() {
             isError={districtPricesQuery.isError}
             onRetry={() => districtPricesQuery.refetch()}
           />
-        </m.section>
+        </motion.section>
 
         {insight && insight.top_models.length > 0 && (
-          <m.section variants={revealItem}>
+          <motion.section variants={revealItem}>
             <SectionHeader eyebrow={t("makeHub.models", "Models")} title={t("districtHub.popular", "Popular in {district}", { district: canonicalDistrict })} className="mb-8" />
-            <m.div variants={revealContainer} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <motion.div variants={revealContainer} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {insight.top_models.map((entry) => (
                 <Link
                   key={`${entry.make}-${entry.model}`}
@@ -161,25 +161,25 @@ export default function DistrictHub() {
                   </p>
                 </Link>
               ))}
-            </m.div>
-          </m.section>
+            </motion.div>
+          </motion.section>
         )}
 
-        <m.section variants={revealItem}>
+        <motion.section variants={revealItem}>
           <DistrictVelocityList />
-        </m.section>
+        </motion.section>
 
         {recentListings.length > 0 && (
-          <m.section variants={revealItem}>
+          <motion.section variants={revealItem}>
             <SectionHeader eyebrow={t("makeHub.liveInventory", "Live inventory")} title={t("districtHub.recent", "Recent listings")} className="mb-8" />
-            <m.div variants={revealContainer} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <motion.div variants={revealContainer} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {recentListings.map((listing) => (
-                <m.div key={listing.id} variants={revealItem}>
+                <motion.div key={listing.id} variants={revealItem}>
                   <ListingCard listing={listing} />
-                </m.div>
+                </motion.div>
               ))}
-            </m.div>
-          </m.section>
+            </motion.div>
+          </motion.section>
         )}
 
         <Button asChild className="w-full sm:w-auto">

@@ -5,7 +5,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 export function AnimatedListItem({

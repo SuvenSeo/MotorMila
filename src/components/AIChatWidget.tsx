@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import { type ChatListingResult, type ChatWebSource, sendChatMessage, formatPrice } from "@/services/api";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { claimDockTeaser, releaseDockTeaser } from "@/lib/dock";
 import { useAuth } from "@/lib/authContext";
 import { hasFullPlatformAccess } from "@/lib/planLimits";
 import { safeExternalUrl } from "@/lib/safeExternalUrl";
@@ -160,7 +159,7 @@ function pageContextFor(pathname: string, search: string): PageContext {
   }
 
   return {
-    label: search ? "Filtered search" : "Home",
+    label: search ? "Filtered dashboard" : "Market cockpit",
     summary: search
       ? `The user is on the main dashboard with URL filters: ${search}.`
       : "The user is on the main dashboard, browsing live inventory, market concentration, trends, and priced listings.",
@@ -319,7 +318,6 @@ export function AIChatWidget() {
     window.setTimeout(() => {
       setShowTooltip(false);
       setTooltipOut(false);
-      releaseDockTeaser("chat");
     }, 200);
     try {
       localStorage.setItem(TOOLTIP_KEY, "1");
@@ -352,16 +350,8 @@ export function AIChatWidget() {
 
     const seen = localStorage.getItem(TOOLTIP_KEY);
     if (!seen) {
-      // The bubble is desktop-only (hidden below sm) and shares the corner
-      // with the app strip: show it only when it can own the corner.
-      const timer = window.setTimeout(() => {
-        if (!window.matchMedia?.("(min-width: 640px)").matches) return;
-        if (claimDockTeaser("chat")) setShowTooltip(true);
-      }, 2000);
-      return () => {
-        window.clearTimeout(timer);
-        releaseDockTeaser("chat");
-      };
+      const timer = window.setTimeout(() => setShowTooltip(true), 2000);
+      return () => window.clearTimeout(timer);
     }
   }, []);
 
@@ -466,7 +456,7 @@ export function AIChatWidget() {
 
       {showTooltip && !open && (
         <div
-          className={`${tooltipOut ? "aw-tooltip-out" : "aw-tooltip-in"} dock-float right-[92px] hidden max-w-[250px] items-center gap-3 rounded-2xl border border-primary/25 bg-popover/95 px-3 py-3 shadow-soft-lg backdrop-blur-2xl sm:flex`}
+          className={`${tooltipOut ? "aw-tooltip-out" : "aw-tooltip-in"} fixed bottom-7 right-[92px] z-[9998] hidden max-w-[250px] items-center gap-3 rounded-2xl border border-primary/25 bg-popover/95 px-3 py-3 shadow-soft-lg backdrop-blur-2xl sm:flex`}
         >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-primary/25 bg-primary/12 text-primary">
             <Bot className="h-4 w-4" />
@@ -490,7 +480,7 @@ export function AIChatWidget() {
           if (open) closePanel();
           else setOpen(true);
         }}
-        className="aw-fab aw-fab-wrapper dock-float group flex h-14 w-14 items-center justify-center rounded-full border border-primary/30 bg-card text-primary shadow-soft-lg transition-transform active:scale-95"
+        className="aw-fab aw-fab-wrapper group flex h-14 w-14 items-center justify-center rounded-full border border-primary/30 bg-card text-primary shadow-soft-lg transition-transform active:scale-95"
       >
         {open ? <X className="h-5 w-5" /> : <MessageCircle className="h-5 w-5" />}
       </button>

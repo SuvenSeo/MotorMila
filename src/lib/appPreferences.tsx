@@ -5,7 +5,6 @@ import {
   interpolate,
   type Language,
 } from "@/locales";
-import { loadScriptFonts } from "@/lib/scriptFonts";
 
 type ThemeMode = "system" | "dark" | "light";
 
@@ -111,8 +110,6 @@ export function AppPreferencesProvider({ children }: { children: React.ReactNode
   // selected language, not a hardcoded "en".
   useEffect(() => {
     document.documentElement.lang = language;
-    // Noto Sans Sinhala/Tamil load on demand — never for English sessions.
-    void loadScriptFonts(language);
   }, [language]);
 
   const setLanguage = (nextLanguage: Language) => {

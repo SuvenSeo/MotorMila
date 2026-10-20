@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 import { FileText, Info, RefreshCw, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getPermits } from "@/services/api";
@@ -11,7 +11,6 @@ import { PageHero } from "@/components/PageHero";
 import { SectionHeader } from "@/components/SectionHeader";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { QUERY_STALE } from "@/lib/queryPolicy";
-import { formatLkrCompact } from "@/lib/price";
 
 const PERMIT_TYPE_LABELS: Record<string, string> = {
   assembled: "Assembled Vehicle",
@@ -29,7 +28,10 @@ function permitTypeLabel(raw: string): string {
 }
 
 function formatLkr(value: number): string {
-  return formatLkrCompact(value);
+  if (value >= 1_000_000) {
+    return `LKR ${(value / 1_000_000).toFixed(2)}M`;
+  }
+  return `LKR ${value.toLocaleString()}`;
 }
 
 function PermitRow({ permit }: { permit: PermitInfo }) {

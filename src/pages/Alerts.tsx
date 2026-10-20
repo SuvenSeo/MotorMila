@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 import { Bell, BellOff, ExternalLink, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useServerMarketAlerts } from "@/hooks/useServerMarketAlerts";
 import { usePush } from "@/hooks/usePush";

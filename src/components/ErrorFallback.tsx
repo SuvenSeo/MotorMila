@@ -1,4 +1,4 @@
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 import { springSnappy, springSoft } from "@/lib/motion";
 import { useAppPreferences } from "@/lib/appPreferences";
 

@@ -3,7 +3,7 @@ import tailwindcssAnimate from "tailwindcss-animate";
 
 export default {
   darkMode: ["class", ".theme-dark"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}", "./node_modules/@tremor/**/*.{js,ts,jsx,tsx}"],
   // Tremor v3 dynamic chart colors (chosen at runtime) — safelist the palette.
   safelist: [
     {
@@ -44,34 +44,14 @@ export default {
       },
     },
     extend: {
-      // Floating-layer scale (ui/shell). Values live in src/styles/layers.css.
-      zIndex: {
-        base: "var(--z-base)",
-        sticky: "var(--z-sticky)",
-        floating: "var(--z-floating)",
-        "bottom-nav": "var(--z-bottom-nav)",
-        header: "var(--z-header)",
-        overlay: "var(--z-overlay)",
-        modal: "var(--z-modal)",
-        toast: "var(--z-toast)",
-        skip: "var(--z-skip)",
-        devtools: "var(--z-devtools)",
-      },
       fontFamily: {
-        // Brand guide: Space Grotesk (display) + Inter (body/UI). Two Latin families.
-        sans: ['var(--font-sans)', '"Inter"', "system-ui", "-apple-system", '"Segoe UI"', "sans-serif"],
-        display: ['var(--font-display)', '"Space Grotesk"', '"Inter"', "system-ui", "sans-serif"],
-        body: ['var(--font-body)', '"Inter"', "system-ui", "-apple-system", '"Segoe UI"', "sans-serif"],
-        // `font-mono` is used for prices/figures across the app: keep it a
-        // proportional face with tabular-nums (styles/tokens.css), never monospace.
-        mono: ['var(--font-numeric)', '"Inter"', "system-ui", "sans-serif"],
-        numeric: ['var(--font-numeric)', '"Inter"', "system-ui", "sans-serif"],
-        code: ['var(--font-mono)', "ui-monospace", "monospace"],
+        sans: ['var(--font-sans)', '"Plus Jakarta Sans"', '"Geist Sans"', "system-ui", "-apple-system", "sans-serif"],
+        display: ['var(--font-display)', '"Azonix"', '"Clash Display"', '"Orbitron"', "sans-serif"],
+        body: ['var(--font-body)', '"Plus Jakarta Sans"', '"Geist Sans"', "system-ui", "-apple-system", "sans-serif"],
+        mono: ['var(--font-numeric)', '"Geist Mono"', '"SFMono-Regular"', "monospace"],
+        numeric: ['var(--font-numeric)', '"Rajdhani"', '"Plus Jakarta Sans"', "sans-serif"],
       },
-      // Type scale (ui/design) — 2xs 11 · xs 12 · sm 13 · base 15 · lg 17 · xl 20 ·
-      // 2xl 24 · 3xl 30 · 4xl 36 · 5xl 48 · display (fluid 40→76). No text-[Npx].
       fontSize: {
-        "2xs": ["0.6875rem", { lineHeight: "1.45" }],
         xs: ["0.75rem", { lineHeight: "1.5" }],
         sm: ["0.8125rem", { lineHeight: "1.5" }],
         base: ["0.9375rem", { lineHeight: "1.6" }],
@@ -86,8 +66,6 @@ export default {
         "8xl": ["6rem", { lineHeight: "0.95", letterSpacing: "-0.04em" }],
         label: ["0.6875rem", { lineHeight: "1.25", letterSpacing: "0.12em" }],
         caption: ["0.6875rem", { lineHeight: "1.45", letterSpacing: "0" }],
-        "display-sm": ["clamp(2rem, 1.55rem + 1.9vw, 3rem)", { lineHeight: "1.04", letterSpacing: "-0.03em", fontWeight: "700" }],
-        display: ["clamp(2.5rem, 1.7rem + 3.4vw, 4.75rem)", { lineHeight: "0.98", letterSpacing: "-0.035em", fontWeight: "700" }],
         // Tremor v3 type scale (#7 UI review)
         "tremor-label": ["0.75rem", { lineHeight: "1rem" }],
         "tremor-default": ["0.875rem", { lineHeight: "1.25rem" }],
@@ -101,8 +79,6 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         "primary-bright": "hsl(var(--primary-bright))",
-        "primary-text": "hsl(var(--primary-text))",
-        brand: "hsl(var(--brand-blue))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -143,25 +119,7 @@ export default {
           green: "#1d9e75",
           red: "#e24b4a",
         },
-        // Deal signals — ONE semantic set (styles/tokens.css, TOKENS.md).
-        // Badge: border-deal-good/30 bg-deal-good/10 text-deal-good-text
         deal: {
-          great: "hsl(var(--deal-great))",
-          "great-foreground": "hsl(var(--deal-great-foreground))",
-          "great-text": "hsl(var(--deal-great-text))",
-          good: "hsl(var(--deal-good))",
-          "good-foreground": "hsl(var(--deal-good-foreground))",
-          "good-text": "hsl(var(--deal-good-text))",
-          fair: "hsl(var(--deal-fair))",
-          "fair-foreground": "hsl(var(--deal-fair-foreground))",
-          "fair-text": "hsl(var(--deal-fair-text))",
-          high: "hsl(var(--deal-high))",
-          "high-foreground": "hsl(var(--deal-high-foreground))",
-          "high-text": "hsl(var(--deal-high-text))",
-          caution: "hsl(var(--deal-caution))",
-          "caution-foreground": "hsl(var(--deal-caution-foreground))",
-          "caution-text": "hsl(var(--deal-caution-text))",
-          // legacy aliases
           green: "hsl(var(--deal-green))",
           "green-foreground": "hsl(var(--deal-green-foreground))",
           amber: "hsl(var(--deal-amber))",
@@ -232,33 +190,19 @@ export default {
         },
       },
       borderRadius: {
-        // Radius scale (ui/design): base 12px card, 10px input, full pill.
-        xs: "var(--radius-xs)",
-        sm: "var(--radius-sm)",
-        DEFAULT: "8px",
-        md: "var(--radius-md)",
-        lg: "var(--radius-lg)",
-        xl: "var(--radius-xl)",
-        "2xl": "var(--radius-2xl)",
-        "3xl": "var(--radius-3xl)",
-        "4xl": "var(--radius-4xl)",
+        sm: "calc(var(--radius) - 16px)",
+        DEFAULT: "calc(var(--radius) - 12px)",
+        md: "calc(var(--radius) - 10px)",
+        lg: "calc(var(--radius) - 6px)",
+        xl: "calc(var(--radius) - 2px)",
+        "2xl": "var(--radius)",
+        "3xl": "calc(var(--radius) + 8px)",
+        "4xl": "calc(var(--radius) + 16px)",
         full: "9999px",
-        card: "var(--radius-lg)",
-        input: "var(--radius-md)",
-        sheet: "var(--radius-2xl)",
-        pill: "9999px",
         // Tremor v3 radii (#7 UI review)
         "tremor-small": "0.375rem",
         "tremor-default": "0.5rem",
         "tremor-full": "9999px",
-      },
-      // text-primary = brand blue for TEXT (AA on page surfaces in both themes);
-      // bg-/border-/ring-primary keep the fill blue (white text on it ≥ 4.5:1).
-      textColor: {
-        primary: {
-          DEFAULT: "hsl(var(--primary-text))",
-          foreground: "hsl(var(--primary-foreground))",
-        },
       },
       boxShadow: {
         console: "0 2px 8px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.04)",

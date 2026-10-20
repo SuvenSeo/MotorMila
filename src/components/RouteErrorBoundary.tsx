@@ -1,7 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { springSnappy } from "@/lib/motion";
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 
 type RouteErrorBoundaryProps = {
   children: ReactNode;

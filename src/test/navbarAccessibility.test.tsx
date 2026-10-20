@@ -14,25 +14,6 @@ describe("Navbar accessibility active-state", () => {
     Object.defineProperty(window, "scrollY", { configurable: true, writable: true, value: 0 });
   });
 
-  it("shows the five primary destinations in the header", async () => {
-    await act(async () => {
-      render(
-        <AuthProvider>
-          <AppPreferencesProvider>
-            <MemoryRouter initialEntries={["/"]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-              <Navbar />
-            </MemoryRouter>
-          </AppPreferencesProvider>
-        </AuthProvider>,
-      );
-    });
-    const primary = screen.getByRole("navigation", { name: /primary navigation/i });
-    for (const name of ["Buy", "Prices", "Tools", "Sell", "Saved"]) {
-      expect(primary.querySelector(`a[href]`)).not.toBeNull();
-      expect(screen.getAllByRole("link", { name: new RegExp(`^${name}$`, "i") }).length).toBeGreaterThan(0);
-    }
-  });
-
   it("marks the active section link with aria-current on dashboard route", async () => {
     await act(async () => {
       render(
@@ -46,9 +27,9 @@ describe("Navbar accessibility active-state", () => {
       );
     });
 
-    const buyLinks = screen.getAllByRole("link", { name: /^buy$/i });
-    expect(buyLinks.some((link) => link.getAttribute("aria-current") === "page")).toBe(true);
-    expect(buyLinks.some((link) => link.getAttribute("data-active") === "true")).toBe(true);
+    const homeLinks = screen.getAllByRole("link", { name: /^home$/i });
+    expect(homeLinks.some((link) => link.getAttribute("aria-current") === "page")).toBe(true);
+    expect(homeLinks.some((link) => link.getAttribute("data-active") === "true")).toBe(true);
   });
 
   it("marks trends link as current on trends route", async () => {
@@ -64,10 +45,8 @@ describe("Navbar accessibility active-state", () => {
       );
     });
 
-    const pricesLinks = screen.getAllByRole("link", { name: /^prices$/i });
-    expect(pricesLinks.some((link) => link.getAttribute("aria-current") === "page")).toBe(true);
-    // The unlabeled "Delayed" pill is gone; nothing renders while data is fresh.
-    expect(screen.queryByText(/^delayed$/i)).not.toBeInTheDocument();
+    const trendsLinks = screen.getAllByRole("link", { name: /trends/i });   
+    expect(trendsLinks.some((link) => link.getAttribute("aria-current") === "page")).toBe(true);
   });
 
   it("stays compact after leaving the top and restores only at the top", async () => {

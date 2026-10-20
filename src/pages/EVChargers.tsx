@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { m } from "motion/react";
+import { motion } from "framer-motion";
 import { ArrowRight, ExternalLink, MapPin, PlugZap, Zap } from "lucide-react";
 import { getChargingStations } from "@/services/api";
 import type { ChargingStation } from "@/services/api";
@@ -120,7 +120,7 @@ export default function EVChargers() {
       />
 
       <PageBody className="space-y-10 lg:space-y-14">
-        <m.section variants={revealItem} className="flex flex-wrap items-end gap-4">
+        <motion.section variants={revealItem} className="flex flex-wrap items-end gap-4">
           <div className="min-w-[12rem]">
             <p className="mb-2 text-[12px] font-semibold text-muted-foreground">
               {t("common.district", "District")}
@@ -155,9 +155,9 @@ export default function EVChargers() {
               </SelectContent>
             </Select>
           </div>
-        </m.section>
+        </motion.section>
 
-        <m.section variants={revealItem}>
+        <motion.section variants={revealItem}>
           <SectionHeader title={t("ev.chargersNearby", "Nearby stations")} className="mb-6" />
           {stationsQuery.isPending ? (
             <div className="grid gap-3">
@@ -212,7 +212,7 @@ export default function EVChargers() {
               ))}
             </ul>
           )}
-        </m.section>
+        </motion.section>
 
         <p className="text-[12px] font-medium leading-relaxed text-muted-foreground">
           {limitation} {attribution}

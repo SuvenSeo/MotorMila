@@ -31,5 +31,5 @@ export const BRAND = {
   vision:
     "Make Sri Lanka’s vehicle market transparent — so every dealer, broker, importer, and serious buyer can see the real price by district, duty, and deal quality.",
   mission:
-    "Put every vehicle ad, DMT/Customs update and import-cost sum in one trustworthy place, so buyers and sellers can agree on a fair price faster.",
+    "Turn live listings, official DMT/Customs signals, and import-cost math into one trustworthy cockpit for pricing stock, negotiating asks, and moving inventory faster.",
 } as const;

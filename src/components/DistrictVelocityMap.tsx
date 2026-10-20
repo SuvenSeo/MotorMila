@@ -3,7 +3,6 @@ import { CircleMarker, MapContainer, Popup, TileLayer, Tooltip } from "react-lea
 import { DistrictVelocityPoint } from "@/types/car";
 import { LazyMapMount } from "@/components/leaflet/LazyMapMount";
 import { MapResizeController } from "@/components/leaflet/MapResizeController";
-import { DistrictBoundaries, districtKey } from "@/components/leaflet/DistrictBoundaries";
 import "leaflet/dist/leaflet.css";
 
 interface DistrictVelocityMapProps {
@@ -78,13 +77,6 @@ export const DistrictVelocityMap = memo(function DistrictVelocityMap({
     [points],
   );
 
-  const fillByDistrict = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const p of points) m.set(districtKey(p.district), velocityColor(p.velocity_score, maxScore));
-    return m;
-  }, [points, maxScore]);
-  const styleKey = useMemo(() => Array.from(fillByDistrict.entries()).map((e) => e.join(":")).join(","), [fillByDistrict]);
-
   if (isLoading) {
     return (
       <div className="h-[420px] rounded-xl border border-border bg-card overflow-hidden flex flex-col items-center justify-center space-y-4">
@@ -157,10 +149,6 @@ export const DistrictVelocityMap = memo(function DistrictVelocityMap({
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
             url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
             noWrap
-          />
-          <DistrictBoundaries
-            fillFor={(name) => fillByDistrict.get(districtKey(name)) ?? null}
-            styleKey={styleKey}
           />
 
           {points.map((point) => {
