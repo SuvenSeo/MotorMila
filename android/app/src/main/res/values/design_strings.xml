@@ -62,4 +62,15 @@
     <string name="mm_home_sub_count">%1$s cars for sale, compared with what similar cars ask.</string>
     <string name="mm_home_sub_counts">%1$s cars for sale from %2$d sites, compared with what similar cars ask.</string>
     <string name="mm_home_search_hint">Make, model or paste a link</string>
+    <string name="mm_see_all">See all</string>
+    <string name="mm_stat_listed">Cars listed</string>
+    <string name="mm_stat_new24h">New today</string>
+    <string name="mm_stat_avg_asking">Avg asking</string>
+    <string name="mm_pct_below_typical">%1$d%% below typical</string>
+    <string name="mm_was_price">Was %1$s</string>
+    <string name="mm_listed_count">%1$s listed</string>
+    <string name="mm_home_best_priced">Best priced today</string>
+    <string name="mm_home_price_drops">Price drops</string>
+    <string name="mm_home_trending">Most listed models</string>
+    <string name="mm_home_districts">By district</string>
 </resources>

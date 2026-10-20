@@ -204,8 +204,6 @@ fun HomeContent(
     onPriceIndexClick: () -> Unit = {},
     onPermitsClick: () -> Unit = {},
 ) {
-    val haptics = rememberHaptics()
-    val reducedMotion = rememberReducedMotion()
 
     MmPullToRefresh(
         isRefreshing = state.isRefreshing,
@@ -250,13 +248,10 @@ fun HomeContent(
                 )
             }
 
-            // 3. Stats Row / Bento Metrics Card
-            // When offline (banner showing), never show the blocking error —
-            // the tappable banner is the single offline affordance and the
-            // screen renders cached data beneath it.
+            // 3. Market strip (honest counts) — skeleton / error / data
             item {
                 if (state.isLoading) {
-                    LoadingSkeletonCard(Modifier.padding(horizontal = 16.dp))
+                    LoadingSkeletonCard(Modifier.padding(horizontal = MmSpacing.gutter))
                 } else if (state.error != null && state.summary.totalListings == 0 &&
                     !state.isOffline && !state.showCachedBadge
                 ) {
@@ -265,220 +260,65 @@ fun HomeContent(
                         onRetry = onRetry,
                         cachedAvailable = false,
                         onLogin = onLoginClick,
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        modifier = Modifier.padding(horizontal = MmSpacing.gutter),
                     )
                 } else {
-                    HeroStatsCard(
-                        total = state.summary.totalListings,
-                        goodDeals = state.summary.goodDealsCount,
+                    HomeMarketStrip(
+                        totalListings = state.summary.totalListings,
                         new24h = state.insights.newListings24h,
-                        avgPrice = state.summary.avgPriceLkr?.let { LkrFormat.price(it) },
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        avgPriceLkr = state.summary.avgPriceLkr,
                     )
                 }
             }
 
-            // (design v2) How-it-works beam band and feature banners removed
-            // from Home for calm; utilities live on the Tools tab.
-
+            // 4. Shortcuts
             item {
-                HubShortcutsRow(
+                HomeShortcutGrid(
+                    onBestPicksClick = onBestPicksClick,
+                    onPriceIndexClick = onPriceIndexClick,
+                    onCalculatorClick = onCalculatorClick,
                     onEvHubClick = onEvHubClick,
                     onPulseClick = onPulseClick,
-                    onBestPicksClick = onBestPicksClick,
-                    onCalculatorClick = onCalculatorClick,
-                    onPriceIndexClick = onPriceIndexClick,
                     onPermitsClick = onPermitsClick,
-                    modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
 
-            // 5. Live Incoming Feed Ticker — real listings only (no placeholder cars)
-            item {
-                val feedItems = remember(state.insights.hotDeals, live, state.priceDrops) {
-                    when {
-                        state.insights.hotDeals.isNotEmpty() ->
-                            state.insights.hotDeals.take(4).map { deal ->
-                                LiveFeedItem(
-                                    title = "${deal.make} ${deal.model}",
-                                    district = deal.district ?: "Sri Lanka",
-                                    dealScoreText = "+${deal.dealScore.toInt()} deal",
-                                    listingId = deal.id,
-                                )
-                            }
-                        live.isNotEmpty() ->
-                            live.take(4).map { listing ->
-                                LiveFeedItem(
-                                    title = "${listing.make} ${listing.model}",
-                                    district = listing.district ?: "Sri Lanka",
-                                    dealScoreText = listing.formattedPrice(),
-                                    listingId = listing.id,
-                                )
-                            }
-                        state.priceDrops.isNotEmpty() ->
-                            state.priceDrops.take(4).map { drop ->
-                                LiveFeedItem(
-                                    title = drop.listing.displayName,
-                                    district = drop.listing.district ?: "Sri Lanka",
-                                    dealScoreText = LkrFormat.price(drop.newPriceLkr),
-                                    listingId = drop.listing.id,
-                                )
-                            }
-                        else -> emptyList()
-                    }
-                }
-                if (feedItems.isNotEmpty()) {
-                    LiveIncomingFeedTicker(
-                        items = feedItems,
-                        onItemClick = { item ->
-                            if (item.listingId != null) {
-                                onListingClick(item.listingId)
-                            } else {
-                                onSearchClick()
-                            }
-                        },
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
-                }
-            }
-
-            // 6. Trending Models Rail
-            if (state.insights.trendingModels.isNotEmpty()) {
-                item {
-                    val trendingList = remember(state.insights.trendingModels) {
-                        state.insights.trendingModels.take(4).map {
-                            TrendingModelItem(
-                                make = it.make,
-                                model = it.model,
-                                countText = "${LkrFormat.count(it.listingCount)} listed",
-                                avgPriceText = "avg ${LkrFormat.price(it.avgPriceLkr)}",
-                                imageUrl = it.thumbnailUrl,
-                            )
-                        }
-                    }
-                    TrendingModelsRail(
-                        models = trendingList,
-                        onSeeAllTrends = { onSeeAll("trends") },
-                        onModelClick = { onMakeModelClick(it.make, it.model) },
-                    )
-                }
-            }
-
-            // 7. Live Now Strip (if available from streaming backend)
-            if (live.isNotEmpty()) {
-                item {
-                    SectionRow(title = "Live now", onSeeAll = null)
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        items(live, key = { it.id }) { l ->
-                            val tickerInteraction = remember(l.id) { MutableInteractionSource() }
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .clip(MotormilaRadius.pill)
-                                    .applePress(tickerInteraction, pressedScale = 0.95f)
-                                    .clickable(
-                                        interactionSource = tickerInteraction,
-                                        indication = null,
-                                    ) {
-                                        if (!reducedMotion) haptics.tick()
-                                        onListingClick(l.id)
-                                    }
-                                    .padding(end = 12.dp),
-                            ) {
-                                LivePulse()
-                                Spacer(Modifier.width(6.dp))
-                                Text(
-                                    "${l.make} ${l.model} · ${l.formattedPrice()}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MotormilaOnSurface,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 8. Hot Deals / Best Picks (with Context Eyebrow Capsule Badge)
+            // 5. Best priced (real hot deals only)
             if (state.insights.hotDeals.isNotEmpty()) {
                 item {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        ContextCapsuleBadge(text = "• ✩ BEST PICKS", isAccent = true)
-                        Spacer(Modifier.height(6.dp))
-                    }
-                    SectionRow(title = "Hot deals", onSeeAll = { onSeeAll("deals") })
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        itemsIndexed(state.insights.hotDeals.take(10), key = { _, deal -> deal.id }) { index, deal ->
-                            HotDealCard(
-                                title = "${deal.make} ${deal.model} ${deal.year ?: ""}".trim(),
-                                imageUrl = deal.thumbnailUrl,
-                                priceLkr = deal.priceLkr,
-                                score = deal.dealScore,
-                                isPro = state.isPro,
-                                index = index,
-                                belowFmv = deal.dealScore > 0,
-                                onClick = { onListingClick(deal.id) },
-                            )
-                        }
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        MmSectionHeader(stringResource(R.string.mm_home_best_priced), onSeeAll = { onSeeAll("deals") })
+                        HomeDealRail(state.insights.hotDeals.take(10), onClick = onListingClick)
                     }
                 }
             }
 
-            // 9. Price Drops Rail
+            // 6. Price drops
             if (state.priceDrops.isNotEmpty()) {
                 item {
-                    SectionRow(title = "Price drops", onSeeAll = { onSeeAll("drops") })
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        itemsIndexed(state.priceDrops.take(10), key = { _, drop -> drop.listing.id }) { index, drop ->
-                            PriceDropCard(
-                                title = drop.listing.displayName,
-                                imageUrl = drop.listing.heroImageUrl,
-                                newPrice = LkrFormat.price(drop.newPriceLkr),
-                                dropPct = drop.dropPct,
-                                index = index,
-                                onClick = { onListingClick(drop.listing.id) },
-                            )
-                        }
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        MmSectionHeader(stringResource(R.string.mm_home_price_drops), onSeeAll = { onSeeAll("drops") })
+                        HomeDropRail(state.priceDrops.take(10), onClick = onListingClick)
                     }
                 }
             }
 
-            // 10. Fuel Mix
-            if (state.fuelMix.isNotEmpty()) {
+            // 7. Most listed models
+            if (state.insights.trendingModels.isNotEmpty()) {
                 item {
-                    SectionRow(title = "Fuel mix", onSeeAll = null)
-                    FuelMixRow(
-                        buckets = state.fuelMix,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        MmSectionHeader(stringResource(R.string.mm_home_trending), onSeeAll = { onSeeAll("trends") })
+                        HomeTrendingList(state.insights.trendingModels.take(5)) { onMakeModelClick(it.make, it.model) }
+                    }
                 }
             }
 
-            // 11. Districts
+            // 8. Districts
             if (state.districts.isNotEmpty()) {
                 item {
-                    SectionRow(title = "Districts", onSeeAll = { onSeeAll("districts") })
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        items(state.districts.take(12), key = { it.district }) { d ->
-                            DistrictChip(
-                                district = d.district,
-                                count = d.count,
-                                median = LkrFormat.price(d.medianPriceLkr),
-                                onClick = { onDistrictClick(d.district) },
-                            )
-                        }
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        MmSectionHeader(stringResource(R.string.mm_home_districts), onSeeAll = { onSeeAll("districts") })
+                        HomeDistrictRail(state.districts.take(12), onClick = onDistrictClick)
                     }
                 }
             }
