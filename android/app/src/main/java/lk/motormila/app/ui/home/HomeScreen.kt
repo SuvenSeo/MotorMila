@@ -181,6 +181,7 @@ fun HomeScreen(
 }
 
 /** Stateless Home body (previewable / Paparazzi-renderable). */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeContent(
     state: HomeUiState,
