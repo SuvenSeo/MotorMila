@@ -144,7 +144,7 @@ export function CommandPalette() {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center px-4 pt-[10vh] sm:pt-[14vh]"
+      className="fixed inset-0 z-modal flex items-start justify-center px-4 pt-[10vh] sm:pt-[14vh]"
       role="dialog"
       aria-modal="true"
       aria-label={t("palette.label", "Search")}

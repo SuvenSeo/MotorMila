@@ -1,9 +1,9 @@
-import { scrollBehavior } from "@/lib/motion";
+import { scrollBehavior, duration, ease, spring, press, useReducedMotionOrLowData } from "@/lib/motion";
 import { startTransition, useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
-import { motion } from "framer-motion";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useSearchParams } from "react-router-dom";
+import { AnimatePresence, m, motion } from "motion/react";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { FilterState, CarListing, DashboardInsights, DistrictVelocityPoint } from "@/types/car";
 import { getPriceDrops,
   getStats, getListings, getMakes, getListingsBatch,
@@ -18,23 +18,17 @@ import { FuelMixStrip } from "@/components/FuelMixStrip";
 import { DataFreshnessIndicator } from "@/components/DataFreshnessIndicator";
 import { SnapshotModeNotice } from "@/components/SnapshotModeNotice";
 import { AtmosphericImage } from "@/components/AtmosphericImage";
-import { HeroSideSignals } from "@/components/HeroSideSignals";
-import { FlipWords } from "@/components/ui/FlipWords";
-import { MarketTicker } from "@/components/MarketTicker";
-import { SourceMarquee } from "@/components/SourceMarquee";
 import { HeroVariantPicker } from "@/components/HeroVariantPicker";
 import { useHeroVariantLab } from "@/hooks/useHeroVariantLab";
 import type { HeroAlign } from "@/lib/heroVariants";
 import { RevealSection } from "@/components/RevealSection";
+import { SourceCredits } from "@/components/SourceCredits";
 import { SectionHeader } from "@/components/SectionHeader";
-import { visuals } from "@/lib/visualAssets";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { TrendingDown,
   ArrowRight,
   ArrowUpRight,
-  ChevronLeft,
-  ChevronRight,
   ExternalLink,
   Flame,
   LayoutGrid,
@@ -64,18 +58,20 @@ import { useServerMarketAlerts } from "@/hooks/useServerMarketAlerts";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { FreePlanBanner } from "@/components/FreePlanBanner";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
-import { HowItWorksBand } from "@/components/HowItWorksBand";
 import { ProFeatureLock } from "@/components/ProFeatureLock";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { useAuth } from "@/lib/authContext";
-import {
-  FREE_LISTINGS_PAGE_SIZE,
-  FREE_MAX_LISTING_PAGES,
-  freeListingsVisibleTotal,
-  freePlanCopy,
-  hasFullPlatformAccess,
-} from "@/lib/planLimits";
+import { freePlanCopy, hasFullPlatformAccess } from "@/lib/planLimits";
 import { trackEvent } from "@/lib/analytics";
+import { DEFAULT_SORT, EMPTY_FILTERS, useSearchFilters } from "@/lib/searchUrlState";
+import { normalizeSearchQuery, resolveSearchAlias } from "@/lib/searchAliases";
+import { saveSearchWithAlert, savedSearchLabel } from "@/lib/savedSearchAlerts";
+import { SortControl } from "@/components/search/SortControl";
+import { SearchPagination } from "@/components/search/SearchPagination";
+import { NoResultsState, type AlertStatus } from "@/components/search/NoResultsState";
+import { FlowNumber } from "@/components/motion/FlowNumber";
+import { Reveal } from "@/components/motion/Reveal";
+import { HeroFlipWords } from "@/components/motion/HeroFlipWords";
 
 const heroContainerVariants = {
   hidden: { opacity: 0 },
@@ -100,6 +96,37 @@ const heroItemVariants = {
     }
   }
 } as const;
+
+/** Hero headline: words fade + rise in sequence, once on mount. */
+const heroHeadlineVariants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.06, delayChildren: 0.04 } },
+} as const;
+const heroWordVariants = {
+  hidden: { opacity: 0, y: "0.4em" },
+  show: { opacity: 1, y: 0, transition: { duration: duration.slow, ease: ease.emphasized } },
+} as const;
+const heroWordVariantsStill = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { duration: duration.base } },
+} as const;
+
+/** Render a phrase as inline-block words so each can animate on its own. */
+function HeroWords({ text, still }: { text: string; still: boolean }) {
+  const words = text.split(/\s+/).filter(Boolean);
+  return (
+    <>
+      {words.map((word, i) => (
+        <span key={`${word}-${i}`}>
+          <m.span className="inline-block" variants={still ? heroWordVariantsStill : heroWordVariants}>
+            {word}
+          </m.span>
+          {i < words.length - 1 ? " " : null}
+        </span>
+      ))}
+    </>
+  );
+}
 
 const cardContainerVariants = {
   hidden: { opacity: 0 },
@@ -130,9 +157,6 @@ const DistrictVelocityMap = lazyWithRetry(() =>
 const ProvinceVelocityStrip = lazyWithRetry(() =>
   import("@/components/ProvinceVelocityStrip").then((m) => ({ default: m.ProvinceVelocityStrip }))
 );
-const ComparisonModal = lazyWithRetry(() =>
-  import("@/components/ComparisonModal").then((m) => ({ default: m.ComparisonModal }))
-);
 const MarketIntelligencePanel = lazyWithRetry(() =>
   import("@/components/MarketIntelligencePanel").then((m) => ({ default: m.MarketIntelligencePanel }))
 );
@@ -153,7 +177,15 @@ const HERO_POPULAR_SCANS = [
   { label: "Toyota Axio", make: "Toyota", model: "Axio" },
 ] as const;
 
-const SORT_VALUES = ["newest", "deal_score", "price_asc", "price_desc", "mileage_asc"] as const;
+/** Home quick links. Bikes and three-wheelers get top billing next to cars. */
+const HOME_CATEGORIES = [
+  { value: "cars", labelKey: "shell.home.cat.cars", fallback: "Cars" },
+  { value: "motorbikes", labelKey: "shell.home.cat.bikes", fallback: "Bikes" },
+  { value: "three-wheelers", labelKey: "shell.home.cat.threeWheelers", fallback: "Three-wheelers" },
+  { value: "vans", labelKey: "shell.home.cat.vans", fallback: "Vans" },
+  { value: "lorries", labelKey: "shell.home.cat.lorries", fallback: "Lorries" },
+] as const;
+
 
 function heroCopyAlignClass(align: HeroAlign, hideSideSignals: boolean): string {
   switch (align) {
@@ -179,103 +211,16 @@ function heroCopyAlignClass(align: HeroAlign, hideSideSignals: boolean): string 
   }
 }
 
-function parseOptionalNumber(value: string | null) {
-  if (!value) return undefined;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
-}
-
-function isSortValue(value: string | null): value is FilterState["sort"] {
-  return value !== null && (SORT_VALUES as readonly string[]).includes(value);
-}
-
-function normalizeSourceValue(value: string | null | undefined): string | undefined {
-  if (!value) return undefined;
-  const compact = value.trim().toLowerCase().replace(/[-_.\s]/g, "");
-  if (!compact) return undefined;
-  if (compact.startsWith("ikman")) return "ikman";
-  if (compact.startsWith("riyasewana")) return "riyasewana";
-  if (["autolanka", "autolankacom", "autolankasite", "autolankalk"].includes(compact)) return "autolanka";
-  if (compact.startsWith("autodirect")) return "autodirect";
-  if (compact.startsWith("patpat")) return "patpat";
-  if (compact.startsWith("autostream")) return "autostream";
-  if (compact.startsWith("carshop")) return "carshop";
-  if (["saleme", "salemelk"].includes(compact)) return "saleme";
-  if (["riyahub", "riyahublk"].includes(compact)) return "riyahub";
-  if (["dimo", "carsatdimo", "dimoautomobiles"].includes(compact)) return "dimo";
-  return value.trim().toLowerCase();
-}
-
-function parseFilters(params: URLSearchParams): FilterState {
-  const sort = params.get("sort");
-  const priceAvailability = params.get("price_availability");
-  const vehicleCategory = params.get("vehicle_category");
-  const allowedCategories = new Set([
-    "cars",
-    "motorbikes",
-    "three-wheelers",
-    "vans",
-    "buses",
-    "lorries",
-    "heavy-duty",
-    "tractors",
-    "bicycles",
-    "boats",
-    "others",
-  ]);
-  return {
-    q: params.get("q") || undefined,
-    source: normalizeSourceValue(params.get("source")),
-    make: params.get("make") || undefined,
-    model: params.get("model") || undefined,
-    year_min: parseOptionalNumber(params.get("year_min")),
-    year_max: parseOptionalNumber(params.get("year_max")),
-    price_min: parseOptionalNumber(params.get("price_min")),
-    price_max: parseOptionalNumber(params.get("price_max")),
-    mileage_max: parseOptionalNumber(params.get("mileage_max")),
-    condition: (params.get("condition") as FilterState["condition"]) || undefined,
-    body_type: (params.get("body_type") as FilterState["body_type"]) || undefined,
-    transmission: (params.get("transmission") as FilterState["transmission"]) || undefined,
-    fuel_type: (params.get("fuel_type") as FilterState["fuel_type"]) || undefined,
-    district: params.get("district") || undefined,
-    vehicle_category:
-      vehicleCategory && allowedCategories.has(vehicleCategory)
-        ? (vehicleCategory as FilterState["vehicle_category"])
-        : "cars",
-    price_availability: priceAvailability === "unavailable" ? "unavailable" : undefined,
-    fresh_24h: params.get("fresh_24h") === "1" ? true : undefined,
-    sort: isSortValue(sort) ? sort : "newest",
-    page: Math.max(1, parseOptionalNumber(params.get("page")) || 1),
-  };
-}
-
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [filters, setFilters] = useState<FilterState>(() => parseFilters(searchParams));
-  const { hasProAccess, isAdmin } = useAuth();
+  // Filters, sort and page live in the URL (shareable; Back steps back).
+  const [filters, setFilters] = useSearchFilters();
+  const { hasProAccess, isAdmin, isAuthenticated } = useAuth();
   const fullAccess = hasFullPlatformAccess({ hasProAccess, isAdmin });
-
-  useEffect(() => {
-    const nextFilters = parseFilters(searchParams);
-    setFilters((prev) => {
-      const keys = Object.keys(nextFilters) as (keyof FilterState)[];
-      return keys.some((k) => prev[k] !== nextFilters[k]) ? nextFilters : prev;
-    });
-  }, [searchParams]);
-
-  // Free plan: always page 1 — pagination is a Pro unlock.
-  useEffect(() => {
-    if (!fullAccess && filters.page > FREE_MAX_LISTING_PAGES) {
-      setFilters((prev) => ({ ...prev, page: 1 }));
-    }
-  }, [fullAccess, filters.page]);
-
-  const listingFilters = useMemo<FilterState>(
-    () => (fullAccess ? filters : { ...filters, page: 1 }),
-    [filters, fullAccess],
-  );
+  // Guests and free users get normal pagination (no 12-result cap).
+  const listingFilters = filters;
+  const [noResultsAlertStatus, setNoResultsAlertStatus] = useState<AlertStatus>("idle");
   const { t, resolvedTheme } = useAppPreferences();
   const queryClient = useQueryClient();
   const liveMarketSnapshot = useLiveMarketSnapshot();
@@ -291,6 +236,8 @@ export default function Dashboard() {
   const [heroActiveIdx, setHeroActiveIdx] = useState(-1);
   const [heroSuggestions, setHeroSuggestions] = useState<ListingSearchSuggestion[]>([]);
   const [heroSuggestionsOpen, setHeroSuggestionsOpen] = useState(false);
+  const [heroFocused, setHeroFocused] = useState(false);
+  const motionStill = useReducedMotionOrLowData();
   const [heroSuggestionsLoading, setHeroSuggestionsLoading] = useState(false);
   const [showSavedListings, setShowSavedListings] = useState(false);
   const [savedListings, setSavedListings] = useState<CarListing[]>([]);
@@ -343,6 +290,9 @@ export default function Dashboard() {
     queryKey: ["listings", listingFilters],
     queryFn: () => getListings(listingFilters),
     staleTime: QUERY_STALE.listings,
+    // Keep the current grid on screen while the next filter/sort loads, then
+    // crossfade — no skeleton flash, no scroll jump.
+    placeholderData: keepPreviousData,
   });
   const { refetch: refetchListings } = listingsQuery;
   const retryListings = useCallback(() => {
@@ -355,6 +305,7 @@ export default function Dashboard() {
   const listings = useMemo(() => listingsQuery.data?.listings ?? [], [listingsQuery.data]);
   const total = listingsQuery.data?.total ?? 0;
   const loadingListings = listingsQuery.isPending;
+  const refreshingListings = listingsQuery.isPlaceholderData && listingsQuery.isFetching;
   const listingsFailed = listingsQuery.isError;
 
   const serverAlerts = useServerMarketAlerts();
@@ -377,7 +328,7 @@ export default function Dashboard() {
     let cancelled = false;
     const timer = window.setTimeout(() => {
       setHeroSuggestionsLoading(true);
-      getListingSearchSuggestions(query, 8)
+      getListingSearchSuggestions(normalizeSearchQuery(query) || query, 8)
         .then((rows) => { if (!cancelled) { setHeroSuggestions(rows); setHeroSuggestionsOpen(true); setHeroSearchMessage(null); } })
         .catch(() => { if (!cancelled) setHeroSuggestions([]); })
         .finally(() => { if (!cancelled) setHeroSuggestionsLoading(false); });
@@ -413,42 +364,13 @@ export default function Dashboard() {
     if (!previous || previous === latestAt) return;
     queryClient.invalidateQueries({ queryKey: ["stats"] });
     queryClient.invalidateQueries({ queryKey: ["dashboard-insights"] });
-    if (filters.page === 1 && filters.sort === "newest") {
+    if (filters.page === 1 && (filters.sort === "newest" || filters.sort === DEFAULT_SORT)) {
       queryClient.invalidateQueries({ queryKey: ["listings"] });
       setNewLiveListingsAvailable(false);
     } else {
       setNewLiveListingsAvailable(true);
     }
   }, [queryClient, filters.page, filters.sort, liveMarketSnapshot?.latest_listing_at]);
-
-  // ── URL sync ───────────────────────────────────────────────────
-
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (filters.q) params.set("q", filters.q);
-    if (filters.source) params.set("source", filters.source);
-    if (filters.make) params.set("make", filters.make);
-    if (filters.model) params.set("model", filters.model);
-    if (filters.year_min) params.set("year_min", String(filters.year_min));
-    if (filters.year_max) params.set("year_max", String(filters.year_max));
-    if (filters.price_min) params.set("price_min", String(filters.price_min));
-    if (filters.price_max) params.set("price_max", String(filters.price_max));
-    if (filters.mileage_max) params.set("mileage_max", String(filters.mileage_max));
-    if (filters.condition) params.set("condition", filters.condition);
-    if (filters.body_type) params.set("body_type", filters.body_type);
-    if (filters.transmission) params.set("transmission", filters.transmission);
-    if (filters.fuel_type) params.set("fuel_type", filters.fuel_type);
-    if (filters.district) params.set("district", filters.district);
-    if (filters.vehicle_category && filters.vehicle_category !== "cars") {
-      params.set("vehicle_category", filters.vehicle_category);
-    }
-    if (filters.price_availability === "unavailable") params.set("price_availability", filters.price_availability);
-    if (filters.fresh_24h) params.set("fresh_24h", "1");
-    if (filters.sort && filters.sort !== "newest") params.set("sort", filters.sort);
-    if (filters.page > 1) params.set("page", String(filters.page));
-    const next = params.toString();
-    if (next !== searchParams.toString()) setSearchParams(params, { replace: true });
-  }, [filters, searchParams, setSearchParams]);
 
   // ── Derived data ───────────────────────────────────────────────
 
@@ -585,7 +507,11 @@ export default function Dashboard() {
     // same tick gets cancelled when the grid re-lays out.
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        document.getElementById("market")?.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
+        const market = document.getElementById("market");
+        // jsdom (tests) has no scrollIntoView; old WebViews may lack it too.
+        if (market && typeof market.scrollIntoView === "function") {
+          market.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
+        }
       });
     });
   }, []);
@@ -597,43 +523,84 @@ export default function Dashboard() {
     startTransition(() => { setFilters((prev) => ({ ...prev, q: undefined, make: s.make, model: s.model, page: 1 })); });
     setHeroSearchMessage(null);
     scrollToMarket();
-  }, [scrollToMarket]);
+  }, [scrollToMarket, setFilters]);
 
   const runHeroSearch = useCallback(() => {
     const query = heroSearch.trim();
     if (!query) return;
     if (heroSuggestions.length > 0) { applyHeroSuggestion(heroSuggestions[0]); return; }
-    const normalizedQuery = query.toLowerCase();
+    // Singlish / misspelling tolerance ("akwa", "wagonr", "primio", "vits").
+    const alias = resolveSearchAlias(query);
+    if (alias.make) {
+      startTransition(() => {
+        setFilters((prev) => ({ ...prev, q: alias.rest || undefined, make: alias.make, model: alias.model, page: 1 }));
+      });
+      setHeroSuggestionsOpen(false);
+      setHeroSearchMessage(null);
+      scrollToMarket();
+      trackEvent("search_submit", { query, make_match: alias.make, alias: alias.corrected });
+      return;
+    }
+    const normalizedQuery = alias.normalized || query.toLowerCase();
     const makeMatch = makes.find((e) => e.make.toLowerCase().includes(normalizedQuery));
     startTransition(() => {
-      setFilters((prev) => ({ ...prev, q: query, make: makeMatch?.make ?? prev.make, model: makeMatch ? undefined : prev.model, page: 1 }));
+      setFilters((prev) => ({ ...prev, q: normalizedQuery, make: makeMatch?.make ?? prev.make, model: makeMatch ? undefined : prev.model, page: 1 }));
     });
     setHeroSuggestionsOpen(false);
     setHeroSearchMessage(makeMatch ? null : t("home.searchingIndexOnly", "Searching vehicle index only."));
     scrollToMarket();
     trackEvent("search_submit", { query, make_match: makeMatch?.make ?? null });
-  }, [applyHeroSuggestion, heroSearch, heroSuggestions, makes, scrollToMarket, t]);
+  }, [applyHeroSuggestion, heroSearch, heroSuggestions, makes, scrollToMarket, setFilters, t]);
 
   const focusModel = useCallback((make: string, model?: string) => {
     startTransition(() => { setFilters((prev) => ({ ...prev, q: undefined, make, model: model || undefined, page: 1 })); });
     scrollToMarket();
-  }, [scrollToMarket]);
+  }, [scrollToMarket, setFilters]);
 
   const sortByDealScore = useCallback(() => {
     startTransition(() => { setFilters((prev) => ({ ...prev, sort: "deal_score", page: 1 })); });
     scrollToMarket();
-  }, [scrollToMarket]);
+  }, [scrollToMarket, setFilters]);
 
   const browseNewestListings = useCallback(() => {
     startTransition(() => { setFilters((prev) => ({ ...prev, fresh_24h: true, sort: "newest", page: 1, vehicle_category: prev.vehicle_category || "cars" })); });
     scrollToMarket();
-  }, [scrollToMarket]);
+  }, [scrollToMarket, setFilters]);
 
-  const totalPages = fullAccess
-    ? Math.ceil(total / LISTINGS_PAGE_SIZE)
-    : Math.min(1, Math.ceil(total / FREE_LISTINGS_PAGE_SIZE) || 0);
-  const freeVisibleCap = freeListingsVisibleTotal(total);
-  const freeHitListingCap = !fullAccess && total > FREE_LISTINGS_PAGE_SIZE * FREE_MAX_LISTING_PAGES;
+  const browseCategory = useCallback((category: string) => {
+    startTransition(() => {
+      setFilters((prev) => ({
+        ...prev,
+        vehicle_category: category as FilterState["vehicle_category"],
+        make: undefined,
+        model: undefined,
+        body_type: undefined,
+        page: 1,
+      }));
+    });
+    scrollToMarket();
+  }, [scrollToMarket, setFilters]);
+
+  const totalPages = Math.max(0, Math.ceil(total / LISTINGS_PAGE_SIZE));
+  const goToPage = useCallback((page: number) => {
+    setFilters((prev) => ({ ...prev, page: Math.max(1, page) }));
+    scrollToMarket();
+  }, [scrollToMarket, setFilters]);
+  const setSort = useCallback((sort: FilterState["sort"]) => {
+    setFilters((prev) => ({ ...prev, sort, page: 1 }));
+  }, [setFilters]);
+
+  // Reset the empty-state alert button whenever the search changes.
+  useEffect(() => { setNoResultsAlertStatus("idle"); }, [filters]);
+  const createNoResultsAlert = useCallback(async () => {
+    setNoResultsAlertStatus("saving");
+    const { status } = await saveSearchWithAlert(
+      savedSearchLabel(filters, t("filter.currentSearch", "Current search")),
+      filters,
+      "daily",
+    );
+    setNoResultsAlertStatus(status === "saved" ? "saved" : status === "limit" ? "limit" : "error");
+  }, [filters, t]);
   const currentAlertSummary = useMemo(() => summarizeAlertFilters(filters), [filters]);
 
   const saveCurrentMarketAlert = useCallback(() => {
@@ -730,9 +697,12 @@ export default function Dashboard() {
   // ═════════════════════════════════════════════════════════════════
 
   return (
-    <div className="min-h-screen">
-      <FreePlanBanner />
-      <AnnouncementBanner />
+    <div className="relative min-h-screen">
+      {/* Banners float over the hero (which runs under the transparent header), so no strip appears above it. */}
+      <div className="hero-banners">
+        <FreePlanBanner />
+        <AnnouncementBanner />
+      </div>
       {showHeroLab ? (
         <HeroVariantPicker activeId={heroVariant.id} onSelect={setHeroVariantId} />
       ) : null}
@@ -771,42 +741,21 @@ export default function Dashboard() {
           className={cn(
             "relative z-10 mx-auto flex w-full max-w-[1560px] flex-1 flex-col px-5 sm:px-6",
             heroCentered
-              ? "min-h-[min(calc(88svh-var(--nav-offset)),calc(900px-var(--nav-offset)))] items-center justify-center py-24 sm:py-28"
-              : "justify-end pb-28 pt-24 sm:pb-24 sm:pt-28 lg:pb-28 lg:pt-32",
+              ? "min-h-[min(calc(70svh-var(--nav-offset)),calc(720px-var(--nav-offset)))] items-center justify-center py-10 sm:py-16"
+              : "justify-end pb-10 pt-12 sm:pb-16 sm:pt-20 lg:pb-20 lg:pt-24",
           )}
         >
-          {!heroVariant.hideSideSignals ? (
-            <HeroSideSignals
-              trending={trendingModels[0] ?? null}
-              hotDeal={hotDeals[0] ?? null}
-              priceDrop={heroPriceDrop}
-              newListings24h={heroNewListings24h}
-              goodDealsCount={heroGoodDealsCount}
-              avgPriceLkr={stats?.avg_price_lkr ?? null}
-              sourceCount={marketPulseSources}
-              districtCount={Number(stats?.district_count || 0)}
-              onTrendingClick={() => {
-                const row = trendingModels[0];
-                if (row) focusModel(row.make, row.model);
-              }}
-              onBrowseNewest={browseNewestListings}
-              onGoodDealsClick={sortByDealScore}
-            />
-          ) : null}
 
           <div className={`relative ${heroAlignClass}`}>
             <motion.p variants={heroItemVariants} className={cn("hero-pill", heroCentered && "flex justify-center")}>
               <span className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[12px] font-medium tracking-tight ${heroKickerClass}`}>
-                <span aria-hidden className="relative inline-flex h-1.5 w-1.5">
-                  <span className="animate-live-dot absolute inset-0 rounded-full bg-primary" />
-                  <span className="relative h-1.5 w-1.5 rounded-full bg-primary" />
-                </span>
-                {t("hero.kicker", "Sri Lanka live market")}
+                <span aria-hidden className="relative h-1.5 w-1.5 rounded-full bg-primary" />
+                {t("shell.home.kicker", "Every vehicle ad in Sri Lanka, one search")}
               </span>
             </motion.p>
 
             <motion.h1
-              variants={heroItemVariants}
+              variants={heroHeadlineVariants}
               className={cn(
                 "display-hero mt-6",
                 heroCentered ? "display-hero--lockup" : "max-w-3xl",
@@ -814,19 +763,23 @@ export default function Dashboard() {
               )}
             >
               <span className={heroCentered ? "display-hero__lead" : undefined}>
-                {t("hero.title", "Sri Lanka's entire vehicle market,")}
+                <HeroWords text={t("hero.title", "Sri Lanka's entire vehicle market,")} still={motionStill} />
               </span>
               <span className={cn("italic text-primary", heroCentered ? "display-hero__accent" : undefined)}>
                 {heroCentered ? null : " "}
-                {/* Flip Words — rotating accent (#8 UI review) */}
-                <FlipWords
-                  words={[
-                    t("hero.titleAccent", "decoded."),
-                    t("hero.accentWord2", "priced."),
-                    t("hero.accentWord3", "tracked."),
-                    t("hero.accentWord4", "compared."),
-                  ]}
-                />
+                {/* Rotating accent word — fixed-width box, pauses offscreen/hidden tab,
+                    static "priced." under reduced motion or low-data mode. */}
+                <m.span className="inline-block" variants={motionStill ? heroWordVariantsStill : heroWordVariants}>
+                  <HeroFlipWords
+                    align={heroCentered ? "center" : "start"}
+                    words={[
+                      t("hero.accentWord2", "priced."),
+                      t("hero.accentWord3", "tracked."),
+                      t("hero.accentWord4", "compared."),
+                      t("hero.titleAccent", "decoded."),
+                    ]}
+                  />
+                </m.span>
               </span>
             </motion.h1>
 
@@ -849,12 +802,13 @@ export default function Dashboard() {
               ) : null}
               {marketPulseSources > 0
                 ? t(
-                    "hero.bodyShort",
-                    "live listings across {sources} sources — pricing, deal scores, and market intel in one place.",
-                  ).replace("{sources}", String(marketPulseSources))
+                    "shell.home.body",
+                    "vehicle ads from {sources} Sri Lankan sites, with price history and a fair-price range for each.",
+                    { sources: marketPulseSources },
+                  )
                 : t(
-                    "hero.bodyShortNoSources",
-                    "Live market pricing, deal scores, and intel in one place — sourced from Sri Lanka's vehicle marketplaces.",
+                    "shell.home.bodyNoCount",
+                    "Vehicle ads from Sri Lanka's marketplaces in one search, with price history and a fair-price range for each.",
                   )}
             </motion.p>
 
@@ -863,15 +817,23 @@ export default function Dashboard() {
               className={cn("mt-9 w-full max-w-2xl", heroCentered ? "mx-auto" : "text-left")}
             >
                 <div className="relative">
-                  <div className={`flex items-center gap-2 rounded-full border p-1.5 transition-all ${heroSearchShellClass}`}>
+                  <m.div
+                    animate={{ scale: heroFocused && !motionStill ? 1.015 : 1 }}
+                    transition={spring.gentle}
+                    className={cn(
+                      "flex items-center gap-2 rounded-full border p-1.5 transition-[border-color,box-shadow] duration-300",
+                      heroSearchShellClass,
+                      heroFocused && "hero-search--focused",
+                    )}
+                  >
                     <Search aria-hidden className={`ml-3.5 h-5 w-5 shrink-0 ${heroFilmTone === "cinematic" ? "text-white/55" : "text-muted-foreground"}`} />
                     <label htmlFor="hero-search" className="sr-only">{t("common.search", "Search")} vehicles</label>
                     <input
                       id="hero-search"
                       value={heroSearch}
                       onChange={(e) => { setHeroSearch(e.target.value); setHeroSearchMessage(null); setHeroActiveIdx(-1); }}
-                      onFocus={() => setHeroSuggestionsOpen(true)}
-                      onBlur={() => { window.setTimeout(() => { setHeroSuggestionsOpen(false); setHeroActiveIdx(-1); }, 120); }}
+                      onFocus={() => { setHeroSuggestionsOpen(true); setHeroFocused(true); }}
+                      onBlur={() => { setHeroFocused(false); window.setTimeout(() => { setHeroSuggestionsOpen(false); setHeroActiveIdx(-1); }, 120); }}
                       onKeyDown={(e) => {
                         if (showHeroPopular) {
                           if (e.key === "ArrowDown") {
@@ -928,7 +890,7 @@ export default function Dashboard() {
                     <button type="button" onClick={runHeroSearch} className="mr-0.5 h-11 rounded-full bg-primary px-6 text-[13px] font-semibold tracking-[-0.005em] text-white shadow-soft transition-all hover:bg-primary/95 active:scale-[0.97]">
                       {t("common.search", "Search")}
                     </button>
-                  </div>
+                  </m.div>
 
                   {showHeroPopular ? (
                     <div id="hero-suggestions" role="listbox" className="absolute inset-x-0 bottom-full z-50 mb-2 overflow-hidden rounded-[1.75rem] border border-border bg-card/95 p-1.5 shadow-soft-xl backdrop-blur-xl">
@@ -995,63 +957,278 @@ export default function Dashboard() {
                     {heroSearchMessage}
                   </p>
                 )}
+
+                {/* Category quick links — bikes and three-wheelers sit right next to cars */}
+                <nav
+                  aria-label={t("shell.home.categories", "Browse by type")}
+                  className={cn("mt-4 flex flex-wrap gap-2", heroCentered && "justify-center")}
+                >
+                  {HOME_CATEGORIES.map((cat) => {
+                    const active = (filters.vehicle_category || "cars") === cat.value;
+                    return (
+                      <m.button
+                        key={cat.value}
+                        type="button"
+                        onClick={() => browseCategory(cat.value)}
+                        aria-pressed={active}
+                        {...(motionStill ? {} : press)}
+                        className={cn(
+                          "relative isolate inline-flex min-h-10 items-center rounded-full border px-4 text-[13px] font-semibold transition-colors",
+                          heroFilmTone === "cinematic"
+                            ? active
+                              ? "border-transparent text-white"
+                              : "border-white/20 bg-black/30 text-white/90 hover:bg-white/15"
+                            : active
+                              ? "border-transparent text-primary-bright"
+                              : "border-border bg-card/80 text-foreground hover:border-primary/30",
+                        )}
+                      >
+                        {active ? (
+                          /* Selected pill slides between chips (layoutId needs motion.*). */
+                          <motion.span
+                            aria-hidden
+                            layoutId="home-category-pill"
+                            transition={motionStill ? { duration: 0 } : spring.snappy}
+                            className={cn(
+                              "absolute inset-0 -z-10 rounded-full border",
+                              heroFilmTone === "cinematic" ? "border-white/40 bg-white/20" : "border-primary/40 bg-primary/10",
+                            )}
+                          />
+                        ) : null}
+                        {t(cat.labelKey, cat.fallback)}
+                      </m.button>
+                    );
+                  })}
+                </nav>
             </motion.div>
           </div>
         </motion.div>
       </section>
 
-      {/* ── Market ticker — Kibo UI ticker (#12 UI review) ─────────────── */}
-      <MarketTicker
-        rows={trendingModels.filter((r) => isReasonableListingPrice(Number(r.avg_price_lkr || 0))).slice(0, 8)}
-        onSelect={(row) => focusModel(row.make, row.model)}
-      />
+      <section id="market" className="scroll-mt-20">
+        <div className="mx-auto max-w-[1560px] px-5 py-8 sm:px-6 lg:py-10">
 
-      {/* ── How it works — animated beam band ─────────────────────────── */}
-      <HowItWorksBand />
+          {/* Toolbar */}
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <Reveal className="flex flex-col gap-2 sm:gap-2.5">
+              <div className="flex items-baseline gap-2.5">
+                <h2 className="text-[15px] font-semibold tracking-tight text-foreground">
+                  {isPriceUnavailableMode ? t("common.unpricedInventory", "Unpriced inventory") : t("common.inventory", "Inventory")}
+                </h2>
+                {loadingListings ? (
+                  <span className="inline-block h-4 w-14 animate-pulse rounded bg-foreground/[0.03]" aria-hidden />
+                ) : (
+                  <span className="text-[13px] font-medium text-muted-foreground num" aria-live="polite">
+                    <FlowNumber value={total} label={total.toLocaleString()} />
+                    {!isPriceUnavailableMode && activeFilterLabels.length === 0 ? (
+                      <span className="ml-1 text-muted-foreground">priced</span>
+                    ) : null}
+                  </span>
+                )}
+              </div>
+              {listingFreshnessAt ? (
+                <DataFreshnessIndicator
+                  latestListingAt={liveMarketSnapshot?.latest_listing_at}
+                  lastUpdated={stats?.last_updated}
+                  variant="subline"
+                  className="normal-case tracking-normal"
+                />
+              ) : null}
+            </Reveal>
+            <div className="flex flex-wrap items-center gap-2">
+              <SortControl
+                value={filters.sort}
+                onChange={setSort}
+                priceUnavailable={isPriceUnavailableMode}
+                fullAccess={fullAccess}
+              />
+              <button
+                type="button"
+                onClick={() => setShowMobileFilter(true)}
+                className="inline-flex min-h-11 lg:hidden items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1.5 text-[12px] font-semibold text-primary-bright transition-colors hover:bg-primary/15 active:scale-[0.97]"
+                aria-label={t("filter.title", "Filters")}
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                {t("filter.title", "Filters")}
+                {activeFilterLabels.length > 0 && (
+                  <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-white">
+                    {activeFilterLabels.length}
+                  </span>
+                )}
+              </button>
+              <button type="button" onClick={() => setShowSavedListings(true)}
+                className="rounded-full border border-border px-3 py-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:border-border hover:text-foreground"
+              >{watchlistIds.length} {t("common.saved", "saved")}</button>
+              <button type="button" onClick={saveCurrentMarketAlert}
+                className="rounded-full border border-primary/15 bg-primary/5 px-3 py-1.5 text-[12px] font-medium text-primary-bright transition-colors hover:bg-primary/10"
+              >{t("common.saveAlert", "Save alert")}</button>
+              <button type="button" onClick={() => setShowMarketAlerts(true)}
+                className="rounded-full border border-border px-3 py-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >{marketAlerts.length} {t("common.alerts", "alerts")}</button>
+              <div className="hidden items-center gap-0.5 md:flex">
+                <button type="button" onClick={() => setMarketView("grid")} aria-label={t("home.gridView", "Grid view")} aria-pressed={marketView === "grid"}
+                  className={`h-8 w-8 rounded-full border transition-colors flex items-center justify-center ${marketView === "grid" ? "border-border bg-foreground/[0.03] text-foreground" : "border-transparent text-muted-foreground hover:text-muted-foreground"}`}
+                ><LayoutGrid className="h-3.5 w-3.5" /></button>
+                <button type="button" onClick={() => setMarketView("list")} aria-label={t("home.listView", "List view")} aria-pressed={marketView === "list"}
+                  className={`h-8 w-8 rounded-full border transition-colors flex items-center justify-center ${marketView === "list" ? "border-border bg-foreground/[0.03] text-foreground" : "border-transparent text-muted-foreground hover:text-muted-foreground"}`}
+                ><List className="h-3.5 w-3.5" /></button>
+              </div>
+            </div>
+          </div>
 
-      {/* ── Live intelligence (post-hero) ─────────────────────────── */}
-      <section className="border-b border-border bg-background">
-        <div className="mx-auto max-w-[1560px] px-5 py-10 sm:px-6 lg:py-14">
-          <ProFeatureLock label={t("home.liveIntelLock", "Live intelligence console")}>
-            <Suspense fallback={null}>
-              {!liveMarketSnapshot && !stats && !dashboardInsights ? (
-                <MarketIntelligenceSkeleton />
+          {/* Active filters */}
+          {activeFilterLabels.length > 0 && (
+            <div className="mb-5 flex flex-wrap items-center gap-1.5">
+              <AnimatePresence initial={false} mode="popLayout">
+                {activeFilterLabels.map((label) => (
+                  <motion.span
+                    key={label}
+                    layout={!motionStill}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9, transition: { duration: duration.fast, ease: ease.exit } }}
+                    transition={spring.snappy}
+                    className="rounded-full border border-border bg-foreground/[0.03] px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
+                  >{label}</motion.span>
+                ))}
+                <motion.button key="__clear" layout={!motionStill} transition={spring.snappy} type="button" onClick={() => setFilters({ ...EMPTY_FILTERS })}
+                  className="rounded-full px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >{t("common.clearAll", "Clear all")}</motion.button>
+              </AnimatePresence>
+            </div>
+          )}
+
+          {newLiveListingsAvailable && (
+            <div className="mb-5 flex items-center justify-between rounded-2xl border border-primary/15 bg-primary/5 px-4 py-2.5">
+              <span className="text-[12px] font-semibold text-primary-bright">New listings available</span>
+              <button type="button" onClick={() => { setFilters((p) => ({ ...p, sort: "newest", page: 1 })); setNewLiveListingsAvailable(false); }}
+                className="text-[12px] font-semibold text-primary-bright transition-colors hover:text-primary-bright"
+              >Refresh</button>
+            </div>
+          )}
+
+          <DataFreshnessIndicator
+            latestListingAt={liveMarketSnapshot?.latest_listing_at}
+            lastUpdated={stats?.last_updated}
+            variant="banner"
+            className="mb-5"
+          />
+          <SnapshotModeNotice className="mb-5" />
+
+          {/* Filters + Grid */}
+          <div className="flex flex-col items-start gap-6 lg:flex-row">
+            <div className="w-full shrink-0 self-start lg:sticky lg:top-20 lg:w-[300px]">
+              <FilterSidebar filters={filters} onFiltersChange={setFilters} />
+            </div>
+
+            <m.div
+              className="min-w-0 flex-1"
+              animate={{ opacity: refreshingListings ? 0.55 : 1 }}
+              transition={{ duration: refreshingListings ? duration.fast : duration.base, ease: ease.standard }}
+              aria-busy={refreshingListings || undefined}
+            >
+              {loadingListings ? (
+                <div className={marketView === "grid" ? "grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3" : "space-y-3"}>
+                  {Array.from({ length: marketView === "grid" ? 9 : 6 }).map((_, i) => (
+                    <ListingCardSkeleton key={`skel-${i}`} />
+                  ))}
+                </div>
+              ) : listingsFailed ? (
+                <div className="flex flex-col items-center justify-center gap-3 rounded-[2rem] border border-border bg-surface px-4 py-20 text-center">
+                  <p className="text-sm font-semibold text-foreground">
+                    {t("home.listingsErrorTitle", "We couldn't load listings just now")}
+                  </p>
+                  <p className="max-w-sm text-sm text-muted-foreground">
+                    {t("home.listingsErrorBody", "This is usually a short outage on our side. Your filters are kept. Try again in a moment.")}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={retryListings}
+                    className="min-h-11 rounded-2xl border border-border bg-card px-5 py-3 text-[13px] font-medium text-foreground transition-colors hover:border-primary/30 hover:text-primary-bright"
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : listings.length === 0 ? (
+                <NoResultsState
+                  filters={filters}
+                  onFiltersChange={(next) => setFilters(next)}
+                  onCreateAlert={() => { void createNoResultsAlert(); }}
+                  alertStatus={noResultsAlertStatus}
+                  isSignedIn={isAuthenticated}
+                />
+              ) : marketView === "grid" ? (
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+                  {/* Cards self-reveal on scroll (ListingCard revealIndex caps the stagger). */}
+                  {listings.map((listing, index) => (
+                    <ListingCard key={listing.id} listing={listing} priority={index < 6} revealIndex={index} onCompareToggle={toggleCompare} isComparing={compareIdSet.has(listing.id)} onWatchlistToggle={toggleWatchlist} isWatchlisted={watchlistIdSet.has(listing.id)} />
+                  ))}
+                </div>
               ) : (
-                <MarketIntelligencePanel snapshot={liveMarketSnapshot} stats={stats} insights={dashboardInsights} />
+                <motion.div
+                  initial="hidden"
+                  animate="show"
+                  variants={cardContainerVariants}
+                  className="space-y-3"
+                >
+                  {listings.map((listing) => {
+                    const hasPrice = isReasonableListingPrice(Number(listing.price_lkr));
+                    return (
+                      <motion.div key={listing.id} variants={cardItemVariants}>
+                        <Link to={`/listing/${listing.id}`} className="inventory-tile group flex items-center gap-4 p-3 no-underline active:scale-[0.99]">
+                          <div className="h-16 w-24 shrink-0 overflow-hidden rounded-2xl bg-black/30">
+                            <VehicleThumbnail src={pickVehicleImageUrl([listing.thumbnail_url, ...(Array.isArray(listing.images) ? listing.images : [])], [listing.detail_url])} listingId={listing.id} source={listing.source} alt={`${listing.make} ${listing.model}`} className="w-full h-full object-cover" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[14px] font-semibold text-foreground group-hover:text-primary transition-colors">{listing.make} {listing.model} {listing.variant || ""}</p>
+                            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{listing.year || "N/A"} · {listing.district || "N/A"} · {listing.source}</p>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            {hasPrice ? (
+                              <p className="text-[14px] font-bold text-foreground num">{formatPrice(Number(listing.price_lkr))}</p>
+                            ) : <PriceUnavailableBadge label="N/A" className="text-[10px]" />}
+                            {fullAccess && listing.deal_score != null && (
+                              <p className={`mt-0.5 text-[10px] font-bold num ${Number(listing.deal_score) >= 0 ? "text-primary-bright" : "text-muted-foreground"}`}>
+                                {Number(listing.deal_score) >= 0 ? "+" : ""}{Number(listing.deal_score).toFixed(0)} deal
+                              </p>
+                            )}
+                            {!fullAccess && (
+                              <p className="mt-0.5 text-[10px] font-semibold text-muted-foreground/70">Pro score</p>
+                            )}
+                          </div>
+                          <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+                        </Link>
+                      </motion.div>
+                    );
+                  })}
+                </motion.div>
               )}
-            </Suspense>
-          </ProFeatureLock>
+
+              {/* Pagination — everyone, guests included */}
+              {!loadingListings && !listingsFailed && listings.length > 0 ? (
+                <SearchPagination
+                  page={filters.page}
+                  totalPages={totalPages}
+                  total={total}
+                  pageSize={LISTINGS_PAGE_SIZE}
+                  onPageChange={goToPage}
+                />
+              ) : null}
+              {!fullAccess && listings.length > 0 ? (
+                <div className="mt-6">
+                  <UpgradePrompt
+                    variant="strip"
+                    title={freePlanCopy.scoresTitle}
+                    body={freePlanCopy.scoresBody}
+                  />
+                </div>
+              ) : null}
+            </m.div>
+          </div>
         </div>
       </section>
 
-      {/* ── Market trust bar — three real numbers, no photos ─────── */}
-      <section className="border-b border-border bg-background">
-        <div className="mx-auto max-w-[1560px] px-5 py-8 sm:px-6">
-          <dl className="grid gap-x-8 gap-y-6 sm:grid-cols-3">
-            <div>
-              <dt className="text-[13px] font-medium text-muted-foreground">Vehicle types covered</dt>
-              <dd className="mt-1 text-[15px] font-semibold text-foreground">
-                Cars, vans, SUVs, bikes and more
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[13px] font-medium text-muted-foreground">Verified signals</dt>
-              <dd className="mt-1 text-[15px] font-semibold text-foreground">
-                Deal scores and seller trust on every listing
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[13px] font-medium text-muted-foreground">Data freshness</dt>
-              <dd className="mt-1 text-[15px] font-semibold text-foreground">
-                Re-scanned across sources every few hours
-              </dd>
-            </div>
-          </dl>
-        </div>
-      </section>
-
-      {/* ── INVENTORY ───────────────────────────────────────────── */}
-      {/* Market pulse showcase: curated proof-of-inventory above the grid */}
+      {/* ── Market pulse — what's moving (below the listings grid) ───── */}
       <RevealSection className="border-t border-border">
         <div className="mx-auto max-w-[1560px] px-5 py-14 sm:px-6 lg:py-20">
           <SectionHeader eyebrow={t("home.marketPulse", "Market pulse")} title={t("home.whatsMoving", "What's moving right now")} />
@@ -1087,7 +1264,7 @@ export default function Dashboard() {
             </div>
 
             {/* Hot deals */}
-            <ProFeatureLock label={t("home.bestDealsLock", "Best deals scoring")}>
+            <ProFeatureLock label={t("shell.home.bestDealsLock", "Best deals")}>
             <div>
               <div className="mb-5 flex items-center justify-between">
                 <h3 className="font-display text-base font-semibold tracking-tight text-foreground flex items-center gap-2">
@@ -1154,256 +1331,54 @@ export default function Dashboard() {
                   ))}
                 </div>
               ) : (
-                <p className="text-[11px] text-muted-foreground">No cuts caught in the last 7 days &mdash; tracking is scan-over-scan.</p>
+                <p className="text-[11px] text-muted-foreground">{t("shell.home.noCuts", "No price cuts spotted in the last 7 days.")}</p>
               )}
             </div>
           </div>
         </div>
       </RevealSection>
 
-      <section id="market" className="scroll-mt-20">
-        <div className="mx-auto max-w-[1560px] px-5 py-8 sm:px-6 lg:py-10">
-
-          {/* Toolbar */}
-          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-col gap-2 sm:gap-2.5">
-              <div className="flex items-baseline gap-2.5">
-                <h2 className="text-[15px] font-semibold tracking-tight text-foreground">
-                  {isPriceUnavailableMode ? t("common.unpricedInventory", "Unpriced inventory") : t("common.inventory", "Inventory")}
-                </h2>
-                {loadingListings ? (
-                  <span className="inline-block h-4 w-14 animate-pulse rounded bg-foreground/[0.03]" aria-hidden />
-                ) : (
-                  <span className="text-[13px] font-medium text-muted-foreground num" aria-live="polite">
-                    {total.toLocaleString()}
-                    {!isPriceUnavailableMode && activeFilterLabels.length === 0 ? (
-                      <span className="ml-1 text-muted-foreground">priced</span>
-                    ) : null}
-                  </span>
-                )}
-              </div>
-              {listingFreshnessAt ? (
-                <DataFreshnessIndicator
-                  latestListingAt={liveMarketSnapshot?.latest_listing_at}
-                  lastUpdated={stats?.last_updated}
-                  variant="subline"
-                  className="normal-case tracking-normal"
-                />
-              ) : null}
+      {/* ── Trust bar — only claims this page backs with data ─────── */}
+      <section className="border-b border-border bg-background">
+        <div className="mx-auto max-w-[1560px] px-5 py-8 sm:px-6">
+          <dl className="grid gap-x-8 gap-y-6 sm:grid-cols-3">
+            <div>
+              <dt className="text-[13px] font-medium text-muted-foreground">{t("shell.home.trust.sources", "Sources")}</dt>
+              <dd className="mt-1 text-[15px] font-semibold text-foreground">
+                {marketPulseSources > 0
+                  ? t("shell.home.trust.sourcesValue", "{n} Sri Lankan marketplaces, credited on every listing", { n: marketPulseSources })
+                  : t("shell.home.trust.sourcesFallback", "Sri Lankan marketplaces, credited on every listing")}
+              </dd>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShowMobileFilter(true)}
-                className="inline-flex lg:hidden items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1.5 text-[12px] font-semibold text-primary-bright transition-colors hover:bg-primary/15 active:scale-[0.97]"
-                aria-label={t("filter.title", "Filters")}
-              >
-                <SlidersHorizontal className="h-3.5 w-3.5" />
-                {t("filter.title", "Filters")}
-                {activeFilterLabels.length > 0 && (
-                  <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-white">
-                    {activeFilterLabels.length}
-                  </span>
-                )}
-              </button>
-              <button type="button" onClick={() => setShowSavedListings(true)}
-                className="rounded-full border border-border px-3 py-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:border-border hover:text-foreground"
-              >{watchlistIds.length} {t("common.saved", "saved")}</button>
-              <button type="button" onClick={saveCurrentMarketAlert}
-                className="rounded-full border border-primary/15 bg-primary/5 px-3 py-1.5 text-[12px] font-medium text-primary-bright transition-colors hover:bg-primary/10"
-              >{t("common.saveAlert", "Save alert")}</button>
-              <button type="button" onClick={() => setShowMarketAlerts(true)}
-                className="rounded-full border border-border px-3 py-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >{marketAlerts.length} {t("common.alerts", "alerts")}</button>
-              <div className="hidden items-center gap-0.5 md:flex">
-                <button type="button" onClick={() => setMarketView("grid")} aria-label={t("home.gridView", "Grid view")} aria-pressed={marketView === "grid"}
-                  className={`h-8 w-8 rounded-full border transition-colors flex items-center justify-center ${marketView === "grid" ? "border-border bg-foreground/[0.03] text-foreground" : "border-transparent text-muted-foreground hover:text-muted-foreground"}`}
-                ><LayoutGrid className="h-3.5 w-3.5" /></button>
-                <button type="button" onClick={() => setMarketView("list")} aria-label={t("home.listView", "List view")} aria-pressed={marketView === "list"}
-                  className={`h-8 w-8 rounded-full border transition-colors flex items-center justify-center ${marketView === "list" ? "border-border bg-foreground/[0.03] text-foreground" : "border-transparent text-muted-foreground hover:text-muted-foreground"}`}
-                ><List className="h-3.5 w-3.5" /></button>
-              </div>
+            <div>
+              <dt className="text-[13px] font-medium text-muted-foreground">{t("shell.home.trust.types", "Vehicle types")}</dt>
+              <dd className="mt-1 text-[15px] font-semibold text-foreground">
+                {t("shell.home.trust.typesValue", "Cars, bikes, three-wheelers, vans and lorries")}
+              </dd>
             </div>
-          </div>
-
-          {/* Active filters */}
-          {activeFilterLabels.length > 0 && (
-            <div className="mb-5 flex flex-wrap items-center gap-1.5">
-              {activeFilterLabels.map((label) => (
-                <span key={label} className="rounded-full border border-border bg-foreground/[0.03] px-2.5 py-1 text-[11px] font-medium text-muted-foreground">{label}</span>
-              ))}
-              <button type="button" onClick={() => setFilters({ sort: "newest", page: 1, vehicle_category: "cars" })}
-                className="rounded-full px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >Clear all</button>
-            </div>
-          )}
-
-          {newLiveListingsAvailable && (
-            <div className="mb-5 flex items-center justify-between rounded-2xl border border-primary/15 bg-primary/5 px-4 py-2.5">
-              <span className="text-[12px] font-semibold text-primary-bright">New listings available</span>
-              <button type="button" onClick={() => { setFilters((p) => ({ ...p, sort: "newest", page: 1 })); setNewLiveListingsAvailable(false); }}
-                className="text-[12px] font-semibold text-primary-bright transition-colors hover:text-primary-bright"
-              >Refresh</button>
-            </div>
-          )}
-
-          <DataFreshnessIndicator
-            latestListingAt={liveMarketSnapshot?.latest_listing_at}
-            lastUpdated={stats?.last_updated}
-            variant="banner"
-            className="mb-5"
-          />
-          <SnapshotModeNotice className="mb-5" />
-
-          {/* Filters + Grid */}
-          <div className="flex flex-col items-start gap-6 lg:flex-row">
-            <div className="w-full shrink-0 self-start lg:sticky lg:top-20 lg:w-[300px]">
-              <FilterSidebar filters={filters} onFiltersChange={setFilters} />
-            </div>
-
-            <div className="min-w-0 flex-1">
-              {loadingListings ? (
-                <div className={marketView === "grid" ? "grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3" : "space-y-3"}>
-                  {Array.from({ length: marketView === "grid" ? 9 : 6 }).map((_, i) => (
-                    <ListingCardSkeleton key={`skel-${i}`} />
-                  ))}
-                </div>
-              ) : listingsFailed ? (
-                <div className="flex flex-col items-center justify-center gap-3 rounded-[2rem] border border-border bg-surface px-4 py-20 text-center">
-                  <p className="text-sm font-semibold text-foreground">
-                    {t("home.listingsErrorTitle", "We couldn't load listings just now")}
-                  </p>
-                  <p className="max-w-sm text-sm text-muted-foreground">
-                    {t("home.listingsErrorBody", "This is usually a short outage on our side. Your filters are kept. Try again in a moment.")}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={retryListings}
-                    className="min-h-11 rounded-2xl border border-border bg-card px-5 py-3 text-[13px] font-medium text-foreground transition-colors hover:border-primary/30 hover:text-primary-bright"
-                  >
-                    Retry
-                  </button>
-                </div>
-              ) : listings.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-[2rem] border border-dashed border-border px-4 py-16 text-center">
-                  <AtmosphericImage
-                    src={visuals.emptyState.src}
-                    srcSm={visuals.emptyState.srcSm}
-                    className="mb-5 h-28 w-auto max-w-[220px] object-contain opacity-90"
-                    sizes="220px"
+            <div>
+              <dt className="text-[13px] font-medium text-muted-foreground">{t("shell.home.trust.updated", "Last updated")}</dt>
+              <dd className="mt-1 text-[15px] font-semibold text-foreground">
+                {listingFreshnessAt ? (
+                  <DataFreshnessIndicator
+                    latestListingAt={liveMarketSnapshot?.latest_listing_at}
+                    lastUpdated={stats?.last_updated}
+                    variant="subline"
+                    className="text-[15px] font-semibold normal-case tracking-normal text-foreground"
                   />
-                  <p className="text-[13px] font-semibold text-foreground">{t("home.noResults", "No results")}</p>
-                  <p className="mt-2 text-sm text-muted-foreground">{t("home.widenFilters", "Widen your filters or clear them to browse.")}</p>
-                  <button type="button" onClick={() => setFilters({ sort: "newest", page: 1, vehicle_category: "cars" })}
-                    className="mt-4 min-h-11 rounded-2xl border border-border px-5 py-3 text-[13px] font-semibold text-foreground transition-colors hover:bg-foreground/[0.03] active:scale-[0.98]"
-                  >Reset filters</button>
-                  <button
-                    type="button"
-                    onClick={() => setShowMobileFilter(true)}
-                    className="mt-2 min-h-11 rounded-2xl bg-primary px-5 py-3 text-[13px] font-bold text-primary-foreground transition-colors hover:bg-primary/95 active:scale-[0.98]"
-                  >
-                    {t("home.adjustFilters", "Adjust filters")}
-                  </button>
-                </div>
-              ) : marketView === "grid" ? (
-                <motion.div
-                  initial="hidden"
-                  animate="show"
-                  variants={cardContainerVariants}
-                  className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3"
-                >
-                  {listings.map((listing, index) => (
-                    <motion.div key={listing.id} variants={cardItemVariants}>
-                      <ListingCard listing={listing} priority={index < 6} onCompareToggle={toggleCompare} isComparing={compareIdSet.has(listing.id)} onWatchlistToggle={toggleWatchlist} isWatchlisted={watchlistIdSet.has(listing.id)} />
-                    </motion.div>
-                  ))}
-                </motion.div>
-              ) : (
-                <motion.div
-                  initial="hidden"
-                  animate="show"
-                  variants={cardContainerVariants}
-                  className="space-y-3"
-                >
-                  {listings.map((listing) => {
-                    const hasPrice = isReasonableListingPrice(Number(listing.price_lkr));
-                    return (
-                      <motion.div key={listing.id} variants={cardItemVariants}>
-                        <Link to={`/listing/${listing.id}`} className="inventory-tile group flex items-center gap-4 p-3 no-underline active:scale-[0.99]">
-                          <div className="h-16 w-24 shrink-0 overflow-hidden rounded-2xl bg-black/30">
-                            <VehicleThumbnail src={pickVehicleImageUrl([listing.thumbnail_url, ...(Array.isArray(listing.images) ? listing.images : [])], [listing.detail_url])} listingId={listing.id} source={listing.source} alt={`${listing.make} ${listing.model}`} className="w-full h-full object-cover" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-[14px] font-semibold text-foreground group-hover:text-primary transition-colors">{listing.make} {listing.model} {listing.variant || ""}</p>
-                            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{listing.year || "N/A"} · {listing.district || "N/A"} · {listing.source}</p>
-                          </div>
-                          <div className="shrink-0 text-right">
-                            {hasPrice ? (
-                              <p className="text-[14px] font-bold text-foreground num">{formatPrice(Number(listing.price_lkr))}</p>
-                            ) : <PriceUnavailableBadge label="N/A" className="text-[10px]" />}
-                            {fullAccess && listing.deal_score != null && (
-                              <p className={`mt-0.5 text-[10px] font-bold num ${Number(listing.deal_score) >= 0 ? "text-primary-bright" : "text-muted-foreground"}`}>
-                                {Number(listing.deal_score) >= 0 ? "+" : ""}{Number(listing.deal_score).toFixed(0)} deal
-                              </p>
-                            )}
-                            {!fullAccess && (
-                              <p className="mt-0.5 text-[10px] font-semibold text-muted-foreground/70">Pro score</p>
-                            )}
-                          </div>
-                          <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
-                        </Link>
-                      </motion.div>
-                    );
-                  })}
-                </motion.div>
-              )}
-
-              {/* Pagination / free upgrade ceiling */}
-              {fullAccess && totalPages > 1 && (
-                <div className="mt-8 flex items-center justify-between border-t border-border pt-6">
-                  <p className="text-[11px] text-muted-foreground">
-                    <span className="num text-foreground">{(filters.page - 1) * LISTINGS_PAGE_SIZE + 1}–{Math.min(filters.page * LISTINGS_PAGE_SIZE, total)}</span> of {total.toLocaleString()}
-                  </p>
-                  <div className="flex items-center gap-1.5">
-                    <button type="button" aria-label="Previous page" disabled={filters.page <= 1} onClick={() => setFilters((p) => ({ ...p, page: Math.max(1, p.page - 1) }))}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
-                    ><ChevronLeft className="h-3.5 w-3.5" /></button>
-                    <span className="px-2 text-[11px] font-semibold text-muted-foreground num">{filters.page} / {totalPages}</span>
-                    <button type="button" aria-label="Next page" disabled={filters.page >= totalPages} onClick={() => setFilters((p) => ({ ...p, page: p.page + 1 }))}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
-                    ><ChevronRight className="h-3.5 w-3.5" /></button>
-                  </div>
-                </div>
-              )}
-              {!fullAccess && (
-                <div className="mt-8 space-y-3 border-t border-border pt-6">
-                  <p className="text-[11px] text-muted-foreground">
-                    Showing <span className="num font-semibold text-foreground">{Math.min(listings.length, freeVisibleCap)}</span> of{" "}
-                    <span className="num font-semibold text-foreground">{total.toLocaleString()}</span> live listings on Free
-                  </p>
-                  {freeHitListingCap ? (
-                    <UpgradePrompt
-                      variant="strip"
-                      title={freePlanCopy.listingsTitle}
-                      body={freePlanCopy.listingsBody}
-                    />
-                  ) : (
-                    <UpgradePrompt
-                      variant="strip"
-                      title={freePlanCopy.scoresTitle}
-                      body={freePlanCopy.scoresBody}
-                    />
-                  )}
-                </div>
-              )}            </div>
-          </div>
+                ) : (
+                  t("shell.home.trust.updatedPending", "Waiting for the first update")
+                )}
+              </dd>
+            </div>
+          </dl>
         </div>
       </section>
 
       {/* ── MARKET PULSE ────────────────────────────────────────── */}
       <RevealSection className="border-t border-border">
         <div className="mx-auto max-w-[1560px] px-5 py-14 sm:px-6 lg:py-20">
-          <SectionHeader eyebrow={t("home.deeperIntel", "Deeper intelligence")} title={t("home.deeperTitle", "Fuel mix, market signals & regional momentum")} />
+          <SectionHeader eyebrow={t("shell.home.moreData", "More market data")} title={t("shell.home.moreDataTitle", "Fuel mix, price signals and demand by district")} />
           <div className="space-y-6">
             <FuelMixStrip />
             <MarketSignalsStrip />
@@ -1411,19 +1386,19 @@ export default function Dashboard() {
 
           {/* District demand velocity */}
           <div className="mt-12 border-t border-border pt-8">
-            <ProFeatureLock label="District demand velocity">
+            <ProFeatureLock label={t("shell.home.districtDemandLock", "Demand by district")}>
             <div className="mb-5 flex items-center justify-between">
               <div>
-                <p className="text-[13px] font-medium text-primary">Demand velocity</p>
+                <p className="text-[13px] font-medium text-primary">{t("shell.home.districtDemand", "Demand by district")}</p>
                 <h3 className="mt-1 font-display text-base font-semibold tracking-tight text-foreground">
-                  Regional listing momentum — last 7 days
+                  {t("shell.home.districtDemandTitle", "Where new ads are appearing — last 7 days")}
                 </h3>
               </div>
               <Link
                 to="/#market"
                 className="flex items-center gap-1 text-[12px] font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright"
               >
-                Market feed <ArrowUpRight className="h-3 w-3" />
+                {t("shell.home.allListings", "All listings")} <ArrowUpRight className="h-3 w-3" />
               </Link>
             </div>
             <Suspense
@@ -1453,14 +1428,14 @@ export default function Dashboard() {
 
           {/* Tool links */}
           <div className="mt-12 border-t border-border pt-8">
-            <p className="mb-4 text-[13px] font-medium text-muted-foreground">Intelligence tools</p>
+            <p className="mb-4 text-[13px] font-medium text-muted-foreground">{t("shell.nav.tools", "Tools")}</p>
             <div className="flex flex-wrap gap-2">
             {[
-              { label: "Valuation", to: "/estimate" },
-              { label: "Trends", to: "/trends" },
-              { label: "Calculator", to: "/calculator" },
-              { label: "EV Hub", to: "/ev-hub" },
-              { label: "Official Pulse", to: "/official-pulse" },
+              { label: t("shell.nav.valueMyVehicle", "What's my vehicle worth?"), to: "/estimate" },
+              { label: t("shell.nav.priceTrends", "Price trends"), to: "/trends" },
+              { label: t("shell.nav.importTax", "Import tax calculator"), to: "/calculator" },
+              { label: t("shell.nav.electric", "Electric & hybrid"), to: "/ev-hub" },
+              { label: t("shell.nav.officialUpdates", "Tax & customs updates"), to: "/official-pulse" },
             ].map((tool) => (
               <Link key={tool.label} to={tool.to}
                 className="group/tool flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2.5 text-[12px] font-semibold text-foreground no-underline transition-all hover:border-primary/30 hover:bg-primary/[0.06] hover:shadow-soft active:scale-[0.98]"
@@ -1475,75 +1450,27 @@ export default function Dashboard() {
       </RevealSection>
 
 
-      {/* ── Source marquee — Marquee (#11 UI review) ───────────────────── */}
-      <SourceMarquee
+      {/* ── Market overview (Pro) — deliberately low on the page ─────── */}
+      <section className="border-b border-border bg-background">
+        <div className="mx-auto max-w-[1560px] px-5 py-10 sm:px-6 lg:py-14">
+          <ProFeatureLock label={t("shell.home.marketOverviewLock", "Full market overview")}>
+            <Suspense fallback={null}>
+              {!liveMarketSnapshot && !stats && !dashboardInsights ? (
+                <MarketIntelligenceSkeleton />
+              ) : (
+                <MarketIntelligencePanel snapshot={liveMarketSnapshot} stats={stats} insights={dashboardInsights} />
+              )}
+            </Suspense>
+          </ProFeatureLock>
+        </div>
+      </section>
+
+      {/* ── Sources — static credit list (no marquee) ──────────────── */}
+      <SourceCredits
         items={(liveMarketSnapshot?.source_status || [])
           .filter((st) => Number(st.listings_found || 0) > 0)
           .map((st) => ({ source: st.source, listings: Number(st.listings_found || 0) }))}
       />
-
-      {/* ── COMPARE BAR ─────────────────────────────────────────── */}
-      {compareIds.length > 0 && (
-        <div className="fixed bottom-24 left-1/2 z-[1200] w-[min(94vw,720px)] -translate-x-1/2 md:bottom-4">
-          <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card/95 px-3 py-2.5 shadow-soft-xl backdrop-blur-xl md:px-4">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex -space-x-2">
-                {compareListings.slice(0, 4).map((listing) => (
-                  <div
-                    key={listing.id}
-                    className="relative h-9 w-9 overflow-hidden rounded-2xl border-2 border-card bg-muted ring-1 ring-border"
-                  >
-                    <VehicleThumbnail
-                      src={pickVehicleImageUrl(
-                        [listing.thumbnail_url, ...(Array.isArray(listing.images) ? listing.images : [])],
-                        [listing.detail_url],
-                      )}
-                      listingId={listing.id}
-                      alt={`${listing.make} ${listing.model}`}
-                      className="h-full w-full object-cover"
-                      placeholderClassName="flex h-full w-full items-center justify-center bg-muted"
-                    />
-                  </div>
-                ))}
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-[12px] font-semibold text-foreground">
-                  {compareIds.length} selected to compare
-                </p>
-                <p className="truncate text-[10px] text-muted-foreground">
-                  {compareIds.length < 2 ? "Add one more vehicle" : "Ready to compare side-by-side"}
-                </p>
-              </div>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setCompareListings([])}
-                className="flex h-9 items-center gap-1 rounded-xl border border-border px-3 text-[11px] font-semibold text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <X className="h-3 w-3" /> Clear
-              </button>
-              <button
-                type="button"
-                disabled={compareIds.length < 2}
-                onClick={() => setShowCompare(true)}
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-primary px-4 text-[11px] font-bold text-primary-foreground transition-colors hover:bg-primary/95 disabled:opacity-40"
-              >
-                <Scale className="h-3.5 w-3.5" />
-                Compare
-              </button>
-              {compareIds.length >= 2 && (
-                <Link
-                  to={`/compare?ids=${compareIds.slice(0, 4).join(",")}`}
-                  className="inline-flex h-9 items-center gap-1 rounded-xl border border-border bg-card px-3 text-[11px] font-semibold text-foreground no-underline transition-colors hover:border-primary/30 hover:bg-primary/10 hover:text-primary-bright"
-                >
-                  Full page
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── DIALOGS ─────────────────────────────────────────────── */}
       <Dialog open={showMarketAlerts} onOpenChange={setShowMarketAlerts}>
@@ -1552,7 +1479,7 @@ export default function Dashboard() {
             <DialogTitle className="font-display text-lg font-semibold tracking-tight">Market alerts</DialogTitle>
           </DialogHeader>
           <div className="rounded-2xl border border-border bg-surface p-4">
-            <p className="text-[11px] font-medium text-muted-foreground">Current lane</p>
+            <p className="text-[11px] font-medium text-muted-foreground">{t("shell.home.currentSearch", "Current search")}</p>
             <p className="mt-1.5 text-[13px] font-semibold text-foreground">{currentAlertSummary}</p>
             <div className="mt-3 flex gap-2">
               <Input value={alertPriceInput} onChange={(e) => setAlertPriceInput(e.target.value.replace(/[^\d]/g, ""))} inputMode="numeric" placeholder="Target max price (LKR)" className="h-9 flex-1 rounded-2xl border-border bg-transparent text-base md:text-sm" />
@@ -1568,7 +1495,7 @@ export default function Dashboard() {
                     <p className="mt-0.5 text-[11px] text-muted-foreground">{alert.target_price_lkr ? `Under ${formatPrice(alert.target_price_lkr)}` : t("home.newListingsAvailable", "New listings available")}</p>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <button type="button" onClick={() => { setFilters({ ...(alert.filters as FilterState), sort: alert.filters.sort || "newest", page: 1 }); setShowMarketAlerts(false); scrollToMarket(); }}
+                    <button type="button" onClick={() => { setFilters({ ...(alert.filters as FilterState), sort: alert.filters.sort || DEFAULT_SORT, page: 1 }); setShowMarketAlerts(false); scrollToMarket(); }}
                       className="h-7 rounded-full border border-primary/15 bg-primary/5 px-2.5 text-[10px] font-semibold text-primary-bright transition-all hover:bg-primary/10 active:scale-[0.95]">Open</button>
                     <button type="button" onClick={() => deleteMarketAlert(alert.id)}
                       className="h-7 rounded-full border border-border px-2.5 text-[10px] font-semibold text-muted-foreground transition-all hover:text-foreground active:scale-[0.95]">Delete</button>
@@ -1632,9 +1559,6 @@ export default function Dashboard() {
         />
       </Suspense>
 
-      <Suspense fallback={null}>
-        <ComparisonModal listings={compareListings} open={showCompare} onClose={() => setShowCompare(false)} />
-      </Suspense>
     </div>
   );
 }

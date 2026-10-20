@@ -13,6 +13,7 @@ import {
   type AffordabilityAssumptions,
   type AffordabilityBreakdown,
 } from "@/lib/affordability";
+import { formatLkrMonthly } from "@/lib/price";
 
 const STORAGE_KEY = "motormila.afford.v1";
 
@@ -96,7 +97,7 @@ function ResultCard({
         <dt className="text-muted-foreground">{t("afford.loan", "Loan / lease")}</dt>
         <dd className="num text-right font-semibold">{formatPrice(result.loanLkr)}</dd>
         <dt className="text-muted-foreground">{t("afford.monthly", "Monthly")}</dt>
-        <dd className="num text-right font-semibold">{formatPrice(result.monthlyLkr)}</dd>
+        <dd className="num text-right font-semibold">{formatLkrMonthly(result.monthlyLkr)}</dd>
       </dl>
       <p className="mt-3 text-[12px] text-muted-foreground">{limitText}</p>
       {result.maxPriceLkr > 0 && (

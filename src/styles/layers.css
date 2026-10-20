@@ -1,0 +1,115 @@
+/* ============================================================================
+   Floating layers & bottom dock (ui/shell)
+
+   One z-index scale for everything that floats, and one bottom area that the
+   mobile nav, the chat button, the compare tray and the app promo all share.
+   Tailwind exposes the same scale as `z-base`, `z-sticky`, `z-floating`,
+   `z-bottom-nav`, `z-header`, `z-overlay`, `z-modal`, `z-toast`, `z-skip`,
+   `z-devtools` (see tailwind.config.ts → theme.extend.zIndex).
+
+   Order, low → high:
+     base       in-flow content that needs to sit above section backgrounds
+     sticky     in-page sticky bars (filters, table headers)
+     floating   chat button, compare tray, app promo strip
+     bottom-nav mobile bottom navigation
+     header     site header (+ its menus)
+     overlay    chat panel + its backdrop
+     modal      blocking dialogs (shadcn dialogs/sheets use z-50 = header,
+                and portal after the header so they still paint on top)
+     toast      sonner toasts
+     skip       skip-to-content link
+     devtools   dev-only tooling (font studio, hero lab)
+   ========================================================================== */
+
+:root {
+  --z-base: 1;
+  --z-sticky: 20;
+  --z-floating: 40;
+  --z-bottom-nav: 45;
+  --z-header: 50;
+  --z-overlay: 60;
+  --z-modal: 70;
+  --z-toast: 80;
+  --z-skip: 90;
+  --z-devtools: 100;
+
+  /* Height the bottom nav reserves on mobile: 12px gap + 64px bar + safe area. */
+  --dock-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  /* Extra stack height claimed by a transient strip (app promo) above the nav. */
+  --dock-extra: 0px;
+  --dock-gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --dock-bottom: 0px;
+    --dock-gap: 1.5rem;
+  }
+}
+
+/* Anything floating above the dock (chat button, compare tray). */
+.dock-float {
+  position: fixed;
+  bottom: calc(var(--dock-bottom) + var(--dock-extra) + var(--dock-gap));
+  z-index: var(--z-floating);
+  transition: bottom 200ms ease, opacity 150ms ease, transform 150ms ease;
+}
+
+/* Transient strip sitting directly on top of the nav (mobile) / corner (desktop). */
+.dock-strip {
+  position: fixed;
+  bottom: calc(var(--dock-bottom) + var(--dock-gap));
+  z-index: var(--z-floating);
+}
+
+/* Page content never ends under the dock: room for nav + one floating button. */
+.app-shell-dock-pad {
+  padding-bottom: calc(var(--dock-bottom) + var(--dock-extra) + 4.5rem);
+}
+@media (min-width: 768px) {
+  .app-shell-dock-pad { padding-bottom: 0; }
+}
+
+/* Chat widget positioning (replaces the old fixed 9997-9999 values). */
+.aw-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  background: rgba(0, 0, 0, 0.25);
+}
+.aw-fab-wrapper {
+  right: 1rem;
+}
+@media (min-width: 768px) {
+  .aw-fab-wrapper { right: 1.5rem; }
+}
+.aw-panel-wrapper {
+  position: fixed;
+  right: 0.625rem;
+  bottom: calc(var(--dock-bottom) + var(--dock-gap) + 4rem);
+  width: 420px;
+  max-width: calc(100vw - 1.25rem);
+  height: min(650px, calc(100dvh - var(--dock-bottom) - var(--dock-gap) - 4rem - var(--nav-offset, 4.75rem)));
+  z-index: var(--z-overlay);
+}
+@media (min-width: 768px) {
+  .aw-panel-wrapper { right: 1.5rem; bottom: calc(var(--dock-gap) + 4.25rem); }
+}
+/* Keyboard open on a phone: the chat button must never sit over a field. */
+html[data-typing="true"] .aw-fab-wrapper,
+html[data-typing="true"] .dock-hide-when-typing {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.9);
+}
+@media (min-width: 768px) {
+  html[data-typing="true"] .aw-fab-wrapper,
+  html[data-typing="true"] .dock-hide-when-typing {
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dock-float { transition: none; }
+}

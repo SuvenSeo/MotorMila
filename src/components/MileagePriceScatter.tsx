@@ -9,6 +9,7 @@ import {
   YAxis,
 } from "recharts";
 import { formatPriceLkrMillions } from "@/lib/formatting";
+import { formatLkrAxis } from "@/lib/price";
 
 export interface MileagePricePoint {
   mileage: number;
@@ -79,7 +80,7 @@ export const MileagePriceScatter = memo(function MileagePriceScatter({
                 fill: "hsl(var(--muted-foreground))",
                 fontSize: 10,
                 fontWeight: 600,
-                fontFamily: "Nofex",
+                fontFamily: "Inter, system-ui, sans-serif",
               }}
               tickFormatter={formatKm}
               label={{
@@ -89,7 +90,7 @@ export const MileagePriceScatter = memo(function MileagePriceScatter({
                 style: {
                   fill: "hsl(var(--muted-foreground))",
                   fontSize: 11,
-                  fontFamily: "Nofex",
+                  fontFamily: "Inter, system-ui, sans-serif",
                   fontWeight: 500,
                   letterSpacing: "0.02em",
                 },
@@ -105,9 +106,9 @@ export const MileagePriceScatter = memo(function MileagePriceScatter({
                 fill: "hsl(var(--muted-foreground))",
                 fontSize: 10,
                 fontWeight: 600,
-                fontFamily: "Nofex",
+                fontFamily: "Inter, system-ui, sans-serif",
               }}
-              tickFormatter={(value: number) => `${(value / 1_000_000).toFixed(0)}M`}
+              tickFormatter={(value: number) => formatLkrAxis(value)}
               width={44}
             />
             <Tooltip

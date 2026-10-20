@@ -1,74 +1,56 @@
-import { BarChart2, Bell, Crown, Home, Star, TrendingUp } from "lucide-react";
-import { motion } from "framer-motion";
+import { LayoutGroup, m, motion } from "motion/react";
 import { useLocation } from "react-router-dom";
 import { PrefetchLink } from "@/components/PrefetchLink";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { springSnappy } from "@/lib/motion";
+import { spring, usePrefersReducedMotionOrLowData } from "@/lib/motion";
+import { NAV_DESTINATIONS, isDestinationActive, type NavDestination } from "@/lib/siteNav";
 
-type NavTab = {
-  labelKey: string;
-  fallback: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  matchHash?: string;
-};
-
-const TABS: NavTab[] = [
-  { labelKey: "nav.home", fallback: "Home", href: "/", icon: Home },
-  { labelKey: "nav.market", fallback: "Market", href: "/#market", icon: TrendingUp, matchHash: "market" },
-  { labelKey: "nav.alerts", fallback: "Alerts", href: "/alerts", icon: Bell },
-  { labelKey: "nav.trends", fallback: "Trends", href: "/trends", icon: BarChart2 },
-  { labelKey: "nav.bestPicks", fallback: "Best Picks", href: "/best-picks", icon: Star },
-  { labelKey: "nav.pro", fallback: "Pro", href: "/pro", icon: Crown },
-];
-
-function useIsTabActive(tab: NavTab): boolean {
-  const { pathname, hash } = useLocation();
-
-  if (tab.matchHash) {
-    return pathname === "/" && hash === `#${tab.matchHash}`;
-  }
-
-  if (tab.href === "/") {
-    return pathname === "/" && !hash;
-  }
-
-  return pathname === tab.href || pathname.startsWith(`${tab.href}/`);
-}
-
-function TabItem({ tab }: { tab: NavTab }) {
-  const isActive = useIsTabActive(tab);
+/**
+ * Mobile bottom nav: the same five destinations as the header (Buy, Prices,
+ * Tools, Sell, Saved). Saved sits behind sign-in — tapping it goes through
+ * RequireAuth, which asks the visitor to sign in and returns them after.
+ * Labels are short, truncate with an ellipsis and every tab has a min width so
+ * Sinhala / Tamil words never collide.
+ */
+function TabItem({ dest, calm }: { dest: NavDestination; calm: boolean }) {
+  const { pathname } = useLocation();
   const { t } = useAppPreferences();
-  const Icon = tab.icon;
-  const label = t(tab.labelKey, tab.fallback);
+  const isActive = isDestinationActive(dest, pathname);
+  const Icon = dest.icon;
+  const label = t(dest.labelKey, dest.fallback);
 
   return (
     <PrefetchLink
-      to={tab.href}
-      aria-label={label}
+      to={dest.href}
       aria-current={isActive ? "page" : undefined}
       data-active={isActive}
-      className={`group relative flex flex-1 flex-col items-center justify-center gap-1 py-2 no-underline outline-none transition-colors duration-200 ease-apple focus-visible:ring-2 focus-visible:ring-primary/50 active:scale-[0.96] ${
+      title={label}
+      className={`bottom-nav-tab group relative flex min-w-[3.5rem] flex-1 basis-0 flex-col items-center justify-center gap-1 overflow-hidden px-0.5 py-2 no-underline outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-primary/50 ${
         isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
       }`}
     >
-      <span className="relative flex h-7 w-7 items-center justify-center">
+      <span className="relative flex h-7 w-10 items-center justify-center">
         {isActive && (
           <motion.span
             layoutId="mobile-nav-pill"
             className="absolute inset-0 rounded-full bg-primary/12"
-            transition={springSnappy}
+            transition={calm ? { duration: 0 } : spring.snappy}
             aria-hidden
           />
         )}
-        <Icon
-          className={`relative z-10 h-4 w-4 transition-transform duration-200 ease-apple ${
-            isActive ? "scale-110" : "group-hover:scale-105"
-          }`}
-        />
+        {/* Micro-bounce: squish on tap, small hop when the tab becomes active. */}
+        <m.span
+          className="relative z-10 flex"
+          initial={false}
+          animate={calm ? undefined : isActive ? { y: [0, -3, 0], scale: [1, 1.08, 1] } : { y: 0, scale: 1 }}
+          transition={{ duration: 0.32, ease: [0.3, 0, 0, 1] }}
+          whileTap={calm ? undefined : { scale: 0.86 }}
+        >
+          <Icon className="h-[18px] w-[18px]" aria-hidden />
+        </m.span>
       </span>
       <span
-        className={`whitespace-nowrap text-[10px] font-semibold tracking-tight leading-none ${
+        className={`bottom-nav-label block w-full truncate text-center text-[11px] font-semibold leading-tight ${
           isActive ? "text-primary" : "text-muted-foreground"
         }`}
       >
@@ -80,18 +62,21 @@ function TabItem({ tab }: { tab: NavTab }) {
 
 export function MobileBottomNav() {
   const { t } = useAppPreferences();
+  const calm = usePrefersReducedMotionOrLowData();
 
   return (
     <nav
       aria-label={t("nav.mobileNavigation", "Mobile bottom navigation")}
-      className="md:hidden fixed inset-x-3 bottom-3 z-[999] pointer-events-auto"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      className="md:hidden fixed inset-x-3 bottom-3 z-bottom-nav pointer-events-auto"
+      style={{ marginBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="nav-glass overflow-hidden rounded-full">
-        <div className="flex min-h-16 items-stretch px-1">
-          {TABS.map((tab) => (
-            <TabItem key={tab.href} tab={tab} />
-          ))}
+        <div className="flex min-h-16 items-stretch px-2">
+          <LayoutGroup id="mobile-bottom-nav">
+            {NAV_DESTINATIONS.map((dest) => (
+              <TabItem key={dest.id} dest={dest} calm={calm} />
+            ))}
+          </LayoutGroup>
         </div>
       </div>
     </nav>

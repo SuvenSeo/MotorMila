@@ -15,10 +15,11 @@ import {
   Sun,
   Trash2,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { toast } from "sonner";
 import { useAppPreferences, type Language } from "@/lib/appPreferences";
-import { useCompareTray } from "@/lib/compareTray";
+import { MAX_PINNED, useCompareTray } from "@/lib/compareTray";
+import { LowDataSettingsCard } from "@/components/lowData/LowDataSettingsCard";
 import { openFeedbackDialog } from "@/lib/feedbackEvents";
 import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
@@ -132,7 +133,7 @@ export default function Settings() {
         >
           {/* Card 1: Appearance & Theme Mode */}
           <motion.div
-            variants={revealItem}
+            inherit={false} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.12 }} variants={revealItem}
             className="flex flex-col justify-between rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl sm:p-8 lg:col-span-7"
           >
             <div>
@@ -246,7 +247,7 @@ export default function Settings() {
 
           {/* Card 2: Language & Localization */}
           <motion.div
-            variants={revealItem}
+            inherit={false} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.12 }} variants={revealItem}
             className="flex flex-col justify-between rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl sm:p-8 lg:col-span-5"
           >
             <div>
@@ -314,7 +315,7 @@ export default function Settings() {
 
           {/* Card 3: Regional Standards & Currency */}
           <motion.div
-            variants={revealItem}
+            inherit={false} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.12 }} variants={revealItem}
             className="flex flex-col justify-between rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl sm:p-8 lg:col-span-6"
           >
             <div>
@@ -395,7 +396,7 @@ export default function Settings() {
 
           {/* Card 4: Compare Tray & Local Session */}
           <motion.div
-            variants={revealItem}
+            inherit={false} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.12 }} variants={revealItem}
             className="flex flex-col justify-between rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl sm:p-8 lg:col-span-6"
           >
             <div>
@@ -414,7 +415,7 @@ export default function Settings() {
                   </div>
                 </div>
                 <span className="rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] font-mono font-bold text-foreground">
-                  {pinned.length} / 3 Pinned
+                  {pinned.length} / {MAX_PINNED} Pinned
                 </span>
               </div>
 
@@ -424,7 +425,7 @@ export default function Settings() {
                     <p className="text-xs font-bold text-foreground">Active Compare Tray</p>
                     <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
                       {pinned.length === 0
-                        ? "No vehicles are currently pinned. Pin up to 3 cars from search or market results to compare side-by-side."
+                        ? `No vehicles are currently pinned. Pin up to ${MAX_PINNED} cars from search or market results to compare side-by-side.`
                         : `You have ${pinned.length} vehicle${pinned.length > 1 ? "s" : ""} saved in your comparison session.`}
                     </p>
                   </div>
@@ -481,9 +482,14 @@ export default function Settings() {
             </div>
           </motion.div>
 
+          {/* ui/features: low-data mode */}
+          <motion.div inherit={false} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.12 }} variants={revealItem} className="lg:col-span-12">
+            <LowDataSettingsCard />
+          </motion.div>
+
           {/* Card 5: Feedback & Issue Reporting Hub */}
           <motion.div
-            variants={revealItem}
+            inherit={false} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.12 }} variants={revealItem}
             className="flex flex-col justify-between rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl sm:p-8 lg:col-span-7"
           >
             <div>
@@ -535,7 +541,7 @@ export default function Settings() {
 
           {/* Card 6: Platform & System Status */}
           <motion.div
-            variants={revealItem}
+            inherit={false} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.12 }} variants={revealItem}
             className="flex flex-col justify-between rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl sm:p-8 lg:col-span-5"
           >
             <div>

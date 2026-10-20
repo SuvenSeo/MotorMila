@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { ArrowRight, BookOpen, ExternalLink, FileText, Radio } from "lucide-react";
 import { DOCS_SECTIONS } from "@/lib/docsContent";
 import { PageBody } from "@/components/PageBody";

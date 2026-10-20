@@ -47,6 +47,7 @@ import { formatPriceLkrMillions } from "@/lib/formatting";
 import { authHeaders } from "@/lib/authToken";
 import { districtCoords, normalizeDistrictName } from "@/data/districts";
 import { QUERY_STALE } from "@/lib/queryPolicy";
+import { cleanDistrict, computedDropPct, isPlausiblePriceDrop } from "@/lib/dataSanity";
 
 const DEFAULT_PRODUCTION_API = "https://seo292-vehicle-platform-backend.hf.space/api/v1";
 const HF_COLD_START_TIMEOUT_MS = 60_000;
@@ -599,6 +600,8 @@ function normalizeListing(raw: JsonRecord): CarListing {
     body_type: bodyType,
     thumbnail_url: thumbnailUrl,
     images,
+    // "Sri Lanka" / "Island-wide" is the country, not a district — unknown.
+    district: cleanDistrict(raw?.district) ?? undefined,
     // Snapshot payloads predate the lifecycle flag — default to active so
     // only an explicit backend false renders the possibly-sold state.
     is_active: raw?.is_active === undefined ? true : Boolean(raw.is_active),
@@ -1273,8 +1276,21 @@ function matchesSnapshotFilters(listing: CarListing, filters: FilterState): bool
   return true;
 }
 
+/** Best match: real price (2) + a photo (1). Priceless / photoless rows sink. */
+function bestMatchRank(listing: CarListing): number {
+  const price = toNumberOrNull(listing.price_lkr);
+  const hasPrice = price !== null && price >= 100_000;
+  const hasPhoto = Boolean(listing.thumbnail_url || (Array.isArray(listing.images) && listing.images.length));
+  return (hasPrice ? 2 : 0) + (hasPhoto ? 1 : 0);
+}
+
 function sortSnapshotListings(listings: CarListing[], sort: FilterState["sort"]): CarListing[] {
   return [...listings].sort((a, b) => {
+    if (sort === "best_match") {
+      return bestMatchRank(b) - bestMatchRank(a)
+        || listingTimestamp(b) - listingTimestamp(a)
+        || Number(b.id || 0) - Number(a.id || 0);
+    }
     if (sort === "deal_score") {
       return (toNumberOrNull(b.deal_score) ?? -Infinity) - (toNumberOrNull(a.deal_score) ?? -Infinity)
         || listingTimestamp(b) - listingTimestamp(a)
@@ -1683,6 +1699,51 @@ export const getLiveMarketStreamUrl = (): string => {
   return new URL(`${API_BASE}/stats/live/stream`, window.location.origin).toString();
 };
 
+/**
+ * "best_match" is a frontend-first sort: older/live backends validate `sort`
+ * against newest|deal_score|price_* and answer 422. When that happens we ask
+ * for `newest` instead (best match's own tie-break) and apply the best-match
+ * ranking to the page client-side. Remembered for the session so later pages
+ * skip the failing request.
+ */
+let backendRejectsBestMatch = false;
+
+function isClientError(error: unknown): boolean {
+  return error instanceof APIError && error.status >= 400 && error.status < 500;
+}
+
+async function fetchListingsPage(
+  params: QueryParams,
+): Promise<{ data: JsonRecord; clientRanked: boolean }> {
+  const wantsBestMatch = params.sort === "best_match";
+  if (wantsBestMatch && backendRejectsBestMatch) {
+    const data = await fetchJSON<JsonRecord>("/listings", { ...params, sort: "newest" });
+    return { data, clientRanked: true };
+  }
+  try {
+    const data = await fetchJSON<JsonRecord>("/listings", params);
+    return { data, clientRanked: false };
+  } catch (error) {
+    if (!wantsBestMatch || !isClientError(error)) throw error;
+    backendRejectsBestMatch = true;
+    const data = await fetchJSON<JsonRecord>("/listings", { ...params, sort: "newest" });
+    return { data, clientRanked: true };
+  }
+}
+
+/** Stable best-match order for one page of newest-first rows. */
+export function rankBestMatchPage(listings: CarListing[]): CarListing[] {
+  return listings
+    .map((listing, index) => ({ listing, index }))
+    .sort((a, b) => bestMatchRank(b.listing) - bestMatchRank(a.listing) || a.index - b.index)
+    .map((row) => row.listing);
+}
+
+/** Test hook: forget the remembered 4xx. */
+export function __resetBestMatchSupportForTests() {
+  backendRejectsBestMatch = false;
+}
+
 export const getListings = async (filters: FilterState): Promise<{ listings: CarListing[]; total: number }> => {
   const effectiveFilters: FilterState = {
     ...filters,
@@ -1692,12 +1753,13 @@ export const getListings = async (filters: FilterState): Promise<{ listings: Car
   // fallback for offline / SNAPSHOT_ONLY — not the primary catalog.
   if (!SNAPSHOT_ONLY) {
     try {
-      const data = await fetchJSON<JsonRecord>("/listings", {
+      const { data, clientRanked } = await fetchListingsPage({
         ...effectiveFilters,
         size: LISTINGS_PAGE_SIZE,
       });
       const items = Array.isArray(data.items) ? data.items : [];
       let listings = dedupeListings(items.map((item) => normalizeListing(asJsonRecord(item))));
+      if (clientRanked) listings = rankBestMatchPage(listings);
       // The backend may not support fresh_24h; apply it client-side to ensure
       // the "New in 24h" filter actually filters. We use the same matcher as
       // the snapshot path for consistency.
@@ -1732,6 +1794,53 @@ export const getListings = async (filters: FilterState): Promise<{ listings: Car
 
   // Live failed and no snapshot — surface the error rather than a silent empty list.
   throw new APIError(503, "Listings are temporarily unavailable.");
+};
+
+/**
+ * Price sample for the filter histogram: up to `size` newest priced listings
+ * matching every filter except price. Returns whole-rupee prices plus the
+ * total match count. Empty on failure — the histogram simply hides.
+ */
+export const getListingPriceSample = async (
+  filters: FilterState,
+  size = 100,
+): Promise<{ prices: number[]; total: number }> => {
+  const sampleFilters: FilterState = {
+    ...filters,
+    price_min: undefined,
+    price_max: undefined,
+    price_availability: undefined,
+    sort: "newest",
+    page: 1,
+    vehicle_category: filters.vehicle_category || "cars",
+  };
+  const toPrices = (rows: CarListing[]) =>
+    rows
+      .map((row) => toNumberOrNull(row.price_lkr))
+      .filter((price): price is number => price !== null && price >= 100_000)
+      .map((price) => Math.round(price));
+  try {
+    if (!SNAPSHOT_ONLY) {
+      const data = await fetchJSON<JsonRecord>("/listings", { ...sampleFilters, size: Math.min(100, Math.max(1, size)) });
+      const items = Array.isArray(data.items) ? data.items : [];
+      return {
+        prices: toPrices(items.map((item) => normalizeListing(asJsonRecord(item)))),
+        total: Number(data.total) || 0,
+      };
+    }
+  } catch {
+    // fall through to the snapshot sample
+  }
+  try {
+    const scoped = await getScopedSnapshotIndex(sampleFilters);
+    if (scoped) {
+      const result = filterScopedSnapshot(scoped, sampleFilters, size);
+      return { prices: toPrices(result.listings), total: result.total };
+    }
+  } catch {
+    // no snapshot either
+  }
+  return { prices: [], total: 0 };
 };
 
 export const sendFeedback = async (payload: FeedbackInput): Promise<FeedbackReceipt> => {
@@ -1804,15 +1913,23 @@ function normalizePriceDropItems(data: JsonRecord, limit = 12): PriceDropItem[] 
   return data.items
     .map((row: unknown) => {
       const record = asJsonRecord(row);
+      const previous = toNumberOrNull(record?.previous_price_lkr) ?? 0;
+      const next = toNumberOrNull(record?.new_price_lkr) ?? 0;
       return {
         listing: normalizeListing(asJsonRecord(record?.listing)),
-        previous_price_lkr: toNumberOrNull(record?.previous_price_lkr) ?? 0,
-        new_price_lkr: toNumberOrNull(record?.new_price_lkr) ?? 0,
-        drop_pct: toNumberOrNull(record?.drop_pct) ?? 0,
+        previous_price_lkr: previous,
+        new_price_lkr: next,
+        // Recompute from the two prices so the badge always matches them.
+        drop_pct: computedDropPct(previous, next) || (toNumberOrNull(record?.drop_pct) ?? 0),
         dropped_at: String(record?.dropped_at || ""),
+        confirmations: toNumberOrNull(record?.confirmations ?? record?.points_at_new_price),
       };
     })
-    .filter((item) => item.listing.id && item.drop_pct > 0)
+    // Sanity guard: unit mismatches (lakhs vs millions), lease takeovers and
+    // unconfirmed >50% "cuts" are parse bugs, not market moves.
+    // confirmations are kept on the item so a later re-check (BestPicks) can
+    // still honour a confirmed large drop.
+    .filter((item) => item.listing.id && item.drop_pct > 0 && isPlausiblePriceDrop(item))
     .slice(0, limit);
 }
 
@@ -1821,7 +1938,8 @@ export const getPriceDrops = async (days = 7, limit = 12): Promise<PriceDropItem
   if (snapshot) return normalizePriceDropItems(snapshot, limit);
   if (SNAPSHOT_ONLY) return [];
 
-  const data = await fetchJSON<JsonRecord>(`/listings/price-drops?days=${days}&limit=${limit}`);
+  // Over-fetch: the sanity guard drops implausible rows, keep the board full.
+  const data = await fetchJSON<JsonRecord>(`/listings/price-drops?days=${days}&limit=${Math.min(60, limit * 3)}`);
   return normalizePriceDropItems(data, limit);
 };
 
@@ -2856,15 +2974,16 @@ export const getListingsForExport = async (
     return { listings: [], total: 0 };
   }
 
-  const data = await fetchJSON<JsonRecord>("/listings", {
+  const { data, clientRanked } = await fetchListingsPage({
     ...filters,
     page: 1,
     size,
   });
 
   const items = Array.isArray(data.items) ? data.items : [];
+  const rows = items.map((item) => normalizeListing(asJsonRecord(item)));
   return {
-    listings: items.map((item) => normalizeListing(asJsonRecord(item))),
+    listings: clientRanked ? rankBestMatchPage(rows) : rows,
     total: Number(data.total || 0),
   };
 };
@@ -3035,7 +3154,7 @@ export const getMakeModelInsight = async (make: string, model: string): Promise<
 
     const districtMap = new Map<string, { count: number; total: number; priced: number }>();
     for (const l of rows) {
-      const d = String(l.district || "").trim();
+      const d = cleanDistrict(l.district);
       if (!d) continue;
       const entry = districtMap.get(d) ?? { count: 0, total: 0, priced: 0 };
       entry.count += 1;
@@ -3086,10 +3205,10 @@ export const getMakeModelInsight = async (make: string, model: string): Promise<
     median_price_lkr: toNumberOrNull(data.median_price_lkr),
     top_districts: Array.isArray(data.top_districts)
       ? (data.top_districts as JsonRecord[]).map((row) => ({
-          district: String(row.district || ""),
+          district: cleanDistrict(row.district) ?? "",
           count: Number(row.count || 0),
           avg_price_lkr: toNumberOrNull(row.avg_price_lkr),
-        }))
+        })).filter((row) => row.district)
       : [],
   };
 };
@@ -3178,10 +3297,10 @@ export const getMakeInsight = async (make: string): Promise<MakeInsight> => {
         all_models: Array.isArray(data.all_models) ? (data.all_models as JsonRecord[]).map(mapModelRow) : undefined,
         top_districts: Array.isArray(data.top_districts)
           ? (data.top_districts as JsonRecord[]).map((row) => ({
-              district: String(row.district || ""),
+              district: cleanDistrict(row.district) ?? "",
               count: Number(row.count || 0),
               avg_price_lkr: toNumberOrNull(row.avg_price_lkr),
-            }))
+            })).filter((row) => row.district)
           : [],
       };
     }
@@ -3206,10 +3325,10 @@ export const getMakeInsight = async (make: string): Promise<MakeInsight> => {
       : undefined,
     top_districts: Array.isArray(data.top_districts)
       ? (data.top_districts as JsonRecord[]).map((row) => ({
-          district: String(row.district || ""),
+          district: cleanDistrict(row.district) ?? "",
           count: Number(row.count || 0),
           avg_price_lkr: toNumberOrNull(row.avg_price_lkr),
-        }))
+        })).filter((row) => row.district)
       : [],
   };
 };
@@ -4450,4 +4569,39 @@ export const deleteMyListing = async (id: number): Promise<void> => {
     },
   });
   if (!response.ok) throw await parseApiError(response);
+};
+
+// ---------------------------------------------------------------------------
+// ui/features: snapshot comps for a make/model (estimate fallback, sell-speed)
+// ---------------------------------------------------------------------------
+
+/**
+ * Every snapshot row for one make/model (compact comps: id, price, year,
+ * mileage, district, condition, first_seen_at, fuel). Reads the per-model
+ * idx/ file when published, else filters the legacy full catalogue.
+ * Never calls the live API; returns [] when no snapshot covers the model.
+ * Pass `{ allowFullCatalog: false }` for non-essential UI (badges) so it
+ * never triggers the full-catalogue download.
+ */
+export const getSnapshotModelComps = async (
+  make: string,
+  model: string,
+  opts: { allowFullCatalog?: boolean } = {},
+): Promise<CarListing[]> => {
+  if (!make || !model) return [];
+  try {
+    if (await hasSnapshotIndex()) {
+      const idx = await getSnapshotModelIndex(make, model);
+      return (idx?.comps || []) as CarListing[];
+    }
+    // The legacy catalogue is tens of MB: only badges/extras opt out of it.
+    if (opts.allowFullCatalog === false) return [];
+    const catalog = await getSnapshotListingCatalog();
+    if (!catalog) return [];
+    const mk = makeIndexKey(make);
+    const mo = modelIndexKey(model);
+    return catalog.filter((row) => makeIndexKey(row.make) === mk && modelIndexKey(row.model) === mo);
+  } catch {
+    return [];
+  }
 };

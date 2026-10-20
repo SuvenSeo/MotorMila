@@ -41,8 +41,8 @@ export function SignInPortalModal({ open, onOpenChange }: SignInPortalModalProps
           </DialogTitle>
           <DialogDescription className="leading-relaxed text-muted-foreground">
             {t(
-              "signInPortal.body",
-              "Your Motormila account unlocks saved searches, price-drop alerts and the Pro terminal. Browsing the live market never needs an account.",
+              "shell.copy.signInPortalBody",
+              "Your account keeps your saved vehicles and price-drop alerts. Browsing never needs an account.",
             )}
           </DialogDescription>
         </DialogHeader>
