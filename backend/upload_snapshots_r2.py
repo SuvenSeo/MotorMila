@@ -19,7 +19,15 @@ from __future__ import annotations
 
 import mimetypes
 import os
+import time
 from pathlib import Path
+
+
+# Cloudflare's API intermittently returns 5xx on R2 object PUTs (seen 500/502
+# on 2026-10-18/20) — retry those, fail fast on 4xx (auth/permission problems
+# never heal with retries).
+TRANSIENT_STATUSES = {500, 502, 503, 504}
+MAX_ATTEMPTS = 4
 
 
 def required_env(name: str) -> str | None:
@@ -105,15 +113,26 @@ def upload_via_cf_api(source: Path, prefix: str, bucket: str,
                 "Content-Type": content_type_for(path),
             },
         )
-        try:
-            with urllib.request.urlopen(req, timeout=300) as resp:
-                status = resp.status
-        except urllib.error.HTTPError as exc:
-            raise SystemExit(
-                f"R2 upload failed for {key}: HTTP {exc.code} {exc.reason}. "
-                "If this is a 403, the Cloudflare API token needs "
-                "R2 Storage write permission for this bucket."
-            ) from exc
+        status = None
+        for attempt in range(1, MAX_ATTEMPTS + 1):
+            try:
+                with urllib.request.urlopen(req, timeout=300) as resp:
+                    status = resp.status
+                break
+            except urllib.error.HTTPError as exc:
+                if exc.code in TRANSIENT_STATUSES and attempt < MAX_ATTEMPTS:
+                    wait = 2 ** attempt
+                    print(
+                        f"R2 upload transient HTTP {exc.code} for {key} "
+                        f"(attempt {attempt}/{MAX_ATTEMPTS}), retrying in {wait}s"
+                    )
+                    time.sleep(wait)
+                    continue
+                raise SystemExit(
+                    f"R2 upload failed for {key}: HTTP {exc.code} {exc.reason}. "
+                    "If this is a 403, the Cloudflare API token needs "
+                    "R2 Storage write permission for this bucket."
+                ) from exc
         if status not in (200, 201):
             raise SystemExit(f"R2 upload failed for {key}: HTTP {status}")
         uploaded += 1
