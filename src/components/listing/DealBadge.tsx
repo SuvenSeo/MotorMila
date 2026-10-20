@@ -1,6 +1,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { AlertTriangle, FileWarning, Info, TrendingDown, TrendingUp, Minus, X } from "lucide-react";
 import { Link } from "react-router-dom";
+import { AnimatePresence, m } from "motion/react";
+import { fadeIn, scaleIn, useReducedMotionOrLowData } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { howWePriceHref } from "@/lib/howWePrice";
 import { useAppPreferences } from "@/lib/appPreferences";
@@ -50,6 +52,10 @@ export function DealBadge({ badge, tone = "soft", size = "sm", why, className }:
   const { t } = useAppPreferences();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLSpanElement>(null);
+  const whyRef = useRef<HTMLButtonElement>(null);
+  const calm = useReducedMotionOrLowData();
+  // The popover grows out of its "Why?" trigger.
+  const originX = whyRef.current ? whyRef.current.offsetLeft + whyRef.current.offsetWidth / 2 : 0;
   const panelId = useId();
 
   useEffect(() => {
@@ -93,6 +99,7 @@ export function DealBadge({ badge, tone = "soft", size = "sm", why, className }:
 
       {showWhy && (
         <button
+          ref={whyRef}
           type="button"
           aria-expanded={open}
           aria-controls={panelId}
@@ -108,8 +115,15 @@ export function DealBadge({ badge, tone = "soft", size = "sm", why, className }:
         </button>
       )}
 
+      <AnimatePresence>
       {showWhy && open && (
-        <span
+        <m.span
+          key="why"
+          initial="hidden"
+          animate="show"
+          exit="exit"
+          variants={calm ? fadeIn : scaleIn}
+          style={{ transformOrigin: `${Math.round(originX)}px 0px` }}
           id={panelId}
           role="dialog"
           aria-label={t("deal.whyTitle", "How we judged this price")}
@@ -169,8 +183,9 @@ export function DealBadge({ badge, tone = "soft", size = "sm", why, className }:
               {t("deal.howWePrice", "How we price →")}
             </Link>
           </span>
-        </span>
+        </m.span>
       )}
+      </AnimatePresence>
     </span>
   );
 }

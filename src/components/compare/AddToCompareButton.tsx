@@ -1,4 +1,5 @@
-import { Check, Scale } from "lucide-react";
+import { Scale } from "lucide-react";
+import { CompareGlyph } from "@/components/listing/SaveHeart";
 import { toast } from "sonner";
 import type { CarListing } from "@/types/car";
 import { useAppPreferences } from "@/lib/appPreferences";
@@ -36,7 +37,7 @@ export function AddToCompareButton({
         }
       }}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border font-semibold transition-colors",
+        "inline-flex items-center gap-1.5 rounded-full border font-semibold transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.97] motion-reduce:active:scale-100",
         size === "sm" ? "min-h-9 px-3 text-[12px]" : "min-h-11 px-4 text-[13px]",
         active
           ? "border-primary/40 bg-primary/15 text-primary-bright"
@@ -44,7 +45,7 @@ export function AddToCompareButton({
         className,
       )}
     >
-      {active ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Scale className="h-3.5 w-3.5" aria-hidden />}
+      <CompareGlyph active={active} idle={Scale} className="h-3.5 w-3.5" />
       {active ? t("compareTray.added", "Comparing") : t("compareTray.add", "Compare")}
     </button>
   );
