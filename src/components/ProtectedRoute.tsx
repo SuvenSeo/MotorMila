@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { Crown, Lock, LogOut, ShieldCheck, Sparkles } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
 import { useAppPreferences } from "@/lib/appPreferences";
@@ -34,14 +34,14 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
             </h1>
             <p className="mt-3 max-w-xl text-[14px] leading-relaxed text-muted-foreground">
               {user?.name || "This account"} is on the {user?.plan || "free"} plan.{" "}
-              {t("proGate.body", "Lane intelligence, district profiles, and exports unlock with an active Pro subscription.")}
+              {t("shell.copy.proGateBody", "Pro is coming soon. Full price history, district detail and exports will be part of it.")}
             </p>
             <div className="mt-7 flex flex-wrap gap-2.5">
               <Link
-                to="/pricing"
+                to="/pricing#get-started"
                 className="inline-flex h-11 items-center gap-1.5 rounded-full bg-primary px-5 text-[12px] font-semibold tracking-tight text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/95"
               >
-                <Crown className="h-3.5 w-3.5" /> View plans
+                <Crown className="h-3.5 w-3.5" /> {t("shell.pro.notify", "Notify me")}
               </Link>
               <Link
                 to="/pro-preview"

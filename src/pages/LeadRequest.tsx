@@ -1,5 +1,5 @@
 import { Banknote, ClipboardCheck, ShieldCheck } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { PRIVACY_EMAIL } from "@/components/money/LegalPageShell";
 import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";

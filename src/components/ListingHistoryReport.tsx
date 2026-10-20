@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { AlertTriangle, ShieldAlert, History, Clock, TrendingDown, Layers, Info } from "lucide-react";
 import { getListingHistoryReport, formatPrice } from "@/services/api";
 import type { HistoryReport, HistoryReportFlag } from "@/types/car";

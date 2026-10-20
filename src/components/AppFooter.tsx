@@ -1,9 +1,11 @@
 import { prefersReducedMotion, scrollBehavior } from "@/lib/motion";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "motion/react";
 import { ArrowUpRight, ExternalLink } from "lucide-react";
 import { useMemo } from "react";
 import { PrefetchLink } from "@/components/PrefetchLink";
+import { openFeedbackDialog } from "@/lib/feedbackEvents";
+import { HOW_WE_PRICE_PATH } from "@/lib/howWePrice";
 
 const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -51,6 +53,7 @@ export function AppFooter() {
       { label: t("nav.valuation", "Valuation"), to: "/estimate" },
       { label: t("nav.pricing", "Pricing"), to: "/pricing" },
       { label: t("nav.docs", "Docs"), to: "/docs" },
+      { label: t("footer.howWePrice", "How we score prices"), to: HOW_WE_PRICE_PATH },
     ],
     [t],
   );
@@ -64,8 +67,12 @@ export function AppFooter() {
       { label: t("nav.compare", "Compare"), to: "/compare" },
       { label: t("nav.leasing", "Leasing quotes"), to: "/finance" },
       { label: t("nav.inspection", "Book an inspection"), to: "/inspection" },
+      { label: t("shell.nav.insurance", "Insurance quotes"), to: "/insurance" },
+      { label: t("shell.nav.permits", "Import permit prices"), to: "/permits" },
+      { label: t("shell.nav.sellVehicle", "Sell your vehicle"), to: "/sell" },
+      { label: t("nav.myListings", "My listings"), to: "/profile" },
       { label: t("nav.proPreview", "Pro Preview"), to: "/pro-preview" },
-      { label: t("nav.alerts", "Alerts"), to: "/alerts" },
+      { label: t("shell.nav.saved", "Saved"), to: "/alerts" },
       { label: t("nav.settings", "Settings"), to: "/settings" },
     ],
     [t],
@@ -223,6 +230,13 @@ export function AppFooter() {
                 <Icon className="h-3.5 w-3.5" />
               </motion.a>
             ))}
+            <button
+              type="button"
+              onClick={() => openFeedbackDialog()}
+              className="rounded-full border border-white/[0.1] bg-white/[0.04] px-3.5 py-2 text-[12px] font-medium text-zinc-400 transition-colors duration-200 hover:border-primary/35 hover:bg-primary/12 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            >
+              {t("shell.nav.feedback", "Send feedback")}
+            </button>
             <button
               type="button"
               onClick={() => window.scrollTo({ top: 0, behavior: scrollBehavior() })}

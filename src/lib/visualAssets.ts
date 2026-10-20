@@ -51,6 +51,14 @@ import pageHomeHeroCoastalSm from "../../assets/page_home_hero_coastal-sm.webp";
 import alt2PageFeaturesBg from "../../assets/alt2_page_features_bg.webp";
 import alt2PageFeaturesBgSm from "../../assets/alt2_page_features_bg-sm.webp";
 
+// ── AVIF companions for the LCP hero photos (scripts/build-hero-avif.mjs) ──
+import pageHomeHeroAvif from "../../assets/page_home_hero.avif";
+import pageHomeHeroAvifSm from "../../assets/page_home_hero-sm.avif";
+import pageHomeHeroDuskAvif from "../../assets/page_home_hero_dusk.avif";
+import pageHomeHeroDuskAvifSm from "../../assets/page_home_hero_dusk-sm.avif";
+import pageHomeHeroCoastalAvif from "../../assets/page_home_hero_coastal.avif";
+import pageHomeHeroCoastalAvifSm from "../../assets/page_home_hero_coastal-sm.avif";
+
 export type VisualAsset = {
   src: string;
   srcSm: string;
@@ -88,3 +96,21 @@ export const visuals = {
 } as const;
 
 export type VisualKey = keyof typeof visuals;
+
+export type HeroImageMeta = {
+  avif: string;
+  avifSm: string;
+  /** Intrinsic size of the 1920w file — lets the browser reserve space (no CLS). */
+  width: number;
+  height: number;
+};
+
+/**
+ * Keyed by the WebP `src` URL, so <AtmosphericImage src={…}> picks up AVIF +
+ * intrinsic dimensions with no call-site changes.
+ */
+export const HERO_AVIF: Record<string, HeroImageMeta> = {
+  [pageHomeHero]: { avif: pageHomeHeroAvif, avifSm: pageHomeHeroAvifSm, width: 1920, height: 823 },
+  [pageHomeHeroDusk]: { avif: pageHomeHeroDuskAvif, avifSm: pageHomeHeroDuskAvifSm, width: 1920, height: 823 },
+  [pageHomeHeroCoastal]: { avif: pageHomeHeroCoastalAvif, avifSm: pageHomeHeroCoastalAvifSm, width: 1920, height: 823 },
+};

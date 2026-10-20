@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { Link, useNavigate } from "react-router-dom";
+import { m } from "motion/react";
+import { cleanDistrict, isPlausiblePriceDrop } from "@/lib/dataSanity";
 import { ExternalLink, SearchX, Star, TrendingDown } from "lucide-react";
 import { getListings, getPriceDrops, formatPrice } from "@/services/api";
 import type { CarListing, FilterState, PriceDropItem } from "@/types/car";
 import { VehicleThumbnail } from "@/components/VehicleThumbnail";
-import { CardSkeleton } from "@/components/Skeleton";
+
 import { EmptyState } from "@/components/EmptyState";
 import { SectionHeader } from "@/components/SectionHeader";
 import { pickVehicleImageUrl } from "@/lib/listingImage";
@@ -15,7 +16,8 @@ import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
 import { PageHero } from "@/components/PageHero";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
-import { revealContainer, revealItem } from "@/lib/motion";
+import { duration, fadeUp, hoverLift, listStagger, press, revealItem, useReducedMotionOrLowData } from "@/lib/motion";
+import type { Variants } from "motion/react";
 import { useAuth } from "@/lib/authContext";
 import { useAppPreferences } from "@/lib/appPreferences";
 import {
@@ -27,7 +29,6 @@ import {
 import { MorphingDialog } from "@/components/ui/MorphingDialog";
 import { setSpotlightVars, CardSpotlightGlow } from "@/components/ui/CardSpotlight";
 import { visuals } from "@/lib/visualAssets";
-import { InfiniteMovingCards } from "@/components/ui/InfiniteMovingCards";
 
 const PICKS_PAGES = 4;
 const MIN_DEAL_SCORE = 8;
@@ -143,8 +144,66 @@ function sortPicks(listings: CarListing[], mode: BestPicksSortMode): CarListing[
   }
 }
 
+const PICKS_TIMEOUT_MS = 15_000;
+
+/** Items past the stagger cap: plain fade, all together after the first 8. */
+const lateFade: Variants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { duration: duration.base, delay: 8 * 0.04 } },
+};
+
+/** Loading placeholder shaped like the final page: featured pick (image +
+ * text, 2 columns on desktop), then a shortlist of 16:10 tiles. */
+function PicksSkeleton() {
+  const bar = "skeleton-shimmer rounded-full";
+  return (
+    <div className="space-y-14 lg:space-y-20" aria-hidden>
+      <div className="grid overflow-hidden rounded-2xl border border-border bg-card lg:grid-cols-[1.1fr_1fr]">
+        <div className="skeleton-shimmer aspect-[16/10] lg:aspect-auto lg:min-h-[320px]" />
+        <div className="flex flex-col justify-between gap-6 p-6 sm:p-8">
+          <div className="space-y-4">
+            <div className={`${bar} h-3 w-24`} />
+            <div className={`${bar} h-9 w-3/4`} />
+            <div className={`${bar} h-3 w-32`} />
+            <div className="flex items-baseline justify-between border-t border-border pt-4">
+              <div className={`${bar} h-8 w-40`} />
+              <div className={`${bar} h-3 w-16`} />
+            </div>
+            <div className={`${bar} h-1 w-full`} />
+          </div>
+          <div className={`${bar} h-11 w-full`} />
+        </div>
+      </div>
+      <div>
+        <div className="mb-8 space-y-2">
+          <div className={`${bar} h-3 w-24`} />
+          <div className={`${bar} h-7 w-48`} />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card">
+              <div className="skeleton-shimmer aspect-[16/10]" />
+              <div className="flex flex-col gap-3 p-4">
+                <div className={`${bar} h-3 w-20`} />
+                <div className={`${bar} h-4 w-2/3`} />
+                <div className="flex justify-between">
+                  <div className={`${bar} h-4 w-24`} />
+                  <div className={`${bar} h-3 w-8`} />
+                </div>
+                <div className={`${bar} h-1 w-full`} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function BestPicks() {
   const { t } = useAppPreferences();
+  const motionStill = useReducedMotionOrLowData();
+  const canHoverLift = typeof window !== "undefined" && window.matchMedia?.("(hover: hover) and (pointer: fine)").matches === true;
   const { hasProAccess, isAdmin } = useAuth();
   const fullAccess = hasFullPlatformAccess({ hasProAccess, isAdmin });
   const [loading, setLoading] = useState(true);
@@ -152,6 +211,9 @@ export default function BestPicks() {
   const [picks, setPicks] = useState<CarListing[]>([]);
   const [drops, setDrops] = useState<PriceDropItem[]>([]);
   const [dropsLoaded, setDropsLoaded] = useState(false);
+  const navigate = useNavigate();
+  const [timedOut, setTimedOut] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [sortMode, setSortMode] = useState<BestPicksSortMode>(() =>
     fullAccess ? "deal_score" : "affordability",
   );
@@ -159,7 +221,7 @@ export default function BestPicks() {
   useEffect(() => {
     let cancelled = false;
     getPriceDrops(7, fullAccess ? 8 : FREE_PRICE_DROPS_LIMIT)
-      .then((items) => { if (!cancelled) setDrops(items); })
+      .then((items) => { if (!cancelled) setDrops(items.filter(isPlausiblePriceDrop)); })
       .catch(() => { /* feed is additive — page works without it */ })
       .finally(() => { if (!cancelled) setDropsLoaded(true); });
     return () => { cancelled = true; };
@@ -167,8 +229,16 @@ export default function BestPicks() {
 
   useEffect(() => {
     let cancelled = false;
+    // Never leave the page on "loading" forever: after PICKS_TIMEOUT_MS show a
+    // proper "taking longer than usual" state with a retry.
+    const timer = window.setTimeout(() => {
+      if (cancelled) return;
+      cancelled = true;
+      setTimedOut(true);
+      setLoading(false);
+    }, PICKS_TIMEOUT_MS);
     (async () => {
-      setLoading(true); setError(null);
+      setLoading(true); setError(null); setTimedOut(false);
       try {
         // Free cannot receive deal_score from the API — use newest teasers ranked
         // by affordability instead of an empty deal-score filter.
@@ -195,13 +265,15 @@ export default function BestPicks() {
       } catch {
         if (!cancelled) setError(t("picks.loadError", "Unable to load best picks."));
       } finally {
+        window.clearTimeout(timer);
         if (!cancelled) setLoading(false);
       }
     })();
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
     };
-  }, [fullAccess, t]);
+  }, [fullAccess, t, reloadKey]);
 
   const ranked = useMemo(() => {
     const sorted = sortPicks(picks, sortMode);
@@ -221,20 +293,24 @@ export default function BestPicks() {
         eyebrow={t("picks.eyebrow", "Best picks")}
         eyebrowIcon={Star}
         watermarkIcon={Star}
-        title={<>{t("picks.title", "Deal-score picks.")}</>}
-        description={loading ? t("picks.scanning", "Scanning inventory...") : fullAccess
-          ? `${ranked.length} vehicles scored ${MIN_DEAL_SCORE}+ from ${PICKS_PAGES} pages, ${rankCaption}.`
-          : `${ranked.length} free teaser picks scored ${MIN_DEAL_SCORE}+ — upgrade for the full board.`}
+        title={<>{t("shell.picks.title", "Best deals.")}</>}
+        description={loading
+          ? t("shell.picks.loading", "Finding the best-priced listings…")
+          : timedOut || error
+            ? t("shell.picks.descUnavailable", "Vehicles priced clearly below similar ads.")
+            : fullAccess
+              ? t("shell.picks.descPro", "{n} vehicles priced well below similar ads, {rank}.", { n: ranked.length, rank: rankCaption })
+              : t("shell.picks.descFree", "{n} recent listings, smallest down payment first. Deal scores are coming with Pro.", { n: ranked.length })}
         media={visuals.altCategorySuvWhite}
         mediaPosition="center 40%"
         mediaTone="light"
-        highlights={[
-          { label: "Min score", value: `${MIN_DEAL_SCORE}+`, hint: "Strict deal-score floor" },
-          { label: "Inventory", value: loading ? "…" : String(ranked.length), hint: fullAccess ? "Vehicles in this shortlist" : "Free teaser shortlist" },
-          { label: "Sort modes", value: "2", hint: "Deal score or affordability" },
-        ]}
+        highlights={
+          loading || timedOut || error
+            ? undefined
+            : [{ label: t("shell.picks.hlCount", "Listings"), value: String(ranked.length), hint: t("shell.picks.hlCountHint", "In this shortlist") }]
+        }
       >
-        {!loading && !error && picks.length > 0 && (
+        {!loading && !error && !timedOut && picks.length > 0 && (
           <div className="mt-8 flex flex-wrap gap-2.5" role="group" aria-label={t("picks.sortAria", "Sort best picks")}>
               <button
                 type="button"
@@ -266,14 +342,14 @@ export default function BestPicks() {
 
       <PageBody className="space-y-14 lg:space-y-20">
         {/* Biggest cuts this week — powered by per-listing price history */}
-        <motion.section initial="hidden" animate="show" variants={revealItem} className="rounded-2xl border border-border bg-card p-5 shadow-soft backdrop-blur-md sm:p-6">
+        <m.section initial="hidden" animate="show" variants={revealItem} className="rounded-2xl border border-border bg-card p-5 shadow-soft backdrop-blur-md sm:p-6">
             <div className="flex items-center gap-2.5 border-b border-border pb-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-2xl border border-emerald-500/25 bg-emerald-500/10">
                 <TrendingDown className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
               </div>
               <div>
                 <h2 className="text-[15px] font-bold tracking-tight text-foreground">{t("picks.cutsTitle", "Biggest cuts this week")}</h2>
-                <p className="text-[11px] text-muted-foreground font-semibold">{t("picks.cutsSubtitle", "Sellers who moved their asking price down — tracked scan-over-scan")}</p>
+                <p className="text-[11px] text-muted-foreground font-semibold">{t("shell.picks.cutsSubtitle", "Sellers who lowered their asking price in the last 7 days")}</p>
               </div>
             </div>
             {!dropsLoaded ? (
@@ -284,17 +360,12 @@ export default function BestPicks() {
               </div>
             ) : drops.length === 0 ? (
               <p className="pt-4 text-[13px] text-muted-foreground font-medium">
-                {t("picks.cutsEmpty", "No cuts recorded in the last 7 days yet — price tracking is scan-over-scan, so drops appear here as our daily scans catch sellers moving their asking prices.")}
+                {t("shell.picks.cutsEmpty", "No price cuts spotted in the last 7 days. They show up here when a seller lowers an asking price.")}
               </p>
             ) : (
-              <InfiniteMovingCards
-                items={drops}
-                keyOf={(drop) => drop.listing.id}
-                direction="left"
-                speed="normal"
-                pauseOnHover
-                className="pt-3"
-                renderItem={(drop) => (
+              <ul className="grid gap-2.5 pt-4 sm:grid-cols-2 lg:grid-cols-4">
+                {drops.map((drop) => (
+                  <li key={drop.listing.id}>
                   <Link
                     to={`/listing/${drop.listing.id}`}
                     className="group block h-full rounded-xl border border-border bg-surface p-3.5 no-underline transition-all hover:border-emerald-500/30 hover:bg-card hover:shadow-soft"
@@ -304,7 +375,7 @@ export default function BestPicks() {
                         {drop.listing.make} {drop.listing.model}{drop.listing.year ? ` ${drop.listing.year}` : ""}
                       </span>
                       <span className="shrink-0 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 num">
-                        −{drop.drop_pct}%
+                        −{drop.drop_pct.toFixed(1)}%
                       </span>
                     </div>
                     <div className="mt-2 flex items-baseline gap-2">
@@ -312,41 +383,49 @@ export default function BestPicks() {
                       <span className="text-[13px] font-bold text-foreground num">{formatPrice(drop.new_price_lkr)}</span>
                     </div>
                     <p className="mt-1 text-[10px] font-semibold text-muted-foreground">
-                      {drop.listing.district || drop.listing.source}
+                      {cleanDistrict(drop.listing.district) || drop.listing.source}
                     </p>
                   </Link>
-                )}
-              />
+                  </li>
+                ))}
+              </ul>
             )}
-          </motion.section>
+          </m.section>
 
         {loading ? (
-          <CardSkeleton />
+          <div role="status" aria-live="polite">
+            <p className="mb-3 text-[13px] font-medium text-muted-foreground">{t("shell.picks.loading", "Finding the best-priced listings…")}</p>
+            <PicksSkeleton />
+          </div>
+        ) : timedOut ? (
+          <m.div variants={revealItem}>
+            <EmptyState
+              headline={t("shell.picks.timeoutTitle", "This is taking longer than usual")}
+              body={t("shell.picks.timeoutBody", "We couldn't load deal picks just now. Try again, or browse all listings.")}
+              actionLabel={t("shell.picks.retry", "Try again")}
+              onAction={() => setReloadKey((k) => k + 1)}
+              hint={
+                <Link to="/#market" className="underline underline-offset-2 hover:text-foreground">
+                  {t("shell.picks.browse", "Browse all listings")}
+                </Link>
+              }
+            />
+          </m.div>
         ) : error ? (
-          <motion.div variants={revealItem} className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-border py-16 text-center">
+          <m.div variants={revealItem} className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-border py-16 text-center">
             <SearchX className="h-5 w-5 text-muted-foreground" aria-hidden />
             <p className="text-[13px] text-muted-foreground font-medium">{error}</p>
             <Link to="/#market" className="rounded-full border border-border bg-card px-4 py-2 text-[11px] font-bold text-foreground no-underline transition-all hover:bg-surface active:scale-[0.97]">{t("common.openInventory", "Open inventory")}</Link>
-          </motion.div>
+          </m.div>
         ) : ranked.length === 0 ? (
-          <motion.div variants={revealItem}>
+          <m.div variants={revealItem}>
             <EmptyState
-              headline={t("picks.empty", "No vehicles meet the deal-score gate right now.")}
-              body={t("picks.emptyHint", "Try clearing the sort, or seed local demo inventory to preview this board.")}
-              actionLabel={t("picks.clearFilters", "Clear filters")}
-              onAction={() => setSortMode("deal_score")}
-              hint={
-                <span>
-                  {t("picks.loadDemoHint", "Load demo:")}{" "}
-                  <code className="rounded bg-surface px-1.5 py-0.5 font-mono text-[10px]">python scripts/seed-demo.py --demo</code>{" "}
-                  ·{" "}
-                  <Link to="/#market" className="underline underline-offset-2 hover:text-foreground">
-                    {t("common.browseInventory", "Browse inventory")}
-                  </Link>
-                </span>
-              }
+              headline={t("shell.picks.emptyTitle", "No standout deals right now")}
+              body={t("shell.picks.emptyBody", "We only list vehicles priced clearly below similar ads. Check back after the next update, or browse everything.")}
+              actionLabel={t("shell.picks.browse", "Browse all listings")}
+              onAction={() => navigate("/#market")}
             />
-          </motion.div>
+          </m.div>
         ) : (
           <>
             {/* Featured — the one hero pick, at 2× weight */}
@@ -355,7 +434,7 @@ export default function BestPicks() {
               const pct = topScore > 0 ? Math.min(100, Math.round((score / topScore) * 100)) : 0;
               const cashDown = minCashDownForPrice(Number(featured.price_lkr || 0));
               return (
-                <motion.article variants={revealItem} className="group relative grid overflow-hidden rounded-2xl border border-border bg-card shadow-soft backdrop-blur-md transition-all duration-300 hover:border-primary/30 hover:shadow-soft-lg lg:grid-cols-[1.1fr_1fr]" onMouseMove={setSpotlightVars}>
+                <m.article variants={revealItem} className="group relative grid overflow-hidden rounded-2xl border border-border bg-card shadow-soft backdrop-blur-md transition-all duration-300 hover:border-primary/30 hover:shadow-soft-lg lg:grid-cols-[1.1fr_1fr]" onMouseMove={setSpotlightVars}>
                   <CardSpotlightGlow />
                   <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-30 pointer-events-none" aria-hidden />
                   <Link to={`/listing/${featured.id}`} className="block aspect-[16/10] overflow-hidden bg-muted no-underline transition-transform duration-200 active:scale-[0.99] lg:aspect-auto lg:min-h-[320px]">
@@ -392,7 +471,7 @@ export default function BestPicks() {
                       )}
                     </div>
                   </div>
-                </motion.article>
+                </m.article>
               );
             })()}
 
@@ -405,13 +484,27 @@ export default function BestPicks() {
                   className="mb-8"
                   actions={<span className="text-[11px] font-bold text-muted-foreground num">{t("picks.more", "{n} more", { n: rest.length })}</span>}
                 />
-                <motion.div variants={revealContainer} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <m.div
+                  inherit={false}
+                  initial="hidden"
+                  whileInView="show"
+                  viewport={{ once: true, amount: 0.05 }}
+                  variants={listStagger}
+                  className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                >
                   {rest.map((listing, idx) => {
                     const score = Number(listing.deal_score || 0);
                     const pct = topScore > 0 ? Math.min(100, Math.round((score / topScore) * 100)) : 0;
                     const cashDown = minCashDownForPrice(Number(listing.price_lkr || 0));
                     return (
-                      <motion.article key={listing.id} variants={revealItem} className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg" onMouseMove={setSpotlightVars}>
+                      <m.article
+                        key={listing.id}
+                        // Stagger the first 8; the rest arrive together.
+                        variants={idx < 8 ? fadeUp : lateFade}
+                        {...(motionStill ? {} : canHoverLift ? { ...hoverLift, whileTap: press.whileTap } : { whileTap: press.whileTap })}
+                        className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft backdrop-blur-md transition-[border-color,box-shadow] duration-300 hover:border-primary/30 hover:shadow-soft-lg"
+                        onMouseMove={setSpotlightVars}
+                      >
                         <CardSpotlightGlow />
                         <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-30 pointer-events-none" aria-hidden />
                         <Link to={`/listing/${listing.id}`} className="relative block aspect-[16/10] overflow-hidden bg-muted no-underline transition-transform duration-200 active:scale-[0.98]">
@@ -439,10 +532,10 @@ export default function BestPicks() {
                             <div className={`h-full rounded-full ${dealMeter(score)}`} style={{ width: `${pct}%` }} />
                           </div>
                         </div>
-                      </motion.article>
+                      </m.article>
                     );
                   })}
-                </motion.div>
+                </m.div>
               </div>
             )}
           </>

@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { formatSourceName } from "@/lib/sourceAttribution";
 
 interface VehicleThumbnailProps {
@@ -13,6 +13,10 @@ interface VehicleThumbnailProps {
   /** First-screen images should load eagerly to protect LCP. */
   priority?: boolean;
   sizes?: string;
+  /** Fade the real photo in once decoded (placeholder colour shows underneath). Skipped for priority images (LCP). */
+  fadeIn?: boolean;
+  /** Motion hooks: "card" = card photo (view-transition source), "hero" = detail hero (target). */
+  marker?: "card" | "hero";
 }
 
 function escapeSvgText(value: string): string {
@@ -28,21 +32,41 @@ function escapeSvgText(value: string): string {
  * clip-art). Used both as the `<img>` background while the photo loads (so a
  * slow or blocked source never shows a blank tile) and as the final image when
  * the source refuses to serve it (riyasewana hot-link 403s, proxy 401s).
+ *
+ * Everything sits inside a crop-safe box (x 180–780, y 70–530 of 960×600), so
+ * the Apex M mark and the full "Motormila" wordmark survive `object-cover`
+ * from 1:1 squares up to 2:1 banners. Text widths are pinned with textLength
+ * because a data-URI SVG can't use the page's web fonts (system fallback).
  */
 function createFallbackThumbnailDataUri(label: string, source?: string | null): string {
-  const safeLabel = escapeSvgText(String(label || "Vehicle").trim().slice(0, 32) || "Vehicle");
+  const rawLabel = String(label || "Vehicle").trim().slice(0, 40) || "Vehicle";
+  const safeLabel = escapeSvgText(rawLabel);
   const sourceName = formatSourceName(source);
   const sourceLine = escapeSvgText(sourceName ? `Photos on ${sourceName}` : "Photo unavailable");
+  // Layout keeps everything in the top ~60% of the 16:10 frame: card/detail
+  // overlays (price, deal badge, source credit) sit along the bottom edge and
+  // used to clip a bottom-anchored wordmark down to "RMILA".
+  // Lockup = Apex M vector (same geometry as the Android adaptive icon) + "otormila",
+  // mirroring /logo-wordmark.png (brand bible: the M *is* the first letter).
+  // textLength pins the word width because web fonts don't load inside <img> SVGs.
+  // ~0.58em average glyph width: shrink long titles to the 560px safe width,
+  // and pin it with textLength as a backstop for wide fallback fonts.
+  const labelSize = Math.max(20, Math.min(34, Math.floor(560 / (rawLabel.length * 0.6))));
+  const labelFit = rawLabel.length * labelSize * 0.58 > 520 ? ' textLength="560" lengthAdjust="spacingAndGlyphs"' : "";
   const svg = `
 <svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600">
   <rect width="960" height="600" fill="#09090B"/>
   <g stroke="#ffffff" stroke-opacity="0.05">
     <path d="M0 150h960M0 300h960M0 450h960M240 0v600M480 0v600M720 0v600"/>
   </g>
-  <rect x="440" y="226" width="80" height="6" rx="3" fill="#0A7AFF"/>
-  <text x="480" y="300" fill="#FFFFFF" fill-opacity="0.86" font-family="Space Grotesk,Inter,system-ui,sans-serif" font-weight="700" font-size="40" text-anchor="middle">${safeLabel}</text>
-  <text x="480" y="350" fill="#FFFFFF" fill-opacity="0.55" font-family="Inter,system-ui,sans-serif" font-size="26" text-anchor="middle">${sourceLine}</text>
-  <text x="480" y="548" fill="#0A7AFF" fill-opacity="0.75" font-family="Space Grotesk,Inter,system-ui,sans-serif" font-weight="700" font-size="20" letter-spacing="4" text-anchor="middle">MOTORMILA</text>
+  <g transform="translate(276 107) scale(1.2)" fill="none" stroke="#0A7AFF" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M30,76 L30,34 L54,58 L78,34 L78,62"/>
+    <path d="M78,62 L97,43"/>
+    <path d="M97,43 L87.5,43 M97,43 L97,52.5"/>
+  </g>
+  <text x="402" y="198" textLength="246" lengthAdjust="spacingAndGlyphs" fill="#FFFFFF" font-family="Space Grotesk,Inter,system-ui,sans-serif" font-weight="700" font-size="62">otormila</text>
+  <text x="480" y="282" fill="#FFFFFF" fill-opacity="0.86" font-family="Space Grotesk,Inter,system-ui,sans-serif" font-weight="700" font-size="${labelSize}" text-anchor="middle"${labelFit}>${safeLabel}</text>
+  <text x="480" y="326" fill="#FFFFFF" fill-opacity="0.55" font-family="Inter,system-ui,sans-serif" font-size="24" text-anchor="middle">${sourceLine}</text>
 </svg>`;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
@@ -55,6 +79,8 @@ export const VehicleThumbnail = memo(function VehicleThumbnail({
   className,
   priority = false,
   sizes = "(max-width: 768px) 100vw, 33vw",
+  fadeIn = false,
+  marker,
 }: VehicleThumbnailProps) {
   const fallbackSrc = useMemo(() => createFallbackThumbnailDataUri(alt, source), [alt, source]);
   // The thumbnail proxy is retired (410) - photos are only hotlinked with
@@ -77,9 +103,18 @@ export const VehicleThumbnail = memo(function VehicleThumbnail({
 
   const imageSrc = candidates[Math.min(attempt, candidates.length - 1)];
   const isPlaceholder = imageSrc === fallbackSrc;
+  const fade = fadeIn && !priority && !isPlaceholder;
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    // Cached photos can finish before React attaches onLoad.
+    const el = imgRef.current;
+    setLoaded(Boolean(el && el.complete && el.naturalWidth > 0));
+  }, [imageSrc]);
 
   return (
     <img
+      ref={imgRef}
       src={imageSrc}
       alt={alt}
       width={480}
@@ -89,8 +124,13 @@ export const VehicleThumbnail = memo(function VehicleThumbnail({
       decoding="async"
       sizes={sizes}
       data-placeholder={isPlaceholder ? "true" : undefined}
+      data-fade-in={fade ? "" : undefined}
+      data-loaded={fade ? String(loaded) : undefined}
+      data-card-photo={marker === "card" ? "" : undefined}
+      data-listing-hero={marker === "hero" ? "" : undefined}
+      onLoad={fade ? () => setLoaded(true) : undefined}
       // The placeholder paints underneath until the real photo arrives: no blank tiles.
-      style={isPlaceholder ? undefined : { backgroundImage: `url("${fallbackSrc}")`, backgroundSize: "cover", backgroundPosition: "center" }}
+      style={isPlaceholder || fade ? undefined : { backgroundImage: `url("${fallbackSrc}")`, backgroundSize: "cover", backgroundPosition: "center" }}
       onError={() => {
         if (!isPlaceholder) setAttempt((a) => a + 1);
       }}

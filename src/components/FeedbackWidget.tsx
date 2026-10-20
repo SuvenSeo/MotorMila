@@ -82,15 +82,7 @@ export function FeedbackWidget() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="floating-action-menu-item floating-control fixed bottom-20 left-5 z-40 inline-flex h-10 w-10 items-center justify-center rounded-full border border-border/80 bg-card/90 text-muted-foreground shadow-soft-lg backdrop-blur transition-all duration-200 hover:border-primary/40 hover:text-primary active:scale-95 max-sm:hidden"
-        aria-label={t("feedback.sendAria", "Send feedback")}
-        title={t("feedback.title", "Send Feedback")}
-      >
-        <MessageSquare className="h-4 w-4" />
-      </button>
+      {/* No floating trigger: opened via openFeedbackDialog() from the menu, footer or Settings. */}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg border-border bg-card text-foreground">

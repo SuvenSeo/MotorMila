@@ -3,6 +3,7 @@ import { StatsOverview } from "@/types/car";
 import { DataFreshnessIndicator } from "@/components/DataFreshnessIndicator";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { NumberTicker } from "@/components/ui/NumberTicker";
+import { formatLkrCompact } from "@/lib/price";
 
 interface StatsBarProps {
   stats: StatsOverview;
@@ -31,7 +32,7 @@ export const StatsBar = memo(function StatsBar({ stats, latestListingAt }: Stats
                 <NumberTicker
                   value={stats.avg_price_lkr / 1_000_000}
                   decimalPlaces={2}
-                  formatValue={(v) => `Rs. ${v.toFixed(2)}M`}
+                  formatValue={(v) => formatLkrCompact(v * 1_000_000)}
                 />
               </p>
               <div className={`mt-6 inline-flex items-center gap-2 rounded-full px-4 py-1.5 tech-label num ${
