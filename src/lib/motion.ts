@@ -220,3 +220,6 @@ export function haptic(ms = 8): void {
   if (!window.matchMedia?.("(pointer: coarse)").matches) return;
   navigator.vibrate?.(ms);
 }
+
+/** Alias used by the pages/listing worktrees. Same hook. */
+export const useReducedMotionOrLowData = usePrefersReducedMotionOrLowData;
