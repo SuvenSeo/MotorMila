@@ -41,9 +41,11 @@ fun MmSheet(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
     title: String? = null,
-    sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    skipPartiallyExpanded: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    // SheetState stays internal so callers need no experimental opt-in.
+    val sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = skipPartiallyExpanded)
     val c = MmColors.current
     val reduced = MmMotion.reduced
     val density = LocalDensity.current

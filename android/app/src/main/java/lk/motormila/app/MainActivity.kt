@@ -4,7 +4,13 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.compose.setContent
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import kotlinx.coroutines.flow.map
+import lk.motormila.app.data.local.datastore.SettingsStore
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -35,8 +41,14 @@ class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var billing: PlayBillingDataSource
 
+    @Inject
+    lateinit var settingsStore: SettingsStore
+
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+        )
         super.onCreate(savedInstanceState)
         // Only consume the launch intent on a fresh start: on recreation
         // (rotation, locale switch, process restore) the nav back stack is
@@ -48,7 +60,26 @@ class MainActivity : AppCompatActivity() {
             runCatching { billing.syncPlayEntitlement() }
         }
         setContent {
-            MotormilaTheme {
+            // Theme follows Settings ("system" | "light" | "dark"); dark-first
+            // default. Dynamic colour stays off (brand consistency).
+            val themePref by remember { settingsStore.observe().map { it.theme } }
+                .collectAsState(initial = "system")
+            // Dark-first: only an explicit "light" choice switches the app to
+            // the light scheme ("system" stays dark until every screen is on
+            // MmColors; flip to isSystemInDarkTheme() then).
+            val dark = themePref != "light"
+
+            LaunchedEffect(dark) {
+                // Translucent system bars: transparent scrim, icon colour
+                // follows the theme. Content draws edge-to-edge underneath.
+                val style = if (dark) {
+                    SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+                } else {
+                    SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
+                }
+                enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+            }
+            MotormilaTheme(darkTheme = dark) {
                 MotormilaNavGraph(
                     sharedUrl = sharedUrl,
                     startDeepLink = startDeepLink,

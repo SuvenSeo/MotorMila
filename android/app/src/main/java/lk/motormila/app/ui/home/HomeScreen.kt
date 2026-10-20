@@ -86,6 +86,8 @@ import lk.motormila.app.ui.components.NumberTicker
 import lk.motormila.app.ui.components.SlidingNumber
 import lk.motormila.app.ui.components.EmptyState
 import lk.motormila.app.ui.components.ErrorState
+import lk.motormila.app.ui.components.MmPullToRefresh
+import lk.motormila.app.ui.theme.MmSpacing
 import lk.motormila.app.ui.components.LivePulse
 import lk.motormila.app.ui.components.LoadingSkeletonCard
 import lk.motormila.app.ui.components.cascadeDelay
@@ -158,7 +160,7 @@ fun HomeScreen(
     val haptics = rememberHaptics()
     val reducedMotion = rememberReducedMotion()
 
-    PullToRefreshBox(
+    MmPullToRefresh(
         isRefreshing = state.isRefreshing,
         onRefresh = viewModel::refresh,
         modifier = Modifier.fillMaxSize(),
@@ -170,16 +172,16 @@ fun HomeScreen(
             contentPadding = PaddingValues(bottom = 128.dp),
             // Generous 22dp rhythm between sections — the web's airy,
             // confident feel rather than a cramped feed.
-            verticalArrangement = Arrangement.spacedBy(22.dp),
+            verticalArrangement = Arrangement.spacedBy(MmSpacing.xxl),
         ) {
             // 0. Announcement banner (market updates, dismissible, persisted)
             item {
                 AnnouncementBanner(onViewDeals = onBestPicksClick)
             }
 
-            // 1. Top Brand Lockup Bar
+            // 1. Top row (lockup + alerts) — design v2
             item {
-                Column(Modifier.padding(top = 10.dp)) {
+                Column {
                     if (state.isOffline || state.showCachedBadge) {
                         OfflineBanner(
                             visible = true,
@@ -187,17 +189,17 @@ fun HomeScreen(
                             onRetry = viewModel::retry,
                         )
                     }
-                    TopBrandBar(onAlertsClick = onAlertsClick)
+                    HomeTopRow(onAlertsClick = onAlertsClick)
                 }
             }
 
-            // 2. Cinematic Hero Header
+            // 2. Calm hero: one line, honest counts, one search entry
             item {
-                CinematicHeroHeader(
-                    total = state.summary.totalListings,
+                HomeHero(
+                    totalListings = state.summary.totalListings,
+                    sourceCount = state.summary.sourceCount,
                     onSearchClick = onSearchClick,
-                    summarySourceCount = state.summary.sourceCount,
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(top = 12.dp, bottom = 8.dp),
                 )
             }
 
@@ -229,18 +231,8 @@ fun HomeScreen(
                 }
             }
 
-            // 3b. How-it-works animated beam band
-            item {
-                HowItWorksBand()
-            }
-
-            // 4. Feature Banners (VEHICLE TYPES & VERIFIED SIGNALS)
-            item {
-                FeatureBannersRow(
-                    onVehicleTypesClick = onSearchClick,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-            }
+            // (design v2) How-it-works beam band and feature banners removed
+            // from Home for calm; utilities live on the Tools tab.
 
             item {
                 HubShortcutsRow(

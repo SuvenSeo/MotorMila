@@ -34,4 +34,7 @@
     <string name="mm_why_this_car">இந்த வாகனம்</string>
     <string name="mm_pay_title">பணம் செலுத்தும் முன்</string>
     <string name="mm_pay_1">வாகனத்தை நேரில் பார்ப்பதற்கு முன் ஒருபோதும் வைப்புத்தொகையோ முன்பணமோ செலுத்த வேண்டாம்.</string>
+    <string name="mm_lease_short">லீசிங் பொறுப்பேற்பு</string>
+    <string name="mm_home_title">நியாயமான விலையைக் கண்டறியுங்கள்.</string>
+    <string name="mm_home_search_hint">தயாரிப்பு, மாடல் அல்லது இணைப்பை ஒட்டவும்</string>
 </resources>

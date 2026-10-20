@@ -1,34 +1,36 @@
 package lk.motormila.app.ui
 
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Handyman
+import androidx.compose.material.icons.filled.Insights
+import androidx.compose.material.icons.filled.Sell
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.DirectionsCar
+import androidx.compose.material.icons.outlined.Handyman
+import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.outlined.Sell
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,57 +40,50 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import lk.motormila.app.R
 import lk.motormila.app.ui.chat.AIChatBottomSheet
+import lk.motormila.app.ui.components.MmBottomBar
+import lk.motormila.app.ui.components.MmBottomBarItem
 import lk.motormila.app.ui.home.badgeFor
-import lk.motormila.app.ui.theme.MotormilaGlassFill
-import lk.motormila.app.ui.theme.MotormilaGlassFillStrong
-import lk.motormila.app.ui.theme.MotormilaGood
-import lk.motormila.app.ui.theme.MotormilaPill
-import lk.motormila.app.ui.theme.MotormilaPrimary
-import lk.motormila.app.ui.theme.MotormilaPrimaryBright
-import lk.motormila.app.ui.theme.MotormilaPrimaryContainer
-import lk.motormila.app.ui.theme.MotormilaPrimaryGlow
-import lk.motormila.app.ui.theme.MotormilaRadius
-import lk.motormila.app.ui.theme.MotormilaSecondaryText
-import lk.motormila.app.ui.theme.ReduceMotion
-import lk.motormila.app.ui.theme.applePress
-import lk.motormila.app.ui.theme.appleTween
-import lk.motormila.app.ui.theme.fluidSpring
-import lk.motormila.app.ui.theme.liquidGlass
-import lk.motormila.app.ui.theme.rememberHaptics
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
+import lk.motormila.app.ui.theme.MmColors
+import lk.motormila.app.ui.theme.MmMotion
+import lk.motormila.app.ui.theme.MmShapes
+import lk.motormila.app.ui.theme.mmPress
 
-data class BottomNavItem(
-    val route: String,
-    val label: String,
-    val icon: ImageVector,
-    val badgeKey: String? = null,
-)
+/** Bottom-bar tab keys (Buy, Prices, Tools, Sell, Saved). */
+object MotormilaTabs {
+    const val BUY = "buy"
+    const val PRICES = "prices"
+    const val TOOLS = "tools"
+    const val SELL = "sell"
+    const val SAVED = "saved"
+}
 
 @Composable
-fun motormilaNavItems(): List<BottomNavItem> = listOf(
-    BottomNavItem("home", stringResource(R.string.nav_home), Icons.Filled.Home),
-    BottomNavItem("search", stringResource(R.string.nav_search), Icons.Filled.Search),
-    BottomNavItem("watchlist", stringResource(R.string.nav_watchlist), Icons.Filled.Favorite, badgeKey = "watchlist"),
-    BottomNavItem("insights", stringResource(R.string.nav_insights), Icons.Filled.AutoAwesome),
-    BottomNavItem("profile", stringResource(R.string.nav_profile), Icons.Filled.Person, badgeKey = "inbox"),
+fun motormilaTabItems(badges: Map<String, Int>): List<MmBottomBarItem> = listOf(
+    MmBottomBarItem(MotormilaTabs.BUY, stringResource(R.string.mm_nav_buy), Icons.Outlined.DirectionsCar, Icons.Filled.DirectionsCar),
+    MmBottomBarItem(MotormilaTabs.PRICES, stringResource(R.string.mm_nav_prices), Icons.Outlined.Insights, Icons.Filled.Insights),
+    MmBottomBarItem(MotormilaTabs.TOOLS, stringResource(R.string.mm_nav_tools), Icons.Outlined.Handyman, Icons.Filled.Handyman, badge = badgeFor("inbox", badges)),
+    MmBottomBarItem(MotormilaTabs.SELL, stringResource(R.string.mm_nav_sell), Icons.Outlined.Sell, Icons.Filled.Sell),
+    MmBottomBarItem(MotormilaTabs.SAVED, stringResource(R.string.mm_nav_saved), Icons.Outlined.BookmarkBorder, Icons.Filled.Bookmark, badge = badgeFor("watchlist", badges)),
 )
 
+/**
+ * App shell: [MmBottomBar] (sliding indicator, icon spring, haptics) and a
+ * single quiet AI-assistant button on the Buy and Prices tabs. Plate scan
+ * moved to the Tools tab (and the search bar), so content is no longer
+ * covered by a floating FAB stack.
+ *
+ * [selected] is a [MotormilaTabs] key, or "" for full-screen routes.
+ * [onScan] is kept for API compatibility (Tools owns the entry now).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MotormilaScaffold(
@@ -98,227 +93,39 @@ fun MotormilaScaffold(
     onNavigate: (route: String) -> Unit,
     onScan: () -> Unit,
     onOpenListing: ((Int) -> Unit)? = null,
+    onReselect: (route: String) -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
     var showAIChat by rememberSaveable { mutableStateOf(false) }
-    // Fully-rounded capsule dock (50% corners) — reads as one smooth pill,
-    // matching the liquid-glass FAB stack and the app's rounded design language.
-    val dockShape = MotormilaPill
-    val haptics = rememberHaptics()
-    val reduceMotion = ReduceMotion.current
+    val reduced = MmMotion.reduced
+    val showAssistant = showBottomBar && (selected == MotormilaTabs.BUY || selected == MotormilaTabs.PRICES)
 
     Scaffold(
         containerColor = Color.Transparent,
         bottomBar = {
-            if (showBottomBar) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(start = 20.dp, end = 20.dp, bottom = 14.dp),
-                ) {
-                    // Custom tab row (NOT NavigationBarItem): the M3 active
-                    // indicator is a fixed rounded-rectangle that clashed with
-                    // the dock's capsule language. Every tab owns a fully-round
-                    // MotormilaPill wash that fades/springs in when selected.
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(dockShape)
-                            .liquidGlass(
-                                dockShape,
-                                fill = MotormilaGlassFillStrong,
-                                border = MotormilaPrimaryGlow,
-                                specular = true,
-                            )
-                            .padding(horizontal = 6.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        motormilaNavItems().forEach { item ->
-                            val isSelected = selected == item.route
-                            val count = item.badgeKey?.let { badgeFor(it, badges) }
-                            val interaction = remember(item.route) { MutableInteractionSource() }
-
-                            val iconScale by animateFloatAsState(
-                                targetValue = if (isSelected) 1.1f else 1.0f,
-                                animationSpec = fluidSpring(),
-                                label = "nav-icon-scale",
-                            )
-                            val iconLift by animateDpAsState(
-                                targetValue = if (isSelected) (-1).dp else 0.dp,
-                                animationSpec = fluidSpring(),
-                                label = "nav-icon-lift",
-                            )
-                            val tint by animateColorAsState(
-                                targetValue = if (isSelected) MotormilaPrimaryBright else MotormilaSecondaryText,
-                                animationSpec = appleTween(220),
-                                label = "nav-tint",
-                            )
-                            val pillWash by animateColorAsState(
-                                targetValue = if (isSelected) MotormilaPrimaryContainer else Color.Transparent,
-                                animationSpec = appleTween(220),
-                                label = "nav-pill",
-                            )
-                            val pillScale by animateFloatAsState(
-                                targetValue = if (isSelected) 1f else 0.85f,
-                                animationSpec = fluidSpring(),
-                                label = "nav-pill-scale",
-                            )
-                            val liftPx = with(LocalDensity.current) { iconLift.toPx() }
-
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(MotormilaPill)
-                                    .applePress(interaction, pressedScale = 0.92f)
-                                    .clickable(
-                                        interactionSource = interaction,
-                                        indication = null,
-                                        role = Role.Tab,
-                                        onClick = {
-                                            if (!reduceMotion) haptics.tick()
-                                            onNavigate(item.route)
-                                        },
-                                    )
-                                    .semantics {
-                                        contentDescription = item.label
-                                        // Qualified: the scaffold's own `selected`
-                                        // route param shadows the accessor.
-                                        this.selected = isSelected
-                                    }
-                                    .padding(vertical = 2.dp),
-                            ) {
-                                Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier
-                                        .graphicsLayer {
-                                            scaleX = pillScale
-                                            scaleY = pillScale
-                                        }
-                                        .clip(MotormilaPill)
-                                        .background(pillWash)
-                                        .padding(horizontal = 14.dp, vertical = 4.dp),
-                                ) {
-                                    Box(
-                                        modifier = Modifier.graphicsLayer {
-                                            scaleX = iconScale
-                                            scaleY = iconScale
-                                            translationY = liftPx
-                                        },
-                                    ) {
-                                        val iconSlot: @Composable () -> Unit = {
-                                            Icon(item.icon, contentDescription = null, tint = tint)
-                                        }
-                                        if (count != null && count > 0) {
-                                            BadgedBox(
-                                                badge = {
-                                                    Badge(
-                                                        containerColor = MotormilaGood,
-                                                        contentColor = Color.Black,
-                                                        modifier = Modifier.semantics {
-                                                            contentDescription = "$count new"
-                                                        },
-                                                    ) {
-                                                        Text(
-                                                            text = if (count > 99) "99+" else count.toString(),
-                                                            fontWeight = FontWeight.Bold,
-                                                            fontSize = 10.sp,
-                                                        )
-                                                    }
-                                                },
-                                            ) { iconSlot() }
-                                        } else {
-                                            iconSlot()
-                                        }
-                                    }
-                                }
-                                Text(
-                                    text = item.label,
-                                    color = tint,
-                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                                    fontSize = 11.sp,
-                                )
-                            }
-                        }
-                    }
-                }
+            AnimatedVisibility(
+                visible = showBottomBar,
+                enter = if (reduced) fadeIn(tween(0)) else slideInVertically(MmMotion.snappy()) { it } + fadeIn(tween(MmMotion.Fast)),
+                exit = if (reduced) fadeOut(tween(0)) else slideOutVertically(tween(MmMotion.Fast, easing = MmMotion.Exit)) { it } + fadeOut(tween(MmMotion.Fast)),
+            ) {
+                MmBottomBar(
+                    items = motormilaTabItems(badges),
+                    selectedKey = selected,
+                    onSelect = { onNavigate(it.key) },
+                    onReselect = { onReselect(it.key) },
+                )
             }
         },
         floatingActionButton = {
-            if (showBottomBar) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier
-                        .padding(end = 4.dp, bottom = 88.dp)
-                        .liquidGlass(
-                            MotormilaRadius.lg,
-                            fill = MotormilaGlassFillStrong,
-                            border = MotormilaPrimaryGlow,
-                        )
-                        .padding(8.dp),
-                ) {
-                    val aiInteraction = remember { MutableInteractionSource() }
-                    FloatingActionButton(
-                        onClick = { showAIChat = true },
-                        containerColor = Color.Transparent,
-                        contentColor = MotormilaPrimaryBright,
-                        elevation = FloatingActionButtonDefaults.elevation(
-                            defaultElevation = 0.dp,
-                            pressedElevation = 0.dp,
-                        ),
-                        interactionSource = aiInteraction,
-                        shape = CircleShape,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .applePress(aiInteraction, pressedScale = 0.92f)
-                            .semantics { contentDescription = "Open Motormila AI Intelligence Assistant" },
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.AutoAwesome,
-                            contentDescription = "Motormila AI Assistant",
-                            tint = MotormilaPrimaryBright,
-                            modifier = Modifier.size(22.dp),
-                        )
-                    }
-
-                    val scanInteraction = remember { MutableInteractionSource() }
-                    FloatingActionButton(
-                        onClick = onScan,
-                        containerColor = MotormilaPrimary,
-                        contentColor = Color.White,
-                        elevation = FloatingActionButtonDefaults.elevation(
-                            defaultElevation = 0.dp,
-                            pressedElevation = 0.dp,
-                        ),
-                        interactionSource = scanInteraction,
-                        shape = CircleShape,
-                        modifier = Modifier
-                            .size(56.dp)
-                            .applePress(scanInteraction, pressedScale = 0.92f)
-                            .semantics { contentDescription = "Scan number plate" },
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.CameraAlt,
-                            contentDescription = "Scan number plate",
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp),
-                        )
-                    }
-                }
+            AnimatedVisibility(
+                visible = showAssistant,
+                enter = if (reduced) fadeIn(tween(0)) else scaleIn(MmMotion.snappy(), initialScale = 0.8f) + fadeIn(tween(MmMotion.Fast)),
+                exit = if (reduced) fadeOut(tween(0)) else scaleOut(tween(MmMotion.Fast), targetScale = 0.8f) + fadeOut(tween(MmMotion.Fast)),
+            ) {
+                AssistantButton(onClick = { showAIChat = true })
             }
         },
-        content = { paddingValues ->
-            // Full-width content: the floating AI/scan stack is translucent
-            // liquid glass, so it floats OVER content (the standard premium
-            // pattern) instead of squeezing the layout. Screens get the full
-            // width; the stack's bottom=88dp clearance keeps it above the nav
-            // dock, and screens add bottom content padding so nothing hides
-            // behind it.
-            content(paddingValues)
-        },
+        content = content,
     )
 
     if (showAIChat) {
@@ -329,5 +136,27 @@ fun MotormilaScaffold(
                 onOpenListing?.invoke(listingId) ?: onNavigate("listing/$listingId")
             },
         )
+    }
+}
+
+@Composable
+private fun AssistantButton(onClick: () -> Unit) {
+    val c = MmColors.current
+    val interaction = remember { MutableInteractionSource() }
+    val label = stringResource(R.string.mm_assistant)
+    Box(
+        modifier = Modifier
+            .padding(bottom = 4.dp)
+            .size(52.dp)
+            .mmPress(interaction, 0.92f)
+            .shadow(12.dp, MmShapes.pill, ambientColor = Color.Black, spotColor = Color.Black)
+            .clip(MmShapes.pill)
+            .background(c.surfaceHigh)
+            .border(1.dp, c.outlineStrong, MmShapes.pill)
+            .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = c.brandText, modifier = Modifier.size(22.dp))
     }
 }

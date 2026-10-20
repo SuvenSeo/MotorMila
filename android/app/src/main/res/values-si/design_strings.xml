@@ -34,4 +34,7 @@
     <string name="mm_why_this_car">මෙම වාහනය</string>
     <string name="mm_pay_title">ගෙවීමට පෙර</string>
     <string name="mm_pay_1">වාහනය පෞද්ගලිකව දැකීමට පෙර කිසිවිටෙක තැන්පතුවක් හෝ අත්තිකාරමක් ගෙවන්න එපා.</string>
+    <string name="mm_lease_short">ලීසිං භාරගැනීම</string>
+    <string name="mm_home_title">සාධාරණ මිලක් සොයන්න.</string>
+    <string name="mm_home_search_hint">නිෂ්පාදකයා, මාදිලිය හෝ සබැඳියක් අලවන්න</string>
 </resources>

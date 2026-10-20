@@ -1,5 +1,6 @@
 package lk.motormila.app.ui.navigation
 
+import lk.motormila.app.ui.theme.MmMotion
 import android.content.res.Resources
 import androidx.activity.BackEventCompat
 import kotlin.math.roundToInt
@@ -82,20 +83,23 @@ internal fun sheetVerticalSpring() = spring<IntOffset>(
 /** Sliding bottom-nav indicator spring (spec §2: spring 0.9/700). */
 fun tabIndicatorSpring() = spring<Float>(dampingRatio = 0.9f, stiffness = 700f)
 
+/**
+ * Forward push between screens: Material fade-through with a slight scale
+ * (incoming 0.96 → 1, outgoing 1 → 1.02), tokens from [MmMotion]. Tab
+ * switches are peers, so they only crossfade (with a tiny 0.98 settle).
+ * Navigation-Compose 2.8 drives the pop pair from the predictive-back
+ * gesture progress, so the back swipe scrubs these same transitions.
+ */
 fun motormilaEnterTransition(
     reducedMotion: Boolean,
     tabSwitch: Boolean,
 ): EnterTransition {
     if (reducedMotion) return fadeIn(tween(0))
     return if (tabSwitch) {
-        // Tabs are peers, not a stack: plain crossfade, no horizontal slide.
-        fadeIn(tween(300, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)))
+        fadeIn(tween(MmMotion.Base, delayMillis = 40, easing = MmMotion.Standard)) +
+            scaleIn(tween(MmMotion.Base, delayMillis = 40, easing = MmMotion.Emphasized), initialScale = 0.985f)
     } else {
-        fadeIn(MotionTokens.effectsDefault()) +
-            slideInHorizontally(
-                animationSpec = spatialOffsetSpring(),
-                initialOffsetX = { dpToPx(MotionTokens.ScreenSlideDp) },
-            )
+        MmMotion.fadeThroughEnter()
     }
 }
 
@@ -105,14 +109,9 @@ fun motormilaExitTransition(
 ): ExitTransition {
     if (reducedMotion) return fadeOut(tween(0))
     return if (tabSwitch) {
-        fadeOut(tween(300, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)))
+        fadeOut(tween(MmMotion.Fast - 60, easing = MmMotion.Exit))
     } else {
-        // Exits are faster than entrances — always.
-        fadeOut(MotionTokens.exit()) +
-            slideOutHorizontally(
-                animationSpec = exitOffsetTween(),
-                targetOffsetX = { -dpToPx(NAV_PUSH_EXIT_DP) },
-            )
+        MmMotion.fadeThroughExit()
     }
 }
 
@@ -122,14 +121,9 @@ fun motormilaPopEnterTransition(
 ): EnterTransition {
     if (reducedMotion) return fadeIn(tween(0))
     return if (tabSwitch) {
-        fadeIn(tween(300, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)))
+        fadeIn(tween(MmMotion.Base, delayMillis = 40, easing = MmMotion.Standard))
     } else {
-        // Exact reverse of the push exit.
-        fadeIn(MotionTokens.exit()) +
-            slideInHorizontally(
-                animationSpec = exitOffsetTween(),
-                initialOffsetX = { -dpToPx(NAV_PUSH_EXIT_DP) },
-            )
+        MmMotion.fadeThroughPopEnter()
     }
 }
 
@@ -139,14 +133,9 @@ fun motormilaPopExitTransition(
 ): ExitTransition {
     if (reducedMotion) return fadeOut(tween(0))
     return if (tabSwitch) {
-        fadeOut(tween(300, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)))
+        fadeOut(tween(MmMotion.Fast - 60, easing = MmMotion.Exit))
     } else {
-        // Exact reverse of the push enter.
-        fadeOut(MotionTokens.effectsDefault()) +
-            slideOutHorizontally(
-                animationSpec = spatialOffsetSpring(),
-                targetOffsetX = { dpToPx(MotionTokens.ScreenSlideDp) },
-            )
+        MmMotion.fadeThroughPopExit()
     }
 }
 

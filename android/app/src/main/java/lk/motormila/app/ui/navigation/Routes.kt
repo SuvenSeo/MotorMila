@@ -120,6 +120,10 @@ data object PriceIndex
 @Serializable
 data object Sell
 
+/** Tools tab (design v2): index of utilities — valuation, scan, calculators, permits, account. */
+@Serializable
+data object Tools
+
 /** Routes that show the bottom NavigationBar. */
 val BOTTOM_BAR_ROUTES: Set<String> = setOf(
     Home::class.qualifiedName!!,
@@ -127,6 +131,8 @@ val BOTTOM_BAR_ROUTES: Set<String> = setOf(
     Watchlist::class.qualifiedName!!,
     Insights::class.qualifiedName!!,
     Profile::class.qualifiedName!!,
+    Tools::class.qualifiedName!!,
+    Sell::class.qualifiedName!!,
 )
 
 /** Returns true if the given destination route (qualified class name) shows the bottom bar. */

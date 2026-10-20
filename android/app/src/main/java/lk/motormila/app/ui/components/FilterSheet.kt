@@ -17,7 +17,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.RangeSlider
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import lk.motormila.app.ui.theme.MmColors
+import lk.motormila.app.ui.theme.MmSpacing
+import lk.motormila.app.ui.theme.MmType
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -79,8 +83,9 @@ data class FilterDraft(
 }
 
 /**
- * Modal bottom sheet with 50/90 detents: make/model/year/budget/fuel/district
- * chips + sticky CTA showing live count. Callbacks Apply/Reset.
+ * Filters (design v2): [MmSheet] (28dp, content rides in on a gentle
+ * spring), grouped chip sections, a single max-budget slider labelled in
+ * millions, and a pinned Reset / Show results row. Toggle haptics on chips.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -94,32 +99,47 @@ fun FilterSheet(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     var draft by remember(current) { mutableStateOf(FilterDraft.from(current)) }
-    val haptics = rememberHaptics()
-    // Sheet open: light tick per spec §4.
-    LaunchedEffect(Unit) { haptics.tick() }
-    ModalBottomSheet(
-        onDismissRequest = { haptics.tick(); onDismiss() },
-        sheetState = sheetState,
-        shape = lk.motormila.app.ui.theme.MotormilaSheetShape,
+    val c = MmColors.current
+    MmSheet(
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.ui_components_filters),
         modifier = modifier.semantics { contentDescription = "Search filters" },
     ) {
         Column(
             Modifier
                 .fillMaxWidth()
+                .weight(1f, fill = false)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
-                .navigationBarsPadding(),
+                .padding(horizontal = MmSpacing.gutter),
         ) {
-            Text(stringResource(R.string.ui_components_filters), fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            Spacer(Modifier.height(12.dp))
-
             SectionLabel("Make")
             MakeCombobox(
                 options = makes,
                 selected = draft.make,
                 onSelect = { draft = draft.copy(make = it, model = null) },
+            )
+            SectionLabel("Max budget")
+            val budget = draft.priceMaxLkr
+            Text(
+                text = if (budget == null || budget >= MAX_BUDGET) "Any price" else "Up to ${MmPriceFormat.compact(budget.toDouble())}",
+                style = MmType.current.priceS,
+                color = c.textPrimary,
+            )
+            Slider(
+                value = (budget ?: MAX_BUDGET).coerceIn(MIN_BUDGET, MAX_BUDGET),
+                onValueChange = { v ->
+                    // Snap to Rs 0.5 Mn steps so the label reads cleanly.
+                    val snapped = (Math.round(v / 500_000f) * 500_000f).coerceIn(MIN_BUDGET, MAX_BUDGET)
+                    draft = draft.copy(priceMaxLkr = if (snapped >= MAX_BUDGET) null else snapped)
+                },
+                valueRange = MIN_BUDGET..MAX_BUDGET,
+                colors = SliderDefaults.colors(
+                    thumbColor = c.brand,
+                    activeTrackColor = c.brand,
+                    inactiveTrackColor = c.surfaceHigh,
+                ),
+                modifier = Modifier.fillMaxWidth(),
             )
             SectionLabel("Fuel")
             ChipFlow(
@@ -145,52 +165,44 @@ fun FilterSheet(
                 selected = draft.district,
                 onSelect = { draft = draft.copy(district = it) },
             )
-            SectionLabel("Max budget")
-            var budget by remember(draft.priceMaxLkr) {
-                mutableStateOf(draft.priceMaxLkr ?: 30_000_000f)
-            }
-            RangeSlider(
-                value = 2_000_000f..budget,
-                onValueChange = {
-                    budget = it.endInclusive
-                    draft = draft.copy(priceMaxLkr = it.endInclusive)
+            Spacer(Modifier.height(MmSpacing.lg))
+        }
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = MmSpacing.gutter, vertical = MmSpacing.md),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            MmButton(
+                text = "Reset",
+                onClick = {
+                    draft = FilterDraft()
+                    onReset()
                 },
-                valueRange = 2_000_000f..60_000_000f,
-                modifier = Modifier.fillMaxWidth(),
+                style = MmButtonStyle.Secondary,
+                modifier = Modifier.weight(1f),
             )
-            Spacer(Modifier.height(8.dp))
-
-            Row(
-                Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                MotormilaGhostButton(
-                    label = "Reset",
-                    onClick = {
-                        draft = FilterDraft()
-                        onReset()
-                    },
-                    modifier = Modifier.weight(1f),
-                )
-                MotormilaPrimaryButton(
-                    label = if (resultCount != null) "Show $resultCount results" else "Apply filters",
-                    onClick = { onApply(draft.toQuery(current)) },
-                    modifier = Modifier.weight(2f).pressKeyHaptic(haptics),
-                )
-            }
-            Spacer(Modifier.height(8.dp))
+            MmButton(
+                // resultCount is only the loaded page count, never a total —
+                // so the CTA never claims a number it can't stand behind.
+                text = "Show results",
+                onClick = { onApply(draft.toQuery(current)) },
+                modifier = Modifier.weight(2f),
+            )
         }
     }
 }
 
+private const val MIN_BUDGET = 1_000_000f
+private const val MAX_BUDGET = 60_000_000f
+
 @Composable
 private fun SectionLabel(text: String) {
     Text(
-        text = text,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 13.sp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 10.dp, bottom = 6.dp),
+        text = text.uppercase(),
+        style = MmType.current.overline,
+        color = MmColors.current.textTertiary,
+        modifier = Modifier.padding(top = MmSpacing.xl, bottom = MmSpacing.sm),
     )
 }
 
@@ -203,12 +215,12 @@ private fun ChipFlow(
 ) {
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         options.forEach { option ->
             val isSel = selected.equals(option, ignoreCase = true)
-            MotormilaChoiceChip(
-                label = option,
+            MmChip(
+                label = option.replace('_', ' ').replaceFirstChar(Char::uppercase),
                 selected = isSel,
                 onClick = { onSelect(if (isSel) null else option) },
             )

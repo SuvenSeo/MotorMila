@@ -1,5 +1,24 @@
 package lk.motormila.app.ui.search
 
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.material.icons.automirrored.filled.CompareArrows
+import androidx.compose.material.icons.automirrored.outlined.ViewList
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import lk.motormila.app.ui.components.MmChip
+import lk.motormila.app.ui.components.MmIconButton
+import lk.motormila.app.ui.components.MmIconButtonStyle
+import lk.motormila.app.ui.components.MmListingCardSkeleton
+import lk.motormila.app.ui.components.MmPullToRefresh
+import lk.motormila.app.ui.theme.MmHaptics
+import lk.motormila.app.ui.theme.MmMotion
+import lk.motormila.app.ui.theme.MmSpacing
 import android.app.Activity
 import android.speech.RecognizerIntent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -97,6 +116,8 @@ fun SearchScreen(
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val isRefreshing = items.loadState.refresh is LoadState.Loading
+    var gridMode by rememberSaveable { mutableStateOf(true) }
+    val haptics = MmHaptics.current
 
     // Voice affordance: system recogniser (no RECORD_AUDIO permission needed),
     // parsed with the shared parseVoiceQuery heuristic (si/ta/en via locale).
@@ -205,19 +226,28 @@ fun SearchScreen(
                 onSort = viewModel::onSortChange,
                 onFilters = viewModel::openFilters,
                 onCreateAlert = viewModel::createAlertFromFilters,
+                gridMode = gridMode,
+                onToggleLayout = {
+                    haptics.toggle()
+                    gridMode = !gridMode
+                },
             )
-            PullToRefreshBox(
+            MmPullToRefresh(
                 isRefreshing = isRefreshing,
                 onRefresh = { items.refresh() },
                 modifier = Modifier.weight(1f),
             ) {
                 when {
                     isRefreshing -> {
-                        LazyColumn(
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        // Skeletons match the result layout (grid cards / list rows).
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(if (gridMode) 2 else 1),
+                            contentPadding = PaddingValues(MmSpacing.lg),
+                            horizontalArrangement = Arrangement.spacedBy(MmSpacing.cardGap),
+                            verticalArrangement = Arrangement.spacedBy(MmSpacing.cardGap),
+                            userScrollEnabled = false,
                         ) {
-                            items(5) { LoadingSkeletonCard() }
+                            items(6) { MmListingCardSkeleton() }
                         }
                     }
                     items.loadState.refresh is LoadState.Error -> {
@@ -240,40 +270,58 @@ fun SearchScreen(
                         )
                     }
                     else -> {
-                        LazyColumn(
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(if (gridMode) 2 else 1),
+                            contentPadding = PaddingValues(
+                                start = MmSpacing.lg,
+                                end = MmSpacing.lg,
+                                top = MmSpacing.sm,
+                                bottom = if (state.compareIds.isNotEmpty()) 120.dp else MmSpacing.huge,
+                            ),
+                            horizontalArrangement = Arrangement.spacedBy(MmSpacing.cardGap),
+                            verticalArrangement = Arrangement.spacedBy(MmSpacing.lg),
                             modifier = Modifier
                                 .fillMaxSize()
                                 .semantics { contentDescription = "Search results" },
                         ) {
                             items(
                                 count = items.itemCount,
-                                key = { i -> items[i]?.id ?: -i },
+                                key = { i -> items.peek(i)?.id ?: -i - 1 },
                             ) { i ->
                                 val listing = items[i]
                                 if (listing != null) {
-                                    StaggeredItem(index = i) {
-                                        ListingCard(
-                                            listing = listing,
-                                            isWatched = false,
-                                            onClick = { onListingClick(listing.id) },
-                                            onWatchToggle = { viewModel.toggleWatch(listing) },
+                                    Column(
+                                        Modifier.animateItem(
+                                            fadeInSpec = null,
+                                            fadeOutSpec = null,
+                                            placementSpec = MmMotion.itemPlacement,
+                                        ),
+                                    ) {
+                                        StaggeredItem(index = i) {
+                                            ListingCard(
+                                                listing = listing,
+                                                isWatched = false,
+                                                onClick = { onListingClick(listing.id) },
+                                                onWatchToggle = { viewModel.toggleWatch(listing) },
+                                            )
+                                        }
+                                        CompareToggleRow(
+                                            selected = state.compareIds.contains(listing.id),
+                                            enabled = state.compareIds.contains(listing.id) ||
+                                                state.compareIds.size < MAX_COMPARE_IDS,
+                                            onToggle = {
+                                                if (state.compareIds.contains(listing.id)) haptics.unsave() else haptics.save()
+                                                viewModel.toggleCompare(listing.id)
+                                            },
                                         )
                                     }
-                                    CompareToggleRow(
-                                        selected = state.compareIds.contains(listing.id),
-                                        enabled = state.compareIds.contains(listing.id) ||
-                                            state.compareIds.size < MAX_COMPARE_IDS,
-                                        onToggle = { viewModel.toggleCompare(listing.id) },
-                                    )
                                 }
                             }
                             if (items.loadState.append is LoadState.Loading) {
-                                item { LoadingSkeletonCard() }
+                                item { MmListingCardSkeleton() }
                             }
                             if (items.loadState.append is LoadState.Error) {
-                                item {
+                                item(span = { GridItemSpan(maxLineSpan) }) {
                                     ErrorState(
                                         message = "Couldn't load more",
                                         onRetry = { items.retry() },
@@ -324,37 +372,52 @@ private fun SortFilterRow(
     onSort: (String) -> Unit,
     onFilters: () -> Unit,
     onCreateAlert: () -> Unit,
+    gridMode: Boolean,
+    onToggleLayout: () -> Unit,
 ) {
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        item {
-            IconButton(onClick = onFilters, modifier = Modifier.size(48.dp)) {
-                Icon(Icons.Filled.FilterList, contentDescription = "Open filters")
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        LazyRow(
+            contentPadding = PaddingValues(start = 8.dp, end = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f),
+        ) {
+            item {
+                MmIconButton(
+                    icon = Icons.Outlined.Tune,
+                    contentDescription = "Open filters",
+                    onClick = onFilters,
+                    style = MmIconButtonStyle.Filled,
+                )
+            }
+            items(ListingSorts.ALL) { s ->
+                MmChip(
+                    label = when (s) {
+                        ListingSorts.NEWEST -> "Newest"
+                        ListingSorts.DEAL_SCORE -> "Best deal"
+                        ListingSorts.PRICE_ASC -> "Price ↑"
+                        ListingSorts.PRICE_DESC -> "Price ↓"
+                        ListingSorts.MILEAGE_ASC -> "Low km"
+                        else -> s
+                    },
+                    selected = sort == s,
+                    onClick = { onSort(s) },
+                )
+            }
+            item {
+                MmIconButton(
+                    icon = Icons.Filled.AddAlert,
+                    contentDescription = "Create alert from these filters",
+                    onClick = onCreateAlert,
+                )
             }
         }
-        items(ListingSorts.ALL) { s ->
-            MotormilaChoiceChip(
-                label = when (s) {
-                    ListingSorts.NEWEST -> "Newest"
-                    ListingSorts.DEAL_SCORE -> "Best deal"
-                    ListingSorts.PRICE_ASC -> "Price ↑"
-                    ListingSorts.PRICE_DESC -> "Price ↓"
-                    ListingSorts.MILEAGE_ASC -> "Low km"
-                    else -> s
-                },
-                selected = sort == s,
-                compact = true,
-                onClick = { onSort(s) },
-            )
-        }
-        item {
-            IconButton(onClick = onCreateAlert, modifier = Modifier.size(48.dp)) {
-                Icon(Icons.Filled.AddAlert, contentDescription = "Create alert from these filters")
-            }
-        }
+        MmIconButton(
+            icon = if (gridMode) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
+            contentDescription = if (gridMode) "Show as list" else "Show as grid",
+            onClick = onToggleLayout,
+            modifier = Modifier.padding(end = 4.dp),
+        )
     }
 }
 
@@ -378,11 +441,12 @@ private fun CompareToggleRow(selected: Boolean, enabled: Boolean, onToggle: () -
             .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-            MotormilaChoiceChip(
-                label = if (selected) "Added to compare" else "Compare",
+            MmChip(
+                label = if (selected) "In compare" else "Compare",
                 selected = selected,
                 enabled = enabled,
                 onClick = onToggle,
+                leadingIcon = if (selected) Icons.Filled.Check else Icons.AutoMirrored.Filled.CompareArrows,
             )
     }
 }

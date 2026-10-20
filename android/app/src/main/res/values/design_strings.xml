@@ -56,4 +56,10 @@
     <string name="mm_pay_2">Check the CR (registration) book matches the seller\'s NIC and the chassis and engine numbers on the car.</string>
     <string name="mm_pay_3">Meet in a public place in daylight, and get an independent mechanic inspection.</string>
     <string name="mm_pay_4">Pay through a bank transfer only after the transfer papers (MTA forms) are signed.</string>
+    <string name="mm_lease_short">Lease takeover</string>
+    <string name="mm_home_title">Find a fair price.</string>
+    <string name="mm_home_sub">Every car for sale in Sri Lanka, compared with what similar cars ask.</string>
+    <string name="mm_home_sub_count">%1$s cars for sale, compared with what similar cars ask.</string>
+    <string name="mm_home_sub_counts">%1$s cars for sale from %2$d sites, compared with what similar cars ask.</string>
+    <string name="mm_home_search_hint">Make, model or paste a link</string>
 </resources>
