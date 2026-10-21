@@ -74,6 +74,7 @@ import lk.motormila.app.ui.theme.rememberHaptics
 fun AlertsScreen(
     onOpenDetail: (id: Int) -> Unit,
     onUpgrade: () -> Unit,
+    onSignIn: () -> Unit = {},
     viewModel: AlertsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -130,6 +131,9 @@ fun AlertsScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     item { OfflineBanner(visible = state.offline) }
+                    if (!state.signedIn || state.signInRequired) {
+                        item { SignInRequiredCard(emphasised = state.signInRequired, onSignIn = onSignIn) }
+                    }
                     item { CreateForm(state, viewModel, onUpgrade) }
                     if (state.justCreatedId != null) {
                         item { ConfettiLite(modifier = Modifier.fillMaxWidth().height(64.dp)) }
@@ -568,5 +572,23 @@ private fun ConfettiLite(modifier: Modifier = Modifier) {
                 ),
             )
         }
+    }
+}
+
+/** Shown when signed out: alert creation needs an account, so say so on screen instead of failing silently. */
+@Composable
+private fun SignInRequiredCard(emphasised: Boolean, onSignIn: () -> Unit) {
+    MotormilaSurface(highlighted = emphasised) {
+        Text(
+            if (emphasised) "Sign in to create this alert" else "Sign in to create price alerts",
+            style = MaterialTheme.typography.titleSmall,
+        )
+        Text(
+            "Price alerts are saved to your MotorMila account so we can notify you when a match lands.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
+        )
+        MotormilaPrimaryButton(label = "Sign in", onClick = onSignIn)
     }
 }

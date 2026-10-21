@@ -336,7 +336,7 @@ private fun SignalCard(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
             Text(
-                text = "${pulseSourceLabel(signal.source)} · ${signal.signalType.replace('_', ' ')}",
+                text = "${pulseSourceLabel(signal.source)} · ${PulseLabels.signalTypeLabel(signal.signalType)}",
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.8.sp,
@@ -561,23 +561,11 @@ private fun pulseSourceLabel(raw: String): String {
 }
 
 @Composable
-private fun signalTitle(signal: MarketSignal): String {
-    val fromCategory = signal.category?.trim().orEmpty()
-    if (fromCategory.isNotEmpty()) return fromCategory
-    val metric = signal.metric.replace('_', ' ').trim()
-    if (metric.isNotEmpty()) return metric.replaceFirstChar { it.titlecase() }
-    return signal.signalType.replace('_', ' ').replaceFirstChar { it.titlecase() }
-}
+private fun signalTitle(signal: MarketSignal): String = PulseLabels.title(signal)
 
 @Composable
 private fun formatPulseValue(signal: MarketSignal): String {
-    val value = signal.valueNumeric ?: return stringResource(R.string.hub_na)
-    val unit = signal.unit?.trim().orEmpty()
-    if (unit.equals("lkr", ignoreCase = true) || signal.metric.contains("lkr", ignoreCase = true)) {
-        return lk.motormila.app.ui.common.mn(value)
-    }
-    val number = if (value % 1.0 == 0.0) value.toLong().toString() else "%.1f".format(value)
-    return if (unit.isBlank()) number else stringResource(R.string.hub_pulse_value_unit, number, unit)
+    return PulseLabels.value(signal) { lk.motormila.app.ui.common.mn(it) } ?: stringResource(R.string.hub_na)
 }
 
 @Composable
@@ -586,9 +574,8 @@ private fun pulsePeriodLabel(signal: MarketSignal): String {
     val month = signal.periodMonth
     if (year != null && month != null && month in 1..12) {
         val stamp = "%04d-%02d".format(year, month)
-        val metric = signal.metric.replace('_', ' ').trim()
-        val period = stringResource(R.string.hub_pulse_period, stamp)
-        return if (metric.isBlank()) period else "$period · $metric"
+        // The metric is already the card title; the period line stays just the period.
+        return stringResource(R.string.hub_pulse_period, stamp)
     }
     val observed = signal.observedAt.take(10)
     val latest = stringResource(R.string.hub_pulse_latest)

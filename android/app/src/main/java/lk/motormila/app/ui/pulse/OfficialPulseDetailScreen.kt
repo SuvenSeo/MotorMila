@@ -72,7 +72,7 @@ fun OfficialPulseDetailScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Text(
-                        "${signal.source.replace('_', ' ')} · ${signal.signalType.replace('_', ' ')}",
+                        "${PulseLabels.humanize(signal.source)} · ${PulseLabels.signalTypeLabel(signal.signalType)}",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Bold,
                             color = MotormilaPrimaryBright,
@@ -93,7 +93,7 @@ fun OfficialPulseDetailScreen(
                     )
                     MotormilaSurface(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(stringResource(R.string.hub_pulse_detail_metric), fontWeight = FontWeight.SemiBold)
-                        Text(signal.metric.replace('_', ' '), color = MotormilaSecondaryText)
+                        Text(PulseLabels.metricLabel(signal.metric), color = MotormilaSecondaryText)
                     }
                     MotormilaPrimaryButton(
                         label = stringResource(R.string.hub_pulse_read_guides),
@@ -123,20 +123,8 @@ fun OfficialPulseDetailScreen(
     }
 }
 
-private fun signalDetailTitle(signal: MarketSignal): String {
-    val fromCategory = signal.category?.trim().orEmpty()
-    if (fromCategory.isNotEmpty()) return fromCategory
-    val metric = signal.metric.replace('_', ' ').trim()
-    if (metric.isNotEmpty()) return metric.replaceFirstChar { it.titlecase() }
-    return signal.signalType.replace('_', ' ').replaceFirstChar { it.titlecase() }
-}
+private fun signalDetailTitle(signal: MarketSignal): String = PulseLabels.title(signal)
 
 private fun signalDetailValue(signal: MarketSignal): String {
-    val value = signal.valueNumeric ?: return "N/A"
-    val unit = signal.unit?.trim().orEmpty()
-    if (unit.equals("lkr", ignoreCase = true) || signal.metric.contains("lkr", ignoreCase = true)) {
-        return lk.motormila.app.ui.common.mn(value)
-    }
-    val number = if (value % 1.0 == 0.0) value.toLong().toString() else "%.1f".format(value)
-    return if (unit.isBlank()) number else "$number $unit"
+    return PulseLabels.value(signal) { lk.motormila.app.ui.common.mn(it) } ?: "N/A"
 }

@@ -75,6 +75,10 @@ class SearchRouteArgsTest {
         val district = resolveMotormilaDeepLink("motormila://locations/Colombo")
         assertTrue(district is DistrictHub)
         assertEquals("Colombo", (district as DistrictHub).district)
+        assertTrue(resolveMotormilaDeepLink("motormila://locations") is Insights)
+        assertTrue(resolveMotormilaDeepLink("motormila://locations/") is Insights)
+        assertTrue(resolveMotormilaDeepLink("https://motormila.pages.dev/locations") is Insights)
+        assertTrue(resolveMotormilaDeepLink("https://motormila.pages.dev/locations/Kandy") is DistrictHub)
 
         assertTrue(resolveMotormilaDeepLink("motormila://calculator") is Calculator)
         assertTrue(resolveMotormilaDeepLink("motormila://pricing") is Pricing)

@@ -422,6 +422,7 @@ fun MotormilaNavGraph(
                         AlertsScreen(
                             onOpenDetail = { id -> navController.navigate(ListingDetail(id)) },
                             onUpgrade = { navController.navigate(Pro) },
+                            onSignIn = { navController.navigate(Login()) },
                         )
                     }
                     motormilaComposable<Notifications>(
