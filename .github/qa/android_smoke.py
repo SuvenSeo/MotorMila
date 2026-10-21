@@ -275,7 +275,10 @@ def s_cold_start():
 
 def s_home_feed():
     bottom_tab("Buy")
-    time.sleep(8)
+    time.sleep(3)
+    for _ in range(6):  # Buy tab restores scroll state: back to the top
+        adb(f"shell input swipe {W//2} {int(H*0.3)} {W//2} {int(H*0.85)} 200")
+    time.sleep(5)
     top = dump("home_top")
     shot("home_top")
     offline = find(top, r"Offline")
@@ -288,12 +291,12 @@ def s_home_feed():
     ctx["home_offline_banner_while_online"] = bool(offline)
     if offline or cars in ("0", None):
         raise AssertionError(f"Home header while ONLINE: offline_banner={bool(offline)} cars_listed={cars}")
-    hit, nodes = scroll_find(PRICE_MN.pattern, "desc", 10, 20)
+    hit, nodes = scroll_find(PRICE_MN.pattern, "both", 10, 20)
     if not hit:
         hit2 = find(nodes, PRICE_ANY.pattern)
         raise AssertionError(f"no listing card with 'Rs X Mn' (other prices: {[n.label for n in hit2][:3]})")
-    ctx["home_first_card"] = hit[0].desc
-    return f"{len(hit)} cards visible, first='{hit[0].desc[:80]}'"
+    ctx["home_first_card"] = hit[0].label
+    return f"cars_listed={cars}; {len(hit)} priced cards visible, first='{hit[0].label[:80]}'"
 
 
 def s_search():
