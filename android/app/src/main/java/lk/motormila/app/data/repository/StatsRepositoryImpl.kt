@@ -3,6 +3,10 @@ package lk.motormila.app.data.repository
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -75,6 +79,7 @@ class StatsRepositoryImpl @Inject constructor(
 
     companion object {
         const val TTL_MS = 15 * 60 * 1000L
+        const val DISTRICT_INSIGHT_TIMEOUT_MS = 8_000L
         const val SUMMARY_KEY = "stats_summary"
     }
 
@@ -137,9 +142,18 @@ class StatsRepositoryImpl @Inject constructor(
         )
         // Union with district-insight top-models (best-effort, capped to the top
         // 6 districts by count to avoid a request storm; failures keep base rows).
+        // Run in parallel with a per-call bound: sequential calls (~4-5 s each on
+        // the HF backend) took ~27 s and blew Home's 20 s load budget, so Home
+        // showed "Offline — 0 cars listed" on every launch (QA 2026-10-21).
         val top = dtos.sortedByDescending { it.count }.take(6)
-        val insights = top.associate { dto ->
-            dto.district to runCatching { api.districtInsight(dto.district) }.getOrNull()
+        val insights = coroutineScope {
+            top.map { dto ->
+                async {
+                    dto.district to withTimeoutOrNull(DISTRICT_INSIGHT_TIMEOUT_MS) {
+                        runCatching { api.districtInsight(dto.district) }.getOrNull()
+                    }
+                }
+            }.awaitAll().toMap()
         }
         dtos.map { dto ->
             val base = dto.toDomain()

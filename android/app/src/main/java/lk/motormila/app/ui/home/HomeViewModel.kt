@@ -11,7 +11,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withTimeoutOrNull
 import lk.motormila.app.domain.model.DistrictStat
 import lk.motormila.app.domain.model.FuelMixBucket
 import lk.motormila.app.domain.model.Insights
@@ -90,40 +91,43 @@ class HomeViewModel @Inject constructor(
             try {
                 // Hard bound: no single hanging call (dead radio, captive portal,
                 // stalled snapshot fetch) may keep the skeleton up forever.
-                // withTimeout cancels the stragglers; partial results still apply.
-                val (summary, insights, drops, districts, fuel) = withTimeout(20_000) {
-                    val summaryDef = async { runCatching { getStatsSummary() }.getOrNull() }
-                    val insightsDef = async { runCatching { getInsights() }.getOrNull() }
-                    val dropsDef = async { runCatching { getPriceDrops() }.getOrNull() }
-                    val districtsDef = async { runCatching { getDistrictPrices() }.getOrNull() }
-                    val fuelDef = async { runCatching { stats.fuelMix() }.getOrNull() }
-                    Quint(
-                        summaryDef.await(),
-                        insightsDef.await(),
-                        dropsDef.await(),
-                        districtsDef.await(),
-                        fuelDef.await(),
-                    )
-                }
+                // Each section is bounded on its own (see bounded()); partial results apply.
+                coroutineScope {
+                    val summaryDef = async { bounded { getStatsSummary() } }
+                    val insightsDef = async { bounded { getInsights() } }
+                    val dropsDef = async { bounded { getPriceDrops() } }
+                    val districtsDef = async { bounded { getDistrictPrices() } }
+                    val fuelDef = async { bounded { stats.fuelMix() } }
 
-                if (summary == null && insights == null) {
+                    // Headline sections first: publish as soon as they land so a
+                    // slow secondary section never holds Home in skeleton/offline.
+                    val summary = summaryDef.await()
+                    val insights = insightsDef.await()
+                    if (summary == null && insights == null) {
+                        _state.value = _state.value.copy(
+                            isLoading = false,
+                            isOffline = true,
+                            showCachedBadge = true,
+                            error = "Couldn't reach Motormila",
+                        )
+                    } else {
+                        _state.value = _state.value.copy(
+                            isLoading = false,
+                            summary = summary ?: _state.value.summary,
+                            insights = insights ?: _state.value.insights,
+                            isOffline = false,
+                            showCachedBadge = false,
+                            error = null,
+                        )
+                    }
+
+                    val drops = dropsDef.await()
+                    val districts = districtsDef.await()
+                    val fuel = fuelDef.await()
                     _state.value = _state.value.copy(
-                        isLoading = false,
-                        isOffline = true,
-                        showCachedBadge = true,
-                        error = "Couldn't reach Motormila",
-                    )
-                } else {
-                    _state.value = _state.value.copy(
-                        isLoading = false,
-                        summary = summary ?: _state.value.summary,
-                        insights = insights ?: _state.value.insights,
                         priceDrops = drops ?: _state.value.priceDrops,
                         districts = districts ?: _state.value.districts,
                         fuelMix = fuel ?: _state.value.fuelMix,
-                        isOffline = false,
-                        showCachedBadge = false,
-                        error = null,
                     )
                 }
             } catch (e: Exception) {
@@ -143,12 +147,12 @@ class HomeViewModel @Inject constructor(
             _state.value = _state.value.copy(isRefreshing = true, error = null)
             try {
                 // Same hard bound as load(): refresh must always settle.
-                val (summary, insights, drops, districts, fuel) = withTimeout(20_000) {
-                    val summaryDef = async { runCatching { getStatsSummary() }.getOrNull() }
-                    val insightsDef = async { runCatching { getInsights() }.getOrNull() }
-                    val dropsDef = async { runCatching { getPriceDrops() }.getOrNull() }
-                    val districtsDef = async { runCatching { getDistrictPrices() }.getOrNull() }
-                    val fuelDef = async { runCatching { stats.fuelMix() }.getOrNull() }
+                val (summary, insights, drops, districts, fuel) = coroutineScope {
+                    val summaryDef = async { bounded { getStatsSummary() } }
+                    val insightsDef = async { bounded { getInsights() } }
+                    val dropsDef = async { bounded { getPriceDrops() } }
+                    val districtsDef = async { bounded { getDistrictPrices() } }
+                    val fuelDef = async { bounded { stats.fuelMix() } }
                     Quint(
                         summaryDef.await(),
                         insightsDef.await(),
@@ -180,6 +184,19 @@ class HomeViewModel @Inject constructor(
     }
 
     fun retry() = load()
+
+    /**
+     * Per-section bound: one slow endpoint (cold HF backend, sequential
+     * district enrichment) must not discard the sections that did load.
+     * Previously a single withTimeout(20 s) around all five calls threw and
+     * flagged the whole Home as offline with "0 cars listed" (QA 2026-10-21).
+     */
+    private suspend fun <T> bounded(block: suspend () -> T): T? =
+        withTimeoutOrNull(SECTION_TIMEOUT_MS) { runCatching { block() }.getOrNull() }
+
+    private companion object {
+        const val SECTION_TIMEOUT_MS = 20_000L
+    }
 
     fun dismissCachedBadge() {
         _state.value = _state.value.copy(showCachedBadge = false)

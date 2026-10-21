@@ -51,7 +51,7 @@ import org.junit.Test
  *
  * Plain JVM tests (no emulator, no Robolectric): [Dispatchers.setMain] swaps
  * the Main dispatcher for a [StandardTestDispatcher] so virtual time controls
- * the 20s [withTimeout] bound deterministically.
+ * the 20s per-section [withTimeoutOrNull] bound deterministically.
  *
  * The v1.6.2 regression net: [HomeViewModel.load] hard-bounds the parallel
  * fetch with `withTimeout(20s)`, so even a repository that hangs forever
@@ -167,6 +167,31 @@ class HomeViewModelLoadTest {
         val state = vm.state.value
         assertFalse("isLoading must be false after the load timeout", state.isLoading)
         assertNotNull("an error/offline signal must be surfaced", state.error)
+    }
+
+    @Test
+    fun load_withOneSlowSection_keepsOtherSections_andIsNotOffline() = runTest(testDispatcher) {
+        // QA 2026-10-21: district enrichment took ~27 s on the live backend; the old
+        // all-or-nothing withTimeout(20 s) threw and Home showed "Offline — 0 cars".
+        val repo = FakeStatsRepository(
+            summaryFn = { StatsSummary(totalListings = 86_296) },
+            insightsFn = { Insights(newListings24h = 342) },
+            districtPricesFn = { awaitCancellation() },
+        )
+        val vm = viewModel(repo)
+        // Headline numbers publish immediately, not after the slow section.
+        advanceTimeBy(1_000)
+        assertFalse(vm.state.value.isLoading)
+        assertEquals(86_296, vm.state.value.summary.totalListings)
+
+        advanceTimeBy(TimeUnit.SECONDS.toMillis(25))
+
+        val state = vm.state.value
+        assertFalse(state.isLoading)
+        assertFalse("one slow section must not flag Home offline", state.isOffline)
+        assertNull(state.error)
+        assertEquals(86_296, state.summary.totalListings)
+        assertEquals(342, state.insights.newListings24h)
     }
 
     /**
