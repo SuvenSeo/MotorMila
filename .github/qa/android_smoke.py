@@ -281,8 +281,9 @@ def s_home_feed():
     offline = find(top, r"Offline")
     cars = None
     for i, n in enumerate(top):
-        if n.text == "Cars listed" and i > 0:
-            cars = top[i - 1].text
+        if n.text == "Cars listed":
+            prev = [m.text for m in top[:i] if re.fullmatch(r"[\d,]+|—", m.text.strip())]
+            cars = prev[-1] if prev else None
     ctx["home_cars_listed"] = cars
     ctx["home_offline_banner_while_online"] = bool(offline)
     if offline or cars in ("0", None):
@@ -495,15 +496,16 @@ def s_alerts():
     edits = [n for n in nodes if "EditText" in n.cls]
     if create and edits:
         tap(edits[0]); adb("shell input text Toyota"); adb("shell input keyevent 111")
-        mx = [n for n in dump() if "EditText" in n.cls and re.search(r"Max", n.label)]
+        eds = [n for n in dump() if "EditText" in n.cls]
+        mx = [n for n in eds if re.search(r"Max", n.label)] or eds[3:4]
         if mx:
             tap(mx[0]); adb("shell input text 8"); adb("shell input keyevent 111")
         tap_text(r"^Create alert$", 10, "text")
-        time.sleep(5)
+        time.sleep(1.5)
         after = dump("alerts_after_create")
         shot("alerts_after_create")
         perm = [n for n in after if "permissioncontroller" in n.pkg]
-        msgs = [n.label[:80] for n in after if re.search(r"sign|log ?in|error|fail|created|401|unauthor", n.label, re.I)]
+        msgs = [n.label[:80] for n in after if re.search(r"sign|log ?in|error|fail|created|401|403|unauthor|couldn|forbidden|account", n.label, re.I)]
         note += f" | unauthenticated create -> perm_dialog={bool(perm)} msgs={msgs[:4]}"
         if perm:
             d = find(perm, r"Don.t allow", "text")
@@ -529,7 +531,7 @@ def s_alert_from_search_perm():
     if not hit:
         raise AssertionError("no create-alert button on search")
     tap(hit[0])
-    time.sleep(4)
+    time.sleep(1.5)
     nodes = dump("after_create_alert")
     perm = [n for n in nodes if "permissioncontroller" in n.pkg]
     signin = find(nodes, r"Sign in|Log in|sign in to")
