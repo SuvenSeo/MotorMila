@@ -128,6 +128,35 @@ def dismiss_noise(nodes=None):
     return False
 
 
+def swipe_up(frac=0.5):
+    adb(f"shell input swipe {W//2} {int(H*0.75)} {W//2} {int(H*(0.75-frac))} 400")
+    time.sleep(1.5)
+
+
+def scroll_find(pat, where="both", max_swipes=8, wait_first=30):
+    hit, nodes = wait_for(pat, wait_first, where)
+    n = 0
+    while not hit and n < max_swipes:
+        swipe_up(0.45)
+        nodes = dump()
+        hit = find(nodes, pat, where)
+        n += 1
+    return hit, nodes
+
+
+def bottom_tab(label):
+    for _ in range(3):
+        nodes = dump()
+        h = [n for n in find(nodes, f"^{label}$", "both") if n.y1 > H * 0.85]
+        if h:
+            tap(h[0])
+            time.sleep(2)
+            return True
+        adb("shell input keyevent 4")
+        time.sleep(1.5)
+    raise AssertionError(f"bottom tab {label} not found")
+
+
 def alive():
     return adb(f"shell pidof {PKG}").strip() != ""
 
@@ -162,6 +191,7 @@ def step(name, fn, attempts=3):
             dump(f"{name}_pass")
             RESULTS.append({"step": name, "status": "PASS", "attempt": i, "note": str(note), "shot": f})
             print(f"PASS {name} (attempt {i}) {note}", flush=True)
+            flush()
             return True
         except Exception as e:
             msg = f"{type(e).__name__}: {e}"
@@ -178,7 +208,13 @@ def step(name, fn, attempts=3):
     RESULTS.append({"step": name, "status": "FAIL", "attempt": len(errs),
                     "note": errs[-1] + (" (same failure x%d — step stopped)" % len(errs) if same else ""),
                     "errors": errs, "shot": f})
+    flush()
     return False
+
+
+def flush():
+    json.dump({"api": args.api, "results": RESULTS, "ctx": {k: v for k, v in ctx.items()}},
+              open(f"{OUT}/results.json", "w"), indent=2, ensure_ascii=False, default=str)
 
 
 def untested(name, why):
@@ -204,6 +240,7 @@ adb("shell settings put global transition_animation_scale 0")
 adb("shell settings put global animator_duration_scale 0")
 # gesture navigation so predictive back can be exercised with an edge swipe
 print(adb("shell cmd overlay enable com.android.internal.systemui.navbar.gestural"))
+adb("logcat -G 16M")
 adb("logcat -c")
 print(adb(f"install -r -t '{args.apk}'", timeout=180))
 SIZE = adb("shell wm size")
@@ -230,7 +267,20 @@ def s_cold_start():
 
 
 def s_home_feed():
-    hit, nodes = wait_for(PRICE_MN.pattern, timeout=90, where="desc")
+    bottom_tab("Buy")
+    time.sleep(8)
+    top = dump("home_top")
+    shot("home_top")
+    offline = find(top, r"Offline")
+    cars = None
+    for i, n in enumerate(top):
+        if n.text == "Cars listed" and i > 0:
+            cars = top[i - 1].text
+    ctx["home_cars_listed"] = cars
+    ctx["home_offline_banner_while_online"] = bool(offline)
+    if offline or cars in ("0", None):
+        raise AssertionError(f"Home header while ONLINE: offline_banner={bool(offline)} cars_listed={cars}")
+    hit, nodes = scroll_find(PRICE_MN.pattern, "desc", 10, 20)
     if not hit:
         hit2 = find(nodes, PRICE_ANY.pattern)
         raise AssertionError(f"no listing card with 'Rs X Mn' (other prices: {[n.label for n in hit2][:3]})")
@@ -275,9 +325,22 @@ def s_filters():
     return f"filters Petrol+Automatic applied, {len(hit)} results"
 
 
+def open_search_grid(q=None):
+    deeplink("motormila://search" + (f"?q={q}" if q else ""))
+    time.sleep(3)
+    adb("shell input keyevent 111")  # ESC: close IME / suggestion dropdown
+    time.sleep(1)
+    nodes = dump()
+    if not find(nodes, r"^Open filters$", "desc"):
+        adb("shell input keyevent 4")
+        time.sleep(1.5)
+    hit, nodes = wait_for(PRICE_MN.pattern, 45, "desc")
+    hit = [n for n in hit if n.y2 - n.y1 > 250]  # grid cards, not suggestion rows
+    return hit, nodes
+
+
 def s_detail():
-    deeplink("motormila://home")
-    hit, _ = wait_for(PRICE_MN.pattern, 60, "desc")
+    hit, _ = open_search_grid()
     if not hit:
         raise AssertionError("no card to open")
     card = hit[0]
@@ -328,7 +391,7 @@ def s_back_button():
 
 
 def s_watchlist_screen():
-    deeplink("motormila://watchlist")
+    bottom_tab("Saved")
     hit, nodes = wait_for(r"^Watched ", 20, "desc")
     if not hit:
         raise AssertionError("saved listing not in Watchlist")
@@ -336,8 +399,7 @@ def s_watchlist_screen():
 
 
 def s_predictive_back():
-    deeplink("motormila://home")
-    hit, _ = wait_for(PRICE_MN.pattern, 45, "desc")
+    hit, _ = open_search_grid()
     if not hit:
         raise AssertionError("no card")
     tap(hit[0])
@@ -372,6 +434,10 @@ def s_trends():
         shot(nm)
         err = find(nodes, r"Something went wrong|Couldn.t load|Error|Retry", "both")
         txt = len([n for n in nodes if n.text.strip()])
+        if nm == "pulse":
+            pill = find(nodes, r"^Market signals$", "desc")
+            if pill and pill[0].y2 - pill[0].y1 > 300:
+                raise AssertionError(f"pulse tab pill is {pill[0].y2 - pill[0].y1}px tall — content area collapsed")
         out.append(f"{nm}:texts={txt}{' ERR=' + err[0].label[:40] if err else ''}")
         if txt < 5 or err:
             raise AssertionError("; ".join(out))
@@ -379,7 +445,7 @@ def s_trends():
 
 
 def s_insights_tab():
-    tap_text(r"^Insights$", 15, "both")
+    bottom_tab("Prices")
     time.sleep(6)
     nodes = dump("insights")
     err = find(nodes, r"Something went wrong|Couldn.t load|Retry")
@@ -389,14 +455,13 @@ def s_insights_tab():
 
 
 def s_locations():
-    deeplink("motormila://locations")
-    time.sleep(5)
-    hit, nodes = wait_for(r"Colombo|Gampaha|Kandy", 30)
-    if not hit:
-        raise AssertionError("locations page shows no districts")
-    tap(hit[0])
-    time.sleep(5)
+    deeplink("motormila://locations/Colombo")
+    time.sleep(8)
+    shot("district_colombo")
     nodes = dump("district")
+    if not find(nodes, r"Colombo"):
+        raise AssertionError("district hub for Colombo not shown")
+    hit = find(nodes, r"Colombo")
     err = find(nodes, r"Something went wrong|Couldn.t load|Retry")
     if err:
         raise AssertionError("district hub error: " + err[0].label[:60])
@@ -419,13 +484,30 @@ def s_alerts():
     ctx["alerts_labels"] = labels
     signin = find(nodes, r"Sign in|Log in")
     create = find(nodes, r"^Create alert$")
-    return f"sign-in prompt={bool(signin)} create_button={bool(create)}"
+    note = f"sign-in prompt={bool(signin)} create_button={bool(create)}"
+    edits = [n for n in nodes if "EditText" in n.cls]
+    if create and edits:
+        tap(edits[0]); adb("shell input text Toyota"); adb("shell input keyevent 111")
+        mx = [n for n in dump() if "EditText" in n.cls and re.search(r"Max", n.label)]
+        if mx:
+            tap(mx[0]); adb("shell input text 8"); adb("shell input keyevent 111")
+        tap_text(r"^Create alert$", 10, "text")
+        time.sleep(5)
+        after = dump("alerts_after_create")
+        shot("alerts_after_create")
+        perm = [n for n in after if "permissioncontroller" in n.pkg]
+        msgs = [n.label[:80] for n in after if re.search(r"sign|log ?in|error|fail|created|401|unauthor", n.label, re.I)]
+        note += f" | unauthenticated create -> perm_dialog={bool(perm)} msgs={msgs[:4]}"
+        if perm:
+            d = find(perm, r"Don.t allow", "text")
+            if d:
+                tap(d[0])
+    return note
 
 
 def s_alert_from_search_perm():
     """Search 'Create alert from these filters' is the path that triggers the notification prompt."""
-    deeplink("motormila://search?q=honda")
-    wait_for(PRICE_MN.pattern, 45, "desc")
+    open_search_grid("honda")
     hit = find(dump(), r"^Create alert from these filters$", "desc")
     if not hit:
         raise AssertionError("no create-alert button on search")
@@ -488,8 +570,13 @@ def s_lang(code_label, expect_pat, back_label=None):
         hit, nodes = wait_for(expect_pat, 15, "text")
         if not hit:
             raise AssertionError(f"UI not localised (expected /{expect_pat}/)")
-        deeplink("motormila://home")
-        time.sleep(5)
+        for _ in range(3):
+            adb("shell input keyevent 4"); time.sleep(1.5)
+            if any(n.y1 > H * 0.85 for n in dump() if n.text.strip()):
+                break
+        if not foreground_is_app():
+            start_app(); time.sleep(4)
+        time.sleep(3)
         shot(f"home_{code_label}")
         nodes = dump(f"home_{code_label}")
         nonlatin = [n.text for n in nodes if re.search(r"[\u0D80-\u0DFF\u0B80-\u0BFF]", n.text)]
@@ -557,8 +644,15 @@ def s_offline():
     adb("shell svc wifi enable")
     adb("shell svc data enable")
     time.sleep(8)
-    deeplink("motormila://home")
-    hit, _ = wait_for(PRICE_MN.pattern, 60, "desc")
+    bottom_tab("Buy")
+    r = find(dump(), r"^Retry$|Tap to retry", "both")
+    if r:
+        tap(r[0]); time.sleep(6)
+    still_off = bool(find(dump("online_again"), r"Offline"))
+    hit, _ = scroll_find(PRICE_MN.pattern, "desc", 8, 30)
+    note += f" ; offline banner after reconnect+retry={still_off}"
+    if still_off:
+        raise AssertionError(note + " ; still flagged offline after reconnect")
     if not hit and not cards:
         raise AssertionError(note + " ; did not recover after reconnect")
     return note + f" ; recovered online cards={len(hit)}"
