@@ -199,8 +199,9 @@ internal fun resolveParsedDeepLink(parsed: ParsedDeepLink): Any? {
             val model = segments.getOrNull(2)?.takeIf { it.isNotBlank() }
             return if (model == null) MakeHub(make) else MakeModelHub(make, model)
         }
-        if (segments.size >= 2 && segments[0] == "locations") {
-            return DistrictHub(segments[1])
+        if (segments.firstOrNull() == "locations") {
+            // Bare /locations → the districts list (Insights), same as Home's "See all districts".
+            return segments.getOrNull(1)?.takeIf { it.isNotBlank() }?.let { DistrictHub(it) } ?: Insights
         }
         if (segments.firstOrNull() == "official-pulse") {
             if (segments.size == 1) return OfficialPulse
@@ -284,7 +285,8 @@ internal fun resolveParsedDeepLink(parsed: ParsedDeepLink): Any? {
             val model = segments.getOrNull(1)?.takeIf { it.isNotBlank() }
             if (model == null) MakeHub(make) else MakeModelHub(make, model)
         }
-        "locations" -> segments.firstOrNull()?.takeIf { it.isNotBlank() }?.let { DistrictHub(it) }
+        // Bare motormila://locations (declared in the manifest) → districts list (Insights).
+        "locations" -> segments.firstOrNull()?.takeIf { it.isNotBlank() }?.let { DistrictHub(it) } ?: Insights
         "estimate" -> Valuation(
             make = parsed.queryOrNull("make"),
             model = parsed.queryOrNull("model"),

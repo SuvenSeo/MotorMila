@@ -337,9 +337,12 @@ fun MotormilaPillTabs(
     val count = tabs.size.coerceAtLeast(1)
     val safeSelected = selected.coerceIn(0, count - 1)
     BoxWithConstraints(
+        // Fixed height: the indicator/row use fillMaxHeight, so heightIn(min)
+        // let them fill ALL remaining height inside a bounded Column — Official
+        // Pulse rendered a full-screen pill and no content (QA 2026-10-21).
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 48.dp)
+            .height(48.dp)
             .liquidGlass(MotormilaPill, fill = MotormilaGlassFill, specular = false)
             .padding(4.dp),
     ) {

@@ -137,6 +137,10 @@ data class AlertsUiState(
     val isPro: Boolean = false,
     /** Free plan cap: 1 active alert. */
     val freeCapReached: Boolean = false,
+    /** False once the session flow reports no signed-in user (alerts are server-side). */
+    val signedIn: Boolean = true,
+    /** Set when a create was blocked or rejected because the user is signed out. */
+    val signInRequired: Boolean = false,
     /** Inbox unread count (same repository's notification surface). */
     val unreadCount: Int = 0,
     val offline: Boolean = false,
@@ -187,7 +191,7 @@ class AlertsViewModel @Inject constructor(
                 repository.observeAlerts(),
                 authRepository.session(),
             ) { alerts, session ->
-                Triple(alerts, session?.isPro == true, alerts.map { it.id })
+                Triple(alerts, session, alerts.map { it.id })
             }.catch { e ->
                 val mapped = ErrorMapper.map(e)
                 _state.update {
@@ -198,9 +202,12 @@ class AlertsViewModel @Inject constructor(
                         error = mapped.message,
                     )
                 }
-            }.collect { (alerts, isPro, ids) ->
+            }.collect { (alerts, session, ids) ->
+                val isPro = session?.isPro == true
                 _state.update {
                     it.copy(
+                        signedIn = session != null,
+                        signInRequired = it.signInRequired && session == null,
                         isLoading = false,
                         isRefreshing = false,
                         offline = false,
@@ -315,6 +322,11 @@ class AlertsViewModel @Inject constructor(
 
     private fun create() {
         val f = _state.value.form
+        if (!_state.value.signedIn) {
+            // Alerts live on the server: a signed-out create used to fail with no visible feedback.
+            _state.update { it.copy(signInRequired = true, error = null) }
+            return
+        }
         if (_state.value.freeCapReached) {
             _state.update { it.copy(error = "Free plan allows 1 alert. Upgrade to Pro for unlimited alerts.") }
             return
@@ -337,11 +349,15 @@ class AlertsViewModel @Inject constructor(
                 .onFailure { e ->
                     val mapped = ErrorMapper.map(e)
                     _state.update {
-                        it.copy(
-                            creating = false,
-                            offline = mapped is AppError.Network,
-                            error = mapped.message,
-                        )
+                        if (mapped is AppError.Unauthorized) {
+                            it.copy(creating = false, signInRequired = true)
+                        } else {
+                            it.copy(
+                                creating = false,
+                                offline = mapped is AppError.Network,
+                                error = mapped.message,
+                            )
+                        }
                     }
                 }
         }

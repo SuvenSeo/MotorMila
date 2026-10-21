@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import lk.motormila.app.domain.model.AlertInput
 import lk.motormila.app.domain.model.Listing
@@ -32,6 +33,9 @@ import javax.inject.Inject
 
 /** Web parity (Compare.tsx / compareSlug.ts): tray holds at most 3 ids. */
 const val MAX_COMPARE_IDS = 3
+
+/** Shown when "Create alert from these filters" is used while signed out. */
+const val SIGN_IN_FOR_ALERTS = "Sign in to create price alerts."
 
 data class SearchUiState(
     val query: String = "",
@@ -208,6 +212,12 @@ class SearchViewModel @Inject constructor(
     fun createAlertFromFilters() {
         val f = _state.value.filters
         viewModelScope.launch {
+            val session = runCatching { observeSession().first() }.getOrNull()
+            if (session == null) {
+                // Alerts are server-side; a signed-out create used to fail with no visible feedback.
+                _state.value = _state.value.copy(error = SIGN_IN_FOR_ALERTS)
+                return@launch
+            }
             try {
                 alerts.create(
                     AlertInput(
@@ -218,8 +228,16 @@ class SearchViewModel @Inject constructor(
                     ),
                 )
                 _state.value = _state.value.copy(alertSaved = true)
+            } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+                throw e
             } catch (e: Exception) {
-                _state.value = _state.value.copy(error = e.message ?: "Couldn't save alert")
+                val mapped = lk.motormila.app.core.network.ErrorMapper.map(e)
+                val msg = if (mapped is lk.motormila.app.core.common.AppError.Unauthorized) {
+                    SIGN_IN_FOR_ALERTS
+                } else {
+                    "Couldn't save alert. ${mapped.message}"
+                }
+                _state.value = _state.value.copy(error = msg)
             }
         }
     }
