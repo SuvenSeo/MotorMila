@@ -86,8 +86,8 @@ def find(nodes, pat, where="both", flags=re.I):
     rx = re.compile(pat, flags)
     res = []
     for n in nodes:
-        s = n.text if where == "text" else n.desc if where == "desc" else n.label
-        if rx.search(s):
+        fields = [n.text] if where == "text" else [n.desc] if where == "desc" else [n.text, n.desc]
+        if any(f and rx.search(f) for f in fields):
             res.append(n)
     return res
 
@@ -152,8 +152,15 @@ def bottom_tab(label):
             tap(h[0])
             time.sleep(2)
             return True
+        if not foreground_is_app():
+            start_app()
+            time.sleep(4)
+            continue
         adb("shell input keyevent 4")
         time.sleep(1.5)
+        if not foreground_is_app():
+            start_app()
+            time.sleep(4)
     raise AssertionError(f"bottom tab {label} not found")
 
 
@@ -509,6 +516,16 @@ def s_alert_from_search_perm():
     """Search 'Create alert from these filters' is the path that triggers the notification prompt."""
     open_search_grid("honda")
     hit = find(dump(), r"^Create alert from these filters$", "desc")
+    for _ in range(3):
+        if hit:
+            break
+        chip = find(dump(), r"^Newest$", "text")
+        if not chip:
+            break
+        y = chip[0].center()[1]
+        adb(f"shell input swipe {int(W*0.85)} {y} {int(W*0.1)} {y} 300")
+        time.sleep(1)
+        hit = find(dump(), r"^Create alert from these filters$", "desc")
     if not hit:
         raise AssertionError("no create-alert button on search")
     tap(hit[0])
