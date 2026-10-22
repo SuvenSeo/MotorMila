@@ -250,11 +250,21 @@ fun HomeContent(
 
             // 3. Market strip (honest counts) — skeleton / error / data
             item {
-                if (state.isLoading) {
+                // Skeleton -> content crossfades (no jump when data lands).
+                val stripState = when {
+                    state.isLoading -> 0
+                    state.error != null && state.summary.totalListings == 0 &&
+                        !state.isOffline && !state.showCachedBadge -> 1
+                    else -> 2
+                }
+                androidx.compose.animation.AnimatedContent(
+                    targetState = stripState,
+                    transitionSpec = { lk.motormila.app.ui.theme.MmMotion.crossfade() },
+                    label = "home-strip",
+                ) { strip ->
+                if (strip == 0) {
                     LoadingSkeletonCard(Modifier.padding(horizontal = MmSpacing.gutter))
-                } else if (state.error != null && state.summary.totalListings == 0 &&
-                    !state.isOffline && !state.showCachedBadge
-                ) {
+                } else if (strip == 1) {
                     ErrorState(
                         message = state.error ?: "Unknown error",
                         onRetry = onRetry,
@@ -268,6 +278,7 @@ fun HomeContent(
                         new24h = state.insights.newListings24h,
                         avgPriceLkr = state.summary.avgPriceLkr,
                     )
+                }
                 }
             }
 
