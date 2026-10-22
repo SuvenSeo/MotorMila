@@ -96,59 +96,41 @@ def test_ikman_api_rejects_missing_price():
     assert IkmanCarScraper(db=None)._build_payload_from_api_ad(row) is None
 
 
-def test_ikman_scrape_never_uses_internal_api(monkeypatch):
+def test_ikman_scrape_defaults_to_api_mode_auto(monkeypatch):
     calls: list[str] = []
 
-    async def fake_playwright(self, max_pages: int = 5):
-        calls.append(f"html:{max_pages}")
+    async def fake_api(self, max_pages: int = 5, *, start_page: int = 1):
+        calls.append(f"api:{max_pages}:{start_page}")
         return 3
+
+    async def fake_playwright(self, max_pages: int = 5):
+        calls.append(f"playwright:{max_pages}")
+
+    monkeypatch.delenv("IKMAN_SCRAPE_MODE", raising=False)
+    monkeypatch.setattr(IkmanCarScraper, "_scrape_via_api", fake_api)
+    monkeypatch.setattr(IkmanCarScraper, "_scrape_via_playwright", fake_playwright)
+
+    import asyncio
+
+    asyncio.run(IkmanCarScraper(db=None).scrape(max_pages=2))
+    assert calls == ["api:2:1"]
+
+
+def test_ikman_api_start_page_can_resume_older_results(monkeypatch):
+    calls: list[tuple[int, int]] = []
+
+    async def fake_api(self, max_pages: int = 5, *, start_page: int = 1):
+        calls.append((max_pages, start_page))
+        return 1
 
     monkeypatch.setenv("IKMAN_SCRAPE_MODE", "api")
-    monkeypatch.setenv("SOURCES_ENABLED", "ikman")
-    monkeypatch.setattr(IkmanCarScraper, "_scrape_via_playwright", fake_playwright)
-    assert not hasattr(IkmanCarScraper, "_scrape_via_api")
+    monkeypatch.setenv("IKMAN_START_PAGE", "201")
+    monkeypatch.setattr(IkmanCarScraper, "_scrape_via_api", fake_api)
 
     import asyncio
 
-    assert asyncio.run(IkmanCarScraper(db=None).scrape(max_pages=2)) == 3
-    assert calls == ["html:2"]
-
-
-def test_ikman_is_enabled_by_default(monkeypatch):
-    # Re-enabled by owner decision 22 Oct 2026 (was disabled by default
-    # 19-22 Oct 2026). With no flags set, scrape() reaches the HTML reader.
-    calls: list[str] = []
-
-    async def fake_playwright(self, max_pages: int = 5):
-        calls.append("html")
-        return 3
-
-    monkeypatch.delenv("SOURCES_ENABLED", raising=False)
-    monkeypatch.delenv("SOURCES_DISABLED", raising=False)
-    monkeypatch.setattr(IkmanCarScraper, "_scrape_via_playwright", fake_playwright)
-
-    import asyncio
-
-    assert asyncio.run(IkmanCarScraper(db=None).scrape(max_pages=2)) == 3
-    assert calls == ["html"]
-
-
-def test_ikman_stops_when_disabled_via_sources_disabled(monkeypatch):
-    # The instant kill switch: SOURCES_DISABLED=ikman must no-op the crawl.
-    calls: list[str] = []
-
-    async def fake_playwright(self, max_pages: int = 5):
-        calls.append("html")
-        return 3
-
-    monkeypatch.delenv("SOURCES_ENABLED", raising=False)
-    monkeypatch.setenv("SOURCES_DISABLED", "ikman")
-    monkeypatch.setattr(IkmanCarScraper, "_scrape_via_playwright", fake_playwright)
-
-    import asyncio
-
-    assert asyncio.run(IkmanCarScraper(db=None).scrape(max_pages=2)) == 0
-    assert calls == []
+    asyncio.run(IkmanCarScraper(db=None).scrape(max_pages=200))
+    assert calls == [(200, 201)]
 
 
 def test_ikman_vehicle_categories_cover_all_for_sale_leaves():

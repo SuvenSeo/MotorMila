@@ -170,18 +170,6 @@ jobs:
           print("merged DB history:", con.execute("SELECT COUNT(*) FROM vehicle_price_history").fetchone()[0])
           PY
 
-      - name: Reset duplicate flags before the strict dedup pass
-        # Clears is_duplicate/duplicate_of left by the old loose matcher; the
-        # next step re-flags only strict matches (same photo hash, or same
-        # district + mileage within 2% + price within 2%). Same run condition
-        # as the export step so a forced publish-full-catalog redeploy heals.
-        if: steps.discover.outputs.count != '0' || github.event.inputs.publish-full-catalog == 'true'
-        env:
-          COLD_DATABASE_URL: sqlite:///motormila.db
-          MOTORMILA_LOCAL_DB: motormila.db
-          ALLOW_SQLITE_FALLBACK: "true"
-        run: python scripts/ops/repair_duplicate_flags.py --apply
-
       - name: Run market analysis + dedup
         if: steps.discover.outputs.count != '0'
         env:
@@ -190,13 +178,17 @@ jobs:
           RUN_MARKET_ANALYSIS: "true"
           RUN_MARKET_SIGNALS: "true"
           RUN_DEAL_SCORE_REFRESH: "true"
-          # Dedup re-enabled with the strict matcher (app/utils/deduplication.py):
-          # a pair needs the same photo hash, or same district + mileage and
-          # price within 2%. The loose matcher that flagged >50% of the
-          # catalog (Sept 2026) is gone. Flags are reset in the previous step,
-          # so this is a full in-memory pass over the local SQLite DB.
-          RUN_DEDUP: "true"
-          DEDUP_FULL_PASS: "true"
+          # Dedup marking DISABLED (2026-09-17): the make/model/year/price±3%
+          # matcher was flagging >50% of the catalog as cross-source duplicates
+          # (incl. distinct cars in different districts), collapsing public
+          # live counts 207k → 106k. Keep off until the matcher requires
+          # district + seller/photo evidence. The repair step below clears any
+          # residual flags before every export so the catalog stays whole.
+          RUN_DEDUP: "false"
+          # Incremental (48h window) dedup — a full sweep re-reads 240k rows
+          # and adds ~40 min to every merge. Full passes run on-demand via
+          # heavy-maintenance.yml against SQLite (zero egress cost).
+          DEDUP_FULL_PASS: "false"
           RUN_STATS_CACHE_REFRESH: "true"
           RUN_LISTING_LIFECYCLE: "true"
           RUN_OUTLIER_DETECTION: "true"
@@ -206,6 +198,17 @@ jobs:
           RUN_THUMBNAIL_CACHE: "false"
           RUN_IMAGE_PHASH: "false"
         run: python run_sync.py
+
+      - name: Repair duplicate flags (keep catalog whole)
+        # Clears is_duplicate/duplicate_of set by earlier dedup passes so the
+        # export counts every row. Same run condition as the export step so a
+        # forced publish-full-catalog redeploy also heals.
+        if: steps.discover.outputs.count != '0' || github.event.inputs.publish-full-catalog == 'true'
+        env:
+          COLD_DATABASE_URL: sqlite:///motormila.db
+          MOTORMILA_LOCAL_DB: motormila.db
+          ALLOW_SQLITE_FALLBACK: "true"
+        run: python scripts/ops/repair_duplicate_flags.py --apply
 
       - name: Export and deploy SQLite snapshots (zero-egress catalog refresh)
         # Permanent path: whenever new dump data was merged, refresh the live

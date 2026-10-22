@@ -20,7 +20,6 @@ from app.scrapers.patpat import PatpatScraper
 from app.scrapers.riyahub import RiyahubScraper
 from app.scrapers.riyasewana import RiyasewanaScraper
 from app.scrapers.saleme import SaleMeScraper
-from app.scrapers.polite import source_enabled
 from app.api.v1.endpoints.pipeline import reconcile_orphan_running_runs
 from app.services.aggregator import CarPriceAggregator
 from app.services.market_signals import MarketSignalImporter
@@ -658,12 +657,6 @@ async def main(profile_override: str | None = None):
     profile = _resolve_profile(profile_override)
     source_configs = _build_source_configs(profile)
     enabled_sources = _resolve_enabled_sources(SOURCE_PROFILES[profile])
-    # Legal kill-switch (SOURCES_ENABLED / SOURCES_DISABLED, ikman off by
-    # default): see app/scrapers/polite.py and docs/legal/data-sourcing.md.
-    flag_disabled = sorted(s for s in enabled_sources if not source_enabled(s))
-    if flag_disabled:
-        log.warning("sources_disabled_by_flag", sources=flag_disabled)
-    enabled_sources = {s for s in enabled_sources if source_enabled(s)}
     active_configs = [config for config in source_configs if config[0] in enabled_sources]
     run_scrapers = _resolve_bool_env("RUN_SCRAPERS", True)
     run_market_analysis = _resolve_bool_env("RUN_MARKET_ANALYSIS", True)
