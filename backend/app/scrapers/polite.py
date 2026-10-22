@@ -10,8 +10,10 @@ Policy (see docs/legal/data-sourcing.md):
   2-5 s, jittered) between requests to the same host.
 * If a host answers with a block / challenge / rate limit, the caller backs
   off and skips the source for this run. We never retry through a challenge.
-* Sources are opt-in per run via ``SOURCES_ENABLED``; ikman is OFF by default
-  (a partnership / data feed is the intended path).
+* Sources run by default; a run can be limited to an allow-list via
+  ``SOURCES_ENABLED`` or a source switched off via ``SOURCES_DISABLED``.
+  ikman was OFF by default 19-22 Oct 2026 and was re-enabled by owner
+  decision on 22 Oct 2026 (public HTML only; never ``api.ikman.lk``).
 """
 from __future__ import annotations
 
@@ -49,9 +51,11 @@ BOT_USER_AGENT = bot_user_agent()
 # ---------------------------------------------------------------------------
 
 # Sources that stay OFF unless explicitly listed in SOURCES_ENABLED.
-# ikman: we do not have permission to use api.ikman.lk; the intended path is a
-# partnership / feed. Its public HTML crawler can be opted in explicitly.
-DEFAULT_DISABLED_SOURCES = frozenset({"ikman"})
+# Empty since 22 Oct 2026: ikman sat here 19-22 Oct 2026 while a
+# partnership / feed was the intended path; the owner re-enabled its
+# public-HTML crawler on 22 Oct 2026. It can be switched off instantly
+# again with SOURCES_DISABLED=ikman. api.ikman.lk is still never used.
+DEFAULT_DISABLED_SOURCES = frozenset()
 
 
 def _parse_source_list(raw: str) -> set[str]:

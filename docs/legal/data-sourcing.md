@@ -1,6 +1,6 @@
 # MotorMila data sourcing policy
 
-_Last updated: 19 October 2026. Applies to the MotorMila website, API and Android app._
+_Last updated: 22 October 2026. Applies to the MotorMila website, API and Android app._
 
 MotorMila is an independent search engine for vehicles for sale in Sri Lanka. It is
 not affiliated with ikman.lk, Riyasewana or any other site it links to. Listings
@@ -65,8 +65,11 @@ seller gives us their own contact details and can edit or delete them.
   to stop, we stop the same day.
 - **Per-source switch.** Each source can be turned off instantly with the
   `SOURCES_DISABLED` setting, or the crawl limited to an allow-list with
-  `SOURCES_ENABLED`. **ikman.lk is off by default**: the intended path is a
-  data partnership or feed under ikman's "partner sites" terms.
+  `SOURCES_ENABLED`. **ikman.lk crawling was paused 19–22 October 2026 and
+  re-enabled on 22 October 2026.** We crawl only robots-permitted public
+  HTML pages and never `api.ikman.lk`; a data partnership or feed under
+  ikman's "partner sites" terms remains the preferred long-term path, and
+  `SOURCES_DISABLED=ikman` stops the crawl instantly if that changes.
 
 ## 4. Freshness
 
