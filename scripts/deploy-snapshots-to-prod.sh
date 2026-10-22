@@ -167,9 +167,9 @@ while IFS= read -r -d '' bigfile; do
 done < <(find . -type f -size +99M -not -path "./.git/*" -print0)
 echo "==> Moved $(find "${FAILOVER_STASH}" -type f | wc -l) file(s) >99MB aside for the Vercel upload"
 if [[ -n "${VERCEL_TOKEN:-}" ]]; then
-  npx --yes vercel deploy --prod --yes --token "${VERCEL_TOKEN}"
+  npx --yes vercel deploy --prod --yes --archive=tgz --token "${VERCEL_TOKEN}"
 else
-  npx --yes vercel deploy --prod --yes
+  npx --yes vercel deploy --prod --yes --archive=tgz
 fi
 trap - EXIT
 restore_stash

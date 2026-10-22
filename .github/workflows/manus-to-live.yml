@@ -261,7 +261,9 @@ jobs:
           # release asset can only be fetched with a token, and the binary is
           # gitignored, so it must ride the CLI deploy).
           bash scripts/fetch-apk-for-deploy.sh
-          bash scripts/deploy-snapshots-to-prod.sh
+          # Vercel failure (e.g. free-plan upload cap) must not block Cloudflare.
+          VERCEL_OK=1
+          bash scripts/deploy-snapshots-to-prod.sh || { VERCEL_OK=0; echo "::warning::Vercel deploy failed; continuing to Cloudflare"; }
           # Cloudflare Pages — permanent Vercel alternative (motormila.pages.dev).
           # Skipped if the Cloudflare secrets are not configured.
           if [[ -n "${CLOUDFLARE_API_TOKEN:-}" && -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]]; then
