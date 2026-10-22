@@ -29,7 +29,23 @@ import lk.motormila.app.domain.usecase.ObserveSessionUseCase
 import lk.motormila.app.domain.usecase.ToggleWatchlistUseCase
 import lk.motormila.app.ui.navigation.Search
 import lk.motormila.app.ui.navigation.searchArgsToQuery
+import lk.motormila.app.domain.model.VehicleCategory
+import lk.motormila.app.domain.model.VehicleCategoryRules
 import javax.inject.Inject
+
+/** Launch rule: every browse list a user lands on starts on Cars. */
+fun defaultSearchQuery(): ListingQuery = ListingQuery(vehicleCategory = VehicleCategory.DEFAULT.apiValue)
+
+/**
+ * Deep links / hubs carry make/model/keyword but no category. Default them to
+ * Cars unless the intent is clearly another vehicle type (Bajaj RE, Honda Dio,
+ * TVS…), in which case show All so the result is never empty by surprise.
+ */
+fun ListingQuery.withDefaultCategory(): ListingQuery {
+    if (vehicleCategory != null) return this
+    val carIntent = VehicleCategoryRules.isCarLike(null, make, model, keyword)
+    return copy(vehicleCategory = if (carIntent) VehicleCategory.DEFAULT.apiValue else null)
+}
 
 /** Web parity (Compare.tsx / compareSlug.ts): tray holds at most 3 ids. */
 const val MAX_COMPARE_IDS = 3
@@ -39,7 +55,7 @@ const val SIGN_IN_FOR_ALERTS = "Sign in to create price alerts."
 
 data class SearchUiState(
     val query: String = "",
-    val filters: ListingQuery = ListingQuery(),
+    val filters: ListingQuery = defaultSearchQuery(),
     val suggestions: List<Listing> = emptyList(),
     val recentSearches: List<String> = emptyList(),
     val compareIds: List<Int> = emptyList(),
@@ -69,7 +85,7 @@ class SearchViewModel @Inject constructor(
     val state: StateFlow<SearchUiState> = _state.asStateFlow()
 
     private val queryFlow = MutableStateFlow("")
-    private val pagingKey = MutableStateFlow(ListingQuery())
+    private val pagingKey = MutableStateFlow(defaultSearchQuery())
 
     /** True while results come from the offline snapshot (backend down). */
     val fromSnapshot: kotlinx.coroutines.flow.StateFlow<Boolean> get() = getListingsPaging.fromSnapshot
@@ -178,7 +194,19 @@ class SearchViewModel @Inject constructor(
     }
 
     fun resetFilters() {
-        applyFilters(ListingQuery(keyword = _state.value.query.ifBlank { null }))
+        // Clears refinements; the browse category the user picked stays.
+        applyFilters(
+            ListingQuery(
+                keyword = _state.value.query.ifBlank { null },
+                vehicleCategory = _state.value.filters.vehicleCategory,
+            ),
+        )
+    }
+
+    /** Category chip row (Cars default · All · Bikes · …). */
+    fun onCategoryChange(category: VehicleCategory) {
+        if (_state.value.filters.vehicleCategory == category.apiValue) return
+        applyFilters(_state.value.filters.copy(vehicleCategory = category.apiValue))
     }
 
     fun toggleCompare(id: Int) {
@@ -259,7 +287,7 @@ class SearchViewModel @Inject constructor(
             incoming.model != null ||
             !route.sort.isNullOrBlank()
         if (hasArgs) {
-            applyIncomingQuery(incoming)
+            applyIncomingQuery(incoming.withDefaultCategory())
             if (keyword != null) {
                 onSearch(keyword)
             }

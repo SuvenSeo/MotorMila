@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.search
 
+import lk.motormila.app.domain.model.VehicleCategory
+
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -136,7 +138,11 @@ fun SearchScreen(
             } else {
                 viewModel.onQueryChange(heard)
                 val parsed = parseVoiceQuery(heard)
-                viewModel.applyFilters(parsed.copy(sort = state.filters.sort))
+                viewModel.applyFilters(
+                    parsed.copy(sort = state.filters.sort).let {
+                        if (it.vehicleCategory == null) it.copy(vehicleCategory = state.filters.vehicleCategory) else it
+                    },
+                )
             }
         }
     }
@@ -224,6 +230,10 @@ fun SearchScreen(
                 }
                 Spacer(Modifier.height(4.dp))
             }
+            CategoryChipRow(
+                selected = VehicleCategory.fromApi(state.filters.vehicleCategory),
+                onSelect = viewModel::onCategoryChange,
+            )
             SortFilterRow(
                 sort = state.filters.sort,
                 onSort = viewModel::onSortChange,
@@ -364,6 +374,35 @@ fun SearchScreen(
                 onApply = viewModel::applyFilters,
                 onReset = viewModel::resetFilters,
                 onDismiss = viewModel::closeFilters,
+            )
+        }
+    }
+}
+
+/**
+ * Browse category chips. Cars is the default first impression; one tap
+ * switches to All vehicles or another type.
+ */
+@Composable
+internal fun CategoryChipRow(
+    selected: VehicleCategory,
+    onSelect: (VehicleCategory) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(bottom = 4.dp)
+            .semantics { contentDescription = "Vehicle type" },
+    ) {
+        items(VehicleCategory.entries, key = { it.name }) { cat ->
+            MmChip(
+                label = cat.label,
+                selected = cat == selected,
+                onClick = { onSelect(cat) },
             )
         }
     }

@@ -1,5 +1,8 @@
 package lk.motormila.app.data.repository
 
+import lk.motormila.app.domain.model.VehicleCategoryRules
+import lk.motormila.app.domain.model.carsOnlyOrFirst
+
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
@@ -187,7 +190,12 @@ class StatsRepositoryImpl @Inject constructor(
 
     override suspend fun priceDrops(days: Int, limit: Int): List<PriceDrop> = withContext(io) {
         withSnapshotFallback(
-            live = { api.getPriceDrops(days).items.take(limit).map { it.toDomain() } },
+            // Cars first (launch rule): ask the backend for car drops; older
+            // backends ignore the param and callers rank client-side.
+            live = {
+                api.getPriceDrops(days, lk.motormila.app.domain.model.VehicleCategory.DEFAULT.apiValue)
+                    .items.take(limit).map { it.toDomain() }
+            },
             snapshot = { snapshots.priceDrops().items.take(limit).map { it.toDomain() } },
         )
     }
@@ -214,11 +222,18 @@ class StatsRepositoryImpl @Inject constructor(
     override fun liveListings(limit: Int): Flow<List<Listing>> = flow {
         while (true) {
             val items = runCatching {
-                api.searchListings(sort = "newest", page = 1, size = limit.coerceIn(1, 50))
-                    .items.map { it.toDomain() }
+                // Cars first: the live strip is a first-impression surface.
+                api.searchListings(
+                    sort = "newest",
+                    vehicleCategory = lk.motormila.app.domain.model.VehicleCategory.DEFAULT.apiValue,
+                    page = 1,
+                    size = limit.coerceIn(1, 50),
+                ).items.map { it.toDomain() }
             }.getOrElse {
                 runCatching {
-                    snapshots.liveMarket().latestListings.take(limit.coerceIn(1, 50)).map { it.toDomain() }
+                    snapshots.liveMarket().latestListings.map { it.toDomain() }
+                        .carsOnlyOrFirst(min = 3) { VehicleCategoryRules.isCarLike(it) }
+                        .take(limit.coerceIn(1, 50))
                 }.getOrNull().orEmpty()
             }
             emit(items)

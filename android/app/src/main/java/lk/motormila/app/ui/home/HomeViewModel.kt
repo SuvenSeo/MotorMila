@@ -27,7 +27,23 @@ import lk.motormila.app.domain.usecase.GetPriceDropsUseCase
 import lk.motormila.app.domain.usecase.GetStatsSummaryUseCase
 import lk.motormila.app.domain.usecase.ObserveSessionUseCase
 import lk.motormila.app.domain.usecase.ToggleWatchlistUseCase
+import lk.motormila.app.domain.model.VehicleCategory
+import lk.motormila.app.domain.model.VehicleCategoryRules
+import lk.motormila.app.domain.model.carsOnlyOrFirst
 import javax.inject.Inject
+
+/**
+ * First impression is cars: Home rails come from endpoints without a category
+ * param, so keep car-like items only (or rank them first when too few).
+ */
+internal fun Insights.carsFirst(): Insights = copy(
+    hotDeals = hotDeals.carsOnlyOrFirst { VehicleCategoryRules.isCarLike(null, it.make, it.model) },
+    trendingModels = trendingModels.carsOnlyOrFirst { VehicleCategoryRules.isCarLike(null, it.make, it.model) },
+)
+
+internal fun List<PriceDrop>.carsFirst(): List<PriceDrop> =
+    carsOnlyOrFirst { VehicleCategoryRules.isCarLike(it.listing) }
+
 
 data class HomeUiState(
     val isLoading: Boolean = true,
@@ -94,8 +110,8 @@ class HomeViewModel @Inject constructor(
                 // Each section is bounded on its own (see bounded()); partial results apply.
                 coroutineScope {
                     val summaryDef = async { bounded { getStatsSummary() } }
-                    val insightsDef = async { bounded { getInsights() } }
-                    val dropsDef = async { bounded { getPriceDrops() } }
+                    val insightsDef = async { bounded { getInsights().carsFirst() } }
+                    val dropsDef = async { bounded { getPriceDrops().carsFirst() } }
                     val districtsDef = async { bounded { getDistrictPrices() } }
                     val fuelDef = async { bounded { stats.fuelMix() } }
 
@@ -149,8 +165,8 @@ class HomeViewModel @Inject constructor(
                 // Same hard bound as load(): refresh must always settle.
                 val (summary, insights, drops, districts, fuel) = coroutineScope {
                     val summaryDef = async { bounded { getStatsSummary() } }
-                    val insightsDef = async { bounded { getInsights() } }
-                    val dropsDef = async { bounded { getPriceDrops() } }
+                    val insightsDef = async { bounded { getInsights().carsFirst() } }
+                    val dropsDef = async { bounded { getPriceDrops().carsFirst() } }
                     val districtsDef = async { bounded { getDistrictPrices() } }
                     val fuelDef = async { bounded { stats.fuelMix() } }
                     Quint(
@@ -234,5 +250,6 @@ class HomeViewModel @Inject constructor(
     }
 
     /** Feed query for the home "Latest" feed section (newest first). */
-    fun feedQuery(): ListingQuery = ListingQuery(sort = "newest")
+    fun feedQuery(): ListingQuery =
+        ListingQuery(sort = "newest", vehicleCategory = VehicleCategory.DEFAULT.apiValue)
 }
