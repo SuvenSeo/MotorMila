@@ -155,17 +155,21 @@ fun ListingCard(
                         label = if (verdict.kind == MmDealVerdict.Kind.LEASE) stringResource(R.string.mm_lease_short) else label,
                         tone = verdict.tone,
                         onImage = true,
+                        // End inset keeps the pill clear of the 48dp save button
+                        // (Cal Sans Text sets ~15% wider than the old face).
                         modifier = Modifier
                             .align(Alignment.TopStart)
-                            .padding(10.dp),
+                            .padding(start = 10.dp, top = 10.dp, end = 52.dp),
                     )
                 } else if (listing.dealBand() == DealBand.LOCKED && listing.priceLkr != null) {
                     MmDealBadge(
                         band = DealBand.LOCKED,
                         onImage = true,
+                        // End inset keeps the pill clear of the 48dp save button
+                        // (Cal Sans Text sets ~15% wider than the old face).
                         modifier = Modifier
                             .align(Alignment.TopStart)
-                            .padding(10.dp),
+                            .padding(start = 10.dp, top = 10.dp, end = 52.dp),
                     )
                 }
             }

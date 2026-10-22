@@ -202,15 +202,15 @@ data class MmType(
         /**
          * Cal Sans scale. Display tier (designed for >= 24sp) carries display,
          * large titles and the hero price; the Text UI tier carries everything
-         * at 11-20sp. Cal Sans is already tightly spaced, so tracking is
-         * gentler than the old Space Grotesk values; body sits at 0 so 14-16sp
+         * at 11-20sp. Cal Sans' display cut is already tightly spaced (word
+         * spaces are narrow), so tracking is much gentler than the old Space Grotesk values; body sits at 0 so 14-16sp
          * copy keeps its open spacing (and stays legible at 200% font scale,
          * where line heights scale with the sp size).
          */
         fun build(body: FontFamily = CalSansText, display: FontFamily = CalSans) = MmType(
-            displayL = style(display, FontWeight.Bold, 40, 46, -0.8),
-            displayM = style(display, FontWeight.Bold, 32, 38, -0.5),
-            titleL = style(display, FontWeight.SemiBold, 26, 32, -0.3),
+            displayL = style(display, FontWeight.Bold, 40, 46, -0.4),
+            displayM = style(display, FontWeight.Bold, 32, 38, -0.3),
+            titleL = style(display, FontWeight.SemiBold, 26, 32, -0.15),
             titleM = style(body, FontWeight.SemiBold, 20, 26, -0.2),
             titleS = style(body, FontWeight.SemiBold, 17, 22, -0.1),
             bodyL = style(body, FontWeight.Normal, 16, 24, 0.0),
@@ -220,7 +220,7 @@ data class MmType(
             labelS = style(body, FontWeight.SemiBold, 12, 16, 0.1),
             caption = style(body, FontWeight.Medium, 12, 16, 0.1),
             overline = style(body, FontWeight.SemiBold, 11, 14, 0.9),
-            priceL = style(display, FontWeight.Bold, 30, 36, -0.4, "tnum"),
+            priceL = style(display, FontWeight.Bold, 30, 36, -0.2, "tnum"),
             priceM = style(body, FontWeight.Bold, 20, 24, -0.2, "tnum"),
             priceS = style(body, FontWeight.SemiBold, 16, 20, -0.1, "tnum"),
             numeric = style(body, FontWeight.Medium, 14, 18, 0.0, "tnum"),
