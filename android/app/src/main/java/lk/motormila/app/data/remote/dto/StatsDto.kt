@@ -146,6 +146,8 @@ data class DistrictTopModelDto(
     val make: String = "",
     val model: String = "",
     @SerialName("listing_count") val listingCount: Int = 0,
+    /** make-insight top_models send `count` instead of listing_count. */
+    val count: Int? = null,
     @SerialName("avg_price_lkr") val avgPriceLkr: Double = 0.0,
 )
 

@@ -195,7 +195,7 @@ fun EvInsightDto.toTrendSeries(): TrendSeries =
 fun DistrictTopModelDto.toHubTopModel(): HubTopModel = HubTopModel(
     make = make,
     model = model,
-    listingCount = listingCount,
+    listingCount = count?.takeIf { it > 0 } ?: listingCount,
     avgPriceLkr = avgPriceLkr,
 )
 
