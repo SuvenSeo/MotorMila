@@ -123,7 +123,8 @@ fun WatchlistScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     itemsIndexed(state.items, key = { _, it -> it.id }) { index, item ->
-                        Box(Modifier.motormilaReveal(delayMillis = cascadeDelay(index))) {
+                        // Removing a saved car closes the gap on a spring instead of jumping.
+                        Box(Modifier.animateItem(fadeInSpec = null, placementSpec = lk.motormila.app.ui.theme.MmMotion.itemPlacement, fadeOutSpec = androidx.compose.animation.core.spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow)).motormilaReveal(delayMillis = cascadeDelay(index))) {
                             WatchRow(
                                 item = item,
                                 flash = item.id in state.droppedIds,

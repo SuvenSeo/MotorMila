@@ -99,6 +99,8 @@ android/*.status
 # (docs/ANDROID_SIGNING.md); rotate via ANDROID_KEYSTORE_* secrets, then
 # git rm --cached it after the secret-keyed release reaches all devices.
 *.keystore
+# Preview/debug-only key (passwords "android", lk.motormila.app.debug only, never release):
+!android/app/preview-debug.keystore
 *.jks
 
 # Database snapshots & checkpoints (contain live data — never commit)

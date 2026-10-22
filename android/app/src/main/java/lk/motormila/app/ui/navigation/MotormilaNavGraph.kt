@@ -163,8 +163,18 @@ fun MotormilaNavGraph(
             return@LaunchedEffect
         }
         val target = startDeepLink?.let { resolveMotormilaDeepLink(it) } ?: return@LaunchedEffect
+        // Routes with arguments (search query, sign-up tab, compare ids…) must
+        // not reuse the current entry via singleTop, or a second deep link to
+        // the same screen silently drops its new arguments. Replace it instead.
+        val carriesArgs = target is Search || target is Login || target is Compare ||
+            target is Alerts || target is Valuation
+        val current = navController.currentDestination
         navController.navigate(target) {
-            launchSingleTop = true
+            if (carriesArgs && current != null && current.hasRoute(target::class)) {
+                popUpTo(current.id) { inclusive = true }
+            } else {
+                launchSingleTop = true
+            }
         }
     }
 

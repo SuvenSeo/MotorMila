@@ -1,5 +1,6 @@
 package lk.motormila.app.ui.components
 
+import lk.motormila.app.ui.theme.mmTappable
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
@@ -349,7 +350,7 @@ fun OfflineBanner(
             .padding(horizontal = 16.dp)
             .clip(MotormilaRadius.pill)
             .background(MaterialTheme.colorScheme.secondaryContainer)
-            .then(if (onRetry != null) Modifier.clickable { onRetry() } else Modifier)
+            .then(if (onRetry != null) Modifier.mmTappable(role = androidx.compose.ui.semantics.Role.Button, pressedScale = 1f) { onRetry() } else Modifier)
             .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp)
             .semantics { contentDescription = "Offline, showing cached data. Tap to retry." },
         verticalAlignment = Alignment.CenterVertically,

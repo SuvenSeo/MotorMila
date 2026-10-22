@@ -185,9 +185,14 @@ class AppUpdateChecker @Inject constructor(
     }
 
     /** Static CDN manifest first (carries sha256, up when the API is down), then the API. */
-    private suspend fun fetchLatestRelease(): LatestRelease? =
-        fetchManifest(STATIC_RELEASE_MANIFEST_URL, bare = true)
+    private suspend fun fetchLatestRelease(): LatestRelease? {
+        // Debug/preview builds (lk.motormila.app.debug) follow the preview
+        // pre-release manifest only: production APKs are a different package.
+        val preview = BuildConfig.PREVIEW_UPDATE_MANIFEST_URL.trim()
+        if (preview.isNotEmpty()) return fetchManifest(preview, bare = true)
+        return fetchManifest(STATIC_RELEASE_MANIFEST_URL, bare = true)
             ?: fetchManifest(buildReleaseUrl(), bare = false)
+    }
 
     private val bareClient: OkHttpClient by lazy {
         OkHttpClient.Builder()

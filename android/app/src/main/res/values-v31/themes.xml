@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- API 31+ overlay: system splash shows the brand mark (adaptive launcher
-         foreground, same safe-zone sizing) on Ink, so cold start never flashes
+         foreground, same safe-zone sizing) on the light ground, so cold start never flashes
          the platform default background or icon before the Compose splash. -->
     <style name="Theme.Motormila" parent="Theme.AppCompat.NoActionBar">
-        <item name="android:windowBackground">@color/motormila_bg</item>
+        <item name="android:windowBackground">@color/window_bg</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
         <item name="android:enforceStatusBarContrast">false</item>
         <item name="android:enforceNavigationBarContrast">false</item>
-        <item name="android:windowSplashScreenBackground">@color/launcher_bg</item>
+        <item name="android:windowSplashScreenBackground">@color/window_bg</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
     </style>
 </resources>

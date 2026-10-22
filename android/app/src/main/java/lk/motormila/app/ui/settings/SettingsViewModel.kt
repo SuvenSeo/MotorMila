@@ -74,7 +74,7 @@ class SettingsViewModel @Inject constructor(
 
     val theme: StateFlow<String> = settingsStore.observe()
         .map { it.theme }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "system")
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsStore.DEFAULT_THEME)
 
     val language: StateFlow<String> = settingsStore.observe()
         .map { LocaleHelper.normalize(it.language) }

@@ -1,5 +1,6 @@
 package lk.motormila.app.ui.common
 
+import lk.motormila.app.ui.theme.mmTappable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -205,12 +206,12 @@ fun MmSelectField(
         Text(label, style = MmType.current.label, color = c.textSecondary, modifier = Modifier.padding(bottom = MmSpacing.xs))
         Row(
             Modifier
+                .mmTappable(enabled = enabled, role = Role.Button, shape = MmShapes.sm, onClick = onClick)
                 .fillMaxWidth()
                 .heightIn(min = 52.dp)
                 .clip(MmShapes.sm)
                 .background(c.surfaceRaised)
                 .border(1.dp, c.outline, MmShapes.sm)
-                .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
                 .padding(horizontal = MmSpacing.lg),
             verticalAlignment = Alignment.CenterVertically,
         ) {

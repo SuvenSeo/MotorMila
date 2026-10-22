@@ -40,7 +40,7 @@
     <string name="offline_cached_data">Offline — showing cached data</string>
     <string name="offline_snapshot_banner">Live data is unavailable — showing the latest snapshot</string>
     <string name="settings_account">Account</string>
-    <string name="settings_appearance">Appearance</string>
+    <string name="settings_appearance">தோற்றம்</string>
     <string name="settings_biometric_body">Log in with fingerprint / face</string>
     <string name="settings_biometric_title">Biometric unlock</string>
     <string name="settings_default_district">Default district</string>
@@ -58,9 +58,9 @@
     <string name="settings_security">Security</string>
     <string name="settings_terms_body">Rules that govern the platform</string>
     <string name="settings_terms_title">Terms of Service</string>
-    <string name="settings_theme_dark">Dark</string>
-    <string name="settings_theme_light">Light</string>
-    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_dark">இருள்</string>
+    <string name="settings_theme_light">ஒளி</string>
+    <string name="settings_theme_system">சிஸ்டம்</string>
     <string name="settings_title">Settings</string>
     <string name="ui_alerts_chat_id_or_username_pro">Chat ID or @username (Pro)</string>
     <string name="ui_alerts_district">District</string>
@@ -123,4 +123,7 @@
     <string name="ui_valuation_target_district">Target district</string>
     <string name="ui_valuation_transmission">Transmission</string>
     <string name="update_install_permission_hint">Allow MotorMila to install apps on the screen that just opened, then tap Update now again.</string>
+    <string name="settings_licences_title">திறந்த மூல உரிமங்கள்</string>
+    <string name="settings_licences_body">பயன்பாட்டுடன் உள்ள எழுத்துருக்கள் மற்றும் நூலகங்கள்</string>
+    <string name="settings_licences_intro">MotorMila இல் Cal Sans மற்றும் Noto Sans எழுத்துருக்கள் SIL Open Font License 1.1 இன் கீழ் உள்ளன. முழு உரை கீழே.</string>
 </resources>

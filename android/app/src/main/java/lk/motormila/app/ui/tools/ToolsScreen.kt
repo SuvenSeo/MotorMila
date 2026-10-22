@@ -1,5 +1,6 @@
 package lk.motormila.app.ui.tools
 
+import lk.motormila.app.ui.theme.mmTappable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.semantics.Role
@@ -158,9 +159,9 @@ private fun ToolRow(entry: ToolEntry) {
     val c = MmColors.current
     Row(
         modifier = Modifier
+            .mmTappable(role = Role.Button, shape = MmShapes.md, onClick = entry.onClick)
             .fillMaxWidth()
             .clip(MmShapes.md)
-            .clickable(role = Role.Button, onClick = entry.onClick)
             .padding(horizontal = MmSpacing.lg, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

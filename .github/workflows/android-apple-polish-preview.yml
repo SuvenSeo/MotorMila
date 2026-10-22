@@ -76,8 +76,17 @@ jobs:
           : "${ANDROID_HOME:=${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" >/dev/null || true
-      - name: Assemble directDebug
-        run: chmod +x gradlew && ./gradlew :app:assembleDirectDebug --stacktrace
+      - name: Assemble directDebug (preview key, increasing versionCode)
+        run: |
+          set -euo pipefail
+          export MOTORMILA_PREVIEW_VERSION_CODE=$(( $(date +%s) / 60 ))
+          echo "versionCode=$MOTORMILA_PREVIEW_VERSION_CODE"
+          chmod +x gradlew && ./gradlew :app:assembleDirectDebug --stacktrace
+          grep -h "VERSION_CODE\|PREVIEW_UPDATE" app/build/generated/source/buildConfig/direct/debug/lk/motormila/app/BuildConfig.java
+          BT="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)"
+          APK="$(ls app/build/outputs/apk/direct/debug/*.apk | head -1)"
+          "$BT/aapt2" dump badging "$APK" | head -1
+          "$BT/apksigner" verify --print-certs "$APK" | grep -i "SHA-256"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: qa-apk
@@ -182,5 +191,12 @@ jobs:
           cp "$APK" MotorMila-1.7.0-preview-sideload.apk
           sha256sum MotorMila-1.7.0-preview-sideload.apk
           gh release view preview-android-1.7.0 -R "$GITHUB_REPOSITORY" --json isPrerelease -q .isPrerelease | grep -q true
-          gh release upload preview-android-1.7.0 MotorMila-1.7.0-preview-sideload.apk --clobber -R "$GITHUB_REPOSITORY"
+          BT="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)"
+          CODE="$("$BT/aapt2" dump badging MotorMila-1.7.0-preview-sideload.apk | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p" | head -1)"
+          SHA="$(sha256sum MotorMila-1.7.0-preview-sideload.apk | cut -d' ' -f1)"
+          # Preview self-updater manifest (read only by the debug/preview app).
+          printf '{"version":"1.7.0-preview","version_code":%s,"apk_url":"https://github.com/%s/releases/download/preview-android-1.7.0/MotorMila-1.7.0-preview-sideload.apk","sha256":"%s","notes":"Preview build %s","published_at":"%s"}\n' \
+            "$CODE" "$GITHUB_REPOSITORY" "$SHA" "${GITHUB_SHA::7}" "$(date -u +%FT%TZ)" > preview-latest.json
+          cat preview-latest.json
+          gh release upload preview-android-1.7.0 MotorMila-1.7.0-preview-sideload.apk preview-latest.json --clobber -R "$GITHUB_REPOSITORY"
           gh release view preview-android-1.7.0 -R "$GITHUB_REPOSITORY" --json assets -q '.assets[] | "\(.name) \(.updatedAt) \(.size)"'

@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.components
 
+import lk.motormila.app.ui.theme.tabular
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -755,7 +757,7 @@ fun MotormilaMetricTile(
             // a metric tile must never ellipsis its headline value.
             fontSize = if (value.length > 8) 13.sp else 16.sp,
             fontWeight = FontWeight.Bold,
-            fontFamily = FontFamily.SansSerif,
+            style = LocalTextStyle.current.tabular(),
             color = MotormilaOnSurface,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,

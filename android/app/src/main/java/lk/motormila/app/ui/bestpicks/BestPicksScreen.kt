@@ -408,7 +408,7 @@ private fun CutRow(drop: PriceDrop, onClick: () -> Unit) {
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontWeight = FontWeight.Bold,
                     color = MotormilaGood,
-                    fontFamily = FontFamily.Monospace,
+                    fontFeatureSettings = "tnum",
                 ),
             )
         }
@@ -418,14 +418,14 @@ private fun CutRow(drop: PriceDrop, onClick: () -> Unit) {
                 style = MaterialTheme.typography.labelSmall.copy(
                     color = MotormilaSecondaryText,
                     textDecoration = TextDecoration.LineThrough,
-                    fontFamily = FontFamily.Monospace,
+                    fontFeatureSettings = "tnum",
                 ),
             )
             Text(
                 lk.motormila.app.ui.common.mn(drop.newPriceLkr),
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace,
+                    fontFeatureSettings = "tnum",
                 ),
             )
         }

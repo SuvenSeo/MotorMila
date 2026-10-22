@@ -1,5 +1,6 @@
 package lk.motormila.app.ui.components
 
+import lk.motormila.app.ui.theme.mmTappable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -56,7 +57,7 @@ fun MmDealBadge(
             .background(bg)
             .then(
                 if (onWhy != null) {
-                    Modifier.clickable(role = Role.Button, onClickLabel = whyLabel, onClick = onWhy)
+                    Modifier.mmTappable(role = Role.Button, onClickLabel = whyLabel, pressedScale = 1f, onClick = onWhy)
                 } else {
                     Modifier
                 },

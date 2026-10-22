@@ -1,5 +1,8 @@
 package lk.motormila.app.ui.components
 
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -52,7 +55,7 @@ fun FmvGauge(
     }.coerceIn(0f, 1f)
     val animated by animateFloatAsState(
         targetValue = if (started) fraction else 0.5f,
-        animationSpec = tween(if (reducedMotion) 1 else 700),
+        animationSpec = if (reducedMotion) snap() else spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessLow),
         label = "fmv-needle",
     )
     val track = MaterialTheme.colorScheme.surfaceVariant

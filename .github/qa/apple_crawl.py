@@ -123,13 +123,17 @@ def tab(label_rx):
 
 
 def listing_ids():
-    try:
-        with urllib.request.urlopen(f"{API}/listings?vehicle_category=cars&limit=4", timeout=40) as r:
-            items = json.load(r).get("items", [])
-        return [i["id"] for i in items if i.get("id")]
-    except Exception as e:
-        print("listing ids failed", e)
-        return []
+    for attempt in range(4):
+        try:
+            with urllib.request.urlopen(f"{API}/listings?vehicle_category=cars&limit=4", timeout=60) as r:
+                items = json.load(r).get("items", [])
+            ids = [i["id"] for i in items if i.get("id")]
+            if ids:
+                return ids
+        except Exception as e:
+            print("listing ids failed", attempt, e)
+        time.sleep(10)
+    return []
 
 
 # ------------------------------------------------------------------ setup

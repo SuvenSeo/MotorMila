@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.admin
 
+import lk.motormila.app.ui.theme.tabular
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -150,7 +152,7 @@ private fun OverviewPane(state: AdminUiState) {
                 MotormilaSurface {
                     Row(Modifier.fillMaxWidth()) {
                         Text(row.make, modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold, color = MotormilaOnSurface)
-                        Text(LkrFormat.count(row.count), fontFamily = FontFamily.Monospace, color = MotormilaPrimaryBright)
+                        Text(LkrFormat.count(row.count), style = LocalTextStyle.current.tabular(),  color = MotormilaPrimaryBright)
                     }
                 }
             }
@@ -362,7 +364,7 @@ private fun InvitesPane(
                 if (signupUrl != null) {
                     Spacer(Modifier.height(10.dp))
                     Text("Share this sign-up link.", fontSize = 12.sp, color = MotormilaGoodText)
-                    Text(signupUrl, fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = MotormilaPrimaryBright)
+                    Text(signupUrl, style = LocalTextStyle.current.tabular(),  fontSize = 11.sp, color = MotormilaPrimaryBright)
                     Spacer(Modifier.height(8.dp))
                     MotormilaGhostButton(
                         label = "Copy sign-up URL",
@@ -556,7 +558,7 @@ private fun NamedCountList(title: String, rows: List<AdminNamedCount>) {
                     Text(row.label, modifier = Modifier.weight(1f), color = MotormilaOnSurface)
                     Text(
                         LkrFormat.count(row.count),
-                        fontFamily = FontFamily.Monospace,
+                        style = LocalTextStyle.current.tabular(),
                         color = MotormilaPrimaryBright,
                     )
                 }
@@ -726,7 +728,7 @@ private fun PermitsPane(state: AdminUiState, viewModel: AdminViewModel) {
                 Text(permit.permitType, fontSize = 12.sp, color = MotormilaSecondaryText)
                 Text(
                     lk.motormila.app.ui.common.mn(permit.marketPriceLkr),
-                    fontFamily = FontFamily.Monospace,
+                    style = LocalTextStyle.current.tabular(),
                     color = MotormilaPrimaryBright,
                 )
             }

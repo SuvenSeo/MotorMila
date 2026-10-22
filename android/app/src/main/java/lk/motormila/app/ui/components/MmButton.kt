@@ -132,6 +132,7 @@ fun MmIconButton(
     visualSize: Dp = 40.dp,
 ) {
     val c = MmColors.current
+    val haptics = MmHaptics.current
     val interaction = remember { MutableInteractionSource() }
     val (bg, fg) = when (style) {
         MmIconButtonStyle.Plain -> Color.Transparent to c.textPrimary
@@ -146,8 +147,10 @@ fun MmIconButton(
                 indication = null,
                 enabled = enabled,
                 role = Role.Button,
-                onClick = onClick,
-            ),
+            ) {
+                haptics.press()
+                onClick()
+            },
         contentAlignment = Alignment.Center,
     ) {
         Box(

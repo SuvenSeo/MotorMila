@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -62,8 +63,8 @@ private fun MmColors.toMaterial(): ColorScheme {
 }
 
 /**
- * MotorMila theme (design system v2). Dark-first; [darkTheme] = false gives
- * the full light scheme. Dynamic colour is deliberately OFF: brand tokens win
+ * MotorMila theme (design system v2). Light-first (the app default since
+ * apple-polish); [darkTheme] = true gives the full dark scheme. Dynamic colour is deliberately OFF: brand tokens win
  * over wallpaper tints.
  *
  * Provides [MmColors.current], [MmType.current] (body face follows the app
@@ -77,7 +78,7 @@ private fun MmColors.toMaterial(): ColorScheme {
  */
 @Composable
 fun MotormilaTheme(
-    darkTheme: Boolean = true,
+    darkTheme: Boolean = false,
     reducedMotion: Boolean? = null,
     languageTag: String? = null,
     content: @Composable () -> Unit,
@@ -117,13 +118,19 @@ fun MotormilaTheme(
             typography = remember(type) { type.toMaterial() },
             shapes = MotormilaShapes,
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(colors.background),
-            ) {
-                if (darkTheme) MotormilaAmbient()
-                content()
+            // Root content colour: any Text/Icon without an explicit colour and
+            // outside an M3 Surface used to fall back to LocalContentColor's
+            // default (black), which vanished on dark grounds (e.g. Alerts'
+            // sign-in card title, the Detail deal ladder values).
+            CompositionLocalProvider(LocalContentColor provides colors.textPrimary) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(colors.background),
+                ) {
+                    if (darkTheme) MotormilaAmbient()
+                    content()
+                }
             }
         }
     }

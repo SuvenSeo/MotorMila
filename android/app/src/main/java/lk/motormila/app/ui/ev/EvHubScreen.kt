@@ -598,7 +598,7 @@ private fun ChargerRow(station: ChargingStation) {
             Text(
                 distance,
                 style = MaterialTheme.typography.labelMedium.copy(
-                    fontFamily = FontFamily.Monospace,
+                    fontFeatureSettings = "tnum",
                     color = MotormilaPrimaryBright,
                 ),
             )

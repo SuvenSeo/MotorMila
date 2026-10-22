@@ -120,7 +120,7 @@ fun MotormilaScaffold(
             AnimatedVisibility(
                 visible = showAssistant,
                 enter = if (reduced) fadeIn(tween(0)) else scaleIn(MmMotion.snappy(), initialScale = 0.8f) + fadeIn(tween(MmMotion.Fast)),
-                exit = if (reduced) fadeOut(tween(0)) else scaleOut(tween(MmMotion.Fast), targetScale = 0.8f) + fadeOut(tween(MmMotion.Fast)),
+                exit = if (reduced) fadeOut(tween(0)) else scaleOut(MmMotion.snappy(), targetScale = 0.8f) + fadeOut(tween(MmMotion.Fast)),
             ) {
                 AssistantButton(onClick = { showAIChat = true })
             }

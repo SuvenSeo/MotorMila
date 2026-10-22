@@ -7,6 +7,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
+import androidx.compose.material3.ripple
 
 /**
  * Press-scale (0.97 by default) driven by an [InteractionSource]: snappy
@@ -28,4 +31,38 @@ fun Modifier.mmPress(
         scaleX = scale
         scaleY = scale
     }
+}
+
+/**
+ * One-stop tappable for cards, rows and tiles: ripple + spring press-scale
+ * (graphics layer only) + key-press haptic, with the same semantics as
+ * [androidx.compose.foundation.clickable]. Reduced motion keeps the ripple
+ * and haptic but drops the scale.
+ */
+fun Modifier.mmTappable(
+    enabled: Boolean = true,
+    onClickLabel: String? = null,
+    role: androidx.compose.ui.semantics.Role? = null,
+    pressedScale: Float = MmMotion.PressScale,
+    haptic: Boolean = true,
+    shape: androidx.compose.ui.graphics.Shape? = null,
+    onClick: () -> Unit,
+): Modifier = composed {
+    val interaction = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val haptics = MmHaptics.current
+    this
+        .mmPress(interaction, pressedScale)
+        .then(if (shape != null) Modifier.clip(shape) else Modifier)
+        .then(
+            Modifier.clickable(
+                interactionSource = interaction,
+                indication = ripple(),
+                enabled = enabled,
+                onClickLabel = onClickLabel,
+                role = role,
+            ) {
+                if (haptic) haptics.press()
+                onClick()
+            },
+        )
 }

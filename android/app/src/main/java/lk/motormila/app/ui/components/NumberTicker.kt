@@ -1,5 +1,8 @@
 package lk.motormila.app.ui.components
 
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
@@ -148,10 +151,8 @@ private fun RollingDigit(
     }
     val animatedOffset by animateFloatAsState(
         targetValue = -digit * digitHeightPx,
-        animationSpec = tween(
-            durationMillis = if (reducedMotion) 1 else 650,
-            easing = AppleEasing,
-        ),
+        // Spring roll (slight settle, no bounce past the digit).
+        animationSpec = if (reducedMotion) snap() else spring(dampingRatio = 0.86f, stiffness = Spring.StiffnessMediumLow),
         label = "rolling-digit",
     )
     Box(

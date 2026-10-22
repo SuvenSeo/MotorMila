@@ -578,7 +578,7 @@ private fun LandedResultCard(result: LandedCost?, calculating: Boolean) {
                                     "+${lk.motormila.app.ui.components.MmPriceFormat.compact(result.dutyLkr + result.vatLkr + result.palLkr)}",
                                     style = MaterialTheme.typography.labelMedium.copy(
                                         fontWeight = FontWeight.Bold,
-                                        fontFamily = FontFamily.Monospace,
+                                        fontFeatureSettings = "tnum",
                                         color = MotormilaPrimaryBright,
                                     ),
                                 )
@@ -642,7 +642,7 @@ private fun TcoResultCard(result: Tco?, calculating: Boolean) {
                                 lk.motormila.app.ui.components.MmPriceFormat.monthly(result.monthlyLkr),
                                 style = MaterialTheme.typography.headlineMedium.copy(
                                     fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Monospace,
+                                    fontFeatureSettings = "tnum",
                                     color = MotormilaOnSurface,
                                 ),
                             )
@@ -658,7 +658,7 @@ private fun TcoResultCard(result: Tco?, calculating: Boolean) {
                                     lk.motormila.app.ui.components.MmPriceFormat.compact(result.totalLkr),
                                     style = MaterialTheme.typography.titleSmall.copy(
                                         fontWeight = FontWeight.Bold,
-                                        fontFamily = FontFamily.Monospace,
+                                        fontFeatureSettings = "tnum",
                                         color = MotormilaPrimaryBright,
                                     ),
                                 )
@@ -882,7 +882,7 @@ private fun PermitsPane(
                         Text(
                             lk.motormila.app.ui.components.MmPriceFormat.compact(permit.marketPriceLkr),
                             style = MaterialTheme.typography.bodyLarge.copy(
-                                fontFamily = FontFamily.Monospace,
+                                fontFeatureSettings = "tnum",
                                 fontWeight = FontWeight.Bold,
                             ),
                         )
@@ -950,7 +950,7 @@ private fun CostLineRow(label: String, amountLkr: Double, monthly: Boolean = fal
             else lk.motormila.app.ui.components.MmPriceFormat.compact(amountLkr),
             style = MaterialTheme.typography.bodyMedium.copy(
                 fontWeight = FontWeight.SemiBold,
-                fontFamily = FontFamily.Monospace,
+                fontFeatureSettings = "tnum",
             ),
         )
     }
@@ -1012,7 +1012,7 @@ private fun AmountPreview(raw: String) {
     Text(
         text = "= " + lk.motormila.app.ui.components.MmPriceFormat.compact(amount),
         style = MaterialTheme.typography.labelSmall.copy(
-            fontFamily = FontFamily.Monospace,
+            fontFeatureSettings = "tnum",
             color = MotormilaSecondaryText,
         ),
     )

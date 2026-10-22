@@ -249,7 +249,7 @@ private fun MakeHubModelRow(
                     price,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace,
+                        fontFeatureSettings = "tnum",
                     ),
                 )
             }

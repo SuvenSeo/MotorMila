@@ -1,5 +1,6 @@
 package lk.motormila.app.ui.pricing
 
+import lk.motormila.app.ui.theme.mmTappable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
@@ -278,10 +279,10 @@ private fun FaqRow(question: String, answer: String, open: Boolean, onToggle: ()
     val rotation by animateFloatAsState(if (open) 180f else 0f, MmMotion.orSnap(reduced, MmMotion.standard()), label = "faq-chevron")
     Column(
         Modifier
+            .mmTappable(role = Role.Button, shape = MmShapes.md, onClick = onToggle)
             .fillMaxWidth()
             .clip(MmShapes.md)
             .background(c.surface)
-            .clickable(role = Role.Button, onClick = onToggle)
             .padding(MmSpacing.lg),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {

@@ -1,5 +1,6 @@
 package lk.motormila.app.ui.home
 
+import lk.motormila.app.ui.theme.tabular
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -576,7 +577,7 @@ internal fun PriceDropCard(
             )
             Column(Modifier.padding(12.dp)) {
                 Text(title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                Text(newPrice, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                Text(newPrice, style = (MaterialTheme.typography.titleMedium).tabular(), fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(4.dp))
                 Row(
                     modifier = Modifier

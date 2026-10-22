@@ -1,5 +1,6 @@
 package lk.motormila.app.ui.valuation
 
+import lk.motormila.app.ui.theme.mmTappable
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
@@ -605,7 +606,7 @@ private fun ResultBody(state: ValuationUiState, result: QuizResult, onOpenListin
                     Modifier
                         .fillMaxWidth()
                         .heightIn(min = 52.dp)
-                        .clickable(role = Role.Button) { onOpenListing(comp.id) }
+                        .mmTappable(role = Role.Button, pressedScale = 1f) { onOpenListing(comp.id) }
                         .padding(horizontal = MmSpacing.lg, vertical = MmSpacing.sm),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {

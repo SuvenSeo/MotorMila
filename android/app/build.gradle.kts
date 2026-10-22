@@ -105,6 +105,18 @@ android {
     //   PLAY_UPLOAD_KEYSTORE_FILE, PLAY_UPLOAD_KEYSTORE_PASSWORD,
     //   PLAY_UPLOAD_KEY_ALIAS, PLAY_UPLOAD_KEY_PASSWORD
     signingConfigs {
+        // Preview/debug ONLY (lk.motormila.app.debug). A committed, well-known
+        // key (passwords "android") so every CI preview APK is signed
+        // identically and installs as an in-place update over the previous
+        // preview. NEVER used for release: release signing comes only from
+        // env/secrets below. Fingerprint (SHA-256):
+        // BD:50:03:0F:71:FB:18:07:04:79:D6:8F:F8:D2:FA:BE:86:BB:B2:8F:C6:54:1E:D8:DF:C0:14:2E:09:28:14:9F
+        getByName("debug") {
+            storeFile = file("preview-debug.keystore")
+            storePassword = "android"
+            keyAlias = "motormila-preview"
+            keyPassword = "android"
+        }
         directSigning?.let { cfg ->
             create("directRelease") {
                 storeFile = file(cfg.storeFile)
@@ -143,6 +155,15 @@ android {
                 "\"$debugBaseUrl\"",
             )
             isDebuggable = true
+            signingConfig = signingConfigs.getByName("debug")
+            // Preview self-updater channel: the debug app reads its update
+            // manifest from the preview pre-release instead of production
+            // (a release APK can never update the .debug package anyway).
+            buildConfigField(
+                "String",
+                "PREVIEW_UPDATE_MANIFEST_URL",
+                "\"https://github.com/SuvenSeo/Vehicle-Platform/releases/download/preview-android-1.7.0/preview-latest.json\"",
+            )
         }
         release {
             buildConfigField(
@@ -150,6 +171,7 @@ android {
                 "BASE_URL",
                 "\"https://seo292-vehicle-platform-backend.hf.space/api/v1\"",
             )
+            buildConfigField("String", "PREVIEW_UPDATE_MANIFEST_URL", "\"\"")
             // Per-flavor signing (env only) is wired below the android block.
             signingConfig = null
             isMinifyEnabled = true
@@ -188,6 +210,19 @@ android {
     tasks.withType<Test> {
         testLogging {
             showStandardStreams = true
+        }
+    }
+}
+
+// Preview builds: CI passes MOTORMILA_PREVIEW_VERSION_CODE (minutes since the
+// Unix epoch, monotonic across workflows) so each preview APK has a higher
+// versionCode than the last and installs/self-updates in place. Debug only;
+// release versionCodes stay the defaultConfig value.
+val previewVersionCode: Int? = envOrNull("MOTORMILA_PREVIEW_VERSION_CODE")?.toIntOrNull()
+androidComponents {
+    onVariants(selector().withBuildType("debug")) { variant ->
+        previewVersionCode?.let { code ->
+            variant.outputs.forEach { it.versionCode.set(code) }
         }
     }
 }

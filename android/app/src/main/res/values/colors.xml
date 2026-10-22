@@ -6,6 +6,8 @@
     <color name="motormila_bg">#09090B</color>
     <color name="motormila_gold">#0A7AFF</color>
     <color name="motormila_deal">#00C853</color>
+    <!-- Window / system splash ground: light-first default theme (MmColors.Light.background). -->
+    <color name="window_bg">#F5F5F7</color>
     <color name="launcher_bg">#09090B</color>
     <color name="launcher_gold">#0A7AFF</color>
 </resources>

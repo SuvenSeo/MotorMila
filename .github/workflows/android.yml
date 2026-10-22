@@ -113,7 +113,9 @@ jobs:
         working-directory: .
         run: |
           set -euo pipefail
-          if git ls-files | grep -Ei '\.(jks|keystore|p12)$'; then
+          # Only exception: the well-known debug/preview key (passwords "android"),
+          # used solely by the debug build type of lk.motormila.app.debug.
+          if git ls-files | grep -Ei '\.(jks|keystore|p12)$' | grep -vx 'android/app/preview-debug.keystore'; then
             echo "ERROR: a keystore is committed. Signing keys come from GitHub secrets only."; exit 1
           fi
 

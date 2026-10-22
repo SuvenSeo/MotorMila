@@ -2,6 +2,10 @@
 
 package lk.motormila.app.ui.detail
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import lk.motormila.app.ui.theme.CalSansText
+import lk.motormila.app.ui.theme.tabular
 import android.content.Context
 import android.content.Intent
 import androidx.compose.animation.Crossfade
@@ -565,7 +569,7 @@ private fun PriceSlot(
         Modifier
     }
     val priceStyle = TextStyle(
-        fontFamily = FontFamily.Monospace,
+        fontFamily = CalSansText, fontFeatureSettings = "tnum",
         fontWeight = FontWeight.Bold,
         fontSize = 26.sp,
         color = MotormilaOnSurface,
@@ -647,7 +651,7 @@ private fun PriceDropTicker(
     var started by remember(drop.dropId) { mutableStateOf(false) }
     val strikeProgress by animateFloatAsState(
         targetValue = if (started) 1f else 0f,
-        animationSpec = tween(durationMillis = 400),
+        animationSpec = spring(dampingRatio = 1f, stiffness = Spring.StiffnessMediumLow, visibilityThreshold = 0.001f),
         label = "drop-strike",
     )
     val flash = remember(drop.dropId) { Animatable(0f) }
@@ -666,7 +670,7 @@ private fun PriceDropTicker(
                 Text(
                     text = LkrFormat.full(drop.oldPriceLkr),
                     style = MaterialTheme.typography.headlineMedium.copy(
-                        fontFamily = FontFamily.Monospace,
+                        fontFeatureSettings = "tnum",
                         color = MotormilaSecondaryText,
                     ),
                 )
@@ -769,8 +773,7 @@ private fun IntelligencePills(listing: Listing, modifier: Modifier = Modifier) {
             ) {
                 Text(
                     text = "$sellSpeedScore",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontFamily = FontFamily.Monospace,
+                    style = (MaterialTheme.typography.labelSmall).tabular(),
                     fontWeight = FontWeight.ExtraBold,
                     color = MotormilaTeal,
                 )
@@ -797,8 +800,7 @@ private fun IntelligencePills(listing: Listing, modifier: Modifier = Modifier) {
             ) {
                 Text(
                     text = "$adHealthScore",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontFamily = FontFamily.Monospace,
+                    style = (MaterialTheme.typography.labelSmall).tabular(),
                     fontWeight = FontWeight.ExtraBold,
                     color = MotormilaWarn,
                 )
@@ -907,7 +909,7 @@ private fun LadderRung(label: String, value: Double, active: Boolean) {
             color = MotormilaOnSurface,
             modifier = Modifier.weight(1f),
         )
-        Text(LkrFormat.full(value), style = MaterialTheme.typography.labelLarge, fontFamily = FontFamily.Monospace, fontWeight = if (active) FontWeight.Bold else FontWeight.Normal)
+        Text(LkrFormat.full(value), style = (MaterialTheme.typography.labelLarge).tabular(), fontWeight = if (active) FontWeight.Bold else FontWeight.Normal)
     }
 }
 
@@ -1108,8 +1110,7 @@ private fun LeasePaymentCalculator(
                     )
                     Text(
                         text = "${downPaymentPct.toInt()}% (${LkrFormat.price(downPayment)})",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontFamily = FontFamily.Monospace,
+                        style = (MaterialTheme.typography.labelSmall).tabular(),
                         fontWeight = FontWeight.Bold,
                         color = MotormilaPrimaryBright,
                     )
@@ -1167,8 +1168,7 @@ private fun LeasePaymentCalculator(
                         }
                         Text(
                             text = "${"%.1f".format(interestRate)}%",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontFamily = FontFamily.Monospace,
+                            style = (MaterialTheme.typography.labelLarge).tabular(),
                             fontWeight = FontWeight.Bold,
                             color = MotormilaOnSurface,
                         )
@@ -1249,8 +1249,7 @@ private fun LeasePaymentCalculator(
                     )
                     Text(
                         text = LkrFormat.full(principal),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontFamily = FontFamily.Monospace,
+                        style = (MaterialTheme.typography.labelSmall).tabular(),
                         fontWeight = FontWeight.SemiBold,
                         color = MotormilaOnSurface,
                     )
@@ -1266,8 +1265,7 @@ private fun LeasePaymentCalculator(
                     )
                     Text(
                         text = LkrFormat.full(totalInterest),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontFamily = FontFamily.Monospace,
+                        style = (MaterialTheme.typography.labelSmall).tabular(),
                         fontWeight = FontWeight.SemiBold,
                         color = MotormilaOnSurface,
                     )
@@ -1298,8 +1296,7 @@ private fun LeasePaymentCalculator(
                     ) {
                         Text(
                             text = LkrFormat.full(monthlyPayment),
-                            style = MaterialTheme.typography.headlineLarge,
-                            fontFamily = FontFamily.Monospace,
+                            style = (MaterialTheme.typography.headlineLarge).tabular(),
                             fontWeight = FontWeight.ExtraBold,
                             color = MotormilaOnSurface,
                         )
@@ -1443,8 +1440,7 @@ private fun ImportDutyEstimator(
                 ) {
                     Text(
                         text = "INDICATIVE",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontFamily = FontFamily.Monospace,
+                        style = (MaterialTheme.typography.labelSmall).tabular(),
                         fontWeight = FontWeight.Bold,
                         color = MotormilaPrimaryBright,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
@@ -1535,8 +1531,7 @@ private fun ImportDutyEstimator(
                         )
                         Text(
                             text = "+${LkrFormat.price(totalEstimatedTaxes)}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontFamily = FontFamily.Monospace,
+                            style = (MaterialTheme.typography.bodyMedium).tabular(),
                             fontWeight = FontWeight.Bold,
                             color = MotormilaPrimaryBright,
                         )
@@ -1573,8 +1568,7 @@ private fun ImportDutyEstimator(
                         }
                         Text(
                             text = LkrFormat.price(estimatedLandedCost),
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontFamily = FontFamily.Monospace,
+                            style = (MaterialTheme.typography.headlineMedium).tabular(),
                             fontWeight = FontWeight.ExtraBold,
                             color = MotormilaOnSurface,
                         )
@@ -1626,8 +1620,7 @@ private fun TaxBreakdownRow(label: String, amount: String) {
         )
         Text(
             text = amount,
-            style = MaterialTheme.typography.labelSmall,
-            fontFamily = FontFamily.Monospace,
+            style = (MaterialTheme.typography.labelSmall).tabular(),
             fontWeight = FontWeight.Medium,
             color = MotormilaOnSurface,
         )
@@ -1885,7 +1878,7 @@ private fun SimilarMiniCard(title: String, imageUrl: String?, price: String, onC
         )
         Column(Modifier.padding(8.dp)) {
             Text(title, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, maxLines = 1)
-            Text(price, style = MaterialTheme.typography.labelLarge, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+            Text(price, style = (MaterialTheme.typography.labelLarge).tabular(), fontWeight = FontWeight.Bold)
         }
     }
 }

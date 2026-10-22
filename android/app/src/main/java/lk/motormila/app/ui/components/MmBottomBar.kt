@@ -47,6 +47,8 @@ import lk.motormila.app.ui.theme.MmMotion
 import lk.motormila.app.ui.theme.MmShapes
 import lk.motormila.app.ui.theme.MmSpacing
 import lk.motormila.app.ui.theme.MmType
+import lk.motormila.app.ui.theme.mmPress
+import lk.motormila.app.ui.theme.CappedFontScale
 
 data class MmBottomBarItem(
     val key: String,
@@ -160,6 +162,7 @@ private fun BottomBarTab(
         modifier = modifier
             .fillMaxHeight()
             .clickable(interactionSource = interaction, indication = null, role = Role.Tab, onClick = onClick)
+            .mmPress(interaction, 0.9f)
             .semantics {
                 contentDescription = item.label
                 this.selected = selected
@@ -197,11 +200,14 @@ private fun BottomBarTab(
             }
         }
         Spacer(Modifier.height(9.dp))
-        Text(
-            item.label,
-            style = MmType.current.caption,
-            color = tint,
-            maxLines = 1,
-        )
+        CappedFontScale(max = 1.15f) {
+            Text(
+                item.label,
+                style = MmType.current.caption,
+                color = tint,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+        }
     }
 }

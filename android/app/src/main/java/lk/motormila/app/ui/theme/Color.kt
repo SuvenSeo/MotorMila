@@ -15,7 +15,7 @@ import androidx.compose.ui.graphics.Color
  * Prefer `MmColors.current` in new code.
  */
 object LegacyPalette {
-    var isDark: Boolean by mutableStateOf(true)
+    var isDark: Boolean by mutableStateOf(false)
 }
 
 // Dark-first tokens - Motormila brand matching web (tailwind / index.css)

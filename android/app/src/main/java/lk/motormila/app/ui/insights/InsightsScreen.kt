@@ -341,7 +341,7 @@ private fun TrendsTab(
                                 text = lk.motormila.app.ui.components.MmPriceFormat.compact(med),
                                 style = MaterialTheme.typography.titleLarge.copy(
                                     fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Monospace,
+                                    fontFeatureSettings = "tnum",
                                     color = MotormilaOnSurface,
                                 ),
                             )
@@ -537,7 +537,7 @@ private fun PriceDropCard(drop: PriceDrop) {
         Text(
             "${lk.motormila.app.ui.common.mn(drop.previousPriceLkr)} → ${lk.motormila.app.ui.common.mn(drop.newPriceLkr)} · −${formatPct(drop.dropPct, 0).trimStart('+')}",
             style = MaterialTheme.typography.bodyMedium.copy(
-                fontFamily = FontFamily.Monospace,
+                fontFeatureSettings = "tnum",
                 color = MotormilaGood,
             ),
         )
@@ -654,7 +654,7 @@ private fun EvTab(
                             text = ev?.count?.takeIf { it > 0 }?.toString() ?: "—",
                             style = MaterialTheme.typography.headlineMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                fontFamily = FontFamily.Monospace,
+                                fontFeatureSettings = "tnum",
                                 fontSize = 28.sp,
                                 color = MotormilaPrimaryBright,
                             ),
@@ -684,7 +684,7 @@ private fun EvTab(
                             text = ev?.let { "%.1f%%".format(it.sharePct) } ?: "—",
                             style = MaterialTheme.typography.headlineMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                fontFamily = FontFamily.Monospace,
+                                fontFeatureSettings = "tnum",
                                 fontSize = 28.sp,
                                 color = MotormilaGood,
                             ),
@@ -717,7 +717,7 @@ private fun EvTab(
                         text = ev?.avgPriceLkr?.let { lk.motormila.app.ui.common.mn(it) } ?: "—",
                         style = MaterialTheme.typography.bodyLarge.copy(
                             fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace,
+                            fontFeatureSettings = "tnum",
                             color = MotormilaOnSurface,
                         ),
                     )
@@ -1001,7 +1001,7 @@ private fun DistrictRow(d: DistrictStat, onDrill: () -> Unit) {
                 Text(d.district, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
                 Text(
                     "${lk.motormila.app.ui.common.mn(d.medianPriceLkr)} median · ${d.count} listings",
-                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                    style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
                     color = MotormilaSecondaryText,
                 )
                 if (topLine.isNotEmpty()) {

@@ -1,5 +1,6 @@
 package lk.motormila.app.ui.compare
 
+import lk.motormila.app.ui.theme.mmTappable
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -262,10 +263,10 @@ private fun CarColumn(
     ) {
         Column(
             Modifier
+                .mmTappable(role = Role.Button, shape = MmShapes.md, onClickLabel = item.displayName) { onOpenDetail(item.id) }
                 .height(HeaderHeight)
                 .clip(MmShapes.md)
-                .background(c.surface)
-                .clickable(role = Role.Button, onClickLabel = item.displayName) { onOpenDetail(item.id) },
+                .background(c.surface),
         ) {
             Box {
                 MmImage(
@@ -324,12 +325,12 @@ private fun AddColumn(onAdd: () -> Unit) {
     val c = MmColors.current
     Box(
         Modifier
+            .mmTappable(role = Role.Button, onClick = onAdd)
             .padding(start = MmSpacing.sm)
             .width(ColumnWidth)
             .height(HeaderHeight)
             .clip(MmShapes.md)
-            .border(1.dp, c.outlineStrong, MmShapes.md)
-            .clickable(role = Role.Button, onClick = onAdd),
+            .border(1.dp, c.outlineStrong, MmShapes.md),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
