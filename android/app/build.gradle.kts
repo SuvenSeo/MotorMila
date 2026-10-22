@@ -291,6 +291,9 @@ dependencies {
     implementation(libs.paging.runtime)
     implementation(libs.paging.compose)
 
+    // Startup: compiles src/main/baseline-prof.txt on install (sideload too).
+    implementation(libs.androidx.profileinstaller)
+
     // Images
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)

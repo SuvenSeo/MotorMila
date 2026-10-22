@@ -97,7 +97,7 @@ fun motormilaEnterTransition(
     if (reducedMotion) return fadeIn(tween(0))
     return if (tabSwitch) {
         fadeIn(tween(MmMotion.Base, delayMillis = 40, easing = MmMotion.Standard)) +
-            scaleIn(tween(MmMotion.Base, delayMillis = 40, easing = MmMotion.Emphasized), initialScale = 0.985f)
+            scaleIn(MmMotion.pageSpring(), initialScale = 0.985f)
     } else {
         MmMotion.fadeThroughEnter()
     }
