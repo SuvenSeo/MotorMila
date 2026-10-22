@@ -8,6 +8,7 @@ import AdminDashboard from "@/pages/AdminDashboard";
 import {
   adminSessionMinutesLeft,
   clearAdminSession,
+  shouldAutoUnlockAdminConsole,
   readAdminSession,
   verifyLocalAdminCredential,
   writeAdminSession,
@@ -26,7 +27,7 @@ import { springSoft } from "@/lib/motion";
  */
 export default function AdminConsole() {
   const { t } = useAppPreferences();
-  const { login, logout, isAdmin, isAuthenticated, authReady } = useAuth();
+  const { login, logout, isAdmin, isAuthenticated, authReady, user } = useAuth();
   const [session, setSession] = useState<AdminSession | null>(() => readAdminSession());
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -34,12 +35,27 @@ export default function AdminConsole() {
   const [error, setError] = useState("");
   const [attempting, setAttempting] = useState(false);
   const [lockSeconds, setLockSeconds] = useState(0);
+  // "Lock console" must stick for this visit even when the session is an admin.
+  const [manuallyLocked, setManuallyLocked] = useState(false);
+
+  // A server-verified admin session (role re-read via /auth/me) unlocks the
+  // console on its own — no separate console password for admins/owners. The
+  // backend still gates every admin API with require_admin_access.
+  const sessionAdmin = shouldAutoUnlockAdminConsole({
+    backendAuthEnabled: BACKEND_AUTH_ENABLED,
+    authReady,
+    isAuthenticated,
+    isAdmin,
+  });
+  const autoUnlocked = sessionAdmin && !manuallyLocked;
 
   // A console session alone is not enough when the API owns identity: the
   // signed-in account must still be an admin (the backend enforces this too).
-  const unlocked = Boolean(
+  const passwordUnlocked = Boolean(
     session && (BACKEND_AUTH_ENABLED ? isAuthenticated && isAdmin : true),
   );
+  const unlocked = autoUnlocked || passwordUnlocked;
+  const consoleUser = session?.username || user?.email || "";
 
   useEffect(() => {
     if (!BACKEND_AUTH_ENABLED) return;
@@ -88,12 +104,14 @@ export default function AdminConsole() {
             return;
           }
           setSession(writeAdminSession(stored.email));
+          setManuallyLocked(false);
           setPassword("");
           return;
         }
 
         const local = verifyLocalAdminCredential(trimmedUser, password);
         if (local.ok) {
+          setManuallyLocked(false);
           setSession(writeAdminSession(trimmedUser));
           setPassword("");
           return;
@@ -118,12 +136,13 @@ export default function AdminConsole() {
   const lockConsole = useCallback(() => {
     clearAdminSession();
     setSession(null);
+    setManuallyLocked(true);
     setPassword("");
     setError("");
   }, []);
 
   // ── Session established: the console itself ──────────────────────
-  if (unlocked && session) {
+  if (unlocked) {
     return (
       <div className="relative min-h-screen bg-background">
         <div className="border-b border-border bg-surface/70 backdrop-blur-xl">
@@ -137,7 +156,7 @@ export default function AdminConsole() {
                   {t("adminLogin.console", "Admin console")}
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  {t("adminLogin.signedInAs", "Unlocked as {user}", { user: session.username })}
+                  {t("adminLogin.signedInAs", "Unlocked as {user}", { user: consoleUser })}
                 </p>
               </div>
             </div>
