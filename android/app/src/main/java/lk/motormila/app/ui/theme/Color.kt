@@ -1,5 +1,8 @@
 package lk.motormila.app.ui.theme
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 
 /**
@@ -12,7 +15,7 @@ import androidx.compose.ui.graphics.Color
  * Prefer `MmColors.current` in new code.
  */
 object LegacyPalette {
-    var isDark: Boolean by androidx.compose.runtime.mutableStateOf(true)
+    var isDark: Boolean by mutableStateOf(true)
 }
 
 // Dark-first tokens - Motormila brand matching web (tailwind / index.css)
