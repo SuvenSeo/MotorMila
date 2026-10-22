@@ -453,6 +453,15 @@ class GenericDetailScraper:
                         break
                     except Exception as exc:
                         log.error("generic_detail_page_error", source=self.SOURCE, url=page_url, error=str(exc))
+                        # A page that errors (404 past the end of a catalogue,
+                        # 410, repeated 5xx) is an empty page for budgeting:
+                        # without this, error pages never counted toward the
+                        # empty-page limit and a 2-page catalogue was crawled
+                        # for all 30 budgeted pages every cycle (DIMO, 21 Oct
+                        # 2026: pages 3-30 all 404, ~4 min wasted per run).
+                        consecutive_empty_pages += 1
+                        if consecutive_empty_pages >= empty_page_limit:
+                            break
                         continue
 
                     if not listing_urls:
