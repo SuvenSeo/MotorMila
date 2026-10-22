@@ -178,7 +178,7 @@ fun AIChatBottomSheet(
                 exit = fadeOut(),
             ) {
                 ChatErrorRow(
-                    message = state.lastError ?: "",
+                    message = if (state.signInRequired) stringResource(R.string.chat_sign_in_required) else state.lastError ?: "",
                     onRetry = { viewModel.onEvent(AIChatUiEvent.Retry) },
                     onDismiss = { viewModel.onEvent(AIChatUiEvent.DismissError) },
                 )

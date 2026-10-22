@@ -48,7 +48,9 @@ internal fun Insights.carsFirst(): Insights = copy(
 )
 
 internal fun List<PriceDrop>.carsFirst(): List<PriceDrop> =
-    carsOnlyOrFirst { VehicleCategoryRules.isCarLike(it.listing) }
+    // Same plausibility rule as deals: a 75% "cut" is a mis-typed price, not a drop.
+    filter { kotlin.math.abs(it.dropPct) <= MAX_PLAUSIBLE_DEAL_PCT }
+        .carsOnlyOrFirst { VehicleCategoryRules.isCarLike(it.listing) }
 
 
 data class HomeUiState(

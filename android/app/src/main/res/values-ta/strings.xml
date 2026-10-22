@@ -179,4 +179,5 @@
     <string name="chat_thinking">நேரடி சந்தை தகவல்களைப் படிக்கிறது…</string>
     <string name="chat_input_hint">பட்ஜெட், மதிப்பு, பட்டியல்கள் பற்றி கேளுங்கள்…</string>
     <string name="calculating_cd">கணக்கிடுகிறது</string>
+    <string name="chat_sign_in_required">நேரடி AI பதில்களுக்கு உள்நுழையவும். தற்போது விரைவான ஆஃப்லைன் பதில் காட்டப்படுகிறது.</string>
 </resources>

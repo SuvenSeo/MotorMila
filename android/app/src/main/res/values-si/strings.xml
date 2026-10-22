@@ -179,4 +179,5 @@
     <string name="chat_thinking">සජීවී වෙළඳපොළ තොරතුරු කියවමින්…</string>
     <string name="chat_input_hint">අයවැය, වටිනාකම, දැන්වීම් ගැන අසන්න…</string>
     <string name="calculating_cd">ගණනය කරමින්</string>
+    <string name="chat_sign_in_required">සජීවී AI පිළිතුරු සඳහා ලොග් වන්න. දැනට ඉක්මන් නොබැඳි පිළිතුරක් පෙන්වයි.</string>
 </resources>

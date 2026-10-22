@@ -37,7 +37,7 @@
     <string name="hub_ev_count_note">Active EV inventory tracked across all sources</string>
     <string name="hub_ev_share_label">EV market share</string>
     <string name="hub_ev_share_note">Share of all tracked listings that are electric</string>
-    <string name="hub_ev_median_label">Average EV price</string>
+    <string name="hub_ev_median_label">Median EV price</string>
     <string name="hub_ev_median_note">Median price across all priced EV listings</string>
     <string name="hub_ev_share_value">%1$.1f%%</string>
     <string name="hub_ev_top_models">Top EV models</string>
@@ -93,7 +93,7 @@
     <string name="hub_ev_empty_body">Electric inventory and charging stations will appear after the next market sync.</string>
     <string name="hub_ev_cd_stat_count">Electric listings live, %1$d</string>
     <string name="hub_ev_cd_stat_share">EV market share, %1$.1f percent</string>
-    <string name="hub_ev_cd_stat_median">Average EV price, %1$s</string>
+    <string name="hub_ev_cd_stat_median">Median EV price, %1$s</string>
     <string name="hub_ev_cd_charger">Charging station %1$s, %2$s</string>
     <string name="hub_ev_cd_refresh">Refresh EV Hub</string>
 

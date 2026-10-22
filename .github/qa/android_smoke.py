@@ -796,6 +796,13 @@ def clickables(nodes):
     return out
 
 
+def close_overlays():
+    """Close sheets/dialogs (e.g. the AI chat sheet) so they don't leak into the next root."""
+    if find(dump(), r"Motormila AI Intelligence Assistant|Ask about budget", "both"):
+        adb("shell input keyevent 4")
+        time.sleep(1)
+
+
 def crawl(root, pages=1, max_taps=16):
     report = []
     for page in range(pages):
@@ -803,15 +810,25 @@ def crawl(root, pages=1, max_taps=16):
         time.sleep(3)
         for _ in range(page):
             swipe_up(0.6)
-        targets = clickables(dump())[:max_taps]
+        time.sleep(3)  # let data load so target bounds are stable
+        # never flip language / sign out mid-crawl (it changed later roots to Tamil)
+        skip = re.compile(r"සිංහල|தமிழ்|^English|Sign out|Log out|Delete account", re.I)
+        targets = [t for t in clickables(dump()) if not skip.search(t[1])][:max_taps]
         for i, (n, lab) in enumerate(targets):
+            close_overlays()
             deeplink(root)
-            time.sleep(2.5)
+            time.sleep(3)
             for _ in range(page):
                 swipe_up(0.6)
             before = dump()
             sig0 = screen_sig(before)
-            # re-find the same target by bounds (layout may shift a little after data loads)
+            # re-find the same target by label in the fresh dump (layout shifts after data loads)
+            fresh = [m for (m, l2) in clickables(before) if l2 == lab]
+            if fresh:
+                n = fresh[0]
+            elif not lab.startswith("@"):
+                report.append(f"SKIP(moved) {lab[:40]}")
+                continue
             x, y = n.center()
             adb(f"shell input tap {x} {y}")
             time.sleep(2.5)

@@ -210,7 +210,7 @@ fun DistrictInsightDto.toDomain(): DistrictInsight = DistrictInsight(
 
 fun MakeInsightDto.toDomain(): MakeInsight = MakeInsight(
     make = make,
-    listingCount = listingCount,
+    listingCount = total?.takeIf { it > 0 } ?: listingCount,
     avgPriceLkr = avgPriceLkr,
     medianPriceLkr = medianPriceLkr,
     topModels = topModels.map { it.toHubTopModel() },
@@ -220,7 +220,7 @@ fun MakeInsightDto.toDomain(): MakeInsight = MakeInsight(
 fun MakeModelInsightDto.toDomain(): MakeModelInsight = MakeModelInsight(
     make = make.orEmpty(),
     model = model.orEmpty(),
-    listingCount = listingCount,
+    listingCount = total?.takeIf { it > 0 } ?: listingCount,
     avgPriceLkr = avgPriceLkr,
     medianPriceLkr = medianPriceLkr,
     minPriceLkr = minPriceLkr,
