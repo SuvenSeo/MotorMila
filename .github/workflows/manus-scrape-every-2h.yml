@@ -47,8 +47,9 @@ jobs:
 
       - name: Scrape sources and upload dump
         # riyasewana runs in its own job below so a block there cannot stop
-        # this dump. ikman is listed but is skipped unless SOURCES_ENABLED
-        # opts it in (off by default; partnership/feed is the intended path).
+        # this dump. ikman is crawled here like every other source in the
+        # list (public HTML only, robots-first; re-enabled by owner decision
+        # 22 Oct 2026 after a 19-22 Oct pause).
         run: |
           bash backend/scripts/ops/manus_scrape_dump.sh \
             ikman autolanka auto-lanka hitad autostream saleme riyahub carshop dimo autodirect cartivate

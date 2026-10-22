@@ -28,11 +28,12 @@ from app.utils.time import utc_now
 log = structlog.get_logger()
 
 # NOTE (legal): MotorMila does NOT call ikman's internal JSON API
-# (api.ikman.lk). It was never offered publicly. ikman is disabled by default
-# (see app.scrapers.polite.DEFAULT_DISABLED_SOURCES); the intended path is a
-# partnership / data feed under ikman's "partner sites" clause. When explicitly
-# enabled via SOURCES_ENABLED=ikman, only robots-permitted public HTML search
-# pages are read (no ``?sort=`` / ``?query=`` / ``?filters=`` URLs).
+# (api.ikman.lk). It was never offered publicly. ikman crawling was paused
+# 19-22 Oct 2026 (off by default in app.scrapers.polite) and re-enabled by
+# owner decision on 22 Oct 2026. A partnership / data feed under ikman's
+# "partner sites" clause remains the preferred long-term path. Only
+# robots-permitted public HTML search pages are read (no ``?sort=`` /
+# ``?query=`` / ``?filters=`` URLs). SOURCES_DISABLED=ikman stops it again.
 
 
 class IkmanApiUnavailable(RuntimeError):
@@ -571,8 +572,8 @@ class IkmanCarScraper:
             log.warning(
                 "source_disabled",
                 source=self.SOURCE,
-                note="ikman is off by default; partnership/feed is the intended path. "
-                "Opt in with SOURCES_ENABLED=ikman (public HTML only).",
+                note="ikman is switched off for this run (SOURCES_DISABLED or an "
+                "allow-list that excludes it). Public HTML only; no api.ikman.lk.",
             )
             return 0
         mode = str(os.getenv("IKMAN_SCRAPE_MODE", "") or "").strip().lower()

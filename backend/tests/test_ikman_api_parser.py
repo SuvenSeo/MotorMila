@@ -114,7 +114,9 @@ def test_ikman_scrape_never_uses_internal_api(monkeypatch):
     assert calls == ["html:2"]
 
 
-def test_ikman_is_disabled_by_default(monkeypatch):
+def test_ikman_is_enabled_by_default(monkeypatch):
+    # Re-enabled by owner decision 22 Oct 2026 (was disabled by default
+    # 19-22 Oct 2026). With no flags set, scrape() reaches the HTML reader.
     calls: list[str] = []
 
     async def fake_playwright(self, max_pages: int = 5):
@@ -122,6 +124,25 @@ def test_ikman_is_disabled_by_default(monkeypatch):
         return 3
 
     monkeypatch.delenv("SOURCES_ENABLED", raising=False)
+    monkeypatch.delenv("SOURCES_DISABLED", raising=False)
+    monkeypatch.setattr(IkmanCarScraper, "_scrape_via_playwright", fake_playwright)
+
+    import asyncio
+
+    assert asyncio.run(IkmanCarScraper(db=None).scrape(max_pages=2)) == 3
+    assert calls == ["html"]
+
+
+def test_ikman_stops_when_disabled_via_sources_disabled(monkeypatch):
+    # The instant kill switch: SOURCES_DISABLED=ikman must no-op the crawl.
+    calls: list[str] = []
+
+    async def fake_playwright(self, max_pages: int = 5):
+        calls.append("html")
+        return 3
+
+    monkeypatch.delenv("SOURCES_ENABLED", raising=False)
+    monkeypatch.setenv("SOURCES_DISABLED", "ikman")
     monkeypatch.setattr(IkmanCarScraper, "_scrape_via_playwright", fake_playwright)
 
     import asyncio

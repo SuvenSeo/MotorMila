@@ -163,10 +163,11 @@ def test_default_host_delay_is_at_least_two_seconds(monkeypatch):
 # --- source flags ------------------------------------------------------------
 
 
-def test_ikman_disabled_by_default(monkeypatch):
+def test_ikman_enabled_by_default(monkeypatch):
+    # Re-enabled by owner decision 22 Oct 2026 (was off by default 19-22 Oct).
     monkeypatch.delenv("SOURCES_ENABLED", raising=False)
     monkeypatch.delenv("SOURCES_DISABLED", raising=False)
-    assert not polite.source_enabled("ikman")
+    assert polite.source_enabled("ikman")
     assert polite.source_enabled("riyasewana")
 
 
