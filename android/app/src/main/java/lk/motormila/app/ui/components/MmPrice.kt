@@ -16,7 +16,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.isSp
 import androidx.compose.ui.unit.times
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable

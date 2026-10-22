@@ -68,7 +68,18 @@ def nodes(root):
 
 def dismiss_noise():
     _, root = dump()
-    for n in nodes(root):
+    ns = nodes(root)
+    # Emulator system ANR dialogs ("Pixel Launcher isn't responding") sit on top of the app and
+    # swallow taps; answer "Wait" so the screenshot shows the app.
+    if any(re.search(r"isn.t responding", n["text"] or "") for n in ns):
+        for n in ns:
+            if re.fullmatch(r"Wait", n["text"] or ""):
+                x = (n["b"][0] + n["b"][2]) // 2
+                y = (n["b"][1] + n["b"][3]) // 2
+                adb(f"shell input tap {x} {y}")
+                time.sleep(1)
+                return True
+    for n in ns:
         if re.fullmatch(r"Later|පසුව|பின்னர்|Not now", n["text"] or ""):
             x = (n["b"][0] + n["b"][2]) // 2
             y = (n["b"][1] + n["b"][3]) // 2
@@ -147,6 +158,8 @@ SIZE = (int(m.group(1)), int(m.group(2))) if m else (1080, 2400)
 adb("shell pm grant %s android.permission.POST_NOTIFICATIONS" % PKG)
 adb("logcat -c")
 
+# Suppress system crash/ANR dialogs from other apps (emulator launcher ANRs polluted shots).
+adb("shell settings put global hide_error_dialogs 1")
 # First launch with no extras: shows the out-of-box default theme.
 adb(f"shell am force-stop {PKG}")
 start()
@@ -210,6 +223,7 @@ for name, target in SCREENS:
         elif target.startswith("TAB:"):
             link("motormila://home")
             time.sleep(3)
+            dismiss_noise()
             tab(target[4:])
             snap(name)
         else:
