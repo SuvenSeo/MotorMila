@@ -726,6 +726,9 @@ def recover():
 
 
 def s_category_chips():
+    # fresh process so earlier steps' keyword/filters don't leak into this check
+    adb(f"shell am force-stop {PKG}")
+    start_app(); time.sleep(6)
     deeplink("motormila://search")
     hit, nodes = wait_for(r"^Cars$", 25, "text")
     if not hit:

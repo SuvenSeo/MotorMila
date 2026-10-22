@@ -83,6 +83,8 @@ fun MotormilaTheme(
     content: @Composable () -> Unit,
 ) {
     val colors = if (darkTheme) MmColors.Dark else MmColors.Light
+    // Legacy Motormila* constants follow the theme (see LegacyPalette).
+    if (LegacyPalette.isDark != darkTheme) LegacyPalette.isDark = darkTheme
     val scheme = remember(colors) { colors.toMaterial() }
     val inspection = LocalInspectionMode.current
     val lang = languageTag ?: if (inspection) null else remember {

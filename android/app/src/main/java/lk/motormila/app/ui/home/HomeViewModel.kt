@@ -36,8 +36,14 @@ import javax.inject.Inject
  * First impression is cars: Home rails come from endpoints without a category
  * param, so keep car-like items only (or rank them first when too few).
  */
+/** Deals claiming more than this % below typical are treated as data errors on Home. */
+internal const val MAX_PLAUSIBLE_DEAL_PCT = 60.0
+
 internal fun Insights.carsFirst(): Insights = copy(
-    hotDeals = hotDeals.carsOnlyOrFirst { VehicleCategoryRules.isCarLike(null, it.make, it.model) },
+    hotDeals = hotDeals
+        // "96% below typical" is a mis-parsed price, not a deal: never lead with it.
+        .filter { it.dealScore <= MAX_PLAUSIBLE_DEAL_PCT }
+        .carsOnlyOrFirst { VehicleCategoryRules.isCarLike(null, it.make, it.model) },
     trendingModels = trendingModels.carsOnlyOrFirst { VehicleCategoryRules.isCarLike(null, it.make, it.model) },
 )
 

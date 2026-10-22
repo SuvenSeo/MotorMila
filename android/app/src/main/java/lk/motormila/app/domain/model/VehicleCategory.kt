@@ -82,8 +82,8 @@ fun <T> List<T>.carsFirst(isCar: (T) -> Boolean): List<T> {
     return cars + others
 }
 
-/** Cars only when there are at least [min] car items; else cars-first ranking. */
-fun <T> List<T>.carsOnlyOrFirst(min: Int = 3, isCar: (T) -> Boolean): List<T> {
+/** Cars only when there are at least [min] car items (default 1); else cars-first ranking. */
+fun <T> List<T>.carsOnlyOrFirst(min: Int = 1, isCar: (T) -> Boolean): List<T> {
     val cars = filter(isCar)
     return if (cars.size >= min || cars.size == size) cars else carsFirst(isCar)
 }

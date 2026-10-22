@@ -232,7 +232,7 @@ class StatsRepositoryImpl @Inject constructor(
             }.getOrElse {
                 runCatching {
                     snapshots.liveMarket().latestListings.map { it.toDomain() }
-                        .carsOnlyOrFirst(min = 3) { VehicleCategoryRules.isCarLike(it) }
+                        .carsOnlyOrFirst { VehicleCategoryRules.isCarLike(it) }
                         .take(limit.coerceIn(1, 50))
                 }.getOrNull().orEmpty()
             }

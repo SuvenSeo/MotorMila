@@ -274,11 +274,19 @@ fun SearchScreen(
                         )
                     }
                     items.itemCount == 0 -> {
+                        // Narrow category + nothing else to clear -> offer All vehicles,
+                        // so the empty state is never a dead end.
+                        val onlyCategory = state.filters.copy(vehicleCategory = null, sort = ListingSorts.NEWEST, keyword = null).isEmpty &&
+                            state.filters.vehicleCategory != null
                         EmptyState(
                             title = "No vehicles found",
-                            body = "Try widening the budget or clearing a filter.",
-                            ctaLabel = "Reset filters",
-                            onCta = viewModel::resetFilters,
+                            body = if (onlyCategory) "Nothing in this category right now." else "Try widening the budget or clearing a filter.",
+                            ctaLabel = if (onlyCategory) "Show all vehicles" else "Reset filters",
+                            onCta = if (onlyCategory) {
+                                { viewModel.onCategoryChange(VehicleCategory.ALL) }
+                            } else {
+                                viewModel::resetFilters
+                            },
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
