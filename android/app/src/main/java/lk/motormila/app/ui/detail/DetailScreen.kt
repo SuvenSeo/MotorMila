@@ -843,6 +843,34 @@ private fun HeroActionsRow(
         style = MaterialTheme.typography.labelMedium,
         color = MotormilaSecondaryText,
     )
+    // Large Dynamic Type (> 1.3x): two side-by-side buttons can't hold their labels
+    // ("Share o… WhatsA pp" at 200 %), so stack them full width instead.
+    val largeText = androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f
+    if (largeText) {
+        MotormilaPrimaryButton(
+            label = stringResource(R.string.listing_view_on_source, sourceName),
+            leadingIcon = Icons.AutoMirrored.Filled.OpenInNew,
+            onClick = onViewSource,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            MotormilaGhostButton(
+                label = stringResource(R.string.listing_share_whatsapp),
+                fillMaxWidth = false,
+                leadingIcon = Icons.AutoMirrored.Filled.Chat,
+                modifier = Modifier.weight(1f),
+                onClick = onShareWhatsApp,
+            )
+            MotormilaIconAction(
+                icon = Icons.Filled.Share,
+                contentDescription = stringResource(R.string.listing_share_cd),
+                onClick = onShare,
+            )
+        }
+    } else {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -867,6 +895,7 @@ private fun HeroActionsRow(
             contentDescription = stringResource(R.string.listing_share_cd),
             onClick = onShare,
         )
+    }
     }
     }
 }

@@ -154,21 +154,10 @@ fun MmStepper(
 ) {
     val c = MmColors.current
     val haptics = MmHaptics.current
-    Row(
-        modifier
-            .fillMaxWidth()
-            .clip(MmShapes.sm)
-            .background(c.surfaceRaised)
-            .border(1.dp, c.outline, MmShapes.sm)
-            .padding(horizontal = MmSpacing.xs),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            label,
-            style = MmType.current.bodyM,
-            color = c.textSecondary,
-            modifier = Modifier.weight(1f).padding(start = MmSpacing.md),
-        )
+    // Large Dynamic Type (> 1.3x): the label no longer fits beside − value + and broke
+    // mid-word ("manufactur / e"), so it moves onto its own line above the controls.
+    val largeText = androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f
+    val controls: @Composable () -> Unit = {
         MmIconButton(
             icon = Icons.Filled.Remove,
             contentDescription = stringResource(R.string.scr_decrease, label),
@@ -188,6 +177,37 @@ fun MmStepper(
             enabled = value + step <= range.last,
             onClick = { haptics.press(); onValueChange((value + step).coerceIn(range)) },
         )
+    }
+    val container = modifier
+        .fillMaxWidth()
+        .clip(MmShapes.sm)
+        .background(c.surfaceRaised)
+        .border(1.dp, c.outline, MmShapes.sm)
+        .padding(horizontal = MmSpacing.xs)
+    if (largeText) {
+        androidx.compose.foundation.layout.Column(container.padding(top = MmSpacing.sm)) {
+            Text(
+                label,
+                style = MmType.current.bodyM,
+                color = c.textSecondary,
+                modifier = Modifier.padding(start = MmSpacing.md),
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) { controls() }
+        }
+    } else {
+        Row(container, verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                label,
+                style = MmType.current.bodyM,
+                color = c.textSecondary,
+                modifier = Modifier.weight(1f).padding(start = MmSpacing.md),
+            )
+            controls()
+        }
     }
 }
 
