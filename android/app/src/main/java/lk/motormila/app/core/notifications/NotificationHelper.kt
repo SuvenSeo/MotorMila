@@ -98,6 +98,7 @@ class NotificationHelper @Inject constructor(
         ensureChannels()
         val builder = NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_notification)
+            .setColor(0xFF0A7AFF.toInt())
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(style)
