@@ -19,6 +19,11 @@ Generate a password hash with:
 set PRO_ACCESS_ENFORCED=false only for local development.
 
 App-wide API gating uses APP_ACCESS_ENFORCED (default true, same opt-out).
+
+Platform owners (OWNER_EMAILS, default "suvenseoras@gmail.com"; see
+app/core/owners.py) are healed to role=admin, plan=enterprise,
+subscription_status=active, is_active=true whenever their account resolves,
+so they always pass admin and Pro gates. Owners are never auto-created.
 """
 
 from __future__ import annotations
@@ -41,6 +46,12 @@ from sqlalchemy.orm import Session
 
 from app.core.db_guard import DatabaseUnavailable, find_db_unavailable
 from app.core import origins as _origins
+from app.core.owners import (
+    OWNER_PLAN,
+    OWNER_ROLE,
+    OWNER_SUBSCRIPTION_STATUS,
+    is_owner_email,
+)
 from app.services.rate_limit import LoginThrottle, RateLimiter, _client_key
 from db.models import PlatformUser, UserInvite
 from db.schema_patches import heal_platform_users_schema
@@ -403,6 +414,50 @@ def bump_token_version(db: Session, *, email: Optional[str] = None, user_id: Opt
     return int(row.token_version or 0)
 
 
+def _owner_row_needs_heal(row: PlatformUser) -> bool:
+    return (
+        str(row.role or "").lower() != OWNER_ROLE
+        or str(row.plan or "").lower() != OWNER_PLAN
+        or str(row.subscription_status or "").lower() != OWNER_SUBSCRIPTION_STATUS
+        or not bool(row.is_active)
+    )
+
+
+def _heal_owner_row(row: PlatformUser, db: Session) -> PlatformUser:
+    """Force an OWNER_EMAILS account row to admin + enterprise + active.
+
+    token_version is deliberately NOT bumped: live checks re-read the row, so
+    existing sessions keep working and immediately gain owner access.
+    """
+    if not is_owner_email(row.email) or not _owner_row_needs_heal(row):
+        return row
+    row.role = OWNER_ROLE
+    row.plan = OWNER_PLAN
+    row.subscription_status = OWNER_SUBSCRIPTION_STATUS
+    row.is_active = True
+    try:
+        db.commit()
+        db.refresh(row)
+    except Exception:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+    return row
+
+
+def _elevate_owner_record(record: Optional[dict]) -> Optional[dict]:
+    """Return a copy of an account record with owner privileges applied."""
+    if not record or not is_owner_email(record.get("email")):
+        return record
+    elevated = dict(record)
+    elevated["role"] = OWNER_ROLE
+    elevated["plan"] = OWNER_PLAN
+    elevated["subscription_status"] = OWNER_SUBSCRIPTION_STATUS
+    elevated["is_active"] = True
+    return elevated
+
+
 def resolve_live_session(payload: dict, db: Optional[Session] = None) -> dict:
     """Re-read plan/role/active from the account store; reject revoked/inactive sessions.
 
@@ -446,6 +501,12 @@ def resolve_user_record(email: str, db: Optional[Session] = None) -> Optional[di
         try:
             row = db.query(PlatformUser).filter(PlatformUser.email == normalized).first()
             if row is not None:
+                if is_owner_email(row.email):
+                    # Owner allowlist: heal the row (role/plan/status/active)
+                    # and always report owner privileges, even if the heal
+                    # write fails.
+                    row = _heal_owner_row(row, db)
+                    return _elevate_owner_record(_platform_user_to_record(row))
                 if not row.is_active:
                     return None
                 return _platform_user_to_record(row)
@@ -459,7 +520,7 @@ def resolve_user_record(email: str, db: Optional[Session] = None) -> Optional[di
             except Exception:
                 pass
 
-    env_record = _configured_users().get(normalized)
+    env_record = _elevate_owner_record(_configured_users().get(normalized))
     if env_record is None and (db_unavailable or _accounts_store_degraded()):
         # Outage: we cannot tell "no such account" from "DB down". Answer 503
         # instead of 401 so clients keep their session and retry, rather than
@@ -501,7 +562,7 @@ def sync_env_user_to_db(record: dict, db: Session) -> Optional[PlatformUser]:
         existing.is_active = True
         db.commit()
         db.refresh(existing)
-        return existing
+        return _heal_owner_row(existing, db)
     user = PlatformUser(
         email=email,
         password_hash=record["password_hash"],
@@ -515,7 +576,7 @@ def sync_env_user_to_db(record: dict, db: Session) -> Optional[PlatformUser]:
     db.add(user)
     db.commit()
     db.refresh(user)
-    return user
+    return _heal_owner_row(user, db)
 
 
 def default_subscription_for_plan(plan: str) -> str:
@@ -608,10 +669,12 @@ def _issue_login_response(record: dict, response: Response, db: Optional[Session
             if row is not None:
                 row.last_login_at = datetime.now(timezone.utc)
                 session.commit()
+                row = _heal_owner_row(row, session)
                 record = _platform_user_to_record(row)
         except Exception:
             session.rollback()
 
+    record = _elevate_owner_record(record)
     token, expires_at = issue_token(
         record["email"],
         record["plan"],
@@ -1165,6 +1228,8 @@ def require_admin_access(
         if not bearer and not _is_trusted_origin(_request_origin(request)):
             raise HTTPException(status_code=403, detail="Admin writes require a trusted Origin.")
     live = get_current_auth_payload(request, authorization, db)
+    if is_owner_email(live.get("email")):
+        live = _elevate_owner_record(live)
     if str(live.get("role") or "").lower() != "admin":
         raise HTTPException(status_code=403, detail="Admin access required.")
     return {
@@ -1213,6 +1278,9 @@ def require_pro_access(
         raise HTTPException(status_code=401, detail="Pro access requires a valid session token.")
 
     live = resolve_live_session(payload, _session_or_none(db))
+    if is_owner_email(live.get("email")):
+        # Platform owner: full paid access regardless of plan/trial state.
+        return
     if str(live.get("plan") or "").lower() not in PRO_PLANS:
         raise HTTPException(status_code=403, detail="Pro subscription required.")
     subscription_status = str(live.get("subscription_status") or "active").lower()

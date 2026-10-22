@@ -17,6 +17,11 @@
  *     bundle. This keeps the console usable in snapshot-only/dev builds, but it
  *     is a UI gate, not a security boundary — production must run path 1.
  *
+ * Signed-in admins skip the gate: when backend auth is on and the live
+ * session (refreshed from `/auth/me`) reports `role: "admin"` — including the
+ * platform owner, whom the server always elevates via OWNER_EMAILS — the
+ * console unlocks automatically. The password gate above stays as a fallback.
+ *
  * Override the fallback credentials per build with:
  *   VITE_ADMIN_USERNAME=motormila
  *   VITE_ADMIN_PASSWORD_HASH=<sha256 hex of your password>
@@ -253,4 +258,19 @@ export function clearAdminSession(): void {
 export function adminSessionMinutesLeft(session: AdminSession | null): number {
   if (!session) return 0;
   return Math.max(0, Math.round((session.expiresAt - Date.now()) / 60_000));
+}
+
+/**
+ * True when the signed-in session itself proves admin rights, so the console
+ * can open without the password gate. Only trusted with backend auth on: the
+ * role then comes from the server (`/auth/me`), not forgeable local state, and
+ * every admin API call is still enforced server-side.
+ */
+export function shouldAutoUnlockAdminConsole(input: {
+  backendAuthEnabled: boolean;
+  authReady: boolean;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+}): boolean {
+  return Boolean(input.backendAuthEnabled && input.authReady && input.isAuthenticated && input.isAdmin);
 }
