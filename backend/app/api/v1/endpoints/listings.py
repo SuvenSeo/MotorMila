@@ -1054,6 +1054,11 @@ def get_price_drops(
     request: Request,
     days: int = Query(7, ge=1, le=30),
     limit: int = Query(20, ge=1, le=50),
+    vehicle_category: Optional[str] = Query(
+        None,
+        description="Optional browse category filter (cars, motorbikes, ...). Omit for all vehicles.",
+        max_length=40,
+    ),
     authorization: Optional[str] = Header(default=None),
     db: Session = Depends(get_db),
 ):
@@ -1109,7 +1114,16 @@ def get_price_drops(
         )
         .join(drops, drops.c.vehicle_id == CarListing.id)
         .filter(live_listing_filter(), CarListing.is_duplicate == False)  # noqa: E712
-        .order_by(desc((drops.c.prev_price - drops.c.new_price) / drops.c.prev_price))
+    )
+    category_clause = (
+        category_sql_filter(CarListing, vehicle_category)
+        if isinstance(vehicle_category, str)
+        else None
+    )
+    if category_clause is not None:
+        rows = rows.filter(category_clause)
+    rows = (
+        rows.order_by(desc((drops.c.prev_price - drops.c.new_price) / drops.c.prev_price))
         .limit(limit)
         .all()
     )

@@ -221,3 +221,38 @@ def test_price_history_endpoint():
         assert missing.status_code == 404
     finally:
         app.dependency_overrides.pop(get_db, None)
+
+
+def test_price_drops_feed_vehicle_category_filter():
+    """`vehicle_category=cars` keeps passenger cars and drops bikes (Android cars-first)."""
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from db.session import get_db
+
+    db = _session()
+    upsert_listing(db, "ikman", _payload(source_id="car", price_lkr=12_000_000))
+    db.commit()
+    upsert_listing(db, "ikman", _payload(source_id="car", price_lkr=10_000_000))
+    db.commit()
+    bike = {
+        **_payload(source_id="bike", price_lkr=900_000),
+        "make": "Honda",
+        "model": "Dio",
+        "title": "Honda Dio scooter 2019",
+        "vehicle_category": "motorbikes",
+    }
+    upsert_listing(db, "ikman", bike)
+    db.commit()
+    upsert_listing(db, "ikman", {**bike, "price_lkr": 600_000})
+    db.commit()
+
+    app.dependency_overrides[get_db] = lambda: db
+    try:
+        client = TestClient(app)
+        all_body = client.get("/api/v1/listings/price-drops?days=7&limit=10").json()
+        assert {i["listing"]["source_id"] for i in all_body["items"]} == {"car", "bike"}
+        cars = client.get("/api/v1/listings/price-drops?days=7&limit=10&vehicle_category=cars")
+        assert cars.status_code == 200
+        assert [i["listing"]["source_id"] for i in cars.json()["items"]] == ["car"]
+    finally:
+        app.dependency_overrides.pop(get_db, None)

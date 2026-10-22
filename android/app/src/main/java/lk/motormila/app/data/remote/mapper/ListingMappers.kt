@@ -60,6 +60,7 @@ fun ListingDto.toDomain(): Listing = Listing(
     detailUrl = detailUrl ?: url,
     externalUrl = externalUrl ?: url,
     engineCc = engineCapacity?.toDouble(),
+    vehicleCategory = vehicleCategory,
 )
 
 fun ListingSearchSuggestionDto.toDomain(): Listing = Listing(

@@ -147,4 +147,37 @@
     <string name="sell_login_cta">உள்நுழைக / பதிவு செய்க</string>
     <string name="sell_success_title">பட்டியல் சமர்ப்பிக்கப்பட்டது</string>
     <string name="sell_success_body">உங்கள் %1$s மதிப்பாய்வில் உள்ளது. நேரலைக்கு வந்ததும் தெரிவிப்போம்.</string>
+    <!-- launch-polish: category chips, Home stats, search empty state, chat sheet -->
+    <string name="vehicle_category_cars">கார்கள்</string>
+    <string name="vehicle_category_all">அனைத்து வாகனங்கள்</string>
+    <string name="vehicle_category_bikes">பைக்குகள்</string>
+    <string name="vehicle_category_three_wheelers">முச்சக்கர வண்டிகள்</string>
+    <string name="vehicle_category_vans">வேன்கள்</string>
+    <string name="vehicle_category_lorries">லாரிகள்</string>
+    <string name="vehicle_category_buses">பேருந்துகள்</string>
+    <string name="vehicle_category_row_cd">வாகன வகை</string>
+    <string name="search_empty_title">வாகனங்கள் எதுவும் கிடைக்கவில்லை</string>
+    <string name="search_empty_category_body">இந்த வகையில் தற்போது எதுவும் இல்லை.</string>
+    <string name="search_empty_filters_body">பட்ஜெட்டை விரிவாக்கவும் அல்லது ஒரு வடிகட்டியை அகற்றவும்.</string>
+    <string name="search_empty_show_all">அனைத்து வாகனங்களையும் காட்டு</string>
+    <string name="search_empty_reset">வடிகட்டிகளை மீட்டமை</string>
+    <string name="compare_selected_count">%1$d/%2$d தேர்ந்தெடுக்கப்பட்டது</string>
+    <string name="compare_cta">ஒப்பிடு</string>
+    <string name="home_live_listings">நேரடி பட்டியல்கள்</string>
+    <string name="home_data_fresh">1 மணி நேரத்துக்கு முந்தைய தரவு</string>
+    <string name="home_avg_price">சராசரி விலை</string>
+    <string name="home_new_24h">புதியவை (24 மணி)</string>
+    <string name="home_good_deals">நல்ல டீல்கள்</string>
+    <string name="home_empty_title">இன்னும் சந்தை தரவு இல்லை</string>
+    <string name="home_empty_body">புதுப்பிக்க கீழே இழுக்கவும் — புதிய பட்டியல்கள் இங்கே தோன்றும்.</string>
+    <string name="home_empty_cta">அனைத்து வாகனங்களையும் பார்</string>
+    <string name="chat_subtitle">நேரடி சந்தை தகவல், மதிப்பீட்டு வழிகாட்டல் &amp; ஸ்மார்ட் பட்டியல்கள்</string>
+    <string name="chat_hero_title">முடிவெடுக்கும் முன் சந்தை உதவியாளரிடம் கேளுங்கள்.</string>
+    <string name="chat_hero_body">இலங்கை முழுவதும் நேரடி வாகன பட்டியல்களைத் தேடி, நியாயமான சந்தை மதிப்பை (FMV) கணக்கிட்டு, டீல் அபாயத்தைக் காட்டி, CBSL வாகன நிதி விதிகளை விளக்குகிறேன்.</string>
+    <string name="chat_popular">பிரபலமான கேள்விகள்</string>
+    <string name="chat_recommended">பரிந்துரைக்கப்பட்ட வாகனங்கள்</string>
+    <string name="chat_thinking">நேரடி சந்தை தகவல்களைப் படிக்கிறது…</string>
+    <string name="chat_input_hint">பட்ஜெட், மதிப்பு, பட்டியல்கள் பற்றி கேளுங்கள்…</string>
+    <string name="calculating_cd">கணக்கிடுகிறது</string>
+    <string name="chat_sign_in_required">நேரடி AI பதில்களுக்கு உள்நுழையவும். தற்போது விரைவான ஆஃப்லைன் பதில் காட்டப்படுகிறது.</string>
 </resources>

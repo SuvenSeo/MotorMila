@@ -21,7 +21,6 @@ import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -528,15 +527,8 @@ private fun LandedResultCard(result: LandedCost?, calculating: Boolean) {
             )
             when {
                 calculating && result == null -> {
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 48.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        CircularProgressIndicator(color = MotormilaPrimary, modifier = Modifier.size(24.dp))
-                    }
+                    // Skeleton (not a spinner): result rows shimmer in place.
+                    CalcResultSkeleton()
                 }
                 result == null -> {
                     Text(
@@ -615,15 +607,8 @@ private fun TcoResultCard(result: Tco?, calculating: Boolean) {
             )
             when {
                 calculating && result == null -> {
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 48.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        CircularProgressIndicator(color = MotormilaPrimary, modifier = Modifier.size(24.dp))
-                    }
+                    // Skeleton (not a spinner): result rows shimmer in place.
+                    CalcResultSkeleton()
                 }
                 result == null -> {
                     Text(
@@ -872,13 +857,7 @@ private fun PermitsPane(
         when {
             state.loadingPermits && state.permits.isEmpty() -> {
                 MotormilaPane {
-                    Row(
-                        Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        CircularProgressIndicator(color = MotormilaPrimary, modifier = Modifier.size(24.dp))
-                    }
+                    CalcResultSkeleton()
                 }
             }
             state.permits.isEmpty() -> {
@@ -1068,4 +1047,21 @@ private fun CalcTextField(
             .fillMaxWidth()
             .heightIn(min = 48.dp),
     )
+}
+
+
+/** Shimmer placeholder for calculator / permit result blocks (replaces spinners). */
+@Composable
+private fun CalcResultSkeleton() {
+    val calculatingCd = androidx.compose.ui.res.stringResource(lk.motormila.app.R.string.calculating_cd)
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = calculatingCd },
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        lk.motormila.app.ui.components.MmSkeleton(width = 140.dp, height = 12.dp)
+        lk.motormila.app.ui.components.MmSkeleton(Modifier.fillMaxWidth(), height = 28.dp)
+        lk.motormila.app.ui.components.MmSkeleton(width = 200.dp, height = 12.dp)
+    }
 }

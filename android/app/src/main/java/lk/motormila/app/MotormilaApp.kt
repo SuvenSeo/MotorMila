@@ -4,6 +4,7 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import coil3.ImageLoader
+import okio.Path.Companion.toPath
 import coil3.SingletonImageLoader
 import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
@@ -110,6 +111,14 @@ class MotormilaApp : Application(), SingletonImageLoader.Factory, Configuration.
             .memoryCache {
                 MemoryCache.Builder()
                     .maxSizePercent(context, 0.28)
+                    .build()
+            }
+            // Explicit, bounded disk cache so listing photos survive restarts
+            // without growing unbounded on low-storage phones.
+            .diskCache {
+                coil3.disk.DiskCache.Builder()
+                    .directory(context.cacheDir.resolve("image_cache").absolutePath.toPath())
+                    .maxSizeBytes(150L * 1024 * 1024)
                     .build()
             }
             .crossfade(160)

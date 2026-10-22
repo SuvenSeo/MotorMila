@@ -93,27 +93,34 @@ object MmMotion {
 
     // ---- Ready-made transitions -------------------------------------------
 
+    /**
+     * Page movement spring (launch polish): critically-near damping 0.9 so a
+     * push/pop settles like iOS without overshoot; fades stay tweens.
+     * Seekable, so predictive back still scrubs it with the gesture.
+     */
+    fun pageSpring(): SpringSpec<Float> = spring(dampingRatio = 0.9f, stiffness = 380f)
+
     /** Material fade-through with a slight scale: forward navigation. */
     fun fadeThroughEnter(reduced: Boolean = false): EnterTransition =
         if (reduced) EnterTransition.None
         else fadeIn(tween(Base, delayMillis = 60, easing = Standard)) +
-            scaleIn(tween(Page, delayMillis = 60, easing = Emphasized), initialScale = 0.96f)
+            scaleIn(pageSpring(), initialScale = 0.96f)
 
     fun fadeThroughExit(reduced: Boolean = false): ExitTransition =
         if (reduced) ExitTransition.None
         else fadeOut(tween(Fast - 60, easing = Exit)) +
-            scaleOut(tween(Page, easing = Emphasized), targetScale = 1.02f)
+            scaleOut(pageSpring(), targetScale = 1.02f)
 
     /** Back navigation mirror (outgoing shrinks slightly, incoming settles from 1.02). */
     fun fadeThroughPopEnter(reduced: Boolean = false): EnterTransition =
         if (reduced) EnterTransition.None
         else fadeIn(tween(Base, delayMillis = 60, easing = Standard)) +
-            scaleIn(tween(Page, delayMillis = 60, easing = Emphasized), initialScale = 1.02f)
+            scaleIn(pageSpring(), initialScale = 1.02f)
 
     fun fadeThroughPopExit(reduced: Boolean = false): ExitTransition =
         if (reduced) ExitTransition.None
         else fadeOut(tween(Fast - 60, easing = Exit)) +
-            scaleOut(tween(Page, easing = Emphasized), targetScale = 0.96f)
+            scaleOut(pageSpring(), targetScale = 0.96f)
 
     /** Content swap (loading → content, tab panes). */
     fun crossfade(reduced: Boolean = false): ContentTransform =

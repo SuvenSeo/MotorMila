@@ -91,14 +91,19 @@ fun BrandLogo(
 
     Column(modifier = modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            // Transparent lockups per theme (the old Ink-baked logo_wordmark showed
+            // as a black box in Light mode). 1200x220 artwork has no padding, so
+            // 0.7x height keeps the same visual width as the old 4000x1040 lockup.
             Image(
-                painter = painterResource(id = R.drawable.logo_wordmark),
+                painter = painterResource(
+                    id = if (lk.motormila.app.ui.theme.MmColors.current.isDark) R.drawable.logo_wordmark_on_dark
+                    else R.drawable.logo_wordmark_on_light,
+                ),
                 contentDescription = "Motormila",
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
-                    .height(size.lockupHeight)
-                    // logo_wordmark.png is brand-lockup.png (4000x1040, baked on Ink #09090B).
-                    .aspectRatio(4000f / 1040f),
+                    .height(size.lockupHeight * 0.7f)
+                    .aspectRatio(1200f / 220f),
             )
 
             if (showLiveIndicator) {
@@ -156,7 +161,7 @@ fun MarketLivePill(modifier: Modifier = Modifier) {
             text = "LIVE",
             fontSize = 9.sp,
             fontWeight = FontWeight.ExtraBold,
-            color = Color(0xFF69F0AE),
+            color = lk.motormila.app.ui.theme.MotormilaGoodText,
             letterSpacing = 0.08.sp,
         )
     }

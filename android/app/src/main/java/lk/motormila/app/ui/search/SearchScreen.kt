@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.search
 
+import lk.motormila.app.domain.model.VehicleCategory
+
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -136,7 +138,11 @@ fun SearchScreen(
             } else {
                 viewModel.onQueryChange(heard)
                 val parsed = parseVoiceQuery(heard)
-                viewModel.applyFilters(parsed.copy(sort = state.filters.sort))
+                viewModel.applyFilters(
+                    parsed.copy(sort = state.filters.sort).let {
+                        if (it.vehicleCategory == null) it.copy(vehicleCategory = state.filters.vehicleCategory) else it
+                    },
+                )
             }
         }
     }
@@ -224,6 +230,10 @@ fun SearchScreen(
                 }
                 Spacer(Modifier.height(4.dp))
             }
+            CategoryChipRow(
+                selected = VehicleCategory.fromApi(state.filters.vehicleCategory),
+                onSelect = viewModel::onCategoryChange,
+            )
             SortFilterRow(
                 sort = state.filters.sort,
                 onSort = viewModel::onSortChange,
@@ -264,11 +274,19 @@ fun SearchScreen(
                         )
                     }
                     items.itemCount == 0 -> {
+                        // Narrow category + nothing else to clear -> offer All vehicles,
+                        // so the empty state is never a dead end.
+                        val onlyCategory = state.filters.copy(vehicleCategory = null, sort = ListingSorts.NEWEST, keyword = null).isEmpty &&
+                            state.filters.vehicleCategory != null
                         EmptyState(
-                            title = "No vehicles found",
-                            body = "Try widening the budget or clearing a filter.",
-                            ctaLabel = "Reset filters",
-                            onCta = viewModel::resetFilters,
+                            title = stringResource(R.string.search_empty_title),
+                            body = stringResource(if (onlyCategory) R.string.search_empty_category_body else R.string.search_empty_filters_body),
+                            ctaLabel = stringResource(if (onlyCategory) R.string.search_empty_show_all else R.string.search_empty_reset),
+                            onCta = if (onlyCategory) {
+                                { viewModel.onCategoryChange(VehicleCategory.ALL) }
+                            } else {
+                                viewModel::resetFilters
+                            },
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
@@ -367,6 +385,48 @@ fun SearchScreen(
             )
         }
     }
+}
+
+/**
+ * Browse category chips. Cars is the default first impression; one tap
+ * switches to All vehicles or another type.
+ */
+@Composable
+internal fun CategoryChipRow(
+    selected: VehicleCategory,
+    onSelect: (VehicleCategory) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val categoryRowCd = stringResource(R.string.vehicle_category_row_cd)
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(bottom = 4.dp)
+            .semantics { contentDescription = categoryRowCd },
+    ) {
+        items(VehicleCategory.entries, key = { it.name }) { cat ->
+            MmChip(
+                label = stringResource(cat.labelRes()),
+                selected = cat == selected,
+                onClick = { onSelect(cat) },
+            )
+        }
+    }
+}
+
+/** Localised chip label; the domain enum keeps an English label for logs/tests only. */
+@androidx.annotation.StringRes
+internal fun VehicleCategory.labelRes(): Int = when (this) {
+    VehicleCategory.CARS -> R.string.vehicle_category_cars
+    VehicleCategory.ALL -> R.string.vehicle_category_all
+    VehicleCategory.MOTORBIKES -> R.string.vehicle_category_bikes
+    VehicleCategory.THREE_WHEELERS -> R.string.vehicle_category_three_wheelers
+    VehicleCategory.VANS -> R.string.vehicle_category_vans
+    VehicleCategory.LORRIES -> R.string.vehicle_category_lorries
+    VehicleCategory.BUSES -> R.string.vehicle_category_buses
 }
 
 @Composable
@@ -481,7 +541,7 @@ private fun CompareTray(
                 CompareTrayThumb(thumb = thumb)
                 Spacer(Modifier.width(8.dp))
             }
-            Text("$count/$MAX_COMPARE_IDS selected", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.compare_selected_count, count, MAX_COMPARE_IDS), fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
             val clearPress = remember { MutableInteractionSource() }
             Text(
                 "Clear",
@@ -494,7 +554,7 @@ private fun CompareTray(
             )
             Spacer(Modifier.width(8.dp))
             MotormilaPrimaryButton(
-                label = "Compare",
+                label = stringResource(R.string.compare_cta),
                 onClick = onCompare,
                 enabled = count >= 2,
                 fillMaxWidth = false,

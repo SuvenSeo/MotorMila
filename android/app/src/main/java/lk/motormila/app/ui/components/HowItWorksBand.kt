@@ -135,7 +135,7 @@ fun HowItWorksBand(modifier: Modifier = Modifier) {
                     // Faint track.
                     drawPath(
                         path = path,
-                        color = Color.White.copy(alpha = 0.08f),
+                        color = lk.motormila.app.ui.theme.MotormilaOnSurface.copy(alpha = 0.08f),
                         style = Stroke(width = 2.dp.toPx()),
                     )
                     // Brand beam: deal green -> blue gradient.

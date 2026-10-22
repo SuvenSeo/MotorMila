@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.components
 
+import androidx.compose.animation.core.VisibilityThreshold
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -138,10 +140,10 @@ fun MmAnimatedText(
                     val up = targetState.value >= initialState.value
                     val dir = if (up) 1 else -1
                     (
-                        slideInVertically(tween(MmMotion.Base, easing = MmMotion.Emphasized)) { h -> dir * h } +
+                        slideInVertically(MmMotion.snappy(IntOffset.VisibilityThreshold)) { h -> dir * h } +
                             fadeIn(tween(MmMotion.Fast))
                         ) togetherWith (
-                        slideOutVertically(tween(MmMotion.Base, easing = MmMotion.Emphasized)) { h -> -dir * h } +
+                        slideOutVertically(MmMotion.snappy(IntOffset.VisibilityThreshold)) { h -> -dir * h } +
                             fadeOut(tween(MmMotion.Fast))
                         )
                 },

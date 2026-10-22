@@ -114,8 +114,11 @@ class DealWidgetWorker(
                 DealWidgetEntryPoint::class.java,
             )
             // Daily best deal = biggest % drop in the last 7 days (StatsRepository).
-            val best = runCatching { entry.statsRepository().priceDrops(days = 7, limit = 5) }
+            // Cars first (launch rule): prefer the best car drop, else any.
+            val drops = runCatching { entry.statsRepository().priceDrops(days = 7, limit = 20) }
                 .getOrDefault(emptyList())
+            val best = (drops.filter { lk.motormila.app.domain.model.VehicleCategoryRules.isCarLike(it.listing) }
+                .ifEmpty { drops })
                 .maxByOrNull { it.dropPct }
             val indexLast = runCatching { entry.insightsRepository().index() }
                 .getOrNull()?.points?.lastOrNull()

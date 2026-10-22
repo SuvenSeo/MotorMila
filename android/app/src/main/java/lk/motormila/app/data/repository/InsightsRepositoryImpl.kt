@@ -119,12 +119,13 @@ class InsightsRepositoryImpl @Inject constructor(
         }.getOrDefault(emptyList())
         val electricShare = mix.firstOrNull { it.fuelType.contains("elect", ignoreCase = true) }?.pct ?: 0.0
         EvStats(
-            count = ev.listingCount,
+            count = ev.evCount?.takeIf { it > 0 } ?: ev.listingCount,
             sharePct = electricShare,
-            avgPriceLkr = ev.avgPriceLkr?.takeIf { it > 0 },
+            // Backend now sends a median; the tile is labelled "Median EV price".
+            avgPriceLkr = ev.avgPriceLkr?.takeIf { it > 0 } ?: ev.medianEvPriceLkr?.takeIf { it > 0 },
             // No hybrid benchmark or savings figure from the backend yet: show nothing rather than a made-up number.
             aquaMedianLkr = null,
-            topModels = ev.topModels.map { "${it.make} ${it.model}".trim() },
+            topModels = ev.topModels.ifEmpty { ev.topEvModels }.map { "${it.make} ${it.model}".trim() },
         )
     }
 

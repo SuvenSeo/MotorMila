@@ -242,7 +242,7 @@ private fun WatchRow(
                                     text = "▼ ${LkrFormat.deltaPct(item.dropPct())}",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF69F0AE),
+                                    color = lk.motormila.app.ui.theme.MotormilaGoodText,
                                     modifier = Modifier
                                         .clip(MotormilaRadius.pill)
                                         .background(MotormilaGoodContainer)

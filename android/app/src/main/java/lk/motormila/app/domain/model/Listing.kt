@@ -31,6 +31,8 @@ data class Listing(
     val detailUrl: String?,
     val externalUrl: String?,
     val engineCc: Double?,
+    /** Backend `vehicle_category` (cars, suvs, motorbikes, three-wheelers…); null on cached/legacy rows. */
+    val vehicleCategory: String? = null,
 ) {
     /** Compact LKR display ("Rs 12.45 Mn"), or "Price on request". */
     fun formattedPrice(): String = lk.motormila.app.core.format.LkrFormat.price(priceLkr)

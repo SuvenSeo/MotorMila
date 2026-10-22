@@ -146,6 +146,8 @@ data class DistrictTopModelDto(
     val make: String = "",
     val model: String = "",
     @SerialName("listing_count") val listingCount: Int = 0,
+    /** make-insight top_models send `count` instead of listing_count. */
+    val count: Int? = null,
     @SerialName("avg_price_lkr") val avgPriceLkr: Double = 0.0,
 )
 
@@ -164,6 +166,8 @@ data class MakeModelInsightDto(
     val make: String? = null,
     val model: String? = null,
     @SerialName("listing_count") val listingCount: Int = 0,
+    /** Backend sends the count as `total` (listing_count kept for older builds). */
+    val total: Int? = null,
     @SerialName("avg_price_lkr") val avgPriceLkr: Double? = null,
     @SerialName("median_price_lkr") val medianPriceLkr: Double? = null,
     @SerialName("min_price_lkr") val minPriceLkr: Double? = null,
@@ -177,6 +181,8 @@ data class MakeModelInsightDto(
 data class MakeInsightDto(
     val make: String = "",
     @SerialName("listing_count") val listingCount: Int = 0,
+    /** Backend sends the count as `total` (listing_count kept for older builds). */
+    val total: Int? = null,
     @SerialName("avg_price_lkr") val avgPriceLkr: Double? = null,
     @SerialName("median_price_lkr") val medianPriceLkr: Double? = null,
     @SerialName("top_models") val topModels: List<DistrictTopModelDto> = emptyList(),
@@ -237,6 +243,10 @@ data class EvInsightDto(
     @SerialName("trend_points") val trendPoints: List<TrendPointDto> = emptyList(),
     @SerialName("listing_count") val listingCount: Int = 0,
     @SerialName("avg_price_lkr") val avgPriceLkr: Double? = null,
+    // Current backend shape (stats/ev-insight): ev_count, median_ev_price_lkr, top_ev_models.
+    @SerialName("ev_count") val evCount: Int? = null,
+    @SerialName("median_ev_price_lkr") val medianEvPriceLkr: Double? = null,
+    @SerialName("top_ev_models") val topEvModels: List<TrendingModelDto> = emptyList(),
 )
 
 @Serializable

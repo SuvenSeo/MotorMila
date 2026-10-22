@@ -23,6 +23,8 @@ data class AIChatUiState(
     val failedPrompt: String? = null,
     val offline: Boolean = false,
     val error: String? = null,
+    /** Live AI answers need an account (backend rejects signed-out writes); UI shows a localised sign-in hint. */
+    val signInRequired: Boolean = false,
 )
 
 sealed interface AIChatUiEvent {
@@ -79,6 +81,7 @@ class AIChatViewModel @Inject constructor(
                         lastError = null,
                         failedPrompt = null,
                         offline = false,
+                        signInRequired = false,
                     )
                 }
             }.onFailure { e ->
@@ -93,6 +96,7 @@ class AIChatViewModel @Inject constructor(
                         lastError = mapped.message,
                         failedPrompt = trimmed,
                         offline = mapped is AppError.Network,
+                        signInRequired = needsSignIn(mapped),
                     )
                 }
             }
@@ -123,11 +127,15 @@ class AIChatViewModel @Inject constructor(
                             isLoading = false,
                             lastError = mapped.message,
                             offline = mapped is AppError.Network,
+                            signInRequired = needsSignIn(mapped),
                         )
                     }
                 }
         }
     }
+
+    private fun needsSignIn(e: AppError): Boolean = e is AppError.Unauthorized ||
+        (e is AppError.Forbidden && (e.message.contains("Bearer", ignoreCase = true) || e.message.contains("Authentication", ignoreCase = true)))
 
     private fun generateFallbackReply(prompt: String): ChatMessage {
         val lower = prompt.lowercase()

@@ -139,7 +139,7 @@ fun AIChatBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
         containerColor = MotormilaSurface,
-        scrimColor = Color.Black.copy(alpha = 0.72f),
+        scrimColor = Color.Black.copy(alpha = if (lk.motormila.app.ui.theme.LegacyPalette.isDark) 0.72f else 0.4f),
         shape = MotormilaSheetShape,
         dragHandle = null,
         modifier = modifier
@@ -178,7 +178,7 @@ fun AIChatBottomSheet(
                 exit = fadeOut(),
             ) {
                 ChatErrorRow(
-                    message = state.lastError ?: "",
+                    message = if (state.signInRequired) stringResource(R.string.chat_sign_in_required) else state.lastError ?: "",
                     onRetry = { viewModel.onEvent(AIChatUiEvent.Retry) },
                     onDismiss = { viewModel.onEvent(AIChatUiEvent.DismissError) },
                 )
@@ -235,7 +235,7 @@ private fun AIChatHeader(
                 .width(36.dp)
                 .height(4.dp)
                 .clip(MotormilaRadius.pill)
-                .background(Color(0x33FFFFFF)),
+                .background(lk.motormila.app.ui.theme.MotormilaSecondaryText.copy(alpha = 0.35f)),
         )
 
         Spacer(Modifier.height(12.dp))
@@ -279,7 +279,7 @@ private fun AIChatHeader(
                         )
                     }
                     Text(
-                        text = "Real-time market intel, valuation guidance & smart shortlists",
+                        text = stringResource(R.string.chat_subtitle),
                         fontSize = 11.sp,
                         color = MotormilaSecondaryText,
                         maxLines = 1,
@@ -497,7 +497,7 @@ private fun WelcomeGlassCard(
         Spacer(Modifier.height(10.dp))
 
         Text(
-            text = "Ask the market assistant before you decide.",
+            text = stringResource(R.string.chat_hero_title),
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
             color = MotormilaOnSurface,
@@ -507,7 +507,7 @@ private fun WelcomeGlassCard(
         Spacer(Modifier.height(6.dp))
 
         Text(
-            text = "I query live market listings across Sri Lanka, calculate Fair Market Value (FMV), surface deal risk, and explain CBSL automotive financing rules.",
+            text = stringResource(R.string.chat_hero_body),
             fontSize = 13.sp,
             color = MotormilaSecondaryText,
             lineHeight = 18.sp,
@@ -516,11 +516,11 @@ private fun WelcomeGlassCard(
         Spacer(Modifier.height(16.dp))
 
         Text(
-            text = "POPULAR INQUIRIES",
+            text = stringResource(R.string.chat_popular),
             fontSize = 10.5.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = 0.8.sp,
-            color = Color(0xFF6E6E73),
+            color = lk.motormila.app.ui.theme.MotormilaSecondaryText,
         )
 
         Spacer(Modifier.height(8.dp))
@@ -667,7 +667,7 @@ private fun AssistantSpeechBubble(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
-                        text = "RECOMMENDED VEHICLES",
+                        text = stringResource(R.string.chat_recommended),
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.8.sp,
@@ -754,7 +754,7 @@ private fun FormattedMessageText(content: String) {
                     Text(
                         text = trimmed,
                         fontSize = 13.5.sp,
-                        color = Color(0xFFF5F5F7),
+                        color = MotormilaOnSurface,
                         lineHeight = 19.sp,
                     )
                 }
@@ -894,7 +894,7 @@ private fun LoadingThinkingIndicator(modifier: Modifier = Modifier) {
             modifier = Modifier.size(14.dp),
         )
         Text(
-            text = "Reading live market context...",
+            text = stringResource(R.string.chat_thinking),
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
             color = MotormilaPrimaryBright,
@@ -938,9 +938,9 @@ private fun AIChatInputBar(
                 onValueChange = onInputChange,
                 placeholder = {
                     Text(
-                        text = "Ask about budget, value, listings...",
+                        text = stringResource(R.string.chat_input_hint),
                         fontSize = 13.5.sp,
-                        color = Color(0xFF6E6E73),
+                        color = lk.motormila.app.ui.theme.MotormilaSecondaryText,
                     )
                 },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
@@ -984,7 +984,7 @@ private fun AIChatInputBar(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Send,
                     contentDescription = "Send Message",
-                    tint = if (canSend) Color.White else Color(0xFF6E6E73),
+                    tint = if (canSend) Color.White else lk.motormila.app.ui.theme.MotormilaSecondaryText,
                     modifier = Modifier.size(18.dp),
                 )
             }

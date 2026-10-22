@@ -128,6 +128,7 @@ fun ColumnScope.FilterSheetBody(
     onReset: () -> Unit,
     onApply: () -> Unit,
 ) {
+    val applyHaptics = lk.motormila.app.ui.theme.MmHaptics.current
     val c = MmColors.current
     Column(
         Modifier
@@ -209,7 +210,10 @@ fun ColumnScope.FilterSheetBody(
             // resultCount is only the loaded page count, never a total —
             // so the CTA never claims a number it can't stand behind.
             text = "Show results",
-            onClick = onApply,
+            onClick = {
+                applyHaptics.save() // confirm tick on filter apply
+                onApply()
+            },
             modifier = Modifier.weight(2f),
         )
     }

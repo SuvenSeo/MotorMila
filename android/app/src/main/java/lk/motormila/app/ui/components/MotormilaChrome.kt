@@ -481,7 +481,7 @@ fun MotormilaChoiceChip(
     val fill by animateColorAsState(
         targetValue = when {
             selected -> MotormilaPrimary
-            else -> Color(0xFF131318)
+            else -> lk.motormila.app.ui.theme.MotormilaSurfaceHigh
         },
         animationSpec = appleTween(200),
         label = "choice-fill",

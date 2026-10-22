@@ -224,8 +224,12 @@ interface MotormilaApiService {
     @GET("listings/{id}/geo")
     suspend fun getListingGeo(@Path("id") id: Int): GeoDto
 
+    /** `vehicle_category` is ignored by backends older than launch-polish (then the client ranks cars first). */
     @GET("listings/price-drops")
-    suspend fun getPriceDrops(@Query("days") days: Int = 7): PriceDropsDto
+    suspend fun getPriceDrops(
+        @Query("days") days: Int = 7,
+        @Query("vehicle_category") vehicleCategory: String? = null,
+    ): PriceDropsDto
 
     @GET("listings/sources")
     suspend fun getSources(): List<SourceRowDto>

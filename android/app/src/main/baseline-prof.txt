@@ -1,0 +1,27 @@
+# Baseline Profile (hand-written startup rules, launch polish Oct 2026).
+# AGP merges this with the Compose / AndroidX library profiles and
+# profileinstaller (pulled in by Compose) compiles it on install, including
+# for sideloaded APKs. Covers cold start -> Home -> Search -> Detail.
+# TODO(after launch): replace with a generated profile from a
+# :baselineprofile macrobenchmark module.
+HSPLlk/motormila/app/MainActivity;->**(**)**
+HSPLlk/motormila/app/MotormilaApp;->**(**)**
+HSPLlk/motormila/app/ui/navigation/**;->**(**)**
+HSPLlk/motormila/app/ui/theme/**;->**(**)**
+HSPLlk/motormila/app/ui/components/**;->**(**)**
+HSPLlk/motormila/app/ui/splash/**;->**(**)**
+HSPLlk/motormila/app/ui/home/**;->**(**)**
+HSPLlk/motormila/app/ui/search/**;->**(**)**
+HSPLlk/motormila/app/ui/detail/**;->**(**)**
+HSPLlk/motormila/app/data/remote/**;->**(**)**
+HSPLlk/motormila/app/data/repository/**;->**(**)**
+HSPLlk/motormila/app/domain/**;->**(**)**
+HSPLlk/motormila/app/core/**;->**(**)**
+Llk/motormila/app/MainActivity;
+Llk/motormila/app/ui/navigation/**;
+Llk/motormila/app/ui/theme/**;
+Llk/motormila/app/ui/components/**;
+Llk/motormila/app/ui/home/**;
+Llk/motormila/app/ui/search/**;
+Llk/motormila/app/ui/detail/**;
+Llk/motormila/app/domain/**;
