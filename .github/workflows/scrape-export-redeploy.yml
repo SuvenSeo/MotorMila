@@ -104,8 +104,6 @@ jobs:
           ALLOW_SQLITE_FALLBACK: "false"
           SCRAPE_PROFILE: "all"
           SCRAPE_ENABLED_SOURCES: ${{ inputs.source }}
-          SOURCES_ENABLED: ${{ vars.SOURCES_ENABLED }}
-          BOT_CONTACT: ${{ vars.BOT_CONTACT }}
           RUN_SCRAPERS: "true"
           RUN_MARKET_ANALYSIS: "false"
           RUN_MARKET_SIGNALS: "false"
@@ -117,7 +115,7 @@ jobs:
           SCRAPE_SOURCE_TIMEOUT_SECONDS: "5400"
           SCRAPE_SOURCE_TIMEOUT_SECONDS_IKMAN: "5400"
           SCRAPE_SOURCE_TIMEOUT_SECONDS_RIYASEWANA: "5400"
-          # api.ikman.lk is no longer used; ikman runs only if SOURCES_ENABLED opts it in.
+          IKMAN_SCRAPE_MODE: "api"
         run: python run_sync.py
 
       - name: Count after

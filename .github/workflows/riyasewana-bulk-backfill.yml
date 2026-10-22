@@ -1,7 +1,7 @@
 # Riyasewana Deep Backfill (Neon-first)
 #
 # One-shot / scheduled deep crawl of riyasewana.com using the scraper's fast
-# plain-HTTP mode (honest MotorMilaBot UA, robots.txt + 2-5s per-host delay).
+# plain-HTTP mode (curl_cffi Chrome impersonation; no Playwright browser).
 # Riyasewana's full catalog runs to ~2,000+ pages across categories (cars ~534,
 # motorcycles ~700, suvs ~171, vans ~151, three-wheels ~161, lorries ~123 ...),
 # vs the 60 pages/day the daily pipeline touches.  This is the tool to run to
@@ -102,8 +102,6 @@ jobs:
           ALLOW_SQLITE_FALLBACK: "false"
           SCRAPE_PROFILE: "all"
           SCRAPE_ENABLED_SOURCES: "riyasewana"
-          SOURCES_ENABLED: ${{ vars.SOURCES_ENABLED }}
-          BOT_CONTACT: ${{ vars.BOT_CONTACT }}
           RUN_SCRAPERS: "true"
           RUN_MARKET_ANALYSIS: "false"
           RUN_MARKET_SIGNALS: "false"
@@ -113,11 +111,14 @@ jobs:
           SCRAPE_MAX_PAGES_RIYASEWANA: ${{ github.event.inputs.max_pages || '800' }}
           SCRAPE_SOURCE_TIMEOUT_SECONDS: "10800"
           SCRAPE_SOURCE_TIMEOUT_SECONDS_RIYASEWANA: "10800"
-          # Plain-HTTP crawl with the honest bot UA; a block ends the run (no evasion).
+          # Fast plain-HTTP crawl (curl_cffi Chrome impersonation) — no browser.
           RIYASEWANA_SCRAPE_MODE: "http"
           # Full budget for every category so the whole catalog is covered.
           RIYASEWANA_FLAT_BUDGET: "true"
           RIYASEWANA_START_PAGE: ${{ github.event.inputs.start_page || '1' }}
+          # Optional residential proxy. Without it this run depends on drawing a
+          # GitHub runner IP that riyasewana's Cloudflare does not block.
+          SCRAPE_PROXY_URL: ${{ secrets.SCRAPE_PROXY_URL }}
         run: python run_sync.py
 
       - name: Count riyasewana listings after

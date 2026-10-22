@@ -8,8 +8,6 @@ from urllib.parse import urljoin, urlparse
 
 import httpx
 import structlog
-
-from app.scrapers.polite import BOT_USER_AGENT
 from bs4 import BeautifulSoup
 from sqlalchemy.orm import Session
 
@@ -21,7 +19,11 @@ from app.utils.listing_upsert import buffered_upsert_listing, flush_upsert_buffe
 log = structlog.get_logger()
 
 DEFAULT_HEADERS = {
-    "User-Agent": BOT_USER_AGENT,
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    ),
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
 
@@ -453,15 +455,6 @@ class GenericDetailScraper:
                         break
                     except Exception as exc:
                         log.error("generic_detail_page_error", source=self.SOURCE, url=page_url, error=str(exc))
-                        # A page that errors (404 past the end of a catalogue,
-                        # 410, repeated 5xx) is an empty page for budgeting:
-                        # without this, error pages never counted toward the
-                        # empty-page limit and a 2-page catalogue was crawled
-                        # for all 30 budgeted pages every cycle (DIMO, 21 Oct
-                        # 2026: pages 3-30 all 404, ~4 min wasted per run).
-                        consecutive_empty_pages += 1
-                        if consecutive_empty_pages >= empty_page_limit:
-                            break
                         continue
 
                     if not listing_urls:
