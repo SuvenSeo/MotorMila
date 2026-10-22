@@ -1053,10 +1053,11 @@ private fun CalcTextField(
 /** Shimmer placeholder for calculator / permit result blocks (replaces spinners). */
 @Composable
 private fun CalcResultSkeleton() {
+    val calculatingCd = androidx.compose.ui.res.stringResource(lk.motormila.app.R.string.calculating_cd)
     Column(
         Modifier
             .fillMaxWidth()
-            .semantics { contentDescription = "Calculating" },
+            .semantics { contentDescription = calculatingCd },
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         lk.motormila.app.ui.components.MmSkeleton(width = 140.dp, height = 12.dp)

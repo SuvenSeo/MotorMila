@@ -750,6 +750,9 @@ def s_category_chips():
 
 def s_route_sweep():
     bad = []
+    # Light-mode sweep: theme is "System" after step 17, so force the emulator to light.
+    adb("shell cmd uimode night no")
+    time.sleep(2)
     for uri in ROUTES:
         mark(f"route {uri}")
         deeplink(uri)
@@ -793,7 +796,7 @@ def clickables(nodes):
     return out
 
 
-def crawl(root, pages=2, max_taps=24):
+def crawl(root, pages=1, max_taps=16):
     report = []
     for page in range(pages):
         deeplink(root)

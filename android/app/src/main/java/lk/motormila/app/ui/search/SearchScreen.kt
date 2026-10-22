@@ -279,9 +279,9 @@ fun SearchScreen(
                         val onlyCategory = state.filters.copy(vehicleCategory = null, sort = ListingSorts.NEWEST, keyword = null).isEmpty &&
                             state.filters.vehicleCategory != null
                         EmptyState(
-                            title = "No vehicles found",
-                            body = if (onlyCategory) "Nothing in this category right now." else "Try widening the budget or clearing a filter.",
-                            ctaLabel = if (onlyCategory) "Show all vehicles" else "Reset filters",
+                            title = stringResource(R.string.search_empty_title),
+                            body = stringResource(if (onlyCategory) R.string.search_empty_category_body else R.string.search_empty_filters_body),
+                            ctaLabel = stringResource(if (onlyCategory) R.string.search_empty_show_all else R.string.search_empty_reset),
                             onCta = if (onlyCategory) {
                                 { viewModel.onCategoryChange(VehicleCategory.ALL) }
                             } else {
@@ -397,6 +397,7 @@ internal fun CategoryChipRow(
     onSelect: (VehicleCategory) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val categoryRowCd = stringResource(R.string.vehicle_category_row_cd)
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -404,16 +405,28 @@ internal fun CategoryChipRow(
         modifier = modifier
             .fillMaxWidth()
             .padding(bottom = 4.dp)
-            .semantics { contentDescription = "Vehicle type" },
+            .semantics { contentDescription = categoryRowCd },
     ) {
         items(VehicleCategory.entries, key = { it.name }) { cat ->
             MmChip(
-                label = cat.label,
+                label = stringResource(cat.labelRes()),
                 selected = cat == selected,
                 onClick = { onSelect(cat) },
             )
         }
     }
+}
+
+/** Localised chip label; the domain enum keeps an English label for logs/tests only. */
+@androidx.annotation.StringRes
+internal fun VehicleCategory.labelRes(): Int = when (this) {
+    VehicleCategory.CARS -> R.string.vehicle_category_cars
+    VehicleCategory.ALL -> R.string.vehicle_category_all
+    VehicleCategory.MOTORBIKES -> R.string.vehicle_category_bikes
+    VehicleCategory.THREE_WHEELERS -> R.string.vehicle_category_three_wheelers
+    VehicleCategory.VANS -> R.string.vehicle_category_vans
+    VehicleCategory.LORRIES -> R.string.vehicle_category_lorries
+    VehicleCategory.BUSES -> R.string.vehicle_category_buses
 }
 
 @Composable
@@ -528,7 +541,7 @@ private fun CompareTray(
                 CompareTrayThumb(thumb = thumb)
                 Spacer(Modifier.width(8.dp))
             }
-            Text("$count/$MAX_COMPARE_IDS selected", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.compare_selected_count, count, MAX_COMPARE_IDS), fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
             val clearPress = remember { MutableInteractionSource() }
             Text(
                 "Clear",
@@ -541,7 +554,7 @@ private fun CompareTray(
             )
             Spacer(Modifier.width(8.dp))
             MotormilaPrimaryButton(
-                label = "Compare",
+                label = stringResource(R.string.compare_cta),
                 onClick = onCompare,
                 enabled = count >= 2,
                 fillMaxWidth = false,

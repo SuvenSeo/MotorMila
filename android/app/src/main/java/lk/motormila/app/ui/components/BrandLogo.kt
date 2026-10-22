@@ -156,7 +156,7 @@ fun MarketLivePill(modifier: Modifier = Modifier) {
             text = "LIVE",
             fontSize = 9.sp,
             fontWeight = FontWeight.ExtraBold,
-            color = Color(0xFF69F0AE),
+            color = lk.motormila.app.ui.theme.MotormilaGoodText,
             letterSpacing = 0.08.sp,
         )
     }

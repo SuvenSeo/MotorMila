@@ -338,9 +338,9 @@ fun HomeContent(
             if (!state.isLoading && state.priceDrops.isEmpty() && state.insights.hotDeals.isEmpty()) {
                 item {
                     EmptyState(
-                        title = "No market data yet",
-                        body = "Pull to refresh — new listings appear here as scrapers run.",
-                        ctaLabel = "Browse all vehicles",
+                        title = stringResource(R.string.home_empty_title),
+                        body = stringResource(R.string.home_empty_body),
+                        ctaLabel = stringResource(R.string.home_empty_cta),
                         onCta = onSearchClick,
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
@@ -363,7 +363,7 @@ fun ContextCapsuleBadge(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .clip(MotormilaRadius.pill)
-            .background(Color(0xFF141419))
+            .background(lk.motormila.app.ui.theme.MotormilaSurfaceHigh)
             .border(
                 width = 1.dp,
                 color = if (isAccent) Color(0x440A7AFF) else MotormilaGlassBorder,
@@ -430,7 +430,7 @@ internal fun HeroStatsCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text = "LIVE LISTINGS",
+                    text = stringResource(R.string.home_live_listings),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.5.sp,
@@ -452,11 +452,11 @@ internal fun HeroStatsCard(
                     )
                     Spacer(Modifier.width(5.dp))
                     Text(
-                        text = "DATA AS OF 1H AGO",
+                        text = stringResource(R.string.home_data_fresh),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.5.sp,
-                        color = Color(0xFF69F0AE),
+                        color = lk.motormila.app.ui.theme.MotormilaGoodText,
                     )
                 }
             }
@@ -501,12 +501,12 @@ internal fun HeroStatsCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 MotormilaMetricTile(
-                    label = "AVG PRICE",
+                    label = stringResource(R.string.home_avg_price),
                     value = avgPrice ?: "—",
                     modifier = Modifier.weight(1f),
                 )
                 MotormilaMetricTile(
-                    label = "NEW 24H",
+                    label = stringResource(R.string.home_new_24h),
                     modifier = Modifier.weight(1f),
                 ) {
                     if (new24h > 0) {
@@ -527,7 +527,7 @@ internal fun HeroStatsCard(
                     }
                 }
                 MotormilaMetricTile(
-                    label = "GOOD DEALS",
+                    label = stringResource(R.string.home_good_deals),
                     modifier = Modifier.weight(1f),
                 ) {
                     if (goodDeals > 0) {
@@ -588,7 +588,7 @@ internal fun PriceDropCard(
                     Text(
                         "▼ ${LkrFormat.deltaPct(dropPct)}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFF69F0AE),
+                        color = lk.motormila.app.ui.theme.MotormilaGoodText,
                         fontWeight = FontWeight.Bold,
                     )
                 }

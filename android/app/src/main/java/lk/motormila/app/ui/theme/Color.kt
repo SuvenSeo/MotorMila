@@ -56,6 +56,7 @@ val MotormilaWarn = Color(0xFFF59E0BL)
 val MotormilaWarnContainer = Color(0x2EF59E0BL)
 val MotormilaBad = Color(0xFFEF4444L)
 val MotormilaBadContainer = Color(0x2EEF4444L)
+val MotormilaBadText: Color get() = if (LegacyPalette.isDark) Color(0xFFFCA5A5) else Color(0xFFB91C1C)
 
 // Light scheme tokens
 val MotormilaLightBg = Color(0xFFFBFBFDL)

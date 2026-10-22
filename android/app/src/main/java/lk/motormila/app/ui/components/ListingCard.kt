@@ -256,7 +256,7 @@ private fun SaveButton(
 private fun DeltaChip(deltaPct: Double) {
     val down = deltaPct < 0
     val container = if (down) MotormilaGoodContainer else Color(0x2EEF4444)
-    val content = if (down) Color(0xFF69F0AE) else Color(0xFFFCA5A5)
+    val content = if (down) lk.motormila.app.ui.theme.MotormilaGoodText else lk.motormila.app.ui.theme.MotormilaBadText
     val border = if (down) MotormilaGoodSoft else Color(0x55EF4444)
     Text(
         text = "${if (down) "▼" else "▲"} ${LkrFormat.deltaPct(deltaPct)}",

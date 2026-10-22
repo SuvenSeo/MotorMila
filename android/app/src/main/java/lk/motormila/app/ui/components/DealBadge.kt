@@ -50,26 +50,26 @@ fun DealBadge(
     val style = when (band) {
         DealBand.GREAT -> DealBadgeStyle(
             container = MotormilaGoodContainer,
-            content = androidx.compose.ui.graphics.Color(0xFF69F0AE),
+            content = lk.motormila.app.ui.theme.MotormilaGoodText,
             border = MotormilaGoodSoft,
             text = if (score != null) "GREAT %.1f".format(score) else "GREAT",
         )
         DealBand.FAIR -> DealBadgeStyle(
             container = MotormilaPrimaryContainer,
-            content = androidx.compose.ui.graphics.Color(0xFF3D94FF),
+            content = lk.motormila.app.ui.theme.MotormilaPrimaryBright,
             border = MotormilaPrimaryBorder,
             text = if (score != null) "FAIR %.1f".format(score) else "FAIR",
         )
         DealBand.HIGH -> DealBadgeStyle(
             container = androidx.compose.ui.graphics.Color(0x2EEF4444),
-            content = androidx.compose.ui.graphics.Color(0xFFFCA5A5),
+            content = lk.motormila.app.ui.theme.MotormilaBadText,
             border = androidx.compose.ui.graphics.Color(0x55EF4444),
             text = "HIGH",
         )
         DealBand.LOCKED -> DealBadgeStyle(
-            container = androidx.compose.ui.graphics.Color(0xDD18181B),
-            content = androidx.compose.ui.graphics.Color(0xFFF5F5F7),
-            border = androidx.compose.ui.graphics.Color(0x33FFFFFF),
+            container = lk.motormila.app.ui.theme.MotormilaSurfaceHighest,
+            content = lk.motormila.app.ui.theme.MotormilaOnSurface,
+            border = lk.motormila.app.ui.theme.MotormilaGlassBorder,
             text = lockedLabel,
         )
     }
