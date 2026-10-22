@@ -22,6 +22,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import lk.motormila.app.billing.PlayBillingDataSource
+import lk.motormila.app.core.locale.LocaleHelper
 import lk.motormila.app.ui.navigation.MotormilaNavGraph
 import lk.motormila.app.ui.theme.MotormilaTheme
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -54,7 +55,10 @@ class MainActivity : AppCompatActivity() {
         // Only consume the launch intent on a fresh start: on recreation
         // (rotation, locale switch, process restore) the nav back stack is
         // already restored and replaying the deep link/share would duplicate it.
-        if (savedInstanceState == null) applyIncomingIntent(intent)
+        if (savedInstanceState == null) {
+            applyQaOverrides(intent)
+            applyIncomingIntent(intent)
+        }
         // Reconcile the local Play Pro entitlement with Play's purchase cache
         // (best-effort, off the main thread — never blocks startup).
         lifecycleScope.launch(Dispatchers.IO) {
@@ -93,7 +97,27 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        applyQaOverrides(intent)
         applyIncomingIntent(intent)
+    }
+
+    /**
+     * DEBUG builds only (QA screenshot crawl): `am start --es mm_qa_theme
+     * light|dark|system --es mm_qa_lang en|si|ta` persists the same settings
+     * the Settings screen writes. Release builds ignore the extras.
+     */
+    private fun applyQaOverrides(intent: Intent?) {
+        if (!BuildConfig.DEBUG || intent == null) return
+        val theme = intent.getStringExtra(QA_THEME_EXTRA)?.takeIf { it in setOf("light", "dark", "system") }
+        val lang = intent.getStringExtra(QA_LANG_EXTRA)?.let { LocaleHelper.normalize(it) }
+        if (theme == null && lang == null) return
+        lifecycleScope.launch {
+            theme?.let { settingsStore.setTheme(it) }
+            lang?.let {
+                settingsStore.setLanguage(it)
+                LocaleHelper.apply(it)
+            }
+        }
     }
 
     private fun applyIncomingIntent(intent: Intent?) {
@@ -121,6 +145,8 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val SHARED_URL_KEY = "shared_url"
+        private const val QA_THEME_EXTRA = "mm_qa_theme"
+        private const val QA_LANG_EXTRA = "mm_qa_lang"
         private val URL_REGEX = Regex("https?://[^\\s]+")
 
         fun extractViewUri(intent: Intent?): Uri? {
