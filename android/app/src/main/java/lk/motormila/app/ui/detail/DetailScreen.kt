@@ -73,6 +73,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -230,10 +231,17 @@ fun ListingDetailScreen(
                     val galleryImages = listing.images.ifEmpty { listOfNotNull(listing.thumbnailUrl) }
                     val sourceUrl = listing.externalUrl ?: listing.detailUrl
                     Box(Modifier.fillMaxSize()) {
+                    // Room for the sticky price / "View on source" bar: its measured height
+                    // (it grows with font scale), never less than the original 120 dp.
+                    var actionBarHeightPx by androidx.compose.runtime.remember {
+                        androidx.compose.runtime.mutableIntStateOf(0)
+                    }
+                    val actionBarRoom = with(androidx.compose.ui.platform.LocalDensity.current) {
+                        maxOf(120.dp, actionBarHeightPx.toDp() + 16.dp)
+                    }
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        // Room for the sticky price / "View on source" bar.
-                        contentPadding = PaddingValues(bottom = 120.dp),
+                        contentPadding = PaddingValues(bottom = actionBarRoom),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         if (state.isOffline) {
@@ -412,7 +420,9 @@ fun ListingDetailScreen(
                         priceLkr = listing.priceLkr,
                         sourceName = sourceDisplayName(listing.source),
                         onViewSource = sourceUrl?.let { url -> { openUrl(context, url) } },
-                        modifier = Modifier.align(Alignment.BottomCenter),
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .onSizeChanged { actionBarHeightPx = it.height },
                     )
                     }
                 }

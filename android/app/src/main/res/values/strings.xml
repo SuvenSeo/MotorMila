@@ -139,6 +139,10 @@
     <string name="sell_submitting">Listing\u2026</string>
     <string name="sell_login_required">Log in to list your vehicle on Motormila.</string>
     <string name="sell_login_cta">Log in / sign up</string>
+    <string name="sell_signed_out_title">Sell your car on Motormila</string>
+    <string name="sell_benefit_fast">List in under a minute — just the essentials</string>
+    <string name="sell_benefit_price">Buyers contact you directly by phone</string>
+    <string name="sell_benefit_reviewed">Every listing is reviewed before it goes live</string>
     <string name="sell_success_title">Listing submitted</string>
     <string name="sell_success_body">Your %1$s is pending review. We\'ll notify you once it\'s live.</string>
     <!-- launch-polish: category chips, Home stats, search empty state, chat sheet -->

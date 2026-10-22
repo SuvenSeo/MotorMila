@@ -412,6 +412,9 @@ fun DetailActionBar(
     modifier: Modifier = Modifier,
 ) {
     val c = MmColors.current
+    // Fixed chrome: cap Dynamic Type at 1.3x like an iOS toolbar so the price and the
+    // button both fit at 200 %; the price additionally shrinks to fit (MmFitText).
+    lk.motormila.app.ui.theme.CappedFontScale(max = 1.3f) {
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -420,12 +423,15 @@ fun DetailActionBar(
             .navigationBarsPadding()
             .padding(horizontal = MmSpacing.gutter, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Column(Modifier.weight(1f)) {
             Text(
                 stringResource(R.string.mm_detail_asking),
                 style = MmType.current.caption,
                 color = c.textSecondary,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
             MmPrice(
                 value = priceLkr,
@@ -442,6 +448,7 @@ fun DetailActionBar(
                 size = MmButtonSize.Medium,
             )
         }
+    }
     }
 }
 

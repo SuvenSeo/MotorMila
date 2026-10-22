@@ -194,11 +194,11 @@ fun ListingCard(
                 overflow = TextOverflow.Ellipsis,
             )
             Spacer(Modifier.height(4.dp))
-            Text(
+            // Shrinks to fit instead of dropping "Mn" at large font scales.
+            MmFitText(
                 text = priceText,
                 style = t.priceM,
                 color = c.textPrimary,
-                maxLines = 1,
                 modifier = Modifier.then(priceShared),
             )
             Spacer(Modifier.height(6.dp))
