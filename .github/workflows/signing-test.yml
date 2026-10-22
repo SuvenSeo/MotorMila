@@ -1,0 +1,85 @@
+# TEMPORARY signing test — lives only on test/signing-key-rotation.
+# Builds the direct release APK with the ANDROID_KEYSTORE_* secrets and
+# uploads it as a CI artifact. Publishes nothing: no GitHub Release,
+# no R2 upload, no manifest commit. Delete with the branch.
+name: Signing Test
+
+on:
+  push:
+    branches: ["test/signing-key-rotation"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  signed-test-build:
+    name: Signed test build (direct release)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Accept Android SDK licenses
+        working-directory: .
+        run: |
+          set -euo pipefail
+          : "${ANDROID_HOME:=${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          SDKMANAGER=""
+          for candidate in \
+            "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "$ANDROID_HOME/cmdline-tools/bin/sdkmanager"; do
+            if [[ -x "$candidate" ]]; then
+              SDKMANAGER="$candidate"
+              break
+            fi
+          done
+          if [[ -z "$SDKMANAGER" ]]; then
+            echo "No sdkmanager found under $ANDROID_HOME; relying on runner defaults"
+            exit 0
+          fi
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Resolve release keystore from secrets
+        working-directory: .
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ secrets.ANDROID_KEYSTORE_FILE }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.android"
+          KEYSTORE="$HOME/.android/motormila-release.keystore"
+          if [ -z "${ANDROID_KEYSTORE_FILE:-}" ]; then
+            echo "ERROR: ANDROID_KEYSTORE_FILE secret is not set."
+            exit 1
+          fi
+          printf '%s' "$ANDROID_KEYSTORE_FILE" | base64 --decode > "$KEYSTORE"
+          echo "MOTORMILA_KEYSTORE_PATH=$KEYSTORE" >> "$GITHUB_ENV"
+          echo "Using the ANDROID_KEYSTORE_FILE secret identity."
+
+      - name: Assemble direct release APK (signed test)
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ env.MOTORMILA_KEYSTORE_PATH }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew :app:assembleDirectRelease --stacktrace
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: motormila-signed-test
+          path: android/app/build/outputs/apk/direct/release/app-direct-release.apk
+          if-no-files-found: error
