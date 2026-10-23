@@ -99,9 +99,9 @@
      = 0.166em, vs 0.213em in Cal Sans Text. With negative tracking the gap
      between words collapsed ("Askingprice", "Sri Lanka'sentire"). Every
      display-face rule takes looser tracking plus a word-spacing top-up so the
-     space lands at ~0.226em, level with the Text face. */
+     space lands at ~0.256em (~3.3px on a 13px label, ~20px on the 80px hero). */
   --tracking-display: -0.01em;
-  --display-word-spacing: 0.07em;
+  --display-word-spacing: 0.1em;
   --tracking-caps: 0.08em;
 
   /* ── Numerals — prices never fall back to a monospace face ───────── */
