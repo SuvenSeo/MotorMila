@@ -100,13 +100,12 @@ const appHistory = createViewTransitionHistory();
 const MinimalLoader = () => <RouteFallback />;
 
 /**
- * Internal hero A/B lab. It is a design tool, not a product surface, so it
- * stays reachable in dev (or with `?heroLab=1`) and redirects home otherwise.
+ * Internal hero A/B lab. It is a design tool, not a product surface: dev
+ * builds only. Production has no route for it (falls through to 404) and no
+ * `?heroLab=1` escape hatch.
  */
 function HeroLabGate() {
-  const { search } = useLocation();
-  const enabled = import.meta.env.DEV || new URLSearchParams(search).get("heroLab") === "1";
-  return enabled ? <HeroLab /> : <Navigate to="/" replace />;
+  return import.meta.env.DEV ? <HeroLab /> : <Navigate to="/" replace />;
 }
 
 function TrialBannerSlot() {  const { user } = useAuth();
@@ -277,11 +276,13 @@ const App = () => {
                     <SignUp />
                   </Suspense>
                 } />
-                <Route path="/hero-lab" element={
-                  <Suspense fallback={<MinimalLoader />}>
-                    <HeroLabGate />
-                  </Suspense>
-                } />
+                {import.meta.env.DEV ? (
+                  <Route path="/hero-lab" element={
+                    <Suspense fallback={<MinimalLoader />}>
+                      <HeroLabGate />
+                    </Suspense>
+                  } />
+                ) : null}
                 {/**
                  * Admin console: unlisted, credential-gated, and deliberately
                  * outside the marketing shell — no navbar, no footer, no links

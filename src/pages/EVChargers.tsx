@@ -98,11 +98,15 @@ export default function EVChargers() {
         highlights={[
           {
             label: t("ev.chargersCountLabel", "Stations in radius"),
-            value: stationsQuery.isPending ? "…" : String(stationsQuery.data?.count ?? 0),
-            hint: t("ev.chargersCountHint", "{radius} km of {district}", {
-              radius: radiusKm,
-              district,
-            }),
+            // An empty cache is "not loaded yet", not a real zero: never headline "0".
+            value: stationsQuery.isPending ? "…" : (stationsQuery.data?.count ?? 0) > 0 ? String(stationsQuery.data?.count) : "—",
+            hint:
+              !stationsQuery.isPending && !(stationsQuery.data?.count ?? 0)
+                ? t("ev.chargersCountPendingHint", "Charger map updating")
+                : t("ev.chargersCountHint", "{radius} km of {district}", {
+                    radius: radiusKm,
+                    district,
+                  }),
           },
           {
             label: t("ev.chargersSourceLabel", "Source"),

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { CheckCircle2, Clock, Loader2, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, Loader2, Receipt, XCircle } from "lucide-react";
 import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
 import { PageHero } from "@/components/PageHero";
@@ -41,13 +41,24 @@ export default function CheckoutReturn() {
 
   const paid = status === "paid";
   const waiting = status === "checking" || status === "created" || status === "pending";
-  const Icon = paid ? CheckCircle2 : waiting ? Clock : XCircle;
-  const title = paid ? "Payment received" : waiting ? "Confirming your payment" : "Payment not completed";
+  // No order_id at all (direct visit, bookmark, stripped redirect) is not a
+  // failure: show a neutral "nothing to confirm" state, never red.
+  const noOrder = status === "unknown";
+  const Icon = paid ? CheckCircle2 : waiting ? Clock : noOrder ? Receipt : XCircle;
+  const title = paid
+    ? "Payment received"
+    : waiting
+      ? "Confirming your payment"
+      : noOrder
+        ? "No payment to confirm"
+        : "Payment not completed";
   const body = paid
     ? "Your plan is active. Sign out and back in if you don't see it straight away."
     : waiting
       ? "PayHere is confirming the payment with us. This usually takes a few seconds."
-      : "No money was taken for this order, or it was cancelled. You can try again or pay by bank transfer or KOKO.";
+      : noOrder
+        ? "This page confirms a PayHere checkout. Start from Pricing to choose a plan, or open your account to see an existing one."
+        : "No money was taken for this order, or it was cancelled. You can try again or pay by bank transfer or KOKO.";
 
   return (
     <PageCanvas>

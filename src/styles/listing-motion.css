@@ -28,13 +28,32 @@ html[data-listing-vt="hero"] .route-stage:not(:has(img[data-listing-hero])) {
   display: none !important;
 }
 
-/* ── Photo fade-in on load (placeholder colour shows underneath) ───────── */
-img[data-fade-in] {
-  opacity: 0;
-  transition: opacity var(--dur-medium) var(--ease-standard);
+/* ── Photo loading: neutral shimmer → photo cross-fade ────────────────────
+   No branded logo tile before a photo: the frame shimmers (same recipe as
+   .skeleton-shimmer) and the photo fades in once decoded. */
+img[data-pending="true"] {
+  background-color: hsl(var(--muted));
+  background-image: linear-gradient(100deg, transparent 30%, hsl(var(--foreground) / 0.07) 50%, transparent 70%);
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+  animation: photo-shimmer 1.6s linear infinite;
+}
+@keyframes photo-shimmer {
+  from { background-position: 130% 0; }
+  to { background-position: -30% 0; }
 }
 img[data-fade-in][data-loaded="true"] {
-  opacity: 1;
+  animation: photo-reveal var(--dur-medium) var(--ease-standard) both;
+}
+@keyframes photo-reveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  img[data-pending="true"],
+  img[data-fade-in][data-loaded="true"] {
+    animation: none;
+  }
 }
 
 /* ── Card photo hover zoom (desktop only, inside the clipped frame) ────── */
@@ -90,13 +109,13 @@ img[data-fade-in][data-loaded="true"] {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  img[data-fade-in] { transition: none; }
   .group:hover .listing-card-photo img { transform: none; }
   .save-burst[data-play="true"] { animation: none; }
   .mm-lightbox-zoom .yarl__carousel { animation: none; }
   .cmp-tint { transition: none; }
 }
-html.low-data img[data-fade-in] { opacity: 1; transition: none; }
+html.low-data img[data-pending="true"],
+html.low-data img[data-fade-in][data-loaded="true"] { animation: none; }
 html.low-data .save-burst[data-play="true"],
 html.low-data .mm-lightbox-zoom .yarl__carousel { animation: none; }
 html.low-data .group:hover .listing-card-photo img { transform: none; }

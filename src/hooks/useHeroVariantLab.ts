@@ -11,7 +11,7 @@ import {
 } from "@/lib/heroVariants";
 
 /**
- * Local-only hero A/B lab. Enabled in Vite DEV (or when `?heroLab=1`).
+ * Local-only hero A/B lab. Enabled in Vite DEV only (never in production).
  * Persists pick in localStorage; also accepts `?hero=<id>`.
  */
 export function useHeroVariantLab(): {
@@ -20,13 +20,13 @@ export function useHeroVariantLab(): {
   showPicker: boolean;
 } {
   const [params, setParams] = useSearchParams();
-  const showPicker = import.meta.env.DEV || params.get("heroLab") === "1";
+  const showPicker = import.meta.env.DEV;
 
-  const paramId = params.get("hero");
-  const initial =
-    (isHeroVariantId(paramId) ? paramId : null) ??
-    readStoredHeroVariantId() ??
-    DEFAULT_HERO_VARIANT_ID;
+  // Production always renders the shipped hero: no `?hero=` or stored pick.
+  const paramId = showPicker ? params.get("hero") : null;
+  const initial = showPicker
+    ? (isHeroVariantId(paramId) ? paramId : null) ?? readStoredHeroVariantId() ?? DEFAULT_HERO_VARIANT_ID
+    : DEFAULT_HERO_VARIANT_ID;
 
   const [variantId, setVariantIdState] = useState<HeroVariantId>(initial);
 

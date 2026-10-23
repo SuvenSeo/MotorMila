@@ -6,8 +6,12 @@ import { PageCanvas } from "@/components/PageCanvas";
 import { PageHero } from "@/components/PageHero";
 import { revealItem } from "@/lib/motion";
 
-/** Effective date shown on every legal page. Set before publishing. */
-export const LEGAL_EFFECTIVE_DATE = "[EFFECTIVE DATE]";
+/**
+ * Effective date shown on every legal page. Set VITE_LEGAL_EFFECTIVE_DATE
+ * (e.g. "1 November 2026") at build time; until then the line is hidden
+ * rather than showing a bracketed placeholder.
+ */
+export const LEGAL_EFFECTIVE_DATE = String(import.meta.env.VITE_LEGAL_EFFECTIVE_DATE ?? "").trim();
 /** Privacy / data-protection contact. Replace with a real mailbox (e.g. privacy@motormila.lk). */
 export const PRIVACY_EMAIL = "privacy@motormila.lk";
 export const CONTROLLER_NAME = "MotorMila (operated by [COMPANY NAME] (Pvt) Ltd, PV [REG. NO.])";
@@ -59,9 +63,9 @@ export function LegalPageShell({
           variants={revealItem}
           className="max-w-3xl space-y-8 text-body leading-7 text-foreground/85 [&_a]:underline [&_a]:underline-offset-2 [&_li]:ml-5 [&_ul]:list-disc [&_ul]:space-y-1.5"
         >
-          {showEffectiveDate && (
+          {showEffectiveDate && LEGAL_EFFECTIVE_DATE ? (
             <p className="text-caption text-muted-foreground">Effective date: {LEGAL_EFFECTIVE_DATE}</p>
-          )}
+          ) : null}
           {children}
           <nav aria-label="Legal pages" className="flex flex-wrap gap-2 border-t border-border pt-6 !no-underline">
             {LEGAL_LINKS.map((l) => (

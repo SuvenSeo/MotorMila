@@ -13,7 +13,7 @@ interface VehicleThumbnailProps {
   /** First-screen images should load eagerly to protect LCP. */
   priority?: boolean;
   sizes?: string;
-  /** Fade the real photo in once decoded (placeholder colour shows underneath). Skipped for priority images (LCP). */
+  /** Fade the real photo in once decoded (neutral shimmer shows underneath). Skipped for priority images (LCP). */
   fadeIn?: boolean;
   /** Motion hooks: "card" = card photo (view-transition source), "hero" = detail hero (target). */
   marker?: "card" | "hero";
@@ -29,9 +29,9 @@ function escapeSvgText(value: string): string {
 
 /**
  * Branded placeholder (brand bible: Ink ground, Motormila Blue accent, no car
- * clip-art). Used both as the `<img>` background while the photo loads (so a
- * slow or blocked source never shows a blank tile) and as the final image when
- * the source refuses to serve it (riyasewana hot-link 403s, proxy 401s).
+ * clip-art). Used as the final image when a listing has no photo or the source
+ * refuses to serve it (riyasewana hot-link 403s). While a photo loads, a
+ * neutral skeleton shimmer shows instead.
  *
  * Everything sits inside a crop-safe box (x 180–780, y 70–530 of 960×600), so
  * the Apex M mark and the full "Motormila" wordmark survive `object-cover`
@@ -126,11 +126,13 @@ export const VehicleThumbnail = memo(function VehicleThumbnail({
       data-placeholder={isPlaceholder ? "true" : undefined}
       data-fade-in={fade ? "" : undefined}
       data-loaded={fade ? String(loaded) : undefined}
+      data-pending={!isPlaceholder && !loaded ? "true" : undefined}
       data-card-photo={marker === "card" ? "" : undefined}
       data-listing-hero={marker === "hero" ? "" : undefined}
-      onLoad={fade ? () => setLoaded(true) : undefined}
-      // The placeholder paints underneath until the real photo arrives: no blank tiles.
-      style={isPlaceholder || fade ? undefined : { backgroundImage: `url("${fallbackSrc}")`, backgroundSize: "cover", backgroundPosition: "center" }}
+      onLoad={() => setLoaded(true)}
+      // While the photo is in flight a neutral shimmer shows (img[data-pending],
+      // listing-motion.css). The branded lockup is only the final state for a
+      // listing with no usable photo; flashing it before every photo read as broken.
       onError={() => {
         if (!isPlaceholder) setAttempt((a) => a + 1);
       }}

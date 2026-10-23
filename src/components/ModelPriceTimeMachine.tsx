@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Area,
@@ -98,9 +98,22 @@ export function ModelPriceTimeMachine({
     }));
   }, [data]);
 
-  const hasCalendar = calendarChart.some((row) => row.live != null || row.archive != null);
-  const hasYom = yomChart.some((row) => row.median != null);
+  // An area needs two points to draw a line: one month of data rendered an
+  // empty plot with stacked axis labels. Treat <2 points as "thin", not a chart.
+  const calendarPoints = calendarChart.filter((row) => row.live != null || row.archive != null).length;
+  const yomPoints = yomChart.filter((row) => row.median != null).length;
+  const hasCalendar = calendarPoints >= 2;
+  const hasYom = yomPoints >= 2;
   const empty = !historyQuery.isPending && !hasCalendar && !hasYom;
+
+  // Open on whichever view can actually draw.
+  const [autoPicked, setAutoPicked] = useState(false);
+  useEffect(() => {
+    if (autoPicked || historyQuery.isPending) return;
+    setAutoPicked(true);
+    if (!hasCalendar && hasYom) setMode("yom");
+  }, [autoPicked, historyQuery.isPending, hasCalendar, hasYom]);
+  const viewEmpty = mode === "calendar" ? !hasCalendar : !hasYom;
 
   return (
     <section className="space-y-5">
@@ -144,7 +157,7 @@ export function ModelPriceTimeMachine({
       <div className="rounded-2xl border border-border bg-card/60 p-4 sm:p-6">
         {historyQuery.isPending ? (
           <div className="h-[320px] animate-pulse rounded-xl bg-muted/30" />
-        ) : empty || historyQuery.isError ? (
+        ) : empty || viewEmpty || historyQuery.isError ? (
           <div className="flex flex-col items-center gap-3 py-16 text-center">
             <LineChart className="h-5 w-5 text-muted-foreground" />
             <p className="max-w-md text-footnote font-medium text-muted-foreground">
