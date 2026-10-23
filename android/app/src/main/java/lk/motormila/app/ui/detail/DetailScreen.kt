@@ -694,6 +694,7 @@ private fun PriceSlot(
                 rememberSharedContentState(key = listingPriceKey(listing.id)),
                 animatedScope,
                 boundsTransform = motormilaSharedBoundsTransform(),
+                resizeMode = lk.motormila.app.ui.components.PriceMorphResize,
             )
         }
     } else {
@@ -706,16 +707,21 @@ private fun PriceSlot(
         color = MotormilaOnSurface,
     )
     val drop = remember(listing.id, history) { detectPriceDrop(listing.id, history) }
-    Box(modifier = modifier.then(priceShared)) {
-        Crossfade(
-            targetState = drop,
-            animationSpec = tween(durationMillis = 200),
-            label = "price-slot",
-        ) { activeDrop ->
-            if (activeDrop != null) {
-                PriceDropTicker(drop = activeDrop, priceStyle = priceStyle)
-            } else {
-                Text(text = LkrFormat.priceFull(listing.priceLkr), style = priceStyle)
+    // Shared bounds hug the price text (not the weight(1f) slot): matched
+    // against the slot's full row width, the card's short "Rs 1.4 Mn" was
+    // scaled up ~3x mid-morph.
+    Box(modifier = modifier) {
+        Box(Modifier.then(priceShared)) {
+            Crossfade(
+                targetState = drop,
+                animationSpec = tween(durationMillis = 200),
+                label = "price-slot",
+            ) { activeDrop ->
+                if (activeDrop != null) {
+                    PriceDropTicker(drop = activeDrop, priceStyle = priceStyle)
+                } else {
+                    Text(text = LkrFormat.priceFull(listing.priceLkr), style = priceStyle)
+                }
             }
         }
     }

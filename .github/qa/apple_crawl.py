@@ -485,7 +485,15 @@ if args.motion == "1":
     record("compare_zoom", a7, 6)
     # 8. Cold start: splash -> home.
     adb(f"shell am force-stop {PKG}"); time.sleep(1)
-    record("splash_home", lambda: start(), 6)
+    def a8():
+        # `am start -W` returns once the first frame is displayed; grab the
+        # in-app brand splash (AVD, 900 ms) as stills too, since screenrecord
+        # on the software GPU sometimes stops before the hand-off.
+        start()
+        for i, dt in enumerate((0.0, 0.25, 0.25, 0.4, 0.6, 1.0)):
+            time.sleep(dt)
+            sh(f"adb exec-out screencap -p > '{os.path.join(OUT, f'motion_splash_{i}.png')}'")
+    record("splash_home", a8, 9)
 
     json.dump(FRAMES, open(f"{OUT}/frames.json", "w"), indent=2)
     print("FRAMES", json.dumps(FRAMES, indent=1))

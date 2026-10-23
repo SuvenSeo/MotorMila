@@ -133,6 +133,7 @@ fun ListingCard(
                 rememberSharedContentState(key = listingPriceKey(listing.id)),
                 animatedScope,
                 boundsTransform = motormilaSharedBoundsTransform(),
+                resizeMode = PriceMorphResize,
             )
         }
     } else {
@@ -156,6 +157,16 @@ fun ListingCard(
             Modifier.sharedBounds(
                 rememberSharedContentState(key = listingCardKey(listing.id)),
                 animatedScope,
+                // Fade-through: the card's own content is scaled with the
+                // container (ScaleToBounds), so at full-page bounds it read ~2x
+                // (giant Compare pill / spec line). It leaves fast on open and
+                // only comes back once the page has mostly shrunk into it.
+                enter = androidx.compose.animation.fadeIn(
+                    androidx.compose.animation.core.tween(200, delayMillis = 140, easing = lk.motormila.app.ui.theme.MmMotion.Standard),
+                ),
+                exit = androidx.compose.animation.fadeOut(
+                    androidx.compose.animation.core.tween(90, easing = lk.motormila.app.ui.theme.MmMotion.Exit),
+                ),
                 boundsTransform = motormilaSharedBoundsTransform(),
                 clipInOverlayDuringTransition = OverlayClip(lk.motormila.app.ui.theme.MmShapes.lg),
             )
@@ -438,6 +449,19 @@ private fun metaLine(l: Listing): String {
         .joinToString(", ").takeIf { it.isNotBlank() }?.let { parts += it }
     return parts.joinToString(" · ").ifBlank { "Details on listing page" }
 }
+
+/**
+ * Price card <-> Detail morph: scale by HEIGHT (= font size ratio), anchored at
+ * the start, so "Rs 1.4 Mn" grows into "Rs 1,400,000" at the right size while
+ * the two strings cross-fade. FillWidth (the default) blew the short card
+ * string up to the long Detail string's width.
+ */
+@OptIn(ExperimentalSharedTransitionApi::class)
+val PriceMorphResize: androidx.compose.animation.SharedTransitionScope.ResizeMode =
+    androidx.compose.animation.SharedTransitionScope.ResizeMode.ScaleToBounds(
+        ContentScale.FillHeight,
+        Alignment.CenterStart,
+    )
 
 /** Shared-transition key for the listing price text (card ↔ detail). Text morphs, so this is a [sharedBounds] key. */
 fun listingPriceKey(listingId: Int): String = "listing-price-$listingId"
