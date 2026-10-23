@@ -231,6 +231,67 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  functional:
+    # Functional E2E QA (adb + uiautomator): real actions asserted against the
+    # live API. Informational: never blocks the preview publish.
+    needs: build
+    if: "!contains(github.event.head_commit.message, '[skip-functional]')"
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    continue-on-error: true
+    permissions:
+      contents: read
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { api: 34, shard: a, only: "L,H,S1,S2,S3,S4,S5,S6" }
+          - { api: 34, shard: b, only: "S7,S8,S9" }
+          - { api: 34, shard: c, only: "S10,S11,S12,S13,S14,S15,D,C,U" }
+          - { api: 34, shard: d, only: "A,G,X,Y,Z1" }
+          - { api: 34, shard: e, only: "Z2" }
+          - { api: 36, shard: f, only: "L2,L3,L4,H1,H2,H6,S1,S10,S14,S15,D1,D3,D4,D5,C1,U4,A1,G1,G3,G5,X1,X2,Z1" }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@v4
+        with:
+          name: qa-apk
+          path: apk
+      - name: Older preview APK (self-updater check)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p oldapk
+          gh run download 39942567989 -n qa-apk -D oldapk -R "$GITHUB_REPOSITORY" || true
+          ls -la oldapk || true
+          pip install --quiet pillow || true
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Functional QA
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          ram-size: 4096M
+          disk-size: 6000M
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none
+          disable-animations: true
+          script: python3 .github/qa/functional_qa.py --apk "$(ls apk/*.apk | head -1)" --old-apk "$(ls oldapk/*.apk 2>/dev/null | head -1)" --out fq-out --only "${{ matrix.only }}"
+      - name: Upload functional QA
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: functional-api${{ matrix.api }}-${{ matrix.shard }}
+          path: fq-out/
+          if-no-files-found: warn
+          retention-days: 14
+
   preview:
     needs: [build, tests]
     if: contains(github.event.head_commit.message, '[publish-preview]')
