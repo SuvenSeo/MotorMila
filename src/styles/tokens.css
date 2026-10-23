@@ -57,7 +57,7 @@
   --radius-4xl: 24px;    /* hero media */
 
   /* ── Numerals — prices never fall back to a monospace face ───────── */
-  --font-numeric-stack: var(--font-numeric), "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-numeric-stack: var(--font-numeric), "Cal Sans Text Fallback", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 .theme-dark {
@@ -86,16 +86,17 @@
 }
 
 /* Sinhala / Tamil: Noto faces are loaded on demand (src/lib/scriptFonts.ts)
-   and only referenced when <html lang> is si / ta. Latin glyphs keep Inter. */
+   and only referenced when <html lang> is si / ta. Cal Sans has no Sinhala or
+   Tamil glyphs, so Latin runs stay in Cal Sans and script runs fall to Noto. */
 :root:lang(si) {
-  --font-body: 'Inter', 'Noto Sans Sinhala', system-ui, sans-serif;
-  --font-sans: 'Inter', 'Noto Sans Sinhala', system-ui, sans-serif;
-  --font-display: 'Space Grotesk', 'Noto Sans Sinhala', 'Inter', sans-serif;
+  --font-body: "Cal Sans Text", "Noto Sans Sinhala", "Cal Sans Text Fallback", system-ui, sans-serif;
+  --font-sans: "Cal Sans Text", "Noto Sans Sinhala", "Cal Sans Text Fallback", system-ui, sans-serif;
+  --font-display: "Cal Sans", "Noto Sans Sinhala", "Cal Sans Fallback", system-ui, sans-serif;
 }
 :root:lang(ta) {
-  --font-body: 'Inter', 'Noto Sans Tamil', system-ui, sans-serif;
-  --font-sans: 'Inter', 'Noto Sans Tamil', system-ui, sans-serif;
-  --font-display: 'Space Grotesk', 'Noto Sans Tamil', 'Inter', sans-serif;
+  --font-body: "Cal Sans Text", "Noto Sans Tamil", "Cal Sans Text Fallback", system-ui, sans-serif;
+  --font-sans: "Cal Sans Text", "Noto Sans Tamil", "Cal Sans Text Fallback", system-ui, sans-serif;
+  --font-display: "Cal Sans", "Noto Sans Tamil", "Cal Sans Fallback", system-ui, sans-serif;
 }
 /* Sinhala/Tamil glyphs need more vertical room than Latin. */
 :root:lang(si) body,
@@ -112,7 +113,7 @@
   font-variant-numeric: tabular-nums lining-nums;
 }
 
-/* Chart text (Recharts) — numbers in Inter tabular, overriding any legacy
+/* Chart text (Recharts) — numbers in Cal Sans Text tabular, overriding any legacy
    per-chart font-family attribute (e.g. the removed demo-licensed "Nofex"). */
 .recharts-text,
 .recharts-cartesian-axis-tick-value {

@@ -25,49 +25,15 @@
           var root = document.documentElement;
           root.classList.add(dark ? "theme-dark" : "theme-light");
           root.style.colorScheme = dark ? "dark" : "light";
-          var fontChoice = localStorage.getItem("motormila_font_choice") || "brand";
-          var fontScope = localStorage.getItem("motormila_font_scope") || "hybrid";
-          root.setAttribute("data-theme-font", fontChoice);
-          root.setAttribute("data-font-scope", fontScope);
         } catch (e) {
           document.documentElement.classList.add("theme-dark");
         }
       })();
     </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- Production type (MOTORMILA-BRAND.md): Space Grotesk (display) + Inter (body/UI).
-         Two Latin families; Noto Sans Sinhala/Tamil load on demand for si/ta.
-         Non-blocking (print->all swap) with font-display=swap; the other
-         FontStudio families load only when a saved choice needs them (below). -->
-    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" media="print" onload="this.media='all'" />
-    <noscript>
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" />
-    </noscript>
-    <script>
-      /* Optional families for non-default FontStudio choices (dev tool / saved prefs). */
-      (function () {
-        try {
-          var choice = document.documentElement.getAttribute("data-theme-font") || "brand";
-          var extra = {
-            "general-sans-inter": "https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap",
-            "general-sans-pure": "https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap",
-            "clash-display": "https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&display=swap",
-            "sora-inter": "https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap",
-            "satoshi-inter": "https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700,900&display=swap",
-            "satoshi-pure": "https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap",
-            "nofex": "https://fonts.googleapis.com/css2?family=Russo+One&display=swap"
-          }[choice];
-          if (extra) {
-            var link = document.createElement("link");
-            link.rel = "stylesheet";
-            link.href = extra;
-            document.head.appendChild(link);
-          }
-        } catch (e) {}
-      })();
-    </script>
+    <!-- Type: Cal Sans, self-hosted (src/styles/fonts.css, OFL in /fonts/cal-sans/OFL.txt).
+         Preload only the two faces above the fold: Text 400 (body) and Display 600 (headlines). -->
+    <link rel="preload" href="/fonts/cal-sans/cal-sans-text-400.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/cal-sans/cal-sans-display-600.woff2" as="font" type="font/woff2" crossorigin />
     <meta name="robots" content="index, follow" />
     <meta property="og:title" content="Motormila — Vehicle Intelligence for Sri Lanka" />
     <meta

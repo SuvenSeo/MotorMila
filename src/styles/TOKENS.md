@@ -87,7 +87,7 @@ Nothing below 11px for text people must read (10px/9px arbitrary sizes are being
 - **Body/UI/numbers:** Inter 400–700 (`font-sans`, `font-body`). Prices: `font-numeric` / `font-mono` / `.tabular-price` → Inter with `tabular-nums` — never a monospace fallback.
 - **Code only:** `font-code` (system monospace).
 - **Sinhala / Tamil:** Noto Sans Sinhala / Noto Sans Tamil 400+600 (Fontsource, OFL) loaded by `src/lib/scriptFonts.ts` only when the language is si/ta; stacks switch via `:root:lang(si|ta)`.
-- Removed: "Nofex DEMO" (demo licence). Dev-only FontStudio "drag-race" preset now uses Russo One (OFL). Azonix (dev preset only) still ships in `public/fonts` — licence unverified.
+- Type is Cal Sans only (OFL 1.1, self-hosted, `styles/fonts.css`). Font Studio, Azonix, Russo One, Inter, Space Grotesk and the Google Fonts links were removed in web/premium-p0.
 
 ## i18n
 

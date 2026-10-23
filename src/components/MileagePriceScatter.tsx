@@ -80,7 +80,7 @@ export const MileagePriceScatter = memo(function MileagePriceScatter({
                 fill: "hsl(var(--muted-foreground))",
                 fontSize: 10,
                 fontWeight: 600,
-                fontFamily: "Inter, system-ui, sans-serif",
+                fontFamily: "var(--font-numeric-stack)",
               }}
               tickFormatter={formatKm}
               label={{
@@ -90,7 +90,7 @@ export const MileagePriceScatter = memo(function MileagePriceScatter({
                 style: {
                   fill: "hsl(var(--muted-foreground))",
                   fontSize: 11,
-                  fontFamily: "Inter, system-ui, sans-serif",
+                  fontFamily: "var(--font-numeric-stack)",
                   fontWeight: 500,
                   letterSpacing: "0.02em",
                 },
@@ -106,7 +106,7 @@ export const MileagePriceScatter = memo(function MileagePriceScatter({
                 fill: "hsl(var(--muted-foreground))",
                 fontSize: 10,
                 fontWeight: 600,
-                fontFamily: "Inter, system-ui, sans-serif",
+                fontFamily: "var(--font-numeric-stack)",
               }}
               tickFormatter={(value: number) => formatLkrAxis(value)}
               width={44}

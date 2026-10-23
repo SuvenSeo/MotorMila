@@ -27,7 +27,6 @@ const FeedbackWidget = lazyWithRetry(() =>
   import("@/components/FeedbackWidget").then((m) => ({ default: m.FeedbackWidget }))
 );
 import { CompareTray, CompareProvider } from "@/components/compare/CompareTray";
-import { FontStudioBar } from "@/components/FontStudioBar";
 // Trial banner lives in Pricing to avoid a new chunk; lazy keeps it out of first paint.
 const TrialCountdownBanner = lazyWithRetry(() =>
   import("./pages/Pricing").then((m) => ({ default: m.TrialCountdownBanner }))
@@ -164,7 +163,6 @@ function AppShell() {
       <MobileAppPromo />
       <CompareTray />
       <MobileBottomNav />
-      <FontStudioBar />
     </div>
   );
 }

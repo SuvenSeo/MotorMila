@@ -64,9 +64,9 @@ function createFallbackThumbnailDataUri(label: string, source?: string | null): 
     <path d="M78,62 L97,43"/>
     <path d="M97,43 L87.5,43 M97,43 L97,52.5"/>
   </g>
-  <text x="402" y="198" textLength="246" lengthAdjust="spacingAndGlyphs" fill="#FFFFFF" font-family="Space Grotesk,Inter,system-ui,sans-serif" font-weight="700" font-size="62">otormila</text>
-  <text x="480" y="282" fill="#FFFFFF" fill-opacity="0.86" font-family="Space Grotesk,Inter,system-ui,sans-serif" font-weight="700" font-size="${labelSize}" text-anchor="middle"${labelFit}>${safeLabel}</text>
-  <text x="480" y="326" fill="#FFFFFF" fill-opacity="0.55" font-family="Inter,system-ui,sans-serif" font-size="24" text-anchor="middle">${sourceLine}</text>
+  <text x="402" y="198" textLength="246" lengthAdjust="spacingAndGlyphs" fill="#FFFFFF" font-family="Cal Sans,Arial,sans-serif" font-weight="700" font-size="62">otormila</text>
+  <text x="480" y="282" fill="#FFFFFF" fill-opacity="0.86" font-family="Cal Sans,Arial,sans-serif" font-weight="700" font-size="${labelSize}" text-anchor="middle"${labelFit}>${safeLabel}</text>
+  <text x="480" y="326" fill="#FFFFFF" fill-opacity="0.55" font-family="Cal Sans Text,Arial,sans-serif" font-size="24" text-anchor="middle">${sourceLine}</text>
 </svg>`;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }

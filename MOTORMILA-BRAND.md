@@ -35,8 +35,14 @@ Masters (AI originals + transparent key): `~/workspace/motormila-brand/`.
 
 ## Typography
 
-- **Space Grotesk 700**, tracking −3.5% — wordmark and display.
-- Never substitute another face in the lockup. Body/UI type is unchanged.
+- The logo lockup is artwork (SVG): never re-set it in a live font.
+- **Cal Sans** (SIL OFL 1.1, github.com/calcom/sans v2.011) is the only UI typeface:
+  - *Cal Sans* (display optical size) 600/700 — headlines, tracking −2%.
+  - *Cal Sans Text* (Text UI optical size) 400/500/600 — body, UI and prices
+    (tabular numbers). Body 15/22.
+- Sinhala and Tamil fall back to Noto Sans Sinhala / Noto Sans Tamil.
+- Self-hosted Latin-subset WOFF2 in `public/fonts/cal-sans/` with `OFL.txt`;
+  wiring in `src/styles/fonts.css`. No Google Fonts, no runtime font switcher.
 
 ## Rules
 
