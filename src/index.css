@@ -1747,6 +1747,31 @@
   }
 
   .hero-banners > * { pointer-events: auto; }
+
+  /* Once the page scrolls, the banners fade out instead of sliding under the
+     fixed header (transparent row, then the floating capsule). Opacity and
+     transform only: the stack is absolutely positioned, so nothing shifts. */
+  .hero-banners {
+    transition:
+      opacity var(--dur-fast) var(--ease-standard),
+      transform var(--dur-fast) var(--ease-standard),
+      visibility 0s linear 0s;
+  }
+  .hero-banners[data-tucked="true"] {
+    opacity: 0;
+    transform: translate3d(0, -8px, 0);
+    visibility: hidden;
+    transition:
+      opacity var(--dur-fast) var(--ease-standard),
+      transform var(--dur-fast) var(--ease-standard),
+      visibility 0s linear var(--dur-fast);
+  }
+  .hero-banners[data-tucked="true"] > * { pointer-events: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-banners,
+    .hero-banners[data-tucked="true"] { transition: none; transform: none; }
+  }
   /* Keep hero content clear of the floating banners. */
   .hero-banners:has(> :only-child) ~ .hero-cinematic { padding-top: calc(var(--nav-offset) + 64px); }
   .hero-banners:has(> :nth-child(2)) ~ .hero-cinematic { padding-top: calc(var(--nav-offset) + 124px); }
