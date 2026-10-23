@@ -354,7 +354,9 @@ if args.motion == "1":
              and (n["b"][2] - n["b"][0]) > W * 0.3]
     if cards:
         c = cards[0]
-        x, y = (c["b"][0] + c["b"][2]) // 2, (c["b"][1] + c["b"][3]) // 2
+        # Tap the title/price block (lower part of the card): the card centre
+        # is the photo, where the in-card Compare toggle lives.
+        x, y = (c["b"][0] + c["b"][2]) // 2, int(c["b"][1] + (c["b"][3] - c["b"][1]) * 0.82)
         adb(f"shell input tap {x} {y}")
         for i in range(4):
             fn = os.path.join(OUT, f"motion_detail_{i}.png")
