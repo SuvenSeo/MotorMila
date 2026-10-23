@@ -30,11 +30,13 @@ def _isolate_stats_memory_cache() -> None:
     without per-test clearing, a payload from one test's database would leak
     into the next test's assertions.
     """
-    from app.utils import memory_cache
+    from app.utils import listing_cache, memory_cache
 
     memory_cache.clear()
+    listing_cache.clear()
     yield
     memory_cache.clear()
+    listing_cache.clear()
 
 
 @pytest.fixture(autouse=True)

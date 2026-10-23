@@ -85,6 +85,15 @@ _INDEX_PATCHES = (
         "car_listings",
         "vehicle_category, first_seen_at",
     ),
+    # Public browse (GET /listings): the live filter (is_active, is_outlier,
+    # is_duplicate, user_listing_status) + the price floor. Covering, so the
+    # unfiltered/lightly filtered COUNT(*) is an index-only scan instead of a
+    # walk over every wide row (measured on the failover dump: 0.67 s -> 0.03 s).
+    (
+        "idx_car_listings_live_browse",
+        "car_listings",
+        "is_active, is_outlier, is_duplicate, price_lkr, user_listing_status",
+    ),
     ("idx_scrape_runs_started_at", "scrape_runs", "started_at"),
     ("idx_scrape_runs_source_started_at", "scrape_runs", "source, started_at"),
     ("idx_provider_sync_runs_provider_started", "provider_sync_runs", "provider, started_at"),

@@ -530,13 +530,38 @@ def resolve_user_record(email: str, db: Optional[Session] = None) -> Optional[di
 
 
 def _accounts_store_degraded() -> bool:
-    """True while serving from the SQLite failover dump (no user tables there)."""
+    """True while the account tables are unreadable as a source of truth.
+
+    That is the case while serving from the SQLite failover dump: the dump is
+    a public file and deliberately carries no accounts, so "no row" there
+    means "unknown", not "no such account". A dedicated account store
+    (AUTH_DATABASE_URL) is unaffected by the catalog failover.
+    """
+    try:
+        from db import session as db_session
+
+        if db_session.has_dedicated_auth_store():
+            return False
+    except Exception:
+        pass
     try:
         from db.sqlite_failover import failover_active
 
         return bool(failover_active())
     except Exception:
         return False
+
+
+def _ensure_account_writes_allowed() -> None:
+    """Refuse account-creating writes while the account store is degraded.
+
+    In failover mode the API is bound to a throwaway SQLite copy: an invite
+    lookup there answers "not found" for every real invite, and an account
+    created there silently disappears when the API fails back to Neon (or the
+    Space restarts). Answer 503 + Retry-After instead so clients retry later.
+    """
+    if _accounts_store_degraded():
+        raise DatabaseUnavailable("account store unavailable (failover mode)")
 
 
 def sync_env_user_to_db(record: dict, db: Session) -> Optional[PlatformUser]:
@@ -737,6 +762,7 @@ def signup(
         raise HTTPException(status_code=503, detail="Authentication is not configured on this deployment.")
     if db is None:
         raise HTTPException(status_code=503, detail="Database is required for invite signup.")
+    _ensure_account_writes_allowed()
 
     token = payload.token.strip()
     invite = db.query(UserInvite).filter(UserInvite.token == token).first()
@@ -785,6 +811,7 @@ def signup(
 @router.get("/invite/{token}", response_model=dict)
 def invite_preview(token: str, db: Session = Depends(get_db)):
     """Public preview of a pending invite (no secrets)."""
+    _ensure_account_writes_allowed()
     invite = db.query(UserInvite).filter(UserInvite.token == token.strip()).first()
     if invite is None:
         raise HTTPException(status_code=404, detail="Invite not found.")
@@ -1020,6 +1047,7 @@ def self_signup(
         raise HTTPException(status_code=403, detail="Self-serve signup is disabled. Ask your Motormila admin for an invite.")
     if db is None:
         raise HTTPException(status_code=503, detail="Database is required for self-serve signup.")
+    _ensure_account_writes_allowed()
 
     try:
         heal_platform_users_schema(db)

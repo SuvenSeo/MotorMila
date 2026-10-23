@@ -185,7 +185,9 @@ def test_app_access_gate_requires_auth(client: TestClient):
         assert client.get(public_path).status_code != 401
 
     # Non-allowlisted product routes still require a session.
-    assert client.get("/api/v1/vehicles/safety-research").status_code == 401
+    # (vehicles/safety-research became a public research read in fix/backend-qa.)
+    assert client.get("/api/v1/notifications").status_code == 401
+    assert client.get("/api/v1/listings/mine").status_code == 401
     # Writes and privileged surfaces stay gated (B2-A boundary).
     # Unsafe methods without a Bearer token are CSRF-blocked (403) before
     # the auth-session check ever runs (see require_authenticated).

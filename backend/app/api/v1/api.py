@@ -52,6 +52,14 @@ _PUBLIC_BROWSE_PATHS = frozenset(
         "/api/v1/stats/model-price-history",
         # Live FX context for the signed-out calculator (read-only, no PII).
         "/api/v1/calculators/macro",
+        # Permit market + vehicle-policy headlines are public browse pages on
+        # web (/permits, Official Pulse) and Android (Permits, News). Read-only,
+        # no PII; vehicle-news already trims to the free limit for guests.
+        "/api/v1/calculators/permits",
+        "/api/v1/calculators/vehicle-news",
+        # Make/model/year safety research (NHTSA recalls + complaints): public
+        # research card, cached server-side, no PII.
+        "/api/v1/vehicles/safety-research",
         # Starter valuation is free-plan product copy (web /estimate and the
         # Android guest Valuation screen call it signed-out) — deliberately
         # public, with its own tighter rate limit. The advanced/custom
@@ -63,7 +71,12 @@ _PUBLIC_BROWSE_PATHS = frozenset(
 # Detail + read-only sub-resources (numeric id only, so e.g.
 # /listings/custom-estimate and /listings/mine stay gated).
 _LISTING_DETAIL_RE = re.compile(r"^/api/v1/listings/\d+$")
-_LISTING_SUB_RE = re.compile(r"^/api/v1/listings/\d+/(similar|price-history|fmv)$")
+# history-report / safety-research / geo render on the public listing page
+# (web ListingDetail, Android Detail) for guests; seller-profile is retired
+# and only answers 410 + a link to the source listing.
+_LISTING_SUB_RE = re.compile(
+    r"^/api/v1/listings/\d+/(similar|price-history|fmv|history-report|safety-research|geo|seller-profile)$"
+)
 
 
 def _is_public_browse_path(path: str) -> bool:
@@ -95,7 +108,7 @@ def require_app_access_or_public_browse(
 _public_browse_gate = [Depends(require_app_access_or_public_browse)]
 api_router.include_router(my_listings.router, prefix="/listings", tags=["my-listings"], dependencies=_app_gate)
 api_router.include_router(listings.router, prefix="/listings", tags=["listings"], dependencies=_public_browse_gate)
-api_router.include_router(vehicles.router, prefix="/vehicles", tags=["vehicles"], dependencies=_app_gate)
+api_router.include_router(vehicles.router, prefix="/vehicles", tags=["vehicles"], dependencies=_public_browse_gate)
 api_router.include_router(ev.router, prefix="/ev", tags=["ev"], dependencies=_public_browse_gate)
 api_router.include_router(stats.router, prefix="/stats", tags=["stats"], dependencies=_public_browse_gate)
 api_router.include_router(calculators.router, prefix="/calculators", tags=["calculators"], dependencies=_public_browse_gate)
