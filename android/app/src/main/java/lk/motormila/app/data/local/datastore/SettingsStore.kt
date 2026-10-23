@@ -31,6 +31,7 @@ class SettingsStore @Inject constructor(
         val BASE_URL = stringPreferencesKey("baseUrlOverride")
         val DEALER_TOKEN = stringPreferencesKey("dealerClaimToken")
         val FCM_TOKEN = stringPreferencesKey("fcmToken")
+        val REDUCE_TRANSPARENCY = booleanPreferencesKey("reduceTransparency")
     }
 
     data class Settings(
@@ -44,6 +45,8 @@ class SettingsStore @Inject constructor(
         val baseUrlOverride: String? = null,
         val dealerClaimToken: String? = null,
         val fcmToken: String? = null,
+        /** Opaque chrome instead of liquid glass (accessibility). */
+        val reduceTransparency: Boolean = false,
     )
 
     fun observe(): Flow<Settings> = dataStore.data.map { prefs ->
@@ -57,6 +60,7 @@ class SettingsStore @Inject constructor(
             baseUrlOverride = prefs[Keys.BASE_URL],
             dealerClaimToken = prefs[Keys.DEALER_TOKEN],
             fcmToken = prefs[Keys.FCM_TOKEN],
+            reduceTransparency = prefs[Keys.REDUCE_TRANSPARENCY] == true,
         )
     }
 
@@ -66,6 +70,9 @@ class SettingsStore @Inject constructor(
     suspend fun setDistrict(value: String?) = editNullable(Keys.DISTRICT, value)
     suspend fun setBiometricEnabled(value: Boolean) {
         dataStore.edit { it[Keys.BIOMETRIC] = value }
+    }
+    suspend fun setReduceTransparency(value: Boolean) {
+        dataStore.edit { it[Keys.REDUCE_TRANSPARENCY] = value }
     }
     suspend fun setAnnouncementDismissed(value: Boolean) {
         dataStore.edit { it[Keys.ANNOUNCEMENT_DISMISSED] = value }

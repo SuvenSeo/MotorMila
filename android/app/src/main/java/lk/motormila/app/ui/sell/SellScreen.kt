@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.sell
 
+import lk.motormila.app.ui.common.mmScreenSafe
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -67,20 +69,24 @@ fun SellScreen(
 
     lk.motormila.app.ui.common.MmScreen(
         title = stringResource(R.string.sell_title),
-        onBack = onBack,
+        // Tab root: no back chevron (onBack kept for API compatibility).
+        showBack = false,
+        edgeToEdge = true,
     ) {
         when {
-            !loggedIn -> SellSignedOutCard(onLoginClick = onLoginClick)
-            state.created != null -> SellSuccessCard(
-                make = state.created!!.make,
-                model = state.created!!.model,
-            )
+            !loggedIn -> Box(Modifier.mmScreenSafe()) { SellSignedOutCard(onLoginClick = onLoginClick) }
+            state.created != null -> Box(Modifier.mmScreenSafe()) {
+                SellSuccessCard(
+                    make = state.created!!.make,
+                    model = state.created!!.model,
+                )
+            }
             else -> {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(lk.motormila.app.ui.common.mmScreenPadding(horizontal = 16.dp, top = 12.dp, bottom = 12.dp)),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Text(

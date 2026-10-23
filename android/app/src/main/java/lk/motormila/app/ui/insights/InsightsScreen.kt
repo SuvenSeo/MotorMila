@@ -130,8 +130,9 @@ fun InsightsScreen(
         }
     }
 
-    lk.motormila.app.ui.common.MmScreen(title = stringResource(R.string.scr_ins_title), showBack = false, snackbarHostState = snacks) {
-        Column(Modifier.fillMaxSize()) {
+    lk.motormila.app.ui.common.MmScreen(title = stringResource(R.string.scr_ins_title), showBack = false, snackbarHostState = snacks, edgeToEdge = true) {
+        val screenInsets = lk.motormila.app.ui.common.LocalMmScreenInsets.current
+        Column(Modifier.fillMaxSize().padding(top = screenInsets.top)) {
             MotormilaChipTabs(
                 tabs = tabs,
                 selected = tab,
@@ -141,7 +142,11 @@ fun InsightsScreen(
                 },
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
-            PullToRefreshBox(
+            // Tab panes pad only for the floating tab bar (the header + chips sit above).
+            androidx.compose.runtime.CompositionLocalProvider(
+                lk.motormila.app.ui.common.LocalMmScreenInsets provides lk.motormila.app.ui.common.MmScreenInsets(top = 0.dp, bottom = screenInsets.bottom),
+            ) {
+            lk.motormila.app.ui.components.MmPullToRefresh(
                 isRefreshing = state.isRefreshing,
                 onRefresh = { viewModel.onEvent(InsightsUiEvent.Refresh) },
                 modifier = Modifier.fillMaxSize(),
@@ -168,6 +173,7 @@ fun InsightsScreen(
                     }
                 }
             }
+            }
         }
     }
 }
@@ -191,9 +197,8 @@ private fun TrendsTab(
     }
 
     LazyColumn(
-        Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        Modifier.fillMaxSize(),
+        contentPadding = lk.motormila.app.ui.common.mmScreenPadding(horizontal = 16.dp, top = 16.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         // Hero Header: Eyebrow Pill, Headline with negative letter spacing, Subtitle
@@ -589,9 +594,8 @@ private fun EvTab(
     val ev = state.ev
 
     LazyColumn(
-        Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        Modifier.fillMaxSize(),
+        contentPadding = lk.motormila.app.ui.common.mmScreenPadding(horizontal = 16.dp, top = 16.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         // Hero Header: Eyebrow Pill, Headline with negative letter spacing, Subtitle
@@ -946,7 +950,7 @@ private fun IndexTab(state: InsightsUiState, onUpgrade: () -> Unit) {
 
 @Composable
 private fun DistrictsTab(state: InsightsUiState, onDrillDistrict: (String) -> Unit) {
-    LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = lk.motormila.app.ui.common.mmScreenPadding(horizontal = 16.dp, top = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { OfflineBanner(visible = state.offline) }
         item {
             MotormilaSurface {
@@ -1023,7 +1027,7 @@ private fun DistrictRow(d: DistrictStat, onDrill: () -> Unit) {
 
 @Composable
 private fun PulseTab(state: InsightsUiState, live: List<Listing>, onOpenPulseDetail: (String) -> Unit) {
-    LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = lk.motormila.app.ui.common.mmScreenPadding(horizontal = 16.dp, top = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { OfflineBanner(visible = state.offline) }
         item { LiveTicker(live) }
         if (state.priceDrops.isNotEmpty()) {

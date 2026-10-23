@@ -330,6 +330,8 @@ dependencies {
     implementation(libs.androidx.profileinstaller)
 
     // Images
+    // Backdrop blur (liquid-glass chrome); RenderEffect on API 31+, tinted scrim below.
+    implementation(libs.haze)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
 

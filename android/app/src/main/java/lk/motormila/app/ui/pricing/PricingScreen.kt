@@ -82,7 +82,7 @@ fun PricingScreen(
             viewModel.consumeMessage()
         }
     }
-    MmScreen(title = stringResource(R.string.scr_price_title), onBack = onBack, snackbarHostState = snacks) {
+    MmScreen(title = stringResource(R.string.scr_price_title), onBack = onBack, snackbarHostState = snacks, edgeToEdge = true) {
         PricingContent(
             isPro = state.isPro,
             externalCheckout = BuildConfig.EXTERNAL_CHECKOUT_ENABLED,

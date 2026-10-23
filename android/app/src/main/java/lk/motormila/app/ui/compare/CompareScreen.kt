@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
@@ -196,7 +197,12 @@ fun CompareMatrix(
     val type = MmType.current
     val format = rememberCompareFormat()
     val allRows = remember(items, format) { CompareLogic.rows(items, format) }
-    val rows = if (onlyDifferences && items.size > 1) allRows.filter { it.differs || it.best != null } else allRows
+    // Rows where no car has a value (Fuel/Gearbox/Engine are often missing
+    // from the sources) are hidden and named once in a small "No data" note.
+    val (filledRows, emptyRows) = remember(allRows) {
+        allRows.partition { r -> r.values.any { v -> v.isNotBlank() && v != "—" } }
+    }
+    val rows = if (onlyDifferences && items.size > 1) filledRows.filter { it.differs || it.best != null } else filledRows
     val hScroll = rememberScrollState()
     CappedFontScale(max = 1.5f) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -284,6 +290,26 @@ fun CompareMatrix(
                                 CarColumn(item, col, rows, colW, rowH)
                             }
                             if (showAdd) Spacer(Modifier.width(colW))
+                        }
+                    }
+                    if (emptyRows.isNotEmpty()) {
+                        val names = emptyRows.map { rowLabel(it.key) }.joinToString(" · ")
+                        Row(
+                            Modifier.padding(start = MmSpacing.lg, end = MmSpacing.lg, top = MmSpacing.md),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                Icons.Outlined.Info,
+                                contentDescription = null,
+                                tint = c.textTertiary,
+                                modifier = Modifier.size(14.dp),
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                stringResource(R.string.scr_cmp_no_data, names),
+                                style = type.caption,
+                                color = c.textSecondary,
+                            )
                         }
                     }
                     Text(

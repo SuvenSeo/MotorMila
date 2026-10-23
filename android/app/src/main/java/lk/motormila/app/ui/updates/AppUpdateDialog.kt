@@ -28,8 +28,11 @@ fun AppUpdateDialog(
     installPermissionRequested: Boolean = false,
 ) {
     AlertDialog(
+        containerColor = lk.motormila.app.ui.components.glassSheetColor(),
+        shape = lk.motormila.app.ui.theme.MmShapes.xl,
         onDismissRequest = { if (!update.mandatory) onDismiss() },
         title = {
+            lk.motormila.app.ui.components.WindowBackdropBlur()
             Text(
                 text = stringResource(R.string.update_available_title),
                 style = MaterialTheme.typography.titleLarge,

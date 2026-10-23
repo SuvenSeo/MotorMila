@@ -2,6 +2,11 @@
 
 package lk.motormila.app.ui.detail
 
+import lk.motormila.app.ui.theme.glassBackdrop
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import lk.motormila.app.ui.theme.CalSansText
@@ -189,41 +194,43 @@ fun ListingDetailScreen(
         }
     }
 
-    MotormilaPage(
-        title = state.listing?.displayName ?: "Listing",
-        onBack = onBack,
-        actions = {
-            MotormilaIconAction(
-                icon = if (state.isWatched) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                contentDescription = if (state.isWatched) "Remove from watchlist" else "Save to watchlist",
-                onClick = {
-                    if (state.isWatched) mmHaptics.unsave() else mmHaptics.save()
-                    viewModel.toggleWatch()
-                },
-                tint = if (state.isWatched) MaterialTheme.colorScheme.error else MotormilaOnSurface,
-            )
-            MotormilaIconAction(
-                icon = Icons.Filled.Share,
-                contentDescription = "Share listing",
-                onClick = { state.listing?.let { shareListing(context, it, state.fmv) } },
-            )
-        },
+    // Immersive detail: the photo runs under the status bar; floating glass
+    // buttons ride on it and a glass title bar fades in once it scrolls away.
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val detailBackdrop = remember { dev.chrisbanes.haze.HazeState() }
+    val stretch = rememberDetailStretch()
+    val galleryIndex = if (state.isOffline) 1 else 0
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val screenW = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp
+    val statusTop = androidx.compose.foundation.layout.WindowInsets.statusBars
+        .asPaddingValues().calculateTopPadding()
+    val galleryHeightPx = with(density) { screenW.toPx() } * 0.75f
+    val topBarPx = with(density) { (statusTop + 56.dp).toPx() }
+    val collapse: () -> Float = {
+        when {
+            state.listing == null -> 1f
+            listState.firstVisibleItemIndex > galleryIndex -> 1f
+            listState.firstVisibleItemIndex < galleryIndex -> 0f
+            else -> ((listState.firstVisibleItemScrollOffset - (galleryHeightPx - topBarPx * 1.6f)) / (topBarPx * 0.6f)).coerceIn(0f, 1f)
+        }
+    }
+    DetailStatusBarIcons(overPhoto = { state.listing != null && collapse() < 0.5f })
+    Box(
+        Modifier
+            .fillMaxSize()
+            .nestedScroll(stretch.connection),
     ) {
-        MmPullToRefresh(
-            isRefreshing = state.isLoading && state.listing != null,
-            onRefresh = viewModel::retry,
-            modifier = Modifier.fillMaxSize(),
-        ) {
+        run {
             when {
                 state.isLoading && state.listing == null -> {
-                    MmDetailSkeleton()
+                    Box(Modifier.padding(top = statusTop + 56.dp)) { MmDetailSkeleton() }
                 }
                 state.listing == null -> {
                     ErrorState(
                         message = state.error ?: "Listing not found",
                         onRetry = viewModel::retry,
                         cachedAvailable = false,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().padding(top = statusTop + 56.dp),
                     )
                 }
                 else -> {
@@ -240,12 +247,17 @@ fun ListingDetailScreen(
                         maxOf(120.dp, actionBarHeightPx.toDp() + 16.dp)
                     }
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
+                        state = listState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .glassBackdrop(detailBackdrop)
+                            // Pull-down past the top slides the page down; the photo zooms to fill.
+                            .graphicsLayer { translationY = stretch.offset },
                         contentPadding = PaddingValues(bottom = actionBarRoom),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         if (state.isOffline) {
-                            item { OfflineBanner(visible = true) }
+                            item { OfflineBanner(visible = true, modifier = Modifier.padding(top = statusTop + 56.dp)) }
                         }
                         item {
                             DetailGallery(
@@ -253,6 +265,20 @@ fun ListingDetailScreen(
                                 title = listing.displayName,
                                 listingId = listing.id,
                                 onOpenViewer = { page -> viewerPage = page },
+                                // Signature header motion: parallax (photo scrolls at
+                                // ~55 % speed under the content) + rubber-band zoom on
+                                // over-pull. Graphics layer only.
+                                modifier = Modifier.graphicsLayer {
+                                    val st = stretch.offset
+                                    if (st > 0f && size.height > 0f) {
+                                        val sc = (size.height + st) / size.height
+                                        scaleX = sc
+                                        scaleY = sc
+                                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 1f)
+                                    } else if (listState.firstVisibleItemIndex == galleryIndex) {
+                                        translationY = listState.firstVisibleItemScrollOffset * 0.45f
+                                    }
+                                },
                             )
                         }
                         item {
@@ -416,6 +442,9 @@ fun ListingDetailScreen(
                             }
                         }
                     }
+                    androidx.compose.runtime.CompositionLocalProvider(
+                        lk.motormila.app.ui.theme.LocalGlassEnv provides lk.motormila.app.ui.theme.LocalGlassEnv.current.copy(backdrop = detailBackdrop),
+                    ) {
                     DetailActionBar(
                         priceLkr = listing.priceLkr,
                         sourceName = sourceDisplayName(listing.source),
@@ -425,8 +454,27 @@ fun ListingDetailScreen(
                             .onSizeChanged { actionBarHeightPx = it.height },
                     )
                     }
+                    }
                 }
             }
+        }
+        val listingNow = state.listing
+        androidx.compose.runtime.CompositionLocalProvider(
+            lk.motormila.app.ui.theme.LocalGlassEnv provides lk.motormila.app.ui.theme.LocalGlassEnv.current.copy(backdrop = detailBackdrop),
+        ) {
+            DetailTopChrome(
+                title = listingNow?.displayName ?: "",
+                collapse = collapse,
+                backdrop = detailBackdrop,
+                onBack = onBack,
+                saved = state.isWatched,
+                onToggleSave = {
+                    if (state.isWatched) mmHaptics.unsave() else mmHaptics.save()
+                    viewModel.toggleWatch()
+                },
+                onShare = { listingNow?.let { shareListing(context, it, state.fmv) } },
+                modifier = Modifier.align(Alignment.TopStart),
+            )
         }
     }
 
@@ -464,7 +512,12 @@ fun ListingDetailScreen(
     }
 
     if (showFmvExplain && state.fmv != null) {
-        ModalBottomSheet(onDismissRequest = { showFmvExplain = false }) {
+        ModalBottomSheet(
+            onDismissRequest = { showFmvExplain = false },
+            shape = lk.motormila.app.ui.theme.MmShapes.sheet,
+            containerColor = lk.motormila.app.ui.components.glassSheetColor(),
+        ) {
+            lk.motormila.app.ui.components.WindowBackdropBlur()
             Column(Modifier.padding(20.dp)) {
                 Text(stringResource(R.string.ui_detail_how_this_valuation_works), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineMedium)
                 Spacer(Modifier.height(8.dp))
@@ -515,11 +568,23 @@ private fun PriceDealSection(
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        val titleShared = if (sharedScope != null && animatedScope != null) {
+            with(sharedScope) {
+                Modifier.sharedBounds(
+                    rememberSharedContentState(key = lk.motormila.app.ui.components.listingTitleKey(listing.id)),
+                    animatedScope,
+                    boundsTransform = motormilaSharedBoundsTransform(),
+                )
+            }
+        } else {
+            Modifier
+        }
         Text(
             listing.displayName,
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.headlineMedium,
             color = MotormilaOnSurface,
+            modifier = titleShared,
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
             PriceSlot(

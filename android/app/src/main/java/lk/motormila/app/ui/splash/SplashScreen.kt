@@ -12,6 +12,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -23,10 +25,11 @@ import lk.motormila.app.ui.theme.MmColors
 import lk.motormila.app.ui.theme.MmMotion
 
 /**
- * Brief logo reveal: the lockup settles from 0.94 → 1 while fading in
- * (emphasized, 450ms), holds a beat, then hands off. ~650ms total, never a
- * wall; reduced motion shows it static for 150ms. Session restore runs in
- * parallel (SplashGate), so this is rarely the critical path.
+ * Signature splash: the "M" mark pops in on its own (elastic spring, 0.6 →
+ * 1.12 → 1), then the wordmark *unfolds* out of it — a clip reveal from the
+ * mark rightward while the lockup glides from mark-centred to centred.
+ * ~850ms, never a wall; reduced motion shows it static for 150ms. Session
+ * restore runs in parallel (SplashGate), so this is rarely the critical path.
  */
 @Composable
 fun SplashScreen(
@@ -34,18 +37,25 @@ fun SplashScreen(
 ) {
     val reduced = MmMotion.reduced
     val colors = MmColors.current
-    val p = remember { Animatable(if (reduced) 1f else 0f) }
+    val pop = remember { Animatable(if (reduced) 1f else 0.6f) }
+    val fade = remember { Animatable(if (reduced) 1f else 0f) }
+    val reveal = remember { Animatable(if (reduced) 1f else 0f) }
 
     LaunchedEffect(Unit) {
         if (!reduced) {
-            launch { p.animateTo(1f, MmMotion.emphasized(MmMotion.Slow)) }
-            delay((MmMotion.Slow + 200).toLong())
+            launch { fade.animateTo(1f, androidx.compose.animation.core.tween(160)) }
+            launch { pop.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.45f, stiffness = 380f)) }
+            delay(230)
+            launch { reveal.animateTo(1f, MmMotion.emphasized(420)) }
+            delay(620)
         } else {
             delay(150)
         }
         onDone()
     }
 
+    // Fraction of the wordmark artwork occupied by the "M" mark (left edge).
+    val markFrac = 0.17f
     Box(Modifier.fillMaxSize().background(colors.background), contentAlignment = Alignment.Center) {
         Image(
             painter = painterResource(
@@ -57,11 +67,20 @@ fun SplashScreen(
                 .width(220.dp)
                 .aspectRatio(1200f / 220f)
                 .graphicsLayer {
-                    val v = p.value
-                    alpha = v
-                    val s = 0.94f + 0.06f * v
+                    val r = reveal.value
+                    alpha = fade.value
+                    // Mark-centred → lockup-centred.
+                    translationX = (size.width * (0.5f - markFrac / 2f)) * (1f - r)
+                    val s = pop.value
                     scaleX = s
                     scaleY = s
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(markFrac / 2f, 0.5f)
+                }
+                .drawWithContent {
+                    val r = reveal.value
+                    clipRect(right = size.width * (markFrac + (1f - markFrac) * r)) {
+                        this@drawWithContent.drawContent()
+                    }
                 },
         )
     }

@@ -140,7 +140,7 @@ fun AIChatBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
-        containerColor = MotormilaSurface,
+        containerColor = lk.motormila.app.ui.components.glassSheetColor(),
         scrimColor = Color.Black.copy(alpha = if (lk.motormila.app.ui.theme.LegacyPalette.isDark) 0.72f else 0.4f),
         shape = MotormilaSheetShape,
         dragHandle = null,
@@ -148,6 +148,7 @@ fun AIChatBottomSheet(
             .fillMaxHeight(0.92f)
             .semantics { contentDescription = "Motormila AI Intelligence Assistant Sheet" },
     ) {
+        lk.motormila.app.ui.components.WindowBackdropBlur()
         Column(
             modifier = Modifier
                 .fillMaxSize()

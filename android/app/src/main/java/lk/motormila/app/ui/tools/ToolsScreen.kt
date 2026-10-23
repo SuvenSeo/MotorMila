@@ -79,7 +79,6 @@ fun ToolsScreen(
     modifier: Modifier = Modifier,
 ) {
     val c = MmColors.current
-    val scroll = rememberMmTopBarScrollBehavior()
     val groups = listOf(
         stringResource(R.string.mm_tools_section_price) to listOf(
             ToolEntry(Icons.Outlined.PriceCheck, stringResource(R.string.mm_tools_valuation), stringResource(R.string.mm_tools_valuation_sub), onValuation),
@@ -97,20 +96,15 @@ fun ToolsScreen(
             ToolEntry(Icons.Outlined.Person, stringResource(R.string.mm_tools_account), stringResource(R.string.mm_tools_account_sub), onAccount),
         ),
     )
-    Scaffold(
-        modifier = modifier.nestedScroll(scroll.nestedScrollConnection),
-        containerColor = Color.Transparent,
-        contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0),
-        topBar = { MmTopBar(title = stringResource(R.string.mm_tools_title), scrollBehavior = scroll) },
-    ) { padding ->
+    lk.motormila.app.ui.common.MmScreen(
+        title = stringResource(R.string.mm_tools_title),
+        showBack = false,
+        edgeToEdge = true,
+        modifier = modifier,
+    ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                top = padding.calculateTopPadding(),
-                bottom = MmSpacing.huge,
-                start = MmSpacing.gutter,
-                end = MmSpacing.gutter,
-            ),
+            contentPadding = lk.motormila.app.ui.common.mmScreenPadding(horizontal = MmSpacing.gutter, bottom = MmSpacing.lg),
             verticalArrangement = Arrangement.spacedBy(MmSpacing.xxl),
         ) {
             item {

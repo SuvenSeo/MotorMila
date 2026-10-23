@@ -31,6 +31,7 @@ import lk.motormila.app.ui.theme.MmMotion
 import lk.motormila.app.ui.theme.MmShapes
 import lk.motormila.app.ui.theme.MmType
 import lk.motormila.app.ui.theme.mmPress
+import lk.motormila.app.ui.components.mmWobbleOnSelect
 
 /**
  * Filter / choice chip. 36dp visual height inside a 48dp touch row when used
@@ -57,6 +58,7 @@ fun MmChip(
     Box(
         modifier = modifier
             .heightIn(min = 36.dp)
+            .mmWobbleOnSelect(selected)
             .mmPress(interaction, 0.95f)
             .clip(MmShapes.pill)
             .background(bg)

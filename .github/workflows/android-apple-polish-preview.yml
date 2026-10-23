@@ -136,11 +136,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { lang: en, theme: light, font: "1.0", subset: "" }
-          - { lang: en, theme: dark, font: "1.0", subset: "" }
-          - { lang: si, theme: light, font: "1.0", subset: "" }
-          - { lang: si, theme: dark, font: "1.0", subset: "" }
-          - { lang: en, theme: light, font: "2.0", subset: "home,search,search_compare_tray,search_compare_tray_scrolled,compare_from_tray,compare_from_tray_scrolled,compare_removed,detail,detail_scrolled,settings,profile,tools,sign_in,valuation,watchlist,pricing,alerts,price_index" }
+          - { lang: en, theme: light, font: "1.0", subset: "", motion: "1" }
+          - { lang: en, theme: dark, font: "1.0", subset: "", motion: "0" }
+          - { lang: si, theme: light, font: "1.0", subset: "", motion: "0" }
+          - { lang: si, theme: dark, font: "1.0", subset: "", motion: "0" }
+          - { lang: en, theme: light, font: "2.0", motion: "0", subset: "home,home_scrolled,home_scrolled_up,search,search_scrolled,filter_sheet,search_compare_tray,search_compare_tray_scrolled,compare_from_tray,compare_from_tray_scrolled,compare_removed,detail,detail_scrolled,settings,profile,tools,sign_in,valuation,watchlist,pricing,alerts,price_index" }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/download-artifact@v4
@@ -163,7 +163,7 @@ jobs:
           disk-size: 6000M
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none
           disable-animations: true
-          script: python3 .github/qa/apple_crawl.py --apk "$(ls apk/*.apk | head -1)" --out qa-out --lang ${{ matrix.lang }} --theme ${{ matrix.theme }} --font ${{ matrix.font }} --subset "${{ matrix.subset }}"
+          script: python3 .github/qa/apple_crawl.py --apk "$(ls apk/*.apk | head -1)" --out qa-out --lang ${{ matrix.lang }} --theme ${{ matrix.theme }} --font ${{ matrix.font }} --subset "${{ matrix.subset }}" --motion "${{ matrix.motion }}"
       - name: Upload crawl
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

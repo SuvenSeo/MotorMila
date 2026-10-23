@@ -2,6 +2,7 @@
 
 package lk.motormila.app.ui.detail
 
+import lk.motormila.app.ui.theme.liquidGlass
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.core.Animatable
@@ -418,10 +419,11 @@ fun DetailActionBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(c.surfaceOverlay.copy(alpha = 0.97f))
-            .drawBehind { drawLine(c.outline, Offset(0f, 0f), Offset(size.width, 0f), 1f) }
             .navigationBarsPadding()
-            .padding(horizontal = MmSpacing.gutter, vertical = 12.dp),
+            // Floating liquid-glass capsule over the scrolling page.
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .liquidGlass(MmShapes.xl, lk.motormila.app.ui.theme.GlassWeight.Regular, elevation = 18.dp)
+            .padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {

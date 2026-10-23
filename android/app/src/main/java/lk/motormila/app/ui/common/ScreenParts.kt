@@ -84,8 +84,20 @@ fun trendColor(trend: Trend): Color {
     }
 }
 
-/** Standard content padding for screen lists. */
-val ScreenPadding = PaddingValues(start = MmSpacing.lg, end = MmSpacing.lg, top = MmSpacing.sm, bottom = MmSpacing.huge)
+/**
+ * Standard content padding for screen lists. Inside an edge-to-edge
+ * [MmScreen] it also clears the glass header and the floating tab bar.
+ */
+val ScreenPadding: PaddingValues
+    @Composable get() {
+        val i = LocalMmScreenInsets.current
+        return PaddingValues(
+            start = MmSpacing.lg,
+            end = MmSpacing.lg,
+            top = MmSpacing.sm + i.top,
+            bottom = MmSpacing.xxxl + i.bottom,
+        )
+    }
 
 /** Skeleton placeholder for a card list (loading state). */
 @Composable
@@ -119,7 +131,7 @@ fun ScreenError(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier.fillMaxSize().padding(MmSpacing.xxl), contentAlignment = Alignment.Center) {
+    Box(modifier.fillMaxSize().mmScreenSafe().padding(MmSpacing.xxl), contentAlignment = Alignment.Center) {
         MmEmptyState(
             icon = Icons.Filled.CloudOff,
             title = stringResource(R.string.scr_error_title),

@@ -63,7 +63,7 @@ fun PriceIndexPane(
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(14.dp),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 28.dp),
+        contentPadding = lk.motormila.app.ui.common.mmScreenPadding(bottom = 12.dp),
     ) {
         item {
             Column(Modifier.motormilaReveal()) {

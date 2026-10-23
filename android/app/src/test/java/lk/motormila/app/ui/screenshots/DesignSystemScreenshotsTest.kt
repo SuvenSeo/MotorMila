@@ -198,7 +198,7 @@ class DesignSystemScreenshotsTest {
         Page(true) {
             Box(Modifier.fillMaxSize()) {
                 ToolsScreen({}, {}, {}, {}, {}, {}, {}, {}, {})
-                MmBottomBar(motormilaTabItems(mapOf("watchlist" to 3)), MotormilaTabs.TOOLS, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter))
+                MmBottomBar(motormilaTabItems(mapOf("watchlist" to 3)), MotormilaTabs.TOOLS, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp, vertical = 12.dp))
             }
         }
     }
@@ -213,7 +213,7 @@ class DesignSystemScreenshotsTest {
                     primaryAction = "Reset filters" to {},
                     modifier = Modifier.align(Alignment.Center),
                 )
-                MmBottomBar(motormilaTabItems(emptyMap()), MotormilaTabs.BUY, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter))
+                MmBottomBar(motormilaTabItems(emptyMap()), MotormilaTabs.BUY, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp, vertical = 12.dp))
             }
         }
     }
@@ -256,7 +256,7 @@ class DesignSystemScreenshotsTest {
                 state = homeState(), live = emptyList(), onRefresh = {}, onRetry = {}, onDismissCached = {},
                 banner = {}, onListingClick = {}, onSearchClick = {}, onAlertsClick = {}, onSeeAll = {},
             )
-            MmBottomBar(motormilaTabItems(emptyMap()), MotormilaTabs.BUY, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter))
+            MmBottomBar(motormilaTabItems(emptyMap()), MotormilaTabs.BUY, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp, vertical = 12.dp))
         }
     }
 
@@ -286,7 +286,7 @@ class DesignSystemScreenshotsTest {
                         lk.motormila.app.ui.search.CompareThumb(2, null),
                     ),
                 )
-                MmBottomBar(motormilaTabItems(emptyMap()), MotormilaTabs.BUY, onSelect = {})
+                MmBottomBar(motormilaTabItems(emptyMap()), MotormilaTabs.BUY, onSelect = {}, modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp))
             }
         }
     }
@@ -323,7 +323,7 @@ class DesignSystemScreenshotsTest {
         Page(false) {
             Box(Modifier.fillMaxSize()) {
                 ToolsScreen({}, {}, {}, {}, {}, {}, {}, {}, {})
-                MmBottomBar(motormilaTabItems(mapOf("watchlist" to 3)), MotormilaTabs.TOOLS, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter))
+                MmBottomBar(motormilaTabItems(mapOf("watchlist" to 3)), MotormilaTabs.TOOLS, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp, vertical = 12.dp))
             }
         }
     }

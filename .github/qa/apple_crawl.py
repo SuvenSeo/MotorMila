@@ -23,6 +23,7 @@ ap.add_argument("--lang", default="en")
 ap.add_argument("--theme", default="light")
 ap.add_argument("--font", default="1.0")
 ap.add_argument("--subset", default="")
+ap.add_argument("--motion", default="0", help="1 = also capture mid-transition frames + gfxinfo frame stats")
 args = ap.parse_args()
 TAG = f"{args.lang}-{args.theme}" + ("" if args.font in ("1", "1.0") else f"-font{args.font}")
 OUT = os.path.join(args.out, TAG)
@@ -200,7 +201,14 @@ ids = listing_ids()
 SCREENS = [
     ("home", "motormila://home"),
     ("home_scrolled", "SCROLL"),
+    # Scrolling down minimises the glass tab bar; a short scroll up restores it
+    # over content (content must scroll UNDER the floating bar).
+    ("home_scrolled_up", "SCROLL_UP"),
     ("search", "motormila://search"),
+    ("search_scrolled", "SCROLL"),
+    ("search_scrolled_up", "SCROLL_UP"),
+    ("filter_sheet", "FILTERS"),
+    ("assistant_sheet", "ASSISTANT"),
     # Compare flow: select 3 cars on Search -> tray; tap "Compare 3" -> Compare screen.
     ("search_compare_tray", "CMP_SELECT"),
     ("search_compare_tray_scrolled", "SCROLL"),
@@ -252,6 +260,26 @@ for name, target in SCREENS:
             W, H = SIZE
             adb(f"shell input swipe {W//2} {int(H*0.8)} {W//2} {int(H*0.25)} 500")
             snap(name, 3)
+        elif target == "SCROLL_UP":
+            W, H = SIZE
+            adb(f"shell input swipe {W//2} {int(H*0.45)} {W//2} {int(H*0.6)} 300")
+            snap(name, 3)
+        elif target == "FILTERS":
+            link("motormila://search")
+            time.sleep(8)
+            dismiss_noise()
+            tap_desc(r"^Open filters$", limit=1, max_y_frac=0.6)
+            snap(name, 4)
+            adb("shell input keyevent 4")
+            time.sleep(2)
+        elif target == "ASSISTANT":
+            link("motormila://home")
+            time.sleep(5)
+            dismiss_noise()
+            tap_desc(r"(Ask MotorMila AI|MotorMila AI ගෙන් අසන්න|MotorMila AI இடம் கேளுங்கள்)", limit=1, max_y_frac=1.0)
+            snap(name, 5)
+            adb("shell input keyevent 4")
+            time.sleep(2)
         elif target == "CMP_SELECT":
             link("motormila://search")
             time.sleep(9)
@@ -284,6 +312,61 @@ for name, target in SCREENS:
     except Exception as e:
         print("ERR", name, e)
         RESULTS.append({"screen": name, "error": str(e)})
+
+
+def gfx_scroll(name, uri, swipes=6):
+    """Frame stats while flinging a list (animations ON)."""
+    link(uri)
+    time.sleep(9)
+    dismiss_noise()
+    adb(f"shell dumpsys gfxinfo {PKG} reset")
+    W, H = SIZE
+    for i in range(swipes):
+        if i % 2 == 0:
+            adb(f"shell input swipe {W//2} {int(H*0.78)} {W//2} {int(H*0.28)} 250")
+        else:
+            adb(f"shell input swipe {W//2} {int(H*0.35)} {W//2} {int(H*0.7)} 250")
+        time.sleep(1.2)
+    out = adb(f"shell dumpsys gfxinfo {PKG}")
+    keep = [l.strip() for l in out.splitlines() if re.search(r"Total frames rendered|Janky frames|50th percentile|90th percentile|95th percentile|99th percentile|Number Slow", l)]
+    return {"screen": name, "gfx": keep}
+
+
+if args.motion == "1":
+    # Animations ON for this phase only.
+    for k in ("window_animation_scale", "transition_animation_scale", "animator_duration_scale"):
+        adb(f"shell settings put global {k} 1")
+    adb(f"shell am force-stop {PKG}")
+    start()
+    time.sleep(8)
+    FRAMES = []
+    FRAMES.append(gfx_scroll("gfx_home", "motormila://home"))
+    FRAMES.append(gfx_scroll("gfx_search", "motormila://search"))
+    if ids:
+        FRAMES.append(gfx_scroll("gfx_detail", f"motormila://listing/{ids[0]}"))
+    # Card -> Detail container transform, captured mid-flight.
+    link("motormila://search")
+    time.sleep(9)
+    dismiss_noise()
+    _, root = dump()
+    W, H = SIZE
+    cards = [n for n in nodes(root) if n["click"] and n["b"][1] > H * 0.3 and n["b"][3] < H * 0.8
+             and (n["b"][2] - n["b"][0]) > W * 0.3]
+    if cards:
+        c = cards[0]
+        x, y = (c["b"][0] + c["b"][2]) // 2, (c["b"][1] + c["b"][3]) // 2
+        adb(f"shell input tap {x} {y}")
+        for i in range(4):
+            fn = os.path.join(OUT, f"motion_detail_{i}.png")
+            sh(f"adb exec-out screencap -p > '{fn}'")
+        time.sleep(4)
+        sh(f"adb exec-out screencap -p > '{os.path.join(OUT, 'motion_detail_settled.png')}'")
+        # Predictive-back / pop transition mid-flight.
+        adb("shell input keyevent 4")
+        for i in range(3):
+            sh(f"adb exec-out screencap -p > '{os.path.join(OUT, f'motion_back_{i}.png')}'")
+    json.dump(FRAMES, open(f"{OUT}/frames.json", "w"), indent=2)
+    print("FRAMES", json.dumps(FRAMES, indent=1))
 
 sh(f"adb logcat -d -b crash > '{OUT}/crash.txt'")
 sh(f"adb logcat -d > '{OUT}/logcat.txt'", 120)

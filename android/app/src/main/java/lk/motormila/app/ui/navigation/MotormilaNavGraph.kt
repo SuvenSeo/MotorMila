@@ -9,6 +9,11 @@ import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -205,13 +210,21 @@ fun MotormilaNavGraph(
             onScan = { navController.navigate(PlateScan) },
             onOpenListing = { id -> navController.navigate(ListingDetail(id)) },
         ) { innerPadding ->
+            // Edge-to-edge: every screen owns its status-bar inset (glass top
+            // bars draw under it). Tab roots let content scroll under the
+            // floating glass tab bar and pad via LocalBottomChrome; Detail
+            // owns its bottom action bar; other pushed routes keep the
+            // gesture/nav-bar inset here so nothing ends under it.
+            val navInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            val isDetail = currentDestination?.hasRoute<ListingDetail>() == true
+            val isSplash = currentDestination?.hasRoute<Splash>() == true
+            val bottomPad = if (showBottomBar || isDetail || isSplash) 0.dp else navInset
             Box(
                 Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    // Children must not re-apply the insets the shell already
-                    // padded (avoids a double status-bar gap under MmTopBar).
-                    .consumeWindowInsets(innerPadding)
+                    .padding(bottom = bottomPad)
+                    .consumeWindowInsets(PaddingValues(bottom = bottomPad))
             ) {
                 updateState.available?.let { update ->
                     AppUpdateDialog(

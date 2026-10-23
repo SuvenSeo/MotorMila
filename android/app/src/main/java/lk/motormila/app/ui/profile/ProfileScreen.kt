@@ -164,10 +164,11 @@ fun ProfileScreen(
     )
 
     val reducedMotion = MmMotion.reduced
-    MmScreen(title = stringResource(R.string.scr_profile_title), showBack = false, snackbarHostState = snacks) {
-        PullToRefreshBox(
+    MmScreen(title = stringResource(R.string.scr_profile_title), showBack = false, snackbarHostState = snacks, edgeToEdge = true) {
+        lk.motormila.app.ui.components.MmPullToRefresh(
             isRefreshing = state.isRefreshing,
             onRefresh = { viewModel.onEvent(ProfileUiEvent.Refresh) },
+            indicatorTop = lk.motormila.app.ui.common.LocalMmScreenInsets.current.top,
             modifier = Modifier.fillMaxSize(),
         ) {
             AnimatedContent(

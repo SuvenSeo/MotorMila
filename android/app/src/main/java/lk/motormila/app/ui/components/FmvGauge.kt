@@ -54,8 +54,10 @@ fun FmvGauge(
         else -> (((fmv.askingLkr / fmv.fmvLkr) - 0.7) / 0.6).toFloat()
     }.coerceIn(0f, 1f)
     val animated by animateFloatAsState(
-        targetValue = if (started) fraction else 0.5f,
-        animationSpec = if (reducedMotion) snap() else spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessLow),
+        // Signature needle: sweeps in from the left stop, overshoots past the
+        // reading and settles with a damped wobble (under-damped spring).
+        targetValue = if (started) fraction else 0f,
+        animationSpec = if (reducedMotion) snap() else spring(dampingRatio = 0.42f, stiffness = 110f),
         label = "fmv-needle",
     )
     val track = MaterialTheme.colorScheme.surfaceVariant

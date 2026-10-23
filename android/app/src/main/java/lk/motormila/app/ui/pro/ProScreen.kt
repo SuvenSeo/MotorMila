@@ -174,7 +174,10 @@ fun ProScreen(
             ModalBottomSheet(
                 onDismissRequest = { paywallOpen = false },
                 sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+                shape = lk.motormila.app.ui.theme.MmShapes.sheet,
+                containerColor = lk.motormila.app.ui.components.glassSheetColor(),
             ) {
+                lk.motormila.app.ui.components.WindowBackdropBlur()
                 Column(
                     Modifier.fillMaxWidth().padding(24.dp)
                         .semantics { contentDescription = "Pro paywall" },

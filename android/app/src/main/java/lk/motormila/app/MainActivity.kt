@@ -74,6 +74,8 @@ class MainActivity : AppCompatActivity() {
             // applied instantly; only later user changes crossfade.
             val themePref by remember { settingsStore.observe().map<SettingsStore.Settings, String?> { it.theme } }
                 .collectAsState(initial = null)
+            val reducePref by remember { settingsStore.observe().map { it.reduceTransparency } }
+                .collectAsState(initial = false)
             val dark = when (themePref) {
                 "dark" -> true
                 "system" -> isSystemInDarkTheme()
@@ -92,11 +94,18 @@ class MainActivity : AppCompatActivity() {
                     enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
                 }
                 MotormilaTheme(darkTheme = shownDark) {
-                    MotormilaNavGraph(
-                        sharedUrl = sharedUrl,
-                        startDeepLink = startDeepLink,
-                        navigationEventId = navigationEventId,
-                    )
+                    // Liquid glass → opaque chrome when the user asks for it
+                    // (Settings → Appearance) or has system high-contrast text on.
+                    val systemHighContrast = lk.motormila.app.ui.theme.rememberSystemHighContrastText()
+                    androidx.compose.runtime.CompositionLocalProvider(
+                        lk.motormila.app.ui.theme.LocalReduceTransparency provides (reducePref || systemHighContrast),
+                    ) {
+                        MotormilaNavGraph(
+                            sharedUrl = sharedUrl,
+                            startDeepLink = startDeepLink,
+                            navigationEventId = navigationEventId,
+                        )
+                    }
                 }
             }
         }

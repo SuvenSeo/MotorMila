@@ -49,6 +49,25 @@ import lk.motormila.app.ui.theme.MmShapes
 import lk.motormila.app.ui.theme.MmType
 import lk.motormila.app.ui.theme.CappedFontScale
 import lk.motormila.app.ui.LocalAssistantLift
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeEffect
+import lk.motormila.app.ui.LocalBottomChrome
+import lk.motormila.app.ui.theme.GlassWeight
+import lk.motormila.app.ui.theme.LiquidGlass
+import lk.motormila.app.ui.theme.LocalGlassEnv
+import lk.motormila.app.ui.theme.glassBackdrop
 import android.app.Activity
 import android.speech.RecognizerIntent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -215,8 +234,174 @@ fun SearchScreen(
         onDispose { assistantLift?.value = 0.dp }
     }
 
-    Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
+    // Edge-to-edge: results scroll under a liquid-glass search header (top)
+    // and the floating glass tab bar (bottom). The header is measured once
+    // per size change (not per frame) and pads the result grid.
+    val chrome = LocalBottomChrome.current
+    var headerPx by remember { mutableStateOf(0) }
+    val headerH = with(density) { headerPx.toDp() }
+    val searchBackdrop = remember { HazeState() }
+    val gridState = rememberLazyGridState()
+    val scrolledUnder by remember {
+        derivedStateOf { gridState.firstVisibleItemIndex > 0 || gridState.firstVisibleItemScrollOffset > 4 }
+    }
+    val headerGlass by animateFloatAsState(
+        if (scrolledUnder) 1f else 0f,
+        if (MmMotion.reduced) tween(0) else tween(MmMotion.Base),
+        label = "search-header-glass",
+    )
+    val glassEnv = LocalGlassEnv.current
+    val c = MmColors.current
+    val headerStyle = LiquidGlass.style(c, GlassWeight.Regular)
+    val bottomPad = chrome.contentPadding + if (trayShown) trayHeight + 8.dp else 0.dp
+    // Fly-to-tray: a photo copy arcs from the card into the compare tray.
+    val flights = remember { mutableStateListOf<CompareFlight>() }
+    var trayBounds by remember { mutableStateOf(androidx.compose.ui.geometry.Rect.Zero) }
+    val reducedMotion = MmMotion.reduced
+
+    var rootHeightPx by remember { mutableStateOf(0f) }
+    Box(Modifier.fillMaxSize().onSizeChanged { rootHeightPx = it.height.toFloat() }) {
+            MmPullToRefresh(
+                isRefreshing = isRefreshing,
+                onRefresh = { items.refresh() },
+                indicatorTop = headerH,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .glassBackdrop(searchBackdrop),
+            ) {
+                when {
+                    isRefreshing -> {
+                        // Skeletons match the result layout (grid cards / list rows).
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(if (gridMode) 2 else 1),
+                            contentPadding = PaddingValues(start = MmSpacing.lg, end = MmSpacing.lg, top = headerH + MmSpacing.sm, bottom = bottomPad),
+                            horizontalArrangement = Arrangement.spacedBy(MmSpacing.cardGap),
+                            verticalArrangement = Arrangement.spacedBy(MmSpacing.cardGap),
+                            userScrollEnabled = false,
+                        ) {
+                            items(6) { MmListingCardSkeleton() }
+                        }
+                    }
+                    items.loadState.refresh is LoadState.Error -> {
+                        val err = items.loadState.refresh as LoadState.Error
+                        ErrorState(
+                            message = err.error.message ?: "Couldn't load results",
+                            onRetry = { items.retry() },
+                            cachedAvailable = items.itemCount > 0,
+                            onShowCached = { items.retry() },
+                            modifier = Modifier.fillMaxSize().padding(top = headerH, bottom = bottomPad),
+                        )
+                    }
+                    items.itemCount == 0 -> {
+                        // Narrow category + nothing else to clear -> offer All vehicles,
+                        // so the empty state is never a dead end.
+                        val onlyCategory = state.filters.copy(vehicleCategory = null, sort = ListingSorts.NEWEST, keyword = null).isEmpty &&
+                            state.filters.vehicleCategory != null
+                        EmptyState(
+                            title = stringResource(R.string.search_empty_title),
+                            body = stringResource(if (onlyCategory) R.string.search_empty_category_body else R.string.search_empty_filters_body),
+                            ctaLabel = stringResource(if (onlyCategory) R.string.search_empty_show_all else R.string.search_empty_reset),
+                            onCta = if (onlyCategory) {
+                                { viewModel.onCategoryChange(VehicleCategory.ALL) }
+                            } else {
+                                viewModel::resetFilters
+                            },
+                            modifier = Modifier.fillMaxSize().padding(top = headerH, bottom = bottomPad),
+                        )
+                    }
+                    else -> {
+                        LazyVerticalGrid(
+                            state = gridState,
+                            columns = GridCells.Fixed(if (gridMode) 2 else 1),
+                            contentPadding = PaddingValues(
+                                start = MmSpacing.lg,
+                                end = MmSpacing.lg,
+                                top = headerH + MmSpacing.sm,
+                                // Clear the floating glass tab bar (and the compare tray).
+                                bottom = bottomPad,
+                            ),
+                            horizontalArrangement = Arrangement.spacedBy(MmSpacing.cardGap),
+                            verticalArrangement = Arrangement.spacedBy(MmSpacing.lg),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .semantics { contentDescription = "Search results" },
+                        ) {
+                            items(
+                                count = items.itemCount,
+                                key = { i -> items.peek(i)?.id ?: -i - 1 },
+                            ) { i ->
+                                val listing = items[i]
+                                if (listing != null) {
+                                    val inCompare = state.compareIds.contains(listing.id)
+                                    Box(
+                                        Modifier.animateItem(
+                                            fadeInSpec = null,
+                                            fadeOutSpec = null,
+                                            placementSpec = MmMotion.itemPlacement,
+                                        ),
+                                    ) {
+                                        StaggeredItem(index = i) {
+                                            ListingCard(
+                                                listing = listing,
+                                                isWatched = false,
+                                                onClick = { onListingClick(listing.id) },
+                                                onWatchToggle = { viewModel.toggleWatch(listing) },
+                                                compareSelected = inCompare,
+                                                compareEnabled = inCompare || state.compareIds.size < MAX_COMPARE_IDS,
+                                                onCompareToggle = {
+                                                    if (inCompare) haptics.unsave() else haptics.save()
+                                                    viewModel.toggleCompare(listing.id)
+                                                },
+                                                onCompareFly = { from ->
+                                                    if (!reducedMotion && from != androidx.compose.ui.geometry.Rect.Zero) {
+                                                        flights += CompareFlight(System.nanoTime(), listing.heroImageUrl, from, state.compareIds.size)
+                                                    }
+                                                },
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            if (items.loadState.append is LoadState.Loading) {
+                                item { MmListingCardSkeleton() }
+                            }
+                            if (items.loadState.append is LoadState.Error) {
+                                item(span = { GridItemSpan(maxLineSpan) }) {
+                                    ErrorState(
+                                        message = "Couldn't load more",
+                                        onRetry = { items.retry() },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        CompositionLocalProvider(LocalGlassEnv provides glassEnv.copy(backdrop = searchBackdrop)) {
+        Box(Modifier.fillMaxSize()) {
+        Column(
+            Modifier
+                .align(Alignment.TopStart)
+                .fillMaxWidth()
+                .onSizeChanged { headerPx = it.height }
+                .then(
+                    if (glassEnv.solid) {
+                        Modifier.background(LiquidGlass.solid(c).copy(alpha = 0.97f))
+                    } else {
+                        Modifier.hazeEffect(searchBackdrop, headerStyle) {
+                            blurEnabled = glassEnv.blurAllowed
+                            alpha = headerGlass
+                        }
+                    },
+                )
+                .drawBehind {
+                    if (headerGlass > 0.01f) {
+                        drawLine(c.outline.copy(alpha = c.outline.alpha * headerGlass), androidx.compose.ui.geometry.Offset(0f, size.height - 0.5f), androidx.compose.ui.geometry.Offset(size.width, size.height - 0.5f), 1f)
+                    }
+                }
+                .statusBarsPadding()
+                .padding(bottom = 4.dp),
+        ) {
             if (items.loadState.refresh is LoadState.Error) {
                 OfflineBanner(visible = true, onRetry = { items.refresh() })
             } else if (fromSnapshot) {
@@ -265,7 +450,7 @@ fun SearchScreen(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        "Free plan · newest first — Pro unlocks deal-score sort",
+                        stringResource(R.string.glass_free_plan_note),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
@@ -289,114 +474,6 @@ fun SearchScreen(
                     gridMode = !gridMode
                 },
             )
-            MmPullToRefresh(
-                isRefreshing = isRefreshing,
-                onRefresh = { items.refresh() },
-                modifier = Modifier.weight(1f),
-            ) {
-                when {
-                    isRefreshing -> {
-                        // Skeletons match the result layout (grid cards / list rows).
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(if (gridMode) 2 else 1),
-                            contentPadding = PaddingValues(MmSpacing.lg),
-                            horizontalArrangement = Arrangement.spacedBy(MmSpacing.cardGap),
-                            verticalArrangement = Arrangement.spacedBy(MmSpacing.cardGap),
-                            userScrollEnabled = false,
-                        ) {
-                            items(6) { MmListingCardSkeleton() }
-                        }
-                    }
-                    items.loadState.refresh is LoadState.Error -> {
-                        val err = items.loadState.refresh as LoadState.Error
-                        ErrorState(
-                            message = err.error.message ?: "Couldn't load results",
-                            onRetry = { items.retry() },
-                            cachedAvailable = items.itemCount > 0,
-                            onShowCached = { items.retry() },
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    }
-                    items.itemCount == 0 -> {
-                        // Narrow category + nothing else to clear -> offer All vehicles,
-                        // so the empty state is never a dead end.
-                        val onlyCategory = state.filters.copy(vehicleCategory = null, sort = ListingSorts.NEWEST, keyword = null).isEmpty &&
-                            state.filters.vehicleCategory != null
-                        EmptyState(
-                            title = stringResource(R.string.search_empty_title),
-                            body = stringResource(if (onlyCategory) R.string.search_empty_category_body else R.string.search_empty_filters_body),
-                            ctaLabel = stringResource(if (onlyCategory) R.string.search_empty_show_all else R.string.search_empty_reset),
-                            onCta = if (onlyCategory) {
-                                { viewModel.onCategoryChange(VehicleCategory.ALL) }
-                            } else {
-                                viewModel::resetFilters
-                            },
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    }
-                    else -> {
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(if (gridMode) 2 else 1),
-                            contentPadding = PaddingValues(
-                                start = MmSpacing.lg,
-                                end = MmSpacing.lg,
-                                top = MmSpacing.sm,
-                                // Clear the floating assistant button (and the compare
-                                // tray + lifted button when the tray shows).
-                                bottom = if (state.compareIds.isNotEmpty()) trayHeight + 112.dp else 88.dp,
-                            ),
-                            horizontalArrangement = Arrangement.spacedBy(MmSpacing.cardGap),
-                            verticalArrangement = Arrangement.spacedBy(MmSpacing.lg),
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .semantics { contentDescription = "Search results" },
-                        ) {
-                            items(
-                                count = items.itemCount,
-                                key = { i -> items.peek(i)?.id ?: -i - 1 },
-                            ) { i ->
-                                val listing = items[i]
-                                if (listing != null) {
-                                    val inCompare = state.compareIds.contains(listing.id)
-                                    Box(
-                                        Modifier.animateItem(
-                                            fadeInSpec = null,
-                                            fadeOutSpec = null,
-                                            placementSpec = MmMotion.itemPlacement,
-                                        ),
-                                    ) {
-                                        StaggeredItem(index = i) {
-                                            ListingCard(
-                                                listing = listing,
-                                                isWatched = false,
-                                                onClick = { onListingClick(listing.id) },
-                                                onWatchToggle = { viewModel.toggleWatch(listing) },
-                                                compareSelected = inCompare,
-                                                compareEnabled = inCompare || state.compareIds.size < MAX_COMPARE_IDS,
-                                                onCompareToggle = {
-                                                    if (inCompare) haptics.unsave() else haptics.save()
-                                                    viewModel.toggleCompare(listing.id)
-                                                },
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                            if (items.loadState.append is LoadState.Loading) {
-                                item { MmListingCardSkeleton() }
-                            }
-                            if (items.loadState.append is LoadState.Error) {
-                                item(span = { GridItemSpan(maxLineSpan) }) {
-                                    ErrorState(
-                                        message = "Couldn't load more",
-                                        onRetry = { items.retry() },
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
         }
 
         // Compare tray (max 3): compact solid capsule floating above the tab bar.
@@ -410,22 +487,56 @@ fun SearchScreen(
             visible = state.compareIds.isNotEmpty(),
             enter = if (MmMotion.reduced) fadeIn(tween(0)) else slideInVertically(MmMotion.snappy()) { it } + fadeIn(tween(MmMotion.Fast)),
             exit = if (MmMotion.reduced) fadeOut(tween(0)) else slideOutVertically(tween(MmMotion.Fast)) { it } + fadeOut(tween(MmMotion.Fast)),
-            modifier = Modifier.align(Alignment.BottomCenter),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = chrome.barTop)
+                // Follows the tab bar down when it minimises (layout-free offset).
+                .offset {
+                    val p = chrome.minimize?.value ?: 0f
+                    IntOffset(0, (chrome.minimizeDrop.toPx() * p).roundToInt())
+                },
         ) {
             CompareTray(
                 count = state.compareIds.size,
                 onCompare = { onCompare(state.compareIds) },
                 onClear = viewModel::clearCompare,
                 thumbnails = compareThumbs,
-                modifier = Modifier.onSizeChanged { trayHeightPx = it.height },
+                modifier = Modifier
+                    .onSizeChanged { trayHeightPx = it.height }
+                    .onGloballyPositioned { trayBounds = it.boundsInRoot() },
             )
         }
-        SnackbarHost(
+        lk.motormila.app.ui.components.MmGlassSnackbarHost(
             snackbar,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = if (trayShown) trayHeight else 0.dp),
+                .padding(horizontal = 16.dp)
+                .padding(bottom = chrome.barTop + 12.dp + if (trayShown) trayHeight else 0.dp),
         )
+
+            // In-flight compare thumbnails (drawn above everything in Search).
+            flights.forEach { f ->
+                androidx.compose.runtime.key(f.key) {
+                    FlyingCompareThumb(
+                        flight = f,
+                        target = {
+                            val d = density
+                            val slot = with(d) { (8.dp + ThumbSize / 2 + ThumbStep * f.slot).toPx() }
+                            if (trayBounds != androidx.compose.ui.geometry.Rect.Zero) {
+                                androidx.compose.ui.geometry.Offset(trayBounds.left + with(d) { MmSpacing.lg.toPx() } + slot, trayBounds.center.y)
+                            } else {
+                                androidx.compose.ui.geometry.Offset(
+                                    with(d) { (MmSpacing.lg + 8.dp).toPx() } + slot,
+                                    rootHeightPx - with(d) { (chrome.barTop + 40.dp).toPx() },
+                                )
+                            }
+                        },
+                        onDone = { flights.remove(f) },
+                    )
+                }
+            }
+        }
+        }
 
         if (state.showFilterSheet) {
             FilterSheet(
@@ -578,8 +689,8 @@ private fun StaggeredItem(index: Int, content: @Composable () -> Unit) {
 }
 
 /**
- * Compare tray: a compact, solid floating capsule (theme surface, soft shadow
- * in light / hairline in dark) — overlapping thumbnails, "n/3 selected",
+ * Compare tray: a liquid-glass capsule stacked above the glass tab bar (same
+ * material, same side insets) — overlapping thumbnails, "n/3 selected",
  * Clear, and a single-line "Compare n" pill. Font scale capped at 1.3x so it
  * stays one row at 200 %.
  */
@@ -596,18 +707,10 @@ internal fun CompareTray(
     CappedFontScale(max = 1.3f) {
         Row(
             modifier = modifier
-                .padding(horizontal = MmSpacing.lg, vertical = MmSpacing.md)
+                .padding(horizontal = MmSpacing.lg, vertical = 10.dp)
                 .fillMaxWidth()
-                .shadow(
-                    elevation = if (c.isDark) 0.dp else 16.dp,
-                    shape = MmShapes.pill,
-                    clip = false,
-                    ambientColor = Color.Black.copy(alpha = 0.08f),
-                    spotColor = Color.Black.copy(alpha = 0.18f),
-                )
-                .clip(MmShapes.pill)
-                .background(if (c.isDark) c.surfaceHigh else c.surfaceRaised)
-                .then(if (c.isDark) Modifier.border(0.5.dp, c.outlineStrong, MmShapes.pill) else Modifier)
+                // Same liquid-glass material as the tab bar it is stacked on.
+                .liquidGlass(MmShapes.pill, lk.motormila.app.ui.theme.GlassWeight.Regular, elevation = 18.dp)
                 .heightIn(min = 60.dp)
                 .padding(start = 8.dp, end = 6.dp, top = 6.dp, bottom = 6.dp)
                 .semantics(mergeDescendants = false) { contentDescription = trayCd },
@@ -620,7 +723,7 @@ internal fun CompareTray(
                     thumbnails.forEachIndexed { i, thumb ->
                         CompareTrayThumb(
                             thumb = thumb,
-                            ring = if (c.isDark) c.surfaceHigh else c.surfaceRaised,
+                            ring = if (c.isDark) Color(0xFF2A2A30) else Color.White,
                             modifier = Modifier.offset(x = ThumbStep * i),
                         )
                     }
@@ -736,5 +839,63 @@ private fun CompareTrayThumb(thumb: CompareThumb, ring: Color, modifier: Modifie
             .padding(2.dp)
             .clip(CircleShape)
             .then(sharedMod),
+    )
+}
+
+
+/** One compare thumbnail flying from a card photo to its tray slot. */
+internal data class CompareFlight(val key: Long, val imageUrl: String?, val from: androidx.compose.ui.geometry.Rect, val slot: Int)
+
+/**
+ * Signature **fly-to-tray** motion: a copy of the card photo lifts (shadow),
+ * arcs along a quadratic Bézier toward its slot in the compare tray while
+ * shrinking and rounding into a 36dp avatar, then dissolves as the real tray
+ * thumbnail lands. Everything is read in layout/draw lambdas (no
+ * recomposition per frame). Not started under reduced motion.
+ */
+@Composable
+private fun FlyingCompareThumb(
+    flight: CompareFlight,
+    target: () -> androidx.compose.ui.geometry.Offset,
+    onDone: () -> Unit,
+) {
+    val p = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(Unit) {
+        p.animateTo(1f, tween(640, easing = androidx.compose.animation.core.CubicBezierEasing(0.32f, 0f, 0.18f, 1f)))
+        onDone()
+    }
+    ListingImage(
+        model = flight.imageUrl,
+        contentDescription = null,
+        modifier = Modifier
+            .layout { measurable, constraints ->
+                val t = p.value
+                val from = flight.from
+                val end = target()
+                val toSize = ThumbSize.toPx()
+                val w = androidx.compose.ui.util.lerp(from.width, toSize, t)
+                val h = androidx.compose.ui.util.lerp(from.height, toSize, t)
+                val start = from.center
+                val ctrl = androidx.compose.ui.geometry.Offset(
+                    (start.x + end.x) / 2f,
+                    minOf(start.y, end.y) - 140.dp.toPx(),
+                )
+                val u = 1f - t
+                val x = u * u * start.x + 2 * u * t * ctrl.x + t * t * end.x
+                val y = u * u * start.y + 2 * u * t * ctrl.y + t * t * end.y
+                val placeable = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(w.roundToInt().coerceAtLeast(1), h.roundToInt().coerceAtLeast(1)))
+                layout(constraints.maxWidth, constraints.maxHeight) {
+                    placeable.placeWithLayer((x - w / 2f).roundToInt(), (y - h / 2f).roundToInt()) {
+                        val corner = androidx.compose.ui.util.lerp(24.dp.toPx(), minOf(w, h) / 2f, t)
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(corner)
+                        clip = true
+                        shadowElevation = (1f - t) * 18.dp.toPx() + 4.dp.toPx()
+                        alpha = if (t > 0.86f) ((1f - t) / 0.14f).coerceIn(0f, 1f) else 1f
+                        val lift = if (t < 0.18f) 1f + t * 0.4f else 1.07f - (t - 0.18f) * 0.085f
+                        scaleX = lift
+                        scaleY = lift
+                    }
+                }
+            },
     )
 }
