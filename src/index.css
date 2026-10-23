@@ -372,6 +372,14 @@
     overflow-x: hidden;
   }
 
+  /* Radix scroll lock (Select, Dialog, modal menus) hides overflow on <body>
+     and adds a scrollbar-width margin-right, but <html> is the scroller here
+     (overflow-x above), so the scrollbar stayed and the margin shifted the
+     page sideways. Lock <html> too: its scrollbar goes away and the body
+     margin stands in for it, so nothing moves. The fixed header compensates
+     via .right-scroll-bar-position. */
+  html:has(> body[data-scroll-locked]) { overflow: hidden; }
+
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     font-weight: 500;
@@ -1728,6 +1736,141 @@
     /* Opened from "More" in the centre group. */
     .site-menu-panel-wrap { justify-content: center; transform-origin: top center; }
   }
+
+  /* ── Desktop "More" dropdown (NavMoreMenu) ─────────────────────
+     A compact glass menu anchored under the More pill: same surface as
+     the floating capsule, no internal scroll. */
+  .nav-more {
+    width: 320px;
+    max-width: calc(100vw - 24px);
+    padding: 6px;
+    border-radius: 20px;
+    border: 1px solid hsl(var(--foreground) / 0.09);
+    background: hsl(var(--popover) / 0.94);
+    color: hsl(var(--popover-foreground));
+    backdrop-filter: blur(24px) saturate(1.7);
+    -webkit-backdrop-filter: blur(24px) saturate(1.7);
+    box-shadow:
+      0 18px 44px -14px rgb(0 0 0 / 0.22),
+      0 3px 10px -4px rgb(0 0 0 / 0.1),
+      inset 0 1px 0 rgb(255 255 255 / 0.6);
+    outline: none;
+  }
+
+  .theme-dark .nav-more {
+    background: hsl(var(--card) / 0.94);
+    border-color: hsl(var(--foreground) / 0.1);
+    box-shadow:
+      0 22px 50px -14px rgb(0 0 0 / 0.75),
+      0 3px 10px -3px rgb(0 0 0 / 0.5),
+      inset 0 1px 0 hsl(var(--foreground) / 0.07);
+  }
+
+  html.low-data .nav-more {
+    background: hsl(var(--popover) / 0.98);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .nav-more__label {
+    padding: 8px 10px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .nav-more__sep {
+    height: 1px;
+    margin: 6px 8px;
+    background: hsl(var(--foreground) / 0.07);
+  }
+
+  .nav-more__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 7px 10px 7px 8px;
+    border-radius: 12px;
+    color: hsl(var(--foreground));
+    text-decoration: none;
+    cursor: pointer;
+    outline: none;
+    user-select: none;
+    transition: background-color var(--dur-fast) var(--ease-standard);
+  }
+
+  .nav-more__item[data-highlighted] { background: hsl(var(--foreground) / 0.06); }
+  .nav-more__item:focus-visible { box-shadow: inset 0 0 0 2px hsl(var(--primary) / 0.5); }
+  .nav-more__item[data-current="true"] { background: hsl(var(--primary) / 0.1); }
+
+  .nav-more__icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    border: 1px solid hsl(var(--foreground) / 0.08);
+    background: hsl(var(--foreground) / 0.035);
+    color: hsl(var(--foreground) / 0.7);
+    transition: color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard), background-color var(--dur-fast) var(--ease-standard);
+  }
+
+  .nav-more__item[data-highlighted] .nav-more__icon,
+  .nav-more__item[data-current="true"] .nav-more__icon {
+    color: hsl(var(--primary));
+    border-color: hsl(var(--primary) / 0.3);
+    background: hsl(var(--primary) / 0.1);
+  }
+
+  .nav-more__title {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+  }
+
+  .nav-more__detail {
+    display: block;
+    margin-top: 1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11.5px;
+    line-height: 1.35;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .nav-more__foot {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin: 6px -6px -6px;
+    padding: 6px 8px;
+    border-top: 1px solid hsl(var(--foreground) / 0.07);
+    border-radius: 0 0 20px 20px;
+    background: hsl(var(--foreground) / 0.025);
+  }
+
+  .nav-more__foot-link {
+    padding: 4px 8px;
+    border-radius: 8px;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: hsl(var(--muted-foreground));
+    text-decoration: none;
+    outline: none;
+    transition: color var(--dur-fast) var(--ease-standard), background-color var(--dur-fast) var(--ease-standard);
+  }
+
+  .nav-more__foot-link[data-highlighted] { color: hsl(var(--foreground)); background: hsl(var(--foreground) / 0.06); }
 
   /* Home banners float over the hero just under the header. */
   .hero-banners {

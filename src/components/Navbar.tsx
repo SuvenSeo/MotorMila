@@ -22,8 +22,9 @@ import { openCommandPalette } from "@/lib/commandPalette";
 import { openFeedbackDialog } from "@/lib/feedbackEvents";
 import { FEEDBACK_LINK, MORE_LINKS, NAV_DESTINATIONS, isDestinationActive, type NavLinkItem } from "@/lib/siteNav";
 import { NavFreshnessIndicator } from "@/components/NavFreshnessIndicator";
-import { cn } from "@/lib/utils";
+import { NavMoreMenu } from "@/components/NavMoreMenu";
 import { fitNav } from "@/lib/navFit";
+import { cn } from "@/lib/utils";
 
 const SCROLLED_AT = 24;
 const HIDE_AFTER = 96;
@@ -34,10 +35,10 @@ const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayout
  * Site header (polish/shell).
  *
  * One 64px row on a 3-column grid: brand left · five destinations centred on
- * the viewport (lg+) with a "More" button for every other route · actions
- * right (search, freshness hint, language, bell, account), all 36px controls.
- * Below lg the destinations live in the bottom nav (mobile) / menu panel and a
- * hamburger replaces "More".
+ * the viewport (lg+) with a compact "More" dropdown (NavMoreMenu) holding only
+ * the routes no destination reaches · actions right (search, freshness hint,
+ * language, bell, account), all 36px controls. Below lg the destinations live
+ * in the bottom nav (mobile) / hamburger menu panel, which lists every route.
  *
  * Transparent at the top so page heroes run underneath it; a translucent
  * blurred background + hairline fade in once the page scrolls. On phones the
@@ -150,7 +151,7 @@ export function Navbar() {
   return (
     <header
       ref={headerRef}
-      className="site-nav-header fixed inset-x-0 top-0 z-header"
+      className="site-nav-header right-scroll-bar-position fixed inset-x-0 top-0 z-header"
       data-scrolled={isScrolled}
       data-nav-mode={isScrolled ? "compact" : "full"}
       data-hidden={hidden}
@@ -205,21 +206,7 @@ export function Navbar() {
               );
             })}
             <span aria-hidden className="mx-1 h-4 w-px bg-border" />
-            <button
-              type="button"
-              onClick={() => setMenuOpen((open) => !open)}
-              className="site-nav__link gap-1"
-              data-active={false}
-              aria-expanded={menuOpen}
-              aria-controls="site-menu"
-              aria-label={menuOpen ? t("nav.closeMenu", "Close menu") : t("nav.more", "More")}
-            >
-              <span className="relative z-10">{t("nav.more", "More")}</span>
-              <ChevronDown
-                className={cn("relative z-10 h-3.5 w-3.5 opacity-70 transition-transform duration-200", menuOpen && "rotate-180")}
-                aria-hidden
-              />
-            </button>
+            <NavMoreMenu pathname={pathname} t={t} />
           </div>
         </LayoutGroup>
 
@@ -306,7 +293,7 @@ export function Navbar() {
         </div>
       </nav>
 
-      {/* Menu panel — every route, grouped under its destination */}
+      {/* Hamburger menu panel (below lg) — every route, grouped under its destination */}
       <AnimatePresence>
         {menuOpen && (
           <m.div
@@ -323,9 +310,35 @@ export function Navbar() {
           >
             <div className="max-h-[min(78vh,720px)] overflow-y-auto overscroll-contain rounded-3xl border border-border bg-popover/[0.98] p-3.5 shadow-soft-lg">
               <div className="grid gap-4 sm:grid-cols-2">
-                {NAV_DESTINATIONS.map((dest) => (
-                  <MenuGroup key={dest.id} title={label(dest)} items={dest.items} pathname={pathname} onPick={goTo} t={t} />
-                ))}
+                {/* Destinations collapse to one row each (the current one starts open) so the panel stays short. */}
+                <div className="grid content-start gap-0.5">
+                  {NAV_DESTINATIONS.map((dest) => {
+                    const DestIcon = dest.icon;
+                    const current = isDestinationActive(dest, pathname);
+                    return (
+                      <details key={dest.id} className="site-menu-dest group/dest" open={current || undefined}>
+                        <summary className="flex cursor-pointer list-none items-center gap-2.5 rounded-xl px-2.5 py-2 outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary/50 [&::-webkit-details-marker]:hidden">
+                          <span
+                            className={cn(
+                              "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border",
+                              current ? "border-primary/30 bg-primary/[0.12] text-primary" : "border-border bg-foreground/[0.03] text-muted-foreground",
+                            )}
+                          >
+                            <DestIcon className="h-3.5 w-3.5" aria-hidden />
+                          </span>
+                          <span className="flex-1 text-[13px] font-semibold tracking-tight text-foreground">{label(dest)}</span>
+                          <ChevronDown
+                            className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 group-open/dest:rotate-180 motion-reduce:transition-none"
+                            aria-hidden
+                          />
+                        </summary>
+                        <div className="pb-1 pl-5">
+                          <MenuGroup items={dest.items} pathname={pathname} onPick={goTo} t={t} />
+                        </div>
+                      </details>
+                    );
+                  })}
+                </div>
                 <div>
                   <MenuGroup title={t("footer.more", "More")} items={MORE_LINKS} pathname={pathname} onPick={goTo} t={t} />
                   <button
@@ -386,7 +399,7 @@ function MenuGroup({
   onPick,
   t,
 }: {
-  title: string;
+  title?: string;
   items: NavLinkItem[];
   pathname: string;
   onPick: (href: string) => void;
@@ -394,7 +407,7 @@ function MenuGroup({
 }) {
   return (
     <div>
-      <p className="px-2 pb-1.5 pt-1 text-[11px] font-semibold text-muted-foreground">{title}</p>
+      {title ? <p className="px-2 pb-1.5 pt-1 text-[11px] font-semibold text-muted-foreground">{title}</p> : null}
       <div className="grid gap-0.5">
         {items.map((item) => {
           const Icon = item.icon;
