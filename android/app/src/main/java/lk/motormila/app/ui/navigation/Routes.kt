@@ -209,6 +209,8 @@ internal fun resolveParsedDeepLink(parsed: ParsedDeepLink): Any? {
             )
         }
         if (segments.isEmpty()) return Home
+        // Bare /search (no filters) opens Search.
+        if (segments == listOf("search")) return Search()
         if (segments.size >= 2 && segments[0] == "listing") {
             return segments[1].toIntOrNull()?.let { ListingDetail(it) }
         }
