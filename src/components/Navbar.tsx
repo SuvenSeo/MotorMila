@@ -156,6 +156,7 @@ export function Navbar() {
       data-nav-mode={isScrolled ? "compact" : "full"}
       data-hidden={hidden}
       data-menu-open={menuOpen}
+      data-over-hero={pathname === "/" && !isScrolled && !menuOpen}
       data-fit="0"
     >
       <div aria-hidden className="site-nav-bg" />
