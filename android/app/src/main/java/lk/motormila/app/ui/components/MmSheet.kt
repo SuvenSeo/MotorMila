@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -57,7 +59,11 @@ fun MmSheet(
     }
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
-        modifier = modifier.glassEdges(MmShapes.sheet, c, sheen = !lk.motormila.app.ui.theme.glassIsSolid),
+        // Never expand under the status bar (tall sheets at 200 % put the
+        // title under the clock).
+        modifier = modifier
+            .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.statusBars)
+            .glassEdges(MmShapes.sheet, c, sheen = !lk.motormila.app.ui.theme.glassIsSolid),
         sheetState = sheetState,
         shape = MmShapes.sheet,
         containerColor = glassSheetColor(),

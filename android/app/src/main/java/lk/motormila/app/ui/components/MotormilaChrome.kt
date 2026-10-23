@@ -372,7 +372,8 @@ fun MotormilaPillTabs(
                 val isSelected = index == safeSelected
                 val interaction = remember(label) { MutableInteractionSource() }
                 val labelColor by animateColorAsState(
-                    targetValue = if (isSelected) MotormilaOnSurface else MotormilaSecondaryText,
+                    // White on the brand-blue indicator (was near-black on blue in light).
+                    targetValue = if (isSelected) Color.White else MotormilaSecondaryText,
                     animationSpec = appleTween(220),
                     label = "pill-label",
                 )

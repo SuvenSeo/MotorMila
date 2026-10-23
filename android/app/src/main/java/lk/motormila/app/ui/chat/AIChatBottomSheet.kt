@@ -27,6 +27,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -148,6 +150,7 @@ fun AIChatBottomSheet(
         // surface was anchored at the top of the window (header under the
         // status bar, a strip of page showing under the nav bar).
         modifier = modifier
+            .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.statusBars)
             .semantics { contentDescription = "Motormila AI Intelligence Assistant Sheet" },
     ) {
         lk.motormila.app.ui.components.WindowBackdropBlur()
