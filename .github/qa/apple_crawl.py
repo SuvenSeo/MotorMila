@@ -133,6 +133,31 @@ def tab(label_rx):
     return False
 
 
+def tap_desc(rx, limit=1, max_y_frac=0.9):
+    """Tap up to `limit` nodes whose content-desc/text matches rx (top to bottom)."""
+    _, root = dump()
+    W, H = SIZE
+    hits = [n for n in nodes(root)
+            if re.search(rx, (n["desc"] or n["text"] or "")) and n["b"][3] > n["b"][1]
+            and (n["b"][1] + n["b"][3]) // 2 < H * max_y_frac]
+    seen, done = set(), 0
+    for n in sorted(hits, key=lambda n: (n["b"][1], n["b"][0])):
+        key = (n["b"][0] // 20, n["b"][1] // 20)
+        if key in seen:
+            continue
+        seen.add(key)
+        adb(f"shell input tap {(n['b'][0]+n['b'][2])//2} {(n['b'][1]+n['b'][3])//2}")
+        time.sleep(1.2)
+        done += 1
+        if done >= limit:
+            break
+    return done
+
+
+ADD_CMP = r"(to compare|සැසඳීමට එක් කරන්න|ஒப்பீட்டில் சேர்)$"
+CMP_CTA = r"^(Compare|සසඳන්න|ஒப்பிடு) \d$"
+
+
 def listing_ids():
     for attempt in range(4):
         try:
@@ -176,6 +201,12 @@ SCREENS = [
     ("home", "motormila://home"),
     ("home_scrolled", "SCROLL"),
     ("search", "motormila://search"),
+    # Compare flow: select 3 cars on Search -> tray; tap "Compare 3" -> Compare screen.
+    ("search_compare_tray", "CMP_SELECT"),
+    ("search_compare_tray_scrolled", "SCROLL"),
+    ("compare_from_tray", "CMP_OPEN"),
+    ("compare_from_tray_scrolled", "SCROLL"),
+    ("compare_removed", "CMP_REMOVE"),
     ("search_toyota", "motormila://search?q=toyota"),
     ("watchlist", "motormila://watchlist"),
     ("insights", f"{WEB}/trends"),
@@ -208,6 +239,7 @@ SCREENS = [
     ("privacy", f"{WEB}/privacy"),
     ("terms", f"{WEB}/terms"),
     ("admin", f"{WEB}/admin"),
+    ("compare_4", f"{WEB}/compare?ids={','.join(map(str, ids[:4]))}" if len(ids) >= 4 else None),
 ]
 subset = set(filter(None, args.subset.split(",")))
 for name, target in SCREENS:
@@ -220,6 +252,26 @@ for name, target in SCREENS:
             W, H = SIZE
             adb(f"shell input swipe {W//2} {int(H*0.8)} {W//2} {int(H*0.25)} 500")
             snap(name, 3)
+        elif target == "CMP_SELECT":
+            link("motormila://search")
+            time.sleep(9)
+            dismiss_noise()
+            n = tap_desc(ADD_CMP, limit=3, max_y_frac=0.75)
+            if n < 3:
+                W, H = SIZE
+                adb(f"shell input swipe {W//2} {int(H*0.7)} {W//2} {int(H*0.4)} 400")
+                time.sleep(2)
+                tap_desc(ADD_CMP, limit=3 - n, max_y_frac=0.75)
+            snap(name, 3)
+        elif target == "CMP_OPEN":
+            tap_desc(CMP_CTA, limit=1, max_y_frac=0.95)
+            snap(name, 10)
+        elif target == "CMP_REMOVE":
+            W, H = SIZE
+            adb(f"shell input swipe {W//2} {int(H*0.3)} {W//2} {int(H*0.8)} 400")
+            time.sleep(2)
+            tap_desc(r"^Remove ", limit=1)
+            snap(name, 4)
         elif target.startswith("TAB:"):
             link("motormila://home")
             time.sleep(3)
@@ -228,7 +280,7 @@ for name, target in SCREENS:
             snap(name)
         else:
             link(target)
-            snap(name, 9 if name in ("home", "detail", "insights", "search") else 6)
+            snap(name, 20 if name in ("model_hub", "district_hub") else 9 if name in ("home", "detail", "insights", "search", "compare_4") else 6)
     except Exception as e:
         print("ERR", name, e)
         RESULTS.append({"screen": name, "error": str(e)})

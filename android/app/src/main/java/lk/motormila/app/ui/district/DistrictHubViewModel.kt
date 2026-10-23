@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import lk.motormila.app.core.common.AppError
 import lk.motormila.app.core.network.ErrorMapper
+import lk.motormila.app.core.network.runCatchingWithTimeout
 import lk.motormila.app.domain.model.DistrictInsight
 import lk.motormila.app.domain.model.DistrictVelocity
 import lk.motormila.app.domain.model.Listing
@@ -103,9 +104,9 @@ class DistrictHubViewModel @Inject constructor(
             _state.update {
                 it.copy(isLoading = !refresh, isRefreshing = refresh, error = null, offline = false)
             }
-            val insightDef = async { runCatching { stats.districtInsight(district) } }
+            val insightDef = async { runCatchingWithTimeout { stats.districtInsight(district) } }
             val listingsDef = async {
-                runCatching {
+                runCatchingWithTimeout {
                     listings.searchPage(
                         ListingQuery(district = district, sort = ListingSorts.NEWEST),
                         page = 1,
@@ -113,8 +114,8 @@ class DistrictHubViewModel @Inject constructor(
                     )
                 }
             }
-            val pricesDef = async { runCatching { stats.districtPrices() } }
-            val velocityDef = async { runCatching { stats.districtVelocity() } }
+            val pricesDef = async { runCatchingWithTimeout { stats.districtPrices() } }
+            val velocityDef = async { runCatchingWithTimeout { stats.districtVelocity() } }
 
             val insightResult = insightDef.await()
             val listingsResult = listingsDef.await()

@@ -31,7 +31,13 @@ import androidx.compose.material.icons.outlined.Sell
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.unit.Dp
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,6 +62,14 @@ import lk.motormila.app.ui.theme.MmColors
 import lk.motormila.app.ui.theme.MmMotion
 import lk.motormila.app.ui.theme.MmShapes
 import lk.motormila.app.ui.theme.mmPress
+
+/**
+ * Extra bottom offset a tab screen asks for so the floating assistant button
+ * rides above that screen's own bottom chrome (e.g. the Search compare tray)
+ * instead of covering it. Screens write the height they occupy and reset it
+ * to 0.dp when that chrome goes away.
+ */
+val LocalAssistantLift = staticCompositionLocalOf<MutableState<Dp>?> { null }
 
 /** Bottom-bar tab keys (Buy, Prices, Tools, Sell, Saved). */
 object MotormilaTabs {
@@ -99,6 +113,12 @@ fun MotormilaScaffold(
     var showAIChat by rememberSaveable { mutableStateOf(false) }
     val reduced = MmMotion.reduced
     val showAssistant = showBottomBar && (selected == MotormilaTabs.BUY || selected == MotormilaTabs.PRICES)
+    val assistantLift = remember { mutableStateOf(0.dp) }
+    val liftAnim by animateDpAsState(
+        targetValue = assistantLift.value,
+        animationSpec = if (reduced) snap() else MmMotion.snappy(),
+        label = "assistant-lift",
+    )
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -122,10 +142,15 @@ fun MotormilaScaffold(
                 enter = if (reduced) fadeIn(tween(0)) else scaleIn(MmMotion.snappy(), initialScale = 0.8f) + fadeIn(tween(MmMotion.Fast)),
                 exit = if (reduced) fadeOut(tween(0)) else scaleOut(MmMotion.snappy(), targetScale = 0.8f) + fadeOut(tween(MmMotion.Fast)),
             ) {
-                AssistantButton(onClick = { showAIChat = true })
+                AssistantButton(
+                    onClick = { showAIChat = true },
+                    modifier = Modifier.padding(bottom = liftAnim),
+                )
             }
         },
-        content = content,
+        content = { pv ->
+            CompositionLocalProvider(LocalAssistantLift provides assistantLift) { content(pv) }
+        },
     )
 
     if (showAIChat) {
@@ -140,12 +165,12 @@ fun MotormilaScaffold(
 }
 
 @Composable
-private fun AssistantButton(onClick: () -> Unit) {
+private fun AssistantButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     val c = MmColors.current
     val interaction = remember { MutableInteractionSource() }
     val label = stringResource(R.string.mm_assistant)
     Box(
-        modifier = Modifier
+        modifier = modifier
             .padding(bottom = 4.dp)
             .size(52.dp)
             .mmPress(interaction, 0.92f)

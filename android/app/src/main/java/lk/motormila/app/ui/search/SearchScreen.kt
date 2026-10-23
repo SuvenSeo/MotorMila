@@ -21,6 +21,34 @@ import lk.motormila.app.ui.components.MmPullToRefresh
 import lk.motormila.app.ui.theme.MmHaptics
 import lk.motormila.app.ui.theme.MmMotion
 import lk.motormila.app.ui.theme.MmSpacing
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.Role
+import lk.motormila.app.ui.theme.MmColors
+import lk.motormila.app.ui.theme.MmShapes
+import lk.motormila.app.ui.theme.MmType
+import lk.motormila.app.ui.theme.CappedFontScale
+import lk.motormila.app.ui.LocalAssistantLift
 import android.app.Activity
 import android.speech.RecognizerIntent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -173,6 +201,20 @@ fun SearchScreen(
         }
     }
 
+    // Measured compare-tray height: pads the grid so the last row scrolls
+    // clear of it, and lifts the assistant button above it (no overlap).
+    var trayHeightPx by remember { mutableStateOf(0) }
+    val density = LocalDensity.current
+    val trayHeight = with(density) { trayHeightPx.toDp() }
+    val assistantLift = LocalAssistantLift.current
+    val trayShown = state.compareIds.isNotEmpty()
+    LaunchedEffect(trayShown, trayHeight) {
+        assistantLift?.value = if (trayShown && trayHeight > 0.dp) trayHeight else 0.dp
+    }
+    DisposableEffect(assistantLift) {
+        onDispose { assistantLift?.value = 0.dp }
+    }
+
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             if (items.loadState.refresh is LoadState.Error) {
@@ -226,6 +268,8 @@ fun SearchScreen(
                         "Free plan · newest first — Pro unlocks deal-score sort",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
                 Spacer(Modifier.height(4.dp))
@@ -297,7 +341,9 @@ fun SearchScreen(
                                 start = MmSpacing.lg,
                                 end = MmSpacing.lg,
                                 top = MmSpacing.sm,
-                                bottom = if (state.compareIds.isNotEmpty()) 120.dp else MmSpacing.huge,
+                                // Clear the floating assistant button (and the compare
+                                // tray + lifted button when the tray shows).
+                                bottom = if (state.compareIds.isNotEmpty()) trayHeight + 112.dp else 88.dp,
                             ),
                             horizontalArrangement = Arrangement.spacedBy(MmSpacing.cardGap),
                             verticalArrangement = Arrangement.spacedBy(MmSpacing.lg),
@@ -311,7 +357,8 @@ fun SearchScreen(
                             ) { i ->
                                 val listing = items[i]
                                 if (listing != null) {
-                                    Column(
+                                    val inCompare = state.compareIds.contains(listing.id)
+                                    Box(
                                         Modifier.animateItem(
                                             fadeInSpec = null,
                                             fadeOutSpec = null,
@@ -324,17 +371,14 @@ fun SearchScreen(
                                                 isWatched = false,
                                                 onClick = { onListingClick(listing.id) },
                                                 onWatchToggle = { viewModel.toggleWatch(listing) },
+                                                compareSelected = inCompare,
+                                                compareEnabled = inCompare || state.compareIds.size < MAX_COMPARE_IDS,
+                                                onCompareToggle = {
+                                                    if (inCompare) haptics.unsave() else haptics.save()
+                                                    viewModel.toggleCompare(listing.id)
+                                                },
                                             )
                                         }
-                                        CompareToggleRow(
-                                            selected = state.compareIds.contains(listing.id),
-                                            enabled = state.compareIds.contains(listing.id) ||
-                                                state.compareIds.size < MAX_COMPARE_IDS,
-                                            onToggle = {
-                                                if (state.compareIds.contains(listing.id)) haptics.unsave() else haptics.save()
-                                                viewModel.toggleCompare(listing.id)
-                                            },
-                                        )
                                     }
                                 }
                             }
@@ -355,23 +399,33 @@ fun SearchScreen(
             }
         }
 
-        // Compare tray (max 3).
-        if (state.compareIds.isNotEmpty()) {
-            val compareThumbs = remember(state.compareIds, items.itemSnapshotList) {
-                val byId = items.itemSnapshotList.items.filterNotNull().associateBy { it.id }
-                state.compareIds.mapNotNull { id ->
-                    byId[id]?.let { CompareThumb(id = it.id, imageUrl = it.heroImageUrl) }
-                }
+        // Compare tray (max 3): compact solid capsule floating above the tab bar.
+        val compareThumbs = remember(state.compareIds, items.itemSnapshotList) {
+            val byId = items.itemSnapshotList.items.filterNotNull().associateBy { it.id }
+            state.compareIds.mapNotNull { id ->
+                byId[id]?.let { CompareThumb(id = it.id, imageUrl = it.heroImageUrl) }
             }
+        }
+        AnimatedVisibility(
+            visible = state.compareIds.isNotEmpty(),
+            enter = if (MmMotion.reduced) fadeIn(tween(0)) else slideInVertically(MmMotion.snappy()) { it } + fadeIn(tween(MmMotion.Fast)),
+            exit = if (MmMotion.reduced) fadeOut(tween(0)) else slideOutVertically(tween(MmMotion.Fast)) { it } + fadeOut(tween(MmMotion.Fast)),
+            modifier = Modifier.align(Alignment.BottomCenter),
+        ) {
             CompareTray(
                 count = state.compareIds.size,
                 onCompare = { onCompare(state.compareIds) },
                 onClear = viewModel::clearCompare,
-                modifier = Modifier.align(Alignment.BottomCenter),
                 thumbnails = compareThumbs,
+                modifier = Modifier.onSizeChanged { trayHeightPx = it.height },
             )
         }
-        SnackbarHost(snackbar, modifier = Modifier.align(Alignment.BottomCenter))
+        SnackbarHost(
+            snackbar,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = if (trayShown) trayHeight else 0.dp),
+        )
 
         if (state.showFilterSheet) {
             FilterSheet(
@@ -438,12 +492,31 @@ internal fun SortFilterRow(
     gridMode: Boolean,
     onToggleLayout: () -> Unit,
 ) {
+    val c = MmColors.current
     Row(verticalAlignment = Alignment.CenterVertically) {
+        // Chips scroll under a soft fade at the trailing edge instead of being
+        // cut hard against the layout toggle ("P" of "Price ↓" clipped).
         LazyRow(
-            contentPadding = PaddingValues(start = 8.dp, end = 4.dp),
+            contentPadding = PaddingValues(start = 8.dp, end = 20.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                .drawWithContent {
+                    drawContent()
+                    val fade = 24.dp.toPx()
+                    drawRect(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(Color.Black, Color.Transparent),
+                            startX = size.width - fade,
+                            endX = size.width,
+                        ),
+                        topLeft = Offset(size.width - fade, 0f),
+                        size = Size(fade, size.height),
+                        blendMode = BlendMode.DstIn,
+                    )
+                },
         ) {
             item {
                 MmIconButton(
@@ -475,6 +548,14 @@ internal fun SortFilterRow(
                 )
             }
         }
+        // Layout toggle gets its own slot, separated by a hairline.
+        Box(
+            Modifier
+                .padding(horizontal = 2.dp)
+                .width(0.5.dp)
+                .height(24.dp)
+                .background(c.outline),
+        )
         MmIconButton(
             icon = if (gridMode) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
             contentDescription = if (gridMode) "Show as list" else "Show as grid",
@@ -496,75 +577,131 @@ private fun StaggeredItem(index: Int, content: @Composable () -> Unit) {
     }
 }
 
+/**
+ * Compare tray: a compact, solid floating capsule (theme surface, soft shadow
+ * in light / hairline in dark) — overlapping thumbnails, "n/3 selected",
+ * Clear, and a single-line "Compare n" pill. Font scale capped at 1.3x so it
+ * stays one row at 200 %.
+ */
 @Composable
-private fun CompareToggleRow(selected: Boolean, enabled: Boolean, onToggle: () -> Unit) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-            MmChip(
-                label = if (selected) "In compare" else "Compare",
-                selected = selected,
-                enabled = enabled,
-                onClick = onToggle,
-                leadingIcon = if (selected) Icons.Filled.Check else Icons.AutoMirrored.Filled.CompareArrows,
-            )
-    }
-}
-
-@Composable
-private fun CompareTray(
+internal fun CompareTray(
     count: Int,
     onCompare: () -> Unit,
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
     thumbnails: List<CompareThumb> = emptyList(),
 ) {
-    androidx.compose.material3.Surface(
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp,
-        color = Color.Transparent,
-        shape = MotormilaRadius.lg,
-        modifier = modifier
-            .padding(16.dp)
-            .liquidGlass(MotormilaRadius.lg, fill = MotormilaGlassFillStrong),
-    ) {
+    val c = MmColors.current
+    val trayCd = stringResource(R.string.compare_tray_cd, count, MAX_COMPARE_IDS)
+    CappedFontScale(max = 1.3f) {
         Row(
-            Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = modifier
+                .padding(horizontal = MmSpacing.lg, vertical = MmSpacing.md)
+                .fillMaxWidth()
+                .shadow(
+                    elevation = if (c.isDark) 0.dp else 16.dp,
+                    shape = MmShapes.pill,
+                    clip = false,
+                    ambientColor = Color.Black.copy(alpha = 0.08f),
+                    spotColor = Color.Black.copy(alpha = 0.18f),
+                )
+                .clip(MmShapes.pill)
+                .background(if (c.isDark) c.surfaceHigh else c.surfaceRaised)
+                .then(if (c.isDark) Modifier.border(0.5.dp, c.outlineStrong, MmShapes.pill) else Modifier)
+                .heightIn(min = 60.dp)
+                .padding(start = 8.dp, end = 6.dp, top = 6.dp, bottom = 6.dp)
+                .semantics(mergeDescendants = false) { contentDescription = trayCd },
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Selected-vehicle thumbnails — the fly-to-tray target end
+            // Overlapping avatar stack — the fly-to-tray target end
             // (spec §3 / §7.5, sharedElement key "compare-thumb-{id}").
-            thumbnails.forEach { thumb ->
-                CompareTrayThumb(thumb = thumb)
-                Spacer(Modifier.width(8.dp))
+            if (thumbnails.isNotEmpty()) {
+                Box(Modifier.width(ThumbSize + ThumbStep * (thumbnails.size - 1)).height(ThumbSize)) {
+                    thumbnails.forEachIndexed { i, thumb ->
+                        CompareTrayThumb(
+                            thumb = thumb,
+                            ring = if (c.isDark) c.surfaceHigh else c.surfaceRaised,
+                            modifier = Modifier.offset(x = ThumbStep * i),
+                        )
+                    }
+                }
+                Spacer(Modifier.width(10.dp))
             }
-            Text(stringResource(R.string.compare_selected_count, count, MAX_COMPARE_IDS), fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.compare_selected_count, count, MAX_COMPARE_IDS),
+                    style = MmType.current.label,
+                    color = c.textPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (count < 2) {
+                    Text(
+                        stringResource(R.string.compare_pick_more),
+                        style = MmType.current.caption,
+                        color = c.textSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
             val clearPress = remember { MutableInteractionSource() }
-            Text(
-                "Clear",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
+            Box(
+                Modifier
                     .applePress(clearPress)
                     .heightIn(min = 48.dp)
-                    .clickable(interactionSource = clearPress, indication = null, onClick = onClear)
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-            )
-            Spacer(Modifier.width(8.dp))
-            MotormilaPrimaryButton(
-                label = stringResource(R.string.compare_cta),
-                onClick = onCompare,
-                enabled = count >= 2,
-                fillMaxWidth = false,
-            )
+                    .clip(MmShapes.pill)
+                    .clickable(interactionSource = clearPress, indication = null, role = Role.Button, onClick = onClear)
+                    .padding(horizontal = 10.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    stringResource(R.string.compare_clear),
+                    style = MmType.current.label,
+                    color = c.textSecondary,
+                    maxLines = 1,
+                    softWrap = false,
+                )
+            }
+            Spacer(Modifier.width(4.dp))
+            val ctaPress = remember { MutableInteractionSource() }
+            val ctaEnabled = count >= 2
+            val ctaLabel = stringResource(R.string.compare_cta_count, count)
+            Box(
+                Modifier
+                    .applePress(ctaPress)
+                    .heightIn(min = 48.dp)
+                    .clip(MmShapes.pill)
+                    .background(if (ctaEnabled) c.brand else c.brand.copy(alpha = 0.35f))
+                    .clickable(
+                        enabled = ctaEnabled,
+                        interactionSource = ctaPress,
+                        indication = null,
+                        role = Role.Button,
+                        onClick = onCompare,
+                    )
+                    .padding(horizontal = 18.dp)
+                    .semantics { contentDescription = ctaLabel },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    ctaLabel,
+                    style = MmType.current.label,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White,
+                    maxLines = 1,
+                    softWrap = false,
+                )
+            }
         }
     }
 }
 
+private val ThumbSize = 36.dp
+private val ThumbStep = 22.dp
+
 /** Thumbnail shown in the compare tray for one selected listing. */
-private data class CompareThumb(val id: Int, val imageUrl: String?)
+internal data class CompareThumb(val id: Int, val imageUrl: String?)
 
 /** Shared-transition key for the compare-tray thumbnail (grid → tray). */
 private fun compareThumbKey(listingId: Int): String = "compare-thumb-$listingId"
@@ -576,7 +713,7 @@ private fun compareThumbKey(listingId: Int): String = "compare-thumb-$listingId"
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-private fun CompareTrayThumb(thumb: CompareThumb) {
+private fun CompareTrayThumb(thumb: CompareThumb, ring: Color, modifier: Modifier = Modifier) {
     val sharedScope = LocalSharedTransitionScope.current
     val animatedScope = LocalNavAnimatedVisibilityScope.current
     val sharedMod = if (sharedScope != null && animatedScope != null) {
@@ -592,10 +729,12 @@ private fun CompareTrayThumb(thumb: CompareThumb) {
     }
     ListingImage(
         model = thumb.imageUrl,
-        contentDescription = "Compared vehicle",
-        modifier = Modifier
-            .size(44.dp)
-            .clip(MotormilaRadius.xs)
+        contentDescription = null,
+        modifier = modifier
+            .size(ThumbSize)
+            .border(2.dp, ring, CircleShape)
+            .padding(2.dp)
+            .clip(CircleShape)
             .then(sharedMod),
     )
 }

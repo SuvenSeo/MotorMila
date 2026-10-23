@@ -154,8 +154,12 @@ fun HomeShortcutGrid(
     )
     Column(modifier.fillMaxWidth().padding(horizontal = MmSpacing.gutter), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         items.chunked(3).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                row.forEach { s -> ShortcutTile(s, Modifier.weight(1f)) }
+            // Equal-height tiles even when one title wraps to two lines.
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Min),
+            ) {
+                row.forEach { s -> ShortcutTile(s, Modifier.weight(1f).fillMaxHeight()) }
             }
         }
     }
@@ -181,7 +185,18 @@ private fun ShortcutTile(s: Shortcut, modifier: Modifier) {
             Icon(s.icon, contentDescription = null, tint = c.onBrandContainer, modifier = Modifier.size(21.dp))
         }
         Spacer(Modifier.height(8.dp))
-        Text(s.title, style = MmType.current.labelS, color = c.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // Two centred lines (Sinhala/Tamil titles and 200 % text no longer cut
+        // to "හොඳම තෝරා…" / "Best p…"); scale capped like other fixed tiles.
+        lk.motormila.app.ui.theme.CappedFontScale(max = 1.3f) {
+            Text(
+                s.title,
+                style = MmType.current.labelS,
+                color = c.textPrimary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+        }
     }
 }
 

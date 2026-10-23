@@ -167,6 +167,15 @@
     <string name="search_empty_reset">வடிகட்டிகளை மீட்டமை</string>
     <string name="compare_selected_count">%1$d/%2$d தேர்ந்தெடுக்கப்பட்டது</string>
     <string name="compare_cta">ஒப்பிடு</string>
+    <string name="compare_cta_count">ஒப்பிடு %1$d</string>
+    <string name="compare_clear">அழி</string>
+    <string name="compare_add">ஒப்பிடு</string>
+    <string name="compare_added">சேர்க்கப்பட்டது</string>
+    <string name="compare_add_cd">%1$s ஐ ஒப்பீட்டில் சேர்</string>
+    <string name="compare_remove_cd">%1$s ஐ ஒப்பீட்டிலிருந்து நீக்கு</string>
+    <string name="compare_tray_cd">ஒப்பீட்டுத் தட்டு, %2$d இல் %1$d கார்கள் தேர்ந்தெடுக்கப்பட்டன</string>
+    <string name="compare_pick_more">இன்னும் ஒன்றைத் தேர்ந்தெடு</string>
+    <string name="listing_share_whatsapp_short">WhatsApp</string>
     <string name="home_live_listings">நேரடி பட்டியல்கள்</string>
     <string name="home_data_fresh">1 மணி நேரத்துக்கு முந்தைய தரவு</string>
     <string name="home_avg_price">சராசரி விலை</string>

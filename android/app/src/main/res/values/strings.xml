@@ -161,6 +161,15 @@
     <string name="search_empty_reset">Reset filters</string>
     <string name="compare_selected_count">%1$d/%2$d selected</string>
     <string name="compare_cta">Compare</string>
+    <string name="compare_cta_count">Compare %1$d</string>
+    <string name="compare_clear">Clear</string>
+    <string name="compare_add">Compare</string>
+    <string name="compare_added">Added</string>
+    <string name="compare_add_cd">Add %1$s to compare</string>
+    <string name="compare_remove_cd">Remove %1$s from compare</string>
+    <string name="compare_tray_cd">Compare tray, %1$d of %2$d cars selected</string>
+    <string name="compare_pick_more">Pick one more</string>
+    <string name="listing_share_whatsapp_short">WhatsApp</string>
     <string name="home_live_listings">LIVE LISTINGS</string>
     <string name="home_data_fresh">DATA AS OF 1H AGO</string>
     <string name="home_avg_price">AVG PRICE</string>

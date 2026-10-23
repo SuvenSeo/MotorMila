@@ -84,7 +84,13 @@ fun SearchBar(
                     }
                 }
             },
-            placeholder = { Text(stringResource(R.string.ui_components_search_make_model_e_g)) },
+            placeholder = {
+                Text(
+                    stringResource(R.string.ui_components_search_make_model_e_g),
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                )
+            },
             modifier = Modifier.fillMaxWidth(),
         )
         if (showDropdown && (suggestions.isNotEmpty() || (query.isBlank() && recentSearches.isNotEmpty()))) {

@@ -527,7 +527,11 @@ private fun PriceDealSection(
                 history = history,
                 modifier = Modifier.weight(1f),
             )
-            DealRing(score = if (isPro) listing.dealScore else null, band = if (isPro) listing.dealBand() else DealBand.LOCKED)
+            // Free tier already shows the PRO badge + locked "Deal score" row below;
+            // an empty ring with a dash next to the price read as a broken widget.
+            if (isPro && listing.dealScore != null) {
+                DealRing(score = listing.dealScore, band = listing.dealBand())
+            }
         }
         if (isPro) {
             DealBadge(band = listing.dealBand(), score = listing.dealScore)
@@ -880,14 +884,18 @@ private fun HeroActionsRow(
             label = stringResource(R.string.listing_view_on_source, sourceName),
             fillMaxWidth = false,
             leadingIcon = Icons.AutoMirrored.Filled.OpenInNew,
-            modifier = Modifier.weight(1.25f),
+            modifier = Modifier.weight(1f),
             onClick = onViewSource,
         )
+        // Short "WhatsApp" label (icon + word) so it never wraps beside the
+        // primary button ("Share on / WhatsApp" at 100 %); the full phrase stays
+        // as the accessibility label.
+        val waCd = stringResource(R.string.listing_share_whatsapp)
         MotormilaGhostButton(
-            label = stringResource(R.string.listing_share_whatsapp),
+            label = stringResource(R.string.listing_share_whatsapp_short),
             fillMaxWidth = false,
             leadingIcon = Icons.AutoMirrored.Filled.Chat,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.semantics { contentDescription = waCd },
             onClick = onShareWhatsApp,
         )
         MotormilaIconAction(

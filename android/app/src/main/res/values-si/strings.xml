@@ -167,6 +167,15 @@
     <string name="search_empty_reset">පෙරහන් යළි සකසන්න</string>
     <string name="compare_selected_count">%1$d/%2$d තෝරා ඇත</string>
     <string name="compare_cta">සසඳන්න</string>
+    <string name="compare_cta_count">සසඳන්න %1$d</string>
+    <string name="compare_clear">ඉවත් කරන්න</string>
+    <string name="compare_add">සසඳන්න</string>
+    <string name="compare_added">එක් කළා</string>
+    <string name="compare_add_cd">%1$s සැසඳීමට එක් කරන්න</string>
+    <string name="compare_remove_cd">%1$s සැසඳීමෙන් ඉවත් කරන්න</string>
+    <string name="compare_tray_cd">සැසඳීම් තැටිය, කාර් %2$d න් %1$d ක් තෝරා ඇත</string>
+    <string name="compare_pick_more">තවත් එකක් තෝරන්න</string>
+    <string name="listing_share_whatsapp_short">WhatsApp</string>
     <string name="home_live_listings">සජීවී දැන්වීම්</string>
     <string name="home_data_fresh">පැයකට පෙර දත්ත</string>
     <string name="home_avg_price">සාමාන්‍ය මිල</string>

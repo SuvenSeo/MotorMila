@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -220,9 +221,12 @@ private fun PlanCard(
 ) {
     val c = MmColors.current
     val type = MmType.current
+    // Highlighted plan = solid surface + brand ring (was a translucent brand
+    // wash that rendered as a heavy saturated-blue slab under the card shadow).
     MmCard(
-        Modifier.fillMaxWidth(),
-        color = if (highlighted) c.brandContainer.copy(alpha = 0.35f) else null,
+        Modifier
+            .fillMaxWidth()
+            .then(if (highlighted) Modifier.border(1.5.dp, c.brand.copy(alpha = 0.6f), MmShapes.lg) else Modifier),
     ) {
         Text(name.uppercase(), style = type.overline, color = c.brandText)
         Spacer(Modifier.height(MmSpacing.sm))

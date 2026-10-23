@@ -494,7 +494,8 @@ fun MotormilaChoiceChip(
         label = "choice-border",
     )
     val labelColor by animateColorAsState(
-        targetValue = if (selected) MotormilaOnSurface else if (enabled) MotormilaOnSurface else MotormilaSecondaryText,
+        // White on the brand fill (was near-black on blue in light mode — low contrast).
+        targetValue = if (selected) Color.White else if (enabled) MotormilaOnSurface else MotormilaSecondaryText,
         animationSpec = appleTween(200),
         label = "choice-label",
     )
@@ -563,11 +564,13 @@ fun MotormilaPrimaryButton(
         modifier = modifier
             .then(if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier)
             .heightIn(min = 48.dp)
-            .then(if (fillMaxWidth) Modifier else Modifier.padding(horizontal = 16.dp))
             .applePress(interaction, pressedScale = 0.97f)
             .clip(CircleShape)
             .background(if (canClick) MotormilaPrimary else MotormilaPrimary.copy(alpha = 0.35f))
             .clickable(enabled = canClick, interactionSource = interaction, indication = null, onClick = onClick)
+            // Inner padding: the label never touches the pill edge (was an outer
+            // margin, so wrap-content buttons hugged their text — "Browse listings").
+            .padding(horizontal = 20.dp, vertical = 6.dp)
             .semantics { contentDescription = label },
         contentAlignment = Alignment.Center,
     ) {
@@ -595,6 +598,7 @@ fun MotormilaPrimaryButton(
                 fontSize = 14.sp,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
         }
     }
@@ -617,6 +621,7 @@ fun MotormilaGhostButton(
             .clip(CircleShape)
             .border(1.dp, MotormilaGlassBorder, CircleShape)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 6.dp)
             .semantics { contentDescription = label },
         contentAlignment = Alignment.Center,
     ) {
@@ -635,6 +640,9 @@ fun MotormilaGhostButton(
                 color = MotormilaOnSurface,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
         }
     }
@@ -764,7 +772,7 @@ fun MotormilaMetricTile(
         )
         if (!note.isNullOrBlank()) {
             Spacer(Modifier.height(2.dp))
-            Text(note, fontSize = 11.sp, color = MotormilaSecondaryText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(note, fontSize = 11.sp, lineHeight = 14.sp, color = MotormilaSecondaryText, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -798,7 +806,7 @@ fun MotormilaMetricTile(
         valueContent()
         if (!note.isNullOrBlank()) {
             Spacer(Modifier.height(2.dp))
-            Text(note, fontSize = 11.sp, color = MotormilaSecondaryText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(note, fontSize = 11.sp, lineHeight = 14.sp, color = MotormilaSecondaryText, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }
 }

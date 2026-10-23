@@ -27,6 +27,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.automirrored.filled.CompareArrows
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -92,6 +96,9 @@ fun ListingCard(
     modifier: Modifier = Modifier,
     showDeal: Boolean = true,
     sharedElementModifier: Modifier = Modifier,
+    compareSelected: Boolean? = null,
+    compareEnabled: Boolean = true,
+    onCompareToggle: (() -> Unit)? = null,
 ) {
     val c = MmColors.current
     val t = MmType.current
@@ -136,6 +143,11 @@ fun ListingCard(
         contentPadding = PaddingValues(0.dp),
         modifier = modifier
             .fillMaxWidth()
+            // Selected for compare: a brand ring on the whole card, so the state
+            // reads at a glance in the grid (iOS selection style).
+            .then(
+                if (compareSelected == true) Modifier.border(2.dp, c.brand, lk.motormila.app.ui.theme.MmShapes.lg) else Modifier,
+            )
             .semantics(mergeDescendants = false) { contentDescription = "${listing.displayName}, $priceText" },
     ) {
         Box {
@@ -184,6 +196,15 @@ fun ListingCard(
                     .align(Alignment.TopEnd)
                     .padding(4.dp),
             )
+            if (compareSelected != null && onCompareToggle != null) {
+                CompareToggle(
+                    selected = compareSelected,
+                    enabled = compareEnabled || compareSelected,
+                    listingName = listing.displayName,
+                    onToggle = onCompareToggle,
+                    modifier = Modifier.align(Alignment.BottomEnd),
+                )
+            }
         }
         Column(Modifier.padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 14.dp)) {
             Text(
@@ -209,6 +230,67 @@ fun ListingCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+        }
+    }
+}
+
+/**
+ * Compare toggle that lives on the card photo's bottom-end corner (was a
+ * detached chip row floating between cards). Scrim pill like the save button;
+ * brand-filled with a check once the car is in the compare tray. 48dp touch
+ * target, label capped at 1.15x so it never wraps on the photo.
+ */
+@Composable
+private fun CompareToggle(
+    selected: Boolean,
+    enabled: Boolean,
+    listingName: String,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val c = MmColors.current
+    val label = stringResource(if (selected) R.string.compare_added else R.string.compare_add)
+    val cd = stringResource(if (selected) R.string.compare_remove_cd else R.string.compare_add_cd, listingName)
+    Box(
+        modifier
+            .heightIn(min = 48.dp)
+            .clip(RoundedCornerShape(percent = 50))
+            .clickable(
+                enabled = enabled,
+                role = androidx.compose.ui.semantics.Role.Checkbox,
+                onClickLabel = cd,
+                onClick = onToggle,
+            )
+            .padding(horizontal = 8.dp, vertical = 8.dp)
+            .semantics { contentDescription = cd },
+        contentAlignment = Alignment.Center,
+    ) {
+        lk.motormila.app.ui.theme.CappedFontScale(max = 1.15f) {
+            Row(
+                Modifier
+                    .graphicsLayer { alpha = if (enabled) 1f else 0.5f }
+                    .clip(RoundedCornerShape(percent = 50))
+                    .background(if (selected) c.brand else Color(0x99000000))
+                    .padding(start = 8.dp, end = 10.dp, top = 5.dp, bottom = 5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = if (selected) Icons.Filled.Check else Icons.AutoMirrored.Filled.CompareArrows,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(14.dp),
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = label,
+                    color = Color.White,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    softWrap = false,
+                )
+            }
         }
     }
 }

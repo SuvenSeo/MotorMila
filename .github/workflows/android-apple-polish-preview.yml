@@ -140,7 +140,7 @@ jobs:
           - { lang: en, theme: dark, font: "1.0", subset: "" }
           - { lang: si, theme: light, font: "1.0", subset: "" }
           - { lang: si, theme: dark, font: "1.0", subset: "" }
-          - { lang: en, theme: light, font: "2.0", subset: "home,search,detail,detail_scrolled,settings,profile,tools,sign_in,valuation,watchlist" }
+          - { lang: en, theme: light, font: "2.0", subset: "home,search,search_compare_tray,search_compare_tray_scrolled,compare_from_tray,compare_from_tray_scrolled,compare_removed,detail,detail_scrolled,settings,profile,tools,sign_in,valuation,watchlist,pricing,alerts,price_index" }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/download-artifact@v4
