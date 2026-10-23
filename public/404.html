@@ -22,7 +22,7 @@
       body { margin: 0; min-height: 100vh; background: var(--ink); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; padding: 24px; }
       main { width: 100%; max-width: 560px; }
       .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; font-weight: 700; letter-spacing: -0.01em; }
-      .brand img { width: 32px; height: 32px; }
+      .brand img { display: block; width: auto; height: 28px; }
       h1 { margin: 28px 0 8px; font-size: 28px; line-height: 1.2; letter-spacing: -0.02em; }
       p { margin: 0 0 20px; color: var(--muted); }
       form { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -37,8 +37,10 @@
   <body>
     <main>
       <a class="brand" href="/" aria-label="MotorMila home">
-        <img src="/logo-mark.png" alt="" width="32" height="32" />
-        MotorMila
+        <picture>
+          <source srcset="/logo-wordmark-light.svg" media="(prefers-color-scheme: light)" />
+          <img src="/logo-wordmark-dark.svg" alt="MotorMila" width="167" height="28" />
+        </picture>
       </a>
       <h1>Page not found</h1>
       <p>We couldn't find that page. It may have moved, or the ad may have been removed. Search for the car instead:</p>

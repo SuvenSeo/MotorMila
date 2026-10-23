@@ -143,19 +143,18 @@ export function AppFooter() {
               className="group inline-flex items-center no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               aria-label={t("footer.homeAria", "Go to Motormila home")}
             >
-              <img
-                src="/logo.png"
-                alt=""
-                width={40}
-                height={40}
-                className="h-10 w-10 shrink-0 rounded-[22%] object-cover shadow-sm ring-1 ring-white/15"
-                decoding="async"
-              />
-              <span className="flex flex-col leading-none">
-                <span className="font-display text-[17px] font-bold tracking-[-0.03em] text-white">
-                  Motor<span className="text-[#3D94FF]">mila</span>
-                </span>
-                <span className="mt-1.5 text-[10px] font-medium tracking-[-0.005em] text-white/45">
+              <span className="flex flex-col items-start leading-none">
+                {/* Footer is always dark: fixed lockup with light lettering. */}
+                <img
+                  src="/logo-wordmark-dark.svg"
+                  alt="MotorMila"
+                  width={167}
+                  height={28}
+                  className="block h-7 w-auto max-w-none"
+                  draggable={false}
+                  decoding="async"
+                />
+                <span className="mt-2 text-[10px] font-medium tracking-[-0.005em] text-white/45">
                   {t("footer.tagline", "Market Intelligence")}
                 </span>
               </span>
