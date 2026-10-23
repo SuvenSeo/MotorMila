@@ -935,10 +935,12 @@
       linear-gradient(180deg, rgba(255, 248, 240, 0.35) 0%, transparent 30%, hsl(var(--background) / 0.92) 100%);
   }
 
+  /* Centered home hero keeps its dark vignette in light mode too: the copy is
+     white on the photo in both themes. */
   .theme-light .hero-cinematic--centered .hero-cinematic__vignette {
     background:
-      radial-gradient(ellipse 70% 62% at 50% 46%, transparent 22%, rgba(255, 248, 240, 0.2) 100%),
-      linear-gradient(180deg, rgba(255, 248, 240, 0.38) 0%, transparent 30%, hsl(var(--background) / 0.92) 100%);
+      radial-gradient(ellipse 70% 62% at 50% 46%, rgba(6, 4, 3, 0.36) 0%, transparent 58%),
+      linear-gradient(180deg, rgba(6, 4, 3, 0.34) 0%, transparent 26%, rgba(6, 4, 3, 0.76) 100%);
   }
 
   .theme-light .hero-cinematic__grain { opacity: 0.025; }

@@ -203,7 +203,7 @@ function heroCopyAlignClass(align: HeroAlign, hideSideSignals: boolean): string 
     case "center":
       return cn(
         "mx-auto flex w-full max-w-3xl flex-col items-center text-center",
-        !hideSideSignals && "xl:max-w-2xl 2xl:max-w-3xl",
+        !hideSideSignals && "xl:max-w-3xl",
       );
     default: {
       const _exhaustive: never = align;
@@ -222,7 +222,7 @@ export default function Dashboard() {
   // Guests and free users get normal pagination (no 12-result cap).
   const listingFilters = filters;
   const [noResultsAlertStatus, setNoResultsAlertStatus] = useState<AlertStatus>("idle");
-  const { t, resolvedTheme } = useAppPreferences();
+  const { t } = useAppPreferences();
   const queryClient = useQueryClient();
   const liveMarketSnapshot = useLiveMarketSnapshot();
   // Use the persisted compare tray (localStorage) so selections survive navigation.
@@ -665,7 +665,10 @@ export default function Dashboard() {
   const isPriceUnavailableMode = filters.price_availability === "unavailable";
   const listingFreshnessAt = liveMarketSnapshot?.latest_listing_at ?? stats?.last_updated ?? null;
   const { variant: heroVariant, setVariantId: setHeroVariantId, showPicker: showHeroLab } = useHeroVariantLab();
-  const heroFilmTone = resolvedTheme === "light" ? "light" : (heroVariant.tone === "light" ? "light" : "cinematic");
+  // The hero copy always sits on the photo, so it is always white over a dark
+  // scrim, in light and dark themes alike (black display type on a bright
+  // aerial photo failed contrast in light mode). Only popovers follow the theme.
+  const heroFilmTone: "cinematic" | "light" = heroVariant.tone === "light" ? "light" : "cinematic";
   const heroCentered = heroVariant.align === "center";
   const heroAlignClass = heroCopyAlignClass(heroVariant.align, heroVariant.hideSideSignals);
   const heroCopyTone =
@@ -678,19 +681,18 @@ export default function Dashboard() {
       : "text-foreground/80 [text-shadow:0_1px_14px_hsl(var(--background)/0.45)]";
   const heroSearchShellClass =
     heroFilmTone === "cinematic"
-      ? "border-border bg-foreground/10 shadow-soft-xl focus-within:border-primary/55 focus-within:shadow-gold-glow"
+      ? "border-white/20 bg-black/35 shadow-soft-xl focus-within:border-primary/55 focus-within:shadow-gold-glow"
       : "border-border/80 bg-card shadow-soft-lg focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20";
   const heroInputClass =
     heroFilmTone === "cinematic"
       ? "h-14 min-w-0 flex-1 bg-transparent text-body font-semibold text-white placeholder:text-white/45 outline-none [&::-webkit-search-cancel-button]:hidden"
       : "h-14 min-w-0 flex-1 bg-transparent text-body font-semibold text-foreground placeholder:text-muted-foreground outline-none [&::-webkit-search-cancel-button]:hidden";
+  // The suggestions popover is a bg-card surface, so its rows follow the theme.
   const heroPopularBtnClass =
-    heroFilmTone === "cinematic"
-      ? "w-full rounded-2xl px-3 py-2.5 text-left text-footnote font-medium text-white/85 transition-colors hover:bg-foreground/10"
-      : "w-full rounded-2xl px-3 py-2.5 text-left text-footnote font-medium text-foreground transition-colors hover:bg-surface";
+    "w-full rounded-2xl px-3 py-2.5 text-left text-footnote font-medium text-foreground transition-colors hover:bg-surface";
   const heroKickerClass =
     heroFilmTone === "cinematic"
-      ? "border-border bg-foreground/10 text-white/88"
+      ? "border-white/20 bg-black/35 text-white/90"
       : "border-border bg-card text-foreground";
 
   // ═════════════════════════════════════════════════════════════════
@@ -974,7 +976,7 @@ export default function Dashboard() {
                           heroFilmTone === "cinematic"
                             ? active
                               ? "border-transparent text-white"
-                              : "border-border bg-black/30 text-white/90 hover:bg-foreground/15"
+                              : "border-white/20 bg-black/30 text-white/90 hover:bg-black/45"
                             : active
                               ? "border-transparent text-primary-bright"
                               : "border-border bg-card/80 text-foreground hover:border-primary/30",
