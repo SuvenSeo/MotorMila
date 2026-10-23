@@ -1,29 +1,24 @@
-import { lazy, Suspense } from "react";
 import { formatLkrFull } from "@/lib/price";
-
-// number-flow is only pulled in on the detail page, after first paint; the
-// formatted text is the fallback (and what reduced-motion users see animate to).
-const NumberFlow = lazy(() => import("@number-flow/react"));
+import { AnimatedNumber } from "@/components/ui/animated-number";
 
 /**
  * Full asking price ("Rs 7,250,000", canonical detail-page format) that rolls
  * digits when the price changes (e.g. hopping between similar listings).
+ * Built on the kit's AnimatedNumber: tabular figures, the motion tokens, and
+ * instant under reduced motion / low data.
  */
 export function AnimatedPrice({ priceLkr, className }: { priceLkr: number; className?: string }) {
-  const fallback = <span className={className}>{formatLkrFull(priceLkr)}</span>;
-  if (!Number.isFinite(priceLkr) || priceLkr <= 0) return fallback;
+  if (!Number.isFinite(priceLkr) || priceLkr <= 0) return <span className={className}>{formatLkrFull(priceLkr)}</span>;
   return (
-    <Suspense fallback={fallback}>
-      <span className={className} aria-label={formatLkrFull(priceLkr)}>
-        <NumberFlow
+    <span className={className} aria-label={formatLkrFull(priceLkr)}>
+      <span aria-hidden>
+        <AnimatedNumber
           value={Math.round(priceLkr)}
           prefix="Rs "
           locales="en-US"
           format={{ maximumFractionDigits: 0, useGrouping: true }}
-          respectMotionPreference
-          aria-hidden
         />
       </span>
-    </Suspense>
+    </span>
   );
 }

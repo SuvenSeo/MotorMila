@@ -58,6 +58,12 @@ import { computeDealBadge, DEAL_TEXT_CLASSES } from '@/lib/dealBadge';
 import { detectListingLeaseTakeover } from '@/lib/leaseTakeover';
 import { estimateListingMonthly, formatMonthlyLkr } from '@/lib/listingFinance';
 import { DealBadge, type DealWhyData } from '@/components/listing/DealBadge';
+import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button-variants';
+import { Card, cardVariants } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Chip } from '@/components/ui/chip';
+import { cn } from '@/lib/utils';
 import { BeforeYouPayStrip } from '@/components/listing/BeforeYouPayStrip';
 import { ListingStickyBar } from '@/components/listing/ListingStickyBar';
 import { SimilarCarsStrip } from '@/components/listing/SimilarCarsStrip';
@@ -266,7 +272,7 @@ export default function ListingDetail() {
           <p className="text-caption font-medium text-muted-foreground">{t("listing.unavailable", "Unavailable")}</p>
           <h1 className="mt-2 font-display text-title3 font-semibold text-foreground">{t("listing.notFound", "Listing not found")}</h1>
           <p className="mt-2 max-w-sm text-caption text-muted-foreground">{t("listing.notFoundBody", "The source may have removed it or the ID is no longer in the live index.")}</p>
-          <button type="button" onClick={() => navigate('/')} className="mt-5 rounded-full bg-primary px-5 py-2.5 text-caption font-semibold text-primary-foreground shadow-soft transition-ui hover:bg-primary/95 hover:shadow-soft-lg active:scale-[0.97]">{t("listing.returnInventory", "Return to inventory")}</button>
+          <Button type="button" className="mt-5" onClick={() => navigate('/')}>{t("listing.returnInventory", "Return to inventory")}</Button>
         </div>
       </div>
     );
@@ -360,9 +366,9 @@ export default function ListingDetail() {
 
   // ── Blocks (some render in both the mobile flow and the desktop sidebar) ──
   const renderPriceBlock = (placement: 'mobile' | 'desktop') => (
-    <div className={placement === 'desktop' ? 'rounded-[1.75rem] border border-border bg-card p-5 shadow-soft-lg' : ''}>
+    <div className={placement === 'desktop' ? cn(cardVariants({ padding: "md" }), "shadow-e2") : ''}>
       <h2 className="text-caption font-semibold text-muted-foreground">{t("listing.askingPrice", "Asking price")}</h2>
-      <p className={`num mt-1 font-extrabold leading-[1.05] tracking-tight text-foreground ${placement === 'desktop' ? 'text-large' : 'text-title1'}`}>
+      <p className={`num mt-1 font-display font-semibold leading-[1.05] tracking-tight text-foreground ${placement === 'desktop' ? 'text-large' : 'text-title1'}`}>
         {hasPrice ? <AnimatedPrice priceLkr={listingPrice} /> : t("listing.unlisted", "Unlisted")}
       </p>
       {deal.kind !== 'none' && (
@@ -395,19 +401,19 @@ export default function ListingDetail() {
       )}
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
         {priceCut && (
-          <span
-            className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-1 text-caption font-semibold text-foreground"
+          <Badge
+            className="gap-1"
             title={t("listing.priceCutTitle", "Downward price moves since Motormila first saw this ad")}
           >
             <TrendingDown aria-hidden className="h-3 w-3 text-primary" />
             {t("listing.priceCut", "Price cut {n}×", { n: priceCut.cut_count })}
             {priceCut.change_pct !== null && priceCut.change_pct < 0 && <span className="num">({priceCut.change_pct}%)</span>}
-          </span>
+          </Badge>
         )}
         {seenOnSites && (
-          <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-1 text-caption font-semibold text-foreground num">
+          <Badge className="num gap-1">
             <Layers aria-hidden className="h-3 w-3" /> {t("listingCard.onSites", "On {n} sites", { n: seenOnSites })}
-          </span>
+          </Badge>
         )}
         <SellSpeedChip listing={listing} />
         <AdvertHealthChip listing={listing} />
@@ -422,7 +428,7 @@ export default function ListingDetail() {
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => trackEvent("contact_on_source_clicked", { listing_id: listing.id, source: listing.source, placement: "sidebar" })}
-              className="inline-flex h-12 w-full items-center justify-center gap-1.5 rounded-2xl bg-primary px-4 text-body font-bold text-primary-foreground no-underline shadow-soft transition-ui hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.97]"
+              className={cn(buttonVariants({ size: "lg" }), "w-full no-underline")}
             >
               {t("listing.viewOnSource", "View on {source}", { source: attribution.sourceName })}
               <ExternalLink aria-hidden className="h-4 w-4" />
@@ -440,7 +446,7 @@ export default function ListingDetail() {
   );
 
   const renderFmvCard = () => (
-    <section aria-labelledby="fmv-card-title" className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
+    <section aria-labelledby="fmv-card-title" className={cardVariants({ padding: "md" })}>
       <h2 id="fmv-card-title" className="text-caption font-semibold text-muted-foreground">{t("listing.typicalPrice", "Typical asking price")}</h2>
       {lease.isLeaseTakeover ? (
         <p className="mt-2 text-footnote leading-relaxed text-muted-foreground">
@@ -469,15 +475,10 @@ export default function ListingDetail() {
               fmvLkr={fmvSummary.fmv_lkr}
               updatedAt={fmvDetail?.updated_at}
             />
-            <button
-              type="button"
-              onClick={handleComparePin}
-              aria-pressed={isPinnedForCompare(Number(listing.id))}
-              className="inline-flex min-h-[32px] items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-caption font-semibold text-primary-bright transition-ui hover:bg-primary/15 active:scale-[0.97]"
-            >
-              <Scale aria-hidden className="h-3 w-3" />
+            <Chip onClick={handleComparePin} selected={isPinnedForCompare(Number(listing.id))}>
+              <Scale aria-hidden />
               {isPinnedForCompare(Number(listing.id)) ? t("listing.pinned", "Pinned ✓") : t("listing.addToCompare", "Add to compare")}
-            </button>
+            </Chip>
           </div>
           <p className="mt-2 text-caption text-muted-foreground">
             {t("deal.whyAsking", "These are asking prices on listing sites, not sale prices.")}
@@ -497,7 +498,7 @@ export default function ListingDetail() {
       <UpgradePrompt title={freePlanCopy.scoresTitle} body={freePlanCopy.scoresBody} variant="strip" />
     ) : null;
 
-  const actionBtn = "inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:text-foreground hover:bg-surface active:scale-[0.97]";
+  const actionBtn = cn(buttonVariants({ variant: "secondary", size: "icon" }), "text-muted-foreground hover:text-foreground [&_svg]:size-4");
 
   // ── Render ─────────────────────────────────────────────────
   return (
@@ -511,9 +512,9 @@ export default function ListingDetail() {
       <motion.section variants={revealItem} className="relative z-10 -mt-[var(--nav-offset)] border-b border-border bg-card/30 pt-[var(--nav-offset)]">
         <div className="mx-auto max-w-[1320px] px-5 py-6 sm:px-6 sm:py-8">
           <div className="mb-4 flex items-center justify-between gap-3">
-            <button type="button" onClick={handleBack} className="group inline-flex min-h-[40px] items-center gap-1.5 text-caption font-medium text-muted-foreground transition-colors hover:text-foreground">
-              <ArrowLeft aria-hidden className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" /> {t("common.back", "Back")}
-            </button>
+            <Button type="button" variant="ghost" size="sm" onClick={handleBack} className="group -ml-2 text-muted-foreground">
+              <ArrowLeft aria-hidden className="transition-transform duration-short group-hover:-translate-x-0.5" /> {t("common.back", "Back")}
+            </Button>
             <div className="flex items-center gap-2">
               <button type="button" onClick={handleWhatsAppShare} className={actionBtn} aria-label={t("listing.shareWhatsApp", "Share on WhatsApp")} title={t("listing.shareWhatsApp", "Share on WhatsApp")}>
                 <MessageCircle aria-hidden className="h-4 w-4" />
@@ -541,7 +542,7 @@ export default function ListingDetail() {
           <SnapshotModeNotice className="mb-4 max-w-2xl" />
 
           {listing.is_active === false && (
-            <div className="mb-4 flex max-w-2xl items-start gap-2.5 rounded-3xl border border-deal-caution/25 bg-deal-caution/[0.06] p-3.5">
+            <div className="mb-4 flex max-w-2xl items-start gap-2.5 rounded-card border border-deal-caution/25 bg-deal-caution/10 p-3.5">
               <AlertTriangle aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-deal-caution-text" />
               <div>
                 <p className="text-caption font-bold text-deal-caution-text">{t("listing.possiblySold", "Possibly sold or delisted")}</p>
@@ -571,7 +572,7 @@ export default function ListingDetail() {
           <div className="min-w-0 space-y-6">
 
             {/* 1. Gallery — the car is the hero; overlays stay dark (they sit on the photo) */}
-            <motion.div variants={revealItem} data-listing-gallery className="overflow-hidden rounded-[2rem] border border-border bg-card shadow-soft">
+            <motion.div variants={revealItem} data-listing-gallery className={cn(cardVariants({ variant: "media" }), "rounded-sheet")}>
               <div className="group relative aspect-[16/10] min-h-[220px] overflow-hidden bg-black/40">
                 <ListingImageCarousel
                   images={galleryImages}
@@ -619,13 +620,13 @@ export default function ListingDetail() {
                 <h2 id="key-specs-title" className="text-caption font-semibold text-muted-foreground">{t("listing.keySpecs", "Key specs")}</h2>
                 <dl className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                   {keySpecs.map((s) => (
-                    <div key={s.label} className="flex items-center gap-3 rounded-2xl border border-border bg-card px-3.5 py-3">
+                    <Card key={s.label} padding="none" className="flex items-center gap-3 px-3.5 py-3">
                       <s.icon aria-hidden className="h-4 w-4 shrink-0 text-primary" />
                       <div className="min-w-0">
                         <dt className="text-caption font-medium text-muted-foreground">{s.label}</dt>
-                        <dd className="num truncate text-footnote font-bold leading-tight text-foreground">{s.value}</dd>
+                        <dd className="num truncate text-footnote font-semibold leading-tight text-foreground">{s.value}</dd>
                       </div>
-                    </div>
+                    </Card>
                   ))}
                 </dl>
                 <MileageTrustChip mileageKm={listing.mileage_km} year={listing.year} />
@@ -661,7 +662,7 @@ export default function ListingDetail() {
 
             {/* 7. Finance planner */}
             {hasPrice && (lease.isLeaseTakeover ? (
-              <motion.section {...onScroll} className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
+              <motion.section {...onScroll} className={cardVariants({ padding: "md" })}>
                 <h2 className="text-caption font-semibold text-muted-foreground">{t("listing.ownershipPlanning", "Ownership planning")}</h2>
                 <p className="mt-2 text-footnote leading-relaxed text-muted-foreground">
                   {t("listing.leaseNoFinance", "Finance estimates are hidden: the price on a lease takeover isn't the full price. Ask the seller for the settlement letter from the finance company first.")}
@@ -718,7 +719,7 @@ export default function ListingDetail() {
             })())}
 
             {/* 8. Details */}
-            <motion.div {...onScroll} className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
+            <motion.div {...onScroll} className={cardVariants({ padding: "md" })}>
               <h2 className="mb-3 text-caption font-semibold text-muted-foreground">{t("listing.description", "Description")}</h2>
               <p className="whitespace-pre-wrap text-footnote font-medium leading-[1.8] text-muted-foreground">
                 {listing.description || t("listing.noDescription", "The seller didn't add a description. Open the original ad for full details.")}
@@ -726,7 +727,7 @@ export default function ListingDetail() {
             </motion.div>
 
             {/* Seller — info only; the one contact CTA lives in the price card / sticky bar */}
-            <motion.section {...onScroll} aria-labelledby="seller-title" className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
+            <motion.section {...onScroll} aria-labelledby="seller-title" className={cardVariants({ padding: "md" })}>
               <div className="mb-3 flex items-center gap-2">
                 <ShieldCheck aria-hidden className="h-4 w-4 text-primary" />
                 <h2 id="seller-title" className="text-caption font-semibold text-muted-foreground">{t("listing.sellerInfo", "Seller information")}</h2>
@@ -787,7 +788,7 @@ export default function ListingDetail() {
             {importFuelType === 'electric' && (
               <Link
                 to="/ev-hub"
-                className="flex h-10 items-center justify-center gap-1.5 rounded-2xl border border-border bg-card px-3.5 text-caption font-semibold text-muted-foreground no-underline transition-ui hover:bg-surface hover:text-foreground"
+                className={cn(buttonVariants({ variant: "secondary", size: "md" }), "w-full no-underline")}
               >
                 <PlugZap aria-hidden className="h-3.5 w-3.5" /> {t("listing.chargersNearby", "Charging stations")}
               </Link>

@@ -25,6 +25,12 @@ import { RevealSection } from "@/components/RevealSection";
 import { SourceCredits } from "@/components/SourceCredits";
 import { SectionHeader } from "@/components/SectionHeader";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Chip } from "@/components/ui/chip";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { TrendingDown,
   ArrowRight,
@@ -129,12 +135,15 @@ function HeroWords({ text, still }: { text: string; still: boolean }) {
   );
 }
 
+// First-load entrance: capped stagger (30ms/item, the first ~10 rows) so a
+// long list never makes the last row wait.
 const cardContainerVariants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.02
+      staggerChildren: 0.03,
+      delayChildren: 0.02,
     }
   }
 } as const;
@@ -886,9 +895,9 @@ export default function Dashboard() {
                       enterKeyHint="search"
                       className={heroInputClass}
                     />
-                    <button type="button" onClick={runHeroSearch} className="mr-0.5 h-11 rounded-full bg-primary px-6 text-footnote font-semibold tracking-normal text-white shadow-soft transition-ui hover:bg-primary/95 active:scale-[0.97]">
+                    <Button type="button" onClick={runHeroSearch} size="md" className="mr-0.5 h-11 px-6 text-footnote">
                       {t("common.search", "Search")}
-                    </button>
+                    </Button>
                   </m.div>
 
                   {showHeroPopular ? (
@@ -1018,7 +1027,7 @@ export default function Dashboard() {
                   <span className="inline-block h-4 w-14 animate-pulse rounded bg-foreground/[0.03]" aria-hidden />
                 ) : (
                   <span className="text-footnote font-medium text-muted-foreground num" aria-live="polite">
-                    <FlowNumber value={total} label={total.toLocaleString()} />
+                    <AnimatedNumber value={total} />
                     {!isPriceUnavailableMode && activeFilterLabels.length === 0 ? (
                       <span className="ml-1 text-muted-foreground">priced</span>
                     ) : null}
@@ -1041,36 +1050,42 @@ export default function Dashboard() {
                 priceUnavailable={isPriceUnavailableMode}
                 fullAccess={fullAccess}
               />
-              <button
-                type="button"
+              <Chip
                 onClick={() => setShowMobileFilter(true)}
-                className="inline-flex min-h-11 lg:hidden items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1.5 text-caption font-semibold text-primary-bright transition-colors hover:bg-primary/15 active:scale-[0.97]"
+                className="h-11 lg:hidden"
                 aria-label={t("filter.title", "Filters")}
+                aria-pressed={undefined}
               >
-                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <SlidersHorizontal aria-hidden />
                 {t("filter.title", "Filters")}
                 {activeFilterLabels.length > 0 && (
-                  <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-primary px-1 text-caption font-bold text-white">
-                    {activeFilterLabels.length}
-                  </span>
+                  <Badge variant="solid" className="h-5 min-w-5 justify-center px-1.5">
+                    <AnimatedNumber value={activeFilterLabels.length} />
+                  </Badge>
                 )}
-              </button>
-              <button type="button" onClick={() => setShowSavedListings(true)}
-                className="rounded-full border border-border px-3 py-1.5 text-caption font-medium text-muted-foreground transition-colors hover:border-border hover:text-foreground"
-              >{watchlistIds.length} {t("common.saved", "saved")}</button>
-              <button type="button" onClick={saveCurrentMarketAlert}
-                className="rounded-full border border-primary/15 bg-primary/5 px-3 py-1.5 text-caption font-medium text-primary-bright transition-colors hover:bg-primary/10"
-              >{t("common.saveAlert", "Save alert")}</button>
-              <button type="button" onClick={() => setShowMarketAlerts(true)}
-                className="rounded-full border border-border px-3 py-1.5 text-caption font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >{marketAlerts.length} {t("common.alerts", "alerts")}</button>
-              <div className="hidden items-center gap-0.5 md:flex">
-                <button type="button" onClick={() => setMarketView("grid")} aria-label={t("home.gridView", "Grid view")} aria-pressed={marketView === "grid"}
-                  className={`h-8 w-8 rounded-full border transition-colors flex items-center justify-center ${marketView === "grid" ? "border-border bg-foreground/[0.03] text-foreground" : "border-transparent text-muted-foreground hover:text-muted-foreground"}`}
-                ><LayoutGrid className="h-3.5 w-3.5" /></button>
-                <button type="button" onClick={() => setMarketView("list")} aria-label={t("home.listView", "List view")} aria-pressed={marketView === "list"}
-                  className={`h-8 w-8 rounded-full border transition-colors flex items-center justify-center ${marketView === "list" ? "border-border bg-foreground/[0.03] text-foreground" : "border-transparent text-muted-foreground hover:text-muted-foreground"}`}
-                ><List className="h-3.5 w-3.5" /></button>
+              </Chip>
+              <Chip onClick={() => setShowSavedListings(true)} aria-pressed={undefined}>
+                <AnimatedNumber value={watchlistIds.length} /> {t("common.saved", "saved")}
+              </Chip>
+              <Button type="button" variant="tertiary" size="sm" onClick={saveCurrentMarketAlert}>
+                {t("common.saveAlert", "Save alert")}
+              </Button>
+              <Chip onClick={() => setShowMarketAlerts(true)} aria-pressed={undefined}>
+                <AnimatedNumber value={marketAlerts.length} /> {t("common.alerts", "alerts")}
+              </Chip>
+              <div className="hidden items-center gap-1 md:flex" role="group" aria-label={t("home.viewMode", "View")}>
+                <Chip
+                  onClick={() => setMarketView("grid")}
+                  selected={marketView === "grid"}
+                  aria-label={t("home.gridView", "Grid view")}
+                  className="w-8 justify-center px-0"
+                ><LayoutGrid aria-hidden /></Chip>
+                <Chip
+                  onClick={() => setMarketView("list")}
+                  selected={marketView === "list"}
+                  aria-label={t("home.listView", "List view")}
+                  className="w-8 justify-center px-0"
+                ><List aria-hidden /></Chip>
               </div>
             </div>
           </div>
@@ -1087,23 +1102,23 @@ export default function Dashboard() {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9, transition: { duration: duration.short, ease: ease.accelerate } }}
                     transition={spring.snappy}
-                    className="rounded-full border border-border bg-foreground/[0.03] px-2.5 py-1 text-caption font-medium text-muted-foreground"
+                    className="inline-flex h-7 items-center rounded-full border border-border bg-surface-2 px-2.5 text-caption font-medium text-muted-foreground"
                   >{label}</motion.span>
                 ))}
                 <motion.button key="__clear" layout={!motionStill} transition={spring.snappy} type="button" onClick={() => setFilters({ ...EMPTY_FILTERS })}
-                  className="rounded-full px-2.5 py-1 text-caption font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  className="inline-flex h-7 items-center rounded-full px-2.5 text-caption font-semibold text-primary transition-colors duration-short hover:bg-primary/10 active:scale-[0.97]"
                 >{t("common.clearAll", "Clear all")}</motion.button>
               </AnimatePresence>
             </div>
           )}
 
           {newLiveListingsAvailable && (
-            <div className="mb-5 flex items-center justify-between rounded-2xl border border-primary/15 bg-primary/5 px-4 py-2.5">
-              <span className="text-caption font-semibold text-primary-bright">New listings available</span>
-              <button type="button" onClick={() => { setFilters((p) => ({ ...p, sort: "newest", page: 1 })); setNewLiveListingsAvailable(false); }}
-                className="text-caption font-semibold text-primary-bright transition-colors hover:text-primary-bright"
-              >Refresh</button>
-            </div>
+            <Card padding="none" className="content-in mb-5 flex items-center justify-between border-primary/20 bg-primary/5 px-4 py-2">
+              <span className="text-footnote font-semibold text-primary">{t("home.newListings", "New listings available")}</span>
+              <Button type="button" variant="tertiary" size="sm" onClick={() => { setFilters((p) => ({ ...p, sort: "newest", page: 1 })); setNewLiveListingsAvailable(false); }}>
+                {t("common.refresh", "Refresh")}
+              </Button>
+            </Card>
           )}
 
           <DataFreshnessIndicator
@@ -1133,21 +1148,17 @@ export default function Dashboard() {
                   ))}
                 </div>
               ) : listingsFailed ? (
-                <div className="flex flex-col items-center justify-center gap-3 rounded-[2rem] border border-border bg-surface px-4 py-20 text-center">
+                <Card className="content-in flex flex-col items-center justify-center gap-3 px-4 py-20 text-center">
                   <p className="text-footnote font-semibold text-foreground">
                     {t("home.listingsErrorTitle", "We couldn't load listings just now")}
                   </p>
                   <p className="max-w-sm text-footnote text-muted-foreground">
                     {t("home.listingsErrorBody", "This is usually a short outage on our side. Your filters are kept. Try again in a moment.")}
                   </p>
-                  <button
-                    type="button"
-                    onClick={retryListings}
-                    className="min-h-11 rounded-2xl border border-border bg-card px-5 py-3 text-footnote font-medium text-foreground transition-colors hover:border-primary/30 hover:text-primary-bright"
-                  >
-                    Retry
-                  </button>
-                </div>
+                  <Button type="button" variant="secondary" onClick={retryListings}>
+                    {t("common.retry", "Retry")}
+                  </Button>
+                </Card>
               ) : listings.length === 0 ? (
                 <NoResultsState
                   filters={filters}
@@ -1477,27 +1488,25 @@ export default function Dashboard() {
           <DialogHeader>
             <DialogTitle className="font-display text-callout font-semibold tracking-tight">Market alerts</DialogTitle>
           </DialogHeader>
-          <div className="rounded-2xl border border-border bg-surface p-4">
+          <Card padding="sm" className="bg-surface-2 shadow-none">
             <p className="text-caption font-medium text-muted-foreground">{t("shell.home.currentSearch", "Current search")}</p>
             <p className="mt-1.5 text-footnote font-semibold text-foreground">{currentAlertSummary}</p>
             <div className="mt-3 flex gap-2">
               <Input value={alertPriceInput} onChange={(e) => setAlertPriceInput(e.target.value.replace(/[^\d]/g, ""))} inputMode="numeric" placeholder="Target max price (LKR)" className="h-9 flex-1 rounded-2xl border-border bg-transparent text-body md:text-footnote" />
-              <button type="button" onClick={saveCurrentMarketAlert} className="h-9 rounded-full bg-primary px-4 text-caption font-semibold text-white transition-ui hover:bg-primary/95 active:scale-[0.97]">Save</button>
+              <Button type="button" size="sm" className="h-9" onClick={saveCurrentMarketAlert}>{t("common.save", "Save")}</Button>
             </div>
-          </div>
+          </Card>
           {marketAlerts.length ? (
             <div className="space-y-1.5">
               {marketAlerts.map((alert) => (
-                <div key={alert.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-3">
+                <div key={alert.id} className="flex items-center justify-between gap-3 rounded-card border border-border bg-surface-2 p-3 transition-colors duration-short hover:bg-surface-3">
                   <div className="min-w-0">
                     <p className="truncate text-footnote font-semibold text-foreground">{alert.label}</p>
                     <p className="mt-0.5 text-caption text-muted-foreground">{alert.target_price_lkr ? `Under ${formatPrice(alert.target_price_lkr)}` : t("home.newListingsAvailable", "New listings available")}</p>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <button type="button" onClick={() => { setFilters({ ...(alert.filters as FilterState), sort: alert.filters.sort || DEFAULT_SORT, page: 1 }); setShowMarketAlerts(false); scrollToMarket(); }}
-                      className="h-7 rounded-full border border-primary/15 bg-primary/5 px-2.5 text-caption font-semibold text-primary-bright transition-ui hover:bg-primary/10 active:scale-[0.95]">Open</button>
-                    <button type="button" onClick={() => deleteMarketAlert(alert.id)}
-                      className="h-7 rounded-full border border-border px-2.5 text-caption font-semibold text-muted-foreground transition-ui hover:text-foreground active:scale-[0.95]">Delete</button>
+                    <Button type="button" variant="tertiary" size="sm" onClick={() => { setFilters({ ...(alert.filters as FilterState), sort: alert.filters.sort || DEFAULT_SORT, page: 1 }); setShowMarketAlerts(false); scrollToMarket(); }}>{t("common.open", "Open")}</Button>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => deleteMarketAlert(alert.id)}>{t("common.delete", "Delete")}</Button>
                   </div>
                 </div>
               ))}
@@ -1512,20 +1521,22 @@ export default function Dashboard() {
             <DialogTitle className="font-display text-callout font-semibold tracking-tight">Saved listings</DialogTitle>
           </DialogHeader>
           {savedListingsLoading ? (
-            <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="skeleton-shimmer h-16 rounded-2xl" />)}</div>
+            <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} shape="row" className="h-16" />)}</div>
           ) : savedListings.length ? (
             <div className="space-y-1.5">
               {savedListings.map((listing) => (
-                <div key={listing.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-3">
+                <div key={listing.id} className="flex items-center justify-between gap-3 rounded-card border border-border bg-surface-2 p-3 transition-colors duration-short hover:bg-surface-3">
                   <div className="min-w-0">
                     <p className="truncate text-footnote font-semibold text-foreground">{listing.make} {listing.model} {listing.year || ""}</p>
                     <p className="mt-0.5 text-caption text-muted-foreground">{listing.district || "LK"} · {isReasonableListingPrice(Number(listing.price_lkr || 0)) ? formatPrice(listing.price_lkr) : "N/A"}</p>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <button type="button" onClick={() => toggleWatchlist(listing)} className="h-7 rounded-full border border-primary/15 bg-primary/5 px-2.5 text-caption font-semibold text-primary-bright transition-ui hover:bg-primary/10 active:scale-[0.95]">{t("home.remove", "Remove")}</button>
-                    <Link to={`/listing/${listing.id}`} onClick={() => setShowSavedListings(false)} className="flex h-7 items-center gap-1 rounded-full border border-border px-2.5 text-caption font-semibold text-muted-foreground no-underline transition-ui hover:text-foreground active:scale-[0.95]">
-                      Open <ExternalLink className="h-2.5 w-2.5" />
-                    </Link>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => toggleWatchlist(listing)}>{t("home.remove", "Remove")}</Button>
+                    <Button asChild variant="tertiary" size="sm">
+                      <Link to={`/listing/${listing.id}`} onClick={() => setShowSavedListings(false)} className="no-underline">
+                        {t("common.open", "Open")} <ExternalLink aria-hidden />
+                      </Link>
+                    </Button>
                   </div>
                 </div>
               ))}
