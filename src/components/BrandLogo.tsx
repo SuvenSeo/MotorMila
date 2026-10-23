@@ -4,6 +4,7 @@ type BrandLogoSize = "default" | "compact" | "nav";
 
 type BrandLogoProps = {
   className?: string;
+  /** Extra classes for the mark image (mark-only mode) or the wordmark images. */
   markClassName?: string;
   showWordmark?: boolean;
   showTagline?: boolean;
@@ -11,35 +12,28 @@ type BrandLogoProps = {
   /** @deprecated Use `size="compact"` instead. */
   compact?: boolean;
   size?: BrandLogoSize;
-  /** Use the full stacked lockup image instead of mark + text. */
+  /** Use the full stacked lockup image instead of the wordmark. */
   lockup?: boolean;
 };
 
+/*
+ * Fixed Motormila lockup (brand v2, 2026-10-23): the blue M *is* the first
+ * letter of "Motormila". Open Sans Bold lettering at −3.5 % tracking, the M at
+ * 1.035 × cap height sitting on the baseline, M→o gap 0.133 em. Shipped as
+ * outlined SVGs (crisp at any DPR, no web-font dependency), swapped by theme.
+ * Aspect ratio of the SVG viewBox: 10157.2 × 1700.
+ */
+const WORDMARK_LIGHT = "/logo-wordmark-light.svg"; // dark lettering, for the light theme
+const WORDMARK_DARK = "/logo-wordmark-dark.svg"; // light lettering, for the dark theme
+const WORDMARK_ASPECT = 10157.2 / 1700;
+
 const BRAND_SIZE_STYLES = {
-  default: {
-    mark: "h-10 w-10",
-    markPx: 40,
-    text: "text-lg",
-    gap: "gap-2.5",
-    useCompactMark: false,
-  },
-  compact: {
-    mark: "h-8 w-8",
-    markPx: 32,
-    text: "text-base",
-    gap: "gap-2.5",
-    useCompactMark: true,
-  },
-  nav: {
-    mark: "h-11 w-11 sm:h-12 sm:w-12",
-    markPx: 48,
-    text: "text-lg sm:text-xl",
-    gap: "gap-2.5 sm:gap-3",
-    useCompactMark: true,
-  },
+  default: { wordmark: "h-7", wordmarkPx: 28, mark: "h-10 w-10", markPx: 40 },
+  compact: { wordmark: "h-6", wordmarkPx: 24, mark: "h-8 w-8", markPx: 32 },
+  nav: { wordmark: "h-6 sm:h-7", wordmarkPx: 28, mark: "h-9 w-9", markPx: 36 },
 } as const;
 
-/** Motormila mark + Motor/mila wordmark lockup (official brand assets). */
+/** Motormila wordmark lockup (official brand assets). */
 export function BrandLogo({
   className,
   markClassName,
@@ -62,59 +56,51 @@ export function BrandLogo({
   }
 
   const resolvedSize = size ?? (compact ? "compact" : "default");
-  const brandSize = BRAND_SIZE_STYLES[resolvedSize];
-  const { mark, markPx, text, gap, useCompactMark } = brandSize;
+  const { wordmark, wordmarkPx, mark, markPx } = BRAND_SIZE_STYLES[resolvedSize];
+
+  if (!showWordmark) {
+    return (
+      <img
+        src="/logo-mark.svg"
+        alt="MotorMila"
+        width={markPx}
+        height={markPx}
+        className={cn(mark, "shrink-0 object-contain", markClassName, className)}
+        decoding="async"
+      />
+    );
+  }
+
+  const wordmarkWidth = Math.round(wordmarkPx * WORDMARK_ASPECT);
+  const imgClass = cn(wordmark, "block w-auto max-w-none shrink-0 select-none", markClassName);
 
   return (
-    <span className={cn("inline-flex items-center", gap, className)}>
-      {useCompactMark ? (
+    <span className={cn("inline-flex min-w-0 flex-col items-start leading-none", className)}>
+      <span role="img" aria-label="MotorMila" className="brand-wordmark-lockup inline-flex">
         <img
-          src="/logo.png"
+          src={WORDMARK_LIGHT}
           alt=""
-          width={markPx}
-          height={markPx}
-          className={cn(mark, "shrink-0 rounded-[22%] object-cover shadow-sm ring-1 ring-foreground/10", markClassName)}
+          aria-hidden="true"
+          width={wordmarkWidth}
+          height={wordmarkPx}
+          className={cn(imgClass, "dark:hidden")}
+          draggable={false}
           decoding="async"
         />
-      ) : (
-        <>
-          <img
-            src="/logo-mark-light.webp"
-            alt=""
-            width={markPx}
-            height={markPx}
-            className={cn(mark, "shrink-0 object-contain dark:hidden", markClassName)}
-            decoding="async"
-          />
-          <img
-            src="/logo-mark.webp"
-            alt=""
-            width={markPx}
-            height={markPx}
-            className={cn(
-              mark,
-              "hidden shrink-0 object-contain dark:block",
-              markClassName,
-            )}
-            decoding="async"
-          />
-        </>
-      )}
-      {showWordmark && (
-        <span className="brand-wordmark min-w-0 leading-none">
-          <span
-            className={cn(
-              "brand-wordmark block font-display text-foreground",
-              text,
-            )}
-          >
-            Motor<span className="text-primary">mila</span>
-          </span>
-          {showTagline && (
-            <span className="mt-1.5 block max-w-[16rem] truncate text-2xs font-medium tracking-[-0.005em] text-muted-foreground">
-              {tagline}
-            </span>
-          )}
+        <img
+          src={WORDMARK_DARK}
+          alt=""
+          aria-hidden="true"
+          width={wordmarkWidth}
+          height={wordmarkPx}
+          className={cn(imgClass, "hidden dark:block")}
+          draggable={false}
+          decoding="async"
+        />
+      </span>
+      {showTagline && (
+        <span className="mt-1.5 block max-w-[16rem] truncate text-2xs font-medium tracking-[-0.005em] text-muted-foreground">
+          {tagline}
         </span>
       )}
     </span>

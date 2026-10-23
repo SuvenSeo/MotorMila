@@ -15,9 +15,13 @@ export const BRAND = {
   },
   logo: {
     mark: "/logo-mark.png",
+    markSvg: "/logo-mark.svg",
     markLight: "/logo-mark-light.png",
     icon: "/logo.png",
     wordmark: "/logo-wordmark.png",
+    /** Fixed lockup, outlined SVG: dark lettering (light theme) / light lettering (dark theme). */
+    wordmarkLightTheme: "/logo-wordmark-light.svg",
+    wordmarkDarkTheme: "/logo-wordmark-dark.svg",
     lockup: "/brand-lockup.png",
     sheet: "/brand-sheet.png",
   },
