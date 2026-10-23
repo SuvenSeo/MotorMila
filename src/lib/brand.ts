@@ -25,7 +25,6 @@ export const BRAND = {
     lockup: "/brand-lockup.png",
     sheet: "/brand-sheet.png",
   },
-  copilot: "Motormila Copilot",
   contactEmail: CONTACT_EMAIL,
   contactMailto: `mailto:${CONTACT_EMAIL}?subject=Motormila%20custom%20pricing`,
   /** Empty unless VITE_CONTACT_PHONE is set; callers hide the link when empty. */

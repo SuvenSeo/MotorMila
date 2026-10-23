@@ -17,8 +17,14 @@ const KEY_RENAMES: Array<readonly [legacy: string, current: string]> = [
   ["autolens.market_alerts.v1", "motormila.market_alerts.v1"],
   ["autolens.feedback.offline.v1", "motormila.feedback.offline.v1"],
   ["autolens.alert_token.v1", "motormila.alert_token.v1"],
-  ["autolens_chat_v2", "motormila_chat_v2"],
-  ["autolens_chat_tooltip_seen", "motormila_chat_tooltip_seen"],
+];
+
+// Leftovers of the retired AI chat widget (history + tooltip flag): dropped.
+const RETIRED_KEYS = [
+  "autolens_chat_v2",
+  "autolens_chat_tooltip_seen",
+  "motormila_chat_v2",
+  "motormila_chat_tooltip_seen",
 ];
 
 export function migrateLegacyStorageKeys(): void {
@@ -37,6 +43,13 @@ export function migrateLegacyStorageKeys(): void {
         storage.removeItem(legacy);
       } catch {
         // Per-key failures (quota, privacy mode) must not block the rest.
+      }
+    }
+    for (const key of RETIRED_KEYS) {
+      try {
+        storage.removeItem(key);
+      } catch {
+        // Ignore: privacy mode / storage errors.
       }
     }
   } catch {

@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Smartphone, X } from "lucide-react";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { DOCK_TEASER_EVENT, claimDockTeaser, getDockTeaser, releaseDockTeaser, setDockExtra } from "@/lib/dock";
+import { setDockExtra } from "@/lib/dock";
 
 const SEEN_KEY = "motormila.mobile_promo_seen";
 /**
@@ -46,8 +46,7 @@ function markSeen() {
  *   so it never comes back on the next visit even if the user ignores it.
  * - Hidden on search (any query string on "/") and task pages.
  * - Never over the hero: it waits until the page is scrolled past the fold
- *   and steps away near the top; it also waits while the chat "Ask Copilot"
- *   bubble owns the bottom corner (one corner teaser at a time).
+ *   and steps away near the top.
  */
 export function MobileAppPromo() {
   const { t } = useAppPreferences();
@@ -63,8 +62,6 @@ export function MobileAppPromo() {
   // Past the fold: never over the hero at the top of a page — the strip only
   // appears once the reader has scrolled, and steps away again near the top.
   const [pastFold, setPastFold] = useState(false);
-  // The bottom corner is free (the chat "Ask Copilot" bubble isn't showing).
-  const [cornerFree, setCornerFree] = useState(() => getDockTeaser() !== "chat");
 
   useEffect(() => {
     if (suppressed) {
@@ -94,28 +91,16 @@ export function MobileAppPromo() {
     };
   }, [pathname]);
 
+  // Becomes visible once due and past the fold.
   useEffect(() => {
-    const sync = () => setCornerFree(getDockTeaser() !== "chat");
-    window.addEventListener(DOCK_TEASER_EVENT, sync);
-    return () => window.removeEventListener(DOCK_TEASER_EVENT, sync);
-  }, []);
-
-  // Becomes visible once due, past the fold and with the corner free.
-  useEffect(() => {
-    if (suppressed || visible || !due || !pastFold || !cornerFree) return;
+    if (suppressed || visible || !due || !pastFold) return;
     setVisible(true);
     markSeen();
-  }, [suppressed, visible, due, pastFold, cornerFree]);
+  }, [suppressed, visible, due, pastFold]);
 
   const shown = !suppressed && visible && pastFold;
 
-  useEffect(() => {
-    if (!shown) return;
-    claimDockTeaser("promo");
-    return () => releaseDockTeaser("promo");
-  }, [shown]);
-
-  // Claim dock height while shown so the chat button / compare tray stack
+  // Claim dock height while shown so the compare tray stacks
   // above the strip instead of overlapping it.
   useLayoutEffect(() => {
     if (!shown) {

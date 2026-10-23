@@ -94,7 +94,7 @@ const MIN_REASONABLE_PRICE_LKR = 100_000;
  * Cookie credentials only work when the API is same-origin.
  * Cross-origin calls to Hugging Face Spaces fail in the browser because HF's
  * edge answers CORS preflight without Access-Control-Allow-Credentials, so
- * `credentials: "include"` makes POSTs (calculator, chat, login) throw
+ * `credentials: "include"` makes POSTs (calculator, login) throw
  * TypeError "Failed to fetch". Bearer auth still works with "omit".
  */
 export function resolveFetchCredentials(apiBase: string = API_BASE): RequestCredentials {
@@ -157,38 +157,6 @@ function refuseLiveApiFallback(context: string): never {
     `Snapshot-only mode: ${context} is unavailable from CDN. ` +
       "Check VITE_SNAPSHOT_BASE_URL / R2 objects, or unset VITE_SNAPSHOT_ONLY.",
   );
-}
-
-export interface ChatMessage {
-  role: "user" | "assistant";
-  content: string;
-}
-
-export interface ChatRequestOptions {
-  model?: string;
-  pageContext?: {
-    route: string;
-    page: string;
-    summary: string;
-  };
-}
-
-export interface ChatListingResult {
-  id: number;
-  title: string;
-  price_lkr: number | null;
-  district?: string | null;
-  deal_score?: number | null;
-  source?: string | null;
-  detail_url?: string | null;
-  external_url?: string | null;
-}
-
-export interface ChatWebSource {
-  title: string;
-  url: string;
-  snippet: string;
-  source: string;
 }
 
 export interface CustomVehicleComparable {
@@ -3732,67 +3700,6 @@ export const claimDealerProfile = async (payload: {
 
 export const getDealerProfile = async (claimToken: string): Promise<DealerClaimProfile> => {
   return fetchJSON<DealerClaimProfile>("/dealer/me", { claim_token: claimToken });
-};
-
-export const sendChatMessage = async (
-  message: string,
-  history: ChatMessage[],
-  options?: ChatRequestOptions,
-) => {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-  const model = String(options?.model || "").trim();
-  const pageContext = options?.pageContext;
-
-  const response = await fetch(new URL(`${API_BASE}/chat`, window.location.origin).toString(), {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      message,
-      history,
-      ...(model ? { model } : {}),
-      ...(pageContext ? { page_context: pageContext } : {}),
-    }),
-    signal: controller.signal,
-  }).finally(() => clearTimeout(timeout));
-
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => "");
-    throw new Error(`API error ${response.status}: ${errorText || response.statusText}`);
-  }
-
-  const data = await response.json().catch(() => ({}));
-  return {
-    response: String(data?.response || data?.message || "No response available"),
-    listings: Array.isArray(data?.listings)
-      ? data.listings
-          .map((row: JsonRecord) => ({
-            id: Number(row?.id),
-            title: String(row?.title || "Listing"),
-            price_lkr: toNumberOrNull(row?.price_lkr),
-            district: row?.district ? String(row.district) : null,
-            deal_score: toNumberOrNull(row?.deal_score),
-            source: row?.source ? String(row.source) : null,
-            detail_url: row?.detail_url ? String(row.detail_url) : null,
-            external_url: row?.external_url ? String(row.external_url) : null,
-          }))
-          .filter((row: ChatListingResult) => Number.isFinite(row.id) && row.id > 0)
-      : [],
-    web_sources: Array.isArray(data?.web_sources)
-      ? data.web_sources
-          .map((row: JsonRecord) => ({
-            title: String(row?.title || ""),
-            url: String(row?.url || ""),
-            snippet: String(row?.snippet || ""),
-            source: String(row?.source || ""),
-          }))
-          .filter((row: ChatWebSource) => Boolean(row.url))
-      : [],
-  };
 };
 
 export const getSourceQuality = async (): Promise<SourceQualityResponse> => {

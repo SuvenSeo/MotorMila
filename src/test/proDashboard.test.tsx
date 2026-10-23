@@ -5,10 +5,6 @@ import { AuthProvider } from "@/lib/authContext";
 import ProDashboard from "@/pages/ProDashboard";
 import type { ProDetailPayload, ProDistrictProfile, ProMarketSnapshot, ProVehicleLane } from "@/types/pro";
 
-vi.mock("@/components/AIChatWidget", () => ({
-  AIChatWidget: () => null,
-}));
-
 vi.mock("@/lib/proReports", () => ({
   customizeProReport: vi.fn((report, options = {}) => ({
     ...report,

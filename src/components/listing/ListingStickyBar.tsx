@@ -18,15 +18,6 @@ interface ListingStickyBarProps {
   source: string;
 }
 
-/*
- * Mobile/tablet (< lg) sticky CTA. Sits above the floating bottom nav (< md)
- * and nudges the chat launcher up while mounted so they never overlap.
- * Scoped <style> keeps that tweak inside this component (no global CSS edit).
- */
-const FLOATING_OFFSET_CSS = `
-@media (max-width: 767px) { .aw-fab-wrapper { bottom: calc(10.5rem + env(safe-area-inset-bottom)) !important; } }
-@media (min-width: 768px) and (max-width: 1023px) { .aw-fab-wrapper { bottom: 6rem !important; } }
-`;
 
 /**
  * Shown once the hero gallery ([data-listing-gallery]) has scrolled away and
@@ -72,7 +63,6 @@ export function ListingStickyBar({ priceLkr, badge, href, sourceName, listingId,
   // in place, the bar would sit at the bottom of the page instead of the viewport.
   const bar = (
     <>
-      <style>{FLOATING_OFFSET_CSS}</style>
       <m.div
         className="fixed inset-x-3 z-[60] lg:hidden bottom-[calc(5.5rem+env(safe-area-inset-bottom))] md:bottom-3"
         role="region"

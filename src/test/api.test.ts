@@ -8,47 +8,12 @@ describe("api module", () => {
     vi.resetModules();
   });
 
-  it("exports sendChatMessage", async () => {
-    const api: typeof import("@/services/api") = await import("@/services/api");
-
-    expect(typeof api.sendChatMessage).toBe("function");
-  });
-
   it("formats prices in Mn", async () => {
     const { formatPrice } = await import("@/services/api");
 
     expect(formatPrice(null)).toBe("N/A");
     expect(formatPrice(925000)).toBe("Rs 0.93 Mn");
     expect(formatPrice(2500000)).toBe("Rs 2.5 Mn");
-  });
-
-  it("posts chat payloads to the backend api", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ response: "ok" }),
-    });
-
-    vi.stubGlobal("fetch", fetchMock);
-
-    const api: typeof import("@/services/api") = await import("@/services/api");
-    const result = await api.sendChatMessage("hello", [
-      { role: "user", content: "previous message" },
-    ]);
-
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0]?.[0]).toContain("/api/v1/chat");
-    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-    });
-    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body)).toEqual({
-      message: "hello",
-      history: [{ role: "user", content: "previous message" }],
-    });
-    expect(result).toEqual({ response: "ok", listings: [], web_sources: [] });
   });
 
   it("omits cookies for cross-origin HF API bases (HF preflight lacks Allow-Credentials)", async () => {
