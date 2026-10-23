@@ -185,6 +185,8 @@ fun ListingDetailScreen(
     viewModel: DetailViewModel = hiltViewModel(),
     /** Opened by tapping a listing card: the whole page is a container transform of that card. */
     fromCard: Boolean = false,
+    /** Opens another listing as a new back-stack entry (Similar rail), so Back returns here. */
+    onOpenListing: ((Int) -> Unit)? = null,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -423,15 +425,22 @@ fun ListingDetailScreen(
                                             title = s.displayName,
                                             imageUrl = s.heroImageUrl,
                                             price = s.formattedPrice(),
-                                            // No onOpenDetail in this route's contract — swap the
-                                            // detail content in place via the VM (same backstack entry).
-                                            onClick = { viewModel.load(s.id) },
+                                            // Push a new Detail entry so Back returns to this listing;
+                                            // without a navigator, swap the content in place.
+                                            onClick = {
+                                                lk.motormila.app.ui.navigation.ListingPreviewCache.put(s)
+                                                onOpenListing?.invoke(s.id) ?: viewModel.load(s.id)
+                                            },
                                         )
                                     }
                                 }
                                 MotormilaGhostButton(
                                     label = "Compare with similar",
-                                    onClick = { onCompare(listOf(listingId) + state.similar.take(2).map { it.id }) },
+                                    onClick = {
+                                        // The listing on screen (may differ from the route id after an in-place swap).
+                                        val shownId = state.listing?.id ?: listingId
+                                        onCompare((listOf(shownId) + state.similar.map { it.id }.filter { it != shownId }.take(2)))
+                                    },
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                                 )
                             }
@@ -2054,9 +2063,14 @@ private fun SimilarMiniCard(title: String, imageUrl: String?, price: String, onC
 }
 
 private fun openUrl(context: Context, url: String) {
+    val intent = Intent(Intent.ACTION_VIEW, url.toUri())
+        .addCategory(Intent.CATEGORY_BROWSABLE)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     try {
-        context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+        context.startActivity(intent)
     } catch (_: Exception) {
+        // No browser / handler: tell the user instead of silently doing nothing.
+        android.widget.Toast.makeText(context, "No app can open this link", android.widget.Toast.LENGTH_SHORT).show()
     }
 }
 

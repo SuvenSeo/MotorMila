@@ -55,4 +55,10 @@
     <string name="filter_from_year">ஆண்டிலிருந்து</string>
     <string name="filter_to_year">ஆண்டு வரை</string>
     <string name="filter_count_loading">எண்ணுகிறது\u2026</string>
+    <!-- Search sort chips -->
+    <string name="sort_newest">புதியவை</string>
+    <string name="sort_best_deal">சிறந்த டீல்</string>
+    <string name="sort_price_asc">விலை ↑</string>
+    <string name="sort_price_desc">விலை ↓</string>
+    <string name="sort_low_km">குறைந்த கி.மீ</string>
 </resources>

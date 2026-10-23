@@ -58,11 +58,11 @@
     <string name="mm_lease_short">Lease takeover</string>
     <string name="mm_home_title">Find a fair price.</string>
     <string name="mm_home_sub">Every car for sale in Sri Lanka, compared with what similar cars ask.</string>
-    <string name="mm_home_sub_count">%1$s cars for sale, compared with what similar cars ask.</string>
-    <string name="mm_home_sub_counts">%1$s cars for sale from %2$d sites, compared with what similar cars ask.</string>
+    <string name="mm_home_sub_count">%1$s vehicles for sale, compared with what similar cars ask.</string>
+    <string name="mm_home_sub_counts">%1$s vehicles for sale from %2$d sites, compared with what similar cars ask.</string>
     <string name="mm_home_search_hint">Make, model or paste a link</string>
     <string name="mm_see_all">See all</string>
-    <string name="mm_stat_listed">Cars listed</string>
+    <string name="mm_stat_listed">Vehicles listed</string>
     <string name="mm_stat_new24h">New today</string>
     <string name="mm_stat_avg_asking">Avg asking</string>
     <string name="mm_pct_below_typical">%1$d%% below typical</string>

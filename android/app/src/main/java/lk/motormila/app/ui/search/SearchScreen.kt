@@ -166,6 +166,8 @@ fun SearchScreen(
     onListingClick: (Int) -> Unit,
     onCompare: (List<Int>) -> Unit,
     viewModel: SearchViewModel = hiltViewModel(),
+    /** A pasted ad / MotorMila link ("Make, model or paste a link") opens the share-import flow. */
+    onOpenSharedUrl: ((String) -> Unit)? = null,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val items = viewModel.paging.collectAsLazyPagingItems()
@@ -381,7 +383,7 @@ fun SearchScreen(
                                         StaggeredItem(index = i, animate = firstReveal) {
                                             ListingCard(
                                                 listing = listing,
-                                                isWatched = false,
+                                                isWatched = state.watchedIds.contains(listing.id),
                                                 onClick = { onListingClick(listing.id) },
                                                 onWatchToggle = { viewModel.toggleWatch(listing) },
                                                 compareSelected = inCompare,
@@ -453,7 +455,14 @@ fun SearchScreen(
             SearchBar(
                 query = state.query,
                 onQueryChange = viewModel::onQueryChange,
-                onSearch = viewModel::onSearch,
+                onSearch = { q ->
+                    val t = q.trim()
+                    if (onOpenSharedUrl != null && Regex("^(https?://|motormila://)", RegexOption.IGNORE_CASE).containsMatchIn(t)) {
+                        onOpenSharedUrl(t)
+                    } else {
+                        viewModel.onSearch(q)
+                    }
+                },
                 suggestions = state.suggestions,
                 recentSearches = state.recentSearches,
                 onSuggestionClick = { onListingClick(it.id) },
@@ -479,7 +488,7 @@ fun SearchScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
-                        .semantics { contentDescription = "Free plan sorts by newest" },
+                        .semantics { contentDescription = "Best-deal sort needs Pro" },
                 ) {
                     Icon(
                         Icons.Filled.Lock,
@@ -701,11 +710,11 @@ internal fun SortFilterRow(
             items(ListingSorts.ALL) { s ->
                 MmChip(
                     label = when (s) {
-                        ListingSorts.NEWEST -> "Newest"
-                        ListingSorts.DEAL_SCORE -> "Best deal"
-                        ListingSorts.PRICE_ASC -> "Price ↑"
-                        ListingSorts.PRICE_DESC -> "Price ↓"
-                        ListingSorts.MILEAGE_ASC -> "Low km"
+                        ListingSorts.NEWEST -> stringResource(R.string.sort_newest)
+                        ListingSorts.DEAL_SCORE -> stringResource(R.string.sort_best_deal)
+                        ListingSorts.PRICE_ASC -> stringResource(R.string.sort_price_asc)
+                        ListingSorts.PRICE_DESC -> stringResource(R.string.sort_price_desc)
+                        ListingSorts.MILEAGE_ASC -> stringResource(R.string.sort_low_km)
                         else -> s
                     },
                     selected = sort == s,

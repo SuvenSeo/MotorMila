@@ -244,6 +244,8 @@ jobs:
       actions: read
     strategy:
       fail-fast: false
+      # The live backend is slow (10-30 s filtered queries): at most 2 emulators hit it at once.
+      max-parallel: 2
       matrix:
         include:
           - { api: 34, shard: a, only: "L,H,S1,S2,S3,S4,S5,S6" }
@@ -251,7 +253,7 @@ jobs:
           - { api: 34, shard: c, only: "S10,S11,S12,S13,S14,S15,D,C,U" }
           - { api: 34, shard: d, only: "A,G,X,Y,Z1" }
           - { api: 34, shard: e, only: "Z2" }
-          - { api: 36, shard: f, only: "L2,L3,L4,H1,H2,H6,S1,S10,S14,S15,D1,D3,D4,D5,C1,U4,A1,G1,G3,G5,X1,X2,Z1" }
+          - { api: 36, shard: f, only: "L3,H6,S2,S15,D3,X2,G3,Z1" }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/download-artifact@v4

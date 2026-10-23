@@ -7,7 +7,7 @@
     <string name="scr_cmp_remove">%1$s ඉවත් කරන්න</string>
     <string name="scr_cmp_count">කාර් %2$d න් %1$d</string>
     <string name="scr_cmp_only_diff">වෙනස්කම් පමණි</string>
-    <string name="scr_cmp_empty_title">කාර් 4ක් දක්වා සසඳන්න</string>
+    <string name="scr_cmp_empty_title">කාර් 3ක් දක්වා සසඳන්න</string>
     <string name="scr_cmp_empty_body">ඕනෑම දැන්වීමක සසඳන්න ඔබා මෙහි එක් කරන්න. විශේෂාංග පැත්තෙන් පැත්තට, හොඳම අගයන් උද්දීපනය කර පෙන්වයි.</string>
     <string name="scr_cmp_browse">දැන්වීම් බලන්න</string>
     <string name="scr_cmp_price">ඉල්ලන මිල</string>
@@ -44,10 +44,10 @@
     <string name="mm_why_body">අපි මෙම ඉල්ලන මිල සමාන දැන්වීම්වල (එකම වර්ගය, මාදිලිය සහ වසර පරාසය) සාමාන්‍ය ඉල්ලන මිල සමඟ සසඳමු. මේවා ඉල්ලන මිල මිස විකුණුම් මිල නොවේ; මඟපෙන්වීමක් ලෙස සලකා සෑම විටම කාරය පරීක්ෂා කරන්න.</string>
     <string name="mm_why_verify">සාමාන්‍යයට වඩා බොහෝ අඩු මිල වංචා රටාවකි. කිසිවක් ගෙවීමට පෙර කාරය සහ එහි ලේඛන පෞද්ගලිකව බලන්න.</string>
     <string name="mm_home_sub">ශ්‍රී ලංකාවේ විකිණීමට ඇති සෑම කාරයක්ම, සමාන කාර් ඉල්ලන මිල සමඟ සසඳා.</string>
-    <string name="mm_home_sub_count">විකිණීමට කාර් %1$s ක්, සමාන කාර් ඉල්ලන මිල සමඟ සසඳා.</string>
-    <string name="mm_home_sub_counts">වෙබ් අඩවි %2$d කින් විකිණීමට කාර් %1$s ක්, සමාන කාර් ඉල්ලන මිල සමඟ සසඳා.</string>
+    <string name="mm_home_sub_count">විකිණීමට වාහන %1$s ක්, සමාන කාර් ඉල්ලන මිල සමඟ සසඳා.</string>
+    <string name="mm_home_sub_counts">වෙබ් අඩවි %2$d කින් විකිණීමට වාහන %1$s ක්, සමාන කාර් ඉල්ලන මිල සමඟ සසඳා.</string>
     <string name="mm_see_all">සියල්ල බලන්න</string>
-    <string name="mm_stat_listed">ලැයිස්තුගත කාර්</string>
+    <string name="mm_stat_listed">ලැයිස්තුගත වාහන</string>
     <string name="mm_stat_new24h">අද අලුත්</string>
     <string name="mm_stat_avg_asking">සාමාන්‍ය ඉල්ලීම</string>
     <string name="mm_pct_below_typical">සාමාන්‍යයට වඩා %1$d%% අඩුයි</string>
@@ -207,7 +207,7 @@
     <string name="calc_depreciation_title">වටිනාකම රඳවා ගැනීමේ වක්‍රය</string>
     <string name="calc_calculate_depreciation">රඳවා ගැනීම ගණනය කරන්න</string>
     <string name="scr_cmp_no_data">මෙම කාර් සඳහා %1$s දත්ත නැත</string>
-    <string name="glass_free_plan_note">නොමිලේ සැලැස්ම · නවතම පළමුව — Pro සමඟ ගනුදෙනු ලකුණු අනුපිළිවෙළ</string>
+    <string name="glass_free_plan_note">නොමිලේ සැලැස්ම · හොඳම ගනුදෙනුව (ගනුදෙනු ලකුණු) අනුපිළිවෙළ Pro සමඟ</string>
     <string name="glass_tab_bar_expand">ටැබ් පෙන්වන්න</string>
     <string name="glass_save">සුරකින්න</string>
     <string name="glass_unsave">සුරැකි ලැයිස්තුවෙන් ඉවත් කරන්න</string>

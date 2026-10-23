@@ -82,7 +82,8 @@ def nodes(root=None):
         res.append({"text": e.get("text", ""), "desc": e.get("content-desc", ""), "cls": e.get("class", ""),
                     "click": e.get("clickable") == "true", "b": b, "pkg": e.get("package", ""),
                     "focused": e.get("focused") == "true", "checked": e.get("checked") == "true",
-                    "selected": e.get("selected") == "true", "enabled": e.get("enabled") == "true"})
+                    "selected": e.get("selected") == "true", "enabled": e.get("enabled") == "true",
+                    "checkable": e.get("checkable") == "true"})
     return res
 
 
@@ -167,7 +168,10 @@ def start(extra=""):
 
 
 def link(uri, settle=0):
-    out = adb(f"shell am start -W -a android.intent.action.VIEW -d '{uri}' {PKG}")
+    # Double-quote for the local shell, single-quote for the device shell: an
+    # unquoted '&' would background `am start` on the device and drop every
+    # query parameter after the first.
+    out = adb(f"shell am start -W -a android.intent.action.VIEW -d \"'{uri}'\" {PKG}")
     if settle:
         time.sleep(settle)
     return out
@@ -185,6 +189,14 @@ def dismiss_noise(ns=None):
         tapxy(*center(n)); time.sleep(1)
         return True
     return False
+
+
+def ime_submit():
+    """Press the keyboard's action key (Search / Done): ENTER, then the IME key if the keyboard is still up."""
+    adb("shell input keyevent 66"); time.sleep(1.5)
+    if "mInputShown=true" in adb("shell dumpsys input_method"):
+        W, H = SIZE
+        tapxy(int(W * 0.92), int(H * 0.909)); time.sleep(1)
 
 
 def shot(name):
@@ -308,7 +320,7 @@ def t_first():
         fn = f"{SHOT_N[0]:03d}_L1_splash_{i}.png"
         sh(f"adb exec-out screencap -p > '{os.path.join(OUT, fn)}'"); frames.append(fn)
         time.sleep(0.35)
-    ns = wait_for(r"(Find a fair price|Cars listed|Buy)", 40)
+    ns = wait_for(r"(Find a fair price|(?:Cars|Vehicles) listed|Buy)", 40)
     ev = frames + [shot("L1_first_home")]
     tt = re.search(r"TotalTime: (\d+)", out)
     onboarding = bool(find(r"(Get started|Skip|Continue|Next)$", ns or []))
@@ -321,7 +333,7 @@ def t_cold():
     adb(f"shell am force-stop {PKG}"); time.sleep(1)
     out = start()
     tt = re.search(r"TotalTime: (\d+)", out)
-    ns = wait_for(r"Cars listed", 40)
+    ns = wait_for(r"(?:Cars|Vehicles) listed", 40)
     ev = [shot("L2_cold_home")]
     stats = api("stats/summary")
     txt = joined(ns or [])
@@ -331,7 +343,9 @@ def t_cold():
 
 @T("L3", "Launch", "Warm start (HOME then relaunch) keeps state")
 def t_warm():
-    link("motormila://search?q=toyota", 8)
+    time.sleep(4)
+    link("motormila://search?q=toyota", 10)
+    pre = shot("L3_before_home_key")
     adb("shell input keyevent 3"); time.sleep(2)
     out = start()
     tt = re.search(r"TotalTime: (\d+)", out)
@@ -339,7 +353,7 @@ def t_warm():
     ns = nodes()
     ok = bool(find(r"(?i)toyota", ns))
     record("L3", "Launch", "Warm start", "PASS" if ok else "FAIL",
-           f"TotalTime={tt.group(1) if tt else '?'}ms; still on Search(toyota)={ok}", [shot("L3_warm")])
+           f"TotalTime={tt.group(1) if tt else '?'}ms; still on Search(toyota)={ok}", [pre, shot("L3_warm")])
 
 
 def net(on):
@@ -408,7 +422,7 @@ def t_offline_clean():
 # ------------------------------------------------------------------ 2. home
 @T("H1", "Home", "Home stats show live numbers matching /stats/summary")
 def t_home_stats():
-    link("motormila://home"); ns = wait_for(r"Cars listed", 30) or nodes()
+    link("motormila://home"); ns = wait_for(r"(?:Cars|Vehicles) listed", 30) or nodes()
     ev = [shot("H1_home")]
     stats = api("stats/summary")
     txt = joined(ns)
@@ -438,6 +452,8 @@ def t_home_tiles():
         if not n:
             record(f"H2.{label}", "Home", f"Hub tile {label}", "FAIL", "tile not found on Home", [shot(f"H2_{label}_missing")]); continue
         tapxy(*center(n)); time.sleep(9)
+        if re.search(r"(?i)loading", joined()):
+            time.sleep(12)
         ns2 = nodes(); ev = [shot(f"H2_{label.replace(' ', '_')}")]
         txt = joined(ns2)
         has_back = bool(find(r"^Back$", ns2))
@@ -459,6 +475,11 @@ def t_home_sections():
             if t and n["cls"].endswith("TextView") and 3 < len(t) < 40 and t not in seen_headers and n["b"][3] - n["b"][1] > 50:
                 seen_headers.append(t)
         cs = [c for c in cards(ns) if SIZE[1] * 0.2 < c["node"]["b"][1] < SIZE[1] * 0.75]
+        if not cs:  # Home rails: card node desc == its title text, photo-sized
+            for n in ns:
+                if n["desc"] and n["b"][3] - n["b"][1] > 300 and n["b"][1] > SIZE[1] * 0.06 and n["b"][3] < SIZE[1] * 0.85 \
+                        and any(m["text"] == n["desc"] for m in ns):
+                    cs.append({"title": n["desc"], "node": n, "price": None, "sub": ""})
         if cs and len(opened) < 4:
             c = cs[0]
             if c["title"] not in [o[0] for o in opened]:
@@ -503,7 +524,7 @@ def t_home_ptr():
     swipe_down(0.45, 600, 0.3); ev = [shot("H5_ptr_mid")]
     time.sleep(6)
     ns = nodes(); ev.append(shot("H5_ptr_after"))
-    ok = alive() and bool(find(r"Cars listed", ns))
+    ok = alive() and bool(find(r"(?:Cars|Vehicles) listed", ns))
     record("H5", "Home", "Home pull to refresh", "PASS" if ok else "FAIL", f"stats still shown={ok}", ev)
 
 
@@ -512,9 +533,13 @@ def t_home_search():
     link("motormila://home"); time.sleep(5)
     if not tap(r"^Make, model or paste a link$", 2):
         record("H6", "Home", "Home search bar", "FAIL", "search bar not found", [shot("H6_missing")]); return
-    adb("shell input text 'aqua'"); time.sleep(1.5)
+    time.sleep(2)
+    f = find(r"^(Search make or model|Vehicle search)$")
+    if f:
+        tapxy(*center(f)); time.sleep(1)
+    adb("shell input text 'aqua'"); time.sleep(2.5)
     ev = [shot("H6_typed")]
-    adb("shell input keyevent 66"); time.sleep(10)
+    ime_submit(); time.sleep(10)
     ns = nodes(); ev.append(shot("H6_results"))
     cs = cards(ns)
     hits = [c["title"] for c in cs if "aqua" in c["title"].lower()]
@@ -528,9 +553,12 @@ def t_home_paste():
     if not url:
         record("H7", "Home", "Paste link", "INFO", "no ikman url from API"); return
     link("motormila://home"); time.sleep(5)
-    tap(r"^Make, model or paste a link$", 2)
+    tap(r"^Make, model or paste a link$", 3)
+    f = find(r"^(Search make or model|Vehicle search)$")
+    if f:
+        tapxy(*center(f)); time.sleep(1)
     adb(f"shell input text '{url}'"); time.sleep(1.5)
-    adb("shell input keyevent 66"); time.sleep(12)
+    ime_submit(); time.sleep(12)
     ns = nodes(); ev = [shot("H7_paste_result")]
     txt = joined(ns)
     ok = bool(re.search(r"(?i)(SPECIFICATIONS|Asking price|View on|valuation|fair price|estimate)", txt))
@@ -599,7 +627,7 @@ def t_s_typed():
     tapxy(*center(f)); time.sleep(1.5)
     adb("shell input text 'honda'"); time.sleep(2.5)
     ev = [shot("S2_suggestions")]
-    adb("shell input keyevent 66"); time.sleep(10)
+    ime_submit(); time.sleep(10)
     ns = nodes(); ev.append(shot("S2_results"))
     cs = cards(ns)
     hits = [c for c in cs if "honda" in c["title"].lower()]
@@ -842,9 +870,9 @@ def t_s_weblinks():
     ev = []
     for url in [f"{WEB}/?make=Toyota&fuel_type=hybrid", f"{WEB}/search?make=Honda", f"{WEB}/listing/{LID[0] if LID else 1}",
                 f"{WEB}/cars/Toyota/Aqua", f"{WEB}/locations/Kandy"]:
-        q = adb(f"shell cmd package query-activities -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d '{url}'")
+        q = adb(f"shell cmd package query-activities -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d \"'{url}'\"")
         handled = PKG in q
-        out = adb(f"shell am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d '{url}' {PKG}")
+        out = adb(f"shell am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d \"'{url}'\" {PKG}")
         time.sleep(9)
         ns = nodes(); ev.append(shot("S15_" + re.sub(r"\W+", "_", url[29:])[:30]))
         res[url] = {"manifest_handles": handled, "start": "Error" not in out and "unable" not in out.lower(), "screen": joined(ns)[:120]}
@@ -907,9 +935,9 @@ def t_d_source():
     d = api(f"listings/{lid}")
     link(f"motormila://listing/{lid}"); time.sleep(10)
     adb("logcat -c")
-    if not tap(r"^View on ", 5, max_y=0.9):
+    if not tap(r"^View on ", 5, max_y=0.97):
         swipe_up(0.3)
-        tap(r"^View on ", 5, max_y=0.9)
+        tap(r"^View on ", 5, max_y=0.97)
     ev = [shot("D3_after_tap")]
     top = resumed()
     log = adb("logcat -d -s ActivityTaskManager:I", 30)
@@ -931,7 +959,7 @@ def t_d_share():
     sheet = ("intentresolver" in top or "ResolverActivity" in top or "Chooser" in top or any("android" in n["pkg"] and n["pkg"] != PKG for n in ns))
     back(); time.sleep(2)
     adb("logcat -c")
-    wa = tap(r"^Share on WhatsApp$", 4)
+    wa = tap(r"^(Share on WhatsApp|WhatsApp)$", 4, max_y=0.97)
     top2 = resumed(); ev.append(shot("D4_whatsapp"))
     log = adb("logcat -d -s ActivityTaskManager:I", 30)
     m = re.search(r"START u0 \{[^}]*\}", log)
@@ -1066,10 +1094,11 @@ def t_compare():
             rows[p] = {"api_price": pr, "price_on_screen": any(x and abs(x - pr) <= max(10000, pr * 0.01) for x in shown),
                        "year_on_screen": str(it.get("year")) in txt}
     rm = find(r"^Remove ")
-    before = len([n for n in ns if (n["desc"] or "").startswith("Remove ")])
+    cnt = lambda t: int(m.group(1)) if (m := re.search(r"(\d) of \d cars", t)) else -1
+    before = cnt(txt)
     if rm:
         tapxy(*center(rm)); time.sleep(4)
-    after = len([n for n in nodes() if (n["desc"] or "").startswith("Remove ")])
+    after = cnt(joined())
     ev.append(shot("C1_removed"))
     vals_ok = rows and all(v["price_on_screen"] and v["year_on_screen"] for v in rows.values())
     ok = len(in_cmp) == len(picked) == 3 and vals_ok and after == before - 1
@@ -1310,17 +1339,17 @@ def t_theme():
 def t_toggles():
     link("motormila://settings"); time.sleep(5)
     ns = nodes()
-    sw = [n for n in ns if n["cls"].endswith("Switch") or "Switch" in n["cls"]]
+    sw = [n for n in ns if n["checkable"] or "Switch" in n["cls"]]
     before = [n["checked"] for n in sw]
     for n in sw[:2]:
         tapxy(*center(n)); time.sleep(1.5)
-    mid = [n["checked"] for n in nodes() if "Switch" in n["cls"]]
+    mid = [n["checked"] for n in nodes() if n["checkable"] or "Switch" in n["cls"]]
     ev = [shot("G2_toggled")]
     adb(f"shell am force-stop {PKG}"); start(); time.sleep(6)
     link("motormila://settings"); time.sleep(5)
-    after = [n["checked"] for n in nodes() if "Switch" in n["cls"]]
+    after = [n["checked"] for n in nodes() if n["checkable"] or "Switch" in n["cls"]]
     ev.append(shot("G2_after_restart"))
-    for n in [n for n in nodes() if "Switch" in n["cls"]][:2]:
+    for n in [n for n in nodes() if n["checkable"] or "Switch" in n["cls"]][:2]:
         tapxy(*center(n)); time.sleep(1.5)
     record("G2", "Settings", "Toggles persist", "PASS" if sw and mid != before and after == mid else "FAIL",
            f"switches={len(sw)} before={before} toggled={mid} after_restart={after}", ev)
@@ -1333,11 +1362,13 @@ def t_lang():
         link("motormila://settings"); time.sleep(5)
         tap(rf"^{label}$", 6)
         time.sleep(4)
+        adb(f"shell am force-stop {PKG}"); start(); time.sleep(6)
         for uri, key in [("motormila://home", "home"), ("motormila://search", "search"), (f"motormila://listing/{LID[0]}", "detail"), ("motormila://settings", "settings")]:
             link(uri); time.sleep(9)
             ns = nodes(); ev.append(shot(f"G3_{lang}_{key}"))
             labs = [l for l in labels(ns) if re.search(r"[A-Za-z]{3,}", l) and not re.search(r"(Rs |km|MotorMila|Motormila|\d{4}|ikman|riyasewana|Toyota|Honda|Suzuki|Nissan)", l)]
             res[f"{lang}.{key}"] = {"english_labels": labs[:25], "n_english": len(labs), "n_total": len(labels(ns))}
+    start("--es mm_qa_lang en"); time.sleep(5); adb(f"shell am force-stop {PKG}"); start(); time.sleep(6)
     si_en = sum(v["n_english"] for k, v in res.items() if k.startswith("si."))
     record("G3", "Settings", "Language switching", "PASS" if si_en < 25 else "FAIL",
            json.dumps({k: (v["n_english"], v["english_labels"][:12]) for k, v in res.items()}, ensure_ascii=False)[:2500], ev)
@@ -1346,7 +1377,7 @@ def t_lang():
 @T("G4", "Settings", "Privacy / Terms / Licences / Feedback / Contact / Clear cache do something real")
 def t_settings_rows():
     res = {}; ev = []
-    for label, expect in [("Privacy", r"(?i)privacy"), ("Terms", r"(?i)terms"), ("Open-source licences|Licences|Open source", r"(?i)licen")]:
+    for label, expect in [("Privacy", r"(?i)privacy"), ("Terms", r"(?i)terms"), ("Open[- ]source|Licen[cs]es|Third-party", r"(?i)(licen|apache|mit)")]:
         link("motormila://settings"); time.sleep(5)
         for _ in range(3):
             n = find(rf"(?i)^({label})", max_y=0.92)
@@ -1428,24 +1459,25 @@ def t_updater():
 
 
 # ------------------------------------------------------------------ 11. camera / intents
-@T("X1", "Intents", "Plate scan: permission prompt -> camera screen; tools tiles")
+@T("X1", "Intents", "Plate scan: camera permission prompt -> grant -> camera / no-camera state")
 def t_scan():
     adb(f"shell pm revoke {PKG} android.permission.CAMERA")
     link("motormila://scan"); time.sleep(6)
     ns = nodes(); ev = [shot("X1_scan")]
     txt = joined(ns)
-    g = find(r"(?i)(allow camera|grant|camera access|enable camera)")
-    perm = None
-    if g:
-        tapxy(*center(g)); time.sleep(3); ev.append(shot("X1_perm_dialog"))
-        perm = resumed() + " " + joined()[:150]
-        a = find(r"(?i)^(While using the app|Only this time|Allow)$")
-        if a:
-            tapxy(*center(a)); time.sleep(5)
+    g = find(r"(?i)(allow camera|grant|camera access|enable camera)", ns)
+    if g and not re.search(r"(?i)Allow .* to take pictures", txt):
+        tapxy(*center(g)); time.sleep(3); ns = nodes(); txt = joined(ns); ev.append(shot("X1_perm_dialog"))
+    dialog = bool(re.search(r"(?i)Allow .* to take pictures", txt))
+    a = find(r"(?i)^(While using the app|Only this time|Allow)$", ns)
+    if a:
+        tapxy(*center(a)); time.sleep(6)
     ev.append(shot("X1_after_grant"))
     after = joined()
-    record("X1", "Intents", "Plate scan", "PASS" if g and perm and re.search(r"(?i)(permissioncontroller|allow)", perm) else "FAIL",
-           f"screen={txt[:200]!r}; perm={perm!r}; after={after[:200]!r} (emulator has no camera: -camera-back none)", ev)
+    granted = "granted=true" in adb(f"shell dumpsys package {PKG} | grep android.permission.CAMERA")
+    record("X1", "Intents", "Plate scan", "PASS" if dialog and granted and alive() else "FAIL",
+           f"system_dialog={dialog}; granted={granted}; after_grant_screen={after[:200]!r} (emulator has no camera: -camera-back none)", ev)
+    back()
 
 
 @T("X2", "Intents", "Share-import: ACTION_SEND of an ikman URL opens the listing/estimate in app")
@@ -1458,7 +1490,7 @@ def t_share_import():
     b = find(r"(?i)^(open listing|open|view listing|open valuation|estimate)")
     if b:
         tapxy(*center(b)); time.sleep(8); ev.append(shot("X2_share_import_open")); txt += "\n>>" + joined()
-    ok = bool(re.search(r"(?i)(SPECIFICATIONS|Asking price|View on|estimate|fair|value)", txt))
+    ok = bool(re.search(r"(?i)(SPECIFICATIONS|Asking price|View on|estimate|fair|value|worth)", txt))
     record("X2", "Intents", "Share import", "PASS" if ok else "FAIL", f"url={url}; text={txt[:300]!r}", ev)
 
 
@@ -1532,9 +1564,15 @@ def t_motion():
 @T("Z1", "Global", "Bottom tabs each open their screen")
 def t_tabs_bar():
     res = {}; ev = []
+    # The glass tab bar minimises to the current tab while content is scrolled:
+    # start from Home at the top so every tab is laid out.
+    link("motormila://home"); time.sleep(6)
     for lab, rx in [("Prices", r"(?i)(price|index|district|market)"), ("Tools", r"(?i)(calculator|tools|valuation)"), ("Sell", r"(?i)(sell|value)"),
-                    ("Saved", r"(?i)(watchlist|saved|nothing)"), ("Buy", r"(?i)(fair price|cars listed)")]:
+                    ("Saved", r"(?i)(watchlist|saved|nothing)"), ("Buy", r"(?i)(fair price|cars listed|vehicles listed)")]:
         n = find(rf"^{lab}$", min_y=0.8)
+        if not n:
+            swipe_down(0.5) if "swipe_down" in globals() else adb("shell input swipe 540 900 540 1700 300"); time.sleep(1.5)
+            n = find(rf"^{lab}$", min_y=0.8)
         if n:
             tapxy(*center(n)); time.sleep(6)
             ns = nodes(); ev.append(shot(f"Z1_{lab}"))

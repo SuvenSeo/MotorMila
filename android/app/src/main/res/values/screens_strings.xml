@@ -180,7 +180,7 @@
     <string name="scr_cmp_remove">Remove %1$s</string>
     <string name="scr_cmp_count">%1$d of %2$d cars</string>
     <string name="scr_cmp_only_diff">Only differences</string>
-    <string name="scr_cmp_empty_title">Compare up to 4 cars</string>
+    <string name="scr_cmp_empty_title">Compare up to 3 cars</string>
     <string name="scr_cmp_empty_body">Tap Compare on any listing to add it here. Specs line up side by side, with the best values highlighted.</string>
     <string name="scr_cmp_browse">Browse listings</string>
     <string name="scr_cmp_price">Asking price</string>

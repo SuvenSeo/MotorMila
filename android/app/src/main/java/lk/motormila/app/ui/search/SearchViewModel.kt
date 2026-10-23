@@ -27,6 +27,7 @@ import lk.motormila.app.domain.repository.ListingSorts
 import lk.motormila.app.domain.usecase.GetListingsPagingUseCase
 import lk.motormila.app.domain.usecase.ObserveSessionUseCase
 import lk.motormila.app.domain.usecase.ToggleWatchlistUseCase
+import lk.motormila.app.domain.usecase.ObserveWatchlistUseCase
 import lk.motormila.app.ui.navigation.Search
 import lk.motormila.app.ui.navigation.searchArgsToQuery
 import lk.motormila.app.ui.navigation.toWebFilters
@@ -83,6 +84,8 @@ data class SearchUiState(
     val isPro: Boolean = false,
     /** One-shot: SearchScreen launches the system recogniser then [SearchViewModel.consumeVoice]. */
     val pendingVoice: Boolean = false,
+    /** Saved listing ids (card heart state), same source as Best Picks. */
+    val watchedIds: Set<Int> = emptySet(),
 )
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -94,6 +97,7 @@ class SearchViewModel @Inject constructor(
     private val listings: ListingRepository,
     private val alerts: AlertsRepository,
     private val savedStateHandle: SavedStateHandle,
+    private val observeWatchlist: ObserveWatchlistUseCase,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SearchUiState(districts = SRI_LANKA_DISTRICTS))
@@ -125,7 +129,8 @@ class SearchViewModel @Inject constructor(
             observeSession().collect { session ->
                 val isPro = session?.isPro == true
                 val current = _state.value
-                val nextFilters = if (!isPro && current.filters.sort != ListingSorts.NEWEST) {
+                // Only the deal-score sort is Pro (backend downgrades it for free plans).
+                val nextFilters = if (!isPro && current.filters.sort == ListingSorts.DEAL_SCORE) {
                     current.filters.copy(sort = ListingSorts.NEWEST)
                 } else {
                     current.filters
@@ -133,6 +138,13 @@ class SearchViewModel @Inject constructor(
                 _state.value = current.copy(isPro = isPro, filters = nextFilters)
                 if (nextFilters != current.filters) {
                     pagingKey.value = nextFilters
+                }
+            }
+        }
+        viewModelScope.launch {
+            runCatching {
+                observeWatchlist().collect { rows ->
+                    _state.value = _state.value.copy(watchedIds = rows.map { it.listingId }.toSet())
                 }
             }
         }
@@ -168,6 +180,11 @@ class SearchViewModel @Inject constructor(
     fun onQueryChange(q: String) {
         queryFlow.value = q
         _state.value = _state.value.copy(query = q)
+        // Clearing the field (✕ or deleting the text) drops the keyword filter too,
+        // otherwise the results stay filtered by a query the field no longer shows.
+        if (q.isBlank() && _state.value.filters.keyword != null) {
+            applyFilters(_state.value.filters.copy(keyword = null))
+        }
     }
 
     fun onSearch(q: String) {
@@ -261,11 +278,11 @@ class SearchViewModel @Inject constructor(
     }
 
     fun onSortChange(sort: String) {
-        // Free tier has no deal_score/median — backend forces `newest`.
-        if (!_state.value.isPro && sort != ListingSorts.NEWEST) {
+        // Free tier has no deal_score — only that sort is Pro; price/km/newest stay free.
+        if (!_state.value.isPro && sort == ListingSorts.DEAL_SCORE) {
             applyFilters(_state.value.filters.copy(sort = ListingSorts.NEWEST))
             _state.value = _state.value.copy(
-                error = "Free plan sorts by newest — upgrade to Pro for deal-score sort",
+                error = "Best-deal sort is a Pro feature — upgrade to Pro to sort by deal score",
             )
             return
         }

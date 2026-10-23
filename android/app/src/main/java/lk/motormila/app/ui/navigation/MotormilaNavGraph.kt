@@ -317,6 +317,7 @@ fun MotormilaNavGraph(
                         SearchScreen(
                             onListingClick = { id -> navController.navigate(ListingDetail(id, fromCard = true)) },
                             onCompare = { ids -> navController.navigate(Compare(ids)) },
+                            onOpenSharedUrl = { url -> navController.navigate(ShareImport(url)) },
                         )
                     }
                     motormilaComposable<Watchlist>(
@@ -389,6 +390,7 @@ fun MotormilaNavGraph(
                             onBack = { navController.popBackStack() },
                             onCompare = { ids -> navController.navigate(Compare(ids)) },
                             onEstimate = { navController.navigate(Valuation()) },
+                            onOpenListing = { id -> navController.navigate(ListingDetail(id)) },
                         )
                     }
                     motormilaComposable<Compare>(
@@ -513,8 +515,8 @@ fun MotormilaNavGraph(
                                     popUpTo(route) { inclusive = true }
                                 }
                             },
-                            onValuation = { make, model ->
-                                navController.navigate(Valuation(make, model)) {
+                            onValuation = { make, model, year ->
+                                navController.navigate(Valuation(make, model, year)) {
                                     popUpTo(route) { inclusive = true }
                                 }
                             },

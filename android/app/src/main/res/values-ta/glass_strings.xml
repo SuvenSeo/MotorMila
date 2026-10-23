@@ -7,7 +7,7 @@
     <string name="scr_cmp_remove">%1$s ஐ நீக்கு</string>
     <string name="scr_cmp_count">%2$d இல் %1$d கார்கள்</string>
     <string name="scr_cmp_only_diff">வேறுபாடுகள் மட்டும்</string>
-    <string name="scr_cmp_empty_title">4 கார்கள் வரை ஒப்பிடுங்கள்</string>
+    <string name="scr_cmp_empty_title">3 கார்கள் வரை ஒப்பிடுங்கள்</string>
     <string name="scr_cmp_empty_body">எந்த விளம்பரத்திலும் ஒப்பிடு என்பதைத் தட்டி இங்கே சேர்க்கவும். விவரங்கள் அருகருகே, சிறந்த மதிப்புகள் சிறப்பித்துக் காட்டப்படும்.</string>
     <string name="scr_cmp_browse">விளம்பரங்களைப் பார்</string>
     <string name="scr_cmp_price">கேட்கும் விலை</string>
@@ -44,10 +44,10 @@
     <string name="mm_why_body">இந்தக் கேட்கும் விலையை ஒத்த விளம்பரங்களின் (அதே தயாரிப்பு, மாடல், ஆண்டு வரம்பு) வழக்கமான கேட்கும் விலையுடன் ஒப்பிடுகிறோம். இவை கேட்கும் விலைகள், விற்பனை விலைகள் அல்ல; வழிகாட்டியாகக் கருதி எப்போதும் காரைப் பரிசோதியுங்கள்.</string>
     <string name="mm_why_verify">வழக்கத்தை விட மிகக் குறைந்த விலைகள் பொதுவான மோசடி முறை. எதையும் செலுத்தும் முன் காரையும் ஆவணங்களையும் நேரில் பாருங்கள்.</string>
     <string name="mm_home_sub">இலங்கையில் விற்பனைக்கு உள்ள ஒவ்வொரு காரும், ஒத்த கார்களின் கேட்கும் விலையுடன் ஒப்பிட்டு.</string>
-    <string name="mm_home_sub_count">விற்பனைக்கு %1$s கார்கள், ஒத்த கார்களின் கேட்கும் விலையுடன் ஒப்பிட்டு.</string>
-    <string name="mm_home_sub_counts">%2$d தளங்களிலிருந்து விற்பனைக்கு %1$s கார்கள், ஒத்த கார்களின் கேட்கும் விலையுடன் ஒப்பிட்டு.</string>
+    <string name="mm_home_sub_count">விற்பனைக்கு %1$s வாகனங்கள், ஒத்த கார்களின் கேட்கும் விலையுடன் ஒப்பிட்டு.</string>
+    <string name="mm_home_sub_counts">%2$d தளங்களிலிருந்து விற்பனைக்கு %1$s வாகனங்கள், ஒத்த கார்களின் கேட்கும் விலையுடன் ஒப்பிட்டு.</string>
     <string name="mm_see_all">அனைத்தையும் பார்</string>
-    <string name="mm_stat_listed">பட்டியலிட்ட கார்கள்</string>
+    <string name="mm_stat_listed">பட்டியலிட்ட வாகனங்கள்</string>
     <string name="mm_stat_new24h">இன்று புதியவை</string>
     <string name="mm_stat_avg_asking">சராசரி கேட்பு</string>
     <string name="mm_pct_below_typical">வழக்கத்தை விட %1$d%% குறைவு</string>
@@ -207,7 +207,7 @@
     <string name="calc_depreciation_title">மதிப்புத் தக்கவைப்பு வளைவு</string>
     <string name="calc_calculate_depreciation">தக்கவைப்பைக் கணக்கிடு</string>
     <string name="scr_cmp_no_data">இந்தக் கார்களுக்கு %1$s தரவு இல்லை</string>
-    <string name="glass_free_plan_note">இலவசத் திட்டம் · புதியவை முதலில் — Pro இல் டீல் மதிப்பெண் வரிசை</string>
+    <string name="glass_free_plan_note">இலவசத் திட்டம் · சிறந்த டீல் (டீல் மதிப்பெண்) வரிசை Pro இல் மட்டும்</string>
     <string name="glass_tab_bar_expand">தாவல்களைக் காட்டு</string>
     <string name="glass_save">சேமி</string>
     <string name="glass_unsave">சேமித்தவற்றிலிருந்து நீக்கு</string>

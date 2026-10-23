@@ -620,6 +620,8 @@ fun ColumnScope.FilterSheetBody(
             modifier = Modifier.weight(1f),
         )
         val cta = when {
+            // Never show the previous draft's total while the new one is counting.
+            counting -> stringResource(R.string.filter_count_loading)
             liveCount == null -> stringResource(R.string.filter_show_results)
             liveCount == 0 -> stringResource(R.string.filter_no_matches)
             liveCount == 1 -> stringResource(R.string.filter_show_one_result)

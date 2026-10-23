@@ -55,4 +55,10 @@
     <string name="filter_from_year">From year</string>
     <string name="filter_to_year">To year</string>
     <string name="filter_count_loading">Counting\u2026</string>
+    <!-- Search sort chips -->
+    <string name="sort_newest">Newest</string>
+    <string name="sort_best_deal">Best deal</string>
+    <string name="sort_price_asc">Price ↑</string>
+    <string name="sort_price_desc">Price ↓</string>
+    <string name="sort_low_km">Low km</string>
 </resources>

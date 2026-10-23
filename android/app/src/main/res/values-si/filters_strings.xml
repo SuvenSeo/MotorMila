@@ -55,4 +55,10 @@
     <string name="filter_from_year">වර්ෂයෙන්</string>
     <string name="filter_to_year">වර්ෂය දක්වා</string>
     <string name="filter_count_loading">ගණන් කරමින්\u2026</string>
+    <!-- Search sort chips -->
+    <string name="sort_newest">අලුත්ම</string>
+    <string name="sort_best_deal">හොඳම ගනුදෙනුව</string>
+    <string name="sort_price_asc">මිල ↑</string>
+    <string name="sort_price_desc">මිල ↓</string>
+    <string name="sort_low_km">අඩු කි.මී.</string>
 </resources>

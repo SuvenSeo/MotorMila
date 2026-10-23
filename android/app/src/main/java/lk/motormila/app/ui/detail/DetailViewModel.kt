@@ -124,10 +124,15 @@ class DetailViewModel @Inject constructor(
             } catch (ce: kotlin.coroutines.cancellation.CancellationException) {
                 throw ce
             } catch (e: Exception) {
+                // Live call failed and the listing isn't in the offline snapshot either:
+                // report the live failure (timeout / no connection / 404), not the
+                // internal "not in the offline snapshot" fallback message.
+                val cause = e.suppressed.firstOrNull() ?: e
                 _state.value = _state.value.copy(
                     isLoading = false,
                     isOffline = true,
-                    error = e.message ?: "Couldn't load listing",
+                    error = lk.motormila.app.core.network.ErrorMapper.map(cause).message
+                        .takeIf { it.isNotBlank() } ?: "Couldn't load listing",
                 )
             }
         }

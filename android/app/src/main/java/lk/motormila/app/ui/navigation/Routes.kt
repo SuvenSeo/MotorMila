@@ -49,7 +49,7 @@ data class ListingDetail(
 data class Compare(val ids: List<Int>)
 
 @Serializable
-data class Valuation(val make: String? = null, val model: String? = null)
+data class Valuation(val make: String? = null, val model: String? = null, val year: Int? = null)
 
 @Serializable
 data class Alerts(val listingId: Int = 0)

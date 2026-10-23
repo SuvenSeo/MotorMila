@@ -72,6 +72,28 @@ fun filterSnapshotListings(rows: List<ListingDto>, query: ListingQuery): List<Li
         ) {
             return@filter false
         }
+        if (!query.transmission.isNullOrBlank() &&
+            !(row.transmission?.equals(query.transmission, ignoreCase = true) == true)
+        ) {
+            return@filter false
+        }
+        if (!query.condition.isNullOrBlank() &&
+            !(row.condition?.replace(' ', '_')?.equals(query.condition, ignoreCase = true) == true)
+        ) {
+            return@filter false
+        }
+        if (!query.bodyType.isNullOrBlank() &&
+            !(row.bodyType?.equals(query.bodyType, ignoreCase = true) == true)
+        ) {
+            return@filter false
+        }
+        if (!query.vehicleCategory.isNullOrBlank() && row.vehicleCategory != null &&
+            !row.vehicleCategory.equals(query.vehicleCategory, ignoreCase = true)
+        ) {
+            return@filter false
+        }
+        if (query.priceAvailability == "unavailable" && (row.priceLkr ?: 0.0) > 0.0) return@filter false
+        if (query.priceAvailability == "available" && (row.priceLkr ?: 0.0) <= 0.0) return@filter false
         if (query.yearMin != null && (row.year ?: 0) < query.yearMin) return@filter false
         if (query.yearMax != null && (row.year ?: Int.MAX_VALUE) > query.yearMax) return@filter false
         if (query.priceMin != null && (row.priceLkr ?: 0.0) < query.priceMin) return@filter false

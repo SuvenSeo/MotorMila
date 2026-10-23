@@ -77,4 +77,15 @@
     <string name="calc_cd_upgrade">Pro-க்கு மேம்படுத்து</string>
     <string name="calc_cd_tab_locked">%1$s, Pro தேவை</string>
     <string name="calc_cd_fuel">எரிபொருள் வகை %1$s</string>
+    <string name="calc_error_down_pct">0 முதல் 100 வரையிலான முன்பணச் சதவீதத்தை உள்ளிடவும்.</string>
+    <string name="calc_error_rate_pct">ஆண்டு வட்டி விகிதச் சதவீதத்தை உள்ளிடவும்.</string>
+    <string name="calc_error_consideration">வாகனத்தின் பரிசீலனைத் தொகையை (விற்பனை விலை) ரூபாயில் உள்ளிடவும்.</string>
+    <string name="calc_lease_hint">CBSL பயணிகள் வாகன LTV பொதுவாக அதிகபட்சம் 50% நிதியுதவி. சூத்திரம் ஒரு நிலையான தவணைக் கடன்.</string>
+    <string name="calc_lease_ltv_warn">முன்பணம் பொதுவான 50% CBSL பயணிகள் வாகன LTV வரம்பை விடக் குறைவு — வங்கிகள் இந்த அமைப்பை நிராகரிக்கலாம்.</string>
+    <string name="calc_ownership_hint">வருமான உரிமம், மூன்றாம் தரப்புக் காப்பீடு, விருப்ப உரிமை மாற்றக் கட்டணங்கள் மற்றும் புகைப் பரிசோதனை நேரடிக் கணிப்பான் சேவைகளிலிருந்து.</string>
+    <string name="calc_ownership_consideration">பரிசீலனைத் தொகை / விற்பனை விலை (ரூ.)</string>
+    <string name="calc_ownership_include_transfer">உரிமை மாற்றக் கட்டணங்களைச் சேர்க்கவும்</string>
+    <string name="calc_permits_hint">நிர்வாகி உள்ளிட்ட மற்றும் தானாகச் சேகரிக்கப்பட்ட அனுமதிப்பத்திர விலைகள். அனுமதிப்பத்திரத் திரையில் உள்ள அதே தரவு.</string>
+    <string name="calc_permits_empty">இன்னும் அனுமதிப்பத்திர விலைகள் இல்லை. API இல் தரவு சேர்க்கப்பட்டதும் புதுப்பிக்கவும்.</string>
+    <string name="calc_depreciation_hint" formatted="false">தோராயமான எழுதித் தள்ளிய மதிப்பு: மூன்று ஆண்டுகளில் 12% / 9% / 8%. வங்கியின் எஞ்சிய மதிப்பு அல்ல.</string>
 </resources>

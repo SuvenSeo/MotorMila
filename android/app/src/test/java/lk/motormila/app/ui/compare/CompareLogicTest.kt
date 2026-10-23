@@ -7,9 +7,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CompareLogicTest {
-    @Test fun mergeKeepsTrayAndAddsNewUpToFour() {
+    @Test fun mergeKeepsTrayAndAddsNewUpToThree() {
         assertEquals(listOf(1, 2, 3), CompareLogic.merge(listOf(1, 2), listOf(3)))
-        assertEquals(listOf(2, 3, 4, 5), CompareLogic.merge(listOf(1, 2, 3, 4), listOf(5)))
+        assertEquals(listOf(2, 3, 4), CompareLogic.merge(listOf(1, 2, 3), listOf(4)))
         assertEquals(listOf(1, 3, 2), CompareLogic.merge(listOf(1, 2, 3), listOf(2)))
     }
 
