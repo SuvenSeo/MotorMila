@@ -515,11 +515,11 @@ private fun ListingImageErrorTile(modifier: Modifier = Modifier) {
         modifier = modifier.background(Color(0xFF09090B)),
         contentAlignment = Alignment.Center,
     ) {
-        // motormila_logo is blue-on-Ink artwork — no tint, it already matches.
+        // Brand v2 mark (blue gradient vector) on Ink — no tint.
         Image(
-            painter = painterResource(id = R.drawable.motormila_logo),
+            painter = painterResource(id = R.drawable.motormila_mark),
             contentDescription = null,
-            modifier = Modifier.size(48.dp),
+            modifier = Modifier.size(width = 40.dp, height = 32.6.dp),
         )
     }
 }

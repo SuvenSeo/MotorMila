@@ -323,6 +323,7 @@ gradle.taskGraph.whenReady {
 dependencies {
     // Compose BOM — versions for all compose artifacts
     implementation(platform(libs.compose.bom))
+    implementation(libs.compose.animation.graphics) // brand v2 splash AVD
     androidTestImplementation(platform(libs.compose.bom))
 
     // Compose UI

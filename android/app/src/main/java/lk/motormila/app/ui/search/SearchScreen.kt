@@ -248,7 +248,9 @@ fun SearchScreen(
     // and the floating glass tab bar (bottom). The header is measured once
     // per size change (not per frame) and pads the result grid.
     val chrome = LocalBottomChrome.current
-    var headerPx by remember { mutableStateOf(0) }
+    // Saveable: on pop back from Detail the screen re-enters composition and a
+    // 0 header for the first frame drew the grid up under the chips.
+    var headerPx by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(0) }
     val headerH = with(density) { headerPx.toDp() }
     val searchBackdrop = remember { HazeState() }
     val gridState = rememberLazyGridState()

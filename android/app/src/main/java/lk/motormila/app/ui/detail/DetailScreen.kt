@@ -608,24 +608,15 @@ private fun PriceDealSection(
     history: PriceHistory? = null,
 ) {
     LaunchedEffect(listing.id) { onDealShown() }
-    // Spec §3: the card container morphs into this section on card → detail.
+    // The card container key (listingCardKey) lives ONLY on the Detail root
+    // (detailContainerTransform). A second sharedBounds with the same key here
+    // made Compose pair the root against this section: the whole page was
+    // ScaleToBounds-squeezed into this band and stayed there after settling.
     val sharedScope = LocalSharedTransitionScope.current
     val animatedScope = LocalNavAnimatedVisibilityScope.current
-    val cardShared = if (sharedScope != null && animatedScope != null) {
-        with(sharedScope) {
-            Modifier.sharedBounds(
-                rememberSharedContentState(key = listingCardKey(listing.id)),
-                animatedScope,
-                boundsTransform = motormilaSharedBoundsTransform(),
-            )
-        }
-    } else {
-        Modifier
-    }
     Column(
         Modifier
             .fillMaxWidth()
-            .then(cardShared)
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {

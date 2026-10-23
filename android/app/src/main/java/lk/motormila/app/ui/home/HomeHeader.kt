@@ -53,12 +53,12 @@ fun HomeTopRow(onAlertsClick: () -> Unit, modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Image(
-            painter = painterResource(if (c.isDark) R.drawable.logo_wordmark_on_dark else R.drawable.logo_wordmark_on_light),
+            painter = painterResource(lk.motormila.app.ui.components.motormilaWordmarkRes(c.isDark)),
             contentDescription = "MotorMila",
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .width(132.dp)
-                .aspectRatio(1200f / 220f),
+                .aspectRatio(lk.motormila.app.ui.components.MOTORMILA_WORDMARK_ASPECT),
         )
         Spacer(Modifier.weight(1f))
         MmIconButton(

@@ -80,13 +80,13 @@ fun MmImagePlaceholder(modifier: Modifier = Modifier) {
     ) {
         Image(
             painter = painterResource(
-                if (c.isDark) R.drawable.logo_wordmark_on_dark else R.drawable.logo_wordmark_on_light,
+                motormilaWordmarkRes(c.isDark),
             ),
             contentDescription = null,
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .fillMaxWidth(0.42f)
-                .aspectRatio(1200f / 220f)
+                .aspectRatio(MOTORMILA_WORDMARK_ASPECT)
                 .alpha(if (c.isDark) 0.22f else 0.28f),
         )
     }
