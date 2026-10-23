@@ -677,7 +677,7 @@ export default function Dashboard() {
       : "text-foreground [text-shadow:0_1px_18px_hsl(var(--background)/0.55)]";
   const heroMutedTone =
     heroFilmTone === "cinematic"
-      ? "text-white/92 [text-shadow:0_2px_18px_rgba(0,0,0,0.85),0_8px_32px_rgba(0,0,0,0.55)]"
+      ? "text-white/90 [text-shadow:0_2px_18px_rgba(0,0,0,0.85),0_8px_32px_rgba(0,0,0,0.55)]"
       : "text-foreground/80 [text-shadow:0_1px_14px_hsl(var(--background)/0.45)]";
   const heroSearchShellClass =
     heroFilmTone === "cinematic"

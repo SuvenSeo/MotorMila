@@ -10,7 +10,8 @@ import { LETTER_SPACING, TYPE_TOKENS } from "@/styles/type-scale";
 const twMerge = extendTailwindMerge({
   extend: {
     classGroups: {
-      "font-size": [{ text: TYPE_TOKENS }],
+      // body-lg is a component type class (index.css), not a colour.
+      "font-size": [{ text: [...TYPE_TOKENS, "body-lg"] }],
       tracking: [{ tracking: Object.keys(LETTER_SPACING) }],
       shadow: [{ shadow: ["e1", "e2", "e3"] }],
       rounded: [{ rounded: ["control", "card", "sheet", "pill"] }],
