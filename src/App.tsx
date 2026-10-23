@@ -251,6 +251,7 @@ const App = () => {
                   <Route path="/insurance" element={<LeadRequest kind="insurance" />} />
                   <Route path="/checkout/return" element={<CheckoutReturn />} />
                   <Route path="/compare" element={<Compare />} />
+                  <Route path="/compare/:slug" element={<Compare />} />
                   <Route path="/how-we-price" element={<HowWePrice />} />
                   {/** Legacy valuation path: header/footer now point at /estimate. */}
                   <Route path="/valuation" element={<Navigate to="/estimate" replace />} />

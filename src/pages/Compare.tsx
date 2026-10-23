@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowUpRight, Info, Link2, Plus, Scale, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
@@ -9,6 +9,7 @@ import { PageCanvas } from "@/components/PageCanvas";
 import { formatLkrFull } from "@/lib/price";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { buildCompareLink } from "@/lib/compareTray";
+import { canonicalComparePath, fromCompareSlug } from "@/lib/compareSlug";
 import { formatSourceName } from "@/lib/sourceAttribution";
 import { howWePriceHref } from "@/lib/howWePrice";
 import { useLowData } from "@/hooks/useLowData";
@@ -61,12 +62,14 @@ export default function Compare() {
   const [onlyDiff, setOnlyDiff] = useState(false);
   const motionCalm = useReducedMotionOrLowData();
 
+  // Canonical slug path (/compare/12-vs-45) wins; legacy ?ids=12,45 still works.
+  const { slug } = useParams<{ slug?: string }>();
+  const navigate = useNavigate();
   const rawIds = searchParams.get("ids") ?? "";
-  const urlIds = useMemo(
-    () =>
-      [...new Set(rawIds.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => Number.isFinite(n) && n > 0))].slice(0, MAX_COMPARE),
-    [rawIds],
-  );
+  const urlIds = useMemo(() => {
+    if (slug) return fromCompareSlug(slug).slice(0, MAX_COMPARE);
+    return [...new Set(rawIds.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => Number.isFinite(n) && n > 0))].slice(0, MAX_COMPARE);
+  }, [rawIds, slug]);
   // Direct visit to /compare (nav, bookmark): fall back to the tray selection.
   const trayKey = compare.items.map((p) => p.id).join(",");
   const ids = useMemo(
@@ -114,6 +117,10 @@ export default function Compare() {
   const removeId = (id: number) => {
     compare.remove(id);
     const remaining = ids.filter((n) => n !== id);
+    if (slug) {
+      navigate(remaining.length >= 2 ? canonicalComparePath(remaining) : remaining.length ? `/compare?ids=${remaining.join(",")}` : "/compare", { replace: true });
+      return;
+    }
     setSearchParams(remaining.length ? { ids: remaining.join(",") } : {}, { replace: true });
   };
 
