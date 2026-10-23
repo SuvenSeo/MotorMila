@@ -1,5 +1,5 @@
 import { LazyMotion, MotionConfig, domAnimation } from "motion/react";
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { ScrollRestoration } from "@/components/ScrollRestoration";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
@@ -23,7 +23,6 @@ import { RequireAuth } from "@/components/RequireAuth";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { useDockTypingFlag } from "@/lib/dock";
 
-const AIChatWidget = lazyWithRetry(() => import("@/components/AIChatWidget").then((m) => ({ default: m.AIChatWidget })));
 const FeedbackWidget = lazyWithRetry(() =>
   import("@/components/FeedbackWidget").then((m) => ({ default: m.FeedbackWidget }))
 );
@@ -137,12 +136,12 @@ function HashScroller() {
   return null;
 }
 
-function AppShell({ chatMounted }: { chatMounted: boolean }) {
+function AppShell() {
   // Floating buttons step aside while a text field is focused (mobile keyboard).
   useDockTypingFlag();
   return (
     // app-shell-dock-pad: content and footer always clear the bottom dock
-    // (mobile nav + one floating button). See src/styles/layers.css.
+    // (mobile nav + compare tray). See src/styles/layers.css.
     <div className="min-h-screen app-shell app-shell-dock-pad selection:bg-primary/20 bg-background">
       <a href="#main-content" className="skip-to-content">Skip to main content</a>
       <HashScroller />
@@ -152,11 +151,6 @@ function AppShell({ chatMounted }: { chatMounted: boolean }) {
       <Suspense fallback={null}>
         <FeedbackWidget />
       </Suspense>
-      {chatMounted && (
-        <Suspense fallback={null}>
-          <AIChatWidget />
-        </Suspense>
-      )}
       <main id="main-content" className="relative z-base pt-[var(--nav-offset)]">
           <TrialBannerSlot />
         <RouteErrorBoundary>
@@ -166,7 +160,7 @@ function AppShell({ chatMounted }: { chatMounted: boolean }) {
         </RouteErrorBoundary>
       </main>
       <AppFooter />
-      {/* Bottom dock — one area, stacked: app promo strip → compare tray / chat button → bottom nav. */}
+      {/* Bottom dock — one area, stacked: app promo strip → compare tray → bottom nav. */}
       <MobileAppPromo />
       <CompareTray />
       <MobileBottomNav />
@@ -176,26 +170,22 @@ function AppShell({ chatMounted }: { chatMounted: boolean }) {
 }
 
 // Public browse shell: no session required.
-function PublicLayout({ chatMounted }: { chatMounted: boolean }) {
-  return <AppShell chatMounted={chatMounted} />;
+function PublicLayout() {
+  return <AppShell />;
 }
 
 // Gated shell: sign-in required (invite-only signup unchanged).
-function ProtectedLayout({ chatMounted }: { chatMounted: boolean }) {
+function ProtectedLayout() {
   return (
     <RequireAuth>
-      <AppShell chatMounted={chatMounted} />
+      <AppShell />
     </RequireAuth>
   );
 }
 
 const App = () => {
-  // Chat mounts after a short idle delay so its chunk never competes with
-  // first paint; nothing else is gated behind an artificial loader.
-  const [chatMounted, setChatMounted] = useState(false);
-
+  // Route chunks prefetch on idle; nothing is gated behind an artificial loader.
   useEffect(() => {
-    const chatId = window.setTimeout(() => setChatMounted(true), 2000);
     let idleHandle: number | undefined;
     let timeoutHandle: number | undefined;
     if (typeof window.requestIdleCallback === "function") {
@@ -204,7 +194,6 @@ const App = () => {
       timeoutHandle = window.setTimeout(() => prefetchAppShellRoutes(), 1200);
     }
     return () => {
-      window.clearTimeout(chatId);
       if (idleHandle !== undefined) window.cancelIdleCallback?.(idleHandle);
       if (timeoutHandle !== undefined) window.clearTimeout(timeoutHandle);
     };
@@ -219,14 +208,14 @@ const App = () => {
           <LazyMotion features={domAnimation}>
           <MotionConfig reducedMotion="user">
             <ScrollProgressBar />
-            {/* Toasts sit under the header, clear of the bottom dock (nav, chat, compare). */}
+            {/* Toasts sit under the header, clear of the bottom dock (nav, compare). */}
             <Sonner position="top-center" offset={76} mobileOffset={{ top: 72 }} />
             <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <ScrollRestoration />
               <RouteMeta />
               <CompareProvider>
               <Routes>
-                <Route element={<PublicLayout chatMounted={chatMounted} />}>
+                <Route element={<PublicLayout />}>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/trends" element={<Trends />} />
                   <Route path="/estimate" element={<Estimate />} />
@@ -269,7 +258,7 @@ const App = () => {
                   <Route path="/safe-transfer" element={<SafeTransfer />} />
                   <Route path="*" element={<NotFound />} />
                 </Route>
-                <Route element={<ProtectedLayout chatMounted={chatMounted} />}>
+                <Route element={<ProtectedLayout />}>
                   <Route path="/dealer" element={<DealerDashboard />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/alerts" element={<Alerts />} />

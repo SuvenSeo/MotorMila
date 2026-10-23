@@ -2,7 +2,7 @@
    Floating layers & bottom dock (ui/shell)
 
    One z-index scale for everything that floats, and one bottom area that the
-   mobile nav, the chat button, the compare tray and the app promo all share.
+   mobile nav, the compare tray and the app promo all share.
    Tailwind exposes the same scale as `z-base`, `z-sticky`, `z-floating`,
    `z-bottom-nav`, `z-header`, `z-overlay`, `z-modal`, `z-toast`, `z-skip`,
    `z-devtools` (see tailwind.config.ts → theme.extend.zIndex).
@@ -10,10 +10,10 @@
    Order, low → high:
      base       in-flow content that needs to sit above section backgrounds
      sticky     in-page sticky bars (filters, table headers)
-     floating   chat button, compare tray, app promo strip
+     floating   compare tray, app promo strip
      bottom-nav mobile bottom navigation
      header     site header (+ its menus)
-     overlay    chat panel + its backdrop
+     overlay    full-screen overlays + their backdrops
      modal      blocking dialogs (shadcn dialogs/sheets use z-50 = header,
                 and portal after the header so they still paint on top)
      toast      sonner toasts
@@ -47,7 +47,7 @@
   }
 }
 
-/* Anything floating above the dock (chat button, compare tray). */
+/* Anything floating above the dock (compare tray). */
 .dock-float {
   position: fixed;
   bottom: calc(var(--dock-bottom) + var(--dock-extra) + var(--dock-gap));
@@ -62,7 +62,7 @@
   z-index: var(--z-floating);
 }
 
-/* Page content never ends under the dock: room for nav + one floating button. */
+/* Page content never ends under the dock: room for nav + the compare tray. */
 .app-shell-dock-pad {
   padding-bottom: calc(var(--dock-bottom) + var(--dock-extra) + 4.5rem);
 }
@@ -70,40 +70,13 @@
   .app-shell-dock-pad { padding-bottom: 0; }
 }
 
-/* Chat widget positioning (replaces the old fixed 9997-9999 values). */
-.aw-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-overlay);
-  background: rgba(0, 0, 0, 0.25);
-}
-.aw-fab-wrapper {
-  right: 1rem;
-}
-@media (min-width: 768px) {
-  .aw-fab-wrapper { right: 1.5rem; }
-}
-.aw-panel-wrapper {
-  position: fixed;
-  right: 0.625rem;
-  bottom: calc(var(--dock-bottom) + var(--dock-gap) + 4rem);
-  width: 420px;
-  max-width: calc(100vw - 1.25rem);
-  height: min(650px, calc(100dvh - var(--dock-bottom) - var(--dock-gap) - 4rem - var(--nav-offset, 4.75rem)));
-  z-index: var(--z-overlay);
-}
-@media (min-width: 768px) {
-  .aw-panel-wrapper { right: 1.5rem; bottom: calc(var(--dock-gap) + 4.25rem); }
-}
-/* Keyboard open on a phone: the chat button must never sit over a field. */
-html[data-typing="true"] .aw-fab-wrapper,
+/* Keyboard open on a phone: floating controls must never sit over a field. */
 html[data-typing="true"] .dock-hide-when-typing {
   opacity: 0;
   pointer-events: none;
   transform: scale(0.9);
 }
 @media (min-width: 768px) {
-  html[data-typing="true"] .aw-fab-wrapper,
   html[data-typing="true"] .dock-hide-when-typing {
     opacity: 1;
     pointer-events: auto;
