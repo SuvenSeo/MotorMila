@@ -171,8 +171,10 @@ fun MotormilaNavGraph(
         // Routes with arguments (search query, sign-up tab, compare ids…) must
         // not reuse the current entry via singleTop, or a second deep link to
         // the same screen silently drops its new arguments. Replace it instead.
+        // ListingDetail too: a link to a listing that is already on top reused the
+        // entry with its old scroll position, so the gallery was off-screen (D2).
         val carriesArgs = target is Search || target is Login || target is Compare ||
-            target is Alerts || target is Valuation
+            target is Alerts || target is Valuation || target is ListingDetail
         val current = navController.currentDestination
         navController.navigate(target) {
             if (carriesArgs && current != null && current.hasRoute(target::class)) {
@@ -307,13 +309,12 @@ fun MotormilaNavGraph(
                             onPermitsClick = { navController.navigate(Permits) },
                         )
                     }
-                    motormilaComposable<Search>(
-                        deepLinks = listOf(
-                            navDeepLink<Search>(basePath = "motormila://search"),
-                            navDeepLink { uriPattern = "motormila://search?q={q}&district={district}&voice={voice}" },
-                            navDeepLink { uriPattern = "motormila://search" },
-                        ),
-                    ) {
+                    // No Navigation-level deep links here: NavHost's automatic cold-start
+                    // handling matched motormila://search?… against the route's own fields
+                    // only, silently dropping web filter keys (fuel_type, transmission…) and
+                    // relaunching the task. resolveMotormilaDeepLink (Splash / onNewIntent)
+                    // maps every key into Search.filters instead.
+                    motormilaComposable<Search> {
                         SearchScreen(
                             onListingClick = { id -> navController.navigate(ListingDetail(id, fromCard = true)) },
                             onCompare = { ids -> navController.navigate(Compare(ids)) },

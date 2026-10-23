@@ -132,7 +132,7 @@ fun FmvGauge(
             color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
-            text = "FMV · ${fmv.confidence} confidence · tap to explain",
+            text = androidx.compose.ui.res.stringResource(lk.motormila.app.R.string.mm_fmv_confidence_hint, fmv.confidence),
             fontSize = 11.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

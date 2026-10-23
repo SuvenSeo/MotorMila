@@ -171,6 +171,7 @@ fun SearchScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val items = viewModel.paging.collectAsLazyPagingItems()
+    val searchResultsCd = stringResource(R.string.mm_search_results_cd)
     val fromSnapshot by viewModel.fromSnapshot.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -362,7 +363,7 @@ fun SearchScreen(
                             verticalArrangement = Arrangement.spacedBy(MmSpacing.lg),
                             modifier = Modifier
                                 .fillMaxSize()
-                                .semantics { contentDescription = "Search results" },
+                                .semantics { contentDescription = searchResultsCd },
                         ) {
                             items(
                                 count = items.itemCount,

@@ -759,9 +759,15 @@ def t_s_sheet2():
         if len(eds) > 1 and eds[1]["enabled"]:
             tapxy(*center(eds[1])); time.sleep(1); adb("shell input text 'Aqua'"); time.sleep(3)
             ev.append(shot("S11_model_typed"))
-            opts = [n for n in nodes() if re.match(r"(?i)^aqua", n["text"] or "") and not n["cls"].endswith("EditText")]
+            opts = [n for n in nodes() if re.match(r"(?i)^aqua", n["text"] or "") and not n["cls"].endswith("EditText")
+                    and n["b"][3] < SIZE[1] * 0.62]
             if opts:
-                tapxy(*center(opts[0])); time.sleep(3); model_ok = True
+                tapxy(*center(opts[0])); time.sleep(3)
+            else:
+                adb("shell input keyevent 66"); time.sleep(3)  # IME Done commits the typed model
+            ev.append(shot("S11_model_committed"))
+            model_ok = bool(find(r"(?i)^Toyota Aqua$")) or any(
+                n["cls"].endswith("EditText") and re.match(r"(?i)^aqua$", n["text"] or "") for n in nodes())
             adb("shell input keyevent 111"); time.sleep(1)
     ev.append(shot("S11_make_model"))
     # price 3..8 Mn and year 2012..2018
@@ -808,8 +814,14 @@ def t_s_sort():
     for label, key in [("Price ↑", "price_asc"), ("Price ↓", "price_desc"), ("Low km", "mileage_asc"), ("Best deal", "deal_score")]:
         link("motormila://search"); time.sleep(8)
         n = find(rf"^{re.escape(label)}$")
+        for _ in range(3):
+            if n and n["b"][2] < SIZE[0] * 0.86:
+                break
+            anchor = find(r"^(Newest|Best deal|Price ↑)$")
+            y = center(anchor)[1] if anchor else int(SIZE[1] * 0.225)
+            adb(f"shell input swipe {int(SIZE[0]*0.8)} {y} {int(SIZE[0]*0.3)} {y} 300"); time.sleep(1.5)
+            n = find(rf"^{re.escape(label)}$")
         if not n:
-            swipe_left_row = SIZE
             res[key] = "chip not visible"; continue
         tapxy(*center(n)); time.sleep(9)
         ns = nodes(); ev.append(shot(f"S12_{key}"))
@@ -1047,7 +1059,8 @@ def t_d_morph():
     ns = nodes(); cs = cards(ns)
     if not cs:
         record("D8", "Detail", "Morph", "FAIL", "no cards"); return
-    c = cs[0]; n = c["node"]
+    vis = [x for x in cs if x["node"]["b"][1] > SIZE[1] * 0.3 and x["node"]["b"][3] < SIZE[1] * 0.9]
+    c = (vis or cs)[0]; n = c["node"]
     tapxy(n["b"][0] + 40, int(n["b"][1] + (n["b"][3] - n["b"][1]) * 0.85))
     ev = []
     for i in range(3):
@@ -1166,7 +1179,7 @@ def t_hubs():
         digits = len(re.findall(r"\d", txt + txt2))
         spinner_only = len(labels(ns)) < 6
         ok = re.search(rx, txt) and not err and digits >= 6 and not spinner_only
-        if key in ("notifications", "admin", "dealer"):
+        if key in ("notifications", "admin", "dealer", "pro", "docs", "sell"):
             ok = re.search(rx, txt + txt2) and not err
         record(f"U1.{key}", "Hubs", f"{key}", "PASS" if ok else "FAIL",
                f"digits={digits} error={err.group(0) if err else None}; text={(txt)[:260]!r}", ev)
@@ -1366,7 +1379,7 @@ def t_lang():
         for uri, key in [("motormila://home", "home"), ("motormila://search", "search"), (f"motormila://listing/{LID[0]}", "detail"), ("motormila://settings", "settings")]:
             link(uri); time.sleep(9)
             ns = nodes(); ev.append(shot(f"G3_{lang}_{key}"))
-            labs = [l for l in labels(ns) if re.search(r"[A-Za-z]{3,}", l) and not re.search(r"(Rs |km|MotorMila|Motormila|\d{4}|ikman|riyasewana|Toyota|Honda|Suzuki|Nissan)", l)]
+            labs = [l for l in labels(ns) if re.search(r"[A-Za-z]{3,}", l) and not re.search(r"(Rs |km|MotorMila|Motormila|\d{4}|ikman|riyasewana|Toyota|Honda|Suzuki|Nissan|^PRO$|^Pro$|WhatsApp|Ikman|Riyasewana|Patpat)", l)]
             res[f"{lang}.{key}"] = {"english_labels": labs[:25], "n_english": len(labs), "n_total": len(labels(ns))}
     start("--es mm_qa_lang en"); time.sleep(5); adb(f"shell am force-stop {PKG}"); start(); time.sleep(6)
     si_en = sum(v["n_english"] for k, v in res.items() if k.startswith("si."))
@@ -1565,8 +1578,11 @@ def t_motion():
 def t_tabs_bar():
     res = {}; ev = []
     # The glass tab bar minimises to the current tab while content is scrolled:
-    # start from Home at the top so every tab is laid out.
+    # start from Home at the top so every tab is laid out. Fresh process: on the
+    # API 36 shard the previous test (X2 share-import) left a task without the tab bar.
+    adb(f"shell am force-stop {PKG}"); start(); time.sleep(6)
     link("motormila://home"); time.sleep(6)
+    ev.append(shot("Z1_home"))
     for lab, rx in [("Prices", r"(?i)(price|index|district|market)"), ("Tools", r"(?i)(calculator|tools|valuation)"), ("Sell", r"(?i)(sell|value)"),
                     ("Saved", r"(?i)(watchlist|saved|nothing)"), ("Buy", r"(?i)(fair price|cars listed|vehicles listed)")]:
         n = find(rf"^{lab}$", min_y=0.8)

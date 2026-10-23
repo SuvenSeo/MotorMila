@@ -667,7 +667,7 @@ private fun PriceDealSection(
             DealBadge(band = DealBand.LOCKED, score = null)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    "Deal score",
+                    stringResource(R.string.mm_deal_score_label),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -850,7 +850,7 @@ private fun PriceDropTicker(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun IntelligencePills(listing: Listing, modifier: Modifier = Modifier) {
-    val mileageLabel = remember(listing.mileageKm, listing.year) {
+    val mileageLabelRes = remember(listing.mileageKm, listing.year) {
         val mileage = listing.mileageKm
         val year = listing.year
         val currentYear = Calendar.getInstance().get(Calendar.YEAR)
@@ -859,15 +859,16 @@ private fun IntelligencePills(listing: Listing, modifier: Modifier = Modifier) {
             val kmPerYear = mileage / age
             val ratio = kmPerYear / 12000.0
             when {
-                age >= 3 && ratio < 0.35 -> "LOW KM ANOMALY"
-                ratio > 2.2 -> "HIGH USAGE"
-                ratio < 0.55 && age >= 2 -> "BELOW-AVG KM"
-                else -> "MILEAGE LOOKS TYPICAL"
+                age >= 3 && ratio < 0.35 -> R.string.mm_km_low_anomaly
+                ratio > 2.2 -> R.string.mm_km_high_usage
+                ratio < 0.55 && age >= 2 -> R.string.mm_km_below_avg
+                else -> R.string.mm_km_typical
             }
         } else {
-            "MILEAGE LOOKS TYPICAL"
+            R.string.mm_km_typical
         }
     }
+    val mileageLabel = stringResource(mileageLabelRes)
 
     val sellSpeedScore = remember(listing.dealScore) {
         val score = listing.dealScore ?: 7.5
@@ -925,7 +926,7 @@ private fun IntelligencePills(listing: Listing, modifier: Modifier = Modifier) {
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
-                    text = "SELL SPEED",
+                    text = stringResource(R.string.mm_pill_sell_speed),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.5.sp,
@@ -952,7 +953,7 @@ private fun IntelligencePills(listing: Listing, modifier: Modifier = Modifier) {
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
-                    text = "AD HEALTH",
+                    text = stringResource(R.string.mm_pill_ad_health),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.5.sp,
@@ -1052,7 +1053,7 @@ private fun DealLadder(askingLkr: Double?, fmvLkr: Double?, modifier: Modifier =
     if (askingLkr == null || fmvLkr == null || fmvLkr <= 0) return
     MotormilaSurface(modifier = modifier) {
         Text(
-            "Deal ladder",
+            stringResource(R.string.mm_deal_ladder),
             fontWeight = FontWeight.SemiBold,
             style = MaterialTheme.typography.bodyMedium,
             color = MotormilaOnSurface,
@@ -2018,13 +2019,14 @@ private fun DeepLinksRow(
         MotormilaGhostButton(
             label = "Estimate",
             fillMaxWidth = false,
-            modifier = Modifier.weight(1f),
+            // "Estimate" wrapped mid-word at equal weights on a 1080 px screen.
+            modifier = Modifier.weight(1.4f),
             onClick = onEstimate,
         )
         MotormilaGhostButton(
             label = "Tax",
             fillMaxWidth = false,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(0.85f),
             onClick = onTax,
         )
         MotormilaGhostButton(
@@ -2036,7 +2038,7 @@ private fun DeepLinksRow(
         MotormilaGhostButton(
             label = "Map",
             fillMaxWidth = false,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(0.85f),
             onClick = onMap,
         )
     }
@@ -2047,12 +2049,14 @@ private fun SimilarMiniCard(title: String, imageUrl: String?, price: String, onC
     MotormilaSurface(
         onClick = onClick,
         fillMaxWidth = false,
-        modifier = Modifier.width(180.dp),
+        // Same "Title, Rs X" label as the Search cards so TalkBack (and the QA
+        // card finder) reads the rail card as one listing (D6).
+        modifier = Modifier.width(180.dp).semantics { contentDescription = "$title, $price" },
         contentPadding = PaddingValues(0.dp),
     ) {
         ListingImage(
             model = imageUrl,
-            contentDescription = "Photo of $title",
+            contentDescription = null,
             modifier = Modifier.fillMaxWidth().height(90.dp),
         )
         Column(Modifier.padding(8.dp)) {
