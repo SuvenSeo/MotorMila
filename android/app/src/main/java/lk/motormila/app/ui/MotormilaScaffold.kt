@@ -170,7 +170,9 @@ fun MotormilaScaffold(
                 minimizeDrop = MmTabBarMetrics.height - MmTabBarMetrics.minimizedHeight,
             )
         } else {
-            MmBottomChrome(barVisible = false, contentPadding = 16.dp, barTop = 0.dp)
+            // Pushed edge-to-edge screens: the end of the scroll clears the
+            // gesture/nav bar, not just 16dp.
+            MmBottomChrome(barVisible = false, contentPadding = navInset + 16.dp, barTop = 0.dp)
         }
     }
 

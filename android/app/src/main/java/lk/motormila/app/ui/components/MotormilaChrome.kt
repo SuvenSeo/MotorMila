@@ -504,6 +504,8 @@ fun MotormilaChoiceChip(
         animationSpec = fluidSpring(),
         label = "choice-scale",
     )
+    // 48dp touch target, 36dp visible pill (was a 48dp blob that read as a
+    // circle for short labels and touched the button below).
     Box(
         modifier = Modifier
             .heightIn(min = 48.dp)
@@ -512,21 +514,25 @@ fun MotormilaChoiceChip(
                 scaleY = scale
             }
             .applePress(interaction, pressedScale = 0.96f)
-            .clip(CircleShape)
-            .background(if (enabled) fill else fill.copy(alpha = 0.45f))
-            .border(1.dp, border, CircleShape)
             .clickable(
                 enabled = enabled,
                 interactionSource = interaction,
                 indication = null,
                 onClick = { haptics.tick(); onClick() },
             )
-            .padding(horizontal = if (compact) 12.dp else 14.dp)
             .semantics { contentDescription = label }
             .then(modifier),
         contentAlignment = Alignment.Center,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier
+                .heightIn(min = if (compact) 32.dp else 36.dp)
+                .clip(CircleShape)
+                .background(if (enabled) fill else fill.copy(alpha = 0.45f))
+                .border(1.dp, border, CircleShape)
+                .padding(horizontal = if (compact) 12.dp else 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             if (leadingIcon != null) {
                 Icon(
                     leadingIcon,
