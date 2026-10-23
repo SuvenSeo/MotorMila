@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { BrandLogo } from "@/components/BrandLogo";
 import { sendFeedback } from "@/services/api";
 import { toast } from "sonner";
 import { motion } from "motion/react";
@@ -57,63 +58,54 @@ export default function SignIn() {
       initial="hidden"
       animate="show"
       variants={revealContainer}
-      className="relative min-h-screen overflow-hidden bg-[#07080a] text-white"
+      className="relative grid min-h-screen bg-background text-foreground lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]"
     >
-      {/* Full-bleed cinematic garage — car/light stay on the right */}
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        <AtmosphericImage
-          src={visuals.darkGarageSilhouette.src}
-          srcSm={visuals.darkGarageSilhouette.srcSm}
-          className="h-full w-full object-cover object-[72%_center] sm:object-[68%_center] lg:object-[62%_center]"
-          priority
-          sizes="100vw"
-        />
-        {/* Left negative-space wash for the auth panel; keep right luminous */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/92 via-black/72 to-black/25 sm:via-black/65 sm:to-black/15 lg:from-black/90 lg:via-black/45 lg:to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/40 lg:from-black/50 lg:to-black/25" />
-        {/* Mobile: dim the whole frame so the panel stays readable */}
-        <div className="absolute inset-0 bg-black/35 sm:bg-black/20 lg:bg-transparent" />
+      {/* Photo panel (desktop): rounded, inset, with a scrim so it reads the
+          same in light and dark. The form side follows the theme. */}
+      <div aria-hidden className="pointer-events-none relative order-2 hidden p-3 lg:block">
+        <div className="relative h-full overflow-hidden rounded-sheet">
+          <AtmosphericImage
+            src={visuals.darkGarageSilhouette.src}
+            srcSm={visuals.darkGarageSilhouette.srcSm}
+            className="h-full w-full object-cover object-[62%_center]"
+            priority
+            sizes="55vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-black/20" />
+        </div>
       </div>
 
-      <div className="relative z-10 flex min-h-screen items-center px-5 py-12 sm:px-8 lg:px-12 xl:px-16">
+      <div className="relative z-10 order-1 flex min-h-screen items-center justify-center px-5 py-12 sm:px-8">
         <motion.div
           variants={revealItem}
-          className="w-full max-w-[420px] rounded-[2rem] border border-border bg-foreground/[0.07] p-6 shadow-e3 sm:p-8"
+          className="w-full max-w-[400px]"
         >
           <div>
-            <Link to="/" className="mb-8 inline-flex items-center gap-2.5 group">
-              <div className="h-9 w-9 overflow-hidden rounded-2xl ring-1 ring-border transition-ui group-hover:ring-primary/50">
-                <img src="/logo.png" alt="" className="h-full w-full object-cover" />
-              </div>
-              <span className="font-display text-title3 font-bold tracking-tight text-white sm:text-title2">
-                Motormila
-              </span>
+            <Link to="/" className="mb-10 inline-flex rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Motormila home">
+              <BrandLogo size="nav" showTagline={false} />
             </Link>
 
-            {/* The auth page is permanently dark, so it uses fixed brand blues
-                rather than theme tokens — `--primary-bright` drops to a dark navy
-                in light theme and disappears against this backdrop. */}
-            <div className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-[#3D94FF]/35 bg-[#0A7AFF]/15 px-3 py-1">
-              <Lock className="h-3 w-3 text-[#6CB8FF]" aria-hidden />
-              <span className="text-caption font-semibold text-[#6CB8FF]">
+            <div className="mb-4 inline-flex h-6 items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-2.5">
+              <Lock className="h-3 w-3 text-primary" aria-hidden />
+              <span className="text-caption font-semibold text-primary">
                 {t("signin.secureAccess", "Secure access")}
               </span>
             </div>
 
-            <h1 className="font-display text-title1 font-bold tracking-tight text-white sm:text-title1">
+            <h1 className="font-display text-title1 font-bold tracking-tight text-foreground sm:text-title1">
               {t("signin.title", "Sign in")}
             </h1>
-            <p className="mt-3 text-body font-medium leading-relaxed text-white/65">
+            <p className="mt-3 text-body font-medium leading-relaxed text-label-2">
               {t("shell.copy.signinSubtitle", "Sign in to see your saved vehicles and price-drop alerts.")}
             </p>
           </div>
 
           {previewAccessEnabled && (
             <div className="mt-7 rounded-xl border border-border bg-foreground/[0.05] p-4">
-              <p className="text-caption font-bold text-[#6CB8FF]">
+              <p className="text-caption font-bold text-primary">
                 {t("signin.previewAvailable", "Preview available")}
               </p>
-              <p className="mt-1 text-caption font-medium text-white/55">
+              <p className="mt-1 text-caption font-medium text-label-2">
                 {t("signin.previewBody", "Preview the Pro workspace without signing in.")}
               </p>
               <motion.button
@@ -121,7 +113,7 @@ export default function SignIn() {
                 onClick={() => navigate("/pro-preview")}
                 whileTap={{ scale: 0.98 }}
                 transition={spring.smooth}
-                className="mt-3 flex h-9 w-full items-center justify-center gap-1.5 rounded-full border border-border bg-foreground/[0.08] text-caption font-bold text-white transition-ui hover:border-primary/40 hover:bg-foreground/[0.12]"
+                className="mt-3 flex h-9 w-full items-center justify-center gap-1.5 rounded-full border border-border bg-foreground/[0.08] text-caption font-bold text-foreground transition-ui hover:border-primary/40 hover:bg-foreground/[0.12]"
               >
                 {t("signin.previewPro", "Preview Pro")} <ArrowRight className="h-3 w-3" aria-hidden />
               </motion.button>
@@ -130,7 +122,7 @@ export default function SignIn() {
 
           {DEMO_AUTH_ENABLED && (
             <div className="mt-7 space-y-2 rounded-xl border border-border bg-foreground/[0.05] p-4">
-              <p className="text-caption font-bold text-[#6CB8FF]">
+              <p className="text-caption font-bold text-primary">
                 {t("signin.reviewAccounts", "Review accounts")}
               </p>
               {DEMO_ACCOUNT_SUMMARY.map((acc) => (
@@ -140,24 +132,24 @@ export default function SignIn() {
                   onClick={() => { setValue("email", acc.email); setServerError(""); }}
                   whileTap={{ scale: 0.99 }}
                   transition={spring.smooth}
-                  className="flex w-full items-center justify-between rounded-xl border border-border bg-black/25 px-3 py-2.5 text-left transition-ui hover:border-primary/35"
+                  className="flex w-full items-center justify-between rounded-xl border border-border bg-surface-1 px-3 py-2.5 text-left transition-ui hover:border-primary/35"
                 >
                   <div>
-                    <p className="text-caption font-bold text-white">{acc.name}</p>
-                    <p className="text-caption font-medium text-white/50">{acc.email}</p>
+                    <p className="text-caption font-bold text-foreground">{acc.name}</p>
+                    <p className="text-caption font-medium text-label-2">{acc.email}</p>
                   </div>
                   <span
                     className={`rounded-full border px-2 py-0.5 text-caption font-medium ${
                       acc.subscriptionStatus === "active"
-                        ? "border-[#3D94FF]/35 bg-[#0A7AFF]/15 text-[#6CB8FF]"
-                        : "border-border text-white/50"
+                        ? "border-primary/25 bg-primary/10 text-primary"
+                        : "border-border text-label-2"
                     }`}
                   >
                     {acc.plan}
                   </span>
                 </motion.button>
               ))}
-              <p className="text-caption font-medium text-white/45">
+              <p className="text-caption font-medium text-label-2">
                 {t("signin.reviewHint", "Selecting an account fills the email — enter its password to sign in.")}
               </p>
             </div>
@@ -165,7 +157,7 @@ export default function SignIn() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="mt-7 space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-caption font-semibold text-white/50">
+              <Label htmlFor="email" className="text-caption font-semibold text-label-2">
                 {t("signin.email", "Email")}
               </Label>
               <Input
@@ -174,14 +166,14 @@ export default function SignIn() {
                 placeholder={t("shell.copy.emailPlaceholder", "you@example.com")}
                 autoComplete="email"
                 {...register("email")}
-                className="h-11 rounded-xl border-border bg-black/35 text-footnote text-white placeholder:text-white/35 focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
+                className="h-11"
               />
               {errors.email && (
                 <p className="text-caption font-semibold text-deal-high-text">{errors.email.message}</p>
               )}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="password" className="text-caption font-semibold text-white/50">
+              <Label htmlFor="password" className="text-caption font-semibold text-label-2">
                 {t("signin.password", "Password")}
               </Label>
               <div className="relative">
@@ -191,12 +183,12 @@ export default function SignIn() {
                   placeholder="••••••••"
                   autoComplete="current-password"
                   {...register("password")}
-                  className="h-11 rounded-xl border-border bg-black/35 pr-10 text-footnote text-white placeholder:text-white/35 focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
+                  className="h-11 pr-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((s) => !s)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/45 transition-ui hover:text-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-label-2 transition-ui hover:text-foreground"
                   aria-label={showPassword ? t("signin.hidePassword", "Hide password") : t("signin.showPassword", "Show password")}
                 >
                   {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -209,7 +201,7 @@ export default function SignIn() {
                 <button
                   type="button"
                   onClick={() => { setShowReset(true); setResetDone(false); }}
-                  className="text-caption font-medium text-white/55 underline decoration-foreground/25 underline-offset-4 transition-colors hover:text-white"
+                  className="text-caption font-medium text-label-2 underline decoration-foreground/25 underline-offset-4 transition-colors hover:text-foreground"
                 >
                   {t("signin.forgotPassword", "Forgot password?")}
                 </button>
@@ -225,7 +217,7 @@ export default function SignIn() {
               disabled={loading}
               whileTap={{ scale: 0.98 }}
               transition={spring.smooth}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#0A7AFF] text-caption font-semibold text-white shadow-e2 transition-ui hover:bg-[#3D94FF] disabled:opacity-50"
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-primary text-body font-semibold text-primary-foreground shadow-e1 transition-ui hover:bg-primary/90 active:scale-[0.97] disabled:opacity-50"
             >
               {loading ? (
                 t("signin.loading", "Signing in...")
@@ -239,20 +231,20 @@ export default function SignIn() {
           </form>
 
           <div className="mt-8 space-y-3 border-t border-border pt-6 text-center">
-            <p className="text-caption font-medium text-white/50">
+            <p className="text-caption font-medium text-label-2">
               {t("signin.invitePrompt", "Have an invite link?")}{" "}
               <Link
                 to="/sign-up"
-                className="font-semibold text-white underline decoration-[#3D94FF]/50 underline-offset-4 transition-colors hover:text-[#6CB8FF]"
+                className="font-semibold text-foreground underline decoration-primary/50 underline-offset-4 transition-colors hover:text-primary"
               >
                 {t("signin.completeSignup", "Complete sign-up")}
               </Link>
             </p>
-            <p className="text-caption font-medium text-white/40">
+            <p className="text-caption font-medium text-label-2">
               {t("signin.noInvite", "No invite yet?")}{" "}
               <Link
                 to="/"
-                className="font-semibold text-white/80 underline decoration-foreground/25 underline-offset-4 transition-colors hover:text-white"
+                className="font-semibold text-foreground/90 underline decoration-foreground/25 underline-offset-4 transition-colors hover:text-foreground"
               >
                 {t("signin.browseAnyway", "Browse the live market instead")}
               </Link>
@@ -266,21 +258,21 @@ export default function SignIn() {
             role="dialog"
             aria-modal="true"
             aria-label={t("signin.resetTitle", "Reset your password")}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-5"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-5"
             onClick={() => setShowReset(false)}
           >
             <div
-              className="w-full max-w-sm rounded-3xl border border-border bg-[#101014] p-6 shadow-soft-xl"
+              className="w-full max-w-sm rounded-3xl border border-border bg-popover p-6 shadow-e3"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="mb-3 flex items-center gap-2">
                 <KeyRound aria-hidden className="h-4 w-4 text-primary-bright" />
-                <h2 className="text-body font-bold text-white">
+                <h2 className="text-body font-bold text-foreground">
                   {t("signin.resetTitle", "Reset your password")}
                 </h2>
               </div>
               {resetDone ? (
-                <p className="text-footnote leading-relaxed text-white/70">
+                <p className="text-footnote leading-relaxed text-foreground/90">
                   {t(
                     "signin.resetDone",
                     "Request received — we'll email you a reset link once support verifies the account. Check your inbox within a day.",
@@ -288,7 +280,7 @@ export default function SignIn() {
                 </p>
               ) : (
                 <>
-                  <p className="text-footnote leading-relaxed text-white/60">
+                  <p className="text-footnote leading-relaxed text-label-2">
                     {t(
                       "signin.resetBody",
                       "Enter your account email and we'll have support send you a password reset link.",
@@ -325,20 +317,20 @@ export default function SignIn() {
                       onChange={(e) => setResetEmail(e.target.value)}
                       placeholder={t("signin.emailPlaceholder", "you@example.com")}
                       aria-label={t("signin.emailPlaceholder", "you@example.com")}
-                      className="h-11 rounded-xl border-border bg-black/35 text-footnote text-white placeholder:text-white/35 focus:border-primary/40"
+                      className="h-11"
                     />
                     <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={() => setShowReset(false)}
-                        className="h-10 flex-1 rounded-full border border-border text-caption font-semibold text-white/70 transition-colors hover:text-white"
+                        className="h-10 flex-1 rounded-full border border-border text-caption font-semibold text-foreground/90 transition-colors hover:text-foreground"
                       >
                         {t("common.cancel", "Cancel")}
                       </button>
                       <button
                         type="submit"
                         disabled={resetSending}
-                        className="h-10 flex-1 rounded-full bg-[#0A7AFF] text-caption font-semibold text-white transition-ui hover:bg-[#3D94FF] disabled:opacity-50"
+                        className="h-10 flex-1 rounded-full bg-primary text-footnote font-semibold text-primary-foreground transition-ui hover:bg-primary/90 disabled:opacity-50"
                       >
                         {resetSending
                           ? t("signin.resetSending", "Sending...")
@@ -352,7 +344,7 @@ export default function SignIn() {
                 <button
                   type="button"
                   onClick={() => setShowReset(false)}
-                  className="mt-4 h-10 w-full rounded-full border border-border text-caption font-semibold text-white/70 transition-colors hover:text-white"
+                  className="mt-4 h-10 w-full rounded-full border border-border text-caption font-semibold text-foreground/90 transition-colors hover:text-foreground"
                 >
                   {t("common.close", "Close")}
                 </button>
@@ -364,7 +356,7 @@ export default function SignIn() {
         {/* Desktop-only brand whisper in the luminous right field — never overpowers Motormila mark */}
         <p
           aria-hidden
-          className="pointer-events-none absolute bottom-8 right-8 hidden max-w-xs text-right text-caption font-medium tracking-caps text-white/35 lg:block xl:right-14"
+          className="pointer-events-none absolute bottom-8 right-8 hidden max-w-xs text-right text-caption font-medium tracking-caps text-label-2 lg:block xl:right-14"
         >
           {t("signin.brandWhisper", "Sri Lanka vehicle intelligence")}
         </p>

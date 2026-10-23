@@ -12,7 +12,7 @@ export function RouteFallback() {
 
   if (isGrid) {
     return (
-      <div className="mx-auto w-full max-w-[1560px] px-5 py-8 sm:px-6" aria-label="Loading" role="status">
+      <div className="mx-auto min-h-[calc(100svh-var(--nav-offset))] w-full max-w-[1560px] px-5 py-8 sm:px-6" aria-label="Loading" role="status">
         <div className="skeleton-shimmer mb-6 h-8 w-48 rounded-full" />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }, (_, i) => (
@@ -24,7 +24,7 @@ export function RouteFallback() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[960px] px-5 py-16 sm:px-6" aria-label="Loading" role="status">
+    <div className="mx-auto min-h-[calc(100svh-var(--nav-offset))] w-full max-w-[960px] px-5 py-16 sm:px-6" aria-label="Loading" role="status">
       <div className="skeleton-shimmer mb-4 h-3 w-28 rounded-full" />
       <div className="skeleton-shimmer mb-3 h-10 w-2/3 max-w-md rounded-xl" />
       <div className="skeleton-shimmer mb-8 h-4 w-full max-w-xl rounded" />

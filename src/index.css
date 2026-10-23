@@ -2095,8 +2095,12 @@
 /* No persistent will-change/contain here: both make .route-stage the
    containing block for position:fixed descendants (sticky bars, sheets).
    motion/react promotes the layer only while a transition runs. */
+/* Reserve a full viewport for every route so the footer always starts below
+   the fold: lazy pages and skeleton->content swaps can no longer shove it
+   (the audit's top CLS source on Trends, Calculator and Listing). */
 .route-stage {
-  min-height: 1px;
+  min-height: calc(100vh - var(--nav-offset));
+  min-height: calc(100svh - var(--nav-offset));
 }
 
 @view-transition {
