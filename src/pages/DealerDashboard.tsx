@@ -50,7 +50,7 @@ const TOOLTIP_STYLE = {
   background: "hsl(var(--card))",
   border: "1px solid hsl(var(--border))",
   borderRadius: "10px",
-  fontSize: "11px",
+  fontSize: "12px",
   color: "hsl(var(--foreground))",
   boxShadow: "var(--shadow-md)",
 } as const;
@@ -82,9 +82,9 @@ function WidgetShell({
     <section className="rounded-2xl border border-border bg-card p-6 shadow-soft">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-[12px] font-semibold text-muted-foreground/80">Dealer Intelligence</p>
-          <h3 className="mt-1 font-display text-[15px] font-bold tracking-tight text-foreground">{title}</h3>
-          <p className="mt-0.5 text-[11px] text-muted-foreground font-medium">{subtitle}</p>
+          <p className="text-caption font-semibold text-muted-foreground/80">Dealer Intelligence</p>
+          <h3 className="mt-1 font-display text-body font-bold tracking-tight text-foreground">{title}</h3>
+          <p className="mt-0.5 text-caption text-muted-foreground font-medium">{subtitle}</p>
         </div>
         <button type="button" onClick={onToggle} className="flex h-7 w-7 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground active:scale-[0.95]" aria-label={collapsed ? `Expand ${title}` : `Collapse ${title}`} aria-expanded={!collapsed}>
           {collapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
@@ -99,15 +99,15 @@ function WidgetShell({
           ) : error ? (
             <div className="flex min-h-[180px] flex-col items-center justify-center gap-3 text-center">
               <AlertTriangle className="h-4 w-4 text-rose-500 dark:text-rose-400" />
-              <p className="text-[11px] text-muted-foreground">{error}</p>
+              <p className="text-caption text-muted-foreground">{error}</p>
               {onRetry ? (
-                <button type="button" onClick={onRetry} className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[10px] font-semibold text-foreground transition-all hover:border-primary/40 hover:bg-surface active:scale-[0.97]">
+                <button type="button" onClick={onRetry} className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-caption font-semibold text-foreground transition-all hover:border-primary/40 hover:bg-surface active:scale-[0.97]">
                   <RefreshCw className="h-3 w-3" /> Retry
                 </button>
               ) : null}
             </div>
           ) : emptyMessage ? (
-            <p className="py-8 text-center text-[11px] text-muted-foreground">{emptyMessage}</p>
+            <p className="py-8 text-center text-caption text-muted-foreground">{emptyMessage}</p>
           ) : (
             children
           )}
@@ -179,21 +179,21 @@ function ClaimYardCard() {
     <section className="rounded-2xl border border-border bg-card p-5 shadow-soft">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[12px] font-semibold text-primary">{t("dealer.claimYard", "Claim your yard")}</p>
-          <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">{t("dealer.profile", "Dealer profile")}</h2>
-          <p className="mt-1 max-w-xl text-[12px] text-muted-foreground">
+          <p className="text-caption font-semibold text-primary">{t("dealer.claimYard", "Claim your yard")}</p>
+          <h2 className="mt-1 text-callout font-semibold tracking-tight text-foreground">{t("dealer.profile", "Dealer profile")}</h2>
+          <p className="mt-1 max-w-xl text-caption text-muted-foreground">
             {t("dealer.claimHint", "Claim a seller name so Motormila can match your live inventory and show pricing vs market.")}
           </p>
         </div>
         {profile && (
           <div className="flex flex-wrap items-center gap-2">
             {profile.status === "verified" && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[12px] font-semibold text-emerald-700 dark:text-emerald-400">
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-caption font-semibold text-emerald-700 dark:text-emerald-400">
                 <ShieldCheck className="h-3 w-3" aria-hidden />
                 {t("dealer.verified", "Verified dealer")}
               </span>
             )}
-            <span className="rounded-full border border-border bg-surface px-3 py-1 text-[12px] font-semibold text-muted-foreground">
+            <span className="rounded-full border border-border bg-surface px-3 py-1 text-caption font-semibold text-muted-foreground">
               {profile.status} · {profile.matched_listings} matched
               {profile.subscription_status && profile.subscription_status !== "none"
                 ? ` · ${profile.plan || "dealer"}/${profile.subscription_status}`
@@ -204,61 +204,61 @@ function ClaimYardCard() {
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <label htmlFor="dealer-name" className="mb-1 block text-[11px] font-semibold text-muted-foreground">
+          <label htmlFor="dealer-name" className="mb-1 block text-caption font-semibold text-muted-foreground">
             Yard / brand name
           </label>
           <input
             id="dealer-name"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            className="h-9 w-full rounded-2xl border border-border bg-surface px-3 text-sm text-foreground"
+            className="h-9 w-full rounded-2xl border border-border bg-surface px-3 text-footnote text-foreground"
             placeholder="Colombo Auto Hub"
           />
         </div>
         <div>
-          <label htmlFor="dealer-pattern" className="mb-1 block text-[11px] font-semibold text-muted-foreground">
+          <label htmlFor="dealer-pattern" className="mb-1 block text-caption font-semibold text-muted-foreground">
             Seller name on ads
           </label>
           <input
             id="dealer-pattern"
             value={pattern}
             onChange={(e) => setPattern(e.target.value)}
-            className="h-9 w-full rounded-2xl border border-border bg-surface px-3 text-sm text-foreground"
+            className="h-9 w-full rounded-2xl border border-border bg-surface px-3 text-footnote text-foreground"
             placeholder="Auto Hub LK"
           />
         </div>
         <div>
-          <label htmlFor="dealer-url" className="mb-1 block text-[11px] font-semibold text-muted-foreground">
+          <label htmlFor="dealer-url" className="mb-1 block text-caption font-semibold text-muted-foreground">
             Listing / yard URL
           </label>
           <input
             id="dealer-url"
             value={claimedUrl}
             onChange={(e) => setClaimedUrl(e.target.value)}
-            className="h-9 w-full rounded-2xl border border-border bg-surface px-3 text-sm text-foreground"
+            className="h-9 w-full rounded-2xl border border-border bg-surface px-3 text-footnote text-foreground"
             placeholder="https://ikman.lk/en/shops/..."
             inputMode="url"
           />
         </div>
         <div>
-          <label htmlFor="dealer-phone" className="mb-1 block text-[11px] font-semibold text-muted-foreground">
+          <label htmlFor="dealer-phone" className="mb-1 block text-caption font-semibold text-muted-foreground">
             WhatsApp / phone
           </label>
           <input
             id="dealer-phone"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="h-9 w-full rounded-2xl border border-border bg-surface px-3 text-sm text-foreground"
+            className="h-9 w-full rounded-2xl border border-border bg-surface px-3 text-footnote text-foreground"
             placeholder="0771234567"
           />
         </div>
       </div>
-      {error && <p className="mt-2 text-[11px] text-destructive">{error}</p>}
+      {error && <p className="mt-2 text-caption text-destructive">{error}</p>}
       <button
         type="button"
         onClick={() => void handleClaim()}
         disabled={saving}
-        className="mt-4 inline-flex h-9 items-center rounded-full bg-primary px-4 text-[11px] font-bold text-white disabled:opacity-40"
+        className="mt-4 inline-flex h-9 items-center rounded-full bg-primary px-4 text-caption font-bold text-white disabled:opacity-40"
       >
         {saving ? t("common.saving", "Saving…") : profile ? t("dealer.updateClaim", "Update claim") : t("dealer.claimProfile", "Claim profile")}
       </button>
@@ -302,7 +302,7 @@ function InventoryBenchmark() {
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-border bg-surface p-4">
-        <label className="block text-[12px] font-semibold text-muted-foreground/80 mb-2 font-semibold">
+        <label className="block text-caption font-semibold text-muted-foreground/80 mb-2 font-semibold">
           Listing URLs <span className="normal-case font-normal">(one per line, max 50)</span>
         </label>
         <textarea
@@ -311,16 +311,16 @@ function InventoryBenchmark() {
           onChange={(e) => setUrlsText(e.target.value)}
           placeholder={"https://ikman.lk/en/ad/toyota-vitz-2018-for-sale-...\nhttps://riyasewana.com/listing/..."}
           rows={5}
-          className="w-full resize-none rounded-xl border border-border bg-card px-3 py-2.5 text-[12px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/40"
+          className="w-full resize-none rounded-xl border border-border bg-card px-3 py-2.5 text-caption text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/40"
         />
         <div className="mt-3 flex items-center justify-between gap-3">
-          <span className="text-[10px] text-muted-foreground font-bold num">{urlCount > 0 ? `${urlCount} URL${urlCount === 1 ? "" : "s"}` : t("dealer.pasteUrls", "Paste URLs above")}</span>
+          <span className="text-caption text-muted-foreground font-bold num">{urlCount > 0 ? `${urlCount} URL${urlCount === 1 ? "" : "s"}` : t("dealer.pasteUrls", "Paste URLs above")}</span>
           <div className="flex items-center gap-2">
             {(results !== null || urlsText) && (
               <button
                 type="button"
                 onClick={handleClear}
-                className="inline-flex h-8 items-center rounded-full border border-border bg-surface px-3 text-[10px] font-bold text-muted-foreground transition-all hover:text-foreground hover:bg-card active:scale-[0.97]"
+                className="inline-flex h-8 items-center rounded-full border border-border bg-surface px-3 text-caption font-bold text-muted-foreground transition-all hover:text-foreground hover:bg-card active:scale-[0.97]"
               >
                 Clear
               </button>
@@ -329,7 +329,7 @@ function InventoryBenchmark() {
               type="button"
               onClick={() => void handleSubmit()}
               disabled={loading || !urlCount}
-              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-primary px-4 text-[10px] font-bold text-white shadow-soft transition-all hover:bg-primary/95 active:scale-[0.97] disabled:opacity-40"
+              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-primary px-4 text-caption font-bold text-white shadow-soft transition-all hover:bg-primary/95 active:scale-[0.97] disabled:opacity-40"
             >
               {loading ? (
                 <span className="flex items-center gap-1.5">
@@ -350,13 +350,13 @@ function InventoryBenchmark() {
       {submitError && (
         <div className="flex items-start gap-2 rounded-xl border border-rose-500/20 bg-rose-500/5 px-3 py-2.5">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-500 dark:text-rose-400" />
-          <p className="text-[11px] text-rose-700 dark:text-rose-300 font-medium">{submitError}</p>
+          <p className="text-caption text-rose-700 dark:text-rose-300 font-medium">{submitError}</p>
         </div>
       )}
 
       {results !== null && results.length > 0 && (
         <div className="overflow-x-auto rounded-xl border border-border bg-surface">
-          <table className="w-full min-w-[600px] text-[11px]">
+          <table className="w-full min-w-[600px] text-caption">
             <thead>
               <tr className="border-b border-border bg-card">
                 <th className="px-3 py-2.5 text-left font-bold text-muted-foreground/80">URL</th>
@@ -380,7 +380,7 @@ function InventoryBenchmark() {
                       {row.url.replace(/^https?:\/\//, "").slice(0, 45)}{row.url.length > 50 ? "…" : ""}
                     </a>
                     {row.error && (
-                      <span className="mt-0.5 block text-[9px] text-rose-600 dark:text-rose-400">{row.error}</span>
+                      <span className="mt-0.5 block text-caption text-rose-600 dark:text-rose-400">{row.error}</span>
                     )}
                   </td>
                   <td className="px-3 py-2.5 text-foreground font-medium">
@@ -399,7 +399,7 @@ function InventoryBenchmark() {
                     {row.market_median != null ? (
                       <span title={`${row.comparable_count} comparables`}>
                         {formatPrice(row.market_median)}
-                        <span className="ml-1 text-[9px] text-muted-foreground">({row.comparable_count})</span>
+                        <span className="ml-1 text-caption text-muted-foreground">({row.comparable_count})</span>
                       </span>
                     ) : (
                       <span className="text-muted-foreground">—</span>
@@ -420,7 +420,7 @@ function InventoryBenchmark() {
       )}
 
       {results !== null && results.length === 0 && (
-        <p className="py-6 text-center text-[11px] text-muted-foreground">{t("dealer.noResults", "No results returned.")}</p>
+        <p className="py-6 text-center text-caption text-muted-foreground">{t("dealer.noResults", "No results returned.")}</p>
       )}
     </div>
   );
@@ -537,9 +537,9 @@ export default function DealerDashboard() {
         ]}
         actions={
           <>
-            <Link to="/#market" className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-[12px] font-semibold text-muted-foreground no-underline shadow-soft transition-all hover:border-primary/40 hover:text-foreground hover:bg-surface active:scale-[0.98]">{t("dealer.openPublicInventory", "Open public inventory")}</Link>
-            <Link to="/pricing" className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-[12px] font-semibold text-muted-foreground no-underline shadow-soft transition-all hover:border-primary/40 hover:text-foreground hover:bg-surface active:scale-[0.98]">Dealer plans</Link>
-            <Link to="/official-pulse" className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-[12px] font-semibold text-muted-foreground no-underline shadow-soft transition-all hover:border-primary/40 hover:text-foreground hover:bg-surface active:scale-[0.98]">Official pulse</Link>
+            <Link to="/#market" className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-caption font-semibold text-muted-foreground no-underline shadow-soft transition-all hover:border-primary/40 hover:text-foreground hover:bg-surface active:scale-[0.98]">{t("dealer.openPublicInventory", "Open public inventory")}</Link>
+            <Link to="/pricing" className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-caption font-semibold text-muted-foreground no-underline shadow-soft transition-all hover:border-primary/40 hover:text-foreground hover:bg-surface active:scale-[0.98]">Dealer plans</Link>
+            <Link to="/official-pulse" className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-caption font-semibold text-muted-foreground no-underline shadow-soft transition-all hover:border-primary/40 hover:text-foreground hover:bg-surface active:scale-[0.98]">Official pulse</Link>
           </>
         }
       />
@@ -560,9 +560,9 @@ export default function DealerDashboard() {
           <div className="mb-6 flex items-start gap-3 rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-500 dark:text-rose-400" />
             <div className="min-w-0">
-              <p className="text-[12px] font-bold text-foreground">{t("dealer.unavailable", "Dealer data unavailable")}</p>
-              <p className="mt-1 text-[11px] text-muted-foreground font-medium">{dashboardError}</p>
-              <button type="button" onClick={retryAll} className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[10px] font-bold text-foreground transition-all hover:border-primary/40 hover:bg-card active:scale-[0.97]">
+              <p className="text-caption font-bold text-foreground">{t("dealer.unavailable", "Dealer data unavailable")}</p>
+              <p className="mt-1 text-caption text-muted-foreground font-medium">{dashboardError}</p>
+              <button type="button" onClick={retryAll} className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-caption font-bold text-foreground transition-all hover:border-primary/40 hover:bg-card active:scale-[0.97]">
                 <RefreshCw className="h-3 w-3" /> Retry
               </button>
             </div>
@@ -576,8 +576,8 @@ export default function DealerDashboard() {
         <div className="grid gap-6 lg:grid-cols-[268px_1fr]">
           <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
             <motion.div variants={revealItem} className="rounded-2xl border border-border bg-card p-5 shadow-soft">
-              <p className="text-[12px] font-semibold text-primary-bright">Motormila</p>
-              <h2 className="mt-2 font-display text-lg font-bold tracking-tight text-foreground">Command stack</h2>
+              <p className="text-caption font-semibold text-primary-bright">Motormila</p>
+              <h2 className="mt-2 font-display text-callout font-bold tracking-tight text-foreground">Command stack</h2>
               <nav className="mt-4 space-y-1" aria-label={t("dealer.commandStack", "Command stack")}>
                 {[
                   { label: t("dealer.turnover", "Inventory Turnover"), meta: turnoverData.length ? `${turnoverData.length} models` : "—" },
@@ -587,12 +587,12 @@ export default function DealerDashboard() {
                   { label: t("dealer.benchmark", "Inventory Benchmark"), meta: "URL upload" },
                 ].map((i) => (
                   <div key={i.label} className="flex items-center justify-between rounded-2xl border border-border bg-surface px-3 py-2 transition-all hover:border-primary/40 hover:bg-card">
-                    <span className="text-[11px] text-foreground font-medium">{i.label}</span>
-                    <span className="text-[9px] font-bold text-primary-bright num">{i.meta}</span>
+                    <span className="text-caption text-foreground font-medium">{i.label}</span>
+                    <span className="text-caption font-bold text-primary-bright num">{i.meta}</span>
                   </div>
                 ))}
                 <div className="pt-3">
-                  <p className="mb-2 px-1 text-[11px] font-medium text-muted-foreground/80">{t("dealer.quickTools", "Quick tools")}</p>
+                  <p className="mb-2 px-1 text-caption font-medium text-muted-foreground/80">{t("dealer.quickTools", "Quick tools")}</p>
                   {DEALER_QUICK_TOOLS.map((tool) => (
                     <Link
                       key={tool.id}
@@ -600,8 +600,8 @@ export default function DealerDashboard() {
                       className="mb-1 flex items-center justify-between rounded-2xl border border-border bg-surface px-3 py-2 no-underline transition-all hover:border-primary/40 hover:bg-card last:mb-0"
                     >
                       <span className="min-w-0">
-                        <span className="block text-[11px] text-foreground font-medium">{tool.title}</span>
-                        <span className="block text-[9px] text-muted-foreground font-medium">{tool.description}</span>
+                        <span className="block text-caption text-foreground font-medium">{tool.title}</span>
+                        <span className="block text-caption text-muted-foreground font-medium">{tool.description}</span>
                       </span>
                     </Link>
                   ))}
@@ -609,19 +609,19 @@ export default function DealerDashboard() {
               </nav>
             </motion.div>
             <motion.div variants={revealItem} className="rounded-2xl border border-border bg-card p-4 shadow-soft">
-              <div className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-primary-bright" /><p className="text-[10px] font-bold text-primary-bright">{t("dealer.trustTier", "Trust tier")}</p></div>
+              <div className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-primary-bright" /><p className="text-caption font-bold text-primary-bright">{t("dealer.trustTier", "Trust tier")}</p></div>
               {dashboardLoading ? (
                 <div className="mt-3 h-8 animate-pulse rounded-full bg-surface" />
               ) : (
                 <>
                   <p className="mt-2 flex items-baseline gap-1">
-                    <span className="num text-2xl font-bold text-foreground">{trustScore ?? "—"}</span>
-                    {trustScore != null ? <span className="text-[11px] text-muted-foreground font-bold">/100</span> : null}
+                    <span className="num text-title2 font-bold text-foreground">{trustScore ?? "—"}</span>
+                    {trustScore != null ? <span className="text-caption text-muted-foreground font-bold">/100</span> : null}
                   </p>
                   {trustScore != null ? (
                     <div className="mt-2 h-1 overflow-hidden rounded-full bg-surface"><div className="h-full rounded-full bg-primary" style={{ width: `${trustScore}%` }} /></div>
                   ) : (
-                    <p className="mt-2 text-[10px] text-muted-foreground font-medium">Trust score needs listing volume data.</p>
+                    <p className="mt-2 text-caption text-muted-foreground font-medium">Trust score needs listing volume data.</p>
                   )}
                 </>
               )}
@@ -641,13 +641,13 @@ export default function DealerDashboard() {
                     transition={springSoft}
                     className={`group rounded-2xl border border-border bg-card shadow-soft transition-all hover:border-primary/30 ${featured ? "sm:col-span-2 p-6" : "p-5"}`}
                   >
-                    <p className="text-[12px] font-semibold text-muted-foreground/80">{m.label}</p>
+                    <p className="text-caption font-semibold text-muted-foreground/80">{m.label}</p>
                     {dashboardLoading ? (
                       <div className={`mt-3 animate-pulse rounded-full bg-surface ${featured ? "h-12 w-28" : "h-8 w-16"}`} />
                     ) : (
-                      <p className={`num mt-2 font-bold text-foreground ${featured ? "text-4xl sm:text-5xl" : "text-2xl"}`}>{m.value}</p>
+                      <p className={`num mt-2 font-bold text-foreground ${featured ? "text-title1 sm:text-large" : "text-title2"}`}>{m.value}</p>
                     )}
-                    <p className={`mt-1 text-[11px] font-semibold ${m.tone}`}>{m.delta}</p>
+                    <p className={`mt-1 text-caption font-semibold ${m.tone}`}>{m.delta}</p>
                   </motion.div>
                 );
               })}
@@ -656,8 +656,8 @@ export default function DealerDashboard() {
             <motion.div variants={revealItem} key={activeNotif} className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 shadow-soft">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary-bright"><Bell className="h-3.5 w-3.5" /></div>
               <div className="min-w-0">
-                <p className="text-[10px] font-bold text-primary-bright">Lead notification</p>
-                <p className="mt-1 text-[12px] text-foreground font-medium leading-relaxed">{activeNotif}</p>
+                <p className="text-caption font-bold text-primary-bright">Lead notification</p>
+                <p className="mt-1 text-caption text-foreground font-medium leading-relaxed">{activeNotif}</p>
               </div>
             </motion.div>
 
@@ -674,13 +674,13 @@ export default function DealerDashboard() {
                     variants={revealItem}
                     className="rounded-2xl border border-border bg-card p-5 shadow-soft transition-all hover:border-primary/30"
                   >
-                    <p className="text-[11px] font-medium text-primary-bright">{item.forWhom}</p>
-                    <h3 className="mt-1.5 font-display text-[14px] font-bold tracking-tight text-foreground">{item.title}</h3>
-                    <p className="mt-2 text-[11px] text-muted-foreground font-medium leading-relaxed">{item.problem}</p>
-                    <p className="mt-2 text-[11px] text-foreground font-medium leading-relaxed">{item.whatMotormilaDoes}</p>
+                    <p className="text-caption font-medium text-primary-bright">{item.forWhom}</p>
+                    <h3 className="mt-1.5 font-display text-body font-bold tracking-tight text-foreground">{item.title}</h3>
+                    <p className="mt-2 text-caption text-muted-foreground font-medium leading-relaxed">{item.problem}</p>
+                    <p className="mt-2 text-caption text-foreground font-medium leading-relaxed">{item.whatMotormilaDoes}</p>
                     <Link
                       to={item.whereToGo.to}
-                      className="mt-4 inline-flex text-[12px] font-semibold text-primary-bright no-underline transition-colors hover:text-primary"
+                      className="mt-4 inline-flex text-caption font-semibold text-primary-bright no-underline transition-colors hover:text-primary"
                     >
                       {item.whereToGo.label} →
                     </Link>
@@ -713,8 +713,8 @@ export default function DealerDashboard() {
                       <AreaChart data={turnoverData}>
                         <defs><linearGradient id="turnoverArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.3} /><stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} /></linearGradient></defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                        <XAxis dataKey="week" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} tickLine={false} axisLine={false} />
-                        <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} tickLine={false} axisLine={false} />
+                        <XAxis dataKey="week" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickLine={false} axisLine={false} />
+                        <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickLine={false} axisLine={false} />
                         <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} />
                         <Area type="monotone" dataKey="sellThrough" name="Momentum index" stroke="hsl(var(--primary))" fill="url(#turnoverArea)" strokeWidth={2} />
                       </AreaChart>
@@ -736,8 +736,8 @@ export default function DealerDashboard() {
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={priceGaps}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                        <XAxis dataKey="district" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} tickLine={false} axisLine={false} />
-                        <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} tickFormatter={(v) => `${v}%`} tickLine={false} axisLine={false} />
+                        <XAxis dataKey="district" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickLine={false} axisLine={false} />
+                        <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={(v) => `${v}%`} tickLine={false} axisLine={false} />
                         <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} formatter={(v: number) => [`${v.toFixed(1)}%`, "Gap"]} />
                         <Bar dataKey="gapPct" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                       </BarChart>
@@ -759,12 +759,12 @@ export default function DealerDashboard() {
                     {districtDemand.map((d) => (
                       <div key={d.district} className="rounded-xl border border-border bg-surface p-4 transition-all hover:border-primary/40 hover:bg-card hover:shadow-soft">
                         <div className="flex items-center justify-between">
-                          <p className="text-[12px] font-bold text-foreground">{d.district}</p>
-                          <span className="text-[10px] font-bold text-primary-bright num">Demand {d.demandScore}</span>
+                          <p className="text-caption font-bold text-foreground">{d.district}</p>
+                          <span className="text-caption font-bold text-primary-bright num">Demand {d.demandScore}</span>
                         </div>
                         <div className="mt-2 space-y-1">
-                          <div className="flex justify-between text-[10px] font-medium"><span className="text-muted-foreground">Top model</span><span className="text-foreground">{d.topModel}</span></div>
-                          <div className="flex justify-between text-[10px] font-medium"><span className="text-muted-foreground">Avg price</span><span className="text-foreground num">{d.avgPrice > 0 ? formatPrice(d.avgPrice) : "—"}</span></div>
+                          <div className="flex justify-between text-caption font-medium"><span className="text-muted-foreground">Top model</span><span className="text-foreground">{d.topModel}</span></div>
+                          <div className="flex justify-between text-caption font-medium"><span className="text-muted-foreground">Avg price</span><span className="text-foreground num">{d.avgPrice > 0 ? formatPrice(d.avgPrice) : "—"}</span></div>
                         </div>
                         <div className="mt-2 h-1 overflow-hidden rounded-full bg-card"><div className="h-full rounded-full bg-primary" style={{ width: `${d.demandScore}%` }} /></div>
                       </div>
@@ -786,8 +786,8 @@ export default function DealerDashboard() {
               ) : (
                 <ProFeatureLock label={freePlanCopy.dealerTitle} className="min-h-[18rem]">
                   <div className="rounded-2xl border border-border bg-card p-8 opacity-80">
-                    <p className="font-display text-lg font-bold text-foreground">{t("dealer.turnover", "Inventory Turnover")}</p>
-                    <p className="mt-2 text-sm text-muted-foreground">{freePlanCopy.dealerBody}</p>
+                    <p className="font-display text-callout font-bold text-foreground">{t("dealer.turnover", "Inventory Turnover")}</p>
+                    <p className="mt-2 text-footnote text-muted-foreground">{freePlanCopy.dealerBody}</p>
                   </div>
                 </ProFeatureLock>
               )}
@@ -797,16 +797,16 @@ export default function DealerDashboard() {
               variants={revealItem}
               className="rounded-2xl border border-border bg-card p-6 shadow-soft"
             >
-              <p className="text-[12px] font-semibold text-primary-bright">Dealer plan</p>
-              <h3 className="mt-2 font-display text-[15px] font-bold tracking-tight text-foreground">
+              <p className="text-caption font-semibold text-primary-bright">Dealer plan</p>
+              <h3 className="mt-2 font-display text-body font-bold tracking-tight text-foreground">
                 Full dealer workspace is part of Dealer plan — LKR 1,999/mo
               </h3>
-              <p className="mt-2 max-w-xl text-[12px] text-muted-foreground font-medium leading-relaxed">
+              <p className="mt-2 max-w-xl text-caption text-muted-foreground font-medium leading-relaxed">
                 Keep using the command center today. Upgrade when you want billed seats, saved yard workflows, and priority market sync.
               </p>
               <Link
                 to="/pricing"
-                className="mt-4 inline-flex h-10 items-center rounded-full border border-border bg-surface px-5 text-[12px] font-semibold text-foreground no-underline shadow-soft transition-all hover:border-primary/40 hover:bg-card active:scale-[0.98]"
+                className="mt-4 inline-flex h-10 items-center rounded-full border border-border bg-surface px-5 text-caption font-semibold text-foreground no-underline shadow-soft transition-all hover:border-primary/40 hover:bg-card active:scale-[0.98]"
               >
                 View dealer plans
               </Link>

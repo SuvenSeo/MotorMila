@@ -59,18 +59,18 @@ function SignalCard({ signal }: { signal: MarketSignal }) {
       className="group flex flex-col rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl transition-all hover:border-primary/30 hover:shadow-soft-lg"
     >
       <Link to={`/official-pulse/${signal.id}`} className="flex flex-1 flex-col no-underline">
-        <p className="text-[12px] font-medium text-primary/70">
+        <p className="text-caption font-medium text-primary/70">
           {labelPulseSource(signal.source)} · {signal.signal_type.replace(/_/g, " ")}
         </p>
-        <h3 className="mt-2 text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+        <h3 className="mt-2 text-footnote font-semibold text-foreground group-hover:text-primary transition-colors">
           {title}
         </h3>
-        <p className="num mt-4 text-2xl font-bold tracking-tight text-foreground">{value}</p>
-        <p className="mt-1 text-[11px] text-muted-foreground">
+        <p className="num mt-4 text-title2 font-bold tracking-tight text-foreground">{value}</p>
+        <p className="mt-1 text-caption text-muted-foreground">
           {period ? t("pulse.period", "Period {period}", { period }) : t("pulse.latest", "Latest official pulse")}
           {signal.metric ? ` · ${signal.metric.replace(/_/g, " ")}` : null}
         </p>
-        <span className="mt-4 inline-flex items-center gap-1.5 text-[11px] font-semibold text-primary">
+        <span className="mt-4 inline-flex items-center gap-1.5 text-caption font-semibold text-primary">
           {t("pulse.openInPlatform", "Open in-platform")}
           <ArrowRight aria-hidden className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
         </span>
@@ -80,7 +80,7 @@ function SignalCard({ signal }: { signal: MarketSignal }) {
           href={signal.source_url}
           target="_blank"
           rel="noreferrer"
-          className="mt-4 inline-flex items-center gap-1.5 self-start text-[10px] font-medium text-muted-foreground no-underline transition-colors hover:text-foreground"
+          className="mt-4 inline-flex items-center gap-1.5 self-start text-caption font-medium text-muted-foreground no-underline transition-colors hover:text-foreground"
         >
           <ExternalLink aria-hidden className="h-3 w-3" />
           {t("pulse.viewOriginal", "View original source")}
@@ -155,14 +155,14 @@ export default function OfficialPulse() {
           <>
             <Link
               to="/docs#official-pulse"
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-[13px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-footnote font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <BookOpen aria-hidden className="h-4 w-4" />
               {t("pulse.readDocs", "Read the docs")}
             </Link>
             <Link
               to="/pricing"
-              className="inline-flex h-11 items-center rounded-full border border-border bg-card px-6 text-[13px] font-semibold text-foreground no-underline transition-all hover:border-primary/40 hover:bg-surface active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="inline-flex h-11 items-center rounded-full border border-border bg-card px-6 text-footnote font-semibold text-foreground no-underline transition-all hover:border-primary/40 hover:bg-surface active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               {t("common.viewPricing", "View pricing")}
             </Link>
@@ -188,16 +188,16 @@ export default function OfficialPulse() {
                   to={`/official-pulse/guide/${guide.key}`}
                   className="group flex h-full flex-col rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl no-underline transition-all hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg"
                 >
-                  <p className="text-[12px] font-medium text-primary/70">
+                  <p className="text-caption font-medium text-primary/70">
                     {labelPulseSource(guide.source)}
                   </p>
-                  <h3 className="mt-2 font-display text-[15px] font-bold text-foreground group-hover:text-primary transition-colors">
+                  <h3 className="mt-2 font-display text-body font-bold text-foreground group-hover:text-primary transition-colors">
                     {guide.title}
                   </h3>
-                  <p className="mt-3 flex-1 text-[12px] font-medium leading-relaxed text-muted-foreground">
+                  <p className="mt-3 flex-1 text-caption font-medium leading-relaxed text-muted-foreground">
                     {guide.summary}
                   </p>
-                  <span className="mt-5 inline-flex items-center gap-1.5 text-[11px] font-semibold text-primary">
+                  <span className="mt-5 inline-flex items-center gap-1.5 text-caption font-semibold text-primary">
                     <FileText aria-hidden className="h-3.5 w-3.5" />
                     {t("pulse.openGuide", "Open guide")}
                     <ArrowRight
@@ -218,7 +218,7 @@ export default function OfficialPulse() {
             description={t("pulse.feedDesc", "Latest DMT, Customs, CBSL FX, CCPI, and import-parity observations synced into Motormila.")}
             className="mb-8"
             actions={
-              <div className="inline-flex items-center gap-2 text-[11px] font-medium text-muted-foreground">
+              <div className="inline-flex items-center gap-2 text-caption font-medium text-muted-foreground">
                 <Radio aria-hidden className="h-3.5 w-3.5 text-primary" />
                 {fullAccess
                   ? t("pulse.last48", "Last 48 observations")
@@ -255,15 +255,15 @@ export default function OfficialPulse() {
             <div className="flex flex-col items-start gap-3 rounded-3xl border border-rose-500/25 bg-rose-500/5 p-6 backdrop-blur-xl">
               <div className="flex items-center gap-2">
                 <Loader2 aria-hidden className="h-4 w-4 text-rose-500" />
-                <p className="text-[13px] font-semibold text-foreground">{t("pulse.loadError", "Could not load live signals")}</p>
+                <p className="text-footnote font-semibold text-foreground">{t("pulse.loadError", "Could not load live signals")}</p>
               </div>
-              <p className="text-[12px] text-muted-foreground">
+              <p className="text-caption text-muted-foreground">
                 {t("pulse.loadErrorBody", "The market-signals feed is temporarily unavailable. Retry in a moment.")}
               </p>
               <button
                 type="button"
                 onClick={() => void signalsQuery.refetch()}
-                className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-card/85 px-5 py-2 text-[11px] font-bold text-foreground transition-all hover:border-primary/40 hover:bg-surface active:scale-[0.97]"
+                className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-card/85 px-5 py-2 text-caption font-bold text-foreground transition-all hover:border-primary/40 hover:bg-surface active:scale-[0.97]"
               >
                 <RefreshCw aria-hidden className="h-3.5 w-3.5" />
                 {t("common.retry", "Retry")}
@@ -272,8 +272,8 @@ export default function OfficialPulse() {
           ) : filteredSignals.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-border/80 bg-card/60 px-6 py-14 text-center backdrop-blur-xl">
               <Landmark aria-hidden className="mx-auto h-6 w-6 text-muted-foreground" />
-              <p className="mt-3 text-[14px] font-semibold text-foreground">{t("pulse.empty", "No signals yet")}</p>
-              <p className="mx-auto mt-2 max-w-md text-[12px] text-muted-foreground">
+              <p className="mt-3 text-body font-semibold text-foreground">{t("pulse.empty", "No signals yet")}</p>
+              <p className="mx-auto mt-2 max-w-md text-caption text-muted-foreground">
                 {sourceFilter === "all"
                   ? t(
                       "pulse.emptyBody",
@@ -324,10 +324,10 @@ export default function OfficialPulse() {
                   key={item.id || `${item.title}-${index}`}
                   className="rounded-3xl border border-border/80 bg-card/85 p-5 shadow-soft backdrop-blur-xl"
                 >
-                  <p className="text-[12px] font-medium text-primary/70">
+                  <p className="text-caption font-medium text-primary/70">
                     Helakuru Esana
                   </p>
-                  <p className="mt-2 text-sm font-semibold leading-snug text-foreground">{item.title}</p>
+                  <p className="mt-2 text-footnote font-semibold leading-snug text-foreground">{item.title}</p>
                 </li>
               ))}
             </ul>

@@ -234,7 +234,7 @@ export function Navbar() {
           >
             <Search className="h-4 w-4" aria-hidden />
             <span className="nav-search__label">{t("nav.search", "Search")}</span>
-            <kbd className="nav-search__kbd rounded-md border border-border px-1.5 text-[10.5px] font-medium text-muted-foreground">
+            <kbd className="nav-search__kbd rounded-md border border-border px-1.5 text-caption font-medium text-muted-foreground">
               Ctrl K
             </kbd>
           </button>
@@ -261,8 +261,8 @@ export function Navbar() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" sideOffset={8} className="w-56">
-                <DropdownMenuLabel className="text-[12px] font-medium text-muted-foreground">
-                  {user.name ? <span className="block truncate text-[13px] font-semibold text-foreground">{user.name}</span> : null}
+                <DropdownMenuLabel className="text-caption font-medium text-muted-foreground">
+                  {user.name ? <span className="block truncate text-footnote font-semibold text-foreground">{user.name}</span> : null}
                   {hasProAccess ? t("common.pro", "Pro") : t("shell.nav.freePlan", "Free plan")}
                 </DropdownMenuLabel>
                 {hasProAccess ? (
@@ -339,7 +339,7 @@ export function Navbar() {
                     <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border bg-foreground/[0.03] text-muted-foreground">
                       <FEEDBACK_LINK.icon className="h-3.5 w-3.5" aria-hidden />
                     </span>
-                    <span className="text-[12.5px] font-semibold tracking-tight text-foreground">{label(FEEDBACK_LINK)}</span>
+                    <span className="text-footnote font-semibold tracking-tight text-foreground">{label(FEEDBACK_LINK)}</span>
                   </button>
                 </div>
               </div>
@@ -349,7 +349,7 @@ export function Navbar() {
                   <LocaleSwitcher showName />
                   <NavFreshnessIndicator className="!inline-flex" />
                 </div>
-                <span className="hidden items-center gap-1.5 text-[11.5px] text-muted-foreground md:inline-flex">
+                <span className="hidden items-center gap-1.5 text-caption text-muted-foreground md:inline-flex">
                   <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
                   {t("nav.navigationMenu", "Navigation menu")}
                 </span>
@@ -394,7 +394,7 @@ function MenuGroup({
 }) {
   return (
     <div>
-      <p className="px-2 pb-1.5 pt-1 text-[11px] font-semibold text-muted-foreground">{title}</p>
+      <p className="px-2 pb-1.5 pt-1 text-caption font-semibold text-muted-foreground">{title}</p>
       <div className="grid gap-0.5">
         {items.map((item) => {
           const Icon = item.icon;
@@ -421,11 +421,11 @@ function MenuGroup({
                 <Icon className="h-3.5 w-3.5" aria-hidden />
               </span>
               <span className="min-w-0">
-                <span className="block truncate text-[12.5px] font-semibold tracking-tight text-foreground">
+                <span className="block truncate text-footnote font-semibold tracking-tight text-foreground">
                   {t(item.labelKey, item.fallback)}
                 </span>
                 {item.detailKey ? (
-                  <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                  <span className="mt-0.5 block truncate text-caption text-muted-foreground">
                     {t(item.detailKey, item.detailFallback)}
                   </span>
                 ) : null}

@@ -37,9 +37,9 @@ function FuelBadge({ bucket }: { bucket: FuelMixBucket }) {
   if (bucket.count === 0) return null;
   return (
     <div className={`flex items-center gap-1.5 rounded-2xl border px-2.5 py-1.5 transition-colors ${colors.badge}`}>
-      <span className="text-[11px] font-semibold">{colors.label}</span>
-      <span className="num text-[10px] font-bold opacity-80">{bucket.pct}%</span>
-      <span className="num text-[10px] opacity-60">({bucket.count.toLocaleString()})</span>
+      <span className="text-caption font-semibold">{colors.label}</span>
+      <span className="num text-caption font-bold opacity-80">{bucket.pct}%</span>
+      <span className="num text-caption opacity-60">({bucket.count.toLocaleString()})</span>
     </div>
   );
 }
@@ -48,17 +48,17 @@ function HybridBandRow({ band, maxCount }: { band: HybridBand; maxCount: number 
   const widthPct = maxCount > 0 ? Math.round((band.count / maxCount) * 100) : 0;
   return (
     <div className="flex items-center gap-3">
-      <span className="w-28 shrink-0 text-[11px] font-semibold text-foreground">{band.label}</span>
+      <span className="w-28 shrink-0 text-caption font-semibold text-foreground">{band.label}</span>
       <div className="relative h-5 flex-1 overflow-hidden rounded-full bg-emerald-500/10">
         <div
           className="h-full rounded-full bg-emerald-500/30 transition-all duration-500 ease-apple"
           style={{ width: `${widthPct}%` }}
         />
-        <span className="absolute inset-0 flex items-center pl-2 num text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">
+        <span className="absolute inset-0 flex items-center pl-2 num text-caption font-semibold text-emerald-700 dark:text-emerald-300">
           {band.count.toLocaleString()} listings
         </span>
       </div>
-      <span className="w-28 shrink-0 text-right num text-[11px] text-muted-foreground">
+      <span className="w-28 shrink-0 text-right num text-caption text-muted-foreground">
         {band.median_price_lkr != null ? formatPrice(band.median_price_lkr) : "—"}
       </span>
     </div>
@@ -105,10 +105,10 @@ export function FuelMixStrip() {
       <div className="mb-5 flex items-center gap-2">
         <Zap className="h-4 w-4 text-emerald-600/80 dark:text-emerald-400/80" />
         <div>
-          <p className="text-[12px] font-medium text-muted-foreground">
+          <p className="text-caption font-medium text-muted-foreground">
             Fuel mix
           </p>
-          <h2 className="text-sm font-semibold text-foreground">
+          <h2 className="text-footnote font-semibold text-foreground">
             EV &amp; hybrid share tracker
           </h2>
         </div>
@@ -133,14 +133,14 @@ export function FuelMixStrip() {
                   <FuelBadge key={b.fuel_type} bucket={b} />
                 ))}
               </div>
-              <p className="text-[10px] text-muted-foreground num">
+              <p className="text-caption text-muted-foreground num">
                 {fuelMix.total.toLocaleString()} total listings
               </p>
             </>
           )}
 
           {fuelMix && fuelMix.total > 0 && !mixMeaningful && (
-            <p className="text-[12px] leading-relaxed text-muted-foreground">
+            <p className="text-caption leading-relaxed text-muted-foreground">
               Fuel-type classification is still in progress — only{" "}
               {Math.round(100 - otherPct)}% of listings are classified so far, so
               a mix chart would mislead. Hybrid bands below use verified data.
@@ -150,17 +150,17 @@ export function FuelMixStrip() {
           {hybridBands && hybridBands.total_hybrids > 0 && (
             <div className="mt-2 space-y-2 border-t border-border pt-4">
               <div className="mb-3 flex items-center justify-between">
-                <p className="text-[12px] font-medium text-muted-foreground">
+                <p className="text-caption font-medium text-muted-foreground">
                   Hybrid engine bands
                 </p>
-                <p className="text-[10px] text-muted-foreground num">
+                <p className="text-caption text-muted-foreground num">
                   {hybridBands.total_hybrids.toLocaleString()} hybrids
                 </p>
               </div>
               <div className="mb-1 flex items-center gap-3">
-                <span className="w-28 shrink-0 text-[10px] text-muted-foreground">Band</span>
-                <span className="flex-1 text-[10px] text-muted-foreground">Listings</span>
-                <span className="w-28 shrink-0 text-right text-[10px] text-muted-foreground">
+                <span className="w-28 shrink-0 text-caption text-muted-foreground">Band</span>
+                <span className="flex-1 text-caption text-muted-foreground">Listings</span>
+                <span className="w-28 shrink-0 text-right text-caption text-muted-foreground">
                   Median price
                 </span>
               </div>
@@ -171,7 +171,7 @@ export function FuelMixStrip() {
           )}
 
           {!fuelMix?.total && !hybridBands?.total_hybrids && (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-footnote text-muted-foreground">
               Fuel-type data will appear here once listings are classified.
             </p>
           )}

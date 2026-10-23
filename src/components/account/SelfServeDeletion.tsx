@@ -67,15 +67,15 @@ export function SelfServeDeletion({ onDeleted }: { onDeleted?: () => void }) {
   if (phase === "done") {
     return (
       <div role="status" className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-5">
-        <p className="flex items-center gap-2 text-[14px] font-semibold text-emerald-700 dark:text-emerald-400">
+        <p className="flex items-center gap-2 text-body font-semibold text-emerald-700 dark:text-emerald-400">
           <Check aria-hidden className="h-4 w-4" /> {t("deleteAcct.doneTitle", "Your account has been deleted")}
         </p>
-        <p className="mt-2 text-[13px] text-foreground/80">
+        <p className="mt-2 text-footnote text-foreground/80">
           {deletedEmail
             ? t("deleteAcct.doneBodyEmail", "{email} and its saved searches, alerts and watchlist are gone. You've been signed out.", { email: deletedEmail })
             : t("deleteAcct.doneBody", "Your saved searches, alerts and watchlist are gone. You've been signed out.")}
         </p>
-        <Link to="/" className="mt-3 inline-flex min-h-11 items-center rounded-full border border-border bg-card px-5 text-[13px] font-semibold text-foreground no-underline">
+        <Link to="/" className="mt-3 inline-flex min-h-11 items-center rounded-full border border-border bg-card px-5 text-footnote font-semibold text-foreground no-underline">
           {t("deleteAcct.home", "Back to MotorMila")}
         </Link>
       </div>
@@ -84,7 +84,7 @@ export function SelfServeDeletion({ onDeleted }: { onDeleted?: () => void }) {
 
   return (
     <div className="space-y-4 rounded-[1.75rem] border border-border bg-card p-6 shadow-soft">
-      <p className="text-[13px] text-foreground/85">
+      <p className="text-footnote text-foreground/85">
         {t("deleteAcct.signedInAs", "Signed in as {email}.", { email: user?.email ?? "" })}
       </p>
 
@@ -92,7 +92,7 @@ export function SelfServeDeletion({ onDeleted }: { onDeleted?: () => void }) {
         <button
           type="button"
           onClick={() => setPhase("confirm")}
-          className="inline-flex min-h-11 items-center gap-2 rounded-full border border-destructive/40 bg-destructive/10 px-5 text-[13px] font-semibold text-destructive hover:bg-destructive/15"
+          className="inline-flex min-h-11 items-center gap-2 rounded-full border border-destructive/40 bg-destructive/10 px-5 text-footnote font-semibold text-destructive hover:bg-destructive/15"
         >
           <Trash2 className="h-4 w-4" aria-hidden />
           {t("deleteAcct.start", "Delete my account now")}
@@ -109,7 +109,7 @@ export function SelfServeDeletion({ onDeleted }: { onDeleted?: () => void }) {
           className="space-y-4"
           aria-describedby={`${uid}-warn`}
         >
-          <p id={`${uid}-warn`} className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-[13px] text-foreground">
+          <p id={`${uid}-warn`} className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-footnote text-foreground">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden />
             {t("deleteAcct.warn", "This can't be undone. Any paid plan ends without a refund for unused time.")}
           </p>
@@ -141,7 +141,7 @@ export function SelfServeDeletion({ onDeleted }: { onDeleted?: () => void }) {
             />
           </div>
           {error && (
-            <p role="alert" className="text-[13px] font-semibold text-destructive">
+            <p role="alert" className="text-footnote font-semibold text-destructive">
               {error.message}{" "}
               {error.signIn ? (
                 <Link to="/sign-in" state={{ from: { pathname: "/delete-account" } }} className="underline">
@@ -154,7 +154,7 @@ export function SelfServeDeletion({ onDeleted }: { onDeleted?: () => void }) {
             <button
               type="submit"
               disabled={!canDelete || phase === "deleting"}
-              className="inline-flex min-h-11 items-center gap-2 rounded-full bg-destructive px-5 text-[13px] font-semibold text-destructive-foreground disabled:opacity-40"
+              className="inline-flex min-h-11 items-center gap-2 rounded-full bg-destructive px-5 text-footnote font-semibold text-destructive-foreground disabled:opacity-40"
             >
               {phase === "deleting" ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Trash2 className="h-4 w-4" aria-hidden />}
               {phase === "deleting" ? t("deleteAcct.deleting", "Deleting…") : t("deleteAcct.confirm", "Permanently delete")}
@@ -168,7 +168,7 @@ export function SelfServeDeletion({ onDeleted }: { onDeleted?: () => void }) {
                 setPassword("");
                 setError(null);
               }}
-              className="inline-flex min-h-11 items-center rounded-full border border-border bg-card px-5 text-[13px] font-semibold text-foreground"
+              className="inline-flex min-h-11 items-center rounded-full border border-border bg-card px-5 text-footnote font-semibold text-foreground"
             >
               {t("deleteAcct.cancel", "Cancel")}
             </button>

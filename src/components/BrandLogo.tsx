@@ -99,7 +99,7 @@ export function BrandLogo({
         />
       </span>
       {showTagline && (
-        <span className="mt-1.5 block max-w-[16rem] truncate text-2xs font-medium tracking-[-0.005em] text-muted-foreground">
+        <span className="mt-1.5 block max-w-[16rem] truncate text-caption font-medium tracking-normal text-muted-foreground">
           {tagline}
         </span>
       )}

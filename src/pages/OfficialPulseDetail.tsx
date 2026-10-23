@@ -49,14 +49,14 @@ function NotFoundState({
         <p className="section-eyebrow mt-4 text-primary-bright">
           {t("nav.statusUnavailable", "Unavailable")}
         </p>
-        <h1 className="mt-3 font-display text-xl font-semibold text-foreground">
+        <h1 className="mt-3 font-display text-title3 font-semibold text-foreground">
           {t("pulse.signalNotFound", "Signal not found")}
         </h1>
-        <p className="mt-2 text-[13px] text-muted-foreground">{message}</p>
+        <p className="mt-2 text-footnote text-muted-foreground">{message}</p>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
           <Link
             to="/official-pulse"
-            className="inline-flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-[12px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98]"
+            className="inline-flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-caption font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98]"
           >
             <ArrowLeft aria-hidden className="h-3.5 w-3.5" />
             {t("pulse.backToPulse", "Back to Official Pulse")}
@@ -65,14 +65,14 @@ function NotFoundState({
             <button
               type="button"
               onClick={onRetry}
-              className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-[12px] font-semibold text-foreground transition-all hover:border-primary/40 active:scale-[0.98]"
+              className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-caption font-semibold text-foreground transition-all hover:border-primary/40 active:scale-[0.98]"
             >
               {t("common.retry", "Retry")}
             </button>
           ) : null}
           <Link
             to="/official-pulse/guide/dmt_registrations"
-            className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-[12px] font-semibold text-foreground no-underline transition-all hover:border-primary/40 active:scale-[0.98]"
+            className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-caption font-semibold text-foreground no-underline transition-all hover:border-primary/40 active:scale-[0.98]"
           >
             {t("pulse.readGuides", "Read signal guides")}
           </Link>
@@ -169,7 +169,7 @@ export default function OfficialPulseDetail() {
         <div className="mx-auto max-w-[1320px] px-5 pb-14 pt-16 sm:px-6 lg:pb-20 lg:pt-24">
           <Link
             to="/official-pulse"
-            className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground no-underline transition-colors hover:text-foreground"
+            className="inline-flex items-center gap-1.5 text-caption font-semibold text-muted-foreground no-underline transition-colors hover:text-foreground"
           >
             <ArrowLeft aria-hidden className="h-3.5 w-3.5" />
             {t("pulse.eyebrow", "Official pulse")}
@@ -221,13 +221,13 @@ export default function OfficialPulseDetail() {
             },
           ].map((card) => (
             <div key={card.label} className="bg-card p-5 sm:p-6">
-              <p className="text-[12px] font-semibold text-muted-foreground">
+              <p className="text-caption font-semibold text-muted-foreground">
                 {card.label}
               </p>
-              <p className="num mt-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+              <p className="num mt-2 text-title3 font-bold tracking-tight text-foreground sm:text-title2">
                 {card.value}
               </p>
-              <p className="mt-2 text-[11px] font-medium text-muted-foreground">{card.note}</p>
+              <p className="mt-2 text-caption font-medium text-muted-foreground">{card.note}</p>
             </div>
           ))}
         </motion.div>
@@ -237,7 +237,7 @@ export default function OfficialPulseDetail() {
             <motion.section variants={revealItem} className="rounded-2xl border border-border bg-card p-6 shadow-soft">
               <div className="mb-4 flex items-center gap-2">
                 <Sparkles aria-hidden className="h-4 w-4 text-primary" />
-                <h2 className="font-display text-[15px] font-bold text-foreground">
+                <h2 className="font-display text-body font-bold text-foreground">
                   {t("pulse.whyMatters", "Why it matters")}
                 </h2>
               </div>
@@ -245,7 +245,7 @@ export default function OfficialPulseDetail() {
                 {guide.whyItMatters.map((item) => (
                   <li key={item} className="flex items-start gap-2.5">
                     <span aria-hidden className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                    <p className="text-[13px] font-medium leading-relaxed text-muted-foreground">{item}</p>
+                    <p className="text-footnote font-medium leading-relaxed text-muted-foreground">{item}</p>
                   </li>
                 ))}
               </ul>
@@ -254,7 +254,7 @@ export default function OfficialPulseDetail() {
             <motion.section variants={revealItem} className="rounded-2xl border border-border bg-card p-6 shadow-soft">
               <div className="mb-4 flex items-center gap-2">
                 <ListChecks aria-hidden className="h-4 w-4 text-primary" />
-                <h2 className="font-display text-[15px] font-bold text-foreground">
+                <h2 className="font-display text-body font-bold text-foreground">
                   {t("pulse.howWeRead", "How we read it")}
                 </h2>
               </div>
@@ -262,7 +262,7 @@ export default function OfficialPulseDetail() {
                 {guide.howWeReadIt.map((item) => (
                   <li key={item} className="flex items-start gap-2.5">
                     <span aria-hidden className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                    <p className="text-[13px] font-medium leading-relaxed text-muted-foreground">{item}</p>
+                    <p className="text-footnote font-medium leading-relaxed text-muted-foreground">{item}</p>
                   </li>
                 ))}
               </ul>
@@ -274,14 +274,14 @@ export default function OfficialPulseDetail() {
             >
               <div className="mb-3 flex items-center gap-2">
                 <Lightbulb aria-hidden className="h-4 w-4 text-primary" />
-                <h2 className="font-display text-[15px] font-bold text-foreground">
+                <h2 className="font-display text-body font-bold text-foreground">
                   {t("pulse.dealerTip", "Dealer tip")}
                 </h2>
               </div>
-              <p className="text-[13px] font-medium leading-relaxed text-foreground/90">{guide.dealerTip}</p>
+              <p className="text-footnote font-medium leading-relaxed text-foreground/90">{guide.dealerTip}</p>
               <Link
                 to={`/official-pulse/guide/${guide.key}`}
-                className="mt-4 inline-flex text-[12px] font-semibold text-primary no-underline hover:underline"
+                className="mt-4 inline-flex text-caption font-semibold text-primary no-underline hover:underline"
               >
                 {t("pulse.fullGuide", "Full {label} guide", {
                   label: guide.shortLabel.toLowerCase(),
@@ -292,7 +292,7 @@ export default function OfficialPulseDetail() {
         ) : (
           <motion.div
             variants={revealItem}
-            className="rounded-2xl border border-dashed border-border bg-card/60 p-6 text-[13px] text-muted-foreground"
+            className="rounded-2xl border border-dashed border-border bg-card/60 p-6 text-footnote text-muted-foreground"
           >
             {t(
               "pulse.noGuide",
@@ -309,7 +309,7 @@ export default function OfficialPulseDetail() {
               className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
               aria-expanded={sourceOpen}
             >
-              <span className="text-[12px] font-semibold text-foreground">
+              <span className="text-caption font-semibold text-foreground">
                 {t("pulse.originalSource", "Original source")}
               </span>
               {sourceOpen ? (
@@ -320,7 +320,7 @@ export default function OfficialPulseDetail() {
             </button>
             {sourceOpen ? (
               <div className="border-t border-border px-5 py-4">
-                <p className="text-[12px] text-muted-foreground">
+                <p className="text-caption text-muted-foreground">
                   {t(
                     "pulse.originalSourceHint",
                     "Optional external reference. Primary explanation stays in Motormila above.",
@@ -330,7 +330,7 @@ export default function OfficialPulseDetail() {
                   href={signal.source_url}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-3 inline-flex items-center gap-1.5 text-[12px] font-semibold text-primary no-underline hover:underline"
+                  className="mt-3 inline-flex items-center gap-1.5 text-caption font-semibold text-primary no-underline hover:underline"
                 >
                   <ExternalLink aria-hidden className="h-3.5 w-3.5" />
                   {t("pulse.openOriginal", "Open original source")}

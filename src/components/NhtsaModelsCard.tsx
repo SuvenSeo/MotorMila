@@ -60,7 +60,7 @@ export function NhtsaModelsCard({ make, model, compact = false, vin }: NhtsaMode
       >
         <div className="flex items-center gap-2.5 min-w-0">
           <BookOpen aria-hidden className="h-4 w-4 shrink-0 text-primary" />
-          <span className="text-[12px] font-semibold text-muted-foreground truncate">
+          <span className="text-caption font-semibold text-muted-foreground truncate">
             {label}
           </span>
         </div>
@@ -90,20 +90,20 @@ export function NhtsaModelsCard({ make, model, compact = false, vin }: NhtsaMode
               )}
 
               {isError && (
-                <p className="text-[11px] font-medium text-muted-foreground">
+                <p className="text-caption font-medium text-muted-foreground">
                   {t("nhtsa.loadError", "Could not load NHTSA catalog. NHTSA may be temporarily unavailable.")}
                 </p>
               )}
 
               {!isLoading && !isError && displayModels.length === 0 && (
-                <p className="text-[11px] font-medium text-muted-foreground">
+                <p className="text-caption font-medium text-muted-foreground">
                   {t("nhtsa.empty", "No catalog entries found for this make.")}
                 </p>
               )}
 
               {!isLoading && !isError && displayModels.length > 0 && (
                 <>
-                  <p className="mb-3 text-[10px] font-semibold text-muted-foreground">
+                  <p className="mb-3 text-caption font-semibold text-muted-foreground">
                     {t("nhtsa.sourceNote", "Source: NHTSA vPIC · {count} models", {
                       count: data?.count ?? displayModels.length,
                     })}
@@ -116,15 +116,15 @@ export function NhtsaModelsCard({ make, model, compact = false, vin }: NhtsaMode
                         key={`${m.make_id}-${m.model_id}`}
                         className="rounded-2xl border border-border bg-surface px-2.5 py-1.5"
                       >
-                        <p className="text-[11px] font-semibold text-foreground leading-snug">{m.model}</p>
+                        <p className="text-caption font-semibold text-foreground leading-snug">{m.model}</p>
                         {!compact && m.model_id && (
-                          <p className="text-[9px] font-medium text-muted-foreground/70">ID {m.model_id}</p>
+                          <p className="text-caption font-medium text-muted-foreground/70">ID {m.model_id}</p>
                         )}
                       </div>
                     ))}
                   </div>
                   {displayModels.length > (compact ? 8 : 60) && (
-                    <p className="mt-3 text-[10px] font-medium text-muted-foreground">
+                    <p className="mt-3 text-caption font-medium text-muted-foreground">
                       {t("nhtsa.moreModels", "+{n} more in catalog", {
                         n: displayModels.length - (compact ? 8 : 60),
                       })}

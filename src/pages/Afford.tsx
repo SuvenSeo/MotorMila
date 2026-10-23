@@ -37,7 +37,7 @@ function NumberField({
   const id = useId();
   return (
     <div>
-      <label htmlFor={id} className="text-[13px] font-medium text-foreground">
+      <label htmlFor={id} className="text-footnote font-medium text-foreground">
         {label}
       </label>
       <div className="mt-1.5 flex items-center rounded-2xl border border-border bg-background focus-within:ring-2 focus-within:ring-ring">
@@ -50,12 +50,12 @@ function NumberField({
           value={Number.isFinite(value) ? value : 0}
           onChange={(e) => onChange(Number(e.target.value))}
           aria-describedby={hint ? `${id}-hint` : undefined}
-          className="h-11 w-full min-w-0 rounded-2xl bg-transparent px-3.5 text-[15px] tabular-nums text-foreground outline-none"
+          className="h-11 w-full min-w-0 rounded-2xl bg-transparent px-3.5 text-body tabular-nums text-foreground outline-none"
         />
-        {suffix && <span className="pr-3.5 text-[13px] text-muted-foreground">{suffix}</span>}
+        {suffix && <span className="pr-3.5 text-footnote text-muted-foreground">{suffix}</span>}
       </div>
       {hint && (
-        <p id={`${id}-hint`} className="mt-1 text-[12px] text-muted-foreground">
+        <p id={`${id}-hint`} className="mt-1 text-caption text-muted-foreground">
           {hint}
         </p>
       )}
@@ -83,13 +83,13 @@ function ResultCard({
         : t("afford.limitCash", "Your cash is the limit here.");
   return (
     <div className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
-      <p className="text-[13px] font-semibold text-muted-foreground">{title}</p>
-      <p className="text-[12px] text-muted-foreground">{subtitle}</p>
-      <p className="num mt-3 text-[2rem] font-extrabold leading-none tracking-tight text-foreground">
+      <p className="text-footnote font-semibold text-muted-foreground">{title}</p>
+      <p className="text-caption text-muted-foreground">{subtitle}</p>
+      <p className="num mt-3 text-title1 font-extrabold leading-none tracking-tight text-foreground">
         {result.maxPriceLkr > 0 ? formatPrice(result.maxPriceLkr) : "—"}
       </p>
-      <p className="mt-1 text-[12px] text-muted-foreground">{t("afford.maxPrice", "Highest asking price that fits")}</p>
-      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-[13px]">
+      <p className="mt-1 text-caption text-muted-foreground">{t("afford.maxPrice", "Highest asking price that fits")}</p>
+      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-footnote">
         <dt className="text-muted-foreground">{t("afford.down", "Down payment")}</dt>
         <dd className="num text-right font-semibold">{formatPrice(result.downPaymentLkr)}</dd>
         <dt className="text-muted-foreground">{t("afford.upfront", "Upfront costs")}</dt>
@@ -99,11 +99,11 @@ function ResultCard({
         <dt className="text-muted-foreground">{t("afford.monthly", "Monthly")}</dt>
         <dd className="num text-right font-semibold">{formatLkrMonthly(result.monthlyLkr)}</dd>
       </dl>
-      <p className="mt-3 text-[12px] text-muted-foreground">{limitText}</p>
+      <p className="mt-3 text-caption text-muted-foreground">{limitText}</p>
       {result.maxPriceLkr > 0 && (
         <Link
           to={buildAffordableSearchUrl(result.maxPriceLkr, { condition })}
-          className="mt-4 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-2xl bg-primary px-4 text-[13px] font-semibold text-primary-foreground no-underline transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="mt-4 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-2xl bg-primary px-4 text-footnote font-semibold text-primary-foreground no-underline transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           <Search className="h-3.5 w-3.5" aria-hidden />
           {t("afford.browse", "See cars up to {price}", { price: formatPrice(result.maxPriceLkr) })}
@@ -160,7 +160,7 @@ export default function Afford() {
       />
       <PageBody narrow className="space-y-8">
         <section aria-labelledby="afford-inputs" className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
-          <h2 id="afford-inputs" className="text-[15px] font-semibold text-foreground">
+          <h2 id="afford-inputs" className="text-body font-semibold text-foreground">
             {t("afford.yourBudget", "Your budget")}
           </h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -192,9 +192,9 @@ export default function Afford() {
         </section>
 
         <details className="group rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
-          <summary className="cursor-pointer list-none text-[15px] font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <summary className="cursor-pointer list-none text-body font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             {t("afford.assumptions", "Assumptions (edit to match your lender)")}
-            <span className="ml-2 text-[12px] font-normal text-muted-foreground group-open:hidden">{t("afford.show", "Show")}</span>
+            <span className="ml-2 text-caption font-normal text-muted-foreground group-open:hidden">{t("afford.show", "Show")}</span>
           </summary>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <NumberField
@@ -213,7 +213,7 @@ export default function Afford() {
             <NumberField label={t("afford.term", "Term")} value={a.termYears} onChange={(v) => setAssumption("termYears", Math.min(10, Math.max(1, v)))} suffix={t("afford.years", "years")} />
             <NumberField label={t("afford.stamp", "Stamp duty + lender fees (% of loan)")} value={a.stampDutyPct} onChange={(v) => setAssumption("stampDutyPct", Math.max(0, v))} suffix="%" step={0.5} />
             <NumberField label={t("afford.transfer", "Ownership transfer fee")} value={a.transferFeeLkr} onChange={(v) => setAssumption("transferFeeLkr", Math.max(0, v))} suffix="LKR" step={500} />
-            <label className="flex items-center gap-2.5 text-[13px] text-foreground sm:col-span-2">
+            <label className="flex items-center gap-2.5 text-footnote text-foreground sm:col-span-2">
               <input
                 type="checkbox"
                 checked={a.includeInsurance}
@@ -226,13 +226,13 @@ export default function Afford() {
           <button
             type="button"
             onClick={() => setA(DEFAULT_AFFORDABILITY_ASSUMPTIONS)}
-            className="mt-4 rounded-full border border-border px-4 py-2 text-[12px] font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="mt-4 rounded-full border border-border px-4 py-2 text-caption font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {t("afford.reset", "Reset to defaults")}
           </button>
         </details>
 
-        <p className="text-[12px] leading-relaxed text-muted-foreground">
+        <p className="text-caption leading-relaxed text-muted-foreground">
           {t(
             "afford.disclaimer",
             "Indicative planning figures only, not a loan offer. Financing caps follow CBSL Directions No. 01 of 2026 (effective 25 May 2026): 40% for unregistered or under-1-year cars, 60% for cars registered over a year and for commercial vehicles. Lenders set their own rates, fees and eligibility. Check with your bank or leasing company before you commit.",

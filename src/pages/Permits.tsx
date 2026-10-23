@@ -40,15 +40,15 @@ function PermitRow({ permit }: { permit: PermitInfo }) {
       className="group border-b border-border last:border-0 hover:bg-surface transition-colors"
     >
       <td className="py-3.5 pl-5 pr-4">
-        <p className="text-[13px] font-semibold text-foreground leading-snug">{permit.permit_name}</p>
+        <p className="text-footnote font-semibold text-foreground leading-snug">{permit.permit_name}</p>
       </td>
       <td className="py-3.5 px-4 hidden sm:table-cell">
-        <span className="inline-flex items-center rounded-full border border-border bg-surface px-2.5 py-0.5 text-[10px] font-bold text-muted-foreground">
+        <span className="inline-flex items-center rounded-full border border-border bg-surface px-2.5 py-0.5 text-caption font-bold text-muted-foreground">
           {typeLabel}
         </span>
       </td>
       <td className="py-3.5 pl-4 pr-5 text-right">
-        <span className="num text-[13px] font-bold text-foreground tabular-nums">{formatLkr(permit.market_price_lkr)}</span>
+        <span className="num text-footnote font-bold text-foreground tabular-nums">{formatLkr(permit.market_price_lkr)}</span>
       </td>
     </motion.tr>
   );
@@ -108,7 +108,7 @@ export default function Permits() {
               type="button"
               onClick={() => refetch()}
               disabled={isFetching}
-              className="flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:bg-card hover:text-foreground disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-caption font-semibold text-muted-foreground transition-colors hover:bg-card hover:text-foreground disabled:opacity-50"
               aria-label={t("common.refresh", "Refresh")}
             >
               <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} aria-hidden />
@@ -126,7 +126,7 @@ export default function Permits() {
 
           {isError && (
             <div className="rounded-2xl border border-border bg-card p-6 text-center">
-              <p className="text-[13px] font-medium text-muted-foreground">
+              <p className="text-footnote font-medium text-muted-foreground">
                 {t("permits.loadError", "Could not load permit data. Please try again.")}
               </p>
             </div>
@@ -135,10 +135,10 @@ export default function Permits() {
           {!isLoading && !isError && permits.length === 0 && (
             <div className="rounded-2xl border border-border bg-card p-8 text-center">
               <FileText aria-hidden className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
-              <p className="text-[14px] font-semibold text-foreground mb-1">
+              <p className="text-body font-semibold text-foreground mb-1">
                 {t("permits.emptyTitle", "No permit data yet")}
               </p>
-              <p className="text-[12px] text-muted-foreground max-w-sm mx-auto leading-relaxed">
+              <p className="text-caption text-muted-foreground max-w-sm mx-auto leading-relaxed">
                 {t(
                   "permits.emptyDesc",
                   "Permit prices are seeded by administrators or the permitsale scraper. Check back later or visit the Calculator for estimates.",
@@ -152,13 +152,13 @@ export default function Permits() {
               <motion.table variants={revealContainer} className="w-full text-left">
                 <thead>
                   <tr className="border-b border-border bg-surface">
-                    <th className="py-3 pl-5 pr-4 text-[12px] font-semibold text-muted-foreground">
+                    <th className="py-3 pl-5 pr-4 text-caption font-semibold text-muted-foreground">
                       {t("permits.colName", "Permit name")}
                     </th>
-                    <th className="py-3 px-4 text-[12px] font-semibold text-muted-foreground hidden sm:table-cell">
+                    <th className="py-3 px-4 text-caption font-semibold text-muted-foreground hidden sm:table-cell">
                       {t("permits.colType", "Type")}
                     </th>
-                    <th className="py-3 pl-4 pr-5 text-right text-[12px] font-semibold text-muted-foreground">
+                    <th className="py-3 pl-4 pr-5 text-right text-caption font-semibold text-muted-foreground">
                       {t("permits.colPrice", "Market price")}
                     </th>
                   </tr>
@@ -180,10 +180,10 @@ export default function Permits() {
         >
           <Info aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
           <div className="space-y-1">
-            <p className="text-[12px] font-bold text-foreground">
+            <p className="text-caption font-bold text-foreground">
               {t("permits.disclaimerTitle", "Indicative prices only")}
             </p>
-            <p className="text-[11px] leading-relaxed text-muted-foreground">
+            <p className="text-caption leading-relaxed text-muted-foreground">
               {t(
                 "permits.disclaimerBody",
                 "Permit prices fluctuate based on demand, regulatory changes, and foreign-exchange rates. These figures are research-document baselines and may not reflect current black-market rates. Always verify with a licensed importer.",
@@ -203,10 +203,10 @@ export default function Permits() {
                 <FileText aria-hidden className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <p className="text-[13px] font-bold text-foreground">
+                <p className="text-footnote font-bold text-foreground">
                   {t("permits.calcLink", "Import & Landed Cost Calculator")}
                 </p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-caption text-muted-foreground">
                   {t("permits.calcLinkHint", "Factor permit costs into your total import estimate")}
                 </p>
               </div>

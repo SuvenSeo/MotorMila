@@ -127,14 +127,14 @@ export function MobileFilterSheet({ open, onOpenChange, filters, onFiltersChange
           <span className="h-1 w-10 rounded-full bg-muted-foreground/30" />
         </motion.div>
         <SheetHeader className="flex-row items-center justify-between space-y-0 border-b border-border px-5 pb-3 pt-1">
-          <SheetTitle className="text-base font-semibold text-foreground">{t("filter.title", "Filters")}</SheetTitle>
+          <SheetTitle className="text-body font-semibold text-foreground">{t("filter.title", "Filters")}</SheetTitle>
           <SheetDescription className="sr-only">
             {t("search.drawerDescription", "Refine listings, then show results.")}
           </SheetDescription>
           <button
             type="button"
             onClick={clear}
-            className="mr-8 min-h-11 rounded-full px-3 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+            className="mr-8 min-h-11 rounded-full px-3 text-footnote font-medium text-muted-foreground transition-colors hover:text-foreground"
             aria-label={t("filter.clearAllAria", "Clear all filters")}
           >
             {t("common.clearAll", "Clear all")}
@@ -154,7 +154,7 @@ export function MobileFilterSheet({ open, onOpenChange, filters, onFiltersChange
             onClick={apply}
             aria-live="polite"
             aria-label={showLabel}
-            className="num min-h-12 w-full rounded-xl bg-primary py-3 text-[14px] font-bold text-primary-foreground shadow-soft transition-colors hover:bg-primary/95 active:scale-[0.99]"
+            className="num min-h-12 w-full rounded-xl bg-primary py-3 text-body font-bold text-primary-foreground shadow-soft transition-colors hover:bg-primary/95 active:scale-[0.99]"
           >
             {showBefore !== null && count !== undefined ? (
               <span aria-hidden>

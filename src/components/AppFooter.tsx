@@ -12,13 +12,13 @@ const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 function FooterColumn({ title, links }: { title: string; links: Array<{ label: string; to: string }> }) {
   return (
     <div>
-      <p className="text-[12px] font-semibold text-white/50">{title}</p>
+      <p className="text-caption font-semibold text-white/50">{title}</p>
       <ul className="mt-6 space-y-4">
         {links.map((link) => (
           <li key={link.label}>
             <PrefetchLink
               to={link.to}
-              className="group inline-flex items-center gap-1.5 text-[14px] leading-none text-zinc-400 no-underline transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              className="group inline-flex items-center gap-1.5 text-body leading-none text-zinc-400 no-underline transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             >
               <span>{link.label}</span>
               <ArrowUpRight className="h-3 w-3 opacity-0 transition-opacity duration-200 group-hover:opacity-70" />
@@ -154,13 +154,13 @@ export function AppFooter() {
                   draggable={false}
                   decoding="async"
                 />
-                <span className="mt-2 text-[10px] font-medium tracking-[-0.005em] text-white/45">
+                <span className="mt-2 text-caption font-medium tracking-normal text-white/45">
                   {t("footer.tagline", "Market Intelligence")}
                 </span>
               </span>
             </PrefetchLink>
 
-            <p className="mt-6 text-[14px] leading-7 text-zinc-400">
+            <p className="mt-6 text-body leading-7 text-zinc-400">
               {t(
                 "footer.body",
                 "Sri Lanka vehicle market intelligence — live listings, fair-value signals, and tools built for buyers and dealers.",
@@ -170,7 +170,7 @@ export function AppFooter() {
             <motion.div whileHover={reduceMotion ? undefined : { y: -2 }} whileTap={reduceMotion ? undefined : { scale: 0.98 }}>
               <PrefetchLink
                 to="/pricing"
-                className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#0A7AFF] px-6 py-3.5 text-[13px] font-semibold text-white no-underline shadow-[0_10px_40px_rgba(10,122,255,0.28)] transition-[filter,background-color] duration-200 hover:bg-[#3D94FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#0A7AFF] px-6 py-3.5 text-footnote font-semibold text-white no-underline shadow-[0_10px_40px_rgba(10,122,255,0.28)] transition-[filter,background-color] duration-200 hover:bg-[#3D94FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
               >
                 {t("footer.explorePro", "Explore Pro")}
                 <ArrowUpRight className="h-4 w-4" />
@@ -185,7 +185,7 @@ export function AppFooter() {
             <FooterColumn title={t("footer.legal", "Legal")} links={legalLinks} />
 
             <div>
-              <p className="text-[12px] font-semibold text-white/50">{t("footer.studio", "Studio")}</p>
+              <p className="text-caption font-semibold text-white/50">{t("footer.studio", "Studio")}</p>
               <ul className="mt-6 space-y-4">
                 {studioLinks.map((link) => (
                   <li key={link.label}>
@@ -193,7 +193,7 @@ export function AppFooter() {
                       href={link.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="group inline-flex items-center gap-1.5 text-[14px] leading-none text-zinc-400 no-underline transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                      className="group inline-flex items-center gap-1.5 text-body leading-none text-zinc-400 no-underline transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                     >
                       <span>{link.label}</span>
                       <ArrowUpRight className="h-3 w-3 opacity-0 transition-opacity duration-200 group-hover:opacity-70" />
@@ -206,7 +206,7 @@ export function AppFooter() {
         </div>
 
         <div className="relative z-10 mt-16 flex flex-col gap-5 border-t border-white/[0.08] pt-8 md:flex-row md:items-center md:justify-between">
-          <p className="text-[12px] text-zinc-500">
+          <p className="text-caption text-zinc-500">
             {t("footer.copyright", "© {year} Ardeno Studio. Built in Sri Lanka.", { year })}
           </p>
 
@@ -232,14 +232,14 @@ export function AppFooter() {
             <button
               type="button"
               onClick={() => openFeedbackDialog()}
-              className="rounded-full border border-white/[0.1] bg-white/[0.04] px-3.5 py-2 text-[12px] font-medium text-zinc-400 transition-colors duration-200 hover:border-primary/35 hover:bg-primary/12 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              className="rounded-full border border-white/[0.1] bg-white/[0.04] px-3.5 py-2 text-caption font-medium text-zinc-400 transition-colors duration-200 hover:border-primary/35 hover:bg-primary/12 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             >
               {t("shell.nav.feedback", "Send feedback")}
             </button>
             <button
               type="button"
               onClick={() => window.scrollTo({ top: 0, behavior: scrollBehavior() })}
-              className="ml-1 rounded-full border border-white/[0.1] bg-white/[0.04] px-3.5 py-2 text-[12px] font-medium text-zinc-400 transition-colors duration-200 hover:border-primary/35 hover:bg-primary/12 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              className="ml-1 rounded-full border border-white/[0.1] bg-white/[0.04] px-3.5 py-2 text-caption font-medium text-zinc-400 transition-colors duration-200 hover:border-primary/35 hover:bg-primary/12 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             >
               {t("footer.backToTop", "Back to top")}
             </button>
@@ -250,7 +250,7 @@ export function AppFooter() {
           aria-hidden="true"
           className="relative z-0 mt-10 flex select-none items-center justify-center overflow-hidden border-t border-white/[0.06] pt-8 md:mt-12 md:pt-10"
         >
-          <span className="app-footer__watermark whitespace-nowrap bg-gradient-to-b from-white/[0.10] via-white/[0.05] to-transparent bg-clip-text font-display text-[clamp(3.4rem,11.5vw,12rem)] font-bold uppercase leading-none tracking-[-0.03em] text-transparent">
+          <span className="app-footer__watermark whitespace-nowrap bg-gradient-to-b from-white/[0.10] via-white/[0.05] to-transparent bg-clip-text font-display text-[clamp(3.4rem,11.5vw,12rem)] font-bold uppercase leading-none tracking-tight text-transparent">
             Motormila
           </span>
         </div>

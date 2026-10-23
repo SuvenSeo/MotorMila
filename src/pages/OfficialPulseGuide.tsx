@@ -43,15 +43,15 @@ function GuideNotFound() {
         <p className="section-eyebrow mt-4 text-primary-bright">
           {t("nav.statusUnavailable", "Unavailable")}
         </p>
-        <h1 className="mt-3 font-display text-xl font-semibold text-foreground">
+        <h1 className="mt-3 font-display text-title3 font-semibold text-foreground">
           {t("pulse.guideNotFound", "Guide not found")}
         </h1>
-        <p className="mt-2 text-[13px] text-muted-foreground">
+        <p className="mt-2 text-footnote text-muted-foreground">
           {t("pulse.guideNotFoundBody", "That pulse guide key is not in the in-platform catalog.")}
         </p>
         <Link
           to="/official-pulse"
-          className="mt-6 inline-flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-[12px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98]"
+          className="mt-6 inline-flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-caption font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98]"
         >
           <ArrowLeft aria-hidden className="h-3.5 w-3.5" />
           {t("pulse.backToPulse", "Back to Official Pulse")}
@@ -79,17 +79,17 @@ function RelatedSignalCard({ signal }: { signal: MarketSignal }) {
       className="group rounded-2xl border border-border bg-card p-5 shadow-soft transition-colors hover:border-primary/30"
     >
       <Link to={`/official-pulse/${signal.id}`} className="flex h-full flex-col no-underline">
-        <p className="text-[12px] font-medium text-primary/70">
+        <p className="text-caption font-medium text-primary/70">
           {labelPulseSource(signal.source)} · {signal.signal_type.replace(/_/g, " ")}
         </p>
-        <h3 className="mt-2 text-sm font-semibold text-foreground group-hover:text-primary">{title}</h3>
-        <p className="num mt-4 text-2xl font-bold tracking-tight text-foreground">{value}</p>
-        <p className="mt-1 text-[11px] text-muted-foreground">
+        <h3 className="mt-2 text-footnote font-semibold text-foreground group-hover:text-primary">{title}</h3>
+        <p className="num mt-4 text-title2 font-bold tracking-tight text-foreground">{value}</p>
+        <p className="mt-1 text-caption text-muted-foreground">
           {period
             ? t("pulse.period", "Period {period}", { period })
             : t("pulse.latest", "Latest official pulse")}
         </p>
-        <span className="mt-4 inline-flex items-center gap-1.5 text-[11px] font-semibold text-primary">
+        <span className="mt-4 inline-flex items-center gap-1.5 text-caption font-semibold text-primary">
           {t("pulse.openSignal", "Open signal")}
           <ArrowRight aria-hidden className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
         </span>
@@ -132,7 +132,7 @@ function GuideBody({ guide }: { guide: PulseSourceGuide }) {
         <div className="mx-auto max-w-[1320px] px-5 pb-14 pt-16 sm:px-6 lg:pb-20 lg:pt-24">
           <Link
             to="/official-pulse"
-            className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground no-underline transition-colors hover:text-foreground"
+            className="inline-flex items-center gap-1.5 text-caption font-semibold text-muted-foreground no-underline transition-colors hover:text-foreground"
           >
             <ArrowLeft aria-hidden className="h-3.5 w-3.5" />
             {t("pulse.eyebrow", "Official pulse")}
@@ -151,7 +151,7 @@ function GuideBody({ guide }: { guide: PulseSourceGuide }) {
           <motion.section variants={revealItem} className="rounded-2xl border border-border bg-card p-6 shadow-soft sm:p-7">
             <div className="mb-5 flex items-center gap-2">
               <Sparkles aria-hidden className="h-4 w-4 text-primary" />
-              <h2 className="font-display text-[15px] font-bold text-foreground">
+              <h2 className="font-display text-body font-bold text-foreground">
                 {t("pulse.whyMatters", "Why it matters")}
               </h2>
             </div>
@@ -159,7 +159,7 @@ function GuideBody({ guide }: { guide: PulseSourceGuide }) {
               {guide.whyItMatters.map((item) => (
                 <li key={item} className="flex items-start gap-2.5">
                   <span aria-hidden className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                  <p className="text-[13px] font-medium leading-relaxed text-muted-foreground">{item}</p>
+                  <p className="text-footnote font-medium leading-relaxed text-muted-foreground">{item}</p>
                 </li>
               ))}
             </ul>
@@ -168,7 +168,7 @@ function GuideBody({ guide }: { guide: PulseSourceGuide }) {
           <motion.section variants={revealItem} className="rounded-2xl border border-border bg-card p-6 shadow-soft sm:p-7">
             <div className="mb-5 flex items-center gap-2">
               <ListChecks aria-hidden className="h-4 w-4 text-primary" />
-              <h2 className="font-display text-[15px] font-bold text-foreground">
+              <h2 className="font-display text-body font-bold text-foreground">
                 {t("pulse.howWeRead", "How we read it")}
               </h2>
             </div>
@@ -176,7 +176,7 @@ function GuideBody({ guide }: { guide: PulseSourceGuide }) {
               {guide.howWeReadIt.map((item) => (
                 <li key={item} className="flex items-start gap-2.5">
                   <span aria-hidden className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                  <p className="text-[13px] font-medium leading-relaxed text-muted-foreground">{item}</p>
+                  <p className="text-footnote font-medium leading-relaxed text-muted-foreground">{item}</p>
                 </li>
               ))}
             </ul>
@@ -189,11 +189,11 @@ function GuideBody({ guide }: { guide: PulseSourceGuide }) {
         >
           <div className="mb-3 flex items-center gap-2">
             <Lightbulb aria-hidden className="h-4 w-4 text-primary" />
-            <h2 className="font-display text-[15px] font-bold text-foreground">
+            <h2 className="font-display text-body font-bold text-foreground">
               {t("pulse.dealerTip", "Dealer tip")}
             </h2>
           </div>
-          <p className="max-w-3xl text-[14px] font-medium leading-relaxed text-foreground/90">
+          <p className="max-w-3xl text-body font-medium leading-relaxed text-foreground/90">
             {guide.dealerTip}
           </p>
         </motion.section>
@@ -221,7 +221,7 @@ function GuideBody({ guide }: { guide: PulseSourceGuide }) {
               ))}
             </div>
           ) : signalsQuery.isError ? (
-            <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-6 text-[13px] text-muted-foreground">
+            <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-6 text-footnote text-muted-foreground">
               {t(
                 "pulse.relatedLoadError",
                 "Could not load related live signals. The guide content above remains available offline.",
@@ -229,10 +229,10 @@ function GuideBody({ guide }: { guide: PulseSourceGuide }) {
             </div>
           ) : relatedSignals.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border bg-card/60 px-6 py-12 text-center">
-              <p className="text-[14px] font-semibold text-foreground">
+              <p className="text-body font-semibold text-foreground">
                 {t("pulse.noRelated", "No related live signals yet")}
               </p>
-              <p className="mx-auto mt-2 max-w-md text-[12px] text-muted-foreground">
+              <p className="mx-auto mt-2 max-w-md text-caption text-muted-foreground">
                 {t(
                   "pulse.noRelatedBody",
                   "When the market-signals sync records {label} activity, those observations will appear here.",

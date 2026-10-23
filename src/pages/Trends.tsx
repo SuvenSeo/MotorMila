@@ -144,9 +144,9 @@ export default function Trends() {
     return value;
   };
 
-  const selectTriggerClass = "h-11 rounded-full border-border bg-surface text-sm text-foreground";
+  const selectTriggerClass = "h-11 rounded-full border-border bg-surface text-footnote text-foreground";
   const selectContentClass = "border-border bg-popover text-popover-foreground";
-  const fieldLabelClass = "text-[12px] font-semibold text-muted-foreground";
+  const fieldLabelClass = "text-caption font-semibold text-muted-foreground";
 
   return (
     <PageCanvas>
@@ -207,7 +207,7 @@ export default function Trends() {
                   label={t("trends.lock.conditionFilter", "Condition filter")}
                   className="flex min-h-[2.75rem] w-full justify-start rounded-full"
                 >
-                  <div className={`${selectTriggerClass} flex h-10 items-center px-3 text-sm text-muted-foreground`}>
+                  <div className={`${selectTriggerClass} flex h-10 items-center px-3 text-footnote text-muted-foreground`}>
                     {t("common.any", "Any")}
                   </div>
                 </ProFeatureLock>
@@ -229,7 +229,7 @@ export default function Trends() {
                   label={t("trends.lock.districtFilter", "District filter")}
                   className="flex min-h-[2.75rem] w-full justify-start rounded-full"
                 >
-                  <div className={`${selectTriggerClass} flex h-10 items-center px-3 text-sm text-muted-foreground`}>
+                  <div className={`${selectTriggerClass} flex h-10 items-center px-3 text-footnote text-muted-foreground`}>
                     {t("common.allDistricts", "All districts")}
                   </div>
                 </ProFeatureLock>
@@ -245,7 +245,7 @@ export default function Trends() {
               { id: "condition", label: conditionLabel(condition) },
               { id: "district", label: district === "all" ? "All LK" : district },
             ].map((chip) => (
-              <span key={chip.id} className="rounded-full border border-border bg-surface px-2.5 py-1 text-[10px] font-semibold text-muted-foreground">{chip.label}</span>
+              <span key={chip.id} className="rounded-full border border-border bg-surface px-2.5 py-1 text-caption font-semibold text-muted-foreground">{chip.label}</span>
             ))}
             {hasNarrow && (
               <Button
@@ -253,7 +253,7 @@ export default function Trends() {
                 variant="ghost"
                 size="sm"
                 onClick={() => { setDistrict("all"); setCondition("all"); }}
-                className="ml-auto h-8 gap-1.5 px-3 text-xs font-semibold text-muted-foreground"
+                className="ml-auto h-8 gap-1.5 px-3 text-caption font-semibold text-muted-foreground"
               >
                 <RotateCcw aria-hidden /> {t("trends.resetFilters", "Reset filters")}
               </Button>
@@ -280,12 +280,12 @@ export default function Trends() {
         </m.div>
 
         <m.div variants={revealItem} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3">
-          <p className="text-[11px] font-medium text-muted-foreground">
+          <p className="text-caption font-medium text-muted-foreground">
             {selectedMake && selectedModel
               ? t("trends.medianNote", "Median advertised prices grouped by month from the public Sri Lanka snapshot.")
               : t("trends.chooseLane", "Choose a make and model to render the trajectory.")}
           </p>
-          <span className="shrink-0 text-[10px] font-semibold text-primary-bright num">{t("common.publicData", "Public data")}</span>
+          <span className="shrink-0 text-caption font-semibold text-primary-bright num">{t("common.publicData", "Public data")}</span>
         </m.div>
 
         {/* ── HYBRID TAX ARBITRAGE (Pro depth) ─────────────────── */}
@@ -302,8 +302,8 @@ export default function Trends() {
               className="min-h-[12rem] rounded-xl"
             >
               <div className="rounded-xl border border-border bg-surface p-6">
-                <p className="font-display text-lg font-bold text-foreground">{t("trends.hybridTitle", "Hybrid Tax Arbitrage")}</p>
-                <p className="mt-2 text-sm text-muted-foreground">{t("pro.lock.preview", "Preview locked on Free")}</p>
+                <p className="font-display text-callout font-bold text-foreground">{t("trends.hybridTitle", "Hybrid Tax Arbitrage")}</p>
+                <p className="mt-2 text-footnote text-muted-foreground">{t("pro.lock.preview", "Preview locked on Free")}</p>
               </div>
             </ProFeatureLock>
           )}
@@ -339,7 +339,7 @@ function HybridTaxArbitrageSection({ data, loading, error }: HybridTaxArbitrageS
     >
       <div className="mb-6 flex items-start justify-between gap-3">
         <div className="max-w-2xl">
-          <p className="inline-flex items-center gap-2 text-[0.6875rem] font-medium tracking-tight text-primary-bright">
+          <p className="inline-flex items-center gap-2 text-caption font-medium tracking-tight text-primary-bright">
             <span aria-hidden className="h-1 w-1 rounded-full bg-primary-bright" />
             {t("trends.hybridEyebrow", "Import tax intelligence")}
           </p>
@@ -349,7 +349,7 @@ function HybridTaxArbitrageSection({ data, loading, error }: HybridTaxArbitrageS
           >
             {t("trends.hybridTitle", "Hybrid tax arbitrage bands")}
           </h2>
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          <p className="mt-3 text-footnote leading-relaxed text-muted-foreground">
             {t("trends.hybridBody", "Median market prices vs excise duty across three engine-cc bands. The 1,500 cc cliff creates a pricing discontinuity worth exploiting.")}
           </p>
         </div>
@@ -369,8 +369,8 @@ function HybridTaxArbitrageSection({ data, loading, error }: HybridTaxArbitrageS
 
       {!loading && error && (
         <div className="rounded-2xl border border-border bg-surface px-4 py-6 text-center">
-          <p className="text-[12px] text-muted-foreground">{error}</p>
-          <p className="mt-1 text-[11px] text-muted-foreground">
+          <p className="text-caption text-muted-foreground">{error}</p>
+          <p className="mt-1 text-caption text-muted-foreground">
             {t("trends.hybridErrorHint", "Excise cliff insight is still available below from the static tax model.")}
           </p>
         </div>
@@ -378,7 +378,7 @@ function HybridTaxArbitrageSection({ data, loading, error }: HybridTaxArbitrageS
 
       {!loading && !error && bands.length === 0 && (
         <div className="rounded-2xl border border-border bg-surface px-4 py-6 text-center">
-          <p className="text-[12px] text-muted-foreground">{t("trends.hybridEmpty", "No hybrid band data available yet.")}</p>
+          <p className="text-caption text-muted-foreground">{t("trends.hybridEmpty", "No hybrid band data available yet.")}</p>
         </div>
       )}
 
@@ -400,21 +400,21 @@ function HybridTaxArbitrageSection({ data, loading, error }: HybridTaxArbitrageS
               >
                 <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${colors.badge} ${colors.text}`}>
+                    <span className={`rounded-full border px-2 py-0.5 text-caption font-bold ${colors.badge} ${colors.text}`}>
                       {band.label}
                     </span>
                     {isCliffBand && (
-                      <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+                      <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-caption font-medium text-emerald-700 dark:text-emerald-400">
                         {t("trends.taxCliff", "Tax cliff ↓")}
                       </span>
                     )}
                   </div>
                   <div className="flex items-center gap-3 text-right">
-                    <span className="text-[11px] text-muted-foreground num">
+                    <span className="text-caption text-muted-foreground num">
                       {band.count.toLocaleString()} {t("common.listings", "listings")}
                     </span>
                     {band.median_price_lkr !== null && (
-                      <span className="text-[13px] font-bold text-foreground num">
+                      <span className="text-footnote font-bold text-foreground num">
                         {formatPrice(band.median_price_lkr)}
                       </span>
                     )}
@@ -432,7 +432,7 @@ function HybridTaxArbitrageSection({ data, loading, error }: HybridTaxArbitrageS
                 </div>
 
                 {/* Excise note */}
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-caption text-muted-foreground">
                   {t("trends.exciseDuty", "Excise duty:")}{" "}
                   <span className={`font-semibold ${colors.text}`}>
                     {exciseLabelFor(band.cc_max)}
@@ -453,11 +453,11 @@ function HybridTaxArbitrageSection({ data, loading, error }: HybridTaxArbitrageS
       <div className="mt-5 rounded-2xl border border-amber-500/20 bg-amber-500/[0.05] p-4">
         <div className="mb-2 flex items-center gap-2">
           <Zap className="h-4 w-4 text-amber-600 dark:text-amber-400" aria-hidden />
-          <p className="text-[12px] font-semibold text-amber-700 dark:text-amber-400">
+          <p className="text-caption font-semibold text-amber-700 dark:text-amber-400">
             {t("trends.cliffTitle", "1,500 cc excise cliff")}
           </p>
         </div>
-        <p className="text-[13px] text-muted-foreground leading-relaxed">
+        <p className="text-footnote text-muted-foreground leading-relaxed">
           At exactly{" "}
           <span className="font-semibold text-foreground num">
             {cliffInsight.cliffCc.toLocaleString()} cc
@@ -481,17 +481,17 @@ function HybridTaxArbitrageSection({ data, loading, error }: HybridTaxArbitrageS
           </span>{" "}
           in excise versus the equivalent petrol band at this capacity.
         </p>
-        <p className="mt-2 text-[10px] font-medium text-muted-foreground">
+        <p className="mt-2 text-caption font-medium text-muted-foreground">
           Rates from the indicative 2025–2026 Sri Lanka excise schedule ·{" "}
           verify against the latest gazette before transacting.
         </p>
       </div>
 
       <div className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-4">
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-caption text-muted-foreground">
           Median prices from live market snapshot · excise rates from the 2025–2026 import tax model.
         </p>
-        <span className="shrink-0 text-[10px] font-semibold text-amber-700 dark:text-amber-400 num">{t("trends.taxModel", "Tax model")}</span>
+        <span className="shrink-0 text-caption font-semibold text-amber-700 dark:text-amber-400 num">{t("trends.taxModel", "Tax model")}</span>
       </div>
     </section>
   );

@@ -55,9 +55,9 @@ function HighlightChip({
 }: PageHighlight & { tilt: string }) {
   return (
     <div className={cn("page-hero__highlight", `page-hero__highlight--${tilt}`)}>
-      <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
-      <p className="mt-1 font-display text-[22px] font-semibold leading-none tracking-tight text-foreground num">{value}</p>
-      {hint ? <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p> : null}
+      <p className="text-caption font-medium text-muted-foreground">{label}</p>
+      <p className="mt-1 font-display text-title2 font-semibold leading-none tracking-tight text-foreground num">{value}</p>
+      {hint ? <p className="mt-1 text-caption text-muted-foreground">{hint}</p> : null}
     </div>
   );
 }

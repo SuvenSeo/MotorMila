@@ -219,7 +219,7 @@ export function ListingImageCarousel({
               <ChevronRight aria-hidden className="h-4 w-4" />
             </button>
             {/* Top-centre: bottom corners carry price / deal / source overlays. */}
-            <span className="pointer-events-none absolute left-1/2 top-2.5 z-30 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/10 bg-black/60 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-white backdrop-blur-md">
+            <span className="pointer-events-none absolute left-1/2 top-2.5 z-30 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/10 bg-black/60 px-2 py-0.5 text-caption font-semibold tabular-nums text-white backdrop-blur-md">
               <Camera aria-hidden className="h-3 w-3" />
               {index + 1}/{count}
             </span>

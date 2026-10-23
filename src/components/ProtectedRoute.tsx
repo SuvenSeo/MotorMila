@@ -26,33 +26,33 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
             transition={springSnappy}
             className="premium-surface p-8 shadow-soft-lg md:p-10"
           >
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[12px] font-semibold text-primary-bright">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-caption font-semibold text-primary-bright">
               <Lock className="h-3 w-3" /> Subscription required
             </span>
-            <h1 className="mt-5 font-display text-[2.1rem] font-semibold tracking-tight text-foreground md:text-[2.55rem]">
+            <h1 className="mt-5 font-display text-title1 font-semibold tracking-tight text-foreground md:text-large">
               {t("proGate.title", "Pro is locked.")}
             </h1>
-            <p className="mt-3 max-w-xl text-[14px] leading-relaxed text-muted-foreground">
+            <p className="mt-3 max-w-xl text-body leading-relaxed text-muted-foreground">
               {user?.name || "This account"} is on the {user?.plan || "free"} plan.{" "}
               {t("shell.copy.proGateBody", "Pro is coming soon. Full price history, district detail and exports will be part of it.")}
             </p>
             <div className="mt-7 flex flex-wrap gap-2.5">
               <Link
                 to="/pricing#get-started"
-                className="inline-flex h-11 items-center gap-1.5 rounded-full bg-primary px-5 text-[12px] font-semibold tracking-tight text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/95"
+                className="inline-flex h-11 items-center gap-1.5 rounded-full bg-primary px-5 text-caption font-semibold tracking-tight text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/95"
               >
                 <Crown className="h-3.5 w-3.5" /> {t("shell.pro.notify", "Notify me")}
               </Link>
               <Link
                 to="/pro-preview"
-                className="inline-flex h-11 items-center gap-1.5 rounded-full border border-border bg-card px-5 text-[12px] font-semibold text-foreground no-underline transition-all hover:border-primary/35"
+                className="inline-flex h-11 items-center gap-1.5 rounded-full border border-border bg-card px-5 text-caption font-semibold text-foreground no-underline transition-all hover:border-primary/35"
               >
                 <Sparkles className="h-3.5 w-3.5" /> {t("proGate.preview", "Preview Pro")}
               </Link>
               <button
                 type="button"
                 onClick={logout}
-                className="inline-flex h-11 items-center gap-1.5 rounded-full border border-border px-4 text-[12px] font-semibold text-muted-foreground transition-colors hover:text-foreground"
+                className="inline-flex h-11 items-center gap-1.5 rounded-full border border-border px-4 text-caption font-semibold text-muted-foreground transition-colors hover:text-foreground"
               >
                 <LogOut className="h-3.5 w-3.5" /> {t("nav.signOut", "Sign out")}
               </button>
@@ -75,8 +75,8 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
                   <ShieldCheck className="h-3.5 w-3.5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-[14px] font-semibold text-foreground">{item}</p>
-                  <p className="mt-1 text-[12px] text-muted-foreground">{t("proGate.lockedHint", "Locked until Pro subscription is active.")}</p>
+                  <p className="text-body font-semibold text-foreground">{item}</p>
+                  <p className="mt-1 text-caption text-muted-foreground">{t("proGate.lockedHint", "Locked until Pro subscription is active.")}</p>
                 </div>
               </motion.div>
             ))}

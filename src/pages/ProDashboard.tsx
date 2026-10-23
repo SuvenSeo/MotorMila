@@ -193,7 +193,7 @@ function SectionTitle({ title, eyebrow, children }: { title: string; eyebrow: st
   return (
     <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div className="max-w-2xl">
-        <p className="mb-2.5 inline-flex items-center gap-2 text-[0.6875rem] font-medium tracking-tight text-primary">
+        <p className="mb-2.5 inline-flex items-center gap-2 text-caption font-medium tracking-tight text-primary">
           <span aria-hidden className="h-1 w-1 rounded-full bg-primary" />
           {eyebrow}
         </p>
@@ -208,11 +208,11 @@ function MetricCard({ label, value, detail, icon: Icon }: { label: string; value
   return (
     <div className="metric-tile group rounded-2xl p-5 transition-[border-color,box-shadow,transform] hover:-translate-y-0.5">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[12px] font-medium text-muted-foreground">{label}</p>
+        <p className="text-caption font-medium text-muted-foreground">{label}</p>
         <Icon className="h-3.5 w-3.5 text-primary/70" aria-hidden="true" />
       </div>
-      <p className="mt-3 text-[1.75rem] font-bold leading-none tracking-tight text-foreground num">{value}</p>
-      {detail && <p className="mt-2 text-[11px] text-muted-foreground">{detail}</p>}
+      <p className="mt-3 text-title2 font-bold leading-none tracking-tight text-foreground num">{value}</p>
+      {detail && <p className="mt-2 text-caption text-muted-foreground">{detail}</p>}
     </div>
   );
 }
@@ -406,8 +406,8 @@ function DetailDialog({
         {detail ? (
           <>
             <DialogHeader>
-              <DialogTitle className="text-2xl font-bold tracking-normal">{detail.title}</DialogTitle>
-              <DialogDescription className="text-sm leading-relaxed text-muted-foreground">{detail.summary}</DialogDescription>
+              <DialogTitle className="text-title2 font-bold tracking-normal">{detail.title}</DialogTitle>
+              <DialogDescription className="text-footnote leading-relaxed text-muted-foreground">{detail.summary}</DialogDescription>
             </DialogHeader>
 
             <ExportButtons report={detailReport(detail)} />
@@ -416,8 +416,8 @@ function DetailDialog({
               {detail.metrics.map((metric) => (
                 <div key={metric.label} className="rounded-xl border border-border bg-surface p-4">
                   <p className="field-label">{metric.label}</p>
-                  <p className="mt-2 text-xl font-bold text-foreground num">{metric.value}</p>
-                  {metric.detail && <p className="mt-1 text-xs text-muted-foreground">{metric.detail}</p>}
+                  <p className="mt-2 text-title3 font-bold text-foreground num">{metric.value}</p>
+                  {metric.detail && <p className="mt-1 text-caption text-muted-foreground">{metric.detail}</p>}
                 </div>
               ))}
             </div>
@@ -430,8 +430,8 @@ function DetailDialog({
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={chartData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                        <XAxis dataKey="month" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} axisLine={false} tickLine={false} unit="M" />
+                        <XAxis dataKey="month" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} unit="M" />
                         <Tooltip
                           contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, color: "hsl(var(--foreground))" }}
                           labelStyle={{ color: "hsl(var(--foreground))" }}
@@ -442,7 +442,7 @@ function DetailDialog({
                       </LineChart>
                     </ResponsiveContainer>
                   ) : (
-                    <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-border text-sm text-muted-foreground">
+                    <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-border text-footnote text-muted-foreground">
                       Trend history is not deep enough for this selection yet.
                     </div>
                   )}
@@ -454,8 +454,8 @@ function DetailDialog({
                 {[...detail.source_mix, ...detail.district_mix].slice(0, 8).map((row) => (
                   <div key={`${row.label}-${row.count}`} className="rounded-xl border border-border bg-card p-3">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-bold text-foreground">{row.label}</p>
-                      <p className="text-xs font-bold text-primary-bright">{row.share_pct.toFixed(1)}%</p>
+                      <p className="text-footnote font-bold text-foreground">{row.label}</p>
+                      <p className="text-caption font-bold text-primary-bright">{row.share_pct.toFixed(1)}%</p>
                     </div>
                     <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-foreground/[0.03]">
                       <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, row.share_pct)}%` }} />
@@ -476,13 +476,13 @@ function DetailDialog({
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-bold text-foreground">{listing.title}</p>
+                        <p className="truncate text-footnote font-bold text-foreground">{listing.title}</p>
                         <p className="mt-1 tech-label text-muted-foreground">
                           {listing.district || "Sri Lanka"} · {listing.source}
                         </p>
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1.5">
-                        <p className="text-sm font-bold text-primary num">{fmtMoney(listing.price_lkr)}</p>
+                        <p className="text-footnote font-bold text-primary num">{fmtMoney(listing.price_lkr)}</p>
                         <VelocityBadge firstSeenAt={listing.first_seen_at ?? null} lastSeenAt={listing.last_seen_at ?? null} />
                       </div>
                     </div>
@@ -494,8 +494,8 @@ function DetailDialog({
         ) : (
           <div className="space-y-3 p-4">
             <DialogHeader>
-              <DialogTitle className="text-xl font-bold tracking-normal">Loading detail</DialogTitle>
-              <DialogDescription className="text-sm text-muted-foreground">Preparing the selected Pro intelligence view.</DialogDescription>
+              <DialogTitle className="text-title3 font-bold tracking-normal">Loading detail</DialogTitle>
+              <DialogDescription className="text-footnote text-muted-foreground">Preparing the selected Pro intelligence view.</DialogDescription>
             </DialogHeader>
             <Skeleton className="h-8 w-1/2 bg-foreground/[0.03]" />
             <Skeleton className="h-24 w-full bg-foreground/[0.03]" />
@@ -906,18 +906,18 @@ export default function ProDashboard() {
           <Link to="/" className="flex items-center gap-2 no-underline">
             <img src="/logo.png" alt="Motormila" className="h-7 w-7 rounded-full ring-1 ring-border" />
             <div>
-              <p className="text-[13px] font-bold text-foreground">Motormila</p>
-              <p className="text-[11px] font-medium text-muted-foreground/80">{t("pro.workspace", "Pro Workspace")}</p>
+              <p className="text-footnote font-bold text-foreground">Motormila</p>
+              <p className="text-caption font-medium text-muted-foreground/80">{t("pro.workspace", "Pro Workspace")}</p>
             </div>
           </Link>
           <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing || loading} className="h-8 gap-1.5 rounded-2xl border-border bg-surface text-foreground hover:bg-card text-[10px] font-bold">
+            <Button type="button" variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing || loading} className="h-8 gap-1.5 rounded-2xl border-border bg-surface text-foreground hover:bg-card text-caption font-bold">
               <RefreshCw className={`h-3 w-3 ${refreshing ? "animate-spin" : ""}`} /> Refresh
             </Button>
-            <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary-bright">
+            <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-caption font-bold text-primary-bright">
               <Crown className="h-3 w-3" /> {user?.plan || "pro"}
             </span>
-            <button type="button" onClick={handleLogout} className="inline-flex h-8 items-center gap-1.5 rounded-2xl border border-border bg-surface px-2.5 text-[10px] font-bold text-muted-foreground transition-all hover:border-rose-500/25 hover:text-rose-600 dark:hover:text-rose-400">
+            <button type="button" onClick={handleLogout} className="inline-flex h-8 items-center gap-1.5 rounded-2xl border border-border bg-surface px-2.5 text-caption font-bold text-muted-foreground transition-all hover:border-rose-500/25 hover:text-rose-600 dark:hover:text-rose-400">
               <LogOut className="h-3 w-3" /> Sign out
             </button>
           </div>
@@ -928,7 +928,7 @@ export default function ProDashboard() {
         <motion.header variants={itemVariants} className="pt-4 pb-2 md:pt-8">
           <div className="grid gap-8 lg:grid-cols-[1.4fr_0.6fr] lg:items-end">
             <div>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[0.6875rem] font-medium tracking-tight text-primary-bright">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-caption font-medium tracking-tight text-primary-bright">
                 <Lock className="h-3 w-3" aria-hidden="true" /> {t("pro.eyebrow", "Professional intelligence")}
               </span>
               <h1 className="display-hero mt-5 text-foreground">
@@ -940,10 +940,10 @@ export default function ProDashboard() {
             </div>
             <div className="rounded-2xl border border-border bg-card p-5 shadow-soft">
               <p className="tech-label text-primary">{t("pro.dataFreshness", "Data freshness")}</p>
-              <p className="mt-2 text-2xl font-bold text-foreground num">
+              <p className="mt-2 text-title2 font-bold text-foreground num">
                 {snapshot?.last_updated ? formatRelativeTime(snapshot.last_updated) : t("pro.loading", "Loading")}
               </p>
-              <p className="mt-1 text-xs text-muted-foreground font-semibold">{t("pro.generated", "Generated {date}", { date: snapshot ? fmtDate(snapshot.generated_at) : t("pro.pending", "pending") })}</p>
+              <p className="mt-1 text-caption text-muted-foreground font-semibold">{t("pro.generated", "Generated {date}", { date: snapshot ? fmtDate(snapshot.generated_at) : t("pro.pending", "pending") })}</p>
               <div className="mt-4">
                 <ExportButtons report={activeMarketReport} />
               </div>
@@ -952,7 +952,7 @@ export default function ProDashboard() {
         </motion.header>
 
         {error && (
-          <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm font-bold text-rose-700 dark:text-rose-300">
+          <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-footnote font-bold text-rose-700 dark:text-rose-300">
             {error}
           </div>
         )}
@@ -975,8 +975,8 @@ export default function ProDashboard() {
                     <Icon className="h-4 w-4" aria-hidden="true" />
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-bold text-foreground">{t(labelKey, fallback)}</span>
-                    <span className="mt-0.5 block truncate text-xs font-semibold leading-5 text-muted-foreground/80">{getModeDetail(id)}</span>
+                    <span className="block truncate text-footnote font-bold text-foreground">{t(labelKey, fallback)}</span>
+                    <span className="mt-0.5 block truncate text-caption font-semibold leading-5 text-muted-foreground/80">{getModeDetail(id)}</span>
                   </span>
                 </span>
               </TabsTrigger>
@@ -1008,7 +1008,7 @@ export default function ProDashboard() {
                   ) : (snapshot?.top_opportunities?.length ?? 0) === 0 ? (
                     <div className="console-empty">
                       <Database className="mx-auto mb-3 h-7 w-7 text-muted-foreground" aria-hidden="true" />
-                      <p className="text-sm text-muted-foreground">Top opportunities will surface once the market snapshot loads.</p>
+                      <p className="text-footnote text-muted-foreground">Top opportunities will surface once the market snapshot loads.</p>
                     </div>
                   ) : (
                     (snapshot?.top_opportunities || []).slice(0, 8).map((listing) => (
@@ -1018,13 +1018,13 @@ export default function ProDashboard() {
                       className="flex items-center justify-between gap-4 rounded-xl border border-border bg-surface px-4 py-3 no-underline transition-colors hover:border-primary/25"
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-bold text-foreground">{listing.make} {listing.model} {listing.year || ""}</p>
+                        <p className="truncate text-footnote font-bold text-foreground">{listing.make} {listing.model} {listing.year || ""}</p>
                         <p className="mt-1 tech-label text-muted-foreground">
                           {listing.district || "Sri Lanka"} · {listing.source}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-bold text-primary num">{fmtMoney(listing.price_lkr)}</p>
+                        <p className="text-footnote font-bold text-primary num">{fmtMoney(listing.price_lkr)}</p>
                         <p className="ui-caption font-bold">Score {listing.deal_score?.toFixed(1) || "N/A"}</p>
                         <VelocityBadge
                           firstSeenAt={listing.first_seen_at ?? null}
@@ -1046,14 +1046,14 @@ export default function ProDashboard() {
                   ) : (snapshot?.source_coverage?.length ?? 0) === 0 ? (
                     <div className="console-empty flex h-full flex-col items-center justify-center gap-3">
                       <BarChart3 className="h-7 w-7 text-muted-foreground" aria-hidden="true" />
-                      <p className="text-sm text-muted-foreground">Source coverage will populate once the snapshot reloads.</p>
+                      <p className="text-footnote text-muted-foreground">Source coverage will populate once the snapshot reloads.</p>
                     </div>
                   ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={snapshot?.source_coverage || []}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                      <XAxis dataKey="label" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <XAxis dataKey="label" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} />
                       <Tooltip cursor={{ fill: "hsl(var(--muted) / 0.4)" }} contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, color: "hsl(var(--foreground))" }} labelStyle={{ color: "hsl(var(--foreground))" }} />
                       <Bar dataKey="count" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
                     </BarChart>
@@ -1111,7 +1111,7 @@ export default function ProDashboard() {
               </div>
             </SectionTitle>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-semibold text-muted-foreground">
+              <span className="text-caption font-semibold text-muted-foreground">
                 {hasProAccess
                   ? `${filteredLanes.length.toLocaleString()} lanes in focus`
                   : `Trial: 1 lane visible${lockedLaneCount > 0 ? ` · ${lockedLaneCount} locked` : ""}`}
@@ -1139,7 +1139,7 @@ export default function ProDashboard() {
             {!loading && filteredLanes.length === 0 ? (
               <div className="console-empty flex flex-col items-center gap-4">
                 <Search className="h-7 w-7 text-muted-foreground" aria-hidden="true" />
-                <p className="text-sm text-muted-foreground">No vehicle lanes match this filter.</p>
+                <p className="text-footnote text-muted-foreground">No vehicle lanes match this filter.</p>
                 <button type="button" onClick={resetLaneFilters} className="action-soft h-9">
                   <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
                   Reset filters
@@ -1147,7 +1147,7 @@ export default function ProDashboard() {
               </div>
             ) : (
               <div className="max-h-[640px] overflow-auto rounded-xl border border-border">
-                <table className="w-full min-w-[860px] text-sm">
+                <table className="w-full min-w-[860px] text-footnote">
                   <thead className="sticky top-0 z-10 bg-surface">
                     <tr>
                       {["Vehicle", "Listings", "Median", "Range", "Avg Deal", "Districts", "Source"].map((heading) => (
@@ -1199,7 +1199,7 @@ export default function ProDashboard() {
                     ))}
                     {lockedLaneCount > 0 && (
                       <tr className="border-t border-border bg-primary/5">
-                        <td colSpan={7} className="px-4 py-3 text-center text-xs font-bold">
+                        <td colSpan={7} className="px-4 py-3 text-center text-caption font-bold">
                           <Link to="/pricing" className="text-primary-bright no-underline hover:underline">
                             {lockedLaneCount} more lane{lockedLaneCount === 1 ? "" : "s"} locked — start a 7-day free trial to unlock
                           </Link>
@@ -1223,7 +1223,7 @@ export default function ProDashboard() {
             ) : districts.length === 0 ? (
               <div className="console-empty">
                 <MapPin className="mx-auto mb-3 h-7 w-7 text-muted-foreground" aria-hidden="true" />
-                <p className="text-sm text-muted-foreground">District profiles will return once the snapshot reloads.</p>
+                <p className="text-footnote text-muted-foreground">District profiles will return once the snapshot reloads.</p>
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -1236,7 +1236,7 @@ export default function ProDashboard() {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-lg font-bold text-foreground">{district.district}</p>
+                        <p className="text-callout font-bold text-foreground">{district.district}</p>
                         <p className="mt-1 tech-label text-muted-foreground">
                           {district.source_count} sources · latest {fmtDate(district.latest_seen_at)}
                         </p>
@@ -1246,14 +1246,14 @@ export default function ProDashboard() {
                     <div className="mt-5 grid grid-cols-2 gap-3">
                       <div>
                         <p className="field-label">Listings</p>
-                        <p className="mt-1 text-xl font-bold text-foreground num">{fmtCount(district.listing_count)}</p>
+                        <p className="mt-1 text-title3 font-bold text-foreground num">{fmtCount(district.listing_count)}</p>
                       </div>
                       <div>
                         <p className="field-label">Median</p>
-                        <p className="mt-1 text-xl font-bold text-primary num">{fmtMoney(district.median_price_lkr)}</p>
+                        <p className="mt-1 text-title3 font-bold text-primary num">{fmtMoney(district.median_price_lkr)}</p>
                       </div>
                     </div>
-                    <p className="mt-4 text-sm text-muted-foreground">
+                    <p className="mt-4 text-footnote text-muted-foreground">
                       Top model: <span className="font-semibold text-foreground">{district.top_make} {district.top_model}</span>
                     </p>
                   </button>
@@ -1285,7 +1285,7 @@ export default function ProDashboard() {
             ) : arbitrageGaps.length === 0 ? (
               <div className="console-empty">
                 <ArrowRightLeft className="mx-auto mb-3 h-7 w-7 text-muted-foreground" aria-hidden="true" />
-                <p className="text-sm text-muted-foreground">
+                <p className="text-footnote text-muted-foreground">
                   {arbitrageLaneKey
                     ? "Not enough district data for this vehicle to compute gaps."
                     : "Select a vehicle to scan for cross-district price gaps."}
@@ -1314,8 +1314,8 @@ export default function ProDashboard() {
             <section className="page-panel rounded-xl p-5">
               <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <h3 className="text-xl font-bold text-foreground">{trendDetail?.title || "Select a vehicle lane"}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">{trendDetail?.summary || "Trend depth appears here once a lane is selected."}</p>
+                  <h3 className="text-title3 font-bold text-foreground">{trendDetail?.title || "Select a vehicle lane"}</h3>
+                  <p className="mt-1 text-footnote text-muted-foreground">{trendDetail?.summary || "Trend depth appears here once a lane is selected."}</p>
                 </div>
                 {trendDetail && <ExportButtons report={detailReport(trendDetail)} />}
               </div>
@@ -1326,8 +1326,8 @@ export default function ProDashboard() {
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={trendChart}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="month" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} axisLine={false} tickLine={false} unit="M" />
+                      <XAxis dataKey="month" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} unit="M" />
                       <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, color: "hsl(var(--foreground))" }} labelStyle={{ color: "hsl(var(--foreground))" }} />
                       <Line type="monotone" dataKey="median" stroke="hsl(var(--primary))" strokeWidth={3} dot={false} name="Median" />
                       <Line type="monotone" dataKey="avg" stroke="hsl(var(--muted-foreground))" strokeWidth={2} dot={false} strokeDasharray="4 3" name="Average" />
@@ -1336,7 +1336,7 @@ export default function ProDashboard() {
                 ) : (
                   <div className="console-empty flex h-full flex-col items-center justify-center gap-3">
                     <TrendingUp className="h-7 w-7 text-muted-foreground" aria-hidden="true" />
-                    <p className="text-sm text-muted-foreground">No trend data available for this lane yet.</p>
+                    <p className="text-footnote text-muted-foreground">No trend data available for this lane yet.</p>
                   </div>
                 )}
               </div>
@@ -1345,16 +1345,16 @@ export default function ProDashboard() {
             {/* Import-era depreciation cohort split */}
             <SectionTitle eyebrow="Import-era market" title="Pre-freeze vs post-freeze cohorts">
               <div className="flex items-center gap-3">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-caption font-semibold text-amber-600 dark:text-amber-400">
                   Pre-freeze ≤2024
                 </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/20 bg-sky-500/10 px-2.5 py-1 text-[10px] font-semibold text-sky-600 dark:text-sky-400">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/20 bg-sky-500/10 px-2.5 py-1 text-caption font-semibold text-sky-600 dark:text-sky-400">
                   Post-freeze ≥2025
                 </span>
               </div>
             </SectionTitle>
             <section className="page-panel rounded-xl p-5" aria-label="Import era split chart">
-              <p className="mb-4 text-sm text-muted-foreground">
+              <p className="mb-4 text-footnote text-muted-foreground">
                 Median asking price comparison per make between pre-2025 import cohort (older stock, higher supply) and
                 post-2025 cohort (restricted imports, supply premium). Only priced, non-outlier listings with a known
                 manufacture year are included.
@@ -1365,7 +1365,7 @@ export default function ProDashboard() {
                 ) : (eraData?.makes?.length ?? 0) === 0 ? (
                   <div className="console-empty flex h-full flex-col items-center justify-center gap-3">
                     <TrendingUp className="h-7 w-7 text-muted-foreground" aria-hidden="true" />
-                    <p className="text-sm text-muted-foreground">Import-era split data is not yet available.</p>
+                    <p className="text-footnote text-muted-foreground">Import-era split data is not yet available.</p>
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
@@ -1380,8 +1380,8 @@ export default function ProDashboard() {
                       margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                      <XAxis dataKey="make" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} axisLine={false} tickLine={false} unit="M" />
+                      <XAxis dataKey="make" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} unit="M" />
                       <Tooltip
                         cursor={{ fill: "hsl(var(--muted) / 0.4)" }}
                         contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, color: "hsl(var(--foreground))" }}
@@ -1402,7 +1402,7 @@ export default function ProDashboard() {
               </div>
               {(eraData?.makes?.length ?? 0) > 0 && (
                 <div className="mt-4 overflow-auto rounded-2xl border border-border" aria-label="Import era split table">
-                  <table className="w-full min-w-[580px] text-sm">
+                  <table className="w-full min-w-[580px] text-footnote">
                     <thead className="bg-surface">
                       <tr>
                         {["Make", "Pre-freeze count", "Pre-freeze median", "Post-freeze count", "Post-freeze median", "Premium"].map((h) => (
@@ -1446,7 +1446,7 @@ export default function ProDashboard() {
             ) : (snapshot?.source_coverage?.length ?? 0) === 0 ? (
               <div className="console-empty">
                 <Database className="mx-auto mb-3 h-7 w-7 text-muted-foreground" aria-hidden="true" />
-                <p className="text-sm text-muted-foreground">Source coverage will return once the snapshot reloads.</p>
+                <p className="text-footnote text-muted-foreground">Source coverage will return once the snapshot reloads.</p>
               </div>
             ) : (
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -1459,13 +1459,13 @@ export default function ProDashboard() {
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <p className="text-lg font-bold text-foreground">{source.label}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">Latest {fmtDate(source.latest_seen_at)}</p>
+                        <p className="text-callout font-bold text-foreground">{source.label}</p>
+                        <p className="mt-1 text-caption text-muted-foreground">Latest {fmtDate(source.latest_seen_at)}</p>
                       </div>
                       <Database className="h-5 w-5 text-primary" />
                     </div>
-                    <p className="mt-4 text-3xl font-bold text-foreground num">{source.count.toLocaleString()}</p>
-                    <p className="mt-1 text-xs font-semibold text-muted-foreground">{source.share_pct.toFixed(1)}% of priced coverage · {fmtMoney(source.avg_price_lkr)} avg</p>
+                    <p className="mt-4 text-title1 font-bold text-foreground num">{source.count.toLocaleString()}</p>
+                    <p className="mt-1 text-caption font-semibold text-muted-foreground">{source.share_pct.toFixed(1)}% of priced coverage · {fmtMoney(source.avg_price_lkr)} avg</p>
                   </button>
                 ))}
               </div>
@@ -1493,7 +1493,7 @@ export default function ProDashboard() {
                   <div className="mb-5 flex items-start justify-between gap-4">
                     <div>
                       <p className="tech-label text-primary">Custom scope</p>
-                      <h3 className="mt-1 text-2xl font-bold text-foreground">Report composer</h3>
+                      <h3 className="mt-1 text-title2 font-bold text-foreground">Report composer</h3>
                     </div>
                     <Settings2 className="h-6 w-6 text-primary" />
                   </div>
@@ -1551,7 +1551,7 @@ export default function ProDashboard() {
                           </SelectContent>
                         </Select>
                       ) : (
-                        <div className="control-dark flex items-center px-3 text-sm font-bold text-foreground">
+                        <div className="control-dark flex items-center px-3 text-footnote font-bold text-foreground">
                           {customReportTargetLabel}
                         </div>
                       )}
@@ -1636,7 +1636,7 @@ export default function ProDashboard() {
                   <div className="mb-5 flex items-start justify-between gap-4">
                     <div>
                       <p className="tech-label text-primary">Contents</p>
-                      <h3 className="mt-1 text-2xl font-bold text-foreground">Choose sections</h3>
+                      <h3 className="mt-1 text-title2 font-bold text-foreground">Choose sections</h3>
                     </div>
                     <SlidersHorizontal className="h-6 w-6 text-primary" />
                   </div>
@@ -1659,8 +1659,8 @@ export default function ProDashboard() {
                             className="mt-0.5 border-input data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                           />
                           <span>
-                            <span className="block text-sm font-bold text-foreground">{section.label}</span>
-                            <span className="mt-1 block text-xs leading-5 text-muted-foreground">{section.detail}</span>
+                            <span className="block text-footnote font-bold text-foreground">{section.label}</span>
+                            <span className="mt-1 block text-caption leading-5 text-muted-foreground">{section.detail}</span>
                           </span>
                         </label>
                       );
@@ -1685,7 +1685,7 @@ export default function ProDashboard() {
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="field-label">Preview</p>
-                          <p className="mt-1 text-lg font-bold text-foreground">{customReportTargetLabel}</p>
+                          <p className="mt-1 text-callout font-bold text-foreground">{customReportTargetLabel}</p>
                         </div>
                         <Palette className="h-5 w-5 text-primary" />
                       </div>
@@ -1729,7 +1729,7 @@ export default function ProDashboard() {
                 return (
                   <div key={item.title} className="rounded-xl border border-border bg-surface p-5 transition-colors hover:border-border">
                     <Icon className="h-5 w-5 text-primary/60" />
-                    <h3 className="mt-4 text-base font-semibold text-foreground">{item.title}</h3>
+                    <h3 className="mt-4 text-body font-semibold text-foreground">{item.title}</h3>
                     <div className="mt-5">
                       <ExportButtons report={item.report} />
                     </div>
@@ -1740,7 +1740,7 @@ export default function ProDashboard() {
           </TabsContent>
         </Tabs>
 
-        <footer className="flex flex-col gap-3 border-t border-border pt-6 text-xs text-muted-foreground md:flex-row md:items-center md:justify-between">
+        <footer className="flex flex-col gap-3 border-t border-border pt-6 text-caption text-muted-foreground md:flex-row md:items-center md:justify-between">
           <span className="inline-flex items-center gap-2">
             <ShieldCheck className="h-4 w-4" />
             Pro data is aggregated from public Sri Lanka vehicle marketplaces for commercial analysis.

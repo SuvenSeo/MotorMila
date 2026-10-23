@@ -71,7 +71,7 @@ function SourceCard({ row }: { row: SourceQualityRow }) {
     <div className="asset-surface rounded-xl p-5 transition-all duration-300 ease-apple hover:border-primary/30 hover:shadow-soft-lg">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-lg font-bold text-foreground">{row.source}</p>
+          <p className="text-callout font-bold text-foreground">{row.source}</p>
           <p className="mt-1 tech-label text-muted-foreground">
             {row.listing_count.toLocaleString()} listings
           </p>
@@ -86,8 +86,8 @@ function SourceCard({ row }: { row: SourceQualityRow }) {
           return (
             <div key={metric.label}>
               <div className="flex items-center justify-between gap-3">
-                <p className="text-xs text-muted-foreground">{metric.label}</p>
-                <p className={`text-xs font-bold num ${metric.colorClass}`}>{metric.value}</p>
+                <p className="text-caption text-muted-foreground">{metric.label}</p>
+                <p className={`text-caption font-bold num ${metric.colorClass}`}>{metric.value}</p>
               </div>
               <div className="mt-1 h-1 overflow-hidden rounded-full bg-foreground/[0.06]">
                 <div
@@ -138,7 +138,7 @@ export function SourceQualityScorecard() {
     return (
       <div className="console-empty">
         <Database className="mx-auto mb-3 h-7 w-7 text-muted-foreground" aria-hidden="true" />
-        <p className="text-sm text-muted-foreground">No source quality data available yet.</p>
+        <p className="text-footnote text-muted-foreground">No source quality data available yet.</p>
       </div>
     );
   }

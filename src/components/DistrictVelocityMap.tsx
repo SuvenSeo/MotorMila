@@ -89,8 +89,8 @@ export const DistrictVelocityMap = memo(function DistrictVelocityMap({
     return (
       <div className="h-[420px] rounded-xl border border-border bg-card overflow-hidden flex flex-col items-center justify-center space-y-4">
         <div className="w-12 h-12 rounded-full border-2 border-primary/20 border-t-primary animate-spin mb-4" />
-        <p className="text-sm font-semibold tracking-tight text-primary/80">Loading velocity data</p>
-        <p className="text-xs text-muted-foreground font-medium">Calculating demand momentum across districts…</p>
+        <p className="text-footnote font-semibold tracking-tight text-primary/80">Loading velocity data</p>
+        <p className="text-caption text-muted-foreground font-medium">Calculating demand momentum across districts…</p>
       </div>
     );
   }
@@ -98,14 +98,14 @@ export const DistrictVelocityMap = memo(function DistrictVelocityMap({
   if (isError) {
     return (
       <div className="flex h-[420px] flex-col items-center justify-center gap-3 rounded-xl border border-border bg-surface px-4 text-center">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-footnote text-muted-foreground">
           Velocity data temporarily unavailable — market API returned an error.
         </p>
         {onRetry ? (
           <button
             type="button"
             onClick={onRetry}
-            className="rounded-2xl border border-border bg-card px-3 py-1.5 text-[12px] font-medium text-foreground transition-colors hover:border-primary/30 hover:text-primary-bright"
+            className="rounded-2xl border border-border bg-card px-3 py-1.5 text-caption font-medium text-foreground transition-colors hover:border-primary/30 hover:text-primary-bright"
           >
             Retry
           </button>
@@ -116,7 +116,7 @@ export const DistrictVelocityMap = memo(function DistrictVelocityMap({
 
   if (!points.length) {
     return (
-      <div className="h-[420px] rounded-xl border border-border bg-surface flex items-center justify-center text-muted-foreground text-sm">
+      <div className="h-[420px] rounded-xl border border-border bg-surface flex items-center justify-center text-muted-foreground text-footnote">
         Velocity data unavailable — listings not yet indexed with district timestamps.
       </div>
     );
@@ -124,7 +124,7 @@ export const DistrictVelocityMap = memo(function DistrictVelocityMap({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3 text-[12px] font-semibold">
+      <div className="flex flex-wrap items-center gap-3 text-caption font-semibold">
         <div className="rounded-2xl border border-border bg-surface px-3 py-1.5 text-foreground transition-colors">
           Color = new listings / total (7-day velocity)
         </div>
@@ -184,8 +184,8 @@ export const DistrictVelocityMap = memo(function DistrictVelocityMap({
                   {point.district}
                 </Tooltip>
                 <Popup autoPan keepInView autoPanPaddingTopLeft={[24, 84]} autoPanPaddingBottomRight={[24, 24]}>
-                  <div className="min-w-[200px] text-sm space-y-1.5">
-                    <p className="font-bold text-base">{point.district}</p>
+                  <div className="min-w-[200px] text-footnote space-y-1.5">
+                    <p className="font-bold text-body">{point.district}</p>
                     <p>Total Listings: <span className="num">{point.listing_count.toLocaleString()}</span></p>
                     <p>New (7d): <span className="num">{point.new_7d_count.toLocaleString()}</span></p>
                     <p>

@@ -159,7 +159,7 @@ export function FmvExplainer({
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[12px] font-semibold text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
+        className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-caption font-semibold text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
       >
         <Info className="h-3 w-3" aria-hidden />
         {t.trigger}
@@ -173,7 +173,7 @@ export function FmvExplainer({
           className="absolute left-0 top-full z-40 mt-2 w-72 rounded-xl border border-border bg-popover p-4 text-left shadow-soft-xl"
         >
           <div className="mb-2 flex items-start justify-between gap-2">
-            <h4 className="text-[12px] font-semibold text-primary-bright">
+            <h4 className="text-caption font-semibold text-primary-bright">
               {t.title}
             </h4>
             <button
@@ -187,12 +187,12 @@ export function FmvExplainer({
           </div>
 
           {fmvLkr != null && Number(fmvLkr) > 0 && (
-            <p className="num text-sm font-extrabold text-foreground">
+            <p className="num text-footnote font-extrabold text-foreground">
               {formatPriceLkrMillions(Number(fmvLkr))}
             </p>
           )}
 
-          <ul className="mt-2 space-y-1.5 text-[12px] leading-relaxed text-muted-foreground">
+          <ul className="mt-2 space-y-1.5 text-caption leading-relaxed text-muted-foreground">
             <li>• {count > 0 ? t.comps(count) : t.noComps}</li>
             <li>• {t.confidence[confidence] ?? t.confidence.none}</li>
             <li>
@@ -213,7 +213,7 @@ export function FmvExplainer({
             {updatedLabel && <li>• {t.updated(updatedLabel)}</li>}
           </ul>
           {/* Plain anchor (not <Link>) so the explainer also renders outside a Router. */}
-          <a href={howWePriceHref("fmv")} className="mt-2 inline-block text-[11px] font-semibold text-primary-bright">
+          <a href={howWePriceHref("fmv")} className="mt-2 inline-block text-caption font-semibold text-primary-bright">
             {t.howLink}
           </a>
         </div>

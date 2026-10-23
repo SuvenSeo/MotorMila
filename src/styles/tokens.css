@@ -56,6 +56,19 @@
   --radius-3xl: 20px;
   --radius-4xl: 24px;    /* hero media */
 
+  /* ── Type scale (mirrors src/styles/type-scale.ts) ───────────────── */
+  --text-caption: 0.75rem;     /* 12/16 */
+  --text-footnote: 0.8125rem;  /* 13/18 */
+  --text-body: 0.9375rem;      /* 15/22 */
+  --text-callout: 1.0625rem;   /* 17/24 */
+  --text-title3: 1.25rem;      /* 20/26 */
+  --text-title2: 1.5rem;       /* 24/30 */
+  --text-title1: 2rem;         /* 32/38 */
+  --text-large: 2.75rem;       /* 44/48 */
+  --text-hero: clamp(3rem, 1.6rem + 3.9vw, 5rem); /* 48 → 80 */
+  --tracking-tight: -0.02em;
+  --tracking-caps: 0.08em;
+
   /* ── Numerals — prices never fall back to a monospace face ───────── */
   --font-numeric-stack: var(--font-numeric), "Cal Sans Text Fallback", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }

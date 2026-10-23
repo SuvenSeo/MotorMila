@@ -53,18 +53,18 @@ export function ModelTrendPanel({ make, model }: { make: string; model: string }
     <div className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[12px] font-semibold text-muted-foreground">
+          <p className="text-caption font-semibold text-muted-foreground">
             {t("modelTrend.eyebrow", "Price history")}
           </p>
-          <h3 className="mt-1 font-display text-xl font-semibold text-foreground">
+          <h3 className="mt-1 font-display text-title3 font-semibold text-foreground">
             {t("modelTrend.title", "{make} {model} — 12-month trend", { make, model })}
           </h3>
-          <p className="mt-1 text-[13px] text-muted-foreground">
+          <p className="mt-1 text-footnote text-muted-foreground">
             {t("modelTrend.sub", "Median asking price · trailing 12 months")}
           </p>
         </div>
         {!isLoading && (
-          <span className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold", TONE_STYLES[tone].chip)}>
+          <span className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-footnote font-semibold", TONE_STYLES[tone].chip)}>
             <Icon className="h-4 w-4" aria-hidden />
             {tone === "stable" ? t("trendTone.stableShort", "Stable") : formatChangePct(changePct)}{" "}
             {t("modelTrend.thisYear", "this year")}
@@ -101,7 +101,7 @@ export function ModelTrendPanel({ make, model }: { make: string; model: string }
                 tickMargin={8}
                 minTickGap={28}
                 interval="preserveStartEnd"
-                fontSize={11}
+                fontSize={12}
               />
               <YAxis
                 domain={domain ?? ["auto", "auto"]}
@@ -110,7 +110,7 @@ export function ModelTrendPanel({ make, model }: { make: string; model: string }
                 axisLine={false}
                 tickCount={4}
                 width={48}
-                fontSize={11}
+                fontSize={12}
               />
               <ChartTooltip
                 cursor={false}
@@ -136,7 +136,7 @@ export function ModelTrendPanel({ make, model }: { make: string; model: string }
           </ChartContainer>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <TrendToneLegend />
-            <span className="text-[11px] font-medium text-muted-foreground">
+            <span className="text-caption font-medium text-muted-foreground">
               {t("chart.mnNote", "Mn = million rupees (Rs 1,000,000)")}
             </span>
           </div>

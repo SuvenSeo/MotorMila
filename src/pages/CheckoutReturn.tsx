@@ -53,12 +53,12 @@ export default function CheckoutReturn() {
     <PageCanvas>
       <PageHero theme="default" eyebrow="Checkout" eyebrowIcon={Icon} watermarkIcon={Icon} title={<>{title}<span className="text-sheen">.</span></>} description={body} />
       <PageBody>
-        <div role="status" className="max-w-xl space-y-4 rounded-[1.75rem] border border-border bg-card p-6 text-[13px]">
+        <div role="status" className="max-w-xl space-y-4 rounded-[1.75rem] border border-border bg-card p-6 text-footnote">
           {waiting && <p className="flex items-center gap-2"><Loader2 aria-hidden className="h-4 w-4 animate-spin" /> Checking order {orderId || "…"}</p>}
           {error && <p className="text-destructive">{error}</p>}
           {orderId && <p className="text-muted-foreground">Order reference: <span className="num font-semibold text-foreground">{orderId}</span></p>}
           <div className="flex flex-wrap gap-2">
-            <Link to={paid ? "/dealer" : "/pricing"} className="inline-flex h-10 items-center rounded-full bg-primary px-5 text-[12px] font-semibold text-primary-foreground no-underline">
+            <Link to={paid ? "/dealer" : "/pricing"} className="inline-flex h-10 items-center rounded-full bg-primary px-5 text-caption font-semibold text-primary-foreground no-underline">
               {paid ? "Open dealer workspace" : "Back to pricing"}
             </Link>
           </div>

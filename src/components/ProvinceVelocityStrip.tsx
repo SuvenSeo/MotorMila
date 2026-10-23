@@ -66,17 +66,17 @@ function ProvinceCell({
         style={{ background: color, opacity: 0.85 }}
         aria-hidden
       />
-      <p className="text-[12px] font-semibold text-foreground/90">
+      <p className="text-caption font-semibold text-foreground/90">
         {point.province}
       </p>
       {/* Cell background is an always-dark data-viz gradient (not a theme surface), so text stays fixed-light regardless of theme */}
-      <p className="mt-2 num text-lg font-semibold tracking-tight text-emerald-300">
+      <p className="mt-2 num text-callout font-semibold tracking-tight text-emerald-300">
         {formatVelocityPct(point.velocity_score)}
       </p>
-      <p className="mt-1 text-[11px] text-muted-foreground num">
+      <p className="mt-1 text-caption text-muted-foreground num">
         {point.listing_count.toLocaleString()} listings
       </p>
-      <p className="mt-0.5 text-[10px] text-muted-foreground/80 num">
+      <p className="mt-0.5 text-caption text-muted-foreground/80 num">
         +{point.new_7d_count.toLocaleString()} new · 7d
       </p>
     </article>
@@ -120,14 +120,14 @@ export const ProvinceVelocityStrip = memo(function ProvinceVelocityStrip({
   if (isError) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border bg-surface px-4 py-6 text-center">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-footnote text-muted-foreground">
           Province velocity temporarily unavailable — market API returned an error.
         </p>
         {onRetry ? (
           <button
             type="button"
             onClick={onRetry}
-            className="rounded-2xl border border-border bg-card px-3 py-1.5 text-[12px] font-medium text-foreground transition-colors hover:border-primary/30 hover:text-primary-bright"
+            className="rounded-2xl border border-border bg-card px-3 py-1.5 text-caption font-medium text-foreground transition-colors hover:border-primary/30 hover:text-primary-bright"
           >
             Retry
           </button>
@@ -138,7 +138,7 @@ export const ProvinceVelocityStrip = memo(function ProvinceVelocityStrip({
 
   if (!provinces.length) {
     return (
-      <div className="rounded-xl border border-border bg-surface px-4 py-6 text-center text-sm text-muted-foreground">
+      <div className="rounded-xl border border-border bg-surface px-4 py-6 text-center text-footnote text-muted-foreground">
         Province velocity unavailable — district points not yet indexed.
       </div>
     );
@@ -147,7 +147,7 @@ export const ProvinceVelocityStrip = memo(function ProvinceVelocityStrip({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2 text-[12px] font-semibold text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2 text-caption font-semibold text-muted-foreground">
           <span className="rounded-2xl border border-border bg-surface px-2.5 py-1 text-foreground">
             Province rollup
           </span>
@@ -156,7 +156,7 @@ export const ProvinceVelocityStrip = memo(function ProvinceVelocityStrip({
           </span>
         </div>
         {hottest ? (
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             Hottest:{" "}
             <span className="font-semibold text-emerald-600 dark:text-emerald-400">{hottest.province}</span>
             <span className="num"> · {formatVelocityPct(hottest.velocity_score)}</span>

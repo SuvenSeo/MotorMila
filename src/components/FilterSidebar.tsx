@@ -119,7 +119,7 @@ function PillButton({
 }
 
 function selectTriggerClass() {
-  return "h-9 rounded-full border-transparent bg-surface/70 px-3.5 text-sm text-foreground transition-all duration-150 hover:border-primary/40 focus:ring-2 focus:ring-primary/20";
+  return "h-9 rounded-full border-transparent bg-surface/70 px-3.5 text-footnote text-foreground transition-all duration-150 hover:border-primary/40 focus:ring-2 focus:ring-primary/20";
 }
 
 function selectContentClass() {
@@ -367,7 +367,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
 
   return (
     <div
-      className={`space-y-3 px-3 py-3 text-sm ${
+      className={`space-y-3 px-3 py-3 text-footnote ${
         touch ? "[&_[data-pill]]:min-h-11 [&_[data-pill]]:px-3.5 [&_button[role=combobox]]:h-11" : ""
       }`}
     >
@@ -377,7 +377,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
             child still got space-y margin and left a gap above "With price". */}
         {touch ? null : (
         <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-semibold tracking-tight text-foreground">{t("filter.title", "Filters")}</p>
+          <p className="text-footnote font-semibold tracking-tight text-foreground">{t("filter.title", "Filters")}</p>
           {activeChips.length > 0 ? (
             <button
               type="button"
@@ -456,7 +456,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
           </span>
           <span
             className={cn(
-              "rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+              "rounded-full px-1.5 py-0.5 text-caption font-bold uppercase tracking-caps",
               filters.include_archive
                 ? "bg-amber-500/20 text-amber-700 dark:text-amber-300"
                 : "bg-muted/50 text-muted-foreground",
@@ -494,7 +494,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
           }}
           placeholder={t("filter.searchPlaceholder", "Make, model, year…")}
           aria-label={t("filter.searchAria", "Search listings")}
-          className="h-9 rounded-full border-transparent bg-surface/70 text-sm text-foreground"
+          className="h-9 rounded-full border-transparent bg-surface/70 text-footnote text-foreground"
         />
       </FilterGroup>
 
@@ -519,7 +519,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
                 onChange={(event) => setModelSearchQuery(event.target.value)}
                 placeholder={t("filter.findModel", "Find model…")}
                 aria-label={t("common.model", "Model")}
-                className="h-9 rounded-full border-transparent bg-surface/70 text-sm text-foreground"
+                className="h-9 rounded-full border-transparent bg-surface/70 text-footnote text-foreground"
               />
             ) : null}
             <Select value={filters.model || ALL_OPTION} onValueChange={(value) => update({ model: value === ALL_OPTION ? undefined : value })}>
@@ -646,7 +646,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
               inputMode="numeric"
               placeholder={t("filter.maxKm", "Max km")}
               aria-label={t("filter.maxMileageAria", "Maximum mileage")}
-              className="h-9 flex-1 rounded-full border-transparent bg-surface/70 text-sm text-foreground"
+              className="h-9 flex-1 rounded-full border-transparent bg-surface/70 text-footnote text-foreground"
             />
             <span className="num shrink-0 text-caption font-medium text-muted-foreground">{formatMileage(mileageValue === MAX_MILEAGE ? undefined : mileageValue, t("filter.anyMileage", "Any"))}</span>
           </div>

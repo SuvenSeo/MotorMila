@@ -56,7 +56,7 @@ export function NumberTicker({
   return (
     <span
       ref={ref}
-      className={cn("inline-block tabular-nums tracking-wider", className)}
+      className={cn("inline-block tabular-nums tracking-caps", className)}
     />
   );
 }

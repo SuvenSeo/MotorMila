@@ -31,7 +31,7 @@ function FlagRow({ flag }: { flag: HistoryReportFlag }) {
   return (
     <div className={`flex items-start gap-2.5 rounded-2xl border p-3 ${flagTone(flag.severity)}`}>
       <Icon className="h-4 w-4 shrink-0 mt-0.5" />
-      <p className="text-[12px] leading-relaxed font-medium">{flag.detail}</p>
+      <p className="text-caption leading-relaxed font-medium">{flag.detail}</p>
     </div>
   );
 }
@@ -75,24 +75,24 @@ export function ListingHistoryReport({ listingId }: { listingId: number | string
           <History className="h-4 w-4 text-primary-bright" />
         </div>
         <div>
-          <h2 className="text-[13px] font-bold text-foreground">Listing history</h2>
-          <p className="text-[10px] text-muted-foreground font-semibold">What our archive knows about this ad</p>
+          <h2 className="text-footnote font-bold text-foreground">Listing history</h2>
+          <p className="text-caption text-muted-foreground font-semibold">What our archive knows about this ad</p>
         </div>
       </div>
 
       {/* Timeline facts */}
       <div className="grid grid-cols-3 gap-2 border-b border-border pb-4">
         <div>
-          <p className="text-[11px] font-medium text-muted-foreground">First seen</p>
-          <p className="mt-1 text-[12px] font-bold text-foreground">{formatDate(report.first_seen_at)}</p>
+          <p className="text-caption font-medium text-muted-foreground">First seen</p>
+          <p className="mt-1 text-caption font-bold text-foreground">{formatDate(report.first_seen_at)}</p>
         </div>
         <div>
-          <p className="text-[11px] font-medium text-muted-foreground">Days on market</p>
-          <p className="mt-1 text-[12px] font-bold text-foreground num">{report.days_on_market ?? "—"}</p>
+          <p className="text-caption font-medium text-muted-foreground">Days on market</p>
+          <p className="mt-1 text-caption font-bold text-foreground num">{report.days_on_market ?? "—"}</p>
         </div>
         <div>
-          <p className="text-[11px] font-medium text-muted-foreground">Price cuts</p>
-          <p className="mt-1 text-[12px] font-bold text-foreground num">
+          <p className="text-caption font-medium text-muted-foreground">Price cuts</p>
+          <p className="mt-1 text-caption font-bold text-foreground num">
             {report.price_cuts}
             {report.total_change_pct !== null && report.total_change_pct < 0 && (
               <span className="ml-1 text-emerald-600 dark:text-emerald-400">({report.total_change_pct}%)</span>
@@ -111,7 +111,7 @@ export function ListingHistoryReport({ listingId }: { listingId: number | string
       {/* Related listings */}
       {report.related_listings.length > 0 && (
         <div className="mt-4">
-          <p className="mb-2 text-[12px] font-medium text-muted-foreground">
+          <p className="mb-2 text-caption font-medium text-muted-foreground">
             Same vehicle in other ads ({report.related_listings.length})
           </p>
           <div className="space-y-1.5">
@@ -122,8 +122,8 @@ export function ListingHistoryReport({ listingId }: { listingId: number | string
                 className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-2.5 no-underline transition-colors hover:border-primary/40 hover:bg-card"
               >
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[12px] font-semibold text-foreground">{r.title}</span>
-                  <span className="text-[10px] text-muted-foreground font-medium">
+                  <span className="block truncate text-caption font-semibold text-foreground">{r.title}</span>
+                  <span className="text-caption text-muted-foreground font-medium">
                     {r.source}
                     {r.mileage ? ` · ${(r.mileage / 1000).toFixed(0)}k km` : ""}
                     {r.confidence === "confirmed"
@@ -133,14 +133,14 @@ export function ListingHistoryReport({ listingId }: { listingId: number | string
                         : " · likely match"}
                   </span>
                 </span>
-                {r.price_lkr && <span className="shrink-0 text-[12px] font-bold text-foreground num">{formatPrice(r.price_lkr)}</span>}
+                {r.price_lkr && <span className="shrink-0 text-caption font-bold text-foreground num">{formatPrice(r.price_lkr)}</span>}
               </Link>
             ))}
           </div>
         </div>
       )}
 
-      <p className="mt-4 flex items-start gap-1.5 border-t border-border pt-3 text-[10px] leading-relaxed text-muted-foreground font-medium">
+      <p className="mt-4 flex items-start gap-1.5 border-t border-border pt-3 text-caption leading-relaxed text-muted-foreground font-medium">
         <Info className="h-3 w-3 shrink-0 mt-0.5" />
         {report.disclaimer}
       </p>

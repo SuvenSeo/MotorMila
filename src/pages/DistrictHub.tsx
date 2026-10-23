@@ -116,10 +116,10 @@ export default function DistrictHub() {
               },
             ].map((card) => (
               <div key={card.label} className="bg-card p-6">
-                <p className="text-[12px] font-semibold text-muted-foreground">
+                <p className="text-caption font-semibold text-muted-foreground">
                   {card.label}
                 </p>
-                <p className="num mt-2.5 text-3xl font-bold tracking-tight text-foreground">{card.value}</p>
+                <p className="num mt-2.5 text-title1 font-bold tracking-tight text-foreground">{card.value}</p>
               </div>
             ))}
           </div>
@@ -150,13 +150,13 @@ export default function DistrictHub() {
                   to={`/cars/${encodeURIComponent(entry.make)}/${encodeURIComponent(entry.model)}`}
                   className="group rounded-2xl border border-border bg-card p-5 shadow-soft transition-all hover:-translate-y-1 hover:border-primary/30 no-underline"
                 >
-                  <p className="text-[14px] font-bold text-foreground">
+                  <p className="text-body font-bold text-foreground">
                     {entry.make} {entry.model}
                   </p>
-                  <p className="mt-1 text-[11px] font-medium text-muted-foreground">
+                  <p className="mt-1 text-caption font-medium text-muted-foreground">
                     {entry.listing_count} {t("common.listings", "listings")}
                   </p>
-                  <p className="num mt-3 text-lg font-bold text-foreground">
+                  <p className="num mt-3 text-callout font-bold text-foreground">
                     {entry.avg_price_lkr ? formatPrice(entry.avg_price_lkr) : t("common.priceNa", "Price N/A")}
                   </p>
                 </Link>

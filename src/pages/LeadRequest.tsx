@@ -41,11 +41,11 @@ export default function LeadRequest({ kind }: { kind: LeadKind }) {
         <motion.aside variants={revealItem} className="space-y-4">
           {FAQ[kind].map((item) => (
             <div key={item.q} className="rounded-2xl border border-border bg-card/40 p-4">
-              <h2 className="text-[13px] font-bold text-foreground">{item.q}</h2>
-              <p className="mt-1.5 text-[12px] leading-relaxed text-muted-foreground">{item.a}</p>
+              <h2 className="text-footnote font-bold text-foreground">{item.q}</h2>
+              <p className="mt-1.5 text-caption leading-relaxed text-muted-foreground">{item.a}</p>
             </div>
           ))}
-          <p className="text-[12px] text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             Changed your mind? Email <a href={`mailto:${PRIVACY_EMAIL}`} className="underline underline-offset-2">{PRIVACY_EMAIL}</a> with your phone number and we will delete your request.
           </p>
         </motion.aside>

@@ -18,7 +18,7 @@ export function TrendToneLegend({ className }: { className?: string }) {
   ];
   return (
     <ul
-      className={cn("flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-medium text-muted-foreground", className)}
+      className={cn("flex flex-wrap items-center gap-x-4 gap-y-1 text-caption font-medium text-muted-foreground", className)}
       aria-label={t("trendTone.legendAria", "Price change colour legend")}
     >
       {items.map((i) => (

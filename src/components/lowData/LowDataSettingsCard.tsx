@@ -23,10 +23,10 @@ export function LowDataSettingsCard({ className }: { className?: string }) {
             <Feather className="h-5 w-5" aria-hidden />
           </div>
           <div>
-            <h2 id={`${id}-title`} className="text-base font-bold tracking-tight text-foreground">
+            <h2 id={`${id}-title`} className="text-body font-bold tracking-tight text-foreground">
               {t("lowData.title", "Low-data mode")}
             </h2>
-            <p className="mt-0.5 text-xs font-medium text-muted-foreground">
+            <p className="mt-0.5 text-caption font-medium text-muted-foreground">
               {t("lowData.subtitle", "Saves mobile data and battery on slow connections.")}
             </p>
           </div>
@@ -54,13 +54,13 @@ export function LowDataSettingsCard({ className }: { className?: string }) {
           />
         </button>
       </div>
-      <ul className="mt-4 grid gap-1.5 text-[12px] text-muted-foreground sm:grid-cols-2">
+      <ul className="mt-4 grid gap-1.5 text-caption text-muted-foreground sm:grid-cols-2">
         <li>• {t("lowData.point.images", "Small thumbnail photos only")}</li>
         <li>• {t("lowData.point.carousel", "Photo carousels don't auto-play")}</li>
         <li>• {t("lowData.point.motion", "Animations turned off")}</li>
         <li>• {t("lowData.point.charts", "Charts load only when you tap them")}</li>
       </ul>
-      <p className="mt-3 text-[11px] text-muted-foreground">
+      <p className="mt-3 text-caption text-muted-foreground">
         {t("lowData.storedLocally", "Saved on this device only.")}
       </p>
       <LowDataSuggestion className="mt-4" />

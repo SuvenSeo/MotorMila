@@ -26,9 +26,9 @@ export const StatsBar = memo(function StatsBar({ stats, latestListingAt }: Stats
         <div className="cinematic-panel motion-card rounded-xl p-8 lg:col-span-2 group">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
           <div className="relative z-10 flex flex-col justify-between h-full space-y-8">
-            <p className="tech-label tracking-[0.18em]">{t("stats.avgIndexPrice", "Average Index Price")}</p>
+            <p className="tech-label tracking-caps">{t("stats.avgIndexPrice", "Average Index Price")}</p>
             <div>
-              <p className="text-5xl font-semibold leading-none text-foreground num lg:text-7xl">
+              <p className="text-large font-semibold leading-none text-foreground num lg:text-hero">
                 <NumberTicker
                   value={stats.avg_price_lkr / 1_000_000}
                   decimalPlaces={2}
@@ -57,9 +57,9 @@ export const StatsBar = memo(function StatsBar({ stats, latestListingAt }: Stats
 
         {/* Listings Count */}
         <div className="cinematic-panel motion-card rounded-xl p-8 flex flex-col justify-between group">
-          <p className="tech-label tracking-[0.18em]">{t("stats.totalDepth", "Total Depth")}</p>
+          <p className="tech-label tracking-caps">{t("stats.totalDepth", "Total Depth")}</p>
           <div>
-            <p className="text-4xl font-semibold leading-none text-foreground num lg:text-5xl">
+            <p className="text-title1 font-semibold leading-none text-foreground num lg:text-large">
               <NumberTicker value={stats.total_listings} delay={0.15} />
             </p>
             <p className="mt-4 flex items-center gap-2 tech-label text-muted-foreground">
@@ -71,9 +71,9 @@ export const StatsBar = memo(function StatsBar({ stats, latestListingAt }: Stats
 
         {/* Good Deals */}
         <div className="cinematic-panel motion-card rounded-xl p-8 flex flex-col justify-between group">
-          <p className="tech-label tracking-[0.18em]">{t("stats.opportunities", "Opportunities")}</p>
+          <p className="tech-label tracking-caps">{t("stats.opportunities", "Opportunities")}</p>
           <div>
-            <p className="text-4xl font-semibold leading-none text-primary num lg:text-5xl">
+            <p className="text-title1 font-semibold leading-none text-primary num lg:text-large">
               <NumberTicker value={stats.good_deals_count} delay={0.3} />+
             </p>
             <p className="mt-4 tech-label text-muted-foreground">{t("stats.arbitrageDeals", "Arbitrage Deals")}</p>

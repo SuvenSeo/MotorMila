@@ -64,7 +64,7 @@ export function LocaleSwitcher({ className, showName = false }: Props) {
           <Globe className="h-4 w-4 shrink-0" aria-hidden />
           <span
             lang={current.value}
-            className={cn("text-[12.5px] font-semibold tracking-tight", current.script && "locale-script-label")}
+            className={cn("text-footnote font-semibold tracking-tight", current.script && "locale-script-label")}
           >
             {showName ? current.label : current.shortLabel}
           </span>
@@ -82,10 +82,10 @@ export function LocaleSwitcher({ className, showName = false }: Props) {
               role="menuitemradio"
               className="flex items-center gap-2.5 py-2"
             >
-              <span lang={opt.value} className={cn("flex-1 text-[14px] font-medium", opt.script && "locale-script-label")}>
+              <span lang={opt.value} className={cn("flex-1 text-body font-medium", opt.script && "locale-script-label")}>
                 {opt.label}
               </span>
-              {opt.script ? <span className="text-[11px] text-muted-foreground">{opt.english}</span> : null}
+              {opt.script ? <span className="text-caption text-muted-foreground">{opt.english}</span> : null}
               <Check className={cn("h-3.5 w-3.5 text-primary", active ? "opacity-100" : "opacity-0")} aria-hidden />
             </DropdownMenuItem>
           );

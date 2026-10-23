@@ -30,7 +30,7 @@ export function BeforeYouPayStrip({
   const titleId = `before-you-pay-${idSuffix}`;
   const list = (
     <>
-      <ul className="mt-2 space-y-1.5 text-[12.5px] leading-relaxed text-muted-foreground">
+      <ul className="mt-2 space-y-1.5 text-footnote leading-relaxed text-muted-foreground">
         {tips.map((tip) => (
           <li key={tip} className="flex gap-2">
             <span aria-hidden className="mt-[0.55em] h-1 w-1 shrink-0 rounded-full bg-amber-500" />
@@ -40,7 +40,7 @@ export function BeforeYouPayStrip({
       </ul>
       <Link
         to="/safe-transfer"
-        className="mt-3 inline-flex min-h-[36px] items-center gap-1 text-[12.5px] font-semibold text-primary no-underline hover:underline"
+        className="mt-3 inline-flex min-h-[36px] items-center gap-1 text-footnote font-semibold text-primary no-underline hover:underline"
       >
         {t("safety.transferLink", "Safe transfer checklist")}
         <ArrowRight aria-hidden className="h-3.5 w-3.5" />
@@ -58,9 +58,9 @@ export function BeforeYouPayStrip({
   if (collapsible) {
     return (
       <details className={cn(shell, "group")}>
-        <summary className="flex min-h-[28px] cursor-pointer list-none items-center gap-2 text-[13px] font-bold text-foreground [&::-webkit-details-marker]:hidden">
+        <summary className="flex min-h-[28px] cursor-pointer list-none items-center gap-2 text-footnote font-bold text-foreground [&::-webkit-details-marker]:hidden">
           {heading}
-          <span className="ml-1 truncate text-[12px] font-medium text-muted-foreground">
+          <span className="ml-1 truncate text-caption font-medium text-muted-foreground">
             {t("safety.summary", "Never pay an advance")}
           </span>
           <ChevronDown aria-hidden className="ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180 motion-reduce:transition-none" />
@@ -72,7 +72,7 @@ export function BeforeYouPayStrip({
 
   return (
     <section aria-labelledby={titleId} className={shell}>
-      <h2 id={titleId} className="flex items-center gap-2 text-[13px] font-bold text-foreground">
+      <h2 id={titleId} className="flex items-center gap-2 text-footnote font-bold text-foreground">
         {heading}
       </h2>
       {list}

@@ -154,10 +154,10 @@ export default function MakeHub() {
                 : []),
             ].map((card) => (
               <div key={card.label} className="bg-card p-6">
-                <p className="text-[12px] font-semibold text-muted-foreground">
+                <p className="text-caption font-semibold text-muted-foreground">
                   {card.label}
                 </p>
-                <p className="num mt-2.5 text-3xl font-bold tracking-tight text-foreground">{card.value}</p>
+                <p className="num mt-2.5 text-title1 font-bold tracking-tight text-foreground">{card.value}</p>
               </div>
             ))}
           </div>
@@ -174,13 +174,13 @@ export default function MakeHub() {
                   className="group rounded-2xl border border-border bg-card p-5 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg no-underline"
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-[14px] font-bold tracking-tight text-foreground">{entry.model}</p>
-                    <span className="num shrink-0 rounded-full border border-border bg-surface px-2.5 py-0.5 text-[10px] font-bold text-muted-foreground">
+                    <p className="text-body font-bold tracking-tight text-foreground">{entry.model}</p>
+                    <span className="num shrink-0 rounded-full border border-border bg-surface px-2.5 py-0.5 text-caption font-bold text-muted-foreground">
                       {entry.count}
                     </span>
                   </div>
                   {entry.avg_price_lkr != null && (
-                    <p className="num mt-3 text-lg font-bold tracking-tight text-foreground">
+                    <p className="num mt-3 text-callout font-bold tracking-tight text-foreground">
                       {formatPrice(entry.avg_price_lkr)}
                     </p>
                   )}
@@ -205,7 +205,7 @@ export default function MakeHub() {
                   onChange={(e) => setModelFilter(e.target.value)}
                   placeholder={t("makeHub.findModel", "Find a model…")}
                   aria-label={t("makeHub.findModel", "Find a model…")}
-                  className="h-11 w-full rounded-xl border border-border bg-surface pl-10 pr-4 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/40"
+                  className="h-11 w-full rounded-xl border border-border bg-surface pl-10 pr-4 text-footnote text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/40"
                 />
               </div>
             )}
@@ -217,15 +217,15 @@ export default function MakeHub() {
                     to={`/cars/${encodeURIComponent(makeParam)}/${encodeURIComponent(entry.model)}`}
                     className="group flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 no-underline"
                   >
-                    <p className="text-[14px] font-bold tracking-tight text-foreground">{entry.model}</p>
-                    <span className="num shrink-0 rounded-full border border-border bg-surface px-2.5 py-0.5 text-[10px] font-bold text-muted-foreground">
+                    <p className="text-body font-bold tracking-tight text-foreground">{entry.model}</p>
+                    <span className="num shrink-0 rounded-full border border-border bg-surface px-2.5 py-0.5 text-caption font-bold text-muted-foreground">
                       {entry.count}
                     </span>
                   </Link>
                 ))}
               </motion.div>
             ) : (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-footnote text-muted-foreground">
                 {t("makeHub.noModelMatch", "No models match “{q}”.", { q: modelFilter.trim() })}
               </p>
             )}
@@ -244,9 +244,9 @@ export default function MakeHub() {
                 >
                   <div className="flex items-center gap-2">
                     <MapPin className="h-3.5 w-3.5 text-primary" aria-hidden />
-                    <p className="text-[14px] font-bold text-foreground">{entry.district}</p>
+                    <p className="text-body font-bold text-foreground">{entry.district}</p>
                   </div>
-                  <p className="num mt-3 text-lg font-bold text-foreground">
+                  <p className="num mt-3 text-callout font-bold text-foreground">
                     {entry.avg_price_lkr != null ? formatPrice(entry.avg_price_lkr) : t("common.priceNa", "Price N/A")}
                   </p>
                 </Link>

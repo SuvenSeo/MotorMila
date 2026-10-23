@@ -47,8 +47,8 @@ export const MileagePriceScatter = memo(function MileagePriceScatter({
   if (validPoints.length < 3) {
     return (
       <div className="data-card flex h-[320px] flex-col items-center justify-center gap-3 p-6 text-center">
-        <p className="text-sm font-semibold text-foreground">{title}</p>
-        <p className="text-[13px] text-muted-foreground">
+        <p className="text-footnote font-semibold text-foreground">{title}</p>
+        <p className="text-footnote text-muted-foreground">
           Not enough data points to render scatter chart — minimum 3 required.
         </p>
       </div>
@@ -59,7 +59,7 @@ export const MileagePriceScatter = memo(function MileagePriceScatter({
     <div className="data-card p-4 sm:p-5">
       <div className="mb-4 flex items-center justify-between">
         <p className="tech-label">{title}</p>
-        <span className="rounded-2xl border border-border bg-surface px-2.5 py-1 text-[12px] font-semibold text-muted-foreground">
+        <span className="rounded-2xl border border-border bg-surface px-2.5 py-1 text-caption font-semibold text-muted-foreground">
           {validPoints.length} listings
         </span>
       </div>
@@ -78,7 +78,7 @@ export const MileagePriceScatter = memo(function MileagePriceScatter({
               tickLine={false}
               tick={{
                 fill: "hsl(var(--muted-foreground))",
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: 600,
                 fontFamily: "var(--font-numeric-stack)",
               }}
@@ -89,7 +89,7 @@ export const MileagePriceScatter = memo(function MileagePriceScatter({
                 offset: -12,
                 style: {
                   fill: "hsl(var(--muted-foreground))",
-                  fontSize: 11,
+                  fontSize: 12,
                   fontFamily: "var(--font-numeric-stack)",
                   fontWeight: 500,
                   letterSpacing: "0.02em",
@@ -104,7 +104,7 @@ export const MileagePriceScatter = memo(function MileagePriceScatter({
               tickLine={false}
               tick={{
                 fill: "hsl(var(--muted-foreground))",
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: 600,
                 fontFamily: "var(--font-numeric-stack)",
               }}
@@ -123,15 +123,15 @@ export const MileagePriceScatter = memo(function MileagePriceScatter({
                     style={{ boxShadow: "0 12px 36px rgba(0,0,0,0.3)" }}
                   >
                     {pt.label && (
-                      <p className="mb-1.5 text-xs font-bold text-foreground">{pt.label}</p>
+                      <p className="mb-1.5 text-caption font-bold text-foreground">{pt.label}</p>
                     )}
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-caption text-muted-foreground">
                       Mileage:{" "}
                       <span className="num font-semibold text-foreground">
                         {pt.mileage.toLocaleString()} km
                       </span>
                     </p>
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-caption text-muted-foreground">
                       Price:{" "}
                       <span className="num font-semibold text-foreground">
                         {formatPriceLkrMillions(pt.price_lkr)}

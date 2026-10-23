@@ -19,7 +19,7 @@ export function SellSpeedChip({ listing, className }: SellSpeedChipProps) {
     <span
       title={result.detail}
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[12px] font-medium",
+        "inline-flex items-center gap-1 rounded-full border px-2 py-1 text-caption font-medium",
         TONE[result.band],
         className,
       )}

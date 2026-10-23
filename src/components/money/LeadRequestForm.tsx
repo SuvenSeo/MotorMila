@@ -62,10 +62,10 @@ export function LeadRequestForm({
   if (receipt) {
     return (
       <div role="status" className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-5">
-        <p className="flex items-center gap-2 text-[14px] font-semibold text-emerald-700 dark:text-emerald-400">
+        <p className="flex items-center gap-2 text-body font-semibold text-emerald-700 dark:text-emerald-400">
           <Check aria-hidden className="h-4 w-4" /> Request sent · ref {receipt.reference}
         </p>
-        <p className="mt-2 text-[13px] leading-relaxed text-foreground/80">{receipt.message}</p>
+        <p className="mt-2 text-footnote leading-relaxed text-foreground/80">{receipt.message}</p>
       </div>
     );
   }
@@ -110,7 +110,7 @@ export function LeadRequestForm({
         }
       }}
     >
-      {!compact && <p className="text-[13px] leading-relaxed text-muted-foreground">{copy.blurb}</p>}
+      {!compact && <p className="text-footnote leading-relaxed text-muted-foreground">{copy.blurb}</p>}
 
       <div style={HONEYPOT_STYLE} aria-hidden="true">
         <label htmlFor={`${uid}-website`}>Website</label>
@@ -163,14 +163,14 @@ export function LeadRequestForm({
       </div>
 
       <div className="rounded-xl border border-border bg-surface p-3.5">
-        <p className="mb-2 flex items-center gap-1.5 text-[12px] font-semibold text-foreground">
+        <p className="mb-2 flex items-center gap-1.5 text-caption font-semibold text-foreground">
           <ShieldCheck aria-hidden className="h-3.5 w-3.5 text-primary" />
           {copy.partnerLabel}:{" "}
           <span className="font-normal text-foreground/80">
             {partners === null ? "loading…" : partnerNames.length ? partnerNames.join(", ") : "we'll match you with a partner and tell you who before they call"}
           </span>
         </p>
-        <label className="flex cursor-pointer items-start gap-2.5 text-[12px] leading-relaxed text-foreground/85" htmlFor={`${uid}-consent`}>
+        <label className="flex cursor-pointer items-start gap-2.5 text-caption leading-relaxed text-foreground/85" htmlFor={`${uid}-consent`}>
           <input
             id={`${uid}-consent`}
             type="checkbox"
@@ -185,7 +185,7 @@ export function LeadRequestForm({
       </div>
 
       {error && (
-        <p role="alert" className="text-[12px] font-semibold text-destructive">
+        <p role="alert" className="text-caption font-semibold text-destructive">
           {error}
         </p>
       )}

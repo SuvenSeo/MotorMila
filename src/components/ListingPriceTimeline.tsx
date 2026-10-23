@@ -102,8 +102,8 @@ export function ListingPriceTimeline({
             <LineChart className="h-4 w-4 text-primary-bright" />
           </div>
           <div>
-            <h2 className="text-[13px] font-bold text-foreground">Price timeline</h2>
-            <p className="text-[10px] font-semibold text-muted-foreground">
+            <h2 className="text-footnote font-bold text-foreground">Price timeline</h2>
+            <p className="text-caption font-semibold text-muted-foreground">
               Scan-over-scan tracking{listingTitle ? ` · ${listingTitle}` : ""}
             </p>
           </div>
@@ -111,7 +111,7 @@ export function ListingPriceTimeline({
         {cutCount > 0 && (
           <Link
             to="/best-picks"
-            className="inline-flex items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-[12px] font-semibold text-emerald-700 no-underline transition-colors hover:bg-emerald-500/15 dark:text-emerald-300"
+            className="inline-flex items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-caption font-semibold text-emerald-700 no-underline transition-colors hover:bg-emerald-500/15 dark:text-emerald-300"
           >
             <TrendingDown className="h-3 w-3" />
             {cutCount} cut{cutCount === 1 ? "" : "s"} recorded
@@ -121,27 +121,27 @@ export function ListingPriceTimeline({
 
       <div className="grid grid-cols-2 gap-2 border-b border-border pb-4 sm:grid-cols-4">
         <div className="rounded-2xl border border-border bg-surface p-3">
-          <p className="text-[11px] font-medium text-muted-foreground">Opening ask</p>
-          <p className="mt-1 text-[13px] font-bold text-foreground num">
+          <p className="text-caption font-medium text-muted-foreground">Opening ask</p>
+          <p className="mt-1 text-footnote font-bold text-foreground num">
             {history.first_price_lkr ? formatPrice(history.first_price_lkr) : "—"}
           </p>
           {points[0]?.scraped_at ? (
-            <p className="mt-0.5 text-[10px] text-muted-foreground">{formatFullDate(points[0].scraped_at)}</p>
+            <p className="mt-0.5 text-caption text-muted-foreground">{formatFullDate(points[0].scraped_at)}</p>
           ) : null}
         </div>
         <div className="rounded-2xl border border-border bg-surface p-3">
-          <p className="text-[11px] font-medium text-muted-foreground">Current ask</p>
-          <p className="mt-1 text-[13px] font-bold text-foreground num">
+          <p className="text-caption font-medium text-muted-foreground">Current ask</p>
+          <p className="mt-1 text-footnote font-bold text-foreground num">
             {history.current_price_lkr ? formatPrice(history.current_price_lkr) : "—"}
           </p>
           {lastChangeAt ? (
-            <p className="mt-0.5 text-[10px] text-muted-foreground">Updated {formatFullDate(lastChangeAt)}</p>
+            <p className="mt-0.5 text-caption text-muted-foreground">Updated {formatFullDate(lastChangeAt)}</p>
           ) : null}
         </div>
         <div className="rounded-2xl border border-border bg-surface p-3">
-          <p className="text-[11px] font-medium text-muted-foreground">Total move</p>
+          <p className="text-caption font-medium text-muted-foreground">Total move</p>
           <div
-            className={`mt-1 inline-flex items-center gap-1 text-[13px] font-bold num ${
+            className={`mt-1 inline-flex items-center gap-1 text-footnote font-bold num ${
               isDrop
                 ? "text-emerald-600 dark:text-emerald-400"
                 : isRise
@@ -154,8 +154,8 @@ export function ListingPriceTimeline({
           </div>
         </div>
         <div className="rounded-2xl border border-border bg-surface p-3">
-          <p className="text-[11px] font-medium text-muted-foreground">Price moves</p>
-          <p className="mt-1 text-[13px] font-bold text-foreground num">
+          <p className="text-caption font-medium text-muted-foreground">Price moves</p>
+          <p className="mt-1 text-footnote font-bold text-foreground num">
             {cutCount > 0 || raiseCount > 0 ? (
               <>
                 {cutCount > 0 ? `${cutCount}↓` : null}
@@ -166,7 +166,7 @@ export function ListingPriceTimeline({
               "Stable"
             )}
           </p>
-          <p className="mt-0.5 text-[10px] text-muted-foreground">{points.length} tracked point{points.length === 1 ? "" : "s"}</p>
+          <p className="mt-0.5 text-caption text-muted-foreground">{points.length} tracked point{points.length === 1 ? "" : "s"}</p>
         </div>
       </div>
 
@@ -191,14 +191,14 @@ export function ListingPriceTimeline({
                   dataKey="label"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10, fontWeight: 600 }}
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12, fontWeight: 600 }}
                   dy={8}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
                   domain={yDomain}
-                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10, fontWeight: 600 }}
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12, fontWeight: 600 }}
                   tickFormatter={(value: number) => formatLkrAxisFromMillions(value)}
                   width={52}
                 />
@@ -225,7 +225,7 @@ export function ListingPriceTimeline({
                       value: "Market median",
                       position: "insideTopRight",
                       fill: "hsl(var(--muted-foreground))",
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: 700,
                     }}
                   />
@@ -251,15 +251,15 @@ export function ListingPriceTimeline({
           </div>
         ) : (
           <div className="flex h-full flex-col items-center justify-center rounded-xl border border-dashed border-border bg-surface px-6 text-center">
-            <p className="text-[12px] font-semibold text-foreground">Tracking started</p>
-            <p className="mt-1 max-w-sm text-[11px] leading-relaxed text-muted-foreground">
+            <p className="text-caption font-semibold text-foreground">Tracking started</p>
+            <p className="mt-1 max-w-sm text-caption leading-relaxed text-muted-foreground">
               We recorded the opening ask at {formatPrice(points[0].price_lkr)}. The chart fills in when the seller changes their price on a future scan.
             </p>
           </div>
         )}
       </div>
 
-      <p className="mt-3 text-[10px] leading-relaxed text-muted-foreground">
+      <p className="mt-3 text-caption leading-relaxed text-muted-foreground">
         Prices update when our scans detect a change at the source — unchanged asks do not add duplicate points.
       </p>
     </section>

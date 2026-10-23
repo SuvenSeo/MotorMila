@@ -244,21 +244,21 @@ export default function MakeModelHub() {
         <div className="mt-10 sm:mt-12">
           <div className="flex items-center gap-2.5">
             <span aria-hidden className="inline-block h-1.5 w-1.5 rounded-full bg-primary animate-live-dot" />
-            <h2 className="text-[12px] font-semibold text-muted-foreground">
+            <h2 className="text-caption font-semibold text-muted-foreground">
               {t("hub.snapshot", "Market snapshot")}
             </h2>
           </div>
           <div className="mt-5 grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-border bg-border shadow-soft sm:grid-cols-3">
             {statsCards.map((card) => (
               <div key={card.label} className="bg-card p-6">
-                <p className="text-[12px] font-semibold text-muted-foreground">
+                <p className="text-caption font-semibold text-muted-foreground">
                   {card.label}
                 </p>
-                <p className="num mt-2.5 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                <p className="num mt-2.5 text-title1 font-bold tracking-tight text-foreground sm:text-title1">
                   {card.value}
                 </p>
                 {card.note && (
-                  <p className="mt-2 text-[11px] font-medium text-muted-foreground">{card.note}</p>
+                  <p className="mt-2 text-caption font-medium text-muted-foreground">{card.note}</p>
                 )}
               </div>
             ))}
@@ -274,7 +274,7 @@ export default function MakeModelHub() {
         {isError && (
           <motion.div
             variants={revealItem}
-            className="rounded-2xl border border-border bg-card p-6 text-[13px] font-medium text-muted-foreground shadow-soft"
+            className="rounded-2xl border border-border bg-card p-6 text-footnote font-medium text-muted-foreground shadow-soft"
           >
             {t(
               "hub.loadError",
@@ -311,22 +311,22 @@ export default function MakeModelHub() {
                       className="group block rounded-2xl border border-border bg-card p-5 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg no-underline"
                     >
                       <div className="flex items-center justify-between gap-3">
-                        <p className="text-[14px] font-bold tracking-tight text-foreground">
+                        <p className="text-body font-bold tracking-tight text-foreground">
                           {entry.district}
                         </p>
-                        <span className="num shrink-0 rounded-full border border-border bg-surface px-2.5 py-0.5 text-[10px] font-bold text-muted-foreground">
+                        <span className="num shrink-0 rounded-full border border-border bg-surface px-2.5 py-0.5 text-caption font-bold text-muted-foreground">
                           {entry.count}{" "}
                           {entry.count !== 1
                             ? t("common.listings", "listings")
                             : t("common.listing", "listing")}
                         </span>
                       </div>
-                      <p className="num mt-3 text-lg font-bold tracking-tight text-foreground">
+                      <p className="num mt-3 text-callout font-bold tracking-tight text-foreground">
                         {entry.avg_price_lkr != null
                           ? formatPrice(entry.avg_price_lkr)
                           : t("common.priceNa", "Price N/A")}
                         {entry.avg_price_lkr != null && (
-                          <span className="ml-1.5 text-[10px] font-medium text-muted-foreground">
+                          <span className="ml-1.5 text-caption font-medium text-muted-foreground">
                             {t("hub.avgShort", "avg")}
                           </span>
                         )}
@@ -398,10 +398,10 @@ export default function MakeModelHub() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-surface transition-colors group-hover:border-primary/30 group-hover:bg-primary/10">
               <BarChart2 className="h-4 w-4 text-primary" aria-hidden />
             </div>
-            <p className="mt-5 text-[12px] font-semibold text-muted-foreground">
+            <p className="mt-5 text-caption font-semibold text-muted-foreground">
               {t("hub.browseAll", "Browse all {vehicle} listings", { vehicle })}
             </p>
-            <p className="mt-2 flex-1 text-[13px] leading-relaxed text-muted-foreground">
+            <p className="mt-2 flex-1 text-footnote leading-relaxed text-muted-foreground">
               {t(
                 "hub.browseAllDesc",
                 "See every live {vehicle} on the market, with price filters, district drill-down, and deal scoring.",
@@ -422,10 +422,10 @@ export default function MakeModelHub() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-surface transition-colors group-hover:border-primary/30 group-hover:bg-primary/10">
               <TrendingUp className="h-4 w-4 text-primary" aria-hidden />
             </div>
-            <p className="mt-5 text-[12px] font-semibold text-muted-foreground">
+            <p className="mt-5 text-caption font-semibold text-muted-foreground">
               {t("hub.priceHistory", "Price history")}
             </p>
-            <p className="mt-2 flex-1 text-[13px] leading-relaxed text-muted-foreground">
+            <p className="mt-2 flex-1 text-footnote leading-relaxed text-muted-foreground">
               {t(
                 "hub.priceTrendsDesc",
                 "Track how {vehicle} prices have moved month-over-month in Sri Lanka.",
@@ -446,10 +446,10 @@ export default function MakeModelHub() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-surface transition-colors group-hover:border-primary/30 group-hover:bg-primary/10">
               <Car className="h-4 w-4 text-primary" aria-hidden />
             </div>
-            <p className="mt-5 text-[12px] font-semibold text-muted-foreground">
+            <p className="mt-5 text-caption font-semibold text-muted-foreground">
               {t("hub.marketDepth", "Market depth")}
             </p>
-            <p className="mt-2 flex-1 text-[13px] leading-relaxed text-muted-foreground">
+            <p className="mt-2 flex-1 text-footnote leading-relaxed text-muted-foreground">
               {t(
                 "hub.estimateDesc",
                 "Get a market valuation for a specific {vehicle} using live comparable data.",

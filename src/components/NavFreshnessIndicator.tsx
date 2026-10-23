@@ -57,7 +57,7 @@ export function NavFreshnessIndicator({ className }: { className?: string }) {
           />
         </button>
       </TooltipTrigger>
-      <TooltipContent side="bottom" className="max-w-[260px] text-[12px] leading-relaxed">
+      <TooltipContent side="bottom" className="max-w-[260px] text-caption leading-relaxed">
         <p className="font-semibold">{ago ? t("shell.fresh.updatedAgo", "Updated {ago}", { ago }) : short}</p>
         <p className="mt-0.5 text-muted-foreground">{explain}</p>
       </TooltipContent>

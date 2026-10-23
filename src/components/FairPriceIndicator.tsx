@@ -19,8 +19,8 @@ function getTierBadgeClasses(tier: keyof typeof DEAL_TIER_META, size: "sm" | "lg
   const isSm = size === "sm";
   const tone = DEAL_TIER_META[tier].classes;
   return isSm
-    ? cn(tone, "border p-1 px-2.5 text-label font-mono")
-    : cn(tone, "border-0 bg-transparent p-0 text-4xl tracking-tight");
+    ? cn(tone, "border p-1 px-2.5 text-caption font-mono")
+    : cn(tone, "border-0 bg-transparent p-0 text-title1 tracking-tight");
 }
 
 export function FairPriceIndicator({
@@ -70,11 +70,11 @@ export function FairPriceIndicator({
           className="max-w-[280px] bg-popover border border-border p-4 shadow-soft-xl rounded-xl z-50"
         >
           <div className="space-y-3">
-            <h4 className="text-xs font-semibold tracking-tight text-primary-bright border-b border-border pb-2 mb-2">Dynamic Value Methodology</h4>
-            <p className="text-sm text-foreground leading-relaxed font-medium">
+            <h4 className="text-caption font-semibold tracking-tight text-primary-bright border-b border-border pb-2 mb-2">Dynamic Value Methodology</h4>
+            <p className="text-footnote text-foreground leading-relaxed font-medium">
               We calculate <span className="text-foreground font-semibold">Fair Price</span> using a proprietary multi-factor algorithm against thousands of active Sri Lankan listings.
             </p>
-            <ul className="text-xs text-muted-foreground space-y-1.5 font-medium">
+            <ul className="text-caption text-muted-foreground space-y-1.5 font-medium">
               <li className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-primary" /> Adjusts for Vehicle Mileage & Age</li>
               <li className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-primary" /> Appraises Condition & Seller Trust</li>
               <li className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-primary" /> Accounts for live Market Demand</li>

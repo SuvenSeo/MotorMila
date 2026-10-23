@@ -682,12 +682,12 @@ export default function Dashboard() {
       : "border-border/80 bg-card/90 shadow-soft-lg backdrop-blur-2xl focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20";
   const heroInputClass =
     heroFilmTone === "cinematic"
-      ? "h-14 min-w-0 flex-1 bg-transparent text-base font-semibold text-white placeholder:text-white/45 outline-none [&::-webkit-search-cancel-button]:hidden"
-      : "h-14 min-w-0 flex-1 bg-transparent text-base font-semibold text-foreground placeholder:text-muted-foreground outline-none [&::-webkit-search-cancel-button]:hidden";
+      ? "h-14 min-w-0 flex-1 bg-transparent text-body font-semibold text-white placeholder:text-white/45 outline-none [&::-webkit-search-cancel-button]:hidden"
+      : "h-14 min-w-0 flex-1 bg-transparent text-body font-semibold text-foreground placeholder:text-muted-foreground outline-none [&::-webkit-search-cancel-button]:hidden";
   const heroPopularBtnClass =
     heroFilmTone === "cinematic"
-      ? "w-full rounded-2xl px-3 py-2.5 text-left text-[13px] font-medium text-white/85 transition-colors hover:bg-white/10"
-      : "w-full rounded-2xl px-3 py-2.5 text-left text-[13px] font-medium text-foreground transition-colors hover:bg-surface";
+      ? "w-full rounded-2xl px-3 py-2.5 text-left text-footnote font-medium text-white/85 transition-colors hover:bg-white/10"
+      : "w-full rounded-2xl px-3 py-2.5 text-left text-footnote font-medium text-foreground transition-colors hover:bg-surface";
   const heroKickerClass =
     heroFilmTone === "cinematic"
       ? "border-white/16 bg-white/10 text-white/88 backdrop-blur-xl"
@@ -749,7 +749,7 @@ export default function Dashboard() {
 
           <div className={`relative ${heroAlignClass}`}>
             <motion.p variants={heroItemVariants} className={cn("hero-pill", heroCentered && "flex justify-center")}>
-              <span className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[12px] font-medium tracking-tight ${heroKickerClass}`}>
+              <span className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-caption font-medium tracking-tight ${heroKickerClass}`}>
                 <span aria-hidden className="relative h-1.5 w-1.5 rounded-full bg-primary" />
                 {t("shell.home.kicker", "Every vehicle ad in Sri Lanka, one search")}
               </span>
@@ -884,14 +884,14 @@ export default function Dashboard() {
                       enterKeyHint="search"
                       className={heroInputClass}
                     />
-                    <button type="button" onClick={runHeroSearch} className="mr-0.5 h-11 rounded-full bg-primary px-6 text-[13px] font-semibold tracking-[-0.005em] text-white shadow-soft transition-all hover:bg-primary/95 active:scale-[0.97]">
+                    <button type="button" onClick={runHeroSearch} className="mr-0.5 h-11 rounded-full bg-primary px-6 text-footnote font-semibold tracking-normal text-white shadow-soft transition-all hover:bg-primary/95 active:scale-[0.97]">
                       {t("common.search", "Search")}
                     </button>
                   </m.div>
 
                   {showHeroPopular ? (
                     <div id="hero-suggestions" role="listbox" className="absolute inset-x-0 bottom-full z-50 mb-2 overflow-hidden rounded-[1.75rem] border border-border bg-card/95 p-1.5 shadow-soft-xl backdrop-blur-xl">
-                      <p className="px-3 py-2 text-[11px] font-semibold text-muted-foreground">
+                      <p className="px-3 py-2 text-caption font-semibold text-muted-foreground">
                         {t("home.popular", "Popular")}
                       </p>
                       {HERO_POPULAR_SCANS.map((item, idx) => (
@@ -918,7 +918,7 @@ export default function Dashboard() {
                   {showHeroSuggestions && (
                     <div id="hero-suggestions" role="listbox" className="absolute inset-x-0 bottom-full z-50 mb-2 overflow-hidden rounded-[1.75rem] border border-border bg-card/95 p-1.5 shadow-soft-xl backdrop-blur-xl">
                       {heroSuggestionsLoading ? (
-                        <p className="px-3 py-2 text-[11px] text-muted-foreground">{t("common.searching", "Searching...")}</p>
+                        <p className="px-3 py-2 text-caption text-muted-foreground">{t("common.searching", "Searching...")}</p>
                       ) : heroSuggestions.length ? (
                         <div className="max-h-[240px] overflow-y-auto">
                           {heroSuggestions.map((s, idx) => (
@@ -929,14 +929,14 @@ export default function Dashboard() {
                               onMouseDown={(e) => e.preventDefault()} onClick={() => applyHeroSuggestion(s)}
                               className={`flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-left transition-colors hover:bg-surface ${idx === heroActiveIdx ? "bg-surface" : ""}`}
                             >
-                              <span className="text-[13px] font-medium text-foreground">{s.make} {s.model} {s.year}</span>
-                              <span className="text-[12px] font-semibold text-primary-bright num">
+                              <span className="text-footnote font-medium text-foreground">{s.make} {s.model} {s.year}</span>
+                              <span className="text-caption font-semibold text-primary-bright num">
                                 {isReasonableListingPrice(Number(s.price_lkr)) ? formatPrice(s.price_lkr || null) : "—"}
                               </span>
                             </button>
                           ))}
                         </div>
-                      ) : <p className="px-3 py-2 text-[11px] text-muted-foreground">{t("home.noMatches", "No matches.")}</p>}
+                      ) : <p className="px-3 py-2 text-caption text-muted-foreground">{t("home.noMatches", "No matches.")}</p>}
                     </div>
                   )}
                 </div>
@@ -944,7 +944,7 @@ export default function Dashboard() {
                 {heroSearchMessage && (
                   <p
                     className={cn(
-                      "mt-2 text-[11px] font-medium",
+                      "mt-2 text-caption font-medium",
                       // Over the cinematic photo the light-theme token is a dark
                       // navy — use the bright brand blue for small text there.
                       heroFilmTone === "cinematic" ? "text-[#6CB8FF]" : "text-primary-bright",
@@ -970,7 +970,7 @@ export default function Dashboard() {
                         aria-pressed={active}
                         {...(motionStill ? {} : press)}
                         className={cn(
-                          "relative isolate inline-flex min-h-10 items-center rounded-full border px-4 text-[13px] font-semibold transition-colors",
+                          "relative isolate inline-flex min-h-10 items-center rounded-full border px-4 text-footnote font-semibold transition-colors",
                           heroFilmTone === "cinematic"
                             ? active
                               ? "border-transparent text-white"
@@ -1009,13 +1009,13 @@ export default function Dashboard() {
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <Reveal className="flex flex-col gap-2 sm:gap-2.5">
               <div className="flex items-baseline gap-2.5">
-                <h2 className="text-[15px] font-semibold tracking-tight text-foreground">
+                <h2 className="text-body font-semibold tracking-tight text-foreground">
                   {isPriceUnavailableMode ? t("common.unpricedInventory", "Unpriced inventory") : t("common.inventory", "Inventory")}
                 </h2>
                 {loadingListings ? (
                   <span className="inline-block h-4 w-14 animate-pulse rounded bg-foreground/[0.03]" aria-hidden />
                 ) : (
-                  <span className="text-[13px] font-medium text-muted-foreground num" aria-live="polite">
+                  <span className="text-footnote font-medium text-muted-foreground num" aria-live="polite">
                     <FlowNumber value={total} label={total.toLocaleString()} />
                     {!isPriceUnavailableMode && activeFilterLabels.length === 0 ? (
                       <span className="ml-1 text-muted-foreground">priced</span>
@@ -1042,25 +1042,25 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={() => setShowMobileFilter(true)}
-                className="inline-flex min-h-11 lg:hidden items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1.5 text-[12px] font-semibold text-primary-bright transition-colors hover:bg-primary/15 active:scale-[0.97]"
+                className="inline-flex min-h-11 lg:hidden items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1.5 text-caption font-semibold text-primary-bright transition-colors hover:bg-primary/15 active:scale-[0.97]"
                 aria-label={t("filter.title", "Filters")}
               >
                 <SlidersHorizontal className="h-3.5 w-3.5" />
                 {t("filter.title", "Filters")}
                 {activeFilterLabels.length > 0 && (
-                  <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-white">
+                  <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-primary px-1 text-caption font-bold text-white">
                     {activeFilterLabels.length}
                   </span>
                 )}
               </button>
               <button type="button" onClick={() => setShowSavedListings(true)}
-                className="rounded-full border border-border px-3 py-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:border-border hover:text-foreground"
+                className="rounded-full border border-border px-3 py-1.5 text-caption font-medium text-muted-foreground transition-colors hover:border-border hover:text-foreground"
               >{watchlistIds.length} {t("common.saved", "saved")}</button>
               <button type="button" onClick={saveCurrentMarketAlert}
-                className="rounded-full border border-primary/15 bg-primary/5 px-3 py-1.5 text-[12px] font-medium text-primary-bright transition-colors hover:bg-primary/10"
+                className="rounded-full border border-primary/15 bg-primary/5 px-3 py-1.5 text-caption font-medium text-primary-bright transition-colors hover:bg-primary/10"
               >{t("common.saveAlert", "Save alert")}</button>
               <button type="button" onClick={() => setShowMarketAlerts(true)}
-                className="rounded-full border border-border px-3 py-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+                className="rounded-full border border-border px-3 py-1.5 text-caption font-medium text-muted-foreground transition-colors hover:text-foreground"
               >{marketAlerts.length} {t("common.alerts", "alerts")}</button>
               <div className="hidden items-center gap-0.5 md:flex">
                 <button type="button" onClick={() => setMarketView("grid")} aria-label={t("home.gridView", "Grid view")} aria-pressed={marketView === "grid"}
@@ -1085,11 +1085,11 @@ export default function Dashboard() {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9, transition: { duration: duration.fast, ease: ease.exit } }}
                     transition={spring.snappy}
-                    className="rounded-full border border-border bg-foreground/[0.03] px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
+                    className="rounded-full border border-border bg-foreground/[0.03] px-2.5 py-1 text-caption font-medium text-muted-foreground"
                   >{label}</motion.span>
                 ))}
                 <motion.button key="__clear" layout={!motionStill} transition={spring.snappy} type="button" onClick={() => setFilters({ ...EMPTY_FILTERS })}
-                  className="rounded-full px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  className="rounded-full px-2.5 py-1 text-caption font-medium text-muted-foreground transition-colors hover:text-foreground"
                 >{t("common.clearAll", "Clear all")}</motion.button>
               </AnimatePresence>
             </div>
@@ -1097,9 +1097,9 @@ export default function Dashboard() {
 
           {newLiveListingsAvailable && (
             <div className="mb-5 flex items-center justify-between rounded-2xl border border-primary/15 bg-primary/5 px-4 py-2.5">
-              <span className="text-[12px] font-semibold text-primary-bright">New listings available</span>
+              <span className="text-caption font-semibold text-primary-bright">New listings available</span>
               <button type="button" onClick={() => { setFilters((p) => ({ ...p, sort: "newest", page: 1 })); setNewLiveListingsAvailable(false); }}
-                className="text-[12px] font-semibold text-primary-bright transition-colors hover:text-primary-bright"
+                className="text-caption font-semibold text-primary-bright transition-colors hover:text-primary-bright"
               >Refresh</button>
             </div>
           )}
@@ -1132,16 +1132,16 @@ export default function Dashboard() {
                 </div>
               ) : listingsFailed ? (
                 <div className="flex flex-col items-center justify-center gap-3 rounded-[2rem] border border-border bg-surface px-4 py-20 text-center">
-                  <p className="text-sm font-semibold text-foreground">
+                  <p className="text-footnote font-semibold text-foreground">
                     {t("home.listingsErrorTitle", "We couldn't load listings just now")}
                   </p>
-                  <p className="max-w-sm text-sm text-muted-foreground">
+                  <p className="max-w-sm text-footnote text-muted-foreground">
                     {t("home.listingsErrorBody", "This is usually a short outage on our side. Your filters are kept. Try again in a moment.")}
                   </p>
                   <button
                     type="button"
                     onClick={retryListings}
-                    className="min-h-11 rounded-2xl border border-border bg-card px-5 py-3 text-[13px] font-medium text-foreground transition-colors hover:border-primary/30 hover:text-primary-bright"
+                    className="min-h-11 rounded-2xl border border-border bg-card px-5 py-3 text-footnote font-medium text-foreground transition-colors hover:border-primary/30 hover:text-primary-bright"
                   >
                     Retry
                   </button>
@@ -1177,20 +1177,20 @@ export default function Dashboard() {
                             <VehicleThumbnail src={pickVehicleImageUrl([listing.thumbnail_url, ...(Array.isArray(listing.images) ? listing.images : [])], [listing.detail_url])} listingId={listing.id} source={listing.source} alt={`${listing.make} ${listing.model}`} className="w-full h-full object-cover" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-[14px] font-semibold text-foreground group-hover:text-primary transition-colors">{listing.make} {listing.model} {listing.variant || ""}</p>
-                            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{listing.year || "N/A"} · {listing.district || "N/A"} · {listing.source}</p>
+                            <p className="truncate text-body font-semibold text-foreground group-hover:text-primary transition-colors">{listing.make} {listing.model} {listing.variant || ""}</p>
+                            <p className="mt-0.5 truncate text-caption text-muted-foreground">{listing.year || "N/A"} · {listing.district || "N/A"} · {listing.source}</p>
                           </div>
                           <div className="shrink-0 text-right">
                             {hasPrice ? (
-                              <p className="text-[14px] font-bold text-foreground num">{formatPrice(Number(listing.price_lkr))}</p>
-                            ) : <PriceUnavailableBadge label="N/A" className="text-[10px]" />}
+                              <p className="text-body font-bold text-foreground num">{formatPrice(Number(listing.price_lkr))}</p>
+                            ) : <PriceUnavailableBadge label="N/A" className="text-caption" />}
                             {fullAccess && listing.deal_score != null && (
-                              <p className={`mt-0.5 text-[10px] font-bold num ${Number(listing.deal_score) >= 0 ? "text-primary-bright" : "text-muted-foreground"}`}>
+                              <p className={`mt-0.5 text-caption font-bold num ${Number(listing.deal_score) >= 0 ? "text-primary-bright" : "text-muted-foreground"}`}>
                                 {Number(listing.deal_score) >= 0 ? "+" : ""}{Number(listing.deal_score).toFixed(0)} deal
                               </p>
                             )}
                             {!fullAccess && (
-                              <p className="mt-0.5 text-[10px] font-semibold text-muted-foreground/70">Pro score</p>
+                              <p className="mt-0.5 text-caption font-semibold text-muted-foreground/70">Pro score</p>
                             )}
                           </div>
                           <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
@@ -1233,8 +1233,8 @@ export default function Dashboard() {
 
             <div>
               <div className="mb-5 flex items-center justify-between">
-                <h3 className="font-display text-base font-semibold tracking-tight text-foreground">{t("home.trendingModels", "Trending models")}</h3>
-                <Link to="/trends" className="flex items-center gap-1 text-[12px] font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright">
+                <h3 className="font-display text-body font-semibold tracking-tight text-foreground">{t("home.trendingModels", "Trending models")}</h3>
+                <Link to="/trends" className="flex items-center gap-1 text-caption font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright">
                   All trends <ArrowUpRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
@@ -1248,15 +1248,15 @@ export default function Dashboard() {
                         <VehicleThumbnail src={row.thumbnail_url} alt={`${row.make} ${row.model}`} className="w-full h-full object-cover" placeholderClassName="flex h-full w-full items-center justify-center bg-black/20" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-[14px] font-semibold text-foreground">{row.make} {row.model}</p>
-                        <p className="mt-0.5 text-[11px] text-muted-foreground num">{row.listing_count.toLocaleString()} listed · avg {formatPrice(row.avg_price_lkr)}</p>
+                        <p className="truncate text-body font-semibold text-foreground">{row.make} {row.model}</p>
+                        <p className="mt-0.5 text-caption text-muted-foreground num">{row.listing_count.toLocaleString()} listed · avg {formatPrice(row.avg_price_lkr)}</p>
                       </div>
                       <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover/trend:translate-x-0.5 group-hover/trend:text-primary" />
                     </button>
                   ))}
                 </div>
               ) : (
-                <p className="text-[11px] text-muted-foreground">{t("home.awaitingData", "Awaiting data")}</p>
+                <p className="text-caption text-muted-foreground">{t("home.awaitingData", "Awaiting data")}</p>
               )}
             </div>
 
@@ -1264,10 +1264,10 @@ export default function Dashboard() {
             <ProFeatureLock label={t("shell.home.bestDealsLock", "Best deals")}>
             <div>
               <div className="mb-5 flex items-center justify-between">
-                <h3 className="font-display text-base font-semibold tracking-tight text-foreground flex items-center gap-2">
+                <h3 className="font-display text-body font-semibold tracking-tight text-foreground flex items-center gap-2">
                   <Flame className="h-4 w-4 text-primary/70" /> Best deals
                 </h3>
-                <Link to="/best-picks" className="flex items-center gap-1 text-[12px] font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright">
+                <Link to="/best-picks" className="flex items-center gap-1 text-caption font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright">
                   All picks <ArrowUpRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
@@ -1281,27 +1281,27 @@ export default function Dashboard() {
                         <VehicleThumbnail src={row.thumbnail_url} listingId={row.id} alt={`${row.make} ${row.model}`} className="w-full h-full object-cover" placeholderClassName="flex h-full w-full items-center justify-center bg-black/20" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-[14px] font-semibold text-foreground">{row.make} {row.model} {row.year}</p>
-                        <p className="mt-0.5 text-[11px] text-muted-foreground num">{formatPrice(row.price_lkr)} · {row.district || "LK"}</p>
+                        <p className="truncate text-body font-semibold text-foreground">{row.make} {row.model} {row.year}</p>
+                        <p className="mt-0.5 text-caption text-muted-foreground num">{formatPrice(row.price_lkr)} · {row.district || "LK"}</p>
                       </div>
-                      <span className="shrink-0 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 num">
+                      <span className="shrink-0 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-caption font-bold text-emerald-700 dark:text-emerald-300 num">
                         +{Number(row.deal_score || 0).toFixed(0)}
                       </span>
                     </Link>
                   ))}
                 </div>
               ) : (
-                <p className="text-[11px] text-muted-foreground">{t("home.noDeals", "No deals found in current slice")}</p>
+                <p className="text-caption text-muted-foreground">{t("home.noDeals", "No deals found in current slice")}</p>
               )}
             </div>
             </ProFeatureLock>
             {/* Price cuts (7d) */}
             <div>
               <div className="mb-5 flex items-center justify-between">
-                <h3 className="font-display text-base font-semibold tracking-tight text-foreground flex items-center gap-2">
+                <h3 className="font-display text-body font-semibold tracking-tight text-foreground flex items-center gap-2">
                   <TrendingDown className="h-4 w-4 text-emerald-500" /> Price cuts &middot; 7d
                 </h3>
-                <Link to="/best-picks" className="flex items-center gap-1 text-[12px] font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright">
+                <Link to="/best-picks" className="flex items-center gap-1 text-caption font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright">
                   All cuts <ArrowUpRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
@@ -1315,20 +1315,20 @@ export default function Dashboard() {
                         <VehicleThumbnail src={drop.listing.thumbnail_url} listingId={drop.listing.id} alt={`${drop.listing.make} ${drop.listing.model}`} className="w-full h-full object-cover" placeholderClassName="flex h-full w-full items-center justify-center bg-black/20" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-[14px] font-semibold text-foreground">{drop.listing.make} {drop.listing.model}{drop.listing.year ? ` ${drop.listing.year}` : ""}</p>
-                        <p className="mt-0.5 text-[11px] text-muted-foreground num">
+                        <p className="truncate text-body font-semibold text-foreground">{drop.listing.make} {drop.listing.model}{drop.listing.year ? ` ${drop.listing.year}` : ""}</p>
+                        <p className="mt-0.5 text-caption text-muted-foreground num">
                           <span className="line-through">{formatPrice(drop.previous_price_lkr)}</span>{" "}
                           <span className="font-semibold text-foreground">{formatPrice(drop.new_price_lkr)}</span>
                         </p>
                       </div>
-                      <span className="shrink-0 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 num">
+                      <span className="shrink-0 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-caption font-bold text-emerald-700 dark:text-emerald-300 num">
                         &minus;{drop.drop_pct}%
                       </span>
                     </Link>
                   ))}
                 </div>
               ) : (
-                <p className="text-[11px] text-muted-foreground">{t("shell.home.noCuts", "No price cuts spotted in the last 7 days.")}</p>
+                <p className="text-caption text-muted-foreground">{t("shell.home.noCuts", "No price cuts spotted in the last 7 days.")}</p>
               )}
             </div>
           </div>
@@ -1340,28 +1340,28 @@ export default function Dashboard() {
         <div className="mx-auto max-w-[1560px] px-5 py-8 sm:px-6">
           <dl className="grid gap-x-8 gap-y-6 sm:grid-cols-3">
             <div>
-              <dt className="text-[13px] font-medium text-muted-foreground">{t("shell.home.trust.sources", "Sources")}</dt>
-              <dd className="mt-1 text-[15px] font-semibold text-foreground">
+              <dt className="text-footnote font-medium text-muted-foreground">{t("shell.home.trust.sources", "Sources")}</dt>
+              <dd className="mt-1 text-body font-semibold text-foreground">
                 {marketPulseSources > 0
                   ? t("shell.home.trust.sourcesValue", "{n} Sri Lankan marketplaces, credited on every listing", { n: marketPulseSources })
                   : t("shell.home.trust.sourcesFallback", "Sri Lankan marketplaces, credited on every listing")}
               </dd>
             </div>
             <div>
-              <dt className="text-[13px] font-medium text-muted-foreground">{t("shell.home.trust.types", "Vehicle types")}</dt>
-              <dd className="mt-1 text-[15px] font-semibold text-foreground">
+              <dt className="text-footnote font-medium text-muted-foreground">{t("shell.home.trust.types", "Vehicle types")}</dt>
+              <dd className="mt-1 text-body font-semibold text-foreground">
                 {t("shell.home.trust.typesValue", "Cars, bikes, three-wheelers, vans and lorries")}
               </dd>
             </div>
             <div>
-              <dt className="text-[13px] font-medium text-muted-foreground">{t("shell.home.trust.updated", "Last updated")}</dt>
-              <dd className="mt-1 text-[15px] font-semibold text-foreground">
+              <dt className="text-footnote font-medium text-muted-foreground">{t("shell.home.trust.updated", "Last updated")}</dt>
+              <dd className="mt-1 text-body font-semibold text-foreground">
                 {listingFreshnessAt ? (
                   <DataFreshnessIndicator
                     latestListingAt={liveMarketSnapshot?.latest_listing_at}
                     lastUpdated={stats?.last_updated}
                     variant="subline"
-                    className="text-[15px] font-semibold normal-case tracking-normal text-foreground"
+                    className="text-body font-semibold normal-case tracking-normal text-foreground"
                   />
                 ) : (
                   t("shell.home.trust.updatedPending", "Waiting for the first update")
@@ -1386,14 +1386,14 @@ export default function Dashboard() {
             <ProFeatureLock label={t("shell.home.districtDemandLock", "Demand by district")}>
             <div className="mb-5 flex items-center justify-between">
               <div>
-                <p className="text-[13px] font-medium text-primary">{t("shell.home.districtDemand", "Demand by district")}</p>
-                <h3 className="mt-1 font-display text-base font-semibold tracking-tight text-foreground">
+                <p className="text-footnote font-medium text-primary">{t("shell.home.districtDemand", "Demand by district")}</p>
+                <h3 className="mt-1 font-display text-body font-semibold tracking-tight text-foreground">
                   {t("shell.home.districtDemandTitle", "Where new ads are appearing — last 7 days")}
                 </h3>
               </div>
               <Link
                 to="/#market"
-                className="flex items-center gap-1 text-[12px] font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright"
+                className="flex items-center gap-1 text-caption font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright"
               >
                 {t("shell.home.allListings", "All listings")} <ArrowUpRight className="h-3 w-3" />
               </Link>
@@ -1425,7 +1425,7 @@ export default function Dashboard() {
 
           {/* Tool links */}
           <div className="mt-12 border-t border-border pt-8">
-            <p className="mb-4 text-[13px] font-medium text-muted-foreground">{t("shell.nav.tools", "Tools")}</p>
+            <p className="mb-4 text-footnote font-medium text-muted-foreground">{t("shell.nav.tools", "Tools")}</p>
             <div className="flex flex-wrap gap-2">
             {[
               { label: t("shell.nav.valueMyVehicle", "What's my vehicle worth?"), to: "/estimate" },
@@ -1435,7 +1435,7 @@ export default function Dashboard() {
               { label: t("shell.nav.officialUpdates", "Tax & customs updates"), to: "/official-pulse" },
             ].map((tool) => (
               <Link key={tool.label} to={tool.to}
-                className="group/tool flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2.5 text-[12px] font-semibold text-foreground no-underline transition-all hover:border-primary/30 hover:bg-primary/[0.06] hover:shadow-soft active:scale-[0.98]"
+                className="group/tool flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2.5 text-caption font-semibold text-foreground no-underline transition-all hover:border-primary/30 hover:bg-primary/[0.06] hover:shadow-soft active:scale-[0.98]"
               >
                 {tool.label}
                 <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground transition-all group-hover/tool:text-primary group-hover/tool:translate-x-0.5" />
@@ -1473,14 +1473,14 @@ export default function Dashboard() {
       <Dialog open={showMarketAlerts} onOpenChange={setShowMarketAlerts}>
         <DialogContent className="max-h-[86vh] max-w-2xl overflow-y-auto rounded-3xl border-white/40 bg-card/80 text-foreground backdrop-blur-2xl">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-semibold tracking-tight">Market alerts</DialogTitle>
+            <DialogTitle className="font-display text-callout font-semibold tracking-tight">Market alerts</DialogTitle>
           </DialogHeader>
           <div className="rounded-2xl border border-border bg-surface p-4">
-            <p className="text-[11px] font-medium text-muted-foreground">{t("shell.home.currentSearch", "Current search")}</p>
-            <p className="mt-1.5 text-[13px] font-semibold text-foreground">{currentAlertSummary}</p>
+            <p className="text-caption font-medium text-muted-foreground">{t("shell.home.currentSearch", "Current search")}</p>
+            <p className="mt-1.5 text-footnote font-semibold text-foreground">{currentAlertSummary}</p>
             <div className="mt-3 flex gap-2">
-              <Input value={alertPriceInput} onChange={(e) => setAlertPriceInput(e.target.value.replace(/[^\d]/g, ""))} inputMode="numeric" placeholder="Target max price (LKR)" className="h-9 flex-1 rounded-2xl border-border bg-transparent text-base md:text-sm" />
-              <button type="button" onClick={saveCurrentMarketAlert} className="h-9 rounded-full bg-primary px-4 text-[12px] font-semibold text-white transition-all hover:bg-primary/95 active:scale-[0.97]">Save</button>
+              <Input value={alertPriceInput} onChange={(e) => setAlertPriceInput(e.target.value.replace(/[^\d]/g, ""))} inputMode="numeric" placeholder="Target max price (LKR)" className="h-9 flex-1 rounded-2xl border-border bg-transparent text-body md:text-footnote" />
+              <button type="button" onClick={saveCurrentMarketAlert} className="h-9 rounded-full bg-primary px-4 text-caption font-semibold text-white transition-all hover:bg-primary/95 active:scale-[0.97]">Save</button>
             </div>
           </div>
           {marketAlerts.length ? (
@@ -1488,26 +1488,26 @@ export default function Dashboard() {
               {marketAlerts.map((alert) => (
                 <div key={alert.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-3">
                   <div className="min-w-0">
-                    <p className="truncate text-[13px] font-semibold text-foreground">{alert.label}</p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">{alert.target_price_lkr ? `Under ${formatPrice(alert.target_price_lkr)}` : t("home.newListingsAvailable", "New listings available")}</p>
+                    <p className="truncate text-footnote font-semibold text-foreground">{alert.label}</p>
+                    <p className="mt-0.5 text-caption text-muted-foreground">{alert.target_price_lkr ? `Under ${formatPrice(alert.target_price_lkr)}` : t("home.newListingsAvailable", "New listings available")}</p>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <button type="button" onClick={() => { setFilters({ ...(alert.filters as FilterState), sort: alert.filters.sort || DEFAULT_SORT, page: 1 }); setShowMarketAlerts(false); scrollToMarket(); }}
-                      className="h-7 rounded-full border border-primary/15 bg-primary/5 px-2.5 text-[10px] font-semibold text-primary-bright transition-all hover:bg-primary/10 active:scale-[0.95]">Open</button>
+                      className="h-7 rounded-full border border-primary/15 bg-primary/5 px-2.5 text-caption font-semibold text-primary-bright transition-all hover:bg-primary/10 active:scale-[0.95]">Open</button>
                     <button type="button" onClick={() => deleteMarketAlert(alert.id)}
-                      className="h-7 rounded-full border border-border px-2.5 text-[10px] font-semibold text-muted-foreground transition-all hover:text-foreground active:scale-[0.95]">Delete</button>
+                      className="h-7 rounded-full border border-border px-2.5 text-caption font-semibold text-muted-foreground transition-all hover:text-foreground active:scale-[0.95]">Delete</button>
                   </div>
                 </div>
               ))}
             </div>
-          ) : <p className="py-6 text-center text-[11px] text-muted-foreground">No alerts saved</p>}
+          ) : <p className="py-6 text-center text-caption text-muted-foreground">No alerts saved</p>}
         </DialogContent>
       </Dialog>
 
       <Dialog open={showSavedListings} onOpenChange={setShowSavedListings}>
         <DialogContent className="max-h-[86vh] max-w-2xl overflow-y-auto rounded-3xl border-white/40 bg-card/80 text-foreground backdrop-blur-2xl">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-semibold tracking-tight">Saved listings</DialogTitle>
+            <DialogTitle className="font-display text-callout font-semibold tracking-tight">Saved listings</DialogTitle>
           </DialogHeader>
           {savedListingsLoading ? (
             <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="skeleton-shimmer h-16 rounded-2xl" />)}</div>
@@ -1516,12 +1516,12 @@ export default function Dashboard() {
               {savedListings.map((listing) => (
                 <div key={listing.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-3">
                   <div className="min-w-0">
-                    <p className="truncate text-[13px] font-semibold text-foreground">{listing.make} {listing.model} {listing.year || ""}</p>
-                    <p className="mt-0.5 text-[10px] text-muted-foreground">{listing.district || "LK"} · {isReasonableListingPrice(Number(listing.price_lkr || 0)) ? formatPrice(listing.price_lkr) : "N/A"}</p>
+                    <p className="truncate text-footnote font-semibold text-foreground">{listing.make} {listing.model} {listing.year || ""}</p>
+                    <p className="mt-0.5 text-caption text-muted-foreground">{listing.district || "LK"} · {isReasonableListingPrice(Number(listing.price_lkr || 0)) ? formatPrice(listing.price_lkr) : "N/A"}</p>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <button type="button" onClick={() => toggleWatchlist(listing)} className="h-7 rounded-full border border-primary/15 bg-primary/5 px-2.5 text-[10px] font-semibold text-primary-bright transition-all hover:bg-primary/10 active:scale-[0.95]">{t("home.remove", "Remove")}</button>
-                    <Link to={`/listing/${listing.id}`} onClick={() => setShowSavedListings(false)} className="flex h-7 items-center gap-1 rounded-full border border-border px-2.5 text-[10px] font-semibold text-muted-foreground no-underline transition-all hover:text-foreground active:scale-[0.95]">
+                    <button type="button" onClick={() => toggleWatchlist(listing)} className="h-7 rounded-full border border-primary/15 bg-primary/5 px-2.5 text-caption font-semibold text-primary-bright transition-all hover:bg-primary/10 active:scale-[0.95]">{t("home.remove", "Remove")}</button>
+                    <Link to={`/listing/${listing.id}`} onClick={() => setShowSavedListings(false)} className="flex h-7 items-center gap-1 rounded-full border border-border px-2.5 text-caption font-semibold text-muted-foreground no-underline transition-all hover:text-foreground active:scale-[0.95]">
                       Open <ExternalLink className="h-2.5 w-2.5" />
                     </Link>
                   </div>
@@ -1530,20 +1530,20 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
-              <p className="text-[13px] font-bold text-foreground">{t("home.noSavedTitle", "Nothing saved yet")}</p>
-              <p className="max-w-xs text-[11px] leading-relaxed text-muted-foreground">
+              <p className="text-footnote font-bold text-foreground">{t("home.noSavedTitle", "Nothing saved yet")}</p>
+              <p className="max-w-xs text-caption leading-relaxed text-muted-foreground">
                 {t("home.noSavedBody", "Tap the bookmark on any listing and it will wait for you here.")}
               </p>
               <Link
                 to="/#market"
                 onClick={() => setShowSavedListings(false)}
-                className="min-h-11 rounded-full bg-primary px-5 py-3 text-[13px] font-bold text-primary-foreground no-underline transition-all hover:bg-primary/95 active:scale-[0.97]"
+                className="min-h-11 rounded-full bg-primary px-5 py-3 text-footnote font-bold text-primary-foreground no-underline transition-all hover:bg-primary/95 active:scale-[0.97]"
               >
                 {t("common.browseInventory", "Browse inventory")}
               </Link>
             </div>
           )}
-          {savedListingsError && <p className="text-[11px] text-primary-bright">{savedListingsError}</p>}
+          {savedListingsError && <p className="text-caption text-primary-bright">{savedListingsError}</p>}
         </DialogContent>
       </Dialog>
 

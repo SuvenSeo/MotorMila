@@ -32,14 +32,14 @@ export default function Docs() {
           <>
             <Link
               to="/pricing"
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-[13px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-footnote font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               {t("common.viewPricing", "View pricing")}
               <ArrowRight aria-hidden className="h-4 w-4" />
             </Link>
             <Link
               to="/official-pulse"
-              className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-card px-6 text-[13px] font-semibold text-foreground no-underline transition-all hover:border-primary/40 hover:bg-surface active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-card px-6 text-footnote font-semibold text-foreground no-underline transition-all hover:border-primary/40 hover:bg-surface active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <Radio aria-hidden className="h-4 w-4" />
               {t("nav.officialPulse", "Official Pulse")}
@@ -57,7 +57,7 @@ export default function Docs() {
                 <a
                   key={section.id}
                   href={`#${section.id}`}
-                  className="shrink-0 rounded-2xl border border-border bg-surface px-3 py-2 text-[12px] font-semibold text-muted-foreground no-underline transition-colors hover:border-primary/30 hover:text-foreground lg:border-transparent lg:bg-transparent lg:px-0 lg:py-1.5"
+                  className="shrink-0 rounded-2xl border border-border bg-surface px-3 py-2 text-caption font-semibold text-muted-foreground no-underline transition-colors hover:border-primary/30 hover:text-foreground lg:border-transparent lg:bg-transparent lg:px-0 lg:py-1.5"
                 >
                   {section.title}
                 </a>
@@ -75,18 +75,18 @@ export default function Docs() {
               >
                 <div className="mb-2 inline-flex items-center gap-2">
                   <FileText aria-hidden className="h-3.5 w-3.5 text-primary" />
-                  <span className="num text-[12px] font-semibold text-muted-foreground">
+                  <span className="num text-caption font-semibold text-muted-foreground">
                     {section.id}
                   </span>
                 </div>
                 <h2 className="display-2 text-foreground">{section.title}</h2>
-                <p className="mt-3 max-w-2xl text-[15px] font-medium leading-relaxed text-muted-foreground">
+                <p className="mt-3 max-w-2xl text-body font-medium leading-relaxed text-muted-foreground">
                   {section.summary}
                 </p>
 
                 <div className="mt-6 space-y-4">
                   {section.body.map((paragraph) => (
-                    <p key={paragraph.slice(0, 48)} className="max-w-2xl text-[14px] leading-relaxed text-foreground/85">
+                    <p key={paragraph.slice(0, 48)} className="max-w-2xl text-body leading-relaxed text-foreground/85">
                       {paragraph}
                     </p>
                   ))}
@@ -95,7 +95,7 @@ export default function Docs() {
                 {section.bullets && section.bullets.length > 0 && (
                   <ul className="mt-6 space-y-2 border-t border-border pt-6">
                     {section.bullets.map((bullet) => (
-                      <li key={bullet} className="flex gap-2.5 text-[13px] leading-relaxed text-muted-foreground">
+                      <li key={bullet} className="flex gap-2.5 text-footnote leading-relaxed text-muted-foreground">
                         <span aria-hidden className="mt-2 h-1 w-1 shrink-0 rounded-full bg-primary" />
                         <span>{bullet}</span>
                       </li>
@@ -109,7 +109,7 @@ export default function Docs() {
                       <Link
                         key={route.to + route.label}
                         to={route.to}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3.5 py-1.5 text-[11px] font-semibold text-foreground no-underline transition-colors hover:border-primary/35 hover:text-primary-bright"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3.5 py-1.5 text-caption font-semibold text-foreground no-underline transition-colors hover:border-primary/35 hover:text-primary-bright"
                       >
                         {route.label}
                         <ExternalLink aria-hidden className="h-3 w-3 text-muted-foreground" />
@@ -126,21 +126,21 @@ export default function Docs() {
             >
               <div>
                 <p className="section-eyebrow mb-2">{t("docs.nextStep", "Next step")}</p>
-                <h3 className="text-lg font-bold text-foreground">{t("docs.ctaTitle", "Ready for Pulse depth or Dealer seats?")}</h3>
-                <p className="mt-1 max-w-md text-[13px] text-muted-foreground">
+                <h3 className="text-callout font-bold text-foreground">{t("docs.ctaTitle", "Ready for Pulse depth or Dealer seats?")}</h3>
+                <p className="mt-1 max-w-md text-footnote text-muted-foreground">
                   {t("docs.ctaBody", "Compare tiers, then open Official Pulse or the dealer workspace.")}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Link
                   to="/pricing"
-                  className="inline-flex h-10 items-center rounded-full bg-primary px-5 text-[12px] font-semibold text-primary-foreground no-underline"
+                  className="inline-flex h-10 items-center rounded-full bg-primary px-5 text-caption font-semibold text-primary-foreground no-underline"
                 >
                   {t("nav.pricing", "Pricing")}
                 </Link>
                 <Link
                   to="/official-pulse"
-                  className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-[12px] font-semibold text-foreground no-underline"
+                  className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-caption font-semibold text-foreground no-underline"
                 >
                   {t("nav.officialPulse", "Official Pulse")}
                 </Link>

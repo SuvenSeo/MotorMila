@@ -135,7 +135,7 @@ export function PriceRangeFilter({ filters, onCommit, touch = false }: PriceRang
   };
 
   const inputClass = cn(
-    "num rounded-full border-transparent bg-surface/70 text-base text-foreground md:text-sm",
+    "num rounded-full border-transparent bg-surface/70 text-body text-foreground md:text-footnote",
     touch ? "h-11" : "h-9",
   );
   const loLabel = draft.min ? formatLkrCompact(draft.min) : t("search.anyMin", "No min");
@@ -205,7 +205,7 @@ export function PriceRangeFilter({ filters, onCommit, touch = false }: PriceRang
       />
 
       {sampleSize >= 8 ? (
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-caption text-muted-foreground">
           {t("search.histogramNote", "Bars: asking prices of {n} recent matches", { n: sampleSize })}
         </p>
       ) : null}
@@ -276,11 +276,11 @@ export function PriceRangeFilter({ filters, onCommit, touch = false }: PriceRang
         />
       </div>
       {inputError ? (
-        <p role="alert" className="text-[11px] font-medium text-destructive">
+        <p role="alert" className="text-caption font-medium text-destructive">
           {inputError}
         </p>
       ) : (
-        <p className="text-[11px] text-muted-foreground">{t("search.priceInputHint", "Type 8.5 Mn, 85L or Rs 7,250,000")}</p>
+        <p className="text-caption text-muted-foreground">{t("search.priceInputHint", "Type 8.5 Mn, 85L or Rs 7,250,000")}</p>
       )}
     </div>
   );

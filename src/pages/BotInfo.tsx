@@ -17,7 +17,7 @@ export default function BotInfo() {
           on Sri Lankan classifieds sites. It identifies itself on every request with the user agent:
         </p>
         <p>
-          <code className="rounded bg-surface px-2 py-1 text-[12px] font-mono">{UA}</code>
+          <code className="rounded bg-surface px-2 py-1 text-caption font-mono">{UA}</code>
         </p>
         <p>
           This page is the contact URL named in that user agent. If you run one of the sites we read, you can

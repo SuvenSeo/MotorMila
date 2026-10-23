@@ -25,12 +25,12 @@ export const SourceCredits = memo(function SourceCredits({ items }: { items: Sou
   return (
     <section aria-labelledby="source-credits-title" className="border-b border-border bg-background">
       <div className="mx-auto max-w-[1560px] px-5 py-8 sm:px-6">
-        <h2 id="source-credits-title" className="text-[13px] font-medium text-muted-foreground">
+        <h2 id="source-credits-title" className="text-footnote font-medium text-muted-foreground">
           {t("shell.home.sourcesTitle", "Listings come from these Sri Lankan sites")}
         </h2>
         <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
           {sorted.map((i) => (
-            <li key={i.source} className="inline-flex items-baseline gap-2 text-[13px]">
+            <li key={i.source} className="inline-flex items-baseline gap-2 text-footnote">
               <span className="font-semibold text-foreground">{prettySourceName(i.source)}</span>
               <span className="num text-muted-foreground">
                 {t("shell.home.sourceCount", "{n} ads", { n: i.listings.toLocaleString() })}

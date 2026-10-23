@@ -63,18 +63,18 @@ export const MarketPredictor = memo(function MarketPredictor({ trendData, listin
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="tech-label font-bold text-muted-foreground">Market pulse</p>
-          <h3 className="text-2xl font-bold tracking-tight text-foreground">Buy timing signal</h3>
+          <h3 className="text-title2 font-bold tracking-tight text-foreground">Buy timing signal</h3>
         </div>
-        <div className={`inline-flex items-center gap-2 rounded-2xl border border-border bg-surface px-3 py-1.5 text-xs font-semibold tracking-tight ${band.toneClass}`}>
+        <div className={`inline-flex items-center gap-2 rounded-2xl border border-border bg-surface px-3 py-1.5 text-caption font-semibold tracking-tight ${band.toneClass}`}>
           <span className={`h-2 w-2 rounded-full ${band.dotClass}`} />
           <ToneIcon className="h-3.5 w-3.5" />
           Sentiment: {band.label}
         </div>
       </div>
 
-      <p className={`mt-3 text-sm ${band.toneClass}`}>{band.text}</p>
+      <p className={`mt-3 text-footnote ${band.toneClass}`}>{band.text}</p>
 
-      <ul className="mt-4 space-y-2 text-sm text-foreground">
+      <ul className="mt-4 space-y-2 text-footnote text-foreground">
         {predictiveInsights.map((insight) => (
           <li key={insight} className="flex gap-2">
             <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />

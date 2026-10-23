@@ -29,14 +29,14 @@ export const SourceMarquee = memo(function SourceMarquee({ items }: SourceMarque
   const summary = items.map((i) => `${prettySourceName(i.source)} ${i.listings.toLocaleString()}`).join(", ");
   return (
     <section aria-label={`Live sources: ${summary}`} className="border-b border-border bg-background">
-      <p className="pt-5 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+      <p className="pt-5 text-center text-caption font-semibold uppercase tracking-caps text-muted-foreground">
         Live across Sri Lanka's marketplaces
       </p>
       <Marquee duration={55} className="py-4" ariaLabel={`Live sources: ${summary}`}>
         {items.map((i) => (
           <span
             key={i.source}
-            className="mx-6 inline-flex items-baseline gap-2 whitespace-nowrap text-[13px]"
+            className="mx-6 inline-flex items-baseline gap-2 whitespace-nowrap text-footnote"
           >
             <span className="font-display font-semibold tracking-tight text-foreground">
               {prettySourceName(i.source)}

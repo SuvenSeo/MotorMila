@@ -120,7 +120,7 @@ export function ModelPriceTimeMachine({
         <button
           type="button"
           onClick={() => setMode("calendar")}
-          className={`rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition ${
+          className={`rounded-full px-3.5 py-1.5 text-caption font-semibold transition ${
             mode === "calendar"
               ? "bg-primary text-primary-foreground"
               : "border border-border bg-card text-muted-foreground hover:text-foreground"
@@ -131,7 +131,7 @@ export function ModelPriceTimeMachine({
         <button
           type="button"
           onClick={() => setMode("yom")}
-          className={`rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition ${
+          className={`rounded-full px-3.5 py-1.5 text-caption font-semibold transition ${
             mode === "yom"
               ? "bg-primary text-primary-foreground"
               : "border border-border bg-card text-muted-foreground hover:text-foreground"
@@ -147,7 +147,7 @@ export function ModelPriceTimeMachine({
         ) : empty || historyQuery.isError ? (
           <div className="flex flex-col items-center gap-3 py-16 text-center">
             <LineChart className="h-5 w-5 text-muted-foreground" />
-            <p className="max-w-md text-[13px] font-medium text-muted-foreground">
+            <p className="max-w-md text-footnote font-medium text-muted-foreground">
               Historical points for this model are still thin. As Wayback backfill and daily
               scans land, this chart fills in automatically.
             </p>
@@ -167,9 +167,9 @@ export function ModelPriceTimeMachine({
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
-                <XAxis dataKey="label" tick={{ fontSize: 11 }} minTickGap={28} />
+                <XAxis dataKey="label" tick={{ fontSize: 12 }} minTickGap={28} />
                 <YAxis
-                  tick={{ fontSize: 11 }}
+                  tick={{ fontSize: 12 }}
                   tickFormatter={(v: number) => formatLkrAxis(v)}
                   width={52}
                 />
@@ -213,9 +213,9 @@ export function ModelPriceTimeMachine({
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
-                <XAxis dataKey="label" tick={{ fontSize: 11 }} minTickGap={20} />
+                <XAxis dataKey="label" tick={{ fontSize: 12 }} minTickGap={20} />
                 <YAxis
-                  tick={{ fontSize: 11 }}
+                  tick={{ fontSize: 12 }}
                   tickFormatter={(v: number) => formatLkrAxis(v)}
                   width={52}
                 />
@@ -237,7 +237,7 @@ export function ModelPriceTimeMachine({
         )}
 
         {data && (
-          <p className="mt-4 text-[11px] font-medium text-muted-foreground">
+          <p className="mt-4 text-caption font-medium text-muted-foreground">
             Archive months: {data.counts.archive_points} · Motormila aggregate months:{" "}
             {data.counts.aggregate_points} · YOM buckets: {data.counts.yom_buckets}
           </p>

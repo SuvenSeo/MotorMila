@@ -131,10 +131,10 @@ function MetricTile({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="tech-label text-muted-foreground">{label}</p>
-          <p className="mt-3 font-display text-[1.85rem] font-semibold tracking-tight text-foreground num">
+          <p className="mt-3 font-display text-title1 font-semibold tracking-tight text-foreground num">
             {value}
           </p>
-          {hint ? <p className="mt-1.5 text-[12px] text-muted-foreground">{hint}</p> : null}
+          {hint ? <p className="mt-1.5 text-caption text-muted-foreground">{hint}</p> : null}
         </div>
         <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 transition-colors group-hover:border-primary/30">
           <Icon className="h-4 w-4 text-primary" aria-hidden />
@@ -153,13 +153,13 @@ function StatBars({
 }) {
   const max = Math.max(1, ...rows.map((row) => row.count));
   if (rows.length === 0) {
-    return <p className="text-[13px] text-muted-foreground">No data yet.</p>;
+    return <p className="text-footnote text-muted-foreground">No data yet.</p>;
   }
   return (
     <div className="space-y-2">
       {rows.map((row) => (
         <div key={`${labelKey || "row"}-${row.label}`}>
-          <div className="mb-1 flex items-center justify-between gap-2 text-[12px]">
+          <div className="mb-1 flex items-center justify-between gap-2 text-caption">
             <span className="truncate font-semibold text-foreground">{row.label}</span>
             <span className="num text-muted-foreground">{row.count.toLocaleString()}</span>
           </div>
@@ -404,7 +404,7 @@ export default function AdminDashboard() {
             <h1 className="display-1 text-foreground">
               {t("admin.title", "{brand} control.", { brand: BRAND.name })}
             </h1>
-            <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground">
+            <p className="mt-3 text-body leading-relaxed text-muted-foreground">
               Signed in as {user?.email || "admin"}. Manage seats, scrapers, analytics, feedback,
               dealers, permits, and platform security from one place.
             </p>
@@ -476,7 +476,7 @@ export default function AdminDashboard() {
                 <TabsTrigger
                   key={tab.id}
                   value={tab.id}
-                  className="gap-1.5 rounded-xl px-3 py-2 text-[11px] font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                  className="gap-1.5 rounded-xl px-3 py-2 text-caption font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                 >
                   <Icon className="h-3.5 w-3.5" />
                   {tab.label}
@@ -488,7 +488,7 @@ export default function AdminDashboard() {
           <TabsContent value="overview" className="space-y-6">
             <div className="grid gap-6 xl:grid-cols-2">
               <div className="data-card p-6">
-                <h2 className="font-display text-lg font-semibold">Quick links</h2>
+                <h2 className="font-display text-callout font-semibold">Quick links</h2>
                 <div className="mt-4 grid gap-2 sm:grid-cols-2">
                   {[
                     { to: "/", label: "Dashboard" },
@@ -503,7 +503,7 @@ export default function AdminDashboard() {
                     <Link
                       key={item.to}
                       to={item.to}
-                      className="inline-flex items-center justify-between rounded-xl border border-border bg-surface px-3.5 py-2.5 text-[13px] font-semibold text-foreground no-underline transition-colors hover:border-primary/30"
+                      className="inline-flex items-center justify-between rounded-xl border border-border bg-surface px-3.5 py-2.5 text-footnote font-semibold text-foreground no-underline transition-colors hover:border-primary/30"
                     >
                       {item.label}
                       <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
@@ -512,44 +512,44 @@ export default function AdminDashboard() {
                 </div>
               </div>
               <div className="data-card p-6">
-                <h2 className="font-display text-lg font-semibold">Live market glance</h2>
+                <h2 className="font-display text-callout font-semibold">Live market glance</h2>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl border border-border bg-surface p-4">
-                    <p className="text-[12px] font-medium text-muted-foreground">
+                    <p className="text-caption font-medium text-muted-foreground">
                       Avg ask
                     </p>
-                    <p className="mt-2 text-lg font-semibold num">
+                    <p className="mt-2 text-callout font-semibold num">
                       {formatPrice(analytics?.listings.avgPriceLkr)}
                     </p>
                   </div>
                   <div className="rounded-xl border border-border bg-surface p-4">
-                    <p className="text-[12px] font-medium text-muted-foreground">
+                    <p className="text-caption font-medium text-muted-foreground">
                       Active alerts
                     </p>
-                    <p className="mt-2 text-lg font-semibold num">
+                    <p className="mt-2 text-callout font-semibold num">
                       {formatCount(analytics?.alerts.active)}
                     </p>
                   </div>
                   <div className="rounded-xl border border-border bg-surface p-4">
-                    <p className="text-[12px] font-medium text-muted-foreground">
+                    <p className="text-caption font-medium text-muted-foreground">
                       Market signals
                     </p>
-                    <p className="mt-2 text-lg font-semibold num">
+                    <p className="mt-2 text-callout font-semibold num">
                       {formatCount(analytics?.signals.total)}
                     </p>
                   </div>
                   <div className="rounded-xl border border-border bg-surface p-4">
-                    <p className="text-[12px] font-medium text-muted-foreground">
+                    <p className="text-caption font-medium text-muted-foreground">
                       Scrape health
                     </p>
-                    <p className="mt-2 text-lg font-semibold num">
+                    <p className="mt-2 text-callout font-semibold num">
                       {formatCount(analytics?.scrapes.success)} ok /{" "}
                       {formatCount(analytics?.scrapes.failed)} fail
                     </p>
                   </div>
                 </div>
                 {systemQuery.data ? (
-                  <p className="mt-4 text-[12px] text-muted-foreground">
+                  <p className="mt-4 text-caption text-muted-foreground">
                     DB {systemQuery.data.databaseOk ? "ok" : "down"} · App gate{" "}
                     {systemQuery.data.flags.appAccessEnforced ? "on" : "off"} · Pro gate{" "}
                     {systemQuery.data.flags.proAccessEnforced ? "on" : "off"}
@@ -565,7 +565,7 @@ export default function AdminDashboard() {
               <div className="data-card p-6">
                 <div className="mb-4 flex items-center gap-2">
                   <Activity className="h-4 w-4 text-primary" />
-                  <h2 className="font-display text-lg font-semibold">Top makes · live</h2>
+                  <h2 className="font-display text-callout font-semibold">Top makes · live</h2>
                 </div>
                 <StatBars
                   rows={(overview?.topMakes || []).map((row) => ({
@@ -577,7 +577,7 @@ export default function AdminDashboard() {
               <div className="data-card p-6">
                 <div className="mb-4 flex items-center gap-2">
                   <Database className="h-4 w-4 text-primary" />
-                  <h2 className="font-display text-lg font-semibold">Recent scrapes</h2>
+                  <h2 className="font-display text-callout font-semibold">Recent scrapes</h2>
                 </div>
                 <div className="space-y-2">
                   {(overview?.recentScrapes || []).slice(0, 8).map((run) => (
@@ -586,12 +586,12 @@ export default function AdminDashboard() {
                       className="rounded-xl border border-border bg-surface/70 px-3.5 py-3"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-[13px] font-semibold">{run.source}</p>
-                        <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                        <p className="text-footnote font-semibold">{run.source}</p>
+                        <span className="rounded-full border border-border px-2 py-0.5 text-caption font-medium text-muted-foreground">
                           {run.status || "—"}
                         </span>
                       </div>
-                      <p className="mt-1.5 text-[11px] text-muted-foreground">
+                      <p className="mt-1.5 text-caption text-muted-foreground">
                         found {run.listingsFound.toLocaleString()} · new{" "}
                         {run.listingsNew.toLocaleString()}
                       </p>
@@ -606,8 +606,8 @@ export default function AdminDashboard() {
             <div className="premium-surface overflow-hidden p-0 shadow-soft-lg">
               <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border px-6 py-5">
                 <div>
-                  <h2 className="font-display text-lg font-semibold">Users & plans</h2>
-                  <p className="mt-1 text-[12px] text-muted-foreground">
+                  <h2 className="font-display text-callout font-semibold">Users & plans</h2>
+                  <p className="mt-1 text-caption text-muted-foreground">
                     Search, filter, upgrade, demote, or disable seats. Changes invalidate their
                     sessions.
                   </p>
@@ -637,12 +637,12 @@ export default function AdminDashboard() {
                 {usersQuery.isLoading ? (
                   <Skeleton className="h-44 rounded-2xl" />
                 ) : (usersQuery.data?.users || []).length === 0 ? (
-                  <p className="text-[13px] text-muted-foreground">No users match.</p>
+                  <p className="text-footnote text-muted-foreground">No users match.</p>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[900px] text-left text-sm">
+                    <table className="w-full min-w-[900px] text-left text-footnote">
                       <thead>
-                        <tr className="border-b border-border text-[11px] font-medium text-muted-foreground">
+                        <tr className="border-b border-border text-caption font-medium text-muted-foreground">
                           <th className="pb-3 pr-3 font-bold">User</th>
                           <th className="pb-3 pr-3 font-bold">Plan</th>
                           <th className="pb-3 pr-3 font-bold">Role</th>
@@ -656,9 +656,9 @@ export default function AdminDashboard() {
                           <tr key={row.id} className="border-b border-border/60 last:border-0">
                             <td className="py-4 pr-3">
                               <p className="font-semibold text-foreground">{row.name}</p>
-                              <p className="text-[11px] text-muted-foreground">{row.email}</p>
+                              <p className="text-caption text-muted-foreground">{row.email}</p>
                               {row.invitedByEmail ? (
-                                <p className="text-[10px] text-muted-foreground">
+                                <p className="text-caption text-muted-foreground">
                                   invited by {row.invitedByEmail}
                                 </p>
                               ) : null}
@@ -703,13 +703,13 @@ export default function AdminDashboard() {
                                 </SelectContent>
                               </Select>
                             </td>
-                            <td className="py-4 pr-3 text-[11px] text-muted-foreground">
+                            <td className="py-4 pr-3 text-caption text-muted-foreground">
                               {row.lastLoginAt
                                 ? new Date(row.lastLoginAt).toLocaleString()
                                 : "Never"}
                             </td>
                             <td className="py-4 pr-3">
-                              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
+                              <span className="inline-flex items-center gap-1.5 text-caption font-semibold text-muted-foreground">
                                 {row.isActive ? <Check className="h-3.5 w-3.5 text-primary" /> : null}
                                 {row.isActive ? "Active" : "Disabled"} · {row.subscriptionStatus}
                               </span>
@@ -743,8 +743,8 @@ export default function AdminDashboard() {
 
           <TabsContent value="invites" className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
             <div className="premium-surface p-6 sm:p-7 shadow-soft-lg">
-              <h2 className="font-display text-xl font-semibold">Invite by email</h2>
-              <p className="mt-1 text-[12px] text-muted-foreground">
+              <h2 className="font-display text-title3 font-semibold">Invite by email</h2>
+              <p className="mt-1 text-caption text-muted-foreground">
                 Only invited addresses can create an account.
               </p>
               <form onSubmit={onInvite} className="mt-6 space-y-4">
@@ -805,7 +805,7 @@ export default function AdminDashboard() {
               {lastInviteLink ? (
                 <div className="mt-5 rounded-2xl border border-primary/20 bg-primary/[0.06] p-4">
                   <p className="tech-label text-primary-bright">Share this link</p>
-                  <p className="mt-2 break-all text-[12px] font-medium leading-relaxed">
+                  <p className="mt-2 break-all text-caption font-medium leading-relaxed">
                     {lastInviteLink}
                   </p>
                   <Button
@@ -824,12 +824,12 @@ export default function AdminDashboard() {
 
             <div className="space-y-4">
               <div className="data-card p-6">
-                <h3 className="font-display text-lg font-semibold">
+                <h3 className="font-display text-callout font-semibold">
                   Pending ({pendingInvites.length})
                 </h3>
                 <div className="mt-4 space-y-2">
                   {pendingInvites.length === 0 ? (
-                    <p className="text-[13px] text-muted-foreground">No pending invites.</p>
+                    <p className="text-footnote text-muted-foreground">No pending invites.</p>
                   ) : (
                     pendingInvites.map((invite: AdminInvite) => {
                       const link = `${window.location.origin}${invite.signupPath}`;
@@ -840,8 +840,8 @@ export default function AdminDashboard() {
                         >
                           <div className="flex flex-wrap items-center justify-between gap-3">
                             <div>
-                              <p className="text-[14px] font-semibold">{invite.email}</p>
-                              <p className="text-[11px] font-medium text-muted-foreground">
+                              <p className="text-body font-semibold">{invite.email}</p>
+                              <p className="text-caption font-medium text-muted-foreground">
                                 {invite.plan} · {invite.role}
                                 {invite.expiresAt
                                   ? ` · expires ${new Date(invite.expiresAt).toLocaleDateString()}`
@@ -876,12 +876,12 @@ export default function AdminDashboard() {
                 </div>
               </div>
               <div className="data-card p-6">
-                <h3 className="font-display text-lg font-semibold">Invite history</h3>
+                <h3 className="font-display text-callout font-semibold">Invite history</h3>
                 <div className="mt-4 max-h-[320px] space-y-2 overflow-y-auto">
                   {allInvites.map((invite) => (
                     <div
                       key={`hist-${invite.id}`}
-                      className="flex items-center justify-between gap-3 rounded-2xl border border-border/70 px-3 py-2 text-[12px]"
+                      className="flex items-center justify-between gap-3 rounded-2xl border border-border/70 px-3 py-2 text-caption"
                     >
                       <span className="truncate font-medium">{invite.email}</span>
                       <span className="shrink-0 font-medium text-muted-foreground">
@@ -916,8 +916,8 @@ export default function AdminDashboard() {
             </div>
             <div className="premium-surface overflow-hidden p-0">
               <div className="border-b border-border px-6 py-4">
-                <h2 className="font-display text-lg font-semibold">Scrape runs</h2>
-                <p className="text-[12px] text-muted-foreground">
+                <h2 className="font-display text-callout font-semibold">Scrape runs</h2>
+                <p className="text-caption text-muted-foreground">
                   Full error text visible to session admins.
                   {pipelineQuery.data?.orphansReconciled
                     ? ` Reconciled ${pipelineQuery.data.orphansReconciled} orphan run(s).`
@@ -928,9 +928,9 @@ export default function AdminDashboard() {
                 {pipelineQuery.isLoading ? (
                   <Skeleton className="h-40 rounded-2xl" />
                 ) : (
-                  <table className="w-full min-w-[800px] text-left text-sm">
+                  <table className="w-full min-w-[800px] text-left text-footnote">
                     <thead>
-                      <tr className="border-b border-border text-[11px] font-medium text-muted-foreground">
+                      <tr className="border-b border-border text-caption font-medium text-muted-foreground">
                         <th className="pb-3 pr-3">Source</th>
                         <th className="pb-3 pr-3">Status</th>
                         <th className="pb-3 pr-3">Found</th>
@@ -946,10 +946,10 @@ export default function AdminDashboard() {
                           <td className="py-3 pr-3">{run.status || "—"}</td>
                           <td className="py-3 pr-3 num">{run.listingsFound}</td>
                           <td className="py-3 pr-3 num">{run.listingsNew}</td>
-                          <td className="py-3 pr-3 text-[11px] text-muted-foreground">
+                          <td className="py-3 pr-3 text-caption text-muted-foreground">
                             {run.startedAt ? new Date(run.startedAt).toLocaleString() : "—"}
                           </td>
-                          <td className="max-w-[280px] truncate py-3 text-[11px] text-rose-600">
+                          <td className="max-w-[280px] truncate py-3 text-caption text-rose-600">
                             {run.errorMessage || ""}
                           </td>
                         </tr>
@@ -994,7 +994,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="grid gap-6 xl:grid-cols-3">
                   <div className="data-card p-6">
-                    <h3 className="mb-4 font-display text-lg font-semibold">Listings by source</h3>
+                    <h3 className="mb-4 font-display text-callout font-semibold">Listings by source</h3>
                     <StatBars
                       rows={analytics.listings.bySource.map((row) => ({
                         label: row.source,
@@ -1003,7 +1003,7 @@ export default function AdminDashboard() {
                     />
                   </div>
                   <div className="data-card p-6">
-                    <h3 className="mb-4 font-display text-lg font-semibold">Listings by district</h3>
+                    <h3 className="mb-4 font-display text-callout font-semibold">Listings by district</h3>
                     <StatBars
                       rows={analytics.listings.byDistrict.map((row) => ({
                         label: row.district,
@@ -1012,7 +1012,7 @@ export default function AdminDashboard() {
                     />
                   </div>
                   <div className="data-card p-6">
-                    <h3 className="mb-4 font-display text-lg font-semibold">Users by plan</h3>
+                    <h3 className="mb-4 font-display text-callout font-semibold">Users by plan</h3>
                     <StatBars
                       rows={analytics.users.byPlan.map((row) => ({
                         label: row.plan,
@@ -1023,15 +1023,15 @@ export default function AdminDashboard() {
                 </div>
               </>
             ) : (
-              <p className="text-sm text-muted-foreground">Analytics unavailable.</p>
+              <p className="text-footnote text-muted-foreground">Analytics unavailable.</p>
             )}
           </TabsContent>
 
           <TabsContent value="feedback" className="space-y-4">
             <div className="premium-surface overflow-hidden p-0">
               <div className="border-b border-border px-6 py-4">
-                <h2 className="font-display text-lg font-semibold">Feedback inbox</h2>
-                <p className="text-[12px] text-muted-foreground">
+                <h2 className="font-display text-callout font-semibold">Feedback inbox</h2>
+                <p className="text-caption text-muted-foreground">
                   Triage bugs, ideas, and data reports from the in-app widget.
                 </p>
               </div>
@@ -1039,19 +1039,19 @@ export default function AdminDashboard() {
                 {feedbackQuery.isLoading ? (
                   <Skeleton className="h-40 rounded-2xl" />
                 ) : (feedbackQuery.data?.feedback || []).length === 0 ? (
-                  <p className="text-[13px] text-muted-foreground">No feedback yet.</p>
+                  <p className="text-footnote text-muted-foreground">No feedback yet.</p>
                 ) : (
                   (feedbackQuery.data?.feedback || []).map((item) => (
                     <div key={item.id} className="rounded-2xl border border-border bg-surface p-4">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                          <p className="text-[12px] font-medium text-primary/80">
+                          <p className="text-caption font-medium text-primary/80">
                             {item.category} · {item.status}
                           </p>
-                          <p className="mt-2 text-[14px] font-medium leading-relaxed text-foreground">
+                          <p className="mt-2 text-body font-medium leading-relaxed text-foreground">
                             {item.message}
                           </p>
-                          <p className="mt-2 text-[11px] text-muted-foreground">
+                          <p className="mt-2 text-caption text-muted-foreground">
                             {item.email || "anonymous"}
                             {item.route ? ` · ${item.route}` : ""}
                             {item.createdAt
@@ -1088,8 +1088,8 @@ export default function AdminDashboard() {
           <TabsContent value="dealers" className="space-y-4">
             <div className="premium-surface overflow-hidden p-0">
               <div className="border-b border-border px-6 py-4">
-                <h2 className="font-display text-lg font-semibold">Dealer claims</h2>
-                <p className="text-[12px] text-muted-foreground">
+                <h2 className="font-display text-callout font-semibold">Dealer claims</h2>
+                <p className="text-caption text-muted-foreground">
                   Verify pending yards without the separate dealer admin token.
                 </p>
               </div>
@@ -1097,11 +1097,11 @@ export default function AdminDashboard() {
                 {dealersQuery.isLoading ? (
                   <Skeleton className="h-40 rounded-2xl" />
                 ) : (dealersQuery.data?.dealers || []).length === 0 ? (
-                  <p className="text-[13px] text-muted-foreground">No dealer profiles yet.</p>
+                  <p className="text-footnote text-muted-foreground">No dealer profiles yet.</p>
                 ) : (
-                  <table className="w-full min-w-[760px] text-left text-sm">
+                  <table className="w-full min-w-[760px] text-left text-footnote">
                     <thead>
-                      <tr className="border-b border-border text-[11px] font-medium text-muted-foreground">
+                      <tr className="border-b border-border text-caption font-medium text-muted-foreground">
                         <th className="pb-3 pr-3">Dealer</th>
                         <th className="pb-3 pr-3">Contact</th>
                         <th className="pb-3 pr-3">Status</th>
@@ -1113,14 +1113,14 @@ export default function AdminDashboard() {
                         <tr key={dealer.id} className="border-b border-border/50">
                           <td className="py-3 pr-3">
                             <p className="font-semibold">{dealer.displayName}</p>
-                            <p className="text-[11px] text-muted-foreground">
+                            <p className="text-caption text-muted-foreground">
                               {dealer.sellerNamePattern || dealer.claimedUrl || "—"}
                             </p>
                           </td>
-                          <td className="py-3 pr-3 text-[12px] text-muted-foreground">
+                          <td className="py-3 pr-3 text-caption text-muted-foreground">
                             {dealer.contactEmail || dealer.contactPhone || "—"}
                           </td>
-                          <td className="py-3 pr-3 text-[11px] font-medium">
+                          <td className="py-3 pr-3 text-caption font-medium">
                             {dealer.status}
                           </td>
                           <td className="py-3">
@@ -1134,7 +1134,7 @@ export default function AdminDashboard() {
                                 Verify
                               </Button>
                             ) : (
-                              <span className="text-[11px] text-muted-foreground">Verified</span>
+                              <span className="text-caption text-muted-foreground">Verified</span>
                             )}
                           </td>
                         </tr>
@@ -1148,7 +1148,7 @@ export default function AdminDashboard() {
 
           <TabsContent value="permits" className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
             <div className="premium-surface p-6">
-              <h2 className="font-display text-lg font-semibold">Upsert permit price</h2>
+              <h2 className="font-display text-callout font-semibold">Upsert permit price</h2>
               <form
                 className="mt-4 space-y-3"
                 onSubmit={(event) => {
@@ -1188,7 +1188,7 @@ export default function AdminDashboard() {
               </form>
             </div>
             <div className="data-card p-6">
-              <h3 className="font-display text-lg font-semibold">Current permits</h3>
+              <h3 className="font-display text-callout font-semibold">Current permits</h3>
               <div className="mt-4 space-y-2">
                 {(permitsQuery.data?.permits || []).map((permit) => (
                   <div
@@ -1196,16 +1196,16 @@ export default function AdminDashboard() {
                     className="flex items-center justify-between rounded-xl border border-border bg-surface px-3.5 py-3"
                   >
                     <div>
-                      <p className="text-[13px] font-semibold">{permit.permitName}</p>
-                      <p className="text-[11px] text-muted-foreground">{permit.permitType}</p>
+                      <p className="text-footnote font-semibold">{permit.permitName}</p>
+                      <p className="text-caption text-muted-foreground">{permit.permitType}</p>
                     </div>
-                    <p className="num text-[13px] font-semibold">
+                    <p className="num text-footnote font-semibold">
                       {formatPrice(permit.marketPriceLkr)}
                     </p>
                   </div>
                 ))}
                 {!permitsQuery.isLoading && (permitsQuery.data?.permits || []).length === 0 ? (
-                  <p className="text-[13px] text-muted-foreground">No permits configured.</p>
+                  <p className="text-footnote text-muted-foreground">No permits configured.</p>
                 ) : null}
               </div>
             </div>
@@ -1224,11 +1224,11 @@ export default function AdminDashboard() {
           <TabsContent value="system" className="space-y-6">
             <div className="grid gap-6 xl:grid-cols-2">
               <div className="data-card p-6">
-                <h2 className="font-display text-lg font-semibold">Security & config</h2>
+                <h2 className="font-display text-callout font-semibold">Security & config</h2>
                 {systemQuery.isLoading ? (
                   <Skeleton className="mt-4 h-40 rounded-2xl" />
                 ) : systemQuery.data ? (
-                  <ul className="mt-4 space-y-2 text-[13px]">
+                  <ul className="mt-4 space-y-2 text-footnote">
                     {[
                       ["Database", systemQuery.data.databaseOk ? "ok" : "down"],
                       ["App access enforced", String(systemQuery.data.flags.appAccessEnforced)],
@@ -1252,8 +1252,8 @@ export default function AdminDashboard() {
                 ) : null}
               </div>
               <div className="data-card p-6">
-                <h2 className="font-display text-lg font-semibold">Ops tools</h2>
-                <p className="mt-2 text-[13px] text-muted-foreground">
+                <h2 className="font-display text-callout font-semibold">Ops tools</h2>
+                <p className="mt-2 text-footnote text-muted-foreground">
                   Clear the 1-hour market stats cache so summary / district endpoints recompute
                   immediately after data changes.
                 </p>
@@ -1266,17 +1266,17 @@ export default function AdminDashboard() {
                   Clear stats cache
                 </Button>
                 {systemQuery.data?.statsCacheKeys?.length ? (
-                  <p className="mt-3 text-[11px] text-muted-foreground">
+                  <p className="mt-3 text-caption text-muted-foreground">
                     Keys: {systemQuery.data.statsCacheKeys.join(", ")}
                   </p>
                 ) : (
-                  <p className="mt-3 text-[11px] text-muted-foreground">No cache rows currently.</p>
+                  <p className="mt-3 text-caption text-muted-foreground">No cache rows currently.</p>
                 )}
               </div>
             </div>
             <div className="data-card p-6">
-              <h2 className="font-display text-lg font-semibold">Enrichment providers</h2>
-              <p className="mt-2 text-[13px] text-muted-foreground">
+              <h2 className="font-display text-callout font-semibold">Enrichment providers</h2>
+              <p className="mt-2 text-footnote text-muted-foreground">
                 Third-party research adapters. Keys stay on the backend. A failed provider must
                 never take down listing pages.
               </p>
@@ -1287,11 +1287,11 @@ export default function AdminDashboard() {
                   {systemQuery.data.providers.map((provider) => (
                     <li
                       key={provider.id}
-                      className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-3 py-2 text-[13px]"
+                      className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-3 py-2 text-footnote"
                     >
                       <span className="min-w-0">
                         <span className="block font-semibold text-foreground">{provider.label}</span>
-                        <span className="block text-[11px] text-muted-foreground">
+                        <span className="block text-caption text-muted-foreground">
                           {provider.lastRun?.endedAt
                             ? `Last run ${new Date(provider.lastRun.endedAt).toLocaleString()}`
                             : "No ingest run recorded"}
@@ -1304,7 +1304,7 @@ export default function AdminDashboard() {
                   ))}
                 </ul>
               ) : (
-                <p className="mt-4 text-[13px] text-muted-foreground">Provider health unavailable.</p>
+                <p className="mt-4 text-footnote text-muted-foreground">Provider health unavailable.</p>
               )}
               <Button
                 type="button"
@@ -1315,7 +1315,7 @@ export default function AdminDashboard() {
               >
                 {revcarPilotMutation.isPending ? "Running spec pilot…" : "Run RevCarData 100-record pilot"}
               </Button>
-              <p className="mt-2 text-[11px] text-muted-foreground">
+              <p className="mt-2 text-caption text-muted-foreground">
                 Match-rate sample only. Foreign MSRP is never written into LKR fair market value.
               </p>
             </div>

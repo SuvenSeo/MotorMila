@@ -181,10 +181,10 @@ export default function SellYourCar() {
         <section className="mx-auto max-w-xl px-5 py-16 text-center">
           <div className="liquid-panel rounded-[2rem] p-10">
             <CheckCircle2 className="mx-auto h-14 w-14 text-primary-bright" aria-hidden />
-            <h2 className="mt-5 font-display text-2xl font-semibold tracking-tight text-foreground">
+            <h2 className="mt-5 font-display text-title2 font-semibold tracking-tight text-foreground">
               {t("sell.doneTitle", "Listing submitted!")}
             </h2>
-            <p className="mx-auto mt-3 max-w-sm text-[13px] leading-relaxed text-muted-foreground">
+            <p className="mx-auto mt-3 max-w-sm text-footnote leading-relaxed text-muted-foreground">
               {t(
                 "sell.doneBody",
                 "Your vehicle is queued for review. We'll publish it to the market shortly.",
@@ -218,7 +218,7 @@ export default function SellYourCar() {
         <section className="mx-auto max-w-3xl px-5 pb-20">
           {!isAuthenticated && (
             <div className="liquid-panel mb-6 rounded-2xl border border-primary/25 bg-primary/5 px-5 py-4">
-              <p className="text-[13px] leading-relaxed text-foreground">
+              <p className="text-footnote leading-relaxed text-foreground">
                 {t("sell.signInNotice", "You need to sign in to publish a listing.")}{" "}
                 <button
                   type="button"
@@ -233,7 +233,7 @@ export default function SellYourCar() {
 
           <form onSubmit={onSubmit} className="liquid-panel space-y-8 rounded-[2rem] p-6 sm:p-9">
             {error && (
-              <div role="alert" className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-[13px] text-red-200">
+              <div role="alert" className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-footnote text-red-200">
                 {error}
               </div>
             )}
@@ -254,7 +254,7 @@ export default function SellYourCar() {
                     required
                     value={form.make}
                     onChange={(e) => setField("make", e.target.value)}
-                    className="h-11 w-full rounded-full border border-border/50 bg-surface/70 px-4 text-sm text-foreground focus:ring-2 focus:ring-primary/20"
+                    className="h-11 w-full rounded-full border border-border/50 bg-surface/70 px-4 text-footnote text-foreground focus:ring-2 focus:ring-primary/20"
                   >
                     <option value="">{t("sell.selectMake", "Select make")}</option>
                     {MAKES.map((m) => (
@@ -283,7 +283,7 @@ export default function SellYourCar() {
                   <select
                     value={form.year}
                     onChange={(e) => setField("year", e.target.value)}
-                    className="h-11 w-full rounded-full border border-border/50 bg-surface/70 px-4 text-sm text-foreground"
+                    className="h-11 w-full rounded-full border border-border/50 bg-surface/70 px-4 text-footnote text-foreground"
                   >
                     <option value="">{t("sell.selectYear", "Select year")}</option>
                     {Array.from({ length: 40 }, (_, i) => currentYear - i).map((y) => (
@@ -323,7 +323,7 @@ export default function SellYourCar() {
                   <select
                     value={form.fuelType}
                     onChange={(e) => setField("fuelType", e.target.value)}
-                    className="h-11 w-full rounded-full border border-border/50 bg-surface/70 px-4 text-sm text-foreground"
+                    className="h-11 w-full rounded-full border border-border/50 bg-surface/70 px-4 text-footnote text-foreground"
                   >
                     {FUEL_TYPES.map((f) => <option key={f} value={f}>{f}</option>)}
                   </select>
@@ -333,7 +333,7 @@ export default function SellYourCar() {
                   <select
                     value={form.transmission}
                     onChange={(e) => setField("transmission", e.target.value)}
-                    className="h-11 w-full rounded-full border border-border/50 bg-surface/70 px-4 text-sm text-foreground"
+                    className="h-11 w-full rounded-full border border-border/50 bg-surface/70 px-4 text-footnote text-foreground"
                   >
                     {TRANSMISSIONS.map((tm) => <option key={tm} value={tm}>{tm}</option>)}
                   </select>
@@ -343,7 +343,7 @@ export default function SellYourCar() {
                   <select
                     value={form.condition}
                     onChange={(e) => setField("condition", e.target.value)}
-                    className="h-11 w-full rounded-full border border-border/50 bg-surface/70 px-4 text-sm text-foreground"
+                    className="h-11 w-full rounded-full border border-border/50 bg-surface/70 px-4 text-footnote text-foreground"
                   >
                     {CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
@@ -380,7 +380,7 @@ export default function SellYourCar() {
                   <select
                     value={form.district}
                     onChange={(e) => setField("district", e.target.value)}
-                    className="h-11 w-full rounded-full border border-border/50 bg-surface/70 px-4 text-sm text-foreground"
+                    className="h-11 w-full rounded-full border border-border/50 bg-surface/70 px-4 text-footnote text-foreground"
                   >
                     <option value="">{t("sell.selectDistrict", "Select district")}</option>
                     {DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
@@ -427,12 +427,12 @@ export default function SellYourCar() {
                       <button
                         type="button"
                         onClick={() => removeImage(i)}
-                        className="absolute right-1.5 top-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100"
+                        className="absolute right-1.5 top-1.5 rounded-full bg-black/70 px-2 py-0.5 text-caption text-white opacity-0 transition-opacity group-hover:opacity-100"
                       >
                         {t("sell.remove", "Remove")}
                       </button>
                       {i === 0 && (
-                        <span className="absolute bottom-1.5 left-1.5 rounded-full bg-primary px-2 py-0.5 text-[9px] font-bold text-primary-foreground">
+                        <span className="absolute bottom-1.5 left-1.5 rounded-full bg-primary px-2 py-0.5 text-caption font-bold text-primary-foreground">
                           {t("sell.cover", "Cover")}
                         </span>
                       )}
@@ -464,7 +464,7 @@ export default function SellYourCar() {
                     "sell.descPh",
                     "Service history, condition, why you're selling, accessories, anything buyers should know…",
                   )}
-                  className="w-full rounded-3xl border border-border/50 bg-surface/70 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-3xl border border-border/50 bg-surface/70 px-4 py-3 text-footnote text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20"
                 />
               </label>
             </fieldset>

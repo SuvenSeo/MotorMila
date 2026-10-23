@@ -81,7 +81,7 @@ export function TrialCta({ className, label }: { className?: string; label?: str
     return (
       <Link
         to={TRIAL_OFFER.ctaTo}
-        className={className ?? "inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-[13px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98]"}
+        className={className ?? "inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-footnote font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98]"}
       >
         {label ?? t("pricing.startTrial", TRIAL_OFFER.cta)}
         <ArrowRight aria-hidden className="h-4 w-4" />
@@ -91,7 +91,7 @@ export function TrialCta({ className, label }: { className?: string; label?: str
 
   if (done) {
     return (
-      <p className="inline-flex h-11 items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-6 text-[13px] font-semibold text-emerald-700 dark:text-emerald-400">
+      <p className="inline-flex h-11 items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-6 text-footnote font-semibold text-emerald-700 dark:text-emerald-400">
         <Check aria-hidden className="h-4 w-4" />
         {t("shell.pricing.done", "Done — we'll email you when Pro launches.")}
       </p>
@@ -128,13 +128,13 @@ export function TrialCta({ className, label }: { className?: string; label?: str
         onChange={(e) => setEmail(e.target.value)}
         placeholder={t("shell.pricing.emailPlaceholder", "Your email")}
         aria-label={t("shell.pricing.emailAria", "Email for the Pro launch")}
-        className="h-11 min-w-0 flex-1 rounded-full border border-border bg-card px-4 text-[13px] text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none"
+        className="h-11 min-w-0 flex-1 rounded-full border border-border bg-card px-4 text-footnote text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none"
       />
       <ParticleButton
         ref={burstRef}
         type="submit"
         disabled={sending}
-        className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-primary px-5 text-[13px] font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60"
+        className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-primary px-5 text-footnote font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60"
       >
         {sending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : null}
         {t("shell.pro.notify", "Notify me")}
@@ -186,7 +186,7 @@ export function TrialCountdownBanner() {
         role="status"
         className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/25 bg-primary/[0.07] px-5 py-4"
       >
-        <p className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
+        <p className="flex items-center gap-2 text-footnote font-semibold text-foreground">
           <Timer aria-hidden className="h-4 w-4 text-primary" />
           {PRO_FREE_DURING_BETA
             ? t("shell.trial.beta", "You have Pro access during the beta. Nothing is charged; we'll email you before anything changes.")
@@ -206,11 +206,11 @@ export function TrialCountdownBanner() {
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/25 bg-primary/[0.07] px-5 py-4">
-      <p className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
+      <p className="flex items-center gap-2 text-footnote font-semibold text-foreground">
         <Sparkles aria-hidden className="h-4 w-4 text-primary" />
         {t("shell.pricing.notifyBanner", "MotorMila is free during beta. Pro is coming soon — get an email when it launches.")}
       </p>
-      <TrialCta className="inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-[12px] font-semibold text-primary-foreground no-underline transition-all hover:bg-primary/90" />
+      <TrialCta className="inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-caption font-semibold text-primary-foreground no-underline transition-all hover:bg-primary/90" />
     </div>
   );
 }
@@ -225,18 +225,18 @@ function ManualPayPanel({ plan, instructions, onClose }: { plan: string; instruc
         <MessageCircle aria-hidden className="h-3.5 w-3.5" />
         Manual pay — {plan}
       </p>
-      <h3 className="text-[15px] font-bold text-foreground">
+      <h3 className="text-body font-bold text-foreground">
         Bank transfer or KOKO · activated within {instructions.activationWindow}
       </h3>
       <ol className="mt-4 space-y-2.5">
         {instructions.steps.map((step) => (
-          <li key={step} className="flex gap-2.5 rounded-xl border border-border bg-card/60 p-3 text-[12px] leading-relaxed text-foreground/85">
+          <li key={step} className="flex gap-2.5 rounded-xl border border-border bg-card/60 p-3 text-caption leading-relaxed text-foreground/85">
             <Check aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
             <span>{step}</span>
           </li>
         ))}
       </ol>
-      <div className="mt-4 grid gap-2 text-[12px] text-muted-foreground sm:grid-cols-2">
+      <div className="mt-4 grid gap-2 text-caption text-muted-foreground sm:grid-cols-2">
         <p className="rounded-xl border border-border bg-surface p-3"><span className="font-bold text-foreground">Bank: </span>{instructions.bankDetails}</p>
         <p className="rounded-xl border border-border bg-surface p-3"><span className="font-bold text-foreground">KOKO: </span>{instructions.kokoNote}</p>
       </div>
@@ -246,7 +246,7 @@ function ManualPayPanel({ plan, instructions, onClose }: { plan: string; instruc
             href={whatsappLink}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-[12px] font-semibold text-primary-foreground no-underline"
+            className="inline-flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-caption font-semibold text-primary-foreground no-underline"
           >
             <MessageCircle aria-hidden className="h-4 w-4" />
             WhatsApp us ({instructions.activationWindow} activation)
@@ -254,14 +254,14 @@ function ManualPayPanel({ plan, instructions, onClose }: { plan: string; instruc
         )}
         <a
           href={`mailto:${instructions.contactEmail}?subject=Motormila%20${encodeURIComponent(plan)}%20plan%20upgrade`}
-          className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-[12px] font-semibold text-foreground no-underline"
+          className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-caption font-semibold text-foreground no-underline"
         >
           Email {instructions.contactEmail}
         </a>
         <button
           type="button"
           onClick={onClose}
-          className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-[12px] font-semibold text-muted-foreground"
+          className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-caption font-semibold text-muted-foreground"
         >
           Dismiss
         </button>
@@ -281,7 +281,7 @@ const COMPARE_ROW_DEFS = [
 ] as const;
 
 const CTA_CLASS = (highlight?: boolean) =>
-  `mt-6 inline-flex h-10 items-center justify-center rounded-full px-4 text-[12px] font-semibold no-underline transition-all active:scale-[0.98] ${
+  `mt-6 inline-flex h-10 items-center justify-center rounded-full px-4 text-caption font-semibold no-underline transition-all active:scale-[0.98] ${
     highlight
       ? "bg-primary text-primary-foreground hover:bg-primary/90"
       : "border border-border bg-surface text-foreground hover:border-primary/35"
@@ -317,9 +317,9 @@ function PayherePanel({
       <p className="section-eyebrow mb-2 inline-flex items-center gap-2">
         <CreditCard aria-hidden className="h-3.5 w-3.5" />
         Dealer {tier?.name} · {formatLkr(amount)} / {period === "yearly" ? "year" : "month"}
-        {sandbox ? <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-700 dark:text-amber-400">Test mode</span> : null}
+        {sandbox ? <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-caption text-amber-700 dark:text-amber-400">Test mode</span> : null}
       </p>
-      <p className="text-[13px] text-foreground/85">
+      <p className="text-footnote text-foreground/85">
         You'll be sent to PayHere to pay by card, Genie, FriMi or eZcash. MotorMila never sees your card details.
       </p>
       <form
@@ -337,7 +337,7 @@ function PayherePanel({
           }
         }}
       >
-        <label className="flex min-w-[220px] flex-1 flex-col gap-1.5 text-[12px] font-semibold text-foreground">
+        <label className="flex min-w-[220px] flex-1 flex-col gap-1.5 text-caption font-semibold text-foreground">
           Mobile number (PayHere needs it for the receipt)
           <input
             type="tel"
@@ -347,11 +347,11 @@ function PayherePanel({
             placeholder="077 123 4567"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="h-11 rounded-xl border border-border bg-card px-3.5 text-[13px] font-normal text-foreground focus:border-primary/50 focus:outline-none"
+            className="h-11 rounded-xl border border-border bg-card px-3.5 text-footnote font-normal text-foreground focus:border-primary/50 focus:outline-none"
           />
         </label>
         {recurringAvailable && (
-          <label className="flex items-center gap-2 text-[12px] text-foreground/85">
+          <label className="flex items-center gap-2 text-caption text-foreground/85">
             <input type="checkbox" checked={recurring} onChange={(e) => setRecurring(e.target.checked)} className="h-4 w-4 accent-[hsl(var(--primary))]" />
             Renew automatically (cancel any time)
           </label>
@@ -359,18 +359,18 @@ function PayherePanel({
         <button
           type="submit"
           disabled={busy}
-          className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-[13px] font-semibold text-primary-foreground disabled:opacity-60"
+          className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-footnote font-semibold text-primary-foreground disabled:opacity-60"
         >
           {busy ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : null}
           Continue to PayHere
         </button>
       </form>
-      {error && <p role="alert" className="mt-3 text-[12px] font-semibold text-destructive">{error}</p>}
+      {error && <p role="alert" className="mt-3 text-caption font-semibold text-destructive">{error}</p>}
       <div className="mt-4 flex flex-wrap gap-2">
-        <button type="button" onClick={onManual} className="inline-flex h-9 items-center rounded-full border border-border bg-card px-4 text-[12px] font-semibold text-foreground">
+        <button type="button" onClick={onManual} className="inline-flex h-9 items-center rounded-full border border-border bg-card px-4 text-caption font-semibold text-foreground">
           Pay by bank transfer / KOKO instead
         </button>
-        <button type="button" onClick={onClose} className="inline-flex h-9 items-center rounded-full border border-border bg-card px-4 text-[12px] font-semibold text-muted-foreground">
+        <button type="button" onClick={onClose} className="inline-flex h-9 items-center rounded-full border border-border bg-card px-4 text-caption font-semibold text-muted-foreground">
           Cancel
         </button>
       </div>
@@ -440,7 +440,7 @@ function DealerPlans() {
         <div>
           <p className="section-eyebrow mb-3">Dealer plans</p>
           <h2 id="dealer-plans-heading" className="display-2 text-foreground">Priced by the size of your stock.</h2>
-          <p className="mt-2 text-[13px] text-muted-foreground">{ANNUAL_SAVE_NUDGE.dealer}. Market comparisons are shown as medians and ranges, never copies of other sellers' ads.</p>
+          <p className="mt-2 text-footnote text-muted-foreground">{ANNUAL_SAVE_NUDGE.dealer}. Market comparisons are shown as medians and ranges, never copies of other sellers' ads.</p>
         </div>
         <div role="radiogroup" aria-label="Billing period" className="inline-flex rounded-full border border-border bg-card p-1">
           {(["monthly", "yearly"] as const).map((p) => (
@@ -450,7 +450,7 @@ function DealerPlans() {
               role="radio"
               aria-checked={period === p}
               onClick={() => setPeriod(p)}
-              className={`h-9 rounded-full px-4 text-[12px] font-semibold ${period === p ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+              className={`h-9 rounded-full px-4 text-caption font-semibold ${period === p ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
             >
               {p === "monthly" ? "Monthly" : "Yearly (2 months free)"}
             </button>
@@ -460,15 +460,15 @@ function DealerPlans() {
       <div className="grid gap-5 md:grid-cols-3">
         {DEALER_TIERS.map((tier) => (
           <div key={tier.code} className={`flex flex-col rounded-2xl border p-6 ${tier.highlight ? "border-primary/40 bg-primary/[0.07] shadow-soft" : "border-border bg-card/50"}`}>
-            <p className="text-[12px] font-semibold text-muted-foreground">Dealer {tier.name}</p>
+            <p className="text-caption font-semibold text-muted-foreground">Dealer {tier.name}</p>
             <div className="mt-3 flex items-baseline gap-1.5">
-              <span className="num text-2xl font-bold text-foreground">{formatLkr(PLAN_PRICES[tier.code][period])}</span>
-              <span className="text-[12px] text-muted-foreground">/{period === "yearly" ? "yr" : "mo"}</span>
+              <span className="num text-title2 font-bold text-foreground">{formatLkr(PLAN_PRICES[tier.code][period])}</span>
+              <span className="text-caption text-muted-foreground">/{period === "yearly" ? "yr" : "mo"}</span>
             </div>
-            <p className="mt-1 text-[11px] font-medium text-muted-foreground">{tier.stock}</p>
+            <p className="mt-1 text-caption font-medium text-muted-foreground">{tier.stock}</p>
             <ul className="mt-5 flex-1 space-y-2.5 border-t border-border pt-5">
               {tier.features.map((f) => (
-                <li key={f} className="flex gap-2 text-[12px] leading-snug text-foreground/85">
+                <li key={f} className="flex gap-2 text-caption leading-snug text-foreground/85">
                   <Check aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
                   <span>{f}</span>
                 </li>
@@ -481,7 +481,7 @@ function DealerPlans() {
           </div>
         ))}
       </div>
-      <p className="mt-4 text-[11px] text-muted-foreground">
+      <p className="mt-4 text-caption text-muted-foreground">
         {config?.enabled ? "Card and wallet payments by PayHere." : "Pay by bank transfer or KOKO; card payments by PayHere are coming soon."} Prices in LKR. Cancel any time; your plan runs to the end of the paid period.
       </p>
       {payhere && config && (
@@ -548,7 +548,7 @@ export default function Pricing() {
             <TrialCta />
             <Link
               to="/pro-preview"
-              className="inline-flex h-11 items-center rounded-full border border-border bg-card px-6 text-[13px] font-semibold text-foreground no-underline transition-all hover:border-primary/40 hover:bg-surface active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="inline-flex h-11 items-center rounded-full border border-border bg-card px-6 text-footnote font-semibold text-foreground no-underline transition-all hover:border-primary/40 hover:bg-surface active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               {t("shell.pricing.whatPro", "What Pro will include")}
             </Link>
@@ -570,20 +570,20 @@ export default function Pricing() {
                   tier.id === "free" ? "border-primary/40 bg-primary/[0.07] shadow-soft" : "border-border bg-card/50"
                 }`}
               >
-                <p className="text-[12px] font-semibold text-muted-foreground">{tier.name}</p>
+                <p className="text-caption font-semibold text-muted-foreground">{tier.name}</p>
                 <div className="mt-3 flex items-baseline gap-1.5">
-                  <span className="num text-2xl font-bold text-foreground">{tier.priceLkr}</span>
-                  {tier.priceNote ? <span className="text-[12px] text-muted-foreground">{tier.priceNote}</span> : null}
+                  <span className="num text-title2 font-bold text-foreground">{tier.priceLkr}</span>
+                  {tier.priceNote ? <span className="text-caption text-muted-foreground">{tier.priceNote}</span> : null}
                 </div>
                 {tier.id === "free" ? (
-                  <p className="mt-1 text-[11px] font-medium text-muted-foreground">{t("shell.pro.freeBeta", "Free during beta")}</p>
+                  <p className="mt-1 text-caption font-medium text-muted-foreground">{t("shell.pro.freeBeta", "Free during beta")}</p>
                 ) : tier.annualNote ? (
-                  <p className="mt-1 text-[11px] font-medium text-muted-foreground">{tier.annualNote}</p>
+                  <p className="mt-1 text-caption font-medium text-muted-foreground">{tier.annualNote}</p>
                 ) : null}
-                <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">{tier.audience}</p>
+                <p className="mt-3 text-caption leading-relaxed text-muted-foreground">{tier.audience}</p>
                 <ul className="mt-5 flex-1 space-y-2.5 border-t border-border pt-5">
                   {tier.features.map((feature) => (
-                    <li key={feature} className="flex gap-2 text-[12px] leading-snug text-foreground/85">
+                    <li key={feature} className="flex gap-2 text-caption leading-snug text-foreground/85">
                       <Check aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
                       <span>{feature}</span>
                     </li>
@@ -609,7 +609,7 @@ export default function Pricing() {
             {t("shell.pricing.compareTitle", "Free and Pro side by side.")}
           </h2>
           <div className="overflow-x-auto rounded-2xl border border-border lg:max-w-4xl">
-            <table className="w-full min-w-[420px] text-left text-[12px]">
+            <table className="w-full min-w-[420px] text-left text-caption">
               <thead>
                 <tr className="bg-surface">
                   <th className="px-4 py-3 font-semibold tracking-tight text-muted-foreground">{t("pricing.capability", "Capability")}</th>
@@ -653,8 +653,8 @@ export default function Pricing() {
           <div className="grid gap-4 md:grid-cols-2">
             {PRICING_FAQ.map((item) => (
               <div key={item.q} className="rounded-2xl border border-border bg-card/40 p-5">
-                <h3 className="text-[14px] font-bold text-foreground">{item.q}</h3>
-                <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">{item.a}</p>
+                <h3 className="text-body font-bold text-foreground">{item.q}</h3>
+                <p className="mt-2 text-footnote leading-relaxed text-muted-foreground">{item.a}</p>
               </div>
             ))}
           </div>
@@ -678,7 +678,7 @@ export default function Pricing() {
             aria-expanded={dealersOpen}
             aria-controls="for-dealers-panel"
             onClick={() => setDealersOpen((o) => !o)}
-            className="flex w-full cursor-pointer items-center justify-between gap-3 text-left text-[15px] font-bold text-foreground"
+            className="flex w-full cursor-pointer items-center justify-between gap-3 text-left text-body font-bold text-foreground"
           >
             <span className="inline-flex items-center gap-2">
               <Users aria-hidden className="h-4 w-4 text-primary" />
@@ -686,7 +686,7 @@ export default function Pricing() {
             </span>
             <span className="inline-flex items-center gap-2">
               {!dealersOpen ? (
-                <span className="text-[12px] font-medium text-muted-foreground">
+                <span className="text-caption font-medium text-muted-foreground">
                   {t("shell.pricing.forDealersHint", "Plans priced by stock size, from LKR 2,990/mo")}
                 </span>
               ) : null}
@@ -712,8 +712,8 @@ export default function Pricing() {
             <div className="grid gap-4 md:grid-cols-3">
               {DEALER_FAQ.map((item) => (
                 <div key={item.q} className="rounded-2xl border border-border bg-card/40 p-5">
-                  <h3 className="text-[14px] font-bold text-foreground">{item.q}</h3>
-                  <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">{item.a}</p>
+                  <h3 className="text-body font-bold text-foreground">{item.q}</h3>
+                  <p className="mt-2 text-footnote leading-relaxed text-muted-foreground">{item.a}</p>
                 </div>
               ))}
             </div>
@@ -729,13 +729,13 @@ export default function Pricing() {
         >
           <div>
             <p className="section-eyebrow mb-2">{t("common.pro", "Pro")}</p>
-            <h3 className="text-lg font-bold text-foreground">{t("shell.pricing.ctaTitle", "Get an email when Pro launches.")}</h3>
+            <h3 className="text-callout font-bold text-foreground">{t("shell.pricing.ctaTitle", "Get an email when Pro launches.")}</h3>
           </div>
           <div className="flex flex-wrap gap-2">
-            <TrialCta className="inline-flex h-10 items-center rounded-full bg-primary px-5 text-[12px] font-semibold text-primary-foreground no-underline transition-all hover:bg-primary/90" />
+            <TrialCta className="inline-flex h-10 items-center rounded-full bg-primary px-5 text-caption font-semibold text-primary-foreground no-underline transition-all hover:bg-primary/90" />
             <a
               href={BRAND.contactMailto}
-              className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-[12px] font-semibold text-foreground no-underline"
+              className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-caption font-semibold text-foreground no-underline"
             >
               {t("common.messageUs", "Message us")}
             </a>

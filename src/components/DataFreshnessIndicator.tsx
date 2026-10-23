@@ -57,8 +57,8 @@ export function DataFreshnessIndicator({
       >
         <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary-bright" aria-hidden="true" />
         <div className="min-w-0">
-          <p className="text-[12px] font-semibold text-primary-bright">{freshness.staleNotice}</p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
+          <p className="text-caption font-semibold text-primary-bright">{freshness.staleNotice}</p>
+          <p className="mt-0.5 text-caption text-muted-foreground">
             {freshness.dataAsOfLabel} · Updated {freshness.relativeLabel}
             {freshness.listingAt && freshness.statsAt && freshness.listingAt !== freshness.statsAt ? (
               <span className="ml-1">· stats refreshed {freshness.statsAt ? formatStatsNote(freshness, now) : "pending"}</span>
@@ -91,7 +91,7 @@ export function DataFreshnessIndicator({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[12px] font-medium",
+        "inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-caption font-medium",
         tone.border,
         tone.text,
         className,

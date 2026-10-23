@@ -38,13 +38,13 @@ export function DistrictVelocityList() {
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
-      <p className="text-[12px] font-semibold text-muted-foreground">
+      <p className="text-caption font-semibold text-muted-foreground">
         {t("districtVelocity.eyebrow", "Market pulse")}
       </p>
-      <h3 className="mt-1 font-display text-xl font-semibold text-foreground">
+      <h3 className="mt-1 font-display text-title3 font-semibold text-foreground">
         {t("districtVelocity.title", "District sales velocity")}
       </h3>
-      <p className="mt-1 text-[13px] text-muted-foreground">
+      <p className="mt-1 text-footnote text-muted-foreground">
         {t("districtVelocity.sub", "Active listings · top 8 districts")}
       </p>
       {isLoading ? (

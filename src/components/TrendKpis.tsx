@@ -74,17 +74,17 @@ export function TrendKpis({ points }: { points: PriceTrendPoint[] }) {
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label={t("trendKpis.aria", "Trend key figures")}>
       {cards.map((c) => (
         <div key={c.label} className="rounded-2xl border border-border bg-card p-4 shadow-soft">
-          <p className="text-[12px] font-semibold text-muted-foreground">{c.label}</p>
+          <p className="text-caption font-semibold text-muted-foreground">{c.label}</p>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <p className="num text-[1.5rem] font-bold leading-tight tracking-tight text-foreground">{c.animated ?? c.value}</p>
+            <p className="num text-title2 font-bold leading-tight tracking-tight text-foreground">{c.animated ?? c.value}</p>
             {c.delta && (
-              <span className={cn("inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-bold", TONE_STYLES[tone].chip)}>
+              <span className={cn("inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-caption font-bold", TONE_STYLES[tone].chip)}>
                 <DeltaIcon className="h-3 w-3" aria-hidden />
                 {tone === "stable" ? `<1%` : `${Math.abs(kpis.changePct).toFixed(1)}%`}
               </span>
             )}
           </div>
-          <p className="mt-0.5 text-[11px] font-medium text-muted-foreground">{c.sub}</p>
+          <p className="mt-0.5 text-caption font-medium text-muted-foreground">{c.sub}</p>
           <ChartContainer config={chartConfig} className="mt-2 aspect-auto h-14 w-full" aria-hidden>
             <AreaChart data={kpis.spark} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
               {kpis.domain && <YAxis hide domain={kpis.domain} />}

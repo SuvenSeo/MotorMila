@@ -69,7 +69,7 @@ function Field({
   const id = useId();
   return (
     <div className={className}>
-      <label htmlFor={id} className="text-[12.5px] font-medium text-foreground">
+      <label htmlFor={id} className="text-footnote font-medium text-foreground">
         {label}
       </label>
       <input
@@ -77,7 +77,7 @@ function Field({
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 h-10 w-full rounded-xl border border-border bg-background px-3 text-[14px] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="mt-1 h-10 w-full rounded-xl border border-border bg-background px-3 text-body text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
       />
     </div>
   );
@@ -208,7 +208,7 @@ export default function SafeTransfer() {
       <PageBody narrow className="space-y-8">
         <div role="note" className="flex items-start gap-3 rounded-[1.5rem] border border-amber-500/30 bg-amber-400/10 p-4">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden />
-          <p className="text-[13.5px] leading-relaxed text-foreground">
+          <p className="text-footnote leading-relaxed text-foreground">
             {t(
               "transfer.strictNotice",
               "From 1 December 2026 the Department of Motor Traffic says it will strictly enforce the rule that ownership transfers are submitted within 14 days of sale. Until the transfer is registered, the seller can be held liable for the vehicle. Rules and fees can change, so check with the DMT before you rely on any figure here.",
@@ -219,17 +219,17 @@ export default function SafeTransfer() {
         {/* Checklist */}
         <section aria-labelledby="checklist-title" className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 id="checklist-title" className="text-[16px] font-semibold text-foreground">
+            <h2 id="checklist-title" className="text-body font-semibold text-foreground">
               {t("transfer.checklist", "Transfer checklist")}
             </h2>
-            <p className="num text-[13px] text-muted-foreground" aria-live="polite">
+            <p className="num text-footnote text-muted-foreground" aria-live="polite">
               {t("transfer.progress", "{done} of {total} done", { done, total })}
             </p>
           </div>
           <div className="mt-4 space-y-6">
             {CHECKLIST.map((phase) => (
               <fieldset key={phase.phase}>
-                <legend className="text-[13px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{phase.phase}</legend>
+                <legend className="text-footnote font-semibold uppercase tracking-caps text-muted-foreground">{phase.phase}</legend>
                 <ul className="mt-2 space-y-1.5">
                   {phase.items.map((item) => (
                     <li key={item.id}>
@@ -240,7 +240,7 @@ export default function SafeTransfer() {
                           onChange={() => toggle(item.id)}
                           className="mt-0.5 h-4 w-4 shrink-0 rounded border-border accent-[hsl(var(--primary))]"
                         />
-                        <span className={`text-[14px] leading-relaxed ${checked[item.id] ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                        <span className={`text-body leading-relaxed ${checked[item.id] ? "text-muted-foreground line-through" : "text-foreground"}`}>
                           {item.text}
                         </span>
                       </label>
@@ -255,13 +255,13 @@ export default function SafeTransfer() {
         {/* Deadline + cost */}
         <div className="grid gap-4 md:grid-cols-2">
           <section aria-labelledby="deadline-title" className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
-            <h2 id="deadline-title" className="flex items-center gap-2 text-[16px] font-semibold text-foreground">
+            <h2 id="deadline-title" className="flex items-center gap-2 text-body font-semibold text-foreground">
               <CalendarClock className="h-4 w-4 text-primary" aria-hidden />
               {t("transfer.deadline", "Your transfer deadline")}
             </h2>
             <Field label={t("transfer.saleDate", "Date of sale")} type="date" value={saleDate} onChange={setSaleDate} className="mt-3" />
             {deadline && (
-              <p className="mt-4 text-[14px] text-foreground" aria-live="polite">
+              <p className="mt-4 text-body text-foreground" aria-live="polite">
                 {t("transfer.submitBy", "Submit the transfer to the DMT by")}{" "}
                 <strong className="num">
                   {new Date(`${deadline}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })}
@@ -269,7 +269,7 @@ export default function SafeTransfer() {
                 .
               </p>
             )}
-            <p className="mt-2 text-[12.5px] text-muted-foreground">
+            <p className="mt-2 text-footnote text-muted-foreground">
               {strict
                 ? t("transfer.strictYes", "This falls within strict enforcement (from {date}).", { date: "1 Dec 2026" })
                 : t("transfer.strictNo", "The 14-day rule already applies. Strict enforcement starts {date}.", { date: "1 Dec 2026" })}
@@ -277,19 +277,19 @@ export default function SafeTransfer() {
           </section>
 
           <section aria-labelledby="cost-title" className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
-            <h2 id="cost-title" className="text-[16px] font-semibold text-foreground">
+            <h2 id="cost-title" className="text-body font-semibold text-foreground">
               {t("transfer.cost", "Transfer cost estimate")}
             </h2>
             <div className="mt-3 space-y-3">
               <div>
-                <label htmlFor={classId} className="text-[12.5px] font-medium text-foreground">
+                <label htmlFor={classId} className="text-footnote font-medium text-foreground">
                   {t("transfer.class", "Vehicle type")}
                 </label>
                 <select
                   id={classId}
                   value={vehicleClass}
                   onChange={(e) => setVehicleClass(e.target.value as TransferVehicleClass)}
-                  className="mt-1 h-10 w-full rounded-xl border border-border bg-background px-3 text-[14px] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="mt-1 h-10 w-full rounded-xl border border-border bg-background px-3 text-body text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {(Object.keys(TRANSFER_CLASS_LABELS) as TransferVehicleClass[]).map((k) => (
                     <option key={k} value={k}>
@@ -302,7 +302,7 @@ export default function SafeTransfer() {
               <Field label={t("transfer.stamp", "Stamp duty on sale value, if charged (%)")} type="number" value={String(stampPct)} onChange={(v) => setStampPct(Number(v) || 0)} />
               <Field label={t("transfer.extras", "Other costs: DMT record, lawyer, inspection (LKR)")} type="number" value={String(extras)} onChange={(v) => setExtras(Number(v) || 0)} />
             </div>
-            <dl className="mt-4 grid grid-cols-2 gap-y-1.5 text-[13.5px]">
+            <dl className="mt-4 grid grid-cols-2 gap-y-1.5 text-footnote">
               <dt className="text-muted-foreground">{t("transfer.fee", "DMT transfer fee (indicative)")}</dt>
               <dd className="num text-right font-semibold">{formatPrice(cost.transferFeeLkr)}</dd>
               <dt className="text-muted-foreground">{t("transfer.stampLine", "Stamp duty")}</dt>
@@ -312,7 +312,7 @@ export default function SafeTransfer() {
               <dt className="border-t border-border pt-1.5 font-semibold text-foreground">{t("transfer.total", "Total")}</dt>
               <dd className="num border-t border-border pt-1.5 text-right font-bold">{formatPrice(cost.totalLkr)}</dd>
             </dl>
-            <p className="mt-2 text-[12px] text-muted-foreground">
+            <p className="mt-2 text-caption text-muted-foreground">
               {t("transfer.costNote", "Indicative only. Check current fees with the DMT. Late-transfer penalties aren't included.")}
             </p>
           </section>
@@ -320,11 +320,11 @@ export default function SafeTransfer() {
 
         {/* Agreement */}
         <section aria-labelledby="agreement-title" className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
-          <h2 id="agreement-title" className="flex items-center gap-2 text-[16px] font-semibold text-foreground">
+          <h2 id="agreement-title" className="flex items-center gap-2 text-body font-semibold text-foreground">
             <FileText className="h-4 w-4 text-primary" aria-hidden />
             {t("transfer.agreement", "Sale agreement (PDF)")}
           </h2>
-          <p className="mt-1 text-[13px] text-muted-foreground">
+          <p className="mt-1 text-footnote text-muted-foreground">
             {t("transfer.agreementBody", "Fill in what you know. Blank fields print as lines to complete by hand. Nothing you type leaves your device.")}
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -349,12 +349,12 @@ export default function SafeTransfer() {
             type="button"
             onClick={onDownload}
             disabled={busy}
-            className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-primary px-5 text-[14px] font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="mt-5 inline-flex h-11 items-center gap-2 rounded-2xl bg-primary px-5 text-body font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <FileDown className="h-4 w-4" aria-hidden />
             {busy ? t("transfer.generating", "Preparing PDF…") : t("transfer.download", "Download sale agreement")}
           </button>
-          <p className="mt-3 text-[12px] text-muted-foreground">
+          <p className="mt-3 text-caption text-muted-foreground">
             {t("transfer.legal", "This is a general template, not legal advice. For financed or high-value vehicles, ask a lawyer to review it.")}
           </p>
         </section>

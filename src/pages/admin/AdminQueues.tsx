@@ -39,12 +39,12 @@ function Panel({ title, hint, children, onRefresh, filters }: { title: string; h
     <section className="rounded-2xl border border-border bg-card p-5 shadow-soft">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold text-foreground">{title}</h2>
-          <p className="text-[12px] text-muted-foreground">{hint}</p>
+          <h2 className="text-body font-semibold text-foreground">{title}</h2>
+          <p className="text-caption text-muted-foreground">{hint}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {filters}
-          <button type="button" onClick={onRefresh} className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-[12px] font-semibold text-foreground hover:border-primary/40">
+          <button type="button" onClick={onRefresh} className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-caption font-semibold text-foreground hover:border-primary/40">
             <RefreshCw className="h-3.5 w-3.5" aria-hidden /> Refresh
           </button>
         </div>
@@ -56,9 +56,9 @@ function Panel({ title, hint, children, onRefresh, filters }: { title: string; h
 
 function FilterSelect<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: Array<[NoInfer<T>, string]>; onChange: (v: NoInfer<T>) => void }) {
   return (
-    <label className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-muted-foreground">
+    <label className="inline-flex items-center gap-1.5 text-caption font-semibold text-muted-foreground">
       {label}
-      <select value={value} onChange={(e) => onChange(e.target.value as T)} className="h-9 rounded-full border border-border bg-surface px-3 text-[12px] text-foreground">
+      <select value={value} onChange={(e) => onChange(e.target.value as T)} className="h-9 rounded-full border border-border bg-surface px-3 text-caption text-foreground">
         {options.map(([v, l]) => (
           <option key={v} value={v}>
             {l}
@@ -71,12 +71,12 @@ function FilterSelect<T extends string>({ label, value, options, onChange }: { l
 
 function StateBlock({ loading, error, empty }: { loading: boolean; error: unknown; empty: boolean }) {
   if (loading) return <div className="space-y-2"><Skeleton className="h-16 rounded-xl" /><Skeleton className="h-16 rounded-xl" /></div>;
-  if (error) return <p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-[13px] text-destructive">{error instanceof Error ? error.message : "Failed to load."}</p>;
-  if (empty) return <p className="rounded-xl border border-dashed border-border p-6 text-center text-[13px] text-muted-foreground">Nothing here. Queue is clear.</p>;
+  if (error) return <p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-footnote text-destructive">{error instanceof Error ? error.message : "Failed to load."}</p>;
+  if (empty) return <p className="rounded-xl border border-dashed border-border p-6 text-center text-footnote text-muted-foreground">Nothing here. Queue is clear.</p>;
   return null;
 }
 
-const actionBtn = "inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-semibold disabled:opacity-40";
+const actionBtn = "inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-caption font-semibold disabled:opacity-40";
 
 // ── Moderation queue ────────────────────────────────────────────────────────
 export function ModerationQueuePanel() {
@@ -105,14 +105,14 @@ export function ModerationQueuePanel() {
           <li key={it.id} className="rounded-xl border border-border bg-surface/60 p-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <p className="text-[14px] font-semibold text-foreground">
+                <p className="text-body font-semibold text-foreground">
                   {it.title || [it.year, it.make, it.model].filter(Boolean).join(" ") || `Listing #${it.id}`}
                 </p>
-                <p className="text-[12px] text-muted-foreground">
+                <p className="text-caption text-muted-foreground">
                   #{it.id} · {lkr(it.priceLkr)} · {it.district || "—"} · {it.status || "—"} · submitted {fmtDate(it.createdAt)}
                   {it.contactName ? ` · by ${it.contactName}` : ""}
                 </p>
-                {it.description ? <p className="mt-1 line-clamp-3 text-[12px] text-foreground/80">{it.description}</p> : null}
+                {it.description ? <p className="mt-1 line-clamp-3 text-caption text-foreground/80">{it.description}</p> : null}
                 {Array.isArray(it.images) && it.images.length > 0 ? (
                   <div className="mt-2 flex gap-1.5 overflow-x-auto">
                     {it.images.slice(0, 4).map((src) => (
@@ -181,8 +181,8 @@ export function LeadsPanel() {
         {items.map((l) => (
           <li key={l.id} className="rounded-xl border border-border bg-surface/60 p-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0 flex-1 text-[12px] text-muted-foreground">
-                <p className="text-[14px] font-semibold text-foreground">
+              <div className="min-w-0 flex-1 text-caption text-muted-foreground">
+                <p className="text-body font-semibold text-foreground">
                   {l.kind} · {l.name || "—"} <span className="font-normal text-muted-foreground">· {l.status}</span>
                 </p>
                 <p>
@@ -247,10 +247,10 @@ export function RemovalRequestsPanel() {
           return (
             <li key={r.id} className="rounded-xl border border-border bg-surface/60 p-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0 flex-1 text-[12px] text-muted-foreground">
-                  <p className="text-[14px] font-semibold text-foreground">
+                <div className="min-w-0 flex-1 text-caption text-muted-foreground">
+                  <p className="text-body font-semibold text-foreground">
                     {r.reference} · {r.reason || r.kind}{" "}
-                    {overdue ? <span className="ml-1 rounded-full bg-destructive/15 px-2 py-0.5 text-[11px] font-bold text-destructive">Overdue</span> : null}
+                    {overdue ? <span className="ml-1 rounded-full bg-destructive/15 px-2 py-0.5 text-caption font-bold text-destructive">Overdue</span> : null}
                   </p>
                   <p>
                     {r.name || "—"} · {r.email || "—"}

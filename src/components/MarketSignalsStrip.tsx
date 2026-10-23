@@ -21,10 +21,10 @@ function SignalCard({ signal }: { signal: MarketSignal }) {
       <article>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[12px] font-medium text-primary/70">
+            <p className="text-caption font-medium text-primary/70">
               {labelPulseSource(signal.source)} · {signal.signal_type.replace(/_/g, " ")}
             </p>
-            <h3 className="mt-2 text-sm font-semibold text-foreground">{title}</h3>
+            <h3 className="mt-2 text-footnote font-semibold text-foreground">{title}</h3>
           </div>
           <span
             className="rounded-full border border-border p-1.5 text-muted-foreground"
@@ -33,10 +33,10 @@ function SignalCard({ signal }: { signal: MarketSignal }) {
             <ArrowUpRight className="h-3.5 w-3.5" />
           </span>
         </div>
-        <p className="mt-3 text-lg font-semibold tracking-tight text-foreground num">
+        <p className="mt-3 text-callout font-semibold tracking-tight text-foreground num">
           {formatPulseValue(signal.value_numeric, signal.unit, signal.metric)}
         </p>
-        <p className="mt-1 text-[11px] text-muted-foreground">
+        <p className="mt-1 text-caption text-muted-foreground">
           {period ? `Period ${period}` : "Latest official pulse"}
         </p>
       </article>
@@ -60,13 +60,13 @@ export function MarketSignalsStrip() {
         <div className="flex items-center gap-2">
           <Landmark className="h-4 w-4 text-primary/80" />
           <div>
-            <p className="text-[12px] font-medium text-muted-foreground">Official pulse</p>
-            <h2 className="text-sm font-semibold text-foreground">Government & import market signals</h2>
+            <p className="text-caption font-medium text-muted-foreground">Official pulse</p>
+            <h2 className="text-footnote font-semibold text-foreground">Government & import market signals</h2>
           </div>
         </div>
         <Link
           to="/official-pulse"
-          className="text-[11px] font-semibold text-primary no-underline transition-colors hover:text-primary/80"
+          className="text-caption font-semibold text-primary no-underline transition-colors hover:text-primary/80"
         >
           Open pulse desk →
         </Link>
@@ -85,7 +85,7 @@ export function MarketSignalsStrip() {
           ))}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-footnote text-muted-foreground">
           Official registration and import-cost signals will appear here after the market-signals sync runs.{" "}
           <Link to="/official-pulse" className="font-medium text-primary no-underline hover:underline">
             Read what each signal means

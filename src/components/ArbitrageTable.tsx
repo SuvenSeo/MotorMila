@@ -107,7 +107,7 @@ export function ArbitrageTable({ gaps, transport, visibleLimit, trialCtaTo = "/p
 
   return (
     <div className="overflow-auto rounded-xl border border-border" aria-label="Arbitrage gaps table">
-      <table className="w-full min-w-[760px] text-sm">
+      <table className="w-full min-w-[760px] text-footnote">
         <thead className="sticky top-0 z-10 bg-surface">
           <tr>
             {headers.map((header) => (
@@ -152,7 +152,7 @@ export function ArbitrageTable({ gaps, transport, visibleLimit, trialCtaTo = "/p
       {lockedCount > 0 && (
         <Link
           to={trialCtaTo}
-          className="flex items-center justify-center gap-2 border-t border-border bg-primary/5 px-4 py-3 text-xs font-bold text-primary-bright no-underline transition-colors hover:bg-primary/10"
+          className="flex items-center justify-center gap-2 border-t border-border bg-primary/5 px-4 py-3 text-caption font-bold text-primary-bright no-underline transition-colors hover:bg-primary/10"
         >
           <Lock className="h-3.5 w-3.5" aria-hidden="true" />
           {lockedCount} more gap{lockedCount === 1 ? "" : "s"} locked — start a 7-day free trial to unlock net rankings

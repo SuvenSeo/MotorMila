@@ -115,8 +115,8 @@ const NotFound = () => {
                         <span
                           className={
                             l.featured
-                              ? "text-lg font-semibold text-foreground"
-                              : "text-base font-semibold text-foreground"
+                              ? "text-callout font-semibold text-foreground"
+                              : "text-body font-semibold text-foreground"
                           }
                         >
                           {l.label}
@@ -126,7 +126,7 @@ const NotFound = () => {
                           aria-hidden
                         />
                       </div>
-                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                      <p className="mt-1 text-footnote leading-relaxed text-muted-foreground">
                         {l.description}
                       </p>
                     </div>

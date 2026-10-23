@@ -42,11 +42,11 @@ function Section({
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-surface">
           <Icon className="h-4 w-4 text-primary" aria-hidden />
         </span>
-        <h2 id={`${id}-title`} className="text-base font-semibold text-foreground sm:text-lg">
+        <h2 id={`${id}-title`} className="text-body font-semibold text-foreground sm:text-callout">
           {title}
         </h2>
       </div>
-      <div className="space-y-3 text-[14px] leading-relaxed text-foreground/85">{children}</div>
+      <div className="space-y-3 text-body leading-relaxed text-foreground/85">{children}</div>
     </Reveal>
   );
 }
@@ -80,13 +80,13 @@ export default function HowWePrice() {
 
       <PageBody narrow className="pb-20">
         <nav aria-label={t("howPrice.tocAria", "On this page")} className="mb-6 rounded-2xl border border-border bg-surface/60 p-4">
-          <p className="mb-2 text-[12px] font-semibold text-muted-foreground">{t("howPrice.tocAria", "On this page")}</p>
+          <p className="mb-2 text-caption font-semibold text-muted-foreground">{t("howPrice.tocAria", "On this page")}</p>
           <ul className="flex flex-wrap gap-2">
             {toc.map((item) => (
               <li key={item.id}>
                 <a
                   href={`#${item.id}`}
-                  className="inline-flex min-h-9 items-center rounded-full border border-border bg-card px-3 text-[12px] font-medium text-foreground no-underline hover:border-primary/40"
+                  className="inline-flex min-h-9 items-center rounded-full border border-border bg-card px-3 text-caption font-medium text-foreground no-underline hover:border-primary/40"
                 >
                   {item.label}
                 </a>
@@ -137,8 +137,8 @@ export default function HowWePrice() {
                 { term: t("howPrice.conf.none", "None"), desc: t("howPrice.conf.noneDesc", "Too little data. We show no deal call rather than guess.") },
               ].map((row) => (
                 <div key={row.term} className="rounded-xl border border-border bg-surface p-3">
-                  <dt className="text-[13px] font-semibold text-foreground">{row.term}</dt>
-                  <dd className="mt-1 text-[13px] text-muted-foreground">{row.desc}</dd>
+                  <dt className="text-footnote font-semibold text-foreground">{row.term}</dt>
+                  <dd className="mt-1 text-footnote text-muted-foreground">{row.desc}</dd>
                 </div>
               ))}
             </dl>
@@ -194,12 +194,12 @@ export default function HowWePrice() {
             </p>
             <ul className="flex flex-wrap gap-2" aria-label={t("howPrice.sources.listAria", "Listing sources")}>
               {LISTING_SOURCES.map((s) => (
-                <li key={s.domain} className="rounded-full border border-border bg-surface px-3 py-1 text-[12px] text-foreground">
+                <li key={s.domain} className="rounded-full border border-border bg-surface px-3 py-1 text-caption text-foreground">
                   {s.name}
                 </li>
               ))}
             </ul>
-            <p className="text-[13px] text-muted-foreground">
+            <p className="text-footnote text-muted-foreground">
               {t(
                 "howPrice.sources.p2",
                 "Listings belong to their sellers and source sites. MotorMila is independent and not affiliated with them. Sellers can ask us to remove an ad.",
@@ -233,14 +233,14 @@ export default function HowWePrice() {
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
             to="/estimate"
-            className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 text-[13px] font-semibold text-primary-foreground no-underline hover:bg-primary/90"
+            className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 text-footnote font-semibold text-primary-foreground no-underline hover:bg-primary/90"
           >
             <Gauge className="h-4 w-4" aria-hidden />
             {t("howPrice.cta.estimate", "Estimate my car")}
           </Link>
           <Link
             to="/"
-            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-5 text-[13px] font-semibold text-foreground no-underline hover:border-primary/40"
+            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-5 text-footnote font-semibold text-foreground no-underline hover:border-primary/40"
           >
             {t("howPrice.cta.browse", "Browse listings")}
           </Link>

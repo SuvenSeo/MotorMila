@@ -23,7 +23,7 @@ export const LEGAL_LINKS = [
 export function LegalSection({ id, title, children }: { id?: string; title: string; children: React.ReactNode }) {
   return (
     <section id={id} className="scroll-mt-24 space-y-3">
-      <h2 className="font-display text-xl font-semibold text-foreground">{title}</h2>
+      <h2 className="font-display text-title3 font-semibold text-foreground">{title}</h2>
       {children}
     </section>
   );
@@ -57,10 +57,10 @@ export function LegalPageShell({
       <PageBody>
         <motion.article
           variants={revealItem}
-          className="max-w-3xl space-y-8 text-[14px] leading-7 text-foreground/85 [&_a]:underline [&_a]:underline-offset-2 [&_li]:ml-5 [&_ul]:list-disc [&_ul]:space-y-1.5"
+          className="max-w-3xl space-y-8 text-body leading-7 text-foreground/85 [&_a]:underline [&_a]:underline-offset-2 [&_li]:ml-5 [&_ul]:list-disc [&_ul]:space-y-1.5"
         >
           {showEffectiveDate && (
-            <p className="text-[12px] text-muted-foreground">Effective date: {LEGAL_EFFECTIVE_DATE}</p>
+            <p className="text-caption text-muted-foreground">Effective date: {LEGAL_EFFECTIVE_DATE}</p>
           )}
           {children}
           <nav aria-label="Legal pages" className="flex flex-wrap gap-2 border-t border-border pt-6 !no-underline">
@@ -68,7 +68,7 @@ export function LegalPageShell({
               <Link
                 key={l.to}
                 to={l.to}
-                className="inline-flex h-9 items-center rounded-full border border-border bg-card px-4 text-[12px] font-semibold text-foreground !no-underline transition-colors hover:border-primary/40"
+                className="inline-flex h-9 items-center rounded-full border border-border bg-card px-4 text-caption font-semibold text-foreground !no-underline transition-colors hover:border-primary/40"
               >
                 {l.label}
               </Link>

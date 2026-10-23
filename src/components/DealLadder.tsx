@@ -29,10 +29,10 @@ export function DealLadder({ askingPrice, marketMedianLkr, className }: DealLadd
 
   return (
     <div className={cn("mt-4 border-t border-border pt-3", className)}>
-      <p className="text-[12px] font-medium text-muted-foreground">
+      <p className="text-caption font-medium text-muted-foreground">
         Deal ladder
       </p>
-      <p className="mt-2 text-[13px] font-semibold text-foreground">
+      <p className="mt-2 text-footnote font-semibold text-foreground">
         {ladder.band === "good_deal" ? (
           ladder.headline
         ) : ladder.cutToGoodDeal > 0 ? (
@@ -45,7 +45,7 @@ export function DealLadder({ askingPrice, marketMedianLkr, className }: DealLadd
           ladder.headline
         )}
       </p>
-      <p className="mt-1 text-[11px] text-muted-foreground">
+      <p className="mt-1 text-caption text-muted-foreground">
         Current band:{" "}
         <span
           className={cn(
@@ -73,7 +73,7 @@ export function DealLadder({ askingPrice, marketMedianLkr, className }: DealLadd
             <li
               key={rung.band}
               className={cn(
-                "flex items-center justify-between rounded-2xl border px-2.5 py-1.5 text-[12px] font-medium",
+                "flex items-center justify-between rounded-2xl border px-2.5 py-1.5 text-caption font-medium",
                 rung.active ? tone.active : tone.idle,
               )}
             >

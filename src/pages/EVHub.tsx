@@ -142,17 +142,17 @@ export default function EVHub() {
           <div className="space-y-3">
             <div className="data-card flex flex-col gap-4 p-6 sm:flex-row sm:items-end sm:justify-between sm:p-8">
               <div>
-                <p className="text-[12px] font-semibold text-muted-foreground">{featureStat.label}</p>
-                <p className="num mt-3 text-5xl font-bold tracking-tight text-foreground sm:text-6xl">{featureStat.value}</p>
+                <p className="text-caption font-semibold text-muted-foreground">{featureStat.label}</p>
+                <p className="num mt-3 text-large font-bold tracking-tight text-foreground sm:text-hero">{featureStat.value}</p>
               </div>
-              <p className="max-w-xs text-[13px] font-medium leading-relaxed text-muted-foreground sm:text-right">{featureStat.note}</p>
+              <p className="max-w-xs text-footnote font-medium leading-relaxed text-muted-foreground sm:text-right">{featureStat.note}</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               {secondaryStats.map((stat) => (
                 <div key={stat.label} className="data-card p-6">
-                  <p className="text-[12px] font-semibold text-muted-foreground/80">{stat.label}</p>
-                  <p className="num mt-2 text-2xl font-bold text-foreground">{stat.value}</p>
-                  <p className="mt-1.5 text-[12px] font-medium text-muted-foreground">{stat.note}</p>
+                  <p className="text-caption font-semibold text-muted-foreground/80">{stat.label}</p>
+                  <p className="num mt-2 text-title2 font-bold text-foreground">{stat.value}</p>
+                  <p className="mt-1.5 text-caption font-medium text-muted-foreground">{stat.note}</p>
                 </div>
               ))}
             </div>
@@ -206,14 +206,14 @@ export default function EVHub() {
                           )}>
                             <Zap className={cn("text-primary", featured ? "h-5 w-5" : "h-3.5 w-3.5")} aria-hidden />
                           </div>
-                          <p className={cn("font-bold leading-tight text-foreground", featured ? "text-[15px]" : "text-[13px]")}>
+                          <p className={cn("font-bold leading-tight text-foreground", featured ? "text-body" : "text-footnote")}>
                             {model.make} {model.model}
                           </p>
                         </div>
-                        <p className={cn("num font-bold text-foreground", featured ? "text-3xl tracking-tight" : "text-lg")}>
+                        <p className={cn("num font-bold text-foreground", featured ? "text-title1 tracking-tight" : "text-callout")}>
                           {model.median_price_lkr !== null ? formatPrice(model.median_price_lkr) : "—"}
                         </p>
-                        <p className="mt-1.5 text-[11px] font-medium text-muted-foreground">
+                        <p className="mt-1.5 text-caption font-medium text-muted-foreground">
                           {model.listing_count} listing{model.listing_count !== 1 ? "s" : ""} · median
                         </p>
                       </m.div>
@@ -239,33 +239,33 @@ export default function EVHub() {
                 <TrendingDown className="h-5 w-5 text-primary" aria-hidden />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="inline-flex items-center gap-2 text-[12px] font-semibold text-primary-bright">
+                <p className="inline-flex items-center gap-2 text-caption font-semibold text-primary-bright">
                   <span aria-hidden className="h-1 w-1 rounded-full bg-primary" />
                   {t("ev.tcoEyebrow", "TCO comparison")}
                 </p>
-                <h3 className="mt-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">{t("ev.tcoTitle", "EV vs. Toyota Aqua hybrid — real running cost")}</h3>
-                <p className="mt-3 max-w-2xl text-[14px] font-medium leading-relaxed text-muted-foreground">
+                <h3 className="mt-2 text-title3 font-bold tracking-tight text-foreground sm:text-title2">{t("ev.tcoTitle", "EV vs. Toyota Aqua hybrid — real running cost")}</h3>
+                <p className="mt-3 max-w-2xl text-body font-medium leading-relaxed text-muted-foreground">
                   Fuel saving estimated at <span className="num font-bold text-foreground">Rs {groupThousands(annualFuelSavingLkr)}/yr</span> (LKR {TCO_FUEL_COST_PER_KM_EV_LKR} vs LKR {TCO_FUEL_COST_PER_KM_PETROL_LKR} per km, {(TCO_KM_PER_YEAR / 1000).toFixed(0)}k km/yr).
                 </p>
                 <div className="mt-6 grid gap-3 sm:grid-cols-3">
                   <div className="metric-tile p-4">
-                    <p className="text-[12px] font-semibold text-muted-foreground/80">Median EV price</p>
-                    <p className="num mt-2 text-lg font-bold text-foreground">
+                    <p className="text-caption font-semibold text-muted-foreground/80">Median EV price</p>
+                    <p className="num mt-2 text-callout font-bold text-foreground">
                       {pending ? "…" : medianEvPrice !== null ? formatPrice(medianEvPrice) : "N/A"}
                     </p>
                   </div>
                   <div className="metric-tile p-4">
-                    <p className="text-[12px] font-semibold text-muted-foreground/80">Toyota Aqua benchmark</p>
-                    <p className="num mt-2 text-lg font-bold text-foreground">
+                    <p className="text-caption font-semibold text-muted-foreground/80">Toyota Aqua benchmark</p>
+                    <p className="num mt-2 text-callout font-bold text-foreground">
                       {pending ? "…" : benchmark?.median_price_lkr != null ? formatPrice(benchmark.median_price_lkr) : "N/A"}
                     </p>
-                    <p className="mt-1 text-[10px] font-medium text-muted-foreground">
+                    <p className="mt-1 text-caption font-medium text-muted-foreground">
                       {benchmark?.listing_count ? `${benchmark.listing_count} listings` : "hybrid benchmark"}
                     </p>
                   </div>
                   <div className="metric-tile p-4">
-                    <p className="text-[12px] font-semibold text-muted-foreground/80">Fuel savings payback</p>
-                    <p className="num mt-2 text-lg font-bold text-foreground">
+                    <p className="text-caption font-semibold text-muted-foreground/80">Fuel savings payback</p>
+                    <p className="num mt-2 text-callout font-bold text-foreground">
                       {pending
                         ? "…"
                         : paybackYears !== null
@@ -274,14 +274,14 @@ export default function EVHub() {
                             ? "Instant"
                             : "N/A"}
                     </p>
-                    <p className="mt-1 text-[10px] font-medium text-muted-foreground">
+                    <p className="mt-1 text-caption font-medium text-muted-foreground">
                       {evPremiumLkr !== null && evPremiumLkr <= 0
                         ? "EVs already cheaper than the hybrid benchmark"
                         : "to recover EV price premium"}
                     </p>
                   </div>
                 </div>
-                <p className="mt-4 text-[11px] font-medium text-muted-foreground">
+                <p className="mt-4 text-caption font-medium text-muted-foreground">
                   Indicative only. Actual savings vary by charging cost, mileage, and model.
                 </p>
               </div>
@@ -301,10 +301,10 @@ export default function EVHub() {
                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-border bg-surface">
                       <Icon className="h-5 w-5 text-primary" aria-hidden />
                     </div>
-                    <span className="num text-[11px] font-bold text-primary-bright">{m.step}</span>
+                    <span className="num text-caption font-bold text-primary-bright">{m.step}</span>
                   </div>
-                  <h3 className="mt-5 text-[15px] font-bold text-foreground">{m.title}</h3>
-                  <p className="mt-2 text-[12px] font-medium leading-relaxed text-muted-foreground">{m.desc}</p>
+                  <h3 className="mt-5 text-body font-bold text-foreground">{m.title}</h3>
+                  <p className="mt-2 text-caption font-medium leading-relaxed text-muted-foreground">{m.desc}</p>
                 </div>
               );
             })}
@@ -314,14 +314,14 @@ export default function EVHub() {
         {/* Market action */}
         <m.section variants={revealItem} className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
           <div className="data-card p-6 sm:p-8">
-            <p className="text-[12px] font-semibold text-muted-foreground/80">{t("ev.ownershipChecks", "Ownership checks")}</p>
-            <h3 className="mt-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">{t("ev.buyerGuidelines", "Buyer guidelines")}</h3>
+            <p className="text-caption font-semibold text-muted-foreground/80">{t("ev.ownershipChecks", "Ownership checks")}</p>
+            <h3 className="mt-2 text-title3 font-bold tracking-tight text-foreground sm:text-title2">{t("ev.buyerGuidelines", "Buyer guidelines")}</h3>
             <div className="mt-7 grid gap-3 sm:grid-cols-3">
               {ownershipChecks.map((c) => (
                 <div key={c.label} className="metric-tile p-4">
-                  <p className="text-[12px] font-semibold text-muted-foreground">{c.label}</p>
-                  <p className="num mt-2 text-xl font-bold text-foreground">{c.value}</p>
-                  <p className="mt-2 text-[10px] font-medium leading-relaxed text-muted-foreground">{c.note}</p>
+                  <p className="text-caption font-semibold text-muted-foreground">{c.label}</p>
+                  <p className="num mt-2 text-title3 font-bold text-foreground">{c.value}</p>
+                  <p className="mt-2 text-caption font-medium leading-relaxed text-muted-foreground">{c.note}</p>
                 </div>
               ))}
             </div>
@@ -331,15 +331,15 @@ export default function EVHub() {
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-border bg-surface">
               <Car className="h-5 w-5 text-primary" aria-hidden />
             </div>
-            <p className="mt-5 text-[12px] font-semibold text-muted-foreground/80">{t("ev.marketAction", "Market action")}</p>
-            <h3 className="mt-2 text-lg font-bold text-foreground">{t("ev.browseTitle", "Browse EV inventory")}</h3>
+            <p className="mt-5 text-caption font-semibold text-muted-foreground/80">{t("ev.marketAction", "Market action")}</p>
+            <h3 className="mt-2 text-callout font-bold text-foreground">{t("ev.browseTitle", "Browse EV inventory")}</h3>
             <ul className="mt-5 flex flex-wrap gap-2">
               {[
                 t("ev.action.filter", "Filter electric inventory"),
                 t("ev.action.finance", "Check finance baseline"),
                 t("ev.action.resale", "Compare resale pressure"),
               ].map((a) => (
-                <li key={a} className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-[10px] font-bold text-muted-foreground">
+                <li key={a} className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-caption font-bold text-muted-foreground">
                   <CheckCircle2 className="h-3 w-3 text-primary" aria-hidden /> {a}
                 </li>
               ))}

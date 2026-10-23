@@ -183,7 +183,7 @@ export const PipelineStatusBar = memo(function PipelineStatusBar({
                       : "never synced"}
                   </span>
                   {stale ? (
-                    <span className="rounded border border-primary/25 bg-primary/10 px-1.5 py-0.5 text-[12px] font-medium text-primary-bright">
+                    <span className="rounded border border-primary/25 bg-primary/10 px-1.5 py-0.5 text-caption font-medium text-primary-bright">
                       stale
                     </span>
                   ) : null}
@@ -222,7 +222,7 @@ export const PipelineStatusBar = memo(function PipelineStatusBar({
                         className={`w-4 h-4 shrink-0 ${job.status === "running" ? "animate-spin" : ""}`}
                         style={{ color }}
                       />
-                      <p className="text-sm font-semibold text-foreground truncate">{prettifyJobName(job.name)}</p>
+                      <p className="text-footnote font-semibold text-foreground truncate">{prettifyJobName(job.name)}</p>
                     </div>
                     <span className="tech-label rounded-full border border-border bg-card px-2 py-1 text-foreground">
                       {job.status}

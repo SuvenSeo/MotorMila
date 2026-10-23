@@ -125,7 +125,7 @@ export function NotificationBell() {
         {unreadCount > 0 && (
           <span
             aria-hidden
-            className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-primary px-0.5 text-[9px] font-bold text-primary-foreground ring-2 ring-background"
+            className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-primary px-0.5 text-caption font-bold text-primary-foreground ring-2 ring-background"
           >
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
@@ -136,13 +136,13 @@ export function NotificationBell() {
         <div className="mm-pop-in absolute right-0 top-11 z-10 w-80 origin-top-right overflow-hidden rounded-2xl border border-border bg-popover/95 shadow-soft-lg backdrop-blur-2xl">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <p className="text-[12px] font-semibold text-foreground">Notifications</p>
+            <p className="text-caption font-semibold text-foreground">Notifications</p>
             {unreadCount > 0 && (
               <button
                 type="button"
                 onClick={handleMarkAllRead}
                 disabled={loading}
-                className="inline-flex items-center gap-1 text-[11px] font-medium text-primary-bright outline-none transition-opacity hover:opacity-80 disabled:opacity-50"
+                className="inline-flex items-center gap-1 text-caption font-medium text-primary-bright outline-none transition-opacity hover:opacity-80 disabled:opacity-50"
               >
                 <CheckCheck className="h-3 w-3" />
                 Mark all read
@@ -155,8 +155,8 @@ export function NotificationBell() {
             {notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center px-4 py-8 text-center">
                 <Bell className="mb-2 h-5 w-5 text-muted-foreground/40" />
-                <p className="text-[12px] text-muted-foreground">No notifications yet</p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground/60">
+                <p className="text-caption text-muted-foreground">No notifications yet</p>
+                <p className="mt-0.5 text-caption text-muted-foreground/60">
                   You&apos;ll see alert matches here
                 </p>
               </div>
@@ -174,7 +174,7 @@ export function NotificationBell() {
                   <div className="flex items-start justify-between gap-2">
                     <p
                       className={cn(
-                        "line-clamp-2 text-[12px] leading-snug",
+                        "line-clamp-2 text-caption leading-snug",
                         notif.read ? "font-medium text-muted-foreground" : "font-semibold text-foreground",
                       )}
                     >
@@ -188,9 +188,9 @@ export function NotificationBell() {
                     )}
                   </div>
                   {notif.body && (
-                    <p className="line-clamp-2 text-[11px] text-muted-foreground">{notif.body}</p>
+                    <p className="line-clamp-2 text-caption text-muted-foreground">{notif.body}</p>
                   )}
-                  <p className="text-[10px] text-muted-foreground/60">{timeAgo(notif.created_at)}</p>
+                  <p className="text-caption text-muted-foreground/60">{timeAgo(notif.created_at)}</p>
                 </button>
               ))
             )}
@@ -202,7 +202,7 @@ export function NotificationBell() {
               <button
                 type="button"
                 onClick={() => { setOpen(false); navigate("/alerts"); }}
-                className="text-[11px] font-medium text-primary-bright outline-none transition-opacity hover:opacity-80"
+                className="text-caption font-medium text-primary-bright outline-none transition-opacity hover:opacity-80"
               >
                 View all alerts →
               </button>
@@ -210,13 +210,13 @@ export function NotificationBell() {
               <button
                 type="button"
                 onClick={() => { setOpen(false); navigate("/alerts"); }}
-                className="text-[11px] font-medium text-primary-bright outline-none transition-opacity hover:opacity-80"
+                className="text-caption font-medium text-primary-bright outline-none transition-opacity hover:opacity-80"
               >
                 Channel center →
               </button>
             )}
             <span
-              className="inline-flex items-center gap-1 text-[10px] text-muted-foreground/70"
+              className="inline-flex items-center gap-1 text-caption text-muted-foreground/70"
               title={pushOn ? "Web push on — price-drop topics active" : "In-app always delivers; push dormant until enabled"}
             >
               <span

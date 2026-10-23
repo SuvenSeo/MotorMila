@@ -25,7 +25,7 @@ export function ListingLeadActions({
   const [kind, setKind] = useState<LeadKind | null>(null);
   return (
     <section aria-labelledby="listing-next-steps" className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
-      <h2 id="listing-next-steps" className="text-[12px] font-semibold text-muted-foreground">Next steps for this vehicle</h2>
+      <h2 id="listing-next-steps" className="text-caption font-semibold text-muted-foreground">Next steps for this vehicle</h2>
       <div role="tablist" aria-label="Request type" className="mt-3 flex flex-wrap gap-2">
         {TABS.map((tab) => (
           <button
@@ -34,7 +34,7 @@ export function ListingLeadActions({
             role="tab"
             aria-selected={kind === tab.kind}
             onClick={() => setKind(kind === tab.kind ? null : tab.kind)}
-            className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-4 text-[12px] font-semibold transition-colors ${
+            className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-4 text-caption font-semibold transition-colors ${
               kind === tab.kind ? "border-primary/40 bg-primary/10 text-primary-bright" : "border-border bg-surface text-foreground hover:border-primary/30"
             }`}
           >
@@ -45,7 +45,7 @@ export function ListingLeadActions({
       </div>
       {kind && (
         <div role="tabpanel" className="mt-4">
-          <h3 className="mb-1 text-[15px] font-bold text-foreground">{LEAD_COPY[kind].title}</h3>
+          <h3 className="mb-1 text-body font-bold text-foreground">{LEAD_COPY[kind].title}</h3>
           <LeadRequestForm
             key={kind}
             kind={kind}
@@ -54,7 +54,7 @@ export function ListingLeadActions({
           />
         </div>
       )}
-      <p className="mt-4 text-[11px] text-muted-foreground">
+      <p className="mt-4 text-caption text-muted-foreground">
         Is this your ad, or does it show your details?{" "}
         <Link
           to={`/removal?url=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "")}`}

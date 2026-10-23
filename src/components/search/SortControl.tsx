@@ -44,7 +44,7 @@ export function SortControl({ value, onChange, priceUnavailable = false, fullAcc
         aria-label={t("filter.sortAria", "Sort listings")}
         title={current === "best_match" ? t("search.bestMatchHint", "Priced listings with photos first, then newest. Never paid placement.") : undefined}
         className={cn(
-          "h-11 min-w-[11rem] gap-1.5 rounded-full border-border bg-card px-3.5 text-[13px] font-medium text-foreground sm:h-9",
+          "h-11 min-w-[11rem] gap-1.5 rounded-full border-border bg-card px-3.5 text-footnote font-medium text-foreground sm:h-9",
           className,
         )}
       >

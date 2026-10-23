@@ -39,7 +39,7 @@ export function LeaseCalculator({
     <div className="page-panel space-y-6 rounded-xl p-6">
       <div className="flex flex-col gap-1">
         <h3 className="field-label text-foreground">Lease payment calculator</h3>
-        <p className="text-[10px] text-muted-foreground">
+        <p className="text-caption text-muted-foreground">
           CBSL-oriented max LTV {Math.round(CBSL_LTV_CAPS[financeClass] * 100)}% · {getFinanceClassLabel(financeClass)}
         </p>
       </div>
@@ -48,7 +48,7 @@ export function LeaseCalculator({
         <div>
           <div className="flex justify-between mb-1">
             <label htmlFor="lease-down-payment" className="field-label block">Down payment</label>
-            <span className="text-xs font-medium text-foreground num">{downPaymentPct}% ({formatPrice(downPayment)})</span>
+            <span className="text-caption font-medium text-foreground num">{downPaymentPct}% ({formatPrice(downPayment)})</span>
           </div>
           <input
             id="lease-down-payment"
@@ -71,7 +71,7 @@ export function LeaseCalculator({
               step="0.5"
               value={interestRate}
               onChange={e => setInterestRate(Number(e.target.value))}
-              className="w-full rounded-xl border border-border bg-surface p-3 text-sm font-medium text-foreground outline-none transition-[border-color,box-shadow] focus:ring-1 focus:ring-primary/50"
+              className="w-full rounded-xl border border-border bg-surface p-3 text-footnote font-medium text-foreground outline-none transition-[border-color,box-shadow] focus:ring-1 focus:ring-primary/50"
             />
           </div>
           <div>
@@ -80,7 +80,7 @@ export function LeaseCalculator({
               id="lease-term"
               value={years}
               onChange={e => setYears(Number(e.target.value))}
-              className="w-full appearance-none rounded-xl border border-border bg-surface p-3 text-sm font-medium text-foreground outline-none transition-[border-color,box-shadow] focus:ring-1 focus:ring-primary/50"
+              className="w-full appearance-none rounded-xl border border-border bg-surface p-3 text-footnote font-medium text-foreground outline-none transition-[border-color,box-shadow] focus:ring-1 focus:ring-primary/50"
             >
               <option value="3">3 Years (36 mo)</option>
               <option value="5">5 Years (60 mo)</option>
@@ -92,17 +92,17 @@ export function LeaseCalculator({
 
       <div className="space-y-4">
         <div className="flex justify-between items-center px-1">
-          <span className="text-xs font-medium text-muted-foreground">Principal Amount</span>
-          <span className="text-sm font-medium text-foreground num">{formatPrice(principal)}</span>
+          <span className="text-caption font-medium text-muted-foreground">Principal Amount</span>
+          <span className="text-footnote font-medium text-foreground num">{formatPrice(principal)}</span>
         </div>
         <div className="flex justify-between items-center px-1">
-          <span className="text-xs font-medium text-muted-foreground">Total Interest Paid</span>
-          <span className="text-sm font-medium text-foreground num">{formatPrice(totalInterest)}</span>
+          <span className="text-caption font-medium text-muted-foreground">Total Interest Paid</span>
+          <span className="text-footnote font-medium text-foreground num">{formatPrice(totalInterest)}</span>
         </div>
       </div>
 
       {exceedsLtv ? (
-        <p className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-200/90">
+        <p className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-caption text-amber-200/90">
           Financed share exceeds typical CBSL LTV for this class. Raise down payment to at least{" "}
           {ltvMinDown}% (about {formatPrice(price * (ltvMinDown / 100))}) for a realistic cash gap.
         </p>
@@ -110,10 +110,10 @@ export function LeaseCalculator({
 
       <div className="pt-2">
         <div className="flex flex-col rounded-xl border border-primary/20 bg-primary/10 p-5 sm:flex-row sm:items-center sm:justify-between">
-          <span className="mb-1 text-sm font-semibold tracking-tight text-primary sm:mb-0">Est. monthly payment</span>
-          <span className="text-2xl font-bold text-foreground tracking-tight num">
+          <span className="mb-1 text-footnote font-semibold tracking-tight text-primary sm:mb-0">Est. monthly payment</span>
+          <span className="text-title2 font-bold text-foreground tracking-tight num">
             {formatLkrFull(monthlyPayment)}
-            <span className="ml-1 text-sm font-normal text-muted-foreground">/mo</span>
+            <span className="ml-1 text-footnote font-normal text-muted-foreground">/mo</span>
           </span>
         </div>
       </div>

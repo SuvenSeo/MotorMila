@@ -16,13 +16,13 @@ export function ConditionBadge({ condition, className }: ConditionBadgeProps) {
   const config = condition ? conditionConfig[condition as Condition] : undefined;
   if (!config) {
     return (
-      <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-muted text-muted-foreground", className)}>
+      <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-caption font-semibold bg-muted text-muted-foreground", className)}>
         Unknown
       </span>
     );
   }
   return (
-    <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold", config.className, className)}>
+    <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-caption font-semibold", config.className, className)}>
       {config.label}
     </span>
   );

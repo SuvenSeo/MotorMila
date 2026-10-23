@@ -101,10 +101,10 @@ function SignalChip({
         </span>
       )}
       <span className={cn("min-w-0 flex-1", align === "right" && "items-end")}>
-        <span className="block truncate text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+        <span className="block truncate text-caption font-semibold uppercase tracking-caps text-muted-foreground">
           {label}
         </span>
-        <span className="mt-1 block truncate text-[15px] font-semibold tracking-tight text-foreground num">
+        <span className="mt-1 block truncate text-body font-semibold tracking-tight text-foreground num">
           {value}
         </span>
       </span>

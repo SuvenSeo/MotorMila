@@ -82,7 +82,7 @@ export function SnapshotModeNotice({ className }: { className?: string }) {
     <div
       role="status"
       className={cn(
-        "flex items-start gap-2.5 rounded-2xl border border-border bg-muted/50 px-3.5 py-2.5 text-[12.5px] text-muted-foreground",
+        "flex items-start gap-2.5 rounded-2xl border border-border bg-muted/50 px-3.5 py-2.5 text-footnote text-muted-foreground",
         className,
       )}
     >

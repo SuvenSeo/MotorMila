@@ -82,17 +82,17 @@ export function ListingStickyBar({ priceLkr, badge, href, sourceName, listingId,
       >
         <div className="flex items-center gap-3 rounded-2xl border border-border bg-card/95 p-2.5 pl-4 shadow-soft-xl backdrop-blur-md">
           <div className="min-w-0 flex-1">
-            <p className="num truncate text-[17px] font-extrabold leading-tight text-foreground">
+            <p className="num truncate text-callout font-extrabold leading-tight text-foreground">
               {priceLkr ? formatPrice(priceLkr) : t("listing.unlisted", "Unlisted")}
             </p>
             {compactBadge ? (
               <DealBadge badge={compactBadge} tone="soft" className="mt-0.5 max-w-full [&>span]:truncate" />
             ) : badge.kind === "verify" ? (
-              <p className="mt-0.5 truncate text-[11.5px] font-semibold text-amber-700 dark:text-amber-300">
+              <p className="mt-0.5 truncate text-caption font-semibold text-amber-700 dark:text-amber-300">
                 {t("listing.sticky.verify", "Unusually low — verify first")}
               </p>
             ) : badge.kind === "lease" ? (
-              <p className="mt-0.5 truncate text-[11.5px] font-semibold text-sky-700 dark:text-sky-300">
+              <p className="mt-0.5 truncate text-caption font-semibold text-sky-700 dark:text-sky-300">
                 {t("listing.sticky.lease", "Lease takeover — not full price")}
               </p>
             ) : null}
@@ -102,7 +102,7 @@ export function ListingStickyBar({ priceLkr, badge, href, sourceName, listingId,
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => trackEvent("contact_on_source_clicked", { listing_id: listingId, source, placement: "sticky" })}
-            className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl bg-primary px-4 text-[13px] font-bold text-primary-foreground no-underline shadow-soft transition-transform active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl bg-primary px-4 text-footnote font-bold text-primary-foreground no-underline shadow-soft transition-transform active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {t("listing.viewOnSource", "View on {source}", { source: sourceName })}
             <ExternalLink aria-hidden className="h-3.5 w-3.5" />

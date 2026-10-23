@@ -106,7 +106,7 @@ export function SavedSearchesPanel({ filters, onOpen, touch = false }: SavedSear
           </button>
         ))}
       </div>
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-caption text-muted-foreground">
         {frequency === "daily"
           ? t("search.freqDailyHint", "One summary a day at 7am.")
           : frequency === "instant"
@@ -126,7 +126,7 @@ export function SavedSearchesPanel({ filters, onOpen, touch = false }: SavedSear
         {t("search.saveThisSearch", "Save this search")}
       </button>
       {status ? (
-        <p role="status" className="text-[11px] text-muted-foreground">
+        <p role="status" className="text-caption text-muted-foreground">
           {statusText(status)}
         </p>
       ) : null}
@@ -146,7 +146,7 @@ export function SavedSearchesPanel({ filters, onOpen, touch = false }: SavedSear
               <Select value={search.frequency ?? "off"} onValueChange={(v) => void change(search, v as SavedSearchFrequency)}>
                 <SelectTrigger
                   aria-label={t("search.alertFrequencyFor", "Alert frequency for {name}", { name: search.name })}
-                  className="h-7 w-[5.5rem] rounded-full border-transparent bg-surface/70 px-2 text-[11px]"
+                  className="h-7 w-[5.5rem] rounded-full border-transparent bg-surface/70 px-2 text-caption"
                 >
                   <SelectValue />
                 </SelectTrigger>

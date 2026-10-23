@@ -143,15 +143,15 @@ export default function Settings() {
                     <Moon className="h-5 w-5" />
                   </div>
                   <div>
-                    <h2 className="text-base font-bold tracking-tight text-foreground">
+                    <h2 className="text-body font-bold tracking-tight text-foreground">
                       {t("ui.theme", "Theme & Appearance")}
                     </h2>
-                    <p className="text-xs font-medium text-muted-foreground">
+                    <p className="text-caption font-medium text-muted-foreground">
                       {t("settings.themeHint", "Choose visual style for the entire app")}
                     </p>
                   </div>
                 </div>
-                <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-bold text-primary">
+                <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-caption font-bold text-primary">
                   {resolvedTheme === "dark" ? "Dark Active" : "Light Active"}
                 </span>
               </div>
@@ -218,7 +218,7 @@ export default function Settings() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Icon className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground")} />
-                          <span className="text-xs font-bold">{item.label}</span>
+                          <span className="text-caption font-bold">{item.label}</span>
                         </div>
                         <span
                           className={cn(
@@ -231,7 +231,7 @@ export default function Settings() {
                           <Check className="h-3 w-3 stroke-[3]" />
                         </span>
                       </div>
-                      <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                      <p className="mt-2 text-caption leading-relaxed text-muted-foreground">
                         {item.hint}
                       </p>
                     </button>
@@ -240,7 +240,7 @@ export default function Settings() {
               </div>
             </div>
 
-            <p className="mt-6 text-[11px] font-medium text-muted-foreground/80">
+            <p className="mt-6 text-caption font-medium text-muted-foreground/80">
               System mode automatically matches your operating system&apos;s day/night schedule.
             </p>
           </motion.div>
@@ -256,10 +256,10 @@ export default function Settings() {
                   <Globe className="h-5 w-5" />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold tracking-tight text-foreground">
+                  <h2 className="text-body font-bold tracking-tight text-foreground">
                     {t("ui.language", "Display Language")}
                   </h2>
-                  <p className="text-xs font-medium text-muted-foreground">
+                  <p className="text-caption font-medium text-muted-foreground">
                     {t("settings.languageHint", "Set display language for navigation and labels")}
                   </p>
                 </div>
@@ -283,12 +283,12 @@ export default function Settings() {
                     >
                       <div className="min-w-0 pr-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-foreground">{item.fallback}</span>
-                          <span className="rounded-md bg-surface px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                          <span className="text-caption font-bold text-foreground">{item.fallback}</span>
+                          <span className="rounded-md bg-surface px-1.5 py-0.5 text-caption font-semibold text-muted-foreground">
                             {item.native}
                           </span>
                         </div>
-                        <span className="mt-0.5 block truncate text-[11px] text-muted-foreground font-medium">
+                        <span className="mt-0.5 block truncate text-caption text-muted-foreground font-medium">
                           {item.hint}
                         </span>
                       </div>
@@ -308,7 +308,7 @@ export default function Settings() {
               </div>
             </div>
 
-            <p className="mt-6 text-[11px] font-medium text-muted-foreground/80">
+            <p className="mt-6 text-caption font-medium text-muted-foreground/80">
               Language selections synchronize instantly across listings, calculator metrics, and filters.
             </p>
           </motion.div>
@@ -325,10 +325,10 @@ export default function Settings() {
                     <Coins className="h-5 w-5" />
                   </div>
                   <div>
-                    <h2 className="text-base font-bold tracking-tight text-foreground">
+                    <h2 className="text-body font-bold tracking-tight text-foreground">
                       Market Standards & Currency
                     </h2>
-                    <p className="text-xs font-medium text-muted-foreground">
+                    <p className="text-caption font-medium text-muted-foreground">
                       Conventions applied to vehicle prices and depreciation
                     </p>
                   </div>
@@ -339,12 +339,12 @@ export default function Settings() {
                 <div className="rounded-2xl border border-border/70 bg-surface/50 p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-bold text-foreground">Base Currency</p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      <p className="text-caption font-bold text-foreground">Base Currency</p>
+                      <p className="mt-0.5 text-caption text-muted-foreground">
                         Sri Lankan Rupee (LKR) formatted in Millions (e.g. Rs 14.5M)
                       </p>
                     </div>
-                    <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-mono font-bold text-primary">
+                    <span className="rounded-full border border-border bg-card px-2.5 py-1 text-caption font-mono font-bold text-primary">
                       LKR (Rs)
                     </span>
                   </div>
@@ -353,12 +353,12 @@ export default function Settings() {
                 <div className="rounded-2xl border border-border/70 bg-surface/50 p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-bold text-foreground">Price Baseline</p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      <p className="text-caption font-bold text-foreground">Price Baseline</p>
+                      <p className="mt-0.5 text-caption text-muted-foreground">
                         Fair Market Value (FMV) algorithm trained on Sri Lankan market sales
                       </p>
                     </div>
-                    <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-mono font-bold text-emerald-400">
+                    <span className="rounded-full border border-border bg-card px-2.5 py-1 text-caption font-mono font-bold text-emerald-400">
                       FMV v2.4
                     </span>
                   </div>
@@ -367,12 +367,12 @@ export default function Settings() {
                 <div className="rounded-2xl border border-border/70 bg-surface/50 p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-bold text-foreground">Odometer Standard</p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      <p className="text-caption font-bold text-foreground">Odometer Standard</p>
+                      <p className="mt-0.5 text-caption text-muted-foreground">
                         Metric Kilometers (km) with verified odometer checks
                       </p>
                     </div>
-                    <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-mono font-bold text-foreground">
+                    <span className="rounded-full border border-border bg-card px-2.5 py-1 text-caption font-mono font-bold text-foreground">
                       KM
                     </span>
                   </div>
@@ -381,12 +381,12 @@ export default function Settings() {
             </div>
 
             <div className="mt-6 flex items-center justify-between border-t border-border/60 pt-4">
-              <span className="text-[11px] font-medium text-muted-foreground">
+              <span className="text-caption font-medium text-muted-foreground">
                 Want to calculate custom loan lease terms?
               </span>
               <Link
                 to="/calculator"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline"
+                className="inline-flex items-center gap-1.5 text-caption font-bold text-primary hover:underline"
               >
                 Loan Calculator
                 <ArrowUpRight className="h-3.5 w-3.5" />
@@ -406,15 +406,15 @@ export default function Settings() {
                     <Scale className="h-5 w-5" />
                   </div>
                   <div>
-                    <h2 className="text-base font-bold tracking-tight text-foreground">
+                    <h2 className="text-body font-bold tracking-tight text-foreground">
                       Compare Tray & Local Storage
                     </h2>
-                    <p className="text-xs font-medium text-muted-foreground">
+                    <p className="text-caption font-medium text-muted-foreground">
                       Pinned vehicles and offline local preferences
                     </p>
                   </div>
                 </div>
-                <span className="rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] font-mono font-bold text-foreground">
+                <span className="rounded-full border border-border bg-surface px-2.5 py-1 text-caption font-mono font-bold text-foreground">
                   {pinned.length} / {MAX_PINNED} Pinned
                 </span>
               </div>
@@ -422,8 +422,8 @@ export default function Settings() {
               <div className="rounded-2xl border border-border/70 bg-surface/50 p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-xs font-bold text-foreground">Active Compare Tray</p>
-                    <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                    <p className="text-caption font-bold text-foreground">Active Compare Tray</p>
+                    <p className="mt-1 text-caption leading-relaxed text-muted-foreground">
                       {pinned.length === 0
                         ? `No vehicles are currently pinned. Pin up to ${MAX_PINNED} cars from search or market results to compare side-by-side.`
                         : `You have ${pinned.length} vehicle${pinned.length > 1 ? "s" : ""} saved in your comparison session.`}
@@ -433,7 +433,7 @@ export default function Settings() {
                     <button
                       type="button"
                       onClick={handleClearCompare}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-bold text-destructive transition-colors hover:bg-destructive/20 active:scale-95"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-caption font-bold text-destructive transition-colors hover:bg-destructive/20 active:scale-95"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                       Clear
@@ -446,7 +446,7 @@ export default function Settings() {
                     {pinned.map((car) => (
                       <span
                         key={car.id}
-                        className="rounded-lg border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-foreground"
+                        className="rounded-lg border border-border bg-card px-2.5 py-1 text-caption font-semibold text-foreground"
                       >
                         {car.make} {car.model}
                       </span>
@@ -458,8 +458,8 @@ export default function Settings() {
               <div className="mt-4 rounded-2xl border border-border/70 bg-surface/50 p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-bold text-foreground">Browser Local Storage</p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    <p className="text-caption font-bold text-foreground">Browser Local Storage</p>
+                    <p className="mt-0.5 text-caption text-muted-foreground">
                       Preferences and pinned listings are stored securely on this device without tracking cookies.
                     </p>
                   </div>
@@ -469,12 +469,12 @@ export default function Settings() {
             </div>
 
             <div className="mt-6 flex items-center justify-between border-t border-border/60 pt-4">
-              <span className="text-[11px] font-medium text-muted-foreground">
+              <span className="text-caption font-medium text-muted-foreground">
                 Side-by-side spec comparison
               </span>
               <Link
                 to="/compare"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline"
+                className="inline-flex items-center gap-1.5 text-caption font-bold text-primary hover:underline"
               >
                 Go to Compare Page
                 <ArrowUpRight className="h-3.5 w-3.5" />
@@ -498,16 +498,16 @@ export default function Settings() {
                   <Bug className="h-5 w-5" />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold tracking-tight text-foreground">
+                  <h2 className="text-body font-bold tracking-tight text-foreground">
                     Have Feedback or Found a Bug?
                   </h2>
-                  <p className="text-xs font-medium text-muted-foreground">
+                  <p className="text-caption font-medium text-muted-foreground">
                     Direct community feedback pipeline to the engineering team
                   </p>
                 </div>
               </div>
 
-              <p className="text-xs leading-relaxed text-muted-foreground">
+              <p className="text-caption leading-relaxed text-muted-foreground">
                 Found a pricing anomaly, scraper discrepancy, or visual overlap? Use our built-in feedback tool.
                 It automatically includes your browser route context and is reviewed by the Motormila team.
               </p>
@@ -516,7 +516,7 @@ export default function Settings() {
                 {["Bug Report", "Feature Idea", "Data Discrepancy", "UI / UX Polish", "General"].map((chip) => (
                   <span
                     key={chip}
-                    className="rounded-full border border-border bg-surface px-3 py-1 text-[11px] font-medium text-muted-foreground"
+                    className="rounded-full border border-border bg-surface px-3 py-1 text-caption font-medium text-muted-foreground"
                   >
                     {chip}
                   </span>
@@ -525,13 +525,13 @@ export default function Settings() {
             </div>
 
             <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-border/60 pt-4">
-              <span className="text-[11px] font-medium text-muted-foreground">
+              <span className="text-caption font-medium text-muted-foreground">
                 Offline queue supported • Encrypted transit
               </span>
               <button
                 type="button"
                 onClick={() => openFeedbackDialog()}
-                className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-xs font-bold text-primary-foreground shadow-soft transition-all duration-200 hover:opacity-95 active:scale-95"
+                className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-caption font-bold text-primary-foreground shadow-soft transition-all duration-200 hover:opacity-95 active:scale-95"
               >
                 <MessageSquare className="h-4 w-4" />
                 Send Feedback
@@ -550,10 +550,10 @@ export default function Settings() {
                   <ShieldCheck className="h-5 w-5" />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold tracking-tight text-foreground">
+                  <h2 className="text-body font-bold tracking-tight text-foreground">
                     System & Security
                   </h2>
-                  <p className="text-xs font-medium text-muted-foreground">
+                  <p className="text-caption font-medium text-muted-foreground">
                     Platform telemetry and active runtime
                   </p>
                 </div>
@@ -566,30 +566,30 @@ export default function Settings() {
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                       <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
                     </span>
-                    <span className="text-xs font-bold text-foreground">Market Scrapers & DB</span>
+                    <span className="text-caption font-bold text-foreground">Market Scrapers & DB</span>
                   </div>
-                  <span className="text-[11px] font-mono font-semibold text-emerald-400">Operational</span>
+                  <span className="text-caption font-mono font-semibold text-emerald-400">Operational</span>
                 </div>
 
                 <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-surface/50 px-4 py-3">
-                  <span className="text-xs font-bold text-foreground">Client Build</span>
-                  <span className="text-[11px] font-mono text-muted-foreground">v1.4.2 Production</span>
+                  <span className="text-caption font-bold text-foreground">Client Build</span>
+                  <span className="text-caption font-mono text-muted-foreground">v1.4.2 Production</span>
                 </div>
 
                 <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-surface/50 px-4 py-3">
-                  <span className="text-xs font-bold text-foreground">Telemetry & Sentry</span>
-                  <span className="text-[11px] font-mono text-muted-foreground">Anonymous Errors Only</span>
+                  <span className="text-caption font-bold text-foreground">Telemetry & Sentry</span>
+                  <span className="text-caption font-mono text-muted-foreground">Anonymous Errors Only</span>
                 </div>
               </div>
             </div>
 
             <div className="mt-6 flex items-center justify-between border-t border-border/60 pt-4">
-              <span className="text-[11px] font-medium text-muted-foreground">
+              <span className="text-caption font-medium text-muted-foreground">
                 Read documentation & API guides
               </span>
               <Link
                 to="/docs"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline"
+                className="inline-flex items-center gap-1.5 text-caption font-bold text-primary hover:underline"
               >
                 Docs
                 <ArrowUpRight className="h-3.5 w-3.5" />

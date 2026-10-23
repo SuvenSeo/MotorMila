@@ -57,7 +57,7 @@ export function NoResultsState({ filters, onFiltersChange, onCreateAlert, alertS
 
   const apply = (patch: Partial<FilterState>) => onFiltersChange({ ...filters, ...patch, page: 1 });
   const chip =
-    "inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-card px-3.5 text-[13px] font-medium text-foreground transition-colors hover:border-primary/40 hover:text-primary-bright active:scale-[0.98] sm:min-h-9";
+    "inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-card px-3.5 text-footnote font-medium text-foreground transition-colors hover:border-primary/40 hover:text-primary-bright active:scale-[0.98] sm:min-h-9";
 
   return (
     <m.div
@@ -73,15 +73,15 @@ export function NoResultsState({ filters, onFiltersChange, onCreateAlert, alertS
       >
         <SearchX aria-hidden className="mx-auto h-8 w-8 text-muted-foreground" />
       </m.span>
-      <p className="mt-3 text-[15px] font-semibold text-foreground">{t("search.noResultsTitle", "No listings match all of these filters")}</p>
-      <p className="mx-auto mt-1.5 max-w-md text-sm text-muted-foreground">
+      <p className="mt-3 text-body font-semibold text-foreground">{t("search.noResultsTitle", "No listings match all of these filters")}</p>
+      <p className="mx-auto mt-1.5 max-w-md text-footnote text-muted-foreground">
         {t("search.noResultsBody", "Try one of these, or get an alert when a match is listed.")}
       </p>
 
       <div className="mx-auto mt-6 max-w-xl space-y-4 text-left">
         {nearby.length ? (
           <div>
-            <p className="mb-2 flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground">
+            <p className="mb-2 flex items-center gap-1.5 text-caption font-medium text-muted-foreground">
               <MapPin aria-hidden className="h-3.5 w-3.5" /> {t("search.tryNearby", "Try a nearby district")}
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -96,7 +96,7 @@ export function NoResultsState({ filters, onFiltersChange, onCreateAlert, alertS
 
         {hasPrice ? (
           <div>
-            <p className="mb-2 flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground">
+            <p className="mb-2 flex items-center gap-1.5 text-caption font-medium text-muted-foreground">
               <Wallet aria-hidden className="h-3.5 w-3.5" /> {t("search.widenPriceLabel", "Widen your budget")}
             </p>
             {(() => {
@@ -112,7 +112,7 @@ export function NoResultsState({ filters, onFiltersChange, onCreateAlert, alertS
 
         {removable.length ? (
           <div>
-            <p className="mb-2 text-[12px] font-medium text-muted-foreground">{t("search.removeFilter", "Remove a filter")}</p>
+            <p className="mb-2 text-caption font-medium text-muted-foreground">{t("search.removeFilter", "Remove a filter")}</p>
             <div className="flex flex-wrap gap-1.5">
               {removable.map((item) => (
                 <button
@@ -136,7 +136,7 @@ export function NoResultsState({ filters, onFiltersChange, onCreateAlert, alertS
           type="button"
           onClick={onCreateAlert}
           disabled={alertStatus === "saving" || alertStatus === "saved"}
-          className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 text-[13px] font-semibold text-primary-foreground transition-colors hover:bg-primary/95 disabled:opacity-60"
+          className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 text-footnote font-semibold text-primary-foreground transition-colors hover:bg-primary/95 disabled:opacity-60"
         >
           <Bell aria-hidden className="h-4 w-4" />
           {alertStatus === "saved"
@@ -146,13 +146,13 @@ export function NoResultsState({ filters, onFiltersChange, onCreateAlert, alertS
         <button
           type="button"
           onClick={() => onFiltersChange({ ...EMPTY_FILTERS })}
-          className="min-h-11 rounded-full border border-border px-5 text-[13px] font-medium text-foreground transition-colors hover:bg-foreground/[0.03]"
+          className="min-h-11 rounded-full border border-border px-5 text-footnote font-medium text-foreground transition-colors hover:bg-foreground/[0.03]"
         >
           {t("search.clearAll", "Clear all filters")}
         </button>
       </div>
       {alertStatus === "limit" ? (
-        <p role="status" className="mt-3 text-[12px] text-muted-foreground">
+        <p role="status" className="mt-3 text-caption text-muted-foreground">
           {isSignedIn
             ? t("search.alertLimitPro", "You've reached your alert limit. Remove one or upgrade for more.")
             : t("search.alertLimitGuest", "Your free alert is in use.")}{" "}
@@ -161,7 +161,7 @@ export function NoResultsState({ filters, onFiltersChange, onCreateAlert, alertS
           </Link>
         </p>
       ) : alertStatus === "error" ? (
-        <p role="status" className="mt-3 text-[12px] text-muted-foreground">
+        <p role="status" className="mt-3 text-caption text-muted-foreground">
           {t("search.alertSavedLocal", "Saved on this device. We couldn't reach the alert server just now.")}
         </p>
       ) : null}

@@ -38,7 +38,7 @@ describe("ListingPriceTimeline", () => {
     expect(screen.getByText(/2 cuts recorded/i)).toBeInTheDocument();
   });
 
-  it("renders tracking-started state for a single point", () => {
+  it("renders  state for a single point", () => {
     renderTimeline({
       listing_id: 1,
       points: [{ price_lkr: 8_500_000, scraped_at: "2026-07-16T10:00:00Z" }],

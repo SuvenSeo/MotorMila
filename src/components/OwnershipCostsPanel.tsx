@@ -90,15 +90,15 @@ export function OwnershipCostsPanel({
             <FileBadge className="h-4 w-4 text-primary" />
           </div>
           <div>
-            <h2 className="text-[14px] font-bold text-foreground">On-road ownership costs</h2>
-            <p className="text-[10px] font-semibold text-muted-foreground">
+            <h2 className="text-body font-bold text-foreground">On-road ownership costs</h2>
+            <p className="text-caption font-semibold text-muted-foreground">
               Revenue licence · emission · third-party · transfer
             </p>
           </div>
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[12px] font-medium text-muted-foreground/80">
+          <label className="text-caption font-medium text-muted-foreground/80">
             Vehicle class
           </label>
           <div className="grid grid-cols-2 gap-1.5">
@@ -108,7 +108,7 @@ export function OwnershipCostsPanel({
                 type="button"
                 onClick={() => setVehicleClass(item.id)}
                 aria-pressed={vehicleClass === item.id}
-                className={`min-h-[36px] rounded-full border py-2 text-[10px] font-bold transition-all active:scale-[0.97] ${
+                className={`min-h-[36px] rounded-full border py-2 text-caption font-bold transition-all active:scale-[0.97] ${
                   vehicleClass === item.id
                     ? "border-primary/40 bg-primary/10 text-primary-bright"
                     : "border-border bg-surface text-muted-foreground hover:border-primary/40 hover:text-foreground"
@@ -121,7 +121,7 @@ export function OwnershipCostsPanel({
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[12px] font-medium text-muted-foreground/80">
+          <label className="text-caption font-medium text-muted-foreground/80">
             Fuel
           </label>
           <div className="grid grid-cols-4 gap-1.5">
@@ -131,7 +131,7 @@ export function OwnershipCostsPanel({
                 type="button"
                 onClick={() => setFuelType(fuel)}
                 aria-pressed={fuelType === fuel}
-                className={`min-h-[36px] rounded-full border py-2 text-[10px] font-bold capitalize transition-all active:scale-[0.97] ${
+                className={`min-h-[36px] rounded-full border py-2 text-caption font-bold capitalize transition-all active:scale-[0.97] ${
                   fuelType === fuel
                     ? "border-primary/40 bg-primary/10 text-primary-bright"
                     : "border-border bg-surface text-muted-foreground hover:border-primary/40 hover:text-foreground"
@@ -145,7 +145,7 @@ export function OwnershipCostsPanel({
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label htmlFor="own-cc" className="text-[12px] font-medium text-muted-foreground/80">
+            <label htmlFor="own-cc" className="text-caption font-medium text-muted-foreground/80">
               Engine CC
             </label>
             <Input
@@ -157,7 +157,7 @@ export function OwnershipCostsPanel({
             />
           </div>
           <div className="space-y-1.5">
-            <label htmlFor="own-kg" className="text-[12px] font-medium text-muted-foreground/80">
+            <label htmlFor="own-kg" className="text-caption font-medium text-muted-foreground/80">
               Unladen kg (optional)
             </label>
             <Input
@@ -173,7 +173,7 @@ export function OwnershipCostsPanel({
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label htmlFor="own-year" className="text-[12px] font-medium text-muted-foreground/80">
+            <label htmlFor="own-year" className="text-caption font-medium text-muted-foreground/80">
               Model year (import check)
             </label>
             <Input
@@ -185,7 +185,7 @@ export function OwnershipCostsPanel({
             />
           </div>
           <div className="space-y-1.5">
-            <label htmlFor="own-price" className="text-[12px] font-medium text-muted-foreground/80">
+            <label htmlFor="own-price" className="text-caption font-medium text-muted-foreground/80">
               Transfer consideration (LKR)
             </label>
             <Input
@@ -198,7 +198,7 @@ export function OwnershipCostsPanel({
           </div>
         </div>
 
-        <label className="flex min-h-[40px] cursor-pointer items-center gap-2 text-xs font-semibold text-foreground">
+        <label className="flex min-h-[40px] cursor-pointer items-center gap-2 text-caption font-semibold text-foreground">
           <input
             type="checkbox"
             checked={includeTransfer}
@@ -211,8 +211,8 @@ export function OwnershipCostsPanel({
 
       <div className="space-y-6 rounded-2xl border border-border bg-card p-5 shadow-soft-lg sm:p-6">
         <div>
-          <h3 className="text-sm font-bold text-foreground">First-year statutory outlay</h3>
-          <p className="mt-0.5 text-[10px] font-semibold text-muted-foreground">
+          <h3 className="text-footnote font-bold text-foreground">First-year statutory outlay</h3>
+          <p className="mt-0.5 text-caption font-semibold text-muted-foreground">
             Gazette-aligned planning figures — confirm eRL / insurer / RMV before paying
             {bundle?.offline ? " · computed on-device" : ""}
           </p>
@@ -228,7 +228,7 @@ export function OwnershipCostsPanel({
           </div>
         ) : bundle ? (
           <div className={`space-y-5 transition-opacity ${loading ? "opacity-60" : "opacity-100"}`}>
-            <div className="space-y-3 border-b border-border pb-4 text-xs">
+            <div className="space-y-3 border-b border-border pb-4 text-caption">
               <div className="flex justify-between text-muted-foreground">
                 <span>Revenue licence (base)</span>
                 <span className="num font-semibold text-foreground">
@@ -261,7 +261,7 @@ export function OwnershipCostsPanel({
               aria-live="polite"
               className="rounded-2xl border border-primary/25 bg-primary/5 p-6 text-center shadow-soft"
             >
-              <span className="text-[12px] font-semibold text-primary-bright">
+              <span className="text-caption font-semibold text-primary-bright">
                 Statutory cash this year
               </span>
               <p className="display-1 num mt-2 text-foreground">
@@ -278,10 +278,10 @@ export function OwnershipCostsPanel({
                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                   )}
                   <div>
-                    <p className="text-xs font-bold capitalize">
+                    <p className="text-caption font-bold capitalize">
                       Import screen · {eligibility.status.replace(/_/g, " ")}
                     </p>
-                    <ul className="mt-2 space-y-1 text-[10px] font-semibold leading-relaxed opacity-90">
+                    <ul className="mt-2 space-y-1 text-caption font-semibold leading-relaxed opacity-90">
                       {eligibility.reasons.map((reason) => (
                         <li key={reason}>• {reason}</li>
                       ))}
@@ -293,7 +293,7 @@ export function OwnershipCostsPanel({
 
             <div className="flex gap-2 rounded-2xl border border-border bg-surface p-3">
               <Shield className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <p className="text-[10px] font-semibold leading-relaxed text-muted-foreground">
+              <p className="text-caption font-semibold leading-relaxed text-muted-foreground">
                 {bundle.notes} {bundle.revenue_licence.schedule_note}
               </p>
             </div>

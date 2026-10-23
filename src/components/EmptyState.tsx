@@ -21,18 +21,18 @@ export function EmptyState({ headline, body, actionLabel, onAction, hint, classN
       role="status"
       aria-live="polite"
     >
-      <p className="text-[14px] font-bold tracking-tight text-foreground">{headline}</p>
-      {body ? <div className="max-w-md text-sm font-medium text-muted-foreground">{body}</div> : null}
+      <p className="text-body font-bold tracking-tight text-foreground">{headline}</p>
+      {body ? <div className="max-w-md text-footnote font-medium text-muted-foreground">{body}</div> : null}
       {actionLabel && onAction ? (
         <button
           type="button"
           onClick={onAction}
-          className="min-h-11 rounded-full border border-border bg-card px-5 py-3 text-sm font-bold text-foreground transition-all hover:bg-surface active:scale-[0.97]"
+          className="min-h-11 rounded-full border border-border bg-card px-5 py-3 text-footnote font-bold text-foreground transition-all hover:bg-surface active:scale-[0.97]"
         >
           {actionLabel}
         </button>
       ) : null}
-      {hint ? <div className="max-w-md text-2xs font-medium text-muted-foreground">{hint}</div> : null}
+      {hint ? <div className="max-w-md text-caption font-medium text-muted-foreground">{hint}</div> : null}
     </div>
   );
 }

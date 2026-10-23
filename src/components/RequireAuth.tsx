@@ -19,7 +19,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
             <div className="absolute inset-0 animate-spin rounded-full border-t-2 border-primary" />
           </div>
           <div className="text-center">
-            <p className="font-display text-[15px] font-semibold tracking-tight text-foreground">Motormila</p>
+            <p className="font-display text-body font-semibold tracking-tight text-foreground">Motormila</p>
             <p className="mt-1 tech-label">{t("authGate.checkingSession", "Checking session")}</p>
           </div>
         </div>

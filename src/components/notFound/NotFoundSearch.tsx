@@ -50,17 +50,17 @@ export function NotFoundSearch() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder={t("notFound.searchPh", "Search make, model or year — e.g. Toyota Aqua 2015")}
-            className="h-12 w-full rounded-xl border border-border bg-surface pl-9 pr-3 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            className="h-12 w-full rounded-xl border border-border bg-surface pl-9 pr-3 text-body text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           />
         </div>
-        <button type="submit" className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-[14px] font-semibold text-primary-foreground hover:bg-primary/90">
+        <button type="submit" className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-body font-semibold text-primary-foreground hover:bg-primary/90">
           {t("notFound.searchBtn", "Search")}
         </button>
       </form>
       <ul className="mt-4 flex flex-wrap gap-2">
         {quick.map(({ to, label, icon: Icon }) => (
           <li key={to}>
-            <Link to={to} className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-border bg-surface px-3.5 text-[13px] font-medium text-foreground no-underline hover:border-primary/40">
+            <Link to={to} className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-border bg-surface px-3.5 text-footnote font-medium text-foreground no-underline hover:border-primary/40">
               <Icon className="h-3.5 w-3.5 text-primary" aria-hidden />
               {label}
             </Link>

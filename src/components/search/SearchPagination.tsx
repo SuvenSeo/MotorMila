@@ -17,14 +17,14 @@ export function SearchPagination({ page, totalPages, total, pageSize, onPageChan
   const from = (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
   const btn =
-    "flex h-11 min-w-11 items-center justify-center rounded-full border border-border px-2 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-30 sm:h-9 sm:min-w-9";
+    "flex h-11 min-w-11 items-center justify-center rounded-full border border-border px-2 text-footnote font-medium text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-30 sm:h-9 sm:min-w-9";
 
   return (
     <nav
       aria-label={t("search.paginationAria", "Results pages")}
       className="mt-8 flex flex-col items-center gap-3 border-t border-border pt-6 sm:flex-row sm:justify-between"
     >
-      <p className="text-[12px] text-muted-foreground">
+      <p className="text-caption text-muted-foreground">
         {t("search.showingRange", "{from}–{to} of {total}", {
           from: from.toLocaleString(),
           to: to.toLocaleString(),

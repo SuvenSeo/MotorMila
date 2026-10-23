@@ -1,5 +1,6 @@
 import type { Config } from "tailwindcss";
 import tailwindcssAnimate from "tailwindcss-animate";
+import { TYPE_SCALE, LETTER_SPACING } from "./src/styles/type-scale";
 
 export default {
   darkMode: ["class", ".theme-dark"],
@@ -36,6 +37,11 @@ export default {
   ],
   prefix: "",
   theme: {
+    // Type scale (web/premium-p0): 9 steps, nothing below 12px. Not `extend`:
+    // Tailwind's default text-xs…text-9xl are intentionally gone. Values live
+    // in src/styles/type-scale.ts so tailwind-merge and docs share one list.
+    fontSize: TYPE_SCALE,
+    letterSpacing: LETTER_SPACING,
     container: {
       center: true,
       padding: "2rem",
@@ -58,41 +64,15 @@ export default {
         devtools: "var(--z-devtools)",
       },
       fontFamily: {
-        // Brand guide: Space Grotesk (display) + Inter (body/UI). Two Latin families.
-        sans: ['var(--font-sans)', '"Inter"', "system-ui", "-apple-system", '"Segoe UI"', "sans-serif"],
-        display: ['var(--font-display)', '"Space Grotesk"', '"Inter"', "system-ui", "sans-serif"],
-        body: ['var(--font-body)', '"Inter"', "system-ui", "-apple-system", '"Segoe UI"', "sans-serif"],
+        // Cal Sans only (styles/fonts.css): Display for headlines, Text for everything else.
+        sans: ["var(--font-sans)"],
+        display: ["var(--font-display)"],
+        body: ["var(--font-body)"],
         // `font-mono` is used for prices/figures across the app: keep it a
         // proportional face with tabular-nums (styles/tokens.css), never monospace.
-        mono: ['var(--font-numeric)', '"Inter"', "system-ui", "sans-serif"],
-        numeric: ['var(--font-numeric)', '"Inter"', "system-ui", "sans-serif"],
+        mono: ["var(--font-numeric-stack)"],
+        numeric: ["var(--font-numeric-stack)"],
         code: ['var(--font-mono)', "ui-monospace", "monospace"],
-      },
-      // Type scale (ui/design) — 2xs 11 · xs 12 · sm 13 · base 15 · lg 17 · xl 20 ·
-      // 2xl 24 · 3xl 30 · 4xl 36 · 5xl 48 · display (fluid 40→76). No text-[Npx].
-      fontSize: {
-        "2xs": ["0.6875rem", { lineHeight: "1.45" }],
-        xs: ["0.75rem", { lineHeight: "1.5" }],
-        sm: ["0.8125rem", { lineHeight: "1.5" }],
-        base: ["0.9375rem", { lineHeight: "1.6" }],
-        lg: ["1.0625rem", { lineHeight: "1.5" }],
-        xl: ["1.25rem", { lineHeight: "1.35" }],
-        "2xl": ["1.5rem", { lineHeight: "1.2" }],
-        "3xl": ["1.875rem", { lineHeight: "1.12" }],
-        "4xl": ["2.25rem", { lineHeight: "1.06" }],
-        "5xl": ["3rem", { lineHeight: "1", letterSpacing: "-0.025em" }],
-        "6xl": ["3.75rem", { lineHeight: "1", letterSpacing: "-0.03em" }],
-        "7xl": ["4.75rem", { lineHeight: "0.98", letterSpacing: "-0.035em" }],
-        "8xl": ["6rem", { lineHeight: "0.95", letterSpacing: "-0.04em" }],
-        label: ["0.6875rem", { lineHeight: "1.25", letterSpacing: "0.12em" }],
-        caption: ["0.6875rem", { lineHeight: "1.45", letterSpacing: "0" }],
-        "display-sm": ["clamp(2rem, 1.55rem + 1.9vw, 3rem)", { lineHeight: "1.04", letterSpacing: "-0.03em", fontWeight: "700" }],
-        display: ["clamp(2.5rem, 1.7rem + 3.4vw, 4.75rem)", { lineHeight: "0.98", letterSpacing: "-0.035em", fontWeight: "700" }],
-        // Tremor v3 type scale (#7 UI review)
-        "tremor-label": ["0.75rem", { lineHeight: "1rem" }],
-        "tremor-default": ["0.875rem", { lineHeight: "1.25rem" }],
-        "tremor-title": ["1.125rem", { lineHeight: "1.75rem" }],
-        "tremor-metric": ["1.875rem", { lineHeight: "2.25rem" }],
       },
       colors: {
         border: "hsl(var(--border))",

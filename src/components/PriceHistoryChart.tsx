@@ -123,19 +123,19 @@ export function PriceHistoryChart({
             Trend desk
           </div>
 
-          <h3 className="headline-display mt-5 text-3xl leading-tight md:text-4xl">{title}</h3>
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          <h3 className="headline-display mt-5 text-title1 leading-tight md:text-title1">{title}</h3>
+          <p className="mt-3 text-footnote leading-relaxed text-muted-foreground">
             Median advertised price movement for the selected make, model, condition, and district filters.
           </p>
 
           <div className="mt-6 grid grid-cols-2 gap-3">
             <div className="data-card p-3">
               <p className="tech-label">Current median</p>
-              <p className="mt-2 text-2xl font-bold tracking-normal text-foreground num">{latestMedianLabel}</p>
+              <p className="mt-2 text-title2 font-bold tracking-normal text-foreground num">{latestMedianLabel}</p>
             </div>
             <div className="data-card p-3">
               <p className="tech-label">Movement</p>
-              <div className={`mt-2 inline-flex items-center gap-1.5 rounded-2xl px-2.5 py-1 text-xs font-bold ${
+              <div className={`mt-2 inline-flex items-center gap-1.5 rounded-2xl px-2.5 py-1 text-caption font-bold ${
                 !hasChangeSignal ? "bg-foreground/[0.03] text-muted-foreground" : toneStyle.chip
               }`}>
                 {!hasChangeSignal || tone === "stable" ? (
@@ -150,11 +150,11 @@ export function PriceHistoryChart({
             </div>
             <div className="data-card p-3">
               <p className="tech-label">Avg depth</p>
-              <p className="mt-2 text-lg font-bold tracking-normal text-foreground num">{formatSampleCount(averageSamples)}</p>
+              <p className="mt-2 text-callout font-bold tracking-normal text-foreground num">{formatSampleCount(averageSamples)}</p>
             </div>
             <div className="data-card p-3">
               <p className="tech-label">Range</p>
-              <p className="mt-2 text-sm font-bold leading-5 text-foreground num">
+              <p className="mt-2 text-footnote font-bold leading-5 text-foreground num">
                 {lowPoint && highPoint ? `${formatPriceLkrMillions(lowPoint.median_price)} - ${formatPriceLkrMillions(highPoint.median_price)}` : "N/A"}
               </p>
             </div>
@@ -165,7 +165,7 @@ export function PriceHistoryChart({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="tech-label">Price history</p>
-              <h4 className="headline-display mt-1 text-xl">{periodLabel}</h4>
+              <h4 className="headline-display mt-1 text-title3">{periodLabel}</h4>
             </div>
             <div className="flex flex-col items-start gap-2 sm:items-end">
               <div className="status-chip w-fit">
@@ -184,7 +184,7 @@ export function PriceHistoryChart({
             {isLoading ? (
               <div className="skeleton-shimmer h-full w-full rounded-xl border border-border" />
             ) : chartData.length === 0 ? (
-              <div className="console-empty flex h-full w-full flex-col items-center justify-center gap-4 px-6 text-sm leading-relaxed text-muted-foreground">
+              <div className="console-empty flex h-full w-full flex-col items-center justify-center gap-4 px-6 text-footnote leading-relaxed text-muted-foreground">
                 <p>{emptyMessage}</p>
                 {emptyActionLabel && onEmptyAction ? (
                   <button
@@ -222,13 +222,13 @@ export function PriceHistoryChart({
                     tickLine={false}
                     minTickGap={28}
                     interval="preserveStartEnd"
-                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10, fontWeight: 600 }}
+                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12, fontWeight: 600 }}
                     dy={10}
                   />
                   <YAxis
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10, fontWeight: 600 }}
+                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12, fontWeight: 600 }}
                     domain={yDomain ?? ["auto", "auto"]}
                     tickCount={5}
                     allowDecimals

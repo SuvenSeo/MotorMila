@@ -19,7 +19,7 @@ export default function CookieNotice() {
           don't let ad networks track you across sites.
         </p>
         <div className="overflow-x-auto rounded-2xl border border-border">
-          <table className="w-full min-w-[560px] text-left text-[12px]">
+          <table className="w-full min-w-[560px] text-left text-caption">
             <thead className="bg-surface">
               <tr>
                 <th className="px-3 py-2 font-semibold">Name</th>

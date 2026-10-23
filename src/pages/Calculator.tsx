@@ -453,7 +453,7 @@ export default function Calculator() {
 
       {(lcResult?.offline || tcoResult?.offline) && (
         <div className="mx-auto max-w-[1320px] px-4 pt-4">
-          <p className="inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-400/10 px-3 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-200">
+          <p className="inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-400/10 px-3 py-1 text-caption font-semibold text-emerald-700 dark:text-emerald-200">
             {t("calc.offlineBadge", "On-device calculation — server unreachable, same gazette schedules.")}
           </p>
         </div>
@@ -485,7 +485,7 @@ export default function Calculator() {
                 data-tab={tab.id}
                 onClick={() => setActiveTab(tab.id as TabType)}
                 aria-pressed={activeTab === tab.id}
-                className={`relative flex min-h-[40px] shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold tracking-wide transition-colors z-10 active:scale-[0.97] ${
+                className={`relative flex min-h-[40px] shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-caption font-semibold tracking-wide transition-colors z-10 active:scale-[0.97] ${
                   activeTab === tab.id
                     ? "text-black font-bold"
                     : "text-muted-foreground hover:text-foreground"
@@ -510,7 +510,7 @@ export default function Calculator() {
         )}
         <button
           onClick={() => void copyShareLink()}
-          className="flex shrink-0 items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-xs font-semibold tracking-wide text-muted-foreground shadow-soft transition-colors hover:text-foreground active:scale-[0.97]"
+          className="flex shrink-0 items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-caption font-semibold tracking-wide text-muted-foreground shadow-soft transition-colors hover:text-foreground active:scale-[0.97]"
           title={t("calc.shareTitle", "Copy a shareable link to this calculation")}
         >
           <Link2 className="h-3.5 w-3.5" />
@@ -541,13 +541,13 @@ export default function Calculator() {
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                    <span className="text-xs font-bold text-amber-700 dark:text-amber-300">
+                    <span className="text-caption font-bold text-amber-700 dark:text-amber-300">
                       {surchargeCountdown.expired
                         ? t("calc.surchargeExpired", "The 50% CID surcharge's gazetted 3-month period has ended")
                         : t("calc.surchargeActive", "50% CID surcharge in force — set to lapse in {days} day(s)", { days: surchargeCountdown.daysLeft })}
                     </span>
                   </div>
-                  <span className="text-[10px] font-semibold text-muted-foreground">
+                  <span className="text-caption font-semibold text-muted-foreground">
                     {surchargeCountdown.expired
                       ? t("calc.surchargeExpiredHint", "No extension has been gazetted as of our last review — verify current customs rates before committing an import.")
                       : t("calc.surchargeActiveHint", "Gazetted expiry {date} · no extension decision announced · LCs opened on or before 15 May 2026 are exempt", { date: surchargeCountdown.expiryLabel })}
@@ -557,7 +557,7 @@ export default function Calculator() {
                       type="button"
                       onClick={toggleSurchargeNotify}
                       aria-pressed={surchargeNotifyOn}
-                      className="inline-flex min-h-[36px] items-center gap-1.5 rounded-2xl border border-amber-500/30 bg-amber-400/10 px-3 py-1.5 text-[11px] font-bold text-amber-800 transition-colors hover:bg-amber-400/20 dark:text-amber-200"
+                      className="inline-flex min-h-[36px] items-center gap-1.5 rounded-2xl border border-amber-500/30 bg-amber-400/10 px-3 py-1.5 text-caption font-bold text-amber-800 transition-colors hover:bg-amber-400/20 dark:text-amber-200"
                     >
                       {surchargeNotifyOn ? (
                         <>
@@ -579,7 +579,7 @@ export default function Calculator() {
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.92 }}
                         transition={{ duration: 0.18 }}
-                        className="w-full text-center sm:w-auto sm:text-left sm:ml-auto rounded-full border border-emerald-500/25 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 num"
+                        className="w-full text-center sm:w-auto sm:text-left sm:ml-auto rounded-full border border-emerald-500/25 bg-emerald-400/10 px-3 py-1.5 text-caption font-bold text-emerald-700 dark:text-emerald-300 num"
                       >
                         {t("calc.lapseSavings", "This import lands {amount} cheaper if it lapses", { amount: formatPrice(lcLapseSavings) })}
                       </m.span>
@@ -595,19 +595,19 @@ export default function Calculator() {
                     <Banknote className="h-4 w-4 text-primary" />
                   </div>
                   <div>
-                    <h2 className="text-[14px] font-bold text-foreground">{t("calc.importConfig", "Import Configuration")}</h2>
-                    <p className="text-[10px] text-muted-foreground font-semibold">{t("calc.importConfigHint", "Taxes compounding on CIF valuation")}</p>
+                    <h2 className="text-body font-bold text-foreground">{t("calc.importConfig", "Import Configuration")}</h2>
+                    <p className="text-caption text-muted-foreground font-semibold">{t("calc.importConfigHint", "Taxes compounding on CIF valuation")}</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-1.5">
-                      <label htmlFor="lc-cif" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.cifUsd", "CIF Price (USD)")}</label>
+                      <label htmlFor="lc-cif" className="text-caption font-medium text-muted-foreground/80">{t("calc.cifUsd", "CIF Price (USD)")}</label>
                       <Input id="lc-cif" type="number" value={cifUsd} onChange={(e) => setCifUsd(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
                     </div>
                     <div className="space-y-1.5">
-                      <label htmlFor="lc-fx" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.exchangeRate", "Exchange Rate (LKR)")}</label>
+                      <label htmlFor="lc-fx" className="text-caption font-medium text-muted-foreground/80">{t("calc.exchangeRate", "Exchange Rate (LKR)")}</label>
                       <div className="flex gap-2">
                         <Input
                           id="lc-fx"
@@ -635,7 +635,7 @@ export default function Calculator() {
                           type="button"
                           onClick={() => void applyLiveFx()}
                           disabled={fxLoading}
-                          className="inline-flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-2xl border border-border bg-surface px-3 text-[10px] font-bold text-foreground transition-colors hover:border-primary/40 disabled:opacity-60"
+                          className="inline-flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-2xl border border-border bg-surface px-3 text-caption font-bold text-foreground transition-colors hover:border-primary/40 disabled:opacity-60"
                           title="Pull latest CBSL-linked USD/LKR"
                         >
                           <RefreshCw className={`h-3.5 w-3.5 ${fxLoading ? "animate-spin" : ""}`} />
@@ -643,7 +643,7 @@ export default function Calculator() {
                         </button>
                       </div>
                       {macro ? (
-                        <p className="text-[10px] font-semibold text-muted-foreground">
+                        <p className="text-caption font-semibold text-muted-foreground">
                           {macro.fallback ? (
                             <span className="text-deal-amber">Reference rate — live FX unavailable · </span>
                           ) : (
@@ -659,14 +659,14 @@ export default function Calculator() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[12px] font-medium text-muted-foreground/80">{t("calc.fuelCategory", "Fuel Category")}</label>
+                    <label className="text-caption font-medium text-muted-foreground/80">{t("calc.fuelCategory", "Fuel Category")}</label>
                     <div className="grid grid-cols-4 gap-1.5">
                       {(["petrol", "diesel", "hybrid", "electric"] as const).map((fuel) => (
                         <button
                           key={fuel}
                           onClick={() => setLcFuelType(fuel)}
                           aria-pressed={lcFuelType === fuel}
-                          className={`min-h-[36px] rounded-2xl border py-2.5 text-[10px] font-bold capitalize transition-all active:scale-[0.97] ${
+                          className={`min-h-[36px] rounded-2xl border py-2.5 text-caption font-bold capitalize transition-all active:scale-[0.97] ${
                             lcFuelType === fuel
                               ? "border-primary/40 bg-primary/10 text-primary-bright"
                               : "border-border bg-surface text-muted-foreground hover:text-foreground hover:border-primary/40"
@@ -680,10 +680,10 @@ export default function Calculator() {
 
                   {lcFuelType !== "electric" ? (
                     <div className="space-y-1.5">
-                      <label htmlFor="lc-cc" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.engineCc", "Engine Capacity (CC)")}</label>
+                      <label htmlFor="lc-cc" className="text-caption font-medium text-muted-foreground/80">{t("calc.engineCc", "Engine Capacity (CC)")}</label>
                       <Input id="lc-cc" type="number" value={lcEngineCc} onChange={(e) => setLcEngineCc(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
                       {lcFuelType === "hybrid" && lcEngineCc > 1500 && (
-                        <p className="flex items-center gap-1.5 text-[10px] text-amber-600 dark:text-amber-400 font-semibold mt-1">
+                        <p className="flex items-center gap-1.5 text-caption text-amber-600 dark:text-amber-400 font-semibold mt-1">
                           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
                           Capacity is above the 1500cc cliff. Excise rate steps up significantly.
                         </p>
@@ -691,17 +691,17 @@ export default function Calculator() {
                     </div>
                   ) : (
                     <div className="space-y-1.5">
-                      <label htmlFor="lc-kw" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.motorKw", "Motor Power (kW)")}</label>
+                      <label htmlFor="lc-kw" className="text-caption font-medium text-muted-foreground/80">{t("calc.motorKw", "Motor Power (kW)")}</label>
                       <Input id="lc-kw" type="number" value={lcMotorKw} onChange={(e) => setLcMotorKw(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
                     </div>
                   )}
 
                   <div className="space-y-3 pt-3 border-t border-border">
-                    <label className="flex items-center gap-3 cursor-pointer text-xs font-semibold text-muted-foreground hover:text-foreground">
+                    <label className="flex items-center gap-3 cursor-pointer text-caption font-semibold text-muted-foreground hover:text-foreground">
                       <input type="checkbox" checked={applySurcharge} onChange={(e) => setApplySurcharge(e.target.checked)} className="accent-primary h-4 w-4 rounded" />
                       Apply 50% CID Gazette Surcharge (Compounding)
                     </label>
-                    <label className="flex items-center gap-3 cursor-pointer text-xs font-semibold text-muted-foreground hover:text-foreground">
+                    <label className="flex items-center gap-3 cursor-pointer text-caption font-semibold text-muted-foreground hover:text-foreground">
                       <input type="checkbox" checked={applySscl} onChange={(e) => setApplySscl(e.target.checked)} className="accent-primary h-4 w-4 rounded" />
                       Apply 2.5% SSCL Levy
                     </label>
@@ -712,8 +712,8 @@ export default function Calculator() {
               {/* Landed Cost Results — the number is the hero */}
               <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-soft-lg space-y-6">
                 <div>
-                  <h3 className="text-sm font-bold text-foreground">{t("calc.breakdown", "Landed Cost breakdown")}</h3>
-                  <p className="text-[10px] text-muted-foreground font-semibold mt-0.5">{t("calc.breakdownHint", "Indicative tax components based on 2026 gazette calculations")}</p>
+                  <h3 className="text-footnote font-bold text-foreground">{t("calc.breakdown", "Landed Cost breakdown")}</h3>
+                  <p className="text-caption text-muted-foreground font-semibold mt-0.5">{t("calc.breakdownHint", "Indicative tax components based on 2026 gazette calculations")}</p>
                 </div>
 
                 {lcLoading && !lcResult ? (
@@ -723,27 +723,27 @@ export default function Calculator() {
                 ) : lcResult ? (
                   <div className={`space-y-5 transition-opacity duration-200 ${lcLoading ? "opacity-60" : "opacity-100"}`}>
                     <motion.div layout={!motionStill} transition={spring.gentle} className="space-y-3 border-b border-border pb-4">
-                      <div className="flex justify-between text-xs text-muted-foreground">
+                      <div className="flex justify-between text-caption text-muted-foreground">
                         <span>{t("calc.baseCif", "Base CIF LKR Equivalent")}</span>
                         <span className="font-semibold text-foreground num">{formatPrice(lcResult.cif_lkr)}</span>
                       </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
+                      <div className="flex justify-between text-caption text-muted-foreground">
                         <span>{t("calc.cid", "Customs Import Duty (20%)")}</span>
                         <span className="font-semibold text-foreground num">{formatPrice(lcResult.cid)}</span>
                       </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
+                      <div className="flex justify-between text-caption text-muted-foreground">
                         <span>{t("calc.surchargeOnCid", "Surcharge on CID (50% Surcharge)")}</span>
                         <span className="font-semibold text-foreground num">{formatPrice(lcResult.surcharge)}</span>
                       </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
+                      <div className="flex justify-between text-caption text-muted-foreground">
                         <span>{t("calc.excise", "Excise Duty (Capacity Banded)")}</span>
                         <span className="font-semibold text-foreground num">{formatPrice(lcResult.excise)}</span>
                       </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
+                      <div className="flex justify-between text-caption text-muted-foreground">
                         <span>{t("calc.sscl", "SSCL (2.5%)")}</span>
                         <span className="font-semibold text-foreground num">{formatPrice(lcResult.sscl)}</span>
                       </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
+                      <div className="flex justify-between text-caption text-muted-foreground">
                         <span>{t("calc.vat", "VAT (18% Compounded)")}</span>
                         <span className="font-semibold text-foreground num">{formatPrice(lcResult.vat)}</span>
                       </div>
@@ -756,7 +756,7 @@ export default function Calculator() {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, transition: { duration: duration.fast, ease: ease.exit } }}
                             transition={spring.gentle}
-                            className="flex justify-between text-xs text-rose-600 dark:text-rose-400 font-semibold"
+                            className="flex justify-between text-caption text-rose-600 dark:text-rose-400 font-semibold"
                           >
                             <span>{t("calc.luxuryTax", "Luxury Tax (Excess Portion)")}</span>
                             <span className="num">{formatPrice(lcResult.luxury_tax)}</span>
@@ -767,7 +767,7 @@ export default function Calculator() {
 
                     {/* Featured readout — landed cost towers, total taxes demoted below it */}
                     <motion.div layout={!motionStill ? "position" : false} transition={spring.gentle} aria-live="polite" className="rounded-2xl border border-primary/25 bg-primary/5 p-5 sm:p-6 shadow-soft">
-                      <span className="text-[12px] font-semibold text-primary-bright">{t("calc.estLanded", "Est. Landed Cost")}</span>
+                      <span className="text-caption font-semibold text-primary-bright">{t("calc.estLanded", "Est. Landed Cost")}</span>
                       <div className="display-1 text-foreground num mt-2">
                         {lcResult.landed_cost == null || !Number.isFinite(lcResult.landed_cost) ? (
                           "N/A"
@@ -776,8 +776,8 @@ export default function Calculator() {
                         )}
                       </div>
                       <div className="mt-4 flex items-center gap-3 border-t border-primary/15 pt-3">
-                        <span className="text-[12px] font-medium text-muted-foreground">Total Taxes &amp; Duties</span>
-                        <span className="ml-auto text-sm font-bold text-primary num">
+                        <span className="text-caption font-medium text-muted-foreground">Total Taxes &amp; Duties</span>
+                        <span className="ml-auto text-footnote font-bold text-primary num">
                           <FlowLkr value={lcResult.total_tax} prefixPlus label={`+${formatPrice(lcResult.total_tax)}`} />
                         </span>
                       </div>
@@ -785,7 +785,7 @@ export default function Calculator() {
 
                     <div className="rounded-2xl bg-surface border border-border p-3 flex gap-2">
                       <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                      <p className="text-[10px] leading-relaxed text-muted-foreground font-semibold">{lcResult.notes}</p>
+                      <p className="text-caption leading-relaxed text-muted-foreground font-semibold">{lcResult.notes}</p>
                     </div>
                   </div>
                 ) : null}
@@ -809,19 +809,19 @@ export default function Calculator() {
                     <WalletCards className="h-4 w-4 text-primary" />
                   </div>
                   <div>
-                    <h2 className="text-[14px] font-bold text-foreground">{t("calc.leaseAssumptions", "Lease Assumptions")}</h2>
-                    <p className="text-[10px] text-muted-foreground font-semibold">{t("calc.leaseAssumptionsHint", "Bases for loan to value margins")}</p>
+                    <h2 className="text-body font-bold text-foreground">{t("calc.leaseAssumptions", "Lease Assumptions")}</h2>
+                    <p className="text-caption text-muted-foreground font-semibold">{t("calc.leaseAssumptionsHint", "Bases for loan to value margins")}</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <label htmlFor="lease-price" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.vehicleValuation", "Vehicle Valuation (LKR)")}</label>
-                    <Input id="lease-price" type="number" value={leasePrice} onChange={(e) => setLeasePrice(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40 font-semibold text-foreground text-base" />
-                    <p className="text-[10px] text-muted-foreground font-semibold num">{formatPrice(leasePrice)}</p>
+                    <label htmlFor="lease-price" className="text-caption font-medium text-muted-foreground/80">{t("calc.vehicleValuation", "Vehicle Valuation (LKR)")}</label>
+                    <Input id="lease-price" type="number" value={leasePrice} onChange={(e) => setLeasePrice(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40 font-semibold text-foreground text-body" />
+                    <p className="text-caption text-muted-foreground font-semibold num">{formatPrice(leasePrice)}</p>
                   </div>
                   <div className="space-y-1.5">
-                    <label htmlFor="lease-cc" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.engineCc", "Engine Capacity (CC)")}</label>
+                    <label htmlFor="lease-cc" className="text-caption font-medium text-muted-foreground/80">{t("calc.engineCc", "Engine Capacity (CC)")}</label>
                     <Input id="lease-cc" type="number" value={leaseCc} onChange={(e) => setLeaseCc(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
                   </div>
                 </div>
@@ -848,8 +848,8 @@ export default function Calculator() {
                       <div className="flex items-start gap-2.5">
                         <Compass className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                         <div className="space-y-1.5">
-                          <p className="text-xs font-bold text-foreground">{t("calc.ltvTitle", "The 40/60 rule is working in your favour on used cars")}</p>
-                          <p className="text-[11px] leading-relaxed text-muted-foreground font-medium">
+                          <p className="text-caption font-bold text-foreground">{t("calc.ltvTitle", "The 40/60 rule is working in your favour on used cars")}</p>
+                          <p className="text-caption leading-relaxed text-muted-foreground font-medium">
                             CBSL caps financing at <span className="font-bold text-foreground">40%</span> for brand-new or unregistered vehicles but{" "}
                             <span className="font-bold text-foreground">60%</span> for registered used (&gt;1yr). For this{" "}
                             <span className="num font-bold text-foreground">{formatPrice(leasePrice)}</span> vehicle: registered used needs{" "}
@@ -857,7 +857,7 @@ export default function Calculator() {
                             <span className="num font-bold text-rose-600 dark:text-rose-400">{formatPrice(newDown)}</span> — the same cash that would stretch to a{" "}
                             <span className="num font-bold text-foreground">{formatPrice(usedBudgetFromNewDown)}</span> registered used car.
                           </p>
-                          <p className="text-[10px] font-semibold text-muted-foreground">
+                          <p className="text-caption font-semibold text-muted-foreground">
                             CBSL Act Directions No. 01 of 2026 (from 25 May 2026) · banks may apply stricter internal caps
                           </p>
                         </div>
@@ -868,11 +868,11 @@ export default function Calculator() {
                 })()}
                 </AnimatePresence>
                 <div>
-                  <span className="text-[12px] font-medium text-muted-foreground">{t("calc.cashRequirements", "Cash requirements")}</span>
+                  <span className="text-caption font-medium text-muted-foreground">{t("calc.cashRequirements", "Cash requirements")}</span>
                   <CashToOwnStrip priceLkr={leasePrice} financeClass="registered_used" />
                 </div>
                 <div>
-                  <span className="text-[12px] font-medium text-muted-foreground">{t("calc.leaseModeling", "Lease Scenario modeling")}</span>
+                  <span className="text-caption font-medium text-muted-foreground">{t("calc.leaseModeling", "Lease Scenario modeling")}</span>
                   <LeaseCalculator price={leasePrice} financeClass="registered_used" />
                 </div>
               </div>
@@ -895,31 +895,31 @@ export default function Calculator() {
                     <Gauge className="h-4 w-4 text-primary" />
                   </div>
                   <div>
-                    <h2 className="text-[14px] font-bold text-foreground">{t("calc.tcoAssumptions", "TCO Assumptions")}</h2>
-                    <p className="text-[10px] text-muted-foreground font-semibold">{t("calc.tcoAssumptionsHint", "Commute, service, and amortization")}</p>
+                    <h2 className="text-body font-bold text-foreground">{t("calc.tcoAssumptions", "TCO Assumptions")}</h2>
+                    <p className="text-caption text-muted-foreground font-semibold">{t("calc.tcoAssumptionsHint", "Commute, service, and amortization")}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <label htmlFor="tco-km" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.dailyCommute", "Daily Commute (KM)")}</label>
+                    <label htmlFor="tco-km" className="text-caption font-medium text-muted-foreground/80">{t("calc.dailyCommute", "Daily Commute (KM)")}</label>
                     <Input id="tco-km" type="number" value={tcoDailyKm} onChange={(e) => setTcoDailyKm(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
                   </div>
                   <div className="space-y-1.5">
-                    <label htmlFor="tco-kmpl" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.fuelEfficiency", "Fuel Efficiency (KMPL)")}</label>
+                    <label htmlFor="tco-kmpl" className="text-caption font-medium text-muted-foreground/80">{t("calc.fuelEfficiency", "Fuel Efficiency (KMPL)")}</label>
                     <Input id="tco-kmpl" type="number" value={tcoKmpl} onChange={(e) => setTcoKmpl(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[12px] font-medium text-muted-foreground/80">Fuel Type</label>
+                  <label className="text-caption font-medium text-muted-foreground/80">Fuel Type</label>
                   <div className="grid grid-cols-4 gap-1.5">
                     {(["petrol", "diesel", "hybrid", "electric"] as const).map((fuel) => (
                       <button
                         key={fuel}
                         onClick={() => setTcoFuelType(fuel)}
                         aria-pressed={tcoFuelType === fuel}
-                        className={`min-h-[36px] rounded-2xl border py-2.5 text-[10px] font-bold capitalize transition-all active:scale-[0.97] ${
+                        className={`min-h-[36px] rounded-2xl border py-2.5 text-caption font-bold capitalize transition-all active:scale-[0.97] ${
                           tcoFuelType === fuel
                             ? "border-primary/40 bg-primary/10 text-primary-bright"
                             : "border-border bg-surface text-muted-foreground hover:text-foreground hover:border-primary/40"
@@ -932,28 +932,28 @@ export default function Calculator() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label htmlFor="tco-lease" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.monthlyLease", "Monthly Lease (LKR)")}</label>
+                  <label htmlFor="tco-lease" className="text-caption font-medium text-muted-foreground/80">{t("calc.monthlyLease", "Monthly Lease (LKR)")}</label>
                   <Input id="tco-lease" type="number" value={tcoLease} onChange={(e) => setTcoLease(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 border-t border-border pt-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <label htmlFor="tco-ins" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.annualInsurance", "Annual Insurance")}</label>
+                    <label htmlFor="tco-ins" className="text-caption font-medium text-muted-foreground/80">{t("calc.annualInsurance", "Annual Insurance")}</label>
                     <Input id="tco-ins" type="number" value={tcoInsurance} onChange={(e) => setTcoInsurance(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
                   </div>
                   <div className="space-y-1.5">
-                    <label htmlFor="tco-svc" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.annualService", "Annual Service")}</label>
+                    <label htmlFor="tco-svc" className="text-caption font-medium text-muted-foreground/80">{t("calc.annualService", "Annual Service")}</label>
                     <Input id="tco-svc" type="number" value={tcoService} onChange={(e) => setTcoService(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <label htmlFor="tco-tyres" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.annualTyres", "Annual Tyres")}</label>
+                    <label htmlFor="tco-tyres" className="text-caption font-medium text-muted-foreground/80">{t("calc.annualTyres", "Annual Tyres")}</label>
                     <Input id="tco-tyres" type="number" value={tcoTyres} onChange={(e) => setTcoTyres(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
                   </div>
                   <div className="space-y-1.5">
-                    <label htmlFor="tco-dep" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.annualResaleLoss", "Annual Resale Loss")}</label>
+                    <label htmlFor="tco-dep" className="text-caption font-medium text-muted-foreground/80">{t("calc.annualResaleLoss", "Annual Resale Loss")}</label>
                     <Input id="tco-dep" type="number" value={tcoDepreciation} onChange={(e) => setTcoDepreciation(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
                   </div>
                 </div>
@@ -962,8 +962,8 @@ export default function Calculator() {
               {/* TCO Results — monthly cost is the hero number */}
               <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-soft-lg space-y-6">
                 <div>
-                  <h3 className="text-sm font-bold text-foreground">{t("calc.tcoBreakdown", "Monthly Cost of Ownership breakdown")}</h3>
-                  <p className="text-[10px] text-muted-foreground font-semibold mt-0.5">{t("calc.tcoBreakdownHint", "Calculated using live Octane API price metrics")}</p>
+                  <h3 className="text-footnote font-bold text-foreground">{t("calc.tcoBreakdown", "Monthly Cost of Ownership breakdown")}</h3>
+                  <p className="text-caption text-muted-foreground font-semibold mt-0.5">{t("calc.tcoBreakdownHint", "Calculated using live Octane API price metrics")}</p>
                 </div>
 
                 {tcoLoading && !tcoResult ? (
@@ -973,26 +973,26 @@ export default function Calculator() {
                 ) : tcoResult ? (
                   <div className={`space-y-5 transition-opacity duration-200 ${tcoLoading ? "opacity-60" : "opacity-100"}`}>
                     <div className="space-y-3 border-b border-border pb-4">
-                      <div className="flex justify-between text-xs text-muted-foreground">
+                      <div className="flex justify-between text-caption text-muted-foreground">
                         <span>Live fuel/energy price benchmark</span>
                         <span className="font-semibold text-foreground num">Rs. {tcoResult.fuel_price_lkr.toLocaleString()} / L or kWh</span>
                       </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
+                      <div className="flex justify-between text-caption text-muted-foreground">
                         <span>Monthly fuel/energy consumption</span>
                         <span className="font-semibold text-foreground num">{formatLkrMonthly(tcoResult.fuel_cost_monthly)}</span>
                       </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
+                      <div className="flex justify-between text-caption text-muted-foreground">
                         <span>Monthly lease installments</span>
                         <span className="font-semibold text-foreground num">{formatLkrMonthly(tcoResult.lease_cost_monthly)}</span>
                       </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
+                      <div className="flex justify-between text-caption text-muted-foreground">
                         <span>Amortized service, insurance, tyres & depreciation</span>
                         <span className="font-semibold text-foreground num">{formatLkrMonthly(tcoResult.overhead_cost_monthly)}</span>
                       </div>
                     </div>
 
                     <div aria-live="polite" className="rounded-2xl border border-primary/25 bg-primary/5 p-6 text-center shadow-soft">
-                      <span className="text-[12px] font-semibold text-primary-bright">{t("calc.tcoTotal", "Total ownership cost / month")}</span>
+                      <span className="text-caption font-semibold text-primary-bright">{t("calc.tcoTotal", "Total ownership cost / month")}</span>
                       <p className="display-1 text-foreground mt-2 num">
                         <FlowNumber value={Math.round(tcoResult.total_tco_monthly)} prefix="Rs " suffix="/mo" label={formatLkrMonthly(tcoResult.total_tco_monthly)} />
                       </p>
@@ -1000,7 +1000,7 @@ export default function Calculator() {
 
                     <div className="rounded-2xl bg-surface border border-border p-3 flex gap-2">
                       <Compass className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <p className="text-[10px] leading-relaxed text-muted-foreground font-semibold">{tcoResult.notes}</p>
+                      <p className="text-caption leading-relaxed text-muted-foreground font-semibold">{tcoResult.notes}</p>
                     </div>
                   </div>
                 ) : null}
@@ -1035,8 +1035,8 @@ export default function Calculator() {
             >
               <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-soft">
                 <div className="mb-4">
-                  <h3 className="text-sm font-bold text-foreground">{t("calc.permitsTitle", "Live Permit Black Market Tracker")}</h3>
-                  <p className="text-[10px] text-muted-foreground font-semibold mt-0.5">{t("calc.permitsHint", "Indicative values of transferable and EV remittance import licenses")}</p>
+                  <h3 className="text-footnote font-bold text-foreground">{t("calc.permitsTitle", "Live Permit Black Market Tracker")}</h3>
+                  <p className="text-caption text-muted-foreground font-semibold mt-0.5">{t("calc.permitsHint", "Indicative values of transferable and EV remittance import licenses")}</p>
                 </div>
 
                 {permitsLoading ? (
@@ -1045,9 +1045,9 @@ export default function Calculator() {
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full border-collapse text-left text-xs">
+                    <table className="w-full border-collapse text-left text-caption">
                       <thead>
-                        <tr className="border-b border-border text-muted-foreground text-[11px] font-semibold">
+                        <tr className="border-b border-border text-muted-foreground text-caption font-semibold">
                           <th className="py-3 px-4">{t("calc.permitName", "Permit Name")}</th>
                           <th className="py-3 px-4">{t("calc.permitType", "Type")}</th>
                           <th className="py-3 px-4 text-right">{t("calc.permitPremium", "Premium Value (LKR)")}</th>
@@ -1080,8 +1080,8 @@ export default function Calculator() {
             >
               <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-soft">
                 <div className="mb-6">
-                  <h3 className="text-sm font-bold text-foreground">{t("calc.retentionTitle", "Sri Lanka Value Retention Curves")}</h3>
-                  <p className="text-[10px] text-muted-foreground font-semibold mt-0.5">{t("calc.retentionHint", "Asset retention curves demonstrating how specific models retain value in the local market")}</p>
+                  <h3 className="text-footnote font-bold text-foreground">{t("calc.retentionTitle", "Sri Lanka Value Retention Curves")}</h3>
+                  <p className="text-caption text-muted-foreground font-semibold mt-0.5">{t("calc.retentionHint", "Asset retention curves demonstrating how specific models retain value in the local market")}</p>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -1093,26 +1093,26 @@ export default function Calculator() {
                   ].map((curve) => (
                     <div key={curve.model} className={`data-card border ${curve.border} bg-surface p-4 flex flex-col justify-between`}>
                       <div>
-                        <span className="text-[11px] font-medium text-muted-foreground">{curve.type}</span>
-                        <h4 className="text-sm font-bold text-foreground mt-1">{curve.model}</h4>
+                        <span className="text-caption font-medium text-muted-foreground">{curve.type}</span>
+                        <h4 className="text-footnote font-bold text-foreground mt-1">{curve.model}</h4>
 
                         <div className="mt-4 space-y-2 border-b border-border pb-4">
-                          <div className="flex justify-between text-xs">
+                          <div className="flex justify-between text-caption">
                             <span className="text-muted-foreground">{t("calc.year1", "Year 1")}</span>
                             <span className={`font-bold num ${curve.tone}`}>{curve.values[0]}</span>
                           </div>
-                          <div className="flex justify-between text-xs">
+                          <div className="flex justify-between text-caption">
                             <span className="text-muted-foreground">{t("calc.year3", "Year 3")}</span>
                             <span className={`font-bold num ${curve.tone}`}>{curve.values[1]}</span>
                           </div>
-                          <div className="flex justify-between text-xs">
+                          <div className="flex justify-between text-caption">
                             <span className="text-muted-foreground">{t("calc.year5", "Year 5")}</span>
                             <span className={`font-bold num ${curve.tone}`}>{curve.values[2]}</span>
                           </div>
                         </div>
                       </div>
 
-                      <p className="text-[10px] leading-relaxed text-muted-foreground font-semibold mt-4">{curve.note}</p>
+                      <p className="text-caption leading-relaxed text-muted-foreground font-semibold mt-4">{curve.note}</p>
                     </div>
                   ))}
                 </div>

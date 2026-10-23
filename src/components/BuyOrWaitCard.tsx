@@ -42,14 +42,14 @@ export function BuyOrWaitCard({ make, model, className }: { make: string; model:
           <Icon className="h-5 w-5" aria-hidden />
         </span>
         <div className="min-w-0">
-          <p className="text-[12px] font-semibold text-muted-foreground">
+          <p className="text-caption font-semibold text-muted-foreground">
             {t("outlook.eyebrow", "Buy now or wait? · Indicative")}
           </p>
-          <h3 id="buy-or-wait-title" className="mt-0.5 font-display text-lg font-semibold text-foreground">
+          <h3 id="buy-or-wait-title" className="mt-0.5 font-display text-callout font-semibold text-foreground">
             {outlook.headline}
           </h3>
           {outlook.monthlyChangePct !== null && (
-            <p className="num mt-0.5 text-[13px] text-muted-foreground">
+            <p className="num mt-0.5 text-footnote text-muted-foreground">
               {t("outlook.change", "{sign}{pct}% a month on average over {n} months · {samples} ads", {
                 sign: outlook.monthlyChangePct > 0 ? "+" : outlook.monthlyChangePct < 0 ? "−" : "",
                 pct: Math.abs(outlook.monthlyChangePct).toFixed(1),
@@ -60,8 +60,8 @@ export function BuyOrWaitCard({ make, model, className }: { make: string; model:
           )}
         </div>
       </div>
-      <p className="mt-3 text-[14px] leading-relaxed text-foreground">{outlook.advice}</p>
-      <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">
+      <p className="mt-3 text-body leading-relaxed text-foreground">{outlook.advice}</p>
+      <p className="mt-3 text-caption leading-relaxed text-muted-foreground">
         {t(
           "outlook.disclaimer",
           "Based on median asking prices of {make} {model} ads, not sale prices. Confidence: {confidence}. Duty, surcharge or loan-cap changes can move prices quickly. This isn't financial advice.",

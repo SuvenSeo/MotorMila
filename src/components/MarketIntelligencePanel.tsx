@@ -101,9 +101,9 @@ function MetricCell({
 }) {
   return (
     <div className="bg-card p-5 transition-colors duration-200 hover:bg-foreground/[0.03]">
-      <p className="text-[12px] font-medium text-muted-foreground">{label}</p>
+      <p className="text-caption font-medium text-muted-foreground">{label}</p>
       <p
-        className={`mt-2 flex items-center gap-1 font-display text-[1.5rem] font-semibold leading-none tracking-tight num ${
+        className={`mt-2 flex items-center gap-1 font-display text-title2 font-semibold leading-none tracking-tight num ${
           tone === "up"
             ? "text-emerald-600 dark:text-emerald-400"
             : tone === "down"
@@ -218,7 +218,7 @@ export const MarketIntelligencePanel = memo(function MarketIntelligencePanel({
           />
           <div className="relative flex h-full flex-col">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-[12px] font-semibold text-muted-foreground">{t("intel.liveListings", "Live listings")}</p>
+              <p className="text-caption font-semibold text-muted-foreground">{t("intel.liveListings", "Live listings")}</p>
               <DataFreshnessIndicator
                 latestListingAt={snapshot?.latest_listing_at}
                 lastUpdated={stats?.last_updated}
@@ -226,14 +226,14 @@ export const MarketIntelligencePanel = memo(function MarketIntelligencePanel({
             </div>
 
             <p
-              className="mt-4 font-display text-[3rem] font-semibold leading-[0.95] tracking-[-0.035em] text-foreground num sm:text-[4rem] lg:text-[4.75rem]"
+              className="mt-4 font-display text-hero font-semibold leading-[0.95] tracking-tight text-foreground num sm:text-hero lg:text-hero"
               aria-live="polite"
             >
               {liveDisplay}
             </p>
 
             {unavailableCount > 0 && totalIndexed > pricedListings ? (
-              <p className="mt-2 text-[12px] font-medium text-muted-foreground">
+              <p className="mt-2 text-caption font-medium text-muted-foreground">
                 {t("intel.totalIndexed", "{n} total indexed · {u} awaiting price", {
                   n: totalIndexed.toLocaleString(),
                   u: unavailableCount.toLocaleString(),
@@ -241,7 +241,7 @@ export const MarketIntelligencePanel = memo(function MarketIntelligencePanel({
               </p>
             ) : null}
 
-            <p className="mt-3 text-[13px] font-medium text-muted-foreground">
+            <p className="mt-3 text-footnote font-medium text-muted-foreground">
               {t("intel.acrossSources", "Across {sources} live sources and {districts} districts — indexed continuously, scored against market medians.", {
                 sources: sourceCount > 0 ? sourceCount : 10,
                 districts: districtCount > 0 ? districtCount : 25,
@@ -252,7 +252,7 @@ export const MarketIntelligencePanel = memo(function MarketIntelligencePanel({
             {sources.length > 0 && (
               <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-5">
                 {sources.map((s) => (
-                  <span key={s} className="rounded-full border border-border bg-foreground/[0.03] px-2 py-1 text-[10px] font-semibold text-muted-foreground transition-colors duration-200 hover:border-primary/40 hover:text-foreground">
+                  <span key={s} className="rounded-full border border-border bg-foreground/[0.03] px-2 py-1 text-caption font-semibold text-muted-foreground transition-colors duration-200 hover:border-primary/40 hover:text-foreground">
                     {s}
                   </span>
                 ))}
@@ -284,12 +284,12 @@ export const MarketIntelligencePanel = memo(function MarketIntelligencePanel({
       {/* ── Live incoming feed ── */}
       <div className="mt-3 overflow-hidden rounded-[1.75rem] border border-border bg-surface">
         <div className="flex items-center justify-between border-b border-border px-5 py-3">
-          <p className="flex items-center gap-2 text-[12px] font-semibold text-muted-foreground">
+          <p className="flex items-center gap-2 text-caption font-semibold text-muted-foreground">
             <Activity className="h-3.5 w-3.5 text-primary/70" />
             {t("intel.liveFeed", "Live incoming feed")}
           </p>
           <span
-            className="flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground"
+            className="flex items-center gap-1.5 text-caption font-medium text-muted-foreground"
             title={feedSyncAt ? freshness.absoluteLabel : undefined}
           >
             <Radio className="h-3 w-3 text-primary/70" />
@@ -302,20 +302,20 @@ export const MarketIntelligencePanel = memo(function MarketIntelligencePanel({
               <div key={row.key} className="flex items-center justify-between px-5 py-2.5 transition-colors duration-200 hover:bg-foreground/[0.02]">
                 <div className="flex min-w-0 items-center gap-2.5">
                   <Flame className="h-3.5 w-3.5 shrink-0 text-primary/50" />
-                  <span className="truncate text-[13px] font-semibold text-foreground">{row.source}</span>
+                  <span className="truncate text-footnote font-semibold text-foreground">{row.source}</span>
                 </div>
                 <div className="flex shrink-0 items-center gap-4">
                   {row.found > 0 ? (
-                    <span className="text-[12px] font-bold text-emerald-600 dark:text-emerald-400/90 num">{t("intel.newSuffix", "+{n} new", { n: row.fresh.toLocaleString() })}</span>
+                    <span className="text-caption font-bold text-emerald-600 dark:text-emerald-400/90 num">{t("intel.newSuffix", "+{n} new", { n: row.fresh.toLocaleString() })}</span>
                   ) : (
-                    <span className="text-[12px] font-bold text-primary/80 num">{t("intel.dealSuffix", "+{n} deal", { n: row.fresh.toFixed(0) })}</span>
+                    <span className="text-caption font-bold text-primary/80 num">{t("intel.dealSuffix", "+{n} deal", { n: row.fresh.toFixed(0) })}</span>
                   )}
-                  <span className="w-8 text-right text-[11px] text-muted-foreground num">{row.time}</span>
+                  <span className="w-8 text-right text-caption text-muted-foreground num">{row.time}</span>
                 </div>
               </div>
             ))
           ) : (
-            <p className="px-5 py-8 text-center text-[12px] text-muted-foreground">
+            <p className="px-5 py-8 text-center text-caption text-muted-foreground">
               {awaitingFeedSync ? t("intel.awaitingLiveSync", "Awaiting live sync") : t("intel.noScrapeActivity", "No recent scrape activity")}
             </p>
           )}
@@ -333,7 +333,7 @@ export const MarketIntelligencePanel = memo(function MarketIntelligencePanel({
       ) : (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 px-1">
           <p
-            className="text-[11px] font-medium text-muted-foreground"
+            className="text-caption font-medium text-muted-foreground"
             title={freshness.primaryAt ? freshness.absoluteLabel : undefined}
           >
             {freshness.dataAsOfLabel}
@@ -342,7 +342,7 @@ export const MarketIntelligencePanel = memo(function MarketIntelligencePanel({
             ) : null}
           </p>
           {snapshot?.generated_at ? (
-            <p className="text-[12px] font-medium text-muted-foreground/80">
+            <p className="text-caption font-medium text-muted-foreground/80">
               {t("intel.snapshotAgo", "Snapshot {age} ago", { age: formatCompactAge(snapshot.generated_at) })}
             </p>
           ) : null}

@@ -54,10 +54,10 @@ export default function AccountDeletion() {
         <SelfServeDeletion onDeleted={() => setSelfDeleted(true)} />
       ) : receipt ? (
         <div role="status" className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-5">
-          <p className="flex items-center gap-2 text-[14px] font-semibold text-emerald-700 dark:text-emerald-400">
+          <p className="flex items-center gap-2 text-body font-semibold text-emerald-700 dark:text-emerald-400">
             <Check aria-hidden className="h-4 w-4" /> Request received · ref {receipt.reference}
           </p>
-          <p className="mt-2 text-[13px] text-foreground/80">{receipt.message}</p>
+          <p className="mt-2 text-footnote text-foreground/80">{receipt.message}</p>
         </div>
       ) : (
         <form
@@ -90,16 +90,16 @@ export default function AccountDeletion() {
             <label className={LABEL_CLASS} htmlFor={`${uid}-details`}>Anything we should know? <span className="font-normal text-muted-foreground">(optional)</span></label>
             <textarea id={`${uid}-details`} className={TEXTAREA_CLASS} maxLength={1000} value={details} onChange={(e) => setDetails(e.target.value)} />
           </div>
-          <label className="flex cursor-pointer items-start gap-2.5 text-[12px] leading-relaxed text-foreground/85" htmlFor={`${uid}-confirm`}>
+          <label className="flex cursor-pointer items-start gap-2.5 text-caption leading-relaxed text-foreground/85" htmlFor={`${uid}-confirm`}>
             <input id={`${uid}-confirm`} type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-[hsl(var(--primary))]" checked={confirm} onChange={(e) => setConfirm(e.target.checked)} />
             <span>I want to delete my MotorMila account. I understand this can't be undone and any paid plan ends without a refund for unused time.</span>
           </label>
-          {error && <p role="alert" className="text-[12px] font-semibold text-destructive">{error}</p>}
+          {error && <p role="alert" className="text-caption font-semibold text-destructive">{error}</p>}
           <button type="submit" className={PRIMARY_BUTTON_CLASS} disabled={sending}>
             {sending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : null}
             Request account deletion
           </button>
-          <p className="text-[12px] text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             You can also email <a href={`mailto:${PRIVACY_EMAIL}`}>{PRIVACY_EMAIL}</a> from your account email.
           </p>
         </form>

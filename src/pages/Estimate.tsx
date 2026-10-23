@@ -42,9 +42,9 @@ const NOW_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: NOW_YEAR + 1 - 1990 + 1 }, (_, i) => NOW_YEAR + 1 - i);
 
 const fieldClass =
-  "h-12 w-full rounded-xl border border-border bg-surface px-3 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50";
+  "h-12 w-full rounded-xl border border-border bg-surface px-3 text-body text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50";
 const chipBase =
-  "inline-flex min-h-12 items-center justify-center rounded-xl border px-4 text-[14px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
+  "inline-flex min-h-12 items-center justify-center rounded-xl border px-4 text-body font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
 
 function slug(value: string): string {
   return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
@@ -253,18 +253,18 @@ export default function Estimate() {
     <PageCanvas ambient="subtle">
       <PageBody narrow className="max-w-xl py-8 sm:py-12">
         <div className="mb-5">
-          <p className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-primary-bright">
+          <p className="inline-flex items-center gap-1.5 text-caption font-semibold text-primary-bright">
             <Gauge className="h-3.5 w-3.5" aria-hidden />
             {t("quiz.eyebrow", "Free valuation · no sign-up")}
           </p>
-          <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+          <h1 className="mt-1 font-display text-title2 font-semibold tracking-tight text-foreground sm:text-title1">
             {t("quiz.title", "What's your car worth?")}
           </h1>
         </div>
 
         {/* Progress */}
         <div className="mb-5" aria-label={t("quiz.progressAria", "Progress")}>
-          <ol className="mb-2 flex justify-between text-[11px] font-semibold text-muted-foreground">
+          <ol className="mb-2 flex justify-between text-caption font-semibold text-muted-foreground">
             {stepLabels.map((label, i) => (
               <li key={label} aria-current={i === step ? "step" : undefined} className={cn(i <= step && "text-foreground")}>
                 {label}
@@ -300,30 +300,30 @@ export default function Estimate() {
               }}
               className="space-y-4"
             >
-              <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold text-foreground outline-none">
+              <h2 ref={headingRef} tabIndex={-1} className="text-callout font-semibold text-foreground outline-none">
                 {t("quiz.s0.title", "Which car?")}
               </h2>
               <div>
-                <label htmlFor="q-make" className="mb-1.5 block text-[13px] font-semibold text-muted-foreground">{t("common.make", "Make")}</label>
+                <label htmlFor="q-make" className="mb-1.5 block text-footnote font-semibold text-muted-foreground">{t("common.make", "Make")}</label>
                 <select id="q-make" className={fieldClass} value={make} onChange={(e) => { setMake(e.target.value); setModel(""); }}>
                   <option value="">{t("common.selectMake", "Select make")}</option>
                   {makes.map((m) => <option key={m.make} value={m.make}>{m.make}</option>)}
                 </select>
               </div>
               <div>
-                <label htmlFor="q-model" className="mb-1.5 block text-[13px] font-semibold text-muted-foreground">{t("common.model", "Model")}</label>
+                <label htmlFor="q-model" className="mb-1.5 block text-footnote font-semibold text-muted-foreground">{t("common.model", "Model")}</label>
                 <select id="q-model" className={fieldClass} value={model} onChange={(e) => setModel(e.target.value)} disabled={!make}>
                   <option value="">{make && models.length === 0 ? t("quiz.loadingModels", "Loading models…") : t("common.selectModel", "Select model")}</option>
                   {models.map((m) => <option key={m.model} value={m.model}>{m.model}</option>)}
                 </select>
               </div>
               <div>
-                <label htmlFor="q-year" className="mb-1.5 block text-[13px] font-semibold text-muted-foreground">{t("quiz.year", "Year of manufacture")}</label>
+                <label htmlFor="q-year" className="mb-1.5 block text-footnote font-semibold text-muted-foreground">{t("quiz.year", "Year of manufacture")}</label>
                 <select id="q-year" className={fieldClass} value={year} onChange={(e) => setYear(Number(e.target.value))}>
                   {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
                 </select>
               </div>
-              <button type="submit" disabled={!step0Valid} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-[14px] font-semibold text-primary-foreground disabled:opacity-40">
+              <button type="submit" disabled={!step0Valid} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-body font-semibold text-primary-foreground disabled:opacity-40">
                 {t("quiz.next", "Next")} <ArrowRight className="h-4 w-4" aria-hidden />
               </button>
             </form>
@@ -331,11 +331,11 @@ export default function Estimate() {
 
           {step === 1 && (
             <form onSubmit={(e) => { e.preventDefault(); goToQuiz(); }} className="space-y-5">
-              <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold text-foreground outline-none">
+              <h2 ref={headingRef} tabIndex={-1} className="text-callout font-semibold text-foreground outline-none">
                 {t("quiz.s1.title", "Mileage and registration")}
               </h2>
               <fieldset>
-                <legend className="mb-2 text-[13px] font-semibold text-muted-foreground">{t("quiz.registration", "Registration")}</legend>
+                <legend className="mb-2 text-footnote font-semibold text-muted-foreground">{t("quiz.registration", "Registration")}</legend>
                 <div className="grid gap-2 sm:grid-cols-3">
                   {([
                     ["used", t("quiz.reg.used", "Registered (used)")],
@@ -355,7 +355,7 @@ export default function Estimate() {
                 </div>
               </fieldset>
               <div>
-                <label htmlFor="q-km" className="mb-1.5 block text-[13px] font-semibold text-muted-foreground">{t("quiz.mileage", "Mileage (km)")}</label>
+                <label htmlFor="q-km" className="mb-1.5 block text-footnote font-semibold text-muted-foreground">{t("quiz.mileage", "Mileage (km)")}</label>
                 <input
                   id="q-km"
                   inputMode="numeric"
@@ -367,16 +367,16 @@ export default function Estimate() {
                 />
               </div>
               <div>
-                <label htmlFor="q-district" className="mb-1.5 block text-[13px] font-semibold text-muted-foreground">{t("quiz.district", "District")}</label>
+                <label htmlFor="q-district" className="mb-1.5 block text-footnote font-semibold text-muted-foreground">{t("quiz.district", "District")}</label>
                 <select id="q-district" className={fieldClass} value={district} onChange={(e) => setDistrict(e.target.value)}>
                   {SRI_LANKA_DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
               <div className="flex gap-2">
-                <button type="button" onClick={() => setStep(0)} className="inline-flex h-12 items-center justify-center gap-1.5 rounded-full border border-border bg-card px-5 text-[14px] font-semibold text-foreground">
+                <button type="button" onClick={() => setStep(0)} className="inline-flex h-12 items-center justify-center gap-1.5 rounded-full border border-border bg-card px-5 text-body font-semibold text-foreground">
                   <ArrowLeft className="h-4 w-4" aria-hidden /> {t("quiz.back", "Back")}
                 </button>
-                <button type="submit" disabled={!step1Valid} className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-primary text-[14px] font-semibold text-primary-foreground disabled:opacity-40">
+                <button type="submit" disabled={!step1Valid} className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-primary text-body font-semibold text-primary-foreground disabled:opacity-40">
                   {t("quiz.next", "Next")} <ArrowRight className="h-4 w-4" aria-hidden />
                 </button>
               </div>
@@ -388,10 +388,10 @@ export default function Estimate() {
             const def = QUESTIONS[q];
             return (
               <div className="space-y-4">
-                <p className="text-[12px] font-semibold text-muted-foreground">
+                <p className="text-caption font-semibold text-muted-foreground">
                   {t("quiz.qCount", "Question {n} of {total}", { n: qIndex + 1, total: QUIZ_QUESTIONS.length })}
                 </p>
-                <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold text-foreground outline-none">{def.title}</h2>
+                <h2 ref={headingRef} tabIndex={-1} className="text-callout font-semibold text-foreground outline-none">{def.title}</h2>
                 <div className="grid gap-2">
                   {def.options.map((o) => (
                     <m.button
@@ -420,11 +420,11 @@ export default function Estimate() {
                   <button
                     type="button"
                     onClick={() => (qIndex === 0 ? setStep(1) : setQIndex((i) => i - 1))}
-                    className="inline-flex min-h-11 items-center gap-1.5 text-[13px] font-semibold text-muted-foreground hover:text-foreground"
+                    className="inline-flex min-h-11 items-center gap-1.5 text-footnote font-semibold text-muted-foreground hover:text-foreground"
                   >
                     <ArrowLeft className="h-4 w-4" aria-hidden /> {t("quiz.back", "Back")}
                   </button>
-                  <button type="button" onClick={skipQuestion} className="inline-flex min-h-11 items-center text-[13px] font-semibold text-muted-foreground hover:text-foreground">
+                  <button type="button" onClick={skipQuestion} className="inline-flex min-h-11 items-center text-footnote font-semibold text-muted-foreground hover:text-foreground">
                     {t("quiz.skip", "Skip")}
                   </button>
                 </div>
@@ -434,19 +434,19 @@ export default function Estimate() {
 
           {step === 3 && (
             <div className="space-y-4" aria-live="polite">
-              <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold text-foreground outline-none">
+              <h2 ref={headingRef} tabIndex={-1} className="text-callout font-semibold text-foreground outline-none">
                 {year} {make} {model}
               </h2>
 
               {loading && (
                 <div className="space-y-2" aria-busy="true">
-                  <p className="text-[13px] text-muted-foreground">{t("quiz.loading", "Checking comparable listings…")}</p>
+                  <p className="text-footnote text-muted-foreground">{t("quiz.loading", "Checking comparable listings…")}</p>
                   <div className="h-20 animate-pulse rounded-xl bg-surface" />
                 </div>
               )}
 
               {!loading && failed && (
-                <div role="alert" className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[13px] text-foreground">
+                <div role="alert" className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-footnote text-foreground">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
                   <span>
                     {t("quiz.noData", "We don't have enough comparable ads for this car to give an honest range. Try a nearby year, or check similar listings.")}
@@ -457,11 +457,11 @@ export default function Estimate() {
               {!loading && result && band && (
                 <>
                   <div className="rounded-2xl border border-primary/20 bg-surface p-4">
-                    <p className="text-[12px] font-semibold text-muted-foreground">{t("quiz.rangeLabel", "Typical asking range for similar cars")}</p>
-                    <p className="num mt-1 text-3xl font-bold leading-tight tracking-tight text-foreground">
+                    <p className="text-caption font-semibold text-muted-foreground">{t("quiz.rangeLabel", "Typical asking range for similar cars")}</p>
+                    <p className="num mt-1 text-title1 font-bold leading-tight tracking-tight text-foreground">
                       {lkr(result.low)} – {lkr(result.high)}
                     </p>
-                    <div className="mt-3 flex flex-wrap gap-1.5 text-[11px] font-semibold">
+                    <div className="mt-3 flex flex-wrap gap-1.5 text-caption font-semibold">
                       <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-primary-bright">
                         <ShieldCheck className="h-3 w-3" aria-hidden /> {confidenceLabel}
                       </span>
@@ -478,7 +478,7 @@ export default function Estimate() {
 
                   {/* Where this car sits in the range */}
                   <div className="rounded-xl border border-border bg-surface p-4">
-                    <p className="text-[13px] font-semibold text-foreground">
+                    <p className="text-footnote font-semibold text-foreground">
                       {position === "upper"
                         ? t("quiz.pos.upper", "Your answers point to the upper part of the range")
                         : position === "lower"
@@ -497,10 +497,10 @@ export default function Estimate() {
                         }}
                       />
                     </div>
-                    <p className="num mt-2 text-[13px] font-semibold text-foreground">
+                    <p className="num mt-2 text-footnote font-semibold text-foreground">
                       ≈ {lkr(band.from)} – {lkr(band.to)}
                     </p>
-                    <p className="mt-1 text-[11px] text-muted-foreground">
+                    <p className="mt-1 text-caption text-muted-foreground">
                       {t("quiz.posNote", "A rule of thumb from your answers. It doesn't change the market range, which comes from real ads.")}
                     </p>
                   </div>
@@ -508,7 +508,7 @@ export default function Estimate() {
                   {flags.length > 0 && (
                     <ul className="space-y-2">
                       {flags.map((f) => (
-                        <li key={f.key} className={cn("flex items-start gap-2 rounded-xl border p-3 text-[13px]", f.severity === "high" ? "border-rose-500/30 bg-rose-500/10" : "border-amber-500/30 bg-amber-500/10")}>
+                        <li key={f.key} className={cn("flex items-start gap-2 rounded-xl border p-3 text-footnote", f.severity === "high" ? "border-rose-500/30 bg-rose-500/10" : "border-amber-500/30 bg-amber-500/10")}>
                           <AlertTriangle className={cn("mt-0.5 h-4 w-4 shrink-0", f.severity === "high" ? "text-rose-600" : "text-amber-600")} aria-hidden />
                           <span className="text-foreground">{FLAG_TEXT[f.key]}</span>
                         </li>
@@ -516,7 +516,7 @@ export default function Estimate() {
                     </ul>
                   )}
 
-                  <p className="flex items-start gap-1.5 text-[12px] text-muted-foreground">
+                  <p className="flex items-start gap-1.5 text-caption text-muted-foreground">
                     <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
                     <span>
                       {t("quiz.honesty", "These are asking prices. Final sale prices are usually lower after negotiation.")}{" "}
@@ -531,10 +531,10 @@ export default function Estimate() {
               )}
 
               <div className="flex flex-wrap gap-2 pt-1">
-                <Link to={hubHref} className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-primary px-5 text-[13px] font-semibold text-primary-foreground no-underline hover:bg-primary/90">
+                <Link to={hubHref} className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-primary px-5 text-footnote font-semibold text-primary-foreground no-underline hover:bg-primary/90">
                   {t("quiz.seeSimilar", "See similar listings")} <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
-                <button type="button" onClick={restart} className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-card px-5 text-[13px] font-semibold text-foreground">
+                <button type="button" onClick={restart} className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-card px-5 text-footnote font-semibold text-foreground">
                   <RotateCcw className="h-4 w-4" aria-hidden /> {t("quiz.restart", "Start over")}
                 </button>
               </div>

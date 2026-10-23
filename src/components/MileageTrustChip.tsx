@@ -21,7 +21,7 @@ export function MileageTrustChip({ mileageKm, year, className }: MileageTrustChi
     <span
       title={trust.detail}
       className={cn(
-        "inline-flex items-center rounded-full border px-2 py-1 text-[12px] font-medium",
+        "inline-flex items-center rounded-full border px-2 py-1 text-caption font-medium",
         TONE[trust.risk],
         className,
       )}

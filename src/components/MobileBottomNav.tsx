@@ -50,7 +50,7 @@ function TabItem({ dest, calm }: { dest: NavDestination; calm: boolean }) {
         </m.span>
       </span>
       <span
-        className={`bottom-nav-label block w-full truncate text-center text-[11px] font-semibold leading-tight ${
+        className={`bottom-nav-label block w-full truncate text-center text-caption font-semibold leading-tight ${
           isActive ? "text-primary" : "text-muted-foreground"
         }`}
       >

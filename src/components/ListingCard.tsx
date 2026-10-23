@@ -228,7 +228,7 @@ export const ListingCard = memo(function ListingCard({
 
           {conditionLabel && (
             <div className="absolute left-3 top-3 flex items-center gap-1.5">
-              <span className="rounded-full border border-white/10 bg-black/70 px-2.5 py-0.5 text-[11px] font-semibold tracking-tight text-white backdrop-blur-md">
+              <span className="rounded-full border border-white/10 bg-black/70 px-2.5 py-0.5 text-caption font-semibold tracking-tight text-white backdrop-blur-md">
                 {conditionLabel}
               </span>
             </div>
@@ -267,18 +267,18 @@ export const ListingCard = memo(function ListingCard({
 
           <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-3">
             {hasKnownPrice ? (
-              <p className="font-display text-[1.35rem] font-semibold leading-none tracking-tight text-white num [text-shadow:0_1px_8px_rgba(0,0,0,0.55)]">
+              <p className="font-display text-title3 font-semibold leading-none tracking-tight text-white num [text-shadow:0_1px_8px_rgba(0,0,0,0.55)]">
                 {formatPrice(priceValue)}
               </p>
             ) : (
               <PriceUnavailableBadge
                 label={t("listingCard.priceUnavailable", "Price unavailable")}
-                className="bg-black/75 border-primary/40 text-primary-bright px-2 py-0.5 text-[11px] tracking-[0.08em]"
+                className="bg-black/75 border-primary/40 text-primary-bright px-2 py-0.5 text-caption tracking-caps"
               />
             )}
             {monthly && (
               <p
-                className="shrink-0 text-right text-[11px] font-medium leading-tight text-white/85 num"
+                className="shrink-0 text-right text-caption font-medium leading-tight text-white/85 num"
                 title={t("listingCard.monthlyTitle", "Estimate: {ltv}% loan (CBSL cap), {rate}% a year over {years} years. Banks set the final terms.", {
                   ltv: monthly.ltvPct,
                   rate: monthly.ratePct,
@@ -293,11 +293,11 @@ export const ListingCard = memo(function ListingCard({
 
         <div className="flex flex-1 flex-col gap-3.5 p-5">
           <div className="flex items-start justify-between gap-3">
-            <h3 className="font-display text-[1.05rem] font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary truncate">
+            <h3 className="font-display text-callout font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary truncate">
               {listingTitle}
             </h3>
             {listing.year ? (
-              <span className="shrink-0 text-[13px] font-semibold text-muted-foreground num">{listing.year}</span>
+              <span className="shrink-0 text-footnote font-semibold text-muted-foreground num">{listing.year}</span>
             ) : null}
           </div>
 
@@ -306,12 +306,12 @@ export const ListingCard = memo(function ListingCard({
           {(listing.is_active === false || showDropBadge || daysOnMarketLabel || showSites) && (
             <div className="flex flex-wrap gap-1.5">
               {listing.is_active === false && (
-                <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-caption font-semibold text-amber-600 dark:text-amber-400">
                   {t("listingCard.archived", "Archived / Past ad")}
                 </span>
               )}
               {showDropBadge && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] font-semibold text-foreground">
+                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-caption font-semibold text-foreground">
                   <TrendingDown className="h-3 w-3 text-sky-600 dark:text-sky-400" aria-hidden />
                   {dropPctLabel
                     ? t("listingCard.priceDroppedPct", "Price dropped {pct}%", { pct: dropPctLabel })
@@ -319,13 +319,13 @@ export const ListingCard = memo(function ListingCard({
                 </span>
               )}
               {daysOnMarketLabel && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] font-medium text-muted-foreground num">
+                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-caption font-medium text-muted-foreground num">
                   <Clock className="h-3 w-3" aria-hidden />
                   {daysOnMarketLabel}
                 </span>
               )}
               {showSites && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] font-medium text-muted-foreground num">
+                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-caption font-medium text-muted-foreground num">
                   <Layers className="h-3 w-3" aria-hidden />
                   {t("listingCard.onSites", "On {n} sites", { n: sites })}
                 </span>
@@ -353,7 +353,7 @@ export const ListingCard = memo(function ListingCard({
             <MileageTrustChip
               mileageKm={listing.mileage_km}
               year={listing.year}
-              className="self-start !px-2 !py-0.5 !text-[11px]"
+              className="self-start !px-2 !py-0.5 !text-caption"
             />
           )}
 
@@ -361,10 +361,10 @@ export const ListingCard = memo(function ListingCard({
             {fmv != null && (
               <>
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="text-[11px] font-medium text-muted-foreground num">
+                  <p className="text-caption font-medium text-muted-foreground num">
                     {t("listingCard.typical", "Typical {price}", { price: formatPrice(fmv.fmv_lkr) })}
                   </p>
-                  <p className={`text-[11px] font-semibold num ${DEAL_TEXT_CLASSES[fmvKind]}`}>{fmv.label}</p>
+                  <p className={`text-caption font-semibold num ${DEAL_TEXT_CLASSES[fmvKind]}`}>{fmv.label}</p>
                 </div>
                 <div className="relative mb-2 h-1.5 overflow-hidden rounded-full bg-foreground/[0.08]">
                   <div
@@ -376,7 +376,7 @@ export const ListingCard = memo(function ListingCard({
             )}
             {pricePoints.length >= 2 && (
               <div className="flex items-center justify-end gap-1.5">
-                <span className="text-[11px] text-muted-foreground">
+                <span className="text-caption text-muted-foreground">
                   {t("listingCard.priceMoves", "{n} price changes", { n: pricePoints.length - 1 })}
                 </span>
                 <PriceSparkline
@@ -395,12 +395,12 @@ export const ListingCard = memo(function ListingCard({
           <div className="flex items-center justify-between pt-3.5 border-t border-white/5">
             <div className="min-w-0">
               {listing.district && (
-                <p className="flex items-center gap-1.5 text-[12px] font-medium text-foreground/80 truncate">
+                <p className="flex items-center gap-1.5 text-caption font-medium text-foreground/80 truncate">
                   <MapPin className="h-3 w-3 shrink-0 text-muted-foreground/70" />
                   {listing.district}
                 </p>
               )}
-              <p className="mt-0.5 text-[11px] text-muted-foreground truncate">
+              <p className="mt-0.5 text-caption text-muted-foreground truncate">
                 {t("listingCard.listedOn", "Listed on {source}", { source: attribution.sourceName })}
                 {attribution.checkedAgo ? ` · ${t("listingCard.checked", "checked {ago}", { ago: attribution.checkedAgo })}` : ""}
               </p>

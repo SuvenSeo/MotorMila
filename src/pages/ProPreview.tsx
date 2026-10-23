@@ -67,7 +67,7 @@ function LockedOverlay({ label }: { label?: string }) {
     <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[inherit] bg-background/70 backdrop-blur-[3px]">
       <div className="rounded-xl border border-primary/25 bg-primary/10 px-4 py-3 text-center shadow-soft">
         <Lock aria-hidden className="mx-auto mb-1.5 h-4 w-4 text-primary" />
-        <p className="text-[12px] font-semibold text-primary-bright">
+        <p className="text-caption font-semibold text-primary-bright">
           {label ?? t("pro.unlockWithPro", "Unlock with Pro")}
         </p>
       </div>
@@ -131,13 +131,13 @@ export default function ProPreview({ sampleLane, gaps, trialCtaTo = "/pricing#ge
           <>
             <Link
               to={trialCtaTo}
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-[13px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-footnote font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <Sparkles aria-hidden className="h-4 w-4" /> {t("shell.pro.notify", "Notify me")}
             </Link>
             <Link
               to="/pricing"
-              className="inline-flex h-11 items-center rounded-full border border-border bg-card px-6 text-[13px] font-semibold text-foreground no-underline transition-all hover:border-primary/40 hover:bg-surface active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="inline-flex h-11 items-center rounded-full border border-border bg-card px-6 text-footnote font-semibold text-foreground no-underline transition-all hover:border-primary/40 hover:bg-surface active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               {t("pro.seePricing", "See pricing")}
             </Link>
@@ -152,17 +152,17 @@ export default function ProPreview({ sampleLane, gaps, trialCtaTo = "/pricing#ge
             <motion.div variants={revealItem} className="premium-surface relative p-6 sm:p-7">
               <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <p className="section-eyebrow">Sample lane</p>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-300">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-caption font-medium text-emerald-600 dark:text-emerald-300">
                   <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                   Live sample
                 </span>
               </div>
               <div className="overflow-hidden rounded-xl border border-border">
-                <table className="w-full text-[12px]">
+                <table className="w-full text-caption">
                   <thead>
                     <tr className="bg-surface">
                       {["Vehicle", "Listings", "Median", "Top area"].map((h) => (
-                        <th key={h} className="px-4 py-3 text-left text-[12px] font-semibold text-muted-foreground">{h}</th>
+                        <th key={h} className="px-4 py-3 text-left text-caption font-semibold text-muted-foreground">{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -176,7 +176,7 @@ export default function ProPreview({ sampleLane, gaps, trialCtaTo = "/pricing#ge
                   </tbody>
                 </table>
               </div>
-              <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+              <p className="mt-3 text-caption leading-relaxed text-muted-foreground">
                 Showing {lane.visibleCount} of {lane.listings} live {lane.name} listings in {lane.district} — the full lane,
                 district splits, and history unlock with your trial.
               </p>
@@ -187,9 +187,9 @@ export default function ProPreview({ sampleLane, gaps, trialCtaTo = "/pricing#ge
               {gapCards.slice(0, 3).map((gap) => (
                 <motion.div key={gap.title} variants={revealItem} className="data-card relative min-h-[190px] p-5">
                   <LockedOverlay />
-                  <p className="text-[11px] font-medium text-primary-bright">{gap.meta}</p>
-                  <h3 className="mt-2 text-[13px] font-bold text-foreground">{gap.title}</h3>
-                  <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">{gap.body}</p>
+                  <p className="text-caption font-medium text-primary-bright">{gap.meta}</p>
+                  <h3 className="mt-2 text-footnote font-bold text-foreground">{gap.title}</h3>
+                  <p className="mt-1.5 text-caption leading-relaxed text-muted-foreground">{gap.body}</p>
                 </motion.div>
               ))}
             </div>
@@ -198,22 +198,22 @@ export default function ProPreview({ sampleLane, gaps, trialCtaTo = "/pricing#ge
           <aside className="space-y-6">
             <motion.div variants={revealItem} className="data-card p-6">
               <Sparkles aria-hidden className="mb-3 h-5 w-5 text-primary" />
-              <h2 className="font-display text-[15px] font-bold text-foreground">What your trial unlocks</h2>
+              <h2 className="font-display text-body font-bold text-foreground">What your trial unlocks</h2>
               <div className="mt-4 space-y-2">
                 {["Pro dashboard with deal scores", "District detail and full price history", "Exports: PDF, Word, CSV, JSON"].map((i) => (
                   <div key={i} className="flex items-start gap-2.5 rounded-xl border border-border bg-surface p-3">
                     <span aria-hidden className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                    <p className="text-[11px] font-semibold text-muted-foreground">{i}</p>
+                    <p className="text-caption font-semibold text-muted-foreground">{i}</p>
                   </div>
                 ))}
               </div>
               <Link
                 to={trialCtaTo}
-                className="mt-5 flex h-11 items-center justify-center gap-2 rounded-full bg-primary text-[13px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98]"
+                className="mt-5 flex h-11 items-center justify-center gap-2 rounded-full bg-primary text-footnote font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98]"
               >
                 <Sparkles aria-hidden className="h-4 w-4" /> {t("shell.pro.notify", "Notify me")}
               </Link>
-              <p className="mt-2.5 text-center text-[11px] text-muted-foreground">
+              <p className="mt-2.5 text-center text-caption text-muted-foreground">
                 {t("shell.pro.previewNote", "Pro is coming soon. MotorMila is free during beta.")}
               </p>
             </motion.div>
@@ -221,11 +221,11 @@ export default function ProPreview({ sampleLane, gaps, trialCtaTo = "/pricing#ge
             <motion.div variants={revealItem} className="data-card p-6">
               <div className="mb-3 flex items-center gap-2">
                 <FileText aria-hidden className="h-4 w-4 text-primary" />
-                <h2 className="text-[15px] font-bold text-foreground">Report formats</h2>
+                <h2 className="text-body font-bold text-foreground">Report formats</h2>
               </div>
               <div className="space-y-2">
                 {REPORTS.map((r) => (
-                  <div key={r} className="flex h-9 items-center justify-between rounded-xl border border-border bg-surface px-3 text-[11px] font-semibold text-muted-foreground transition-colors hover:text-foreground">
+                  <div key={r} className="flex h-9 items-center justify-between rounded-xl border border-border bg-surface px-3 text-caption font-semibold text-muted-foreground transition-colors hover:text-foreground">
                     <span>{r}</span>
                     <Download aria-hidden className="h-3 w-3 text-primary" />
                   </div>
@@ -236,7 +236,7 @@ export default function ProPreview({ sampleLane, gaps, trialCtaTo = "/pricing#ge
             <motion.div variants={revealItem}>
               <Link
                 to={trialCtaTo}
-                className="flex h-11 items-center justify-center gap-2 rounded-full bg-primary text-[13px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="flex h-11 items-center justify-center gap-2 rounded-full bg-primary text-footnote font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 <MapPin aria-hidden className="h-4 w-4" /> Unlock Pro workspace
               </Link>

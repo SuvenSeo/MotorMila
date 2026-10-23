@@ -1,7 +1,7 @@
 # Motormila design tokens
 
 Source of truth: `src/index.css` (core surfaces) + `src/styles/tokens.css` (semantic layer) + `tailwind.config.ts` (utilities).
-Reach for these utilities; don't hard-code `emerald-*`, `rose-*`, `amber-*`, `bg-white`, `text-[11px]`, or `rounded-[Npx]` in new work.
+Reach for these utilities; don't hard-code `emerald-*`, `rose-*`, `amber-*`, `bg-white`, `text-[Npx]`, or `rounded-[Npx]` in new work.
 
 ## Colour
 

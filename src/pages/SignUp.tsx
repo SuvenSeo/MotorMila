@@ -214,14 +214,14 @@ export default function SignUp() {
             <h1 className="display-1 max-w-[12ch] text-foreground">
               {t("signup.heroTitle", "Activate your Motormila seat.")}
             </h1>
-            <p className="mt-4 max-w-sm text-[14px] leading-relaxed text-muted-foreground">
+            <p className="mt-4 max-w-sm text-body leading-relaxed text-muted-foreground">
               {BRAND.vision}
             </p>
             <div className="mt-8 space-y-3">
               {bullets.map((line) => (
                 <div key={line} className="flex items-start gap-3 rounded-3xl border border-border bg-card/50 px-4 py-3">
                   <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
-                  <p className="text-[13px] font-medium text-foreground/90">{line}</p>
+                  <p className="text-footnote font-medium text-foreground/90">{line}</p>
                 </div>
               ))}
             </div>
@@ -232,35 +232,35 @@ export default function SignUp() {
               <div className="h-9 w-9 overflow-hidden rounded-full ring-1 ring-border transition-all group-hover:ring-primary/40">
                 <img src="/logo.png" alt="Motormila" className="h-full w-full object-cover" />
               </div>
-              <span className="font-display text-sm font-bold text-foreground">{BRAND.name}</span>
+              <span className="font-display text-footnote font-bold text-foreground">{BRAND.name}</span>
             </Link>
 
             <div className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1">
               <ShieldCheck className="h-3 w-3 text-primary" aria-hidden />
-              <span className="text-[12px] font-semibold text-primary-bright">
+              <span className="text-caption font-semibold text-primary-bright">
                 {selfServeEnabled && !token
                   ? t("signup.freeTrial", `${selfServeTrialDays}-day free trial`)
                   : t("signup.inviteOnly", "Invite only")}
               </span>
             </div>
-            <h2 className="font-display text-[1.85rem] font-semibold tracking-tight text-foreground sm:text-[2.1rem]">
+            <h2 className="font-display text-title1 font-semibold tracking-tight text-foreground sm:text-title1">
               {t("signup.createAccount", "Create your account")}
             </h2>
-            <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
+            <p className="mt-2 text-footnote leading-relaxed text-muted-foreground">
               {selfServeEnabled && !token
                 ? t("signup.selfServeSubtitle", `Start your ${selfServeTrialDays}-day Pro trial — no invite needed.`)
                 : t("signup.subtitle", "Motormila is closed to the public. Complete signup with the invite your admin sent you.")}
             </p>
 
             {(inviteLoading || selfServeChecking) && (
-              <div className="mt-8 flex items-center gap-3 text-sm text-muted-foreground" role="status">
+              <div className="mt-8 flex items-center gap-3 text-footnote text-muted-foreground" role="status">
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                 {token ? t("signup.verifying", "Verifying invite…") : t("signup.checkingSignup", "Checking signup options…")}
               </div>
             )}
 
             {inviteError && (
-              <div className="mt-7 rounded-2xl border border-rose-500/20 bg-rose-500/5 px-4 py-4 text-[13px] font-medium text-rose-600 dark:text-rose-300">
+              <div className="mt-7 rounded-2xl border border-rose-500/20 bg-rose-500/5 px-4 py-4 text-footnote font-medium text-rose-600 dark:text-rose-300">
                 {inviteError}
                 <p className="mt-3 text-muted-foreground">
                   {t("signup.alreadyRegistered", "Already registered?")}{" "}
@@ -283,12 +283,12 @@ export default function SignUp() {
                     onChange={(event) => setSelfServeEmail(event.target.value)}
                     className="h-12 rounded-full bg-surface"
                   />
-                  {selfServeEmailError && <p className="text-[11px] font-semibold text-rose-600">{selfServeEmailError}</p>}
+                  {selfServeEmailError && <p className="text-caption font-semibold text-rose-600">{selfServeEmailError}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="self-name" className="field-label">{t("signup.fullName", "Full name")}</Label>
                   <Input id="self-name" autoComplete="name" {...register("name")} className="h-12 rounded-full bg-surface" />
-                  {errors.name && <p className="text-[11px] font-semibold text-rose-600">{errors.name.message}</p>}
+                  {errors.name && <p className="text-caption font-semibold text-rose-600">{errors.name.message}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="self-password" className="field-label">{t("signup.password", "Password")}</Label>
@@ -309,15 +309,15 @@ export default function SignUp() {
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  {errors.password && <p className="text-[11px] font-semibold text-rose-600">{errors.password.message}</p>}
+                  {errors.password && <p className="text-caption font-semibold text-rose-600">{errors.password.message}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="self-confirm" className="field-label">{t("signup.confirmPassword", "Confirm password")}</Label>
                   <Input id="self-confirm" type="password" autoComplete="new-password" {...register("confirm")} className="h-12 rounded-full bg-surface" />
-                  {errors.confirm && <p className="text-[11px] font-semibold text-rose-600">{errors.confirm.message}</p>}
+                  {errors.confirm && <p className="text-caption font-semibold text-rose-600">{errors.confirm.message}</p>}
                 </div>
                 {serverError && (
-                  <p className="rounded-xl border border-rose-500/20 bg-rose-500/5 px-3.5 py-2.5 text-[12px] font-medium text-rose-600">
+                  <p className="rounded-xl border border-rose-500/20 bg-rose-500/5 px-3.5 py-2.5 text-caption font-medium text-rose-600">
                     {serverError}
                   </p>
                 )}
@@ -326,7 +326,7 @@ export default function SignUp() {
                   disabled={loading}
                   whileTap={{ scale: 0.98 }}
                   transition={springSoft}
-                  className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-[12px] font-semibold tracking-tight text-primary-foreground shadow-soft disabled:opacity-50"
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-caption font-semibold tracking-tight text-primary-foreground shadow-soft disabled:opacity-50"
                 >
                   {loading ? t("signup.creating", "Creating account…") : (
                     <>
@@ -335,7 +335,7 @@ export default function SignUp() {
                     </>
                   )}
                 </motion.button>
-                <p className="text-center text-[12px] text-muted-foreground">
+                <p className="text-center text-caption text-muted-foreground">
                   {t("signup.alreadyRegistered", "Already registered?")}{" "}
                   <Link to="/sign-in" className="font-semibold text-foreground underline underline-offset-4">
                     {t("common.signIn", "Sign in")}
@@ -352,16 +352,16 @@ export default function SignUp() {
                       <Mail className="h-4 w-4 text-primary" aria-hidden />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[12px] font-semibold text-muted-foreground">{t("signup.invitedAs", "Invited as")}</p>
-                      <p className="truncate text-[14px] font-semibold text-foreground">{invite.email}</p>
+                      <p className="text-caption font-semibold text-muted-foreground">{t("signup.invitedAs", "Invited as")}</p>
+                      <p className="truncate text-body font-semibold text-foreground">{invite.email}</p>
                     </div>
-                    <span className="rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary-bright">
+                    <span className="rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-caption font-medium text-primary-bright">
                       {invite.plan}
                     </span>
                   </div>
                   <div className="px-4 py-3.5">
-                    <p className="text-[13px] font-semibold text-foreground">{planMeta.title}</p>
-                    <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">{planMeta.detail}</p>
+                    <p className="text-footnote font-semibold text-foreground">{planMeta.title}</p>
+                    <p className="mt-1 text-caption leading-relaxed text-muted-foreground">{planMeta.detail}</p>
                   </div>
                 </div>
 
@@ -369,7 +369,7 @@ export default function SignUp() {
                   <div className="space-y-1.5">
                     <Label htmlFor="name" className="field-label">{t("signup.fullName", "Full name")}</Label>
                     <Input id="name" autoComplete="name" {...register("name")} className="h-12 rounded-full bg-surface" />
-                    {errors.name && <p className="text-[11px] font-semibold text-rose-600">{errors.name.message}</p>}
+                    {errors.name && <p className="text-caption font-semibold text-rose-600">{errors.name.message}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="password" className="field-label">{t("signup.password", "Password")}</Label>
@@ -390,15 +390,15 @@ export default function SignUp() {
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
-                    {errors.password && <p className="text-[11px] font-semibold text-rose-600">{errors.password.message}</p>}
+                    {errors.password && <p className="text-caption font-semibold text-rose-600">{errors.password.message}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="confirm" className="field-label">{t("signup.confirmPassword", "Confirm password")}</Label>
                     <Input id="confirm" type="password" autoComplete="new-password" {...register("confirm")} className="h-12 rounded-full bg-surface" />
-                    {errors.confirm && <p className="text-[11px] font-semibold text-rose-600">{errors.confirm.message}</p>}
+                    {errors.confirm && <p className="text-caption font-semibold text-rose-600">{errors.confirm.message}</p>}
                   </div>
                   {serverError && (
-                    <p className="rounded-xl border border-rose-500/20 bg-rose-500/5 px-3.5 py-2.5 text-[12px] font-medium text-rose-600">
+                    <p className="rounded-xl border border-rose-500/20 bg-rose-500/5 px-3.5 py-2.5 text-caption font-medium text-rose-600">
                       {serverError}
                     </p>
                   )}
@@ -407,7 +407,7 @@ export default function SignUp() {
                     disabled={loading}
                     whileTap={{ scale: 0.98 }}
                     transition={springSoft}
-                    className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-[12px] font-semibold tracking-tight text-primary-foreground shadow-soft disabled:opacity-50"
+                    className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-caption font-semibold tracking-tight text-primary-foreground shadow-soft disabled:opacity-50"
                   >
                     {loading ? t("signup.creating", "Creating account…") : (
                       <>
