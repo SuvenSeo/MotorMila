@@ -1349,7 +1349,7 @@ export const si = {
   "ev.chargersCountLabel": "අරය තුළ ස්ථාන",
   "ev.chargersDescription": "ශ්‍රී ලංකාව සඳහා හැඹිලිගත Open Charge Map ස්ථාන. මෙය සජීවී භාවිත තත්ත්වය නොවේ — ගමන් කිරීමට පෙර ස්ථානය තහවුරු කරගන්න.",
   "ev.chargersEmpty": "මෙම අරය තුළ හැඹිලිගත ආරෝපණ ස්ථාන නැත",
-  "ev.chargersEmptyHint": "ශ්‍රී ලංකා Open Charge Map හැඹිලිය හිස්ය, නැතහොත් මෙම දිස්ත්‍රික්කයේ තවම ස්ථාන නැත. අරය පුළුල් කරන්න, නැතහොත් හැඹිලිය යාවත්කාලීන කිරීමට පරිපාලකයෙකුගෙන් ඉල්ලන්න.",
+  "ev.chargersEmptyHint": "අපි සෑම සතියකම Open Charge Map වෙතින් ශ්‍රී ලංකා ආරෝපණ ස්ථාන සිතියම යාවත්කාලීන කරමු; මෙම ප්‍රදේශයේ තවම ස්ථාන නැත. අරය පුළුල් කර බලන්න, නැතහොත් ඉක්මනින් නැවත පරීක්ෂා කරන්න.",
   "ev.chargersEyebrow": "EV ආරෝපණය",
   "ev.chargersNearby": "ආසන්න ස්ථාන",
   "ev.chargersOpenMap": "OpenStreetMap හි විවෘත කරන්න",
@@ -1653,6 +1653,20 @@ export const si = {
   "deal.howWePrice": "අපි මිල කරන ආකාරය →",
   "trends.lock.conditionFilter": "තත්ත්ව පෙරහන",
   "trends.lock.districtFilter": "දිස්ත්‍රික් පෙරහන",
+  // web/premium-p0
+  "common.delete": "මකන්න",
+  "common.off": "අක්‍රීය",
+  "common.open": "විවෘත කරන්න",
+  "ev.chargersCountPendingHint": "ආරෝපණ ස්ථාන සිතියම යාවත්කාලීන වෙමින්",
+  "footer.fontCredit": "අකුරු: Mark Davis නිර්මාණය කළ Cal Sans, SIL Open Font License යටතේ.",
+  "footer.fontLicence": "බලපත්‍රය",
+  "home.newListings": "නව දැන්වීම් ලැබී ඇත",
+  "home.viewMode": "පෙන්වීම",
+  "seo.botTitle": "MotorMilaBot — {site}",
+  "seo.botDesc": "MotorMilaBot වෙබ් ක්‍රෝලරය ගැන: එය එකතු කරන දේ, එය කොතරම් සැලකිලිමත්ව වෙබ් අඩවි කියවන්නේද, සහ අප හා සම්බන්ධ වීමට හෝ ඉවත් වීමට ආකාරය.",
+  "ui.error.title": "යමක් පූරණය නොවීය",
+  "ui.error.body": "ඔබගේ අන්තර්ජාල සම්බන්ධතාවය පරීක්ෂා කර නැවත උත්සාහ කරන්න. ඔබගේ පෙරහන් එලෙසම තිබේ.",
+  "ui.error.retry": "නැවත උත්සාහ කරන්න",
 } as const;
 
 export type SiKey = keyof typeof si;

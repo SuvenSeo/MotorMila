@@ -1256,7 +1256,7 @@ export const en = {
   "ev.chargersCountLabel": "Stations in radius",
   "ev.chargersDescription": "Cached Open Charge Map points for Sri Lanka. This is not live occupancy — confirm a stall before you travel.",
   "ev.chargersEmpty": "No cached chargers in this radius",
-  "ev.chargersEmptyHint": "The Sri Lanka Open Charge Map cache is empty or this district has no points yet. Widen the radius, or ask an admin to refresh the cache.",
+  "ev.chargersEmptyHint": "We refresh the Sri Lanka charger map from Open Charge Map every week, and this area has no points yet. Try a wider radius, or check back soon.",
   "ev.chargersEyebrow": "EV charging",
   "ev.chargersNearby": "Nearby stations",
   "ev.chargersOpenMap": "Open in OpenStreetMap",
@@ -1653,6 +1653,20 @@ export const en = {
   "deal.howWePrice": "How we price →",
   "trends.lock.conditionFilter": "Condition filter",
   "trends.lock.districtFilter": "District filter",
+  // web/premium-p0
+  "common.delete": "Delete",
+  "common.off": "Off",
+  "common.open": "Open",
+  "ev.chargersCountPendingHint": "Charger map updating",
+  "footer.fontCredit": "Set in Cal Sans by Mark Davis, under the SIL Open Font License.",
+  "footer.fontLicence": "Licence",
+  "home.newListings": "New listings available",
+  "home.viewMode": "View",
+  "seo.botTitle": "MotorMilaBot — {site}",
+  "seo.botDesc": "About the MotorMilaBot web crawler: what it collects, how politely it crawls, and how to contact us or opt out.",
+  "ui.error.title": "Something didn't load",
+  "ui.error.body": "Check your connection and try again. Your filters are kept.",
+  "ui.error.retry": "Try again",
 } as const;
 
 export type EnKey = keyof typeof en;

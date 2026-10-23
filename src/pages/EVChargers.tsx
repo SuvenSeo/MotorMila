@@ -178,7 +178,7 @@ export default function EVChargers() {
               <p className="mx-auto mt-2 max-w-md text-footnote text-muted-foreground">
                 {t(
                   "ev.chargersEmptyHint",
-                  "The Sri Lanka Open Charge Map cache is empty or this district has no points yet. Widen the radius, or ask an admin to refresh the cache.",
+                  "We refresh the Sri Lanka charger map from Open Charge Map every week, and this area has no points yet. Try a wider radius, or check back soon.",
                 )}
               </p>
             </div>

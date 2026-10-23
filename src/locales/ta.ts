@@ -1349,7 +1349,7 @@ export const ta = {
   "ev.chargersCountLabel": "வட்டத்திலுள்ள நிலையங்கள்",
   "ev.chargersDescription": "இலங்கைக்கான சேமிக்கப்பட்ட Open Charge Map இடங்கள். இது நேரடி பயன்பாட்டு நிலை அல்ல — பயணிப்பதற்கு முன் உறுதிப்படுத்துங்கள்.",
   "ev.chargersEmpty": "இந்த வட்டத்தில் சேமிக்கப்பட்ட சார்ஜர்கள் இல்லை",
-  "ev.chargersEmptyHint": "இலங்கை Open Charge Map சேமிப்பு காலியாக உள்ளது அல்லது இந்த மாவட்டத்தில் இன்னும் இடங்கள் இல்லை. வட்டத்தை விரிவாக்குங்கள், அல்லது சேமிப்பைப் புதுப்பிக்க நிர்வாகியிடம் கேளுங்கள்.",
+  "ev.chargersEmptyHint": "இலங்கை சார்ஜர் வரைபடத்தை ஒவ்வொரு வாரமும் Open Charge Map-இலிருந்து புதுப்பிக்கிறோம்; இந்தப் பகுதியில் இன்னும் இடங்கள் இல்லை. பெரிய வட்டத்தை முயலுங்கள், அல்லது விரைவில் மீண்டும் பாருங்கள்.",
   "ev.chargersEyebrow": "EV சார்ஜிங்",
   "ev.chargersNearby": "அருகிலுள்ள நிலையங்கள்",
   "ev.chargersOpenMap": "OpenStreetMap இல் திற",
@@ -1653,6 +1653,20 @@ export const ta = {
   "deal.howWePrice": "நாங்கள் விலையிடும் முறை →",
   "trends.lock.conditionFilter": "நிலை வடிப்பான்",
   "trends.lock.districtFilter": "மாவட்ட வடிப்பான்",
+  // web/premium-p0
+  "common.delete": "நீக்கு",
+  "common.off": "முடக்கம்",
+  "common.open": "திற",
+  "ev.chargersCountPendingHint": "சார்ஜர் வரைபடம் புதுப்பிக்கப்படுகிறது",
+  "footer.fontCredit": "எழுத்துரு: Mark Davis வடிவமைத்த Cal Sans, SIL Open Font License உரிமத்தின் கீழ்.",
+  "footer.fontLicence": "உரிமம்",
+  "home.newListings": "புதிய விளம்பரங்கள் கிடைக்கின்றன",
+  "home.viewMode": "காட்சி",
+  "seo.botTitle": "MotorMilaBot — {site}",
+  "seo.botDesc": "MotorMilaBot வலை கிராலர் பற்றி: அது எதைச் சேகரிக்கிறது, எவ்வளவு மரியாதையுடன் தளங்களைப் படிக்கிறது, எங்களைத் தொடர்புகொள்வது அல்லது விலகுவது எப்படி.",
+  "ui.error.title": "சில தகவல்கள் ஏற்றப்படவில்லை",
+  "ui.error.body": "உங்கள் இணைய இணைப்பைச் சரிபார்த்து மீண்டும் முயலுங்கள். உங்கள் வடிகட்டிகள் அப்படியே இருக்கும்.",
+  "ui.error.retry": "மீண்டும் முயலுங்கள்",
 } as const;
 
 export type TaKey = keyof typeof ta;
