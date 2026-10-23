@@ -218,7 +218,7 @@ class DesignSystemScreenshotsTest {
         }
     }
 
-    @Test fun splash_dark() = paparazzi.snapshot { Page(true) { SplashScreen(onDone = {}) } }
+    @Test fun splash_dark() = paparazzi.snapshot { Page(true) { SplashScreen(onDone = {}, animate = false) } }
 
     // ---------------- Home / Search / Filters (screenshot-only fixtures) ----------------
 
@@ -317,7 +317,7 @@ class DesignSystemScreenshotsTest {
 
     @Test fun filter_sheet_light() = paparazzi.snapshot { Page(false) { FilterSample() } }
 
-    @Test fun splash_light() = paparazzi.snapshot { Page(false) { SplashScreen(onDone = {}) } }
+    @Test fun splash_light() = paparazzi.snapshot { Page(false) { SplashScreen(onDone = {}, animate = false) } }
 
     @Test fun tools_light() = paparazzi.snapshot {
         Page(false) {

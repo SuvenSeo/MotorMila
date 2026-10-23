@@ -51,11 +51,13 @@ private const val SplashReducedMs = 200
 @Composable
 fun SplashScreen(
     onDone: () -> Unit,
+    /** false = draw the settled lockup at once (screenshot tests). */
+    animate: Boolean = true,
 ) {
     val reduced = MmMotion.reduced
     val colors = MmColors.current
     // Screenshot tests / previews: draw the settled lockup.
-    val static = LocalInspectionMode.current
+    val static = !animate || LocalInspectionMode.current
     val logoModifier = Modifier.width(220.dp).aspectRatio(MOTORMILA_WORDMARK_ASPECT)
 
     Box(Modifier.fillMaxSize().background(colors.background), contentAlignment = Alignment.Center) {
