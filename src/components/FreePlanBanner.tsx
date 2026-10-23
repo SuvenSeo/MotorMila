@@ -11,7 +11,7 @@ export function FreePlanBanner() {
 
   return (
     <div className="relative">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-background/70 px-3.5 py-2 shadow-soft backdrop-blur-md sm:px-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-background px-3.5 py-2 shadow-soft sm:px-4">
         <p className="flex items-center gap-2.5 text-caption font-medium text-foreground">
           <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-primary/20 bg-primary/10">
             <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />

@@ -342,7 +342,7 @@ export default function BestPicks() {
 
       <PageBody className="space-y-14 lg:space-y-20">
         {/* Biggest cuts this week — powered by per-listing price history */}
-        <m.section initial="hidden" animate="show" variants={revealItem} className="rounded-2xl border border-border bg-card p-5 shadow-soft backdrop-blur-md sm:p-6">
+        <m.section initial="hidden" animate="show" variants={revealItem} className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
             <div className="flex items-center gap-2.5 border-b border-border pb-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-2xl border border-deal-good/25 bg-deal-good/10">
                 <TrendingDown className="h-4 w-4 text-deal-good-text" aria-hidden />
@@ -434,7 +434,7 @@ export default function BestPicks() {
               const pct = topScore > 0 ? Math.min(100, Math.round((score / topScore) * 100)) : 0;
               const cashDown = minCashDownForPrice(Number(featured.price_lkr || 0));
               return (
-                <m.article variants={revealItem} className="group relative grid overflow-hidden rounded-2xl border border-border bg-card shadow-soft backdrop-blur-md transition-ui duration-medium hover:border-primary/30 hover:shadow-soft-lg lg:grid-cols-[1.1fr_1fr]" onMouseMove={setSpotlightVars}>
+                <m.article variants={revealItem} className="group relative grid overflow-hidden rounded-2xl border border-border bg-card shadow-soft transition-ui duration-medium hover:border-primary/30 hover:shadow-soft-lg lg:grid-cols-[1.1fr_1fr]" onMouseMove={setSpotlightVars}>
                   <CardSpotlightGlow />
                   <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-30 pointer-events-none" aria-hidden />
                   <Link to={`/listing/${featured.id}`} className="block aspect-[16/10] overflow-hidden bg-muted no-underline transition-transform duration-short active:scale-[0.99] lg:aspect-auto lg:min-h-[320px]">
@@ -502,14 +502,14 @@ export default function BestPicks() {
                         // Stagger the first 8; the rest arrive together.
                         variants={idx < 8 ? fadeUp : lateFade}
                         {...(motionStill ? {} : canHoverLift ? { ...hoverLift, whileTap: press.whileTap } : { whileTap: press.whileTap })}
-                        className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft backdrop-blur-md transition-[border-color,box-shadow] duration-medium hover:border-primary/30 hover:shadow-soft-lg"
+                        className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft transition-[border-color,box-shadow] duration-medium hover:border-primary/30 hover:shadow-soft-lg"
                         onMouseMove={setSpotlightVars}
                       >
                         <CardSpotlightGlow />
                         <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-30 pointer-events-none" aria-hidden />
                         <Link to={`/listing/${listing.id}`} className="relative block aspect-[16/10] overflow-hidden bg-muted no-underline transition-transform duration-short active:scale-[0.98]">
                           <VehicleThumbnail src={pickVehicleImageUrl([listing.thumbnail_url, ...(Array.isArray(listing.images) ? listing.images : [])], [listing.url, listing.detail_url, listing.external_url])} listingId={listing.id} alt={`${listing.make} ${listing.model}`} className="h-full w-full object-cover transition-transform duration-long group-hover:scale-[1.02]" />
-                          <span className="absolute left-2 top-2 rounded-full border border-border bg-black/60 px-1.5 py-0.5 text-caption font-bold text-white num backdrop-blur-sm">{String(idx + 2).padStart(2, "0")}</span>
+                          <span className="absolute left-2 top-2 rounded-full border border-border bg-black/60 px-1.5 py-0.5 text-caption font-bold text-white num">{String(idx + 2).padStart(2, "0")}</span>
                         </Link>
                         <div className="flex flex-1 flex-col gap-3 p-4">
                           <div className="flex items-center justify-between">

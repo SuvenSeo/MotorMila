@@ -28,7 +28,7 @@ export function ImportEraPublicSection() {
   }, []);
 
   return (
-    <section className="rounded-3xl border border-border/80 bg-card/85 p-5 sm:p-6 shadow-soft backdrop-blur-xl" aria-labelledby="import-era-heading">
+    <section className="rounded-3xl border border-border/80 bg-card p-5 sm:p-6 shadow-soft" aria-labelledby="import-era-heading">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-caption font-medium text-primary/70">Post-freeze market</p>

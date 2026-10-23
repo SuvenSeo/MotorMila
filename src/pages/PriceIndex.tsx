@@ -99,9 +99,9 @@ export default function PriceIndexPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-background/85 via-background/92 to-background" />
       </div>
-      <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-[radial-gradient(circle,hsl(var(--primary)/0.08),transparent_70%)] rounded-full pointer-events-none" />
 
-      <m.section variants={itemVariants} className="border-b border-border bg-surface/40 backdrop-blur-md relative z-10">
+      <m.section variants={itemVariants} className="border-b border-border bg-surface relative z-10">
         <div className="mx-auto max-w-[1320px] px-5 py-10 sm:px-6 sm:py-12">
           <p className="text-caption font-semibold text-primary-bright">{t("index.eyebrow", "Market benchmark")}</p>
           <h1 className="mt-3 font-display text-title1 font-bold tracking-tight leading-[1.05] text-white sm:text-large lg:text-hero">
@@ -214,7 +214,7 @@ export default function PriceIndexPage() {
             )}
 
             {/* Chart */}
-            <m.div variants={itemVariants} className="rounded-xl border border-border bg-foreground/[0.01] p-5 backdrop-blur-md">
+            <m.div variants={itemVariants} className="rounded-xl border border-border bg-foreground/[0.01] p-5">
               <div
                 role="img"
                 aria-label={`${activeSegment === "overall" ? "Overall" : activeSegment} price index: ${chartData.length} months, currently ${latest?.index_value.toFixed(1)} (${formatPct(totalChange)} since base)`}
@@ -246,7 +246,7 @@ export default function PriceIndexPage() {
             </m.div>
 
             {/* Month-on-month momentum — Bklit bar chart (#14 UI review) */}
-            <m.div variants={itemVariants} className="rounded-xl border border-border bg-foreground/[0.01] p-5 backdrop-blur-md">
+            <m.div variants={itemVariants} className="rounded-xl border border-border bg-foreground/[0.01] p-5">
               <div className="mb-1 flex items-baseline justify-between">
                 <h2 className="text-footnote font-bold text-white">{t("index.momTitle", "Monthly momentum")}</h2>
                 <p className="text-caption text-muted-foreground font-medium">{t("index.momHint", "month-on-month index change")}</p>

@@ -145,7 +145,7 @@ export default function AdminConsole() {
   if (unlocked) {
     return (
       <div className="relative min-h-screen bg-background">
-        <div className="border-b border-border bg-surface/70 backdrop-blur-xl">
+        <div className="border-b border-border bg-surface">
           <div className="mx-auto flex w-full max-w-[1560px] flex-wrap items-center justify-between gap-3 px-5 py-3 sm:px-6">
             <div className="flex items-center gap-3">
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10">
@@ -189,7 +189,7 @@ export default function AdminConsole() {
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_45%_at_50%_-5%,rgba(10,122,255,0.22),transparent_60%)]" />
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:46px_46px] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_35%,black,transparent_75%)]" />
-        <div className="absolute left-1/2 top-1/3 h-[26rem] w-[26rem] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(10,122,255,0.16),transparent_68%)] blur-[120px]" />
+        <div className="absolute left-1/2 top-1/3 h-[26rem] w-[26rem] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(10,122,255,0.16),transparent_68%)]" />
       </div>
 
       <div className="relative z-10 mx-auto flex min-h-[70vh] w-full max-w-[440px] flex-col justify-center">
@@ -197,7 +197,7 @@ export default function AdminConsole() {
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={spring.smooth}
-          className="rounded-[2rem] border border-border bg-foreground/[0.045] p-6 shadow-[0_28px_90px_-40px_rgba(0,0,0,0.9)] backdrop-blur-2xl sm:p-8"
+          className="rounded-[2rem] border border-border bg-foreground/[0.045] p-6 shadow-e3 sm:p-8"
         >
           <div className="flex items-center gap-3">
             <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[#3D94FF]/35 bg-[#0A7AFF]/15">
@@ -284,7 +284,7 @@ export default function AdminConsole() {
             <button
               type="submit"
               disabled={attempting || lockSeconds > 0}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#0A7AFF] text-footnote font-semibold text-white shadow-[0_14px_44px_-18px_rgba(10,122,255,0.9)] transition-ui hover:bg-[#3D94FF] disabled:opacity-50"
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#0A7AFF] text-footnote font-semibold text-white shadow-e2 transition-ui hover:bg-[#3D94FF] disabled:opacity-50"
             >
               {attempting ? (
                 t("adminLogin.checking", "Verifying credentials…")

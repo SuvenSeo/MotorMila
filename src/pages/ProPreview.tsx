@@ -64,7 +64,7 @@ const REPORTS = ["Executive PDF", "Editable Word brief", "CSV data pack"];
 function LockedOverlay({ label }: { label?: string }) {
   const { t } = useAppPreferences();
   return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[inherit] bg-background/70 backdrop-blur-[3px]">
+    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[inherit] bg-background backdrop-blur-[3px]">
       <div className="rounded-xl border border-primary/25 bg-primary/10 px-4 py-3 text-center shadow-soft">
         <Lock aria-hidden className="mx-auto mb-1.5 h-4 w-4 text-primary" />
         <p className="text-caption font-semibold text-primary-bright">

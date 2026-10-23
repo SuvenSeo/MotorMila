@@ -68,7 +68,7 @@ export function ListingHistoryReport({ listingId }: { listingId: number | string
       variants={revealItem}
       initial="hidden"
       animate="show"
-      className="rounded-xl border border-border bg-card p-5 backdrop-blur-md"
+      className="rounded-xl border border-border bg-card p-5"
     >
       <div className="mb-4 flex items-center gap-2.5">
         <div className="flex h-8 w-8 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10">

@@ -43,11 +43,11 @@ export default function HeroLab() {
   const copyPanel =
     variant.tone === "dark"
       ? ""
-      : "rounded-2xl bg-background/55 p-5 backdrop-blur-md sm:bg-background/40 sm:p-6";
+      : "rounded-2xl bg-background p-5 sm:bg-background/40 sm:p-6";
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-40 border-b border-border bg-card/90 px-4 py-3 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-border bg-card px-4 py-3">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-caption font-semibold text-muted-foreground">
@@ -110,10 +110,10 @@ export default function HeroLab() {
               {BRAND.name}
             </p>
             <p
-              className={`mt-4 inline-flex rounded-full border px-3.5 py-1.5 text-caption font-semibold tracking-tight backdrop-blur-md ${
+              className={`mt-4 inline-flex rounded-full border px-3.5 py-1.5 text-caption font-semibold tracking-tight ${
                 variant.tone === "dark"
                   ? "border-border bg-foreground/10 text-white/80"
-                  : "border-border/80 bg-card/90 text-foreground/85"
+                  : "border-border/80 bg-card text-foreground/85"
               }`}
             >
               Vehicle Intelligence · Sri Lanka

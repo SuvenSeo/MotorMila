@@ -10,10 +10,10 @@ const badgeVariants = cva(
       variant: {
         default: "border-primary/25 bg-primary/10 text-primary-bright dark:bg-primary/15",
         solid: "border-transparent bg-primary text-primary-foreground shadow-soft",
-        secondary: "border-border bg-secondary/80 text-secondary-foreground backdrop-blur-md",
+        secondary: "border-border bg-secondary text-secondary-foreground",
         destructive: "border-destructive/25 bg-destructive/10 text-destructive dark:text-destructive-foreground",
-        outline: "border-border bg-card/50 text-foreground backdrop-blur-sm",
-        glass: "border-border bg-card/50 text-foreground backdrop-blur-md dark:border-border dark:bg-foreground/[0.06]",
+        outline: "border-border bg-card text-foreground",
+        glass: "border-border bg-card text-foreground dark:border-border dark:bg-foreground/[0.06]",
         // Deal signals — one semantic set (src/styles/TOKENS.md)
         "deal-great": "border-deal-great/30 bg-deal-great/10 text-deal-great-text",
         "deal-good": "border-deal-good/30 bg-deal-good/10 text-deal-good-text",

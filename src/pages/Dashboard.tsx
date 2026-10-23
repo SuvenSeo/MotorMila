@@ -678,8 +678,8 @@ export default function Dashboard() {
       : "text-foreground/80 [text-shadow:0_1px_14px_hsl(var(--background)/0.45)]";
   const heroSearchShellClass =
     heroFilmTone === "cinematic"
-      ? "border-border bg-foreground/10 shadow-soft-xl backdrop-blur-2xl focus-within:border-primary/55 focus-within:shadow-gold-glow"
-      : "border-border/80 bg-card/90 shadow-soft-lg backdrop-blur-2xl focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20";
+      ? "border-border bg-foreground/10 shadow-soft-xl focus-within:border-primary/55 focus-within:shadow-gold-glow"
+      : "border-border/80 bg-card shadow-soft-lg focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20";
   const heroInputClass =
     heroFilmTone === "cinematic"
       ? "h-14 min-w-0 flex-1 bg-transparent text-body font-semibold text-white placeholder:text-white/45 outline-none [&::-webkit-search-cancel-button]:hidden"
@@ -690,8 +690,8 @@ export default function Dashboard() {
       : "w-full rounded-2xl px-3 py-2.5 text-left text-footnote font-medium text-foreground transition-colors hover:bg-surface";
   const heroKickerClass =
     heroFilmTone === "cinematic"
-      ? "border-border bg-foreground/10 text-white/88 backdrop-blur-xl"
-      : "border-border bg-card/80 text-foreground backdrop-blur-xl";
+      ? "border-border bg-foreground/10 text-white/88"
+      : "border-border bg-card text-foreground";
 
   // ═════════════════════════════════════════════════════════════════
   // RENDER
@@ -890,7 +890,7 @@ export default function Dashboard() {
                   </m.div>
 
                   {showHeroPopular ? (
-                    <div id="hero-suggestions" role="listbox" className="absolute inset-x-0 bottom-full z-50 mb-2 overflow-hidden rounded-[1.75rem] border border-border bg-card/95 p-1.5 shadow-soft-xl backdrop-blur-xl">
+                    <div id="hero-suggestions" role="listbox" className="absolute inset-x-0 bottom-full z-50 mb-2 overflow-hidden rounded-[1.75rem] border border-border bg-card p-1.5 shadow-soft-xl">
                       <p className="px-3 py-2 text-caption font-semibold text-muted-foreground">
                         {t("home.popular", "Popular")}
                       </p>
@@ -916,7 +916,7 @@ export default function Dashboard() {
                   ) : null}
 
                   {showHeroSuggestions && (
-                    <div id="hero-suggestions" role="listbox" className="absolute inset-x-0 bottom-full z-50 mb-2 overflow-hidden rounded-[1.75rem] border border-border bg-card/95 p-1.5 shadow-soft-xl backdrop-blur-xl">
+                    <div id="hero-suggestions" role="listbox" className="absolute inset-x-0 bottom-full z-50 mb-2 overflow-hidden rounded-[1.75rem] border border-border bg-card p-1.5 shadow-soft-xl">
                       {heroSuggestionsLoading ? (
                         <p className="px-3 py-2 text-caption text-muted-foreground">{t("common.searching", "Searching...")}</p>
                       ) : heroSuggestions.length ? (
@@ -1471,7 +1471,7 @@ export default function Dashboard() {
 
       {/* ── DIALOGS ─────────────────────────────────────────────── */}
       <Dialog open={showMarketAlerts} onOpenChange={setShowMarketAlerts}>
-        <DialogContent className="max-h-[86vh] max-w-2xl overflow-y-auto rounded-3xl border-border bg-card/80 text-foreground backdrop-blur-2xl">
+        <DialogContent className="max-h-[86vh] max-w-2xl overflow-y-auto rounded-3xl border-border bg-card text-foreground">
           <DialogHeader>
             <DialogTitle className="font-display text-callout font-semibold tracking-tight">Market alerts</DialogTitle>
           </DialogHeader>
@@ -1505,7 +1505,7 @@ export default function Dashboard() {
       </Dialog>
 
       <Dialog open={showSavedListings} onOpenChange={setShowSavedListings}>
-        <DialogContent className="max-h-[86vh] max-w-2xl overflow-y-auto rounded-3xl border-border bg-card/80 text-foreground backdrop-blur-2xl">
+        <DialogContent className="max-h-[86vh] max-w-2xl overflow-y-auto rounded-3xl border-border bg-card text-foreground">
           <DialogHeader>
             <DialogTitle className="font-display text-callout font-semibold tracking-tight">Saved listings</DialogTitle>
           </DialogHeader>

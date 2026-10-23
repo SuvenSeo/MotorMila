@@ -508,7 +508,7 @@ export default function ListingDetail() {
       className="relative min-h-screen overflow-hidden bg-background pb-44 lg:pb-0"
     >
       {/* Header — back + quiet actions, then one clear title */}
-      <motion.section variants={revealItem} className="relative z-10 -mt-[var(--nav-offset)] border-b border-border bg-card/30 pt-[var(--nav-offset)] backdrop-blur-md">
+      <motion.section variants={revealItem} className="relative z-10 -mt-[var(--nav-offset)] border-b border-border bg-card/30 pt-[var(--nav-offset)]">
         <div className="mx-auto max-w-[1320px] px-5 py-6 sm:px-6 sm:py-8">
           <div className="mb-4 flex items-center justify-between gap-3">
             <button type="button" onClick={handleBack} className="group inline-flex min-h-[40px] items-center gap-1.5 text-caption font-medium text-muted-foreground transition-colors hover:text-foreground">
@@ -585,7 +585,7 @@ export default function ListingDetail() {
                 />
                 <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 to-transparent" />
                 {/* Source credit for hotlinked photos. Fixed bright blue: sits on a black scrim. */}
-                <span className="pointer-events-none absolute bottom-3 right-3 z-10 flex items-center gap-1 rounded-full border border-border bg-black/60 px-2.5 py-1 text-caption font-semibold text-[#6CB8FF] backdrop-blur-md">
+                <span className="pointer-events-none absolute bottom-3 right-3 z-10 flex items-center gap-1 rounded-full border border-border bg-black/60 px-2.5 py-1 text-caption font-semibold text-[#6CB8FF]">
                   <Database aria-hidden className="h-3 w-3" /> {t("listingImage.credit", "Photo: {source}", { source: attribution.sourceName })}
                 </span>
               </div>

@@ -46,15 +46,43 @@
   --deal-red: var(--deal-high);
   --deal-red-foreground: var(--deal-high-foreground);
 
-  /* ── Radius scale ─────────────────────────────────────────────────── */
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 10px;     /* inputs, selects, small buttons */
-  --radius-lg: 12px;     /* cards (= --radius) */
-  --radius-xl: 14px;
-  --radius-2xl: 16px;    /* large panels, sheets, dialogs */
-  --radius-3xl: 20px;
-  --radius-4xl: 24px;    /* hero media */
+  /* ── Radius: 4 steps (web/premium-p0). Legacy names collapse onto them. */
+  --radius-control: 10px;  /* inputs, selects, small buttons, chips-as-rects */
+  --radius-card: 16px;     /* cards, panels, popovers */
+  --radius-sheet: 24px;    /* sheets, dialogs, hero media */
+  /* pill = 9999px */
+  --radius-xs: var(--radius-control);
+  --radius-sm: var(--radius-control);
+  --radius-md: var(--radius-control);
+  --radius-lg: var(--radius-card);
+  --radius-xl: var(--radius-card);
+  --radius-2xl: var(--radius-card);
+  --radius-3xl: var(--radius-sheet);
+  --radius-4xl: var(--radius-sheet);
+
+  /* ── Elevation: 3 steps. e1 resting card, e2 hover/popover, e3 sheet/modal. */
+  --shadow-e1: 0 1px 2px rgb(24 16 8 / 0.05), 0 0 0 1px rgb(24 16 8 / 0.04);
+  --shadow-e2: 0 8px 24px -6px rgb(24 16 8 / 0.12), 0 2px 6px rgb(24 16 8 / 0.05);
+  --shadow-e3: 0 24px 64px -12px rgb(24 16 8 / 0.22), 0 8px 20px rgb(24 16 8 / 0.08);
+  --shadow-sm: var(--shadow-e1);
+  --shadow-md: var(--shadow-e1);
+  --shadow-lg: var(--shadow-e2);
+  --shadow-xl: var(--shadow-e3);
+  --console-shadow: var(--shadow-e1);
+
+  /* ── Semantic surfaces and labels (Apple-style naming over the core HSL set) */
+  --surface-1: var(--card);          /* cards on the page */
+  --surface-2: var(--secondary);     /* raised fills, chips, wells */
+  --surface-3: var(--muted);         /* inset / pressed */
+  --label-1: var(--foreground);
+  --label-2: var(--muted-foreground);
+  --label-3: var(--muted-foreground);
+  --separator: var(--border);
+
+  /* ── Glass: two recipes only (nav, sheet). ≤3 blurred layers on screen. */
+  --glass-blur: 20px;
+  --glass-nav-fill: hsl(var(--background) / 0.82);
+  --glass-sheet-fill: hsl(var(--popover) / 0.9);
 
   /* ── Type scale (mirrors src/styles/type-scale.ts) ───────────────── */
   --text-caption: 0.75rem;     /* 12/16 */
@@ -74,6 +102,17 @@
 }
 
 .theme-dark {
+  --shadow-e1: 0 1px 2px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(255 244 230 / 0.05);
+  --shadow-e2: 0 10px 28px -6px rgb(0 0 0 / 0.6), 0 0 0 1px rgb(255 244 230 / 0.06);
+  --shadow-e3: 0 28px 72px -12px rgb(0 0 0 / 0.75), 0 0 0 1px rgb(255 244 230 / 0.07);
+  --shadow-sm: var(--shadow-e1);
+  --shadow-md: var(--shadow-e1);
+  --shadow-lg: var(--shadow-e2);
+  --shadow-xl: var(--shadow-e3);
+  --console-shadow: var(--shadow-e1);
+  --label-3: 30 8% 50%;
+  --glass-blur: 20px;
+
   --primary-text: 213 100% 68%;          /* #5CA5FF — 7.8:1 on background */
   --brand-blue: 213 100% 60%;
 

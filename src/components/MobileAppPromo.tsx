@@ -132,7 +132,7 @@ export function MobileAppPromo() {
       aria-label={t("mobile.promoAria", "Motormila mobile app announcement")}
       className="dock-strip pointer-events-none inset-x-0 flex justify-center px-3 md:justify-end md:px-6"
     >
-      <div className="pointer-events-auto flex w-full max-w-md items-center gap-2.5 rounded-2xl border border-border bg-card/95 py-2 pl-3 pr-1.5 text-foreground shadow-soft-lg backdrop-blur-md motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
+      <div className="pointer-events-auto flex w-full max-w-md items-center gap-2.5 rounded-2xl border border-border bg-card py-2 pl-3 pr-1.5 text-foreground shadow-soft-lg motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
         <Smartphone className="h-4 w-4 shrink-0 text-primary" aria-hidden />
         <p className="min-w-0 flex-1 text-footnote leading-snug">
           <span className="font-semibold">{t("mobile.promoTitleShort", "Motormila for Android")}</span>

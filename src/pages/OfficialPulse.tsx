@@ -56,7 +56,7 @@ function SignalCard({ signal }: { signal: MarketSignal }) {
       variants={revealItem}
       whileHover={{ y: -2 }}
       transition={spring.smooth}
-      className="group flex flex-col rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl transition-ui hover:border-primary/30 hover:shadow-soft-lg"
+      className="group flex flex-col rounded-3xl border border-border/80 bg-card p-6 shadow-soft transition-ui hover:border-primary/30 hover:shadow-soft-lg"
     >
       <Link to={`/official-pulse/${signal.id}`} className="flex flex-1 flex-col no-underline">
         <p className="text-caption font-medium text-primary/70">
@@ -186,7 +186,7 @@ export default function OfficialPulse() {
               <motion.div key={guide.key} variants={revealItem}>
                 <Link
                   to={`/official-pulse/guide/${guide.key}`}
-                  className="group flex h-full flex-col rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl no-underline transition-ui hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg"
+                  className="group flex h-full flex-col rounded-3xl border border-border/80 bg-card p-6 shadow-soft no-underline transition-ui hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg"
                 >
                   <p className="text-caption font-medium text-primary/70">
                     {labelPulseSource(guide.source)}
@@ -247,12 +247,12 @@ export default function OfficialPulse() {
               {Array.from({ length: 6 }).map((_, index) => (
                 <div
                   key={index}
-                  className="h-40 animate-pulse rounded-3xl border border-border/80 bg-card/85 backdrop-blur-xl"
+                  className="h-40 animate-pulse rounded-3xl border border-border/80 bg-card"
                 />
               ))}
             </div>
           ) : signalsQuery.isError ? (
-            <div className="flex flex-col items-start gap-3 rounded-3xl border border-deal-high/25 bg-deal-high/5 p-6 backdrop-blur-xl">
+            <div className="flex flex-col items-start gap-3 rounded-3xl border border-deal-high/25 bg-deal-high/5 p-6">
               <div className="flex items-center gap-2">
                 <Loader2 aria-hidden className="h-4 w-4 text-deal-high-text" />
                 <p className="text-footnote font-semibold text-foreground">{t("pulse.loadError", "Could not load live signals")}</p>
@@ -270,7 +270,7 @@ export default function OfficialPulse() {
               </button>
             </div>
           ) : filteredSignals.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-border/80 bg-card/60 px-6 py-14 text-center backdrop-blur-xl">
+            <div className="rounded-3xl border border-dashed border-border/80 bg-card px-6 py-14 text-center">
               <Landmark aria-hidden className="mx-auto h-6 w-6 text-muted-foreground" />
               <p className="mt-3 text-body font-semibold text-foreground">{t("pulse.empty", "No signals yet")}</p>
               <p className="mx-auto mt-2 max-w-md text-caption text-muted-foreground">
@@ -322,7 +322,7 @@ export default function OfficialPulse() {
               {newsItems.map((item, index) => (
                 <li
                   key={item.id || `${item.title}-${index}`}
-                  className="rounded-3xl border border-border/80 bg-card/85 p-5 shadow-soft backdrop-blur-xl"
+                  className="rounded-3xl border border-border/80 bg-card p-5 shadow-soft"
                 >
                   <p className="text-caption font-medium text-primary/70">
                     Helakuru Esana

@@ -36,7 +36,7 @@ function GuideNotFound() {
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute right-[-10%] top-[8%] h-[450px] w-[450px] rounded-full bg-primary/5 blur-[110px]"
+        className="pointer-events-none absolute right-[-10%] top-[8%] h-[450px] w-[450px] rounded-full bg-[radial-gradient(circle,hsl(var(--primary)/0.08),transparent_70%)]"
       />
       <motion.div variants={revealItem} className="relative z-10 max-w-md text-center">
         <Landmark aria-hidden className="mx-auto h-7 w-7 text-muted-foreground" />
@@ -121,11 +121,11 @@ function GuideBody({ guide }: { guide: PulseSourceGuide }) {
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute right-[-10%] top-[8%] h-[450px] w-[450px] rounded-full bg-primary/5 blur-[110px]"
+        className="pointer-events-none absolute right-[-10%] top-[8%] h-[450px] w-[450px] rounded-full bg-[radial-gradient(circle,hsl(var(--primary)/0.08),transparent_70%)]"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute bottom-[18%] left-[-15%] h-[400px] w-[400px] rounded-full bg-primary/5 blur-[100px]"
+        className="pointer-events-none absolute bottom-[18%] left-[-15%] h-[400px] w-[400px] rounded-full bg-[radial-gradient(circle,hsl(var(--primary)/0.08),transparent_70%)]"
       />
 
       <motion.section variants={revealItem} className="relative z-10 border-b border-border">

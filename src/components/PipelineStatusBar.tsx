@@ -133,7 +133,7 @@ export const PipelineStatusBar = memo(function PipelineStatusBar({
     <div className="console-section overflow-hidden">
       <div className="flex flex-col gap-4 border-b border-border px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <span className="w-2.5 h-2.5 rounded-full shadow-[0_0_10px_rgba(216,155,53,0.8)]" style={{ backgroundColor: statusColor(overall) }} />
+          <span className="w-2.5 h-2.5 rounded-full shadow-e1" style={{ backgroundColor: statusColor(overall) }} />
           <span className="tech-label text-muted-foreground">Data Pipeline</span>
           <span className="status-chip px-2.5 py-1">
             {overallLabel}

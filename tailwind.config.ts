@@ -42,6 +42,55 @@ export default {
     // in src/styles/type-scale.ts so tailwind-merge and docs share one list.
     fontSize: TYPE_SCALE,
     letterSpacing: LETTER_SPACING,
+    // Radius: 4 steps (styles/tokens.css). Legacy names collapse onto them.
+    borderRadius: {
+      none: "0",
+      control: "var(--radius-control)",
+      card: "var(--radius-card)",
+      sheet: "var(--radius-sheet)",
+      pill: "9999px",
+      full: "9999px",
+      DEFAULT: "var(--radius-control)",
+      xs: "var(--radius-control)",
+      sm: "var(--radius-control)",
+      md: "var(--radius-control)",
+      lg: "var(--radius-card)",
+      xl: "var(--radius-card)",
+      "2xl": "var(--radius-card)",
+      "3xl": "var(--radius-sheet)",
+      "4xl": "var(--radius-sheet)",
+      input: "var(--radius-control)",
+      "tremor-small": "var(--radius-control)",
+      "tremor-default": "var(--radius-control)",
+      "tremor-full": "9999px",
+    },
+    // Elevation: 3 steps. Legacy names collapse onto them.
+    boxShadow: {
+      none: "none",
+      e1: "var(--shadow-e1)",
+      e2: "var(--shadow-e2)",
+      e3: "var(--shadow-e3)",
+      DEFAULT: "var(--shadow-e1)",
+      sm: "var(--shadow-e1)",
+      md: "var(--shadow-e1)",
+      lg: "var(--shadow-e2)",
+      xl: "var(--shadow-e2)",
+      "2xl": "var(--shadow-e3)",
+      inner: "inset 0 1px 2px rgb(0 0 0 / 0.06)",
+      console: "var(--shadow-e1)",
+      "console-soft": "var(--shadow-e1)",
+      soft: "var(--shadow-e1)",
+      "soft-lg": "var(--shadow-e2)",
+      "soft-xl": "var(--shadow-e3)",
+      "gold-glow": "0 0 0 4px hsl(var(--ring) / 0.14)",
+      "gold-glow-lg": "0 0 0 6px hsl(var(--ring) / 0.16)",
+      "tremor-input": "var(--shadow-e1)",
+      "tremor-card": "var(--shadow-e1)",
+      "tremor-dropdown": "var(--shadow-e2)",
+      "dark-tremor-input": "var(--shadow-e1)",
+      "dark-tremor-card": "var(--shadow-e1)",
+      "dark-tremor-dropdown": "var(--shadow-e2)",
+    },
     // Motion tokens (src/lib/motion.ts). Not `extend`: 3 easings, 4 durations only.
     transitionTimingFunction: {
       DEFAULT: "var(--ease-standard)",
@@ -130,14 +179,25 @@ export default {
         surface: {
           DEFAULT: "hsl(var(--surface))",
           foreground: "hsl(var(--surface-foreground))",
+          1: "hsl(var(--surface-1))",
+          2: "hsl(var(--surface-2))",
+          3: "hsl(var(--surface-3))",
         },
+        label: {
+          1: "hsl(var(--label-1))",
+          2: "hsl(var(--label-2))",
+          3: "hsl(var(--label-3))",
+        },
+        separator: "hsl(var(--separator))",
+        // Legacy `intelligence.*` names (amber was actually blue) now resolve
+        // to semantic tokens; prefer primary / deal-* in new code.
         intelligence: {
-          amber: "#0A7AFF",
-          gold: "#3D94FF",
-          ink: "#09090B",
-          cyan: "#3D94FF",
-          green: "#1d9e75",
-          red: "#e24b4a",
+          amber: "hsl(var(--primary))",
+          gold: "hsl(var(--primary-text))",
+          ink: "hsl(var(--foreground))",
+          cyan: "hsl(var(--primary-text))",
+          green: "hsl(var(--deal-good))",
+          red: "hsl(var(--deal-high))",
         },
         // Deal signals — ONE semantic set (styles/tokens.css, TOKENS.md).
         // Badge: border-deal-good/30 bg-deal-good/10 text-deal-good-text
@@ -227,27 +287,6 @@ export default {
           },
         },
       },
-      borderRadius: {
-        // Radius scale (ui/design): base 12px card, 10px input, full pill.
-        xs: "var(--radius-xs)",
-        sm: "var(--radius-sm)",
-        DEFAULT: "8px",
-        md: "var(--radius-md)",
-        lg: "var(--radius-lg)",
-        xl: "var(--radius-xl)",
-        "2xl": "var(--radius-2xl)",
-        "3xl": "var(--radius-3xl)",
-        "4xl": "var(--radius-4xl)",
-        full: "9999px",
-        card: "var(--radius-lg)",
-        input: "var(--radius-md)",
-        sheet: "var(--radius-2xl)",
-        pill: "9999px",
-        // Tremor v3 radii (#7 UI review)
-        "tremor-small": "0.375rem",
-        "tremor-default": "0.5rem",
-        "tremor-full": "9999px",
-      },
       // text-primary = brand blue for TEXT (AA on page surfaces in both themes);
       // bg-/border-/ring-primary keep the fill blue (white text on it ≥ 4.5:1).
       textColor: {
@@ -255,22 +294,6 @@ export default {
           DEFAULT: "hsl(var(--primary-text))",
           foreground: "hsl(var(--primary-foreground))",
         },
-      },
-      boxShadow: {
-        console: "0 2px 8px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.04)",
-        "console-soft": "0 1px 2px rgba(0,0,0,0.04)",
-        soft: "0 2px 8px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.04)",
-        "soft-lg": "0 8px 28px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04)",
-        "soft-xl": "0 20px 56px rgba(0,0,0,0.12), 0 6px 16px rgba(0,0,0,0.06)",
-        "gold-glow": "0 0 0 4px rgba(0,113,227,0.12)",
-        "gold-glow-lg": "0 0 0 6px rgba(0,113,227,0.14)",
-        // Tremor v3 shadows (#7 UI review)
-        "tremor-input": "0 1px 2px 0 rgb(0 0 0 / 0.05)",
-        "tremor-card": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
-        "tremor-dropdown": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
-        "dark-tremor-input": "0 1px 2px 0 rgb(0 0 0 / 0.05)",
-        "dark-tremor-card": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
-        "dark-tremor-dropdown": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
       },
       keyframes: {
         "accordion-down": {

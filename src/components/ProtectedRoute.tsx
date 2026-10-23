@@ -69,7 +69,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
               <motion.div
                 key={item}
                 variants={revealItem}
-                className="flex items-start gap-3 rounded-2xl border border-border bg-card/70 p-4 shadow-soft backdrop-blur-sm transition-colors hover:border-primary/25"
+                className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 shadow-soft transition-colors hover:border-primary/25"
               >
                 <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/10">
                   <ShieldCheck className="h-3.5 w-3.5 text-primary" />

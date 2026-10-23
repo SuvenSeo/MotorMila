@@ -80,7 +80,7 @@ export function ListingStickyBar({ priceLkr, badge, href, sourceName, listingId,
         }
         style={{ pointerEvents: visible ? undefined : "none" }}
       >
-        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card/95 p-2.5 pl-4 shadow-soft-xl backdrop-blur-md">
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-2.5 pl-4 shadow-soft-xl">
           <div className="min-w-0 flex-1">
             <p className="num truncate text-callout font-extrabold leading-tight text-foreground">
               {priceLkr ? formatPrice(priceLkr) : t("listing.unlisted", "Unlisted")}

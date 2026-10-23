@@ -74,7 +74,7 @@ export function MorphingDialog({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={tween.short}
-            className="fixed inset-0 z-[70] flex items-end justify-center bg-background/70 p-4 backdrop-blur-sm sm:items-center"
+            className="fixed inset-0 z-[70] flex items-end justify-center bg-background p-4 sm:items-center"
             onClick={() => setOpen(false)}
             aria-hidden={false}
           >

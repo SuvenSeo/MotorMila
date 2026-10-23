@@ -228,7 +228,7 @@ export const ListingCard = memo(function ListingCard({
 
           {conditionLabel && (
             <div className="absolute left-3 top-3 flex items-center gap-1.5">
-              <span className="rounded-full border border-border bg-black/70 px-2.5 py-0.5 text-caption font-semibold tracking-tight text-white backdrop-blur-md">
+              <span className="rounded-full border border-border bg-black/70 px-2.5 py-0.5 text-caption font-semibold tracking-tight text-white">
                 {conditionLabel}
               </span>
             </div>
@@ -239,7 +239,7 @@ export const ListingCard = memo(function ListingCard({
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onWatchlistToggle(listing); }}
-                className={`pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur-md transition-[background-color,border-color,color,transform] duration-short active:scale-90 motion-reduce:active:scale-100 ${
+                className={`pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border transition-[background-color,border-color,color,transform] duration-short active:scale-90 motion-reduce:active:scale-100 ${
                   isWatchlisted
                     ? "bg-primary text-primary-foreground border-primary"
                     : "bg-black/60 text-white/90 border-border hover:text-white hover:bg-black/75"
@@ -253,7 +253,7 @@ export const ListingCard = memo(function ListingCard({
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onCompareToggle(listing); }}
-                className={`pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur-md transition-[background-color,border-color,color,transform] duration-short active:scale-90 motion-reduce:active:scale-100 ${
+                className={`pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border transition-[background-color,border-color,color,transform] duration-short active:scale-90 motion-reduce:active:scale-100 ${
                   isComparing
                     ? "bg-primary text-primary-foreground border-primary"
                     : "bg-black/60 text-white/90 border-border hover:text-white hover:bg-black/75"

@@ -15,7 +15,7 @@ export function AnnouncementBanner() {
   // tokens so colours stay AA in light mode too.
   return (
     <div className="theme-dark text-foreground">
-      <div className="flex items-center gap-3 rounded-2xl border border-border bg-background/65 px-3.5 py-2 shadow-soft backdrop-blur-md sm:px-4">
+      <div className="flex items-center gap-3 rounded-2xl border border-border bg-background px-3.5 py-2 shadow-soft sm:px-4">
         <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-deal-good/15">
           <TrendingDown className="h-4 w-4 text-deal-good-text" aria-hidden />
         </span>

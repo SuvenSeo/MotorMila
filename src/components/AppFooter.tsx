@@ -116,7 +116,7 @@ export function AppFooter() {
         whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
         viewport={{ once: true, margin: "-100px" }}
         transition={tween.long}
-        className="app-footer__panel relative mx-auto max-w-[1680px] overflow-hidden rounded-[36px] border border-border px-5 py-12 shadow-[0_-24px_90px_rgba(8,47,73,0.28)] sm:px-8 md:rounded-[48px] md:px-14 md:py-16 lg:px-20"
+        className="app-footer__panel relative mx-auto max-w-[1680px] overflow-hidden rounded-[36px] border border-border px-5 py-12 shadow-e3 sm:px-8 md:rounded-[48px] md:px-14 md:py-16 lg:px-20"
       >
         {/* Atmosphere — one quiet brand glow, no noise */}
         <div
@@ -125,7 +125,7 @@ export function AppFooter() {
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute right-[-14rem] top-[-16rem] h-[32rem] w-[32rem] rounded-full bg-[radial-gradient(circle,rgba(10,122,255,0.18),transparent_68%)] blur-[110px]"
+          className="pointer-events-none absolute right-[-14rem] top-[-16rem] h-[32rem] w-[32rem] rounded-full bg-[radial-gradient(circle,rgba(10,122,255,0.18),transparent_68%)]"
         />
         <div
           aria-hidden="true"
@@ -169,7 +169,7 @@ export function AppFooter() {
             <motion.div whileHover={reduceMotion ? undefined : { y: -2 }} whileTap={reduceMotion ? undefined : { scale: 0.98 }}>
               <PrefetchLink
                 to="/pricing"
-                className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#0A7AFF] px-6 py-3.5 text-footnote font-semibold text-white no-underline shadow-[0_10px_40px_rgba(10,122,255,0.28)] transition-[filter,background-color] duration-short hover:bg-[#3D94FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border"
+                className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#0A7AFF] px-6 py-3.5 text-footnote font-semibold text-white no-underline shadow-e2 transition-[filter,background-color] duration-short hover:bg-[#3D94FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border"
               >
                 {t("footer.explorePro", "Explore Pro")}
                 <ArrowUpRight className="h-4 w-4" />

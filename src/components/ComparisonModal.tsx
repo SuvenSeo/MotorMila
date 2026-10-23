@@ -365,11 +365,11 @@ export const ComparisonModal = memo(function ComparisonModal({ listings, open, o
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-border bg-surface/80 px-3 py-1.5 text-caption font-semibold tabular-nums text-foreground backdrop-blur-sm">
+                <span className="rounded-full border border-border bg-surface px-3 py-1.5 text-caption font-semibold tabular-nums text-foreground">
                   {listings.length} vehicles
                 </span>
                 {priceSpreadLabel ? (
-                  <span className="rounded-full border border-border bg-surface/80 px-3 py-1.5 text-caption font-semibold text-muted-foreground backdrop-blur-sm">
+                  <span className="rounded-full border border-border bg-surface px-3 py-1.5 text-caption font-semibold text-muted-foreground">
                     Spread <span className="tabular-nums text-foreground">{priceSpreadLabel}</span>
                   </span>
                 ) : null}
@@ -409,7 +409,7 @@ export const ComparisonModal = memo(function ComparisonModal({ listings, open, o
           <div className="min-w-[760px] px-4 pb-6 pt-4 md:px-5">
             {/* Sticky vehicle headers — card columns, no spreadsheet lines */}
             <div
-              className="sticky top-0 z-20 -mx-1 grid gap-3 bg-gradient-to-b from-card via-card to-card/90 px-1 pb-4 pt-1 backdrop-blur-xl"
+              className="sticky top-0 z-20 -mx-1 grid gap-3 bg-gradient-to-b from-card via-card to-card/90 px-1 pb-4 pt-1"
               style={{ gridTemplateColumns: columnTemplate }}
             >
               <div className="flex items-end pb-2">
@@ -450,13 +450,13 @@ export const ComparisonModal = memo(function ComparisonModal({ listings, open, o
                         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
                         <div className="absolute left-2 top-2 flex flex-wrap gap-1">
                           {isBestDeal ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-deal-good/30 bg-card/80 px-1.5 py-0.5 text-caption font-medium text-deal-good-text backdrop-blur-md">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-deal-good/30 bg-card px-1.5 py-0.5 text-caption font-medium text-deal-good-text">
                               <BadgeCheck className="h-2.5 w-2.5" />
                               Best deal
                             </span>
                           ) : null}
                           {isLowestPrice && !isBestDeal ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card/80 px-1.5 py-0.5 text-caption font-medium text-foreground/90 backdrop-blur-md">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-1.5 py-0.5 text-caption font-medium text-foreground/90">
                               Lowest
                             </span>
                           ) : null}

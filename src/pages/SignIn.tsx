@@ -78,7 +78,7 @@ export default function SignIn() {
       <div className="relative z-10 flex min-h-screen items-center px-5 py-12 sm:px-8 lg:px-12 xl:px-16">
         <motion.div
           variants={revealItem}
-          className="w-full max-w-[420px] rounded-[2rem] border border-border bg-foreground/[0.07] p-6 shadow-[0_24px_80px_-32px_rgba(0,0,0,0.85)] backdrop-blur-xl sm:p-8"
+          className="w-full max-w-[420px] rounded-[2rem] border border-border bg-foreground/[0.07] p-6 shadow-e3 sm:p-8"
         >
           <div>
             <Link to="/" className="mb-8 inline-flex items-center gap-2.5 group">
@@ -225,7 +225,7 @@ export default function SignIn() {
               disabled={loading}
               whileTap={{ scale: 0.98 }}
               transition={spring.smooth}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#0A7AFF] text-caption font-semibold text-white shadow-[0_12px_40px_-16px_rgba(10,122,255,0.85)] transition-ui hover:bg-[#3D94FF] disabled:opacity-50"
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#0A7AFF] text-caption font-semibold text-white shadow-e2 transition-ui hover:bg-[#3D94FF] disabled:opacity-50"
             >
               {loading ? (
                 t("signin.loading", "Signing in...")
@@ -266,7 +266,7 @@ export default function SignIn() {
             role="dialog"
             aria-modal="true"
             aria-label={t("signin.resetTitle", "Reset your password")}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-5 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-5"
             onClick={() => setShowReset(false)}
           >
             <div

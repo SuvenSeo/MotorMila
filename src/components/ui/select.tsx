@@ -17,7 +17,7 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex h-10 w-full items-center justify-between rounded-input border border-border bg-card/60 px-4 py-2 text-footnote text-foreground ring-offset-background placeholder:text-muted-foreground backdrop-blur-xl mm-field focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-border dark:bg-foreground/[0.05] [&>span]:line-clamp-1",
+      "flex h-10 w-full items-center justify-between rounded-input border border-border bg-card px-4 py-2 text-footnote text-foreground ring-offset-background placeholder:text-muted-foreground mm-field focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-border dark:bg-foreground/[0.05] [&>span]:line-clamp-1",
       className,
     )}
     {...props}
@@ -66,7 +66,7 @@ const SelectContent = React.forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        "mm-pop [--mm-origin:var(--radix-select-content-transform-origin,top)] relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-2xl border border-border bg-popover/95 text-popover-foreground shadow-soft-xl backdrop-blur-2xl dark:border-border dark:bg-card/95",
+        "mm-pop [--mm-origin:var(--radix-select-content-transform-origin,top)] relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-soft-xl dark:border-border dark:bg-card/95",
         position === "popper" &&
           "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
         className,

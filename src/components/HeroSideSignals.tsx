@@ -97,7 +97,7 @@ function SignalChip({
     <span className={cn("flex w-full items-center gap-3", align === "right" && "flex-row-reverse text-right")}>
       {thumb ?? (
         <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-gradient-to-br from-white/[0.14] to-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
-          <Icon className="h-5 w-5 text-primary drop-shadow-[0_2px_6px_hsl(var(--primary)/0.5)]" aria-hidden />
+          <Icon className="h-5 w-5 text-primary drop-shadow-e1" aria-hidden />
         </span>
       )}
       <span className={cn("min-w-0 flex-1", align === "right" && "items-end")}>

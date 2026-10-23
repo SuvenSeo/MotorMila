@@ -295,7 +295,7 @@ export default function MobileApp() {
                 href={APK_URL}
                 whileTap={{ scale: 0.97 }}
                 transition={spring.smooth}
-                className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-[#0A7AFF] px-7 text-footnote font-semibold text-white no-underline shadow-[0_14px_44px_-18px_rgba(10,122,255,0.9)] transition-colors hover:bg-[#3D94FF]"
+                className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-[#0A7AFF] px-7 text-footnote font-semibold text-white no-underline shadow-e2 transition-colors hover:bg-[#3D94FF]"
               >
                 <Download className="h-4 w-4" aria-hidden />
                 {t("mobile.downloadCta", "Download for Android · {size}", { size: APK_SIZE })}
@@ -340,7 +340,7 @@ export default function MobileApp() {
                       type="submit"
                       whileTap={{ scale: 0.98 }}
                       transition={spring.smooth}
-                      className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-[#0A7AFF] px-6 text-footnote font-semibold text-white shadow-[0_14px_44px_-18px_rgba(10,122,255,0.9)] transition-colors hover:bg-[#3D94FF]"
+                      className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-[#0A7AFF] px-6 text-footnote font-semibold text-white shadow-e2 transition-colors hover:bg-[#3D94FF]"
                     >
                       <BellRing className="h-3.5 w-3.5" aria-hidden />
                       {t("mobile.notifyCta", "Notify me")}
@@ -372,8 +372,8 @@ export default function MobileApp() {
 
           {/* Phone mock */}
           <motion.div variants={revealItem} className="relative mx-auto w-full max-w-[330px]">
-            <div aria-hidden className="absolute -inset-10 rounded-full bg-[radial-gradient(circle,rgba(10,122,255,0.24),transparent_68%)] blur-[80px]" />
-            <div className="relative rounded-[2.6rem] border border-border bg-[#0a0f19] p-3 shadow-[0_40px_120px_-40px_rgba(0,0,0,0.95)]">
+            <div aria-hidden className="absolute -inset-10 rounded-full bg-[radial-gradient(circle,rgba(10,122,255,0.24),transparent_68%)]" />
+            <div className="relative rounded-[2.6rem] border border-border bg-[#0a0f19] p-3 shadow-e3">
               <div className="relative overflow-hidden rounded-[2.1rem] border border-border bg-[#070b13]">
                 <div className="flex items-center justify-between px-5 pt-4 text-caption font-medium text-white/45">
                   <span>9:41</span>

@@ -123,7 +123,7 @@ function selectTriggerClass() {
 }
 
 function selectContentClass() {
-  return "max-h-64 rounded-2xl border-transparent bg-popover/95 text-foreground backdrop-blur-2xl shadow-soft-xl";
+  return "max-h-64 rounded-2xl border-transparent bg-popover text-foreground shadow-soft-xl";
 }
 
 export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterPanelProps) {
@@ -371,7 +371,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
         touch ? "[&_[data-pill]]:min-h-11 [&_[data-pill]]:px-3.5 [&_button[role=combobox]]:h-11" : ""
       }`}
     >
-      <div className={`${touch ? "" : "sticky top-0 z-10 "}space-y-3 rounded-[1.75rem] border border-transparent bg-card/85 px-3.5 py-3 shadow-soft backdrop-blur-xl`}>
+      <div className={`${touch ? "" : "sticky top-0 z-10 "}space-y-3 rounded-[1.75rem] border border-transparent bg-card px-3.5 py-3 shadow-soft`}>
         {/* In the drawer the sheet header already shows "Filters" + "Clear all". */}
         {/* Not rendered (rather than display:none) in the drawer: a hidden
             child still got space-y margin and left a gap above "With price". */}

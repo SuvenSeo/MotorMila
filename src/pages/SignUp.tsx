@@ -201,7 +201,7 @@ export default function SignUp() {
     >
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_70%_-8%,hsl(var(--primary)/0.14),transparent_55%)]" />
-        <div className="absolute left-[-10%] bottom-[10%] h-[420px] w-[420px] rounded-full bg-primary/[0.05] blur-[110px]" />
+        <div className="absolute left-[-10%] bottom-[10%] h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,hsl(var(--primary)/0.08),transparent_70%)]" />
       </div>
 
       <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1080px] items-center px-5 py-14 sm:px-8">

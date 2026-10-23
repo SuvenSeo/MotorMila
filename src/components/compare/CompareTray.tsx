@@ -71,7 +71,7 @@ function CompareTrayPanel({ className }: { className?: string }) {
     <div
       role="region"
       aria-label={t("compareTray.region", "Compare tray")}
-      className={cn("rounded-2xl border border-border bg-card/95 shadow-soft-xl backdrop-blur", className)}
+      className={cn("rounded-2xl border border-border bg-card shadow-soft-xl", className)}
     >
       {expanded && (
         <ul className="relative max-h-[50vh] space-y-1.5 overflow-auto border-b border-border p-2.5" aria-label={t("compareTray.listAria", "Selected vehicles")}>

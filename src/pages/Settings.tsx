@@ -134,7 +134,7 @@ export default function Settings() {
           {/* Card 1: Appearance & Theme Mode */}
           <motion.div
             inherit={false} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.12 }} variants={revealItem}
-            className="flex flex-col justify-between rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl sm:p-8 lg:col-span-7"
+            className="flex flex-col justify-between rounded-3xl border border-border/80 bg-card p-6 shadow-soft sm:p-8 lg:col-span-7"
           >
             <div>
               <div className="mb-6 flex items-center justify-between gap-3">
@@ -248,7 +248,7 @@ export default function Settings() {
           {/* Card 2: Language & Localization */}
           <motion.div
             inherit={false} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.12 }} variants={revealItem}
-            className="flex flex-col justify-between rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl sm:p-8 lg:col-span-5"
+            className="flex flex-col justify-between rounded-3xl border border-border/80 bg-card p-6 shadow-soft sm:p-8 lg:col-span-5"
           >
             <div>
               <div className="mb-6 flex items-center gap-3">
@@ -316,7 +316,7 @@ export default function Settings() {
           {/* Card 3: Regional Standards & Currency */}
           <motion.div
             inherit={false} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.12 }} variants={revealItem}
-            className="flex flex-col justify-between rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl sm:p-8 lg:col-span-6"
+            className="flex flex-col justify-between rounded-3xl border border-border/80 bg-card p-6 shadow-soft sm:p-8 lg:col-span-6"
           >
             <div>
               <div className="mb-6 flex items-center justify-between">
@@ -397,7 +397,7 @@ export default function Settings() {
           {/* Card 4: Compare Tray & Local Session */}
           <motion.div
             inherit={false} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.12 }} variants={revealItem}
-            className="flex flex-col justify-between rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl sm:p-8 lg:col-span-6"
+            className="flex flex-col justify-between rounded-3xl border border-border/80 bg-card p-6 shadow-soft sm:p-8 lg:col-span-6"
           >
             <div>
               <div className="mb-6 flex items-center justify-between">
@@ -490,7 +490,7 @@ export default function Settings() {
           {/* Card 5: Feedback & Issue Reporting Hub */}
           <motion.div
             inherit={false} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.12 }} variants={revealItem}
-            className="flex flex-col justify-between rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl sm:p-8 lg:col-span-7"
+            className="flex flex-col justify-between rounded-3xl border border-border/80 bg-card p-6 shadow-soft sm:p-8 lg:col-span-7"
           >
             <div>
               <div className="mb-6 flex items-center gap-3">
@@ -542,7 +542,7 @@ export default function Settings() {
           {/* Card 6: Platform & System Status */}
           <motion.div
             inherit={false} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.12 }} variants={revealItem}
-            className="flex flex-col justify-between rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl sm:p-8 lg:col-span-5"
+            className="flex flex-col justify-between rounded-3xl border border-border/80 bg-card p-6 shadow-soft sm:p-8 lg:col-span-5"
           >
             <div>
               <div className="mb-6 flex items-center gap-3">
