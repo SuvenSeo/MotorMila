@@ -124,7 +124,7 @@ class MainActivity : AppCompatActivity() {
      * the Settings screen writes. Release builds ignore the extras.
      */
     private fun applyQaOverrides(intent: Intent?) {
-        if (!BuildConfig.DEBUG || intent == null) return
+        if (!BuildConfig.QA_HOOKS || intent == null) return
         val theme = intent.getStringExtra(QA_THEME_EXTRA)?.takeIf { it in setOf("light", "dark", "system") }
         val lang = intent.getStringExtra(QA_LANG_EXTRA)?.let { LocaleHelper.normalize(it) }
         if (theme == null && lang == null) return

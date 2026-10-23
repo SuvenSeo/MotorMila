@@ -53,6 +53,9 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+        // QA hooks (crawl theme/lang extras, destructive DB fallback): debug +
+        // preview only, never release.
+        buildConfigField("boolean", "QA_HOOKS", "false")
     }
 
     // Two distribution channels (see docs/overhaul/android.md):
@@ -155,6 +158,7 @@ android {
                 "\"$debugBaseUrl\"",
             )
             isDebuggable = true
+            buildConfigField("boolean", "QA_HOOKS", "true")
             signingConfig = signingConfigs.getByName("debug")
             // Preview self-updater channel: the debug app reads its update
             // manifest from the preview pre-release instead of production
@@ -179,6 +183,40 @@ android {
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
+            )
+        }
+    }
+
+    // Preview sideload channel (GitHub pre-release preview-android-1.7.0).
+    // Same package as the old debug preview (lk.motormila.app.debug) and the
+    // same committed preview key, so it installs in place over every earlier
+    // preview, but NOT debuggable: R8-minified + resource-shrunk like release
+    // (debuggable Compose runs uncompiled and stutters). Obfuscation is off
+    // (proguard-preview.pro) so the generated Baseline Profile keeps source
+    // names and preview crash traces stay readable. Profileable from shell
+    // (src/preview/AndroidManifest.xml) for macrobenchmark / baseline profile.
+    // Release signing, the release build type and android-release.yml are
+    // untouched.
+    buildTypes {
+        create("preview") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-preview"
+            isDebuggable = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+                "proguard-preview.pro",
+            )
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+            buildConfigField("boolean", "QA_HOOKS", "true")
+            buildConfigField(
+                "String",
+                "PREVIEW_UPDATE_MANIFEST_URL",
+                "\"https://github.com/SuvenSeo/Vehicle-Platform/releases/download/preview-android-1.7.0/preview-latest.json\"",
             )
         }
     }
@@ -221,6 +259,11 @@ android {
 val previewVersionCode: Int? = envOrNull("MOTORMILA_PREVIEW_VERSION_CODE")?.toIntOrNull()
 androidComponents {
     onVariants(selector().withBuildType("debug")) { variant ->
+        previewVersionCode?.let { code ->
+            variant.outputs.forEach { it.versionCode.set(code) }
+        }
+    }
+    onVariants(selector().withBuildType("preview")) { variant ->
         previewVersionCode?.let { code ->
             variant.outputs.forEach { it.versionCode.set(code) }
         }
@@ -359,4 +402,10 @@ dependencies {
     testImplementation(libs.room.testing)
     // Screenshot (Paparazzi) + functional (Robolectric) tests — JVM only, no emulator.
     testImplementation(libs.paparazzi)
+}
+
+// Preview builds skip lint-vital (it runs for every non-debuggable variant and
+// only duplicates the release lint gate); release variants are unaffected.
+tasks.configureEach {
+    if (name.startsWith("lintVital") && name.contains("Preview")) enabled = false
 }

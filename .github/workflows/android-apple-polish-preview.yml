@@ -1,5 +1,6 @@
 # TEMPORARY workflow for branch android/apple-polish ONLY. DELETE BEFORE MERGE.
-# - build:  directDebug sideload APK (artifact qa-apk).
+# - build:  directPreview sideload APK (non-debuggable, R8; artifact qa-apk) + baselineprofile test APK.
+# - perf:   baseline profile generation + macrobenchmarks on an emulator (artifact perf-out).
 # - tests:  play+direct unit tests + Paparazzi verify.
 # - record-goldens: only when the head commit message contains [record-goldens];
 #   re-records Paparazzi goldens and commits them back to this branch.
@@ -76,21 +77,78 @@ jobs:
           : "${ANDROID_HOME:=${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" >/dev/null || true
-      - name: Assemble directDebug (preview key, increasing versionCode)
+      - name: Assemble directPreview (non-debuggable, R8, preview key, increasing versionCode) + baseline-profile test APK
         run: |
           set -euo pipefail
           export MOTORMILA_PREVIEW_VERSION_CODE=$(( $(date +%s) / 60 ))
           echo "versionCode=$MOTORMILA_PREVIEW_VERSION_CODE"
-          chmod +x gradlew && ./gradlew :app:assembleDirectDebug --stacktrace
-          grep -h "VERSION_CODE\|PREVIEW_UPDATE" app/build/generated/source/buildConfig/direct/debug/lk/motormila/app/BuildConfig.java
+          chmod +x gradlew && ./gradlew :app:assembleDirectPreview :baselineprofile:assemblePreview --stacktrace
+          grep -h "VERSION_CODE\|PREVIEW_UPDATE\|QA_HOOKS\|DEBUG" app/build/generated/source/buildConfig/direct/preview/lk/motormila/app/BuildConfig.java
           BT="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)"
-          APK="$(ls app/build/outputs/apk/direct/debug/*.apk | head -1)"
+          APK="$(ls app/build/outputs/apk/direct/preview/*.apk | head -1)"
           "$BT/aapt2" dump badging "$APK" | head -1
+          if "$BT/aapt2" dump badging "$APK" | grep -q "application-debuggable"; then echo "preview APK is debuggable!"; exit 1; fi
+          echo "debuggable: no"; ls -la "$APK"
           "$BT/apksigner" verify --print-certs "$APK" | grep -i "SHA-256"
+          ls -la baselineprofile/build/outputs/apk/preview/
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: qa-apk
-          path: android/app/build/outputs/apk/direct/debug/*.apk
+          path: android/app/build/outputs/apk/direct/preview/*.apk
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: bp-apk
+          path: android/baselineprofile/build/outputs/apk/preview/*.apk
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: r8-mapping
+          path: android/app/build/outputs/mapping/directPreview/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  perf:
+    # Baseline Profile generation + FrameTiming/Startup macrobenchmarks on the
+    # preview build. Informational: never blocks the preview publish.
+    needs: build
+    if: "!contains(github.event.head_commit.message, '[skip-perf]')"
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@v4
+        with:
+          name: qa-apk
+          path: apk
+      - uses: actions/download-artifact@v4
+        with:
+          name: bp-apk
+          path: bpapk
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Baseline profile + macrobenchmarks
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          ram-size: 4096M
+          disk-size: 6000M
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none
+          disable-animations: false
+          script: bash .github/qa/perf.sh "$(ls apk/*.apk | head -1)" "$(ls bpapk/*.apk | head -1)" perf-out
+      - name: Upload perf
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: perf-out
+          path: perf-out/
+          if-no-files-found: warn
+          retention-days: 14
 
   tests:
     if: "!contains(github.event.head_commit.message, '[record-goldens]')"

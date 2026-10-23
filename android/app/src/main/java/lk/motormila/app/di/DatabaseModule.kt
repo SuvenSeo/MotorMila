@@ -26,7 +26,7 @@ object DatabaseModule {
         // Upgrade without a migration: destructive in debug only. Release
         // has NO destructive fallback (watchlists/alerts must survive); a
         // missing migration is caught by the schema-export + migration tests.
-        if (BuildConfig.DEBUG) builder.fallbackToDestructiveMigration()
+        if (BuildConfig.QA_HOOKS) builder.fallbackToDestructiveMigration()
         return builder.build()
     }
 
