@@ -280,6 +280,12 @@ private fun EvStatsGrid(count: Int, sharePct: Double, avgPriceLkr: Double?) {
     }
 }
 
+internal fun fuelShareLabel(pct: Double?): String = when {
+    pct == null -> "—"
+    pct > 0.0 && pct < 1.0 -> "<1%"
+    else -> "${kotlin.math.round(pct).toInt()}%"
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FuelMixSection(mix: List<FuelMixBucket>) {
@@ -293,10 +299,12 @@ private fun FuelMixSection(mix: List<FuelMixBucket>) {
             ),
         )
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            mix.forEach { bucket ->
+            // A share, not a change: no "+" sign ("+95 %" read like a delta, B14);
+            // largest share first.
+            mix.sortedByDescending { it.pct }.forEach { bucket ->
                 MotormilaMetricTile(
                     label = bucket.fuelType,
-                    value = formatPct(bucket.pct, 0),
+                    value = fuelShareLabel(bucket.pct),
                 )
             }
         }

@@ -628,12 +628,12 @@ internal fun CompareTray(
                 Spacer(Modifier.width(10.dp))
             }
             Column(Modifier.weight(1f)) {
-                Text(
-                    stringResource(R.string.compare_selected_count, count, MAX_COMPARE_IDS),
+                // Shrinks to fit rather than "3/3 s…" when space is tight (200 %).
+                lk.motormila.app.ui.components.MmFitText(
+                    text = stringResource(R.string.compare_selected_count, count, MAX_COMPARE_IDS),
                     style = MmType.current.label,
                     color = c.textPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    minScale = 0.7f,
                 )
                 if (count < 2) {
                     Text(

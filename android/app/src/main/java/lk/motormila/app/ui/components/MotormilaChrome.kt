@@ -619,7 +619,8 @@ fun MotormilaGhostButton(
             .heightIn(min = 48.dp)
             .applePress(interaction, pressedScale = 0.97f)
             .clip(CircleShape)
-            .border(1.dp, MotormilaGlassBorder, CircleShape)
+            // Visible hairline in both themes (glass border vanished on light/dark grounds).
+            .border(1.dp, lk.motormila.app.ui.theme.MmColors.current.outlineStrong, CircleShape)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 6.dp)
             .semantics { contentDescription = label },
@@ -751,13 +752,19 @@ fun MotormilaMetricTile(
             .border(1.dp, MotormilaOutline, MotormilaRadius.md)
             .padding(horizontal = 12.dp, vertical = 12.dp),
     ) {
-        Text(
-            text = label.uppercase(),
-            fontSize = 9.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 0.8.sp,
-            color = MotormilaSecondaryText,
-        )
+        // Overline label: one line, capped at 1.3x — at 200 % three-up tiles
+        // broke it mid-word ("CURREN / T").
+        lk.motormila.app.ui.theme.CappedFontScale(max = 1.3f) {
+            Text(
+                text = label.uppercase(),
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.8.sp,
+                color = MotormilaSecondaryText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         Spacer(Modifier.height(4.dp))
         Text(
             text = value,

@@ -201,12 +201,15 @@ fun CompareMatrix(
     CappedFontScale(max = 1.5f) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
             val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
-            val labelW = if (maxWidth < 380.dp) 96.dp else LabelWidth
+            // Label and car columns widen with the text size so words never break
+            // mid-word ("Conditio/n", "hatchbac/k", "Volkswa/gen") at large text.
+            val growth = 1f + (fontScale - 1f) * 0.7f
+            val labelW = (if (maxWidth < 380.dp) 96.dp else LabelWidth) * growth
             val avail = maxWidth - labelW - MmSpacing.lg
             val colW = when {
                 items.size <= 2 -> avail / 2
                 else -> avail / 2.4f
-            }.coerceIn(MinColumnWidth, MaxColumnWidth)
+            }.coerceIn(MinColumnWidth * fontScale, MaxColumnWidth * fontScale)
             val rowH = RowHeight * fontScale
             val showAdd = items.size < CompareUiState.MAX_IDS
             Column(Modifier.fillMaxSize()) {
