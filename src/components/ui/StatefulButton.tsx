@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 export type StatefulButtonState = "idle" | "loading" | "success";
 
-export type StatefulButtonProps = Omit<ComponentProps<typeof Button>, "children"> & {
+export type StatefulButtonProps = Omit<ComponentProps<typeof Button>, "children" | "loading"> & {
   state: StatefulButtonState;
   /** Content for each state. */
   idle: ReactNode;

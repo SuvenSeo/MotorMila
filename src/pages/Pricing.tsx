@@ -530,6 +530,7 @@ export default function Pricing() {
   return (
     <PageCanvas>
       <PageHero
+        variant="marketing"
         theme="default"
         eyebrow={t("pricing.eyebrow", "Plans")}
         eyebrowIcon={Sparkles}

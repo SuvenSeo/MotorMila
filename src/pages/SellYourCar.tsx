@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { SimpleSelect } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Camera, CheckCircle2, Loader2, MapPin, Phone, Tag, User } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
@@ -250,17 +251,13 @@ export default function SellYourCar() {
                   <span className="mb-1.5 block text-caption font-medium text-foreground">
                     {t("sell.make", "Make")} *
                   </span>
-                  <select
+                  <SimpleSelect
                     required
                     value={form.make}
-                    onChange={(e) => setField("make", e.target.value)}
-                    className="h-11 w-full rounded-full border border-border/50 bg-surface/70 px-4 text-footnote text-foreground focus:ring-2 focus:ring-primary/20"
-                  >
-                    <option value="">{t("sell.selectMake", "Select make")}</option>
-                    {MAKES.map((m) => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
+                    onValueChange={(v) => setField("make", v)}
+                    placeholder={t("sell.selectMake", "Select make")}
+                    options={MAKES.map((m) => ({ value: m, label: m }))}
+                  />
                 </label>
                 <label className="block">
                   <span className="mb-1.5 block text-caption font-medium text-foreground">
@@ -280,16 +277,12 @@ export default function SellYourCar() {
                   <span className="mb-1.5 block text-caption font-medium text-foreground">
                     {t("sell.year", "Year")}
                   </span>
-                  <select
-                    value={form.year}
-                    onChange={(e) => setField("year", e.target.value)}
-                    className="h-11 w-full rounded-full border border-border/50 bg-surface/70 px-4 text-footnote text-foreground"
-                  >
-                    <option value="">{t("sell.selectYear", "Select year")}</option>
-                    {Array.from({ length: 40 }, (_, i) => currentYear - i).map((y) => (
-                      <option key={y} value={y}>{y}</option>
-                    ))}
-                  </select>
+                  <SimpleSelect
+                    value={String(form.year)}
+                    onValueChange={(v) => setField("year", v)}
+                    placeholder={t("sell.selectYear", "Select year")}
+                    options={Array.from({ length: 40 }, (_, i) => currentYear - i).map((y) => ({ value: String(y), label: y }))}
+                  />
                 </label>
                 <label className="block">
                   <span className="mb-1.5 block text-caption font-medium text-foreground">
@@ -320,33 +313,27 @@ export default function SellYourCar() {
               <div className="grid gap-4 sm:grid-cols-3">
                 <label className="block">
                   <span className="mb-1.5 block text-caption font-medium text-foreground">{t("sell.fuel", "Fuel type")}</span>
-                  <select
+                  <SimpleSelect
                     value={form.fuelType}
-                    onChange={(e) => setField("fuelType", e.target.value)}
-                    className="h-11 w-full rounded-full border border-border/50 bg-surface/70 px-4 text-footnote text-foreground"
-                  >
-                    {FUEL_TYPES.map((f) => <option key={f} value={f}>{f}</option>)}
-                  </select>
+                    onValueChange={(v) => setField("fuelType", v)}
+                    options={FUEL_TYPES.map((f) => ({ value: f, label: f }))}
+                  />
                 </label>
                 <label className="block">
                   <span className="mb-1.5 block text-caption font-medium text-foreground">{t("sell.transmission", "Transmission")}</span>
-                  <select
+                  <SimpleSelect
                     value={form.transmission}
-                    onChange={(e) => setField("transmission", e.target.value)}
-                    className="h-11 w-full rounded-full border border-border/50 bg-surface/70 px-4 text-footnote text-foreground"
-                  >
-                    {TRANSMISSIONS.map((tm) => <option key={tm} value={tm}>{tm}</option>)}
-                  </select>
+                    onValueChange={(v) => setField("transmission", v)}
+                    options={TRANSMISSIONS.map((tm) => ({ value: tm, label: tm }))}
+                  />
                 </label>
                 <label className="block">
                   <span className="mb-1.5 block text-caption font-medium text-foreground">{t("sell.condition", "Condition")}</span>
-                  <select
+                  <SimpleSelect
                     value={form.condition}
-                    onChange={(e) => setField("condition", e.target.value)}
-                    className="h-11 w-full rounded-full border border-border/50 bg-surface/70 px-4 text-footnote text-foreground"
-                  >
-                    {CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
+                    onValueChange={(v) => setField("condition", v)}
+                    options={CONDITIONS.map((c) => ({ value: c, label: c }))}
+                  />
                 </label>
               </div>
 
@@ -377,14 +364,12 @@ export default function SellYourCar() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block">
                   <span className="mb-1.5 block text-caption font-medium text-foreground">{t("sell.district", "District")}</span>
-                  <select
+                  <SimpleSelect
                     value={form.district}
-                    onChange={(e) => setField("district", e.target.value)}
-                    className="h-11 w-full rounded-full border border-border/50 bg-surface/70 px-4 text-footnote text-foreground"
-                  >
-                    <option value="">{t("sell.selectDistrict", "Select district")}</option>
-                    {DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
-                  </select>
+                    onValueChange={(v) => setField("district", v)}
+                    placeholder={t("sell.selectDistrict", "Select district")}
+                    options={DISTRICTS.map((d) => ({ value: d, label: d }))}
+                  />
                 </label>
                 <label className="block">
                   <span className="mb-1.5 block text-caption font-medium text-foreground">{t("sell.city", "City")}</span>

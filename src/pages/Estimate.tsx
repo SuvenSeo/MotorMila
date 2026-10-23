@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { SimpleSelect } from "@/components/ui/select";
 import { Link } from "react-router-dom";
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, Gauge, Info, RotateCcw, ShieldCheck } from "lucide-react";
 import { estimatePrice, getMakes, getModels, getSnapshotModelComps } from "@/services/api";
@@ -305,23 +306,33 @@ export default function Estimate() {
               </h2>
               <div>
                 <label htmlFor="q-make" className="mb-1.5 block text-footnote font-semibold text-muted-foreground">{t("common.make", "Make")}</label>
-                <select id="q-make" className={fieldClass} value={make} onChange={(e) => { setMake(e.target.value); setModel(""); }}>
-                  <option value="">{t("common.selectMake", "Select make")}</option>
-                  {makes.map((m) => <option key={m.make} value={m.make}>{m.make}</option>)}
-                </select>
+                <SimpleSelect
+                  id="q-make"
+                  value={make}
+                  onValueChange={(v) => { setMake(v); setModel(""); }}
+                  placeholder={t("common.selectMake", "Select make")}
+                  options={makes.map((m) => ({ value: m.make, label: m.make }))}
+                />
               </div>
               <div>
                 <label htmlFor="q-model" className="mb-1.5 block text-footnote font-semibold text-muted-foreground">{t("common.model", "Model")}</label>
-                <select id="q-model" className={fieldClass} value={model} onChange={(e) => setModel(e.target.value)} disabled={!make}>
-                  <option value="">{make && models.length === 0 ? t("quiz.loadingModels", "Loading models…") : t("common.selectModel", "Select model")}</option>
-                  {models.map((m) => <option key={m.model} value={m.model}>{m.model}</option>)}
-                </select>
+                <SimpleSelect
+                  id="q-model"
+                  value={model}
+                  onValueChange={setModel}
+                  disabled={!make}
+                  placeholder={make && models.length === 0 ? t("quiz.loadingModels", "Loading models…") : t("common.selectModel", "Select model")}
+                  options={models.map((m) => ({ value: m.model, label: m.model }))}
+                />
               </div>
               <div>
                 <label htmlFor="q-year" className="mb-1.5 block text-footnote font-semibold text-muted-foreground">{t("quiz.year", "Year of manufacture")}</label>
-                <select id="q-year" className={fieldClass} value={year} onChange={(e) => setYear(Number(e.target.value))}>
-                  {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-                </select>
+                <SimpleSelect
+                  id="q-year"
+                  value={String(year)}
+                  onValueChange={(v) => setYear(Number(v))}
+                  options={YEARS.map((y) => ({ value: String(y), label: y }))}
+                />
               </div>
               <button type="submit" disabled={!step0Valid} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-body font-semibold text-primary-foreground disabled:opacity-40">
                 {t("quiz.next", "Next")} <ArrowRight className="h-4 w-4" aria-hidden />
@@ -368,9 +379,12 @@ export default function Estimate() {
               </div>
               <div>
                 <label htmlFor="q-district" className="mb-1.5 block text-footnote font-semibold text-muted-foreground">{t("quiz.district", "District")}</label>
-                <select id="q-district" className={fieldClass} value={district} onChange={(e) => setDistrict(e.target.value)}>
-                  {SRI_LANKA_DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
-                </select>
+                <SimpleSelect
+                  id="q-district"
+                  value={district}
+                  onValueChange={setDistrict}
+                  options={SRI_LANKA_DISTRICTS.map((d) => ({ value: d, label: d }))}
+                />
               </div>
               <div className="flex gap-2">
                 <button type="button" onClick={() => setStep(0)} className="inline-flex h-12 items-center justify-center gap-1.5 rounded-full border border-border bg-card px-5 text-body font-semibold text-foreground">
