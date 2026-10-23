@@ -18,6 +18,10 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateDp
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -179,6 +183,8 @@ fun ListingDetailScreen(
     onCompare: (List<Int>) -> Unit,
     onEstimate: () -> Unit,
     viewModel: DetailViewModel = hiltViewModel(),
+    /** Opened by tapping a listing card: the whole page is a container transform of that card. */
+    fromCard: Boolean = false,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -218,6 +224,8 @@ fun ListingDetailScreen(
     Box(
         Modifier
             .fillMaxSize()
+            .then(detailContainerTransform(listingId, fromCard))
+            .background(lk.motormila.app.ui.theme.MmColors.current.background)
             .nestedScroll(stretch.connection),
     ) {
         run {
@@ -264,6 +272,9 @@ fun ListingDetailScreen(
                                 images = galleryImages,
                                 title = listing.displayName,
                                 listingId = listing.id,
+                                heroPlaceholderUrl = remember(listing.id) {
+                                    lk.motormila.app.ui.navigation.ListingPreviewCache.get(listing.id)?.heroImageUrl
+                                } ?: listing.heroImageUrl,
                                 onOpenViewer = { page -> viewerPage = page },
                                 // Signature header motion: parallax (photo scrolls at
                                 // ~55 % speed under the content) + rubber-band zoom on
@@ -536,6 +547,56 @@ fun ListingDetailScreen(
                 Spacer(Modifier.height(12.dp))
             }
         }
+    }
+}
+
+/**
+ * Card → Detail container transform: the whole page grows out of the tapped
+ * card (same spring as the photo / title / price inside it) with its corners
+ * easing from the card's 24 dp to square, and shrinks back into the card on
+ * back — including the predictive-back gesture, which seeks this same
+ * transition. Only when opened from a card; deep links use the push slide.
+ */
+@Composable
+private fun detailContainerTransform(listingId: Int, fromCard: Boolean): Modifier {
+    if (!fromCard) return Modifier
+    val sharedScope = LocalSharedTransitionScope.current ?: return Modifier
+    val animatedScope = LocalNavAnimatedVisibilityScope.current ?: return Modifier
+    val corner = animatedScope.transition.animateDp(
+        transitionSpec = { lk.motormila.app.ui.theme.MmMotion.containerSpringDp() },
+        label = "detail-corner",
+    ) { state -> if (state == androidx.compose.animation.EnterExitState.Visible) 0.dp else 24.dp }
+    // Read at draw time (overlay clip), so the animating radius never recomposes.
+    val shape = remember(corner) {
+        object : androidx.compose.ui.graphics.Shape {
+            override fun createOutline(
+                size: androidx.compose.ui.geometry.Size,
+                layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+                density: androidx.compose.ui.unit.Density,
+            ): androidx.compose.ui.graphics.Outline {
+                val r = with(density) { corner.value.toPx() }
+                return androidx.compose.ui.graphics.Outline.Rounded(
+                    androidx.compose.ui.geometry.RoundRect(
+                        0f, 0f, size.width, size.height,
+                        androidx.compose.ui.geometry.CornerRadius(r, r),
+                    ),
+                )
+            }
+        }
+    }
+    return with(sharedScope) {
+        Modifier.sharedBounds(
+            rememberSharedContentState(key = listingCardKey(listingId)),
+            animatedScope,
+            enter = fadeIn(tween(lk.motormila.app.ui.theme.MmMotion.Base, easing = lk.motormila.app.ui.theme.MmMotion.Standard)),
+            exit = fadeOut(tween(lk.motormila.app.ui.theme.MmMotion.Fast, easing = lk.motormila.app.ui.theme.MmMotion.Exit)),
+            boundsTransform = motormilaSharedBoundsTransform(),
+            resizeMode = SharedTransitionScope.ResizeMode.ScaleToBounds(
+                androidx.compose.ui.layout.ContentScale.FillWidth,
+                Alignment.TopCenter,
+            ),
+            clipInOverlayDuringTransition = OverlayClip(shape),
+        )
     }
 }
 

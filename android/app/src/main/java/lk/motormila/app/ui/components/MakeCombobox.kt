@@ -59,6 +59,10 @@ fun MakeCombobox(
     selected: String?,
     onSelect: (String?) -> Unit,
     modifier: Modifier = Modifier,
+    label: String? = null,
+    searchHint: String? = null,
+    allLabel: String? = null,
+    enabled: Boolean = true,
 ) {
     var expanded by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
@@ -66,7 +70,9 @@ fun MakeCombobox(
         val q = query.trim()
         if (q.isEmpty()) options else options.filter { it.contains(q, ignoreCase = true) }
     }
-    val allMakes = stringResource(R.string.filter_all_makes)
+    val allMakes = allLabel ?: stringResource(R.string.filter_all_makes)
+    val fieldLabel = label ?: stringResource(R.string.filter_make_label)
+    val hint = searchHint ?: stringResource(R.string.filter_make_search_hint)
 
     Column(modifier = modifier.fillMaxWidth()) {
         OutlinedTextField(
@@ -75,8 +81,9 @@ fun MakeCombobox(
                 query = it
                 expanded = true
             },
-            label = { Text(stringResource(R.string.filter_make_label)) },
-            placeholder = { Text(stringResource(R.string.filter_make_search_hint)) },
+            label = { Text(fieldLabel) },
+            placeholder = { Text(hint, maxLines = 1) },
+            enabled = enabled,
             leadingIcon = {
                 Icon(Icons.Filled.Search, contentDescription = null, tint = MotormilaSecondaryText)
             },
@@ -109,7 +116,7 @@ fun MakeCombobox(
         )
 
         AnimatedVisibility(
-            visible = expanded,
+            visible = expanded && enabled,
             enter = expandVertically(),
             exit = shrinkVertically(),
         ) {

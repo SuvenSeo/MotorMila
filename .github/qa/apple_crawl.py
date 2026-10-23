@@ -270,6 +270,17 @@ for name, target in SCREENS:
             dismiss_noise()
             tap_desc(r"^Open filters$", limit=1, max_y_frac=0.6)
             snap(name, 4)
+            # Expanded sheet: scroll through every section, open a collapsed
+            # one (Condition / District), and drag the price knob.
+            W, H = SIZE
+            adb(f"shell input swipe {W//2} {int(H*0.75)} {W//2} {int(H*0.35)} 600")
+            snap(name + "_scrolled", 2)
+            tap_desc(r"^(Condition|තත්ත්වය|நிலை)", limit=1, max_y_frac=0.85)
+            adb(f"shell input swipe {W//2} {int(H*0.75)} {W//2} {int(H*0.35)} 600")
+            snap(name + "_scrolled2", 2)
+            tap_desc(r"^(District|දිස්ත්‍රික්කය|மாவட்டம்)", limit=1, max_y_frac=0.85)
+            adb(f"shell input swipe {W//2} {int(H*0.75)} {W//2} {int(H*0.30)} 600")
+            snap(name + "_scrolled3", 2)
             adb("shell input keyevent 4")
             time.sleep(2)
         elif target == "ASSISTANT":
@@ -367,6 +378,115 @@ if args.motion == "1":
         adb("shell input keyevent 4")
         for i in range(3):
             sh(f"adb exec-out screencap -p > '{os.path.join(OUT, f'motion_back_{i}.png')}'")
+    # Screen-recorded transitions: every kind of open/close, decoded to frames
+    # (8 fps) and tiled into one sheet per transition for review.
+    def record(tag, action, secs=5):
+        dev = f"/sdcard/mm_{tag}.mp4"
+        adb(f"shell rm -f {dev}")
+        rec = subprocess.Popen(f"adb shell screenrecord --bit-rate 6000000 --time-limit {secs} {dev}", shell=True)
+        time.sleep(1.0)
+        try:
+            action()
+        except Exception as e:
+            print("motion action failed", tag, e)
+        rec.wait(timeout=secs + 20)
+        time.sleep(1.5)
+        mp4 = os.path.join(OUT, f"motion_{tag}.mp4")
+        sh(f"adb pull {dev} '{mp4}'", 60)
+        frames_dir = os.path.join(OUT, f"motion_{tag}")
+        os.makedirs(frames_dir, exist_ok=True)
+        sh(f"ffmpeg -loglevel error -y -i '{mp4}' -vf fps=8,scale=360:-1 '{frames_dir}/f_%03d.png'", 120)
+        sh(f"ffmpeg -loglevel error -y -i '{mp4}' -vf fps=8,scale=216:-1,tile=10x4 -frames:v 1 '{OUT}/motion_{tag}_sheet.png'", 120)
+        print("recorded", tag, len(os.listdir(frames_dir)), "frames", flush=True)
+
+    W, H = SIZE
+
+    def tap_xy(x, y):
+        adb(f"shell input tap {x} {y}")
+
+    def card_xy():
+        _, root = dump()
+        cs = [n for n in nodes(root) if n["click"] and n["b"][1] > H * 0.3 and n["b"][3] < H * 0.85
+              and (n["b"][2] - n["b"][0]) > W * 0.3]
+        if not cs:
+            return None
+        c = cs[0]
+        return (c["b"][0] + c["b"][2]) // 2, int(c["b"][1] + (c["b"][3] - c["b"][1]) * 0.86)
+
+    def first_match(rx, max_y=1.0):
+        _, root = dump()
+        for n in nodes(root):
+            lab = n["desc"] or n["text"] or ""
+            if re.search(rx, lab) and (n["b"][1] + n["b"][3]) // 2 < H * max_y:
+                return (n["b"][0] + n["b"][2]) // 2, (n["b"][1] + n["b"][3]) // 2
+        return None
+
+    # 1. Card -> Detail container transform, then back (button).
+    link("motormila://search"); time.sleep(9); dismiss_noise()
+    xy = card_xy()
+    if xy:
+        def a1():
+            tap_xy(*xy); time.sleep(2.6); adb("shell input keyevent 4")
+        record("card_detail_back", a1, 6)
+    # 2. Card -> Detail, then predictive-back edge swipe (slow drag = scrub, then commit).
+    time.sleep(3)
+    xy = card_xy()
+    if xy:
+        tap_xy(*xy); time.sleep(3)
+        def a2():
+            adb(f"shell input swipe 2 {H//2} {int(W*0.6)} {H//2} 1400")
+        record("predictive_back", a2, 5)
+    # 3. Tab switches Buy -> Prices -> Tools -> Saved -> Buy.
+    time.sleep(2)
+    def a3():
+        for rx in (r"^(Prices|මිල|விலைகள்)$", r"^(Tools|මෙවලම්|கருவிகள்)$", r"^(Saved|සුරැකි|சேமித்தவை)$", r"^(Buy|මිලදී ගන්න|வாங்க)$"):
+            p = first_match(rx, 1.0)
+            if p:
+                tap_xy(*p)
+            time.sleep(1.1)
+    record("tabs", a3, 7)
+    # 4. Push + pop: Settings (push slide over Tools) and back.
+    link("motormila://home"); time.sleep(4)
+    p = first_match(r"^(Tools|මෙවලම්|கருவிகள்)$")
+    if p:
+        tap_xy(*p); time.sleep(3)
+    def a4():
+        q = first_match(r"(Calculator|Import|Lease|Price index|Valuation|Estimate)", 0.9)
+        if q:
+            tap_xy(*q); time.sleep(2.2); adb("shell input keyevent 4")
+    record("push_pop", a4, 6)
+    # 5. Hub tile (zoom) from Home and back.
+    link("motormila://home"); time.sleep(5); dismiss_noise()
+    def a5():
+        q = first_match(r"^(Best picks|හොඳම තේරීම්|சிறந்த தேர்வுகள்)", 0.9)
+        if q:
+            tap_xy(*q); time.sleep(2.2); adb("shell input keyevent 4")
+    record("hub_zoom", a5, 6)
+    # 6. Filters sheet open + apply.
+    link("motormila://search"); time.sleep(8); dismiss_noise()
+    def a6():
+        q = first_match(r"^Open filters$", 0.6)
+        if q:
+            tap_xy(*q); time.sleep(2.0)
+            r = first_match(r"^(Hybrid|හයිබ්‍රිඩ්|ஹைப்ரிட்)$", 0.9)
+            if r:
+                tap_xy(*r); time.sleep(1.0)
+            r = first_match(r"^(Show|No matches|ප්‍රතිඵල|முடிவு)", 1.0)
+            if r:
+                tap_xy(*r)
+    record("filter_apply", a6, 7)
+    # 7. Compare: tray -> Compare (zoom from tray) and back.
+    time.sleep(3)
+    tap_desc(ADD_CMP, limit=2, max_y_frac=0.75)
+    def a7():
+        q = first_match(CMP_CTA, 0.97)
+        if q:
+            tap_xy(*q); time.sleep(2.4); adb("shell input keyevent 4")
+    record("compare_zoom", a7, 6)
+    # 8. Cold start: splash -> home.
+    adb(f"shell am force-stop {PKG}"); time.sleep(1)
+    record("splash_home", lambda: start(), 6)
+
     json.dump(FRAMES, open(f"{OUT}/frames.json", "w"), indent=2)
     print("FRAMES", json.dumps(FRAMES, indent=1))
 

@@ -27,11 +27,15 @@ run() {
   echo "exit=$?"; grep -E "INSTRUMENTATION_STATUS: (test|stack)=|OK \(|FAILURES|Tests run|frameDurationCpuMs|frameOverrunMs|timeToInitialDisplayMs|Error|Exception" "$OUT/$tag.log" | head -60
 }
 run lk.motormila.baselineprofile.BaselineProfileGenerator generator
+# Pull the generated profile now: the next instrumentation run clears the output dir.
+mkdir -p "$OUT/profile"
+for f in $(adb shell ls $DEV_OUT 2>/dev/null | tr -d '\r' | grep -E "prof.*\.txt$"); do adb pull "$DEV_OUT/$f" "$OUT/profile/" >/dev/null; done
+ls -la "$OUT/profile"
 run lk.motormila.baselineprofile.Benchmarks bench
 adb pull $DEV_OUT "$OUT/device" >/dev/null 2>&1 || true
 adb pull /sdcard/Android/media/$TPKG "$OUT/media" >/dev/null 2>&1 || true
 find "$OUT" -type f | head -50
-for f in $(find "$OUT" -name "*baseline-prof*.txt"); do echo "$f: $(wc -l < "$f") rules"; done
+for f in $(find "$OUT" -name "*prof*.txt"); do echo "$f: $(wc -l < "$f") rules"; done
 for f in $(find "$OUT" -name "*benchmarkData.json"); do
   python3 - "$f" <<'PY'
 import json,sys

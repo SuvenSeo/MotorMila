@@ -195,6 +195,7 @@ interface MotormilaApiService {
         @Query("sort") sort: String? = null,
         @Query("page") page: Int = 1,
         @Query("size") size: Int = 20,
+        @Query("include_archive") includeArchive: Boolean? = null,
     ): PagedListingsDto
 
     @GET("listings/{id}")

@@ -4,7 +4,6 @@ import android.graphics.Point
 import androidx.benchmark.macro.MacrobenchmarkScope
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
-import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
 
@@ -40,16 +39,21 @@ fun MacrobenchmarkScope.openSearch(): UiObject2? {
     return device.findObject(By.desc("Search results"))
 }
 
-/** Fling the result grid down and back up (the scroll the user feels most). */
+/**
+ * Fling the result grid down three times and back up once (the scroll the
+ * user feels most). Raw screen swipes: UiObject2.fling on the grid did not
+ * reach the Compose list on the CI emulator (no frames were recorded).
+ */
+@Suppress("UNUSED_PARAMETER")
 fun MacrobenchmarkScope.scrollSearch(grid: UiObject2?) {
-    val g = grid ?: device.findObject(By.desc("Search results")) ?: return
-    g.setGestureMargin(device.displayWidth / 5)
-    repeat(2) {
-        g.fling(Direction.DOWN)
-        device.waitForIdle()
+    val w = device.displayWidth
+    val h = device.displayHeight
+    repeat(3) {
+        device.swipe(w / 2, (h * 0.78).toInt(), w / 2, (h * 0.30).toInt(), 10)
+        Thread.sleep(900)
     }
-    g.fling(Direction.UP)
-    device.waitForIdle()
+    device.swipe(w / 2, (h * 0.35).toInt(), w / 2, (h * 0.75).toInt(), 10)
+    Thread.sleep(900)
 }
 
 /** Tap the first card's title block (its photo carries the Compare toggle), then back. */

@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.compose.ui.unit.IntOffset
 import kotlinx.coroutines.CancellationException
 import lk.motormila.app.ui.theme.MotionTokens
@@ -253,5 +254,144 @@ fun MotormilaPredictiveBackTransform(
         },
     ) {
         content()
+    }
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Round 5: one deliberate transition per kind of destination. Every
+// movement is a spring (interruptible, and seekable so the predictive-back
+// gesture scrubs the pop), fades are short tweens, and back always mirrors
+// open. Reduced motion collapses everything to a 150 ms cross-fade.
+// ───────────────────────────────────────────────────────────────────────────
+
+/** What a destination is, for choosing its transition. */
+enum class NavKind { TAB, DETAIL_CARD, COMPARE, HUB, MODAL, SPLASH, PUSH }
+
+fun androidx.navigation.NavBackStackEntry.navKind(): NavKind {
+    val d = destination
+    fun has(k: kotlin.reflect.KClass<*>) = d.hasRoute(k)
+    return when {
+        has(Splash::class) -> NavKind.SPLASH
+        isTabNavRoute(d.route) -> NavKind.TAB
+        has(ListingDetail::class) && (arguments?.getBoolean("fromCard") == true) -> NavKind.DETAIL_CARD
+        has(Compare::class) -> NavKind.COMPARE
+        has(MakeHub::class) || has(MakeModelHub::class) || has(DistrictHub::class) || has(EvHub::class) ||
+            has(BestPicks::class) || has(OfficialPulse::class) || has(PriceIndex::class) -> NavKind.HUB
+        has(Login::class) || has(PlateScan::class) || has(ShareImport::class) -> NavKind.MODAL
+        else -> NavKind.PUSH
+    }
+}
+
+/** Position of a tab in the bar (Buy, Prices, Tools, Sell, Saved); -1 when not a tab. */
+internal fun androidx.navigation.NavBackStackEntry.tabIndex(): Int {
+    val d = destination
+    return when {
+        d.hasRoute(Home::class) || d.hasRoute(Search::class) -> 0
+        d.hasRoute(Insights::class) -> 1
+        d.hasRoute(Tools::class) || d.hasRoute(Profile::class) -> 2
+        d.hasRoute(Sell::class) -> 3
+        d.hasRoute(Watchlist::class) -> 4
+        else -> -1
+    }
+}
+
+private fun pushSpring() = spring<IntOffset>(dampingRatio = 0.92f, stiffness = 420f, visibilityThreshold = IntOffset.VisibilityThreshold)
+private fun zoomSpring() = spring<Float>(dampingRatio = 0.88f, stiffness = 360f, visibilityThreshold = 0.001f)
+private val reducedFadeIn: EnterTransition get() = fadeIn(tween(150))
+private val reducedFadeOut: ExitTransition get() = fadeOut(tween(150))
+private val TrayOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 1f)
+
+private fun tabDirection(from: androidx.navigation.NavBackStackEntry, to: androidx.navigation.NavBackStackEntry): Int =
+    (to.tabIndex() - from.tabIndex()).coerceIn(-1, 1)
+
+/** Tab switch, incoming: cross-fade + a short directional slide (toward the tapped side) + 0.985 settle. */
+private fun tabEnter(dir: Int): EnterTransition =
+    fadeIn(tween(220, easing = MmMotion.Standard)) +
+        scaleIn(MmMotion.pageSpring(), initialScale = 0.985f) +
+        slideInHorizontally(spatialOffsetSpring()) { w -> (w * 0.06f * dir).roundToInt() }
+
+/**
+ * Tab switch, outgoing: stays opaque until the incoming page is mostly in,
+ * then fades (no mid-switch dip to the bare window colour).
+ */
+private fun tabExit(dir: Int): ExitTransition =
+    fadeOut(tween(90, delayMillis = 140, easing = MmMotion.Exit)) +
+        slideOutHorizontally(spatialOffsetSpring()) { w -> (-w * 0.04f * dir).roundToInt() }
+
+fun androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>.motormilaEnter(
+    reducedMotion: Boolean,
+): EnterTransition {
+    if (reducedMotion) return reducedFadeIn
+    val from = initialState.navKind()
+    return when (targetState.navKind()) {
+        NavKind.TAB -> if (from == NavKind.TAB) {
+            tabEnter(tabDirection(initialState, targetState))
+        } else if (from == NavKind.SPLASH) {
+            fadeIn(tween(MmMotion.Page, easing = MmMotion.Standard)) + scaleIn(MmMotion.pageSpring(), initialScale = 0.96f)
+        } else {
+            fadeIn(tween(MmMotion.Base, easing = MmMotion.Standard))
+        }
+        // The card's sharedBounds carries the page; this fade is only the
+        // fallback when no card is on screen to grow out of.
+        NavKind.DETAIL_CARD -> fadeIn(tween(200, easing = MmMotion.Standard))
+        NavKind.COMPARE -> scaleIn(zoomSpring(), initialScale = 0.86f, transformOrigin = TrayOrigin) +
+            fadeIn(tween(200, easing = MmMotion.Standard))
+        NavKind.HUB -> scaleIn(zoomSpring(), initialScale = 0.92f) + fadeIn(tween(220, easing = MmMotion.Standard))
+        NavKind.MODAL -> slideInVertically(sheetVerticalSpring()) { it } + fadeIn(tween(160))
+        NavKind.SPLASH -> fadeIn(tween(0))
+        NavKind.PUSH -> slideInHorizontally(pushSpring()) { it }
+    }
+}
+
+fun androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>.motormilaExit(
+    reducedMotion: Boolean,
+): ExitTransition {
+    if (reducedMotion) return reducedFadeOut
+    val from = initialState.navKind()
+    if (from == NavKind.SPLASH) {
+        return fadeOut(tween(220, easing = MmMotion.Exit)) + scaleOut(MmMotion.pageSpring(), targetScale = 1.04f)
+    }
+    return when (targetState.navKind()) {
+        NavKind.TAB -> if (from == NavKind.TAB) tabExit(tabDirection(initialState, targetState)) else fadeOut(tween(MmMotion.Fast, easing = MmMotion.Exit))
+        // The page beneath stays exactly where it is while the card grows over it.
+        NavKind.DETAIL_CARD, NavKind.MODAL -> ExitTransition.KeepUntilTransitionsFinished
+        NavKind.COMPARE, NavKind.HUB -> scaleOut(zoomSpring(), targetScale = 0.96f) + fadeOut(tween(220, delayMillis = 60, easing = MmMotion.Exit))
+        NavKind.SPLASH -> fadeOut(tween(0))
+        // Parallax underlay: drifts a quarter width left and dims a touch.
+        NavKind.PUSH -> slideOutHorizontally(pushSpring()) { -it / 4 } + fadeOut(tween(MmMotion.Page), targetAlpha = 0.72f)
+    }
+}
+
+fun androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>.motormilaPopEnter(
+    reducedMotion: Boolean,
+): EnterTransition {
+    if (reducedMotion) return reducedFadeIn
+    val leaving = initialState.navKind()
+    if (targetState.navKind() == NavKind.TAB && leaving == NavKind.TAB) return tabEnter(tabDirection(initialState, targetState))
+    return when (leaving) {
+        // Mirror of open: the page beneath is already in place.
+        NavKind.DETAIL_CARD, NavKind.MODAL -> EnterTransition.None
+        NavKind.COMPARE, NavKind.HUB -> scaleIn(zoomSpring(), initialScale = 0.96f) + fadeIn(tween(220, easing = MmMotion.Standard))
+        NavKind.PUSH -> slideInHorizontally(pushSpring()) { -it / 4 } + fadeIn(tween(MmMotion.Page), initialAlpha = 0.72f)
+        else -> fadeIn(tween(MmMotion.Base, easing = MmMotion.Standard))
+    }
+}
+
+fun androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>.motormilaPopExit(
+    reducedMotion: Boolean,
+): ExitTransition {
+    if (reducedMotion) return reducedFadeOut
+    if (initialState.navKind() == NavKind.TAB && targetState.navKind() == NavKind.TAB) {
+        return tabExit(tabDirection(initialState, targetState))
+    }
+    return when (initialState.navKind()) {
+        // sharedBounds shrinks the page back into its card; this is only the
+        // fallback when that card is no longer on screen.
+        NavKind.DETAIL_CARD -> fadeOut(tween(220, easing = MmMotion.Exit)) + scaleOut(zoomSpring(), targetScale = 0.94f)
+        NavKind.COMPARE -> scaleOut(zoomSpring(), targetScale = 0.86f, transformOrigin = TrayOrigin) + fadeOut(tween(200, delayMillis = 40, easing = MmMotion.Exit))
+        NavKind.HUB -> scaleOut(zoomSpring(), targetScale = 0.92f) + fadeOut(tween(200, delayMillis = 40, easing = MmMotion.Exit))
+        NavKind.MODAL -> slideOutVertically(sheetVerticalSpring()) { it } + fadeOut(tween(200, delayMillis = 80))
+        NavKind.PUSH -> slideOutHorizontally(pushSpring()) { it }
+        else -> fadeOut(tween(MmMotion.Fast, easing = MmMotion.Exit))
     }
 }

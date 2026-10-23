@@ -201,7 +201,8 @@ android {
         create("preview") {
             initWith(getByName("release"))
             applicationIdSuffix = ".debug"
-            versionNameSuffix = "-preview"
+            // defaultConfig versionName is already "1.7.0-preview".
+            versionNameSuffix = null
             isDebuggable = false
             isMinifyEnabled = true
             isShrinkResources = true

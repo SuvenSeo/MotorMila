@@ -241,30 +241,10 @@ fun MotormilaNavGraph(
                 NavHost(
                     navController = navController,
                     startDestination = if (sharedUrl != null) ShareImport(sharedUrl) else Splash,
-                    enterTransition = {
-                        motormilaEnterTransition(
-                            reducedMotion,
-                            isTabSwitch(initialState.destination.route, targetState.destination.route),
-                        )
-                    },
-                    exitTransition = {
-                        motormilaExitTransition(
-                            reducedMotion,
-                            isTabSwitch(initialState.destination.route, targetState.destination.route),
-                        )
-                    },
-                    popEnterTransition = {
-                        motormilaPopEnterTransition(
-                            reducedMotion,
-                            isTabSwitch(initialState.destination.route, targetState.destination.route),
-                        )
-                    },
-                    popExitTransition = {
-                        motormilaPopExitTransition(
-                            reducedMotion,
-                            isTabSwitch(initialState.destination.route, targetState.destination.route),
-                        )
-                    },
+                    enterTransition = { motormilaEnter(reducedMotion) },
+                    exitTransition = { motormilaExit(reducedMotion) },
+                    popEnterTransition = { motormilaPopEnter(reducedMotion) },
+                    popExitTransition = { motormilaPopExit(reducedMotion) },
                 ) {
                     motormilaComposable<Splash> {
                         SplashGate(
@@ -336,7 +316,7 @@ fun MotormilaNavGraph(
                         ),
                     ) {
                         SearchScreen(
-                            onListingClick = { id -> navController.navigate(ListingDetail(id)) },
+                            onListingClick = { id -> navController.navigate(ListingDetail(id, fromCard = true)) },
                             onCompare = { ids -> navController.navigate(Compare(ids)) },
                         )
                     }
@@ -406,6 +386,7 @@ fun MotormilaNavGraph(
                         val route = entry.toRoute<ListingDetail>()
                         ListingDetailScreen(
                             listingId = route.id,
+                            fromCard = route.fromCard,
                             onBack = { navController.popBackStack() },
                             onCompare = { ids -> navController.navigate(Compare(ids)) },
                             onEstimate = { navController.navigate(Valuation()) },
@@ -591,7 +572,7 @@ fun MotormilaNavGraph(
                     ) {
                         BestPicksScreen(
                             onBack = { navController.popBackStack() },
-                            onListingClick = { id -> navController.navigate(ListingDetail(id)) },
+                            onListingClick = { id -> navController.navigate(ListingDetail(id, fromCard = true)) },
                             onSeeAllSearch = {
                                 navController.navigate(Search(sort = "deal_score"))
                             },
@@ -609,7 +590,7 @@ fun MotormilaNavGraph(
                             onModelClick = { make, model ->
                                 navController.navigate(MakeModelHub(make, model))
                             },
-                            onListingClick = { id -> navController.navigate(ListingDetail(id)) },
+                            onListingClick = { id -> navController.navigate(ListingDetail(id, fromCard = true)) },
                             onSeeAllSearch = { make ->
                                 navController.navigate(Search(make = make))
                             },
@@ -624,7 +605,7 @@ fun MotormilaNavGraph(
                         MakeModelHubScreen(
                             onBack = { navController.popBackStack() },
                             onMakeClick = { make -> navController.navigate(MakeHub(make)) },
-                            onListingClick = { id -> navController.navigate(ListingDetail(id)) },
+                            onListingClick = { id -> navController.navigate(ListingDetail(id, fromCard = true)) },
                             onSeeAllSearch = { make, model ->
                                 navController.navigate(Search(make = make, model = model))
                             },
@@ -641,7 +622,7 @@ fun MotormilaNavGraph(
                     ) {
                         DistrictHubScreen(
                             onBack = { navController.popBackStack() },
-                            onListingClick = { id -> navController.navigate(ListingDetail(id)) },
+                            onListingClick = { id -> navController.navigate(ListingDetail(id, fromCard = true)) },
                             onModelClick = { make, model ->
                                 navController.navigate(MakeModelHub(make, model))
                             },

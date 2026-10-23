@@ -108,6 +108,8 @@ fun DetailGallery(
     onOpenViewer: (page: Int) -> Unit,
     modifier: Modifier = Modifier,
     pagerState: PagerState = rememberPagerState(pageCount = { images.size.coerceAtLeast(1) }),
+    /** The card's hero URL: its decoded bitmap stands in while page 0 loads (no mid-morph flash). */
+    heroPlaceholderUrl: String? = null,
 ) {
     val sharedScope = LocalSharedTransitionScope.current
     val animatedScope = LocalNavAnimatedVisibilityScope.current
@@ -116,7 +118,7 @@ fun DetailGallery(
             Modifier.sharedElement(
                 rememberSharedContentState(key = listingHeroKey(listingId)),
                 animatedScope,
-                boundsTransform = { _, _ -> MmMotion.gentle() },
+                boundsTransform = lk.motormila.app.ui.components.motormilaSharedBoundsTransform(),
             )
         }
     } else {
@@ -141,6 +143,7 @@ fun DetailGallery(
         ) { page ->
             MmImage(
                 url = images[page],
+                placeholderKey = if (page == 0) heroPlaceholderUrl else null,
                 contentDescription = "Photo ${page + 1} of $title",
                 modifier = Modifier
                     .fillMaxSize()

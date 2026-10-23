@@ -121,7 +121,7 @@ fun ListingCard(
             Modifier.sharedElement(
                 rememberSharedContentState(key = listingHeroKey(listing.id)),
                 animatedScope,
-                boundsTransform = { _, _ -> MmMotion.gentle() },
+                boundsTransform = motormilaSharedBoundsTransform(),
             )
         }
     } else {
@@ -149,6 +149,20 @@ fun ListingCard(
     } else {
         Modifier
     }
+    // Container transform (card -> whole Detail page). Detail carries the
+    // matching sharedBounds on its root only when opened from a card.
+    val cardShared = if (sharedScope != null && animatedScope != null) {
+        with(sharedScope) {
+            Modifier.sharedBounds(
+                rememberSharedContentState(key = listingCardKey(listing.id)),
+                animatedScope,
+                boundsTransform = motormilaSharedBoundsTransform(),
+                clipInOverlayDuringTransition = OverlayClip(lk.motormila.app.ui.theme.MmShapes.lg),
+            )
+        }
+    } else {
+        Modifier
+    }
     val verdict = remember(listing.id, listing.priceLkr, listing.marketMedianLkr) {
         MmDealVerdict.compute(
             askingLkr = listing.priceLkr,
@@ -160,10 +174,15 @@ fun ListingCard(
     val priceText = MmPriceFormat.compact(listing.priceLkr, stringResource(R.string.mm_price_on_request))
 
     MmCard(
-        onClick = onClick,
+        onClick = {
+            // Hand the row to Detail so its first frame is real content.
+            lk.motormila.app.ui.navigation.ListingPreviewCache.put(listing)
+            onClick()
+        },
         contentPadding = PaddingValues(0.dp),
         modifier = modifier
             .fillMaxWidth()
+            .then(cardShared)
             // Selected for compare: a brand ring on the whole card, so the state
             // reads at a glance in the grid (iOS selection style).
             .then(
@@ -438,9 +457,7 @@ fun listingCardKey(listingId: Int): String = "listing-card-$listingId"
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 fun motormilaSharedBoundsTransform(): BoundsTransform =
-    BoundsTransform { _, _ ->
-        spring(dampingRatio = 0.9f, stiffness = 700f)
-    }
+    BoundsTransform { _, _ -> MmMotion.containerSpring() }
 
 /**
  * Listing photo with P0 image polish: a shimmer-tone placeholder while

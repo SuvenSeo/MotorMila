@@ -20,7 +20,7 @@ class BaselineProfileGenerator {
     @Test
     fun generate() = rule.collect(
         packageName = TARGET_PACKAGE,
-        includeInStartupProfile = true,
+        includeInStartupProfile = false,
         maxIterations = 3,
         stableIterations = 2,
     ) {

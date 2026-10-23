@@ -103,6 +103,8 @@ class ListingRepositoryImpl @Inject constructor(
                     bodyType = query.bodyType,
                     district = query.district,
                     vehicleCategory = query.vehicleCategory,
+                    priceAvailability = query.priceAvailability,
+                    includeArchive = query.includeArchive.takeIf { it },
                     sort = query.sort,
                     page = page,
                     size = size,
@@ -113,6 +115,33 @@ class ListingRepositoryImpl @Inject constructor(
                 filterSnapshotListings(rows, query).map { it.toDomain() }
             },
         )
+    }
+
+    override suspend fun count(query: ListingQuery): Int? = withContext(io) {
+        runCatching {
+            api.searchListings(
+                q = query.keyword?.ifBlank { null },
+                source = query.source,
+                make = query.make,
+                model = query.model,
+                yearMin = query.yearMin,
+                yearMax = query.yearMax,
+                priceMin = query.priceMin,
+                priceMax = query.priceMax,
+                mileageMax = query.mileageMax,
+                fuelType = query.fuelType,
+                transmission = query.transmission,
+                condition = query.condition,
+                bodyType = query.bodyType,
+                district = query.district,
+                vehicleCategory = query.vehicleCategory,
+                priceAvailability = query.priceAvailability,
+                includeArchive = query.includeArchive.takeIf { it },
+                sort = query.sort,
+                page = 1,
+                size = 1,
+            ).total
+        }.getOrNull()
     }
 
     override suspend fun getDetail(id: Int): Listing = withContext(io) {

@@ -198,7 +198,8 @@ fun BestPicksScreen(
                     } else if (state.unlocked) {
                         items(
                             count = pagingItems.itemCount,
-                            key = { index -> pagingItems[index]?.id ?: -index },
+                            key = { index -> pagingItems.peek(index)?.id ?: -index - 1 },
+                            contentType = { "pick" },
                         ) { index ->
                             val listing = pagingItems[index]
                             if (listing != null) {

@@ -1,5 +1,15 @@
 package lk.motormila.app.ui.search
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.material.icons.filled.Close
+import lk.motormila.app.ui.components.activeFilterChips
+import lk.motormila.app.ui.components.activeFilterCount
 import lk.motormila.app.domain.model.VehicleCategory
 
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -256,7 +266,11 @@ fun SearchScreen(
     val bottomPad = chrome.contentPadding + if (trayShown) trayHeight + 8.dp else 0.dp
     // Fly-to-tray: a photo copy arcs from the card into the compare tray.
     val flights = remember { mutableStateListOf<CompareFlight>() }
-    val revealedIds = remember { HashSet<Int>() }
+    // Lives in the ViewModel: Search leaves composition while Detail is open,
+    // and a remembered set came back empty on return, so every visible card
+    // re-ran its entrance (alpha 0 -> 1) exactly while the Detail page was
+    // shrinking back into it: the end of the morph flickered.
+    val revealedIds = viewModel.revealedIds
     var trayBounds by remember { mutableStateOf(androidx.compose.ui.geometry.Rect.Zero) }
     val reducedMotion = MmMotion.reduced
 
@@ -280,7 +294,7 @@ fun SearchScreen(
                             verticalArrangement = Arrangement.spacedBy(MmSpacing.cardGap),
                             userScrollEnabled = false,
                         ) {
-                            items(6) { MmListingCardSkeleton() }
+                            items(6, contentType = { "skeleton" }) { MmListingCardSkeleton() }
                         }
                     }
                     items.loadState.refresh is LoadState.Error -> {
@@ -292,6 +306,12 @@ fun SearchScreen(
                             onShowCached = { items.retry() },
                             modifier = Modifier.fillMaxSize().padding(top = headerH, bottom = bottomPad),
                         )
+                    }
+                    // Truly empty only once the source says so: on (re)entry the
+                    // first frame can have 0 items before the cached page lands,
+                    // which flashed the empty state.
+                    items.itemCount == 0 && !items.loadState.append.endOfPaginationReached -> {
+                        Box(Modifier.fillMaxSize())
                     }
                     items.itemCount == 0 -> {
                         // Narrow category + nothing else to clear -> offer All vehicles,
@@ -330,6 +350,7 @@ fun SearchScreen(
                             items(
                                 count = items.itemCount,
                                 key = { i -> items.peek(i)?.id ?: -i - 1 },
+                                contentType = { "listing" },
                             ) { i ->
                                 val listing = items[i]
                                 if (listing != null) {
@@ -468,13 +489,22 @@ fun SearchScreen(
             SortFilterRow(
                 sort = state.filters.sort,
                 onSort = viewModel::onSortChange,
-                onFilters = viewModel::openFilters,
+                onFilters = {
+                    viewModel.loadModels(state.filters.make)
+                    viewModel.openFilters()
+                },
+                activeCount = state.filters.activeFilterCount(),
                 onCreateAlert = viewModel::createAlertFromFilters,
                 gridMode = gridMode,
                 onToggleLayout = {
                     haptics.toggle()
                     gridMode = !gridMode
                 },
+            )
+            // Removable active-filter chips (web parity), spring in/out.
+            ActiveFilterChipsRow(
+                chips = activeFilterChips(state.filters),
+                onRemove = viewModel::removeFilter,
             )
         }
 
@@ -547,8 +577,12 @@ fun SearchScreen(
                 districts = state.districts,
                 resultCount = items.itemCount.takeIf { it > 0 },
                 onApply = viewModel::applyFilters,
-                onReset = viewModel::resetFilters,
+                onReset = {},
                 onDismiss = viewModel::closeFilters,
+                models = state.models,
+                sources = state.sources,
+                onMakeChange = viewModel::loadModels,
+                countFor = viewModel::countFor,
             )
         }
     }
@@ -594,6 +628,11 @@ internal fun VehicleCategory.labelRes(): Int = when (this) {
     VehicleCategory.VANS -> R.string.vehicle_category_vans
     VehicleCategory.LORRIES -> R.string.vehicle_category_lorries
     VehicleCategory.BUSES -> R.string.vehicle_category_buses
+    VehicleCategory.HEAVY_DUTY -> R.string.vehicle_category_heavy
+    VehicleCategory.TRACTORS -> R.string.vehicle_category_tractors
+    VehicleCategory.BOATS -> R.string.vehicle_category_boats
+    VehicleCategory.BICYCLES -> R.string.vehicle_category_cycles
+    VehicleCategory.OTHERS -> R.string.vehicle_category_other
 }
 
 @Composable
@@ -604,6 +643,7 @@ internal fun SortFilterRow(
     onCreateAlert: () -> Unit,
     gridMode: Boolean,
     onToggleLayout: () -> Unit,
+    activeCount: Int = 0,
 ) {
     val c = MmColors.current
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -632,12 +672,15 @@ internal fun SortFilterRow(
                 },
         ) {
             item {
-                MmIconButton(
-                    icon = Icons.Outlined.Tune,
-                    contentDescription = "Open filters",
-                    onClick = onFilters,
-                    style = MmIconButtonStyle.Filled,
-                )
+                Box {
+                    MmIconButton(
+                        icon = Icons.Outlined.Tune,
+                        contentDescription = "Open filters",
+                        onClick = onFilters,
+                        style = MmIconButtonStyle.Filled,
+                    )
+                    FilterCountBadge(activeCount, Modifier.align(Alignment.TopEnd))
+                }
             }
             items(ListingSorts.ALL) { s ->
                 MmChip(
@@ -675,6 +718,105 @@ internal fun SortFilterRow(
             onClick = onToggleLayout,
             modifier = Modifier.padding(end = 4.dp),
         )
+    }
+}
+
+/** Brand count bubble on the filter button; springs in / out and pops on change. */
+@Composable
+private fun FilterCountBadge(count: Int, modifier: Modifier = Modifier) {
+    val c = MmColors.current
+    AnimatedVisibility(
+        visible = count > 0,
+        enter = if (MmMotion.reduced) fadeIn(tween(0)) else scaleIn(MmMotion.bouncy()) + fadeIn(tween(MmMotion.Fast)),
+        exit = if (MmMotion.reduced) fadeOut(tween(0)) else scaleOut(MmMotion.snappy()) + fadeOut(tween(MmMotion.Fast)),
+        modifier = modifier,
+    ) {
+        val reducedBadge = MmMotion.reduced
+        CappedFontScale(max = 1.15f) {
+            AnimatedContent(
+                targetState = count,
+                transitionSpec = {
+                    if (reducedBadge) {
+                        fadeIn(tween(0)) togetherWith fadeOut(tween(0))
+                    } else {
+                        (scaleIn(MmMotion.bouncy(), initialScale = 0.6f) + fadeIn(tween(MmMotion.Fast))) togetherWith fadeOut(tween(90))
+                    }
+                },
+                label = "filter-badge",
+            ) { n ->
+                Text(
+                    n.toString(),
+                    style = MmType.current.labelS,
+                    color = c.textOnBrand,
+                    maxLines = 1,
+                    modifier = Modifier
+                        .padding(top = 2.dp, end = 2.dp)
+                        .heightIn(min = 18.dp)
+                        .clip(MmShapes.pill)
+                        .background(c.brand)
+                        .border(1.5.dp, c.background, MmShapes.pill)
+                        .padding(horizontal = 5.dp, vertical = 1.dp)
+                        .clearAndSetSemantics { },
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Removable chips for the applied filters, under the sort row. Each chip
+ * removes its filter (spring placement / fade); the row itself expands and
+ * collapses as the first chip arrives or the last leaves.
+ */
+@Composable
+internal fun ActiveFilterChipsRow(
+    chips: List<lk.motormila.app.ui.components.ActiveFilterChip>,
+    onRemove: (String) -> Unit,
+) {
+    val c = MmColors.current
+    val haptics = MmHaptics.current
+    AnimatedVisibility(
+        visible = chips.isNotEmpty(),
+        enter = if (MmMotion.reduced) fadeIn(tween(0)) else expandVertically(MmMotion.gentle()) + fadeIn(tween(MmMotion.Base)),
+        exit = if (MmMotion.reduced) fadeOut(tween(0)) else shrinkVertically(MmMotion.snappy()) + fadeOut(tween(MmMotion.Fast)),
+    ) {
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 2.dp, bottom = 4.dp),
+        ) {
+            items(chips, key = { it.key }, contentType = { "active-filter" }) { chip ->
+                val removeCd = stringResource(R.string.filter_remove_cd, chip.label)
+                CappedFontScale(max = 1.3f) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .animateItem(
+                                fadeInSpec = if (MmMotion.reduced) null else tween(MmMotion.Base),
+                                placementSpec = if (MmMotion.reduced) null else MmMotion.itemPlacement,
+                                fadeOutSpec = if (MmMotion.reduced) null else tween(MmMotion.Fast),
+                            )
+                            .heightIn(min = 36.dp)
+                            .clip(MmShapes.pill)
+                            .background(c.brandContainer)
+                            .border(0.5.dp, c.brand.copy(alpha = 0.35f), MmShapes.pill)
+                            .clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = removeCd) {
+                                haptics.unsave()
+                                onRemove(chip.key)
+                            }
+                            .semantics(mergeDescendants = true) { contentDescription = removeCd }
+                            .padding(start = 12.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+                    ) {
+                        Text(chip.label, style = MmType.current.label, color = c.onBrandContainer, maxLines = 1)
+                        Spacer(Modifier.width(4.dp))
+                        Icon(Icons.Filled.Close, contentDescription = null, tint = c.onBrandContainer, modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
+        }
     }
 }
 

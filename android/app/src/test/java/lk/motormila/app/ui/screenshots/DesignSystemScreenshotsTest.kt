@@ -302,7 +302,7 @@ class DesignSystemScreenshotsTest {
             Box(Modifier.fillMaxSize().background(MmColors.current.scrim))
             MmSheetFrame(title = "Filters", modifier = Modifier.align(Alignment.BottomCenter)) {
                 FilterSheetBody(
-                    draft = FilterDraft(make = "Toyota", priceMaxLkr = 9_500_000f, fuelType = "hybrid", condition = "reconditioned"),
+                    draft = FilterDraft(make = "Toyota", model = "Aqua", priceMin = 3_000_000.0, priceMax = 9_500_000.0, yearMin = 2014, fuelType = "hybrid", condition = "reconditioned"),
                     onDraftChange = {},
                     makes = listOf("Toyota", "Honda", "Suzuki", "Nissan"),
                     districts = listOf("Colombo", "Gampaha", "Kandy", "Kurunegala", "Galle", "Kalutara"),
