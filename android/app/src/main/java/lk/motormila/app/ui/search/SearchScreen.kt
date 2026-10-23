@@ -256,6 +256,7 @@ fun SearchScreen(
     val bottomPad = chrome.contentPadding + if (trayShown) trayHeight + 8.dp else 0.dp
     // Fly-to-tray: a photo copy arcs from the card into the compare tray.
     val flights = remember { mutableStateListOf<CompareFlight>() }
+    val revealedIds = remember { HashSet<Int>() }
     var trayBounds by remember { mutableStateOf(androidx.compose.ui.geometry.Rect.Zero) }
     val reducedMotion = MmMotion.reduced
 
@@ -340,7 +341,8 @@ fun SearchScreen(
                                             placementSpec = MmMotion.itemPlacement,
                                         ),
                                     ) {
-                                        StaggeredItem(index = i) {
+                                        val firstReveal = remember(listing.id) { revealedIds.add(listing.id) }
+                                        StaggeredItem(index = i, animate = firstReveal) {
                                             ListingCard(
                                                 listing = listing,
                                                 isWatched = false,
@@ -682,8 +684,10 @@ internal fun SortFilterRow(
  * Reduced motion is handled inside the modifier.
  */
 @Composable
-private fun StaggeredItem(index: Int, content: @Composable () -> Unit) {
-    Box(Modifier.motormilaReveal(delayMillis = cascadeDelay(index))) {
+private fun StaggeredItem(index: Int, animate: Boolean = true, content: @Composable () -> Unit) {
+    // Cascade only the first screenful, once: items scrolled into view later
+    // (or back into view) appear in place — no late pop-in while scrolling.
+    Box(if (animate && index < 8) Modifier.motormilaReveal(delayMillis = cascadeDelay(index)) else Modifier) {
         content()
     }
 }

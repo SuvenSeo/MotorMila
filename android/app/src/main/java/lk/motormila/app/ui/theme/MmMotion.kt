@@ -18,6 +18,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
@@ -117,10 +118,20 @@ object MmMotion {
         else fadeIn(tween(Base, delayMillis = 60, easing = Standard)) +
             scaleIn(pageSpring(), initialScale = 1.02f)
 
+    /**
+     * Pop (and predictive-back preview, which seeks this with the gesture):
+     * the page shrinks toward a card (0.9), drifts toward the back edge and
+     * fades late — like the system back preview, so the user sees where back
+     * leads before committing.
+     */
     fun fadeThroughPopExit(reduced: Boolean = false): ExitTransition =
         if (reduced) ExitTransition.None
-        else fadeOut(tween(Fast - 60, easing = Exit)) +
-            scaleOut(pageSpring(), targetScale = 0.96f)
+        else fadeOut(tween(Base, delayMillis = 60, easing = Exit)) +
+            scaleOut(pageSpring(), targetScale = 0.9f) +
+            slideOutHorizontally(pageSpringInt()) { it / 10 }
+
+    /** Int-offset twin of [pageSpring] for slide transitions. */
+    fun pageSpringInt(): SpringSpec<IntOffset> = spring(dampingRatio = 0.9f, stiffness = 380f, visibilityThreshold = IntOffset(1, 1))
 
     /** Content swap (loading → content, tab panes). */
     fun crossfade(reduced: Boolean = false): ContentTransform =
