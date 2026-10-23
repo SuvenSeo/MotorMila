@@ -152,8 +152,8 @@ export default function ProPreview({ sampleLane, gaps, trialCtaTo = "/pricing#ge
             <motion.div variants={revealItem} className="premium-surface relative p-6 sm:p-7">
               <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <p className="section-eyebrow">Sample lane</p>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-caption font-medium text-emerald-600 dark:text-emerald-300">
-                  <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-deal-good/25 bg-deal-good/10 px-2.5 py-1 text-caption font-medium text-deal-good-text">
+                  <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-deal-good" />
                   Live sample
                 </span>
               </div>

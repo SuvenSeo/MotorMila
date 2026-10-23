@@ -4,11 +4,11 @@ import { getFuelMix, getHybridBands, formatPrice } from "@/services/api";
 import type { FuelMixBucket, HybridBand } from "@/types/car";
 
 const FUEL_COLORS: Record<string, { bar: string; badge: string; label: string }> = {
-  petrol:   { bar: "bg-amber-400",    badge: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300",       label: "Petrol" },
-  hybrid:   { bar: "bg-emerald-400",  badge: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300", label: "Hybrid" },
-  electric: { bar: "bg-sky-400",      badge: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:border-sky-400/30 dark:bg-sky-400/10 dark:text-sky-300",             label: "Electric" },
-  diesel:   { bar: "bg-slate-400",    badge: "border-slate-500/30 bg-slate-500/10 text-slate-700 dark:border-slate-400/30 dark:bg-slate-400/10 dark:text-slate-300",  label: "Diesel" },
-  other:    { bar: "bg-zinc-500",     badge: "border-zinc-500/30 bg-zinc-500/10 text-zinc-600 dark:text-zinc-400",                                                     label: "Other" },
+  petrol:   { bar: "bg-deal-caution",    badge: "border-deal-caution/30 bg-deal-caution/10 text-deal-caution-text dark:border-deal-caution/30 dark:bg-deal-caution/10 dark:text-deal-caution-text",       label: "Petrol" },
+  hybrid:   { bar: "bg-deal-good",  badge: "border-deal-good/30 bg-deal-good/10 text-deal-good-text dark:border-deal-good/30 dark:bg-deal-good/10 dark:text-deal-good-text", label: "Hybrid" },
+  electric: { bar: "bg-primary",      badge: "border-primary/30 bg-primary/10 text-primary dark:border-primary/30 dark:bg-primary/10 dark:text-primary",             label: "Electric" },
+  diesel:   { bar: "bg-muted-foreground",    badge: "border-border bg-muted-foreground/10 text-foreground dark:border-border dark:bg-muted-foreground/10 dark:text-muted-foreground",  label: "Diesel" },
+  other:    { bar: "bg-muted-foreground",     badge: "border-border bg-muted-foreground/10 text-foreground dark:text-muted-foreground",                                                     label: "Other" },
 };
 
 function FuelBar({ buckets, total }: { buckets: FuelMixBucket[]; total: number }) {
@@ -49,12 +49,12 @@ function HybridBandRow({ band, maxCount }: { band: HybridBand; maxCount: number 
   return (
     <div className="flex items-center gap-3">
       <span className="w-28 shrink-0 text-caption font-semibold text-foreground">{band.label}</span>
-      <div className="relative h-5 flex-1 overflow-hidden rounded-full bg-emerald-500/10">
+      <div className="relative h-5 flex-1 overflow-hidden rounded-full bg-deal-good/10">
         <div
-          className="h-full rounded-full bg-emerald-500/30 transition-ui duration-long ease-decelerate"
+          className="h-full rounded-full bg-deal-good/30 transition-ui duration-long ease-decelerate"
           style={{ width: `${widthPct}%` }}
         />
-        <span className="absolute inset-0 flex items-center pl-2 num text-caption font-semibold text-emerald-700 dark:text-emerald-300">
+        <span className="absolute inset-0 flex items-center pl-2 num text-caption font-semibold text-deal-good-text">
           {band.count.toLocaleString()} listings
         </span>
       </div>
@@ -103,7 +103,7 @@ export function FuelMixStrip() {
       aria-label="EV and hybrid market share"
     >
       <div className="mb-5 flex items-center gap-2">
-        <Zap className="h-4 w-4 text-emerald-600/80 dark:text-emerald-400/80" />
+        <Zap className="h-4 w-4 text-deal-good-text/80" />
         <div>
           <p className="text-caption font-medium text-muted-foreground">
             Fuel mix

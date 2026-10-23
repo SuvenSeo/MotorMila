@@ -122,9 +122,9 @@ export const DistrictPriceHeatmap = memo(function DistrictPriceHeatmap({
           Size = relative price level
         </div>
         <div className="flex items-center gap-2 rounded-2xl border border-border bg-surface px-3 py-1.5 text-muted-foreground">
-          <span className="text-indigo-500 dark:text-indigo-400">Low</span>
+          <span className="text-primary">Low</span>
           <div className="h-1.5 w-20 rounded-full bg-gradient-to-r from-[#4f46e5] via-[#14b8a6] to-[#f59e0b]" />
-          <span className="text-amber-500">High</span>
+          <span className="text-deal-caution-text">High</span>
         </div>
       </div>
 

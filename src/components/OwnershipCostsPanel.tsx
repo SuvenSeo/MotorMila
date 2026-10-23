@@ -77,10 +77,10 @@ export function OwnershipCostsPanel({
 
   const statusTone =
     eligibility?.status === "likely_allowed"
-      ? "border-emerald-500/25 bg-emerald-400/10 text-emerald-800 dark:text-emerald-200"
+      ? "border-deal-good/25 bg-deal-good/10 text-deal-good-text"
       : eligibility?.status === "restricted"
-        ? "border-rose-500/25 bg-rose-400/10 text-rose-800 dark:text-rose-200"
-        : "border-amber-500/25 bg-amber-400/10 text-amber-900 dark:text-amber-200";
+        ? "border-deal-high/25 bg-deal-high/10 text-deal-high-text"
+        : "border-deal-caution/25 bg-deal-caution/10 text-deal-caution-text";
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">

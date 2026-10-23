@@ -678,7 +678,7 @@ export default function Dashboard() {
       : "text-foreground/80 [text-shadow:0_1px_14px_hsl(var(--background)/0.45)]";
   const heroSearchShellClass =
     heroFilmTone === "cinematic"
-      ? "border-white/18 bg-white/10 shadow-soft-xl backdrop-blur-2xl focus-within:border-primary/55 focus-within:shadow-gold-glow"
+      ? "border-border bg-foreground/10 shadow-soft-xl backdrop-blur-2xl focus-within:border-primary/55 focus-within:shadow-gold-glow"
       : "border-border/80 bg-card/90 shadow-soft-lg backdrop-blur-2xl focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20";
   const heroInputClass =
     heroFilmTone === "cinematic"
@@ -686,11 +686,11 @@ export default function Dashboard() {
       : "h-14 min-w-0 flex-1 bg-transparent text-body font-semibold text-foreground placeholder:text-muted-foreground outline-none [&::-webkit-search-cancel-button]:hidden";
   const heroPopularBtnClass =
     heroFilmTone === "cinematic"
-      ? "w-full rounded-2xl px-3 py-2.5 text-left text-footnote font-medium text-white/85 transition-colors hover:bg-white/10"
+      ? "w-full rounded-2xl px-3 py-2.5 text-left text-footnote font-medium text-white/85 transition-colors hover:bg-foreground/10"
       : "w-full rounded-2xl px-3 py-2.5 text-left text-footnote font-medium text-foreground transition-colors hover:bg-surface";
   const heroKickerClass =
     heroFilmTone === "cinematic"
-      ? "border-white/16 bg-white/10 text-white/88 backdrop-blur-xl"
+      ? "border-border bg-foreground/10 text-white/88 backdrop-blur-xl"
       : "border-border bg-card/80 text-foreground backdrop-blur-xl";
 
   // ═════════════════════════════════════════════════════════════════
@@ -974,7 +974,7 @@ export default function Dashboard() {
                           heroFilmTone === "cinematic"
                             ? active
                               ? "border-transparent text-white"
-                              : "border-white/20 bg-black/30 text-white/90 hover:bg-white/15"
+                              : "border-border bg-black/30 text-white/90 hover:bg-foreground/15"
                             : active
                               ? "border-transparent text-primary-bright"
                               : "border-border bg-card/80 text-foreground hover:border-primary/30",
@@ -988,7 +988,7 @@ export default function Dashboard() {
                             transition={motionStill ? { duration: 0 } : spring.snappy}
                             className={cn(
                               "absolute inset-0 -z-10 rounded-full border",
-                              heroFilmTone === "cinematic" ? "border-white/40 bg-white/20" : "border-primary/40 bg-primary/10",
+                              heroFilmTone === "cinematic" ? "border-border bg-foreground/20" : "border-primary/40 bg-primary/10",
                             )}
                           />
                         ) : null}
@@ -1284,7 +1284,7 @@ export default function Dashboard() {
                         <p className="truncate text-body font-semibold text-foreground">{row.make} {row.model} {row.year}</p>
                         <p className="mt-0.5 text-caption text-muted-foreground num">{formatPrice(row.price_lkr)} · {row.district || "LK"}</p>
                       </div>
-                      <span className="shrink-0 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-caption font-bold text-emerald-700 dark:text-emerald-300 num">
+                      <span className="shrink-0 rounded-full border border-deal-good/25 bg-deal-good/10 px-2 py-0.5 text-caption font-bold text-deal-good-text num">
                         +{Number(row.deal_score || 0).toFixed(0)}
                       </span>
                     </Link>
@@ -1299,7 +1299,7 @@ export default function Dashboard() {
             <div>
               <div className="mb-5 flex items-center justify-between">
                 <h3 className="font-display text-body font-semibold tracking-tight text-foreground flex items-center gap-2">
-                  <TrendingDown className="h-4 w-4 text-emerald-500" /> Price cuts &middot; 7d
+                  <TrendingDown className="h-4 w-4 text-deal-good-text" /> Price cuts &middot; 7d
                 </h3>
                 <Link to="/best-picks" className="flex items-center gap-1 text-caption font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright">
                   All cuts <ArrowUpRight className="h-3.5 w-3.5" />
@@ -1321,7 +1321,7 @@ export default function Dashboard() {
                           <span className="font-semibold text-foreground">{formatPrice(drop.new_price_lkr)}</span>
                         </p>
                       </div>
-                      <span className="shrink-0 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-caption font-bold text-emerald-700 dark:text-emerald-300 num">
+                      <span className="shrink-0 rounded-full border border-deal-good/25 bg-deal-good/10 px-2 py-0.5 text-caption font-bold text-deal-good-text num">
                         &minus;{drop.drop_pct}%
                       </span>
                     </Link>
@@ -1471,7 +1471,7 @@ export default function Dashboard() {
 
       {/* ── DIALOGS ─────────────────────────────────────────────── */}
       <Dialog open={showMarketAlerts} onOpenChange={setShowMarketAlerts}>
-        <DialogContent className="max-h-[86vh] max-w-2xl overflow-y-auto rounded-3xl border-white/40 bg-card/80 text-foreground backdrop-blur-2xl">
+        <DialogContent className="max-h-[86vh] max-w-2xl overflow-y-auto rounded-3xl border-border bg-card/80 text-foreground backdrop-blur-2xl">
           <DialogHeader>
             <DialogTitle className="font-display text-callout font-semibold tracking-tight">Market alerts</DialogTitle>
           </DialogHeader>
@@ -1505,7 +1505,7 @@ export default function Dashboard() {
       </Dialog>
 
       <Dialog open={showSavedListings} onOpenChange={setShowSavedListings}>
-        <DialogContent className="max-h-[86vh] max-w-2xl overflow-y-auto rounded-3xl border-white/40 bg-card/80 text-foreground backdrop-blur-2xl">
+        <DialogContent className="max-h-[86vh] max-w-2xl overflow-y-auto rounded-3xl border-border bg-card/80 text-foreground backdrop-blur-2xl">
           <DialogHeader>
             <DialogTitle className="font-display text-callout font-semibold tracking-tight">Saved listings</DialogTitle>
           </DialogHeader>

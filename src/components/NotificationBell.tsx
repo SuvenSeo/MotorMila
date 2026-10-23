@@ -221,7 +221,7 @@ export function NotificationBell() {
             >
               <span
                 aria-hidden
-                className={cn("h-1.5 w-1.5 rounded-full", pushOn ? "bg-emerald-500" : "bg-muted-foreground/40")}
+                className={cn("h-1.5 w-1.5 rounded-full", pushOn ? "bg-deal-good" : "bg-muted-foreground/40")}
               />
               {pushOn ? "push" : "in-app"}
             </span>

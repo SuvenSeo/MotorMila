@@ -40,7 +40,7 @@ export const StatsBar = memo(function StatsBar({ stats, latestListingAt }: Stats
                   ? "bg-muted/30 text-muted-foreground border border-border"
                   : momChange < 0
                     ? "bg-primary/10 text-primary-bright border border-primary/20"
-                    : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
+                    : "bg-deal-high/10 text-deal-high-text border border-deal-high/20"
               }`}>
                 {momChange == null ? (
                   t("stats.buildingHistory", "Building history")

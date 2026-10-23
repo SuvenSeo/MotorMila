@@ -11,9 +11,9 @@ interface AdvertHealthChipProps {
 }
 
 const TONE: Record<AdvertHealthBand, string> = {
-  strong: "border-emerald-500/25 bg-emerald-500/10 text-emerald-300",
-  fair: "border-amber-500/25 bg-amber-500/10 text-amber-200",
-  weak: "border-rose-500/25 bg-rose-500/10 text-rose-300",
+  strong: "border-deal-good/25 bg-deal-good/10 text-deal-good-text",
+  fair: "border-deal-caution/25 bg-deal-caution/10 text-deal-caution-text",
+  weak: "border-deal-high/25 bg-deal-high/10 text-deal-high-text",
 };
 
 export function AdvertHealthChip({ listing, className }: AdvertHealthChipProps) {

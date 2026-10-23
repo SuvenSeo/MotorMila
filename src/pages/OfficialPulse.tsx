@@ -252,9 +252,9 @@ export default function OfficialPulse() {
               ))}
             </div>
           ) : signalsQuery.isError ? (
-            <div className="flex flex-col items-start gap-3 rounded-3xl border border-rose-500/25 bg-rose-500/5 p-6 backdrop-blur-xl">
+            <div className="flex flex-col items-start gap-3 rounded-3xl border border-deal-high/25 bg-deal-high/5 p-6 backdrop-blur-xl">
               <div className="flex items-center gap-2">
-                <Loader2 aria-hidden className="h-4 w-4 text-rose-500" />
+                <Loader2 aria-hidden className="h-4 w-4 text-deal-high-text" />
                 <p className="text-footnote font-semibold text-foreground">{t("pulse.loadError", "Could not load live signals")}</p>
               </div>
               <p className="text-caption text-muted-foreground">

@@ -228,7 +228,7 @@ export const ListingCard = memo(function ListingCard({
 
           {conditionLabel && (
             <div className="absolute left-3 top-3 flex items-center gap-1.5">
-              <span className="rounded-full border border-white/10 bg-black/70 px-2.5 py-0.5 text-caption font-semibold tracking-tight text-white backdrop-blur-md">
+              <span className="rounded-full border border-border bg-black/70 px-2.5 py-0.5 text-caption font-semibold tracking-tight text-white backdrop-blur-md">
                 {conditionLabel}
               </span>
             </div>
@@ -242,7 +242,7 @@ export const ListingCard = memo(function ListingCard({
                 className={`pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur-md transition-[background-color,border-color,color,transform] duration-short active:scale-90 motion-reduce:active:scale-100 ${
                   isWatchlisted
                     ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-black/60 text-white/90 border-white/8 hover:text-white hover:bg-black/75"
+                    : "bg-black/60 text-white/90 border-border hover:text-white hover:bg-black/75"
                 }`}
                 aria-label={isWatchlisted ? t("listingCard.removeWatchlist", "Remove from watchlist") : t("listingCard.addWatchlist", "Add to watchlist")}
               >
@@ -256,7 +256,7 @@ export const ListingCard = memo(function ListingCard({
                 className={`pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur-md transition-[background-color,border-color,color,transform] duration-short active:scale-90 motion-reduce:active:scale-100 ${
                   isComparing
                     ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-black/60 text-white/90 border-white/8 hover:text-white hover:bg-black/75"
+                    : "bg-black/60 text-white/90 border-border hover:text-white hover:bg-black/75"
                 }`}
                 aria-label={isComparing ? t("listingCard.removeCompare", "Remove from comparison") : t("listingCard.addCompare", "Add to comparison")}
               >
@@ -306,13 +306,13 @@ export const ListingCard = memo(function ListingCard({
           {(listing.is_active === false || showDropBadge || daysOnMarketLabel || showSites) && (
             <div className="flex flex-wrap gap-1.5">
               {listing.is_active === false && (
-                <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-caption font-semibold text-amber-600 dark:text-amber-400">
+                <span className="inline-flex items-center rounded-full border border-deal-caution/30 bg-deal-caution/10 px-2 py-0.5 text-caption font-semibold text-deal-caution-text">
                   {t("listingCard.archived", "Archived / Past ad")}
                 </span>
               )}
               {showDropBadge && (
                 <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-caption font-semibold text-foreground">
-                  <TrendingDown className="h-3 w-3 text-sky-600 dark:text-sky-400" aria-hidden />
+                  <TrendingDown className="h-3 w-3 text-primary" aria-hidden />
                   {dropPctLabel
                     ? t("listingCard.priceDroppedPct", "Price dropped {pct}%", { pct: dropPctLabel })
                     : t("listingCard.priceDropped", "Price dropped")}
@@ -392,7 +392,7 @@ export const ListingCard = memo(function ListingCard({
             )}
           </div>
 
-          <div className="flex items-center justify-between pt-3.5 border-t border-white/5">
+          <div className="flex items-center justify-between pt-3.5 border-t border-border">
             <div className="min-w-0">
               {listing.district && (
                 <p className="flex items-center gap-1.5 text-caption font-medium text-foreground/80 truncate">

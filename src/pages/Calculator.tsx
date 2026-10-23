@@ -453,7 +453,7 @@ export default function Calculator() {
 
       {(lcResult?.offline || tcoResult?.offline) && (
         <div className="mx-auto max-w-[1320px] px-4 pt-4">
-          <p className="inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-400/10 px-3 py-1 text-caption font-semibold text-emerald-700 dark:text-emerald-200">
+          <p className="inline-flex items-center gap-2 rounded-full border border-deal-good/25 bg-deal-good/10 px-3 py-1 text-caption font-semibold text-deal-good-text">
             {t("calc.offlineBadge", "On-device calculation — server unreachable, same gazette schedules.")}
           </p>
         </div>
@@ -537,11 +537,11 @@ export default function Calculator() {
               className="grid gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]"
             >
               {/* Surcharge countdown — time-boxed gazette moment */}
-              <div className="lg:col-span-2 rounded-2xl border border-amber-500/25 bg-amber-400/[0.06] p-4">
+              <div className="lg:col-span-2 rounded-2xl border border-deal-caution/25 bg-deal-caution/[0.06] p-4">
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                   <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                    <span className="text-caption font-bold text-amber-700 dark:text-amber-300">
+                    <AlertTriangle className="h-4 w-4 text-deal-caution-text shrink-0" />
+                    <span className="text-caption font-bold text-deal-caution-text">
                       {surchargeCountdown.expired
                         ? t("calc.surchargeExpired", "The 50% CID surcharge's gazetted 3-month period has ended")
                         : t("calc.surchargeActive", "50% CID surcharge in force — set to lapse in {days} day(s)", { days: surchargeCountdown.daysLeft })}
@@ -557,7 +557,7 @@ export default function Calculator() {
                       type="button"
                       onClick={toggleSurchargeNotify}
                       aria-pressed={surchargeNotifyOn}
-                      className="inline-flex min-h-[36px] items-center gap-1.5 rounded-2xl border border-amber-500/30 bg-amber-400/10 px-3 py-1.5 text-caption font-bold text-amber-800 transition-colors hover:bg-amber-400/20 dark:text-amber-200"
+                      className="inline-flex min-h-[36px] items-center gap-1.5 rounded-2xl border border-deal-caution/30 bg-deal-caution/10 px-3 py-1.5 text-caption font-bold text-deal-caution-text transition-colors hover:bg-deal-caution/20 dark:text-deal-caution-text"
                     >
                       {surchargeNotifyOn ? (
                         <>
@@ -579,7 +579,7 @@ export default function Calculator() {
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.92 }}
                         transition={tween.short}
-                        className="w-full text-center sm:w-auto sm:text-left sm:ml-auto rounded-full border border-emerald-500/25 bg-emerald-400/10 px-3 py-1.5 text-caption font-bold text-emerald-700 dark:text-emerald-300 num"
+                        className="w-full text-center sm:w-auto sm:text-left sm:ml-auto rounded-full border border-deal-good/25 bg-deal-good/10 px-3 py-1.5 text-caption font-bold text-deal-good-text num"
                       >
                         {t("calc.lapseSavings", "This import lands {amount} cheaper if it lapses", { amount: formatPrice(lcLapseSavings) })}
                       </m.span>
@@ -683,7 +683,7 @@ export default function Calculator() {
                       <label htmlFor="lc-cc" className="text-caption font-medium text-muted-foreground/80">{t("calc.engineCc", "Engine Capacity (CC)")}</label>
                       <Input id="lc-cc" type="number" value={lcEngineCc} onChange={(e) => setLcEngineCc(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
                       {lcFuelType === "hybrid" && lcEngineCc > 1500 && (
-                        <p className="flex items-center gap-1.5 text-caption text-amber-600 dark:text-amber-400 font-semibold mt-1">
+                        <p className="flex items-center gap-1.5 text-caption text-deal-caution-text font-semibold mt-1">
                           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
                           Capacity is above the 1500cc cliff. Excise rate steps up significantly.
                         </p>
@@ -756,7 +756,7 @@ export default function Calculator() {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, transition: { duration: duration.short, ease: ease.accelerate } }}
                             transition={spring.smooth}
-                            className="flex justify-between text-caption text-rose-600 dark:text-rose-400 font-semibold"
+                            className="flex justify-between text-caption text-deal-high-text font-semibold"
                           >
                             <span>{t("calc.luxuryTax", "Luxury Tax (Excess Portion)")}</span>
                             <span className="num">{formatPrice(lcResult.luxury_tax)}</span>
@@ -784,7 +784,7 @@ export default function Calculator() {
                     </motion.div>
 
                     <div className="rounded-2xl bg-surface border border-border p-3 flex gap-2">
-                      <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                      <CheckCircle className="h-4 w-4 text-deal-good-text shrink-0 mt-0.5" />
                       <p className="text-caption leading-relaxed text-muted-foreground font-semibold">{lcResult.notes}</p>
                     </div>
                   </div>
@@ -853,8 +853,8 @@ export default function Calculator() {
                             CBSL caps financing at <span className="font-bold text-foreground">40%</span> for brand-new or unregistered vehicles but{" "}
                             <span className="font-bold text-foreground">60%</span> for registered used (&gt;1yr). For this{" "}
                             <span className="num font-bold text-foreground">{formatPrice(leasePrice)}</span> vehicle: registered used needs{" "}
-                            <span className="num font-bold text-emerald-600 dark:text-emerald-400">{formatPrice(usedDown)}</span> down; new or unregistered needs{" "}
-                            <span className="num font-bold text-rose-600 dark:text-rose-400">{formatPrice(newDown)}</span> — the same cash that would stretch to a{" "}
+                            <span className="num font-bold text-deal-good-text">{formatPrice(usedDown)}</span> down; new or unregistered needs{" "}
+                            <span className="num font-bold text-deal-high-text">{formatPrice(newDown)}</span> — the same cash that would stretch to a{" "}
                             <span className="num font-bold text-foreground">{formatPrice(usedBudgetFromNewDown)}</span> registered used car.
                           </p>
                           <p className="text-caption font-semibold text-muted-foreground">
@@ -1086,10 +1086,10 @@ export default function Calculator() {
 
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   {[
-                    { model: "Suzuki Wagon R", type: "Kei Car / Hybrid", values: ["92%", "85%", "78%"], tone: "text-emerald-600 dark:text-emerald-400", border: "border-emerald-500/25", note: "The gold standard of value retention. Heavy demand for daily urban runs." },
-                    { model: "Honda Vezel Hybrid", type: "Crossover", values: ["82%", "65%", "48%"], tone: "text-amber-600 dark:text-amber-400", border: "border-amber-500/25", note: "Drops heavily after 3 years once the hybrid battery pack warranty expires." },
+                    { model: "Suzuki Wagon R", type: "Kei Car / Hybrid", values: ["92%", "85%", "78%"], tone: "text-deal-good-text", border: "border-deal-good/25", note: "The gold standard of value retention. Heavy demand for daily urban runs." },
+                    { model: "Honda Vezel Hybrid", type: "Crossover", values: ["82%", "65%", "48%"], tone: "text-deal-caution-text", border: "border-deal-caution/25", note: "Drops heavily after 3 years once the hybrid battery pack warranty expires." },
                     { model: "Toyota Land Cruiser Prado", type: "Luxury SUV", values: ["95%", "92%", "88%"], tone: "text-primary", border: "border-primary/25", note: "Prado holds extreme value due to luxury status symbol and low import options." },
-                    { model: "Nissan Leaf EV", type: "Full EV", values: ["60%", "38%", "20%"], tone: "text-rose-600 dark:text-rose-400", border: "border-rose-500/25", note: "Fastest depreciation curve due to battery degradation fears." },
+                    { model: "Nissan Leaf EV", type: "Full EV", values: ["60%", "38%", "20%"], tone: "text-deal-high-text", border: "border-deal-high/25", note: "Fastest depreciation curve due to battery degradation fears." },
                   ].map((curve) => (
                     <div key={curve.model} className={`data-card border ${curve.border} bg-surface p-4 flex flex-col justify-between`}>
                       <div>

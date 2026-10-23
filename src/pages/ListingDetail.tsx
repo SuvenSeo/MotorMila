@@ -399,7 +399,7 @@ export default function ListingDetail() {
             className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-1 text-caption font-semibold text-foreground"
             title={t("listing.priceCutTitle", "Downward price moves since Motormila first saw this ad")}
           >
-            <TrendingDown aria-hidden className="h-3 w-3 text-sky-600 dark:text-sky-400" />
+            <TrendingDown aria-hidden className="h-3 w-3 text-primary" />
             {t("listing.priceCut", "Price cut {n}×", { n: priceCut.cut_count })}
             {priceCut.change_pct !== null && priceCut.change_pct < 0 && <span className="num">({priceCut.change_pct}%)</span>}
           </span>
@@ -527,7 +527,7 @@ export default function ListingDetail() {
                 aria-pressed={watchlisted}
                 aria-label={watchlisted ? t("listing.saved", "Saved ✓") : t("listing.save", "Save")}
                 title={watchlisted ? t("listing.saved", "Saved ✓") : t("listing.save", "Save")}
-                className={`${actionBtn} ${watchlisted ? "!border-rose-500/30 !bg-rose-500/10 !text-rose-600 dark:!text-rose-400" : ""}`}
+                className={`${actionBtn} ${watchlisted ? "!border-deal-high/30 !bg-deal-high/10 !text-deal-high-text dark:!text-deal-high-text" : ""}`}
               >
                 <SaveHeartIcon saved={watchlisted} className="h-4 w-4" />
               </button>
@@ -541,10 +541,10 @@ export default function ListingDetail() {
           <SnapshotModeNotice className="mb-4 max-w-2xl" />
 
           {listing.is_active === false && (
-            <div className="mb-4 flex max-w-2xl items-start gap-2.5 rounded-3xl border border-amber-500/25 bg-amber-400/[0.06] p-3.5">
-              <AlertTriangle aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div className="mb-4 flex max-w-2xl items-start gap-2.5 rounded-3xl border border-deal-caution/25 bg-deal-caution/[0.06] p-3.5">
+              <AlertTriangle aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-deal-caution-text" />
               <div>
-                <p className="text-caption font-bold text-amber-700 dark:text-amber-300">{t("listing.possiblySold", "Possibly sold or delisted")}</p>
+                <p className="text-caption font-bold text-deal-caution-text">{t("listing.possiblySold", "Possibly sold or delisted")}</p>
                 <p className="mt-0.5 text-caption font-medium leading-relaxed text-muted-foreground">
                   This ad has not been seen at {listing.source}
                   {parseFlexibleTime(listing.last_seen_at) !== null ? ` since ${new Date(parseFlexibleTime(listing.last_seen_at)!).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Colombo' })}` : ' recently'}.
@@ -585,7 +585,7 @@ export default function ListingDetail() {
                 />
                 <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 to-transparent" />
                 {/* Source credit for hotlinked photos. Fixed bright blue: sits on a black scrim. */}
-                <span className="pointer-events-none absolute bottom-3 right-3 z-10 flex items-center gap-1 rounded-full border border-white/10 bg-black/60 px-2.5 py-1 text-caption font-semibold text-[#6CB8FF] backdrop-blur-md">
+                <span className="pointer-events-none absolute bottom-3 right-3 z-10 flex items-center gap-1 rounded-full border border-border bg-black/60 px-2.5 py-1 text-caption font-semibold text-[#6CB8FF] backdrop-blur-md">
                   <Database aria-hidden className="h-3 w-3" /> {t("listingImage.credit", "Photo: {source}", { source: attribution.sourceName })}
                 </span>
               </div>

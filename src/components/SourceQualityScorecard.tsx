@@ -16,15 +16,15 @@ function pct(value: number): string {
 }
 
 function metricColor(good: boolean, ok: boolean): string {
-  if (good) return "text-emerald-600 dark:text-emerald-400";
-  if (ok) return "text-amber-600 dark:text-amber-400";
-  return "text-rose-600 dark:text-rose-400";
+  if (good) return "text-deal-good-text";
+  if (ok) return "text-deal-caution-text";
+  return "text-deal-high-text";
 }
 
 function barColor(good: boolean, ok: boolean): string {
-  if (good) return "bg-emerald-500 dark:bg-emerald-400";
-  if (ok) return "bg-amber-500 dark:bg-amber-400";
-  return "bg-rose-500 dark:bg-rose-400";
+  if (good) return "bg-deal-good";
+  if (ok) return "bg-deal-caution";
+  return "bg-deal-high";
 }
 
 function buildMetrics(row: SourceQualityRow): MetricConfig[] {

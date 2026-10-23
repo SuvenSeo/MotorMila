@@ -126,7 +126,7 @@ export function ModerationQueuePanel() {
                   type="button"
                   disabled={approve.isPending || it.status === "published" || it.status === "removed"}
                   onClick={() => approve.mutate(it.id)}
-                  className={cn(actionBtn, "bg-emerald-600 text-white hover:bg-emerald-600/90")}
+                  className={cn(actionBtn, "bg-deal-good text-white hover:bg-deal-good/90")}
                 >
                   <Check className="h-3.5 w-3.5" aria-hidden /> Approve
                 </button>
@@ -275,7 +275,7 @@ export function RemovalRequestsPanel() {
                           if (note === undefined) return;
                           resolve.mutate({ id: r.id, next: "actioned", note });
                         }}
-                        className={cn(actionBtn, "bg-emerald-600 text-white hover:bg-emerald-600/90")}
+                        className={cn(actionBtn, "bg-deal-good text-white hover:bg-deal-good/90")}
                       >
                         <Check className="h-3.5 w-3.5" aria-hidden /> Approve
                       </button>

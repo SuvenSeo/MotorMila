@@ -949,7 +949,7 @@ export default function AdminDashboard() {
                           <td className="py-3 pr-3 text-caption text-muted-foreground">
                             {run.startedAt ? new Date(run.startedAt).toLocaleString() : "—"}
                           </td>
-                          <td className="max-w-[280px] truncate py-3 text-caption text-rose-600">
+                          <td className="max-w-[280px] truncate py-3 text-caption text-deal-high-text">
                             {run.errorMessage || ""}
                           </td>
                         </tr>

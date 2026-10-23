@@ -180,8 +180,8 @@ export default function Settings() {
                           item.mode === "dark"
                             ? "border-border bg-[#0b0f17] text-white"
                             : item.mode === "light"
-                              ? "border-border bg-slate-100 text-slate-900"
-                              : "border-border bg-gradient-to-r from-[#0b0f17] via-[#0b0f17]/80 to-slate-100 text-white",
+                              ? "border-border bg-muted text-foreground"
+                              : "border-border bg-gradient-to-r from-[#0b0f17] via-[#0b0f17]/80 to-border text-white",
                         )}
                         aria-hidden="true"
                       >
@@ -189,7 +189,7 @@ export default function Settings() {
                           <div
                             className={cn(
                               "h-2 w-8 rounded-full",
-                              item.mode === "light" ? "bg-slate-300" : "bg-white/20",
+                              item.mode === "light" ? "bg-secondary" : "bg-foreground/20",
                             )}
                           />
                           <div
@@ -203,13 +203,13 @@ export default function Settings() {
                           <div
                             className={cn(
                               "h-2.5 w-14 rounded-full",
-                              item.mode === "light" ? "bg-slate-400" : "bg-white/30",
+                              item.mode === "light" ? "bg-muted-foreground" : "bg-foreground/30",
                             )}
                           />
                           <div
                             className={cn(
                               "h-1.5 w-10 rounded-full",
-                              item.mode === "light" ? "bg-slate-300" : "bg-white/15",
+                              item.mode === "light" ? "bg-secondary" : "bg-foreground/15",
                             )}
                           />
                         </div>
@@ -358,7 +358,7 @@ export default function Settings() {
                         Fair Market Value (FMV) algorithm trained on Sri Lankan market sales
                       </p>
                     </div>
-                    <span className="rounded-full border border-border bg-card px-2.5 py-1 text-caption font-mono font-bold text-emerald-400">
+                    <span className="rounded-full border border-border bg-card px-2.5 py-1 text-caption font-mono font-bold text-deal-good-text">
                       FMV v2.4
                     </span>
                   </div>
@@ -563,12 +563,12 @@ export default function Settings() {
                 <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-surface/50 px-4 py-3">
                   <div className="flex items-center gap-2.5">
                     <span className="relative flex h-2.5 w-2.5">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-deal-good opacity-75" />
+                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-deal-good" />
                     </span>
                     <span className="text-caption font-bold text-foreground">Market Scrapers & DB</span>
                   </div>
-                  <span className="text-caption font-mono font-semibold text-emerald-400">Operational</span>
+                  <span className="text-caption font-mono font-semibold text-deal-good-text">Operational</span>
                 </div>
 
                 <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-surface/50 px-4 py-3">

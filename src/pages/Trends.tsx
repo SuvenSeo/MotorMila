@@ -50,9 +50,9 @@ function exciseLabelFor(ccMax: number | null): string {
  * variants so the text meets contrast on both themes (bars stay saturated). */
 function bandColor(index: number): { bar: string; badge: string; text: string } {
   const palette = [
-    { bar: "bg-emerald-500", badge: "bg-emerald-500/10 border-emerald-500/25", text: "text-emerald-700 dark:text-emerald-400" },
-    { bar: "bg-amber-500",   badge: "bg-amber-500/10 border-amber-500/25",     text: "text-amber-700 dark:text-amber-400"   },
-    { bar: "bg-rose-500",    badge: "bg-rose-500/10 border-rose-500/25",        text: "text-rose-700 dark:text-rose-400"    },
+    { bar: "bg-deal-good", badge: "bg-deal-good/10 border-deal-good/25", text: "text-deal-good-text" },
+    { bar: "bg-deal-caution",   badge: "bg-deal-caution/10 border-deal-caution/25",     text: "text-deal-caution-text"   },
+    { bar: "bg-deal-high",    badge: "bg-deal-high/10 border-deal-high/25",        text: "text-deal-high-text"    },
   ];
   return palette[Math.min(index, palette.length - 1)];
 }
@@ -404,7 +404,7 @@ function HybridTaxArbitrageSection({ data, loading, error }: HybridTaxArbitrageS
                       {band.label}
                     </span>
                     {isCliffBand && (
-                      <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-caption font-medium text-emerald-700 dark:text-emerald-400">
+                      <span className="rounded-full border border-deal-good/20 bg-deal-good/10 px-1.5 py-0.5 text-caption font-medium text-deal-good-text">
                         {t("trends.taxCliff", "Tax cliff ↓")}
                       </span>
                     )}
@@ -438,7 +438,7 @@ function HybridTaxArbitrageSection({ data, loading, error }: HybridTaxArbitrageS
                     {exciseLabelFor(band.cc_max)}
                   </span>
                   {isCliffBand && (
-                    <span className="ml-2 text-emerald-700 dark:text-emerald-400">
+                    <span className="ml-2 text-deal-good-text">
                       {t("trends.lowestHybridRate", "· lowest hybrid rate")}
                     </span>
                   )}
@@ -450,10 +450,10 @@ function HybridTaxArbitrageSection({ data, loading, error }: HybridTaxArbitrageS
       )}
 
       {/* ── Cliff insight card ── */}
-      <div className="mt-5 rounded-2xl border border-amber-500/20 bg-amber-500/[0.05] p-4">
+      <div className="mt-5 rounded-2xl border border-deal-caution/20 bg-deal-caution/[0.05] p-4">
         <div className="mb-2 flex items-center gap-2">
-          <Zap className="h-4 w-4 text-amber-600 dark:text-amber-400" aria-hidden />
-          <p className="text-caption font-semibold text-amber-700 dark:text-amber-400">
+          <Zap className="h-4 w-4 text-deal-caution-text" aria-hidden />
+          <p className="text-caption font-semibold text-deal-caution-text">
             {t("trends.cliffTitle", "1,500 cc excise cliff")}
           </p>
         </div>
@@ -471,12 +471,12 @@ function HybridTaxArbitrageSection({ data, loading, error }: HybridTaxArbitrageS
             Rs. {cliffInsight.rateAboveCliff.toLocaleString()}/cc
           </span>
           , adding{" "}
-          <span className="font-semibold text-amber-700 dark:text-amber-300 num">
+          <span className="font-semibold text-deal-caution-text num">
             Rs. {cliffInsight.exciseStepUp.toLocaleString()}
           </span>{" "}
           in excise duty crossing one cc. Buyers sourcing ≤ 1,500 cc hybrids
           also save{" "}
-          <span className="font-semibold text-emerald-700 dark:text-emerald-300 num">
+          <span className="font-semibold text-deal-good-text num">
             Rs. {cliffInsight.exciseSavingVsPetrolAtCliff.toLocaleString()}
           </span>{" "}
           in excise versus the equivalent petrol band at this capacity.
@@ -491,7 +491,7 @@ function HybridTaxArbitrageSection({ data, loading, error }: HybridTaxArbitrageS
         <p className="text-caption text-muted-foreground">
           Median prices from live market snapshot · excise rates from the 2025–2026 import tax model.
         </p>
-        <span className="shrink-0 text-caption font-semibold text-amber-700 dark:text-amber-400 num">{t("trends.taxModel", "Tax model")}</span>
+        <span className="shrink-0 text-caption font-semibold text-deal-caution-text num">{t("trends.taxModel", "Tax model")}</span>
       </div>
     </section>
   );

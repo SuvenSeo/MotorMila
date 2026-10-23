@@ -10,7 +10,7 @@ interface DealLadderProps {
 
 const RUNG_TONE = {
   good_deal: {
-    active: "border-emerald-500/35 bg-emerald-500/10 text-emerald-300",
+    active: "border-deal-good/35 bg-deal-good/10 text-deal-good-text",
     idle: "border-border/60 text-muted-foreground",
   },
   fair: {
@@ -18,7 +18,7 @@ const RUNG_TONE = {
     idle: "border-border/60 text-muted-foreground",
   },
   overpriced: {
-    active: "border-rose-500/35 bg-rose-500/10 text-rose-300",
+    active: "border-deal-high/35 bg-deal-high/10 text-deal-high-text",
     idle: "border-border/60 text-muted-foreground",
   },
 } as const;
@@ -50,9 +50,9 @@ export function DealLadder({ askingPrice, marketMedianLkr, className }: DealLadd
         <span
           className={cn(
             "font-semibold",
-            ladder.band === "good_deal" && "text-emerald-400",
+            ladder.band === "good_deal" && "text-deal-good-text",
             ladder.band === "fair" && "text-primary",
-            ladder.band === "overpriced" && "text-rose-400",
+            ladder.band === "overpriced" && "text-deal-high-text",
           )}
         >
           {ladder.bandLabel}

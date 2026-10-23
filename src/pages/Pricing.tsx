@@ -91,7 +91,7 @@ export function TrialCta({ className, label }: { className?: string; label?: str
 
   if (done) {
     return (
-      <p className="inline-flex h-11 items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-6 text-footnote font-semibold text-emerald-700 dark:text-emerald-400">
+      <p className="inline-flex h-11 items-center gap-2 rounded-full border border-deal-good/25 bg-deal-good/10 px-6 text-footnote font-semibold text-deal-good-text">
         <Check aria-hidden className="h-4 w-4" />
         {t("shell.pricing.done", "Done — we'll email you when Pro launches.")}
       </p>
@@ -317,7 +317,7 @@ function PayherePanel({
       <p className="section-eyebrow mb-2 inline-flex items-center gap-2">
         <CreditCard aria-hidden className="h-3.5 w-3.5" />
         Dealer {tier?.name} · {formatLkr(amount)} / {period === "yearly" ? "year" : "month"}
-        {sandbox ? <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-caption text-amber-700 dark:text-amber-400">Test mode</span> : null}
+        {sandbox ? <span className="rounded-full border border-deal-caution/30 bg-deal-caution/10 px-2 py-0.5 text-caption text-deal-caution-text">Test mode</span> : null}
       </p>
       <p className="text-footnote text-foreground/85">
         You'll be sent to PayHere to pay by card, Genie, FriMi or eZcash. MotorMila never sees your card details.

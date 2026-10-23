@@ -70,7 +70,7 @@ function ProvinceCell({
         {point.province}
       </p>
       {/* Cell background is an always-dark data-viz gradient (not a theme surface), so text stays fixed-light regardless of theme */}
-      <p className="mt-2 num text-callout font-semibold tracking-tight text-emerald-300">
+      <p className="mt-2 num text-callout font-semibold tracking-tight text-deal-good-text">
         {formatVelocityPct(point.velocity_score)}
       </p>
       <p className="mt-1 text-caption text-muted-foreground num">
@@ -158,7 +158,7 @@ export const ProvinceVelocityStrip = memo(function ProvinceVelocityStrip({
         {hottest ? (
           <p className="text-caption text-muted-foreground">
             Hottest:{" "}
-            <span className="font-semibold text-emerald-600 dark:text-emerald-400">{hottest.province}</span>
+            <span className="font-semibold text-deal-good-text">{hottest.province}</span>
             <span className="num"> · {formatVelocityPct(hottest.velocity_score)}</span>
           </p>
         ) : null}

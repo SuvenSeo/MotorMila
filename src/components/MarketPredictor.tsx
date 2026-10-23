@@ -21,15 +21,15 @@ function clamp(value: number, min: number, max: number) {
 
 function pickSentimentBand(score: number): SentimentBand {
   if (score >= 72) {
-    return { label: "Strong Buy", toneClass: "text-emerald-600 dark:text-emerald-400", dotClass: "bg-emerald-600 dark:bg-emerald-400", icon: ArrowUpRight, text: "Recent median movement and limited fresh supply suggest higher near-term asking pressure." };
+    return { label: "Strong Buy", toneClass: "text-deal-good-text", dotClass: "bg-deal-good", icon: ArrowUpRight, text: "Recent median movement and limited fresh supply suggest higher near-term asking pressure." };
   }
   if (score >= 56) {
-    return { label: "Buy", toneClass: "text-emerald-600 dark:text-emerald-400", dotClass: "bg-emerald-600 dark:bg-emerald-400", icon: ArrowUpRight, text: "Momentum is positive, but sample depth is still important before making an offer." };
+    return { label: "Buy", toneClass: "text-deal-good-text", dotClass: "bg-deal-good", icon: ArrowUpRight, text: "Momentum is positive, but sample depth is still important before making an offer." };
   }
   if (score >= 40) {
     return { label: "Wait 3 Months", toneClass: "text-primary", dotClass: "bg-primary", icon: ArrowRight, text: "The signal is mixed, so compare fresh listings before moving quickly." };
   }
-  return { label: "Sell", toneClass: "text-rose-600 dark:text-rose-400", dotClass: "bg-rose-600 dark:bg-rose-400", icon: ArrowDownRight, text: "Asking prices look soft versus the current listing flow." };
+  return { label: "Sell", toneClass: "text-deal-high-text", dotClass: "bg-deal-high", icon: ArrowDownRight, text: "Asking prices look soft versus the current listing flow." };
 }
 
 export const MarketPredictor = memo(function MarketPredictor({ trendData, listingsToday = 0 }: MarketPredictorProps) {

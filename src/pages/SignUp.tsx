@@ -260,7 +260,7 @@ export default function SignUp() {
             )}
 
             {inviteError && (
-              <div className="mt-7 rounded-2xl border border-rose-500/20 bg-rose-500/5 px-4 py-4 text-footnote font-medium text-rose-600 dark:text-rose-300">
+              <div className="mt-7 rounded-2xl border border-deal-high/20 bg-deal-high/5 px-4 py-4 text-footnote font-medium text-deal-high-text">
                 {inviteError}
                 <p className="mt-3 text-muted-foreground">
                   {t("signup.alreadyRegistered", "Already registered?")}{" "}
@@ -283,12 +283,12 @@ export default function SignUp() {
                     onChange={(event) => setSelfServeEmail(event.target.value)}
                     className="h-12 rounded-full bg-surface"
                   />
-                  {selfServeEmailError && <p className="text-caption font-semibold text-rose-600">{selfServeEmailError}</p>}
+                  {selfServeEmailError && <p className="text-caption font-semibold text-deal-high-text">{selfServeEmailError}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="self-name" className="field-label">{t("signup.fullName", "Full name")}</Label>
                   <Input id="self-name" autoComplete="name" {...register("name")} className="h-12 rounded-full bg-surface" />
-                  {errors.name && <p className="text-caption font-semibold text-rose-600">{errors.name.message}</p>}
+                  {errors.name && <p className="text-caption font-semibold text-deal-high-text">{errors.name.message}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="self-password" className="field-label">{t("signup.password", "Password")}</Label>
@@ -309,15 +309,15 @@ export default function SignUp() {
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  {errors.password && <p className="text-caption font-semibold text-rose-600">{errors.password.message}</p>}
+                  {errors.password && <p className="text-caption font-semibold text-deal-high-text">{errors.password.message}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="self-confirm" className="field-label">{t("signup.confirmPassword", "Confirm password")}</Label>
                   <Input id="self-confirm" type="password" autoComplete="new-password" {...register("confirm")} className="h-12 rounded-full bg-surface" />
-                  {errors.confirm && <p className="text-caption font-semibold text-rose-600">{errors.confirm.message}</p>}
+                  {errors.confirm && <p className="text-caption font-semibold text-deal-high-text">{errors.confirm.message}</p>}
                 </div>
                 {serverError && (
-                  <p className="rounded-xl border border-rose-500/20 bg-rose-500/5 px-3.5 py-2.5 text-caption font-medium text-rose-600">
+                  <p className="rounded-xl border border-deal-high/20 bg-deal-high/5 px-3.5 py-2.5 text-caption font-medium text-deal-high-text">
                     {serverError}
                   </p>
                 )}
@@ -369,7 +369,7 @@ export default function SignUp() {
                   <div className="space-y-1.5">
                     <Label htmlFor="name" className="field-label">{t("signup.fullName", "Full name")}</Label>
                     <Input id="name" autoComplete="name" {...register("name")} className="h-12 rounded-full bg-surface" />
-                    {errors.name && <p className="text-caption font-semibold text-rose-600">{errors.name.message}</p>}
+                    {errors.name && <p className="text-caption font-semibold text-deal-high-text">{errors.name.message}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="password" className="field-label">{t("signup.password", "Password")}</Label>
@@ -390,15 +390,15 @@ export default function SignUp() {
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
-                    {errors.password && <p className="text-caption font-semibold text-rose-600">{errors.password.message}</p>}
+                    {errors.password && <p className="text-caption font-semibold text-deal-high-text">{errors.password.message}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="confirm" className="field-label">{t("signup.confirmPassword", "Confirm password")}</Label>
                     <Input id="confirm" type="password" autoComplete="new-password" {...register("confirm")} className="h-12 rounded-full bg-surface" />
-                    {errors.confirm && <p className="text-caption font-semibold text-rose-600">{errors.confirm.message}</p>}
+                    {errors.confirm && <p className="text-caption font-semibold text-deal-high-text">{errors.confirm.message}</p>}
                   </div>
                   {serverError && (
-                    <p className="rounded-xl border border-rose-500/20 bg-rose-500/5 px-3.5 py-2.5 text-caption font-medium text-rose-600">
+                    <p className="rounded-xl border border-deal-high/20 bg-deal-high/5 px-3.5 py-2.5 text-caption font-medium text-deal-high-text">
                       {serverError}
                     </p>
                   )}

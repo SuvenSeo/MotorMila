@@ -80,7 +80,7 @@ export function SellerFairAskCard({
       <button
         type="button"
         onClick={handleCopyWhatsApp}
-        className="mt-4 flex h-9 w-full items-center justify-center gap-1.5 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-3 text-caption font-semibold text-emerald-600 transition-colors hover:bg-emerald-500/15 dark:text-emerald-400"
+        className="mt-4 flex h-9 w-full items-center justify-center gap-1.5 rounded-2xl border border-deal-good/25 bg-deal-good/10 px-3 text-caption font-semibold text-deal-good-text transition-colors hover:bg-deal-good/15 dark:text-deal-good-text"
       >
         {copied ? (
           <>

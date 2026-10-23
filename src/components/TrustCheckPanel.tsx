@@ -9,10 +9,10 @@ const DMT_VEHICLE_INFO_URL = "https://eservices.motortraffic.gov.lk/VehicleInfo/
 const CUSTOMS_VERIFY_URL = "https://services.customs.gov.lk/vehicles";
 
 const LEVEL_STYLE: Record<SignalLevel, { icon: typeof Info; tone: string; label: string }> = {
-  high: { icon: ShieldAlert, tone: "text-rose-700 dark:text-rose-300 bg-rose-500/10 border-rose-500/25", label: "Check carefully" },
-  medium: { icon: AlertTriangle, tone: "text-amber-800 dark:text-amber-300 bg-amber-400/10 border-amber-500/25", label: "Worth checking" },
+  high: { icon: ShieldAlert, tone: "text-deal-high-text bg-deal-high/10 border-deal-high/25", label: "Check carefully" },
+  medium: { icon: AlertTriangle, tone: "text-deal-caution-text bg-deal-caution/10 border-deal-caution/25", label: "Worth checking" },
   info: { icon: Info, tone: "text-foreground bg-muted/60 border-border", label: "Good to know" },
-  ok: { icon: CheckCircle2, tone: "text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border-emerald-500/25", label: "Looks normal" },
+  ok: { icon: CheckCircle2, tone: "text-deal-good-text bg-deal-good/10 border-deal-good/25", label: "Looks normal" },
 };
 
 /**

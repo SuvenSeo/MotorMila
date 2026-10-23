@@ -88,11 +88,11 @@ export function ListingStickyBar({ priceLkr, badge, href, sourceName, listingId,
             {compactBadge ? (
               <DealBadge badge={compactBadge} tone="soft" className="mt-0.5 max-w-full [&>span]:truncate" />
             ) : badge.kind === "verify" ? (
-              <p className="mt-0.5 truncate text-caption font-semibold text-amber-700 dark:text-amber-300">
+              <p className="mt-0.5 truncate text-caption font-semibold text-deal-caution-text">
                 {t("listing.sticky.verify", "Unusually low — verify first")}
               </p>
             ) : badge.kind === "lease" ? (
-              <p className="mt-0.5 truncate text-caption font-semibold text-sky-700 dark:text-sky-300">
+              <p className="mt-0.5 truncate text-caption font-semibold text-primary">
                 {t("listing.sticky.lease", "Lease takeover — not full price")}
               </p>
             ) : null}

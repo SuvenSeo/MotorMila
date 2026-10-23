@@ -15,8 +15,8 @@ const FLAG_ICON: Record<string, typeof AlertTriangle> = {
 };
 
 function flagTone(severity: string): string {
-  if (severity === "high") return "border-rose-500/25 bg-rose-500/10 text-rose-600 dark:text-rose-300";
-  if (severity === "medium") return "border-amber-400/25 bg-amber-400/10 text-amber-600 dark:text-amber-300";
+  if (severity === "high") return "border-deal-high/25 bg-deal-high/10 text-deal-high-text";
+  if (severity === "medium") return "border-deal-caution/25 bg-deal-caution/10 text-deal-caution-text";
   return "border-border bg-surface text-muted-foreground";
 }
 
@@ -95,7 +95,7 @@ export function ListingHistoryReport({ listingId }: { listingId: number | string
           <p className="mt-1 text-caption font-bold text-foreground num">
             {report.price_cuts}
             {report.total_change_pct !== null && report.total_change_pct < 0 && (
-              <span className="ml-1 text-emerald-600 dark:text-emerald-400">({report.total_change_pct}%)</span>
+              <span className="ml-1 text-deal-good-text">({report.total_change_pct}%)</span>
             )}
           </p>
         </div>

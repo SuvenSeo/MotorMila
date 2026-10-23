@@ -917,7 +917,7 @@ export default function ProDashboard() {
             <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-caption font-bold text-primary-bright">
               <Crown className="h-3 w-3" /> {user?.plan || "pro"}
             </span>
-            <button type="button" onClick={handleLogout} className="inline-flex h-8 items-center gap-1.5 rounded-2xl border border-border bg-surface px-2.5 text-caption font-bold text-muted-foreground transition-ui hover:border-rose-500/25 hover:text-rose-600 dark:hover:text-rose-400">
+            <button type="button" onClick={handleLogout} className="inline-flex h-8 items-center gap-1.5 rounded-2xl border border-border bg-surface px-2.5 text-caption font-bold text-muted-foreground transition-ui hover:border-deal-high/25 hover:text-deal-high-text dark:hover:text-deal-high-text">
               <LogOut className="h-3 w-3" /> Sign out
             </button>
           </div>
@@ -952,7 +952,7 @@ export default function ProDashboard() {
         </motion.header>
 
         {error && (
-          <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-footnote font-bold text-rose-700 dark:text-rose-300">
+          <div className="rounded-xl border border-deal-high/20 bg-deal-high/10 px-4 py-3 text-footnote font-bold text-deal-high-text">
             {error}
           </div>
         )}
@@ -1345,10 +1345,10 @@ export default function ProDashboard() {
             {/* Import-era depreciation cohort split */}
             <SectionTitle eyebrow="Import-era market" title="Pre-freeze vs post-freeze cohorts">
               <div className="flex items-center gap-3">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-caption font-semibold text-amber-600 dark:text-amber-400">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-deal-caution/20 bg-deal-caution/10 px-2.5 py-1 text-caption font-semibold text-deal-caution-text">
                   Pre-freeze ≤2024
                 </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/20 bg-sky-500/10 px-2.5 py-1 text-caption font-semibold text-sky-600 dark:text-sky-400">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-caption font-semibold text-primary">
                   Post-freeze ≥2025
                 </span>
               </div>
@@ -1422,7 +1422,7 @@ export default function ProDashboard() {
                             <td className="px-4 py-2.5 text-foreground num">{preMed !== null ? fmtMoney(preMed) : "—"}</td>
                             <td className="px-4 py-2.5 text-muted-foreground num">{row.post_freeze.count.toLocaleString()}</td>
                             <td className="px-4 py-2.5 text-foreground num">{postMed !== null ? fmtMoney(postMed) : "—"}</td>
-                            <td className={`px-4 py-2.5 font-bold num ${premium === null ? "text-muted-foreground" : premium >= 0 ? "text-sky-600 dark:text-sky-400" : "text-amber-600 dark:text-amber-400"}`}>
+                            <td className={`px-4 py-2.5 font-bold num ${premium === null ? "text-muted-foreground" : premium >= 0 ? "text-primary" : "text-deal-caution-text"}`}>
                               {premium !== null ? `${premium >= 0 ? "+" : ""}${premium.toFixed(1)}%` : "—"}
                             </td>
                           </tr>

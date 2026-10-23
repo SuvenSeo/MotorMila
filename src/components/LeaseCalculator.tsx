@@ -102,7 +102,7 @@ export function LeaseCalculator({
       </div>
 
       {exceedsLtv ? (
-        <p className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-caption text-amber-200/90">
+        <p className="rounded-2xl border border-deal-caution/20 bg-deal-caution/5 px-3 py-2 text-caption text-deal-caution-text/90">
           Financed share exceeds typical CBSL LTV for this class. Raise down payment to at least{" "}
           {ltvMinDown}% (about {formatPrice(price * (ltvMinDown / 100))}) for a realistic cash gap.
         </p>

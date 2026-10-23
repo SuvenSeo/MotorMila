@@ -265,10 +265,10 @@ export default function MobileApp() {
                 <Smartphone className="h-3.5 w-3.5" aria-hidden />
                 {t("mobile.eyebrow", "Motormila Mobile")}
               </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1.5 text-caption font-semibold text-emerald-200">
+              <span className="inline-flex items-center gap-2 rounded-full border border-deal-good/30 bg-deal-good/10 px-3 py-1.5 text-caption font-semibold text-deal-good-text">
                 <span aria-hidden className="relative inline-flex h-1.5 w-1.5">
-                  <span className="absolute inset-0 animate-ping rounded-full bg-emerald-300/70" />
-                  <span className="relative h-1.5 w-1.5 rounded-full bg-emerald-300" />
+                  <span className="absolute inset-0 animate-ping rounded-full bg-deal-good/70" />
+                  <span className="relative h-1.5 w-1.5 rounded-full bg-deal-good" />
                 </span>
                 {t("mobile.availableNow", "v{version} · Available now", { version: APK_VERSION })}
               </span>
@@ -307,13 +307,13 @@ export default function MobileApp() {
 
             <motion.div variants={revealItem} className="mt-8 max-w-md">
               {joined ? (
-                <div className="flex items-start gap-3 rounded-2xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-3.5">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden />
+                <div className="flex items-start gap-3 rounded-2xl border border-deal-good/25 bg-deal-good/10 px-4 py-3.5">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-deal-good-text" aria-hidden />
                   <div>
-                    <p className="text-footnote font-semibold text-emerald-100">
+                    <p className="text-footnote font-semibold text-deal-good-text">
                       {t("mobile.notifyDoneTitle", "You're on the launch list")}
                     </p>
-                    <p className="mt-0.5 text-caption leading-relaxed text-emerald-100/75">
+                    <p className="mt-0.5 text-caption leading-relaxed text-deal-good-text/75">
                       {t(
                         "mobile.notifyDoneBody",
                         "We'll email {email} the moment the APK drops — beta invites go out first.",
@@ -334,7 +334,7 @@ export default function MobileApp() {
                       onChange={(event) => setEmail(event.target.value)}
                       placeholder={t("mobile.notifyPlaceholder", "you@email.lk")}
                       aria-label={t("mobile.notifyEmail", "Email address")}
-                      className="h-12 flex-1 rounded-full border-white/15 bg-black/40 text-footnote text-white placeholder:text-white/35 focus:border-[#3D94FF]/60 focus:ring-1 focus:ring-[#3D94FF]/35"
+                      className="h-12 flex-1 rounded-full border-border bg-black/40 text-footnote text-white placeholder:text-white/35 focus:border-[#3D94FF]/60 focus:ring-1 focus:ring-[#3D94FF]/35"
                     />
                     <motion.button
                       type="submit"
@@ -346,7 +346,7 @@ export default function MobileApp() {
                       {t("mobile.notifyCta", "Notify me")}
                     </motion.button>
                   </div>
-                  {error && <p className="text-caption font-medium text-rose-300">{error}</p>}
+                  {error && <p className="text-caption font-medium text-deal-high-text">{error}</p>}
                   <p className="text-caption text-white/40">
                     {t("mobile.notifyFinePrint", "One email at launch. No marketing lists, unsubscribe any time.")}
                   </p>
@@ -373,8 +373,8 @@ export default function MobileApp() {
           {/* Phone mock */}
           <motion.div variants={revealItem} className="relative mx-auto w-full max-w-[330px]">
             <div aria-hidden className="absolute -inset-10 rounded-full bg-[radial-gradient(circle,rgba(10,122,255,0.24),transparent_68%)] blur-[80px]" />
-            <div className="relative rounded-[2.6rem] border border-white/15 bg-[#0a0f19] p-3 shadow-[0_40px_120px_-40px_rgba(0,0,0,0.95)]">
-              <div className="relative overflow-hidden rounded-[2.1rem] border border-white/10 bg-[#070b13]">
+            <div className="relative rounded-[2.6rem] border border-border bg-[#0a0f19] p-3 shadow-[0_40px_120px_-40px_rgba(0,0,0,0.95)]">
+              <div className="relative overflow-hidden rounded-[2.1rem] border border-border bg-[#070b13]">
                 <div className="flex items-center justify-between px-5 pt-4 text-caption font-medium text-white/45">
                   <span>9:41</span>
                   <span className="h-4 w-16 rounded-full bg-black/70" />
@@ -388,14 +388,14 @@ export default function MobileApp() {
                     Toyota Aqua S
                   </p>
                   <p className="mt-1 text-caption text-white/50">2017 · Colombo · Petrol hybrid</p>
-                  <div className="mt-4 flex items-end justify-between rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3">
+                  <div className="mt-4 flex items-end justify-between rounded-2xl border border-border bg-foreground/[0.045] px-4 py-3">
                     <div>
                       <p className="text-caption uppercase tracking-caps text-white/40">
                         {t("mobile.mockAsk", "Asking")}
                       </p>
                       <p className="mt-1 text-callout font-semibold text-white">Rs 8,450,000</p>
                     </div>
-                    <span className="rounded-full border border-emerald-400/30 bg-emerald-400/12 px-2.5 py-1 text-caption font-bold text-emerald-300">
+                    <span className="rounded-full border border-deal-good/30 bg-deal-good/12 px-2.5 py-1 text-caption font-bold text-deal-good-text">
                       {t("mobile.mockScore", "9.1 deal")}
                     </span>
                   </div>
@@ -405,15 +405,15 @@ export default function MobileApp() {
                       t("mobile.mockRow2", "Cut 3.5% · 4 days ago"),
                       t("mobile.mockRow3", "Saved to watchlist"),
                     ].map((row) => (
-                      <div key={row} className="flex items-center gap-2.5 rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-2">
+                      <div key={row} className="flex items-center gap-2.5 rounded-xl border border-border bg-foreground/[0.03] px-3 py-2">
                         <Sparkles className="h-3 w-3 shrink-0 text-[#3D94FF]" aria-hidden />
                         <span className="text-caption text-white/60">{row}</span>
                       </div>
                     ))}
                   </div>
-                  <div className="mt-4 flex items-center gap-2 rounded-full border border-amber-400/25 bg-amber-400/10 px-3.5 py-2.5">
-                    <Camera className="h-3.5 w-3.5 shrink-0 text-amber-200" aria-hidden />
-                    <span className="text-caption font-medium text-amber-100">
+                  <div className="mt-4 flex items-center gap-2 rounded-full border border-deal-caution/25 bg-deal-caution/10 px-3.5 py-2.5">
+                    <Camera className="h-3.5 w-3.5 shrink-0 text-deal-caution-text" aria-hidden />
+                    <span className="text-caption font-medium text-deal-caution-text">
                       {t("mobile.mockScan", "Scan a plate to pull the record")}
                     </span>
                   </div>
@@ -431,7 +431,7 @@ export default function MobileApp() {
       </section>
 
       {/* ── Features ─────────────────────────────────────────────── */}
-      <RevealSection className="relative border-t border-white/[0.08] px-5 py-20 sm:px-8">
+      <RevealSection className="relative border-t border-border px-5 py-20 sm:px-8">
         <div className="mx-auto w-full max-w-[1180px]">
           <div className="max-w-2xl">
             <p className="text-caption font-bold uppercase tracking-caps text-[#3D94FF]">
@@ -447,7 +447,7 @@ export default function MobileApp() {
               return (
                 <div
                   key={feature.titleKey}
-                  className="group rounded-3xl border border-white/[0.09] bg-white/[0.035] p-5 transition-colors duration-medium hover:border-[#3D94FF]/35 hover:bg-white/[0.055]"
+                  className="group rounded-3xl border border-border bg-foreground/[0.035] p-5 transition-colors duration-medium hover:border-[#3D94FF]/35 hover:bg-foreground/[0.055]"
                 >
                   <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-[#3D94FF]/25 bg-[#0A7AFF]/12">
                     <Icon className="h-4 w-4 text-[#3D94FF]" />
@@ -462,7 +462,7 @@ export default function MobileApp() {
       </RevealSection>
 
       {/* ── Roadmap ──────────────────────────────────────────────── */}
-      <RevealSection className="relative border-t border-white/[0.08] px-5 py-20 sm:px-8">
+      <RevealSection className="relative border-t border-border px-5 py-20 sm:px-8">
         <div className="mx-auto w-full max-w-[1180px]">
           <p className="text-caption font-bold uppercase tracking-caps text-[#3D94FF]">
             {t("mobile.roadmapEyebrow", "Release roadmap")}
@@ -473,8 +473,8 @@ export default function MobileApp() {
 
           <ol className="mt-12 grid gap-4 lg:grid-cols-4">
             {ROADMAP.map((step, index) => (
-              <li key={step.key} className="relative rounded-3xl border border-white/[0.09] bg-white/[0.035] p-5">
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-black/30 px-2.5 py-1 text-caption font-bold uppercase tracking-caps text-white/55">
+              <li key={step.key} className="relative rounded-3xl border border-border bg-foreground/[0.035] p-5">
+                <span className="inline-flex items-center gap-2 rounded-full border border-border bg-black/30 px-2.5 py-1 text-caption font-bold uppercase tracking-caps text-white/55">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#3D94FF]" />
                   {t(step.labelKey, step.label)}
                 </span>
@@ -489,10 +489,10 @@ export default function MobileApp() {
             ))}
           </ol>
 
-          <div className="mt-8 rounded-3xl border border-emerald-400/20 bg-emerald-400/[0.06] px-5 py-5">
+          <div className="mt-8 rounded-3xl border border-deal-good/20 bg-deal-good/[0.06] px-5 py-5">
             <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-emerald-400/25 bg-emerald-400/12">
-                <Download className="h-4 w-4 text-emerald-300" aria-hidden />
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-deal-good/25 bg-deal-good/12">
+                <Download className="h-4 w-4 text-deal-good-text" aria-hidden />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-body font-semibold text-white">
@@ -514,13 +514,13 @@ export default function MobileApp() {
             <button
               type="button"
               onClick={copyChecksum}
-              className="mt-4 flex w-full items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-3.5 py-2.5 text-left transition-colors hover:border-[#3D94FF]/40"
+              className="mt-4 flex w-full items-center gap-2 rounded-xl border border-border bg-black/30 px-3.5 py-2.5 text-left transition-colors hover:border-[#3D94FF]/40"
               aria-label={t("mobile.copyChecksum", "Copy SHA-256 checksum")}
             >
               <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-[#3D94FF]" aria-hidden />
               <code className="min-w-0 flex-1 truncate font-mono text-caption text-white/60">{APK_SHA256}</code>
               {copied ? (
-                <Check className="h-3.5 w-3.5 shrink-0 text-emerald-300" aria-hidden />
+                <Check className="h-3.5 w-3.5 shrink-0 text-deal-good-text" aria-hidden />
               ) : (
                 <Copy className="h-3.5 w-3.5 shrink-0 text-white/40" aria-hidden />
               )}
@@ -536,7 +536,7 @@ export default function MobileApp() {
       </RevealSection>
 
       {/* ── FAQ ──────────────────────────────────────────────────── */}
-      <RevealSection className="relative border-t border-white/[0.08] px-5 py-20 sm:px-8">
+      <RevealSection className="relative border-t border-border px-5 py-20 sm:px-8">
         <div className="mx-auto grid w-full max-w-[1180px] gap-10 lg:grid-cols-[0.85fr_1.15fr]">
           <div>
             <p className="text-caption font-bold uppercase tracking-caps text-[#3D94FF]">
@@ -552,7 +552,7 @@ export default function MobileApp() {
               )}
             </p>
           </div>
-          <div className="divide-y divide-white/[0.08] overflow-hidden rounded-3xl border border-white/[0.09] bg-white/[0.03]">
+          <div className="divide-y divide-border overflow-hidden rounded-3xl border border-border bg-foreground/[0.03]">
             {FAQ.map((item) => (
               <div key={item.key} className="px-5 py-5">
                 <p className="text-footnote font-semibold text-white">{t(item.qKey, item.q)}</p>
@@ -564,8 +564,8 @@ export default function MobileApp() {
       </RevealSection>
 
       {/* ── Footer CTA ───────────────────────────────────────────── */}
-      <section className="relative border-t border-white/[0.08] px-5 py-16 sm:px-8">
-        <div className="mx-auto flex w-full max-w-[1180px] flex-col items-start justify-between gap-6 rounded-[2.5rem] border border-white/[0.1] bg-[radial-gradient(ellipse_at_top_left,rgba(10,122,255,0.16),transparent_60%)] px-6 py-10 sm:flex-row sm:items-center sm:px-10">
+      <section className="relative border-t border-border px-5 py-16 sm:px-8">
+        <div className="mx-auto flex w-full max-w-[1180px] flex-col items-start justify-between gap-6 rounded-[2.5rem] border border-border bg-[radial-gradient(ellipse_at_top_left,rgba(10,122,255,0.16),transparent_60%)] px-6 py-10 sm:flex-row sm:items-center sm:px-10">
           <div>
             <p className="font-display text-title2 font-semibold tracking-tight text-white">
               {t("mobile.ctaTitle", "The APK has landed.")}
@@ -586,7 +586,7 @@ export default function MobileApp() {
             </motion.a>
             <PrefetchLink
               to="/"
-              className="inline-flex h-11 items-center rounded-full border border-white/15 px-5 text-footnote font-semibold text-white/80 no-underline transition-colors hover:border-[#3D94FF]/45 hover:text-white"
+              className="inline-flex h-11 items-center rounded-full border border-border px-5 text-footnote font-semibold text-white/80 no-underline transition-colors hover:border-[#3D94FF]/45 hover:text-white"
             >
               {t("mobile.ctaMarket", "Open the market")}
             </PrefetchLink>

@@ -24,10 +24,10 @@ function HybridTaxAdvantageCallout({ engineCapacity, fuelType }: { engineCapacit
   const atCliff = isAtHybridExciseCliff(engineCapacity);
 
   return (
-    <div className="flex gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.06] p-3">
-      <Leaf className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" aria-hidden="true" />
+    <div className="flex gap-2 rounded-2xl border border-deal-good/20 bg-deal-good/[0.06] p-3">
+      <Leaf className="mt-0.5 h-3.5 w-3.5 shrink-0 text-deal-good-text" aria-hidden="true" />
       <div className="min-w-0 space-y-1.5">
-        <p className="text-caption font-semibold text-emerald-300">Hybrid tax advantage</p>
+        <p className="text-caption font-semibold text-deal-good-text">Hybrid tax advantage</p>
         <p className="text-caption leading-relaxed text-muted-foreground">
           Hybrid excise is charged per cm³ in capacity bands. At{" "}
           <span className="num font-medium text-foreground">{insight.cliffCc.toLocaleString()} cc</span> the rate is Rs.{" "}
@@ -49,7 +49,7 @@ function HybridTaxAdvantageCallout({ engineCapacity, fuelType }: { engineCapacit
         {!onCalculator && (
           <Link
             to={`/calculator?tab=landed-cost&fuel=${fuelType}&cc=${engineCapacity}`}
-            className="inline-flex items-center gap-1 text-caption font-medium text-emerald-300 no-underline transition-colors hover:text-emerald-200"
+            className="inline-flex items-center gap-1 text-caption font-medium text-deal-good-text no-underline transition-colors hover:text-deal-good-text"
           >
             Model import duty in calculator
             <ArrowRight className="h-3 w-3" aria-hidden="true" />

@@ -120,7 +120,7 @@ export function SimilarCarsStrip({ listings, fullAccess, title }: SimilarCarsStr
                       </p>
                       {badge.kind !== "none" && badge.kind !== "lease" && <DealBadge badge={badge} tone="soft" />}
                       {badge.kind === "lease" && (
-                        <p className="text-caption font-semibold text-sky-700 dark:text-sky-300">{t("listing.sticky.lease", "Lease takeover — not full price")}</p>
+                        <p className="text-caption font-semibold text-primary">{t("listing.sticky.lease", "Lease takeover — not full price")}</p>
                       )}
                     </div>
                   </Link>

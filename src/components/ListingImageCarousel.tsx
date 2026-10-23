@@ -139,7 +139,7 @@ export function ListingImageCarousel({
     });
 
   const arrowClass =
-    "pointer-events-auto absolute top-1/2 z-30 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/55 text-white opacity-0 backdrop-blur-md transition-opacity hover:bg-black/80 focus-visible:opacity-100 group-hover:opacity-100 max-sm:opacity-100";
+    "pointer-events-auto absolute top-1/2 z-30 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-black/55 text-white opacity-0 backdrop-blur-md transition-opacity hover:bg-black/80 focus-visible:opacity-100 group-hover:opacity-100 max-sm:opacity-100";
 
   return (
     <div
@@ -219,7 +219,7 @@ export function ListingImageCarousel({
               <ChevronRight aria-hidden className="h-4 w-4" />
             </button>
             {/* Top-centre: bottom corners carry price / deal / source overlays. */}
-            <span className="pointer-events-none absolute left-1/2 top-2.5 z-30 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/10 bg-black/60 px-2 py-0.5 text-caption font-semibold tabular-nums text-white backdrop-blur-md">
+            <span className="pointer-events-none absolute left-1/2 top-2.5 z-30 flex -translate-x-1/2 items-center gap-1 rounded-full border border-border bg-black/60 px-2 py-0.5 text-caption font-semibold tabular-nums text-white backdrop-blur-md">
               <Camera aria-hidden className="h-3 w-3" />
               {index + 1}/{count}
             </span>
@@ -232,7 +232,7 @@ export function ListingImageCarousel({
             {index < 8 && (
               <m.span
                 aria-hidden
-                className="pointer-events-none absolute left-0 top-1/2 h-1.5 w-1.5 -mt-[3px] rounded-full bg-white shadow-[0_0_0_1.5px_rgba(255,255,255,0.35)]"
+                className="pointer-events-none absolute left-0 top-1/2 h-1.5 w-1.5 -mt-[3px] rounded-full bg-foreground shadow-[0_0_0_1.5px_rgba(255,255,255,0.35)]"
                 initial={false}
                 animate={{ x: index * 10 }}
                 transition={calm ? { duration: 0 } : spring.snappy}
@@ -248,7 +248,7 @@ export function ListingImageCarousel({
                   stop(e);
                   goTo(i);
                 }}
-                className="h-1.5 w-1.5 rounded-full bg-white/45 transition-opacity hover:bg-white/75"
+                className="h-1.5 w-1.5 rounded-full bg-foreground/45 transition-opacity hover:bg-foreground/75"
               />
             ))}
           </span>
@@ -262,7 +262,7 @@ export function ListingImageCarousel({
               stop(e);
               openLightbox(e.currentTarget.parentElement);
             }}
-            className="absolute right-2.5 top-2.5 z-30 flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/55 text-white backdrop-blur-md transition-colors hover:bg-black/80"
+            className="absolute right-2.5 top-2.5 z-30 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-black/55 text-white backdrop-blur-md transition-colors hover:bg-black/80"
           >
             <Expand aria-hidden className="h-4 w-4" />
           </button>

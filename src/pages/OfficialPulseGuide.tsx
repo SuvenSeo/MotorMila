@@ -221,7 +221,7 @@ function GuideBody({ guide }: { guide: PulseSourceGuide }) {
               ))}
             </div>
           ) : signalsQuery.isError ? (
-            <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-6 text-footnote text-muted-foreground">
+            <div className="rounded-2xl border border-deal-high/20 bg-deal-high/5 p-6 text-footnote text-muted-foreground">
               {t(
                 "pulse.relatedLoadError",
                 "Could not load related live signals. The guide content above remains available offline.",

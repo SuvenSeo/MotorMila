@@ -120,19 +120,19 @@ export default function PriceIndexPage() {
           <div role="status" aria-label={t("index.loading", "Loading price index")} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-3" aria-hidden="true">
               {[0, 1, 2].map((i) => (
-                <div key={i} className="rounded-xl border border-white/5 bg-white/[0.01] p-5">
+                <div key={i} className="rounded-xl border border-border bg-foreground/[0.01] p-5">
                   <div className="skeleton-shimmer h-3 w-24 rounded-full" />
                   <div className="skeleton-shimmer mt-3 h-9 w-32 rounded-xl" />
                   <div className="skeleton-shimmer mt-2 h-3 w-20 rounded-full" />
                 </div>
               ))}
             </div>
-            <div className="rounded-xl border border-white/5 bg-white/[0.01] p-5" aria-hidden="true">
+            <div className="rounded-xl border border-border bg-foreground/[0.01] p-5" aria-hidden="true">
               <div className="skeleton-shimmer h-[320px] w-full rounded-xl" />
             </div>
           </div>
         ) : error || !data || activePoints.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-white/10 py-16 text-center">
+          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
             <LineChart className="h-5 w-5 text-muted-foreground" />
             <p className="max-w-md text-footnote text-muted-foreground font-medium">
               {t("index.empty", "The index needs a few months of accumulated market aggregates before it can plot a like-for-like trend. It will populate as daily scans build history.")}
@@ -151,9 +151,9 @@ export default function PriceIndexPage() {
                   {t("index.baseEquals100", "base {period} = 100", { period: data.base_period ? formatPeriod(data.base_period) : "—" })}
                 </p>
               </div>
-              <div className="rounded-xl border border-white/5 bg-white/[0.01] p-5">
+              <div className="rounded-xl border border-border bg-foreground/[0.01] p-5">
                 <p className="text-caption font-semibold text-muted-foreground">{t("index.sinceBase", "Since base")}</p>
-                <p className={`num mt-2 flex items-center gap-1.5 text-title1 font-bold ${up ? "text-emerald-400" : "text-rose-400"}`}>
+                <p className={`num mt-2 flex items-center gap-1.5 text-title1 font-bold ${up ? "text-deal-good-text" : "text-deal-high-text"}`}>
                   {up ? <ArrowUpRight className="h-6 w-6" /> : <ArrowDownRight className="h-6 w-6" />}
                   {totalChange == null || !Number.isFinite(totalChange) ? "—" : (
                     <NumberFlow
@@ -165,7 +165,7 @@ export default function PriceIndexPage() {
                 </p>
                 <p className="mt-1 text-caption text-muted-foreground font-medium">{t("index.wholeWindow", "whole tracked window")}</p>
               </div>
-              <div className="rounded-xl border border-white/5 bg-white/[0.01] p-5">
+              <div className="rounded-xl border border-border bg-foreground/[0.01] p-5">
                 <p className="text-caption font-semibold text-muted-foreground">{t("index.mom", "Month-on-month")}</p>
                 <p className="num mt-2 text-title1 font-bold text-white">
                   {latest?.mom_change_pct == null ? "—" : (
@@ -201,8 +201,8 @@ export default function PriceIndexPage() {
                         activeSegment === seg
                           ? "border-primary/30 bg-primary/10 text-primary-bright"
                           : locked
-                            ? "cursor-not-allowed border-white/5 bg-white/[0.01] text-muted-foreground/50"
-                            : "border-white/5 bg-white/[0.01] text-muted-foreground hover:text-white"
+                            ? "cursor-not-allowed border-border bg-foreground/[0.01] text-muted-foreground/50"
+                            : "border-border bg-foreground/[0.01] text-muted-foreground hover:text-white"
                       }`}
                     >
                       {seg === "overall" ? t("index.allVehicles", "All vehicles") : seg}
@@ -214,7 +214,7 @@ export default function PriceIndexPage() {
             )}
 
             {/* Chart */}
-            <m.div variants={itemVariants} className="rounded-xl border border-white/5 bg-white/[0.01] p-5 backdrop-blur-md">
+            <m.div variants={itemVariants} className="rounded-xl border border-border bg-foreground/[0.01] p-5 backdrop-blur-md">
               <div
                 role="img"
                 aria-label={`${activeSegment === "overall" ? "Overall" : activeSegment} price index: ${chartData.length} months, currently ${latest?.index_value.toFixed(1)} (${formatPct(totalChange)} since base)`}
@@ -246,7 +246,7 @@ export default function PriceIndexPage() {
             </m.div>
 
             {/* Month-on-month momentum — Bklit bar chart (#14 UI review) */}
-            <m.div variants={itemVariants} className="rounded-xl border border-white/5 bg-white/[0.01] p-5 backdrop-blur-md">
+            <m.div variants={itemVariants} className="rounded-xl border border-border bg-foreground/[0.01] p-5 backdrop-blur-md">
               <div className="mb-1 flex items-baseline justify-between">
                 <h2 className="text-footnote font-bold text-white">{t("index.momTitle", "Monthly momentum")}</h2>
                 <p className="text-caption text-muted-foreground font-medium">{t("index.momHint", "month-on-month index change")}</p>
@@ -270,7 +270,7 @@ export default function PriceIndexPage() {
             ) : null}
 
             {/* Methodology */}
-            <m.div variants={itemVariants} className="rounded-xl border border-white/5 bg-white/[0.01] p-5">
+            <m.div variants={itemVariants} className="rounded-xl border border-border bg-foreground/[0.01] p-5">
               <div className="flex items-start gap-2.5">
                 <Info className="h-4 w-4 text-primary-bright shrink-0 mt-0.5" />
                 <div>

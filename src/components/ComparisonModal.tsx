@@ -166,8 +166,8 @@ export const ComparisonModal = memo(function ComparisonModal({ listings, open, o
             <span
               className={cn(
                 "tabular-nums font-semibold",
-                below && "text-emerald-600 dark:text-emerald-400",
-                above && "text-rose-600 dark:text-rose-400",
+                below && "text-deal-good-text",
+                above && "text-deal-high-text",
                 !below && !above && "text-muted-foreground",
               )}
             >
@@ -450,13 +450,13 @@ export const ComparisonModal = memo(function ComparisonModal({ listings, open, o
                         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
                         <div className="absolute left-2 top-2 flex flex-wrap gap-1">
                           {isBestDeal ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-zinc-950/80 px-1.5 py-0.5 text-caption font-medium text-emerald-300 backdrop-blur-md">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-deal-good/30 bg-card/80 px-1.5 py-0.5 text-caption font-medium text-deal-good-text backdrop-blur-md">
                               <BadgeCheck className="h-2.5 w-2.5" />
                               Best deal
                             </span>
                           ) : null}
                           {isLowestPrice && !isBestDeal ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-zinc-950/80 px-1.5 py-0.5 text-caption font-medium text-zinc-100 backdrop-blur-md">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card/80 px-1.5 py-0.5 text-caption font-medium text-foreground/90 backdrop-blur-md">
                               Lowest
                             </span>
                           ) : null}

@@ -105,9 +105,9 @@ function MetricCell({
       <p
         className={`mt-2 flex items-center gap-1 font-display text-title2 font-semibold leading-none tracking-tight num ${
           tone === "up"
-            ? "text-emerald-600 dark:text-emerald-400"
+            ? "text-deal-good-text"
             : tone === "down"
-              ? "text-rose-600 dark:text-rose-400"
+              ? "text-deal-high-text"
               : "text-foreground"
         }`}
       >
@@ -306,7 +306,7 @@ export const MarketIntelligencePanel = memo(function MarketIntelligencePanel({
                 </div>
                 <div className="flex shrink-0 items-center gap-4">
                   {row.found > 0 ? (
-                    <span className="text-caption font-bold text-emerald-600 dark:text-emerald-400/90 num">{t("intel.newSuffix", "+{n} new", { n: row.fresh.toLocaleString() })}</span>
+                    <span className="text-caption font-bold text-deal-good-text dark:text-deal-good-text/90 num">{t("intel.newSuffix", "+{n} new", { n: row.fresh.toLocaleString() })}</span>
                   ) : (
                     <span className="text-caption font-bold text-primary/80 num">{t("intel.dealSuffix", "+{n} deal", { n: row.fresh.toFixed(0) })}</span>
                   )}

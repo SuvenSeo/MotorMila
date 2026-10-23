@@ -441,7 +441,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
           className={cn(
             "flex w-full items-center justify-between rounded-full border px-3 py-1.5 text-caption font-medium transition-ui",
             filters.include_archive
-              ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold shadow-xs"
+              ? "border-deal-caution/40 bg-deal-caution/10 text-deal-caution-text font-semibold shadow-xs"
               : "border-border/60 bg-surface/80 text-muted-foreground hover:text-foreground hover:border-border",
           )}
         >
@@ -449,7 +449,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
             <span
               className={cn(
                 "h-2 w-2 rounded-full",
-                filters.include_archive ? "bg-amber-500" : "bg-muted-foreground/40",
+                filters.include_archive ? "bg-deal-caution" : "bg-muted-foreground/40",
               )}
             />
             {t("filter.includeArchive", "Include 360K+ price archive")}
@@ -458,7 +458,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
             className={cn(
               "rounded-full px-1.5 py-0.5 text-caption font-bold uppercase tracking-caps",
               filters.include_archive
-                ? "bg-amber-500/20 text-amber-700 dark:text-amber-300"
+                ? "bg-deal-caution/20 text-deal-caution-text"
                 : "bg-muted/50 text-muted-foreground",
             )}
           >

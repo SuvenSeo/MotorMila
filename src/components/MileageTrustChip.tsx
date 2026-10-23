@@ -8,9 +8,9 @@ interface MileageTrustChipProps {
 }
 
 const TONE: Record<MileageRiskLevel, string> = {
-  low: "border-emerald-500/25 bg-emerald-500/10 text-emerald-300",
-  medium: "border-amber-500/25 bg-amber-500/10 text-amber-200",
-  high: "border-rose-500/25 bg-rose-500/10 text-rose-300",
+  low: "border-deal-good/25 bg-deal-good/10 text-deal-good-text",
+  medium: "border-deal-caution/25 bg-deal-caution/10 text-deal-caution-text",
+  high: "border-deal-high/25 bg-deal-high/10 text-deal-high-text",
   unknown: "border-border bg-surface text-muted-foreground",
 };
 

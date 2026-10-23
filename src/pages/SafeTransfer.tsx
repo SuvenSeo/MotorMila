@@ -206,8 +206,8 @@ export default function SafeTransfer() {
         )}
       />
       <PageBody narrow className="space-y-8">
-        <div role="note" className="flex items-start gap-3 rounded-[1.5rem] border border-amber-500/30 bg-amber-400/10 p-4">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden />
+        <div role="note" className="flex items-start gap-3 rounded-[1.5rem] border border-deal-caution/30 bg-deal-caution/10 p-4">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-deal-caution-text" aria-hidden />
           <p className="text-footnote leading-relaxed text-foreground">
             {t(
               "transfer.strictNotice",

@@ -33,7 +33,7 @@ export function BeforeYouPayStrip({
       <ul className="mt-2 space-y-1.5 text-footnote leading-relaxed text-muted-foreground">
         {tips.map((tip) => (
           <li key={tip} className="flex gap-2">
-            <span aria-hidden className="mt-[0.55em] h-1 w-1 shrink-0 rounded-full bg-amber-500" />
+            <span aria-hidden className="mt-[0.55em] h-1 w-1 shrink-0 rounded-full bg-deal-caution" />
             <span>{tip}</span>
           </li>
         ))}
@@ -49,11 +49,11 @@ export function BeforeYouPayStrip({
   );
   const heading = (
     <>
-      <ShieldAlert aria-hidden className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+      <ShieldAlert aria-hidden className="h-4 w-4 shrink-0 text-deal-caution-text" />
       <span>{t("listing.beforeYouPayTitle", "Before you pay")}</span>
     </>
   );
-  const shell = cn("rounded-2xl border border-amber-500/30 bg-amber-500/[0.06] p-4", className);
+  const shell = cn("rounded-2xl border border-deal-caution/30 bg-deal-caution/[0.06] p-4", className);
 
   if (collapsible) {
     return (

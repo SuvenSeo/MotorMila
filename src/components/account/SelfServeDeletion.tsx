@@ -66,8 +66,8 @@ export function SelfServeDeletion({ onDeleted }: { onDeleted?: () => void }) {
 
   if (phase === "done") {
     return (
-      <div role="status" className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-5">
-        <p className="flex items-center gap-2 text-body font-semibold text-emerald-700 dark:text-emerald-400">
+      <div role="status" className="rounded-2xl border border-deal-good/25 bg-deal-good/10 p-5">
+        <p className="flex items-center gap-2 text-body font-semibold text-deal-good-text">
           <Check aria-hidden className="h-4 w-4" /> {t("deleteAcct.doneTitle", "Your account has been deleted")}
         </p>
         <p className="mt-2 text-footnote text-foreground/80">

@@ -172,7 +172,7 @@ export default function Compare() {
         const pct = vsFmvPct(l, fmv);
         if (pct === null) return "—";
         const gap = Math.abs((askingPrice(l) ?? 0) - (fmvFor(l, fmv) ?? 0));
-        const tone = pct <= -5 ? "text-emerald-600 dark:text-emerald-400" : pct >= 8 ? "text-rose-600 dark:text-rose-400" : "text-foreground";
+        const tone = pct <= -5 ? "text-deal-good-text" : pct >= 8 ? "text-deal-high-text" : "text-foreground";
         const label =
           Math.abs(pct) < 0.5
             ? t("comparePage.atFmv", "At FMV")
@@ -282,7 +282,7 @@ export default function Compare() {
             const r = ctx.row.original;
             const isBest = highlight && r.best.has(index);
             return (
-              <span className={cn("block", isBest && "font-bold text-emerald-700 dark:text-emerald-400")}>
+              <span className={cn("block", isBest && "font-bold text-deal-good-text")}>
                 {renderCell(r.def.key, l)}
                 {isBest ? <span className="sr-only"> {t("comparePage.bestSr", "(best)")}</span> : null}
               </span>

@@ -98,7 +98,7 @@ function WidgetShell({
             </div>
           ) : error ? (
             <div className="flex min-h-[180px] flex-col items-center justify-center gap-3 text-center">
-              <AlertTriangle className="h-4 w-4 text-rose-500 dark:text-rose-400" />
+              <AlertTriangle className="h-4 w-4 text-deal-high-text" />
               <p className="text-caption text-muted-foreground">{error}</p>
               {onRetry ? (
                 <button type="button" onClick={onRetry} className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-caption font-semibold text-foreground transition-ui hover:border-primary/40 hover:bg-surface active:scale-[0.97]">
@@ -119,9 +119,9 @@ function WidgetShell({
 
 function gapTone(pct: number | null): string {
   if (pct === null) return "text-muted-foreground";
-  if (pct <= -5) return "text-emerald-600 dark:text-emerald-400";
-  if (pct >= 5) return "text-rose-600 dark:text-rose-400";
-  return "text-amber-600 dark:text-amber-400";
+  if (pct <= -5) return "text-deal-good-text";
+  if (pct >= 5) return "text-deal-high-text";
+  return "text-deal-caution-text";
 }
 
 function ClaimYardCard() {
@@ -188,7 +188,7 @@ function ClaimYardCard() {
         {profile && (
           <div className="flex flex-wrap items-center gap-2">
             {profile.status === "verified" && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-caption font-semibold text-emerald-700 dark:text-emerald-400">
+              <span className="inline-flex items-center gap-1 rounded-full border border-deal-good/30 bg-deal-good/10 px-3 py-1 text-caption font-semibold text-deal-good-text">
                 <ShieldCheck className="h-3 w-3" aria-hidden />
                 {t("dealer.verified", "Verified dealer")}
               </span>
@@ -348,9 +348,9 @@ function InventoryBenchmark() {
       </div>
 
       {submitError && (
-        <div className="flex items-start gap-2 rounded-xl border border-rose-500/20 bg-rose-500/5 px-3 py-2.5">
-          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-500 dark:text-rose-400" />
-          <p className="text-caption text-rose-700 dark:text-rose-300 font-medium">{submitError}</p>
+        <div className="flex items-start gap-2 rounded-xl border border-deal-high/20 bg-deal-high/5 px-3 py-2.5">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-deal-high-text" />
+          <p className="text-caption text-deal-high-text font-medium">{submitError}</p>
         </div>
       )}
 
@@ -380,7 +380,7 @@ function InventoryBenchmark() {
                       {row.url.replace(/^https?:\/\//, "").slice(0, 45)}{row.url.length > 50 ? "…" : ""}
                     </a>
                     {row.error && (
-                      <span className="mt-0.5 block text-caption text-rose-600 dark:text-rose-400">{row.error}</span>
+                      <span className="mt-0.5 block text-caption text-deal-high-text">{row.error}</span>
                     )}
                   </td>
                   <td className="px-3 py-2.5 text-foreground font-medium">
@@ -467,7 +467,7 @@ export default function DealerDashboard() {
         label: "Live leads",
         value: liveLeads != null ? liveLeads.toLocaleString() : "—",
         delta: stats?.listings_this_week ? `${stats.listings_this_week.toLocaleString()} this week` : "Syncing market feed",
-        tone: liveLeads != null ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground",
+        tone: liveLeads != null ? "text-deal-good-text" : "text-muted-foreground",
       },
       {
         label: "Arbitrage alerts",
@@ -557,8 +557,8 @@ export default function DealerDashboard() {
         ) : null}
 
         {dashboardError ? (
-          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-500 dark:text-rose-400" />
+          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-deal-high/20 bg-deal-high/5 p-4">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-deal-high-text" />
             <div className="min-w-0">
               <p className="text-caption font-bold text-foreground">{t("dealer.unavailable", "Dealer data unavailable")}</p>
               <p className="mt-1 text-caption text-muted-foreground font-medium">{dashboardError}</p>

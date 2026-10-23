@@ -48,13 +48,13 @@ function dealBandLabel(score: number, t: (key: string, fallback?: string) => str
 
 function dealBandChip(score: number): string {
   const b = dealBand(score);
-  if (b === "elite") return "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
-  if (b === "strong") return "border-emerald-500/20 bg-emerald-500/[0.07] text-emerald-700 dark:text-emerald-300";
+  if (b === "elite") return "border-deal-good/25 bg-deal-good/10 text-deal-good-text";
+  if (b === "strong") return "border-deal-good/20 bg-deal-good/[0.07] text-deal-good-text";
   return "border-primary/20 bg-primary/10 text-primary-bright";
 }
 
 function dealMeter(score: number): string {
-  return dealBand(score) === "watch" ? "bg-primary/60" : "bg-emerald-500/60";
+  return dealBand(score) === "watch" ? "bg-primary/60" : "bg-deal-good/60";
 }
 
 /**
@@ -83,7 +83,7 @@ function DealScoreExplainer({
       triggerClassName={`inline-flex items-center rounded-full border px-2 py-0.5 text-caption font-bold ${dealBandChip(score)}`}
       trigger={
         <>
-          <Star className="mr-1 inline h-3 w-3 text-emerald-600 dark:text-emerald-400" aria-hidden />
+          <Star className="mr-1 inline h-3 w-3 text-deal-good-text" aria-hidden />
           {dealBandLabel(score, t)}
         </>
       }
@@ -112,9 +112,9 @@ function DealScoreExplainer({
           return (
             <li
               key={b.key}
-              className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 ${active ? "border-emerald-500/30 bg-emerald-500/[0.07]" : "border-border bg-surface"}`}
+              className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 ${active ? "border-deal-good/30 bg-deal-good/[0.07]" : "border-border bg-surface"}`}
             >
-              <span className={`num w-12 shrink-0 text-caption font-bold ${active ? "text-emerald-700 dark:text-emerald-300" : "text-muted-foreground"}`}>
+              <span className={`num w-12 shrink-0 text-caption font-bold ${active ? "text-deal-good-text" : "text-muted-foreground"}`}>
                 {b.range}
               </span>
               <div>
@@ -344,8 +344,8 @@ export default function BestPicks() {
         {/* Biggest cuts this week — powered by per-listing price history */}
         <m.section initial="hidden" animate="show" variants={revealItem} className="rounded-2xl border border-border bg-card p-5 shadow-soft backdrop-blur-md sm:p-6">
             <div className="flex items-center gap-2.5 border-b border-border pb-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-2xl border border-emerald-500/25 bg-emerald-500/10">
-                <TrendingDown className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
+              <div className="flex h-8 w-8 items-center justify-center rounded-2xl border border-deal-good/25 bg-deal-good/10">
+                <TrendingDown className="h-4 w-4 text-deal-good-text" aria-hidden />
               </div>
               <div>
                 <h2 className="text-body font-bold tracking-tight text-foreground">{t("picks.cutsTitle", "Biggest cuts this week")}</h2>
@@ -368,13 +368,13 @@ export default function BestPicks() {
                   <li key={drop.listing.id}>
                   <Link
                     to={`/listing/${drop.listing.id}`}
-                    className="group block h-full rounded-xl border border-border bg-surface p-3.5 no-underline transition-ui hover:border-emerald-500/30 hover:bg-card hover:shadow-soft"
+                    className="group block h-full rounded-xl border border-border bg-surface p-3.5 no-underline transition-ui hover:border-deal-good/30 hover:bg-card hover:shadow-soft"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-caption font-bold text-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                      <span className="truncate text-caption font-bold text-foreground group-hover:text-deal-good-text dark:group-hover:text-deal-good-text transition-colors">
                         {drop.listing.make} {drop.listing.model}{drop.listing.year ? ` ${drop.listing.year}` : ""}
                       </span>
-                      <span className="shrink-0 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-0.5 text-caption font-bold text-emerald-700 dark:text-emerald-300 num">
+                      <span className="shrink-0 rounded-full border border-deal-good/25 bg-deal-good/10 px-1.5 py-0.5 text-caption font-bold text-deal-good-text num">
                         −{drop.drop_pct.toFixed(1)}%
                       </span>
                     </div>
@@ -455,7 +455,7 @@ export default function BestPicks() {
                         {sortMode === "affordability" && cashDown != null ? (
                           <p className="num text-caption font-bold text-primary-bright">{t("picks.down", "{price} down", { price: formatPrice(cashDown) })}</p>
                         ) : (
-                          <p className="num text-caption font-bold text-emerald-600 dark:text-emerald-400">{t("picks.deal", "+{score} deal", { score: score.toFixed(0) })}</p>
+                          <p className="num text-caption font-bold text-deal-good-text">{t("picks.deal", "+{score} deal", { score: score.toFixed(0) })}</p>
                         )}
                       </div>
                       <div className="h-1 overflow-hidden rounded-full bg-foreground/[0.08]">
@@ -509,7 +509,7 @@ export default function BestPicks() {
                         <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-30 pointer-events-none" aria-hidden />
                         <Link to={`/listing/${listing.id}`} className="relative block aspect-[16/10] overflow-hidden bg-muted no-underline transition-transform duration-short active:scale-[0.98]">
                           <VehicleThumbnail src={pickVehicleImageUrl([listing.thumbnail_url, ...(Array.isArray(listing.images) ? listing.images : [])], [listing.url, listing.detail_url, listing.external_url])} listingId={listing.id} alt={`${listing.make} ${listing.model}`} className="h-full w-full object-cover transition-transform duration-long group-hover:scale-[1.02]" />
-                          <span className="absolute left-2 top-2 rounded-full border border-white/20 bg-black/60 px-1.5 py-0.5 text-caption font-bold text-white num backdrop-blur-sm">{String(idx + 2).padStart(2, "0")}</span>
+                          <span className="absolute left-2 top-2 rounded-full border border-border bg-black/60 px-1.5 py-0.5 text-caption font-bold text-white num backdrop-blur-sm">{String(idx + 2).padStart(2, "0")}</span>
                         </Link>
                         <div className="flex flex-1 flex-col gap-3 p-4">
                           <div className="flex items-center justify-between">
@@ -525,7 +525,7 @@ export default function BestPicks() {
                             {sortMode === "affordability" && cashDown != null ? (
                               <span className="num text-caption font-bold text-primary-bright">{t("picks.down", "{price} down", { price: formatPrice(cashDown) })}</span>
                             ) : (
-                              <span className="num text-caption font-bold text-emerald-600 dark:text-emerald-400">+{score.toFixed(0)}</span>
+                              <span className="num text-caption font-bold text-deal-good-text">+{score.toFixed(0)}</span>
                             )}
                           </div>
                           <div className="mt-auto h-1 overflow-hidden rounded-full bg-foreground/[0.08]">

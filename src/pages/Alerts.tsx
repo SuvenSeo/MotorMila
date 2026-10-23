@@ -600,17 +600,17 @@ function AlertRow({
             {alert.district && <span>{alert.district}</span>}
             {alert.max_price && <span className="num">{t("alerts.underPrice", "Under {price}", { price: formatPrice(alert.max_price) })}</span>}
             {alert.notify_phone && (
-              <span className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-0.5 text-caption font-bold text-emerald-700 dark:text-emerald-400">
+              <span className="rounded-full border border-deal-good/25 bg-deal-good/10 px-1.5 py-0.5 text-caption font-bold text-deal-good-text">
                 WA {alert.notify_phone}
               </span>
             )}
             {alert.notify_email && (
-              <span className="rounded-full border border-blue-500/25 bg-blue-500/10 px-1.5 py-0.5 text-caption font-bold text-blue-700 dark:text-blue-400">
+              <span className="rounded-full border border-primary/25 bg-primary/10 px-1.5 py-0.5 text-caption font-bold text-primary">
                 ✉ {alert.notify_email}
               </span>
             )}
             {alert.notify_telegram_chat_id && (
-              <span className="rounded-full border border-sky-500/25 bg-sky-500/10 px-1.5 py-0.5 text-caption font-bold text-sky-700 dark:text-sky-400">
+              <span className="rounded-full border border-primary/25 bg-primary/10 px-1.5 py-0.5 text-caption font-bold text-primary">
                 TG {alert.notify_telegram_chat_id}
               </span>
             )}
@@ -632,7 +632,7 @@ function AlertRow({
             onClick={handleDelete}
             disabled={deleting}
             aria-label={t("alerts.deleteAria", "Delete alert for {label}", { label })}
-            className="flex h-7 w-7 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-destructive/40 hover:text-rose-600 disabled:opacity-40 dark:hover:text-rose-400"
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-destructive/40 hover:text-deal-high-text disabled:opacity-40 dark:hover:text-deal-high-text"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>

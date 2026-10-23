@@ -78,11 +78,11 @@ export default function SignIn() {
       <div className="relative z-10 flex min-h-screen items-center px-5 py-12 sm:px-8 lg:px-12 xl:px-16">
         <motion.div
           variants={revealItem}
-          className="w-full max-w-[420px] rounded-[2rem] border border-white/12 bg-white/[0.07] p-6 shadow-[0_24px_80px_-32px_rgba(0,0,0,0.85)] backdrop-blur-xl sm:p-8"
+          className="w-full max-w-[420px] rounded-[2rem] border border-border bg-foreground/[0.07] p-6 shadow-[0_24px_80px_-32px_rgba(0,0,0,0.85)] backdrop-blur-xl sm:p-8"
         >
           <div>
             <Link to="/" className="mb-8 inline-flex items-center gap-2.5 group">
-              <div className="h-9 w-9 overflow-hidden rounded-2xl ring-1 ring-white/20 transition-ui group-hover:ring-primary/50">
+              <div className="h-9 w-9 overflow-hidden rounded-2xl ring-1 ring-border transition-ui group-hover:ring-primary/50">
                 <img src="/logo.png" alt="" className="h-full w-full object-cover" />
               </div>
               <span className="font-display text-title3 font-bold tracking-tight text-white sm:text-title2">
@@ -109,7 +109,7 @@ export default function SignIn() {
           </div>
 
           {previewAccessEnabled && (
-            <div className="mt-7 rounded-xl border border-white/12 bg-white/[0.05] p-4">
+            <div className="mt-7 rounded-xl border border-border bg-foreground/[0.05] p-4">
               <p className="text-caption font-bold text-[#6CB8FF]">
                 {t("signin.previewAvailable", "Preview available")}
               </p>
@@ -121,7 +121,7 @@ export default function SignIn() {
                 onClick={() => navigate("/pro-preview")}
                 whileTap={{ scale: 0.98 }}
                 transition={spring.smooth}
-                className="mt-3 flex h-9 w-full items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/[0.08] text-caption font-bold text-white transition-ui hover:border-primary/40 hover:bg-white/[0.12]"
+                className="mt-3 flex h-9 w-full items-center justify-center gap-1.5 rounded-full border border-border bg-foreground/[0.08] text-caption font-bold text-white transition-ui hover:border-primary/40 hover:bg-foreground/[0.12]"
               >
                 {t("signin.previewPro", "Preview Pro")} <ArrowRight className="h-3 w-3" aria-hidden />
               </motion.button>
@@ -129,7 +129,7 @@ export default function SignIn() {
           )}
 
           {DEMO_AUTH_ENABLED && (
-            <div className="mt-7 space-y-2 rounded-xl border border-white/12 bg-white/[0.05] p-4">
+            <div className="mt-7 space-y-2 rounded-xl border border-border bg-foreground/[0.05] p-4">
               <p className="text-caption font-bold text-[#6CB8FF]">
                 {t("signin.reviewAccounts", "Review accounts")}
               </p>
@@ -140,7 +140,7 @@ export default function SignIn() {
                   onClick={() => { setValue("email", acc.email); setServerError(""); }}
                   whileTap={{ scale: 0.99 }}
                   transition={spring.smooth}
-                  className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-left transition-ui hover:border-primary/35"
+                  className="flex w-full items-center justify-between rounded-xl border border-border bg-black/25 px-3 py-2.5 text-left transition-ui hover:border-primary/35"
                 >
                   <div>
                     <p className="text-caption font-bold text-white">{acc.name}</p>
@@ -150,7 +150,7 @@ export default function SignIn() {
                     className={`rounded-full border px-2 py-0.5 text-caption font-medium ${
                       acc.subscriptionStatus === "active"
                         ? "border-[#3D94FF]/35 bg-[#0A7AFF]/15 text-[#6CB8FF]"
-                        : "border-white/15 text-white/50"
+                        : "border-border text-white/50"
                     }`}
                   >
                     {acc.plan}
@@ -174,10 +174,10 @@ export default function SignIn() {
                 placeholder={t("shell.copy.emailPlaceholder", "you@example.com")}
                 autoComplete="email"
                 {...register("email")}
-                className="h-11 rounded-xl border-white/15 bg-black/35 text-footnote text-white placeholder:text-white/35 focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
+                className="h-11 rounded-xl border-border bg-black/35 text-footnote text-white placeholder:text-white/35 focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
               />
               {errors.email && (
-                <p className="text-caption font-semibold text-rose-300">{errors.email.message}</p>
+                <p className="text-caption font-semibold text-deal-high-text">{errors.email.message}</p>
               )}
             </div>
             <div className="space-y-1.5">
@@ -191,7 +191,7 @@ export default function SignIn() {
                   placeholder="••••••••"
                   autoComplete="current-password"
                   {...register("password")}
-                  className="h-11 rounded-xl border-white/15 bg-black/35 pr-10 text-footnote text-white placeholder:text-white/35 focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
+                  className="h-11 rounded-xl border-border bg-black/35 pr-10 text-footnote text-white placeholder:text-white/35 focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
                 />
                 <button
                   type="button"
@@ -203,20 +203,20 @@ export default function SignIn() {
                 </button>
               </div>
               {errors.password && (
-                <p className="text-caption font-semibold text-rose-300">{errors.password.message}</p>
+                <p className="text-caption font-semibold text-deal-high-text">{errors.password.message}</p>
               )}
               <div className="mt-1.5 text-right">
                 <button
                   type="button"
                   onClick={() => { setShowReset(true); setResetDone(false); }}
-                  className="text-caption font-medium text-white/55 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white"
+                  className="text-caption font-medium text-white/55 underline decoration-foreground/25 underline-offset-4 transition-colors hover:text-white"
                 >
                   {t("signin.forgotPassword", "Forgot password?")}
                 </button>
               </div>
             </div>
             {serverError && (
-              <p className="rounded-xl border border-rose-400/25 bg-rose-500/10 px-3 py-2 text-caption font-medium text-rose-200">
+              <p className="rounded-xl border border-deal-high/25 bg-deal-high/10 px-3 py-2 text-caption font-medium text-deal-high-text">
                 {serverError}
               </p>
             )}
@@ -238,7 +238,7 @@ export default function SignIn() {
             </motion.button>
           </form>
 
-          <div className="mt-8 space-y-3 border-t border-white/10 pt-6 text-center">
+          <div className="mt-8 space-y-3 border-t border-border pt-6 text-center">
             <p className="text-caption font-medium text-white/50">
               {t("signin.invitePrompt", "Have an invite link?")}{" "}
               <Link
@@ -252,7 +252,7 @@ export default function SignIn() {
               {t("signin.noInvite", "No invite yet?")}{" "}
               <Link
                 to="/"
-                className="font-semibold text-white/80 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white"
+                className="font-semibold text-white/80 underline decoration-foreground/25 underline-offset-4 transition-colors hover:text-white"
               >
                 {t("signin.browseAnyway", "Browse the live market instead")}
               </Link>
@@ -270,7 +270,7 @@ export default function SignIn() {
             onClick={() => setShowReset(false)}
           >
             <div
-              className="w-full max-w-sm rounded-3xl border border-white/10 bg-[#101014] p-6 shadow-soft-xl"
+              className="w-full max-w-sm rounded-3xl border border-border bg-[#101014] p-6 shadow-soft-xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="mb-3 flex items-center gap-2">
@@ -325,13 +325,13 @@ export default function SignIn() {
                       onChange={(e) => setResetEmail(e.target.value)}
                       placeholder={t("signin.emailPlaceholder", "you@example.com")}
                       aria-label={t("signin.emailPlaceholder", "you@example.com")}
-                      className="h-11 rounded-xl border-white/15 bg-black/35 text-footnote text-white placeholder:text-white/35 focus:border-primary/40"
+                      className="h-11 rounded-xl border-border bg-black/35 text-footnote text-white placeholder:text-white/35 focus:border-primary/40"
                     />
                     <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={() => setShowReset(false)}
-                        className="h-10 flex-1 rounded-full border border-white/15 text-caption font-semibold text-white/70 transition-colors hover:text-white"
+                        className="h-10 flex-1 rounded-full border border-border text-caption font-semibold text-white/70 transition-colors hover:text-white"
                       >
                         {t("common.cancel", "Cancel")}
                       </button>
@@ -352,7 +352,7 @@ export default function SignIn() {
                 <button
                   type="button"
                   onClick={() => setShowReset(false)}
-                  className="mt-4 h-10 w-full rounded-full border border-white/15 text-caption font-semibold text-white/70 transition-colors hover:text-white"
+                  className="mt-4 h-10 w-full rounded-full border border-border text-caption font-semibold text-white/70 transition-colors hover:text-white"
                 >
                   {t("common.close", "Close")}
                 </button>

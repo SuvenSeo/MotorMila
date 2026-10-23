@@ -37,7 +37,7 @@ function GapCells({ row }: { row: EnrichedGap }) {
   const { gap, transportLkr, grossLkr, netLkr } = row;
   return (
     <>
-      <td className="px-4 py-3 font-semibold text-emerald-600 dark:text-emerald-400">{gap.buy_district}</td>
+      <td className="px-4 py-3 font-semibold text-deal-good-text">{gap.buy_district}</td>
       <td className="px-4 py-3 font-semibold text-primary">{gap.sell_district}</td>
       <td className="px-4 py-3 text-foreground num">{formatPriceLkrMillions(gap.buy_median_lkr)}</td>
       <td className="px-4 py-3 text-foreground num">{formatPriceLkrMillions(gap.sell_median_lkr)}</td>
@@ -45,7 +45,7 @@ function GapCells({ row }: { row: EnrichedGap }) {
       <td className="px-4 py-3 text-muted-foreground num" title="Fuel + driver + transfer estimate">
         {formatPriceLkrMillions(transportLkr)}
       </td>
-      <td className={cn("px-4 py-3 font-bold num", netLkr >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500")}>
+      <td className={cn("px-4 py-3 font-bold num", netLkr >= 0 ? "text-deal-good-text" : "text-deal-high-text")}>
         {netLkr >= 0 ? "+" : "−"}{formatPriceLkrMillions(Math.abs(netLkr))}
       </td>
       <td className="hidden px-4 py-3 text-muted-foreground num lg:table-cell">

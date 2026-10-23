@@ -112,7 +112,7 @@ export default function HeroLab() {
             <p
               className={`mt-4 inline-flex rounded-full border px-3.5 py-1.5 text-caption font-semibold tracking-tight backdrop-blur-md ${
                 variant.tone === "dark"
-                  ? "border-white/15 bg-white/10 text-white/80"
+                  ? "border-border bg-foreground/10 text-white/80"
                   : "border-border/80 bg-card/90 text-foreground/85"
               }`}
             >
@@ -135,7 +135,7 @@ export default function HeroLab() {
                 centered ? "mx-auto" : ""
               } ${
                 variant.tone === "dark"
-                  ? "border-white/20 bg-white/10 text-white"
+                  ? "border-border bg-foreground/10 text-white"
                   : "border-border bg-card"
               }`}
             >

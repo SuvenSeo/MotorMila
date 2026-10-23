@@ -233,7 +233,7 @@ export default function SellYourCar() {
 
           <form onSubmit={onSubmit} className="liquid-panel space-y-8 rounded-[2rem] p-6 sm:p-9">
             {error && (
-              <div role="alert" className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-footnote text-red-200">
+              <div role="alert" className="rounded-2xl border border-deal-high/30 bg-deal-high/10 px-4 py-3 text-footnote text-deal-high-text">
                 {error}
               </div>
             )}

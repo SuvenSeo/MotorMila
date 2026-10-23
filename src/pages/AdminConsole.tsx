@@ -197,7 +197,7 @@ export default function AdminConsole() {
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={spring.smooth}
-          className="rounded-[2rem] border border-white/12 bg-white/[0.045] p-6 shadow-[0_28px_90px_-40px_rgba(0,0,0,0.9)] backdrop-blur-2xl sm:p-8"
+          className="rounded-[2rem] border border-border bg-foreground/[0.045] p-6 shadow-[0_28px_90px_-40px_rgba(0,0,0,0.9)] backdrop-blur-2xl sm:p-8"
         >
           <div className="flex items-center gap-3">
             <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[#3D94FF]/35 bg-[#0A7AFF]/15">
@@ -238,7 +238,7 @@ export default function AdminConsole() {
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
                 placeholder={t("adminLogin.usernamePlaceholder", "Administrator")}
-                className="h-11 rounded-xl border-white/15 bg-black/40 text-footnote text-white placeholder:text-white/35 focus:border-[#3D94FF]/60 focus:ring-1 focus:ring-[#3D94FF]/35"
+                className="h-11 rounded-xl border-border bg-black/40 text-footnote text-white placeholder:text-white/35 focus:border-[#3D94FF]/60 focus:ring-1 focus:ring-[#3D94FF]/35"
               />
             </div>
 
@@ -255,7 +255,7 @@ export default function AdminConsole() {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="••••••••"
-                  className="h-11 rounded-xl border-white/15 bg-black/40 pr-11 text-footnote text-white placeholder:text-white/35 focus:border-[#3D94FF]/60 focus:ring-1 focus:ring-[#3D94FF]/35"
+                  className="h-11 rounded-xl border-border bg-black/40 pr-11 text-footnote text-white placeholder:text-white/35 focus:border-[#3D94FF]/60 focus:ring-1 focus:ring-[#3D94FF]/35"
                 />
                 <button
                   type="button"
@@ -275,7 +275,7 @@ export default function AdminConsole() {
             {error && (
               <p
                 role="alert"
-                className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-3.5 py-2.5 text-caption font-medium text-rose-100"
+                className="rounded-xl border border-deal-high/30 bg-deal-high/10 px-3.5 py-2.5 text-caption font-medium text-deal-high-text"
               >
                 {error}
               </p>
@@ -297,7 +297,7 @@ export default function AdminConsole() {
             </button>
           </form>
 
-          <div className="mt-6 flex items-start gap-2 rounded-xl border border-white/10 bg-black/25 px-3.5 py-3">
+          <div className="mt-6 flex items-start gap-2 rounded-xl border border-border bg-black/25 px-3.5 py-3">
             <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#3D94FF]" aria-hidden />
             <p className="text-caption leading-relaxed text-white/55">
               {BACKEND_AUTH_ENABLED

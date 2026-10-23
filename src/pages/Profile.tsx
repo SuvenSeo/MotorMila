@@ -38,10 +38,10 @@ function humanizeStatus(status: string): string {
 function statusTone(status: string): string {
   const s = status.toLowerCase();
   if (s.includes("live") || s.includes("publish") || s.includes("approv"))
-    return "border-emerald-400/30 bg-emerald-400/10 text-emerald-300";
+    return "border-deal-good/30 bg-deal-good/10 text-deal-good-text";
   if (s.includes("reject") || s.includes("declin") || s.includes("fail"))
-    return "border-red-400/30 bg-red-400/10 text-red-300";
-  return "border-amber-400/30 bg-amber-400/10 text-amber-300";
+    return "border-deal-high/30 bg-deal-high/10 text-deal-high-text";
+  return "border-deal-caution/30 bg-deal-caution/10 text-deal-caution-text";
 }
 
 function listingTitle(l: MyListing): string {
@@ -143,7 +143,7 @@ export default function Profile() {
             </div>
           ) : error ? (
             <div className="liquid-panel rounded-2xl p-8 text-center">
-              <TriangleAlert className="mx-auto h-8 w-8 text-amber-300" aria-hidden />
+              <TriangleAlert className="mx-auto h-8 w-8 text-deal-caution-text" aria-hidden />
               <p className="mt-3 text-footnote text-foreground">
                 {t("profile.loadFailed", "Couldn't load your listings.")}
               </p>
@@ -240,7 +240,7 @@ export default function Profile() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="text-muted-foreground hover:text-red-300"
+                        className="text-muted-foreground hover:text-deal-high-text"
                         onClick={() => setConfirmId(l.id)}
                       >
                         <Trash2 className="mr-1.5 h-3.5 w-3.5" aria-hidden />

@@ -134,7 +134,7 @@ export const DistrictVelocityMap = memo(function DistrictVelocityMap({
         <div className="flex items-center gap-2 rounded-2xl border border-border bg-surface px-3 py-1.5 text-muted-foreground transition-colors">
           <span>Low</span>
           <div className="h-1.5 w-20 rounded-full bg-gradient-to-r from-[#374151] via-[#14b8a6] to-[#10b981]" />
-          <span className="text-emerald-600 dark:text-emerald-400">High</span>
+          <span className="text-deal-good-text">High</span>
         </div>
       </div>
 
@@ -190,7 +190,7 @@ export const DistrictVelocityMap = memo(function DistrictVelocityMap({
                     <p>New (7d): <span className="num">{point.new_7d_count.toLocaleString()}</span></p>
                     <p>
                       Velocity:{" "}
-                      <span className="num font-semibold text-emerald-600">{formatVelocityPct(point.velocity_score)}</span>
+                      <span className="num font-semibold text-deal-good-text">{formatVelocityPct(point.velocity_score)}</span>
                     </p>
                   </div>
                 </Popup>

@@ -30,9 +30,9 @@ export function BuyOrWaitCard({ make, model, className }: { make: string; model:
     outlook.stance === "easing" ? TrendingDown : outlook.stance === "firming" ? TrendingUp : outlook.stance === "steady" ? Minus : Hourglass;
   const tone =
     outlook.stance === "easing"
-      ? "bg-deal-green/10 text-emerald-700 dark:text-emerald-300"
+      ? "bg-deal-green/10 text-deal-good-text"
       : outlook.stance === "firming"
-        ? "bg-rose-500/10 text-rose-700 dark:text-rose-300"
+        ? "bg-deal-high/10 text-deal-high-text"
         : "bg-muted text-foreground";
 
   return (

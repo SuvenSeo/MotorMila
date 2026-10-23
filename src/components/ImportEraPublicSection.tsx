@@ -39,7 +39,7 @@ export function ImportEraPublicSection() {
             Median asking prices for top makes before and after the 2025 import reopening — the two-tier used market in one view.
           </p>
         </div>
-        <span className="text-caption font-medium text-cyan-400/70">Public</span>
+        <span className="text-caption font-medium text-primary/70">Public</span>
       </div>
 
       {loading ? (
@@ -65,14 +65,14 @@ export function ImportEraPublicSection() {
                 <div className="mt-3 grid grid-cols-2 gap-2 text-caption">
                   <div>
                     <p className="text-muted-foreground">Pre-freeze</p>
-                    <p className="mt-0.5 font-semibold num text-amber-700 dark:text-amber-300">
+                    <p className="mt-0.5 font-semibold num text-deal-caution-text">
                       {pre != null ? formatPrice(pre) : "—"}
                     </p>
                     <p className="text-caption text-muted-foreground">{row.pre_freeze.count} listings</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Post-freeze</p>
-                    <p className="mt-0.5 font-semibold num text-sky-700 dark:text-sky-300">
+                    <p className="mt-0.5 font-semibold num text-primary">
                       {post != null ? formatPrice(post) : "—"}
                     </p>
                     <p className="text-caption text-muted-foreground">{row.post_freeze.count} listings</p>

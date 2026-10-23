@@ -111,7 +111,7 @@ export function ListingPriceTimeline({
         {cutCount > 0 && (
           <Link
             to="/best-picks"
-            className="inline-flex items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-caption font-semibold text-emerald-700 no-underline transition-colors hover:bg-emerald-500/15 dark:text-emerald-300"
+            className="inline-flex items-center gap-1 rounded-full border border-deal-good/25 bg-deal-good/10 px-2.5 py-1 text-caption font-semibold text-deal-good-text no-underline transition-colors hover:bg-deal-good/15 dark:text-deal-good-text"
           >
             <TrendingDown className="h-3 w-3" />
             {cutCount} cut{cutCount === 1 ? "" : "s"} recorded
@@ -143,9 +143,9 @@ export function ListingPriceTimeline({
           <div
             className={`mt-1 inline-flex items-center gap-1 text-footnote font-bold num ${
               isDrop
-                ? "text-emerald-600 dark:text-emerald-400"
+                ? "text-deal-good-text"
                 : isRise
-                  ? "text-rose-600 dark:text-rose-400"
+                  ? "text-deal-high-text"
                   : "text-foreground"
             }`}
           >

@@ -52,7 +52,7 @@ export function NavFreshnessIndicator({ className }: { className?: string }) {
             aria-hidden
             className={cn(
               "absolute right-[7px] top-[7px] h-1.5 w-1.5 rounded-full ring-2 ring-background",
-              stale ? "bg-amber-500" : "bg-muted-foreground/60",
+              stale ? "bg-deal-caution" : "bg-muted-foreground/60",
             )}
           />
         </button>

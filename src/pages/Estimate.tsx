@@ -446,8 +446,8 @@ export default function Estimate() {
               )}
 
               {!loading && failed && (
-                <div role="alert" className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-footnote text-foreground">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+                <div role="alert" className="flex items-start gap-2 rounded-xl border border-deal-caution/30 bg-deal-caution/10 p-3 text-footnote text-foreground">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-deal-caution-text" aria-hidden />
                   <span>
                     {t("quiz.noData", "We don't have enough comparable ads for this car to give an honest range. Try a nearby year, or check similar listings.")}
                   </span>
@@ -469,7 +469,7 @@ export default function Estimate() {
                         {t("quiz.comps", "{n} comparable ads", { n: result.comparable_count.toLocaleString() })}
                       </span>
                       {result.source === "snapshot" && (
-                        <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-amber-700 dark:text-amber-300">
+                        <span className="rounded-full border border-deal-caution/30 bg-deal-caution/10 px-2.5 py-1 text-deal-caution-text">
                           {t("quiz.snapshot", "From saved data — live service unavailable")}
                         </span>
                       )}
@@ -508,8 +508,8 @@ export default function Estimate() {
                   {flags.length > 0 && (
                     <ul className="space-y-2">
                       {flags.map((f) => (
-                        <li key={f.key} className={cn("flex items-start gap-2 rounded-xl border p-3 text-footnote", f.severity === "high" ? "border-rose-500/30 bg-rose-500/10" : "border-amber-500/30 bg-amber-500/10")}>
-                          <AlertTriangle className={cn("mt-0.5 h-4 w-4 shrink-0", f.severity === "high" ? "text-rose-600" : "text-amber-600")} aria-hidden />
+                        <li key={f.key} className={cn("flex items-start gap-2 rounded-xl border p-3 text-footnote", f.severity === "high" ? "border-deal-high/30 bg-deal-high/10" : "border-deal-caution/30 bg-deal-caution/10")}>
+                          <AlertTriangle className={cn("mt-0.5 h-4 w-4 shrink-0", f.severity === "high" ? "text-deal-high-text" : "text-deal-caution-text")} aria-hidden />
                           <span className="text-foreground">{FLAG_TEXT[f.key]}</span>
                         </li>
                       ))}
