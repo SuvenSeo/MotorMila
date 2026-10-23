@@ -726,7 +726,10 @@ def t_s_sheet():
 def sheet_field(label_idx, value):
     """Type into the idx-th EditText of the open sheet whose desc is Min/Max."""
     ns = nodes()
-    eds = [n for n in ns if n["cls"].endswith("EditText") and n["desc"] in ("Min", "Max")]
+    # The "Min"/"Max" desc is the empty-field label: once a field holds digits it is gone,
+    # so keep filled numeric fields too and order them on screen (row, then column).
+    eds = [n for n in ns if n["cls"].endswith("EditText") and (n["desc"] in ("Min", "Max") or re.fullmatch(r"[\d.,]+", n["text"] or ""))]
+    eds.sort(key=lambda n: (n["b"][1] // 40, n["b"][0]))
     if len(eds) <= label_idx:
         return False
     tapxy(*center(eds[label_idx])); time.sleep(0.8)
@@ -1078,8 +1081,12 @@ def t_d_morph():
 @T("C1", "Compare", "Add 3 from Search -> tray -> Compare values match each listing -> remove")
 def t_compare():
     link("motormila://search?vehicle_category=cars"); time.sleep(10)
-    ns = nodes()
-    adds = [n for n in ns if (n["desc"] or "").endswith("to compare") and n["desc"].startswith("Add ")]
+    for _ in range(4):  # the live API can take 10+ s: wait for real cards, not skeletons
+        ns = nodes()
+        adds = [n for n in ns if (n["desc"] or "").endswith("to compare") and n["desc"].startswith("Add ")]
+        if adds:
+            break
+        time.sleep(5)
     picked = []
     for n in adds[:3]:
         tapxy(*center(n)); time.sleep(1.5)
@@ -1163,7 +1170,7 @@ HUB_LINKS = [
     ("calculator", "motormila://calculator", r"(?i)(calculat|landed|duty)"),
     ("dealer", "motormila://dealer", r"(?i)dealer"),
     ("sell", "motormila://sell", r"(?i)(sell|value|price)"),
-    ("notifications", "motormila://notifications", r"(?i)(notification|sign in)"),
+    ("notifications", "motormila://notifications", r"(?i)(notification|sign in|inbox|caught up)"),
     ("admin", "motormila://admin", r"(?i)(admin|sign in|not allowed|denied)"),
 ]
 
@@ -1598,8 +1605,26 @@ def t_tabs_bar():
     record("Z1", "Global", "Bottom tabs", "PASS" if all(res.values()) else "FAIL", json.dumps(res), ev)
 
 
+def pix():
+    """Coarse screen fingerprint (32x64 greyscale) so theme / selection / chart changes count as an effect."""
+    try:
+        from PIL import Image
+        import io
+        raw = subprocess.run("adb exec-out screencap -p", shell=True, capture_output=True, timeout=30).stdout
+        return list(Image.open(io.BytesIO(raw)).convert("L").resize((32, 64)).getdata())
+    except Exception:  # noqa
+        return None
+
+
 def sig(ns):
-    return (resumed(), tuple(sorted(set(labels(ns))))[:400])
+    states = tuple(sorted((n["text"] or n["desc"], n["checked"], n["selected"]) for n in ns if n["checkable"] or n["selected"] or n["checked"]))
+    return (resumed(), tuple(sorted(set(labels(ns))))[:400], states)
+
+
+def pix_changed(a, b, thr=6.0):
+    if a is None or b is None:
+        return False
+    return sum(abs(x - y) for x, y in zip(a, b)) / len(a) > thr
 
 
 @T("Z2", "Global", "Dead-button hunt: tap every clickable on main screens, flag taps with no effect")
@@ -1631,17 +1656,32 @@ def t_hunt():
             if not lab:
                 inner = [m for m in ns if m["b"][0] >= n["b"][0] and m["b"][2] <= n["b"][2] and m["b"][1] >= n["b"][1] and m["b"][3] <= n["b"][3] and (m["text"] or m["desc"])]
                 lab = (inner[0]["text"] or inner[0]["desc"]) if inner else f"<unlabeled {n['b']}>"
+            cx, cy2 = center(n)
+            idx = ns.index(n)
+            # Rows scrolled under the glass top bar stay in the tree: a later (drawn on top)
+            # clickable that is not this node's descendant owns the tap there. Skip them.
+            covered = any(m["click"] and j > idx and m["b"][0] <= cx <= m["b"][2] and m["b"][1] <= cy2 <= m["b"][3]
+                          and not (n["b"][0] <= m["b"][0] and m["b"][2] <= n["b"][2] and n["b"][1] <= m["b"][1] and m["b"][3] <= n["b"][3])
+                          for j, m in enumerate(ns))
+            if covered:
+                continue
+            if re.match(r"^(සිංහල|தமிழ்|Log out|Delete account)", lab or ""):
+                continue  # keep the rest of the hunt in English and the signed state intact
             targets.append((lab[:50], center(n)))
         seen = set(); dead = []; tested = 0
         for lab, (x, y) in targets[:22]:
             if (x // 30, y // 30) in seen:
                 continue
             seen.add((x // 30, y // 30))
-            before = sig(nodes())
+            before = sig(nodes()); p0 = pix()
             tapxy(x, y); time.sleep(2.2)
             ns2 = nodes()
             after = sig(ns2)
+            if before == after:  # slow screens: one more look before calling it dead
+                time.sleep(2.5); ns2 = nodes(); after = sig(ns2)
             tested += 1
+            if before == after and pix_changed(p0, pix()):
+                after = ("pixels",)
             if before == after:
                 dead.append(lab)
             if after != before:

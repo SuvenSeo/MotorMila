@@ -61,6 +61,17 @@ class MainActivity : AppCompatActivity() {
         if (savedInstanceState == null) {
             applyQaOverrides(intent)
             applyIncomingIntent(intent)
+        } else {
+            // Recreated (the stored app language / theme is applied a few seconds after
+            // a cold start and relaunches the activity). Splash may still be running and
+            // reads startDeepLink when it finishes, so restore the launch link (L3 on
+            // API 36: a cold-start link landed on Home). The launch intent counts as
+            // consumed, so the next onNewIntent is a new event (> 1); without this the
+            // first link after the relaunch was dropped (S7: the 2nd filter link kept
+            // the 1st one's results).
+            startDeepLink = savedInstanceState.getString(STATE_START_LINK)?.let(Uri::parse)
+            sharedUrl = savedInstanceState.getString(STATE_SHARED_URL)
+            navigationEventId = 1
         }
         // Reconcile the local Play Pro entitlement with Play's purchase cache
         // (best-effort, off the main thread — never blocks startup).
@@ -109,6 +120,12 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString(STATE_START_LINK, startDeepLink?.toString())
+        outState.putString(STATE_SHARED_URL, sharedUrl)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -164,6 +181,8 @@ class MainActivity : AppCompatActivity() {
         const val SHARED_URL_KEY = "shared_url"
         private const val QA_THEME_EXTRA = "mm_qa_theme"
         private const val QA_LANG_EXTRA = "mm_qa_lang"
+        private const val STATE_START_LINK = "mm_start_deep_link"
+        private const val STATE_SHARED_URL = "mm_shared_url"
         private val URL_REGEX = Regex("https?://[^\\s]+")
 
         fun extractViewUri(intent: Intent?): Uri? {

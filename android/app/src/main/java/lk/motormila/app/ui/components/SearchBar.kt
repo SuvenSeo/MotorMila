@@ -76,7 +76,8 @@ fun SearchBar(
         keyboard?.hide()
         focusManager.clearFocus()
     }
-    Column(modifier = modifier.semantics { contentDescription = "Vehicle search" }) {
+    val vehicleSearchCd = stringResource(R.string.mm_vehicle_search_cd)
+    Column(modifier = modifier.semantics { contentDescription = vehicleSearchCd }) {
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChange,
@@ -100,7 +101,7 @@ fun SearchBar(
                             onClick = onVoiceClick,
                             modifier = Modifier.size(48.dp),
                         ) {
-                            Icon(Icons.Filled.Mic, contentDescription = "Voice search")
+                            Icon(Icons.Filled.Mic, contentDescription = stringResource(R.string.mm_voice_search_cd))
                         }
                     }
                 }

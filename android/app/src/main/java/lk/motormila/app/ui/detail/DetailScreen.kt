@@ -1061,9 +1061,9 @@ private fun DealLadder(askingLkr: Double?, fmvLkr: Double?, modifier: Modifier =
         Spacer(Modifier.height(8.dp))
         val low = fmvLkr * 0.9
         val high = fmvLkr * 1.1
-        LadderRung("Great buy", low, askingLkr <= low)
-        LadderRung("Fair (FMV)", fmvLkr, askingLkr in low..high)
-        LadderRung("High", high, askingLkr > high)
+        LadderRung(stringResource(R.string.mm_ladder_great), low, askingLkr <= low)
+        LadderRung(stringResource(R.string.mm_ladder_fair), fmvLkr, askingLkr in low..high)
+        LadderRung(stringResource(R.string.mm_ladder_high), high, askingLkr > high)
     }
 }
 

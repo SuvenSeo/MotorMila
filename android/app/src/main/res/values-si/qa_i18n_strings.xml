@@ -12,4 +12,13 @@
     <string name="mm_km_high_usage">අධික භාවිතය</string>
     <string name="mm_km_below_avg">සාමාන්‍යයට අඩු කි.මී.</string>
     <string name="mm_km_typical">සාමාන්‍ය ධාවන දුර</string>
+    <string name="mm_vehicle_search_cd">වාහන සෙවීම</string>
+    <string name="mm_voice_search_cd">හඬ සෙවීම</string>
+    <string name="mm_ladder_great">විශිෂ්ට මිලදී ගැනීමක්</string>
+    <string name="mm_ladder_fair">සාධාරණ (FMV)</string>
+    <string name="mm_ladder_high">ඉහළ</string>
+    <string name="mm_best_deal_pro_cd">හොඳම ගනුදෙනු අනුපිළිවෙළට Pro අවශ්‍යයි</string>
+    <string name="mm_open_filters_cd">පෙරහන් විවෘත කරන්න</string>
+    <string name="mm_show_list_cd">ලැයිස්තුවක් ලෙස පෙන්වන්න</string>
+    <string name="mm_show_grid_cd">ජාලයක් ලෙස පෙන්වන්න</string>
 </resources>

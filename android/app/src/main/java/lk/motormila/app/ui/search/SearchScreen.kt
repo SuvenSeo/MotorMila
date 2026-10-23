@@ -172,6 +172,7 @@ fun SearchScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val items = viewModel.paging.collectAsLazyPagingItems()
     val searchResultsCd = stringResource(R.string.mm_search_results_cd)
+    val bestDealProCd = stringResource(R.string.mm_best_deal_pro_cd)
     val fromSnapshot by viewModel.fromSnapshot.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -489,7 +490,7 @@ fun SearchScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
-                        .semantics { contentDescription = "Best-deal sort needs Pro" },
+                        .semantics { contentDescription = bestDealProCd },
                 ) {
                     Icon(
                         Icons.Filled.Lock,
@@ -701,7 +702,7 @@ internal fun SortFilterRow(
                 Box {
                     MmIconButton(
                         icon = Icons.Outlined.Tune,
-                        contentDescription = "Open filters",
+                        contentDescription = stringResource(R.string.mm_open_filters_cd),
                         onClick = onFilters,
                         style = MmIconButtonStyle.Filled,
                     )
@@ -740,7 +741,7 @@ internal fun SortFilterRow(
         )
         MmIconButton(
             icon = if (gridMode) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
-            contentDescription = if (gridMode) "Show as list" else "Show as grid",
+            contentDescription = if (gridMode) stringResource(R.string.mm_show_list_cd) else stringResource(R.string.mm_show_grid_cd),
             onClick = onToggleLayout,
             modifier = Modifier.padding(end = 4.dp),
         )
