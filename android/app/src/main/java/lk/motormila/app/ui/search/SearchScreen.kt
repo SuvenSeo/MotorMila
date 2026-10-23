@@ -284,8 +284,29 @@ fun SearchScreen(
                     .fillMaxSize()
                     .glassBackdrop(searchBackdrop),
             ) {
-                when {
-                    isRefreshing -> {
+                // Results update (filter apply, sort, category, refresh) cross-fades
+                // between skeleton / error / empty / grid instead of cutting.
+                val phase = when {
+                    isRefreshing -> 0
+                    items.loadState.refresh is LoadState.Error -> 1
+                    items.itemCount == 0 && !items.loadState.append.endOfPaginationReached -> 2
+                    items.itemCount == 0 -> 3
+                    else -> 4
+                }
+                AnimatedContent(
+                    targetState = phase,
+                    transitionSpec = {
+                        if (reducedMotion) {
+                            fadeIn(tween(150)) togetherWith fadeOut(tween(150))
+                        } else {
+                            fadeIn(tween(MmMotion.Base, easing = MmMotion.Standard)) togetherWith fadeOut(tween(MmMotion.Fast, easing = MmMotion.Exit))
+                        }
+                    },
+                    label = "search-results",
+                    modifier = Modifier.fillMaxSize(),
+                ) { shownPhase ->
+                when (shownPhase) {
+                    0 -> {
                         // Skeletons match the result layout (grid cards / list rows).
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(if (gridMode) 2 else 1),
@@ -297,10 +318,11 @@ fun SearchScreen(
                             items(6, contentType = { "skeleton" }) { MmListingCardSkeleton() }
                         }
                     }
-                    items.loadState.refresh is LoadState.Error -> {
-                        val err = items.loadState.refresh as LoadState.Error
+                    1 -> {
+                        // Safe cast: this branch is still drawn while it fades out.
+                        val err = items.loadState.refresh as? LoadState.Error
                         ErrorState(
-                            message = err.error.message ?: "Couldn't load results",
+                            message = err?.error?.message ?: "Couldn't load results",
                             onRetry = { items.retry() },
                             cachedAvailable = items.itemCount > 0,
                             onShowCached = { items.retry() },
@@ -310,10 +332,10 @@ fun SearchScreen(
                     // Truly empty only once the source says so: on (re)entry the
                     // first frame can have 0 items before the cached page lands,
                     // which flashed the empty state.
-                    items.itemCount == 0 && !items.loadState.append.endOfPaginationReached -> {
+                    2 -> {
                         Box(Modifier.fillMaxSize())
                     }
-                    items.itemCount == 0 -> {
+                    3 -> {
                         // Narrow category + nothing else to clear -> offer All vehicles,
                         // so the empty state is never a dead end.
                         val onlyCategory = state.filters.copy(vehicleCategory = null, sort = ListingSorts.NEWEST, keyword = null).isEmpty &&
@@ -398,6 +420,7 @@ fun SearchScreen(
                             }
                         }
                     }
+                }
                 }
             }
         CompositionLocalProvider(LocalGlassEnv provides glassEnv.copy(backdrop = searchBackdrop)) {
