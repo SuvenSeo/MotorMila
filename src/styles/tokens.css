@@ -95,6 +95,13 @@
   --text-large: 2.75rem;       /* 44/48 */
   --text-hero: clamp(3rem, 1.6rem + 3.9vw, 5rem); /* 48 → 80 */
   --tracking-tight: -0.02em;
+  /* Cal Sans Display (600/700) ships a narrow word space by design: 332/2000
+     = 0.166em, vs 0.213em in Cal Sans Text. With negative tracking the gap
+     between words collapsed ("Askingprice", "Sri Lanka'sentire"). Every
+     display-face rule takes looser tracking plus a word-spacing top-up so the
+     space lands at ~0.226em, level with the Text face. */
+  --tracking-display: -0.01em;
+  --display-word-spacing: 0.07em;
   --tracking-caps: 0.08em;
 
   /* ── Numerals — prices never fall back to a monospace face ───────── */

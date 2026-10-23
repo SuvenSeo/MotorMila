@@ -7,6 +7,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* The `font-display` utility (Tailwind fontFamily.display) gets the same word
+   space top-up as the display rules above; see --display-word-spacing. */
+@layer utilities {
+  .font-display {
+    word-spacing: var(--display-word-spacing);
+  }
+}
+
 /* ============================================================================
    Motormila — night showroom
    Warm asphalt canvas. One electric-blue headlamp. Editorial display type.
@@ -255,7 +263,8 @@
     font-family: var(--font-display);
     font-weight: 500;
     line-height: 1.15;
-    letter-spacing: var(--tracking-tight);
+    letter-spacing: var(--tracking-display);
+    word-spacing: var(--display-word-spacing);
     text-wrap: balance;
   }
 
@@ -493,7 +502,8 @@
     font-family: var(--font-display);
     font-weight: 600;
     font-optical-sizing: auto;
-    letter-spacing: var(--tracking-tight);
+    letter-spacing: var(--tracking-display);
+    word-spacing: var(--display-word-spacing);
   }
 
   .text-lead {
@@ -554,7 +564,8 @@
     font-optical-sizing: auto;
     font-size: var(--text-hero);
     line-height: 1.02;
-    letter-spacing: var(--tracking-tight);
+    letter-spacing: var(--tracking-display);
+    word-spacing: var(--display-word-spacing);
     text-wrap: balance;
   }
 
@@ -584,7 +595,8 @@
     font-optical-sizing: auto;
     font-size: var(--text-large);
     line-height: 1.09;
-    letter-spacing: var(--tracking-tight);
+    letter-spacing: var(--tracking-display);
+    word-spacing: var(--display-word-spacing);
     text-wrap: balance;
   }
 
@@ -594,7 +606,8 @@
     font-optical-sizing: auto;
     font-size: var(--text-title1);
     line-height: 1.19;
-    letter-spacing: var(--tracking-tight);
+    letter-spacing: var(--tracking-display);
+    word-spacing: var(--display-word-spacing);
     text-wrap: balance;
   }
 
@@ -1711,6 +1724,7 @@
     font-size: var(--text-footnote);
     font-weight: 600;
     letter-spacing: 0;
+    word-spacing: var(--display-word-spacing);
     line-height: 1.3;
   }
 

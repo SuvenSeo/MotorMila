@@ -17,16 +17,16 @@ export const TYPE_SCALE = {
   body: ["0.9375rem", { lineHeight: "1.375rem" }],
   callout: ["1.0625rem", { lineHeight: "1.5rem" }],
   title3: ["1.25rem", { lineHeight: "1.625rem", letterSpacing: "-0.01em" }],
-  title2: ["1.5rem", { lineHeight: "1.875rem", letterSpacing: "-0.02em" }],
-  title1: ["2rem", { lineHeight: "2.375rem", letterSpacing: "-0.02em" }],
-  large: ["2.75rem", { lineHeight: "3rem", letterSpacing: "-0.02em" }],
-  hero: ["clamp(3rem, 1.6rem + 3.9vw, 5rem)", { lineHeight: "1.02", letterSpacing: "-0.02em" }],
+  title2: ["1.5rem", { lineHeight: "1.875rem", letterSpacing: "-0.01em" }],
+  title1: ["2rem", { lineHeight: "2.375rem", letterSpacing: "-0.01em" }],
+  large: ["2.75rem", { lineHeight: "3rem", letterSpacing: "-0.01em" }],
+  hero: ["clamp(3rem, 1.6rem + 3.9vw, 5rem)", { lineHeight: "1.02", letterSpacing: "-0.01em" }],
 } satisfies Record<string, Size>;
 
 export type TypeToken = keyof typeof TYPE_SCALE;
 export const TYPE_TOKENS = Object.keys(TYPE_SCALE) as TypeToken[];
 
-/** Four tracking steps. Display sizes carry their own -0.02em. */
+/** Four tracking steps. Display sizes (title2 and up) carry their own -0.01em. */
 export const LETTER_SPACING = {
   tight: "-0.02em",
   normal: "0",

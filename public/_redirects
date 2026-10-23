@@ -6,4 +6,19 @@
 # 200 rule for that path proved unreliable on Pages), so no rule here.
 /assets/* /assets/:splat 200
 /snapshots/* /snapshots/:splat 200
-/* /index.html 200
+# SPA routes with no prerendered shell (mirrors the vercel.json rewrites).
+# Static routes (/calculator, /trends, /cars/:make, /cars/:make/:model, ...) are
+# served from the route shells scripts/prerender-seo.mjs writes, so they need
+# no rule. Do NOT add a catch-all "/* /index.html 200": Pages rejects it as an
+# infinite loop (it strips .html / index) and ignores it, and _redirects rules
+# win over static assets, so any broader rule would shadow the shells. Unknown
+# URLs fall through to the static 404.html with a real 404, as on Vercel.
+/admin / 200
+/price-index / 200
+/valuation / 200
+/leasing / 200
+/cars/:make/:model/:year / 200
+/locations/:district / 200
+/compare/:slug / 200
+/official-pulse/* / 200
+/checkout/return / 200
