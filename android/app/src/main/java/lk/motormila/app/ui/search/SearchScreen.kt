@@ -736,12 +736,25 @@ internal fun CompareTray(
             }
             Column(Modifier.weight(1f)) {
                 // Shrinks to fit rather than "3/3 s…" when space is tight (200 %).
-                lk.motormila.app.ui.components.MmFitText(
-                    text = stringResource(R.string.compare_selected_count, count, MAX_COMPARE_IDS),
-                    style = MmType.current.label,
-                    color = c.textPrimary,
-                    minScale = 0.7f,
-                )
+                // Full "3/3 selected" when it fits; otherwise the bare "3/3"
+                // count (never "3/3 sele…" at 200 %). The tray's content
+                // description still reads the full sentence.
+                androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    val labelStyle = MmType.current.label
+                    val full = stringResource(R.string.compare_selected_count, count, MAX_COMPARE_IDS)
+                    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+                    val fits = remember(full, labelStyle, constraints.maxWidth) {
+                        measurer.measure(full, labelStyle, maxLines = 1, softWrap = false).size.width <= constraints.maxWidth
+                    }
+                    Text(
+                        if (fits) full else "$count/$MAX_COMPARE_IDS",
+                        style = labelStyle,
+                        fontWeight = if (fits) null else FontWeight.SemiBold,
+                        color = c.textPrimary,
+                        maxLines = 1,
+                        softWrap = false,
+                    )
+                }
                 if (count < 2) {
                     Text(
                         stringResource(R.string.compare_pick_more),

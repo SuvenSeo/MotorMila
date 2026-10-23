@@ -435,9 +435,13 @@ fun DetailActionBar(
                 maxLines = 1,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
+            // Full rupees normally; at large text the compact "Rs 1.2 Mn"
+            // (full figure is already in the page title block) so the
+            // capsule never shows "Rs 1,200,0…".
+            val largeText = androidx.compose.ui.platform.LocalConfiguration.current.fontScale > 1.15f
             MmPrice(
                 value = priceLkr,
-                mode = MmPriceMode.Full,
+                mode = if (largeText) MmPriceMode.Compact else MmPriceMode.Full,
                 style = MmType.current.priceM,
                 fallback = stringResource(R.string.mm_price_on_request),
             )

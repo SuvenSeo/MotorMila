@@ -227,13 +227,23 @@ fun MmBottomBar(
                     .drawBehind {
                         val slot = size.width / n
                         val insetX = 5.dp.toPx()
-                        val l = left.value * slot + insetX
-                        val r = right.value * slot - insetX
+                        val l0 = left.value * slot + insetX
+                        val r0 = right.value * slot - insetX
                         val base = slot - insetX * 2
-                        val stretch = ((r - l) / base).coerceAtLeast(1f)
+                        val stretch = ((r0 - l0) / base).coerceAtLeast(1f)
                         val squash = 1f / sqrt(stretch)
                         val fullPillH = size.height - 10.dp.toPx()
-                        val ph = (fullPillH * squash).coerceAtLeast(fullPillH * 0.72f)
+                        val ph0 = (fullPillH * squash).coerceAtLeast(fullPillH * 0.72f)
+                        // Minimised: the pill becomes concentric with the small
+                        // capsule (equal 4dp ring all round) instead of a slot-wide
+                        // pill pinned off-centre.
+                        val mp = progress.value
+                        val ring = 4.dp.toPx()
+                        val cx = (selectedIndex + 0.5f) * slot
+                        val halfMin = MmTabBarMetrics.minimizedWidth.toPx() / 2f
+                        val l = lerp(l0, cx - halfMin + ring, mp)
+                        val r = lerp(r0, cx + halfMin - ring, mp)
+                        val ph = lerp(ph0, size.height - ring * 2f, mp)
                         val top = (size.height - ph) / 2f
                         val radius = CornerRadius(ph / 2f, ph / 2f)
                         drawRoundRect(pillFill, Offset(l, top), Size(r - l, ph), radius)
@@ -300,7 +310,10 @@ private fun BottomBarTab(
             pop.animateTo(1f, spring(dampingRatio = 0.42f, stiffness = 520f))
         }
     }
-    val tint = if (selected) c.brandText else c.textSecondary
+    // Unselected labels/icons sit on translucent glass over photos: use a
+    // stronger ink than textSecondary so they keep AA contrast in dark mode.
+    val idleInk = c.textPrimary.copy(alpha = if (c.isDark) 0.78f else 0.70f)
+    val tint = if (selected) c.brandText else idleInk
     Column(
         modifier = modifier
             .fillMaxHeight()
@@ -333,7 +346,7 @@ private fun BottomBarTab(
                     Icon(
                         item.icon,
                         contentDescription = null,
-                        tint = c.textSecondary,
+                        tint = idleInk,
                         modifier = Modifier
                             .size(24.dp)
                             .graphicsLayer { alpha = 1f - fill },
@@ -366,8 +379,10 @@ private fun BottomBarTab(
                 style = MmType.current.caption.copy(textAlign = TextAlign.Center),
                 color = tint,
                 minScale = 0.7f,
+                // 6dp keeps long labels (si "මිලදී ගන්න") inside the
+                // selection pill (slot − 10dp); MmFitText shrinks them to fit.
                 modifier = Modifier
-                    .padding(horizontal = 2.dp)
+                    .padding(horizontal = 6.dp)
                     .graphicsLayer { alpha = (1f - minimize.value * 2.2f).coerceIn(0f, 1f) },
             )
         }

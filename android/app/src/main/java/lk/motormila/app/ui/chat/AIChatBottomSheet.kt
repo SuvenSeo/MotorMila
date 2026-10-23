@@ -144,14 +144,17 @@ fun AIChatBottomSheet(
         scrimColor = Color.Black.copy(alpha = if (lk.motormila.app.ui.theme.LegacyPalette.isDark) 0.72f else 0.4f),
         shape = MotormilaSheetShape,
         dragHandle = null,
+        // Height lives on the content, not the sheet surface: a fixed-height
+        // surface was anchored at the top of the window (header under the
+        // status bar, a strip of page showing under the nav bar).
         modifier = modifier
-            .fillMaxHeight(0.92f)
             .semantics { contentDescription = "Motormila AI Intelligence Assistant Sheet" },
     ) {
         lk.motormila.app.ui.components.WindowBackdropBlur()
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
+                .fillMaxHeight(0.92f)
                 .navigationBarsPadding()
                 .imePadding(),
         ) {

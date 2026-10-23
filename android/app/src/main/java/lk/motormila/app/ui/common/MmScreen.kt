@@ -369,12 +369,13 @@ private fun GlassHeader(
         }
         if (hasLarge) {
             CappedFontScale(max = 1.3f) {
-                Text(
-                    title,
+                // Shrinks to fit (si/ta titles like "ඔබේ වාහනය විකුණන්න"
+                // used to end in "…").
+                lk.motormila.app.ui.components.MmFitText(
+                    text = title,
                     style = t.displayM,
                     color = c.textPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    minScale = 0.6f,
                     modifier = Modifier
                         .padding(top = statusTop + CompactBarHeight - 6.dp)
                         .padding(horizontal = 20.dp)
