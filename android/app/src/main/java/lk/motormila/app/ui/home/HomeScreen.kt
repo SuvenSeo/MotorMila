@@ -229,7 +229,7 @@ fun HomeContent(
             state = listState,
             modifier = Modifier.fillMaxSize(),
             // Content clears the status bar at rest and the floating glass
-            // tab bar (+ assistant) at the end.
+            // tab bar at the end.
             contentPadding = PaddingValues(top = statusTop, bottom = chrome.contentPadding),
             // Generous 22dp rhythm between sections — the web's airy,
             // confident feel rather than a cramped feed.

@@ -388,35 +388,3 @@ private fun BottomBarTab(
         }
     }
 }
-
-/**
- * Round liquid-glass button that sits beside the tab bar (assistant), same
- * material and height as the bar so they read as one family.
- */
-@Composable
-fun MmGlassCircleButton(
-    icon: ImageVector,
-    contentDescription: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    size: Dp = MmTabBarMetrics.height,
-    tint: Color = MmColors.current.brandText,
-) {
-    val interaction = remember { MutableInteractionSource() }
-    val haptics = MmHaptics.current
-    Box(
-        modifier = modifier
-            .size(size)
-            .mmPress(interaction, 0.9f)
-            .liquidGlass(MmShapes.pill, GlassWeight.Regular, elevation = 18.dp)
-            .clickable(interactionSource = interaction, indication = null, role = Role.Button) {
-                haptics.press()
-                onClick()
-            }
-            .semantics { this.contentDescription = contentDescription },
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(24.dp))
-    }
-}
-

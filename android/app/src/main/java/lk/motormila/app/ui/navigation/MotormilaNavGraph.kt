@@ -208,7 +208,6 @@ fun MotormilaNavGraph(
                 }
             },
             onScan = { navController.navigate(PlateScan) },
-            onOpenListing = { id -> navController.navigate(ListingDetail(id)) },
         ) { innerPadding ->
             // Edge-to-edge: every screen owns its status-bar inset (glass top
             // bars draw under it). Tab roots let content scroll under the

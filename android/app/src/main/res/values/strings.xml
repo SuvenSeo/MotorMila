@@ -145,7 +145,7 @@
     <string name="sell_benefit_reviewed">Every listing is reviewed before it goes live</string>
     <string name="sell_success_title">Listing submitted</string>
     <string name="sell_success_body">Your %1$s is pending review. We\'ll notify you once it\'s live.</string>
-    <!-- launch-polish: category chips, Home stats, search empty state, chat sheet -->
+    <!-- launch-polish: category chips, Home stats, search empty state -->
     <string name="vehicle_category_cars">Cars</string>
     <string name="vehicle_category_all">All vehicles</string>
     <string name="vehicle_category_bikes">Bikes</string>
@@ -178,13 +178,5 @@
     <string name="home_empty_title">No market data yet</string>
     <string name="home_empty_body">Pull to refresh — new listings appear here as scrapers run.</string>
     <string name="home_empty_cta">Browse all vehicles</string>
-    <string name="chat_subtitle">Real-time market intel, valuation guidance &amp; smart shortlists</string>
-    <string name="chat_hero_title">Ask the market assistant before you decide.</string>
-    <string name="chat_hero_body">I query live market listings across Sri Lanka, calculate Fair Market Value (FMV), surface deal risk, and explain CBSL automotive financing rules.</string>
-    <string name="chat_popular">POPULAR INQUIRIES</string>
-    <string name="chat_recommended">RECOMMENDED VEHICLES</string>
-    <string name="chat_thinking">Reading live market context…</string>
-    <string name="chat_input_hint">Ask about budget, value, listings…</string>
     <string name="calculating_cd">Calculating</string>
-    <string name="chat_sign_in_required">Sign in for live AI answers. Showing a quick offline answer for now.</string>
 </resources>

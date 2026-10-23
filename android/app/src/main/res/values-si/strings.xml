@@ -151,7 +151,7 @@
     <string name="sell_benefit_reviewed">සෑම ලැයිස්තුවක්ම සජීවී වීමට පෙර සමාලෝචනය කෙරේ</string>
     <string name="sell_success_title">ලැයිස්තුව යොමු කෙරේ</string>
     <string name="sell_success_body">ඔබේ %1$s සමාලෝචනයට යටත්. සජීවී වූ වහාම දැනුම් දෙන්නෙමු.</string>
-    <!-- launch-polish: category chips, Home stats, search empty state, chat sheet -->
+    <!-- launch-polish: category chips, Home stats, search empty state -->
     <string name="vehicle_category_cars">කාර්</string>
     <string name="vehicle_category_all">සියලු වාහන</string>
     <string name="vehicle_category_bikes">යතුරුපැදි</string>
@@ -184,13 +184,5 @@
     <string name="home_empty_title">තවම වෙළඳපොළ දත්ත නැත</string>
     <string name="home_empty_body">නැවුම් කිරීමට පහළට අදින්න — නව දැන්වීම් මෙහි දිස්වේ.</string>
     <string name="home_empty_cta">සියලු වාහන බලන්න</string>
-    <string name="chat_subtitle">තත්‍ය කාලීන වෙළඳපොළ තොරතුරු, තක්සේරු මඟපෙන්වීම සහ ස්මාර්ට් කෙටි ලැයිස්තු</string>
-    <string name="chat_hero_title">තීරණය කිරීමට පෙර වෙළඳපොළ සහායකයාගෙන් අසන්න.</string>
-    <string name="chat_hero_body">මම ශ්‍රී ලංකාව පුරා සජීවී වාහන දැන්වීම් විමසා, සාධාරණ වෙළඳපොළ වටිනාකම (FMV) ගණනය කර, ගනුදෙනු අවදානම පෙන්වා, CBSL වාහන මූල්‍යකරණ නීති පැහැදිලි කරමි.</string>
-    <string name="chat_popular">ජනප්‍රිය විමසීම්</string>
-    <string name="chat_recommended">නිර්දේශිත වාහන</string>
-    <string name="chat_thinking">සජීවී වෙළඳපොළ තොරතුරු කියවමින්…</string>
-    <string name="chat_input_hint">අයවැය, වටිනාකම, දැන්වීම් ගැන අසන්න…</string>
     <string name="calculating_cd">ගණනය කරමින්</string>
-    <string name="chat_sign_in_required">සජීවී AI පිළිතුරු සඳහා ලොග් වන්න. දැනට ඉක්මන් නොබැඳි පිළිතුරක් පෙන්වයි.</string>
 </resources>

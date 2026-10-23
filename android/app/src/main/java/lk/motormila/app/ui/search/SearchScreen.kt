@@ -41,7 +41,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.offset
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.draw.shadow
@@ -58,7 +57,6 @@ import lk.motormila.app.ui.theme.MmColors
 import lk.motormila.app.ui.theme.MmShapes
 import lk.motormila.app.ui.theme.MmType
 import lk.motormila.app.ui.theme.CappedFontScale
-import lk.motormila.app.ui.LocalAssistantLift
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -231,18 +229,11 @@ fun SearchScreen(
     }
 
     // Measured compare-tray height: pads the grid so the last row scrolls
-    // clear of it, and lifts the assistant button above it (no overlap).
+    // clear of it.
     var trayHeightPx by remember { mutableStateOf(0) }
     val density = LocalDensity.current
     val trayHeight = with(density) { trayHeightPx.toDp() }
-    val assistantLift = LocalAssistantLift.current
     val trayShown = state.compareIds.isNotEmpty()
-    LaunchedEffect(trayShown, trayHeight) {
-        assistantLift?.value = if (trayShown && trayHeight > 0.dp) trayHeight else 0.dp
-    }
-    DisposableEffect(assistantLift) {
-        onDispose { assistantLift?.value = 0.dp }
-    }
 
     // Edge-to-edge: results scroll under a liquid-glass search header (top)
     // and the floating glass tab bar (bottom). The header is measured once

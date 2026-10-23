@@ -41,7 +41,6 @@
     <string name="mm_tools_alerts_sub">Get told when a price drops</string>
     <string name="mm_tools_account">Account &amp; settings</string>
     <string name="mm_tools_account_sub">Profile, language, theme and plan</string>
-    <string name="mm_assistant">Ask MotorMila AI</string>
     <string name="mm_detail_asking">Asking price</string>
     <string name="mm_price_on_request">Price on request</string>
     <string name="mm_why_title">Why this verdict?</string>

@@ -73,7 +73,6 @@
     <string name="ui_auth_email">Email</string>
     <string name="ui_auth_invite_token">Invite token</string>
     <string name="ui_auth_name">Name</string>
-    <string name="ui_chat_retry">Retry</string>
     <string name="ui_components_filters">Filters</string>
     <string name="ui_components_search_make_model_e_g">Search make or model</string>
     <string name="ui_dealer_gap">Gap</string>

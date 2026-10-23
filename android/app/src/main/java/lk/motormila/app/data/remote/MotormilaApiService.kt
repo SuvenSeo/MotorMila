@@ -5,8 +5,6 @@ import lk.motormila.app.data.remote.dto.AnalyticsEventRequestDto
 import lk.motormila.app.data.remote.dto.AnalyticsEventResponseDto
 import lk.motormila.app.data.remote.dto.ArbitrageGapDto
 import lk.motormila.app.data.remote.dto.BenchmarkUrlsRequestDto
-import lk.motormila.app.data.remote.dto.ChatRequestDto
-import lk.motormila.app.data.remote.dto.ChatResponseDto
 import lk.motormila.app.data.remote.dto.ChargingStationsDto
 import lk.motormila.app.data.remote.dto.CheckoutIntentRequestDto
 import lk.motormila.app.data.remote.dto.CheckoutIntentResponseDto
@@ -456,10 +454,6 @@ interface MotormilaApiService {
 
     @POST("notifications/read-all")
     suspend fun markAllNotificationsRead(): MarkAllReadDto
-
-    // ------------------------------------------------------------------- chat
-    @POST("chat")
-    suspend fun chat(@Body body: ChatRequestDto): ChatResponseDto
 
     // --------------------------------------------------------------- feedback
     @POST("feedback")
