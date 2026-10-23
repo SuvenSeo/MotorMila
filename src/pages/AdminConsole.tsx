@@ -16,7 +16,7 @@ import {
 } from "@/lib/adminAuth";
 import { BACKEND_AUTH_ENABLED, readStoredAuthUser, useAuth } from "@/lib/authContext";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { springSoft } from "@/lib/motion";
+import { spring } from "@/lib/motion";
 
 /**
  * `/motormila/admin` — the only way in to the operations console.
@@ -196,7 +196,7 @@ export default function AdminConsole() {
         <motion.div
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={springSoft}
+          transition={spring.smooth}
           className="rounded-[2rem] border border-white/12 bg-white/[0.045] p-6 shadow-[0_28px_90px_-40px_rgba(0,0,0,0.9)] backdrop-blur-2xl sm:p-8"
         >
           <div className="flex items-center gap-3">
@@ -284,7 +284,7 @@ export default function AdminConsole() {
             <button
               type="submit"
               disabled={attempting || lockSeconds > 0}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#0A7AFF] text-footnote font-semibold text-white shadow-[0_14px_44px_-18px_rgba(10,122,255,0.9)] transition-all hover:bg-[#3D94FF] disabled:opacity-50"
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#0A7AFF] text-footnote font-semibold text-white shadow-[0_14px_44px_-18px_rgba(10,122,255,0.9)] transition-ui hover:bg-[#3D94FF] disabled:opacity-50"
             >
               {attempting ? (
                 t("adminLogin.checking", "Verifying credentials…")

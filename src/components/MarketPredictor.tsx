@@ -59,7 +59,7 @@ export const MarketPredictor = memo(function MarketPredictor({ trendData, listin
   );
 
   return (
-    <section className="asset-surface rounded-xl p-5 md:p-6 transition-shadow duration-300 hover:shadow-soft-lg">
+    <section className="asset-surface rounded-xl p-5 md:p-6 transition-shadow duration-medium hover:shadow-soft-lg">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="tech-label font-bold text-muted-foreground">Market pulse</p>

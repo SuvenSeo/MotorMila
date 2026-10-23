@@ -37,7 +37,7 @@ export function AddToCompareButton({
         }
       }}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border font-semibold transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.97] motion-reduce:active:scale-100",
+        "inline-flex items-center gap-1.5 rounded-full border font-semibold transition-[background-color,border-color,color,transform] duration-short active:scale-[0.97] motion-reduce:active:scale-100",
         size === "sm" ? "min-h-9 px-3 text-caption" : "min-h-11 px-4 text-footnote",
         active
           ? "border-primary/40 bg-primary/15 text-primary-bright"

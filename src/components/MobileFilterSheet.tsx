@@ -87,7 +87,7 @@ export function MobileFilterSheet({ open, onOpenChange, filters, onFiltersChange
     if (info.offset.y > 120 || info.velocity.y > 600) {
       const h = contentRef.current?.offsetHeight ?? window.innerHeight;
       setDragClosed(true);
-      void animate(dragY, h, { duration: duration.base, ease: ease.exit }).then(() => onOpenChange(false));
+      void animate(dragY, h, { duration: duration.medium, ease: ease.accelerate }).then(() => onOpenChange(false));
     } else {
       void animate(dragY, 0, spring.snappy);
     }

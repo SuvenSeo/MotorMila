@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { springSnappy, springSoft } from "@/lib/motion";
+import { spring } from "@/lib/motion";
 import { useAppPreferences } from "@/lib/appPreferences";
 
 export function ErrorFallback({
@@ -15,7 +15,7 @@ export function ErrorFallback({
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={springSoft}
+        transition={spring.smooth}
         className="w-full max-w-md rounded-xl border border-border bg-card p-8 text-center shadow-soft-lg"
       >
         <p className="text-caption font-medium text-muted-foreground">
@@ -37,7 +37,7 @@ export function ErrorFallback({
           onClick={onReload}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.97 }}
-          transition={springSnappy}
+          transition={spring.snappy}
           className="mt-5 h-9 rounded-2xl bg-primary px-5 text-caption font-semibold text-white hover:bg-primary/95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           {t("errorBoundary.reload", "Reload App")}

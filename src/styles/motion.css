@@ -1,0 +1,60 @@
+/* ============================================================================
+   Motion system — CSS side (web/premium-p0). Tokens: src/index.css :root
+   (--ease-standard|decelerate|accelerate, --dur-micro|short|medium|long),
+   JS mirror src/lib/motion.ts. Transform + opacity only.
+   ========================================================================== */
+
+/* ── Route View Transition: overlapping cross-fade + 8px rise ──────────── */
+html[data-route-vt]::view-transition-old(root) {
+  animation: vt-route-out var(--dur-short) var(--ease-accelerate) both;
+}
+html[data-route-vt]::view-transition-new(root) {
+  animation: vt-route-in var(--dur-medium) var(--ease-decelerate) both;
+}
+@keyframes vt-route-out {
+  to { opacity: 0; }
+}
+@keyframes vt-route-in {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+}
+
+/* Chrome that persists across routes holds still (no cross-fade flicker). */
+.site-nav-header { view-transition-name: site-nav; }
+.bottom-nav { view-transition-name: bottom-nav; }
+::view-transition-group(site-nav),
+::view-transition-group(bottom-nav) {
+  animation-duration: 0s;
+}
+
+/* ── Interaction primitives ───────────────────────────────────────────── */
+/* One press: scale 0.97, 100ms in, spring-ish out. */
+.press {
+  transition: transform var(--dur-short) var(--ease-standard);
+}
+.press:active:not(:disabled) {
+  transform: scale(0.97);
+  transition-duration: var(--dur-micro);
+}
+/* One focus ring: 2px, offset, never on mouse click. */
+.focus-ring:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Skeleton → content cross-fade (wrap content in .content-in on mount). */
+.content-in {
+  animation: content-in var(--dur-medium) var(--ease-decelerate) both;
+}
+@keyframes content-in {
+  from { opacity: 0; }
+}
+
+/* ── Reduced motion: opacity at 100ms, no View Transition movement ─────── */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+  .press:active:not(:disabled) { transform: none; }
+}

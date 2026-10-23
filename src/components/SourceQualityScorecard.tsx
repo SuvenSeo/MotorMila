@@ -68,7 +68,7 @@ function buildMetrics(row: SourceQualityRow): MetricConfig[] {
 function SourceCard({ row }: { row: SourceQualityRow }) {
   const metrics = buildMetrics(row);
   return (
-    <div className="asset-surface rounded-xl p-5 transition-all duration-300 ease-apple hover:border-primary/30 hover:shadow-soft-lg">
+    <div className="asset-surface rounded-xl p-5 transition-ui duration-medium ease-decelerate hover:border-primary/30 hover:shadow-soft-lg">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-callout font-bold text-foreground">{row.source}</p>
@@ -91,7 +91,7 @@ function SourceCard({ row }: { row: SourceQualityRow }) {
               </div>
               <div className="mt-1 h-1 overflow-hidden rounded-full bg-foreground/[0.06]">
                 <div
-                  className={`h-full rounded-full transition-all duration-500 ease-apple ${barColor(good, ok)}`}
+                  className={`h-full rounded-full transition-ui duration-long ease-decelerate ${barColor(good, ok)}`}
                   style={{ width: `${metric.barWidth}%` }}
                 />
               </div>

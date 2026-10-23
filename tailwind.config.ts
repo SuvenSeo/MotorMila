@@ -42,6 +42,22 @@ export default {
     // in src/styles/type-scale.ts so tailwind-merge and docs share one list.
     fontSize: TYPE_SCALE,
     letterSpacing: LETTER_SPACING,
+    // Motion tokens (src/lib/motion.ts). Not `extend`: 3 easings, 4 durations only.
+    transitionTimingFunction: {
+      DEFAULT: "var(--ease-standard)",
+      standard: "var(--ease-standard)",
+      decelerate: "var(--ease-decelerate)",
+      accelerate: "var(--ease-accelerate)",
+      linear: "linear",
+    },
+    transitionDuration: {
+      DEFAULT: "var(--dur-short)",
+      0: "0ms",
+      micro: "var(--dur-micro)",
+      short: "var(--dur-short)",
+      medium: "var(--dur-medium)",
+      long: "var(--dur-long)",
+    },
     container: {
       center: true,
       padding: "2rem",
@@ -299,19 +315,21 @@ export default {
         },
       },
       animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
-        "ken-burns": "ken-burns 28s cubic-bezier(0.33, 1, 0.68, 1) infinite alternate",
-        "motion-rise": "motion-rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) both",
-        "motion-fade": "motion-fade 0.5s ease both",
-        "fade-up": "fade-up var(--duration-slow) var(--ease-out) both",
+        "accordion-down": "accordion-down var(--dur-medium) var(--ease-standard)",
+        "accordion-up": "accordion-up var(--dur-short) var(--ease-accelerate)",
+        "ken-burns": "ken-burns 28s var(--ease-standard) infinite alternate",
+        "motion-rise": "motion-rise var(--dur-long) var(--ease-decelerate) both",
+        "motion-fade": "motion-fade var(--dur-long) var(--ease-standard) both",
+        "fade-up": "fade-up var(--dur-long) var(--ease-decelerate) both",
         "infinite-scroll": "infinite-scroll var(--marquee-duration, 45s) linear infinite",
-        "fade-in": "fade-in var(--duration-base) var(--ease-out) both",
+        "fade-in": "fade-in var(--dur-medium) var(--ease-decelerate) both",
         "scroll-hint": "scroll-hint 2.4s ease-in-out infinite",
         "pulse-soft": "pulse-soft 2s ease-in-out infinite",
       },
-      transitionTimingFunction: {
-        apple: "cubic-bezier(0.16, 1, 0.3, 1)",
+      // `transition-ui`: colour, opacity, transform and shadow only — the
+      // replacement for transition-all (never animate layout properties).
+      transitionProperty: {
+        ui: "color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform",
       },
     },
   },

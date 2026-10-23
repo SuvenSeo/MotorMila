@@ -167,7 +167,7 @@ export default function Settings() {
                       onClick={() => setThemeMode(item.mode)}
                       aria-pressed={active}
                       className={cn(
-                        "group relative flex flex-col justify-between overflow-hidden rounded-2xl border p-4 text-left transition-all duration-200 active:scale-[0.98]",
+                        "group relative flex flex-col justify-between overflow-hidden rounded-2xl border p-4 text-left transition-ui duration-short active:scale-[0.98]",
                         active
                           ? "border-primary/50 bg-primary/12 text-foreground shadow-soft ring-1 ring-primary/40"
                           : "border-border/80 bg-surface/60 text-muted-foreground hover:border-primary/30 hover:bg-surface hover:text-foreground",
@@ -222,7 +222,7 @@ export default function Settings() {
                         </div>
                         <span
                           className={cn(
-                            "flex h-5 w-5 items-center justify-center rounded-full border transition-all",
+                            "flex h-5 w-5 items-center justify-center rounded-full border transition-ui",
                             active
                               ? "border-primary bg-primary text-primary-foreground"
                               : "border-border text-transparent",
@@ -275,7 +275,7 @@ export default function Settings() {
                       onClick={() => setLanguage(item.value)}
                       aria-pressed={active}
                       className={cn(
-                        "flex w-full items-center justify-between rounded-2xl border px-4 py-3.5 text-left transition-all duration-200 active:scale-[0.98]",
+                        "flex w-full items-center justify-between rounded-2xl border px-4 py-3.5 text-left transition-ui duration-short active:scale-[0.98]",
                         active
                           ? "border-primary/45 bg-primary/12 text-foreground shadow-soft ring-1 ring-primary/30"
                           : "border-border/80 bg-surface/60 text-muted-foreground hover:border-primary/30 hover:bg-surface hover:text-foreground",
@@ -294,7 +294,7 @@ export default function Settings() {
                       </div>
                       <span
                         className={cn(
-                          "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-all",
+                          "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-ui",
                           active
                             ? "border-primary bg-primary text-primary-foreground"
                             : "border-border text-transparent",
@@ -531,7 +531,7 @@ export default function Settings() {
               <button
                 type="button"
                 onClick={() => openFeedbackDialog()}
-                className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-caption font-bold text-primary-foreground shadow-soft transition-all duration-200 hover:opacity-95 active:scale-95"
+                className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-caption font-bold text-primary-foreground shadow-soft transition-ui duration-short hover:opacity-95 active:scale-95"
               >
                 <MessageSquare className="h-4 w-4" />
                 Send Feedback

@@ -1,4 +1,5 @@
 import { memo, useMemo, type ReactNode } from "react";
+import { tween } from "@/lib/motion";
 import { Link } from "react-router-dom";
 import { motion } from "motion/react";
 import {
@@ -427,7 +428,7 @@ export const ComparisonModal = memo(function ComparisonModal({ listings, open, o
                     key={listing.id}
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05, duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                    transition={{ ...tween.medium, delay: index * 0.05 }}
                     className={cn(
                       "relative overflow-hidden rounded-2xl border bg-surface/60 shadow-soft",
                       isBestDeal ? "border-primary/35 ring-1 ring-primary/15" : "border-border",
@@ -522,7 +523,7 @@ export const ComparisonModal = memo(function ComparisonModal({ listings, open, o
                     key={section.group}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 + sectionIndex * 0.06, duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                    transition={{ ...tween.medium, delay: 0.1 + sectionIndex * 0.06 }}
                     className="overflow-hidden rounded-2xl border border-border bg-surface/40 shadow-soft"
                   >
                     <div className="flex items-start justify-between gap-3 border-b border-border/70 px-4 py-3.5 md:px-5">

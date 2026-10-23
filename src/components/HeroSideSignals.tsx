@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCountUp } from "@/hooks/useCountUp";
-import { prefersReducedMotion, springSoft } from "@/lib/motion";
+import { prefersReducedMotion, spring } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { formatPrice } from "@/services/api";
 import { VehicleThumbnail } from "@/components/VehicleThumbnail";
@@ -120,7 +120,7 @@ function SignalChip({
     <motion.div
       initial={{ opacity: 0, y: 14, x: align === "left" ? -12 : 12 }}
       animate={{ opacity: 1, y: 0, x: 0 }}
-      transition={{ delay, ...springSoft }}
+      transition={{ delay, ...spring.smooth }}
       className={cn(
         "hero-signal-float-wrap",
         `hero-signal-float-wrap--float-${float}`,

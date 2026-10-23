@@ -56,7 +56,7 @@ function NotFoundState({
         <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
           <Link
             to="/official-pulse"
-            className="inline-flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-caption font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98]"
+            className="inline-flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-caption font-semibold text-primary-foreground no-underline shadow-soft transition-ui hover:bg-primary/90 active:scale-[0.98]"
           >
             <ArrowLeft aria-hidden className="h-3.5 w-3.5" />
             {t("pulse.backToPulse", "Back to Official Pulse")}
@@ -65,14 +65,14 @@ function NotFoundState({
             <button
               type="button"
               onClick={onRetry}
-              className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-caption font-semibold text-foreground transition-all hover:border-primary/40 active:scale-[0.98]"
+              className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-caption font-semibold text-foreground transition-ui hover:border-primary/40 active:scale-[0.98]"
             >
               {t("common.retry", "Retry")}
             </button>
           ) : null}
           <Link
             to="/official-pulse/guide/dmt_registrations"
-            className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-caption font-semibold text-foreground no-underline transition-all hover:border-primary/40 active:scale-[0.98]"
+            className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-caption font-semibold text-foreground no-underline transition-ui hover:border-primary/40 active:scale-[0.98]"
           >
             {t("pulse.readGuides", "Read signal guides")}
           </Link>

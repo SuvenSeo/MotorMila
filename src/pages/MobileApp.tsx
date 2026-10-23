@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { RevealSection } from "@/components/RevealSection";
 import { sendFeedback } from "@/services/api";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { revealContainer, revealItem, springSoft } from "@/lib/motion";
+import { revealContainer, revealItem, spring } from "@/lib/motion";
 
 const WAITLIST_KEY = "motormila.mobile_waitlist";
 
@@ -294,7 +294,7 @@ export default function MobileApp() {
               <motion.a
                 href={APK_URL}
                 whileTap={{ scale: 0.97 }}
-                transition={springSoft}
+                transition={spring.smooth}
                 className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-[#0A7AFF] px-7 text-footnote font-semibold text-white no-underline shadow-[0_14px_44px_-18px_rgba(10,122,255,0.9)] transition-colors hover:bg-[#3D94FF]"
               >
                 <Download className="h-4 w-4" aria-hidden />
@@ -339,7 +339,7 @@ export default function MobileApp() {
                     <motion.button
                       type="submit"
                       whileTap={{ scale: 0.98 }}
-                      transition={springSoft}
+                      transition={spring.smooth}
                       className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-[#0A7AFF] px-6 text-footnote font-semibold text-white shadow-[0_14px_44px_-18px_rgba(10,122,255,0.9)] transition-colors hover:bg-[#3D94FF]"
                     >
                       <BellRing className="h-3.5 w-3.5" aria-hidden />
@@ -447,7 +447,7 @@ export default function MobileApp() {
               return (
                 <div
                   key={feature.titleKey}
-                  className="group rounded-3xl border border-white/[0.09] bg-white/[0.035] p-5 transition-colors duration-300 hover:border-[#3D94FF]/35 hover:bg-white/[0.055]"
+                  className="group rounded-3xl border border-white/[0.09] bg-white/[0.035] p-5 transition-colors duration-medium hover:border-[#3D94FF]/35 hover:bg-white/[0.055]"
                 >
                   <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-[#3D94FF]/25 bg-[#0A7AFF]/12">
                     <Icon className="h-4 w-4 text-[#3D94FF]" />
@@ -505,7 +505,7 @@ export default function MobileApp() {
               <motion.a
                 href={APK_URL}
                 whileTap={{ scale: 0.97 }}
-                transition={springSoft}
+                transition={spring.smooth}
                 className="inline-flex h-11 items-center rounded-full bg-[#0A7AFF] px-5 text-footnote font-semibold text-white no-underline transition-colors hover:bg-[#3D94FF]"
               >
                 {t("mobile.downloadNow", "Download APK")}
@@ -578,7 +578,7 @@ export default function MobileApp() {
             <motion.a
               href={APK_URL}
               whileTap={{ scale: 0.97 }}
-              transition={springSoft}
+              transition={spring.smooth}
               className="inline-flex h-11 items-center gap-2 rounded-full bg-[#0A7AFF] px-5 text-footnote font-semibold text-white no-underline transition-colors hover:bg-[#3D94FF]"
             >
               <Download className="h-4 w-4" aria-hidden />

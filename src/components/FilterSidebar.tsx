@@ -107,7 +107,7 @@ function PillButton({
       data-pill=""
       aria-pressed={active}
       onClick={onClick}
-      className={`rounded-full border px-3 py-1 text-caption font-medium transition-all duration-150 active:scale-[0.97] ${
+      className={`rounded-full border px-3 py-1 text-caption font-medium transition-ui duration-short active:scale-[0.97] ${
         active
           ? "border-primary/40 bg-primary/15 text-primary shadow-sm"
           : "border-transparent bg-surface/70 text-muted-foreground hover:border-primary/40 hover:text-foreground hover:bg-surface"
@@ -119,7 +119,7 @@ function PillButton({
 }
 
 function selectTriggerClass() {
-  return "h-9 rounded-full border-transparent bg-surface/70 px-3.5 text-footnote text-foreground transition-all duration-150 hover:border-primary/40 focus:ring-2 focus:ring-primary/20";
+  return "h-9 rounded-full border-transparent bg-surface/70 px-3.5 text-footnote text-foreground transition-ui duration-short hover:border-primary/40 focus:ring-2 focus:ring-primary/20";
 }
 
 function selectContentClass() {
@@ -401,7 +401,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
                   layout={!motionStill}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9, transition: { duration: duration.fast, ease: ease.exit } }}
+                  exit={{ opacity: 0, scale: 0.9, transition: { duration: duration.short, ease: ease.accelerate } }}
                   transition={spring.snappy}
                   whileTap={motionStill ? undefined : press.whileTap}
                   className="inline-flex max-w-full items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-caption font-medium text-primary-bright"
@@ -418,7 +418,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
           <button
             type="button"
             onClick={() => setInventoryMode("priced")}
-            className={`flex-1 rounded-full px-2.5 py-1 text-caption font-medium transition-all ${
+            className={`flex-1 rounded-full px-2.5 py-1 text-caption font-medium transition-ui ${
               priceAvailability === "priced" ? "bg-primary/15 text-primary-bright shadow-xs" : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -427,7 +427,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
           <button
             type="button"
             onClick={() => setInventoryMode("unavailable")}
-            className={`flex-1 rounded-full px-2.5 py-1 text-caption font-medium transition-all ${
+            className={`flex-1 rounded-full px-2.5 py-1 text-caption font-medium transition-ui ${
               priceAvailability === "unavailable" ? "bg-primary/15 text-primary-bright shadow-xs" : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -439,7 +439,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
           type="button"
           onClick={() => update({ include_archive: !filters.include_archive })}
           className={cn(
-            "flex w-full items-center justify-between rounded-full border px-3 py-1.5 text-caption font-medium transition-all",
+            "flex w-full items-center justify-between rounded-full border px-3 py-1.5 text-caption font-medium transition-ui",
             filters.include_archive
               ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold shadow-xs"
               : "border-border/60 bg-surface/80 text-muted-foreground hover:text-foreground hover:border-border",

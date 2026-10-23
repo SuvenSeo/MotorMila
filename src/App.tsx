@@ -1,6 +1,7 @@
 import { LazyMotion, MotionConfig, domAnimation } from "motion/react";
 import { Suspense, useEffect } from "react";
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, unstable_HistoryRouter as HistoryRouter, useLocation } from "react-router-dom";
+import { createViewTransitionHistory } from "@/lib/viewTransition";
 import { ScrollRestoration } from "@/components/ScrollRestoration";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { RouteFallback } from "@/components/RouteFallback";
@@ -92,6 +93,9 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+/** Browser history whose route swaps run through a View Transition. */
+const appHistory = createViewTransitionHistory();
 
 const MinimalLoader = () => <RouteFallback />;
 
@@ -208,7 +212,7 @@ const App = () => {
             <ScrollProgressBar />
             {/* Toasts sit under the header, clear of the bottom dock (nav, compare). */}
             <Sonner position="top-center" offset={76} mobileOffset={{ top: 72 }} />
-            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <HistoryRouter history={appHistory} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <ScrollRestoration />
               <RouteMeta />
               <CompareProvider>
@@ -301,7 +305,7 @@ const App = () => {
                 } />
               </Routes>
               </CompareProvider>
-            </BrowserRouter>
+            </HistoryRouter>
           </MotionConfig>
           </LazyMotion>
         </TooltipProvider>

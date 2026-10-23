@@ -10,7 +10,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { SectionHeader } from "@/components/SectionHeader";
-import { revealContainer, revealItem, springSoft } from "@/lib/motion";
+import { revealContainer, revealItem, spring } from "@/lib/motion";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import {
   PULSE_SOURCE_GUIDES,
@@ -51,7 +51,7 @@ function GuideNotFound() {
         </p>
         <Link
           to="/official-pulse"
-          className="mt-6 inline-flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-caption font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98]"
+          className="mt-6 inline-flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-caption font-semibold text-primary-foreground no-underline shadow-soft transition-ui hover:bg-primary/90 active:scale-[0.98]"
         >
           <ArrowLeft aria-hidden className="h-3.5 w-3.5" />
           {t("pulse.backToPulse", "Back to Official Pulse")}
@@ -75,7 +75,7 @@ function RelatedSignalCard({ signal }: { signal: MarketSignal }) {
     <motion.article
       variants={revealItem}
       whileHover={{ y: -2 }}
-      transition={springSoft}
+      transition={spring.smooth}
       className="group rounded-2xl border border-border bg-card p-5 shadow-soft transition-colors hover:border-primary/30"
     >
       <Link to={`/official-pulse/${signal.id}`} className="flex h-full flex-col no-underline">

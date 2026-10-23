@@ -308,7 +308,7 @@ export default function MakeModelHub() {
                   <motion.div key={entry.district} variants={revealItem}>
                     <Link
                       to={`/locations/${encodeURIComponent(entry.district)}`}
-                      className="group block rounded-2xl border border-border bg-card p-5 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg no-underline"
+                      className="group block rounded-2xl border border-border bg-card p-5 shadow-soft transition-ui duration-medium hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg no-underline"
                     >
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-body font-bold tracking-tight text-foreground">
@@ -393,7 +393,7 @@ export default function MakeModelHub() {
         <motion.div variants={revealContainer} className="grid gap-4 lg:grid-cols-3">
           <motion.div
             variants={revealItem}
-            className="group flex flex-col rounded-2xl border border-border bg-card p-6 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg"
+            className="group flex flex-col rounded-2xl border border-border bg-card p-6 shadow-soft transition-ui duration-medium hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-surface transition-colors group-hover:border-primary/30 group-hover:bg-primary/10">
               <BarChart2 className="h-4 w-4 text-primary" aria-hidden />
@@ -417,7 +417,7 @@ export default function MakeModelHub() {
 
           <motion.div
             variants={revealItem}
-            className="group flex flex-col rounded-2xl border border-border bg-card p-6 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg"
+            className="group flex flex-col rounded-2xl border border-border bg-card p-6 shadow-soft transition-ui duration-medium hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-surface transition-colors group-hover:border-primary/30 group-hover:bg-primary/10">
               <TrendingUp className="h-4 w-4 text-primary" aria-hidden />
@@ -441,7 +441,7 @@ export default function MakeModelHub() {
 
           <motion.div
             variants={revealItem}
-            className="group flex flex-col rounded-2xl border border-border bg-card p-6 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg"
+            className="group flex flex-col rounded-2xl border border-border bg-card p-6 shadow-soft transition-ui duration-medium hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-surface transition-colors group-hover:border-primary/30 group-hover:bg-primary/10">
               <Car className="h-4 w-4 text-primary" aria-hidden />

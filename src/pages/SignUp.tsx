@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/authContext";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { API_BASE, resolveFetchCredentials } from "@/services/api";
-import { revealContainer, revealItem, springSoft } from "@/lib/motion";
+import { revealContainer, revealItem, spring } from "@/lib/motion";
 import { BRAND } from "@/lib/brand";
 
 type FormValues = { name: string; password: string; confirm: string };
@@ -229,7 +229,7 @@ export default function SignUp() {
 
           <motion.div variants={revealItem} className="premium-surface mx-auto w-full max-w-md p-7 shadow-soft-lg sm:p-9 lg:mx-0 lg:max-w-none">
             <Link to="/sign-in" className="mb-8 inline-flex items-center gap-2.5 no-underline group">
-              <div className="h-9 w-9 overflow-hidden rounded-full ring-1 ring-border transition-all group-hover:ring-primary/40">
+              <div className="h-9 w-9 overflow-hidden rounded-full ring-1 ring-border transition-ui group-hover:ring-primary/40">
                 <img src="/logo.png" alt="Motormila" className="h-full w-full object-cover" />
               </div>
               <span className="font-display text-footnote font-bold text-foreground">{BRAND.name}</span>
@@ -325,7 +325,7 @@ export default function SignUp() {
                   type="submit"
                   disabled={loading}
                   whileTap={{ scale: 0.98 }}
-                  transition={springSoft}
+                  transition={spring.smooth}
                   className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-caption font-semibold tracking-tight text-primary-foreground shadow-soft disabled:opacity-50"
                 >
                   {loading ? t("signup.creating", "Creating account…") : (
@@ -406,7 +406,7 @@ export default function SignUp() {
                     type="submit"
                     disabled={loading}
                     whileTap={{ scale: 0.98 }}
-                    transition={springSoft}
+                    transition={spring.smooth}
                     className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-caption font-semibold tracking-tight text-primary-foreground shadow-soft disabled:opacity-50"
                   >
                     {loading ? t("signup.creating", "Creating account…") : (

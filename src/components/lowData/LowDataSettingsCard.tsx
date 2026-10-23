@@ -49,7 +49,7 @@ export function LowDataSettingsCard({ className }: { className?: string }) {
             aria-hidden
             initial={false}
             animate={{ x: lowData ? 24 : 4 }}
-            transition={motionStill ? { duration: 0 } : spring.bouncy}
+            transition={motionStill ? { duration: 0 } : spring.expressive}
             className="inline-block h-5 w-5 rounded-full bg-background shadow"
           />
         </button>

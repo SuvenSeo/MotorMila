@@ -1,5 +1,5 @@
 import { BrandLogo } from "@/components/BrandLogo";
-import { scrollBehavior, spring, transition as motionTransition, usePrefersReducedMotionOrLowData } from "@/lib/motion";
+import { scrollBehavior, spring, tween as motionTween, usePrefersReducedMotionOrLowData } from "@/lib/motion";
 import { prefetchRoute } from "@/lib/routePrefetch";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, LayoutGroup, m, motion } from "motion/react";
@@ -216,7 +216,7 @@ export function Navbar() {
             >
               <span className="relative z-10">{t("nav.more", "More")}</span>
               <ChevronDown
-                className={cn("relative z-10 h-3.5 w-3.5 opacity-70 transition-transform duration-200", menuOpen && "rotate-180")}
+                className={cn("relative z-10 h-3.5 w-3.5 opacity-70 transition-transform duration-short", menuOpen && "rotate-180")}
                 aria-hidden
               />
             </button>
@@ -315,8 +315,8 @@ export function Navbar() {
             className="site-menu-panel-wrap"
             aria-label={t("nav.navigationMenu", "Navigation menu")}
             initial={calm ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: -4 }}
-            animate={{ opacity: 1, scale: 1, y: 0, transition: motionTransition.fast }}
-            exit={calm ? { opacity: 0 } : { opacity: 0, scale: 0.98, y: -4, transition: motionTransition.exit }}
+            animate={{ opacity: 1, scale: 1, y: 0, transition: motionTween.short }}
+            exit={calm ? { opacity: 0 } : { opacity: 0, scale: 0.98, y: -4, transition: motionTween.exit }}
             onKeyDown={(e) => {
               if (e.key === "Escape") setMenuOpen(false);
             }}

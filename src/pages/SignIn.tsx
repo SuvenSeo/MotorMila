@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { AtmosphericImage } from "@/components/AtmosphericImage";
 import { DEMO_ACCOUNT_SUMMARY, DEMO_AUTH_ENABLED, useAuth } from "@/lib/authContext";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { revealContainer, revealItem, springSoft } from "@/lib/motion";
+import { revealContainer, revealItem, spring } from "@/lib/motion";
 import { sanitizeSignInRedirect } from "@/lib/signIn";
 import { visuals } from "@/lib/visualAssets";
 
@@ -82,7 +82,7 @@ export default function SignIn() {
         >
           <div>
             <Link to="/" className="mb-8 inline-flex items-center gap-2.5 group">
-              <div className="h-9 w-9 overflow-hidden rounded-2xl ring-1 ring-white/20 transition-all group-hover:ring-primary/50">
+              <div className="h-9 w-9 overflow-hidden rounded-2xl ring-1 ring-white/20 transition-ui group-hover:ring-primary/50">
                 <img src="/logo.png" alt="" className="h-full w-full object-cover" />
               </div>
               <span className="font-display text-title3 font-bold tracking-tight text-white sm:text-title2">
@@ -120,8 +120,8 @@ export default function SignIn() {
                 type="button"
                 onClick={() => navigate("/pro-preview")}
                 whileTap={{ scale: 0.98 }}
-                transition={springSoft}
-                className="mt-3 flex h-9 w-full items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/[0.08] text-caption font-bold text-white transition-all hover:border-primary/40 hover:bg-white/[0.12]"
+                transition={spring.smooth}
+                className="mt-3 flex h-9 w-full items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/[0.08] text-caption font-bold text-white transition-ui hover:border-primary/40 hover:bg-white/[0.12]"
               >
                 {t("signin.previewPro", "Preview Pro")} <ArrowRight className="h-3 w-3" aria-hidden />
               </motion.button>
@@ -139,8 +139,8 @@ export default function SignIn() {
                   type="button"
                   onClick={() => { setValue("email", acc.email); setServerError(""); }}
                   whileTap={{ scale: 0.99 }}
-                  transition={springSoft}
-                  className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-left transition-all hover:border-primary/35"
+                  transition={spring.smooth}
+                  className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-left transition-ui hover:border-primary/35"
                 >
                   <div>
                     <p className="text-caption font-bold text-white">{acc.name}</p>
@@ -196,7 +196,7 @@ export default function SignIn() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((s) => !s)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/45 transition-all hover:text-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/45 transition-ui hover:text-white"
                   aria-label={showPassword ? t("signin.hidePassword", "Hide password") : t("signin.showPassword", "Show password")}
                 >
                   {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -224,8 +224,8 @@ export default function SignIn() {
               type="submit"
               disabled={loading}
               whileTap={{ scale: 0.98 }}
-              transition={springSoft}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#0A7AFF] text-caption font-semibold text-white shadow-[0_12px_40px_-16px_rgba(10,122,255,0.85)] transition-all hover:bg-[#3D94FF] disabled:opacity-50"
+              transition={spring.smooth}
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#0A7AFF] text-caption font-semibold text-white shadow-[0_12px_40px_-16px_rgba(10,122,255,0.85)] transition-ui hover:bg-[#3D94FF] disabled:opacity-50"
             >
               {loading ? (
                 t("signin.loading", "Signing in...")
@@ -338,7 +338,7 @@ export default function SignIn() {
                       <button
                         type="submit"
                         disabled={resetSending}
-                        className="h-10 flex-1 rounded-full bg-[#0A7AFF] text-caption font-semibold text-white transition-all hover:bg-[#3D94FF] disabled:opacity-50"
+                        className="h-10 flex-1 rounded-full bg-[#0A7AFF] text-caption font-semibold text-white transition-ui hover:bg-[#3D94FF] disabled:opacity-50"
                       >
                         {resetSending
                           ? t("signin.resetSending", "Sending...")

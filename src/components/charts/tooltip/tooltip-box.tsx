@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useSpring } from "motion/react";
+import { tween } from "@/lib/motion";
 import type { RefObject } from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -213,7 +214,7 @@ function TooltipBoxInner({
       initial={{ opacity: 0 }}
       ref={tooltipRef}
       style={{ left: finalLeft, top: finalTop }}
-      transition={{ duration: 0.1 }}
+      transition={tween.micro}
     >
       <motion.div
         animate={{ scale: 1, opacity: 1, x: 0 }}

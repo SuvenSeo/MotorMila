@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { m, motion, AnimatePresence } from "motion/react";
-import { duration, ease, spring, useReducedMotionOrLowData } from "@/lib/motion";
+import { duration, ease, spring, useReducedMotionOrLowData, tween } from "@/lib/motion";
 import { formatPrice, getPermits, getMacroContext, type LandedCostResult, type TcoResult, type PermitInfo, type MacroContext } from "@/services/api";
 import {
   calculateLandedCostResilient as calculateLandedCost,
@@ -533,7 +533,7 @@ export default function Calculator() {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.2 }}
+              transition={tween.short}
               className="grid gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]"
             >
               {/* Surcharge countdown — time-boxed gazette moment */}
@@ -578,7 +578,7 @@ export default function Calculator() {
                         initial={{ opacity: 0, scale: 0.92 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.92 }}
-                        transition={{ duration: 0.18 }}
+                        transition={tween.short}
                         className="w-full text-center sm:w-auto sm:text-left sm:ml-auto rounded-full border border-emerald-500/25 bg-emerald-400/10 px-3 py-1.5 text-caption font-bold text-emerald-700 dark:text-emerald-300 num"
                       >
                         {t("calc.lapseSavings", "This import lands {amount} cheaper if it lapses", { amount: formatPrice(lcLapseSavings) })}
@@ -666,7 +666,7 @@ export default function Calculator() {
                           key={fuel}
                           onClick={() => setLcFuelType(fuel)}
                           aria-pressed={lcFuelType === fuel}
-                          className={`min-h-[36px] rounded-2xl border py-2.5 text-caption font-bold capitalize transition-all active:scale-[0.97] ${
+                          className={`min-h-[36px] rounded-2xl border py-2.5 text-caption font-bold capitalize transition-ui active:scale-[0.97] ${
                             lcFuelType === fuel
                               ? "border-primary/40 bg-primary/10 text-primary-bright"
                               : "border-border bg-surface text-muted-foreground hover:text-foreground hover:border-primary/40"
@@ -721,8 +721,8 @@ export default function Calculator() {
                     <div role="status" aria-label="Calculating" className="h-6 w-6 animate-spin rounded-full border border-t-transparent border-primary" />
                   </div>
                 ) : lcResult ? (
-                  <div className={`space-y-5 transition-opacity duration-200 ${lcLoading ? "opacity-60" : "opacity-100"}`}>
-                    <motion.div layout={!motionStill} transition={spring.gentle} className="space-y-3 border-b border-border pb-4">
+                  <div className={`space-y-5 transition-opacity duration-short ${lcLoading ? "opacity-60" : "opacity-100"}`}>
+                    <motion.div layout={!motionStill} transition={spring.smooth} className="space-y-3 border-b border-border pb-4">
                       <div className="flex justify-between text-caption text-muted-foreground">
                         <span>{t("calc.baseCif", "Base CIF LKR Equivalent")}</span>
                         <span className="font-semibold text-foreground num">{formatPrice(lcResult.cif_lkr)}</span>
@@ -754,8 +754,8 @@ export default function Calculator() {
                             layout={!motionStill}
                             initial={{ opacity: 0, y: -4 }}
                             animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, transition: { duration: duration.fast, ease: ease.exit } }}
-                            transition={spring.gentle}
+                            exit={{ opacity: 0, transition: { duration: duration.short, ease: ease.accelerate } }}
+                            transition={spring.smooth}
                             className="flex justify-between text-caption text-rose-600 dark:text-rose-400 font-semibold"
                           >
                             <span>{t("calc.luxuryTax", "Luxury Tax (Excess Portion)")}</span>
@@ -766,7 +766,7 @@ export default function Calculator() {
                     </motion.div>
 
                     {/* Featured readout — landed cost towers, total taxes demoted below it */}
-                    <motion.div layout={!motionStill ? "position" : false} transition={spring.gentle} aria-live="polite" className="rounded-2xl border border-primary/25 bg-primary/5 p-5 sm:p-6 shadow-soft">
+                    <motion.div layout={!motionStill ? "position" : false} transition={spring.smooth} aria-live="polite" className="rounded-2xl border border-primary/25 bg-primary/5 p-5 sm:p-6 shadow-soft">
                       <span className="text-caption font-semibold text-primary-bright">{t("calc.estLanded", "Est. Landed Cost")}</span>
                       <div className="display-1 text-foreground num mt-2">
                         {lcResult.landed_cost == null || !Number.isFinite(lcResult.landed_cost) ? (
@@ -799,7 +799,7 @@ export default function Calculator() {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.2 }}
+              transition={tween.short}
               className="grid gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]"
             >
               {/* ORIGINAL CONFIG INPUTS */}
@@ -841,7 +841,7 @@ export default function Calculator() {
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.25 }}
+                      transition={tween.medium}
                       className="overflow-hidden rounded-2xl border border-primary/20 bg-primary/[0.05] shadow-soft"
                     >
                       <div className="p-4">
@@ -885,7 +885,7 @@ export default function Calculator() {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.2 }}
+              transition={tween.short}
               className="grid gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]"
             >
               {/* Inputs */}
@@ -919,7 +919,7 @@ export default function Calculator() {
                         key={fuel}
                         onClick={() => setTcoFuelType(fuel)}
                         aria-pressed={tcoFuelType === fuel}
-                        className={`min-h-[36px] rounded-2xl border py-2.5 text-caption font-bold capitalize transition-all active:scale-[0.97] ${
+                        className={`min-h-[36px] rounded-2xl border py-2.5 text-caption font-bold capitalize transition-ui active:scale-[0.97] ${
                           tcoFuelType === fuel
                             ? "border-primary/40 bg-primary/10 text-primary-bright"
                             : "border-border bg-surface text-muted-foreground hover:text-foreground hover:border-primary/40"
@@ -971,7 +971,7 @@ export default function Calculator() {
                     <div role="status" aria-label="Calculating" className="h-6 w-6 animate-spin rounded-full border border-t-transparent border-primary" />
                   </div>
                 ) : tcoResult ? (
-                  <div className={`space-y-5 transition-opacity duration-200 ${tcoLoading ? "opacity-60" : "opacity-100"}`}>
+                  <div className={`space-y-5 transition-opacity duration-short ${tcoLoading ? "opacity-60" : "opacity-100"}`}>
                     <div className="space-y-3 border-b border-border pb-4">
                       <div className="flex justify-between text-caption text-muted-foreground">
                         <span>Live fuel/energy price benchmark</span>
@@ -1014,7 +1014,7 @@ export default function Calculator() {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.2 }}
+              transition={tween.short}
             >
               <OwnershipCostsPanel
                 initialFuel={lcFuelType}
@@ -1030,7 +1030,7 @@ export default function Calculator() {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.2 }}
+              transition={tween.short}
               className="space-y-6"
             >
               <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-soft">
@@ -1075,7 +1075,7 @@ export default function Calculator() {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.2 }}
+              transition={tween.short}
               className="space-y-6"
             >
               <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-soft">

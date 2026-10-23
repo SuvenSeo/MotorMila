@@ -81,7 +81,7 @@ export function TrialCta({ className, label }: { className?: string; label?: str
     return (
       <Link
         to={TRIAL_OFFER.ctaTo}
-        className={className ?? "inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-footnote font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98]"}
+        className={className ?? "inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-footnote font-semibold text-primary-foreground no-underline shadow-soft transition-ui hover:bg-primary/90 active:scale-[0.98]"}
       >
         {label ?? t("pricing.startTrial", TRIAL_OFFER.cta)}
         <ArrowRight aria-hidden className="h-4 w-4" />
@@ -134,7 +134,7 @@ export function TrialCta({ className, label }: { className?: string; label?: str
         ref={burstRef}
         type="submit"
         disabled={sending}
-        className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-primary px-5 text-footnote font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60"
+        className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-primary px-5 text-footnote font-semibold text-primary-foreground transition-ui hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60"
       >
         {sending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : null}
         {t("shell.pro.notify", "Notify me")}
@@ -210,7 +210,7 @@ export function TrialCountdownBanner() {
         <Sparkles aria-hidden className="h-4 w-4 text-primary" />
         {t("shell.pricing.notifyBanner", "MotorMila is free during beta. Pro is coming soon — get an email when it launches.")}
       </p>
-      <TrialCta className="inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-caption font-semibold text-primary-foreground no-underline transition-all hover:bg-primary/90" />
+      <TrialCta className="inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-caption font-semibold text-primary-foreground no-underline transition-ui hover:bg-primary/90" />
     </div>
   );
 }
@@ -281,7 +281,7 @@ const COMPARE_ROW_DEFS = [
 ] as const;
 
 const CTA_CLASS = (highlight?: boolean) =>
-  `mt-6 inline-flex h-10 items-center justify-center rounded-full px-4 text-caption font-semibold no-underline transition-all active:scale-[0.98] ${
+  `mt-6 inline-flex h-10 items-center justify-center rounded-full px-4 text-caption font-semibold no-underline transition-ui active:scale-[0.98] ${
     highlight
       ? "bg-primary text-primary-foreground hover:bg-primary/90"
       : "border border-border bg-surface text-foreground hover:border-primary/35"
@@ -548,7 +548,7 @@ export default function Pricing() {
             <TrialCta />
             <Link
               to="/pro-preview"
-              className="inline-flex h-11 items-center rounded-full border border-border bg-card px-6 text-footnote font-semibold text-foreground no-underline transition-all hover:border-primary/40 hover:bg-surface active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="inline-flex h-11 items-center rounded-full border border-border bg-card px-6 text-footnote font-semibold text-foreground no-underline transition-ui hover:border-primary/40 hover:bg-surface active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               {t("shell.pricing.whatPro", "What Pro will include")}
             </Link>
@@ -667,7 +667,7 @@ export default function Pricing() {
           {...onScrollReveal}
           variants={revealItem}
           layout={!motionStill}
-          transition={spring.gentle}
+          transition={spring.smooth}
           id="for-dealers"
           style={{ borderRadius: 16 }}
           className="scroll-mt-24 border border-border bg-card/40 p-5 sm:p-6"
@@ -705,7 +705,7 @@ export default function Pricing() {
             hidden={!dealersOpen}
             initial={false}
             animate={dealersOpen ? { opacity: 1, y: 0 } : { opacity: 0, y: -6 }}
-            transition={{ duration: duration.base, ease: dealersOpen ? ease.emphasized : ease.exit }}
+            transition={{ duration: duration.medium, ease: dealersOpen ? ease.decelerate : ease.accelerate }}
             className="mt-6 space-y-8"
           >
             <DealerPlans />
@@ -732,7 +732,7 @@ export default function Pricing() {
             <h3 className="text-callout font-bold text-foreground">{t("shell.pricing.ctaTitle", "Get an email when Pro launches.")}</h3>
           </div>
           <div className="flex flex-wrap gap-2">
-            <TrialCta className="inline-flex h-10 items-center rounded-full bg-primary px-5 text-caption font-semibold text-primary-foreground no-underline transition-all hover:bg-primary/90" />
+            <TrialCta className="inline-flex h-10 items-center rounded-full bg-primary px-5 text-caption font-semibold text-primary-foreground no-underline transition-ui hover:bg-primary/90" />
             <a
               href={BRAND.contactMailto}
               className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-caption font-semibold text-foreground no-underline"

@@ -88,7 +88,7 @@ export function HeroFlipWords({ words, interval = 2800, align = "start", classNa
               opacity: 0,
               y: "-0.3em",
               filter: "blur(4px)",
-              transition: { duration: duration.fast, ease: ease.exit },
+              transition: { duration: duration.short, ease: ease.accelerate },
             },
           }}
         >
@@ -102,7 +102,7 @@ export function HeroFlipWords({ words, interval = 2800, align = "start", classNa
                   opacity: 1,
                   y: 0,
                   filter: "blur(0px)",
-                  transition: { duration: duration.slow, ease: ease.emphasized },
+                  transition: { duration: duration.long, ease: ease.decelerate },
                 },
               }}
             >

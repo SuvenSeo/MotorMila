@@ -426,7 +426,7 @@ function HybridTaxArbitrageSection({ data, loading, error }: HybridTaxArbitrageS
                   <div
                     role="img"
                     aria-label={`${band.label} median price bar ${barPct}%`}
-                    className={`h-full rounded-full transition-all duration-500 ${colors.bar}`}
+                    className={`h-full rounded-full transition-ui duration-long ${colors.bar}`}
                     style={{ width: `${barPct}%` }}
                   />
                 </div>

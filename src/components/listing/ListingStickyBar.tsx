@@ -73,10 +73,10 @@ export function ListingStickyBar({ priceLkr, badge, href, sourceName, listingId,
         initial={false}
         animate={
           calm
-            ? { opacity: visible ? 1 : 0, y: visible ? 0 : 160, transition: { duration: visible ? duration.fast : 0 } }
+            ? { opacity: visible ? 1 : 0, y: visible ? 0 : 160, transition: { duration: visible ? duration.short : 0 } }
             : visible
-              ? { opacity: 1, y: 0, transition: spring.gentle }
-              : { opacity: 0, y: 160, transition: { duration: duration.base, ease: ease.exit } }
+              ? { opacity: 1, y: 0, transition: spring.smooth }
+              : { opacity: 0, y: 160, transition: { duration: duration.medium, ease: ease.accelerate } }
         }
         style={{ pointerEvents: visible ? undefined : "none" }}
       >

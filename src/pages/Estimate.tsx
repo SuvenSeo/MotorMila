@@ -58,13 +58,13 @@ function lkr(n: number): string {
 /** Direction-aware horizontal step slide (dir 1 = forward, -1 = back). */
 const stepSlide: Variants = {
   enter: (dir: number) => ({ opacity: 0, x: dir * 28 }),
-  center: { opacity: 1, x: 0, transition: { duration: duration.base, ease: ease.emphasized } },
-  exit: (dir: number) => ({ opacity: 0, x: dir * -28, transition: { duration: duration.fast, ease: ease.exit } }),
+  center: { opacity: 1, x: 0, transition: { duration: duration.medium, ease: ease.decelerate } },
+  exit: (dir: number) => ({ opacity: 0, x: dir * -28, transition: { duration: duration.short, ease: ease.accelerate } }),
 };
 const stepFade: Variants = {
   enter: { opacity: 0 },
-  center: { opacity: 1, transition: { duration: duration.fast } },
-  exit: { opacity: 0, transition: { duration: duration.instant } },
+  center: { opacity: 1, transition: { duration: duration.short } },
+  exit: { opacity: 0, transition: { duration: duration.micro } },
 };
 
 export default function Estimate() {
@@ -277,7 +277,7 @@ export default function Estimate() {
               className="h-full w-full origin-left rounded-full bg-primary"
               initial={false}
               animate={{ scaleX: progressPct / 100 }}
-              transition={motionStill ? { duration: 0 } : spring.gentle}
+              transition={motionStill ? { duration: 0 } : spring.smooth}
             />
           </div>
         </div>
@@ -407,7 +407,7 @@ export default function Estimate() {
                         <m.span
                           initial={motionStill ? false : { scale: 0, opacity: 0 }}
                           animate={{ scale: 1, opacity: 1 }}
-                          transition={spring.bouncy}
+                          transition={spring.expressive}
                           className="inline-flex"
                         >
                           <Check className="h-4 w-4 text-primary" aria-hidden />
@@ -490,7 +490,7 @@ export default function Estimate() {
                         className="absolute inset-y-0 rounded-full bg-primary"
                         initial={motionStill ? false : { opacity: 0, scaleX: 0.2 }}
                         animate={{ opacity: 1, scaleX: 1 }}
-                        transition={{ ...spring.gentle, delay: 0.15 }}
+                        transition={{ ...spring.smooth, delay: 0.15 }}
                         style={{
                           left: `${((band.from - result.low) / Math.max(1, result.high - result.low)) * 100}%`,
                           width: `${((band.to - band.from) / Math.max(1, result.high - result.low)) * 100}%`,

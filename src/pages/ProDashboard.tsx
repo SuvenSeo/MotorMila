@@ -917,7 +917,7 @@ export default function ProDashboard() {
             <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-caption font-bold text-primary-bright">
               <Crown className="h-3 w-3" /> {user?.plan || "pro"}
             </span>
-            <button type="button" onClick={handleLogout} className="inline-flex h-8 items-center gap-1.5 rounded-2xl border border-border bg-surface px-2.5 text-caption font-bold text-muted-foreground transition-all hover:border-rose-500/25 hover:text-rose-600 dark:hover:text-rose-400">
+            <button type="button" onClick={handleLogout} className="inline-flex h-8 items-center gap-1.5 rounded-2xl border border-border bg-surface px-2.5 text-caption font-bold text-muted-foreground transition-ui hover:border-rose-500/25 hover:text-rose-600 dark:hover:text-rose-400">
               <LogOut className="h-3 w-3" /> Sign out
             </button>
           </div>
@@ -968,7 +968,7 @@ export default function ProDashboard() {
                 key={id}
                 value={id}
                 onClick={() => setActiveTab(id)}
-                className="motion-card group flex h-auto flex-col items-stretch whitespace-normal rounded-xl border border-border bg-card p-4 text-left shadow-soft data-[state=active]:border-primary data-[state=active]:bg-primary/10 data-[state=active]:text-foreground data-[state=inactive]:hover:border-primary/20 data-[state=inactive]:hover:bg-surface transition-all active:scale-[0.99]"
+                className="motion-card group flex h-auto flex-col items-stretch whitespace-normal rounded-xl border border-border bg-card p-4 text-left shadow-soft data-[state=active]:border-primary data-[state=active]:bg-primary/10 data-[state=active]:text-foreground data-[state=inactive]:hover:border-primary/20 data-[state=inactive]:hover:bg-surface transition-ui active:scale-[0.99]"
               >
                 <span className="flex w-full items-center gap-3">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] border border-border bg-surface text-primary-bright transition-colors group-data-[state=active]:border-primary/40 group-data-[state=active]:bg-primary/10">

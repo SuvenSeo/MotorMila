@@ -197,7 +197,7 @@ export default function PriceIndexPage() {
                       }}
                       aria-pressed={activeSegment === seg}
                       title={locked ? freePlanCopy.indexBody : undefined}
-                      className={`rounded-2xl border px-3.5 py-1.5 text-caption font-semibold transition-all ${
+                      className={`rounded-2xl border px-3.5 py-1.5 text-caption font-semibold transition-ui ${
                         activeSegment === seg
                           ? "border-primary/30 bg-primary/10 text-primary-bright"
                           : locked

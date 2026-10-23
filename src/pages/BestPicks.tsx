@@ -149,7 +149,7 @@ const PICKS_TIMEOUT_MS = 15_000;
 /** Items past the stagger cap: plain fade, all together after the first 8. */
 const lateFade: Variants = {
   hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { duration: duration.base, delay: 8 * 0.04 } },
+  show: { opacity: 1, transition: { duration: duration.medium, delay: 8 * 0.04 } },
 };
 
 /** Loading placeholder shaped like the final page: featured pick (image +
@@ -316,7 +316,7 @@ export default function BestPicks() {
                 type="button"
                 onClick={() => setSortMode("deal_score")}
                 aria-pressed={sortMode === "deal_score"}
-                className={`rounded-full border px-4 py-2 text-caption font-semibold transition-all active:scale-[0.97] ${
+                className={`rounded-full border px-4 py-2 text-caption font-semibold transition-ui active:scale-[0.97] ${
                   sortMode === "deal_score"
                     ? "border-primary/40 bg-primary/10 text-primary-bright shadow-soft"
                     : "border-border bg-card text-muted-foreground hover:bg-surface hover:text-foreground"
@@ -328,7 +328,7 @@ export default function BestPicks() {
                 type="button"
                 onClick={() => setSortMode("affordability")}
                 aria-pressed={sortMode === "affordability"}
-                className={`rounded-full border px-4 py-2 text-caption font-semibold transition-all active:scale-[0.97] ${
+                className={`rounded-full border px-4 py-2 text-caption font-semibold transition-ui active:scale-[0.97] ${
                   sortMode === "affordability"
                     ? "border-primary/40 bg-primary/10 text-primary-bright shadow-soft"
                     : "border-border bg-card text-muted-foreground hover:bg-surface hover:text-foreground"
@@ -368,7 +368,7 @@ export default function BestPicks() {
                   <li key={drop.listing.id}>
                   <Link
                     to={`/listing/${drop.listing.id}`}
-                    className="group block h-full rounded-xl border border-border bg-surface p-3.5 no-underline transition-all hover:border-emerald-500/30 hover:bg-card hover:shadow-soft"
+                    className="group block h-full rounded-xl border border-border bg-surface p-3.5 no-underline transition-ui hover:border-emerald-500/30 hover:bg-card hover:shadow-soft"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="truncate text-caption font-bold text-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
@@ -415,7 +415,7 @@ export default function BestPicks() {
           <m.div variants={revealItem} className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-border py-16 text-center">
             <SearchX className="h-5 w-5 text-muted-foreground" aria-hidden />
             <p className="text-footnote text-muted-foreground font-medium">{error}</p>
-            <Link to="/#market" className="rounded-full border border-border bg-card px-4 py-2 text-caption font-bold text-foreground no-underline transition-all hover:bg-surface active:scale-[0.97]">{t("common.openInventory", "Open inventory")}</Link>
+            <Link to="/#market" className="rounded-full border border-border bg-card px-4 py-2 text-caption font-bold text-foreground no-underline transition-ui hover:bg-surface active:scale-[0.97]">{t("common.openInventory", "Open inventory")}</Link>
           </m.div>
         ) : ranked.length === 0 ? (
           <m.div variants={revealItem}>
@@ -434,11 +434,11 @@ export default function BestPicks() {
               const pct = topScore > 0 ? Math.min(100, Math.round((score / topScore) * 100)) : 0;
               const cashDown = minCashDownForPrice(Number(featured.price_lkr || 0));
               return (
-                <m.article variants={revealItem} className="group relative grid overflow-hidden rounded-2xl border border-border bg-card shadow-soft backdrop-blur-md transition-all duration-300 hover:border-primary/30 hover:shadow-soft-lg lg:grid-cols-[1.1fr_1fr]" onMouseMove={setSpotlightVars}>
+                <m.article variants={revealItem} className="group relative grid overflow-hidden rounded-2xl border border-border bg-card shadow-soft backdrop-blur-md transition-ui duration-medium hover:border-primary/30 hover:shadow-soft-lg lg:grid-cols-[1.1fr_1fr]" onMouseMove={setSpotlightVars}>
                   <CardSpotlightGlow />
                   <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-30 pointer-events-none" aria-hidden />
-                  <Link to={`/listing/${featured.id}`} className="block aspect-[16/10] overflow-hidden bg-muted no-underline transition-transform duration-200 active:scale-[0.99] lg:aspect-auto lg:min-h-[320px]">
-                    <VehicleThumbnail src={pickVehicleImageUrl([featured.thumbnail_url, ...(Array.isArray(featured.images) ? featured.images : [])], [featured.url, featured.detail_url, featured.external_url])} listingId={featured.id} alt={`${featured.make} ${featured.model}`} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
+                  <Link to={`/listing/${featured.id}`} className="block aspect-[16/10] overflow-hidden bg-muted no-underline transition-transform duration-short active:scale-[0.99] lg:aspect-auto lg:min-h-[320px]">
+                    <VehicleThumbnail src={pickVehicleImageUrl([featured.thumbnail_url, ...(Array.isArray(featured.images) ? featured.images : [])], [featured.url, featured.detail_url, featured.external_url])} listingId={featured.id} alt={`${featured.make} ${featured.model}`} className="h-full w-full object-cover transition-transform duration-long group-hover:scale-[1.02]" />
                   </Link>
                   <div className="flex flex-col justify-between gap-6 p-6 sm:p-8">
                     <div className="space-y-4">
@@ -463,9 +463,9 @@ export default function BestPicks() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Link to={`/listing/${featured.id}`} className="flex h-11 flex-1 items-center justify-center rounded-full bg-primary text-caption font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/95 active:scale-[0.97]">{t("picks.openDetail", "Open detail")}</Link>
+                      <Link to={`/listing/${featured.id}`} className="flex h-11 flex-1 items-center justify-center rounded-full bg-primary text-caption font-semibold text-primary-foreground no-underline shadow-soft transition-ui hover:bg-primary/95 active:scale-[0.97]">{t("picks.openDetail", "Open detail")}</Link>
                       {featured.external_url && (
-                        <a href={featured.external_url} target="_blank" rel="noopener noreferrer" className="flex h-11 items-center gap-1 rounded-full border border-border bg-card px-4 text-caption font-semibold text-muted-foreground no-underline transition-all hover:text-foreground hover:bg-surface active:scale-[0.97]">
+                        <a href={featured.external_url} target="_blank" rel="noopener noreferrer" className="flex h-11 items-center gap-1 rounded-full border border-border bg-card px-4 text-caption font-semibold text-muted-foreground no-underline transition-ui hover:text-foreground hover:bg-surface active:scale-[0.97]">
                           {t("common.source", "Source")} <ExternalLink className="h-3 w-3" aria-hidden />
                         </a>
                       )}
@@ -502,13 +502,13 @@ export default function BestPicks() {
                         // Stagger the first 8; the rest arrive together.
                         variants={idx < 8 ? fadeUp : lateFade}
                         {...(motionStill ? {} : canHoverLift ? { ...hoverLift, whileTap: press.whileTap } : { whileTap: press.whileTap })}
-                        className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft backdrop-blur-md transition-[border-color,box-shadow] duration-300 hover:border-primary/30 hover:shadow-soft-lg"
+                        className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft backdrop-blur-md transition-[border-color,box-shadow] duration-medium hover:border-primary/30 hover:shadow-soft-lg"
                         onMouseMove={setSpotlightVars}
                       >
                         <CardSpotlightGlow />
                         <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-30 pointer-events-none" aria-hidden />
-                        <Link to={`/listing/${listing.id}`} className="relative block aspect-[16/10] overflow-hidden bg-muted no-underline transition-transform duration-200 active:scale-[0.98]">
-                          <VehicleThumbnail src={pickVehicleImageUrl([listing.thumbnail_url, ...(Array.isArray(listing.images) ? listing.images : [])], [listing.url, listing.detail_url, listing.external_url])} listingId={listing.id} alt={`${listing.make} ${listing.model}`} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
+                        <Link to={`/listing/${listing.id}`} className="relative block aspect-[16/10] overflow-hidden bg-muted no-underline transition-transform duration-short active:scale-[0.98]">
+                          <VehicleThumbnail src={pickVehicleImageUrl([listing.thumbnail_url, ...(Array.isArray(listing.images) ? listing.images : [])], [listing.url, listing.detail_url, listing.external_url])} listingId={listing.id} alt={`${listing.make} ${listing.model}`} className="h-full w-full object-cover transition-transform duration-long group-hover:scale-[1.02]" />
                           <span className="absolute left-2 top-2 rounded-full border border-white/20 bg-black/60 px-1.5 py-0.5 text-caption font-bold text-white num backdrop-blur-sm">{String(idx + 2).padStart(2, "0")}</span>
                         </Link>
                         <div className="flex flex-1 flex-col gap-3 p-4">

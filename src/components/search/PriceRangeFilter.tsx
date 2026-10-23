@@ -163,11 +163,11 @@ export function PriceRangeFilter({ filters, onCommit, touch = false }: PriceRang
                  data changes just snap to the new height. */
               <m.div
                 key={i}
-                className={cn("flex-1 origin-bottom rounded-t-sm transition-colors duration-200", inRange ? "bg-primary/55" : "bg-muted-foreground/20")}
+                className={cn("flex-1 origin-bottom rounded-t-sm transition-colors duration-short", inRange ? "bg-primary/55" : "bg-muted-foreground/20")}
                 style={{ height: `${count === 0 ? 0 : Math.max(8, (count / histMax) * 100)}%` }}
                 initial={motionStill ? false : { scaleY: 0 }}
                 animate={{ scaleY: 1 }}
-                transition={{ duration: duration.slow, ease: ease.emphasized, delay: Math.min(i, 8) * 0.02 }}
+                transition={{ duration: duration.long, ease: ease.decelerate, delay: Math.min(i, 8) * 0.02 }}
               />
             );
           })}
@@ -200,7 +200,7 @@ export function PriceRangeFilter({ filters, onCommit, touch = false }: PriceRang
           // Thumb grab "spring": scale with an overshoot curve (transform only;
           // the primitive positions thumbs itself, which we never animate).
           !motionStill &&
-            "[&_[role=slider]]:transition-transform [&_[role=slider]]:duration-300 [&_[role=slider]]:ease-[cubic-bezier(0.34,1.56,0.64,1)] [&_[role=slider]:active]:scale-125 [&_[role=slider]:focus-visible]:scale-110",
+            "[&_[role=slider]]:transition-transform [&_[role=slider]]:duration-medium [&_[role=slider]]:ease-standard [&_[role=slider]:active]:scale-125 [&_[role=slider]:focus-visible]:scale-110",
         )}
       />
 

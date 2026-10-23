@@ -26,7 +26,7 @@ import {
   hasFullPlatformAccess,
 } from "@/lib/planLimits";
 import type { ProMarketSnapshot } from "@/types/pro";
-import { revealItem, springSoft } from "@/lib/motion";
+import { revealItem, spring } from "@/lib/motion";
 import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
 import { PageHero } from "@/components/PageHero";
@@ -101,7 +101,7 @@ function WidgetShell({
               <AlertTriangle className="h-4 w-4 text-rose-500 dark:text-rose-400" />
               <p className="text-caption text-muted-foreground">{error}</p>
               {onRetry ? (
-                <button type="button" onClick={onRetry} className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-caption font-semibold text-foreground transition-all hover:border-primary/40 hover:bg-surface active:scale-[0.97]">
+                <button type="button" onClick={onRetry} className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-caption font-semibold text-foreground transition-ui hover:border-primary/40 hover:bg-surface active:scale-[0.97]">
                   <RefreshCw className="h-3 w-3" /> Retry
                 </button>
               ) : null}
@@ -320,7 +320,7 @@ function InventoryBenchmark() {
               <button
                 type="button"
                 onClick={handleClear}
-                className="inline-flex h-8 items-center rounded-full border border-border bg-surface px-3 text-caption font-bold text-muted-foreground transition-all hover:text-foreground hover:bg-card active:scale-[0.97]"
+                className="inline-flex h-8 items-center rounded-full border border-border bg-surface px-3 text-caption font-bold text-muted-foreground transition-ui hover:text-foreground hover:bg-card active:scale-[0.97]"
               >
                 Clear
               </button>
@@ -329,7 +329,7 @@ function InventoryBenchmark() {
               type="button"
               onClick={() => void handleSubmit()}
               disabled={loading || !urlCount}
-              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-primary px-4 text-caption font-bold text-white shadow-soft transition-all hover:bg-primary/95 active:scale-[0.97] disabled:opacity-40"
+              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-primary px-4 text-caption font-bold text-white shadow-soft transition-ui hover:bg-primary/95 active:scale-[0.97] disabled:opacity-40"
             >
               {loading ? (
                 <span className="flex items-center gap-1.5">
@@ -537,9 +537,9 @@ export default function DealerDashboard() {
         ]}
         actions={
           <>
-            <Link to="/#market" className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-caption font-semibold text-muted-foreground no-underline shadow-soft transition-all hover:border-primary/40 hover:text-foreground hover:bg-surface active:scale-[0.98]">{t("dealer.openPublicInventory", "Open public inventory")}</Link>
-            <Link to="/pricing" className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-caption font-semibold text-muted-foreground no-underline shadow-soft transition-all hover:border-primary/40 hover:text-foreground hover:bg-surface active:scale-[0.98]">Dealer plans</Link>
-            <Link to="/official-pulse" className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-caption font-semibold text-muted-foreground no-underline shadow-soft transition-all hover:border-primary/40 hover:text-foreground hover:bg-surface active:scale-[0.98]">Official pulse</Link>
+            <Link to="/#market" className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-caption font-semibold text-muted-foreground no-underline shadow-soft transition-ui hover:border-primary/40 hover:text-foreground hover:bg-surface active:scale-[0.98]">{t("dealer.openPublicInventory", "Open public inventory")}</Link>
+            <Link to="/pricing" className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-caption font-semibold text-muted-foreground no-underline shadow-soft transition-ui hover:border-primary/40 hover:text-foreground hover:bg-surface active:scale-[0.98]">Dealer plans</Link>
+            <Link to="/official-pulse" className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-caption font-semibold text-muted-foreground no-underline shadow-soft transition-ui hover:border-primary/40 hover:text-foreground hover:bg-surface active:scale-[0.98]">Official pulse</Link>
           </>
         }
       />
@@ -562,7 +562,7 @@ export default function DealerDashboard() {
             <div className="min-w-0">
               <p className="text-caption font-bold text-foreground">{t("dealer.unavailable", "Dealer data unavailable")}</p>
               <p className="mt-1 text-caption text-muted-foreground font-medium">{dashboardError}</p>
-              <button type="button" onClick={retryAll} className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-caption font-bold text-foreground transition-all hover:border-primary/40 hover:bg-card active:scale-[0.97]">
+              <button type="button" onClick={retryAll} className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-caption font-bold text-foreground transition-ui hover:border-primary/40 hover:bg-card active:scale-[0.97]">
                 <RefreshCw className="h-3 w-3" /> Retry
               </button>
             </div>
@@ -586,7 +586,7 @@ export default function DealerDashboard() {
                   { label: t("dealer.leadNotifications", "Lead Notifications"), meta: notifications.length > 1 ? t("common.live", "Live").toLowerCase() : "standby" },
                   { label: t("dealer.benchmark", "Inventory Benchmark"), meta: "URL upload" },
                 ].map((i) => (
-                  <div key={i.label} className="flex items-center justify-between rounded-2xl border border-border bg-surface px-3 py-2 transition-all hover:border-primary/40 hover:bg-card">
+                  <div key={i.label} className="flex items-center justify-between rounded-2xl border border-border bg-surface px-3 py-2 transition-ui hover:border-primary/40 hover:bg-card">
                     <span className="text-caption text-foreground font-medium">{i.label}</span>
                     <span className="text-caption font-bold text-primary-bright num">{i.meta}</span>
                   </div>
@@ -597,7 +597,7 @@ export default function DealerDashboard() {
                     <Link
                       key={tool.id}
                       to={tool.to}
-                      className="mb-1 flex items-center justify-between rounded-2xl border border-border bg-surface px-3 py-2 no-underline transition-all hover:border-primary/40 hover:bg-card last:mb-0"
+                      className="mb-1 flex items-center justify-between rounded-2xl border border-border bg-surface px-3 py-2 no-underline transition-ui hover:border-primary/40 hover:bg-card last:mb-0"
                     >
                       <span className="min-w-0">
                         <span className="block text-caption text-foreground font-medium">{tool.title}</span>
@@ -638,8 +638,8 @@ export default function DealerDashboard() {
                     key={m.label}
                     variants={revealItem}
                     whileHover={featured ? { y: -2 } : undefined}
-                    transition={springSoft}
-                    className={`group rounded-2xl border border-border bg-card shadow-soft transition-all hover:border-primary/30 ${featured ? "sm:col-span-2 p-6" : "p-5"}`}
+                    transition={spring.smooth}
+                    className={`group rounded-2xl border border-border bg-card shadow-soft transition-ui hover:border-primary/30 ${featured ? "sm:col-span-2 p-6" : "p-5"}`}
                   >
                     <p className="text-caption font-semibold text-muted-foreground/80">{m.label}</p>
                     {dashboardLoading ? (
@@ -672,7 +672,7 @@ export default function DealerDashboard() {
                   <motion.div
                     key={item.id}
                     variants={revealItem}
-                    className="rounded-2xl border border-border bg-card p-5 shadow-soft transition-all hover:border-primary/30"
+                    className="rounded-2xl border border-border bg-card p-5 shadow-soft transition-ui hover:border-primary/30"
                   >
                     <p className="text-caption font-medium text-primary-bright">{item.forWhom}</p>
                     <h3 className="mt-1.5 font-display text-body font-bold tracking-tight text-foreground">{item.title}</h3>
@@ -757,7 +757,7 @@ export default function DealerDashboard() {
                 >
                   <div className="grid gap-2 sm:grid-cols-2">
                     {districtDemand.map((d) => (
-                      <div key={d.district} className="rounded-xl border border-border bg-surface p-4 transition-all hover:border-primary/40 hover:bg-card hover:shadow-soft">
+                      <div key={d.district} className="rounded-xl border border-border bg-surface p-4 transition-ui hover:border-primary/40 hover:bg-card hover:shadow-soft">
                         <div className="flex items-center justify-between">
                           <p className="text-caption font-bold text-foreground">{d.district}</p>
                           <span className="text-caption font-bold text-primary-bright num">Demand {d.demandScore}</span>
@@ -806,7 +806,7 @@ export default function DealerDashboard() {
               </p>
               <Link
                 to="/pricing"
-                className="mt-4 inline-flex h-10 items-center rounded-full border border-border bg-surface px-5 text-caption font-semibold text-foreground no-underline shadow-soft transition-all hover:border-primary/40 hover:bg-card active:scale-[0.98]"
+                className="mt-4 inline-flex h-10 items-center rounded-full border border-border bg-surface px-5 text-caption font-semibold text-foreground no-underline shadow-soft transition-ui hover:border-primary/40 hover:bg-card active:scale-[0.98]"
               >
                 View dealer plans
               </Link>

@@ -234,8 +234,8 @@ export function ListingPriceTimeline({
                   key={lineVisible ? "drawn" : "waiting"}
                   hide={!lineVisible}
                   isAnimationActive={!calm}
-                  animationDuration={600}
-                  animationEasing={"cubic-bezier(0.2,0,0,1)" as unknown as AnimationTiming}
+                  animationDuration={500}
+                  animationEasing={"var(--ease-standard)" as unknown as AnimationTiming}
                   type="stepAfter"
                   dataKey="price_million"
                   name="Asking price"

@@ -148,7 +148,7 @@ export default function DistrictHub() {
                 <Link
                   key={`${entry.make}-${entry.model}`}
                   to={`/cars/${encodeURIComponent(entry.make)}/${encodeURIComponent(entry.model)}`}
-                  className="group rounded-2xl border border-border bg-card p-5 shadow-soft transition-all hover:-translate-y-1 hover:border-primary/30 no-underline"
+                  className="group rounded-2xl border border-border bg-card p-5 shadow-soft transition-ui hover:-translate-y-1 hover:border-primary/30 no-underline"
                 >
                   <p className="text-body font-bold text-foreground">
                     {entry.make} {entry.model}

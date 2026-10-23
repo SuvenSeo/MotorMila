@@ -471,7 +471,7 @@ const BarColumnTrackInner = memo(function BarColumnTrackInner({
   return (
     <g
       className={`bar-column-track-${uniqueId}`}
-      style={{ transition: "opacity 0.15s ease-in-out" }}
+      style={{ transition: "opacity 0.15s ease-standard" }}
     >
       {data.map((d, i) => {
         const categoryValue = barXAccessor(d);

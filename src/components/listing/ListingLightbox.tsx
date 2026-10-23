@@ -60,9 +60,9 @@ export default function ListingLightbox({
               swipe: 320,
               zoom: 280,
               easing: {
-                fade: "cubic-bezier(0.2, 0, 0, 1)",
-                swipe: "cubic-bezier(0.3, 0, 0, 1)",
-                navigation: "cubic-bezier(0.3, 0, 0, 1)",
+                fade: "var(--ease-standard)",
+                swipe: "var(--ease-decelerate)",
+                navigation: "var(--ease-decelerate)",
               },
             }
       }

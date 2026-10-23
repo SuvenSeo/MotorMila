@@ -127,7 +127,7 @@ function MetricTile({
   icon: typeof Users;
 }) {
   return (
-    <div className="metric-tile group p-5 transition-all hover:-translate-y-0.5 hover:border-primary/25">
+    <div className="metric-tile group p-5 transition-ui hover:-translate-y-0.5 hover:border-primary/25">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="tech-label text-muted-foreground">{label}</p>

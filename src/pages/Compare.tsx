@@ -415,10 +415,10 @@ export default function Compare() {
                         key={r.def.key}
                         layout={motionCalm ? false : "position"}
                         initial={{ opacity: 0 }}
-                        animate={{ opacity: 1, transition: { duration: motionCalm ? 0 : duration.base, ease: ease.standard } }}
-                        exit={{ opacity: 0, transition: { duration: motionCalm ? 0 : duration.fast, ease: ease.exit } }}
+                        animate={{ opacity: 1, transition: { duration: motionCalm ? 0 : duration.medium, ease: ease.standard } }}
+                        exit={{ opacity: 0, transition: { duration: motionCalm ? 0 : duration.short, ease: ease.accelerate } }}
                         transition={motionCalm ? { duration: 0 } : spring.snappy}
-                        className={cn("transition-colors duration-200", dim && "text-muted-foreground")}
+                        className={cn("transition-colors duration-short", dim && "text-muted-foreground")}
                       >
                         {row.getVisibleCells().map((cell, i) =>
                           i === 0 ? (
@@ -426,7 +426,7 @@ export default function Compare() {
                               key={cell.id}
                               scope="row"
                               className={cn(
-                                "sticky left-0 border-b border-border/70 bg-card p-3 text-caption font-semibold transition-colors duration-200",
+                                "sticky left-0 border-b border-border/70 bg-card p-3 text-caption font-semibold transition-colors duration-short",
                                 tint ? "text-foreground" : "text-muted-foreground",
                               )}
                               style={{ zIndex: "var(--z-base, 1)" as unknown as number }}

@@ -100,7 +100,7 @@ function MetricCell({
   tone?: "up" | "down";
 }) {
   return (
-    <div className="bg-card p-5 transition-colors duration-200 hover:bg-foreground/[0.03]">
+    <div className="bg-card p-5 transition-colors duration-short hover:bg-foreground/[0.03]">
       <p className="text-caption font-medium text-muted-foreground">{label}</p>
       <p
         className={`mt-2 flex items-center gap-1 font-display text-title2 font-semibold leading-none tracking-tight num ${
@@ -210,7 +210,7 @@ export const MarketIntelligencePanel = memo(function MarketIntelligencePanel({
         style={{ gap: "1px" }}
       >
         {/* Hero cell — moat number (spans 2 cols, 2 rows on lg) */}
-        <div className="relative col-span-2 overflow-hidden bg-card p-6 transition-colors duration-200 hover:bg-foreground/[0.03] sm:p-8 lg:row-span-2">
+        <div className="relative col-span-2 overflow-hidden bg-card p-6 transition-colors duration-short hover:bg-foreground/[0.03] sm:p-8 lg:row-span-2">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-primary to-primary/40" />
           <div
             className="pointer-events-none absolute inset-0"
@@ -252,7 +252,7 @@ export const MarketIntelligencePanel = memo(function MarketIntelligencePanel({
             {sources.length > 0 && (
               <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-5">
                 {sources.map((s) => (
-                  <span key={s} className="rounded-full border border-border bg-foreground/[0.03] px-2 py-1 text-caption font-semibold text-muted-foreground transition-colors duration-200 hover:border-primary/40 hover:text-foreground">
+                  <span key={s} className="rounded-full border border-border bg-foreground/[0.03] px-2 py-1 text-caption font-semibold text-muted-foreground transition-colors duration-short hover:border-primary/40 hover:text-foreground">
                     {s}
                   </span>
                 ))}
@@ -299,7 +299,7 @@ export const MarketIntelligencePanel = memo(function MarketIntelligencePanel({
         <div className="divide-y divide-border">
           {feed.length ? (
             feed.map((row) => (
-              <div key={row.key} className="flex items-center justify-between px-5 py-2.5 transition-colors duration-200 hover:bg-foreground/[0.02]">
+              <div key={row.key} className="flex items-center justify-between px-5 py-2.5 transition-colors duration-short hover:bg-foreground/[0.02]">
                 <div className="flex min-w-0 items-center gap-2.5">
                   <Flame className="h-3.5 w-3.5 shrink-0 text-primary/50" />
                   <span className="truncate text-footnote font-semibold text-foreground">{row.source}</span>

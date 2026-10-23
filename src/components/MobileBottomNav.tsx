@@ -2,7 +2,7 @@ import { LayoutGroup, m, motion } from "motion/react";
 import { useLocation } from "react-router-dom";
 import { PrefetchLink } from "@/components/PrefetchLink";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { spring, usePrefersReducedMotionOrLowData } from "@/lib/motion";
+import { spring, usePrefersReducedMotionOrLowData, tween } from "@/lib/motion";
 import { NAV_DESTINATIONS, isDestinationActive, type NavDestination } from "@/lib/siteNav";
 
 /**
@@ -25,7 +25,7 @@ function TabItem({ dest, calm }: { dest: NavDestination; calm: boolean }) {
       aria-current={isActive ? "page" : undefined}
       data-active={isActive}
       title={label}
-      className={`bottom-nav-tab group relative flex min-w-[3.5rem] flex-1 basis-0 flex-col items-center justify-center gap-1 overflow-hidden px-0.5 py-2 no-underline outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-primary/50 ${
+      className={`bottom-nav-tab group relative flex min-w-[3.5rem] flex-1 basis-0 flex-col items-center justify-center gap-1 overflow-hidden px-0.5 py-2 no-underline outline-none transition-colors duration-short focus-visible:ring-2 focus-visible:ring-primary/50 ${
         isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
       }`}
     >
@@ -43,7 +43,7 @@ function TabItem({ dest, calm }: { dest: NavDestination; calm: boolean }) {
           className="relative z-10 flex"
           initial={false}
           animate={calm ? undefined : isActive ? { y: [0, -3, 0], scale: [1, 1.08, 1] } : { y: 0, scale: 1 }}
-          transition={{ duration: 0.32, ease: [0.3, 0, 0, 1] }}
+          transition={tween.medium}
           whileTap={calm ? undefined : { scale: 0.86 }}
         >
           <Icon className="h-[18px] w-[18px]" aria-hidden />
@@ -67,7 +67,7 @@ export function MobileBottomNav() {
   return (
     <nav
       aria-label={t("nav.mobileNavigation", "Mobile bottom navigation")}
-      className="md:hidden fixed inset-x-3 bottom-3 z-bottom-nav pointer-events-auto"
+      className="bottom-nav md:hidden fixed inset-x-3 bottom-3 z-bottom-nav pointer-events-auto"
       style={{ marginBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="nav-glass overflow-hidden rounded-full">

@@ -105,11 +105,11 @@ const heroHeadlineVariants = {
 } as const;
 const heroWordVariants = {
   hidden: { opacity: 0, y: "0.4em" },
-  show: { opacity: 1, y: 0, transition: { duration: duration.slow, ease: ease.emphasized } },
+  show: { opacity: 1, y: 0, transition: { duration: duration.long, ease: ease.decelerate } },
 } as const;
 const heroWordVariantsStill = {
   hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { duration: duration.base } },
+  show: { opacity: 1, transition: { duration: duration.medium } },
 } as const;
 
 /** Render a phrase as inline-block words so each can animate on its own. */
@@ -816,9 +816,9 @@ export default function Dashboard() {
                 <div className="relative">
                   <m.div
                     animate={{ scale: heroFocused && !motionStill ? 1.015 : 1 }}
-                    transition={spring.gentle}
+                    transition={spring.smooth}
                     className={cn(
-                      "flex items-center gap-2 rounded-full border p-1.5 transition-[border-color,box-shadow] duration-300",
+                      "flex items-center gap-2 rounded-full border p-1.5 transition-[border-color,box-shadow] duration-medium",
                       heroSearchShellClass,
                       heroFocused && "hero-search--focused",
                     )}
@@ -884,7 +884,7 @@ export default function Dashboard() {
                       enterKeyHint="search"
                       className={heroInputClass}
                     />
-                    <button type="button" onClick={runHeroSearch} className="mr-0.5 h-11 rounded-full bg-primary px-6 text-footnote font-semibold tracking-normal text-white shadow-soft transition-all hover:bg-primary/95 active:scale-[0.97]">
+                    <button type="button" onClick={runHeroSearch} className="mr-0.5 h-11 rounded-full bg-primary px-6 text-footnote font-semibold tracking-normal text-white shadow-soft transition-ui hover:bg-primary/95 active:scale-[0.97]">
                       {t("common.search", "Search")}
                     </button>
                   </m.div>
@@ -1083,7 +1083,7 @@ export default function Dashboard() {
                     layout={!motionStill}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9, transition: { duration: duration.fast, ease: ease.exit } }}
+                    exit={{ opacity: 0, scale: 0.9, transition: { duration: duration.short, ease: ease.accelerate } }}
                     transition={spring.snappy}
                     className="rounded-full border border-border bg-foreground/[0.03] px-2.5 py-1 text-caption font-medium text-muted-foreground"
                   >{label}</motion.span>
@@ -1121,7 +1121,7 @@ export default function Dashboard() {
             <m.div
               className="min-w-0 flex-1"
               animate={{ opacity: refreshingListings ? 0.55 : 1 }}
-              transition={{ duration: refreshingListings ? duration.fast : duration.base, ease: ease.standard }}
+              transition={{ duration: refreshingListings ? duration.short : duration.medium, ease: ease.standard }}
               aria-busy={refreshingListings || undefined}
             >
               {loadingListings ? (
@@ -1435,10 +1435,10 @@ export default function Dashboard() {
               { label: t("shell.nav.officialUpdates", "Tax & customs updates"), to: "/official-pulse" },
             ].map((tool) => (
               <Link key={tool.label} to={tool.to}
-                className="group/tool flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2.5 text-caption font-semibold text-foreground no-underline transition-all hover:border-primary/30 hover:bg-primary/[0.06] hover:shadow-soft active:scale-[0.98]"
+                className="group/tool flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2.5 text-caption font-semibold text-foreground no-underline transition-ui hover:border-primary/30 hover:bg-primary/[0.06] hover:shadow-soft active:scale-[0.98]"
               >
                 {tool.label}
-                <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground transition-all group-hover/tool:text-primary group-hover/tool:translate-x-0.5" />
+                <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground transition-ui group-hover/tool:text-primary group-hover/tool:translate-x-0.5" />
               </Link>
             ))}
             </div>
@@ -1480,7 +1480,7 @@ export default function Dashboard() {
             <p className="mt-1.5 text-footnote font-semibold text-foreground">{currentAlertSummary}</p>
             <div className="mt-3 flex gap-2">
               <Input value={alertPriceInput} onChange={(e) => setAlertPriceInput(e.target.value.replace(/[^\d]/g, ""))} inputMode="numeric" placeholder="Target max price (LKR)" className="h-9 flex-1 rounded-2xl border-border bg-transparent text-body md:text-footnote" />
-              <button type="button" onClick={saveCurrentMarketAlert} className="h-9 rounded-full bg-primary px-4 text-caption font-semibold text-white transition-all hover:bg-primary/95 active:scale-[0.97]">Save</button>
+              <button type="button" onClick={saveCurrentMarketAlert} className="h-9 rounded-full bg-primary px-4 text-caption font-semibold text-white transition-ui hover:bg-primary/95 active:scale-[0.97]">Save</button>
             </div>
           </div>
           {marketAlerts.length ? (
@@ -1493,9 +1493,9 @@ export default function Dashboard() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <button type="button" onClick={() => { setFilters({ ...(alert.filters as FilterState), sort: alert.filters.sort || DEFAULT_SORT, page: 1 }); setShowMarketAlerts(false); scrollToMarket(); }}
-                      className="h-7 rounded-full border border-primary/15 bg-primary/5 px-2.5 text-caption font-semibold text-primary-bright transition-all hover:bg-primary/10 active:scale-[0.95]">Open</button>
+                      className="h-7 rounded-full border border-primary/15 bg-primary/5 px-2.5 text-caption font-semibold text-primary-bright transition-ui hover:bg-primary/10 active:scale-[0.95]">Open</button>
                     <button type="button" onClick={() => deleteMarketAlert(alert.id)}
-                      className="h-7 rounded-full border border-border px-2.5 text-caption font-semibold text-muted-foreground transition-all hover:text-foreground active:scale-[0.95]">Delete</button>
+                      className="h-7 rounded-full border border-border px-2.5 text-caption font-semibold text-muted-foreground transition-ui hover:text-foreground active:scale-[0.95]">Delete</button>
                   </div>
                 </div>
               ))}
@@ -1520,8 +1520,8 @@ export default function Dashboard() {
                     <p className="mt-0.5 text-caption text-muted-foreground">{listing.district || "LK"} · {isReasonableListingPrice(Number(listing.price_lkr || 0)) ? formatPrice(listing.price_lkr) : "N/A"}</p>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <button type="button" onClick={() => toggleWatchlist(listing)} className="h-7 rounded-full border border-primary/15 bg-primary/5 px-2.5 text-caption font-semibold text-primary-bright transition-all hover:bg-primary/10 active:scale-[0.95]">{t("home.remove", "Remove")}</button>
-                    <Link to={`/listing/${listing.id}`} onClick={() => setShowSavedListings(false)} className="flex h-7 items-center gap-1 rounded-full border border-border px-2.5 text-caption font-semibold text-muted-foreground no-underline transition-all hover:text-foreground active:scale-[0.95]">
+                    <button type="button" onClick={() => toggleWatchlist(listing)} className="h-7 rounded-full border border-primary/15 bg-primary/5 px-2.5 text-caption font-semibold text-primary-bright transition-ui hover:bg-primary/10 active:scale-[0.95]">{t("home.remove", "Remove")}</button>
+                    <Link to={`/listing/${listing.id}`} onClick={() => setShowSavedListings(false)} className="flex h-7 items-center gap-1 rounded-full border border-border px-2.5 text-caption font-semibold text-muted-foreground no-underline transition-ui hover:text-foreground active:scale-[0.95]">
                       Open <ExternalLink className="h-2.5 w-2.5" />
                     </Link>
                   </div>
@@ -1537,7 +1537,7 @@ export default function Dashboard() {
               <Link
                 to="/#market"
                 onClick={() => setShowSavedListings(false)}
-                className="min-h-11 rounded-full bg-primary px-5 py-3 text-footnote font-bold text-primary-foreground no-underline transition-all hover:bg-primary/95 active:scale-[0.97]"
+                className="min-h-11 rounded-full bg-primary px-5 py-3 text-footnote font-bold text-primary-foreground no-underline transition-ui hover:bg-primary/95 active:scale-[0.97]"
               >
                 {t("common.browseInventory", "Browse inventory")}
               </Link>

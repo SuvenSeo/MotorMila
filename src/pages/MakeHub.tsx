@@ -171,7 +171,7 @@ export default function MakeHub() {
                 <Link
                   key={entry.model}
                   to={`/cars/${encodeURIComponent(makeParam)}/${encodeURIComponent(entry.model)}`}
-                  className="group rounded-2xl border border-border bg-card p-5 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg no-underline"
+                  className="group rounded-2xl border border-border bg-card p-5 shadow-soft transition-ui duration-medium hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg no-underline"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-body font-bold tracking-tight text-foreground">{entry.model}</p>
@@ -215,7 +215,7 @@ export default function MakeHub() {
                   <Link
                     key={entry.model}
                     to={`/cars/${encodeURIComponent(makeParam)}/${encodeURIComponent(entry.model)}`}
-                    className="group flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 no-underline"
+                    className="group flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-soft transition-ui duration-medium hover:-translate-y-0.5 hover:border-primary/30 no-underline"
                   >
                     <p className="text-body font-bold tracking-tight text-foreground">{entry.model}</p>
                     <span className="num shrink-0 rounded-full border border-border bg-surface px-2.5 py-0.5 text-caption font-bold text-muted-foreground">
@@ -240,7 +240,7 @@ export default function MakeHub() {
                 <Link
                   key={entry.district}
                   to={`/locations/${encodeURIComponent(entry.district)}`}
-                  className="group rounded-2xl border border-border bg-card p-5 shadow-soft transition-all hover:-translate-y-1 hover:border-primary/30 no-underline"
+                  className="group rounded-2xl border border-border bg-card p-5 shadow-soft transition-ui hover:-translate-y-1 hover:border-primary/30 no-underline"
                 >
                   <div className="flex items-center gap-2">
                     <MapPin className="h-3.5 w-3.5 text-primary" aria-hidden />

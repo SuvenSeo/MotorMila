@@ -43,8 +43,8 @@ export function CompareTray({ className }: { className?: string }) {
         <m.div
           key="compare-tray"
           initial={calm ? "hidden" : { opacity: 0, y: 96 }}
-          animate={calm ? "show" : { opacity: 1, y: 0, transition: spring.gentle }}
-          exit={calm ? "exit" : { opacity: 0, y: 96, transition: { duration: duration.base, ease: ease.exit } }}
+          animate={calm ? "show" : { opacity: 1, y: 0, transition: spring.smooth }}
+          exit={calm ? "exit" : { opacity: 0, y: 96, transition: { duration: duration.medium, ease: ease.accelerate } }}
           variants={fadeIn}
           style={TRAY_STYLE}
           className="fixed inset-x-3 mx-auto max-w-md md:inset-x-auto md:left-6 md:mx-0 md:w-[420px]"
@@ -82,7 +82,7 @@ function CompareTrayPanel({ className }: { className?: string }) {
               layout={!calm}
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.96, transition: { duration: duration.fast, ease: ease.exit } }}
+              exit={{ opacity: 0, scale: 0.96, transition: { duration: duration.short, ease: ease.accelerate } }}
               transition={layoutT}
               className="flex items-center gap-2 rounded-xl bg-surface/60 px-2.5 py-2"
             >
@@ -140,8 +140,8 @@ function CompareTrayPanel({ className }: { className?: string }) {
                   key={p.id}
                   layout={!calm}
                   initial={{ opacity: 0, scale: 0.5 }}
-                  animate={{ opacity: 1, scale: 1, transition: calm ? { duration: 0 } : spring.bouncy }}
-                  exit={{ opacity: 0, scale: 0.5, transition: { duration: duration.fast, ease: ease.exit } }}
+                  animate={{ opacity: 1, scale: 1, transition: calm ? { duration: 0 } : spring.expressive }}
+                  exit={{ opacity: 0, scale: 0.5, transition: { duration: duration.short, ease: ease.accelerate } }}
                   transition={layoutT}
                   className="relative inline-flex"
                 >
@@ -179,7 +179,7 @@ function CompareTrayPanel({ className }: { className?: string }) {
               aria-hidden
               initial={calm ? false : { scale: 0.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={spring.bouncy}
+              transition={spring.expressive}
               className="num inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-caption font-bold text-primary-foreground"
             >
               {count}

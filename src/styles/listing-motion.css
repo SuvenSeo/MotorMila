@@ -3,8 +3,8 @@
 
 /* ── Card → detail View Transition ─────────────────────────────────────── */
 ::view-transition-group(listing-hero) {
-  animation-duration: 0.35s;
-  animation-timing-function: var(--ease-emphasized, cubic-bezier(0.3, 0, 0, 1));
+  animation-duration: var(--dur-long);
+  animation-timing-function: var(--ease-decelerate);
 }
 ::view-transition-old(listing-hero),
 ::view-transition-new(listing-hero) {
@@ -15,8 +15,8 @@
 }
 html[data-listing-vt] ::view-transition-old(root),
 html[data-listing-vt] ::view-transition-new(root) {
-  animation-duration: 0.18s;
-  animation-timing-function: var(--ease-standard, cubic-bezier(0.2, 0, 0, 1));
+  animation-duration: var(--dur-short);
+  animation-timing-function: var(--ease-standard);
 }
 /* While the hero morph is captured, show the new route at rest (the route
  * cross-fade would otherwise snapshot it at opacity 0) and drop the old one. */
@@ -31,7 +31,7 @@ html[data-listing-vt="hero"] .route-stage:not(:has(img[data-listing-hero])) {
 /* ── Photo fade-in on load (placeholder colour shows underneath) ───────── */
 img[data-fade-in] {
   opacity: 0;
-  transition: opacity var(--dur-base, 0.28s) var(--ease-standard, cubic-bezier(0.2, 0, 0, 1));
+  transition: opacity var(--dur-medium) var(--ease-standard);
 }
 img[data-fade-in][data-loaded="true"] {
   opacity: 1;
@@ -41,8 +41,8 @@ img[data-fade-in][data-loaded="true"] {
 @media (hover: hover) and (pointer: fine) {
   .listing-card-photo img {
     transition:
-      transform 0.45s var(--ease-standard, cubic-bezier(0.2, 0, 0, 1)),
-      opacity var(--dur-base, 0.28s) var(--ease-standard, cubic-bezier(0.2, 0, 0, 1));
+      transform 0.45s var(--ease-standard),
+      opacity var(--dur-medium) var(--ease-standard);
   }
   .group:hover .listing-card-photo img {
     transform: scale(1.03);
@@ -60,7 +60,7 @@ img[data-fade-in][data-loaded="true"] {
   transform: scale(0.6);
 }
 .save-burst[data-play="true"] {
-  animation: save-burst 0.45s var(--ease-standard, cubic-bezier(0.2, 0, 0, 1)) forwards;
+  animation: save-burst var(--dur-long) var(--ease-standard) forwards;
 }
 @keyframes save-burst {
   0% { opacity: 0.55; transform: scale(0.6); }
@@ -70,7 +70,7 @@ img[data-fade-in][data-loaded="true"] {
 /* ── Lightbox zoom-from-thumbnail ───────────────────────────────────────── */
 .mm-lightbox-zoom .yarl__carousel {
   transform-origin: var(--mm-lb-ox, 50%) var(--mm-lb-oy, 50%);
-  animation: mm-lb-zoom 0.32s var(--ease-emphasized, cubic-bezier(0.3, 0, 0, 1)) both;
+  animation: mm-lb-zoom var(--dur-medium) var(--ease-decelerate) both;
 }
 @keyframes mm-lb-zoom {
   from { opacity: 0; transform: scale(0.55); }
@@ -83,7 +83,7 @@ img[data-fade-in][data-loaded="true"] {
   inset: 0;
   pointer-events: none;
   opacity: 0;
-  transition: opacity var(--dur-base, 0.28s) var(--ease-standard, cubic-bezier(0.2, 0, 0, 1));
+  transition: opacity var(--dur-medium) var(--ease-standard);
 }
 .cmp-tint[data-on="true"] {
   opacity: 1;

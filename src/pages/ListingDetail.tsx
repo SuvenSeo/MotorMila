@@ -266,7 +266,7 @@ export default function ListingDetail() {
           <p className="text-caption font-medium text-muted-foreground">{t("listing.unavailable", "Unavailable")}</p>
           <h1 className="mt-2 font-display text-title3 font-semibold text-foreground">{t("listing.notFound", "Listing not found")}</h1>
           <p className="mt-2 max-w-sm text-caption text-muted-foreground">{t("listing.notFoundBody", "The source may have removed it or the ID is no longer in the live index.")}</p>
-          <button type="button" onClick={() => navigate('/')} className="mt-5 rounded-full bg-primary px-5 py-2.5 text-caption font-semibold text-primary-foreground shadow-soft transition-all hover:bg-primary/95 hover:shadow-soft-lg active:scale-[0.97]">{t("listing.returnInventory", "Return to inventory")}</button>
+          <button type="button" onClick={() => navigate('/')} className="mt-5 rounded-full bg-primary px-5 py-2.5 text-caption font-semibold text-primary-foreground shadow-soft transition-ui hover:bg-primary/95 hover:shadow-soft-lg active:scale-[0.97]">{t("listing.returnInventory", "Return to inventory")}</button>
         </div>
       </div>
     );
@@ -422,7 +422,7 @@ export default function ListingDetail() {
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => trackEvent("contact_on_source_clicked", { listing_id: listing.id, source: listing.source, placement: "sidebar" })}
-              className="inline-flex h-12 w-full items-center justify-center gap-1.5 rounded-2xl bg-primary px-4 text-body font-bold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.97]"
+              className="inline-flex h-12 w-full items-center justify-center gap-1.5 rounded-2xl bg-primary px-4 text-body font-bold text-primary-foreground no-underline shadow-soft transition-ui hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.97]"
             >
               {t("listing.viewOnSource", "View on {source}", { source: attribution.sourceName })}
               <ExternalLink aria-hidden className="h-4 w-4" />
@@ -473,7 +473,7 @@ export default function ListingDetail() {
               type="button"
               onClick={handleComparePin}
               aria-pressed={isPinnedForCompare(Number(listing.id))}
-              className="inline-flex min-h-[32px] items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-caption font-semibold text-primary-bright transition-all hover:bg-primary/15 active:scale-[0.97]"
+              className="inline-flex min-h-[32px] items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-caption font-semibold text-primary-bright transition-ui hover:bg-primary/15 active:scale-[0.97]"
             >
               <Scale aria-hidden className="h-3 w-3" />
               {isPinnedForCompare(Number(listing.id)) ? t("listing.pinned", "Pinned ✓") : t("listing.addToCompare", "Add to compare")}
@@ -581,7 +581,7 @@ export default function ListingDetail() {
                   source={listing.source}
                   priority
                   className="h-full w-full"
-                  imageClassName="transition-transform duration-700 ease-out group-hover:scale-[1.02] motion-reduce:transform-none"
+                  imageClassName="transition-transform duration-long ease-decelerate group-hover:scale-[1.02] motion-reduce:transform-none"
                 />
                 <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 to-transparent" />
                 {/* Source credit for hotlinked photos. Fixed bright blue: sits on a black scrim. */}
@@ -706,7 +706,7 @@ export default function ListingDetail() {
                         </div>
                         <Link
                           to={`/calculator?tab=landed-cost&fuel=${importFuelType}${typeof listing.engine_cc === 'number' ? `&cc=${listing.engine_cc}` : ''}`}
-                          className="inline-flex w-fit items-center gap-1.5 rounded-2xl border border-primary/20 bg-primary/10 px-3 py-2 text-caption font-semibold text-primary-bright no-underline transition-all hover:bg-primary/15"
+                          className="inline-flex w-fit items-center gap-1.5 rounded-2xl border border-primary/20 bg-primary/10 px-3 py-2 text-caption font-semibold text-primary-bright no-underline transition-ui hover:bg-primary/15"
                         >
                           Model a fresh import <ArrowRight aria-hidden className="h-3 w-3" />
                         </Link>
@@ -787,7 +787,7 @@ export default function ListingDetail() {
             {importFuelType === 'electric' && (
               <Link
                 to="/ev-hub"
-                className="flex h-10 items-center justify-center gap-1.5 rounded-2xl border border-border bg-card px-3.5 text-caption font-semibold text-muted-foreground no-underline transition-all hover:bg-surface hover:text-foreground"
+                className="flex h-10 items-center justify-center gap-1.5 rounded-2xl border border-border bg-card px-3.5 text-caption font-semibold text-muted-foreground no-underline transition-ui hover:bg-surface hover:text-foreground"
               >
                 <PlugZap aria-hidden className="h-3.5 w-3.5" /> {t("listing.chargersNearby", "Charging stations")}
               </Link>

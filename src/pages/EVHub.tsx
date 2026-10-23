@@ -296,7 +296,7 @@ export default function EVHub() {
             {evModules.map((m) => {
               const Icon = m.icon;
               return (
-                <div key={m.title} className="data-card p-6 transition-all hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg">
+                <div key={m.title} className="data-card p-6 transition-ui hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg">
                   <div className="flex items-center justify-between">
                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-border bg-surface">
                       <Icon className="h-5 w-5 text-primary" aria-hidden />

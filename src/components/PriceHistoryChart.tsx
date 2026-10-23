@@ -190,7 +190,7 @@ export function PriceHistoryChart({
                   <button
                     type="button"
                     onClick={onEmptyAction}
-                    className="tech-label rounded-2xl border border-primary/25 bg-primary/10 px-3 py-2 text-primary-bright transition-all duration-150 hover:bg-primary/20 active:scale-[0.97]"
+                    className="tech-label rounded-2xl border border-primary/25 bg-primary/10 px-3 py-2 text-primary-bright transition-ui duration-short hover:bg-primary/20 active:scale-[0.97]"
                   >
                     {emptyActionLabel}
                   </button>
@@ -261,10 +261,10 @@ export function PriceHistoryChart({
                     dot={chartData.length <= 14 ? { r: 2.5, strokeWidth: 2, fill: "hsl(var(--card))", stroke: toneStyle.stroke } : false}
                     activeDot={{ r: 5, strokeWidth: 2, fill: toneStyle.stroke, stroke: "hsl(var(--card))" }}
                     connectNulls
-                    // Draw in once (600ms) on first render only; lane changes
+                    // Draw in once (500ms) on first render only; lane changes
                     // crossfade instead. Off under reduced motion / low data.
                     isAnimationActive={animateDraw}
-                    animationDuration={600}
+                    animationDuration={500}
                     animationEasing="ease-out"
                   />
                 </AreaChart>

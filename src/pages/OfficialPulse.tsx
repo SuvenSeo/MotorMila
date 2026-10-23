@@ -17,7 +17,7 @@ import { AnimatedTabs } from "@/components/ui/AnimatedTabs";
 import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
 import { PageHero } from "@/components/PageHero";
-import { revealContainer, revealItem, springSoft } from "@/lib/motion";
+import { revealContainer, revealItem, spring } from "@/lib/motion";
 import { visuals } from "@/lib/visualAssets";
 import {
   PULSE_SOURCE_GUIDES,
@@ -55,8 +55,8 @@ function SignalCard({ signal }: { signal: MarketSignal }) {
     <motion.article
       variants={revealItem}
       whileHover={{ y: -2 }}
-      transition={springSoft}
-      className="group flex flex-col rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl transition-all hover:border-primary/30 hover:shadow-soft-lg"
+      transition={spring.smooth}
+      className="group flex flex-col rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl transition-ui hover:border-primary/30 hover:shadow-soft-lg"
     >
       <Link to={`/official-pulse/${signal.id}`} className="flex flex-1 flex-col no-underline">
         <p className="text-caption font-medium text-primary/70">
@@ -155,14 +155,14 @@ export default function OfficialPulse() {
           <>
             <Link
               to="/docs#official-pulse"
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-footnote font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-footnote font-semibold text-primary-foreground no-underline shadow-soft transition-ui hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <BookOpen aria-hidden className="h-4 w-4" />
               {t("pulse.readDocs", "Read the docs")}
             </Link>
             <Link
               to="/pricing"
-              className="inline-flex h-11 items-center rounded-full border border-border bg-card px-6 text-footnote font-semibold text-foreground no-underline transition-all hover:border-primary/40 hover:bg-surface active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="inline-flex h-11 items-center rounded-full border border-border bg-card px-6 text-footnote font-semibold text-foreground no-underline transition-ui hover:border-primary/40 hover:bg-surface active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               {t("common.viewPricing", "View pricing")}
             </Link>
@@ -186,7 +186,7 @@ export default function OfficialPulse() {
               <motion.div key={guide.key} variants={revealItem}>
                 <Link
                   to={`/official-pulse/guide/${guide.key}`}
-                  className="group flex h-full flex-col rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl no-underline transition-all hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg"
+                  className="group flex h-full flex-col rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl no-underline transition-ui hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg"
                 >
                   <p className="text-caption font-medium text-primary/70">
                     {labelPulseSource(guide.source)}
@@ -263,7 +263,7 @@ export default function OfficialPulse() {
               <button
                 type="button"
                 onClick={() => void signalsQuery.refetch()}
-                className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-card/85 px-5 py-2 text-caption font-bold text-foreground transition-all hover:border-primary/40 hover:bg-surface active:scale-[0.97]"
+                className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-card/85 px-5 py-2 text-caption font-bold text-foreground transition-ui hover:border-primary/40 hover:bg-surface active:scale-[0.97]"
               >
                 <RefreshCw aria-hidden className="h-3.5 w-3.5" />
                 {t("common.retry", "Retry")}

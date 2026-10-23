@@ -54,7 +54,7 @@ function ProvinceCell({
 
   return (
     <article
-      className="relative min-w-0 overflow-hidden rounded-xl border border-border px-3 py-3 transition-all duration-300 ease-apple hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-soft"
+      className="relative min-w-0 overflow-hidden rounded-xl border border-border px-3 py-3 transition-ui duration-medium ease-decelerate hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-soft"
       style={{
         background: `linear-gradient(160deg, ${color.replace("rgb", "rgba").replace(")", `, ${0.22 + intensity * 0.35})`)} 0%, rgba(17,17,17,0.85) 100%)`,
         boxShadow: `inset 0 0 0 1px ${color.replace("rgb", "rgba").replace(")", ", 0.25)")}`,

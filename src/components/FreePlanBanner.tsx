@@ -22,7 +22,7 @@ export function FreePlanBanner() {
         </p>
         <Link
           to="/pricing#get-started"
-          className="inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-caption font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/95 active:scale-[0.98]"
+          className="inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-caption font-semibold text-primary-foreground no-underline shadow-soft transition-ui hover:bg-primary/95 active:scale-[0.98]"
         >
           <Bell className="h-3.5 w-3.5" aria-hidden />
           {t("shell.pro.notify", "Notify me")}

@@ -196,7 +196,7 @@ export default function Permits() {
         <motion.div variants={revealItem}>
           <Link
             to="/calculator?tab=permits"
-            className="group flex items-center justify-between rounded-2xl border border-border bg-card p-5 shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-soft-lg no-underline"
+            className="group flex items-center justify-between rounded-2xl border border-border bg-card p-5 shadow-soft transition-ui duration-medium hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-soft-lg no-underline"
           >
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-surface transition-colors group-hover:border-primary/30 group-hover:bg-primary/10">

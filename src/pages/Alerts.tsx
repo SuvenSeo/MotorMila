@@ -16,7 +16,7 @@ import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
 import { PageHero } from "@/components/PageHero";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
-import { revealItem, springSoft } from "@/lib/motion";
+import { revealItem, spring } from "@/lib/motion";
 import { useAuth } from "@/lib/authContext";
 import { FREE_ALERTS_LIMIT, freePlanCopy, hasFullPlatformAccess } from "@/lib/planLimits";
 
@@ -194,7 +194,7 @@ function AlertMatchSection({ token }: { token: string }) {
                         <Link
                           to={`/listing/${listing.id}`}
                           aria-label={t("alerts.viewListingAria", "View listing {title}", { title: listing.title || listing.id })}
-                          className="flex h-7 w-7 items-center justify-center rounded-full border border-border text-muted-foreground no-underline transition-all hover:border-primary/40 hover:text-foreground"
+                          className="flex h-7 w-7 items-center justify-center rounded-full border border-border text-muted-foreground no-underline transition-ui hover:border-primary/40 hover:text-foreground"
                         >
                           <ExternalLink className="h-3.5 w-3.5" />
                         </Link>
@@ -589,8 +589,8 @@ function AlertRow({
   return (
     <motion.div
       whileHover={{ y: -1 }}
-      transition={springSoft}
-      className="rounded-xl border border-border bg-card p-3.5 transition-colors duration-300 hover:border-primary/40 hover:bg-surface hover:shadow-soft"
+      transition={spring.smooth}
+      className="rounded-xl border border-border bg-card p-3.5 transition-colors duration-medium hover:border-primary/40 hover:bg-surface hover:shadow-soft"
       data-testid="alert-row"
     >
       <div className="flex items-center justify-between gap-3">
@@ -623,7 +623,7 @@ function AlertRow({
           <Link
             to={`/?make=${encodeURIComponent(alert.make || "")}&model=${encodeURIComponent(alert.model || "")}${alert.district ? `&district=${encodeURIComponent(alert.district)}` : ""}${alert.max_price ? `&price_max=${alert.max_price}` : ""}#market`}
             onClick={() => trackEvent("listing_view", { alert_id: alert.id })}
-            className="flex h-7 items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 text-caption font-bold text-primary-bright no-underline transition-all hover:bg-primary/20"
+            className="flex h-7 items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 text-caption font-bold text-primary-bright no-underline transition-ui hover:bg-primary/20"
           >
             {t("common.browse", "Browse")}
           </Link>
@@ -802,7 +802,7 @@ export default function Alerts() {
                   </div>
                   <Link
                     to={`/?${new URLSearchParams(Object.fromEntries(Object.entries(a.filters).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)]))).toString()}#market`}
-                    className="flex h-7 items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 text-caption font-bold text-primary-bright no-underline transition-all hover:bg-primary/20"
+                    className="flex h-7 items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 text-caption font-bold text-primary-bright no-underline transition-ui hover:bg-primary/20"
                   >
                     {t("common.browse", "Browse")}
                   </Link>

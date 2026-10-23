@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { tween } from "@/lib/motion";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, BookOpen } from "lucide-react";
 import { m, AnimatePresence } from "motion/react";
@@ -66,7 +67,7 @@ export function NhtsaModelsCard({ make, model, compact = false, vin }: NhtsaMode
         </div>
         <ChevronDown
           aria-hidden
-          className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-short ${open ? "rotate-180" : ""}`}
         />
       </button>
 
@@ -77,7 +78,7 @@ export function NhtsaModelsCard({ make, model, compact = false, vin }: NhtsaMode
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22, ease: "easeInOut" }}
+            transition={tween.short}
             className="overflow-hidden"
           >
             <div className="border-t border-border px-5 pb-5 pt-4">

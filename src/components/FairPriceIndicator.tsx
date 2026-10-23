@@ -53,7 +53,7 @@ export function FairPriceIndicator({
     <TooltipProvider delayDuration={150}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <span className={cn("inline-flex items-center gap-1.5 cursor-help transition-all duration-200 hover:opacity-80 active:scale-[0.98]", size === "sm" ? "font-semibold rounded" : "font-semibold", badgeClasses, className)}>
+          <span className={cn("inline-flex items-center gap-1.5 cursor-help transition-ui duration-short hover:opacity-80 active:scale-[0.98]", size === "sm" ? "font-semibold rounded" : "font-semibold", badgeClasses, className)}>
             <Icon className={cn("opacity-70", size === "sm" ? "h-3 w-3" : "h-6 w-6 ml-2")} aria-hidden />
             {label}
             {rsDelta && size === "sm" && (

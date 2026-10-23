@@ -1,6 +1,7 @@
 /* Semantic tokens (deal signals, radius scale, script fonts) — see src/styles/TOKENS.md */
 @import "./styles/fonts.css";
 @import "./styles/tokens.css";
+@import "./styles/motion.css";
 
 @tailwind base;
 @tailwind components;
@@ -108,26 +109,15 @@
     --font-numeric: "Cal Sans Text", "Cal Sans Text Fallback", var(--font-fallback);
     --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; /* code only */
 
-    /* ── Motion — Apple easing ────────────────────────────────────────── */
-    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-    --ease-soft: cubic-bezier(0.33, 1, 0.68, 1);
-    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-    --duration-fast: 140ms;
-    --duration-base: 240ms;
-    --duration-slow: 420ms;
-    --duration-cinematic: 640ms;
-    /* Motion system tokens (src/lib/motion.ts mirrors these) */
+    /* ── Motion tokens (mirror of src/lib/motion.ts) ─────────────────────
+       3 easings, 4 durations. Nothing else. Animate transform/opacity only. */
     --ease-standard: cubic-bezier(0.2, 0, 0, 1);
-    --ease-emphasized: cubic-bezier(0.3, 0, 0, 1);
-    --ease-exit: cubic-bezier(0.4, 0, 1, 1);
-    --dur-instant: 100ms;
-    --dur-fast: 180ms;
-    --dur-base: 280ms;
-    --dur-slow: 450ms;
-    --dur-page: 350ms;
-    /* spring(stiffness 300, damping 28) sampled; falls back to emphasized. */
-    --ease-spring-gentle: cubic-bezier(0.3, 0, 0, 1);
-    --ease-spring-bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-decelerate: cubic-bezier(0, 0, 0, 1);
+    --ease-accelerate: cubic-bezier(0.3, 0, 1, 1);
+    --dur-micro: 100ms;
+    --dur-short: 180ms;
+    --dur-medium: 260ms;
+    --dur-long: 400ms;
 
     /* ── Spacing grid ─────────────────────────────────────────────────── */
     --space-1: 0.25rem;  --space-2: 0.5rem;   --space-3: 0.75rem;
@@ -392,10 +382,10 @@
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.85);
     box-shadow: var(--shadow-sm), inset 0 1px 0 var(--glass-top);
     transition:
-      border-color var(--duration-base) var(--ease-out),
-      background-color var(--duration-base) var(--ease-out),
-      box-shadow var(--duration-base) var(--ease-out),
-      transform var(--duration-base) var(--ease-out);
+      border-color var(--dur-medium) var(--ease-decelerate),
+      background-color var(--dur-medium) var(--ease-decelerate),
+      box-shadow var(--dur-medium) var(--ease-decelerate),
+      transform var(--dur-medium) var(--ease-decelerate);
   }
 
   .surface--elevated { box-shadow: var(--shadow-md), inset 0 1px 0 var(--glass-top); }
@@ -461,9 +451,9 @@
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.85);
     box-shadow: var(--shadow-sm), inset 0 1px 0 var(--glass-top);
     transition:
-      border-color var(--duration-base) var(--ease-out),
-      box-shadow var(--duration-base) var(--ease-out),
-      transform var(--duration-base) var(--ease-out);
+      border-color var(--dur-medium) var(--ease-decelerate),
+      box-shadow var(--dur-medium) var(--ease-decelerate),
+      transform var(--dur-medium) var(--ease-decelerate);
   }
 
   .data-card:hover {
@@ -479,7 +469,7 @@
     background: var(--glass-bg);
     backdrop-filter: blur(var(--glass-blur)) saturate(1.7);
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.7);
-    transition: border-color var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out);
+    transition: border-color var(--dur-medium) var(--ease-decelerate), box-shadow var(--dur-medium) var(--ease-decelerate);
   }
 
   .metric-tile:hover { box-shadow: var(--shadow-sm); }
@@ -655,9 +645,9 @@
       0 24px 48px -24px hsl(0 0% 0% / 0.65),
       0 12px 32px -20px hsl(var(--primary) / 0.45);
     transition:
-      border-color var(--duration-base) var(--ease-out),
-      box-shadow var(--duration-base) var(--ease-out),
-      transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+      border-color var(--dur-medium) var(--ease-decelerate),
+      box-shadow var(--dur-medium) var(--ease-decelerate),
+      transform 0.45s var(--ease-decelerate);
   }
 
   /* Apple-style light sweep across the glass on hover. */
@@ -671,7 +661,7 @@
   }
   .hero-signal-float-wrap:hover .hero-signal-card::after {
     transform: translateX(130%);
-    transition: transform 1.1s var(--ease-out);
+    transition: transform var(--dur-long) var(--ease-decelerate);
   }
 
   .hero-signal-card::before {
@@ -729,13 +719,13 @@
 
   /* Gentle showroom float — no cartoon tilt. */
   .hero-signal-float-wrap--float-a.hero-signal-float-wrap--animate {
-    animation: signal-float-a 9s var(--ease-soft) infinite;
+    animation: signal-float-a 9s var(--ease-standard) infinite;
   }
   .hero-signal-float-wrap--float-b.hero-signal-float-wrap--animate {
-    animation: signal-float-b 10.5s var(--ease-soft) infinite;
+    animation: signal-float-b 10.5s var(--ease-standard) infinite;
   }
   .hero-signal-float-wrap--float-c.hero-signal-float-wrap--animate {
-    animation: signal-float-c 12s var(--ease-soft) infinite;
+    animation: signal-float-c 12s var(--ease-standard) infinite;
   }
 
   @keyframes signal-float-a {
@@ -772,7 +762,7 @@
 
   .hero-signal-float-wrap:active .hero-signal-card {
     transform: translateY(-1px) scale(0.975);
-    transition-duration: 0.12s;
+    transition-duration: var(--dur-micro);
   }
 
   .hero-signal-chip-wrap {
@@ -802,9 +792,9 @@
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.8);
     box-shadow: var(--shadow-sm), inset 0 1px 0 var(--glass-top);
     transition:
-      border-color var(--duration-base) var(--ease-out),
-      box-shadow var(--duration-base) var(--ease-out),
-      transform var(--duration-base) var(--ease-out);
+      border-color var(--dur-medium) var(--ease-decelerate),
+      box-shadow var(--dur-medium) var(--ease-decelerate),
+      transform var(--dur-medium) var(--ease-decelerate);
   }
 
   .hero-signal-thumb {
@@ -852,7 +842,7 @@
     background: hsl(var(--primary));
     color: hsl(var(--primary-foreground));
     box-shadow: var(--shadow-sm);
-    transition: background-color var(--duration-fast) ease, transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) ease;
+    transition: background-color var(--dur-short) ease, transform var(--dur-short) var(--ease-decelerate), box-shadow var(--dur-short) ease;
   }
 
   .action-primary:hover {
@@ -869,7 +859,7 @@
     border-color: hsl(var(--border));
     background: hsl(var(--card));
     color: hsl(var(--foreground) / 0.84);
-    transition: border-color var(--duration-base) var(--ease-out), color var(--duration-base) var(--ease-out), background-color var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out);
+    transition: border-color var(--dur-medium) var(--ease-decelerate), color var(--dur-medium) var(--ease-decelerate), background-color var(--dur-medium) var(--ease-decelerate), box-shadow var(--dur-medium) var(--ease-decelerate);
   }
 
   .action-soft:hover,
@@ -928,7 +918,7 @@
   .hero-cinematic__media {
     transform-origin: 62% 42%;
     will-change: transform;
-    animation: ken-burns 32s var(--ease-soft) infinite alternate;
+    animation: ken-burns 32s var(--ease-standard) infinite alternate;
   }
 
   @keyframes ken-burns {
@@ -999,7 +989,7 @@
     backdrop-filter: blur(var(--glass-blur)) saturate(1.8);
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.8);
     box-shadow: var(--shadow-lg), inset 0 1px 0 var(--glass-top);
-    transition: border-color var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out);
+    transition: border-color var(--dur-medium) var(--ease-decelerate), box-shadow var(--dur-medium) var(--ease-decelerate);
   }
 
   .hero-search-panel:focus-within {
@@ -1012,7 +1002,7 @@
     border-radius: var(--radius);
     background: hsl(var(--card));
     box-shadow: var(--shadow-sm);
-    transition: border-color var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out);
+    transition: border-color var(--dur-medium) var(--ease-decelerate), box-shadow var(--dur-medium) var(--ease-decelerate);
   }
 
   .hero-command-strip:focus-within {
@@ -1045,7 +1035,7 @@
     box-shadow: var(--shadow-sm);
   }
 
-  .hero-pill { animation: pill-rise 400ms var(--ease-out) both; }
+  .hero-pill { animation: pill-rise var(--dur-long) var(--ease-decelerate) both; }
 
   /* ── Shared subpage hero — richer than plain text blocks ───────── */
   .page-hero {
@@ -1271,7 +1261,7 @@
     box-shadow: var(--shadow-md), inset 0 1px 0 var(--glass-top);
     backdrop-filter: blur(calc(var(--glass-blur) + 2px)) saturate(1.85);
     -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 2px)) saturate(1.85);
-    transition: transform var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out);
+    transition: transform var(--dur-medium) var(--ease-decelerate), box-shadow var(--dur-medium) var(--ease-decelerate);
   }
 
   .page-hero__highlight:hover {
@@ -1322,7 +1312,7 @@
      The header box stays 64px tall, so nothing below it reflows. */
   .site-nav-header {
     --nav-morph-dur: 380ms;
-    --nav-morph-ease: cubic-bezier(0.32, 0.72, 0, 1);
+    --nav-morph-ease: var(--ease-decelerate);
     /* Capsule geometry */
     --cap-max: 1280px;
     --cap-gap: 10px;       /* min distance from the viewport edge */
@@ -1335,7 +1325,7 @@
     --hdr-w: 100vw;
     container-type: inline-size;
     transform: translate3d(0, 0, 0);
-    transition: transform var(--dur-base) var(--ease-standard);
+    transition: transform var(--dur-medium) var(--ease-standard);
   }
 
   @supports (width: 1cqw) {
@@ -1530,7 +1520,7 @@
     color: hsl(var(--foreground) / 0.66);
     text-decoration: none;
     outline: none;
-    transition: color var(--dur-fast) var(--ease-standard), background-color var(--dur-fast) var(--ease-standard);
+    transition: color var(--dur-short) var(--ease-standard), background-color var(--dur-short) var(--ease-standard);
   }
 
   @media (min-width: 1024px) and (max-width: 1279px) {
@@ -1567,11 +1557,11 @@
     white-space: nowrap;
     outline: none;
     transition:
-      background-color var(--dur-fast) var(--ease-standard),
-      color var(--dur-fast) var(--ease-standard),
-      border-color var(--dur-fast) var(--ease-standard),
-      box-shadow var(--dur-fast) var(--ease-standard),
-      transform var(--dur-instant) var(--ease-standard);
+      background-color var(--dur-short) var(--ease-standard),
+      color var(--dur-short) var(--ease-standard),
+      border-color var(--dur-short) var(--ease-standard),
+      box-shadow var(--dur-short) var(--ease-standard),
+      transform var(--dur-micro) var(--ease-standard);
   }
 
   .nav-control:hover,
@@ -1634,8 +1624,8 @@
      transform only: the stack is absolutely positioned, so nothing shifts. */
   .hero-banners {
     transition:
-      opacity var(--dur-fast) var(--ease-standard),
-      transform var(--dur-fast) var(--ease-standard),
+      opacity var(--dur-short) var(--ease-standard),
+      transform var(--dur-short) var(--ease-standard),
       visibility 0s linear 0s;
   }
   .hero-banners[data-tucked="true"] {
@@ -1643,9 +1633,9 @@
     transform: translate3d(0, -8px, 0);
     visibility: hidden;
     transition:
-      opacity var(--dur-fast) var(--ease-standard),
-      transform var(--dur-fast) var(--ease-standard),
-      visibility 0s linear var(--dur-fast);
+      opacity var(--dur-short) var(--ease-standard),
+      transform var(--dur-short) var(--ease-standard),
+      visibility 0s linear var(--dur-short);
   }
   .hero-banners[data-tucked="true"] > * { pointer-events: none; }
 
@@ -1697,19 +1687,19 @@
   .mm-pop[data-state="delayed-open"],
   .mm-pop[data-state="instant-open"] {
     transform-origin: var(--mm-origin, center);
-    animation: mm-pop-in var(--dur-fast) var(--ease-standard) both;
+    animation: mm-pop-in var(--dur-short) var(--ease-standard) both;
   }
 
   .mm-pop[data-state="closed"] {
     transform-origin: var(--mm-origin, center);
-    animation: mm-pop-out 120ms var(--ease-exit) both;
+    animation: mm-pop-out var(--dur-micro) var(--ease-accelerate) both;
   }
 
-  .mm-fade[data-state="open"] { animation: mm-fade-in var(--dur-base) var(--ease-standard) both; }
-  .mm-fade[data-state="closed"] { animation: mm-fade-out var(--dur-fast) var(--ease-exit) both; }
+  .mm-fade[data-state="open"] { animation: mm-fade-in var(--dur-medium) var(--ease-standard) both; }
+  .mm-fade[data-state="closed"] { animation: mm-fade-out var(--dur-short) var(--ease-accelerate) both; }
 
-  .mm-sheet[data-state="open"] { animation: var(--mm-sheet-in) 420ms var(--ease-spring-gentle) both; }
-  .mm-sheet[data-state="closed"] { animation: var(--mm-sheet-out) 240ms var(--ease-exit) both; }
+  .mm-sheet[data-state="open"] { animation: var(--mm-sheet-in) var(--dur-long) var(--ease-standard) both; }
+  .mm-sheet[data-state="closed"] { animation: var(--mm-sheet-out) var(--dur-medium) var(--ease-accelerate) both; }
   .mm-sheet--bottom { --mm-sheet-in: mm-sheet-in-bottom; --mm-sheet-out: mm-sheet-out-bottom; }
   .mm-sheet--top { --mm-sheet-in: mm-sheet-in-top; --mm-sheet-out: mm-sheet-out-top; }
   .mm-sheet--left { --mm-sheet-in: mm-sheet-in-left; --mm-sheet-out: mm-sheet-out-left; }
@@ -1731,9 +1721,9 @@
   /* ── Form controls (ui primitives) ─────────────────────────────── */
   .mm-field {
     transition:
-      border-color var(--dur-fast) var(--ease-standard),
-      box-shadow var(--dur-base) var(--ease-standard),
-      background-color var(--dur-fast) var(--ease-standard);
+      border-color var(--dur-short) var(--ease-standard),
+      box-shadow var(--dur-medium) var(--ease-standard),
+      background-color var(--dur-short) var(--ease-standard);
   }
 
   .mm-field:focus-visible,
@@ -1744,22 +1734,22 @@
 
   .mm-checkbox {
     transition:
-      background-color var(--dur-fast) var(--ease-standard),
-      border-color var(--dur-fast) var(--ease-standard),
-      box-shadow var(--dur-fast) var(--ease-standard),
-      scale var(--dur-instant) var(--ease-standard);
+      background-color var(--dur-short) var(--ease-standard),
+      border-color var(--dur-short) var(--ease-standard),
+      box-shadow var(--dur-short) var(--ease-standard),
+      scale var(--dur-micro) var(--ease-standard);
   }
 
   .mm-checkbox:active { scale: 0.9; }
-  .mm-check-indicator[data-state="checked"] { animation: mm-check-pop 420ms var(--ease-spring-bouncy) both; }
+  .mm-check-indicator[data-state="checked"] { animation: mm-check-pop var(--dur-medium) var(--ease-standard) both; }
 
   @keyframes mm-check-pop { from { scale: 0.4; opacity: 0; } to { scale: 1; opacity: 1; } }
 
   .liquid-toggle__thumb {
     transition:
-      transform 520ms var(--ease-spring-bouncy),
-      scale var(--dur-fast) var(--ease-standard),
-      color var(--dur-base) ease !important;
+      transform 520ms var(--ease-standard),
+      scale var(--dur-short) var(--ease-standard),
+      color var(--dur-medium) ease !important;
   }
 
   .liquid-toggle:active .liquid-toggle__thumb { scale: 0.9; }
@@ -1771,9 +1761,9 @@
     .mm-pop[data-state="open"],
     .mm-pop[data-state="delayed-open"],
     .mm-pop[data-state="instant-open"],
-    .mm-sheet[data-state="open"] { animation: mm-fade-in var(--dur-fast) linear both; }
+    .mm-sheet[data-state="open"] { animation: mm-fade-in var(--dur-short) linear both; }
     .mm-pop[data-state="closed"],
-    .mm-sheet[data-state="closed"] { animation: mm-fade-out var(--dur-fast) linear both; }
+    .mm-sheet[data-state="closed"] { animation: mm-fade-out var(--dur-short) linear both; }
     .mm-check-indicator[data-state="checked"] { animation: none; }
     .mm-checkbox:active,
     .liquid-toggle:active .liquid-toggle__thumb { scale: 1; }
@@ -1792,7 +1782,7 @@
   .mobile-menu-item {
     position: relative;
     border-radius: calc(var(--radius) - 2px);
-    transition: background-color var(--duration-fast) ease, color var(--duration-fast) ease;
+    transition: background-color var(--dur-short) ease, color var(--dur-short) ease;
   }
 
   .mobile-menu-item[data-active="true"],
@@ -1837,7 +1827,7 @@
     border-radius: inherit;
     background: linear-gradient(135deg, rgba(255,244,230,0.18) 0%, transparent 46%);
     opacity: 0;
-    transition: opacity var(--duration-slow) var(--ease-out);
+    transition: opacity var(--dur-long) var(--ease-decelerate);
   }
 
   .vehicle-card:hover::before { opacity: 1; }
@@ -1850,10 +1840,10 @@
     -webkit-backdrop-filter: blur(20px) saturate(1.4);
     box-shadow: inset 0 1px 0 var(--glass-top);
     transition:
-      border-color var(--duration-base) var(--ease-out),
-      box-shadow var(--duration-base) var(--ease-out),
-      transform var(--duration-base) var(--ease-out),
-      background-color var(--duration-base) var(--ease-out);
+      border-color var(--dur-medium) var(--ease-decelerate),
+      box-shadow var(--dur-medium) var(--ease-decelerate),
+      transform var(--dur-medium) var(--ease-decelerate),
+      background-color var(--dur-medium) var(--ease-decelerate);
   }
 
   .inventory-tile:hover {
@@ -1878,14 +1868,14 @@
 
   .motion-card {
     @apply transition-[border-color,background-color,color,transform,box-shadow];
-    transition-duration: var(--duration-base);
-    transition-timing-function: var(--ease-out);
+    transition-duration: var(--dur-medium);
+    transition-timing-function: var(--ease-decelerate);
   }
 
   .motion-card:active { transform: scale(0.99); }
 
   .micro-press {
-    transition: transform var(--duration-fast) var(--ease-out), opacity var(--duration-fast) var(--ease-out);
+    transition: transform var(--dur-short) var(--ease-decelerate), opacity var(--dur-short) var(--ease-decelerate);
   }
 
   .micro-press:active { transform: scale(0.97); }
@@ -1900,8 +1890,8 @@
     opacity: 0;
     transform: translateY(24px);
     transition:
-      opacity var(--duration-cinematic) var(--ease-out),
-      transform var(--duration-cinematic) var(--ease-out);
+      opacity var(--dur-long) var(--ease-decelerate),
+      transform var(--dur-long) var(--ease-decelerate);
   }
 
   .reveal-section--visible {
@@ -1936,7 +1926,7 @@
     border: 1px solid hsl(var(--border));
     background: hsl(var(--muted));
     padding: 0.2rem;
-    transition: border-color var(--duration-base) ease, background var(--duration-base) ease;
+    transition: border-color var(--dur-medium) ease, background var(--dur-medium) ease;
   }
 
   .liquid-toggle__track {
@@ -1955,7 +1945,7 @@
     background: hsl(var(--primary));
     opacity: 0;
     transform: translateX(-34%);
-    transition: transform var(--duration-slow) var(--ease-out), opacity var(--duration-base) ease;
+    transition: transform var(--dur-long) var(--ease-decelerate), opacity var(--dur-medium) ease;
   }
 
   .liquid-toggle__thumb {
@@ -1971,7 +1961,7 @@
     background: #ffffff;
     color: #1a1a1c;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-    transition: transform var(--duration-slow) var(--ease-spring), color var(--duration-base) ease;
+    transition: transform var(--dur-long) var(--ease-standard), color var(--dur-medium) ease;
   }
 
   .liquid-toggle.is-on {
@@ -2034,7 +2024,7 @@
   .floating-action-menu-item {
     position: relative;
     border-radius: calc(var(--radius) - 4px);
-    transition: background-color var(--duration-fast) ease;
+    transition: background-color var(--dur-short) ease;
   }
 
   .floating-action-menu-item:hover { background: hsl(var(--accent)); }
@@ -2073,7 +2063,7 @@
     background: hsl(var(--card));
     box-shadow: var(--shadow-sm);
     padding: 0.75rem;
-    transition: border-color var(--duration-base) ease, transform var(--duration-base) var(--ease-out), box-shadow var(--duration-base) ease;
+    transition: border-color var(--dur-medium) ease, transform var(--dur-medium) var(--ease-decelerate), box-shadow var(--dur-medium) ease;
   }
 
   .sign-in-feature-card:hover {
@@ -2127,7 +2117,7 @@
 
   .magazine-item {
     @apply bg-background transition-colors;
-    transition-duration: var(--duration-base);
+    transition-duration: var(--dur-medium);
   }
 }
 
@@ -2149,27 +2139,20 @@
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.spring-in { animation: spring-in 0.55s var(--ease-out) both; }
+.spring-in { animation: spring-in var(--dur-long) var(--ease-decelerate) both; }
 
 @keyframes fade-up {
   from { opacity: 0; transform: translate3d(0, 14px, 0); }
   to   { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
-.animate-fade-up { animation: fade-up var(--duration-slow) var(--ease-out) both; }
+.animate-fade-up { animation: fade-up var(--dur-long) var(--ease-decelerate) both; }
 
 /* No persistent will-change/contain here: both make .route-stage the
    containing block for position:fixed descendants (sticky bars, sheets).
    motion/react promotes the layer only while a transition runs. */
 .route-stage {
   min-height: 1px;
-}
-
-@supports (animation-timing-function: linear(0, 1)) {
-  :root {
-    --ease-spring-bouncy: linear(0, 0.069, 0.232, 0.435, 0.638, 0.815, 0.953, 1.047, 1.102, 1.125, 1.123, 1.106, 1.082, 1.056, 1.032, 1.012, 0.998, 0.989, 0.985, 0.984, 0.986, 0.988, 0.992, 0.995, 0.998, 1, 1.001, 1.002, 1.002, 1.002, 1);
-    --ease-spring-gentle: linear(0, 0.054, 0.176, 0.324, 0.473, 0.608, 0.721, 0.812, 0.88, 0.931, 0.965, 0.988, 1.002, 1.009, 1.013, 1.013, 1.012, 1.011, 1.009, 1.007, 1.005, 1.003, 1.002, 1.001, 1);
-  }
 }
 
 @view-transition {
@@ -2308,7 +2291,7 @@
   font-size: var(--text-body);
   font-weight: 600;
   text-decoration: none;
-  transition: top 0.15s ease;
+  transition: transform var(--dur-short) var(--ease-standard);
 }
 
 .skip-to-content:focus {
@@ -2444,7 +2427,7 @@ body.cursor-custom-active * { cursor: auto; }
   pointer-events: none;
   z-index: 20;
   opacity: 0;
-  transition: opacity 0.35s ease;
+  transition: opacity var(--dur-medium) var(--ease-standard);
   background: radial-gradient(
     340px circle at var(--spot-x, 50%) var(--spot-y, 50%),
     hsl(250 89% 68% / 0.14),
@@ -2475,8 +2458,8 @@ body.cursor-custom-active * { cursor: auto; }
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-.animate-palette-in { animation: palette-in 0.18s ease-out; }
-.animate-palette-backdrop-in { animation: palette-backdrop-in 0.15s ease-out; }
+.animate-palette-in { animation: palette-in var(--dur-short) var(--ease-decelerate); }
+.animate-palette-backdrop-in { animation: palette-backdrop-in var(--dur-short) var(--ease-decelerate); }
 @media (prefers-reduced-motion: reduce) {
   .animate-palette-in,
   .animate-palette-backdrop-in { animation: none; }

@@ -51,7 +51,7 @@ function HybridBandRow({ band, maxCount }: { band: HybridBand; maxCount: number 
       <span className="w-28 shrink-0 text-caption font-semibold text-foreground">{band.label}</span>
       <div className="relative h-5 flex-1 overflow-hidden rounded-full bg-emerald-500/10">
         <div
-          className="h-full rounded-full bg-emerald-500/30 transition-all duration-500 ease-apple"
+          className="h-full rounded-full bg-emerald-500/30 transition-ui duration-long ease-decelerate"
           style={{ width: `${widthPct}%` }}
         />
         <span className="absolute inset-0 flex items-center pl-2 num text-caption font-semibold text-emerald-700 dark:text-emerald-300">
@@ -99,7 +99,7 @@ export function FuelMixStrip() {
 
   return (
     <section
-      className="rounded-2xl border border-border bg-surface p-5 shadow-soft transition-shadow duration-300 hover:shadow-soft-lg sm:p-6"
+      className="rounded-2xl border border-border bg-surface p-5 shadow-soft transition-shadow duration-medium hover:shadow-soft-lg sm:p-6"
       aria-label="EV and hybrid market share"
     >
       <div className="mb-5 flex items-center gap-2">

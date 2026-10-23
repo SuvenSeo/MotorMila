@@ -192,7 +192,7 @@ export const ListingCard = memo(function ListingCard({
       {...(calm ? {} : press)}
       {...(canHover && !calm ? hoverLift : {})}
       aria-label={t("listingCard.aria", "{title} listing card", { title: listingTitle || "Vehicle" })}
-      className="liquid-panel vehicle-card group relative isolate h-full overflow-hidden rounded-3xl border border-transparent shadow-soft transition-[border-color,box-shadow] duration-300 ease-apple hover:border-primary/35 hover:shadow-soft-xl motion-reduce:transition-none"
+      className="liquid-panel vehicle-card group relative isolate h-full overflow-hidden rounded-3xl border border-transparent shadow-soft transition-[border-color,box-shadow] duration-medium ease-decelerate hover:border-primary/35 hover:shadow-soft-xl motion-reduce:transition-none"
       onPointerEnter={() => {
         // Only warm the route chunk. Data prefetch on hover used to pull the
         // whole snapshot catalogue (tens of MB) the first time a card was hovered.
@@ -239,7 +239,7 @@ export const ListingCard = memo(function ListingCard({
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onWatchlistToggle(listing); }}
-                className={`pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur-md transition-[background-color,border-color,color,transform] duration-150 active:scale-90 motion-reduce:active:scale-100 ${
+                className={`pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur-md transition-[background-color,border-color,color,transform] duration-short active:scale-90 motion-reduce:active:scale-100 ${
                   isWatchlisted
                     ? "bg-primary text-primary-foreground border-primary"
                     : "bg-black/60 text-white/90 border-white/8 hover:text-white hover:bg-black/75"
@@ -253,7 +253,7 @@ export const ListingCard = memo(function ListingCard({
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onCompareToggle(listing); }}
-                className={`pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur-md transition-[background-color,border-color,color,transform] duration-150 active:scale-90 motion-reduce:active:scale-100 ${
+                className={`pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur-md transition-[background-color,border-color,color,transform] duration-short active:scale-90 motion-reduce:active:scale-100 ${
                   isComparing
                     ? "bg-primary text-primary-foreground border-primary"
                     : "bg-black/60 text-white/90 border-white/8 hover:text-white hover:bg-black/75"
@@ -368,7 +368,7 @@ export const ListingCard = memo(function ListingCard({
                 </div>
                 <div className="relative mb-2 h-1.5 overflow-hidden rounded-full bg-foreground/[0.08]">
                   <div
-                    className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 motion-reduce:transition-none ${DEAL_BAR_CLASSES[fmvKind]}`}
+                    className={`absolute inset-y-0 left-0 rounded-full transition-ui duration-long motion-reduce:transition-none ${DEAL_BAR_CLASSES[fmvKind]}`}
                     style={{ width: `${marketPosition}%` }}
                   />
                 </div>
@@ -405,8 +405,8 @@ export const ListingCard = memo(function ListingCard({
                 {attribution.checkedAgo ? ` · ${t("listingCard.checked", "checked {ago}", { ago: attribution.checkedAgo })}` : ""}
               </p>
             </div>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border transition-all group-hover:border-primary/30 group-hover:bg-primary/10">
-              <ArrowRight className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-300 group-hover:translate-x-1 group-hover:text-primary" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border transition-ui group-hover:border-primary/30 group-hover:bg-primary/10">
+              <ArrowRight className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-medium group-hover:translate-x-1 group-hover:text-primary" />
             </div>
           </div>
         </div>

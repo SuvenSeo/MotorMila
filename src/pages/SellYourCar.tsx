@@ -356,7 +356,7 @@ export default function SellYourCar() {
                     key={c.key}
                     type="button"
                     onClick={() => setField("vehicleCategory", c.key)}
-                    className={`rounded-full border px-3 py-1 text-caption font-medium transition-all active:scale-[0.97] ${
+                    className={`rounded-full border px-3 py-1 text-caption font-medium transition-ui active:scale-[0.97] ${
                       form.vehicleCategory === c.key
                         ? "border-primary/40 bg-primary/15 text-primary"
                         : "border-border/50 bg-surface/70 text-muted-foreground hover:border-primary/40 hover:text-foreground"

@@ -1,6 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { springSnappy } from "@/lib/motion";
+import { spring } from "@/lib/motion";
 import { motion } from "motion/react";
 
 type RouteErrorBoundaryProps = {
@@ -71,7 +71,7 @@ class RouteErrorBoundaryInner extends Component<RouteErrorBoundaryProps, RouteEr
               onClick={this.handleRetry}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.97 }}
-              transition={springSnappy}
+              transition={spring.snappy}
               className="h-9 rounded-2xl bg-primary px-5 text-caption font-semibold text-white"
             >
               Reload page

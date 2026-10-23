@@ -69,7 +69,7 @@ export function NoResultsState({ filters, onFiltersChange, onCreateAlert, alertS
       <m.span
         className="block"
         variants={scaleIn}
-        transition={{ duration: duration.slow, ease: ease.emphasized }}
+        transition={{ duration: duration.long, ease: ease.decelerate }}
       >
         <SearchX aria-hidden className="mx-auto h-8 w-8 text-muted-foreground" />
       </m.span>

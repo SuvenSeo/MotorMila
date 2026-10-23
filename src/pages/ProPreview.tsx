@@ -131,13 +131,13 @@ export default function ProPreview({ sampleLane, gaps, trialCtaTo = "/pricing#ge
           <>
             <Link
               to={trialCtaTo}
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-footnote font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-footnote font-semibold text-primary-foreground no-underline shadow-soft transition-ui hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <Sparkles aria-hidden className="h-4 w-4" /> {t("shell.pro.notify", "Notify me")}
             </Link>
             <Link
               to="/pricing"
-              className="inline-flex h-11 items-center rounded-full border border-border bg-card px-6 text-footnote font-semibold text-foreground no-underline transition-all hover:border-primary/40 hover:bg-surface active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="inline-flex h-11 items-center rounded-full border border-border bg-card px-6 text-footnote font-semibold text-foreground no-underline transition-ui hover:border-primary/40 hover:bg-surface active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               {t("pro.seePricing", "See pricing")}
             </Link>
@@ -209,7 +209,7 @@ export default function ProPreview({ sampleLane, gaps, trialCtaTo = "/pricing#ge
               </div>
               <Link
                 to={trialCtaTo}
-                className="mt-5 flex h-11 items-center justify-center gap-2 rounded-full bg-primary text-footnote font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98]"
+                className="mt-5 flex h-11 items-center justify-center gap-2 rounded-full bg-primary text-footnote font-semibold text-primary-foreground no-underline shadow-soft transition-ui hover:bg-primary/90 active:scale-[0.98]"
               >
                 <Sparkles aria-hidden className="h-4 w-4" /> {t("shell.pro.notify", "Notify me")}
               </Link>
@@ -236,7 +236,7 @@ export default function ProPreview({ sampleLane, gaps, trialCtaTo = "/pricing#ge
             <motion.div variants={revealItem}>
               <Link
                 to={trialCtaTo}
-                className="flex h-11 items-center justify-center gap-2 rounded-full bg-primary text-footnote font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="flex h-11 items-center justify-center gap-2 rounded-full bg-primary text-footnote font-semibold text-primary-foreground no-underline shadow-soft transition-ui hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 <MapPin aria-hidden className="h-4 w-4" /> Unlock Pro workspace
               </Link>

@@ -52,7 +52,7 @@
   position: fixed;
   bottom: calc(var(--dock-bottom) + var(--dock-extra) + var(--dock-gap));
   z-index: var(--z-floating);
-  transition: bottom 200ms ease, opacity 150ms ease, transform 150ms ease;
+  transition: bottom var(--dur-short) var(--ease-standard), opacity var(--dur-short) var(--ease-standard), transform var(--dur-short) var(--ease-standard);
 }
 
 /* Transient strip sitting directly on top of the nav (mobile) / corner (desktop). */

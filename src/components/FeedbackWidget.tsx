@@ -102,7 +102,7 @@ export function FeedbackWidget() {
                     key={option.value}
                     type="button"
                     onClick={() => setCategory(option.value)}
-                    className={`inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-caption font-semibold transition-colors duration-200 active:scale-95 ${
+                    className={`inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-caption font-semibold transition-colors duration-short active:scale-95 ${
                       category === option.value
                         ? "border-primary/35 bg-primary/12 text-primary"
                         : "border-border bg-surface text-muted-foreground hover:border-primary/40 hover:text-foreground"
@@ -137,7 +137,7 @@ export function FeedbackWidget() {
               <Button
                 disabled={!canSubmit}
                 onClick={submit}
-              className="h-10 rounded-full bg-primary px-4 text-caption font-semibold text-primary-foreground transition-transform duration-200 hover:bg-primary active:scale-95 disabled:opacity-50 disabled:active:scale-100"
+              className="h-10 rounded-full bg-primary px-4 text-caption font-semibold text-primary-foreground transition-transform duration-short hover:bg-primary active:scale-95 disabled:opacity-50 disabled:active:scale-100"
               >
                 <Send className="mr-2 h-3.5 w-3.5" />
                 {submitting ? t("feedback.sending", "Sending") : t("feedback.send", "Send")}

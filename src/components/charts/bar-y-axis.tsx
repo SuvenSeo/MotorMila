@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
+import { tween } from "@/lib/motion";
 import { memo, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
@@ -47,7 +48,7 @@ function BarYAxisLabel({
           color: "var(--chart-label, var(--color-zinc-500))",
         }}
         style={{ maxWidth: 70 }}
-        transition={{ duration: 0.15 }}
+        transition={tween.short}
       >
         {label}
       </motion.span>

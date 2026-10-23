@@ -32,14 +32,14 @@ export default function Docs() {
           <>
             <Link
               to="/pricing"
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-footnote font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-footnote font-semibold text-primary-foreground no-underline shadow-soft transition-ui hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               {t("common.viewPricing", "View pricing")}
               <ArrowRight aria-hidden className="h-4 w-4" />
             </Link>
             <Link
               to="/official-pulse"
-              className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-card px-6 text-footnote font-semibold text-foreground no-underline transition-all hover:border-primary/40 hover:bg-surface active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="inline-flex h-11 items-center gap-2 rounded-full border border-border bg-card px-6 text-footnote font-semibold text-foreground no-underline transition-ui hover:border-primary/40 hover:bg-surface active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <Radio aria-hidden className="h-4 w-4" />
               {t("nav.officialPulse", "Official Pulse")}

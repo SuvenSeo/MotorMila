@@ -54,7 +54,7 @@ export function UpgradePrompt({
         <Link
           to="/pricing#get-started"
           onClick={onCtaClick}
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-caption font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/95 active:scale-[0.98]"
+          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-caption font-semibold text-primary-foreground no-underline shadow-soft transition-ui hover:bg-primary/95 active:scale-[0.98]"
         >
           <Bell className="h-3.5 w-3.5" aria-hidden />
           {resolvedCta}
@@ -75,7 +75,7 @@ export function UpgradePrompt({
       <Link
         to="/pricing#get-started"
         onClick={onCtaClick}
-        className="mt-5 inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-footnote font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/95 active:scale-[0.98]"
+        className="mt-5 inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-footnote font-semibold text-primary-foreground no-underline shadow-soft transition-ui hover:bg-primary/95 active:scale-[0.98]"
       >
         {resolvedCta}
         <ArrowRight className="h-4 w-4" aria-hidden />
