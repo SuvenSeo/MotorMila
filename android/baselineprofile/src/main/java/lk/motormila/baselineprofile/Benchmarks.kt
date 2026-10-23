@@ -37,6 +37,17 @@ class Benchmarks {
         compilationMode = mode,
         startupMode = StartupMode.COLD,
         iterations = iterations,
+        setupBlock = {
+            // CI flake (run 39929440281): the app was alive again right after
+            // the harness killed it ("must not be running prior to cold
+            // start"). Kill until it stays dead before the cold launch.
+            pressHome()
+            for (attempt in 0 until 5) {
+                if (device.executeShellCommand("pidof $TARGET_PACKAGE").isBlank()) break
+                killProcess()
+                Thread.sleep(400)
+            }
+        },
     ) {
         startToHome()
     }
