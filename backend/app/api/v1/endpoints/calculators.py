@@ -81,6 +81,9 @@ class PermitCreate(BaseModel):
 
 class PermitRead(PermitCreate):
     id: int
+    # True when the permit table is still empty and the row is the research
+    # baseline (mid-point of published ranges), not a live market price.
+    baseline: bool = False
 
 # Excise band configurations
 EXCISE_PETROL = [
@@ -259,9 +262,38 @@ async def calculate_tco(payload: TCORequest):
         notes=source_notes
     )
 
+def _baseline_permits() -> list[dict]:
+    """Research baseline permit prices, highest first (read-only, never written)."""
+    try:
+        from app.scrapers.permitsale import _DEFAULT_PERMITS as defaults
+    except Exception:  # noqa: BLE001 - optional baseline
+        return []
+    ordered = sorted(defaults, key=lambda row: row[2], reverse=True)
+    return [
+        {
+            "id": index,
+            "permit_name": name,
+            "permit_type": permit_type,
+            "market_price_lkr": float(price),
+            "baseline": True,
+        }
+        for index, (name, permit_type, price) in enumerate(ordered, start=1)
+    ]
+
+
 @router.get("/permits", response_model=List[PermitRead])
 def get_permits(db: Session = Depends(get_db)):
-    return db.query(VehiclePermit).order_by(VehiclePermit.market_price_lkr.desc()).all()
+    """Permit market prices.
+
+    The vehicle_permits table is admin/seeder populated and is empty in the
+    public SQLite failover dump (and on a fresh database), which left the
+    Permit market page blank. Fall back to the research baseline, flagged
+    ``baseline: true``, instead of an empty list.
+    """
+    rows = db.query(VehiclePermit).order_by(VehiclePermit.market_price_lkr.desc()).all()
+    if rows:
+        return rows
+    return _baseline_permits()
 
 @router.post("/permits", response_model=PermitRead, dependencies=[Depends(require_admin_key)])
 def create_or_update_permit(payload: PermitCreate, db: Session = Depends(get_db)):

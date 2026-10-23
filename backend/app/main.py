@@ -359,6 +359,11 @@ async def health_check():
         "failover_error": fo.get("last_error"),
         "failover_last_attempt_at": fo.get("last_attempt_at"),
         "failover_source": (fo.get("source") or "").rsplit("/", 1)[-1] or None,
+        # Why the primary is (or is not) being used: "quota_exceeded" means
+        # the Neon Free monthly transfer allowance is spent (resets at the
+        # start of the next billing month; the monitor fails back by itself).
+        "primary_status": fo.get("primary_status"),
+        "primary_checked_at": fo.get("primary_checked_at"),
         # Breaker state only - the error text can name the DB host.
         "circuit": circuit.get("state"),
         "version": "1.0.0",

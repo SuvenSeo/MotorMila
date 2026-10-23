@@ -95,7 +95,47 @@ _status: dict = {
     "source": None,
     "path": None,
     "bytes": None,
+    # Last observation of the primary (Neon) database, credential-free:
+    # "ok" | "quota_exceeded" | "unreachable" | "auth_failed" | "error".
+    "primary_status": None,
+    "primary_checked_at": None,
 }
+
+
+def classify_primary_error(exc: BaseException | str | None) -> str:
+    """Map a Neon connect failure to a short, secret-free reason code.
+
+    Neon Free answers "Your account or project has exceeded the quota" (or
+    "...data transfer quota") once the monthly transfer allowance is used up;
+    that needs a plan decision or the monthly reset, not a code fix, so
+    /health reports it distinctly from a plain network failure.
+    """
+    if exc is None:
+        return "ok"
+    message = str(exc).lower()
+    if "quota" in message or "exceeded" in message or "endpoint is disabled" in message:
+        return "quota_exceeded"
+    if "password authentication failed" in message or "authentication failed" in message:
+        return "auth_failed"
+    if any(
+        marker in message
+        for marker in (
+            "could not connect",
+            "timeout",
+            "timed out",
+            "could not translate host",
+            "connection refused",
+            "network is unreachable",
+            "name or service not known",
+            "server closed the connection",
+        )
+    ):
+        return "unreachable"
+    return "error"
+
+
+def _record_primary(exc: BaseException | None) -> None:
+    _record_status(primary_status=classify_primary_error(exc), primary_checked_at=time.time())
 
 
 def _record_status(**fields) -> None:
@@ -226,8 +266,10 @@ def neon_reachable(timeout_seconds: float = 3.0) -> bool:
         # Bypass the circuit breaker: this probe must observe the real DB.
         with bypass_breaker(), db_session.hot_engine.connect() as conn:
             conn.execute(text("SELECT 1"))
+        _record_primary(None)
         return True
     except Exception as exc:  # noqa: BLE001 — any connect failure means fail over
+        _record_primary(exc)
         logger.warning("neon_probe_failed", error=str(exc), timeout_seconds=timeout_seconds)
         return False
 
@@ -246,8 +288,10 @@ def _probe_url(url: str, timeout_seconds: float = 3.0) -> bool:
     try:
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
+        _record_primary(None)
         return True
     except Exception as exc:  # noqa: BLE001 — any connect failure means still down
+        _record_primary(exc)
         logger.warning("neon_reprobe_failed", error=str(exc))
         return False
     finally:
