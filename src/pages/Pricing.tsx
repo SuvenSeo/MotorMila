@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Collapse } from "@/components/ui/collapse";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,7 @@ import { DEALER_FAQ, DEALER_TIERS, PLAN_PRICES, PRICING_COMING_SOON, PRICING_FAQ
 import type { DealerTierCode } from "@/lib/pricingContent";
 import { createPayhereCheckout, getPayhereConfig, submitPayhereForm, type PayhereConfig } from "@/lib/moneyApi";
 import { PageCanvas } from "@/components/PageCanvas";
-import { duration, ease, fadeUp, listItem, listStagger, scaleIn, spring, useReducedMotionOrLowData } from "@/lib/motion";
+import { duration, fadeUp, listItem, listStagger, scaleIn, spring, useReducedMotionOrLowData } from "@/lib/motion";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { friendlyApiError } from "@/lib/apiErrorText";
 import { useAuth } from "@/lib/authContext";
@@ -694,14 +695,7 @@ export default function Pricing() {
                 </m.span>
               </span>
             </button>
-            <m.div
-              id="for-dealers-panel"
-              hidden={!dealersOpen}
-              initial={false}
-              animate={dealersOpen ? { opacity: 1, y: 0 } : { opacity: 0, y: -6 }}
-              transition={{ duration: duration.medium, ease: dealersOpen ? ease.decelerate : ease.accelerate }}
-              className="space-y-8 border-t border-separator p-5 sm:p-6"
-            >
+            <Collapse id="for-dealers-panel" open={dealersOpen} innerClassName="space-y-8 border-t border-separator p-5 sm:p-6">
               <DealerPlans />
               <div className="grid gap-4 md:grid-cols-3">
                 {DEALER_FAQ.map((item) => (
@@ -711,7 +705,7 @@ export default function Pricing() {
                   </div>
                 ))}
               </div>
-            </m.div>
+            </Collapse>
           </Card>
         </m.div>
 

@@ -57,7 +57,7 @@ export function BeforeYouPayStrip({
 
   if (collapsible) {
     return (
-      <details className={cn(shell, "group")}>
+      <details className={cn(shell, "group mm-disclosure")}>
         <summary className="flex min-h-[28px] cursor-pointer list-none items-center gap-2 text-footnote font-bold text-foreground [&::-webkit-details-marker]:hidden">
           {heading}
           <span className="ml-1 truncate text-caption font-medium text-muted-foreground">

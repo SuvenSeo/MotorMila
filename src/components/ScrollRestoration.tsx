@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { scrollBehavior } from "@/lib/motion";
 
@@ -17,7 +17,10 @@ function scrollToHashTarget(targetId: string) {
 export function ScrollRestoration() {
   const { pathname, hash } = useLocation();
 
-  useEffect(() => {
+  // Layout effect: the reset lands before the new route paints, so the
+  // incoming page never shows at the old scroll offset (that left the footer
+  // on screen until content arrived and pushed it down: CLS on card → listing).
+  useLayoutEffect(() => {
     if (hash) {
       const targetId = hash.replace("#", "");
       if (!targetId) return;
@@ -35,9 +38,10 @@ export function ScrollRestoration() {
       return () => window.clearInterval(retry);
     }
 
-    // Instant: with View Transitions this runs before the new snapshot is
-    // taken, so the incoming page is already at the top while it fades in.
-    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    // "instant", not "auto": html has `scroll-behavior: smooth`, which turns
+    // "auto" into a 300ms smooth scroll. With View Transitions this runs
+    // before the new snapshot, so the incoming page is already at the top.
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [pathname, hash]);
 
   return null;

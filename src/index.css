@@ -1900,6 +1900,55 @@
   @keyframes mm-sheet-in-right { from { translate: calc(100% + 16px) 0; } to { translate: 0 0; } }
   @keyframes mm-sheet-out-right { from { translate: 0 0; } to { translate: calc(100% + 16px) 0; } }
 
+  /* ── Collapse / accordion body (components/ui/collapse.tsx) ─────────
+     0fr → 1fr grid row: the browser animates the height natively (no JS
+     measuring, no layout reads), content fades with it. Visibility flips
+     after the close so collapsed content leaves the tab order. */
+  .mm-collapse {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      grid-template-rows var(--dur-medium) var(--ease-accelerate),
+      opacity var(--dur-short) var(--ease-accelerate),
+      visibility 0s linear var(--dur-medium);
+  }
+  .mm-collapse[data-open="true"] {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    visibility: visible;
+    transition:
+      grid-template-rows var(--dur-medium) var(--ease-decelerate),
+      opacity var(--dur-medium) var(--ease-decelerate),
+      visibility 0s;
+  }
+  .mm-collapse__inner {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* Native <details> disclosures open/close smoothly where the browser can
+     animate to auto height (Chromium 131+); elsewhere they snap as before. */
+  @supports (interpolate-size: allow-keywords) {
+    details.mm-disclosure {
+      interpolate-size: allow-keywords;
+    }
+    details.mm-disclosure::details-content {
+      block-size: 0;
+      overflow: clip;
+      opacity: 0;
+      transition:
+        block-size var(--dur-medium) var(--ease-standard),
+        opacity var(--dur-short) var(--ease-standard),
+        content-visibility var(--dur-medium) allow-discrete;
+    }
+    details.mm-disclosure[open]::details-content {
+      block-size: auto;
+      opacity: 1;
+    }
+  }
+
   /* ── Form controls (ui primitives) ─────────────────────────────── */
   .mm-field {
     transition:
@@ -1947,6 +1996,13 @@
     .mm-pop[data-state="closed"],
     .mm-sheet[data-state="closed"] { animation: mm-fade-out var(--dur-short) linear both; }
     .mm-check-indicator[data-state="checked"] { animation: none; }
+    .mm-collapse,
+    .mm-collapse[data-open="true"] {
+      transition: opacity var(--dur-micro) linear, visibility 0s linear var(--dur-micro);
+      grid-template-rows: none;
+    }
+    .mm-collapse:not([data-open="true"]) { display: none; }
+    details.mm-disclosure::details-content { transition: none; }
     .mm-checkbox:active,
     .liquid-toggle:active .liquid-toggle__thumb { scale: 1; }
   }

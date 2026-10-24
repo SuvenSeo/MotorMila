@@ -317,7 +317,7 @@ export function Navbar() {
                     const DestIcon = dest.icon;
                     const current = isDestinationActive(dest, pathname);
                     return (
-                      <details key={dest.id} className="site-menu-dest group/dest" open={current || undefined}>
+                      <details key={dest.id} className="site-menu-dest group/dest mm-disclosure" open={current || undefined}>
                         <summary className="flex cursor-pointer list-none items-center gap-2.5 rounded-xl px-2.5 py-2 outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary/50 [&::-webkit-details-marker]:hidden">
                           <span
                             className={cn(
