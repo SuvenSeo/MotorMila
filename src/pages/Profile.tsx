@@ -102,11 +102,11 @@ export default function Profile() {
       <div className="layout-shell pb-20">
         <section className="w-full max-w-3xl">
           <m.div variants={fadeUp}>
-            <Card padding="sm" className="mb-6 flex items-center gap-4 sm:p-5">
+            <Card padding="sm" className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3 sm:p-5">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <UserRound className="h-5 w-5" strokeWidth={1.75} aria-hidden />
               </span>
-              <div className="min-w-0">
+              <div className="min-w-[12rem] flex-1">
                 <p className="truncate text-body font-semibold text-foreground">
                   {user?.email ?? t("profile.signedIn", "Signed in")}
                 </p>

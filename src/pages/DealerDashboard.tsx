@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, m } from "motion/react";
 import { useQuery } from "@tanstack/react-query";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { BarChart3, Bell, ChevronDown, ShieldCheck, Upload } from "lucide-react";
 import {
@@ -417,6 +418,7 @@ export default function DealerDashboard() {
 
   const turnoverData = useMemo(() => buildTurnoverSeries(insights), [insights]);
   const priceGaps = useMemo(() => buildDistrictPriceGaps(districts), [districts]);
+  const isMobile = useIsMobile();
   const districtDemand = useMemo(() => buildDistrictDemandRows(districts), [districts]);
   const notifications = useMemo(() => buildDealerNotifications(insights, stats, t), [insights, stats, t]);
 
@@ -702,7 +704,17 @@ export default function DealerDashboard() {
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={priceGaps}>
                           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                          <XAxis dataKey="district" interval={0} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} tickLine={false} axisLine={false} />
+                          <XAxis
+                            dataKey="district"
+                            interval={0}
+                            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                            tickLine={false}
+                            axisLine={false}
+                            // Five district names don't fit side by side on a phone; slant them.
+                            angle={isMobile ? -35 : 0}
+                            textAnchor={isMobile ? "end" : "middle"}
+                            height={isMobile ? 56 : 30}
+                          />
                           <YAxis width={44} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={(v) => `${v}%`} tickLine={false} axisLine={false} />
                           <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} formatter={(v: number) => [`${v.toFixed(1)}%`, t("dealerDash.gap", "Gap")]} />
                           <Bar dataKey="gapPct" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
