@@ -47,7 +47,6 @@ import { TrendingDown,
   Search,
   SlidersHorizontal,
   X,
-  Bookmark,
 } from "lucide-react";
 import type { StatsOverview } from "@/types/car";
 import {
