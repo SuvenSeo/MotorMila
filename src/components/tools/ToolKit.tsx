@@ -306,6 +306,7 @@ export function ChoiceChips<T extends string>({
       <div role="radiogroup" aria-labelledby={labelId} className={cn("flex flex-wrap gap-2", fill && "grid grid-flow-col auto-cols-fr")}>
         {options.map((o, i) => {
           const selected = o.value === value;
+          const focusable = selected || (i === 0 && !options.some((x) => x.value === value));
           return (
             <Chip
               key={o.value}
@@ -313,7 +314,7 @@ export function ChoiceChips<T extends string>({
               role="radio"
               aria-checked={selected}
               aria-pressed={undefined}
-              tabIndex={selected ? 0 : -1}
+              tabIndex={focusable ? 0 : -1}
               selected={selected}
               onClick={() => onChange(o.value)}
               onKeyDown={(e) => onKeyDown(e, i)}
