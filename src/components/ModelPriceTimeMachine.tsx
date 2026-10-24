@@ -189,7 +189,7 @@ export function ModelPriceTimeMachine({
                 </defs>
                 <CartesianGrid {...chartGrid} />
                 <XAxis {...chartAxis} dataKey="label" minTickGap={28} interval="preserveStartEnd" />
-                <YAxis {...chartAxis} tickFormatter={(v: number) => formatLkrAxis(v)} width={52} />
+                <YAxis {...chartAxis} tickFormatter={(v: number) => formatLkrAxis(v)} width={64} />
                 <Tooltip
                   {...chartTooltip(calm)}
                   content={(p) => (
@@ -241,7 +241,7 @@ export function ModelPriceTimeMachine({
                 </defs>
                 <CartesianGrid {...chartGrid} />
                 <XAxis {...chartAxis} dataKey="label" minTickGap={20} interval="preserveStartEnd" />
-                <YAxis {...chartAxis} tickFormatter={(v: number) => formatLkrAxis(v)} width={52} />
+                <YAxis {...chartAxis} tickFormatter={(v: number) => formatLkrAxis(v)} width={64} />
                 <Tooltip
                   {...chartTooltip(calm)}
                   content={(p) => (

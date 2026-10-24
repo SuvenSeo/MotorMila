@@ -115,7 +115,7 @@ export const MileagePriceScatter = memo(function MileagePriceScatter({
               dataKey="price_lkr"
               name="Price"
               tickFormatter={(value: number) => formatLkrAxis(value)}
-              width={48}
+              width={60}
             />
             <Tooltip
               {...chartTooltip(calm)}

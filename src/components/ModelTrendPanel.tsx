@@ -112,7 +112,7 @@ export function ModelTrendPanel({ make, model }: { make: string; model: string }
               domain={domain ?? ["auto", "auto"]}
               tickFormatter={(v: number) => formatMnShort(v)}
               tickCount={4}
-              width={48}
+              width={56}
             />
             <Tooltip
               {...chartTooltip(calm)}

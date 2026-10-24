@@ -218,7 +218,7 @@ export function PriceHistoryChart({
               tickCount={5}
               allowDecimals
               tickFormatter={(value: number) => formatLkrAxisFromMillions(value)}
-              width={56}
+              width={68}
             />
             <Tooltip
               {...chartTooltip(calm)}
