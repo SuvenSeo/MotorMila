@@ -292,8 +292,9 @@ private fun AccountHeader(p: UiProfile, a: ProfileActions) {
                 }
                 Spacer(Modifier.width(MmSpacing.md))
                 Column(Modifier.weight(1f)) {
-                    Text(p.displayName, style = type.titleL, color = c.textPrimary, maxLines = 1)
-                    Text(p.email, style = type.bodyS, color = c.textSecondary, maxLines = 1)
+                    Text(p.displayName, style = type.titleL, color = c.textPrimary, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    // Long addresses were hard-clipped ("…2992007@gm"): wrap to 2 lines, then ellipsis.
+                    Text(p.email, style = type.bodyS, color = c.textSecondary, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     Spacer(Modifier.height(MmSpacing.xs))
                     Row(horizontalArrangement = Arrangement.spacedBy(MmSpacing.xs)) {
                         MmTag(

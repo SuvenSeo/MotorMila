@@ -604,20 +604,24 @@ fun ColumnScope.FilterSheetBody(
         Spacer(Modifier.height(MmSpacing.sm))
     }
 
-    // Pinned CTA row
-    Row(
+    // Pinned CTA row. At large text two side-by-side pills ellipsized both
+    // labels ("அ…" / "Show results" cut): stack them, primary on top.
+    val stackCtas = androidx.compose.ui.platform.LocalDensity.current.fontScale >= 1.5f
+    @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+    androidx.compose.foundation.layout.FlowRow(
         Modifier
             .fillMaxWidth()
             .padding(horizontal = MmSpacing.gutter, vertical = MmSpacing.md),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        maxItemsInEachRow = if (stackCtas) 1 else 2,
     ) {
         MmButton(
             text = stringResource(R.string.filter_reset_all),
             onClick = onReset,
             style = MmButtonStyle.Secondary,
             enabled = draft.activeCount > 0,
-            modifier = Modifier.weight(1f),
+            modifier = if (stackCtas) Modifier.fillMaxWidth() else Modifier.weight(1f),
         )
         val cta = when {
             // Never show the previous draft's total while the new one is counting.
@@ -634,8 +638,7 @@ fun ColumnScope.FilterSheetBody(
                 onApply()
             },
             loading = false,
-            modifier = Modifier
-                .weight(1.6f)
+            modifier = (if (stackCtas) Modifier.fillMaxWidth() else Modifier.weight(1.6f))
                 .graphicsLayer { alpha = if (counting) 0.92f else 1f },
         )
     }

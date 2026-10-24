@@ -195,7 +195,9 @@ fun MmFitText(
             color = color,
             maxLines = 1,
             softWrap = false,
-            overflow = TextOverflow.Ellipsis,
+            // Anything the font step could not absorb is scaled on the layer,
+            // never ellipsized (a price must stay whole).
+            modifier = Modifier.fitWidth(minScale = 0.2f),
         )
     }
 }
@@ -213,21 +215,22 @@ private fun rememberFittedTextStyle(
         if (maxWidthPx == Constraints.Infinity || maxWidthPx <= 0 || !style.fontSize.isSp) {
             return@remember style
         }
-        val width = measurer.measure(
-            text = text,
-            style = style,
-            softWrap = false,
-            maxLines = 1,
-        ).size.width
-        if (width <= maxWidthPx) {
-            style
-        } else {
-            val scale = (maxWidthPx.toFloat() / width * 0.98f).coerceIn(minScale, 1f)
-            style.copy(
+        // Re-measure after each step: with Android 14+ NON-LINEAR font scaling a
+        // smaller sp is scaled up proportionally MORE, so one linear step left
+        // "Rs 1.85 Mn" still too wide at 200 % (cards showed "Rs 1.85 …").
+        // (fitPerGlyphStyle with one glyph = the whole string.)
+        var scale = 1f
+        var current = style
+        for (pass in 0 until 5) {
+            val width = measurer.measure(text = text, style = current, softWrap = false, maxLines = 1).size.width
+            if (width <= maxWidthPx || scale <= minScale) break
+            scale = (scale * maxWidthPx.toFloat() / width * 0.98f).coerceIn(minScale, 1f)
+            current = style.copy(
                 fontSize = scale * style.fontSize,
                 letterSpacing = if (style.letterSpacing.isSp) scale * style.letterSpacing else style.letterSpacing,
             )
         }
+        current
     }
 }
 

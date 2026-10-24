@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -683,17 +684,24 @@ fun BeforeYouPayCard(modifier: Modifier = Modifier) {
         Spacer(Modifier.height(MmSpacing.md))
         items.forEachIndexed { i, res ->
             Row(Modifier.padding(vertical = 5.dp), verticalAlignment = Alignment.Top) {
-                Text(
-                    "${i + 1}",
-                    style = MmType.current.labelS,
-                    color = c.textSecondary,
-                    modifier = Modifier
-                        .size(20.dp)
+                // Badge grows with the text (was a fixed 20 dp: at 200 % the digit
+                // was cut to a sliver, "ↄ").
+                Box(
+                    Modifier
+                        .defaultMinSize(minWidth = 20.dp, minHeight = 20.dp)
                         .clip(MmShapes.pill)
                         .background(c.surfaceHigh)
-                        .padding(top = 2.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                )
+                        .padding(horizontal = 5.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        "${i + 1}",
+                        style = MmType.current.labelS,
+                        color = c.textSecondary,
+                        maxLines = 1,
+                        softWrap = false,
+                    )
+                }
                 Spacer(Modifier.width(10.dp))
                 Text(stringResource(res), style = MmType.current.bodyS, color = c.textSecondary, overflow = TextOverflow.Clip)
             }

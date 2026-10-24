@@ -1,5 +1,6 @@
 package lk.motormila.app.ui.valuation
 
+import lk.motormila.app.ui.components.fitWidth
 import lk.motormila.app.ui.theme.mmTappable
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
@@ -178,14 +179,28 @@ private fun StepLabels(step: Int) {
         stringResource(R.string.scr_val_step_condition),
         stringResource(R.string.scr_val_step_result),
     )
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+    // Equal quarters, each label scaled to fit its own: at 200 % (ta) the four
+    // labels ran together ("கார்விவரங்கள்நிலைமுடிவு") and wrapped.
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         labels.forEachIndexed { i, label ->
-            Text(
-                label,
-                style = MmType.current.labelS,
-                color = if (i <= step) c.textPrimary else c.textTertiary,
-                fontWeight = if (i == step) FontWeight.SemiBold else FontWeight.Normal,
-            )
+            Box(
+                Modifier.weight(1f),
+                contentAlignment = when (i) {
+                    0 -> Alignment.CenterStart
+                    labels.lastIndex -> Alignment.CenterEnd
+                    else -> Alignment.Center
+                },
+            ) {
+                Text(
+                    label,
+                    style = MmType.current.labelS,
+                    color = if (i <= step) c.textPrimary else c.textTertiary,
+                    fontWeight = if (i == step) FontWeight.SemiBold else FontWeight.Normal,
+                    maxLines = 1,
+                    softWrap = false,
+                    modifier = Modifier.fitWidth(minScale = 0.5f),
+                )
+            }
         }
     }
 }
@@ -491,9 +506,11 @@ private fun ResultBody(state: ValuationUiState, result: QuizResult, onOpenListin
     ) {
         Text(stringResource(R.string.scr_val_range_label), style = type.label, color = c.textSecondary)
         Spacer(Modifier.height(MmSpacing.xs))
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        // FlowRow: the high end was ellipsized ("Rs 132.…") from 130 %; now the
+        // range wraps after the dash and each price fits its line.
+        FlowRow(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             MmPrice(result.low, style = type.priceL)
-            Text("  –  ", style = type.priceL, color = c.textSecondary)
+            Text("  –  ", style = type.priceL, color = c.textSecondary, maxLines = 1, softWrap = false)
             MmPrice(result.high, style = type.priceL)
         }
         Spacer(Modifier.height(MmSpacing.md))

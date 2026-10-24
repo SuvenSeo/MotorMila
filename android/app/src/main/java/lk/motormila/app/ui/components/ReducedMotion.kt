@@ -8,4 +8,8 @@ import androidx.compose.runtime.Composable
  */
 @Composable
 fun rememberReducedMotion(): Boolean =
-    lk.motormila.app.core.motion.rememberReducedMotion()
+    // Also honour the theme's flag (MotormilaTheme(reducedMotion = …)): components
+    // read only the system setting, so the theme override never reached the
+    // tickers / price-drop choreography.
+    lk.motormila.app.ui.theme.LocalMmReducedMotion.current ||
+        lk.motormila.app.core.motion.rememberReducedMotion()
