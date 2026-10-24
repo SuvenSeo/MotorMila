@@ -338,10 +338,12 @@ function PayherePanel({
           />
         </div>
         {recurringAvailable && (
-          <label className="flex h-10 cursor-pointer items-center gap-2 text-footnote text-label-1">
-            <Checkbox checked={recurring} onCheckedChange={(v) => setRecurring(v === true)} />
-            Renew automatically (cancel any time)
-          </label>
+          <div className="flex h-10 items-center gap-2">
+            <Checkbox id="payhere-recurring" checked={recurring} onCheckedChange={(v) => setRecurring(v === true)} />
+            <Label htmlFor="payhere-recurring" className="cursor-pointer text-footnote font-normal text-label-1">
+              Renew automatically (cancel any time)
+            </Label>
+          </div>
         )}
         <Button type="submit" loading={busy}>
           Continue to PayHere
