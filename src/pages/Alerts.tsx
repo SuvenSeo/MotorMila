@@ -476,12 +476,12 @@ function CreateAlertForm({ onCreated, onCreate, alertCount, fullAccess }: Create
 
 function AlertRow({
   alert,
-  token,
   onDelete,
   onChannelsChange,
 }: {
   alert: ServerMarketAlert;
-  token: string;
+  /** Kept for call-site compatibility; the row itself does not need it. */
+  token?: string;
   onDelete: (id: number) => void;
   onChannelsChange?: (id: number, data: { channels?: string[]; delivery_mode?: "instant" | "digest" }) => Promise<unknown>;
 }) {
