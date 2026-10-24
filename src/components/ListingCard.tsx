@@ -185,6 +185,8 @@ export const ListingCard = memo(function ListingCard({
       variants={revealVariants}
       {...(calm ? {} : press)}
       {...(canHover && !calm ? hoverLift : {})}
+      // Motion's whileTap adds tabindex="0"; the title link and buttons inside are the tab stops.
+      tabIndex={-1}
       aria-label={t("listingCard.aria", "{title} listing card", { title: listingTitle || "Vehicle" })}
       className={cn(
         cardVariants({ variant: "media", padding: "none" }),

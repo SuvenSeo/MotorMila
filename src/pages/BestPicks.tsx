@@ -502,6 +502,8 @@ export default function BestPicks() {
                         // Stagger the first 8; the rest arrive together.
                         variants={idx < 8 ? fadeUp : lateFade}
                         {...(motionStill ? {} : canHoverLift ? { ...hoverLift, whileTap: press.whileTap } : { whileTap: press.whileTap })}
+                        // whileTap makes Motion add tabindex="0"; keep the card out of the tab order (its links are the stops).
+                        tabIndex={-1}
                         className={cn(
                           cardVariants({ variant: "media", padding: "none" }),
                           "group flex flex-col transition-[border-color,box-shadow] duration-medium ease-decelerate hover:border-primary/30 hover:shadow-e2",

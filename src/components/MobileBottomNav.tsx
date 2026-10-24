@@ -46,6 +46,8 @@ function TabItem({ dest, calm }: { dest: NavDestination; calm: boolean }) {
           animate={calm ? undefined : isActive ? { y: [0, -3, 0], scale: [1, 1.08, 1] } : { y: 0, scale: 1 }}
           transition={tween.medium}
           whileTap={calm ? undefined : { scale: 0.86 }}
+          // Motion adds tabindex="0" to whileTap elements; the link is the tab stop, not the icon.
+          tabIndex={-1}
         >
           <Icon className="h-[18px] w-[18px]" aria-hidden />
         </m.span>

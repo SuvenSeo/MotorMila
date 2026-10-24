@@ -39,6 +39,8 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
       >
         <m.span
           aria-hidden
+          // whileTap makes Motion add tabindex="0"; the knob must not be its own tab stop.
+          tabIndex={-1}
           className={cn("block rounded-full bg-primary-foreground shadow-e1", sm ? "h-4 w-4" : "h-5 w-5")}
           initial={false}
           animate={{ x: checked ? (sm ? 16 : 20) : 0 }}
