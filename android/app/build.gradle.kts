@@ -47,7 +47,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 18
-        versionName = "1.7.0-preview"
+        versionName = "1.7.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -201,8 +201,9 @@ android {
         create("preview") {
             initWith(getByName("release"))
             applicationIdSuffix = ".debug"
-            // defaultConfig versionName is already "1.7.0-preview".
-            versionNameSuffix = null
+            // Production ships defaultConfig versionName ("1.7.0"); the
+            // preview sideload channel keeps its "-preview" label.
+            versionNameSuffix = "-preview"
             isDebuggable = false
             isMinifyEnabled = true
             isShrinkResources = true
