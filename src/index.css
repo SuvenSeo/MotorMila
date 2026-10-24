@@ -589,6 +589,21 @@
     margin-top: 0.08em;
   }
 
+  /* Sinhala and Tamil set much wider and taller than Latin at hero size: the
+     words (kept whole for the entrance animation) overflowed a 390px screen
+     and the tight leading clipped vowel signs. */
+  :root:lang(si) .display-hero,
+  :root:lang(ta) .display-hero {
+    font-size: clamp(2rem, 1rem + 4.2vw, 4rem);
+    line-height: 1.18;
+    letter-spacing: 0;
+  }
+
+  /* Tamil words run longer still ("கண்காணிக்கப்பட்டது"). */
+  :root:lang(ta) .display-hero {
+    font-size: clamp(1.625rem, 0.6rem + 4vw, 3.5rem);
+  }
+
   .display-1 {
     font-family: var(--font-display);
     font-weight: 600;
