@@ -1,67 +1,86 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { m } from "motion/react";
-import NumberFlow from "@number-flow/react";
-import { BarChart } from "@/components/charts/bar-chart";
-import { Bar } from "@/components/charts/bar";
-import { BarXAxis } from "@/components/charts/bar-x-axis";
-import { Grid } from "@/components/charts/grid";
-import { ChartTooltip } from "@/components/charts/tooltip/chart-tooltip";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { ArrowDownRight, ArrowUpRight, LineChart, Info } from "lucide-react";
+import { AreaChart, Area, Bar, BarChart, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
+import { ArrowDownRight, ArrowUpRight, Info, LineChart, Minus } from "lucide-react";
 import { getPriceIndex } from "@/services/api";
 import type { PriceIndex, PriceIndexPoint } from "@/types/car";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { useAuth } from "@/lib/authContext";
-import { AtmosphericImage } from "@/components/AtmosphericImage";
+import { revealItem } from "@/lib/motion";
 import { FreePlanBanner } from "@/components/FreePlanBanner";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
+import { PageBody } from "@/components/PageBody";
+import { PageCanvas } from "@/components/PageCanvas";
+import { PageHeader } from "@/components/ui/page-header";
+import { Card } from "@/components/ui/card";
+import { Chip } from "@/components/ui/chip";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { SectionHeading } from "@/components/ui/section-heading";
+import { StatTile, FlowValue } from "@/components/ui/stat-tile";
+import {
+  ChartFrame,
+  ChartTooltipCard,
+  chartAxis,
+  chartColor,
+  chartGrid,
+  chartTooltip,
+  toneColor,
+  toneFor,
+  useChartCalm,
+  useChartDraw,
+} from "@/components/ui/chart-theme";
 import {
   FREE_TRENDS_MONTHS,
   freePlanCopy,
   hasFullPlatformAccess,
   takeLastMonths,
 } from "@/lib/planLimits";
-import { visuals } from "@/lib/visualAssets";
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.05, delayChildren: 0.05 } },
-} as const;
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 15 },
-  show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 220, damping: 24 } },
-} as const;
+import { cn } from "@/lib/utils";
 
 function formatPeriod(period: string): string {
-  const [y, m] = period.split("-");
-  const d = new Date(Number(y), Number(m) - 1, 1);
+  const [y, mo] = period.split("-");
+  const d = new Date(Number(y), Number(mo) - 1, 1);
   return Number.isFinite(d.getTime()) ? d.toLocaleDateString("en-US", { month: "short", year: "numeric" }) : period;
 }
 
-function formatPct(v: number | null): string {
-  if (v === null || !Number.isFinite(v)) return "—";
+function formatTick(period: string): string {
+  const [y, mo] = period.split("-");
+  const d = new Date(Number(y), Number(mo) - 1, 1);
+  return Number.isFinite(d.getTime()) ? d.toLocaleDateString("en-GB", { month: "short", year: "2-digit" }) : period;
+}
+
+function formatPct(v: number | null | undefined): string {
+  if (v == null || !Number.isFinite(v)) return "—";
   return `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`;
 }
 
+const PCT_FORMAT = { minimumFractionDigits: 1, maximumFractionDigits: 1, signDisplay: "exceptZero" } as const;
+
 export default function PriceIndexPage() {
   const { t } = useAppPreferences();
+  const calm = useChartCalm();
   const { hasProAccess, isAdmin } = useAuth();
   const fullAccess = hasFullPlatformAccess({ hasProAccess, isAdmin });
   const [data, setData] = useState<PriceIndex | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [activeSegment, setActiveSegment] = useState<string>("overall");
+  const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
   useEffect(() => {
     let cancelled = false;
     document.title = "SL Used Vehicle Price Index — Motormila";
+    setLoading(true);
+    setError(false);
     getPriceIndex()
       .then((d) => { if (!cancelled) setData(d); })
       .catch(() => { if (!cancelled) setError(true); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, []);
+  }, [attempt]);
 
   useEffect(() => {
     if (!fullAccess && activeSegment !== "overall") {
@@ -76,9 +95,15 @@ export default function PriceIndexPage() {
     return fullAccess ? raw : takeLastMonths(raw, FREE_TRENDS_MONTHS);
   }, [data, activeSegment, fullAccess]);
 
-  const chartData = activePoints.map((p) => ({ ...p, label: formatPeriod(p.period) }));
+  const chartData = useMemo(
+    () => activePoints.map((p) => ({ ...p, label: formatPeriod(p.period), tick: formatTick(p.period) })),
+    [activePoints],
+  );
   const momChartData = useMemo(
-    () => activePoints.map((p) => ({ label: formatPeriod(p.period), mom: Number(p.mom_change_pct ?? 0) })),
+    () =>
+      activePoints
+        .filter((p) => p.mom_change_pct != null && Number.isFinite(p.mom_change_pct))
+        .map((p) => ({ label: formatPeriod(p.period), tick: formatTick(p.period), mom: Number(p.mom_change_pct) })),
     [activePoints],
   );
   const latest = activePoints[activePoints.length - 1];
@@ -86,179 +111,220 @@ export default function PriceIndexPage() {
   const totalChange = latest && first && first.index_value > 0
     ? ((latest.index_value - first.index_value) / first.index_value) * 100
     : null;
-  const up = (totalChange ?? 0) >= 0;
+  const tone = toneFor(totalChange);
+  const stroke = activePoints.length >= 2 ? toneColor(tone) : chartColor.primary;
+  const ChangeIcon = tone === "up" ? ArrowUpRight : tone === "down" ? ArrowDownRight : Minus;
+  const draw = useChartDraw(chartData.length >= 2);
+  const drawBars = useChartDraw(momChartData.length >= 2);
+
+  const state = loading ? "loading" : error ? "error" : !data || activePoints.length === 0 ? "empty" : "ready";
+  const segmentLabel = activeSegment === "overall" ? t("index.allVehicles", "All vehicles") : activeSegment;
 
   return (
-    <m.div initial="hidden" animate="show" variants={containerVariants} className="min-h-screen relative overflow-hidden bg-background">
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        <AtmosphericImage
-          src={visuals.priceIntelligenceBg.src}
-          srcSm={visuals.priceIntelligenceBg.srcSm}
-          className="h-full w-full object-cover object-center opacity-[0.22]"
-          sizes="100vw"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/85 via-background/92 to-background" />
-      </div>
-      <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-[radial-gradient(circle,hsl(var(--primary)/0.08),transparent_70%)] rounded-full pointer-events-none" />
-
-      <m.section variants={itemVariants} className="border-b border-border bg-surface relative z-10">
-        <div className="mx-auto max-w-[1320px] px-5 py-10 sm:px-6 sm:py-12">
-          <p className="text-caption font-semibold text-primary-bright">{t("index.eyebrow", "Market benchmark")}</p>
-          <h1 className="mt-3 font-display text-title1 font-bold tracking-tight leading-[1.05] text-white sm:text-large lg:text-hero">
-            {t("index.title", "SL Used Vehicle Price Index.")}
-          </h1>
-          <p className="mt-2 max-w-xl text-body leading-relaxed text-muted-foreground font-medium">
-            {t("index.description", "One number for the whole used-car market, mix-adjusted so it tracks real price movement — not whichever cars happened to be for sale that month.")}
-          </p>
-        </div>
-      </m.section>
+    <PageCanvas ambient="none">
+      <PageHeader
+        eyebrow={t("index.eyebrow", "Market benchmark")}
+        eyebrowIcon={LineChart}
+        title={t("index.title", "SL Used Vehicle Price Index.")}
+        description={t("index.description", "One number for the whole used-car market, mix-adjusted so it tracks real price movement — not whichever cars happened to be for sale that month.")}
+      />
 
       <FreePlanBanner />
 
-      <div className="mx-auto max-w-[1320px] px-5 py-8 sm:px-6 lg:py-10 space-y-6 relative z-10">
-        {loading ? (
-          <div role="status" aria-label={t("index.loading", "Loading price index")} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-3" aria-hidden="true">
+      <PageBody className="space-y-6 pt-0 lg:pt-0">
+        {state === "loading" ? (
+          <div role="status" aria-label={t("index.loading", "Loading price index")} className="space-y-6">
+            <div className="grid gap-3 sm:grid-cols-3">
               {[0, 1, 2].map((i) => (
-                <div key={i} className="rounded-xl border border-border bg-foreground/[0.01] p-5">
-                  <div className="skeleton-shimmer h-3 w-24 rounded-full" />
-                  <div className="skeleton-shimmer mt-3 h-9 w-32 rounded-xl" />
-                  <div className="skeleton-shimmer mt-2 h-3 w-20 rounded-full" />
-                </div>
+                <StatTile key={i} loading label={"\u00a0"} value={null} hint=" " />
               ))}
             </div>
-            <div className="rounded-xl border border-border bg-foreground/[0.01] p-5" aria-hidden="true">
-              <div className="skeleton-shimmer h-[320px] w-full rounded-xl" />
-            </div>
+            <Skeleton shape="chart" className="h-[22rem]" />
           </div>
-        ) : error || !data || activePoints.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
-            <LineChart className="h-5 w-5 text-muted-foreground" />
-            <p className="max-w-md text-footnote text-muted-foreground font-medium">
-              {t("index.empty", "The index needs a few months of accumulated market aggregates before it can plot a like-for-like trend. It will populate as daily scans build history.")}
-            </p>
-          </div>
+        ) : state === "error" ? (
+          <Card padding="none">
+            <ErrorState
+              title={t("index.errorTitle", "The price index didn't load")}
+              body={t("index.errorBody", "Check your connection and try again.")}
+              onRetry={retry}
+            />
+          </Card>
+        ) : state === "empty" ? (
+          <Card padding="none">
+            <EmptyState
+              icon={LineChart}
+              title={t("index.emptyTitle", "The index is still building")}
+              body={t("index.empty", "The index needs a few months of accumulated market aggregates before it can plot a like-for-like trend. It will populate as daily scans build history.")}
+            />
+          </Card>
         ) : (
           <>
             {/* Headline stats */}
-            <m.div variants={itemVariants} className="grid gap-4 sm:grid-cols-3">
-              <div className="rounded-xl border border-primary/20 bg-primary/5 p-5">
-                <p className="text-caption font-semibold text-muted-foreground">{t("index.current", "Current index")}</p>
-                <p className="num mt-2 text-title1 font-bold text-white">
-                  <NumberFlow value={Number(latest?.index_value ?? 0)} format={{ minimumFractionDigits: 1, maximumFractionDigits: 1 }} />
-                </p>
-                <p className="mt-1 text-caption text-muted-foreground font-medium">
-                  {t("index.baseEquals100", "base {period} = 100", { period: data.base_period ? formatPeriod(data.base_period) : "—" })}
-                </p>
-              </div>
-              <div className="rounded-xl border border-border bg-foreground/[0.01] p-5">
-                <p className="text-caption font-semibold text-muted-foreground">{t("index.sinceBase", "Since base")}</p>
-                <p className={`num mt-2 flex items-center gap-1.5 text-title1 font-bold ${up ? "text-deal-good-text" : "text-deal-high-text"}`}>
-                  {up ? <ArrowUpRight className="h-6 w-6" /> : <ArrowDownRight className="h-6 w-6" />}
-                  {totalChange == null || !Number.isFinite(totalChange) ? "—" : (
-                    <NumberFlow
-                      value={totalChange}
-                      format={{ minimumFractionDigits: 1, maximumFractionDigits: 1, signDisplay: "exceptZero" }}
-                      suffix="%"
-                    />
-                  )}
-                </p>
-                <p className="mt-1 text-caption text-muted-foreground font-medium">{t("index.wholeWindow", "whole tracked window")}</p>
-              </div>
-              <div className="rounded-xl border border-border bg-foreground/[0.01] p-5">
-                <p className="text-caption font-semibold text-muted-foreground">{t("index.mom", "Month-on-month")}</p>
-                <p className="num mt-2 text-title1 font-bold text-white">
-                  {latest?.mom_change_pct == null ? "—" : (
-                    <NumberFlow
-                      value={latest.mom_change_pct}
-                      format={{ minimumFractionDigits: 1, maximumFractionDigits: 1, signDisplay: "exceptZero" }}
-                      suffix="%"
-                    />
-                  )}
-                </p>
-                <p className="mt-1 text-caption text-muted-foreground font-medium">
-                  latest: {latest ? formatPeriod(latest.period) : "—"}
-                </p>
-              </div>
+            <m.div variants={revealItem} className="grid gap-3 sm:grid-cols-3">
+              <StatTile
+                label={t("index.current", "Current index")}
+                value={
+                  <FlowValue
+                    value={Number(latest?.index_value ?? 0)}
+                    format={{ minimumFractionDigits: 1, maximumFractionDigits: 1 }}
+                    label={Number(latest?.index_value ?? 0).toFixed(1)}
+                  />
+                }
+                hint={t("index.baseEquals100", "base {period} = 100", { period: data?.base_period ? formatPeriod(data.base_period) : "—" })}
+              />
+              <StatTile
+                label={t("index.sinceBase", "Since base")}
+                value={
+                  totalChange == null || !Number.isFinite(totalChange) ? (
+                    "—"
+                  ) : (
+                    <span className={cn("inline-flex items-center gap-1", tone === "up" ? "text-deal-caution-text" : tone === "down" ? "text-deal-good-text" : "text-foreground")}>
+                      <ChangeIcon className="h-6 w-6" aria-hidden />
+                      <FlowValue value={totalChange} format={PCT_FORMAT} suffix="%" label={formatPct(totalChange)} />
+                    </span>
+                  )
+                }
+                hint={t("index.wholeWindow", "whole tracked window")}
+              />
+              <StatTile
+                label={t("index.mom", "Month-on-month")}
+                value={
+                  latest?.mom_change_pct == null ? (
+                    "—"
+                  ) : (
+                    <FlowValue value={latest.mom_change_pct} format={PCT_FORMAT} suffix="%" label={formatPct(latest.mom_change_pct)} />
+                  )
+                }
+                hint={t("index.latestPeriod", "latest: {period}", { period: latest ? formatPeriod(latest.period) : "—" })}
+              />
             </m.div>
 
             {/* Segment switcher — Free stays on overall; Pro unlocks segments */}
             {segmentKeys.length > 1 && (
-              <div className="flex flex-wrap gap-2" role="group" aria-label={t("index.segmentAria", "Index segment")}>
+              <m.div variants={revealItem} className="flex flex-wrap gap-2" role="group" aria-label={t("index.segmentAria", "Index segment")}>
                 {segmentKeys.map((seg) => {
                   const locked = !fullAccess && seg !== "overall";
                   return (
-                    <button
+                    <Chip
                       key={seg}
-                      type="button"
+                      selected={activeSegment === seg}
                       disabled={locked}
                       onClick={() => {
                         if (!locked) setActiveSegment(seg);
                       }}
-                      aria-pressed={activeSegment === seg}
                       title={locked ? freePlanCopy.indexBody : undefined}
-                      className={`rounded-2xl border px-3.5 py-1.5 text-caption font-semibold transition-ui ${
-                        activeSegment === seg
-                          ? "border-primary/30 bg-primary/10 text-primary-bright"
-                          : locked
-                            ? "cursor-not-allowed border-border bg-foreground/[0.01] text-muted-foreground/50"
-                            : "border-border bg-foreground/[0.01] text-muted-foreground hover:text-white"
-                      }`}
                     >
                       {seg === "overall" ? t("index.allVehicles", "All vehicles") : seg}
                       {locked ? " · Pro" : ""}
-                    </button>
+                    </Chip>
                   );
                 })}
-              </div>
+              </m.div>
             )}
 
-            {/* Chart */}
-            <m.div variants={itemVariants} className="rounded-xl border border-border bg-foreground/[0.01] p-5">
-              <div
-                role="img"
-                aria-label={`${activeSegment === "overall" ? "Overall" : activeSegment} price index: ${chartData.length} months, currently ${latest?.index_value.toFixed(1)} (${formatPct(totalChange)} since base)`}
-                className="h-[360px] w-full"
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={{ top: 18, right: 12, left: -8, bottom: 8 }}>
-                    <defs>
-                      <linearGradient id="idxFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="hsl(250 89% 65%)" stopOpacity={0.35} />
-                        <stop offset="100%" stopColor="hsl(250 89% 65%)" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                    <XAxis dataKey="label" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickLine={false} axisLine={false} domain={["auto", "auto"]} width={44} />
-                    <Tooltip
-                      contentStyle={{ background: "#0e0e11", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, fontSize: 12 }}
-                      labelStyle={{ color: "#fff", fontWeight: 700 }}
-                      formatter={(value: number, _name, entry) => {
-                        const mom = (entry?.payload as PriceIndexPoint | undefined)?.mom_change_pct;
-                        return [`${value.toFixed(1)}  (${formatPct(mom ?? null)} MoM)`, "Index"];
-                      }}
-                    />
-                    <Area type="monotone" dataKey="index_value" stroke="hsl(250 89% 78%)" strokeWidth={2} fill="url(#idxFill)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
+            {/* Index chart */}
+            <m.div variants={revealItem}>
+              <Card padding="md">
+                <SectionHeading
+                  as="h3"
+                  className="mb-4"
+                  eyebrow={segmentLabel}
+                  title={t("index.chartTitle", "Index over time")}
+                  description={t("index.chartBody", "Mix-adjusted, base month = 100.")}
+                />
+                <ChartFrame
+                  state={chartData.length >= 2 ? "ready" : "empty"}
+                  heightClass="h-72 sm:h-[22rem]"
+                  emptyTitle={t("index.oneMonthTitle", "One month in so far")}
+                  emptyBody={t("index.oneMonthBody", "The line draws once the index has a second month.")}
+                  label={t("index.chartAria", "{segment} price index: {n} months, currently {value} ({change} since base)", {
+                    segment: segmentLabel,
+                    n: chartData.length,
+                    value: latest ? latest.index_value.toFixed(1) : "—",
+                    change: formatPct(totalChange),
+                  })}
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData} margin={{ top: 12, right: 8, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="idxFill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={stroke} stopOpacity={0.22} />
+                          <stop offset="100%" stopColor={stroke} stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid {...chartGrid} />
+                      <XAxis {...chartAxis} dataKey="tick" minTickGap={28} interval="preserveStartEnd" />
+                      <YAxis {...chartAxis} domain={["auto", "auto"]} width={44} />
+                      <ReferenceLine y={100} stroke={chartColor.grid} strokeDasharray="2 4" />
+                      <Tooltip
+                        {...chartTooltip(calm)}
+                        content={(p) => (
+                          <ChartTooltipCard
+                            {...p}
+                            title={(_l, payload) => String((payload?.[0]?.payload as { label?: string } | undefined)?.label ?? "")}
+                            rows={(payload) => {
+                              const row = payload?.[0]?.payload as PriceIndexPoint | undefined;
+                              if (!row) return [];
+                              return [
+                                { label: t("index.indexLabel", "Index"), value: row.index_value.toFixed(1), color: stroke },
+                                { label: t("index.momShort", "MoM"), value: formatPct(row.mom_change_pct) },
+                              ];
+                            }}
+                          />
+                        )}
+                      />
+                      <Area type="monotone" dataKey="index_value" stroke={stroke} strokeWidth={2.5} fill="url(#idxFill)" dot={false} activeDot={{ r: 5, strokeWidth: 2, fill: stroke, stroke: chartColor.surface }} {...draw} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </ChartFrame>
+              </Card>
             </m.div>
 
-            {/* Month-on-month momentum — Bklit bar chart (#14 UI review) */}
-            <m.div variants={itemVariants} className="rounded-xl border border-border bg-foreground/[0.01] p-5">
-              <div className="mb-1 flex items-baseline justify-between">
-                <h2 className="text-footnote font-bold text-white">{t("index.momTitle", "Monthly momentum")}</h2>
-                <p className="text-caption text-muted-foreground font-medium">{t("index.momHint", "month-on-month index change")}</p>
-              </div>
-              <div className="h-[220px] w-full" role="img" aria-label={t("index.momAria", "Bar chart of month-on-month index changes")}>
-                <BarChart data={momChartData} xDataKey="label" margin={{ top: 12, right: 8, bottom: 8, left: 8 }}>
-                  <Grid horizontal />
-                  <Bar dataKey="mom" fill="hsl(250 89% 65%)" lineCap="round" />
-                  <BarXAxis maxLabels={8} />
-                  <ChartTooltip />
-                </BarChart>
-              </div>
+            {/* Month-on-month momentum */}
+            <m.div variants={revealItem}>
+              <Card padding="md">
+                <SectionHeading
+                  as="h3"
+                  className="mb-4"
+                  title={t("index.momTitle", "Monthly momentum")}
+                  description={t("index.momHint", "month-on-month index change")}
+                />
+                <ChartFrame
+                  state={momChartData.length >= 2 ? "ready" : "empty"}
+                  heightClass="h-56"
+                  emptyTitle={t("index.momEmptyTitle", "Not enough months yet")}
+                  emptyBody={t("index.momEmptyBody", "Momentum bars appear after two months of index changes.")}
+                  label={t("index.momAria", "Bar chart of month-on-month index changes")}
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={momChartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                      <CartesianGrid {...chartGrid} />
+                      <XAxis {...chartAxis} dataKey="tick" minTickGap={20} interval="preserveStartEnd" />
+                      <YAxis {...chartAxis} width={44} tickFormatter={(v: number) => `${v}%`} />
+                      <ReferenceLine y={0} stroke={chartColor.grid} />
+                      <Tooltip
+                        {...chartTooltip(calm)}
+                        cursor={{ fill: chartColor.grid, fillOpacity: 0.4 }}
+                        content={(p) => (
+                          <ChartTooltipCard
+                            {...p}
+                            title={(_l, payload) => String((payload?.[0]?.payload as { label?: string } | undefined)?.label ?? "")}
+                            rows={(payload) => {
+                              const row = payload?.[0]?.payload as { mom: number } | undefined;
+                              return row ? [{ label: t("index.momShort", "MoM"), value: formatPct(row.mom), color: toneColor(toneFor(row.mom)) }] : [];
+                            }}
+                          />
+                        )}
+                      />
+                      <Bar dataKey="mom" radius={[4, 4, 4, 4]} maxBarSize={28} {...drawBars}>
+                        {momChartData.map((d) => (
+                          <Cell key={d.label} fill={toneColor(toneFor(d.mom))} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartFrame>
+              </Card>
             </m.div>
 
             {!fullAccess ? (
@@ -270,18 +336,20 @@ export default function PriceIndexPage() {
             ) : null}
 
             {/* Methodology */}
-            <m.div variants={itemVariants} className="rounded-xl border border-border bg-foreground/[0.01] p-5">
-              <div className="flex items-start gap-2.5">
-                <Info className="h-4 w-4 text-primary-bright shrink-0 mt-0.5" />
-                <div>
-                  <h2 className="text-footnote font-bold text-white">{t("index.methodology", "Methodology")}</h2>
-                  <p className="mt-1.5 text-caption leading-relaxed text-muted-foreground font-medium">{data.methodology}</p>
-                </div>
-              </div>
-            </m.div>
+            {data?.methodology ? (
+              <m.div variants={revealItem}>
+                <Card padding="md" className="flex items-start gap-3">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+                  <div>
+                    <h2 className="text-callout font-semibold text-foreground">{t("index.methodology", "Methodology")}</h2>
+                    <p className="mt-1.5 text-footnote text-label-2">{data.methodology}</p>
+                  </div>
+                </Card>
+              </m.div>
+            ) : null}
           </>
         )}
-      </div>
-    </m.div>
+      </PageBody>
+    </PageCanvas>
   );
 }
