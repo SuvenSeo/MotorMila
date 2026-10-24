@@ -19,6 +19,7 @@ import { DEMO_ACCOUNT_SUMMARY, DEMO_AUTH_ENABLED, useAuth } from "@/lib/authCont
 import { useAppPreferences } from "@/lib/appPreferences";
 import { fadeIn, revealContainer, scaleIn } from "@/lib/motion";
 import { sanitizeSignInRedirect } from "@/lib/signIn";
+import { authErrorText } from "@/lib/authErrorText";
 import { visuals } from "@/lib/visualAssets";
 
 type FormValues = { email: string; password: string };
@@ -52,7 +53,7 @@ export default function SignIn() {
     const result = await login(values.email, values.password);
     setLoading(false);
     if (result.success) navigate(from, { replace: true });
-    else setServerError(result.error || t("signin.failed", "Login failed"));
+    else setServerError(authErrorText(result, t("signin.failed", "Login failed"), t));
   };
 
   if (isAuthenticated) return <Navigate to={from} replace />;

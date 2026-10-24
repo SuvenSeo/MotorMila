@@ -14,10 +14,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/authContext";
+import { authErrorText } from "@/lib/authErrorText";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { API_BASE, resolveFetchCredentials } from "@/services/api";
 import { fadeIn, revealContainer, scaleIn } from "@/lib/motion";
 import { visuals } from "@/lib/visualAssets";
+import { cn } from "@/lib/utils";
 
 type FormValues = { name: string; password: string; confirm: string };
 
@@ -143,10 +145,13 @@ export default function SignUp() {
         );
         if (cancelled) return;
         if (!response.ok) {
+          // 5xx (e.g. the database is down) is not "invite not found".
           const detail =
             response.status === 410
               ? t("signup.expired", "This invite has expired or was already used.")
-              : t("signup.notFound", "Invite not found. Ask your admin to send a new one.");
+              : response.status >= 500 || response.status === 429
+                ? t("signup.verifyFailed", "Could not verify invite. Try again shortly.")
+                : t("signup.notFound", "Invite not found. Ask your admin to send a new one.");
           setInviteError(detail);
           setInvite(null);
           return;
@@ -175,7 +180,7 @@ export default function SignUp() {
       navigate("/", { replace: true });
       return;
     }
-    setServerError(result.error || t("signup.failed", "Sign-up failed"));
+    setServerError(authErrorText(result, t("signup.failed", "Sign-up failed"), t));
   };
 
   const onSelfServeSubmit = async (values: FormValues) => {
@@ -193,7 +198,7 @@ export default function SignUp() {
       navigate("/", { replace: true });
       return;
     }
-    setServerError(result.error || t("signup.failed", "Sign-up failed"));
+    setServerError(authErrorText(result, t("signup.failed", "Sign-up failed"), t));
   };
 
   if (authReady && isAuthenticated) {
@@ -314,7 +319,14 @@ export default function SignUp() {
           )}
 
           {inviteError && (
-            <div role="alert" className="content-in mt-7 rounded-card border border-deal-high/30 bg-deal-high/10 p-4 text-footnote font-medium text-deal-high-text">
+            // No token at all (someone just opened /sign-up) is not an error: neutral, not red.
+            <div
+              role={token ? "alert" : "status"}
+              className={cn(
+                "content-in mt-7 rounded-card border p-4 text-footnote font-medium",
+                token ? "border-deal-high/30 bg-deal-high/10 text-deal-high-text" : "border-border bg-surface-2 text-foreground",
+              )}
+            >
               {inviteError}
               <p className="mt-3 font-normal text-label-2">
                 {t("signup.alreadyRegistered", "Already registered?")}{" "}

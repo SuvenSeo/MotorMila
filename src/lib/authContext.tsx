@@ -13,11 +13,69 @@ export interface AuthUser {
   trialDaysLeft?: number | null;
 }
 
+/**
+ * Why an auth call failed, so pages can show translated copy (i18n key
+ * `auth.error.<code>`) instead of raw backend text such as
+ * "Database temporarily unavailable" while the API is degraded.
+ */
+export type AuthErrorCode = "invalid" | "unavailable" | "network" | "rate_limited";
+export type AuthResult = { success: boolean; error?: string; code?: AuthErrorCode };
+
+export class AuthError extends Error {
+  code?: AuthErrorCode;
+  constructor(message: string, code?: AuthErrorCode) {
+    super(message);
+    this.name = "AuthError";
+    this.code = code;
+  }
+}
+
+const AUTH_MESSAGES: Record<AuthErrorCode, string> = {
+  invalid: "Invalid email or password.",
+  unavailable: "Sign-in is temporarily unavailable. Please try again in a few minutes.",
+  network: "We couldn't reach Motormila. Check your connection and try again.",
+  rate_limited: "Too many attempts. Wait a few minutes and try again.",
+};
+
+/** POST JSON to an auth endpoint; network failures become AuthError("network"). */
+async function authPost(path: string, body: unknown): Promise<Response> {
+  try {
+    return await fetch(new URL(`${API_BASE}${path}`, window.location.origin).toString(), {
+      method: "POST",
+      // Cross-origin HF Spaces: omit cookies — preflight lacks Allow-Credentials.
+      credentials: resolveFetchCredentials(API_BASE),
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new AuthError(AUTH_MESSAGES.network, "network");
+  }
+}
+
+/** Turn a failed auth response into an AuthError (5xx/429 get a code; 4xx keep the API's detail). */
+async function authFailure(response: Response, fallback: string): Promise<AuthError> {
+  if (response.status >= 500) return new AuthError(AUTH_MESSAGES.unavailable, "unavailable");
+  if (response.status === 429) return new AuthError(AUTH_MESSAGES.rate_limited, "rate_limited");
+  let detail = fallback;
+  try {
+    const body = (await response.json()) as { detail?: unknown };
+    if (typeof body.detail === "string") detail = body.detail;
+  } catch {
+    // keep fallback
+  }
+  return new AuthError(detail);
+}
+
+function toAuthResult(error: unknown, fallback: string): AuthResult {
+  if (error instanceof AuthError) return { success: false, error: error.message, code: error.code };
+  return { success: false, error: error instanceof Error ? error.message : fallback };
+}
+
 interface AuthContextType {
   user: AuthUser | null;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signup: (input: { token: string; name: string; password: string }) => Promise<{ success: boolean; error?: string }>;
-  selfSignup: (input: { email: string; name: string; password: string }) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<AuthResult>;
+  signup: (input: { token: string; name: string; password: string }) => Promise<AuthResult>;
+  selfSignup: (input: { email: string; name: string; password: string }) => Promise<AuthResult>;
   logout: () => void;
   isAuthenticated: boolean;
   hasProAccess: boolean;
@@ -178,19 +236,12 @@ function normalizeServerUser(raw: Partial<AuthUser> | undefined, email: string):
 async function loginWithBackend(email: string, password: string): Promise<AuthUser | null> {
   if (!BACKEND_AUTH_ENABLED) return null;
 
-  const response = await fetch(new URL(`${API_BASE}/auth/login`, window.location.origin).toString(), {
-    method: "POST",
-    // Cross-origin HF Spaces: omit cookies — preflight lacks Allow-Credentials.
-    credentials: resolveFetchCredentials(API_BASE),
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ email, password }),
-  });
+  const response = await authPost("/auth/login", { email, password });
 
   if (!response.ok) {
-    throw new Error(response.status === 401 ? "Invalid email or password." : "Authentication service is unavailable.");
+    if (response.status === 401) throw new AuthError(AUTH_MESSAGES.invalid, "invalid");
+    if (response.status === 429) throw new AuthError(AUTH_MESSAGES.rate_limited, "rate_limited");
+    throw new AuthError(AUTH_MESSAGES.unavailable, "unavailable");
   }
 
   const data = (await response.json().catch(() => ({}))) as LoginResponse;
@@ -208,26 +259,9 @@ async function selfSignupWithBackend(input: {
     throw new Error("Backend auth is required for self-serve signup.");
   }
 
-  const response = await fetch(new URL(`${API_BASE}/auth/self-signup`, window.location.origin).toString(), {
-    method: "POST",
-    credentials: resolveFetchCredentials(API_BASE),
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(input),
-  });
+  const response = await authPost("/auth/self-signup", input);
 
-  if (!response.ok) {
-    let detail = "Self-serve signup failed.";
-    try {
-      const body = (await response.json()) as { detail?: string };
-      if (typeof body.detail === "string") detail = body.detail;
-    } catch {
-      // keep default
-    }
-    throw new Error(detail);
-  }
+  if (!response.ok) throw await authFailure(response, "Self-serve signup failed.");
 
   const data = (await response.json().catch(() => ({}))) as LoginResponse;
   storeAuthToken(data.token || null);
@@ -243,26 +277,9 @@ async function signupWithBackend(input: {
     throw new Error("Backend auth is required to accept invites.");
   }
 
-  const response = await fetch(new URL(`${API_BASE}/auth/signup`, window.location.origin).toString(), {
-    method: "POST",
-    credentials: resolveFetchCredentials(API_BASE),
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(input),
-  });
+  const response = await authPost("/auth/signup", input);
 
-  if (!response.ok) {
-    let detail = "Invite signup failed.";
-    try {
-      const body = (await response.json()) as { detail?: string };
-      if (typeof body.detail === "string") detail = body.detail;
-    } catch {
-      // keep default
-    }
-    throw new Error(detail);
-  }
+  if (!response.ok) throw await authFailure(response, "Invite signup failed.");
 
   const data = (await response.json().catch(() => ({}))) as LoginResponse;
   storeAuthToken(data.token || null);
@@ -290,15 +307,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // No bearer token and a cross-origin API that never receives our cookies:
+    // /auth/me can only answer 401 (console noise on every signed-out page
+    // view). Skip the round trip and drop any stale token-less local user,
+    // exactly as the 401 branch below would.
+    if (!getStoredAuthToken() && resolveFetchCredentials(API_BASE) === "omit") {
+      if (localStorage.getItem(STORAGE_KEY)) {
+        setUser(null);
+        localStorage.removeItem(STORAGE_KEY);
+      }
+      setAuthReady(true);
+      return;
+    }
+
     let cancelled = false;
     void (async () => {
       try {
         const headers: Record<string, string> = { Accept: "application/json" };
         const token = getStoredAuthToken();
         if (token) headers.Authorization = `Bearer ${token}`;
+        const credentials = resolveFetchCredentials(API_BASE);
 
         const response = await fetch(new URL(`${API_BASE}/auth/me`, window.location.origin).toString(), {
-          credentials: resolveFetchCredentials(API_BASE),
+          credentials,
           headers,
         });
         if (cancelled) return;
@@ -342,15 +373,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: true };
       }
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : "Authentication failed." };
+      return toAuthResult(error, "Authentication failed.");
     }
 
     const record = DEMO_USERS[normalizedEmail];
     if (!record || record.password !== password) {
-      const error = DEMO_AUTH_ENABLED
-        ? "Invalid email or password."
-        : "Pro sign-in is not configured for this build.";
-      return { success: false, error };
+      if (DEMO_AUTH_ENABLED) return { success: false, error: AUTH_MESSAGES.invalid, code: "invalid" as const };
+      return { success: false, error: "Pro sign-in is not configured for this build." };
     }
 
     const demoUser = normalizeServerUser(record, normalizedEmail);
@@ -371,7 +400,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthReady(true);
       return { success: true };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : "Sign-up failed." };
+      return toAuthResult(error, "Sign-up failed.");
     }
   }, []);
 
@@ -384,7 +413,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthReady(true);
       return { success: true };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : "Sign-up failed." };
+      return toAuthResult(error, "Sign-up failed.");
     }
   }, []);
 
