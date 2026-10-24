@@ -1,5 +1,6 @@
 import { Suspense, useState, useEffect } from 'react';
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
+import { useDeferredMount } from '@/hooks/useDeferredMount';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   ArrowLeft, ExternalLink, MapPin, Calendar,
@@ -114,6 +115,10 @@ export default function ListingDetail() {
   const [loading, setLoading] = useState(true);
   const { toggle: toggleCompare, isPinned: isPinnedForCompare } = useCompareTray();
   const [watchlisted, setWatchlisted] = useState(false);
+  // Trust check, finance planner, safety/geo cards and similar cars are below
+  // the fold: mount them a frame after the hero so the card → listing open
+  // paints (and morphs) without waiting on them.
+  const restReady = useDeferredMount(listing !== null);
 
   const handleWatchlistToggle = () => {
     if (!listing) return;
@@ -669,137 +674,143 @@ export default function ListingDetail() {
               </motion.div>
             )}
 
-            {/* 6. Trust Check */}
-            <motion.div {...onScroll}>
-              <TrustCheckPanel
-                listing={listing}
-                pricePoints={priceHistory?.points ?? null}
-                related={relatedListings}
-              />
-            </motion.div>
-            {listing.id != null && <ListingHistoryReport listingId={listing.id} />}
+            {restReady ? (
+              <>
+              {/* 6. Trust Check */}
+              <motion.div {...onScroll}>
+                <TrustCheckPanel
+                  listing={listing}
+                  pricePoints={priceHistory?.points ?? null}
+                  related={relatedListings}
+                />
+              </motion.div>
+              {listing.id != null && <ListingHistoryReport listingId={listing.id} />}
 
-            {/* 7. Finance planner */}
-            {hasPrice && (lease.isLeaseTakeover ? (
-              <motion.section {...onScroll} className={cardVariants({ padding: "md" })}>
-                <h2 className="text-caption font-semibold text-muted-foreground">{t("listing.ownershipPlanning", "Ownership planning")}</h2>
-                <p className="mt-2 text-footnote leading-relaxed text-muted-foreground">
-                  {t("listing.leaseNoFinance", "Finance estimates are hidden: the price on a lease takeover isn't the full price. Ask the seller for the settlement letter from the finance company first.")}
+              {/* 7. Finance planner */}
+              {hasPrice && (lease.isLeaseTakeover ? (
+                <motion.section {...onScroll} className={cardVariants({ padding: "md" })}>
+                  <h2 className="text-caption font-semibold text-muted-foreground">{t("listing.ownershipPlanning", "Ownership planning")}</h2>
+                  <p className="mt-2 text-footnote leading-relaxed text-muted-foreground">
+                    {t("listing.leaseNoFinance", "Finance estimates are hidden: the price on a lease takeover isn't the full price. Ask the seller for the settlement letter from the finance company first.")}
+                  </p>
+                </motion.section>
+              ) : (() => {
+                // brand_new already covers API-normalized "unregistered"/new imports
+                const isUnregistered =
+                  listing.condition === 'brand_new' ||
+                  (typeof listing.year === 'number' && listing.year >= 2025);
+                const financeClass = inferFinanceClass({
+                  condition: listing.condition,
+                  fuelType: listing.fuel_type,
+                  year: listing.year,
+                });
+                return (
+                  <motion.div {...onScroll} className="space-y-4">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <h2 className="text-caption font-semibold text-muted-foreground">{t("listing.ownershipPlanning", "Ownership planning")}</h2>
+                      <Link to="/afford" className="text-caption font-semibold text-primary no-underline hover:underline">
+                        {t("listing.whatCanIAfford", "What else fits my budget?")}
+                      </Link>
+                    </div>
+                    <CashToOwnStrip priceLkr={listingPrice} financeClass={financeClass} />
+                    <div className="grid items-start gap-4 md:grid-cols-2">
+                      <LeaseCalculator price={listingPrice} financeClass={financeClass} />
+                      {isUnregistered ? (
+                        <TaxBreakdown
+                          price={listingPrice}
+                          engineCapacity={engineCc}
+                          initialFuelType={importFuelType}
+                        />
+                      ) : (
+                        <div className={cn(cardVariants({ padding: "md" }), "flex flex-col gap-4")}>
+                          <div>
+                            <h2 className="text-footnote font-semibold text-primary">{t("listing.importDutyTax", "Import duty and tax")}</h2>
+                            <p className="mt-2 text-footnote leading-relaxed text-label-2">
+                              {t(
+                                "listing.importDutyRegistered",
+                                "This vehicle is already registered in Sri Lanka, so import duty doesn't apply to buying it. Curious what importing the same spec fresh would cost under today's gazette?",
+                              )}
+                            </p>
+                          </div>
+                          <Link
+                            to={`/calculator?tab=landed-cost&fuel=${importFuelType}${typeof listing.engine_cc === 'number' ? `&cc=${listing.engine_cc}` : ''}`}
+                            className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "w-fit no-underline")}
+                          >
+                            {t("listing.modelFreshImport", "Model a fresh import")} <ArrowRight aria-hidden />
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })())}
+
+              {/* 8. Details */}
+              <motion.div {...onScroll} className={cardVariants({ padding: "md" })}>
+                <h2 className="mb-3 text-caption font-semibold text-muted-foreground">{t("listing.description", "Description")}</h2>
+                <p className="whitespace-pre-wrap text-footnote font-medium leading-[1.8] text-muted-foreground">
+                  {listing.description || t("listing.noDescription", "The seller didn't add a description. Open the original ad for full details.")}
+                </p>
+              </motion.div>
+
+              {/* Seller — info only; the one contact CTA lives in the price card / sticky bar */}
+              <motion.section {...onScroll} aria-labelledby="seller-title" className={cardVariants({ padding: "md" })}>
+                <div className="mb-3 flex items-center gap-2">
+                  <ShieldCheck aria-hidden className="h-4 w-4 text-primary" />
+                  <h2 id="seller-title" className="text-caption font-semibold text-muted-foreground">{t("listing.sellerInfo", "Seller information")}</h2>
+                </div>
+                <p className="text-body font-bold leading-tight text-foreground">{sellerHeadline}</p>
+                {sellerName && <p className="mt-1 truncate text-caption font-medium text-muted-foreground">{sellerName}</p>}
+                <p className="mt-2 text-caption leading-relaxed text-muted-foreground">
+                  {t("listing.sellerContactNote", "Contact the seller through {source}. Motormila doesn't share seller phone numbers.", { source: attribution.sourceName })}
                 </p>
               </motion.section>
-            ) : (() => {
-              // brand_new already covers API-normalized "unregistered"/new imports
-              const isUnregistered =
-                listing.condition === 'brand_new' ||
-                (typeof listing.year === 'number' && listing.year >= 2025);
-              const financeClass = inferFinanceClass({
-                condition: listing.condition,
-                fuelType: listing.fuel_type,
-                year: listing.year,
-              });
-              return (
-                <motion.div {...onScroll} className="space-y-4">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <h2 className="text-caption font-semibold text-muted-foreground">{t("listing.ownershipPlanning", "Ownership planning")}</h2>
-                    <Link to="/afford" className="text-caption font-semibold text-primary no-underline hover:underline">
-                      {t("listing.whatCanIAfford", "What else fits my budget?")}
-                    </Link>
-                  </div>
-                  <CashToOwnStrip priceLkr={listingPrice} financeClass={financeClass} />
-                  <div className="grid items-start gap-4 md:grid-cols-2">
-                    <LeaseCalculator price={listingPrice} financeClass={financeClass} />
-                    {isUnregistered ? (
-                      <TaxBreakdown
-                        price={listingPrice}
-                        engineCapacity={engineCc}
-                        initialFuelType={importFuelType}
-                      />
-                    ) : (
-                      <div className={cn(cardVariants({ padding: "md" }), "flex flex-col gap-4")}>
-                        <div>
-                          <h2 className="text-footnote font-semibold text-primary">{t("listing.importDutyTax", "Import duty and tax")}</h2>
-                          <p className="mt-2 text-footnote leading-relaxed text-label-2">
-                            {t(
-                              "listing.importDutyRegistered",
-                              "This vehicle is already registered in Sri Lanka, so import duty doesn't apply to buying it. Curious what importing the same spec fresh would cost under today's gazette?",
-                            )}
-                          </p>
-                        </div>
-                        <Link
-                          to={`/calculator?tab=landed-cost&fuel=${importFuelType}${typeof listing.engine_cc === 'number' ? `&cc=${listing.engine_cc}` : ''}`}
-                          className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "w-fit no-underline")}
-                        >
-                          {t("listing.modelFreshImport", "Model a fresh import")} <ArrowRight aria-hidden />
-                        </Link>
-                      </div>
-                    )}
-                  </div>
+
+              <motion.div {...onScroll}>
+                <ListingLeadActions
+                  listingId={listing.id ?? undefined}
+                  vehicle={[listing.year, displayMake, displayModel].filter(Boolean).join(' ')}
+                  priceLkr={hasPrice ? listingPrice : undefined}
+                  district={listing.district ?? undefined}
+                />
+              </motion.div>
+
+              <div className="grid gap-5 md:grid-cols-2">
+                {listing.make && (
+                  <motion.div {...onScroll}>
+                    <SafetyResearchCard research={safetyResearch} vin={listingVin(listing)} />
+                  </motion.div>
+                )}
+                <motion.div {...onScroll}>
+                  <ListingGeoCard geo={listingGeo} />
                 </motion.div>
-              );
-            })())}
-
-            {/* 8. Details */}
-            <motion.div {...onScroll} className={cardVariants({ padding: "md" })}>
-              <h2 className="mb-3 text-caption font-semibold text-muted-foreground">{t("listing.description", "Description")}</h2>
-              <p className="whitespace-pre-wrap text-footnote font-medium leading-[1.8] text-muted-foreground">
-                {listing.description || t("listing.noDescription", "The seller didn't add a description. Open the original ad for full details.")}
-              </p>
-            </motion.div>
-
-            {/* Seller — info only; the one contact CTA lives in the price card / sticky bar */}
-            <motion.section {...onScroll} aria-labelledby="seller-title" className={cardVariants({ padding: "md" })}>
-              <div className="mb-3 flex items-center gap-2">
-                <ShieldCheck aria-hidden className="h-4 w-4 text-primary" />
-                <h2 id="seller-title" className="text-caption font-semibold text-muted-foreground">{t("listing.sellerInfo", "Seller information")}</h2>
               </div>
-              <p className="text-body font-bold leading-tight text-foreground">{sellerHeadline}</p>
-              {sellerName && <p className="mt-1 truncate text-caption font-medium text-muted-foreground">{sellerName}</p>}
-              <p className="mt-2 text-caption leading-relaxed text-muted-foreground">
-                {t("listing.sellerContactNote", "Contact the seller through {source}. Motormila doesn't share seller phone numbers.", { source: attribution.sourceName })}
-              </p>
-            </motion.section>
-
-            <motion.div {...onScroll}>
-              <ListingLeadActions
-                listingId={listing.id ?? undefined}
-                vehicle={[listing.year, displayMake, displayModel].filter(Boolean).join(' ')}
-                priceLkr={hasPrice ? listingPrice : undefined}
-                district={listing.district ?? undefined}
-              />
-            </motion.div>
-
-            <div className="grid gap-5 md:grid-cols-2">
               {listing.make && (
                 <motion.div {...onScroll}>
-                  <SafetyResearchCard research={safetyResearch} vin={listingVin(listing)} />
+                  <NhtsaModelsCard make={listing.make} model={listing.model ?? undefined} compact vin={listingVin(listing)} />
                 </motion.div>
               )}
-              <motion.div {...onScroll}>
-                <ListingGeoCard geo={listingGeo} />
-              </motion.div>
-            </div>
-            {listing.make && (
-              <motion.div {...onScroll}>
-                <NhtsaModelsCard make={listing.make} model={listing.model ?? undefined} compact vin={listingVin(listing)} />
-              </motion.div>
-            )}
-            {trackedDays && (
-              <p className="text-caption leading-relaxed text-muted-foreground">
-                {trackedDays === 1
-                  ? t("listing.insightLineOne", "Tracked for 1 day.")
-                  : t("listing.insightLine", "Tracked for {days} days.", { days: trackedDays })}
-                {avgPeerDays ? ` ${t("listing.insightPeers", "Similar ads average {days} days.", { days: avgPeerDays })}` : ''}
-              </p>
-            )}
+              {trackedDays && (
+                <p className="text-caption leading-relaxed text-muted-foreground">
+                  {trackedDays === 1
+                    ? t("listing.insightLineOne", "Tracked for 1 day.")
+                    : t("listing.insightLine", "Tracked for {days} days.", { days: trackedDays })}
+                  {avgPeerDays ? ` ${t("listing.insightPeers", "Similar ads average {days} days.", { days: avgPeerDays })}` : ''}
+                </p>
+              )}
 
-            {/* 9. Similar */}
-            <motion.div {...onScroll}>
-              <SimilarCarsStrip
-                listings={visibleSimilar}
-                fullAccess={fullAccess}
-                title={t("listing.similarTitle", "Similar vehicles")}
-              />
-            </motion.div>
+              {/* 9. Similar */}
+              <motion.div {...onScroll}>
+                <SimilarCarsStrip
+                  listings={visibleSimilar}
+                  fullAccess={fullAccess}
+                  title={t("listing.similarTitle", "Similar vehicles")}
+                />
+              </motion.div>
+              </>
+            ) : (
+              <div aria-hidden className="min-h-[1200px]" />
+            )}
           </div>
 
           {/* ── SIDEBAR (desktop) ─────────────────────────────── */}
