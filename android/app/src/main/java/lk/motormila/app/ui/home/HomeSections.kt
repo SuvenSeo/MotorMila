@@ -1,5 +1,6 @@
 package lk.motormila.app.ui.home
 
+import lk.motormila.app.ui.components.fitWidth
 import lk.motormila.app.ui.theme.mmTappable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -117,7 +118,8 @@ private fun Stat(value: String, label: String, modifier: Modifier) {
     // "90,624" to "90,62"; labels wrap to two lines instead of ellipsising.
     lk.motormila.app.ui.theme.CappedFontScale(max = 1.3f) {
         Column(modifier.padding(horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(value, style = MmType.current.priceM, color = c.textPrimary, maxLines = 1, softWrap = false)
+            // Capped 1.3x still clipped "1,248,2" / "Rs 125 M" on 360 dp: scale to fit.
+            Text(value, style = MmType.current.priceM, color = c.textPrimary, maxLines = 1, softWrap = false, modifier = Modifier.fitWidth())
             Spacer(Modifier.height(2.dp))
             Text(
                 label,

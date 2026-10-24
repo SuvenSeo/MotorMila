@@ -124,6 +124,7 @@ import lk.motormila.app.ui.components.ErrorState
 import lk.motormila.app.ui.components.FmvGauge
 import lk.motormila.app.ui.components.ListingImage
 import lk.motormila.app.ui.components.SlidingLkr
+import lk.motormila.app.ui.components.fitWidth
 import lk.motormila.app.ui.components.rememberSlidingLkrFitStyle
 import lk.motormila.app.ui.components.rememberFitTextStyle
 import lk.motormila.app.ui.components.listingCardKey
@@ -1119,13 +1120,29 @@ private fun LadderRung(label: String, value: Double, active: Boolean) {
                 .background(if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
         )
         Spacer(Modifier.width(8.dp))
-        Text(
-            label,
-            style = MaterialTheme.typography.labelLarge,
-            color = MotormilaOnSurface,
+        // FlowRow: at 200 % the unweighted price took the row and crushed the
+        // label to 3 chars per line (ta) or butted against it ("Great buyRs 106…").
+        // Now the price drops under the label when both don't fit.
+        @OptIn(ExperimentalLayoutApi::class)
+        FlowRow(
             modifier = Modifier.weight(1f),
-        )
-        Text(LkrFormat.full(value), style = (MaterialTheme.typography.labelLarge).tabular(), fontWeight = if (active) FontWeight.Bold else FontWeight.Normal)
+            horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
+        ) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                color = MotormilaOnSurface,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                LkrFormat.full(value),
+                style = (MaterialTheme.typography.labelLarge).tabular(),
+                fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.fitWidth(),
+            )
+        }
     }
 }
 
@@ -1245,6 +1262,10 @@ private fun BentoCell(item: BentoSpecItem, modifier: Modifier = Modifier) {
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = 1.sp,
                     color = MotormilaSecondaryText,
+                    // "TRANSMISSION" broke mid-word ("TRANSMISSIO / N") at 130 %+.
+                    maxLines = 1,
+                    softWrap = false,
+                    modifier = Modifier.fitWidth(minScale = 0.5f),
                 )
                 Text(
                     text = item.value,
@@ -1252,6 +1273,8 @@ private fun BentoCell(item: BentoSpecItem, modifier: Modifier = Modifier) {
                     fontWeight = FontWeight.Bold,
                     color = MotormilaOnSurface,
                     maxLines = 1,
+                    softWrap = false,
+                    modifier = Modifier.fitWidth(minScale = 0.5f),
                 )
             }
         }

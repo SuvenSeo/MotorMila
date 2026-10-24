@@ -272,7 +272,8 @@ fun ListingCard(
                 text = listing.displayName,
                 style = t.label.copy(fontSize = 15.sp, lineHeight = 20.sp),
                 color = c.textPrimary,
-                maxLines = 1,
+                // At large text one line held ~6 chars ("Merced…"): allow two.
+                maxLines = if (androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f) 2 else 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.then(titleShared),
             )
@@ -283,6 +284,9 @@ fun ListingCard(
                 style = t.priceM,
                 color = c.textPrimary,
                 modifier = Modifier.then(priceShared),
+                // A price never ellipsizes: at 200 % on a 360 dp two-column grid
+                // "Rs 1.85 Mn" needs ~0.45x (was floored at 0.55 -> "Rs 1.85 …").
+                minScale = 0.3f,
             )
             Spacer(Modifier.height(6.dp))
             Text(

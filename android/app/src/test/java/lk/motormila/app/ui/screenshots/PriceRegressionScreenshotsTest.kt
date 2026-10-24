@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.dp
 import app.cash.paparazzi.Paparazzi
 import lk.motormila.app.ui.detail.DetailActionBar
 import lk.motormila.app.ui.detail.PriceDealSection
+import lk.motormila.app.ui.screenshots.Sweep.settled
 import org.junit.Rule
 import org.junit.Test
 
@@ -26,7 +27,7 @@ class PriceRegressionScreenshotsTest {
     @get:Rule
     val paparazzi = Paparazzi(deviceConfig = worst.device())
 
-    @Test fun hero_price_drop_200pct_360dp() = paparazzi.snapshot {
+    @Test fun hero_price_drop_200pct_360dp() = paparazzi.settled {
         Sweep.Frame(worst, reducedMotion = false) {
             Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
                 PriceDealSection(Sweep.nissan, isPro = false, onDealShown = {}, history = Sweep.drop(7, 1_125_000.0, 950_000.0))
@@ -35,7 +36,7 @@ class PriceRegressionScreenshotsTest {
         }
     }
 
-    @Test fun sticky_bar_long_price_200pct_360dp() = paparazzi.snapshot {
+    @Test fun sticky_bar_long_price_200pct_360dp() = paparazzi.settled {
         Sweep.Frame(worst, reducedMotion = false) {
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.Bottom)) {
                 DetailActionBar(950_000.0, "Riyasewana", onViewSource = {})
@@ -46,7 +47,7 @@ class PriceRegressionScreenshotsTest {
 
     @Test fun sticky_bar_and_hero_115pct_user_case() {
         paparazzi.unsafeUpdateConfig(deviceConfig = user.device())
-        paparazzi.snapshot {
+        paparazzi.settled {
             Sweep.Frame(user, reducedMotion = false) {
                 Box(Modifier.fillMaxSize()) {
                     PriceDealSection(Sweep.nissan, isPro = false, onDealShown = {}, history = Sweep.drop(7, 1_125_000.0, 950_000.0))

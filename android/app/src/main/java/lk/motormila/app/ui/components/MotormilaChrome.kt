@@ -781,8 +781,11 @@ fun MotormilaMetricTile(
             fontWeight = FontWeight.Bold,
             style = LocalTextStyle.current.tabular(),
             color = MotormilaOnSurface,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
+            // One line, scaled down to fit: at 200 % "Rs 125 Mn" wrapped to
+            // "Rs 125 / Mn" and numbers clipped.
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.fitWidth(),
         )
         if (!note.isNullOrBlank()) {
             Spacer(Modifier.height(2.dp))

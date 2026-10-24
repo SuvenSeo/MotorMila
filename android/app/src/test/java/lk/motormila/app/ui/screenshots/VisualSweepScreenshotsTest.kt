@@ -65,6 +65,7 @@ import lk.motormila.app.ui.valuation.QuizResult
 import lk.motormila.app.ui.valuation.ValuationContent
 import lk.motormila.app.ui.valuation.ValuationQuiz
 import lk.motormila.app.ui.valuation.ValuationUiState
+import lk.motormila.app.ui.screenshots.Sweep.settled
 import org.junit.Assume
 import org.junit.Rule
 import org.junit.Test
@@ -87,7 +88,7 @@ class VisualSweepScreenshotsTest {
         Assume.assumeTrue(SWEEP_ALWAYS || System.getenv("MM_SWEEP") == "1")
         Sweep.matrix.forEach { cfg ->
             paparazzi.unsafeUpdateConfig(deviceConfig = cfg.device())
-            paparazzi.snapshot(name = "${screen}_${cfg.id}") {
+            paparazzi.settled(name = "${screen}_${cfg.id}") {
                 Sweep.Frame(cfg, reducedMotion) { content() }
             }
         }

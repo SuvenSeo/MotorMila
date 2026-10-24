@@ -127,8 +127,11 @@ fun MmAnimatedText(
     animate: Boolean = true,
 ) {
     val reduced = MmMotion.reduced
-    if (!animate || reduced) {
-        MmFitText(text = text, style = style, color = color, modifier = modifier)
+    // Per-glyph cells split Sinhala/Tamil clusters (vowel signs drawn on dotted
+    // circles: "ඉල්ලීම මත මිල" fallback in si). Only animate plain ASCII.
+    val asciiOnly = text.all { it.code < 128 }
+    if (!animate || reduced || !asciiOnly) {
+        MmFitText(text = text, style = style, color = color, modifier = modifier, minScale = if (asciiOnly) 0.55f else 0.4f)
         return
     }
     // Align from the right so "8.5 Mn" → "12.5 Mn" keeps the unit still.
@@ -140,6 +143,7 @@ fun MmAnimatedText(
     val fitted = rememberPerGlyphFittedStyle(text, style, constraints.maxWidth)
     Row(
         verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fitWidth(),
     ) {
         val chars = text.toCharArray()
         chars.forEachIndexed { index, ch ->

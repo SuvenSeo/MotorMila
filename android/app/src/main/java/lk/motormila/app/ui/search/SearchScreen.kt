@@ -1,5 +1,6 @@
 package lk.motormila.app.ui.search
 
+import lk.motormila.app.ui.components.fitWidth
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
@@ -922,6 +923,7 @@ internal fun CompareTray(
                         color = c.textPrimary,
                         maxLines = 1,
                         softWrap = false,
+                        modifier = Modifier.fitWidth(),
                     )
                 }
                 if (count < 2) {
@@ -958,6 +960,8 @@ internal fun CompareTray(
             val ctaLabel = stringResource(R.string.compare_cta_count, count)
             Box(
                 Modifier
+                    // Gives way (label scales) instead of running off the tray edge in si/ta.
+                    .weight(1f, fill = false)
                     .applePress(ctaPress)
                     .heightIn(min = 48.dp)
                     .clip(MmShapes.pill)
@@ -980,6 +984,7 @@ internal fun CompareTray(
                     color = Color.White,
                     maxLines = 1,
                     softWrap = false,
+                    modifier = Modifier.fitWidth(),
                 )
             }
         }

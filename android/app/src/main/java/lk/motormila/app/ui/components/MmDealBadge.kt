@@ -75,7 +75,7 @@ fun MmDealBadge(
         } else {
             Box(Modifier.size(6.dp).clip(MmShapes.pill).background(if (onImage) fg else d.solid))
         }
-        Text(label, style = MmType.current.labelS, color = fg, modifier = Modifier.weight(1f, fill = false), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        Text(label, style = MmType.current.labelS, color = fg, modifier = Modifier.weight(1f, fill = false), maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         if (onWhy != null) {
             Icon(Icons.AutoMirrored.Outlined.HelpOutline, null, tint = fg.copy(alpha = 0.8f), modifier = Modifier.size(14.dp))
         }

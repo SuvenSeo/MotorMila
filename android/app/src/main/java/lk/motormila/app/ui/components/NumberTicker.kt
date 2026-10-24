@@ -135,7 +135,10 @@ private fun RollingDigits(
     val cellHeight: Dp = remember(cellLineHeight, density) { with(density) { cellLineHeight.toDp() } }
     Row(
         // Screen readers get the settled value once, not ten digits per strip.
-        modifier = modifier.clearAndSetSemantics { contentDescription = text },
+        modifier = modifier
+            .clearAndSetSemantics { contentDescription = text }
+            // Last line of defence: scale the whole row down rather than clip.
+            .fitWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val chars = text.toCharArray()

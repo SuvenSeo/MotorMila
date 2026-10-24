@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import app.cash.paparazzi.DeviceConfig
+import app.cash.paparazzi.Paparazzi
+import androidx.compose.ui.platform.ComposeView
 import com.android.resources.NightMode
 import lk.motormila.app.domain.model.Listing
 import lk.motormila.app.domain.model.PriceHistory
@@ -69,5 +71,14 @@ internal object Sweep {
         MotormilaTheme(darkTheme = cfg.dark, reducedMotion = reducedMotion, languageTag = cfg.lang) {
             Box(Modifier.fillMaxSize().background(MmColors.current.background)) { content() }
         }
+    }
+
+    /**
+     * Snapshot after [millis] of frames so tickers/springs have SETTLED (a plain
+     * compose snapshot is frame 0: a price drop shows the strips mid-roll).
+     */
+    fun Paparazzi.settled(name: String? = null, millis: Long = 3_000L, content: @Composable () -> Unit) {
+        val view = ComposeView(context).apply { setContent(content) }
+        snapshot(view, name, offsetMillis = millis)
     }
 }
