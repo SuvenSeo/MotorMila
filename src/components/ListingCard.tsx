@@ -212,11 +212,20 @@ export const ListingCard = memo(function ListingCard({
       }}
       onPointerDown={(e) => {
         // A press is a near-certain open: start the chunk and the detail data
-        // now (~100 ms ahead of the click on touch). Primary button only.
+        // ahead of the click (~100 ms on touch). Primary button only. Started
+        // after the press has painted (rAF → task) so the four fetches and the
+        // chunk preload stay out of the tap's INP; a click that lands first
+        // just fetches from the detail page (and this then does nothing).
         if (e.button !== 0) return;
-        prefetchRoute(`/listing/${listing.id}`);
-        prefetchListingBundle(listing.id);
-        warmDisplayBoldFont();
+        const id = listing.id;
+        window.requestAnimationFrame(() => {
+          window.setTimeout(() => {
+            if (window.location.pathname === `/listing/${id}`) return;
+            prefetchRoute(`/listing/${id}`);
+            prefetchListingBundle(id);
+            warmDisplayBoldFont();
+          }, 0);
+        });
       }}
     >
       <Link

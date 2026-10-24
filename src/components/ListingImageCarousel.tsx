@@ -61,7 +61,7 @@ export function ListingImageCarousel({
   const calm = useReducedMotionOrLowData();
   const ringId = useId();
   // Detail hero: Embla starts after the card → listing View Transition. Its
-  // init measure forced a style + layout of the whole incoming page inside the
+  // init measure (which runs on construction, even inactive) forced a style + layout of the whole incoming page inside the
   // route commit (~40 ms at 4× CPU); slide 0 renders statically until then.
   const [carouselLive, setCarouselLive] = useState(!isDetail);
   useEffect(() => {
@@ -79,8 +79,7 @@ export function ListingImageCarousel({
     };
   }, [carouselLive, multi]);
   const [emblaRef, emblaApi] = useEmblaCarousel({
-    // Single-photo listings skip Embla's measuring work entirely.
-    active: multi && carouselLive,
+    active: multi,
     // Detail: no loop so the first/last photo rubber-bands against the edge
     // (Embla's built-in edge resistance); cards keep looping arrows.
     loop: multi && !isDetail,
@@ -196,7 +195,11 @@ export function ListingImageCarousel({
       onFocus={multi ? () => prime(index) : undefined}
     >
       <div className="relative h-full w-full overflow-hidden">
-        <div ref={emblaRef} className="h-full w-full overflow-hidden">
+        {/* Embla attaches only when it has work to do: it builds its engine (and
+            measures every slide, forcing a style + layout of the page) on
+            construction even with `active: false`, so single-photo listings and
+            the detail hero before the card → listing transition get no viewport ref. */}
+        <div ref={multi && carouselLive ? emblaRef : undefined} className="h-full w-full overflow-hidden">
           <div className="flex h-full w-full touch-pan-y">
             {images.map((src, i) => (
               <div
