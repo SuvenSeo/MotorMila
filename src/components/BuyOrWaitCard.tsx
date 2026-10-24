@@ -70,7 +70,7 @@ export function BuyOrWaitCard({ make, model, className }: { make: string; model:
             {t("outlook.eyebrow", "Buy now or wait? · Indicative")}
           </p>
           <h3 id="buy-or-wait-title" className="mt-1 font-display text-title3 font-semibold text-foreground">
-            {outlook.headline}
+            {t(`outlook.${outlook.stance}.headline`, outlook.headline)}
           </h3>
           {outlook.monthlyChangePct !== null && (
             <p className="mt-1 text-footnote tabular-nums text-label-2">
@@ -84,12 +84,12 @@ export function BuyOrWaitCard({ make, model, className }: { make: string; model:
           )}
         </div>
       </div>
-      <p className="mt-4 text-body text-foreground">{outlook.advice}</p>
+      <p className="mt-4 text-body text-foreground">{t(`outlook.${outlook.stance}.advice`, outlook.advice)}</p>
       <p className="mt-3 text-caption text-label-2">
         {t(
           "outlook.disclaimer",
           "Based on median asking prices of {make} {model} ads, not sale prices. Confidence: {confidence}. Duty, surcharge or loan-cap changes can move prices quickly. This isn't financial advice.",
-          { make, model, confidence: outlook.confidence },
+          { make, model, confidence: t(`outlook.conf.${outlook.confidence}`, outlook.confidence) },
         )}
       </p>
     </Card>

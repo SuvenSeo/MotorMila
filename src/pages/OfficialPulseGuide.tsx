@@ -6,6 +6,7 @@ import { revealItem } from "@/lib/motion";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import {
   PULSE_SOURCE_GUIDES,
+  localizePulseGuide,
   labelPulseSource,
   matchPulseGuide,
   type PulseSourceGuide,
@@ -54,8 +55,9 @@ function GuideNotFound() {
   );
 }
 
-function GuideBody({ guide }: { guide: PulseSourceGuide }) {
+function GuideBody({ guide: sourceGuide }: { guide: PulseSourceGuide }) {
   const { t } = useAppPreferences();
+  const guide = localizePulseGuide(sourceGuide, t);
   const signalsQuery = useQuery({
     queryKey: ["market-signals", 48, guide.source, guide.signalType],
     queryFn: () => getMarketSignals(48),

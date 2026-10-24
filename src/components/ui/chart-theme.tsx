@@ -90,27 +90,56 @@ export function chartTooltip(calm: boolean) {
 }
 
 /**
- * First-draw animation props for a series. Draws in once (≤400ms, the `long`
- * token) when data first arrives; later data changes swap without replaying.
- * Off under reduced motion / low data.
+ * Draw animation props for a series (≤400ms, the `long` token; off under
+ * reduced motion / low data).
+ *
+ * The flag is deliberately stable for the life of the chart. Flipping
+ * `isAnimationActive` from true to false after the first draw (the old
+ * "draw once" trick) left Recharts 3 series blank or drawn at their first
+ * size whenever the chart re-rendered later (resize, full-page capture, tab
+ * switch). With a stable flag Recharts morphs from the previous points on a
+ * data change instead of replaying from zero.
  */
 export function useChartDraw(ready: boolean) {
   const calm = usePrefersReducedMotionOrLowData();
-  const drew = React.useRef(false);
-  const animate = !calm && ready && !drew.current;
-  React.useEffect(() => {
-    if (!ready) return;
-    const id = window.setTimeout(() => {
-      drew.current = true;
-    }, duration.long * 1000 + 60);
-    return () => window.clearTimeout(id);
-  }, [ready]);
   return {
-    isAnimationActive: animate,
+    isAnimationActive: !calm && ready,
     animationDuration: Math.round(duration.long * 1000),
     animationEasing: "ease-out" as const,
     animationBegin: 0,
   };
+}
+
+/**
+ * True once the element has a real box. ResponsiveContainer measured -1×-1
+ * when it mounted before layout (logging "width(-1)") and its first draw ran
+ * against that size; ChartFrame mounts the chart only after this is true.
+ */
+function useHasSize(ref: React.RefObject<HTMLElement | null>) {
+  const [sized, setSized] = React.useState(false);
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || sized) return;
+    const check = () => {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) {
+        setSized(true);
+        return true;
+      }
+      return false;
+    };
+    if (check()) return;
+    if (typeof ResizeObserver === "undefined") {
+      setSized(true);
+      return;
+    }
+    const ro = new ResizeObserver(() => {
+      if (check()) ro.disconnect();
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ref, sized]);
+  return sized;
 }
 
 export { usePrefersReducedMotionOrLowData as useChartCalm };
@@ -218,8 +247,23 @@ export function ChartFrame({
     );
   }
   return (
-    <div role={label ? "img" : undefined} aria-label={label} className={cn("content-in w-full", heightClass, className)}>
+    <SizedPlot label={label} className={cn(heightClass, className)}>
       {children}
+    </SizedPlot>
+  );
+}
+
+/**
+ * The plot box: fixed height, never transformed or hidden, so the chart
+ * measures a real size. Children mount once it has one, then cross-fade in
+ * (opacity only, on an inner layer that already has the final size).
+ */
+function SizedPlot({ label, className, children }: { label?: string; className?: string; children?: React.ReactNode }) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const sized = useHasSize(ref);
+  return (
+    <div ref={ref} role={label ? "img" : undefined} aria-label={label} className={cn("relative w-full min-w-0", className)}>
+      {sized ? <div className="content-in absolute inset-0">{children}</div> : null}
     </div>
   );
 }

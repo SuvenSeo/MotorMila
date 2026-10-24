@@ -19,6 +19,7 @@ import {
   formatPulseValue,
   labelPulseMetric,
   labelPulseSource,
+  localizePulseGuide,
   matchPulseGuide,
 } from "@/lib/officialPulseContent";
 import { formatRelativeTime } from "@/lib/formatting";
@@ -143,7 +144,7 @@ export default function OfficialPulseDetail() {
   }
 
   const signal = signalQuery.data;
-  const guide = matchPulseGuide(signal.source, signal.signal_type);
+  const guide = localizePulseGuide(matchPulseGuide(signal.source, signal.signal_type), t);
   const title =
     guide?.title ||
     labelPulseMetric(signal.category || signal.metric) ||

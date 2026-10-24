@@ -202,6 +202,29 @@ export const PULSE_SOURCE_GUIDES: PulseSourceGuide[] = [
   },
 ];
 
+type Translate = (key: string, fallback?: string, vars?: Record<string, string | number>) => string;
+
+/**
+ * The guide in the reader's language: every field looks up
+ * `pulseGuide.<key>.<field>` (locales/data.ts) and falls back to the English
+ * copy above, so a missing translation never blanks a guide.
+ */
+export function localizePulseGuide(guide: PulseSourceGuide, t: Translate): PulseSourceGuide;
+export function localizePulseGuide(guide: PulseSourceGuide | null, t: Translate): PulseSourceGuide | null;
+export function localizePulseGuide(guide: PulseSourceGuide | null, t: Translate): PulseSourceGuide | null {
+  if (!guide) return null;
+  const k = `pulseGuide.${guide.key}`;
+  return {
+    ...guide,
+    title: t(`${k}.title`, guide.title),
+    shortLabel: t(`${k}.short`, guide.shortLabel),
+    summary: t(`${k}.summary`, guide.summary),
+    whyItMatters: guide.whyItMatters.map((line, i) => t(`${k}.why.${i}`, line)),
+    howWeReadIt: guide.howWeReadIt.map((line, i) => t(`${k}.how.${i}`, line)),
+    dealerTip: t(`${k}.tip`, guide.dealerTip),
+  };
+}
+
 function normalizeSourceKey(source: string): string {
   const key = source.trim().toLowerCase();
   if (key === "import_reference") return "import_parity";

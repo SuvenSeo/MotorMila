@@ -135,7 +135,7 @@ export function MobileAppPromo() {
       <div className="pointer-events-auto flex w-full max-w-md items-center gap-2.5 rounded-2xl border border-border bg-card py-2 pl-3 pr-1.5 text-foreground shadow-soft-lg motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
         <Smartphone className="h-4 w-4 shrink-0 text-primary" aria-hidden />
         <p className="min-w-0 flex-1 text-footnote leading-snug">
-          <span className="font-semibold">{t("mobile.promoTitleShort", "Motormila for Android")}</span>
+          <span className="font-semibold">{t("mobile.promoTitleShort", "Motormila for Android (preview)")}</span>
           <span className="text-muted-foreground"> · {t("mobile.promoBodyShort", "price-drop alerts and plate scan")}</span>
         </p>
         <Link
@@ -143,7 +143,7 @@ export function MobileAppPromo() {
           onClick={dismiss}
           className="shrink-0 rounded-full bg-primary px-3 py-1.5 text-caption font-semibold text-primary-foreground no-underline transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
-          {t("mobile.promoCtaShort", "Get the app")}
+          {t("mobile.promoCtaShort", "Get the preview")}
         </Link>
         <button
           type="button"

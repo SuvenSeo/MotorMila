@@ -11,6 +11,7 @@ import {
   formatPulseValue,
   labelPulseMetric,
   labelPulseSource,
+  localizePulseGuide,
   matchPulseGuide,
 } from "@/lib/officialPulseContent";
 import { Card, cardVariants } from "@/components/ui/card";
@@ -51,7 +52,7 @@ export function PulseSignalCard({
   showMetric?: boolean;
 }) {
   const { t } = useAppPreferences();
-  const guide = matchPulseGuide(signal.source, signal.signal_type);
+  const guide = localizePulseGuide(matchPulseGuide(signal.source, signal.signal_type), t);
   const title = guide?.title || labelPulseMetric(signal.category || signal.metric) || t("pulse.marketSignal", "Market signal");
   const period = formatPulsePeriod(signal.period_year, signal.period_month);
   const value = formatPulseValue(signal.value_numeric, signal.unit, signal.metric);

@@ -17,7 +17,7 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CountValue } from "@/components/ui/stat-tile";
 import { PulseSignalCard } from "@/components/data/PulseParts";
-import { PULSE_SOURCE_GUIDES, labelPulseSource } from "@/lib/officialPulseContent";
+import { PULSE_SOURCE_GUIDES, labelPulseSource, localizePulseGuide } from "@/lib/officialPulseContent";
 import { cn } from "@/lib/utils";
 import { getMarketSignals, getVehicleNews } from "@/services/api";
 import { QUERY_STALE } from "@/lib/queryPolicy";
@@ -108,7 +108,7 @@ export default function OfficialPulse() {
             description={t("pulse.guidesDesc", "Each source is explained in Motormila so you can act without leaving for a government site first.")}
           />
           <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {PULSE_SOURCE_GUIDES.map((guide, i) => (
+            {PULSE_SOURCE_GUIDES.map((g) => localizePulseGuide(g, t)).map((guide, i) => (
               <m.li key={guide.key} variants={listItem} custom={i} initial="hidden" animate="show" className="list-none">
                 <Link
                   to={`/official-pulse/guide/${guide.key}`}
