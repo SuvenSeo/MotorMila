@@ -8,11 +8,11 @@ import { cn } from "@/lib/utils";
 const DMT_VEHICLE_INFO_URL = "https://eservices.motortraffic.gov.lk/VehicleInfo/home";
 const CUSTOMS_VERIFY_URL = "https://services.customs.gov.lk/vehicles";
 
-const LEVEL_STYLE: Record<SignalLevel, { icon: typeof Info; tone: string; label: string }> = {
-  high: { icon: ShieldAlert, tone: "text-deal-high-text bg-deal-high/10 border-deal-high/25", label: "Check carefully" },
-  medium: { icon: AlertTriangle, tone: "text-deal-caution-text bg-deal-caution/10 border-deal-caution/25", label: "Worth checking" },
-  info: { icon: Info, tone: "text-foreground bg-muted/60 border-border", label: "Good to know" },
-  ok: { icon: CheckCircle2, tone: "text-deal-good-text bg-deal-good/10 border-deal-good/25", label: "Looks normal" },
+const LEVEL_STYLE: Record<SignalLevel, { icon: typeof Info; tone: string; label: readonly [string, string] }> = {
+  high: { icon: ShieldAlert, tone: "text-deal-high-text bg-deal-high/10 border-deal-high/25", label: ["trust.level.high", "Check carefully"] },
+  medium: { icon: AlertTriangle, tone: "text-deal-caution-text bg-deal-caution/10 border-deal-caution/25", label: ["trust.level.medium", "Worth checking"] },
+  info: { icon: Info, tone: "text-foreground bg-muted/60 border-border", label: ["trust.level.info", "Good to know"] },
+  ok: { icon: CheckCircle2, tone: "text-deal-good-text bg-deal-good/10 border-deal-good/25", label: ["trust.level.ok", "Looks normal"] },
 };
 
 /**
@@ -24,8 +24,8 @@ export function TrustCheckPanel(props: TrustInput & { className?: string }) {
   const { t } = useAppPreferences();
   const { className, listing, pricePoints, related, now } = props;
   const report = useMemo(
-    () => buildTrustReport({ listing, pricePoints, related, now }),
-    [listing, pricePoints, related, now],
+    () => buildTrustReport({ listing, pricePoints, related, now, t }),
+    [listing, pricePoints, related, now, t],
   );
   const HeaderIcon = report.highCount > 0 ? ShieldAlert : ShieldCheck;
 
@@ -63,7 +63,7 @@ export function TrustCheckPanel(props: TrustInput & { className?: string }) {
                 <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                 <div className="min-w-0">
                   <p className="text-footnote font-semibold leading-snug">
-                    <span className="sr-only">{style.label}: </span>
+                    <span className="sr-only">{t(style.label[0], style.label[1])}: </span>
                     {signal.title}
                   </p>
                   <p className="mt-1 text-footnote leading-relaxed text-muted-foreground">{signal.detail}</p>

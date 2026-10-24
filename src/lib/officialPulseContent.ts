@@ -1,3 +1,5 @@
+import { englishT, type TranslateFn } from "@/lib/translate";
+
 export type PulseSourceGuide = {
   key: string; // dmt_registrations | dmt_transfers | customs_tenders | import_parity
   source: string; // dmt | customs | import_parity | import_reference
@@ -50,11 +52,12 @@ const METRIC_LABELS: Record<string, string> = {
 };
 
 /** Turn a raw metric/category key ("import_cost") into a human title. */
-export function labelPulseMetric(raw: string | null | undefined): string {
+export function labelPulseMetric(raw: string | null | undefined, t: TranslateFn = englishT): string {
   const value = String(raw ?? "").trim();
-  if (!value) return "Market signal";
-  const known = METRIC_LABELS[value.toLowerCase()];
-  if (known) return known;
+  if (!value) return t("pulse.marketSignal", "Market signal");
+  const metricKey = value.toLowerCase().replace(/revenue_license/, "revenue_licence");
+  const known = METRIC_LABELS[metricKey];
+  if (known) return t(`pulse.metric.${metricKey}`, known);
   // Only prettify machine-looking keys (snake_case or plain lowercase).
   // Human-written labels ("Passenger cars") pass through untouched.
   if (value === value.toLowerCase()) {
@@ -284,8 +287,9 @@ export function formatPulseValue(
   return `${formatted} ${unit}`;
 }
 
-export function labelPulseSource(source: string): string {
+export function labelPulseSource(source: string, t: TranslateFn = englishT): string {
   const key = source.trim().toLowerCase();
-  if (!key) return "Unknown";
-  return SOURCE_LABELS[key] || source.replace(/_/g, " ");
+  if (!key) return t("common.unknown", "Unknown");
+  const known = SOURCE_LABELS[key];
+  return known ? t(`pulse.source.${key}`, known) : source.replace(/_/g, " ");
 }

@@ -3,6 +3,7 @@ import { tween } from "@/lib/motion";
 import { AnimatePresence, motion } from "motion/react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAppPreferences } from "@/lib/appPreferences";
 
 type MorphingDialogProps = {
   /** Unique namespace for the shared-layout morph. Auto-generated when omitted. */
@@ -34,6 +35,7 @@ export function MorphingDialog({
   triggerClassName,
   panelClassName,
 }: MorphingDialogProps) {
+  const { t } = useAppPreferences();
   const autoId = useId();
   const namespace = (id ?? autoId).replace(/[^a-zA-Z0-9-_]/g, "");
   const frameId = `morph-${namespace}`;
@@ -93,7 +95,7 @@ export function MorphingDialog({
               <motion.button
                 type="button"
                 onClick={() => setOpen(false)}
-                aria-label="Close dialog"
+                aria-label={t("morphingDialog.close", "Close dialog")}
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.15 }}

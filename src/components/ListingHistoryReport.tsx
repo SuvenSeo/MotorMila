@@ -5,6 +5,7 @@ import { AlertTriangle, ShieldAlert, History, Clock, TrendingDown, Layers, Info 
 import { getListingHistoryReport, formatPrice } from "@/services/api";
 import type { HistoryReport, HistoryReportFlag } from "@/types/car";
 import { revealItem } from "@/lib/motion";
+import { useAppPreferences } from "@/lib/appPreferences";
 
 const FLAG_ICON: Record<string, typeof AlertTriangle> = {
   odometer_inconsistency: ShieldAlert,
@@ -20,10 +21,10 @@ function flagTone(severity: string): string {
   return "border-border bg-surface text-muted-foreground";
 }
 
-function formatDate(iso: string | null): string {
+function formatDate(iso: string | null, localeTag: string): string {
   if (!iso) return "—";
   const d = new Date(iso);
-  return Number.isFinite(d.getTime()) ? d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—";
+  return Number.isFinite(d.getTime()) ? d.toLocaleDateString(localeTag, { day: "numeric", month: "short", year: "numeric" }) : "—";
 }
 
 function FlagRow({ flag }: { flag: HistoryReportFlag }) {
@@ -37,6 +38,7 @@ function FlagRow({ flag }: { flag: HistoryReportFlag }) {
 }
 
 export function ListingHistoryReport({ listingId }: { listingId: number | string }) {
+  const { t, localeTag } = useAppPreferences();
   const [report, setReport] = useState<HistoryReport | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -75,23 +77,23 @@ export function ListingHistoryReport({ listingId }: { listingId: number | string
           <History className="h-4 w-4 text-primary-bright" />
         </div>
         <div>
-          <h2 className="text-footnote font-bold text-foreground">Listing history</h2>
-          <p className="text-caption text-muted-foreground font-semibold">What our archive knows about this ad</p>
+          <h2 className="text-footnote font-bold text-foreground">{t("historyReport.title", "Listing history")}</h2>
+          <p className="text-caption text-muted-foreground font-semibold">{t("historyReport.subtitle", "What our archive knows about this ad")}</p>
         </div>
       </div>
 
       {/* Timeline facts */}
       <div className="grid grid-cols-3 gap-2 border-b border-border pb-4">
         <div>
-          <p className="text-caption font-medium text-muted-foreground">First seen</p>
-          <p className="mt-1 text-caption font-bold text-foreground">{formatDate(report.first_seen_at)}</p>
+          <p className="text-caption font-medium text-muted-foreground">{t("historyReport.firstSeen", "First seen")}</p>
+          <p className="mt-1 text-caption font-bold text-foreground">{formatDate(report.first_seen_at, localeTag)}</p>
         </div>
         <div>
-          <p className="text-caption font-medium text-muted-foreground">Days on market</p>
+          <p className="text-caption font-medium text-muted-foreground">{t("historyReport.daysOnMarket", "Days on market")}</p>
           <p className="mt-1 text-caption font-bold text-foreground num">{report.days_on_market ?? "—"}</p>
         </div>
         <div>
-          <p className="text-caption font-medium text-muted-foreground">Price cuts</p>
+          <p className="text-caption font-medium text-muted-foreground">{t("historyReport.priceCuts", "Price cuts")}</p>
           <p className="mt-1 text-caption font-bold text-foreground num">
             {report.price_cuts}
             {report.total_change_pct !== null && report.total_change_pct < 0 && (
@@ -112,7 +114,7 @@ export function ListingHistoryReport({ listingId }: { listingId: number | string
       {report.related_listings.length > 0 && (
         <div className="mt-4">
           <p className="mb-2 text-caption font-medium text-muted-foreground">
-            Same vehicle in other ads ({report.related_listings.length})
+            {t("historyReport.related", "Same vehicle in other ads ({n})", { n: report.related_listings.length })}
           </p>
           <div className="space-y-1.5">
             {report.related_listings.map((r) => (
@@ -126,11 +128,12 @@ export function ListingHistoryReport({ listingId }: { listingId: number | string
                   <span className="text-caption text-muted-foreground font-medium">
                     {r.source}
                     {r.mileage ? ` · ${(r.mileage / 1000).toFixed(0)}k km` : ""}
+                    {" · "}
                     {r.confidence === "confirmed"
-                      ? " · matched"
+                      ? t("historyReport.matched", "matched")
                       : r.confidence === "photo_match"
-                        ? " · same photo"
-                        : " · likely match"}
+                        ? t("historyReport.samePhoto", "same photo")
+                        : t("historyReport.likelyMatch", "likely match")}
                   </span>
                 </span>
                 {r.price_lkr && <span className="shrink-0 text-caption font-bold text-foreground num">{formatPrice(r.price_lkr)}</span>}

@@ -4,6 +4,7 @@
  * Higher deal_score, fresher first_seen_at, and asking below median all push
  * the score up. Weights: deal 40 · freshness 40 · below-median 20.
  */
+import { englishT, type TranslateFn } from "@/lib/translate";
 
 export interface SellSpeedListingLike {
   deal_score?: number | null;
@@ -72,14 +73,14 @@ function bandFromScore(score: number): SellSpeedBand {
   return "slow";
 }
 
-function labelForBand(band: SellSpeedBand): string {
+function labelForBand(band: SellSpeedBand, t: TranslateFn): string {
   switch (band) {
     case "fast":
-      return "Fast sell";
+      return t("sellSpeed.fast", "Fast sell");
     case "moderate":
-      return "Moderate sell";
+      return t("sellSpeed.moderate", "Moderate sell");
     case "slow":
-      return "Slow sell";
+      return t("sellSpeed.slow", "Slow sell");
     default: {
       const _exhaustive: never = band;
       return _exhaustive;
@@ -90,7 +91,7 @@ function labelForBand(band: SellSpeedBand): string {
 /**
  * Score how quickly a listing-like object is likely to sell (0–100).
  */
-export function computeSellSpeed(listing: SellSpeedInput): SellSpeedResult {
+export function computeSellSpeed(listing: SellSpeedInput, t: TranslateFn = englishT): SellSpeedResult {
   const nowMs = listing.nowMs ?? Date.now();
   const dealRaw = Number(listing.deal_score);
   const dealScore = Number.isFinite(dealRaw) ? dealRaw : 0;
@@ -117,17 +118,25 @@ export function computeSellSpeed(listing: SellSpeedInput): SellSpeedResult {
     clamp(dealContribution + freshnessContribution + medianContribution, 0, 100),
   );
   const band = bandFromScore(score);
-  const label = labelForBand(band);
+  const label = labelForBand(band, t);
 
   const dayText =
     daysOnMarket == null
-      ? "age unknown"
+      ? t("sellSpeed.ageUnknown", "age unknown")
       : daysOnMarket === 0
-        ? "listed today"
-        : `${daysOnMarket}d on market`;
+        ? t("sellSpeed.listedToday", "listed today")
+        : t("sellSpeed.daysOnMarket", "{n}d on market", { n: daysOnMarket });
   const medianText =
-    belowMedian === true ? "below median" : belowMedian === false ? "at/above median" : "median n/a";
-  const detail = `Deal ${dealScore >= 0 ? "+" : ""}${dealScore} · ${dayText} · ${medianText}`;
+    belowMedian === true
+      ? t("sellSpeed.belowMedian", "below median")
+      : belowMedian === false
+        ? t("sellSpeed.aboveMedian", "at/above median")
+        : t("sellSpeed.medianNa", "median n/a");
+  const detail = t("sellSpeed.detail", "Deal {deal} · {days} · {median}", {
+    deal: `${dealScore >= 0 ? "+" : ""}${dealScore}`,
+    days: dayText,
+    median: medianText,
+  });
 
   return {
     score,

@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { Marquee } from "@/components/ui/Marquee";
+import { useAppPreferences } from "@/lib/appPreferences";
 
 export interface SourceMarqueeItem {
   source: string;
@@ -25,14 +26,15 @@ function prettySourceName(source: string): string {
 }
 
 export const SourceMarquee = memo(function SourceMarquee({ items }: SourceMarqueeProps) {
+  const { t } = useAppPreferences();
   if (!items.length) return null;
   const summary = items.map((i) => `${prettySourceName(i.source)} ${i.listings.toLocaleString()}`).join(", ");
   return (
-    <section aria-label={`Live sources: ${summary}`} className="border-b border-border bg-background">
+    <section aria-label={t("sourceMarquee.aria", "Live sources: {list}", { list: summary })} className="border-b border-border bg-background">
       <p className="pt-5 text-center text-caption font-semibold uppercase tracking-caps text-muted-foreground">
-        Live across Sri Lanka's marketplaces
+        {t("sourceMarquee.title", "Live across Sri Lanka's marketplaces")}
       </p>
-      <Marquee duration={55} className="py-4" ariaLabel={`Live sources: ${summary}`}>
+      <Marquee duration={55} className="py-4" ariaLabel={t("sourceMarquee.aria", "Live sources: {list}", { list: summary })}>
         {items.map((i) => (
           <span
             key={i.source}
@@ -41,7 +43,7 @@ export const SourceMarquee = memo(function SourceMarquee({ items }: SourceMarque
             <span className="font-display font-semibold tracking-tight text-foreground">
               {prettySourceName(i.source)}
             </span>
-            <span className="num text-muted-foreground">{i.listings.toLocaleString()} live</span>
+            <span className="num text-muted-foreground">{t("sourceMarquee.live", "{n} live", { n: i.listings.toLocaleString() })}</span>
             <span aria-hidden className="ml-4 inline-block h-1 w-1 rounded-full bg-primary/50" />
           </span>
         ))}

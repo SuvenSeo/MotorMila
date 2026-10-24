@@ -147,7 +147,7 @@ export default function OfficialPulseDetail() {
   const guide = localizePulseGuide(matchPulseGuide(signal.source, signal.signal_type), t);
   const title =
     guide?.title ||
-    labelPulseMetric(signal.category || signal.metric) ||
+    labelPulseMetric(signal.category || signal.metric, t) ||
     t("pulse.marketSignal", "Market signal");
   const period = formatPulsePeriod(signal.period_year, signal.period_month);
   const value = formatPulseValue(signal.value_numeric, signal.unit, signal.metric);
@@ -176,7 +176,7 @@ export default function OfficialPulseDetail() {
       label: t("pulse.observedLabel", "Observed"),
       value: observedLabel || "—",
       note: signal.category
-        ? t("pulse.categoryNote", "Category · {category}", { category: labelPulseMetric(signal.category) })
+        ? t("pulse.categoryNote", "Category · {category}", { category: labelPulseMetric(signal.category, t) })
         : t("pulse.syncTimestamp", "Sync timestamp"),
     },
   ];
@@ -193,7 +193,7 @@ export default function OfficialPulseDetail() {
       </div>
       <PageHeader
         className="pt-3 sm:pt-4"
-        eyebrow={`${labelPulseSource(signal.source)} · ${signal.signal_type.replace(/_/g, " ")}`}
+        eyebrow={`${labelPulseSource(signal.source, t)} · ${signal.signal_type.replace(/_/g, " ")}`}
         eyebrowIcon={Landmark}
         title={title}
         description={

@@ -446,7 +446,7 @@ function CreateAlertForm({ onCreated, onCreate, alertCount, fullAccess }: Create
               <label htmlFor="alert-telegram" className={label}>
                 {t("alerts.notifyTelegram", "Telegram chat ID or @username")}
               </label>
-              <Input id="alert-telegram" value={notifyTelegram} onChange={(e) => setNotifyTelegram(e.target.value)} placeholder="123456789 or @mychannel" />
+              <Input id="alert-telegram" value={notifyTelegram} onChange={(e) => setNotifyTelegram(e.target.value)} placeholder={t("alerts.telegramPlaceholder", "123456789 or @mychannel")} />
               <p className="mt-1.5 text-caption text-label-2">
                 {t("alerts.telegramHint", "Send /start to your bot first to get a chat ID.")}
               </p>

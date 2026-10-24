@@ -5,6 +5,7 @@ import { LazyMapMount } from "@/components/leaflet/LazyMapMount";
 import { MapResizeController } from "@/components/leaflet/MapResizeController";
 import { DistrictBoundaries, districtKey } from "@/components/leaflet/DistrictBoundaries";
 import "leaflet/dist/leaflet.css";
+import { useAppPreferences } from "@/lib/appPreferences";
 
 interface DistrictVelocityMapProps {
   data: DistrictVelocityPoint[];
@@ -56,6 +57,7 @@ export const DistrictVelocityMap = memo(function DistrictVelocityMap({
   isError,
   onRetry,
 }: DistrictVelocityMapProps) {
+  const { t } = useAppPreferences();
   const points = useMemo(
     () => data.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng)),
     [data],
@@ -89,8 +91,8 @@ export const DistrictVelocityMap = memo(function DistrictVelocityMap({
     return (
       <div className="h-[420px] rounded-xl border border-border bg-card overflow-hidden flex flex-col items-center justify-center space-y-4">
         <div className="w-12 h-12 rounded-full border-2 border-primary/20 border-t-primary animate-spin mb-4" />
-        <p className="text-footnote font-semibold tracking-tight text-primary/80">Loading velocity data</p>
-        <p className="text-caption text-muted-foreground font-medium">Calculating demand momentum across districts…</p>
+        <p className="text-footnote font-semibold tracking-tight text-primary/80">{t("velocityMap.loading", "Loading velocity data")}</p>
+        <p className="text-caption text-muted-foreground font-medium">{t("velocityMap.loadingBody", "Calculating demand momentum across districts…")}</p>
       </div>
     );
   }
@@ -99,7 +101,7 @@ export const DistrictVelocityMap = memo(function DistrictVelocityMap({
     return (
       <div className="flex h-[420px] flex-col items-center justify-center gap-3 rounded-xl border border-border bg-surface px-4 text-center">
         <p className="text-footnote text-muted-foreground">
-          Velocity data temporarily unavailable — market API returned an error.
+          {t("velocityMap.error", "Velocity data temporarily unavailable — market API returned an error.")}
         </p>
         {onRetry ? (
           <button
@@ -107,7 +109,7 @@ export const DistrictVelocityMap = memo(function DistrictVelocityMap({
             onClick={onRetry}
             className="rounded-2xl border border-border bg-card px-3 py-1.5 text-caption font-medium text-foreground transition-colors hover:border-primary/30 hover:text-primary-bright"
           >
-            Retry
+            {t("common.retry", "Retry")}
           </button>
         ) : null}
       </div>
@@ -117,7 +119,7 @@ export const DistrictVelocityMap = memo(function DistrictVelocityMap({
   if (!points.length) {
     return (
       <div className="h-[420px] rounded-xl border border-border bg-surface flex items-center justify-center text-muted-foreground text-footnote">
-        Velocity data unavailable — listings not yet indexed with district timestamps.
+        {t("velocityMap.empty", "Velocity data unavailable — listings not yet indexed with district timestamps.")}
       </div>
     );
   }
@@ -126,15 +128,15 @@ export const DistrictVelocityMap = memo(function DistrictVelocityMap({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3 text-caption font-semibold">
         <div className="rounded-2xl border border-border bg-surface px-3 py-1.5 text-foreground transition-colors">
-          Color = new listings / total (7-day velocity)
+          {t("velocityMap.legendColor", "Color = new listings / total (7-day velocity)")}
         </div>
         <div className="rounded-2xl border border-border bg-surface px-3 py-1.5 text-foreground transition-colors">
-          Size = total volume
+          {t("velocityMap.legendSize", "Size = total volume")}
         </div>
         <div className="flex items-center gap-2 rounded-2xl border border-border bg-surface px-3 py-1.5 text-muted-foreground transition-colors">
-          <span>Low</span>
+          <span>{t("velocityMap.low", "Low")}</span>
           <div className="h-1.5 w-20 rounded-full bg-gradient-to-r from-[#374151] via-[#14b8a6] to-[#10b981]" />
-          <span className="text-deal-good-text">High</span>
+          <span className="text-deal-good-text">{t("velocityMap.high", "High")}</span>
         </div>
       </div>
 
@@ -186,10 +188,10 @@ export const DistrictVelocityMap = memo(function DistrictVelocityMap({
                 <Popup autoPan keepInView autoPanPaddingTopLeft={[24, 84]} autoPanPaddingBottomRight={[24, 24]}>
                   <div className="min-w-[200px] text-footnote space-y-1.5">
                     <p className="font-bold text-body">{point.district}</p>
-                    <p>Total Listings: <span className="num">{point.listing_count.toLocaleString()}</span></p>
-                    <p>New (7d): <span className="num">{point.new_7d_count.toLocaleString()}</span></p>
+                    <p>{t("velocityMap.total", "Total listings:")} <span className="num">{point.listing_count.toLocaleString()}</span></p>
+                    <p>{t("velocityMap.new7d", "New (7d):")} <span className="num">{point.new_7d_count.toLocaleString()}</span></p>
                     <p>
-                      Velocity:{" "}
+                      {t("velocityMap.velocity", "Velocity:")}{" "}
                       <span className="num font-semibold text-deal-good-text">{formatVelocityPct(point.velocity_score)}</span>
                     </p>
                   </div>

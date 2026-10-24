@@ -53,7 +53,7 @@ export function PulseSignalCard({
 }) {
   const { t } = useAppPreferences();
   const guide = localizePulseGuide(matchPulseGuide(signal.source, signal.signal_type), t);
-  const title = guide?.title || labelPulseMetric(signal.category || signal.metric) || t("pulse.marketSignal", "Market signal");
+  const title = guide?.title || labelPulseMetric(signal.category || signal.metric, t) || t("pulse.marketSignal", "Market signal");
   const period = formatPulsePeriod(signal.period_year, signal.period_month);
   const value = formatPulseValue(signal.value_numeric, signal.unit, signal.metric);
   const hasSourceUrl = Boolean(signal.source_url?.trim());
@@ -66,7 +66,7 @@ export function PulseSignalCard({
           className="flex flex-1 flex-col rounded-control no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <p className="text-caption font-semibold text-primary">
-            {labelPulseSource(signal.source)} · {signal.signal_type.replace(/_/g, " ")}
+            {labelPulseSource(signal.source, t)} · {signal.signal_type.replace(/_/g, " ")}
           </p>
           <h3 className="mt-2 text-callout font-semibold text-foreground">{title}</h3>
           <p className="mt-4 font-display text-title2 font-semibold tabular-nums text-foreground [overflow-wrap:anywhere]">{value}</p>

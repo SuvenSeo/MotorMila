@@ -4,6 +4,12 @@ import { X } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { useAppPreferences } from "@/lib/appPreferences";
+
+function SrCloseLabel() {
+  const { t } = useAppPreferences();
+  return <span className="sr-only">{t("common.close", "Close")}</span>;
+}
 
 const Sheet = SheetPrimitive.Root;
 
@@ -59,7 +65,7 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
         {children}
         <SheetPrimitive.Close className="absolute right-4 top-4 rounded-full p-1 opacity-70 ring-offset-background transition-ui hover:bg-surface hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
           <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
+          <SrCloseLabel />
         </SheetPrimitive.Close>
       </SheetPrimitive.Content>
     </SheetPortal>

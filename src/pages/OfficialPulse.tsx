@@ -114,7 +114,7 @@ export default function OfficialPulse() {
                   to={`/official-pulse/guide/${guide.key}`}
                   className={cn(cardVariants({ variant: "interactive", padding: "md" }), "group flex h-full flex-col no-underline")}
                 >
-                  <p className="text-caption font-semibold text-primary">{labelPulseSource(guide.source)}</p>
+                  <p className="text-caption font-semibold text-primary">{labelPulseSource(guide.source, t)}</p>
                   <h3 className="mt-2 text-callout font-semibold text-foreground">{guide.title}</h3>
                   <p className="mt-2 flex-1 text-footnote text-label-2">{guide.summary}</p>
                   <span className="mt-4 inline-flex items-center gap-1.5 text-footnote font-semibold text-primary">
@@ -150,7 +150,7 @@ export default function OfficialPulse() {
                   <TabsTrigger value="all">{t("pulse.allSources", "All sources")}</TabsTrigger>
                   {sourceChips.map((source) => (
                     <TabsTrigger key={source} value={source}>
-                      {labelPulseSource(source)}
+                      {labelPulseSource(source, t)}
                     </TabsTrigger>
                   ))}
                 </TabsList>
@@ -187,7 +187,7 @@ export default function OfficialPulse() {
                     : t(
                         "pulse.emptyFiltered",
                         "No live signals for {source} in the latest batch. Try another source chip.",
-                        { source: labelPulseSource(sourceFilter) },
+                        { source: labelPulseSource(sourceFilter, t) },
                       )
                 }
                 actionLabel={sourceFilter === "all" ? undefined : t("pulse.allSources", "All sources")}

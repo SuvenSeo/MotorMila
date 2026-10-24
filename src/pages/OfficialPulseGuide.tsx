@@ -82,7 +82,7 @@ function GuideBody({ guide: sourceGuide }: { guide: PulseSourceGuide }) {
       </div>
       <PageHeader
         className="pt-3 sm:pt-4"
-        eyebrow={`${labelPulseSource(guide.source)} · ${guide.shortLabel}`}
+        eyebrow={`${labelPulseSource(guide.source, t)} · ${guide.shortLabel}`}
         eyebrowIcon={Landmark}
         title={`${guide.title}.`}
         description={guide.summary}
@@ -114,7 +114,7 @@ function GuideBody({ guide: sourceGuide }: { guide: PulseSourceGuide }) {
               label: guide.shortLabel.toLowerCase(),
             })}
             description={t("pulse.relatedDesc", "Recent observations matching {source} · {type}.", {
-              source: labelPulseSource(guide.source),
+              source: labelPulseSource(guide.source, t),
               type: guide.signalType.replace(/_/g, " "),
             })}
           />

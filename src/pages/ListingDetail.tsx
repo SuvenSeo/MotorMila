@@ -81,7 +81,7 @@ export default function ListingDetail() {
     viewport: { once: true, margin: '0px 0px -8% 0px' },
     variants: motionCalm ? fadeIn : fadeUp,
   } as const;
-  const { t } = useAppPreferences();
+  const { t, localeTag } = useAppPreferences();
   const { hasProAccess, isAdmin } = useAuth();
   const fullAccess = hasFullPlatformAccess({ hasProAccess, isAdmin });
   const [listing, setListing] = useState<CarListing | null>(null);
@@ -539,9 +539,13 @@ export default function ListingDetail() {
               <div>
                 <p className="text-caption font-bold text-deal-caution-text">{t("listing.possiblySold", "Possibly sold or delisted")}</p>
                 <p className="mt-0.5 text-caption font-medium leading-relaxed text-muted-foreground">
-                  This ad has not been seen at {listing.source}
-                  {parseFlexibleTime(listing.last_seen_at) !== null ? ` since ${new Date(parseFlexibleTime(listing.last_seen_at)!).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Colombo' })}` : ' recently'}.
-                  Pricing below is kept for market reference and may be historical.
+                  {parseFlexibleTime(listing.last_seen_at) !== null
+                    ? t("listing.notSeenSince", "This ad has not been seen at {source} since {date}.", {
+                        source: listing.source,
+                        date: new Date(parseFlexibleTime(listing.last_seen_at)!).toLocaleDateString(localeTag, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Colombo' }),
+                      })
+                    : t("listing.notSeenRecently", "This ad has not been seen at {source} recently.", { source: listing.source })}{' '}
+                  {t("listing.historicalPricing", "Pricing below is kept for market reference and may be historical.")}
                 </p>
               </div>
             </div>

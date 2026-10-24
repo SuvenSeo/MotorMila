@@ -196,10 +196,10 @@ function ClaimYardCard() {
   };
 
   const fields = [
-    { id: "dealer-name", label: "Yard / brand name", value: displayName, set: setDisplayName, placeholder: "Colombo Auto Hub" },
-    { id: "dealer-pattern", label: "Seller name on ads", value: pattern, set: setPattern, placeholder: "Auto Hub LK" },
-    { id: "dealer-url", label: "Listing / yard URL", value: claimedUrl, set: setClaimedUrl, placeholder: "https://ikman.lk/en/shops/...", inputMode: "url" as const },
-    { id: "dealer-phone", label: "WhatsApp / phone", value: phone, set: setPhone, placeholder: "0771234567", inputMode: "tel" as const },
+    { id: "dealer-name", label: t("dealerDash.yardName", "Yard / brand name"), value: displayName, set: setDisplayName, placeholder: "Colombo Auto Hub" },
+    { id: "dealer-pattern", label: t("dealerDash.sellerName", "Seller name on ads"), value: pattern, set: setPattern, placeholder: "Auto Hub LK" },
+    { id: "dealer-url", label: t("dealerDash.yardUrl", "Listing / yard URL"), value: claimedUrl, set: setClaimedUrl, placeholder: "https://ikman.lk/en/shops/...", inputMode: "url" as const },
+    { id: "dealer-phone", label: t("dealerDash.phone", "WhatsApp / phone"), value: phone, set: setPhone, placeholder: "0771234567", inputMode: "tel" as const },
   ];
 
   return (
@@ -263,7 +263,7 @@ function InventoryBenchmark() {
       const data = await benchmarkDealerUrls(urls);
       setResults(data);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Request failed");
+      setSubmitError(err instanceof Error ? err.message : t("dealerDash.requestFailed", "Request failed"));
     } finally {
       setLoading(false);
     }
@@ -282,7 +282,7 @@ function InventoryBenchmark() {
     <div className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="benchmark-urls">
-          Listing URLs <span className="font-normal text-label-2">(one per line, max 50)</span>
+          {t("dealerDash.listingUrls", "Listing URLs")} <span className="font-normal text-label-2">{t("dealerDash.onePerLineMax50", "(one per line, max 50)")}</span>
         </Label>
         <Textarea
           id="benchmark-urls"
@@ -331,10 +331,10 @@ function InventoryBenchmark() {
             <TableHeader>
               <TableRow>
                 <TableHead>URL</TableHead>
-                <TableHead>Vehicle</TableHead>
-                <TableHead numeric>Listing price</TableHead>
-                <TableHead numeric>Market median</TableHead>
-                <TableHead numeric>Gap</TableHead>
+                <TableHead>{t("dealerDash.vehicle", "Vehicle")}</TableHead>
+                <TableHead numeric>{t("dealerDash.listingPrice", "Listing price")}</TableHead>
+                <TableHead numeric>{t("dealerDash.marketMedian", "Market median")}</TableHead>
+                <TableHead numeric>{t("dealerDash.gap", "Gap")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -418,7 +418,7 @@ export default function DealerDashboard() {
   const turnoverData = useMemo(() => buildTurnoverSeries(insights), [insights]);
   const priceGaps = useMemo(() => buildDistrictPriceGaps(districts), [districts]);
   const districtDemand = useMemo(() => buildDistrictDemandRows(districts), [districts]);
-  const notifications = useMemo(() => buildDealerNotifications(insights, stats), [insights, stats]);
+  const notifications = useMemo(() => buildDealerNotifications(insights, stats, t), [insights, stats, t]);
 
   const metrics = useMemo(() => {
     const liveLeads = insights?.new_listings_24h ?? stats?.listings_this_week ?? proSnapshot?.new_listings_7d ?? null;
@@ -430,25 +430,25 @@ export default function DealerDashboard() {
 
     return [
       {
-        label: "Live leads",
+        label: t("dealerDash.liveLeads", "Live leads"),
         value: liveLeads,
-        delta: stats?.listings_this_week ? `${stats.listings_this_week.toLocaleString()} this week` : "Syncing market feed",
+        delta: stats?.listings_this_week ? t("dealerDash.thisWeek", "{n} this week", { n: stats.listings_this_week.toLocaleString() }) : t("dealerDash.syncingFeed", "Syncing market feed"),
         tone: liveLeads != null ? "text-deal-good-text" : "text-label-2",
       },
       {
-        label: "Arbitrage alerts",
+        label: t("dealerDash.arbitrageAlerts", "Arbitrage alerts"),
         value: arbitrageAlerts,
-        delta: topGapDistrict ? `Highest gap in ${topGapDistrict}` : "Scanning district spreads",
+        delta: topGapDistrict ? t("dealerDash.highestGap", "Highest gap in {district}", { district: topGapDistrict }) : t("dealerDash.scanningSpreads", "Scanning district spreads"),
         tone: "text-label-2",
       },
       {
-        label: "Finance ready",
+        label: t("dealerDash.financeReady", "Finance ready"),
         value: financeReady,
-        delta: financeReady != null ? "High deal-score listings" : "Awaiting deal signals",
+        delta: financeReady != null ? t("dealerDash.highDealScore", "High deal-score listings") : t("dealerDash.awaitingSignals", "Awaiting deal signals"),
         tone: "text-label-2",
       },
     ];
-  }, [insights, stats, proSnapshot, priceGaps]);
+  }, [insights, stats, proSnapshot, priceGaps, t]);
 
   const trustScore = useMemo(() => {
     if (!stats?.total_listings) return null;
@@ -475,7 +475,7 @@ export default function DealerDashboard() {
   const activeNotif =
     notifications[notifIdx] ??
     notifications[0] ??
-    "Market intelligence syncs from live listing data when available.";
+    t("dealerDash.notifFallback", "Market intelligence syncs from live listing data when available.");
   const toggle = (k: WidgetKey) => setCollapsed((p) => ({ ...p, [k]: !p[k] }));
 
   const retryAll = () => {
@@ -556,8 +556,8 @@ export default function DealerDashboard() {
                         to={tool.to}
                         className="block rounded-control px-2 py-2 no-underline transition-colors duration-short ease-standard hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
-                        <span className="block text-footnote font-medium text-foreground">{tool.title}</span>
-                        <span className="block text-caption text-label-2">{tool.description}</span>
+                        <span className="block text-footnote font-medium text-foreground">{t(`dealerTools.${tool.id}.title`, tool.title)}</span>
+                        <span className="block text-caption text-label-2">{t(`dealerTools.${tool.id}.description`, tool.description)}</span>
                       </Link>
                     </li>
                   ))}
@@ -590,7 +590,7 @@ export default function DealerDashboard() {
                     </div>
                   </div>
                 ) : (
-                  <p className="mt-2 text-footnote text-label-2">Trust score needs listing volume data.</p>
+                  <p className="mt-2 text-footnote text-label-2">{t("dealerDash.trustScoreNeedsListingVolume", "Trust score needs listing volume data.")}</p>
                 )}
               </Card>
             </m.div>
@@ -624,7 +624,7 @@ export default function DealerDashboard() {
                 <Bell className="h-4 w-4" aria-hidden />
               </span>
               <div className="min-w-0">
-                <p className="text-footnote font-semibold text-primary">Lead notification</p>
+                <p className="text-footnote font-semibold text-primary">{t("dealerDash.leadNotification", "Lead notification")}</p>
                 <AnimatePresence mode="wait" initial={false}>
                   <m.p key={activeNotif} variants={fadeIn} initial="hidden" animate="show" exit="exit" className="mt-0.5 text-footnote text-foreground">
                     {activeNotif}
@@ -634,18 +634,18 @@ export default function DealerDashboard() {
             </Card>
 
             <section className="pt-4">
-              <p className="text-footnote font-semibold text-primary">Playbook</p>
-              <h2 className="mt-1 font-display text-title2 font-semibold text-foreground">What dealers and brokers use this for</h2>
-              <p className="mt-1 max-w-2xl text-body text-label-2">Operator workflows from stock pricing to import duty, alerts, and weekly yard review.</p>
+              <p className="text-footnote font-semibold text-primary">{t("dealerDash.playbook", "Playbook")}</p>
+              <h2 className="mt-1 font-display text-title2 font-semibold text-foreground">{t("dealerDash.whatDealersAndBrokersUse", "What dealers and brokers use this for")}</h2>
+              <p className="mt-1 max-w-2xl text-body text-label-2">{t("dealerDash.operatorWorkflowsFromStockPricing", "Operator workflows from stock pricing to import duty, alerts, and weekly yard review.")}</p>
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 {DEALER_PLAYBOOK.map((item) => (
                   <Card key={item.id} className="flex flex-col">
-                    <p className="text-footnote font-medium text-primary">{item.forWhom}</p>
-                    <h3 className="mt-1 text-body font-semibold text-foreground">{item.title}</h3>
-                    <p className="mt-2 text-footnote text-label-2">{item.problem}</p>
-                    <p className="mt-2 flex-1 text-footnote text-label-1">{item.whatMotormilaDoes}</p>
+                    <p className="text-footnote font-medium text-primary">{t(`dealerPlaybook.for.${item.forWhom}`, item.forWhom)}</p>
+                    <h3 className="mt-1 text-body font-semibold text-foreground">{t(`dealerPlaybook.${item.id}.title`, item.title)}</h3>
+                    <p className="mt-2 text-footnote text-label-2">{t(`dealerPlaybook.${item.id}.problem`, item.problem)}</p>
+                    <p className="mt-2 flex-1 text-footnote text-label-1">{t(`dealerPlaybook.${item.id}.does`, item.whatMotormilaDoes)}</p>
                     <Button asChild variant="tertiary" size="sm" className="-ml-3 mt-3 self-start">
-                      <Link to={item.whereToGo.to}>{item.whereToGo.label} →</Link>
+                      <Link to={item.whereToGo.to}>{t(`dealerPlaybook.${item.id}.cta`, item.whereToGo.label)} →</Link>
                     </Button>
                   </Card>
                 ))}
@@ -653,21 +653,21 @@ export default function DealerDashboard() {
             </section>
 
             <section className="pt-4">
-              <p className="text-footnote font-semibold text-primary">Analytics</p>
-              <h2 className="mt-1 font-display text-title2 font-semibold text-foreground">Inventory & benchmark analytics</h2>
-              <p className="mb-5 mt-1 max-w-2xl text-body text-label-2">Momentum, price spread, and district demand across your live market feed.</p>
+              <p className="text-footnote font-semibold text-primary">{t("dealerDash.analytics", "Analytics")}</p>
+              <h2 className="mt-1 font-display text-title2 font-semibold text-foreground">{t("dealerDash.inventoryBenchmarkAnalytics", "Inventory & benchmark analytics")}</h2>
+              <p className="mb-5 mt-1 max-w-2xl text-body text-label-2">{t("dealerDash.momentumPriceSpreadAndDistrict", "Momentum, price spread, and district demand across your live market feed.")}</p>
 
               {fullAccess ? (
                 <div className="space-y-5">
                   <WidgetShell
                     title={t("dealer.turnover", "Inventory Turnover")}
-                    subtitle={turnoverData.length ? "Trending model momentum and listing volume" : "Trending model momentum from market insights"}
+                    subtitle={turnoverData.length ? t("dealerDash.turnoverSub", "Trending model momentum and listing volume") : t("dealerDash.turnoverSubInsights", "Trending model momentum from market insights")}
                     collapsed={collapsed.turnover}
                     onToggle={() => toggle("turnover")}
                     loading={insightsQuery.isPending}
-                    error={insightsQuery.isError ? "Unable to load turnover insights." : null}
+                    error={insightsQuery.isError ? t("dealerDash.turnoverError", "Unable to load turnover insights.") : null}
                     onRetry={() => void insightsQuery.refetch()}
-                    emptyMessage={!insightsQuery.isPending && !turnoverData.length ? "No trending model data yet." : undefined}
+                    emptyMessage={!insightsQuery.isPending && !turnoverData.length ? t("dealerDash.turnoverEmpty", "No trending model data yet.") : undefined}
                   >
                     <div className="h-[16.25rem]">
                       <ResponsiveContainer width="100%" height="100%">
@@ -682,7 +682,7 @@ export default function DealerDashboard() {
                           <XAxis dataKey="week" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickLine={false} axisLine={false} />
                           <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickLine={false} axisLine={false} />
                           <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} />
-                          <Area type="monotone" dataKey="sellThrough" name="Momentum index" stroke="hsl(var(--primary))" fill="url(#turnoverArea)" strokeWidth={2} />
+                          <Area type="monotone" dataKey="sellThrough" name={t("dealerDash.momentumIndex", t("dealerDash.momentumIndex", "Momentum index"))} stroke="hsl(var(--primary))" fill="url(#turnoverArea)" strokeWidth={2} />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
@@ -690,13 +690,13 @@ export default function DealerDashboard() {
 
                   <WidgetShell
                     title={t("dealer.priceGaps", "Price Gaps")}
-                    subtitle="District spread vs national median"
+                    subtitle={t("dealerDash.priceGapSub", t("dealerDash.priceGapSub", "District spread vs national median"))}
                     collapsed={collapsed.priceGap}
                     onToggle={() => toggle("priceGap")}
                     loading={districtsQuery.isPending}
-                    error={districtsQuery.isError ? "Unable to load district pricing." : null}
+                    error={districtsQuery.isError ? t("dealerDash.priceGapError", "Unable to load district pricing.") : null}
                     onRetry={() => void districtsQuery.refetch()}
-                    emptyMessage={!districtsQuery.isPending && !priceGaps.length ? "No district price gaps mapped yet." : undefined}
+                    emptyMessage={!districtsQuery.isPending && !priceGaps.length ? t("dealerDash.priceGapEmpty", "No district price gaps mapped yet.") : undefined}
                   >
                     <div className="h-[15rem]">
                       <ResponsiveContainer width="100%" height="100%">
@@ -704,7 +704,7 @@ export default function DealerDashboard() {
                           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                           <XAxis dataKey="district" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickLine={false} axisLine={false} />
                           <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={(v) => `${v}%`} tickLine={false} axisLine={false} />
-                          <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} formatter={(v: number) => [`${v.toFixed(1)}%`, "Gap"]} />
+                          <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} formatter={(v: number) => [`${v.toFixed(1)}%`, t("dealerDash.gap", "Gap")]} />
                           <Bar dataKey="gapPct" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
@@ -713,13 +713,13 @@ export default function DealerDashboard() {
 
                   <WidgetShell
                     title={t("dealer.districtDemand", "District Demand")}
-                    subtitle="Supply concentration and average deal floor"
+                    subtitle={t("dealerDash.demandSub", t("dealerDash.demandSub", "Supply concentration and average deal floor"))}
                     collapsed={collapsed.districtDemand}
                     onToggle={() => toggle("districtDemand")}
                     loading={districtsQuery.isPending}
-                    error={districtsQuery.isError ? "Unable to load district demand." : null}
+                    error={districtsQuery.isError ? t("dealerDash.demandError", "Unable to load district demand.") : null}
                     onRetry={() => void districtsQuery.refetch()}
-                    emptyMessage={!districtsQuery.isPending && !districtDemand.length ? "No district demand data yet." : undefined}
+                    emptyMessage={!districtsQuery.isPending && !districtDemand.length ? t("dealerDash.demandEmpty", "No district demand data yet.") : undefined}
                   >
                     <div className="grid gap-2 sm:grid-cols-2">
                       {districtDemand.map((d) => (
@@ -729,8 +729,8 @@ export default function DealerDashboard() {
                             <span className="text-footnote font-semibold tabular-nums text-primary">Demand {d.demandScore}</span>
                           </div>
                           <dl className="mt-2 space-y-1 text-footnote">
-                            <div className="flex justify-between gap-2"><dt className="text-label-2">Top model</dt><dd className="text-foreground">{d.topModel}</dd></div>
-                            <div className="flex justify-between gap-2"><dt className="text-label-2">Avg price</dt><dd className="tabular-nums text-foreground">{d.avgPrice > 0 ? formatPrice(d.avgPrice) : "—"}</dd></div>
+                            <div className="flex justify-between gap-2"><dt className="text-label-2">{t("dealerDash.topModel", "Top model")}</dt><dd className="text-foreground">{d.topModel}</dd></div>
+                            <div className="flex justify-between gap-2"><dt className="text-label-2">{t("dealerDash.avgPrice", "Avg price")}</dt><dd className="tabular-nums text-foreground">{d.avgPrice > 0 ? formatPrice(d.avgPrice) : "—"}</dd></div>
                           </dl>
                           <div className="mt-2 h-1 overflow-hidden rounded-full bg-surface-3">
                             <div className="h-full origin-left rounded-full bg-primary" style={{ transform: `scaleX(${Math.max(0, Math.min(100, d.demandScore)) / 100})` }} />
@@ -769,10 +769,10 @@ export default function DealerDashboard() {
                 })}
               </h3>
               <p className="mt-2 max-w-xl text-footnote text-label-2">
-                Keep using the command center today. Upgrade when you want billed seats, saved yard workflows, and priority market sync.
+                {t("dealerDash.keepUsingTheCommandCenter", "Keep using the command center today. Upgrade when you want billed seats, saved yard workflows, and priority market sync.")}
               </p>
               <Button asChild variant="secondary" className="mt-4">
-                <Link to="/pricing#for-dealers">View dealer plans</Link>
+                <Link to="/pricing#for-dealers">{t("dealerDash.viewDealerPlans", "View dealer plans")}</Link>
               </Button>
             </Card>
           </div>

@@ -233,14 +233,15 @@ function MetricCard({
 
 function ExportButtons({ report }: { report: ProReportPayload }) {
   const { hasProAccess, isAuthenticated } = useAuth();
+  const { t } = useAppPreferences();
   const navigate = useNavigate();
 
   const runExport = async (format: ProExportFormat) => {
     if (PRO_EXPORTS_ENFORCED && (!isAuthenticated || !hasProAccess)) {
-      toast.error("Pro subscription required", {
-        description: "Sign in with a Pro account to download reports.",
+      toast.error(t("proDash.export.proRequired", "Pro subscription required"), {
+        description: t("proDash.export.signInPro", "Sign in with a Pro account to download reports."),
         action: {
-          label: "Sign in",
+          label: t("proDash.export.signIn", "Sign in"),
           onClick: () => navigate("/sign-in"),
         },
       });
@@ -248,10 +249,10 @@ function ExportButtons({ report }: { report: ProReportPayload }) {
     }
     try {
       await exportReport(report, format);
-      toast.success(`${format.toUpperCase()} export started`);
+      toast.success(t("proDash.export.started", "{format} export started", { format: format.toUpperCase() }));
     } catch (error) {
-      toast.error("Export failed", {
-        description: error instanceof Error ? error.message : "Unable to create this report.",
+      toast.error(t("proDash.export.failed", "Export failed"), {
+        description: error instanceof Error ? error.message : t("proDash.export.unable", "Unable to create this report."),
       });
     }
   };
@@ -407,6 +408,7 @@ function DetailDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const { t } = useAppPreferences();
   const chartData = useMemo(() => trendRows(detail?.trend_points || []), [detail]);
 
   return (
@@ -433,7 +435,7 @@ function DetailDialog({
 
             <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
               <section className="rounded-control border border-border bg-surface-2 p-4">
-                <h3 className="text-caption font-semibold uppercase tracking-caps text-label-2">Trend Detail</h3>
+                <h3 className="text-caption font-semibold uppercase tracking-caps text-label-2">{t("proDash.trendDetail", "Trend Detail")}</h3>
                 <div className="mt-4 h-72">
                   {chartData.length ? (
                     <ResponsiveContainer width="100%" height="100%">
@@ -452,14 +454,14 @@ function DetailDialog({
                     </ResponsiveContainer>
                   ) : (
                     <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-border text-footnote text-label-2">
-                      Trend history is not deep enough for this selection yet.
+                      {t("proDash.trendHistoryIsNotDeep", "Trend history is not deep enough for this selection yet.")}
                     </div>
                   )}
                 </div>
               </section>
 
               <section className="space-y-3 rounded-control border border-border bg-surface-2 p-4">
-                <h3 className="text-caption font-semibold uppercase tracking-caps text-label-2">Mix</h3>
+                <h3 className="text-caption font-semibold uppercase tracking-caps text-label-2">{t("proDash.mix", "Mix")}</h3>
                 {[...detail.source_mix, ...detail.district_mix].slice(0, 8).map((row) => (
                   <div key={`${row.label}-${row.count}`} className="rounded-control border border-border bg-surface-1 p-3">
                     <div className="flex items-center justify-between gap-3">
@@ -475,7 +477,7 @@ function DetailDialog({
             </div>
 
             <section>
-              <h3 className="mb-3 text-caption font-semibold uppercase tracking-caps text-label-2">Sample Listings</h3>
+              <h3 className="mb-3 text-caption font-semibold uppercase tracking-caps text-label-2">{t("proDash.sampleListings", "Sample Listings")}</h3>
               <div className="grid gap-2 md:grid-cols-2">
                 {detail.sample_listings.map((listing) => (
                   <Link
@@ -503,8 +505,8 @@ function DetailDialog({
         ) : (
           <div className="space-y-3 p-4">
             <DialogHeader>
-              <DialogTitle className="text-title3 font-semibold tracking-normal">Loading detail</DialogTitle>
-              <DialogDescription className="text-footnote text-label-2">Preparing the selected Pro intelligence view.</DialogDescription>
+              <DialogTitle className="text-title3 font-semibold tracking-normal">{t("proDash.loadingDetail", "Loading detail")}</DialogTitle>
+              <DialogDescription className="text-footnote text-label-2">{t("proDash.preparingTheSelectedProIntelligence", "Preparing the selected Pro intelligence view.")}</DialogDescription>
             </DialogHeader>
             <Skeleton className="h-8 w-1/2" />
             <Skeleton className="h-24 w-full" />
@@ -1008,14 +1010,14 @@ export default function ProDashboard() {
 
             <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
               <section className="rounded-card border border-border bg-surface-1 p-5 shadow-e1">
-                <SectionTitle eyebrow="Professional scan" title={t("pro.topOpportunities", "Top opportunities")} />
+                <SectionTitle eyebrow={t("proDash.professionalScan", "Professional scan")} title={t("pro.topOpportunities", "Top opportunities")} />
                 <div className="space-y-2">
                   {loading ? (
                     Array.from({ length: 6 }).map((_, index) => (
                       <Skeleton key={index} className="h-[58px] rounded-xl" />
                     ))
                   ) : (snapshot?.top_opportunities?.length ?? 0) === 0 ? (
-                    <EmptyState icon={Database} title="Top opportunities will surface once the market snapshot loads." className="rounded-card border border-dashed border-border bg-surface-2/50" />
+                    <EmptyState icon={Database} title={t("proDash.topOpportunitiesWillSurfaceOnce", "Top opportunities will surface once the market snapshot loads.")} className="rounded-card border border-dashed border-border bg-surface-2/50" />
                   ) : (
                     (snapshot?.top_opportunities || []).slice(0, 8).map((listing) => (
                     <Link
@@ -1045,12 +1047,12 @@ export default function ProDashboard() {
               </section>
 
               <section className="rounded-card border border-border bg-surface-1 p-5 shadow-e1">
-                <SectionTitle eyebrow="Coverage" title="Source mix" />
+                <SectionTitle eyebrow={t("proDash.coverage", "Coverage")} title={t("proDash.sourceMix", "Source mix")} />
                 <div className="h-72">
                   {loading ? (
                     <Skeleton className="h-full w-full rounded-control" />
                   ) : (snapshot?.source_coverage?.length ?? 0) === 0 ? (
-                    <EmptyState icon={BarChart3} title="Source coverage will populate once the snapshot reloads." className="rounded-card border border-dashed border-border bg-surface-2/50 flex h-full flex-col justify-center py-8" />
+                    <EmptyState icon={BarChart3} title={t("proDash.sourceCoverageWillPopulateOnce", "Source coverage will populate once the snapshot reloads.")} className="rounded-card border border-dashed border-border bg-surface-2/50 flex h-full flex-col justify-center py-8" />
                   ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={snapshot?.source_coverage || []}>
@@ -1068,23 +1070,23 @@ export default function ProDashboard() {
           </TabsContent>
 
           <TabsContent value="vehicles" className="space-y-5">
-            <SectionTitle eyebrow="Vehicle intelligence" title="Make and model lanes">
+            <SectionTitle eyebrow={t("proDash.vehicleIntelligence", "Vehicle intelligence")} title={t("proDash.makeAndModelLanes", "Make and model lanes")}>
               <div className="grid w-full gap-2 md:max-w-3xl md:grid-cols-[1.2fr_0.9fr_0.9fr_0.9fr]">
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-label-2" />
                   <Input
                     value={laneSearch}
                     onChange={(event) => setLaneSearch(event.target.value)}
-                    placeholder="Search lanes"
+                    placeholder={t("proDash.searchLanes", "Search lanes")}
                     className="w-full pl-10"
                   />
                 </div>
                 <Select value={laneDistrictFilter} onValueChange={setLaneDistrictFilter}>
                   <SelectTrigger>
-                    <SelectValue placeholder="District" />
+                    <SelectValue placeholder={t("proDash.district", "District")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All districts</SelectItem>
+                    <SelectItem value="all">{t("proDash.allDistricts", "All districts")}</SelectItem>
                     {laneDistrictOptions.map((district) => (
                       <SelectItem key={district} value={district}>{district}</SelectItem>
                     ))}
@@ -1092,10 +1094,10 @@ export default function ProDashboard() {
                 </Select>
                 <Select value={laneSourceFilter} onValueChange={setLaneSourceFilter}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Source" />
+                    <SelectValue placeholder={t("proDash.source", "Source")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All sources</SelectItem>
+                    <SelectItem value="all">{t("proDash.allSources", "All sources")}</SelectItem>
                     {laneSourceOptions.map((source) => (
                       <SelectItem key={source} value={source}>{source}</SelectItem>
                     ))}
@@ -1103,7 +1105,7 @@ export default function ProDashboard() {
                 </Select>
                 <Select value={laneFocus} onValueChange={(value) => setLaneFocus(value as LaneFocus)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Focus" />
+                    <SelectValue placeholder={t("proDash.focus", "Focus")} />
                   </SelectTrigger>
                   <SelectContent>
                     {LANE_FOCUS_OPTIONS.map((option) => (
@@ -1122,22 +1124,22 @@ export default function ProDashboard() {
               <span className="flex-1" />
               <Button type="button" variant="secondary" size="sm" onClick={() => runLanePack("csv")} disabled={loading || displayLanes.length === 0}>
                 <Download aria-hidden />
-                Lane pack CSV
+                {t("proDash.lanePackCsv", "Lane pack CSV")}
               </Button>
               <Button type="button" variant="secondary" size="sm" onClick={() => runLanePack("pdf")} disabled={loading || displayLanes.length === 0}>
                 <Download aria-hidden />
-                Lane pack PDF
+                {t("proDash.lanePackPdf", "Lane pack PDF")}
               </Button>
             </div>
             {!loading && filteredLanes.length === 0 ? (
               <EmptyState
                 icon={Search}
-                title="No vehicle lanes match this filter."
+                title={t("proDash.noVehicleLanesMatchThis", "No vehicle lanes match this filter.")}
                 className="rounded-card border border-dashed border-border bg-surface-2/50"
                 action={
                   <Button type="button" variant="secondary" size="sm" onClick={resetLaneFilters}>
                     <RotateCcw aria-hidden="true" />
-                    Reset filters
+                    {t("proDash.resetFilters", "Reset filters")}
                   </Button>
                 }
               />
@@ -1209,7 +1211,7 @@ export default function ProDashboard() {
           </TabsContent>
 
           <TabsContent value="areas" className="space-y-5">
-            <SectionTitle eyebrow="Area intelligence" title="District profiles" />
+            <SectionTitle eyebrow={t("proDash.areaIntelligence", "Area intelligence")} title={t("proDash.districtProfiles", "District profiles")} />
             {loading ? (
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {Array.from({ length: 6 }).map((_, index) => (
@@ -1217,7 +1219,7 @@ export default function ProDashboard() {
                 ))}
               </div>
             ) : districts.length === 0 ? (
-              <EmptyState icon={MapPin} title="District profiles will return once the snapshot reloads." className="rounded-card border border-dashed border-border bg-surface-2/50" />
+              <EmptyState icon={MapPin} title={t("proDash.districtProfilesWillReturnOnce", "District profiles will return once the snapshot reloads.")} className="rounded-card border border-dashed border-border bg-surface-2/50" />
             ) : (
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {districts.map((district) => (
@@ -1238,11 +1240,11 @@ export default function ProDashboard() {
                     </div>
                     <div className="mt-5 grid grid-cols-2 gap-3">
                       <div>
-                        <p className="text-caption font-semibold uppercase tracking-caps text-label-2">Listings</p>
+                        <p className="text-caption font-semibold uppercase tracking-caps text-label-2">{t("proDash.listings", "Listings")}</p>
                         <p className="mt-1 text-title3 font-semibold text-foreground num">{fmtCount(district.listing_count)}</p>
                       </div>
                       <div>
-                        <p className="text-caption font-semibold uppercase tracking-caps text-label-2">Median</p>
+                        <p className="text-caption font-semibold uppercase tracking-caps text-label-2">{t("proDash.median", "Median")}</p>
                         <p className="mt-1 text-title3 font-semibold text-primary num">{fmtMoney(district.median_price_lkr)}</p>
                       </div>
                     </div>
@@ -1254,10 +1256,10 @@ export default function ProDashboard() {
               </div>
             )}
 
-            <SectionTitle eyebrow="Cross-district scanner" title="Arbitrage gaps">
+            <SectionTitle eyebrow={t("proDash.crossDistrictScanner", "Cross-district scanner")} title={t("proDash.arbitrageGaps", "Arbitrage gaps")}>
               <Select value={arbitrageLaneKey} onValueChange={setArbitrageLaneKey}>
                 <SelectTrigger className="w-full md:w-[260px]">
-                  <SelectValue placeholder="Select vehicle" />
+                  <SelectValue placeholder={t("proDash.selectVehicle", "Select vehicle")} />
                 </SelectTrigger>
                 <SelectContent>
                   {lanes.slice(0, 80).map((lane) => (
@@ -1285,10 +1287,10 @@ export default function ProDashboard() {
           </TabsContent>
 
           <TabsContent value="trends" className="space-y-5">
-            <SectionTitle eyebrow="Trend studio" title="Selected lane price history">
+            <SectionTitle eyebrow={t("proDash.trendStudio", "Trend studio")} title={t("proDash.selectedLanePriceHistory", "Selected lane price history")}>
               <Select value={trendLaneKey} onValueChange={setTrendLaneKey}>
                 <SelectTrigger className="w-full md:w-[320px]">
-                  <SelectValue placeholder="Select vehicle lane" />
+                  <SelectValue placeholder={t("proDash.selectVehicleLane", "Select vehicle lane")} />
                 </SelectTrigger>
                 <SelectContent>
                   {lanes.slice(0, 60).map((lane) => (
@@ -1322,13 +1324,13 @@ export default function ProDashboard() {
                     </LineChart>
                   </ResponsiveContainer>
                 ) : (
-                  <EmptyState icon={TrendingUp} title="No trend data available for this lane yet." className="rounded-card border border-dashed border-border bg-surface-2/50 flex h-full flex-col justify-center py-8" />
+                  <EmptyState icon={TrendingUp} title={t("proDash.noTrendDataAvailableFor", "No trend data available for this lane yet.")} className="rounded-card border border-dashed border-border bg-surface-2/50 flex h-full flex-col justify-center py-8" />
                 )}
               </div>
             </section>
 
             {/* Import-era depreciation cohort split */}
-            <SectionTitle eyebrow="Import-era market" title="Pre-freeze vs post-freeze cohorts">
+            <SectionTitle eyebrow={t("proDash.importEraMarket", "Import-era market")} title={t("proDash.preFreezeVsPostFreeze", "Pre-freeze vs post-freeze cohorts")}>
               <div className="flex items-center gap-3">
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-deal-caution/20 bg-deal-caution/10 px-2.5 py-1 text-caption font-semibold text-deal-caution-text">
                   Pre-freeze ≤2024
@@ -1338,7 +1340,7 @@ export default function ProDashboard() {
                 </span>
               </div>
             </SectionTitle>
-            <section className="rounded-card border border-border bg-surface-1 p-5 shadow-e1" aria-label="Import era split chart">
+            <section className="rounded-card border border-border bg-surface-1 p-5 shadow-e1" aria-label={t("proDash.importEraSplitChart", "Import era split chart")}>
               <p className="mb-4 text-footnote text-label-2">
                 Median asking price comparison per make between pre-2025 import cohort (older stock, higher supply) and
                 post-2025 cohort (restricted imports, supply premium). Only priced, non-outlier listings with a known
@@ -1348,7 +1350,7 @@ export default function ProDashboard() {
                 {loadingEra ? (
                   <Skeleton className="h-full w-full rounded-control" />
                 ) : (eraData?.makes?.length ?? 0) === 0 ? (
-                  <EmptyState icon={TrendingUp} title="Import-era split data is not yet available." className="rounded-card border border-dashed border-border bg-surface-2/50 flex h-full flex-col justify-center py-8" />
+                  <EmptyState icon={TrendingUp} title={t("proDash.importEraSplitDataIs", "Import-era split data is not yet available.")} className="rounded-card border border-dashed border-border bg-surface-2/50 flex h-full flex-col justify-center py-8" />
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
@@ -1383,7 +1385,7 @@ export default function ProDashboard() {
                 )}
               </div>
               {(eraData?.makes?.length ?? 0) > 0 && (
-                <TableContainer className="mt-4" aria-label="Import era split table">
+                <TableContainer className="mt-4" aria-label={t("proDash.importEraSplitTable", "Import era split table")}>
                   <Table className="min-w-[36.25rem]">
                     <TableHeader>
                       <TableRow>
@@ -1418,7 +1420,7 @@ export default function ProDashboard() {
           </TabsContent>
 
           <TabsContent value="sources" className="space-y-5">
-            <SectionTitle eyebrow="Data quality" title="Source coverage and freshness" />
+            <SectionTitle eyebrow={t("proDash.dataQuality", "Data quality")} title={t("proDash.sourceCoverageAndFreshness", "Source coverage and freshness")} />
             {loading ? (
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {Array.from({ length: 6 }).map((_, index) => (
@@ -1426,7 +1428,7 @@ export default function ProDashboard() {
                 ))}
               </div>
             ) : (snapshot?.source_coverage?.length ?? 0) === 0 ? (
-              <EmptyState icon={Database} title="Source coverage will return once the snapshot reloads." className="rounded-card border border-dashed border-border bg-surface-2/50" />
+              <EmptyState icon={Database} title={t("proDash.sourceCoverageWillReturnOnce", "Source coverage will return once the snapshot reloads.")} className="rounded-card border border-dashed border-border bg-surface-2/50" />
             ) : (
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {(snapshot?.source_coverage || []).map((source) => (
@@ -1449,15 +1451,15 @@ export default function ProDashboard() {
                 ))}
               </div>
             )}
-            <SectionTitle eyebrow="Quality metrics" title="Source quality scorecard" />
+            <SectionTitle eyebrow={t("proDash.qualityMetrics", "Quality metrics")} title={t("proDash.sourceQualityScorecard", "Source quality scorecard")} />
             <SourceQualityScorecard />
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-5">
-            <SectionTitle eyebrow="Report studio" title="Build a custom Pro report">
+            <SectionTitle eyebrow={t("proDash.reportStudio", "Report studio")} title={t("proDash.buildACustomProReport", "Build a custom Pro report")}>
               <Button type="button" onClick={runCustomReport} disabled={loading} loading={buildingReport}>
                 <Download aria-hidden />
-                Download Custom Report
+                {t("proDash.downloadCustomReport", "Download Custom Report")}
               </Button>
             </SectionTitle>
 
@@ -1466,15 +1468,15 @@ export default function ProDashboard() {
                 <div className="border-b border-border p-5 xl:border-b-0 xl:border-r">
                   <div className="mb-5 flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-caption font-semibold uppercase tracking-caps text-primary">Custom scope</p>
-                      <h3 className="mt-1 text-title2 font-semibold text-foreground">Report composer</h3>
+                      <p className="text-caption font-semibold uppercase tracking-caps text-primary">{t("proDash.customScope", "Custom scope")}</p>
+                      <h3 className="mt-1 text-title2 font-semibold text-foreground">{t("proDash.reportComposer", "Report composer")}</h3>
                     </div>
                     <Settings2 className="h-6 w-6 text-primary" />
                   </div>
 
                   <div className="grid gap-3 md:grid-cols-2">
                     <div className="space-y-2">
-                      <label className="text-caption font-semibold uppercase tracking-caps text-label-2">Report scope</label>
+                      <label className="text-caption font-semibold uppercase tracking-caps text-label-2">{t("proDash.reportScope", "Report scope")}</label>
                       <Select value={reportScope} onValueChange={(value) => setReportScope(value as ReportScope)}>
                         <SelectTrigger>
                           <SelectValue />
@@ -1488,11 +1490,11 @@ export default function ProDashboard() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-caption font-semibold uppercase tracking-caps text-label-2">Target</label>
+                      <label className="text-caption font-semibold uppercase tracking-caps text-label-2">{t("proDash.target", "Target")}</label>
                       {reportScope === "vehicle" ? (
                         <Select value={reportVehicleKey} onValueChange={setReportVehicleKey}>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select vehicle" />
+                            <SelectValue placeholder={t("proDash.selectVehicle", "Select vehicle")} />
                           </SelectTrigger>
                           <SelectContent>
                             {lanes.slice(0, 120).map((lane) => (
@@ -1505,7 +1507,7 @@ export default function ProDashboard() {
                       ) : reportScope === "district" ? (
                         <Select value={reportDistrict} onValueChange={setReportDistrict}>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select area" />
+                            <SelectValue placeholder={t("proDash.selectArea", "Select area")} />
                           </SelectTrigger>
                           <SelectContent>
                             {districts.map((district) => (
@@ -1516,7 +1518,7 @@ export default function ProDashboard() {
                       ) : reportScope === "source" ? (
                         <Select value={reportSource} onValueChange={setReportSource}>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select source" />
+                            <SelectValue placeholder={t("proDash.selectSource", "Select source")} />
                           </SelectTrigger>
                           <SelectContent>
                             {(snapshot?.source_coverage || []).map((source) => (
@@ -1532,7 +1534,7 @@ export default function ProDashboard() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-caption font-semibold uppercase tracking-caps text-label-2">Format</label>
+                      <label className="text-caption font-semibold uppercase tracking-caps text-label-2">{t("proDash.format", "Format")}</label>
                       <Select value={reportFormat} onValueChange={(value) => setReportFormat(value as ProExportFormat)}>
                         <SelectTrigger>
                           <SelectValue />
@@ -1546,7 +1548,7 @@ export default function ProDashboard() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-caption font-semibold uppercase tracking-caps text-label-2">Design style</label>
+                      <label className="text-caption font-semibold uppercase tracking-caps text-label-2">{t("proDash.designStyle", "Design style")}</label>
                       <Select value={reportTheme} onValueChange={(value) => setReportTheme(value as ProReportTheme)}>
                         <SelectTrigger>
                           <SelectValue />
@@ -1562,45 +1564,45 @@ export default function ProDashboard() {
 
                   <div className="mt-4 grid gap-3 md:grid-cols-2">
                     <div className="space-y-2">
-                      <label htmlFor="report-title" className="text-caption font-semibold uppercase tracking-caps text-label-2">Custom title</label>
+                      <label htmlFor="report-title" className="text-caption font-semibold uppercase tracking-caps text-label-2">{t("proDash.customTitle", "Custom title")}</label>
                       <Input
                         id="report-title"
                         value={reportTitle}
                         onChange={(event) => setReportTitle(event.target.value)}
-                        placeholder="Motormila Pro market brief"
+                        placeholder={t("proDash.motormilaProMarketBrief", "Motormila Pro market brief")}
                        
                       />
                     </div>
                     <div className="space-y-2">
-                      <label htmlFor="report-prepared-for" className="text-caption font-semibold uppercase tracking-caps text-label-2">Prepared for</label>
+                      <label htmlFor="report-prepared-for" className="text-caption font-semibold uppercase tracking-caps text-label-2">{t("proDash.preparedFor", "Prepared for")}</label>
                       <Input
                         id="report-prepared-for"
                         value={reportPreparedFor}
                         onChange={(event) => setReportPreparedFor(event.target.value)}
-                        placeholder="Dealer, lender, client, board"
+                        placeholder={t("proDash.dealerLenderClientBoard", "Dealer, lender, client, board")}
                        
                       />
                     </div>
                   </div>
 
                   <div className="mt-4 space-y-2">
-                    <label htmlFor="report-subtitle" className="text-caption font-semibold uppercase tracking-caps text-label-2">Subtitle</label>
+                    <label htmlFor="report-subtitle" className="text-caption font-semibold uppercase tracking-caps text-label-2">{t("proDash.subtitle", "Subtitle")}</label>
                     <Input
                       id="report-subtitle"
                       value={reportSubtitle}
                       onChange={(event) => setReportSubtitle(event.target.value)}
-                      placeholder="Professional Sri Lanka vehicle market intelligence"
+                      placeholder={t("proDash.professionalSriLankaVehicleMarket", "Professional Sri Lanka vehicle market intelligence")}
                      
                     />
                   </div>
 
                   <div className="mt-4 space-y-2">
-                    <label htmlFor="report-notes" className="text-caption font-semibold uppercase tracking-caps text-label-2">Analyst note</label>
+                    <label htmlFor="report-notes" className="text-caption font-semibold uppercase tracking-caps text-label-2">{t("proDash.analystNote", "Analyst note")}</label>
                     <Textarea
                       id="report-notes"
                       value={reportNotes}
                       onChange={(event) => setReportNotes(event.target.value)}
-                      placeholder="Optional context or recommendation to place on the report cover"
+                      placeholder={t("proDash.optionalContextOrRecommendationTo", "Optional context or recommendation to place on the report cover")}
                       className="h-auto min-h-24"
                     />
                   </div>
@@ -1609,8 +1611,8 @@ export default function ProDashboard() {
                 <div className="p-5">
                   <div className="mb-5 flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-caption font-semibold uppercase tracking-caps text-primary">Contents</p>
-                      <h3 className="mt-1 text-title2 font-semibold text-foreground">Choose sections</h3>
+                      <p className="text-caption font-semibold uppercase tracking-caps text-primary">{t("proDash.contents", "Contents")}</p>
+                      <h3 className="mt-1 text-title2 font-semibold text-foreground">{t("proDash.chooseSections", "Choose sections")}</h3>
                     </div>
                     <SlidersHorizontal className="h-6 w-6 text-primary" />
                   </div>
@@ -1643,7 +1645,7 @@ export default function ProDashboard() {
 
                   <div className="mt-4 grid gap-3 md:grid-cols-[0.8fr_1.2fr]">
                     <div className="space-y-2">
-                      <label htmlFor="report-listing-limit" className="text-caption font-semibold uppercase tracking-caps text-label-2">Listing rows</label>
+                      <label htmlFor="report-listing-limit" className="text-caption font-semibold uppercase tracking-caps text-label-2">{t("proDash.listingRows", "Listing rows")}</label>
                       <Input
                         id="report-listing-limit"
                         type="number"
@@ -1658,7 +1660,7 @@ export default function ProDashboard() {
                     <div className="rounded-control border border-border bg-surface-2 p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-caption font-semibold uppercase tracking-caps text-label-2">Preview</p>
+                          <p className="text-caption font-semibold uppercase tracking-caps text-label-2">{t("proDash.preview", "Preview")}</p>
                           <p className="mt-1 text-callout font-semibold text-foreground">{customReportTargetLabel}</p>
                         </div>
                         <Palette className="h-5 w-5 text-primary" />
@@ -1677,7 +1679,7 @@ export default function ProDashboard() {
               </div>
             </section>
 
-            <SectionTitle eyebrow="Quick packs" title="Download professional packs" />
+            <SectionTitle eyebrow={t("proDash.quickPacks", "Quick packs")} title={t("proDash.downloadProfessionalPacks", "Download professional packs")} />
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {[
                 {
@@ -1717,7 +1719,7 @@ export default function ProDashboard() {
         <footer className="flex flex-col gap-3 border-t border-border pt-6 text-caption text-label-2 md:flex-row md:items-center md:justify-between">
           <span className="inline-flex items-center gap-2">
             <ShieldCheck className="h-4 w-4" />
-            Pro data is aggregated from public Sri Lanka vehicle marketplaces for commercial analysis.
+            {t("proDash.proDataIsAggregatedFrom", "Pro data is aggregated from public Sri Lanka vehicle marketplaces for commercial analysis.")}
           </span>
           <span>{user?.email}</span>
         </footer>

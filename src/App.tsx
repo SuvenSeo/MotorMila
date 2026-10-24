@@ -1,3 +1,4 @@
+import { useAppPreferences } from "@/lib/appPreferences";
 import { LazyMotion, MotionConfig, domAnimation } from "motion/react";
 import { Suspense, useEffect } from "react";
 import { Navigate, Route, Routes, unstable_HistoryRouter as HistoryRouter, useLocation } from "react-router-dom";
@@ -138,6 +139,11 @@ function HashScroller() {
   return null;
 }
 
+function SkipLink() {
+  const { t } = useAppPreferences();
+  return <a href="#main-content" className="skip-to-content">{t("shell.skipToContent", "Skip to main content")}</a>;
+}
+
 function AppShell() {
   // Floating buttons step aside while a text field is focused (mobile keyboard).
   useDockTypingFlag();
@@ -145,7 +151,7 @@ function AppShell() {
     // app-shell-dock-pad: content and footer always clear the bottom dock
     // (mobile nav + compare tray). See src/styles/layers.css.
     <div className="min-h-screen app-shell app-shell-dock-pad selection:bg-primary/20 bg-background">
-      <a href="#main-content" className="skip-to-content">Skip to main content</a>
+      <SkipLink />
       <HashScroller />
       <Navbar />
       <CommandPalette />

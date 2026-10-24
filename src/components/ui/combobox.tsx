@@ -1,6 +1,7 @@
 import { Check, ChevronsUpDown, Search } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useAppPreferences } from "@/lib/appPreferences";
 
 export interface ComboboxOption {
   value: string;
@@ -17,8 +18,8 @@ export function Combobox({
   options,
   value,
   onChange,
-  placeholder = "Select…",
-  allLabel = "All",
+  placeholder: placeholderProp,
+  allLabel: allLabelProp,
   hideLabel = false,
 }: {
   label: string;
@@ -30,6 +31,9 @@ export function Combobox({
   /** Keep the label for screen readers only (when a parent group already shows a heading). */
   hideLabel?: boolean;
 }) {
+  const { t } = useAppPreferences();
+  const placeholder = placeholderProp ?? t("combobox.select", "Select…");
+  const allLabel = allLabelProp ?? t("common.all", "All");
   const ALL_VALUE = "__all__";
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -117,7 +121,7 @@ export function Combobox({
           </div>
           <ul id={listId} role="listbox" aria-label={label} className="max-h-56 overflow-auto py-1.5">
             {filtered.length === 0 && (
-              <li className="px-3.5 py-2.5 text-footnote text-muted-foreground">No matches.</li>
+              <li className="px-3.5 py-2.5 text-footnote text-muted-foreground">{t("combobox.noMatches", "No matches.")}</li>
             )}
             {filtered.map((item, i) => {
               const selected = (value ?? ALL_VALUE) === item.value;

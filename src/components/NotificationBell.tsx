@@ -10,22 +10,25 @@ import {
 import { useAuth } from "@/lib/authContext";
 import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
+import { useAppPreferences } from "@/lib/appPreferences";
+import type { TranslateFn } from "@/lib/translate";
 
 const POLL_INTERVAL_MS = 60_000;
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string, t: TranslateFn): string {
   const diff = Date.now() - new Date(iso).getTime();
   const secs = Math.floor(diff / 1000);
-  if (secs < 60) return "just now";
+  if (secs < 60) return t("common.justNow", "just now");
   const mins = Math.floor(secs / 60);
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 60) return t("notifications.minutesAgo", "{n}m ago", { n: mins });
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
+  if (hrs < 24) return t("common.hoursAgo", "{n}h ago", { n: hrs });
+  return t("common.daysAgo", "{n}d ago", { n: Math.floor(hrs / 24) });
 }
 
 export function NotificationBell() {
   const { isAuthenticated } = useAuth();
+  const { t } = useAppPreferences();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<UserNotification[]>([]);
   const [open, setOpen] = useState(false);
@@ -117,7 +120,7 @@ export function NotificationBell() {
       <button
         type="button"
         onClick={handleOpen}
-        aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
+        aria-label={unreadCount > 0 ? t("notifications.ariaUnread", "Notifications, {n} unread", { n: unreadCount }) : t("notifications.title", "Notifications")}
         aria-expanded={open}
         className="nav-control nav-control--icon relative"
       >
@@ -136,7 +139,7 @@ export function NotificationBell() {
         <div className="mm-pop-in absolute right-0 top-11 z-10 w-80 origin-top-right overflow-hidden rounded-2xl border border-border bg-popover shadow-soft-lg">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <p className="text-caption font-semibold text-foreground">Notifications</p>
+            <p className="text-caption font-semibold text-foreground">{t("notifications.title", "Notifications")}</p>
             {unreadCount > 0 && (
               <button
                 type="button"
@@ -145,7 +148,7 @@ export function NotificationBell() {
                 className="inline-flex items-center gap-1 text-caption font-medium text-primary-bright outline-none transition-opacity hover:opacity-80 disabled:opacity-50"
               >
                 <CheckCheck className="h-3 w-3" />
-                Mark all read
+                {t("notifications.markAllRead", "Mark all read")}
               </button>
             )}
           </div>
@@ -155,9 +158,9 @@ export function NotificationBell() {
             {notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center px-4 py-8 text-center">
                 <Bell className="mb-2 h-5 w-5 text-muted-foreground/40" />
-                <p className="text-caption text-muted-foreground">No notifications yet</p>
+                <p className="text-caption text-muted-foreground">{t("notifications.empty", "No notifications yet")}</p>
                 <p className="mt-0.5 text-caption text-muted-foreground/60">
-                  You&apos;ll see alert matches here
+                  {t("notifications.emptyHint", "You'll see alert matches here")}
                 </p>
               </div>
             ) : (
@@ -190,7 +193,7 @@ export function NotificationBell() {
                   {notif.body && (
                     <p className="line-clamp-2 text-caption text-muted-foreground">{notif.body}</p>
                   )}
-                  <p className="text-caption text-muted-foreground/60">{timeAgo(notif.created_at)}</p>
+                  <p className="text-caption text-muted-foreground/60">{timeAgo(notif.created_at, t)}</p>
                 </button>
               ))
             )}
@@ -204,7 +207,7 @@ export function NotificationBell() {
                 onClick={() => { setOpen(false); navigate("/alerts"); }}
                 className="text-caption font-medium text-primary-bright outline-none transition-opacity hover:opacity-80"
               >
-                View all alerts →
+                {t("notifications.viewAll", "View all alerts →")}
               </button>
             ) : (
               <button
@@ -212,18 +215,18 @@ export function NotificationBell() {
                 onClick={() => { setOpen(false); navigate("/alerts"); }}
                 className="text-caption font-medium text-primary-bright outline-none transition-opacity hover:opacity-80"
               >
-                Channel center →
+                {t("notifications.channelCenter", "Channel center →")}
               </button>
             )}
             <span
               className="inline-flex items-center gap-1 text-caption text-muted-foreground/70"
-              title={pushOn ? "Web push on — price-drop topics active" : "In-app always delivers; push dormant until enabled"}
+              title={pushOn ? t("notifications.pushOnHint", "Web push on — price-drop topics active") : t("notifications.pushOffHint", "In-app always delivers; push dormant until enabled")}
             >
               <span
                 aria-hidden
                 className={cn("h-1.5 w-1.5 rounded-full", pushOn ? "bg-deal-good" : "bg-muted-foreground/40")}
               />
-              {pushOn ? "push" : "in-app"}
+              {pushOn ? t("notifications.push", "push") : t("notifications.inApp", "in-app")}
             </span>
           </div>
         </div>

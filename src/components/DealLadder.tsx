@@ -1,6 +1,13 @@
 import { computeDealLadder } from "@/lib/dealLadder";
 import { formatPrice } from "@/services/api";
 import { cn } from "@/lib/utils";
+import { useAppPreferences } from "@/lib/appPreferences";
+
+const BAND_LABEL = {
+  good_deal: ["listingMeta.goodDeal", "Good Deal"],
+  fair: ["listingMeta.fairPrice", "Fair Price"],
+  overpriced: ["listingMeta.overpriced", "Overpriced"],
+} as const;
 
 interface DealLadderProps {
   askingPrice: number;
@@ -24,29 +31,36 @@ const RUNG_TONE = {
 } as const;
 
 export function DealLadder({ askingPrice, marketMedianLkr, className }: DealLadderProps) {
+  const { t } = useAppPreferences();
   const ladder = computeDealLadder({ askingPrice, marketMedianLkr });
   if (!ladder) return null;
+  const bandName = (band: keyof typeof BAND_LABEL) => t(BAND_LABEL[band][0], BAND_LABEL[band][1]);
 
   return (
     <div className={cn("mt-4 border-t border-border pt-3", className)}>
       <p className="text-caption font-medium text-muted-foreground">
-        Deal ladder
+        {t("dealLadder.title", "Deal ladder")}
       </p>
       <p className="mt-2 text-footnote font-semibold text-foreground">
         {ladder.band === "good_deal" ? (
-          ladder.headline
+          t("dealLadder.already", "Already a Good Deal")
         ) : ladder.cutToGoodDeal > 0 ? (
-          <>
-            Cut{" "}
-            <span className="num text-primary">{formatPrice(ladder.cutToGoodDeal)}</span> to
-            hit Good Deal
-          </>
+          (() => {
+            const [before, after] = t("dealLadder.cut", "Cut {amount} to hit Good Deal", { amount: "\u0000" }).split("\u0000");
+            return (
+              <>
+                {before}
+                <span className="num text-primary">{formatPrice(ladder.cutToGoodDeal)}</span>
+                {after}
+              </>
+            );
+          })()
         ) : (
-          ladder.headline
+          bandName(ladder.band)
         )}
       </p>
       <p className="mt-1 text-caption text-muted-foreground">
-        Current band:{" "}
+        {t("dealLadder.currentBand", "Current band:")}{" "}
         <span
           className={cn(
             "font-semibold",
@@ -55,7 +69,7 @@ export function DealLadder({ askingPrice, marketMedianLkr, className }: DealLadd
             ladder.band === "overpriced" && "text-deal-high-text",
           )}
         >
-          {ladder.bandLabel}
+          {bandName(ladder.band)}
         </span>
       </p>
 
@@ -77,7 +91,7 @@ export function DealLadder({ askingPrice, marketMedianLkr, className }: DealLadd
                 rung.active ? tone.active : tone.idle,
               )}
             >
-              <span>{rung.label}{rung.active ? " · you" : ""}</span>
+              <span>{bandName(rung.band)}{rung.active ? t("dealLadder.you", " · you") : ""}</span>
               <span className="num font-medium normal-case tracking-normal opacity-80">{priceHint}</span>
             </li>
           );

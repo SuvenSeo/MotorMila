@@ -5,6 +5,7 @@ import {
 } from "@/lib/advertHealth";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { useAppPreferences } from "@/lib/appPreferences";
 
 interface AdvertHealthChipProps {
   listing: AdvertHealthListingLike;
@@ -18,12 +19,13 @@ const TONE: Record<AdvertHealthBand, "success" | "warning" | "danger"> = {
 };
 
 export function AdvertHealthChip({ listing, className }: AdvertHealthChipProps) {
-  const result = computeAdvertHealth(listing);
+  const { t } = useAppPreferences();
+  const result = computeAdvertHealth(listing, t);
 
   return (
     <Badge title={result.detail} variant={TONE[result.band]} className={cn("gap-1", className)}>
       <span className="num normal-case tracking-normal">{result.score}</span>
-      Ad health
+      {t("adHealth.chip", "Ad health")}
     </Badge>
   );
 }
