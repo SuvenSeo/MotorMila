@@ -1137,7 +1137,7 @@ export default function Dashboard() {
 
           {/* Filters + Grid */}
           <div className="flex flex-col items-start gap-6 lg:flex-row">
-            <div className="w-full shrink-0 self-start lg:sticky lg:top-20 lg:w-80">
+            <div className="hidden w-full shrink-0 self-start lg:sticky lg:top-20 lg:block lg:w-80">
               <FilterSidebar filters={filters} onFiltersChange={setFilters} />
             </div>
 

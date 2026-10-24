@@ -368,7 +368,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
         className={cn(
           "space-y-3",
           // Desktop rail: the header + active chips stay pinned while the groups scroll.
-          !touch && "sticky top-0 z-10 -mx-4 -mt-4 border-b border-separator bg-surface-1 px-4 pb-4 pt-4",
+          !touch && "sticky top-0 z-10 -mx-4 -mt-4 bg-surface-1 px-4 pb-1 pt-4",
         )}
       >
         {/* In the drawer the sheet header already shows "Filters" + "Clear all".
