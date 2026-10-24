@@ -1,17 +1,23 @@
 import { useEffect, useState } from "react";
-import { motion } from "motion/react";
+import { AnimatePresence, m } from "motion/react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, Eye, EyeOff, KeyRound, Mail, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Eye, EyeOff, Mail, ShieldCheck } from "lucide-react";
+import { AtmosphericImage } from "@/components/AtmosphericImage";
+import { BrandLogo } from "@/components/BrandLogo";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/authContext";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { API_BASE, resolveFetchCredentials } from "@/services/api";
-import { revealContainer, revealItem, spring } from "@/lib/motion";
-import { BRAND } from "@/lib/brand";
+import { fadeIn, revealContainer, scaleIn } from "@/lib/motion";
+import { visuals } from "@/lib/visualAssets";
 
 type FormValues = { name: string; password: string; confirm: string };
 
@@ -20,6 +26,37 @@ type InvitePreview = {
   plan: string;
   expiresAt?: string;
 };
+
+function FieldError({ message }: { message?: string }) {
+  return (
+    <AnimatePresence initial={false}>
+      {message ? (
+        <m.p key="err" variants={fadeIn} initial="hidden" animate="show" exit="exit" className="text-footnote font-medium text-deal-high-text">
+          {message}
+        </m.p>
+      ) : null}
+    </AnimatePresence>
+  );
+}
+
+function RevealToggle({ shown, onToggle, labels }: { shown: boolean; onToggle: () => void; labels: [string, string] }) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon-sm"
+      onClick={onToggle}
+      className="absolute right-2 top-1/2 -translate-y-1/2 text-label-2 active:scale-95"
+      aria-label={shown ? labels[0] : labels[1]}
+    >
+      <AnimatePresence mode="wait" initial={false}>
+        <m.span key={shown ? "off" : "on"} variants={scaleIn} initial="hidden" animate="show" exit="exit" className="inline-flex">
+          {shown ? <EyeOff aria-hidden /> : <Eye aria-hidden />}
+        </m.span>
+      </AnimatePresence>
+    </Button>
+  );
+}
 
 export default function SignUp() {
   const { signup, selfSignup, isAuthenticated, authReady } = useAuth();
@@ -192,236 +229,211 @@ export default function SignUp() {
     t("signup.bullet3", "Credentials stay private to your organisation"),
   ];
 
+  const pwLabels: [string, string] = [t("signup.hidePassword", "Hide password"), t("signup.showPassword", "Show password")];
+  const serverAlert = (
+    <AnimatePresence initial={false}>
+      {serverError ? (
+        <m.p
+          key="server"
+          role="alert"
+          variants={fadeIn}
+          initial="hidden"
+          animate="show"
+          exit="exit"
+          className="rounded-control border border-deal-high/30 bg-deal-high/10 px-3 py-2 text-footnote font-medium text-deal-high-text"
+        >
+          {serverError}
+        </m.p>
+      ) : null}
+    </AnimatePresence>
+  );
+
   return (
-    <motion.div
+    <m.div
       initial="hidden"
       animate="show"
       variants={revealContainer}
-      className="relative min-h-screen overflow-hidden bg-background"
+      className="relative grid min-h-screen bg-background text-foreground lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]"
     >
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_70%_-8%,hsl(var(--primary)/0.14),transparent_55%)]" />
-        <div className="absolute left-[-10%] bottom-[10%] h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,hsl(var(--primary)/0.08),transparent_70%)]" />
+      {/* Same split as Sign in: photo panel on desktop, form follows the theme. */}
+      <div aria-hidden className="pointer-events-none relative order-2 hidden p-3 lg:block">
+        <div className="relative h-full overflow-hidden rounded-sheet">
+          <AtmosphericImage
+            src={visuals.darkGarageSilhouette.src}
+            srcSm={visuals.darkGarageSilhouette.srcSm}
+            className="h-full w-full object-cover object-[62%_center]"
+            priority
+            sizes="55vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/20" />
+          <div className="absolute inset-x-8 bottom-8 max-w-md">
+            <p className="font-display text-title2 font-semibold text-white">{t("signup.heroTitle", "Activate your Motormila seat.")}</p>
+            <ul className="mt-4 space-y-2">
+              {bullets.map((line) => (
+                <li key={line} className="flex items-start gap-2.5 text-footnote text-white/85">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                  {line}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       </div>
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1080px] items-center px-5 py-14 sm:px-8">
-        <div className="grid w-full gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:gap-14">
-          <motion.div variants={revealItem} className="hidden lg:block">
-            <p className="section-eyebrow mb-4 inline-flex items-center gap-2">
-              <KeyRound className="h-3.5 w-3.5" aria-hidden />
-              {t("signup.invitation", "Invitation")}
-            </p>
-            <h1 className="display-1 max-w-[12ch] text-foreground">
-              {t("signup.heroTitle", "Activate your Motormila seat.")}
-            </h1>
-            <p className="mt-4 max-w-sm text-body leading-relaxed text-muted-foreground">
-              {BRAND.vision}
-            </p>
-            <div className="mt-8 space-y-3">
-              {bullets.map((line) => (
-                <div key={line} className="flex items-start gap-3 rounded-3xl border border-border bg-card/50 px-4 py-3">
-                  <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
-                  <p className="text-footnote font-medium text-foreground/90">{line}</p>
-                </div>
-              ))}
-            </div>
-          </motion.div>
+      <div className="relative z-10 order-1 flex min-h-screen items-center justify-center px-5 py-12 sm:px-8">
+        <m.div variants={scaleIn} className="w-full max-w-[25rem]">
+          <Link
+            to="/sign-in"
+            className="mb-10 flex w-fit rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Motormila"
+          >
+            <BrandLogo size="nav" showTagline={false} />
+          </Link>
 
-          <motion.div variants={revealItem} className="premium-surface mx-auto w-full max-w-md p-7 shadow-soft-lg sm:p-9 lg:mx-0 lg:max-w-none">
-            <Link to="/sign-in" className="mb-8 inline-flex items-center gap-2.5 no-underline group">
-              <div className="h-9 w-9 overflow-hidden rounded-full ring-1 ring-border transition-ui group-hover:ring-primary/40">
-                <img src="/logo.png" alt="Motormila" className="h-full w-full object-cover" />
-              </div>
-              <span className="font-display text-footnote font-bold text-foreground">{BRAND.name}</span>
-            </Link>
+          <Badge variant="info" className="mb-4">
+            <ShieldCheck aria-hidden />
+            {selfServeEnabled && !token
+              ? t("signup.freeTrial", `${selfServeTrialDays}-day free trial`)
+              : t("signup.inviteOnly", "Invite only")}
+          </Badge>
+          <h1 className="font-display text-title1 font-semibold text-foreground">{t("signup.createAccount", "Create your account")}</h1>
+          <p className="mt-2 text-body text-label-2">
+            {selfServeEnabled && !token
+              ? t("signup.selfServeSubtitle", `Start your ${selfServeTrialDays}-day Pro trial — no invite needed.`)
+              : t("signup.subtitle", "Motormila is closed to the public. Complete signup with the invite your admin sent you.")}
+          </p>
 
-            <div className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1">
-              <ShieldCheck className="h-3 w-3 text-primary" aria-hidden />
-              <span className="text-caption font-semibold text-primary-bright">
-                {selfServeEnabled && !token
-                  ? t("signup.freeTrial", `${selfServeTrialDays}-day free trial`)
-                  : t("signup.inviteOnly", "Invite only")}
-              </span>
-            </div>
-            <h2 className="font-display text-title1 font-semibold tracking-tight text-foreground sm:text-title1">
-              {t("signup.createAccount", "Create your account")}
-            </h2>
-            <p className="mt-2 text-footnote leading-relaxed text-muted-foreground">
-              {selfServeEnabled && !token
-                ? t("signup.selfServeSubtitle", `Start your ${selfServeTrialDays}-day Pro trial — no invite needed.`)
-                : t("signup.subtitle", "Motormila is closed to the public. Complete signup with the invite your admin sent you.")}
-            </p>
-
-            {(inviteLoading || selfServeChecking) && (
-              <div className="mt-8 flex items-center gap-3 text-footnote text-muted-foreground" role="status">
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          {(inviteLoading || selfServeChecking) && (
+            <div className="mt-7 space-y-3" role="status" aria-label={token ? t("signup.verifying", "Verifying invite…") : t("signup.checkingSignup", "Checking signup options…")}>
+              <Skeleton className="h-12 w-full rounded-control" />
+              <Skeleton className="h-12 w-full rounded-control" />
+              <p className="text-footnote text-label-2">
                 {token ? t("signup.verifying", "Verifying invite…") : t("signup.checkingSignup", "Checking signup options…")}
-              </div>
-            )}
+              </p>
+            </div>
+          )}
 
-            {inviteError && (
-              <div className="mt-7 rounded-2xl border border-deal-high/20 bg-deal-high/5 px-4 py-4 text-footnote font-medium text-deal-high-text">
-                {inviteError}
-                <p className="mt-3 text-muted-foreground">
-                  {t("signup.alreadyRegistered", "Already registered?")}{" "}
-                  <Link to="/sign-in" className="font-semibold text-foreground underline underline-offset-4">
-                    {t("common.signIn", "Sign in")}
-                  </Link>
-                </p>
-              </div>
-            )}
+          {inviteError && (
+            <div role="alert" className="content-in mt-7 rounded-card border border-deal-high/30 bg-deal-high/10 p-4 text-footnote font-medium text-deal-high-text">
+              {inviteError}
+              <p className="mt-3 font-normal text-label-2">
+                {t("signup.alreadyRegistered", "Already registered?")}{" "}
+                <Link to="/sign-in" className="font-semibold text-primary underline-offset-4 hover:underline">
+                  {t("common.signIn", "Sign in")}
+                </Link>
+              </p>
+            </div>
+          )}
 
-            {selfServeEnabled && !token && !inviteError && !selfServeChecking && (
-              <form onSubmit={handleSubmit(onSelfServeSubmit)} className="mt-6 space-y-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="self-email" className="field-label">{t("signup.email", "Email")}</Label>
+          {selfServeEnabled && !token && !inviteError && !selfServeChecking && (
+            <form onSubmit={handleSubmit(onSelfServeSubmit)} className="content-in mt-7 space-y-4" noValidate>
+              <div className="space-y-2">
+                <Label htmlFor="self-email">{t("signup.email", "Email")}</Label>
+                <Input
+                  id="self-email"
+                  type="email"
+                  autoComplete="email"
+                  value={selfServeEmail}
+                  onChange={(event) => setSelfServeEmail(event.target.value)}
+                  aria-invalid={selfServeEmailError ? true : undefined}
+                  className="h-12"
+                />
+                <FieldError message={selfServeEmailError} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="self-name">{t("signup.fullName", "Full name")}</Label>
+                <Input id="self-name" autoComplete="name" {...register("name")} aria-invalid={errors.name ? true : undefined} className="h-12" />
+                <FieldError message={errors.name?.message} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="self-password">{t("signup.password", "Password")}</Label>
+                <div className="relative">
                   <Input
-                    id="self-email"
-                    type="email"
-                    autoComplete="email"
-                    value={selfServeEmail}
-                    onChange={(event) => setSelfServeEmail(event.target.value)}
-                    className="h-12 rounded-full bg-surface"
+                    id="self-password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    {...register("password")}
+                    aria-invalid={errors.password ? true : undefined}
+                    className="h-12 pr-12"
                   />
-                  {selfServeEmailError && <p className="text-caption font-semibold text-deal-high-text">{selfServeEmailError}</p>}
+                  <RevealToggle shown={showPassword} onToggle={() => setShowPassword((v) => !v)} labels={pwLabels} />
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="self-name" className="field-label">{t("signup.fullName", "Full name")}</Label>
-                  <Input id="self-name" autoComplete="name" {...register("name")} className="h-12 rounded-full bg-surface" />
-                  {errors.name && <p className="text-caption font-semibold text-deal-high-text">{errors.name.message}</p>}
+                <FieldError message={errors.password?.message} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="self-confirm">{t("signup.confirmPassword", "Confirm password")}</Label>
+                <Input id="self-confirm" type="password" autoComplete="new-password" {...register("confirm")} aria-invalid={errors.confirm ? true : undefined} className="h-12" />
+                <FieldError message={errors.confirm?.message} />
+              </div>
+              {serverAlert}
+              <Button type="submit" size="lg" className="w-full" loading={loading}>
+                {t("signup.startTrial", `Start ${selfServeTrialDays}-day trial`)}
+                <ArrowRight aria-hidden />
+              </Button>
+              <p className="text-center text-footnote text-label-2">
+                {t("signup.alreadyRegistered", "Already registered?")}{" "}
+                <Link to="/sign-in" className="font-semibold text-primary underline-offset-4 hover:underline">
+                  {t("common.signIn", "Sign in")}
+                </Link>
+              </p>
+            </form>
+          )}
+
+          {invite && !inviteError && (
+            <div className="content-in">
+              <Card padding="none" className="mt-7 overflow-hidden">
+                <div className="flex items-center gap-3 border-b border-separator px-4 py-3.5">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
+                    <Mail className="h-4 w-4" aria-hidden />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-caption text-label-2">{t("signup.invitedAs", "Invited as")}</p>
+                    <p className="truncate text-body font-semibold text-foreground">{invite.email}</p>
+                  </div>
+                  <Badge variant="info">{invite.plan}</Badge>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="self-password" className="field-label">{t("signup.password", "Password")}</Label>
+                <div className="px-4 py-3.5">
+                  <p className="text-footnote font-semibold text-foreground">{planMeta.title}</p>
+                  <p className="mt-1 text-footnote text-label-2">{planMeta.detail}</p>
+                </div>
+              </Card>
+
+              <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4" noValidate>
+                <div className="space-y-2">
+                  <Label htmlFor="name">{t("signup.fullName", "Full name")}</Label>
+                  <Input id="name" autoComplete="name" {...register("name")} aria-invalid={errors.name ? true : undefined} className="h-12" />
+                  <FieldError message={errors.name?.message} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">{t("signup.password", "Password")}</Label>
                   <div className="relative">
                     <Input
-                      id="self-password"
+                      id="password"
                       type={showPassword ? "text" : "password"}
                       autoComplete="new-password"
                       {...register("password")}
-                      className="h-12 rounded-full bg-surface pr-11"
+                      aria-invalid={errors.password ? true : undefined}
+                      className="h-12 pr-12"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((s) => !s)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
-                      aria-label={showPassword ? t("signup.hidePassword", "Hide password") : t("signup.showPassword", "Show password")}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
+                    <RevealToggle shown={showPassword} onToggle={() => setShowPassword((v) => !v)} labels={pwLabels} />
                   </div>
-                  {errors.password && <p className="text-caption font-semibold text-deal-high-text">{errors.password.message}</p>}
+                  <FieldError message={errors.password?.message} />
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="self-confirm" className="field-label">{t("signup.confirmPassword", "Confirm password")}</Label>
-                  <Input id="self-confirm" type="password" autoComplete="new-password" {...register("confirm")} className="h-12 rounded-full bg-surface" />
-                  {errors.confirm && <p className="text-caption font-semibold text-deal-high-text">{errors.confirm.message}</p>}
+                <div className="space-y-2">
+                  <Label htmlFor="confirm">{t("signup.confirmPassword", "Confirm password")}</Label>
+                  <Input id="confirm" type="password" autoComplete="new-password" {...register("confirm")} aria-invalid={errors.confirm ? true : undefined} className="h-12" />
+                  <FieldError message={errors.confirm?.message} />
                 </div>
-                {serverError && (
-                  <p className="rounded-xl border border-deal-high/20 bg-deal-high/5 px-3.5 py-2.5 text-caption font-medium text-deal-high-text">
-                    {serverError}
-                  </p>
-                )}
-                <motion.button
-                  type="submit"
-                  disabled={loading}
-                  whileTap={{ scale: 0.98 }}
-                  transition={spring.smooth}
-                  className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-caption font-semibold tracking-tight text-primary-foreground shadow-soft disabled:opacity-50"
-                >
-                  {loading ? t("signup.creating", "Creating account…") : (
-                    <>
-                      <span>{t("signup.startTrial", `Start ${selfServeTrialDays}-day trial`)}</span>
-                      <ArrowRight className="h-4 w-4" aria-hidden />
-                    </>
-                  )}
-                </motion.button>
-                <p className="text-center text-caption text-muted-foreground">
-                  {t("signup.alreadyRegistered", "Already registered?")}{" "}
-                  <Link to="/sign-in" className="font-semibold text-foreground underline underline-offset-4">
-                    {t("common.signIn", "Sign in")}
-                  </Link>
-                </p>
+                {serverAlert}
+                <Button type="submit" size="lg" className="w-full" loading={loading}>
+                  {t("signup.activate", "Activate account")}
+                  <ArrowRight aria-hidden />
+                </Button>
               </form>
-            )}
-
-            {invite && !inviteError && (
-              <>
-                <div className="mt-7 overflow-hidden rounded-2xl border border-border bg-surface">
-                  <div className="flex items-center gap-3 border-b border-border px-4 py-3.5">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/15 bg-primary/10">
-                      <Mail className="h-4 w-4 text-primary" aria-hidden />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-caption font-semibold text-muted-foreground">{t("signup.invitedAs", "Invited as")}</p>
-                      <p className="truncate text-body font-semibold text-foreground">{invite.email}</p>
-                    </div>
-                    <span className="rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-caption font-medium text-primary-bright">
-                      {invite.plan}
-                    </span>
-                  </div>
-                  <div className="px-4 py-3.5">
-                    <p className="text-footnote font-semibold text-foreground">{planMeta.title}</p>
-                    <p className="mt-1 text-caption leading-relaxed text-muted-foreground">{planMeta.detail}</p>
-                  </div>
-                </div>
-
-                <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="name" className="field-label">{t("signup.fullName", "Full name")}</Label>
-                    <Input id="name" autoComplete="name" {...register("name")} className="h-12 rounded-full bg-surface" />
-                    {errors.name && <p className="text-caption font-semibold text-deal-high-text">{errors.name.message}</p>}
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="password" className="field-label">{t("signup.password", "Password")}</Label>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        autoComplete="new-password"
-                        {...register("password")}
-                        className="h-12 rounded-full bg-surface pr-11"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((s) => !s)}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
-                        aria-label={showPassword ? t("signup.hidePassword", "Hide password") : t("signup.showPassword", "Show password")}
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                    {errors.password && <p className="text-caption font-semibold text-deal-high-text">{errors.password.message}</p>}
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="confirm" className="field-label">{t("signup.confirmPassword", "Confirm password")}</Label>
-                    <Input id="confirm" type="password" autoComplete="new-password" {...register("confirm")} className="h-12 rounded-full bg-surface" />
-                    {errors.confirm && <p className="text-caption font-semibold text-deal-high-text">{errors.confirm.message}</p>}
-                  </div>
-                  {serverError && (
-                    <p className="rounded-xl border border-deal-high/20 bg-deal-high/5 px-3.5 py-2.5 text-caption font-medium text-deal-high-text">
-                      {serverError}
-                    </p>
-                  )}
-                  <motion.button
-                    type="submit"
-                    disabled={loading}
-                    whileTap={{ scale: 0.98 }}
-                    transition={spring.smooth}
-                    className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-caption font-semibold tracking-tight text-primary-foreground shadow-soft disabled:opacity-50"
-                  >
-                    {loading ? t("signup.creating", "Creating account…") : (
-                      <>
-                        <span>{t("signup.activate", "Activate account")}</span>
-                        <ArrowRight className="h-4 w-4" aria-hidden />
-                      </>
-                    )}
-                  </motion.button>
-                </form>
-              </>
-            )}
-          </motion.div>
-        </div>
+            </div>
+          )}
+        </m.div>
       </div>
-    </motion.div>
+    </m.div>
   );
 }

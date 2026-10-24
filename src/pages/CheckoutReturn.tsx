@@ -1,16 +1,23 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { CheckCircle2, Clock, Loader2, Receipt, XCircle } from "lucide-react";
-import { PageBody } from "@/components/PageBody";
+import { CheckCircle2, Clock, Receipt, XCircle } from "lucide-react";
+import { m } from "motion/react";
 import { PageCanvas } from "@/components/PageCanvas";
-import { PageHero } from "@/components/PageHero";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getPayhereOrder } from "@/lib/moneyApi";
+import { useAppPreferences } from "@/lib/appPreferences";
+import { fadeUp } from "@/lib/motion";
+import { cn } from "@/lib/utils";
 
 /** PayHere return_url. PayHere passes no status here, so we poll our own order record. */
 export default function CheckoutReturn() {
+  const { t } = useAppPreferences();
   const [params] = useSearchParams();
   const orderId = params.get("order_id") ?? "";
-  const [status, setStatus] = useState<string>("checking");
+  const [status, setStatus] = useState<string>(orderId ? "checking" : "unknown");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -30,51 +37,87 @@ export default function CheckoutReturn() {
           window.setTimeout(poll, 3000);
         }
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Couldn't check the payment.");
+        if (!cancelled) setError(err instanceof Error ? err.message : t("acct.checkout.checkFailed", "Couldn't check the payment."));
       }
     };
     void poll();
     return () => {
       cancelled = true;
     };
-  }, [orderId]);
+  }, [orderId, t]);
 
   const paid = status === "paid";
   const waiting = status === "checking" || status === "created" || status === "pending";
   // No order_id at all (direct visit, bookmark, stripped redirect) is not a
   // failure: show a neutral "nothing to confirm" state, never red.
   const noOrder = status === "unknown";
+  const failed = !paid && !waiting && !noOrder;
   const Icon = paid ? CheckCircle2 : waiting ? Clock : noOrder ? Receipt : XCircle;
   const title = paid
-    ? "Payment received"
+    ? t("acct.checkout.paidTitle", "Payment received")
     : waiting
-      ? "Confirming your payment"
+      ? t("acct.checkout.waitingTitle", "Confirming your payment")
       : noOrder
-        ? "No payment to confirm"
-        : "Payment not completed";
+        ? t("acct.checkout.noOrderTitle", "No payment to confirm")
+        : t("acct.checkout.failedTitle", "Payment not completed");
   const body = paid
-    ? "Your plan is active. Sign out and back in if you don't see it straight away."
+    ? t("acct.checkout.paidBody", "Your plan is active. Sign out and back in if you don't see it straight away.")
     : waiting
-      ? "PayHere is confirming the payment with us. This usually takes a few seconds."
+      ? t("acct.checkout.waitingBody", "PayHere is confirming the payment with us. This usually takes a few seconds.")
       : noOrder
-        ? "This page confirms a PayHere checkout. Start from Pricing to choose a plan, or open your account to see an existing one."
-        : "No money was taken for this order, or it was cancelled. You can try again or pay by bank transfer or KOKO.";
+        ? t("acct.checkout.noOrderBody", "This page confirms a PayHere checkout. Start from Pricing to choose a plan, or open your account to see an existing one.")
+        : t("acct.checkout.failedBody", "No money was taken for this order, or it was cancelled. You can try again or pay by bank transfer or KOKO.");
 
   return (
-    <PageCanvas>
-      <PageHero theme="default" eyebrow="Checkout" eyebrowIcon={Icon} watermarkIcon={Icon} title={<>{title}<span className="text-sheen">.</span></>} description={body} />
-      <PageBody>
-        <div role="status" className="max-w-xl space-y-4 rounded-[1.75rem] border border-border bg-card p-6 text-footnote">
-          {waiting && <p className="flex items-center gap-2"><Loader2 aria-hidden className="h-4 w-4 animate-spin" /> Checking order {orderId || "…"}</p>}
-          {error && <p className="text-destructive">{error}</p>}
-          {orderId && <p className="text-muted-foreground">Order reference: <span className="num font-semibold text-foreground">{orderId}</span></p>}
-          <div className="flex flex-wrap gap-2">
-            <Link to={paid ? "/dealer" : "/pricing"} className="inline-flex h-10 items-center rounded-full bg-primary px-5 text-caption font-semibold text-primary-foreground no-underline">
-              {paid ? "Open dealer workspace" : "Back to pricing"}
-            </Link>
-          </div>
-        </div>
-      </PageBody>
+    <PageCanvas ambient="none">
+      <PageHeader size="compact" eyebrow={t("acct.checkout.eyebrow", "Checkout")} eyebrowIcon={Receipt} title={title} description={body} />
+      <div className="layout-shell pb-20">
+        <m.div variants={fadeUp} className="max-w-xl">
+          <Card role="status" aria-live="polite" className="space-y-5">
+            <div className="flex items-center gap-4">
+              <span
+                className={cn(
+                  "flex h-12 w-12 shrink-0 items-center justify-center rounded-full",
+                  paid && "bg-deal-good/10 text-deal-good-text",
+                  waiting && "bg-primary/10 text-primary",
+                  noOrder && "bg-surface-2 text-label-2",
+                  failed && "bg-deal-high/10 text-deal-high-text",
+                )}
+              >
+                <Icon className={cn("h-6 w-6", waiting && "motion-safe:animate-pulse")} strokeWidth={1.75} aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-callout font-semibold text-foreground">{title}</p>
+                {orderId ? (
+                  <p className="mt-0.5 truncate text-footnote text-label-2">
+                    {t("acct.checkout.orderRef", "Order reference")}:{" "}
+                    <span className="font-semibold tabular-nums text-foreground">{orderId}</span>
+                  </p>
+                ) : null}
+              </div>
+            </div>
+            {waiting ? (
+              <div className="space-y-2" aria-hidden>
+                <Skeleton shape="text" className="w-3/4" />
+                <Skeleton shape="text" className="w-1/2" />
+              </div>
+            ) : null}
+            {error ? <p className="content-in text-footnote font-medium text-deal-high-text">{error}</p> : null}
+            <div className="flex flex-wrap gap-2.5 border-t border-separator pt-5">
+              <Button asChild>
+                <Link to={paid ? "/dealer" : "/pricing"}>
+                  {paid ? t("acct.checkout.openDealer", "Open dealer workspace") : t("acct.checkout.backToPricing", "Back to pricing")}
+                </Link>
+              </Button>
+              {noOrder || failed ? (
+                <Button asChild variant="secondary">
+                  <Link to="/profile">{t("acct.checkout.openAccount", "Open my account")}</Link>
+                </Button>
+              ) : null}
+            </div>
+          </Card>
+        </m.div>
+      </div>
     </PageCanvas>
   );
 }
