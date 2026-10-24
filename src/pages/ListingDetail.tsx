@@ -81,7 +81,7 @@ export default function ListingDetail() {
     viewport: { once: true, margin: '0px 0px -8% 0px' },
     variants: motionCalm ? fadeIn : fadeUp,
   } as const;
-  const { t, localeTag } = useAppPreferences();
+  const { t, localeTag, language } = useAppPreferences();
   const { hasProAccess, isAdmin } = useAuth();
   const fullAccess = hasFullPlatformAccess({ hasProAccess, isAdmin });
   const [listing, setListing] = useState<CarListing | null>(null);
@@ -313,7 +313,7 @@ export default function ListingDetail() {
     confidence: fmvDetail?.confidence ?? null,
     method: fmvDetail?.method ?? null,
   };
-  const fmvSummary = hasPrice && fmvLkr && !lease.isLeaseTakeover ? summarizeFmv(listingPrice, fmvLkr) : null;
+  const fmvSummary = hasPrice && fmvLkr && !lease.isLeaseTakeover ? summarizeFmv(listingPrice, fmvLkr, t) : null;
   const fmvKind = deal.kind === 'verify' ? 'verify' : fmvSummary?.band === 'below' ? 'below' : fmvSummary?.band === 'above' ? 'above' : 'fair';
   const monthly = hasPrice
     ? estimateListingMonthly({
@@ -466,6 +466,7 @@ export default function ListingDetail() {
               method={fmvDetail?.method}
               fmvLkr={fmvSummary.fmv_lkr}
               updatedAt={fmvDetail?.updated_at}
+              locale={language}
             />
             <Chip onClick={handleComparePin} selected={isPinnedForCompare(Number(listing.id))}>
               <Scale aria-hidden />

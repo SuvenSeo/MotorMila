@@ -130,7 +130,7 @@ export const ListingCard = memo(function ListingCard({
     isLeaseTakeover: isLease,
     ratingAllowed: fullAccess && listing.deal_score !== null && listing.deal_score !== undefined,
   });
-  const fmv = hasKnownPrice && !isLease ? summarizeFmv(priceValue, hasMedian ? median : 0) : null;
+  const fmv = hasKnownPrice && !isLease ? summarizeFmv(priceValue, hasMedian ? median : 0, t) : null;
   const marketDeltaPct = fmv ? fmv.delta_pct : null;
   const marketPosition = marketDeltaPct === null ? 50 : clamp(50 - marketDeltaPct, 8, 92);
   // FMV tone follows the deal badge so a "verify" outlier is never painted green.

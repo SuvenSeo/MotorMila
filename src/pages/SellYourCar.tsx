@@ -21,9 +21,24 @@ const MAKES = [
   "Hyundai", "Kia", "BMW", "Mercedes-Benz", "Audi", "Perodua",
   "Micro", "DFSK", "Chery", "BYD", "MG", "Other",
 ];
-const FUEL_TYPES = ["Petrol", "Diesel", "Hybrid", "Electric", "CNG"];
-const TRANSMISSIONS = ["Automatic", "Manual", "CVT"];
-const CONDITIONS = ["Used", "Reconditioned", "Brand New"];
+// Values stay English (they are sent to the API); labels are translated.
+const FUEL_TYPES = [
+  { value: "Petrol", key: "fuel.petrol" },
+  { value: "Diesel", key: "fuel.diesel" },
+  { value: "Hybrid", key: "fuel.hybrid" },
+  { value: "Electric", key: "fuel.electric" },
+  { value: "CNG", key: "fuel.cng" },
+];
+const TRANSMISSIONS = [
+  { value: "Automatic", key: "trans.automatic" },
+  { value: "Manual", key: "trans.manual" },
+  { value: "CVT", key: "trans.cvt" },
+];
+const CONDITIONS = [
+  { value: "Used", key: "condition.used" },
+  { value: "Reconditioned", key: "condition.reconditioned" },
+  { value: "Brand New", key: "condition.brandNew" },
+];
 const CATEGORY_KEYS = ["cars", "bikes", "tuk", "van", "suv"] as const;
 const DISTRICTS = [
   "Colombo", "Gampaha", "Kalutara", "Kandy", "Matale", "Nuwara Eliya",
@@ -286,18 +301,18 @@ export default function SellYourCar() {
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label={t("sell.fuel", "Fuel type")} htmlFor="sell-fuel">
-            <SimpleSelect id="sell-fuel" value={form.fuelType} onValueChange={(v) => setField("fuelType", v)} options={FUEL_TYPES.map((f) => ({ value: f, label: f }))} />
+            <SimpleSelect id="sell-fuel" value={form.fuelType} onValueChange={(v) => setField("fuelType", v)} options={FUEL_TYPES.map((f) => ({ value: f.value, label: t(f.key, f.value) }))} />
           </Field>
           <Field label={t("sell.transmission", "Transmission")} htmlFor="sell-transmission">
             <SimpleSelect
               id="sell-transmission"
               value={form.transmission}
               onValueChange={(v) => setField("transmission", v)}
-              options={TRANSMISSIONS.map((tm) => ({ value: tm, label: tm }))}
+              options={TRANSMISSIONS.map((tm) => ({ value: tm.value, label: t(tm.key, tm.value) }))}
             />
           </Field>
           <Field label={t("sell.condition", "Condition")} htmlFor="sell-condition">
-            <SimpleSelect id="sell-condition" value={form.condition} onValueChange={(v) => setField("condition", v)} options={CONDITIONS.map((c) => ({ value: c, label: c }))} />
+            <SimpleSelect id="sell-condition" value={form.condition} onValueChange={(v) => setField("condition", v)} options={CONDITIONS.map((c) => ({ value: c.value, label: t(c.key, c.value) }))} />
           </Field>
         </div>
       </FormCard>

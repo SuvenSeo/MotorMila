@@ -3,6 +3,7 @@ import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DEAL_TIER_META, getDealTier } from "@/lib/dealTiers";
 import { formatPriceLkrMillions } from "@/lib/formatting";
+import { useAppPreferences } from "@/lib/appPreferences";
 
 interface FairPriceIndicatorProps {
   score: number;
@@ -31,6 +32,7 @@ export function FairPriceIndicator({
   fmvLkr,
   className,
 }: FairPriceIndicatorProps) {
+  const { t } = useAppPreferences();
   const tier = getDealTier(score);
   const meta = DEAL_TIER_META[tier];
   const badgeClasses = getTierBadgeClasses(tier, size);
@@ -40,9 +42,11 @@ export function FairPriceIndicator({
     priceLkr != null && fmvLkr != null && Number.isFinite(Number(priceLkr)) && Number(fmvLkr) > 0
       ? (() => {
           const delta = Number(priceLkr) - Number(fmvLkr);
-          if (Math.abs(delta) < 1000) return "at FMV";
+          if (Math.abs(delta) < 1000) return t("fairPrice.atFmv", "at FMV");
           const abs = formatPriceLkrMillions(Math.abs(delta));
-          return delta < 0 ? `${abs} below FMV` : `${abs} above FMV`;
+          return delta < 0
+            ? t("fairPrice.belowFmv", "{amount} below FMV", { amount: abs })
+            : t("fairPrice.aboveFmv", "{amount} above FMV", { amount: abs });
         })()
       : null;
 

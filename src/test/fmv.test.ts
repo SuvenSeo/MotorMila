@@ -19,3 +19,21 @@ describe("summarizeFmv", () => {
     expect(summarizeFmv(5_000_000, 0)).toBeNull();
   });
 });
+
+describe("summarizeFmv translation", () => {
+  it("passes the band label through the translator with the percentage", () => {
+    const calls: Array<[string, Record<string, string | number> | undefined]> = [];
+    const t = (key: string, fallback?: string, vars?: Record<string, string | number>) => {
+      calls.push([key, vars]);
+      return `${key}:${vars?.pct ?? ""}`;
+    };
+    expect(summarizeFmv(4_500_000, 5_000_000, t)?.label).toBe("fmv.band.below:10");
+    expect(summarizeFmv(5_000_000, 5_000_000, t)?.label).toBe("fmv.band.near:");
+    expect(calls[0][0]).toBe("fmv.band.below");
+  });
+
+  it("keeps the English label without a translator", () => {
+    expect(summarizeFmv(4_500_000, 5_000_000)?.label).toBe("Priced 10% below FMV");
+    expect(summarizeFmv(5_000_000, 5_000_000)?.label).toBe("Near fair market value");
+  });
+});
