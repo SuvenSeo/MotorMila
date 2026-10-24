@@ -9,9 +9,10 @@ import { compactLkrParts } from "@/components/motion/FlowNumber";
 import { formatLkrCompact } from "@/lib/price";
 
 /**
- * Flowing number with a readable label: screen readers and text search get
- * `label`, sighted users get the rolling AnimatedNumber (tabular figures,
- * motion tokens, instant under reduced motion / low data).
+ * Flowing number: the kit AnimatedNumber (tabular figures, motion tokens,
+ * instant under reduced motion / low data). number-flow renders its value as
+ * text and exposes it to assistive tech; `label` is the same value as plain
+ * text, used as the tooltip so a copy/hover shows the formatted figure.
  */
 export function FlowValue({
   value,
@@ -29,11 +30,8 @@ export function FlowValue({
   className?: string;
 }) {
   return (
-    <span className={cn("tabular-nums", className)}>
-      <span className="sr-only">{label}</span>
-      <span aria-hidden>
-        <AnimatedNumber value={value} format={format} prefix={prefix} suffix={suffix} locales="en-US" />
-      </span>
+    <span className={cn("tabular-nums", className)} title={label}>
+      <AnimatedNumber value={value} format={format} prefix={prefix} suffix={suffix} locales="en-US" />
     </span>
   );
 }
