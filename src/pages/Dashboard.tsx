@@ -26,6 +26,7 @@ import { SourceCredits } from "@/components/SourceCredits";
 import { SectionHeader } from "@/components/SectionHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +48,7 @@ import { TrendingDown,
   Search,
   SlidersHorizontal,
   X,
+  Bookmark,
 } from "lucide-react";
 import type { StatsOverview } from "@/types/car";
 import {
@@ -905,7 +907,7 @@ export default function Dashboard() {
                   </m.div>
 
                   {showHeroPopular ? (
-                    <div id="hero-suggestions" role="listbox" className="absolute inset-x-0 bottom-full z-50 mb-2 overflow-hidden rounded-[1.75rem] border border-border bg-card p-1.5 shadow-soft-xl">
+                    <div id="hero-suggestions" role="listbox" className="absolute inset-x-0 bottom-full z-50 mb-2 overflow-hidden rounded-card border border-border bg-popover p-1.5 shadow-e3">
                       <p className="px-3 py-2 text-caption font-semibold text-muted-foreground">
                         {t("home.popular", "Popular")}
                       </p>
@@ -931,7 +933,7 @@ export default function Dashboard() {
                   ) : null}
 
                   {showHeroSuggestions && (
-                    <div id="hero-suggestions" role="listbox" className="absolute inset-x-0 bottom-full z-50 mb-2 overflow-hidden rounded-[1.75rem] border border-border bg-card p-1.5 shadow-soft-xl">
+                    <div id="hero-suggestions" role="listbox" className="absolute inset-x-0 bottom-full z-50 mb-2 overflow-hidden rounded-card border border-border bg-popover p-1.5 shadow-e3">
                       {heroSuggestionsLoading ? (
                         <p className="px-3 py-2 text-caption text-muted-foreground">{t("common.searching", "Searching...")}</p>
                       ) : heroSuggestions.length ? (
@@ -1307,7 +1309,7 @@ export default function Dashboard() {
                         <p className="truncate text-body font-semibold text-foreground">{row.make} {row.model} {row.year}</p>
                         <p className="mt-0.5 text-caption text-muted-foreground num">{formatPrice(row.price_lkr)} · {row.district || "LK"}</p>
                       </div>
-                      <span className="shrink-0 rounded-full border border-deal-good/25 bg-deal-good/10 px-2 py-0.5 text-caption font-bold text-deal-good-text num">
+                      <span className="inline-flex h-6 shrink-0 items-center rounded-full border border-deal-good/30 bg-deal-good/10 px-2.5 text-caption font-semibold tabular-nums text-deal-good-text">
                         +{Number(row.deal_score || 0).toFixed(0)}
                       </span>
                     </Link>
@@ -1344,7 +1346,7 @@ export default function Dashboard() {
                           <span className="font-semibold text-foreground">{formatPrice(drop.new_price_lkr)}</span>
                         </p>
                       </div>
-                      <span className="shrink-0 rounded-full border border-deal-good/25 bg-deal-good/10 px-2 py-0.5 text-caption font-bold text-deal-good-text num">
+                      <span className="inline-flex h-6 shrink-0 items-center rounded-full border border-deal-good/30 bg-deal-good/10 px-2.5 text-caption font-semibold tabular-nums text-deal-good-text">
                         &minus;{drop.drop_pct}%
                       </span>
                     </Link>
@@ -1590,7 +1592,7 @@ export default function Dashboard() {
               }
             />
           )}
-          {savedListingsError && savedListings.length > 0 ? <p className="text-footnote text-deal-high-text">{savedListingsError}</p> : null}
+          {savedListingsError && savedListings.length > 0 ? <p role="alert" className="text-footnote text-deal-high-text">{savedListingsError}</p> : null}
         </DialogContent>
       </Dialog>
 

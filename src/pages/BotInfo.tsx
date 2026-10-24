@@ -17,7 +17,7 @@ export default function BotInfo() {
           on Sri Lankan classifieds sites. It identifies itself on every request with the user agent:
         </p>
         <p>
-          <code className="rounded bg-surface px-2 py-1 text-caption font-mono">{UA}</code>
+          <code className="inline-block max-w-full break-all rounded-control border border-border bg-surface-2 px-2.5 py-1 font-code text-footnote text-foreground">{UA}</code>
         </p>
         <p>
           This page is the contact URL named in that user agent. If you run one of the sites we read, you can
@@ -37,7 +37,7 @@ export default function BotInfo() {
         </p>
       </LegalSection>
       <LegalSection title="How politely it crawls">
-        <ul className="list-disc space-y-1 pl-5">
+        <ul>
           <li>Respects robots.txt on every host before fetching.</li>
           <li>Waits 2–5 seconds between requests to the same site, with backoff on errors.</li>
           <li>Crawls a small number of pages per run, outside peak hours where possible.</li>

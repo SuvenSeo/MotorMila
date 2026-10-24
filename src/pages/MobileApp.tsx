@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "motion/react";
+import { AnimatePresence, m } from "motion/react";
 import {
   Apple,
   BellRing,
@@ -19,11 +19,13 @@ import {
   WifiOff,
 } from "lucide-react";
 import { PrefetchLink } from "@/components/PrefetchLink";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { RevealSection } from "@/components/RevealSection";
 import { sendFeedback } from "@/services/api";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { revealContainer, revealItem, spring } from "@/lib/motion";
+import { fadeUp, listItem, listStagger, revealContainer, scaleIn } from "@/lib/motion";
 
 const WAITLIST_KEY = "motormila.mobile_waitlist";
 
@@ -104,31 +106,34 @@ const FEATURES: Feature[] = [
 
 const ROADMAP = [
   {
+    key: "preview",
+    labelKey: "acct.mobile.roadmap.preview",
+    label: "Available",
+    titleKey: "acct.mobile.roadmap.preview.title",
+    title: "Preview APK",
+    bodyKey: "acct.mobile.roadmap.preview.body",
+    body: "A signed preview build is on this page now, with its SHA-256 checksum published so you can verify it.",
+    done: true,
+  },
+  {
     key: "now",
-    labelKey: "mobile.roadmap.now",
-    label: "In progress",
-    titleKey: "mobile.roadmap.now.title",
-    title: "Internal build hardening",
-    bodyKey: "mobile.roadmap.now.body",
-    body: "Signed release build, offline cache migrations and alert delivery are being stabilised on Android 8 and above.",
+    labelKey: "acct.mobile.roadmap.now",
+    label: "Now",
+    titleKey: "acct.mobile.roadmap.now.title",
+    title: "Preview feedback",
+    bodyKey: "acct.mobile.roadmap.now.body",
+    body: "Offline cache, alert delivery and plate scanning are being hardened on Android 8 and above, using feedback from the preview.",
+    done: false,
   },
   {
     key: "next",
-    labelKey: "mobile.roadmap.next",
+    labelKey: "acct.mobile.roadmap.next",
     label: "Next",
-    titleKey: "mobile.roadmap.next.title",
-    title: "Closed beta",
-    bodyKey: "mobile.roadmap.next.body",
-    body: "A limited group of buyers and dealers gets the APK first and shapes the release before it goes wide.",
-  },
-  {
-    key: "release",
-    labelKey: "mobile.roadmap.release",
-    label: "Release",
-    titleKey: "mobile.roadmap.release.title",
-    title: "Public APK download",
-    bodyKey: "mobile.roadmap.release.body",
-    body: "The APK opens up here on Motormila with a published checksum, so anyone can verify what they installed.",
+    titleKey: "acct.mobile.roadmap.next.title",
+    title: "Stable release",
+    bodyKey: "acct.mobile.roadmap.next.body",
+    body: "A stable APK replaces the preview here. It installs over the preview and keeps your watchlist.",
+    done: false,
   },
   {
     key: "later",
@@ -136,8 +141,9 @@ const ROADMAP = [
     label: "Later",
     titleKey: "mobile.roadmap.later.title",
     title: "Play Store & iPhone",
-    bodyKey: "mobile.roadmap.later.body",
-    body: "Store listings follow once the APK release settles, with an iOS build after that. The web app keeps working either way.",
+    bodyKey: "acct.mobile.roadmap.later.body",
+    body: "There's no Play Store or App Store listing yet. Store listings come after the stable release, with an iPhone build after that.",
+    done: false,
   },
 ] as const;
 
@@ -151,24 +157,24 @@ const FAQ = [
   },
   {
     key: "access",
-    qKey: "mobile.faq.access.q",
-    q: "How do I get it when it lands?",
-    aKey: "mobile.faq.access.a",
-    a: "Join the launch list above. Closed beta invites go out first, then the public APK download opens on this page.",
+    qKey: "acct.mobile.faq.access.q",
+    q: "How do I get it?",
+    aKey: "acct.mobile.faq.access.a",
+    a: "Download the preview APK from this page and open it on your phone. There's no Play Store listing yet.",
   },
   {
     key: "install",
     qKey: "mobile.faq.install.q",
     q: "Is sideloading the APK safe?",
-    aKey: "mobile.faq.install.a",
-    a: "The APK will be signed by Motormila and shipped with a SHA-256 checksum you can verify. We will never ask you to install it from a third-party mirror.",
+    aKey: "acct.mobile.faq.install.a",
+    a: "The APK is signed by Motormila and published with a SHA-256 checksum you can verify. We never ask you to install it from a third-party mirror.",
   },
   {
     key: "ios",
     qKey: "mobile.faq.ios.q",
     q: "What about iPhone?",
-    aKey: "mobile.faq.ios.a",
-    a: "Android ships first because it covers the widest set of devices in Sri Lanka. iOS follows after the Android release is stable.",
+    aKey: "acct.mobile.faq.ios.a",
+    a: "Android comes first because it covers the widest set of devices in Sri Lanka. An iPhone build follows once the Android release is stable.",
   },
   {
     key: "web",
@@ -244,354 +250,308 @@ export default function MobileApp() {
     });
   };
 
-  return (
-    <div className="relative min-h-screen overflow-hidden bg-[#05070c] text-white">
-      {/* ── Hero ─────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden px-5 pb-20 pt-16 sm:px-8 sm:pt-20 lg:pt-24">
-        <div aria-hidden className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_65%_50%_at_50%_-10%,rgba(10,122,255,0.24),transparent_62%)]" />
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:52px_52px] [mask-image:radial-gradient(ellipse_75%_60%_at_50%_20%,black,transparent_78%)]" />
-        </div>
+  const eyebrow = (text: string) => <p className="text-footnote font-semibold text-primary">{text}</p>;
 
-        <motion.div
+  return (
+    <div className="relative min-h-screen bg-background text-foreground">
+      {/* ── Hero ─────────────────────────────────────────────────── */}
+      <section className="layout-shell pb-16 pt-12 sm:pt-16 lg:pb-24 lg:pt-20">
+        <m.div
           initial="hidden"
           animate="show"
           variants={revealContainer}
-          className="relative z-10 mx-auto grid w-full max-w-[1180px] items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]"
+          className="grid w-full items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16"
         >
-          <div>
-            <motion.div variants={revealItem} className="flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#3D94FF]/35 bg-[#0A7AFF]/12 px-3.5 py-1.5 text-caption font-bold uppercase tracking-caps text-[#6CB8FF]">
-                <Smartphone className="h-3.5 w-3.5" aria-hidden />
+          <div className="min-w-0">
+            <m.div variants={fadeUp} className="flex flex-wrap items-center gap-2">
+              <Badge variant="info">
+                <Smartphone aria-hidden />
                 {t("mobile.eyebrow", "Motormila Mobile")}
-              </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-deal-good/30 bg-deal-good/10 px-3 py-1.5 text-caption font-semibold text-deal-good-text">
-                <span aria-hidden className="relative inline-flex h-1.5 w-1.5">
-                  <span className="absolute inset-0 animate-ping rounded-full bg-deal-good/70" />
-                  <span className="relative h-1.5 w-1.5 rounded-full bg-deal-good" />
-                </span>
-                {t("mobile.availableNow", "v{version} · Available now", { version: APK_VERSION })}
-              </span>
-            </motion.div>
+              </Badge>
+              <Badge variant="warning">
+                {t("acct.mobile.previewBadge", "Android preview · v{version}", { version: APK_VERSION })}
+              </Badge>
+            </m.div>
 
-            <motion.h1
-              variants={revealItem}
-              className="mt-7 font-display text-large font-semibold leading-[1.05] tracking-tight text-white sm:text-hero lg:text-hero"
-            >
-              {t("mobile.title", "The entire market,")}
-              <br />
-              <span className="italic text-[#3D94FF]">{t("mobile.titleAccent", "in your pocket.")}</span>
-            </motion.h1>
+            <m.h1 variants={fadeUp} className="mt-6 font-display text-large font-semibold text-foreground [text-wrap:balance] sm:text-hero">
+              {t("mobile.title", "The entire market,")}{" "}
+              <span className="text-primary">{t("mobile.titleAccent", "in your pocket.")}</span>
+            </m.h1>
 
-            <motion.p variants={revealItem} className="mt-5 max-w-lg text-body leading-relaxed text-white/65">
+            <m.p variants={fadeUp} className="mt-5 max-w-lg text-callout text-label-2">
               {t(
-                "mobile.subtitle",
-                "The Motormila Android app is in its final build: live listings, deal scores, price-drop alerts and plate scanning — working even when the signal drops.",
+                "acct.mobile.subtitle",
+                "The Motormila Android app is out as a preview download: live listings, deal scores, price-drop alerts and plate scanning, even when the signal drops. It's an early build, so expect a few rough edges.",
               )}
-            </motion.p>
+            </m.p>
 
-            <motion.div variants={revealItem} className="mt-8 flex max-w-md flex-wrap items-center gap-3">
-              <motion.a
-                href={APK_URL}
-                whileTap={{ scale: 0.97 }}
-                transition={spring.smooth}
-                className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-[#0A7AFF] px-7 text-footnote font-semibold text-white no-underline shadow-e2 transition-colors hover:bg-[#3D94FF]"
-              >
-                <Download className="h-4 w-4" aria-hidden />
-                {t("mobile.downloadCta", "Download for Android · {size}", { size: APK_SIZE })}
-              </motion.a>
-              <span className="text-caption text-white/40">
-                {t("mobile.downloadMeta", "v{version} · Android 8.0+ · free", { version: APK_VERSION })}
+            <m.div variants={fadeUp} className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-3">
+              <Button asChild size="lg">
+                <a href={APK_URL}>
+                  <Download aria-hidden />
+                  {t("acct.mobile.downloadCta", "Download the preview · {size}", { size: APK_SIZE })}
+                </a>
+              </Button>
+              <span className="text-footnote text-label-2">
+                {t("acct.mobile.downloadMeta", "Preview v{version} · Android 8.0+ · free", { version: APK_VERSION })}
               </span>
-            </motion.div>
+            </m.div>
 
-            <motion.div variants={revealItem} className="mt-8 max-w-md">
-              {joined ? (
-                <div className="flex items-start gap-3 rounded-2xl border border-deal-good/25 bg-deal-good/10 px-4 py-3.5">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-deal-good-text" aria-hidden />
-                  <div>
-                    <p className="text-footnote font-semibold text-deal-good-text">
-                      {t("mobile.notifyDoneTitle", "You're on the launch list")}
-                    </p>
-                    <p className="mt-0.5 text-caption leading-relaxed text-deal-good-text/75">
-                      {t(
-                        "mobile.notifyDoneBody",
-                        "We'll email {email} the moment the APK drops — beta invites go out first.",
-                        { email },
-                      )}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <form onSubmit={handleJoin} className="space-y-3">
-                  <p className="text-caption font-semibold uppercase tracking-caps text-white/45">
-                    {t("mobile.notifyTitle", "Get the launch ping")}
-                  </p>
-                  <div className="flex flex-col gap-2.5 sm:flex-row">
-                    <Input
-                      type="email"
-                      value={email}
-                      onChange={(event) => setEmail(event.target.value)}
-                      placeholder={t("mobile.notifyPlaceholder", "you@email.lk")}
-                      aria-label={t("mobile.notifyEmail", "Email address")}
-                      className="h-12 flex-1 rounded-full border-border bg-black/40 text-footnote text-white placeholder:text-white/35 focus:border-[#3D94FF]/60 focus:ring-1 focus:ring-[#3D94FF]/35"
-                    />
-                    <motion.button
-                      type="submit"
-                      whileTap={{ scale: 0.98 }}
-                      transition={spring.smooth}
-                      className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-[#0A7AFF] px-6 text-footnote font-semibold text-white shadow-e2 transition-colors hover:bg-[#3D94FF]"
-                    >
-                      <BellRing className="h-3.5 w-3.5" aria-hidden />
-                      {t("mobile.notifyCta", "Notify me")}
-                    </motion.button>
-                  </div>
-                  {error && <p className="text-caption font-medium text-deal-high-text">{error}</p>}
-                  <p className="text-caption text-white/40">
-                    {t("mobile.notifyFinePrint", "One email at launch. No marketing lists, unsubscribe any time.")}
-                  </p>
-                </form>
-              )}
-            </motion.div>
+            <m.div variants={fadeUp} className="mt-8 max-w-md">
+              <AnimatePresence mode="wait" initial={false}>
+                {joined ? (
+                  <m.div
+                    key="joined"
+                    variants={scaleIn}
+                    initial="hidden"
+                    animate="show"
+                    role="status"
+                    className="flex items-start gap-3 rounded-card border border-deal-good/30 bg-deal-good/10 px-4 py-3.5"
+                  >
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-deal-good-text" aria-hidden />
+                    <div>
+                      <p className="text-footnote font-semibold text-deal-good-text">{t("acct.mobile.notifyDoneTitle", "You're on the update list")}</p>
+                      <p className="mt-0.5 text-footnote text-label-1">
+                        {t("acct.mobile.notifyDoneBody", "We'll email {email} when a new build or a store listing is ready.", { email })}
+                      </p>
+                    </div>
+                  </m.div>
+                ) : (
+                  <m.form key="form" onSubmit={handleJoin} exit={{ opacity: 0 }} className="space-y-2.5" noValidate>
+                    <p className="text-footnote font-semibold text-foreground">{t("acct.mobile.notifyTitle", "Hear when new builds ship")}</p>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Input
+                        type="email"
+                        value={email}
+                        onChange={(event) => setEmail(event.target.value)}
+                        placeholder={t("mobile.notifyPlaceholder", "you@email.lk")}
+                        aria-label={t("mobile.notifyEmail", "Email address")}
+                        aria-invalid={error ? true : undefined}
+                        className="h-12 flex-1 rounded-full px-4"
+                      />
+                      <Button type="submit" variant="secondary" size="lg" className="shrink-0">
+                        <BellRing aria-hidden />
+                        {t("mobile.notifyCta", "Notify me")}
+                      </Button>
+                    </div>
+                    {error && <p className="content-in text-footnote font-medium text-deal-high-text">{error}</p>}
+                    <p className="text-caption text-label-2">{t("acct.mobile.notifyFinePrint", "Release emails only. Unsubscribe any time.")}</p>
+                  </m.form>
+                )}
+              </AnimatePresence>
+            </m.div>
 
-            <motion.div variants={revealItem} className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-3 text-caption text-white/50">
-              <span className="inline-flex items-center gap-2">
-                <CheckCircle2 className="h-3.5 w-3.5 text-[#3D94FF]" aria-hidden />
+            <m.ul variants={fadeUp} className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-footnote text-label-2">
+              <li className="inline-flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-primary" aria-hidden />
                 {t("mobile.platformAndroid", "Android 8.0+ · APK")}
-              </span>
-              <span className="inline-flex items-center gap-2">
-                <CheckCircle2 className="h-3.5 w-3.5 text-[#3D94FF]" aria-hidden />
+              </li>
+              <li className="inline-flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-primary" aria-hidden />
                 {t("mobile.signedBuild", "Signed build · SHA-256 published")}
-              </span>
-              <span className="inline-flex items-center gap-2">
-                <Apple className="h-3.5 w-3.5 text-[#3D94FF]" aria-hidden />
+              </li>
+              <li className="inline-flex items-center gap-2">
+                <Apple className="h-4 w-4 text-label-2" aria-hidden />
                 {t("mobile.platformIos", "iPhone build after Android")}
-              </span>
-            </motion.div>
+              </li>
+            </m.ul>
           </div>
 
-          {/* Phone mock */}
-          <motion.div variants={revealItem} className="relative mx-auto w-full max-w-[330px]">
-            <div aria-hidden className="absolute -inset-10 rounded-full bg-[radial-gradient(circle,rgba(10,122,255,0.24),transparent_68%)]" />
-            <div className="relative rounded-[2.6rem] border border-border bg-[#0a0f19] p-3 shadow-e3">
-              <div className="relative overflow-hidden rounded-[2.1rem] border border-border bg-[#070b13]">
-                <div className="flex items-center justify-between px-5 pt-4 text-caption font-medium text-white/45">
-                  <span>9:41</span>
-                  <span className="h-4 w-16 rounded-full bg-black/70" />
+          {/* Phone mock — follows the theme like the real app does. */}
+          <m.div variants={scaleIn} className="relative mx-auto w-full max-w-[20.5rem]">
+            <div className="relative rounded-[2.75rem] border border-border bg-surface-2 p-3 shadow-e3">
+              <div className="relative overflow-hidden rounded-[2.25rem] border border-border bg-background">
+                <div className="flex items-center justify-between px-5 pt-4 text-caption font-medium text-label-2">
+                  <span className="tabular-nums">9:41</span>
+                  <span aria-hidden className="h-5 w-20 rounded-full bg-foreground" />
                   <span>{t("mobile.mockSignal", "LTE")}</span>
                 </div>
                 <div className="px-5 pb-6 pt-5">
-                  <p className="text-caption font-bold uppercase tracking-caps text-[#3D94FF]">
-                    {t("mobile.mockEyebrow", "Live market")}
-                  </p>
-                  <p className="mt-1.5 font-display text-title3 font-semibold leading-tight text-white">
-                    Toyota Aqua S
-                  </p>
-                  <p className="mt-1 text-caption text-white/50">2017 · Colombo · Petrol hybrid</p>
-                  <div className="mt-4 flex items-end justify-between rounded-2xl border border-border bg-foreground/[0.045] px-4 py-3">
+                  <p className="text-caption font-semibold text-primary">{t("mobile.mockEyebrow", "Live market")}</p>
+                  <p className="mt-1 font-display text-title3 font-semibold text-foreground">Toyota Aqua S</p>
+                  <p className="mt-0.5 text-caption text-label-2">2017 · Colombo · Petrol hybrid</p>
+                  <div className="mt-4 flex items-end justify-between rounded-card border border-border bg-surface-1 px-4 py-3 shadow-e1">
                     <div>
-                      <p className="text-caption uppercase tracking-caps text-white/40">
-                        {t("mobile.mockAsk", "Asking")}
-                      </p>
-                      <p className="mt-1 text-callout font-semibold text-white">Rs 8,450,000</p>
+                      <p className="text-caption text-label-2">{t("mobile.mockAsk", "Asking")}</p>
+                      <p className="mt-0.5 text-callout font-semibold tabular-nums text-foreground">Rs 8,450,000</p>
                     </div>
-                    <span className="rounded-full border border-deal-good/30 bg-deal-good/12 px-2.5 py-1 text-caption font-bold text-deal-good-text">
-                      {t("mobile.mockScore", "9.1 deal")}
-                    </span>
+                    <Badge variant="deal-good">{t("mobile.mockScore", "9.1 deal")}</Badge>
                   </div>
-                  <div className="mt-3 space-y-2">
+                  <ul className="mt-3 space-y-2">
                     {[
                       t("mobile.mockRow1", "Rs 420,000 below district median"),
                       t("mobile.mockRow2", "Cut 3.5% · 4 days ago"),
                       t("mobile.mockRow3", "Saved to watchlist"),
                     ].map((row) => (
-                      <div key={row} className="flex items-center gap-2.5 rounded-xl border border-border bg-foreground/[0.03] px-3 py-2">
-                        <Sparkles className="h-3 w-3 shrink-0 text-[#3D94FF]" aria-hidden />
-                        <span className="text-caption text-white/60">{row}</span>
-                      </div>
+                      <li key={row} className="flex items-center gap-2.5 rounded-control bg-surface-2 px-3 py-2">
+                        <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
+                        <span className="text-caption text-label-1">{row}</span>
+                      </li>
                     ))}
-                  </div>
-                  <div className="mt-4 flex items-center gap-2 rounded-full border border-deal-caution/25 bg-deal-caution/10 px-3.5 py-2.5">
-                    <Camera className="h-3.5 w-3.5 shrink-0 text-deal-caution-text" aria-hidden />
-                    <span className="text-caption font-medium text-deal-caution-text">
-                      {t("mobile.mockScan", "Scan a plate to pull the record")}
-                    </span>
+                  </ul>
+                  <div className="mt-4 flex items-center gap-2 rounded-full border border-deal-caution/30 bg-deal-caution/10 px-3.5 py-2.5">
+                    <Camera className="h-4 w-4 shrink-0 text-deal-caution-text" aria-hidden />
+                    <span className="text-caption font-medium text-deal-caution-text">{t("mobile.mockScan", "Scan a plate to pull the record")}</span>
                   </div>
                 </div>
               </div>
             </div>
-            <p className="mt-5 text-center text-caption text-white/40">
-              {t(
-                "mobile.mockCaptionIllustrative",
-                "Illustrative preview of the release candidate UI.",
-              )}
+            <p className="mt-4 text-center text-caption text-label-2">
+              {t("acct.mobile.mockCaption", "Illustrative preview of the app.")}
             </p>
-          </motion.div>
-        </motion.div>
+          </m.div>
+        </m.div>
       </section>
 
       {/* ── Features ─────────────────────────────────────────────── */}
-      <RevealSection className="relative border-t border-border px-5 py-20 sm:px-8">
-        <div className="mx-auto w-full max-w-[1180px]">
+      <m.section {...{ initial: "hidden", whileInView: "show", viewport: { once: true, amount: 0.1 } }} variants={listStagger} className="border-t border-separator py-16 lg:py-24">
+        <div className="layout-shell">
           <div className="max-w-2xl">
-            <p className="text-caption font-bold uppercase tracking-caps text-[#3D94FF]">
-              {t("mobile.featuresEyebrow", "What ships in the first release")}
-            </p>
-            <h2 className="mt-4 font-display text-title1 font-semibold leading-tight tracking-tight text-white sm:text-large">
+            {eyebrow(t("acct.mobile.featuresEyebrow", "What's in the preview"))}
+            <h2 className="mt-2 font-display text-title1 font-semibold text-foreground [text-wrap:balance]">
               {t("mobile.featuresTitle", "Built for how Sri Lanka actually buys cars.")}
             </h2>
           </div>
-          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {features.map((feature) => {
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {features.map((feature, i) => {
               const Icon = feature.icon;
               return (
-                <div
-                  key={feature.titleKey}
-                  className="group rounded-3xl border border-border bg-foreground/[0.035] p-5 transition-colors duration-medium hover:border-[#3D94FF]/35 hover:bg-foreground/[0.055]"
-                >
-                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-[#3D94FF]/25 bg-[#0A7AFF]/12">
-                    <Icon className="h-4 w-4 text-[#3D94FF]" />
-                  </span>
-                  <p className="mt-4 text-body font-semibold text-white">{feature.label}</p>
-                  <p className="mt-2 text-footnote leading-relaxed text-white/55">{feature.detail}</p>
-                </div>
+                <m.div key={feature.titleKey} variants={listItem} custom={i}>
+                  <Card className="h-full">
+                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-control bg-primary/10 text-primary">
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <p className="mt-4 text-body font-semibold text-foreground">{feature.label}</p>
+                    <p className="mt-1.5 text-footnote text-label-2">{feature.detail}</p>
+                  </Card>
+                </m.div>
               );
             })}
           </div>
         </div>
-      </RevealSection>
+      </m.section>
 
-      {/* ── Roadmap ──────────────────────────────────────────────── */}
-      <RevealSection className="relative border-t border-border px-5 py-20 sm:px-8">
-        <div className="mx-auto w-full max-w-[1180px]">
-          <p className="text-caption font-bold uppercase tracking-caps text-[#3D94FF]">
-            {t("mobile.roadmapEyebrow", "Release roadmap")}
-          </p>
-          <h2 className="mt-4 font-display text-title1 font-semibold leading-tight tracking-tight text-white sm:text-large">
-            {t("mobile.roadmapTitle", "Phased, verified, then public.")}
+      {/* ── Roadmap + download ───────────────────────────────────── */}
+      <m.section {...{ initial: "hidden", whileInView: "show", viewport: { once: true, amount: 0.1 } }} variants={listStagger} className="border-t border-separator py-16 lg:py-24">
+        <div className="layout-shell">
+          {eyebrow(t("mobile.roadmapEyebrow", "Release roadmap"))}
+          <h2 className="mt-2 font-display text-title1 font-semibold text-foreground">
+            {t("acct.mobile.roadmapTitle", "Preview now, stable next.")}
           </h2>
 
-          <ol className="mt-12 grid gap-4 lg:grid-cols-4">
+          <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {ROADMAP.map((step, index) => (
-              <li key={step.key} className="relative rounded-3xl border border-border bg-foreground/[0.035] p-5">
-                <span className="inline-flex items-center gap-2 rounded-full border border-border bg-black/30 px-2.5 py-1 text-caption font-bold uppercase tracking-caps text-white/55">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#3D94FF]" />
-                  {t(step.labelKey, step.label)}
-                </span>
-                <p className="mt-4 font-display text-body font-semibold text-white">
-                  {t(step.titleKey, step.title)}
-                </p>
-                <p className="mt-2 text-footnote leading-relaxed text-white/55">{t(step.bodyKey, step.body)}</p>
-                <span aria-hidden className="absolute right-5 top-5 font-display text-footnote font-semibold text-white/15">
-                  0{index + 1}
-                </span>
-              </li>
+              <m.li key={step.key} variants={listItem} custom={index}>
+                <Card className={step.done ? "h-full border-deal-good/30" : "h-full"}>
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge variant={step.done ? "success" : "neutral"}>
+                      {step.done ? <Check aria-hidden /> : null}
+                      {t(step.labelKey, step.label)}
+                    </Badge>
+                    <span aria-hidden className="font-display text-footnote font-semibold tabular-nums text-label-3">
+                      0{index + 1}
+                    </span>
+                  </div>
+                  <p className="mt-4 text-body font-semibold text-foreground">{t(step.titleKey, step.title)}</p>
+                  <p className="mt-1.5 text-footnote text-label-2">{t(step.bodyKey, step.body)}</p>
+                </Card>
+              </m.li>
             ))}
           </ol>
 
-          <div className="mt-8 rounded-3xl border border-deal-good/20 bg-deal-good/[0.06] px-5 py-5">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-deal-good/25 bg-deal-good/12">
-                <Download className="h-4 w-4 text-deal-good-text" aria-hidden />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-body font-semibold text-white">
-                  {t("mobile.downloadTitle", "Motormila v{version} for Android", { version: APK_VERSION })}
-                </p>
-                <p className="mt-0.5 text-caption text-white/55">
-                  {t("mobile.downloadSub", "{size} · Android 8.0+ · installs over older builds, watchlist kept", { size: APK_SIZE })}
-                </p>
+          <m.div variants={fadeUp} className="mt-6">
+            <Card className="border-primary/25">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-control bg-primary/10 text-primary">
+                  <Download className="h-5 w-5" aria-hidden />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-body font-semibold text-foreground">
+                    {t("acct.mobile.downloadTitle", "Motormila v{version} for Android (preview)", { version: APK_VERSION })}
+                  </p>
+                  <p className="mt-0.5 text-footnote text-label-2">
+                    {t("mobile.downloadSub", "{size} · Android 8.0+ · installs over older builds, watchlist kept", { size: APK_SIZE })}
+                  </p>
+                </div>
+                <Button asChild>
+                  <a href={APK_URL}>{t("acct.mobile.downloadNow", "Download preview APK")}</a>
+                </Button>
               </div>
-              <motion.a
-                href={APK_URL}
-                whileTap={{ scale: 0.97 }}
-                transition={spring.smooth}
-                className="inline-flex h-11 items-center rounded-full bg-[#0A7AFF] px-5 text-footnote font-semibold text-white no-underline transition-colors hover:bg-[#3D94FF]"
+              <button
+                type="button"
+                onClick={copyChecksum}
+                className="press mt-4 flex w-full items-center gap-2 rounded-control border border-border bg-surface-2 px-3.5 py-2.5 text-left transition-colors duration-short ease-standard hover:bg-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label={t("mobile.copyChecksum", "Copy SHA-256 checksum")}
               >
-                {t("mobile.downloadNow", "Download APK")}
-              </motion.a>
-            </div>
-            <button
-              type="button"
-              onClick={copyChecksum}
-              className="mt-4 flex w-full items-center gap-2 rounded-xl border border-border bg-black/30 px-3.5 py-2.5 text-left transition-colors hover:border-[#3D94FF]/40"
-              aria-label={t("mobile.copyChecksum", "Copy SHA-256 checksum")}
-            >
-              <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-[#3D94FF]" aria-hidden />
-              <code className="min-w-0 flex-1 truncate font-mono text-caption text-white/60">{APK_SHA256}</code>
-              {copied ? (
-                <Check className="h-3.5 w-3.5 shrink-0 text-deal-good-text" aria-hidden />
-              ) : (
-                <Copy className="h-3.5 w-3.5 shrink-0 text-white/40" aria-hidden />
-              )}
-            </button>
-            <p className="mt-3 text-caption leading-relaxed text-white/55">
-              {t(
-                "mobile.downloadVerify",
-                "On your phone: open the file, allow “Install unknown apps” once, then open. Verify the SHA-256 above matches if you want proof of origin — we never ask you to install from a third-party mirror.",
-              )}
-            </p>
-          </div>
+                <ShieldCheck className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+                <code className="min-w-0 flex-1 truncate font-code text-caption text-label-1">{APK_SHA256}</code>
+                <AnimatePresence mode="wait" initial={false}>
+                  <m.span key={copied ? "y" : "n"} variants={scaleIn} initial="hidden" animate="show" exit="exit" className="inline-flex">
+                    {copied ? (
+                      <Check className="h-4 w-4 shrink-0 text-deal-good-text" aria-hidden />
+                    ) : (
+                      <Copy className="h-4 w-4 shrink-0 text-label-2" aria-hidden />
+                    )}
+                  </m.span>
+                </AnimatePresence>
+              </button>
+              <p className="mt-3 text-footnote text-label-2">
+                {t(
+                  "mobile.downloadVerify",
+                  "On your phone: open the file, allow “Install unknown apps” once, then open. Verify the SHA-256 above matches if you want proof of origin — we never ask you to install from a third-party mirror.",
+                )}
+              </p>
+            </Card>
+          </m.div>
         </div>
-      </RevealSection>
+      </m.section>
 
       {/* ── FAQ ──────────────────────────────────────────────────── */}
-      <RevealSection className="relative border-t border-border px-5 py-20 sm:px-8">
-        <div className="mx-auto grid w-full max-w-[1180px] gap-10 lg:grid-cols-[0.85fr_1.15fr]">
+      <section className="border-t border-separator py-16 lg:py-24">
+        <div className="layout-shell grid gap-10 lg:grid-cols-[0.85fr_1.15fr]">
           <div>
-            <p className="text-caption font-bold uppercase tracking-caps text-[#3D94FF]">
-              {t("mobile.faqEyebrow", "Questions")}
-            </p>
-            <h2 className="mt-4 font-display text-title1 font-semibold leading-tight tracking-tight text-white sm:text-large">
-              {t("mobile.faqTitle", "Before you ask.")}
-            </h2>
-            <p className="mt-4 max-w-sm text-footnote leading-relaxed text-white/55">
-              {t(
-                "mobile.faqBody",
-                "Anything missing? Tell us inside the app's feedback panel once you're in the beta — or from the website footer today.",
-              )}
+            {eyebrow(t("mobile.faqEyebrow", "Questions"))}
+            <h2 className="mt-2 font-display text-title1 font-semibold text-foreground">{t("mobile.faqTitle", "Before you ask.")}</h2>
+            <p className="mt-3 max-w-sm text-body text-label-2">
+              {t("acct.mobile.faqBody", "Anything missing? Tell us from the app's feedback panel or the website footer.")}
             </p>
           </div>
-          <div className="divide-y divide-border overflow-hidden rounded-3xl border border-border bg-foreground/[0.03]">
+          <Card padding="none" className="divide-y divide-separator">
             {FAQ.map((item) => (
-              <div key={item.key} className="px-5 py-5">
-                <p className="text-footnote font-semibold text-white">{t(item.qKey, item.q)}</p>
-                <p className="mt-2 text-footnote leading-relaxed text-white/55">{t(item.aKey, item.a)}</p>
+              <div key={item.key} className="px-5 py-5 sm:px-6">
+                <p className="text-body font-semibold text-foreground">{t(item.qKey, item.q)}</p>
+                <p className="mt-1.5 text-footnote text-label-2">{t(item.aKey, item.a)}</p>
               </div>
             ))}
-          </div>
+          </Card>
         </div>
-      </RevealSection>
+      </section>
 
       {/* ── Footer CTA ───────────────────────────────────────────── */}
-      <section className="relative border-t border-border px-5 py-16 sm:px-8">
-        <div className="mx-auto flex w-full max-w-[1180px] flex-col items-start justify-between gap-6 rounded-[2.5rem] border border-border bg-[radial-gradient(ellipse_at_top_left,rgba(10,122,255,0.16),transparent_60%)] px-6 py-10 sm:flex-row sm:items-center sm:px-10">
+      <section className="layout-shell pb-20">
+        <Card padding="lg" className="flex flex-col items-start justify-between gap-6 border-primary/25 bg-primary/5 sm:flex-row sm:items-center">
           <div>
-            <p className="font-display text-title2 font-semibold tracking-tight text-white">
-              {t("mobile.ctaTitle", "The APK has landed.")}
-            </p>
-            <p className="mt-2 max-w-md text-footnote leading-relaxed text-white/60">
-              {t("mobile.ctaBody", "Motormila v{version} for Android is live — market, deal scores, alerts and plate scanning in your pocket.", { version: APK_VERSION })}
+            <p className="font-display text-title2 font-semibold text-foreground">{t("acct.mobile.ctaTitle", "Try the Android preview.")}</p>
+            <p className="mt-2 max-w-md text-body text-label-2">
+              {t(
+                "acct.mobile.ctaBody",
+                "Motormila v{version} for Android is an early preview: market, deal scores, alerts and plate scanning in your pocket.",
+                { version: APK_VERSION },
+              )}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2.5">
-            <motion.a
-              href={APK_URL}
-              whileTap={{ scale: 0.97 }}
-              transition={spring.smooth}
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-[#0A7AFF] px-5 text-footnote font-semibold text-white no-underline transition-colors hover:bg-[#3D94FF]"
-            >
-              <Download className="h-4 w-4" aria-hidden />
-              {t("mobile.ctaDownload", "Download APK · {size}", { size: APK_SIZE })}
-            </motion.a>
-            <PrefetchLink
-              to="/"
-              className="inline-flex h-11 items-center rounded-full border border-border px-5 text-footnote font-semibold text-white/80 no-underline transition-colors hover:border-[#3D94FF]/45 hover:text-white"
-            >
-              {t("mobile.ctaMarket", "Open the market")}
-            </PrefetchLink>
+            <Button asChild>
+              <a href={APK_URL}>
+                <Download aria-hidden />
+                {t("mobile.ctaDownload", "Download APK · {size}", { size: APK_SIZE })}
+              </a>
+            </Button>
+            <Button asChild variant="secondary">
+              <PrefetchLink to="/">{t("mobile.ctaMarket", "Open the market")}</PrefetchLink>
+            </Button>
           </div>
-        </div>
+        </Card>
       </section>
     </div>
   );
