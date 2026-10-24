@@ -26,7 +26,6 @@ import { SourceCredits } from "@/components/SourceCredits";
 import { SectionHeader } from "@/components/SectionHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { Badge } from "@/components/ui/badge";
