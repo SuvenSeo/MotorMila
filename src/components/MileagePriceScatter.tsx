@@ -41,6 +41,22 @@ interface MileagePriceScatterProps {
   onRetry?: () => void;
 }
 
+/** Fewer plotted ads than this reads as an empty chart, so show a compact note instead. */
+export const SCATTER_MIN_POINTS = 8;
+
+/**
+ * Axis domain fitted to the data with padding, snapped outward to `step`, so a
+ * handful of points fill the plot instead of sitting in a corner of a 0–max axis.
+ */
+export function paddedDomain(values: number[], step: number, padRatio = 0.08): [number, number] {
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const pad = Math.max((max - min) * padRatio, step / 2);
+  const lo = Math.max(0, Math.floor((min - pad) / step) * step);
+  const hi = Math.ceil((max + pad) / step) * step;
+  return [lo, hi > lo ? hi : lo + step];
+}
+
 function formatKm(value: number): string {
   if (value >= 1000) return `${Math.round(value / 1000)}k`;
   return `${value}`;
@@ -67,8 +83,16 @@ export const MileagePriceScatter = memo(function MileagePriceScatter({
       ),
     [points],
   );
-  const state = isLoading ? "loading" : isError ? "error" : validPoints.length < 3 ? "empty" : "ready";
+  const state = isLoading ? "loading" : isError ? "error" : validPoints.length < SCATTER_MIN_POINTS ? "empty" : "ready";
   const draw = useChartDraw(state === "ready");
+  const xDomain = useMemo(
+    () => (validPoints.length ? paddedDomain(validPoints.map((p) => p.mileage), 10_000) : undefined),
+    [validPoints],
+  );
+  const yDomain = useMemo(
+    () => (validPoints.length ? paddedDomain(validPoints.map((p) => p.price_lkr), 500_000) : undefined),
+    [validPoints],
+  );
 
   return (
     <Card padding="md">
@@ -82,10 +106,12 @@ export const MileagePriceScatter = memo(function MileagePriceScatter({
       </div>
       <ChartFrame
         state={state}
-        heightClass="h-80"
+        heightClass={state === "empty" ? "h-auto min-h-[9rem]" : "h-80"}
         emptyIcon={ScatterIcon}
-        emptyTitle={t("scatter.emptyTitle", "Not enough priced ads with mileage")}
-        emptyBody={t("scatter.emptyBody", "Not enough data points to render the scatter chart — minimum 3 required.")}
+        emptyTitle={t("scatter.emptyTitle", "Not enough listings with mileage yet")}
+        emptyBody={t("scatter.emptyBody", "The chart appears once {min} or more ads list both mileage and price.", {
+          min: SCATTER_MIN_POINTS,
+        })}
         errorTitle={t("scatter.errorTitle", "The scatter chart didn't load")}
         onRetry={onRetry}
         label={t("scatter.aria", "{title}: {n} listings plotted by mileage and asking price", {
@@ -101,6 +127,7 @@ export const MileagePriceScatter = memo(function MileagePriceScatter({
               type="number"
               dataKey="mileage"
               name="Mileage"
+              domain={xDomain}
               tickFormatter={formatKm}
               label={{
                 value: t("scatter.xLabel", "Mileage (km, thousands)"),
@@ -114,6 +141,7 @@ export const MileagePriceScatter = memo(function MileagePriceScatter({
               type="number"
               dataKey="price_lkr"
               name="Price"
+              domain={yDomain}
               tickFormatter={(value: number) => formatLkrAxis(value)}
               width={60}
             />

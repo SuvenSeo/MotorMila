@@ -93,20 +93,35 @@ export function chartTooltip(calm: boolean) {
  * Draw animation props for a series (≤400ms, the `long` token; off under
  * reduced motion / low data).
  *
- * The flag is deliberately stable for the life of the chart. Flipping
- * `isAnimationActive` from true to false after the first draw (the old
- * "draw once" trick) left Recharts 3 series blank or drawn at their first
- * size whenever the chart re-rendered later (resize, full-page capture, tab
- * switch). With a stable flag Recharts morphs from the previous points on a
- * data change instead of replaying from zero.
+ * The draw-in runs once, on first mount. Recharts 3 animates every later
+ * point change too — a window resize or re-render moved the points and the
+ * line visibly re-drew from its old shape — so the flag stays true only until
+ * the first `onAnimationEnd`, then stays false for the life of the chart.
+ * Nothing remounts: with the flag off Recharts renders the final frame (t=1)
+ * for each new set of points, so the series stays drawn throughout.
+ *
+ * Spread one hook result onto every series of a chart; the first series to
+ * finish (or a timer just past the draw, for Scatter, which has no
+ * onAnimationEnd) ends the draw for all of them. `onAnimationEnd` is stable, since
+ * Recharts restarts the animation whenever that prop changes identity.
  */
 export function useChartDraw(ready: boolean) {
   const calm = usePrefersReducedMotionOrLowData();
+  const [drawn, setDrawn] = React.useState(false);
+  const onAnimationEnd = React.useCallback(() => setDrawn(true), []);
+  const ms = Math.round(duration.long * 1000);
+  // Scatter (and any series without onAnimationEnd) ends the draw on a timer.
+  React.useEffect(() => {
+    if (!ready || drawn || calm) return;
+    const id = window.setTimeout(() => setDrawn(true), ms + 250);
+    return () => window.clearTimeout(id);
+  }, [ready, drawn, calm, ms]);
   return {
-    isAnimationActive: !calm && ready,
-    animationDuration: Math.round(duration.long * 1000),
+    isAnimationActive: !calm && ready && !drawn,
+    animationDuration: ms,
     animationEasing: "ease-out" as const,
     animationBegin: 0,
+    onAnimationEnd,
   };
 }
 
