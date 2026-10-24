@@ -16,7 +16,7 @@ import os from "node:os";
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const out = path.join(os.tmpdir(), `mm-locales-${process.pid}.mjs`);
 await build({
-  entryPoints: [path.join(ROOT, "src/locales/index.ts")],
+  entryPoints: [path.join(ROOT, "src/locales/all.ts")],
   bundle: true,
   format: "esm",
   platform: "node",

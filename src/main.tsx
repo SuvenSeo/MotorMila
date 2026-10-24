@@ -4,7 +4,7 @@ import App from "./App.tsx";
 import "./index.css";
 import "./styles/layers.css";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
-import { AppPreferencesProvider } from "@/lib/appPreferences";
+import { AppPreferencesProvider, preloadSavedLanguage, readSavedLanguage } from "@/lib/appPreferences";
 import { Analytics } from "@vercel/analytics/react";
 import { shouldLoadVercelAnalytics } from "@/lib/vercelAnalytics";
 
@@ -30,11 +30,19 @@ const loadVercelAnalytics = shouldLoadVercelAnalytics(
 	import.meta.env.VITE_VERCEL_ANALYTICS as string | undefined,
 );
 
-createRoot(document.getElementById("root")!).render(
-	<AppPreferencesProvider>
-		<AppErrorBoundary>
-			<App />
-			{loadVercelAnalytics ? <Analytics /> : null}
-		</AppErrorBoundary>
-	</AppPreferencesProvider>
-);
+function mount() {
+	createRoot(document.getElementById("root")!).render(
+		<AppPreferencesProvider>
+			<AppErrorBoundary>
+				<App />
+				{loadVercelAnalytics ? <Analytics /> : null}
+			</AppErrorBoundary>
+		</AppPreferencesProvider>
+	);
+}
+
+// Sinhala/Tamil dictionaries are lazy chunks: for a saved si/ta session wait
+// for that chunk so the first render is already in the right language.
+// English (the default) mounts synchronously, exactly as before.
+if (readSavedLanguage() === "en") mount();
+else void preloadSavedLanguage().then(mount);

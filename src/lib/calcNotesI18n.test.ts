@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { localizeCalcNote } from "./calcNotesI18n";
-import { DICTIONARIES, interpolate } from "@/locales";
+import { DICTIONARIES, interpolate } from "@/locales/all";
 
 const tFor = (lang: "en" | "si" | "ta") => (key: string, fallback?: string, vars?: Record<string, string | number>) =>
   interpolate(DICTIONARIES[lang][key] ?? fallback ?? key, vars);

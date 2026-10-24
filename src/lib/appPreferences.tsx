@@ -1,8 +1,10 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import {
-  DICTIONARIES,
+  EN_DICTIONARY,
   LOCALE_TAGS,
+  getDictionary,
   interpolate,
+  loadDictionary,
   type Language,
 } from "@/locales";
 import { loadScriptFonts } from "@/lib/scriptFonts";
@@ -69,17 +71,49 @@ function isLanguage(value: string | null): value is Language {
   return value === "en" || value === "si" || value === "ta";
 }
 
+/** The saved language (or English). Read synchronously so the first render is already in it. */
+export function readSavedLanguage(): Language {
+  const raw = readStorage(LANGUAGE_STORAGE_KEY);
+  return isLanguage(raw) ? raw : "en";
+}
+
+/**
+ * Called by main.tsx before the first render: load the saved language's
+ * dictionary chunk so the app never paints a frame in the wrong language.
+ * Resolves (to English) even if the chunk fails, so the app always mounts.
+ */
+export async function preloadSavedLanguage(): Promise<void> {
+  const language = readSavedLanguage();
+  if (language === "en") return;
+  try {
+    await loadDictionary(language);
+  } catch {
+    /* offline / chunk error: render in English, setLanguage can retry later */
+  }
+}
+
 export function AppPreferencesProvider({ children }: { children: React.ReactNode }) {
   const [themeMode, setThemeModeState] = useState<ThemeMode>(DEFAULT_THEME_MODE);
-  const [language, setLanguageState] = useState<Language>("en");
+  // Start in the saved language when its dictionary is already loaded
+  // (main.tsx preloads it), so there is no English-first flash.
+  const [language, setLanguageState] = useState<Language>(() => {
+    const saved = readSavedLanguage();
+    return getDictionary(saved) ? saved : "en";
+  });
   const [resolvedTheme, setResolvedTheme] = useState<"dark" | "light">("dark");
 
   useEffect(() => {
     const savedTheme = (readStorage(THEME_STORAGE_KEY) as ThemeMode | null) || DEFAULT_THEME_MODE;
-    const savedLanguageRaw = readStorage(LANGUAGE_STORAGE_KEY);
-    const savedLanguage = isLanguage(savedLanguageRaw) ? savedLanguageRaw : "en";
+    const savedLanguage = readSavedLanguage();
     setThemeModeState(savedTheme);
-    setLanguageState(savedLanguage);
+    if (getDictionary(savedLanguage)) {
+      setLanguageState(savedLanguage);
+    } else {
+      void loadDictionary(savedLanguage).then(
+        () => setLanguageState(savedLanguage),
+        () => {},
+      );
+    }
   }, []);
 
   useEffect(() => {
@@ -116,16 +150,26 @@ export function AppPreferencesProvider({ children }: { children: React.ReactNode
   }, [language]);
 
   const setLanguage = (nextLanguage: Language) => {
-    setLanguageState(nextLanguage);
     writeStorage(LANGUAGE_STORAGE_KEY, nextLanguage);
+    if (getDictionary(nextLanguage)) {
+      setLanguageState(nextLanguage);
+      return;
+    }
+    // Keep the current language on screen until the new dictionary arrives
+    // (no half-translated frame); fonts start loading in parallel.
+    void loadScriptFonts(nextLanguage);
+    void loadDictionary(nextLanguage).then(
+      () => setLanguageState(nextLanguage),
+      () => {},
+    );
   };
 
   const localeTag = LOCALE_TAGS[language];
 
   const t = useMemo(() => {
     return (key: string, fallback?: string, vars?: TranslateVars) => {
-      const selected = DICTIONARIES[language][key];
-      const english = DICTIONARIES.en[key];
+      const selected = (getDictionary(language) ?? EN_DICTIONARY)[key];
+      const english = EN_DICTIONARY[key];
       const raw = selected || english || fallback || key;
       return interpolate(raw, vars);
     };
@@ -155,7 +199,7 @@ const FALLBACK_PREFERENCES: AppPreferencesContextValue = {
   setLanguage: () => {},
   localeTag: LOCALE_TAGS.en,
   t: (key, fallback, vars) => {
-    const raw = DICTIONARIES.en[key] || fallback || key;
+    const raw = EN_DICTIONARY[key] || fallback || key;
     return interpolate(raw, vars);
   },
 };
