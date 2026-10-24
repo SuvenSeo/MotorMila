@@ -109,7 +109,7 @@ export default function DistrictHub() {
         description={t("districtHub.description", "Live inventory, average prices, and top models in {district}.", { district: canonicalDistrict })}
       />
 
-      <PageBody className="space-y-14 pt-0 lg:space-y-20 lg:px-8 lg:pt-0">
+      <PageBody className="space-y-14 pt-0 lg:space-y-20 lg:pt-0">
         <m.section variants={revealItem} aria-label={t("districtHub.statsAria", "{district} market figures", { district: canonicalDistrict })}>
           {isError ? (
             <Card padding="none">

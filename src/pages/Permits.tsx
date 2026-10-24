@@ -102,7 +102,7 @@ export default function Permits() {
         ]}
       />
 
-      <PageBody className="space-y-8 pt-0 lg:px-8 lg:pt-0">
+      <PageBody className="space-y-8 pt-0 lg:pt-0">
         <m.section variants={revealItem}>
           <SectionHeading
             eyebrow={t("permits.sectionEyebrow", "Live data")}

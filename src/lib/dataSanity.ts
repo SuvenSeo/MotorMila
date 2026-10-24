@@ -146,20 +146,22 @@ export function changeTone(pct: number | null | undefined): ChangeTone {
  * Returned as Tailwind classes for text/chip and a CSS color for charts.
  */
 export const TONE_STYLES: Record<ChangeTone, { text: string; chip: string; stroke: string }> = {
+  // Semantic deal tokens (styles/tokens.css): rising prices read as caution,
+  // falling as good for a buyer, flat as the neutral fair tone.
   up: {
-    text: "text-amber-700 dark:text-amber-400",
-    chip: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
-    stroke: "hsl(32 95% 48%)",
+    text: "text-deal-caution-text",
+    chip: "bg-deal-caution/10 text-deal-caution-text",
+    stroke: "hsl(var(--deal-caution))",
   },
   down: {
-    text: "text-emerald-700 dark:text-emerald-400",
-    chip: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-    stroke: "hsl(152 62% 40%)",
+    text: "text-deal-good-text",
+    chip: "bg-deal-good/10 text-deal-good-text",
+    stroke: "hsl(var(--deal-good))",
   },
   stable: {
-    text: "text-muted-foreground",
-    chip: "bg-foreground/[0.05] text-muted-foreground",
-    stroke: "hsl(220 9% 55%)",
+    text: "text-label-2",
+    chip: "bg-foreground/[0.05] text-label-2",
+    stroke: "hsl(var(--deal-fair))",
   },
 };
 

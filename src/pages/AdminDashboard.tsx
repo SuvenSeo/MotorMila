@@ -606,7 +606,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="users" className="space-y-4">
-            <div className={cn(cardVariants({ variant: "media" }), "p-0")}>
+            <div className={cardVariants({ variant: "media" })}>
               <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border px-6 py-5">
                 <div>
                   <h2 className="font-display text-callout font-semibold">Users & plans</h2>
@@ -917,7 +917,7 @@ export default function AdminDashboard() {
                 Trigger alt sync
               </Button>
             </div>
-            <div className={cn(cardVariants({ variant: "media" }), "p-0")}>
+            <div className={cardVariants({ variant: "media" })}>
               <div className="border-b border-border px-6 py-4">
                 <h2 className="font-display text-callout font-semibold">Scrape runs</h2>
                 <p className="text-caption text-label-2">
@@ -1031,7 +1031,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="feedback" className="space-y-4">
-            <div className={cn(cardVariants({ variant: "media" }), "p-0")}>
+            <div className={cardVariants({ variant: "media" })}>
               <div className="border-b border-border px-6 py-4">
                 <h2 className="font-display text-callout font-semibold">Feedback inbox</h2>
                 <p className="text-caption text-label-2">
@@ -1089,7 +1089,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="dealers" className="space-y-4">
-            <div className={cn(cardVariants({ variant: "media" }), "p-0")}>
+            <div className={cardVariants({ variant: "media" })}>
               <div className="border-b border-border px-6 py-4">
                 <h2 className="font-display text-callout font-semibold">Dealer claims</h2>
                 <p className="text-caption text-label-2">

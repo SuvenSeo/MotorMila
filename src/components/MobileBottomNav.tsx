@@ -9,8 +9,9 @@ import { NAV_DESTINATIONS, isDestinationActive, type NavDestination } from "@/li
  * Mobile bottom nav: the same five destinations as the header (Buy, Prices,
  * Tools, Sell, Saved). Saved sits behind sign-in — tapping it goes through
  * RequireAuth, which asks the visitor to sign in and returns them after.
- * Labels are short, truncate with an ellipsis and every tab has a min width so
- * Sinhala / Tamil words never collide.
+ * Labels are short and never truncate: like a native tab bar their size is
+ * capped (index.css .bottom-nav-label) so 200% text keeps whole words, and
+ * every tab has a min width so Sinhala / Tamil words never collide.
  */
 function TabItem({ dest, calm }: { dest: NavDestination; calm: boolean }) {
   const { pathname } = useLocation();
@@ -50,7 +51,7 @@ function TabItem({ dest, calm }: { dest: NavDestination; calm: boolean }) {
         </m.span>
       </span>
       <span
-        className={`bottom-nav-label block w-full truncate text-center text-caption font-semibold leading-tight ${
+        className={`bottom-nav-label block w-full whitespace-normal text-center font-semibold leading-tight [overflow-wrap:normal] ${
           isActive ? "text-primary" : "text-muted-foreground"
         }`}
       >

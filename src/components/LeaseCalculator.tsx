@@ -11,7 +11,6 @@ import { Slider } from "@/components/ui/slider";
 import { SimpleSelect } from "@/components/ui/select";
 import {
   AnimatedLkr,
-  FIELD_SELECT_CLASS,
   Field,
   Notice,
   NumberField,
@@ -80,7 +79,6 @@ export function LeaseCalculator({
         >
           <Slider
             id="lease-down-payment"
-            className="py-2"
             min={10}
             max={90}
             step={5}
@@ -94,7 +92,6 @@ export function LeaseCalculator({
           <Field label={t("tools.lease.term", "Term")} htmlFor="lease-term">
             <SimpleSelect
               id="lease-term"
-              className={FIELD_SELECT_CLASS}
               value={String(years)}
               onValueChange={(v) => setYears(Number(v))}
               options={[3, 5, 7].map((y) => ({ value: String(y), label: t("tools.lease.years", "{n} years ({m} mo)", { n: y, m: y * 12 }) }))}

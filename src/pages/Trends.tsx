@@ -171,7 +171,7 @@ export default function Trends() {
         ]}
       />
 
-      <PageBody className="space-y-6 pt-0 lg:px-8 lg:pt-0">
+      <PageBody className="space-y-6 pt-0 lg:pt-0">
         {/* Controls */}
         <m.div variants={revealItem}>
           <Card padding="md">

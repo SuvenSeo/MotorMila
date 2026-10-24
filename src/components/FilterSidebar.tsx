@@ -3,6 +3,7 @@ import { FilterState, Condition, BodyType, Transmission, FuelType, SortOption, V
 import { getListingSources, getMakes, getModels, type ListingSourceStat } from "@/services/api";
 import { SRI_LANKA_DISTRICTS } from "@/data/districts";
 import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
@@ -352,13 +353,6 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
     return chips;
   }, [activeCategory, filters, priceAvailability, setInventoryMode, setVehicleCategory, t, update, vehicleCategoryOptions]);
 
-  // Track in the quiet fill, range in brand blue; thumbs grow on press
-  // (transform only — the primitive positions them itself).
-  const sliderClass = cn(
-    "py-2 [&>span:first-child]:h-1.5 [&>span:first-child]:bg-foreground/10 [&>span:first-child>span]:bg-primary",
-    !motionStill &&
-      "[&_[role=slider]]:transition-transform [&_[role=slider]]:duration-short [&_[role=slider]]:ease-standard [&_[role=slider]:active]:scale-125 [&_[role=slider]:focus-visible]:scale-110",
-  );
   const selectTriggerClass = touch ? "h-11" : undefined;
   const fieldClass = touch ? "h-11" : undefined;
 
@@ -378,13 +372,9 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-callout font-semibold text-foreground">{t("filter.title", "Filters")}</h2>
             {activeChips.length > 0 ? (
-              <button
-                type="button"
-                onClick={clear}
-                className="rounded-full px-2.5 py-1 text-footnote font-semibold text-primary transition-colors duration-short hover:bg-primary/10 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
+              <Button type="button" variant="tertiary" size="sm" className="h-7 px-2.5" onClick={clear}>
                 {t("common.clearAll", "Clear all")}
-              </button>
+              </Button>
             ) : null}
           </div>
         )}
@@ -547,8 +537,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
               year_max: value[1] === MAX_YEAR ? undefined : value[1],
             })
           }
-          className={sliderClass}
-        />
+                  />
       </FilterGroup>
 
       <FilterGroup label={t("common.fuel", "Fuel")}>
@@ -645,8 +634,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
               setMileageInput(String(nextMileage));
             }}
             onValueCommit={(value) => update({ mileage_max: value[0] === MAX_MILEAGE ? undefined : value[0] })}
-            className={sliderClass}
-          />
+                      />
         </div>
       </FilterGroup>
 

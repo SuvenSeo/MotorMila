@@ -14,7 +14,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SimpleSelect } from "@/components/ui/select";
-import { AdornedInput, AnimatedLkr, ChoiceChips, FIELD_SELECT_CLASS, Field, FormCard, Notice, ToolGrid, ToolPage } from "@/components/tools/ToolKit";
+import { AdornedInput, AnimatedLkr, ChoiceChips, Field, FormCard, Notice, ToolGrid, ToolPage } from "@/components/tools/ToolKit";
 
 const MAKES = [
   "Toyota", "Suzuki", "Honda", "Nissan", "Mitsubishi", "Mazda",
@@ -257,7 +257,6 @@ export default function SellYourCar() {
             <SimpleSelect
               id="sell-make"
               required
-              className={FIELD_SELECT_CLASS}
               value={form.make}
               onValueChange={(v) => setField("make", v)}
               placeholder={t("sell.selectMake", "Select make")}
@@ -272,7 +271,6 @@ export default function SellYourCar() {
           <Field label={t("sell.year", "Year")} htmlFor="sell-year">
             <SimpleSelect
               id="sell-year"
-              className={FIELD_SELECT_CLASS}
               value={String(form.year)}
               onValueChange={(v) => setField("year", v)}
               placeholder={t("sell.selectYear", "Select year")}
@@ -288,19 +286,18 @@ export default function SellYourCar() {
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label={t("sell.fuel", "Fuel type")} htmlFor="sell-fuel">
-            <SimpleSelect id="sell-fuel" className={FIELD_SELECT_CLASS} value={form.fuelType} onValueChange={(v) => setField("fuelType", v)} options={FUEL_TYPES.map((f) => ({ value: f, label: f }))} />
+            <SimpleSelect id="sell-fuel" value={form.fuelType} onValueChange={(v) => setField("fuelType", v)} options={FUEL_TYPES.map((f) => ({ value: f, label: f }))} />
           </Field>
           <Field label={t("sell.transmission", "Transmission")} htmlFor="sell-transmission">
             <SimpleSelect
               id="sell-transmission"
-              className={FIELD_SELECT_CLASS}
               value={form.transmission}
               onValueChange={(v) => setField("transmission", v)}
               options={TRANSMISSIONS.map((tm) => ({ value: tm, label: tm }))}
             />
           </Field>
           <Field label={t("sell.condition", "Condition")} htmlFor="sell-condition">
-            <SimpleSelect id="sell-condition" className={FIELD_SELECT_CLASS} value={form.condition} onValueChange={(v) => setField("condition", v)} options={CONDITIONS.map((c) => ({ value: c, label: c }))} />
+            <SimpleSelect id="sell-condition" value={form.condition} onValueChange={(v) => setField("condition", v)} options={CONDITIONS.map((c) => ({ value: c, label: c }))} />
           </Field>
         </div>
       </FormCard>
@@ -310,7 +307,6 @@ export default function SellYourCar() {
           <Field label={t("sell.district", "District")} htmlFor="sell-district">
             <SimpleSelect
               id="sell-district"
-              className={FIELD_SELECT_CLASS}
               value={form.district}
               onValueChange={(v) => setField("district", v)}
               placeholder={t("sell.selectDistrict", "Select district")}

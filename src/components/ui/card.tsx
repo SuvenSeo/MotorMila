@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
  *   interactive  plain + hover lift (−2px, e2) on fine pointers + press 0.99
  *   media        no padding, clips a photo/edge-to-edge content
  */
-const cardVariants = cva("relative rounded-card border border-border bg-surface-1 text-card-foreground shadow-e1", {
+const cardBase = cva("relative rounded-card border border-border bg-surface-1 text-card-foreground shadow-e1", {
   variants: {
     variant: {
       plain: "",
@@ -24,13 +24,19 @@ const cardVariants = cva("relative rounded-card border border-border bg-surface-
       lg: "p-6 sm:p-8",
     },
   },
-  defaultVariants: { variant: "plain", padding: "md" },
-  compoundVariants: [{ variant: "media", padding: "md", className: "p-0" }],
+  defaultVariants: { variant: "plain" },
 });
 
-export interface CardProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof cardVariants> {}
+/** Card classes. Padding defaults to md, except media cards (edge-to-edge content), which default to none. */
+function cardVariants({ className, ...opts }: VariantProps<typeof cardBase> & { className?: string } = {}) {
+  return cn(cardBase({ ...opts, padding: opts.padding ?? (opts.variant === "media" ? "none" : "md") }), className);
+}
+
+export interface CardProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof cardBase> {}
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(({ className, variant, padding, ...props }, ref) => (
+  // media cards clip edge-to-edge content, so they get no padding unless asked;
+  // every other variant defaults to md.
   <div ref={ref} className={cn(cardVariants({ variant, padding }), className)} {...props} />
 ));
 Card.displayName = "Card";
@@ -38,8 +44,10 @@ Card.displayName = "Card";
 const CardHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={cn("mb-4 flex items-start justify-between gap-3", className)} {...props} />
 );
-const CardTitle = ({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
-  <h3 className={cn("text-callout font-semibold text-foreground", className)} {...props} />
+const CardTitle = ({ className, children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
+  <h3 className={cn("text-callout font-semibold text-foreground", className)} {...props}>
+    {children}
+  </h3>
 );
 const CardDescription = ({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) => (
   <p className={cn("text-footnote text-label-2", className)} {...props} />

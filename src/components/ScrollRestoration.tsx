@@ -38,7 +38,6 @@ export function ScrollRestoration() {
     // Instant: with View Transitions this runs before the new snapshot is
     // taken, so the incoming page is already at the top while it fades in.
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, hash]);
 
   return null;

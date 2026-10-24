@@ -6,11 +6,11 @@ import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-quer
 import { Link } from "react-router-dom";
 import { FilterState, CarListing, DashboardInsights, DistrictVelocityPoint } from "@/types/car";
 import { getPriceDrops,
-  getStats, getListings, getMakes, getListingsBatch,
+  getStats, getListings, getMakes,
   formatPrice, getDashboardInsights, LISTINGS_PAGE_SIZE, getDistrictVelocity,
 } from "@/services/api";
 import { useLiveMarketSnapshot } from "@/hooks/useLiveMarketSnapshot";
-import { useCompareTray, loadPinned, PinnedListing } from "@/lib/compareTray";
+import { useCompareTray } from "@/lib/compareTray";
 import { ListingCard } from "@/components/ListingCard";
 import { FilterSidebar } from "@/components/FilterSidebar";
 import { MarketSignalsStrip } from "@/components/MarketSignalsStrip";
@@ -43,10 +43,8 @@ import { TrendingDown,
   Flame,
   LayoutGrid,
   List,
-  Scale,
   Search,
   SlidersHorizontal,
-  X,
 } from "lucide-react";
 import type { StatsOverview } from "@/types/car";
 import {
@@ -80,7 +78,6 @@ import { saveSearchWithAlert, savedSearchLabel } from "@/lib/savedSearchAlerts";
 import { SortControl } from "@/components/search/SortControl";
 import { SearchPagination } from "@/components/search/SearchPagination";
 import { NoResultsState, type AlertStatus } from "@/components/search/NoResultsState";
-import { FlowNumber } from "@/components/motion/FlowNumber";
 import { Reveal } from "@/components/motion/Reveal";
 import { HeroFlipWords } from "@/components/motion/HeroFlipWords";
 
@@ -238,11 +235,8 @@ export default function Dashboard() {
   const { t } = useAppPreferences();
   const queryClient = useQueryClient();
   const liveMarketSnapshot = useLiveMarketSnapshot();
-  // Use the persisted compare tray (localStorage) so selections survive navigation.
-  // Full CarListing objects are fetched for the pinned IDs for the modal/thumbnails.
-  const { pinned: comparePinned, toggle: toggleCompareTray, isPinned } = useCompareTray();
-  const [compareListings, setCompareListings] = useState<CarListing[]>([]);
-  const [showCompare, setShowCompare] = useState(false);
+  // Persisted compare tray (localStorage) so selections survive navigation.
+  const { pinned: comparePinned, toggle: toggleCompareTray } = useCompareTray();
   const [showMobileFilter, setShowMobileFilter] = useState(false);
   const [watchlistIds, setWatchlistIds] = useState<number[]>([]);
   const [heroSearch, setHeroSearch] = useState("");
@@ -441,54 +435,9 @@ export default function Dashboard() {
     return rows.map((r) => ({ ...r, thumbnail_url: pickVehicleImageUrl([r.thumbnail_url]) }));
   }, [dashboardInsights?.hot_deals, fallbackHotDeals]);
 
-  const heroPriceDrop = useMemo(() => {
-    const drop = dropsQuery.data?.[0];
-    if (!drop?.listing) return null;
-    return {
-      id: drop.listing.id,
-      make: drop.listing.make,
-      model: drop.listing.model,
-      year: drop.listing.year,
-      previous_price_lkr: drop.previous_price_lkr,
-      new_price_lkr: drop.new_price_lkr,
-      drop_pct: drop.drop_pct,
-      thumbnail_url: pickVehicleImageUrl([drop.listing.thumbnail_url, drop.listing.images?.[0]]),
-    };
-  }, [dropsQuery.data]);
-
-  const heroNewListings24h = Number(dashboardInsights?.new_listings_24h ?? stats?.listings_this_week ?? 0);
-  const heroGoodDealsCount = Number(stats?.good_deals_count ?? 0);
 
   // ── Actions ────────────────────────────────────────────────────
 
-  // Sync full CarListing objects for the persisted tray (for modal and thumbnails).
-  useEffect(() => {
-    const pinnedIds = comparePinned.map((p) => p.id);
-    if (pinnedIds.length === 0) {
-      setCompareListings([]);
-      return;
-    }
-    let cancelled = false;
-    getListingsBatch(pinnedIds).then((listings) => {
-      if (!cancelled) setCompareListings(listings);
-    }).catch(() => {
-      if (!cancelled) {
-        // Fallback: construct minimal listings from pinned data
-        setCompareListings(comparePinned.map((p) => ({
-          id: p.id,
-          make: p.make,
-          model: p.model,
-          year: p.year,
-          price_lkr: p.price_lkr,
-          mileage_km: p.mileage_km,
-          district: p.district,
-          thumbnail_url: p.thumbnail_url,
-          detail_url: p.detail_url,
-        } as CarListing)));
-      }
-    });
-    return () => { cancelled = true; };
-  }, [comparePinned]);
 
   const toggleCompare = useCallback((listing: CarListing) => {
     const median = Number(listing.market_median_lkr);
@@ -571,16 +520,6 @@ export default function Dashboard() {
     scrollToMarket();
   }, [scrollToMarket, setFilters]);
 
-  const sortByDealScore = useCallback(() => {
-    startTransition(() => { setFilters((prev) => ({ ...prev, sort: "deal_score", page: 1 })); });
-    scrollToMarket();
-  }, [scrollToMarket, setFilters]);
-
-  const browseNewestListings = useCallback(() => {
-    startTransition(() => { setFilters((prev) => ({ ...prev, fresh_24h: true, sort: "newest", page: 1, vehicle_category: prev.vehicle_category || "cars" })); });
-    scrollToMarket();
-  }, [scrollToMarket, setFilters]);
-
   const browseCategory = useCallback((category: string) => {
     startTransition(() => {
       setFilters((prev) => ({
@@ -657,7 +596,7 @@ export default function Dashboard() {
       filters.fresh_24h ? t("home.newIn24h", "New in 24h") : undefined,
       filters.price_availability === "unavailable" ? t("home.missingPrices", "Missing prices") : undefined,
       filters.vehicle_category && filters.vehicle_category !== "cars" ? filters.vehicle_category : undefined,
-      filters.q ? `"${filters.q}"` : undefined,
+      filters.q || undefined,
       filters.source,
       filters.make,
       filters.model,
@@ -1094,9 +1033,10 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Active filters */}
+          {/* Active filters: phones and tablets only. From lg the filter rail
+              shows the same chips with its own "Clear all". */}
           {activeFilterLabels.length > 0 && (
-            <div className="mb-5 flex flex-wrap items-center gap-1.5">
+            <div className="mb-5 flex flex-wrap items-center gap-1.5 lg:hidden">
               <AnimatePresence initial={false} mode="popLayout">
                 {activeFilterLabels.map((label) => (
                   <motion.span
@@ -1107,7 +1047,7 @@ export default function Dashboard() {
                     exit={{ opacity: 0, scale: 0.9, transition: { duration: duration.short, ease: ease.accelerate } }}
                     transition={spring.snappy}
                     className="inline-flex"
-                  ><Badge variant="neutral" className="h-7 px-3 text-footnote font-medium capitalize">{label}</Badge></motion.span>
+                  ><Badge variant="neutral" className={cn("h-7 px-3 text-footnote font-medium", label !== filters.q && "capitalize")}>{label}</Badge></motion.span>
                 ))}
                 <motion.span key="__clear" layout={!motionStill} transition={spring.snappy} className="inline-flex">
                   <Button type="button" variant="tertiary" size="sm" className="h-7 px-3" onClick={() => setFilters({ ...EMPTY_FILTERS })}>

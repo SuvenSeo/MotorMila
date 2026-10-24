@@ -327,7 +327,7 @@ export default function BestPicks() {
         )}
       </PageHero>
 
-      <PageBody className="space-y-12 pb-16 pt-2 sm:pt-4 lg:space-y-16 lg:px-8 lg:pt-4">
+      <PageBody className="space-y-12 pb-16 pt-2 sm:pt-4 lg:space-y-16 lg:pt-4">
         {/* Biggest cuts this week — powered by per-listing price history */}
         <m.section initial="hidden" animate="show" variants={revealItem} aria-labelledby="picks-cuts-heading">
           <Card padding="md">

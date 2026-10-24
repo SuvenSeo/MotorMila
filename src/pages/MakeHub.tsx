@@ -151,7 +151,7 @@ export default function MakeHub() {
         description={t("makeHub.description", "Used {make} prices, popular models, and district demand across Sri Lanka.", { make: canonicalMake })}
       />
 
-      <PageBody className="space-y-14 pt-0 lg:space-y-20 lg:px-8 lg:pt-0">
+      <PageBody className="space-y-14 pt-0 lg:space-y-20 lg:pt-0">
         <m.section variants={revealItem} aria-label={t("makeHub.statsAria", "{make} market figures", { make: canonicalMake })}>
           {isError ? (
             <Card padding="none">

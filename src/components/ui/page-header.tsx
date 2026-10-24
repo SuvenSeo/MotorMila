@@ -87,7 +87,16 @@ export function PageHeader({
         {actions ? <div className={cn("flex shrink-0 flex-wrap gap-2.5", centered && "justify-center")}>{actions}</div> : null}
       </div>
       {stats?.length ? (
-        <dl className={cn("mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:max-w-3xl", centered && "mx-auto")}>
+        <dl
+          className={cn(
+            // Two up on phones; an odd last stat spans the row instead of sitting alone.
+            "mt-6 grid grid-cols-2 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2",
+            stats.length >= 4
+              ? "sm:grid-cols-4 sm:[&>*:last-child:nth-child(odd)]:col-span-1 lg:max-w-4xl"
+              : "sm:grid-cols-3 sm:[&>*:last-child:nth-child(odd)]:col-span-1 lg:max-w-3xl",
+            centered && "mx-auto",
+          )}
+        >
           {stats.map((s) => (
             <div key={s.label} className="rounded-card border border-border bg-surface-1 px-4 py-3 shadow-e1">
               <dt className="text-caption text-label-2">{s.label}</dt>

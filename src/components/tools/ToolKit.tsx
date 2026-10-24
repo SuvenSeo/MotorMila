@@ -33,12 +33,6 @@ import { AnimatedNumber } from "@/components/ui/animated-number";
 import { compactLkrParts } from "@/components/motion/FlowNumber";
 import { formatLkrCompact, formatLkrFull, formatLkrMonthly } from "@/lib/price";
 
-/**
- * Align the kit Select trigger with the kit Input (same fill, type size and
- * elevation) on tool forms. Pass as `className` to SimpleSelect/SelectTrigger.
- */
-export const FIELD_SELECT_CLASS = "h-10 bg-surface-1 px-3.5 text-body shadow-e1 dark:bg-surface-1";
-
 /* ── Page frame ──────────────────────────────────────────────────────────── */
 
 /** Plain tool canvas: no ambient orbs, compact header, body on the layout shell. */

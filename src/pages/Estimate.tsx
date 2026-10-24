@@ -13,7 +13,7 @@ import { Chip } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SimpleSelect } from "@/components/ui/select";
-import { AdornedInput, AnimatedLkr, ChoiceChips, FIELD_SELECT_CLASS, Field, Notice, ToolGrid, ToolPage } from "@/components/tools/ToolKit";
+import { AdornedInput, AnimatedLkr, ChoiceChips, Field, Notice, ToolGrid, ToolPage } from "@/components/tools/ToolKit";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { useAuth } from "@/lib/authContext";
 import { hasFullPlatformAccess } from "@/lib/planLimits";
@@ -334,7 +334,6 @@ export default function Estimate() {
                 <Field label={t("common.make", "Make")} htmlFor="q-make">
                   <SimpleSelect
                     id="q-make"
-                    className={FIELD_SELECT_CLASS}
                     value={make}
                     onValueChange={(v) => {
                       setMake(v);
@@ -361,7 +360,6 @@ export default function Estimate() {
                 <Field label={t("common.model", "Model")} htmlFor="q-model">
                   <SimpleSelect
                     id="q-model"
-                    className={FIELD_SELECT_CLASS}
                     value={model}
                     onValueChange={setModel}
                     disabled={!make}
@@ -372,7 +370,6 @@ export default function Estimate() {
                 <Field label={t("quiz.year", "Year of manufacture")} htmlFor="q-year">
                   <SimpleSelect
                     id="q-year"
-                    className={FIELD_SELECT_CLASS}
                     value={String(year)}
                     onValueChange={(v) => setYear(Number(v))}
                     options={YEARS.map((y) => ({ value: String(y), label: y }))}
@@ -408,7 +405,6 @@ export default function Estimate() {
                 <Field label={t("quiz.district", "District")} htmlFor="q-district">
                   <SimpleSelect
                     id="q-district"
-                    className={FIELD_SELECT_CLASS}
                     value={district}
                     onValueChange={setDistrict}
                     options={SRI_LANKA_DISTRICTS.map((d) => ({ value: d, label: d }))}

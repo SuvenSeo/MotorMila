@@ -1815,6 +1815,10 @@
     .hero-banners { padding-inline: 20px; }
   }
 
+  /* Bottom nav labels follow text zoom up to a cap (a native tab bar does
+     the same), so "Prices" / "Saved" stay whole words at 200% text. */
+  .bottom-nav-label { font-size: min(var(--text-caption), 15px); }
+
   /* Bottom nav: Sinhala/Tamil labels wrap to two short lines instead of
      truncating mid-word; tabs keep equal widths so labels never collide. */
   :root:lang(si) .bottom-nav-label,
@@ -1825,14 +1829,14 @@
     white-space: normal;
     overflow: hidden;
     overflow-wrap: normal;
-    font-size: var(--text-caption);
+    font-size: min(var(--text-caption), 15px);
     line-height: 1.1;
     font-weight: 600;
   }
 
   /* Tamil words run long (சேமித்தவை): tighten rather than split a word. */
   :root:lang(ta) .bottom-nav-label {
-    font-size: var(--text-caption);
+    font-size: min(var(--text-caption), 14px);
     letter-spacing: 0;
   }
 
@@ -1977,22 +1981,6 @@
    ========================================================================== */
 
 @layer components {
-  .vehicle-card { border-radius: calc(var(--radius) + 6px); }
-
-  .vehicle-card::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 25;
-    pointer-events: none;
-    border-radius: inherit;
-    background: linear-gradient(135deg, rgba(255,244,230,0.18) 0%, transparent 46%);
-    opacity: 0;
-    transition: opacity var(--dur-long) var(--ease-decelerate);
-  }
-
-  .vehicle-card:hover::before { opacity: 1; }
-
   .inventory-tile {
     border-radius: calc(var(--radius) + 2px);
     border: 1px solid var(--glass-border);

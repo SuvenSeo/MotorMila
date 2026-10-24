@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SimpleSelect } from "@/components/ui/select";
-import { CheckRow, FIELD_SELECT_CLASS, Field, FormCard, Notice, ToolGrid, ToolPage } from "@/components/tools/ToolKit";
+import { CheckRow, Field, FormCard, Notice, ToolGrid, ToolPage } from "@/components/tools/ToolKit";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { submitRemovalRequest, type LegalReceipt, type RemovalPayload } from "@/lib/moneyApi";
 
@@ -97,10 +97,10 @@ export default function RemovalRequest() {
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t("tools.removal.reason", "Reason")} htmlFor={id("reason")}>
-            <SimpleSelect id={id("reason")} className={FIELD_SELECT_CLASS} value={reason} onValueChange={(v) => setReason(v as Reason)} options={reasons} />
+            <SimpleSelect id={id("reason")} value={reason} onValueChange={(v) => setReason(v as Reason)} options={reasons} />
           </Field>
           <Field label={t("tools.removal.role", "You are the")} htmlFor={id("role")}>
-            <SimpleSelect id={id("role")} className={FIELD_SELECT_CLASS} value={role} onValueChange={(v) => setRole(v as Role)} options={roles} />
+            <SimpleSelect id={id("role")} value={role} onValueChange={(v) => setRole(v as Role)} options={roles} />
           </Field>
         </div>
         <Field label={t("tools.removal.details", "Details")} htmlFor={id("details")} optional optionalLabel={optional}>

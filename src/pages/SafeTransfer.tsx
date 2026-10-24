@@ -11,7 +11,6 @@ import { AnimatedNumber } from "@/components/ui/animated-number";
 import {
   AnimatedLkr,
   CheckRow,
-  FIELD_SELECT_CLASS,
   Field,
   FormCard,
   Notice,
@@ -252,7 +251,6 @@ export default function SafeTransfer() {
           <Field label={t("transfer.class", "Vehicle type")} htmlFor="transfer-class">
             <SimpleSelect
               id="transfer-class"
-              className={FIELD_SELECT_CLASS}
               value={vehicleClass}
               onValueChange={(v) => setVehicleClass(v as TransferVehicleClass)}
               options={(Object.keys(TRANSFER_CLASS_LABELS) as TransferVehicleClass[]).map((k) => ({

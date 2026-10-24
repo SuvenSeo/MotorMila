@@ -255,7 +255,7 @@ export default function MakeModelHub() {
         }
       />
 
-      <PageBody className="space-y-14 pt-0 lg:space-y-20 lg:px-8 lg:pt-0">
+      <PageBody className="space-y-14 pt-0 lg:space-y-20 lg:pt-0">
         <m.section variants={revealItem} aria-labelledby="hub-snapshot">
           <div className="mb-4 flex items-center gap-2">
             <span aria-hidden className="inline-block h-1.5 w-1.5 rounded-full bg-primary" />

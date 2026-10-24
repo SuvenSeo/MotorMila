@@ -650,7 +650,7 @@ export default function Alerts() {
         ]}
       />
 
-      <PageBody narrow className="pb-16 pt-2 sm:pt-4 lg:px-8 lg:pt-4">
+      <PageBody narrow className="pb-16 pt-2 sm:pt-4 lg:pt-4">
         <m.div initial="hidden" animate="show" variants={listStagger} className="space-y-12">
           <m.div variants={listItem} custom={0} className="space-y-4">
             <ChannelCenterSection alertCount={alerts.length} />

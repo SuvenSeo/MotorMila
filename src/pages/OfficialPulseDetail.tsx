@@ -115,7 +115,7 @@ export default function OfficialPulseDetail() {
           <Skeleton shape="title" className="h-9 max-w-xl" />
           <Skeleton shape="text" className="max-w-lg" />
         </div>
-        <PageBody className="space-y-6 pt-0 lg:px-8 lg:pt-0">
+        <PageBody className="space-y-6 pt-0 lg:pt-0">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[0, 1, 2, 3].map((i) => (
               <Skeleton key={i} shape="kpi" />
@@ -201,7 +201,7 @@ export default function OfficialPulseDetail() {
         }
       />
 
-      <PageBody className="space-y-6 pt-0 lg:px-8 lg:pt-0">
+      <PageBody className="space-y-6 pt-0 lg:pt-0">
         <m.dl variants={revealItem} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {facts.map((card) => (
             <Card key={card.label} padding="md" className="min-w-0">

@@ -100,7 +100,7 @@ export const DEAL_BADGE_CLASSES: Record<Exclude<DealBadgeKind, "none">, string> 
   fair: "border-deal-fair/40 bg-deal-fair/95 text-deal-fair-foreground",
   above: "border-deal-high/40 bg-deal-high/95 text-deal-high-foreground",
   verify: "border-deal-caution/50 bg-deal-caution/95 text-deal-caution-foreground",
-  lease: "border-sky-400/40 bg-sky-950/90 text-sky-100",
+  lease: "border-primary/40 bg-primary/95 text-primary-foreground",
 };
 
 /** Same kinds as soft pills on plain (non-photo) surfaces, theme-aware via tokens. */
@@ -109,7 +109,7 @@ export const DEAL_SOFT_CLASSES: Record<Exclude<DealBadgeKind, "none">, string> =
   fair: "border-deal-fair/30 bg-deal-fair/10 text-deal-fair-text",
   above: "border-deal-high/30 bg-deal-high/10 text-deal-high-text",
   verify: "border-deal-caution/40 bg-deal-caution/10 text-deal-caution-text",
-  lease: "border-sky-500/30 bg-sky-500/10 text-sky-800 dark:text-sky-200",
+  lease: "border-primary/25 bg-primary/10 text-primary",
 };
 
 /** Text tones for the same kinds on plain card surfaces (theme-aware via tokens). */
@@ -118,7 +118,7 @@ export const DEAL_TEXT_CLASSES: Record<Exclude<DealBadgeKind, "none">, string> =
   fair: "text-deal-fair-text",
   above: "text-deal-high-text",
   verify: "text-deal-caution-text",
-  lease: "text-sky-700 dark:text-sky-300",
+  lease: "text-primary",
 };
 
 export const DEAL_BAR_CLASSES: Record<Exclude<DealBadgeKind, "none">, string> = {
@@ -126,7 +126,7 @@ export const DEAL_BAR_CLASSES: Record<Exclude<DealBadgeKind, "none">, string> = 
   fair: "bg-deal-fair",
   above: "bg-deal-high",
   verify: "bg-deal-caution",
-  lease: "bg-sky-500",
+  lease: "bg-primary",
 };
 
 type Translate = (key: string, fallback?: string, vars?: Record<string, string | number>) => string;

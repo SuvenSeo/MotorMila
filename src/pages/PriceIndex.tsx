@@ -131,7 +131,7 @@ export default function PriceIndexPage() {
 
       <FreePlanBanner />
 
-      <PageBody className="space-y-6 pt-0 lg:px-8 lg:pt-0">
+      <PageBody className="space-y-6 pt-0 lg:pt-0">
         {state === "loading" ? (
           <div role="status" aria-label={t("index.loading", "Loading price index")} className="space-y-6">
             <div className="grid gap-3 sm:grid-cols-3">

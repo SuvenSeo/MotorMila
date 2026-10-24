@@ -86,7 +86,7 @@ function GuideBody({ guide }: { guide: PulseSourceGuide }) {
         description={guide.summary}
       />
 
-      <PageBody className="space-y-14 pt-0 lg:space-y-20 lg:px-8 lg:pt-0">
+      <PageBody className="space-y-14 pt-0 lg:space-y-20 lg:pt-0">
         <div className="space-y-4">
           <div className="grid gap-4 lg:grid-cols-2">
             <m.div variants={revealItem}>

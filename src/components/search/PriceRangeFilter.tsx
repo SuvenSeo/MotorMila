@@ -201,13 +201,6 @@ export function PriceRangeFilter({ filters, onCommit, touch = false }: PriceRang
           const hi = (value[1] ?? PRICE_STEP_LAST_INDEX) === PRICE_STEP_LAST_INDEX ? undefined : stepIndexToPrice(value[1]);
           commit(lo, hi);
         }}
-        className={cn(
-          "py-2 [&>span:first-child]:h-1.5 [&>span:first-child]:bg-foreground/10 [&>span:first-child>span]:bg-primary",
-          // Thumb grab "spring": scale with an overshoot curve (transform only;
-          // the primitive positions thumbs itself, which we never animate).
-          !motionStill &&
-            "[&_[role=slider]]:transition-transform [&_[role=slider]]:duration-short [&_[role=slider]]:ease-standard [&_[role=slider]:active]:scale-125 [&_[role=slider]:focus-visible]:scale-110",
-        )}
       />
 
       {sampleSize >= 8 ? (
