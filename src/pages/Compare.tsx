@@ -288,7 +288,7 @@ export default function Compare() {
                   variant="ghost"
                   size="icon-sm"
                   onClick={() => removeId(Number(l.id))}
-                  aria-label={t("compareTray.removeAria", "Remove {name} from compare", { name: `${l.make} ${l.model}` })}
+                  aria-label={t("compareTray.removeAria", "Remove {name} from compare", { name: [l.make, l.model].filter(Boolean).join(" ") })}
                   className="-mr-1 -mt-1 text-label-2"
                 >
                   <X aria-hidden />

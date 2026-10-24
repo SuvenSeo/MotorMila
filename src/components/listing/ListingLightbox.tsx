@@ -59,10 +59,12 @@ export default function ListingLightbox({
               fade: 280,
               swipe: 320,
               zoom: 280,
+              // Literal curves (same as --ease-standard / --ease-decelerate in index.css):
+              // swipe/navigation run through Element.animate(), which rejects var() easings.
               easing: {
-                fade: "var(--ease-standard)",
-                swipe: "var(--ease-decelerate)",
-                navigation: "var(--ease-decelerate)",
+                fade: "cubic-bezier(0.2, 0, 0, 1)",
+                swipe: "cubic-bezier(0, 0, 0, 1)",
+                navigation: "cubic-bezier(0, 0, 0, 1)",
               },
             }
       }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   ArrowLeft, ExternalLink, MapPin, Calendar,
   Share2, Fuel, Gauge, Settings2, MessageCircle,
@@ -73,6 +73,7 @@ import { AnimatedPrice } from '@/components/listing/AnimatedPrice';
 export default function ListingDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const routerLocation = useLocation();
   const motionCalm = useReducedMotionOrLowData();
   // Below-the-fold sections reveal once as they scroll in (opacity only when calm).
   const onScroll = {
@@ -115,7 +116,9 @@ export default function ListingDetail() {
   };
 
   const handleBack = () => {
-    if (window.history.length > 1) navigate(-1);
+    // location.key is "default" on the first in-app entry (landed from a search engine, a shared
+    // link or a new tab): going back there would leave Motormila, so send the user to the market.
+    if (routerLocation.key !== 'default' && window.history.length > 1) navigate(-1);
     else navigate('/');
   };
   const buildShareText = () => {

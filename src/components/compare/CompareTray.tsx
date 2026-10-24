@@ -105,7 +105,7 @@ function CompareTrayPanel({ className }: { className?: string }) {
                 variant="ghost"
                 size="icon"
                 onClick={() => remove(p.id)}
-                aria-label={t("compareTray.removeAria", "Remove {name} from compare", { name: `${p.make} ${p.model}` })}
+                aria-label={t("compareTray.removeAria", "Remove {name} from compare", { name: [p.make, p.model].filter(Boolean).join(" ") })}
                 className="text-label-2"
               >
                 <X aria-hidden />

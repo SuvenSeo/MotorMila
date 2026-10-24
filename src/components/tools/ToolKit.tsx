@@ -258,7 +258,10 @@ export function NumberField({
         onChange={(e) => {
           setText(e.target.value);
           const next = Number(e.target.value);
-          onChange(e.target.value === "" || !Number.isFinite(next) ? 0 : next);
+          if (e.target.value === "" || !Number.isFinite(next)) return onChange(0);
+          // Typed values are clamped to min/max (the HTML attributes only bound the spinner),
+          // so "-500" can't produce negative duty lines.
+          onChange(Math.min(max ?? Infinity, Math.max(min, next)));
         }}
       />
     </Field>
