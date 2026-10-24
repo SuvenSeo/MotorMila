@@ -12,6 +12,7 @@ import { submitAccountDeletion, type LegalReceipt } from "@/lib/moneyApi";
 import { BACKEND_AUTH_ENABLED, useAuth } from "@/lib/authContext";
 import { SelfServeDeletion } from "@/components/account/SelfServeDeletion";
 import { useAppPreferences } from "@/lib/appPreferences";
+import { friendlyApiError } from "@/lib/apiErrorText";
 
 export default function AccountDeletion() {
   const uid = useId();
@@ -79,7 +80,7 @@ export default function AccountDeletion() {
             try {
               setReceipt(await submitAccountDeletion({ email: email.trim(), details: details.trim() || undefined, confirm: true, website: honeypot || undefined }));
             } catch (err) {
-              setError(err instanceof Error ? err.message : "Couldn't send your request.");
+              setError(friendlyApiError(err, "Couldn't send your request.", t));
             } finally {
               setSending(false);
             }

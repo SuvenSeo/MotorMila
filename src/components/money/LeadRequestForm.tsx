@@ -1,11 +1,12 @@
 import { useEffect, useId, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
-import { LEAD_CONSENT, LEAD_COPY, type LeadKind } from "@/lib/leadConsent";
+import { LEAD_CONSENT, leadCopy, type LeadKind } from "@/lib/leadConsent";
 import { getLeadPartners, submitLead, type LeadPartner, type LeadReceipt } from "@/lib/moneyApi";
 import { trackEvent } from "@/lib/analytics";
 import { HONEYPOT_STYLE } from "./formStyles";
 import { useAppPreferences } from "@/lib/appPreferences";
+import { friendlyApiError } from "@/lib/apiErrorText";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,7 +38,7 @@ export function LeadRequestForm({
 }) {
   const uid = useId();
   const { t } = useAppPreferences();
-  const copy = LEAD_COPY[kind];
+  const copy = leadCopy(kind, t);
   const consent = LEAD_CONSENT[kind];
   const [partners, setPartners] = useState<LeadPartner[] | null>(null);
   const [name, setName] = useState("");
@@ -110,7 +111,7 @@ export function LeadRequestForm({
           trackEvent("lead_submitted", { kind, listing: listing?.id ?? null });
           setReceipt(result);
         } catch (err) {
-          setError(err instanceof Error ? err.message : t("tools.lead.errSend", "Couldn't send your request. Please try again."));
+          setError(friendlyApiError(err, t("tools.lead.errSend", "Couldn't send your request. Please try again."), t));
         } finally {
           setSending(false);
         }

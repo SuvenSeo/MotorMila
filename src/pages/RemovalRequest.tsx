@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { SimpleSelect } from "@/components/ui/select";
 import { CheckRow, Field, FormCard, Notice, ToolGrid, ToolPage } from "@/components/tools/ToolKit";
 import { useAppPreferences } from "@/lib/appPreferences";
+import { friendlyApiError } from "@/lib/apiErrorText";
 import { submitRemovalRequest, type LegalReceipt, type RemovalPayload } from "@/lib/moneyApi";
 
 type Reason = RemovalPayload["reason"];
@@ -72,7 +73,7 @@ export default function RemovalRequest() {
         }),
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("tools.removal.errSend", "Couldn't send your request."));
+      setError(friendlyApiError(err, t("tools.removal.errSend", "Couldn't send your request."), t));
     } finally {
       setSending(false);
     }
@@ -183,7 +184,7 @@ export default function RemovalRequest() {
       <nav aria-label={t("tools.removal.legalNav", "Legal pages")} className="flex flex-wrap gap-2">
         {LEGAL_LINKS.filter((l) => l.to !== "/removal").map((l) => (
           <Button key={l.to} asChild variant="secondary" size="sm">
-            <Link to={l.to}>{l.label}</Link>
+            <Link to={l.to}>{t(l.key, l.label)}</Link>
           </Button>
         ))}
       </nav>

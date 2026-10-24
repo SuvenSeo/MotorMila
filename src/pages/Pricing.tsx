@@ -19,8 +19,9 @@ import { createPayhereCheckout, getPayhereConfig, submitPayhereForm, type Payher
 import { PageCanvas } from "@/components/PageCanvas";
 import { duration, ease, fadeUp, listItem, listStagger, scaleIn, spring, useReducedMotionOrLowData } from "@/lib/motion";
 import { useAppPreferences } from "@/lib/appPreferences";
+import { friendlyApiError } from "@/lib/apiErrorText";
 import { useAuth } from "@/lib/authContext";
-import { API_BASE, sendFeedback } from "@/services/api";
+import { API_BASE, resolveFetchCredentials, sendFeedback } from "@/services/api";
 import { toast } from "sonner";
 import { authHeaders } from "@/lib/authToken";
 import { tx } from "@/lib/translate";
@@ -49,7 +50,7 @@ async function fetchCheckoutIntent(plan: string): Promise<CheckoutIntentResponse
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json", ...authHeaders() },
     body: JSON.stringify({ plan }),
-    credentials: "include",
+    credentials: resolveFetchCredentials(API_BASE),
   });
   if (!res.ok) throw new Error("checkout-intent request failed");
   return res.json() as Promise<CheckoutIntentResponse>;
@@ -111,7 +112,7 @@ export function TrialCta({ className, label }: { className?: string; label?: str
         <m.form
           key="form"
           exit={{ opacity: 0, transition: { duration: duration.short } }}
-          className={className ?? "flex w-full max-w-sm items-center gap-2"}
+          className={className ?? "flex w-full max-w-sm flex-wrap items-center justify-center gap-2"}
           onSubmit={async (e) => {
             e.preventDefault();
             const address = email.trim();
@@ -136,9 +137,10 @@ export function TrialCta({ className, label }: { className?: string; label?: str
             onChange={(e) => setEmail(e.target.value)}
             placeholder={t("shell.pricing.emailPlaceholder", "Your email")}
             aria-label={t("shell.pricing.emailAria", "Email for the Pro launch")}
-            className="min-w-0 flex-1 rounded-full px-4"
+            className="min-w-[12rem] flex-1 rounded-full px-4"
           />
-          <Button type="submit" loading={sending} className="shrink-0">
+          {/* Wraps under the field when the label is long (si/ta) instead of squeezing it to one letter. */}
+          <Button type="submit" loading={sending} className="shrink-0 grow sm:grow-0">
             {t("shell.pro.notify", "Notify me")}
           </Button>
         </m.form>
@@ -168,7 +170,7 @@ export function TrialCountdownBanner() {
       try {
         const res = await fetch(new URL(`${API_BASE}/auth/me`, window.location.origin).toString(), {
           headers: { Accept: "application/json", ...authHeaders() },
-          credentials: "include",
+          credentials: resolveFetchCredentials(API_BASE),
         });
         if (!res.ok || cancelled) return;
         const data = (await res.json()) as { trialEndsAt?: string; trialDaysLeft?: number };
@@ -324,7 +326,7 @@ function PayherePanel({
             const checkout = await createPayhereCheckout({ plan_code: code, period, recurring, phone });
             submitPayhereForm(checkout);
           } catch (err) {
-            setError(err instanceof Error ? err.message : t("pricing.payhere.failed", "Couldn't start the payment."));
+            setError(friendlyApiError(err, t("pricing.payhere.failed", "Couldn't start the payment."), t));
             setBusy(false);
           }
         }}

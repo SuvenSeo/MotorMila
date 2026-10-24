@@ -4,7 +4,7 @@ import { LeadRequestForm } from "@/components/money/LeadRequestForm";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { ToolGrid, ToolPage } from "@/components/tools/ToolKit";
-import { LEAD_COPY, type LeadKind } from "@/lib/leadConsent";
+import { leadCopy, type LeadKind } from "@/lib/leadConsent";
 import { useAppPreferences } from "@/lib/appPreferences";
 
 const ICONS = { finance: Banknote, inspection: ClipboardCheck, insurance: ShieldCheck } as const;
@@ -69,7 +69,7 @@ function faq(kind: LeadKind, t: Translate): { q: string; a: string }[] {
 
 export default function LeadRequest({ kind }: { kind: LeadKind }) {
   const { t } = useAppPreferences();
-  const copy = LEAD_COPY[kind];
+  const copy = leadCopy(kind, t);
   const Icon = ICONS[kind];
   return (
     <ToolPage

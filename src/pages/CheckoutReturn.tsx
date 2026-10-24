@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getPayhereOrder } from "@/lib/moneyApi";
+import { friendlyApiError } from "@/lib/apiErrorText";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { fadeUp } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,7 @@ export default function CheckoutReturn() {
   const orderId = params.get("order_id") ?? "";
   const [status, setStatus] = useState<string>(orderId ? "checking" : "unknown");
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!orderId) {
@@ -27,6 +29,8 @@ export default function CheckoutReturn() {
     }
     let cancelled = false;
     let tries = 0;
+    setError(null);
+    setStatus("checking");
     const poll = async () => {
       tries += 1;
       try {
@@ -37,34 +41,43 @@ export default function CheckoutReturn() {
           window.setTimeout(poll, 3000);
         }
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : t("acct.checkout.checkFailed", "Couldn't check the payment."));
+        // Stop the "confirming" spinner: a lookup failure is not a failed payment.
+        if (!cancelled) {
+          setError(friendlyApiError(err, t("acct.checkout.checkFailed", "Couldn't check the payment."), t));
+          setStatus("lookup_failed");
+        }
       }
     };
     void poll();
     return () => {
       cancelled = true;
     };
-  }, [orderId, t]);
+  }, [orderId, t, attempt]);
 
   const paid = status === "paid";
   const waiting = status === "checking" || status === "created" || status === "pending";
   // No order_id at all (direct visit, bookmark, stripped redirect) is not a
   // failure: show a neutral "nothing to confirm" state, never red.
   const noOrder = status === "unknown";
-  const failed = !paid && !waiting && !noOrder;
-  const Icon = paid ? CheckCircle2 : waiting ? Clock : noOrder ? Receipt : XCircle;
+  const lookupFailed = status === "lookup_failed";
+  const failed = !paid && !waiting && !noOrder && !lookupFailed;
+  const Icon = paid ? CheckCircle2 : waiting ? Clock : noOrder || lookupFailed ? Receipt : XCircle;
   const title = paid
     ? t("acct.checkout.paidTitle", "Payment received")
     : waiting
       ? t("acct.checkout.waitingTitle", "Confirming your payment")
-      : noOrder
+      : lookupFailed
+        ? t("acct.checkout.checkFailed", "Couldn't check the payment.")
+        : noOrder
         ? t("acct.checkout.noOrderTitle", "No payment to confirm")
         : t("acct.checkout.failedTitle", "Payment not completed");
   const body = paid
     ? t("acct.checkout.paidBody", "Your plan is active. Sign out and back in if you don't see it straight away.")
     : waiting
       ? t("acct.checkout.waitingBody", "PayHere is confirming the payment with us. This usually takes a few seconds.")
-      : noOrder
+      : lookupFailed
+        ? t("acct.checkout.lookupFailedBody", "Your payment may still have gone through. Check again in a minute, or open your account to see your plan.")
+        : noOrder
         ? t("acct.checkout.noOrderBody", "This page confirms a PayHere checkout. Start from Pricing to choose a plan, or open your account to see an existing one.")
         : t("acct.checkout.failedBody", "No money was taken for this order, or it was cancelled. You can try again or pay by bank transfer or KOKO.");
 
@@ -80,7 +93,7 @@ export default function CheckoutReturn() {
                   "flex h-12 w-12 shrink-0 items-center justify-center rounded-full",
                   paid && "bg-deal-good/10 text-deal-good-text",
                   waiting && "bg-primary/10 text-primary",
-                  noOrder && "bg-surface-2 text-label-2",
+                  (noOrder || lookupFailed) && "bg-surface-2 text-label-2",
                   failed && "bg-deal-high/10 text-deal-high-text",
                 )}
               >
@@ -109,7 +122,12 @@ export default function CheckoutReturn() {
                   {paid ? t("acct.checkout.openDealer", "Open dealer workspace") : t("acct.checkout.backToPricing", "Back to pricing")}
                 </Link>
               </Button>
-              {noOrder || failed ? (
+              {lookupFailed ? (
+                <Button type="button" variant="secondary" onClick={() => setAttempt((n) => n + 1)}>
+                  {t("acct.checkout.checkAgain", "Check again")}
+                </Button>
+              ) : null}
+              {noOrder || failed || lookupFailed ? (
                 <Button asChild variant="secondary">
                   <Link to="/profile">{t("acct.checkout.openAccount", "Open my account")}</Link>
                 </Button>
