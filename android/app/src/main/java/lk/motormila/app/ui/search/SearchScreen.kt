@@ -960,8 +960,6 @@ internal fun CompareTray(
             val ctaLabel = stringResource(R.string.compare_cta_count, count)
             Box(
                 Modifier
-                    // Gives way (label scales) instead of running off the tray edge in si/ta.
-                    .weight(1f, fill = false)
                     .applePress(ctaPress)
                     .heightIn(min = 48.dp)
                     .clip(MmShapes.pill)
@@ -984,7 +982,9 @@ internal fun CompareTray(
                     color = Color.White,
                     maxLines = 1,
                     softWrap = false,
-                    modifier = Modifier.fitWidth(),
+                    // CTA keeps its natural size (priority over the count text, which
+                    // scales); a floor keeps it legible.
+                    modifier = Modifier.fitWidth(minScale = 0.7f),
                 )
             }
         }

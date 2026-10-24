@@ -796,33 +796,21 @@ private fun PriceDropTicker(
     maxWidthPx: Int,
     modifier: Modifier = Modifier,
 ) {
+    // Reduced motion: the same settled layout (struck-through old price + new
+    // price) without the roll, flash or haptic. It used to show only the new
+    // price, so reduced-motion users never saw that the price had dropped.
     val reducedMotion = rememberReducedMotion()
-    if (reducedMotion) {
-        Crossfade(
-            targetState = drop.newPriceLkr,
-            animationSpec = tween(durationMillis = 200),
-            label = "price-drop-reduced",
-        ) { price ->
-            lk.motormila.app.ui.components.MmFitText(
-                text = LkrFormat.priceFull(price),
-                style = priceStyle,
-                color = MotormilaOnSurface,
-                modifier = modifier,
-                minScale = 0.5f,
-            )
-        }
-        return
-    }
     val haptics = rememberHaptics()
     var started by remember(drop.dropId) { mutableStateOf(false) }
     val strikeProgress by animateFloatAsState(
-        targetValue = if (started) 1f else 0f,
+        targetValue = if (started || reducedMotion) 1f else 0f,
         animationSpec = spring(dampingRatio = 1f, stiffness = Spring.StiffnessMediumLow, visibilityThreshold = 0.001f),
         label = "drop-strike",
     )
     val flash = remember(drop.dropId) { Animatable(0f) }
     LaunchedEffect(drop.dropId) {
         started = true
+        if (reducedMotion) return@LaunchedEffect
         // Green wash in, then out; the tick lands on settle (~900ms total).
         flash.animateTo(0.22f, tween(durationMillis = 150))
         flash.animateTo(0f, tween(durationMillis = 600))
@@ -867,12 +855,22 @@ private fun PriceDropTicker(
                     )
                 }
             }
-            SlidingLkr(
-                valueLkr = if (started) drop.newPriceLkr else drop.oldPriceLkr,
-                style = newPriceStyle,
-                full = true,
-                modifier = Modifier.align(Alignment.CenterVertically),
-            )
+            if (reducedMotion) {
+                Text(
+                    text = LkrFormat.full(drop.newPriceLkr),
+                    style = newPriceStyle,
+                    maxLines = 1,
+                    softWrap = false,
+                    modifier = Modifier.align(Alignment.CenterVertically).fitWidth(),
+                )
+            } else {
+                SlidingLkr(
+                    valueLkr = if (started) drop.newPriceLkr else drop.oldPriceLkr,
+                    style = newPriceStyle,
+                    full = true,
+                    modifier = Modifier.align(Alignment.CenterVertically),
+                )
+            }
         }
         if (flash.value > 0.005f) {
             Box(
