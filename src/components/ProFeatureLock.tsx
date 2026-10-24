@@ -96,7 +96,7 @@ export function ProFeatureLock({
       <Link
         to="/pricing#get-started"
         onClick={onCtaClick}
-        className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-border bg-card px-4 text-caption font-semibold text-foreground no-underline transition-colors hover:border-primary/35"
+        className="tap-44 relative inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-border bg-card px-4 text-caption font-semibold text-foreground no-underline transition-colors hover:border-primary/35"
       >
         <Bell className="h-3.5 w-3.5" aria-hidden />
         {t("shell.pro.notify", "Notify me")}

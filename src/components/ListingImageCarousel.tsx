@@ -165,7 +165,7 @@ export function ListingImageCarousel({
     });
 
   const arrowClass =
-    "pointer-events-auto absolute top-1/2 z-30 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-black/55 text-white opacity-0 transition-opacity hover:bg-black/80 focus-visible:opacity-100 group-hover:opacity-100 max-sm:opacity-100";
+    "tap-44 pointer-events-auto absolute top-1/2 z-30 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-black/55 text-white opacity-0 transition-opacity hover:bg-black/80 focus-visible:opacity-100 group-hover:opacity-100 max-sm:opacity-100";
 
   return (
     <div
@@ -293,7 +293,7 @@ export function ListingImageCarousel({
               stop(e);
               openLightbox(e.currentTarget.parentElement);
             }}
-            className="absolute right-2.5 top-2.5 z-30 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-black/55 text-white transition-colors hover:bg-black/80"
+            className="tap-44 absolute right-2.5 top-2.5 z-30 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-black/55 text-white transition-colors hover:bg-black/80"
           >
             <Expand aria-hidden className="h-4 w-4" />
           </button>

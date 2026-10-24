@@ -165,7 +165,7 @@ export function Navbar() {
         <div className="flex min-w-0 items-center justify-self-start">
           <Link
             to="/"
-            className="site-nav__brand-link group flex shrink-0 items-center rounded-xl no-underline outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary/50"
+            className="site-nav__brand-link group relative flex shrink-0 items-center rounded-xl no-underline outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary/50"
             aria-label={t("nav.homeAria", "Motormila home")}
           >
             <BrandLogo className="site-nav__brand-logo" size="nav" showTagline={false} />

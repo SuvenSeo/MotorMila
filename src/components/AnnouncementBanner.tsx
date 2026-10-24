@@ -35,7 +35,7 @@ export function AnnouncementBanner() {
           type="button"
           onClick={() => setOpen(false)}
           aria-label={t("banner.dismiss", "Dismiss announcement")}
-          className="shrink-0 rounded-full p-1.5 text-muted-foreground transition hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="tap-44 relative shrink-0 rounded-full p-1.5 text-muted-foreground transition hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <X className="h-4 w-4" aria-hidden />
         </button>

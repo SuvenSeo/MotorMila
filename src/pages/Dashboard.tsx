@@ -960,7 +960,7 @@ export default function Dashboard() {
                         aria-pressed={active}
                         {...(motionStill ? {} : press)}
                         className={cn(
-                          "relative isolate inline-flex min-h-10 items-center rounded-full border px-4 text-footnote font-semibold transition-colors",
+                          "tap-44 relative isolate inline-flex min-h-10 items-center rounded-full border px-4 text-footnote font-semibold transition-colors",
                           heroFilmTone === "cinematic"
                             ? active
                               ? "border-transparent text-white"

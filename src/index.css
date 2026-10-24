@@ -1587,6 +1587,7 @@
 
   /* One control style for every header button: 36px, pill, hairline. */
   .nav-control {
+    position: relative; /* anchors the 44px touch hit area (.tap-44 rule) */
     display: inline-flex;
     align-items: center;
     justify-content: center;

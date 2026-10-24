@@ -251,7 +251,7 @@ export const ListingCard = memo(function ListingCard({
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onWatchlistToggle(listing); }}
-                className={`pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border transition-[background-color,border-color,color,transform] duration-short ease-standard active:scale-90 active:duration-micro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 ${
+                className={`tap-44 pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border transition-[background-color,border-color,color,transform] duration-short ease-standard active:scale-90 active:duration-micro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 ${
                   isWatchlisted
                     ? "bg-primary text-primary-foreground border-primary"
                     : "border-transparent bg-black/55 text-white hover:bg-black/70"
@@ -265,7 +265,7 @@ export const ListingCard = memo(function ListingCard({
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onCompareToggle(listing); }}
-                className={`pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border transition-[background-color,border-color,color,transform] duration-short ease-standard active:scale-90 active:duration-micro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 ${
+                className={`tap-44 pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border transition-[background-color,border-color,color,transform] duration-short ease-standard active:scale-90 active:duration-micro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 ${
                   isComparing
                     ? "bg-primary text-primary-foreground border-primary"
                     : "border-transparent bg-black/55 text-white hover:bg-black/70"

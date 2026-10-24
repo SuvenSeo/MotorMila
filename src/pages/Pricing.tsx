@@ -138,10 +138,10 @@ export function TrialCta({ className, label }: { className?: string; label?: str
             onChange={(e) => setEmail(e.target.value)}
             placeholder={t("shell.pricing.emailPlaceholder", "Your email")}
             aria-label={t("shell.pricing.emailAria", "Email for the Pro launch")}
-            className="min-w-[12rem] flex-1 rounded-full px-4"
+            className="h-11 min-w-[12rem] flex-1 rounded-full px-4"
           />
           {/* Wraps under the field when the label is long (si/ta) instead of squeezing it to one letter. */}
-          <Button type="submit" loading={sending} className="shrink-0 grow sm:grow-0">
+          <Button type="submit" loading={sending} className="h-11 shrink-0 grow sm:grow-0">
             {t("shell.pro.notify", "Notify me")}
           </Button>
         </m.form>
