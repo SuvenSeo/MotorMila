@@ -173,7 +173,7 @@ function CompareTrayPanel({ className }: { className?: string }) {
                   key={`empty-${i}`}
                   layout={!calm}
                   transition={layoutT}
-                  className="h-8 w-8 rounded-control border-2 border-dashed border-border bg-transparent"
+                  className="hidden h-8 w-8 rounded-control border-2 border-dashed border-border bg-transparent sm:block"
                 />
               ),
             )}
