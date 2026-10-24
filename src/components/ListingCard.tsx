@@ -199,6 +199,9 @@ export const ListingCard = memo(function ListingCard({
       aria-label={t("listingCard.aria", "{title} listing card", { title: listingTitle || "Vehicle" })}
       className={cn(
         cardVariants({ variant: "media", padding: "none" }),
+        // Off-screen cards skip style/layout/paint while scrolling (sized from
+        // their last render; 440px until then).
+        "[content-visibility:auto] [contain-intrinsic-size:auto_440px]",
         "group isolate h-full transition-[border-color,box-shadow] duration-medium ease-decelerate hover:border-primary/30 hover:shadow-e2 motion-reduce:transition-none",
       )}
       onPointerEnter={() => {

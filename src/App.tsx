@@ -206,6 +206,8 @@ function AppShell() {
       <MobileAppPromo />
       <CompareTray />
       <MobileBottomNav />
+      {/* Height = the promo strip's claim (lib/dock.ts setDockExtra), phones only. */}
+      <div data-dock-spacer aria-hidden className="md:hidden" />
     </div>
   );
 }

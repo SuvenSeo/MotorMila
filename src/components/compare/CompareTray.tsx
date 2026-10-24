@@ -7,6 +7,7 @@ import { formatPriceLkrMillions } from "@/lib/formatting";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { useLowData } from "@/hooks/useLowData";
 import { useCompare } from "./CompareContext";
+import { useDockExtra } from "@/lib/dock";
 import { duration, ease, fadeIn, spring, useReducedMotionOrLowData } from "@/lib/motion";
 import { Button } from "@/components/ui/button";
 import { AnimatedNumber } from "@/components/ui/animated-number";
@@ -36,6 +37,7 @@ function initials(make: string, model: string): string {
 /** Slides the tray up on a spring when the first car is added, down when cleared. */
 export function CompareTray({ className }: { className?: string }) {
   const { count } = useCompare();
+  const dockExtra = useDockExtra();
   const { pathname } = useLocation();
   const calm = useReducedMotionOrLowData();
   const show = count > 0 && pathname !== "/compare" && !pathname.startsWith("/compare/");
@@ -48,7 +50,7 @@ export function CompareTray({ className }: { className?: string }) {
           animate={calm ? "show" : { opacity: 1, y: 0, transition: spring.smooth }}
           exit={calm ? "exit" : { opacity: 0, y: 96, transition: { duration: duration.medium, ease: ease.accelerate } }}
           variants={fadeIn}
-          style={TRAY_STYLE}
+          style={{ ...TRAY_STYLE, ["--dock-extra" as string]: `${dockExtra}px` }}
           className="fixed inset-x-3 mx-auto max-w-md md:inset-x-auto md:left-6 md:mx-0 md:w-[420px]"
         >
           <CompareTrayPanel className={className} />
