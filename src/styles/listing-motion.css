@@ -13,8 +13,11 @@
   object-fit: cover;
   overflow: clip;
 }
-html[data-listing-vt] ::view-transition-old(root),
-html[data-listing-vt] ::view-transition-new(root) {
+/* No space before the pseudo: `html[x] ::view-transition-…` is a descendant
+   (universal) selector that never matches the root's pseudos and made every
+   toggle of the attribute restyle the whole page (3× per card → listing). */
+html[data-listing-vt]::view-transition-old(root),
+html[data-listing-vt]::view-transition-new(root) {
   animation-duration: var(--dur-short);
   animation-timing-function: var(--ease-standard);
 }

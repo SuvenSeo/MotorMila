@@ -86,3 +86,14 @@ html[data-route-vt]::view-transition-new(root) {
   content-visibility: auto;
   contain-intrinsic-size: auto 900px;
 }
+
+/* Listing-page sections below the hero (trust check, finance, details,
+   seller, safety, similar). They mount a frame after the card → listing
+   open; off-screen ones then skip style/layout until scrolled near.
+   Paint containment would clip the cards' shadows, so the clip edge is
+   pushed out by the deepest shadow. */
+.cv-section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 420px;
+  overflow-clip-margin: 32px;
+}

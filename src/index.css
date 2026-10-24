@@ -259,6 +259,18 @@
      via .right-scroll-bar-position. */
   html:has(> body[data-scroll-locked]) { overflow: hidden; }
 
+  /* Opening a modal sheet/dialog must not restyle the whole page.
+     - react-remove-scroll sets --removed-body-scroll-bar-size on the locked
+       <body>; an inherited custom property change restyles every element.
+       Declaring the same 0px (the touch / overlay-scrollbar gap) up front
+       makes the lock a no-op for inheritance.
+     - Radix sets pointer-events:none on <body> (inherited, same cost); while
+       an overlay is open (OverlayMark) #root pins its own value, so the
+       change stops at <body>. The full-screen overlay still blocks taps. */
+  body { --removed-body-scroll-bar-size: 0px; }
+  html[data-mm-overlay] #root { pointer-events: auto; }
+  html[data-mm-overlay] .mm-over-overlay { pointer-events: none; }
+
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     font-weight: 500;

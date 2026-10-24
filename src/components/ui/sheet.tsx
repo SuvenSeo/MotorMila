@@ -5,6 +5,7 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 import { useAppPreferences } from "@/lib/appPreferences";
+import { OverlayMark } from "@/components/ui/overlay-mark";
 
 function SrCloseLabel() {
   const { t } = useAppPreferences();
@@ -62,6 +63,7 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
     <SheetPortal>
       <SheetOverlay />
       <SheetPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} {...props}>
+        <OverlayMark />
         {children}
         <SheetPrimitive.Close className="tap-44 absolute right-4 top-4 rounded-full p-1 opacity-70 ring-offset-background transition-ui hover:bg-surface hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
           <X className="h-4 w-4" />

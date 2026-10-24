@@ -64,7 +64,7 @@ export function ListingStickyBar({ priceLkr, badge, href, sourceName, listingId,
   const bar = (
     <>
       <m.div
-        className="fixed inset-x-3 z-[60] lg:hidden bottom-[calc(5.5rem+env(safe-area-inset-bottom))] md:bottom-3"
+        className="mm-over-overlay fixed inset-x-3 z-[60] lg:hidden bottom-[calc(5.5rem+env(safe-area-inset-bottom))] md:bottom-3"
         role="region"
         aria-label={t("listing.sticky.aria", "Price and contact")}
         data-visible={visible ? "true" : "false"}

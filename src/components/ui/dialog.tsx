@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { applyPressOrigin } from "@/lib/pointerOrigin";
 import { useAppPreferences } from "@/lib/appPreferences";
+import { OverlayMark } from "@/components/ui/overlay-mark";
 
 function SrCloseLabel() {
   const { t } = useAppPreferences();
@@ -58,6 +59,7 @@ const DialogContent = React.forwardRef<
       )}
       {...props}
     >
+      <OverlayMark />
       {children}
       <DialogPrimitive.Close className="tap-44 absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-surface/80 text-muted-foreground transition-ui hover:bg-surface hover:text-foreground hover:border-border active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none">
         <X className="h-4 w-4" />

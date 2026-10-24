@@ -677,7 +677,7 @@ export default function ListingDetail() {
             {restReady ? (
               <>
               {/* 6. Trust Check */}
-              <motion.div {...onScroll}>
+              <motion.div {...onScroll} className="cv-section">
                 <TrustCheckPanel
                   listing={listing}
                   pricePoints={priceHistory?.points ?? null}
@@ -688,7 +688,7 @@ export default function ListingDetail() {
 
               {/* 7. Finance planner */}
               {hasPrice && (lease.isLeaseTakeover ? (
-                <motion.section {...onScroll} className={cardVariants({ padding: "md" })}>
+                <motion.section {...onScroll} className={cn(cardVariants({ padding: "md" }), "cv-section")}>
                   <h2 className="text-caption font-semibold text-muted-foreground">{t("listing.ownershipPlanning", "Ownership planning")}</h2>
                   <p className="mt-2 text-footnote leading-relaxed text-muted-foreground">
                     {t("listing.leaseNoFinance", "Finance estimates are hidden: the price on a lease takeover isn't the full price. Ask the seller for the settlement letter from the finance company first.")}
@@ -705,7 +705,7 @@ export default function ListingDetail() {
                   year: listing.year,
                 });
                 return (
-                  <motion.div {...onScroll} className="space-y-4">
+                  <motion.div {...onScroll} className="cv-section space-y-4">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <h2 className="text-caption font-semibold text-muted-foreground">{t("listing.ownershipPlanning", "Ownership planning")}</h2>
                       <Link to="/afford" className="text-caption font-semibold text-primary no-underline hover:underline">
@@ -746,7 +746,7 @@ export default function ListingDetail() {
               })())}
 
               {/* 8. Details */}
-              <motion.div {...onScroll} className={cardVariants({ padding: "md" })}>
+              <motion.div {...onScroll} className={cn(cardVariants({ padding: "md" }), "cv-section")}>
                 <h2 className="mb-3 text-caption font-semibold text-muted-foreground">{t("listing.description", "Description")}</h2>
                 <p className="whitespace-pre-wrap text-footnote font-medium leading-[1.8] text-muted-foreground">
                   {listing.description || t("listing.noDescription", "The seller didn't add a description. Open the original ad for full details.")}
@@ -754,7 +754,7 @@ export default function ListingDetail() {
               </motion.div>
 
               {/* Seller — info only; the one contact CTA lives in the price card / sticky bar */}
-              <motion.section {...onScroll} aria-labelledby="seller-title" className={cardVariants({ padding: "md" })}>
+              <motion.section {...onScroll} aria-labelledby="seller-title" className={cn(cardVariants({ padding: "md" }), "cv-section")}>
                 <div className="mb-3 flex items-center gap-2">
                   <ShieldCheck aria-hidden className="h-4 w-4 text-primary" />
                   <h2 id="seller-title" className="text-caption font-semibold text-muted-foreground">{t("listing.sellerInfo", "Seller information")}</h2>
@@ -766,7 +766,7 @@ export default function ListingDetail() {
                 </p>
               </motion.section>
 
-              <motion.div {...onScroll}>
+              <motion.div {...onScroll} className="cv-section">
                 <ListingLeadActions
                   listingId={listing.id ?? undefined}
                   vehicle={[listing.year, displayMake, displayModel].filter(Boolean).join(' ')}
@@ -777,16 +777,16 @@ export default function ListingDetail() {
 
               <div className="grid gap-5 md:grid-cols-2">
                 {listing.make && (
-                  <motion.div {...onScroll}>
+                  <motion.div {...onScroll} className="cv-section">
                     <SafetyResearchCard research={safetyResearch} vin={listingVin(listing)} />
                   </motion.div>
                 )}
-                <motion.div {...onScroll}>
+                <motion.div {...onScroll} className="cv-section">
                   <ListingGeoCard geo={listingGeo} />
                 </motion.div>
               </div>
               {listing.make && (
-                <motion.div {...onScroll}>
+                <motion.div {...onScroll} className="cv-section">
                   <NhtsaModelsCard make={listing.make} model={listing.model ?? undefined} compact vin={listingVin(listing)} />
                 </motion.div>
               )}
@@ -800,7 +800,7 @@ export default function ListingDetail() {
               )}
 
               {/* 9. Similar */}
-              <motion.div {...onScroll}>
+              <motion.div {...onScroll} className="cv-section">
                 <SimilarCarsStrip
                   listings={visibleSimilar}
                   fullAccess={fullAccess}
