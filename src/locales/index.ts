@@ -5,6 +5,8 @@ import { listingEn, listingSi, listingTa } from "./listing";
 import { shellEn, shellSi, shellTa } from "./shell";
 import { featuresEn, featuresSi, featuresTa } from "./features";
 import { dataEn, dataSi, dataTa } from "./data";
+import { toolsEn, toolsSi, toolsTa } from "./tools";
+import { accountEn, accountSi, accountTa } from "./account";
 
 export type Language = "en" | "si" | "ta";
 export type Dictionary = Record<string, string>;
@@ -15,13 +17,15 @@ function bundle(enBundle: Dictionary, langBundle: Dictionary): Dictionary {
 }
 
 export const DICTIONARIES: Record<Language, Dictionary> = {
-  en: { ...(en as unknown as Dictionary), ...listingEn, ...shellEn, ...featuresEn, ...dataEn },
+  en: { ...(en as unknown as Dictionary), ...listingEn, ...shellEn, ...featuresEn, ...dataEn, ...toolsEn, ...accountEn },
   si: {
     ...(si as unknown as Dictionary),
     ...bundle(listingEn, listingSi),
     ...bundle(shellEn, shellSi),
     ...bundle(featuresEn, featuresSi),
     ...bundle(dataEn, dataSi),
+    ...bundle(toolsEn, toolsSi),
+    ...bundle(accountEn, accountSi),
   },
   ta: {
     ...(ta as unknown as Dictionary),
@@ -29,6 +33,8 @@ export const DICTIONARIES: Record<Language, Dictionary> = {
     ...bundle(shellEn, shellTa),
     ...bundle(featuresEn, featuresTa),
     ...bundle(dataEn, dataTa),
+    ...bundle(toolsEn, toolsTa),
+    ...bundle(accountEn, accountTa),
   },
 };
 
