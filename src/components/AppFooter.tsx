@@ -34,45 +34,52 @@ export function AppFooter() {
   const year = new Date().getFullYear();
   const { t } = useAppPreferences();
 
+  // Six balanced columns (2×3 on phones, 3×2 on tablets, one row on desktop); every link kept.
   const platformLinks = useMemo(
     () => [
       { label: t("nav.home", "Home"), to: "/" },
       { label: t("nav.market", "Market"), to: "/#market" },
       { label: t("nav.trends", "Trends"), to: "/trends" },
-      { label: t("nav.calculator", "Calculator"), to: "/calculator" },
+      { label: t("nav.bestPicks", "Best Picks"), to: "/best-picks" },
+      { label: t("nav.compare", "Compare"), to: "/compare" },
+      { label: t("nav.officialPulse", "Official Pulse"), to: "/official-pulse" },
     ],
     [t],
   );
 
   const toolLinks = useMemo(
     () => [
+      { label: t("nav.calculator", "Calculator"), to: "/calculator" },
       { label: t("nav.afford", "What can I afford?"), to: "/afford" },
-      { label: t("nav.safeTransfer", "Safe-Transfer Kit"), to: "/safe-transfer" },
-      { label: t("nav.evHub", "EV Hub"), to: "/ev-hub" },
       { label: t("nav.valuation", "Valuation"), to: "/estimate" },
-      { label: t("nav.pricing", "Pricing"), to: "/pricing" },
-      { label: t("nav.docs", "Docs"), to: "/docs" },
-      { label: t("footer.howWePrice", "How we score prices"), to: HOW_WE_PRICE_PATH },
+      { label: t("nav.evHub", "EV Hub"), to: "/ev-hub" },
+      { label: t("shell.nav.permits", "Import permit prices"), to: "/permits" },
+      { label: t("nav.safeTransfer", "Safe-Transfer Kit"), to: "/safe-transfer" },
     ],
     [t],
   );
 
-  const moreLinks = useMemo(
+  const serviceLinks = useMemo(
     () => [
-      { label: t("nav.mobileApp", "Mobile App"), to: "/mobile-app" },
-      { label: t("nav.officialPulse", "Official Pulse"), to: "/official-pulse" },
+      { label: t("shell.nav.sellVehicle", "Sell your vehicle"), to: "/sell" },
       { label: t("nav.dealer", "Dealer"), to: "/dealer" },
-      { label: t("nav.bestPicks", "Best Picks"), to: "/best-picks" },
-      { label: t("nav.compare", "Compare"), to: "/compare" },
       { label: t("nav.leasing", "Leasing quotes"), to: "/finance" },
       { label: t("nav.inspection", "Book an inspection"), to: "/inspection" },
       { label: t("shell.nav.insurance", "Insurance quotes"), to: "/insurance" },
-      { label: t("shell.nav.permits", "Import permit prices"), to: "/permits" },
-      { label: t("shell.nav.sellVehicle", "Sell your vehicle"), to: "/sell" },
+      { label: t("nav.mobileApp", "Mobile App"), to: "/mobile-app" },
+    ],
+    [t],
+  );
+
+  const accountLinks = useMemo(
+    () => [
       { label: t("nav.myListings", "My listings"), to: "/profile" },
-      { label: t("nav.proPreview", "Pro Preview"), to: "/pro-preview" },
       { label: t("shell.nav.saved", "Saved"), to: "/alerts" },
       { label: t("nav.settings", "Settings"), to: "/settings" },
+      { label: t("nav.pricing", "Pricing"), to: "/pricing" },
+      { label: t("nav.proPreview", "Pro Preview"), to: "/pro-preview" },
+      { label: t("nav.docs", "Docs"), to: "/docs" },
+      { label: t("footer.howWePrice", "How we score prices"), to: HOW_WE_PRICE_PATH },
     ],
     [t],
   );
@@ -141,10 +148,11 @@ export function AppFooter() {
             </Button>
           </div>
 
-          <nav aria-label={t("footer.navAria", "Footer navigation")} className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 xl:grid-cols-5">
+          <nav aria-label={t("footer.navAria", "Footer navigation")} className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 xl:grid-cols-6">
             <FooterColumn title={t("footer.platform", "Platform")} links={platformLinks} />
             <FooterColumn title={t("footer.tools", "Tools")} links={toolLinks} />
-            <FooterColumn title={t("footer.more", "More")} links={moreLinks} />
+            <FooterColumn title={t("footer.services", "Sell & services")} links={serviceLinks} />
+            <FooterColumn title={t("footer.account", "Account & help")} links={accountLinks} />
             <FooterColumn title={t("footer.legal", "Legal")} links={legalLinks} />
             <div>
               <p className="text-footnote font-semibold text-foreground">{t("footer.studio", "Studio")}</p>

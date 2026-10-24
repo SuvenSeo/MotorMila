@@ -245,6 +245,8 @@ export const featuresEn: Record<string, string> = {
   "outlook.steady.advice": "No clear direction in recent months. Buy when you find the right car at a fair price, and don't wait for the market.",
   "outlook.conf.low": "low",
   "outlook.conf.medium": "medium",
+  "footer.services": "Sell & services",
+  "footer.account": "Account & help",
 };
 
 export const featuresSi: Record<string, string> = {
@@ -486,6 +488,8 @@ export const featuresSi: Record<string, string> = {
   "sellFast.label": "ඉක්මනින් විකිණීමට ඉඩ ඇත",
   "seo.howWePriceDesc": "සැසඳිය හැකි ශ්‍රී ලංකා දැන්වීම්වලින් MotorMila සාධාරණ වෙළඳපොළ වටිනාකම ඇස්තමේන්තු කරන ආකාරය, විශ්වාස මට්ටම් සහ ගනුදෙනු ලාංඡනවල තේරුම, සහ ඉල්ලුම් මිල දත්තවල සීමාවන්.",
   "seo.howWePriceTitle": "අපි මිල ලකුණු කරන ආකාරය — {site}",
+  "footer.services": "විකිණීම සහ සේවා",
+  "footer.account": "ගිණුම සහ උදව්",
 };
 
 export const featuresTa: Record<string, string> = {
@@ -727,4 +731,6 @@ export const featuresTa: Record<string, string> = {
   "sellFast.label": "விரைவாக விற்பனையாக வாய்ப்புண்டு",
   "seo.howWePriceDesc": "ஒப்பிடக்கூடிய இலங்கை விளம்பரங்களிலிருந்து MotorMila நியாயமான சந்தை மதிப்பை எப்படி மதிப்பிடுகிறது, நம்பகத்தன்மை நிலைகள் மற்றும் சலுகை அடையாளங்களின் பொருள், கேட்கும் விலைத் தரவின் வரம்புகள்.",
   "seo.howWePriceTitle": "நாங்கள் விலைகளை எப்படி மதிப்பிடுகிறோம் — {site}",
+  "footer.services": "விற்பனை & சேவைகள்",
+  "footer.account": "கணக்கு & உதவி",
 };
