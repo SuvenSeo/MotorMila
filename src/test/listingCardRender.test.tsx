@@ -189,6 +189,9 @@ describe("ListingCard render states and interactions", () => {
     renderCard(<ListingCard listing={buildListing()} priority />);
     const img = screen.getByRole("img", { name: "Toyota Aqua" });
     expect(img).toHaveAttribute("loading", "eager");
-    expect(img).toHaveAttribute("sizes", "(max-width: 768px) 100vw, 33vw");
+    expect(img).toHaveAttribute("fetchpriority", "high");
+    // `sizes` only ships with a srcset (resizable hosts such as ikman).
+    if (img.getAttribute("srcset")) expect(img).toHaveAttribute("sizes", "(max-width: 768px) 100vw, 33vw");
+    else expect(img).not.toHaveAttribute("sizes");
   });
 });

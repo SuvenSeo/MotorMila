@@ -1,5 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { formatSourceName } from "@/lib/sourceAttribution";
+import { imageHostBlocked, isRemoteImage, marketplaceSrcSet, noteImageResult } from "@/lib/listingImage";
 
 interface VehicleThumbnailProps {
   src?: string | null;
@@ -91,8 +92,9 @@ export const VehicleThumbnail = memo(function VehicleThumbnail({
   const candidates = useMemo(() => {
     const list: string[] = [];
     // Direct first: riyasewana 403s seen from datacenter IPs may not apply to
-    // Sri Lankan residential visitors, so never skip the original.
-    if (src) list.push(src);
+    // Sri Lankan residential visitors, so the original is always tried unless
+    // this session already watched its host refuse several photos in a row.
+    if (src && !imageHostBlocked(src)) list.push(src);
     if (proxyUrl) list.push(proxyUrl);
     list.push(fallbackSrc);
     return list;
@@ -104,8 +106,16 @@ export const VehicleThumbnail = memo(function VehicleThumbnail({
   const imageSrc = candidates[Math.min(attempt, candidates.length - 1)];
   const isPlaceholder = imageSrc === fallbackSrc;
   const fade = fadeIn && !priority && !isPlaceholder;
+  const srcSet = isPlaceholder ? undefined : marketplaceSrcSet(imageSrc);
+  const remote = !isPlaceholder && isRemoteImage(imageSrc);
   const imgRef = useRef<HTMLImageElement>(null);
   const [loaded, setLoaded] = useState(false);
+  // React 18 drops camelCase fetchPriority; set the real attribute so the LCP
+  // photo (detail hero / first cards) is fetched ahead of everything else.
+  useEffect(() => {
+    if (priority) imgRef.current?.setAttribute("fetchpriority", "high");
+    else imgRef.current?.removeAttribute("fetchpriority");
+  }, [priority]);
   useEffect(() => {
     // Cached photos can finish before React attaches onLoad.
     const el = imgRef.current;
@@ -120,21 +130,28 @@ export const VehicleThumbnail = memo(function VehicleThumbnail({
       width={480}
       height={300}
       className={className}
+      srcSet={srcSet}
+      sizes={srcSet ? sizes : undefined}
+      referrerPolicy={remote ? "no-referrer" : undefined}
       loading={priority ? "eager" : "lazy"}
       decoding="async"
-      sizes={sizes}
       data-placeholder={isPlaceholder ? "true" : undefined}
       data-fade-in={fade ? "" : undefined}
       data-loaded={fade ? String(loaded) : undefined}
       data-pending={!isPlaceholder && !loaded ? "true" : undefined}
       data-card-photo={marker === "card" ? "" : undefined}
       data-listing-hero={marker === "hero" ? "" : undefined}
-      onLoad={() => setLoaded(true)}
+      onLoad={() => {
+        setLoaded(true);
+        if (remote) noteImageResult(imageSrc, true);
+      }}
       // While the photo is in flight a neutral shimmer shows (img[data-pending],
       // listing-motion.css). The branded lockup is only the final state for a
       // listing with no usable photo; flashing it before every photo read as broken.
       onError={() => {
-        if (!isPlaceholder) setAttempt((a) => a + 1);
+        if (isPlaceholder) return;
+        if (remote) noteImageResult(imageSrc, false);
+        setAttempt((a) => a + 1);
       }}
     />
   );

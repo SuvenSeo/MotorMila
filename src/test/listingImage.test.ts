@@ -91,3 +91,34 @@ describe("getListingImageList", () => {
     expect(getListingImageList({} as ListingImageInput)).toEqual([]);
   });
 });
+
+describe("marketplace photo helpers", () => {
+  it("builds an ikman srcset at the original aspect ratio", async () => {
+    const { marketplaceSrcSet } = await import("@/lib/listingImage");
+    const url = "https://i.ikman-st.com/bajaj-2001-for-sale-colombo-62/8f1e10ea/1080/810/cropped.jpg";
+    expect(marketplaceSrcSet(url)).toBe(
+      "https://i.ikman-st.com/bajaj-2001-for-sale-colombo-62/8f1e10ea/320/240/cropped.jpg 320w, " +
+        "https://i.ikman-st.com/bajaj-2001-for-sale-colombo-62/8f1e10ea/480/360/cropped.jpg 480w, " +
+        "https://i.ikman-st.com/bajaj-2001-for-sale-colombo-62/8f1e10ea/620/465/cropped.jpg 620w, " +
+        "https://i.ikman-st.com/bajaj-2001-for-sale-colombo-62/8f1e10ea/1080/810/cropped.jpg 1080w",
+    );
+    expect(marketplaceSrcSet("https://riyasewana.com/uploads/a-1.jpg")).toBeUndefined();
+    expect(marketplaceSrcSet(null)).toBeUndefined();
+  });
+
+  it("stops hot-linking a host after repeated refusals, unless it ever served a photo", async () => {
+    const { imageHostBlocked, noteImageResult, resetImageHostState } = await import("@/lib/listingImage");
+    resetImageHostState();
+    const a = "https://riyasewana.com/uploads/a.jpg";
+    for (let i = 0; i < 3; i += 1) noteImageResult(a, false);
+    expect(imageHostBlocked(a)).toBe(false);
+    noteImageResult(a, false);
+    expect(imageHostBlocked("https://riyasewana.com/uploads/b.jpg")).toBe(true);
+    noteImageResult(a, true);
+    expect(imageHostBlocked(a)).toBe(false);
+    for (let i = 0; i < 6; i += 1) noteImageResult(a, false);
+    expect(imageHostBlocked(a)).toBe(false);
+    expect(imageHostBlocked("/demo/car.webp")).toBe(false);
+    resetImageHostState();
+  });
+});

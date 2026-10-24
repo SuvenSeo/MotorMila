@@ -158,6 +158,7 @@ function CompareTrayPanel({ className }: { className?: string }) {
                     alt=""
                     loading="lazy"
                     decoding="async"
+                    referrerPolicy="no-referrer"
                     width={32}
                     height={32}
                     className="h-8 w-8 rounded-control border-2 border-popover bg-surface-2 object-cover"

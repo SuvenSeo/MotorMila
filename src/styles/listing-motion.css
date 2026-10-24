@@ -28,19 +28,18 @@ html[data-listing-vt="hero"] .route-stage:not(:has(img[data-listing-hero])) {
   display: none !important;
 }
 
-/* ── Photo loading: neutral shimmer → photo cross-fade ────────────────────
-   No branded logo tile before a photo: the frame shimmers (same recipe as
-   .skeleton-shimmer) and the photo fades in once decoded. */
+/* ── Photo loading: neutral placeholder → photo cross-fade ───────────────
+   No branded logo tile before a photo: the frame shows the muted surface with
+   a soft opacity breath (compositor-only — the old background-position sweep
+   repainted every pending card on every frame) and the photo fades in once
+   decoded. */
 img[data-pending="true"] {
   background-color: hsl(var(--muted));
-  background-image: linear-gradient(100deg, transparent 30%, hsl(var(--foreground) / 0.07) 50%, transparent 70%);
-  background-size: 220% 100%;
-  background-repeat: no-repeat;
-  animation: photo-shimmer 1.6s linear infinite;
+  animation: photo-pending 1.6s var(--ease-standard) infinite alternate;
 }
-@keyframes photo-shimmer {
-  from { background-position: 130% 0; }
-  to { background-position: -30% 0; }
+@keyframes photo-pending {
+  from { opacity: 1; }
+  to { opacity: 0.55; }
 }
 img[data-fade-in][data-loaded="true"] {
   animation: photo-reveal var(--dur-medium) var(--ease-standard) both;

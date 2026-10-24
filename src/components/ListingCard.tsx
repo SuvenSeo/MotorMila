@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { m } from "motion/react";
 import { CarListing } from "@/types/car";
 import { formatPrice } from "@/services/api";
@@ -75,6 +75,9 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
+/** Listing ids whose card already played its reveal this session. */
+const REVEALED_LISTINGS = new Set<number | string>();
+
 export const ListingCard = memo(function ListingCard({
   listing,
   onCompareToggle,
@@ -105,6 +108,9 @@ export const ListingCard = memo(function ListingCard({
   }, []);
   const calm = useReducedMotionOrLowData();
   const canHover = useCanHover();
+  // Reveal once per session: a card the visitor already saw (back from a
+  // listing, a re-sort, page 2 → page 1) is simply there, no second stagger.
+  const [alreadyRevealed] = useState(() => listing.id != null && REVEALED_LISTINGS.has(listing.id));
   // Scroll-in reveal (once). Reduced motion / low data: opacity only.
   const revealVariants = useMemo(
     () => withShowDelay(calm ? fadeIn : fadeUp, calm ? 0 : revealDelay(revealIndex)),
@@ -179,10 +185,13 @@ export const ListingCard = memo(function ListingCard({
     <m.article
       ref={cardRef}
       role="article"
-      initial="hidden"
+      initial={alreadyRevealed ? false : "hidden"}
       whileInView="show"
       viewport={{ once: true, amount: 0.15 }}
       variants={revealVariants}
+      onViewportEnter={() => {
+        if (listing.id != null) REVEALED_LISTINGS.add(listing.id);
+      }}
       {...(calm ? {} : press)}
       {...(canHover && !calm ? hoverLift : {})}
       // Motion's whileTap adds tabindex="0"; the title link and buttons inside are the tab stops.

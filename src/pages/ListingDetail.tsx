@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
+import { lazyWithRetry } from '@/lib/lazyWithRetry';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   ArrowLeft, ExternalLink, MapPin, Calendar,
@@ -37,7 +38,6 @@ import { MileageTrustChip } from '@/components/MileageTrustChip';
 import { SellSpeedChip } from '@/components/SellSpeedChip';
 import { AdvertHealthChip } from '@/components/AdvertHealthChip';
 import { ListingHistoryReport } from '@/components/ListingHistoryReport';
-import { ListingPriceTimeline } from '@/components/ListingPriceTimeline';
 import { UpgradePrompt } from '@/components/UpgradePrompt';
 import { inferFinanceClass } from '@/lib/cashToOwn';
 import { useAppPreferences } from '@/lib/appPreferences';
@@ -70,7 +70,24 @@ import { ListingStickyBar } from '@/components/listing/ListingStickyBar';
 import { SimilarCarsStrip } from '@/components/listing/SimilarCarsStrip';
 import { AnimatedPrice } from '@/components/listing/AnimatedPrice';
 
+// The price-timeline chart pulls in recharts (chart-vendor, ~115 kB gz). It sits
+// below the fold, so it loads on its own chunk once the page has painted.
+const loadPriceTimeline = () => import('@/components/ListingPriceTimeline');
+const ListingPriceTimeline = lazyWithRetry(() => loadPriceTimeline().then((m) => ({ default: m.ListingPriceTimeline })));
+
 export default function ListingDetail() {
+  // Warm the chart chunk once the hero has painted (idle), so it is usually
+  // ready by the time the price history scrolls into view.
+  useEffect(() => {
+    const ric = window.requestIdleCallback;
+    if (typeof ric === "function") {
+      const handle = ric(() => void loadPriceTimeline().catch(() => {}), { timeout: 4000 });
+      return () => window.cancelIdleCallback?.(handle);
+    }
+    const timer = window.setTimeout(() => void loadPriceTimeline().catch(() => {}), 2500);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const routerLocation = useLocation();
@@ -642,11 +659,13 @@ export default function ListingDetail() {
             {/* 5. Price history */}
             {priceHistory && priceHistory.points.length > 0 && (
               <motion.div {...onScroll}>
-                <ListingPriceTimeline
-                  history={priceHistory}
-                  marketMedianLkr={listing.market_median_lkr}
-                  listingTitle={displayName}
-                />
+                <Suspense fallback={<div className="h-56 rounded-2xl border border-border bg-card skeleton-shimmer" />}>
+                  <ListingPriceTimeline
+                    history={priceHistory}
+                    marketMedianLkr={listing.market_median_lkr}
+                    listingTitle={displayName}
+                  />
+                </Suspense>
               </motion.div>
             )}
 

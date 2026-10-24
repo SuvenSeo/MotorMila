@@ -293,7 +293,7 @@ export default function Compare() {
           header: () => (
             <div className="content-in flex min-w-0 flex-col gap-2.5 normal-case tracking-normal">
               {!lowData && l.thumbnail_url ? (
-                <img src={l.thumbnail_url} alt="" loading="lazy" decoding="async" className="aspect-[4/3] w-full rounded-control bg-surface-2 object-cover" />
+                <img src={l.thumbnail_url} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" width={480} height={360} className="aspect-[4/3] w-full rounded-control bg-surface-2 object-cover" />
               ) : null}
               <div className="flex items-start justify-between gap-1">
                 <Link to={`/listing/${l.id}`} className="min-w-0 text-body font-semibold leading-snug text-foreground no-underline transition-colors duration-short hover:text-primary">

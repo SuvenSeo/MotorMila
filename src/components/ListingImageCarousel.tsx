@@ -25,6 +25,9 @@ interface ListingImageCarouselProps {
   source?: string | null;
 }
 
+/** Listing grid: 1 column < 768px, 2 columns to 1279px, then 3 columns in a ≤1560px frame. */
+const CARD_SIZES = "(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 520px";
+
 function stop(e: React.SyntheticEvent) {
   e.stopPropagation();
   e.preventDefault();
@@ -74,6 +77,27 @@ export function ListingImageCarousel({
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxRequested, setLightboxRequested] = useState(false);
   const sourceName = formatSourceName(source);
+  // Only mount the photos someone can see or is about to: the current slide,
+  // plus its neighbours once the carousel is touched/hovered (cards) or right
+  // away (detail). Every card used to download all of its slides up front —
+  // ~50 full-size photos (≈8 MB) on the home grid.
+  const [mounted, setMounted] = useState<ReadonlySet<number>>(() => new Set(isDetail && multi ? [0, 1, count - 1] : [0]));
+  const prime = useCallback(
+    (center: number) => {
+      if (!multi) return;
+      setMounted((cur) => {
+        const want = [center, (center + 1) % count, (center - 1 + count) % count];
+        if (want.every((i) => cur.has(i))) return cur;
+        const next = new Set(cur);
+        want.forEach((i) => next.add(i));
+        return next;
+      });
+    },
+    [multi, count],
+  );
+  useEffect(() => {
+    if (index !== 0) prime(index);
+  }, [index, prime]);
 
   useEffect(() => {
     if (!emblaApi) return;
@@ -95,8 +119,10 @@ export function ListingImageCarousel({
   const imagesKey = images.join("|");
   useEffect(() => {
     setIndex(0);
+    setMounted(new Set(isDetail && multi ? [0, 1, count - 1] : [0]));
     emblaApi?.reInit();
     emblaApi?.scrollTo(0, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only on a new photo set
   }, [imagesKey, emblaApi]);
 
   // Keyboard navigation (detail only); ignored while typing or in the lightbox.
@@ -147,6 +173,8 @@ export function ListingImageCarousel({
       aria-roledescription="carousel"
       aria-label={t("listingImage.carousel", "Listing photos")}
       className={className}
+      onPointerEnter={multi ? () => prime(index) : undefined}
+      onFocus={multi ? () => prime(index) : undefined}
     >
       <div className="relative h-full w-full overflow-hidden">
         <div ref={emblaRef} className="h-full w-full overflow-hidden">
@@ -157,7 +185,9 @@ export function ListingImageCarousel({
                 className="h-full w-full min-w-0 shrink-0 grow-0 basis-full"
                 aria-hidden={multi && i !== index}
               >
-                {isDetail ? (
+                {!mounted.has(i) ? (
+                  <div className="h-full w-full bg-muted" />
+                ) : isDetail ? (
                   <button
                     type="button"
                     className="block h-full w-full cursor-zoom-in"
@@ -184,6 +214,7 @@ export function ListingImageCarousel({
                     alt={i === 0 ? alt : `${alt} — ${label(i)}`}
                     source={source}
                     priority={priority && i === 0}
+                    sizes={CARD_SIZES}
                     marker="card"
                     fadeIn
                     className={`h-full w-full object-cover${imageClassName ? ` ${imageClassName}` : ""}`}
