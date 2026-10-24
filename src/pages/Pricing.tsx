@@ -23,6 +23,7 @@ import { useAuth } from "@/lib/authContext";
 import { API_BASE, sendFeedback } from "@/services/api";
 import { toast } from "sonner";
 import { authHeaders } from "@/lib/authToken";
+import { tx } from "@/lib/translate";
 
 type ManualPayInstructions = {
   plan: string;
@@ -219,6 +220,7 @@ export function TrialCountdownBanner() {
 }
 
 function ManualPayPanel({ plan, instructions, onClose }: { plan: string; instructions: ManualPayInstructions; onClose: () => void }) {
+  const { t } = useAppPreferences();
   const whatsappLink = instructions.whatsappNumber
     ? `https://wa.me/${instructions.whatsappNumber.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Motormila ${plan} upgrade — my account email is `)}`
     : null;
@@ -226,10 +228,10 @@ function ManualPayPanel({ plan, instructions, onClose }: { plan: string; instruc
     <Card role="status" className="content-in border-primary/25">
       <p className="mb-2 inline-flex items-center gap-2 text-footnote font-semibold text-primary">
         <MessageCircle aria-hidden className="h-4 w-4" />
-        Manual pay — {plan}
+        {t("pricing.manual.title", "Manual pay — {plan}", { plan })}
       </p>
       <h3 className="text-callout font-semibold text-foreground">
-        Bank transfer or KOKO · activated within {instructions.activationWindow}
+        {t("pricing.manual.heading", "Bank transfer or KOKO · activated within {window}", { window: instructions.activationWindow })}
       </h3>
       <ol className="mt-4 space-y-2">
         {instructions.steps.map((step) => (
@@ -240,7 +242,7 @@ function ManualPayPanel({ plan, instructions, onClose }: { plan: string; instruc
         ))}
       </ol>
       <div className="mt-3 grid gap-2 text-footnote text-label-2 sm:grid-cols-2">
-        <p className="rounded-control bg-surface-2 p-3"><span className="font-semibold text-foreground">Bank: </span>{instructions.bankDetails}</p>
+        <p className="rounded-control bg-surface-2 p-3"><span className="font-semibold text-foreground">{t("pricing.manual.bank", "Bank:")} </span>{instructions.bankDetails}</p>
         <p className="rounded-control bg-surface-2 p-3"><span className="font-semibold text-foreground">KOKO: </span>{instructions.kokoNote}</p>
       </div>
       <div className="mt-5 flex flex-wrap gap-2">
@@ -248,17 +250,17 @@ function ManualPayPanel({ plan, instructions, onClose }: { plan: string; instruc
           <Button asChild>
             <a href={whatsappLink} target="_blank" rel="noreferrer">
               <MessageCircle aria-hidden />
-              WhatsApp us ({instructions.activationWindow} activation)
+              {t("pricing.manual.whatsapp", "WhatsApp us ({window} activation)", { window: instructions.activationWindow })}
             </a>
           </Button>
         )}
         <Button asChild variant="secondary">
           <a href={`mailto:${instructions.contactEmail}?subject=Motormila%20${encodeURIComponent(plan)}%20plan%20upgrade`}>
-            Email {instructions.contactEmail}
+            {t("pricing.manual.email", "Email {email}", { email: instructions.contactEmail })}
           </a>
         </Button>
         <Button type="button" variant="ghost" onClick={onClose}>
-          Dismiss
+          {t("pricing.manual.dismiss", "Dismiss")}
         </Button>
       </div>
     </Card>
@@ -293,21 +295,24 @@ function PayherePanel({
   onManual: () => void;
   onClose: () => void;
 }) {
+  const { t } = useAppPreferences();
   const [phone, setPhone] = useState("");
   const [recurring, setRecurring] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const tier = DEALER_TIERS.find((t) => t.code === code);
+  const tier = DEALER_TIERS.find((d) => d.code === code);
   const amount = PLAN_PRICES[code][period];
   return (
-    <Card role="dialog" aria-label="Pay with PayHere" className="content-in border-primary/25">
+    <Card role="dialog" aria-label={t("pricing.payhere.aria", "Pay with PayHere")} className="content-in border-primary/25">
       <p className="mb-2 flex flex-wrap items-center gap-2 text-footnote font-semibold text-primary">
         <CreditCard aria-hidden className="h-4 w-4" />
-        Dealer {tier?.name} · {formatLkr(amount)} / {period === "yearly" ? "year" : "month"}
-        {sandbox ? <Badge variant="warning">Test mode</Badge> : null}
+        {period === "yearly"
+          ? t("pricing.payhere.summaryYear", "Dealer {plan} · {amount} / year", { plan: tier ? tx(t, tier.name) : "", amount: formatLkr(amount) })
+          : t("pricing.payhere.summaryMonth", "Dealer {plan} · {amount} / month", { plan: tier ? tx(t, tier.name) : "", amount: formatLkr(amount) })}
+        {sandbox ? <Badge variant="warning">{t("pricing.payhere.testMode", "Test mode")}</Badge> : null}
       </p>
       <p className="text-body text-label-1">
-        You'll be sent to PayHere to pay by card, Genie, FriMi or eZcash. MotorMila never sees your card details.
+        {t("pricing.payhere.body", "You'll be sent to PayHere to pay by card, Genie, FriMi or eZcash. MotorMila never sees your card details.")}
       </p>
       <form
         className="mt-4 flex flex-wrap items-end gap-3"
@@ -319,13 +324,13 @@ function PayherePanel({
             const checkout = await createPayhereCheckout({ plan_code: code, period, recurring, phone });
             submitPayhereForm(checkout);
           } catch (err) {
-            setError(err instanceof Error ? err.message : "Couldn't start the payment.");
+            setError(err instanceof Error ? err.message : t("pricing.payhere.failed", "Couldn't start the payment."));
             setBusy(false);
           }
         }}
       >
         <div className="flex min-w-[13.75rem] flex-1 flex-col gap-2">
-          <Label htmlFor="payhere-phone">Mobile number (PayHere needs it for the receipt)</Label>
+          <Label htmlFor="payhere-phone">{t("pricing.payhere.phone", "Mobile number (PayHere needs it for the receipt)")}</Label>
           <Input
             id="payhere-phone"
             type="tel"
@@ -341,21 +346,21 @@ function PayherePanel({
           <div className="flex h-10 items-center gap-2">
             <Checkbox id="payhere-recurring" checked={recurring} onCheckedChange={(v) => setRecurring(v === true)} />
             <Label htmlFor="payhere-recurring" className="cursor-pointer text-footnote font-normal text-label-1">
-              Renew automatically (cancel any time)
+              {t("pricing.payhere.recurring", "Renew automatically (cancel any time)")}
             </Label>
           </div>
         )}
         <Button type="submit" loading={busy}>
-          Continue to PayHere
+          {t("pricing.payhere.continue", "Continue to PayHere")}
         </Button>
       </form>
       {error && <p role="alert" className="content-in mt-3 text-footnote font-semibold text-deal-high-text">{error}</p>}
       <div className="mt-4 flex flex-wrap gap-2">
         <Button type="button" variant="secondary" size="sm" onClick={onManual}>
-          Pay by bank transfer / KOKO instead
+          {t("pricing.payhere.manualInstead", "Pay by bank transfer / KOKO instead")}
         </Button>
         <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-          Cancel
+          {t("common.cancel", "Cancel")}
         </Button>
       </div>
     </Card>
@@ -402,7 +407,7 @@ function DealerPlans() {
       const intent = await fetchCheckoutIntent(code);
       if (intent.provider === "payhere" && intent.payhere_checkout_endpoint) {
         if (!user) {
-          toast.message("Sign in first so we know which account to upgrade.");
+          toast.message(t("pricing.signInFirst", "Sign in first so we know which account to upgrade."));
           navigate("/sign-in", { state: { from: { pathname: "/pricing" } } });
           return;
         }
@@ -415,7 +420,7 @@ function DealerPlans() {
       }
       if (intent.manual_pay) setManualPay({ plan: code, instructions: intent.manual_pay });
     } catch {
-      toast.error("Couldn't load payment options. Email us and we'll set you up.");
+      toast.error(t("pricing.paymentOptionsFailed", "Couldn't load payment options. Email us and we'll set you up."));
     } finally {
       setLoading(null);
     }
@@ -426,7 +431,7 @@ function DealerPlans() {
       const res = await fetch(`${API_BASE}/billing/manual-pay?plan=${encodeURIComponent(code)}`, { headers: { Accept: "application/json" } });
       if (res.ok) setManualPay({ plan: code, instructions: (await res.json()) as ManualPayInstructions });
     } catch {
-      toast.error("Couldn't load bank transfer details.");
+      toast.error(t("pricing.bankDetailsFailed", "Couldn't load bank transfer details."));
     }
     setPayhere(null);
   };
@@ -455,21 +460,21 @@ function DealerPlans() {
         {DEALER_TIERS.map((tier) => (
           <Card key={tier.code} className={tier.highlight ? "flex flex-col border-primary/40 shadow-e2" : "flex flex-col"}>
             <div className="flex items-center justify-between gap-2">
-              <p className="text-footnote font-semibold text-label-2">Dealer {tier.name}</p>
+              <p className="text-footnote font-semibold text-label-2">{t("pricing.dealerPlanName", "Dealer {plan}", { plan: tx(t, tier.name) })}</p>
               {tier.highlight ? <Badge variant="info">{t("acct.pricing.popular", "Most popular")}</Badge> : null}
             </div>
             <div className="mt-3 flex items-baseline gap-1.5">
               <span className="text-title2 font-semibold text-foreground">
                 <PlanPrice amount={PLAN_PRICES[tier.code][period]} />
               </span>
-              <span className="text-footnote text-label-2">/{period === "yearly" ? "yr" : "mo"}</span>
+              <span className="text-footnote text-label-2">{period === "yearly" ? t("pricing.perYear", "/yr") : t("pricing.perMonth", "/mo")}</span>
             </div>
-            <p className="mt-1 text-footnote text-label-2">{tier.stock}</p>
+            <p className="mt-1 text-footnote text-label-2">{tx(t, tier.stock)}</p>
             <ul className="mt-5 flex-1 space-y-2.5 border-t border-separator pt-5">
               {tier.features.map((f) => (
-                <li key={f} className="flex gap-2 text-footnote text-label-1">
+                <li key={f[0]} className="flex gap-2 text-footnote text-label-1">
                   <Check aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  <span>{f}</span>
+                  <span>{tx(t, f)}</span>
                 </li>
               ))}
             </ul>
@@ -480,7 +485,7 @@ function DealerPlans() {
               loading={loading === tier.code}
               onClick={() => void choose(tier.code)}
             >
-              Choose {tier.name}
+              {t("pricing.choosePlan", "Choose {plan}", { plan: tx(t, tier.name) })}
             </Button>
           </Card>
         ))}
@@ -578,7 +583,7 @@ export default function Pricing() {
               <m.div key={tier.id} variants={listItem} custom={i}>
                 <Card padding="lg" className={tier.id === "free" ? "flex h-full flex-col border-primary/40 shadow-e2" : "flex h-full flex-col"}>
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-footnote font-semibold text-label-2">{tier.name}</p>
+                    <p className="text-footnote font-semibold text-label-2">{tx(t, tier.name)}</p>
                     {tier.id === "free" ? (
                       <Badge variant="success">{t("shell.pro.freeBeta", "Free during beta")}</Badge>
                     ) : (
@@ -586,16 +591,16 @@ export default function Pricing() {
                     )}
                   </div>
                   <div className="mt-3 flex items-baseline gap-1.5">
-                    <span className="font-display text-title1 font-semibold tabular-nums text-foreground">{tier.priceLkr}</span>
-                    {tier.priceNote ? <span className="text-footnote text-label-2">{tier.priceNote}</span> : null}
+                    <span className="font-display text-title1 font-semibold tabular-nums text-foreground">{tx(t, tier.priceLkr)}</span>
+                    {tier.priceNote ? <span className="text-footnote text-label-2">{tx(t, tier.priceNote)}</span> : null}
                   </div>
-                  {tier.id !== "free" && tier.annualNote ? <p className="mt-1 text-footnote text-label-2">{tier.annualNote}</p> : null}
-                  <p className="mt-3 text-footnote text-label-2">{tier.audience}</p>
+                  {tier.id !== "free" && tier.annualNote ? <p className="mt-1 text-footnote text-label-2">{tx(t, tier.annualNote)}</p> : null}
+                  <p className="mt-3 text-footnote text-label-2">{tx(t, tier.audience)}</p>
                   <ul className="mt-5 flex-1 space-y-2.5 border-t border-separator pt-5">
                     {tier.features.map((feature) => (
-                      <li key={feature} className="flex gap-2 text-footnote text-label-1">
+                      <li key={feature[0]} className="flex gap-2 text-footnote text-label-1">
                         <Check aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                        <span>{feature}</span>
+                        <span>{tx(t, feature)}</span>
                       </li>
                     ))}
                   </ul>
@@ -604,7 +609,7 @@ export default function Pricing() {
                       <TrialCta />
                     ) : (
                       <Button asChild className="w-full">
-                        <Link to={tier.ctaTo}>{tier.ctaLabel}</Link>
+                        <Link to={tier.ctaTo}>{tx(t, tier.ctaLabel)}</Link>
                       </Button>
                     )}
                   </div>
@@ -646,10 +651,10 @@ export default function Pricing() {
           <SectionTitle id="faq-heading" eyebrow={t("pricing.faq", "FAQ")} title={t("pricing.faqTitle", "Common questions.")} />
           <div className="grid gap-4 md:grid-cols-2">
             {PRICING_FAQ.map((item, i) => (
-              <m.div key={item.q} variants={listItem} custom={i}>
+              <m.div key={item.q[0]} variants={listItem} custom={i}>
                 <Card className="h-full">
-                  <h3 className="text-body font-semibold text-foreground">{item.q}</h3>
-                  <p className="mt-2 text-footnote text-label-2">{item.a}</p>
+                  <h3 className="text-body font-semibold text-foreground">{tx(t, item.q)}</h3>
+                  <p className="mt-2 text-footnote text-label-2">{tx(t, item.a)}</p>
                 </Card>
               </m.div>
             ))}
@@ -698,9 +703,9 @@ export default function Pricing() {
               <DealerPlans />
               <div className="grid gap-4 md:grid-cols-3">
                 {DEALER_FAQ.map((item) => (
-                  <div key={item.q} className="rounded-card bg-surface-2 p-5">
-                    <h3 className="text-body font-semibold text-foreground">{item.q}</h3>
-                    <p className="mt-2 text-footnote text-label-2">{item.a}</p>
+                  <div key={item.q[0]} className="rounded-card bg-surface-2 p-5">
+                    <h3 className="text-body font-semibold text-foreground">{tx(t, item.q)}</h3>
+                    <p className="mt-2 text-footnote text-label-2">{tx(t, item.a)}</p>
                   </div>
                 ))}
               </div>

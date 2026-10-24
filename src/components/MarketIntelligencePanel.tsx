@@ -146,6 +146,7 @@ export const MarketIntelligencePanel = memo(function MarketIntelligencePanel({
   const freshness = getListingDataFreshness({
     latestListingAt: snapshot?.latest_listing_at,
     lastUpdated: stats?.last_updated,
+    t,
   });
   const feedSyncAt = snapshot?.generated_at ?? freshness.primaryAt;
   const feedSyncLabel = formatCompactAge(feedSyncAt);

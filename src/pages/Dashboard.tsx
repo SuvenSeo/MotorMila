@@ -1262,10 +1262,10 @@ export default function Dashboard() {
             <div>
               <div className="mb-5 flex items-center justify-between">
                 <h3 className="font-display text-body font-semibold tracking-tight text-foreground flex items-center gap-2">
-                  <TrendingDown className="h-4 w-4 text-deal-good-text" /> Price cuts &middot; 7d
+                  <TrendingDown className="h-4 w-4 text-deal-good-text" /> {t("home.priceCuts7d", "Price cuts · 7d")}
                 </h3>
                 <Link to="/best-picks" className="flex items-center gap-1 text-caption font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright">
-                  All cuts <ArrowUpRight className="h-3.5 w-3.5" />
+                  {t("home.allCuts", "All cuts")} <ArrowUpRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
               {(dropsQuery.data || []).length ? (

@@ -28,6 +28,7 @@ import { useCompareTray } from '@/lib/compareTray';
 import { loadWatchlistIds, saveWatchlistIds, toggleWatchlistId } from '@/lib/watchlist';
 import { DealLadder } from '@/components/DealLadder';
 import { formatListedDateTime } from '@/lib/listing-card-meta';
+import { vehicleTokenLabel } from '@/lib/vehicleTokens';
 import { LeaseCalculator } from '@/components/LeaseCalculator';
 import { TaxBreakdown } from '@/components/TaxBreakdown';
 import { CashToOwnStrip } from '@/components/CashToOwnStrip';
@@ -68,11 +69,6 @@ import { BeforeYouPayStrip } from '@/components/listing/BeforeYouPayStrip';
 import { ListingStickyBar } from '@/components/listing/ListingStickyBar';
 import { SimilarCarsStrip } from '@/components/listing/SimilarCarsStrip';
 import { AnimatedPrice } from '@/components/listing/AnimatedPrice';
-
-function formatToken(value: string | null | undefined): string {
-  if (!value) return 'Unknown';
-  return value.replace(/[_-]/g, ' ').split(' ').filter(Boolean).map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
-}
 
 export default function ListingDetail() {
   const { id } = useParams<{ id: string }>();
@@ -347,19 +343,15 @@ export default function ListingDetail() {
   );
   const seenOnSites = otherSources.size > 0 ? otherSources.size + 1 : null;
 
-  const knownToken = (v: string | null | undefined) => {
-    const s = formatToken(v);
-    return s === 'Unknown' || /^(n\/?a|none|other)$/i.test(s) ? null : s;
-  };
   const engineCc = plausibleEngineCc(listing.engine_cc, listing.year);
   const keySpecs = [
     { label: t("common.year", "Year"), value: listing.year ? String(listing.year) : null, icon: Calendar },
     { label: t("common.mileage", "Mileage"), value: Number.isFinite(Number(listing.mileage_km)) && Number(listing.mileage_km) > 0 ? `${Number(listing.mileage_km).toLocaleString()} km` : null, icon: Gauge },
-    { label: t("common.fuel", "Fuel"), value: knownToken(listing.fuel_type), icon: Fuel },
-    { label: t("common.transmission", "Transmission"), value: knownToken(listing.transmission), icon: Settings2 },
+    { label: t("common.fuel", "Fuel"), value: vehicleTokenLabel("fuel", listing.fuel_type, t), icon: Fuel },
+    { label: t("common.transmission", "Transmission"), value: vehicleTokenLabel("transmission", listing.transmission, t), icon: Settings2 },
     { label: t("listing.engine", "Engine"), value: engineCc ? `${Math.round(engineCc).toLocaleString()} cc` : null, icon: Zap },
-    { label: t("common.condition", "Condition"), value: knownToken(listing.condition), icon: Sparkles },
-    { label: t("common.body", "Body"), value: knownToken(listing.body_type), icon: CarIcon },
+    { label: t("common.condition", "Condition"), value: vehicleTokenLabel("condition", listing.condition, t), icon: Sparkles },
+    { label: t("common.body", "Body"), value: vehicleTokenLabel("body", listing.body_type, t), icon: CarIcon },
   ].filter((s): s is { label: string; value: string; icon: typeof Calendar } => Boolean(s.value));
 
   const priceCut = priceHistory && priceHistory.cut_count > 0 ? priceHistory : null;

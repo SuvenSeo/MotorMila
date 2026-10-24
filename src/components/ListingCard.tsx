@@ -13,6 +13,7 @@ import { HybridCliffBadge } from "@/components/HybridCliffBadge";
 import { plausibleEngineCc } from "@/lib/engineCapacity";
 import { MileageTrustChip } from "@/components/MileageTrustChip";
 import { computeMileageTrust } from "@/lib/mileageTrust";
+import { vehicleTokenLabel } from "@/lib/vehicleTokens";
 import { summarizeFmv } from "@/lib/fmv";
 import { useAuth } from "@/lib/authContext";
 import { hasFullPlatformAccess } from "@/lib/planLimits";
@@ -49,18 +50,6 @@ interface ListingCardProps {
   seenOnSites?: number | null;
   /** Position in its grid: the first 8 cards stagger in (40ms apart), the rest appear together. */
   revealIndex?: number;
-}
-
-/** Title-cases an enum token; returns null for empty/unknown so the pill is hidden. */
-function formatToken(value: string | undefined | null): string | null {
-  if (!value) return null;
-  const clean = value.replace(/[_-]/g, " ").trim();
-  if (!clean || /^(unknown|n\/?a|none|other|-)$/i.test(clean)) return null;
-  return clean
-    .split(" ")
-    .filter(Boolean)
-    .map((part) => part[0].toUpperCase() + part.slice(1))
-    .join(" ");
 }
 
 function formatMileage(value: number | null | undefined): string | null {
@@ -123,7 +112,7 @@ export const ListingCard = memo(function ListingCard({
   );
   // Full photo set (primary first); single-image listings behave exactly as before.
   const galleryImages = getListingImageList(listing);
-  const daysOnMarketLabel = getListingDaysOnMarketLabel(listing.first_seen_at || listing.scraped_at);
+  const daysOnMarketLabel = getListingDaysOnMarketLabel(listing.first_seen_at || listing.scraped_at, t);
   const priceValue = Number(listing.price_lkr || 0);
   const hasKnownPrice = isReasonableListingPrice(priceValue);
   const median = Number(listing.market_median_lkr);
@@ -177,11 +166,11 @@ export const ListingCard = memo(function ListingCard({
   const sites = Number(seenOnSites);
   const showSites = Number.isFinite(sites) && sites >= 2;
 
-  const conditionLabel = formatToken(listing.condition);
+  const conditionLabel = vehicleTokenLabel("condition", listing.condition, t);
   const specPills = [
-    { key: "tx", text: formatToken(listing.transmission), icon: true },
+    { key: "tx", text: vehicleTokenLabel("transmission", listing.transmission, t), icon: true },
     { key: "km", text: formatMileage(listing.mileage_km), icon: false },
-    { key: "fuel", text: formatToken(listing.fuel_type), icon: false },
+    { key: "fuel", text: vehicleTokenLabel("fuel", listing.fuel_type, t), icon: false },
     { key: "cc", text: formatEngineCc(listing.engine_cc), icon: false },
   ].filter((p): p is { key: string; text: string; icon: boolean } => Boolean(p.text));
   const mileageKnown = computeMileageTrust({ mileageKm: listing.mileage_km, year: listing.year }).risk !== "unknown";

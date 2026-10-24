@@ -1,17 +1,23 @@
 import { BRAND } from "@/lib/brand";
+import type { I18nText } from "@/lib/translate";
 
 export type PricingTierId = "free" | "pro" | "dealer" | "custom";
 
+/**
+ * Translatable copy is an I18nText pair, [locale key, English fallback]:
+ * render it with tx(t, pair) (src/lib/translate.ts). The si/ta strings live in
+ * src/locales/strings.ts.
+ */
 export type PricingTier = {
   id: PricingTierId;
-  name: string;
-  priceLkr: string;
-  priceNote: string;
-  annualNote?: string;
-  audience: string;
+  name: I18nText;
+  priceLkr: I18nText;
+  priceNote?: I18nText;
+  annualNote?: I18nText;
+  audience: I18nText;
   highlight?: boolean;
-  features: string[];
-  ctaLabel: string;
+  features: I18nText[];
+  ctaLabel: I18nText;
   /** Internal route (e.g. /dealer) or mailto: for custom */
   ctaTo: string;
   external?: boolean;
@@ -22,6 +28,8 @@ export type IcpPersona = {
   pain: string;
   fit: string;
 };
+
+export type FaqItem = { q: I18nText; a: I18nText };
 
 export const TRIAL_OFFER = {
   days: 7,
@@ -54,25 +62,40 @@ export const PLAN_PRICES = {
 
 export type DealerTierCode = "dealer_starter" | "dealer_pro" | "dealer_yard";
 
-export const DEALER_TIERS: { code: DealerTierCode; name: string; stock: string; features: string[]; highlight?: boolean }[] = [
+export const DEALER_TIERS: { code: DealerTierCode; name: I18nText; stock: I18nText; features: I18nText[]; highlight?: boolean }[] = [
   {
     code: "dealer_starter",
-    name: "Starter",
-    stock: "Up to 20 cars in stock",
-    features: ["Price check on your own stock against market medians", "Aging and price-gap alerts", "Leads from MotorMila buyers on your stock", "1 seat"],
+    name: ["pricing.dealerTier.starter.name", "Starter"],
+    stock: ["pricing.dealerTier.starter.stock", "Up to 20 cars in stock"],
+    features: [
+      ["pricing.dealerTier.starter.f.priceCheckOnYour", "Price check on your own stock against market medians"],
+      ["pricing.dealerTier.starter.f.agingAndPricegapAlerts", "Aging and price-gap alerts"],
+      ["pricing.dealerTier.starter.f.leadsFromMotormilaBuyers", "Leads from MotorMila buyers on your stock"],
+      ["pricing.dealerTier.starter.f.1Seat", "1 seat"],
+    ],
   },
   {
     code: "dealer_pro",
-    name: "Pro",
-    stock: "Up to 75 cars in stock",
+    name: ["pricing.dealerTier.pro.name", "Pro"],
+    stock: ["pricing.dealerTier.pro.stock", "Up to 75 cars in stock"],
     highlight: true,
-    features: ["Everything in Starter", "Bulk URL benchmark", "Verified dealer badge", "3 seats"],
+    features: [
+      ["pricing.dealerTier.pro.f.everythingInStarter", "Everything in Starter"],
+      ["pricing.dealerTier.pro.f.bulkUrlBenchmark", "Bulk URL benchmark"],
+      ["pricing.dealerTier.pro.f.verifiedDealerBadge", "Verified dealer badge"],
+      ["pricing.dealerTier.pro.f.3Seats", "3 seats"],
+    ],
   },
   {
     code: "dealer_yard",
-    name: "Yard",
-    stock: "Unlimited stock",
-    features: ["Everything in Pro", "Multi-branch view", "Team seats for sales staff", "Priority support"],
+    name: ["pricing.dealerTier.yard.name", "Yard"],
+    stock: ["pricing.dealerTier.yard.stock", "Unlimited stock"],
+    features: [
+      ["pricing.dealerTier.yard.f.everythingInPro", "Everything in Pro"],
+      ["pricing.dealerTier.yard.f.multibranchView", "Multi-branch view"],
+      ["pricing.dealerTier.yard.f.teamSeatsForSales", "Team seats for sales staff"],
+      ["pricing.dealerTier.yard.f.prioritySupport", "Priority support"],
+    ],
   },
 ];
 
@@ -92,72 +115,71 @@ export const MANUAL_PAY_COPY = {
 export const PRICING_TIERS: PricingTier[] = [
   {
     id: "free",
-    name: "Free",
-    priceLkr: "LKR 0",
-    priceNote: "/mo",
-    audience: "Browsers and first-time buyers testing the market",
+    name: ["pricing.tier.free.name", "Free"],
+    priceLkr: ["pricing.tier.free.priceLkr", "LKR 0"],
+    priceNote: ["pricing.tier.free.priceNote", "/mo"],
+    audience: ["pricing.tier.free.audience", "Browsers and first-time buyers testing the market"],
     features: [
-      "Search listings from every source we track",
-      "Every search result, with full pagination",
-      "Price range and history on every listing",
-      "Import tax calculator",
-      "6 months of price trends",
-      "Latest 6 tax & customs updates",
-      "1 price-drop alert",
+      ["pricing.tier.free.f.searchListingsFromEvery", "Search listings from every source we track"],
+      ["pricing.tier.free.f.everySearchResultWith", "Every search result, with full pagination"],
+      ["pricing.tier.free.f.priceRangeAndHistory", "Price range and history on every listing"],
+      ["pricing.tier.free.f.importTaxCalculator", "Import tax calculator"],
+      ["pricing.tier.free.f.6MonthsOfPrice", "6 months of price trends"],
+      ["pricing.tier.free.f.latest6TaxCustoms", "Latest 6 tax & customs updates"],
+      ["pricing.tier.free.f.1PricedropAlert", "1 price-drop alert"],
     ],
-    ctaLabel: "Start browsing",
+    ctaLabel: ["pricing.tier.free.ctaLabel", "Start browsing"],
     ctaTo: "/",
   },
   {
     id: "pro",
-    name: "Pro",
-    priceLkr: "Coming soon",
-    priceNote: "",
-    annualNote: "Planned price LKR 999/mo or LKR 9,990/yr. We'll email you before it starts.",
-    audience: "Serious buyers, brokers and anyone who checks prices every week",
+    name: ["pricing.tier.pro.name", "Pro"],
+    priceLkr: ["pricing.tier.pro.priceLkr", "Coming soon"],
+    annualNote: ["pricing.tier.pro.annualNote", "Planned price LKR 999/mo or LKR 9,990/yr. We'll email you before it starts."],
+    audience: ["pricing.tier.pro.audience", "Serious buyers, brokers and anyone who checks prices every week"],
     features: [
-      "Deal score on every listing",
-      "Full price history with district and condition filters",
-      "All tax & customs updates",
-      "More alerts, including WhatsApp",
-      "CSV / PDF exports",
+      ["pricing.tier.pro.f.dealScoreOnEvery", "Deal score on every listing"],
+      ["pricing.tier.pro.f.fullPriceHistoryWith", "Full price history with district and condition filters"],
+      ["pricing.tier.pro.f.allTaxCustomsUpdates", "All tax & customs updates"],
+      ["pricing.tier.pro.f.moreAlertsIncludingWhatsapp", "More alerts, including WhatsApp"],
+      ["pricing.tier.pro.f.csvPdfExports", "CSV / PDF exports"],
     ],
-    ctaLabel: "Notify me",
+    ctaLabel: ["pricing.tier.pro.ctaLabel", "Notify me"],
     ctaTo: "#get-started",
   },
   {
     id: "dealer",
-    name: "Dealer",
-    priceLkr: "LKR 2,990",
-    priceNote: "/mo · from",
-    annualNote: "Starter · Pro · Yard, priced by stock size",
-    audience: "Yards and multi-lot dealers running inventory every day",
+    name: ["pricing.tier.dealer.name", "Dealer"],
+    priceLkr: ["pricing.tier.dealer.priceLkr", "LKR 2,990"],
+    priceNote: ["pricing.tier.dealer.priceNote", "/mo · from"],
+    annualNote: ["pricing.tier.dealer.annualNote", "Starter · Pro · Yard, priced by stock size"],
+    audience: ["pricing.tier.dealer.audience", "Yards and multi-lot dealers running inventory every day"],
     highlight: true,
     features: [
-      "Everything in Pro",
-      "Full Dealer workspace (/dealer)",
-      "Your stock priced against market medians",
-      "Aging and price-gap views",
-      "Leads from MotorMila buyers",
-      "Pay by card, wallet, bank transfer or KOKO",
+      ["pricing.tier.dealer.f.everythingInPro", "Everything in Pro"],
+      ["pricing.tier.dealer.f.fullDealerWorkspaceDealer", "Full Dealer workspace (/dealer)"],
+      ["pricing.tier.dealer.f.yourStockPricedAgainst", "Your stock priced against market medians"],
+      ["pricing.tier.dealer.f.agingAndPricegapViews", "Aging and price-gap views"],
+      ["pricing.tier.dealer.f.leadsFromMotormilaBuyers", "Leads from MotorMila buyers"],
+      ["pricing.tier.dealer.f.payByCardWallet", "Pay by card, wallet, bank transfer or KOKO"],
     ],
-    ctaLabel: "See dealer plans",
+    ctaLabel: ["pricing.tier.dealer.ctaLabel", "See dealer plans"],
     ctaTo: "#dealer-plans",
   },
   {
     id: "custom",
-    name: "Custom",
-    priceLkr: "Custom",
-    priceNote: "message us",
-    audience: "Banks, leasing desks, multi-branch importers — priced for your scope",
+    name: ["pricing.tier.custom.name", "Custom"],
+    priceLkr: ["pricing.tier.custom.priceLkr", "Custom"],
+    priceNote: ["pricing.tier.custom.priceNote", "message us"],
+    audience: ["pricing.tier.custom.audience", "Banks, leasing desks, multi-branch importers — priced for your scope"],
     features: [
-      "Everything in Dealer",
-      "Partnerships for leasing, insurance and import agents",
-      "Seat packs and branded reports",
-      "Policy and portfolio brief formats",
-      "Dedicated onboarding",
+      ["pricing.tier.custom.f.everythingInDealer", "Everything in Dealer"],
+      ["pricing.tier.custom.f.partnershipsForLeasingInsurance", "Partnerships for leasing, insurance and import agents"],
+      ["pricing.tier.custom.f.seatPacksAndBranded", "Seat packs and branded reports"],
+      ["pricing.tier.custom.f.policyAndPortfolioBrief", "Policy and portfolio brief formats"],
+      ["pricing.tier.custom.f.dedicatedOnboarding", "Dedicated onboarding"],
     ],
-    ctaLabel: "Message us",
+    ctaLabel: ["pricing.tier.custom.ctaLabel", "Message us"],
     ctaTo: BRAND.contactMailto,
     external: true,
   },
@@ -196,37 +218,37 @@ export const ICP_PERSONAS: IcpPersona[] = [
   },
 ];
 
-export const PRICING_FAQ: { q: string; a: string }[] = [
+export const PRICING_FAQ: FaqItem[] = [
   {
-    q: "Is MotorMila free?",
-    a: "Yes. Searching listings, price ranges, price history and the import tax calculator are free while MotorMila is in beta. No card needed.",
+    q: ["pricing.faq.isMotormilaFree.q", "Is MotorMila free?"],
+    a: ["pricing.faq.isMotormilaFree.a", "Yes. Searching listings, price ranges, price history and the import tax calculator are free while MotorMila is in beta. No card needed."],
   },
   {
-    q: "When is Pro coming, and what will it cost?",
-    a: "Soon. Pro is planned at LKR 999 a month or LKR 9,990 a year. Leave your email and we'll tell you before it launches. Nothing is ever charged without your agreement.",
+    q: ["pricing.faq.whenIsProComing.q", "When is Pro coming, and what will it cost?"],
+    a: ["pricing.faq.whenIsProComing.a", "Soon. Pro is planned at LKR 999 a month or LKR 9,990 a year. Leave your email and we'll tell you before it launches. Nothing is ever charged without your agreement."],
   },
   {
-    q: "Where do the listings come from?",
-    a: "From public ads on Sri Lankan vehicle sites. Every listing links back to the original ad and names its source.",
+    q: ["pricing.faq.whereDoTheListings.q", "Where do the listings come from?"],
+    a: ["pricing.faq.whereDoTheListings.a", "From public ads on Sri Lankan vehicle sites. Every listing links back to the original ad and names its source."],
   },
   {
-    q: "I run a dealership. Is there a plan for me?",
-    a: "Yes. Open \"For dealers\" below to see dealer plans, or message us.",
+    q: ["pricing.faq.iRunADealership.q", "I run a dealership. Is there a plan for me?"],
+    a: ["pricing.faq.iRunADealership.a", "Yes. Open \"For dealers\" below to see dealer plans, or message us."],
   },
 ];
 
 /** Dealer-specific questions, shown inside the dealer section. */
-export const DEALER_FAQ: { q: string; a: string }[] = [
+export const DEALER_FAQ: FaqItem[] = [
   {
-    q: "Which Dealer plan do I need?",
-    a: "It depends on stock size: Starter up to 20 vehicles (LKR 2,990/mo), Pro up to 75 (LKR 6,990/mo), Yard unlimited with team seats (LKR 14,990/mo).",
+    q: ["pricing.dealerFaq.whichDealerPlanDo.q", "Which Dealer plan do I need?"],
+    a: ["pricing.dealerFaq.whichDealerPlanDo.a", "It depends on stock size: Starter up to 20 vehicles (LKR 2,990/mo), Pro up to 75 (LKR 6,990/mo), Yard unlimited with team seats (LKR 14,990/mo)."],
   },
   {
-    q: "How do I pay?",
-    a: "By card, Genie, FriMi or eZcash through PayHere, or by bank transfer / KOKO with a WhatsApp receipt (activated within 2 hours).",
+    q: ["pricing.dealerFaq.howDoIPay.q", "How do I pay?"],
+    a: ["pricing.dealerFaq.howDoIPay.a", "By card, Genie, FriMi or eZcash through PayHere, or by bank transfer / KOKO with a WhatsApp receipt (activated within 2 hours)."],
   },
   {
-    q: "Can I cancel?",
-    a: "Yes, any time. Your plan stays active until the end of the period you paid for.",
+    q: ["pricing.dealerFaq.canICancel.q", "Can I cancel?"],
+    a: ["pricing.dealerFaq.canICancel.a", "Yes, any time. Your plan stays active until the end of the period you paid for."],
   },
 ];

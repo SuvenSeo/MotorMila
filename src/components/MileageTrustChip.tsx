@@ -1,5 +1,6 @@
 import { computeMileageTrust, type MileageRiskLevel } from "@/lib/mileageTrust";
 import { cn } from "@/lib/utils";
+import { useAppPreferences } from "@/lib/appPreferences";
 
 interface MileageTrustChipProps {
   mileageKm?: number | null;
@@ -15,7 +16,8 @@ const TONE: Record<MileageRiskLevel, string> = {
 };
 
 export function MileageTrustChip({ mileageKm, year, className }: MileageTrustChipProps) {
-  const trust = computeMileageTrust({ mileageKm, year });
+  const { t } = useAppPreferences();
+  const trust = computeMileageTrust({ mileageKm, year }, t);
 
   return (
     <span
