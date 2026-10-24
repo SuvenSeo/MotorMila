@@ -74,3 +74,13 @@ html[data-route-vt]::view-transition-new(root) {
     right: min(0px, calc((100% - 44px) / 2));
   }
 }
+
+/* ── Off-screen sections skip rendering work ─────────────────────────────
+   Long below-the-fold blocks (home market sections, footer): style, layout
+   and paint are skipped until they near the viewport, so page-wide style
+   recalcs (dialog scroll lock, theme switch) and scroll frames stay cheap.
+   `auto` remembers the real height once rendered. */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 900px;
+}

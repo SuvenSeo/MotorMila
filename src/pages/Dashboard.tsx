@@ -1227,7 +1227,7 @@ export default function Dashboard() {
       {belowFoldReady ? (
         <>
           {/* ── Market pulse — what's moving (below the listings grid) ───── */}
-          <RevealSection className="border-t border-border">
+          <RevealSection className="cv-auto border-t border-border">
             <div className="mx-auto max-w-[1560px] px-5 py-14 sm:px-6 lg:py-20">
               <SectionHeader eyebrow={t("home.marketPulse", "Market pulse")} title={t("home.whatsMoving", "What's moving right now")} />
               <div className="grid gap-10 lg:grid-cols-3">
@@ -1337,7 +1337,7 @@ export default function Dashboard() {
           </RevealSection>
 
           {/* ── Trust bar — only claims this page backs with data ─────── */}
-          <section className="border-b border-border bg-background">
+          <section className="cv-auto border-b border-border bg-background">
             <div className="mx-auto max-w-[1560px] px-5 py-8 sm:px-6">
               <dl className="grid gap-x-8 gap-y-6 sm:grid-cols-3">
                 <div>
@@ -1374,7 +1374,7 @@ export default function Dashboard() {
           </section>
 
           {/* ── MARKET PULSE ────────────────────────────────────────── */}
-          <RevealSection className="border-t border-border">
+          <RevealSection className="cv-auto border-t border-border">
             <div className="mx-auto max-w-[1560px] px-5 py-14 sm:px-6 lg:py-20">
               <SectionHeader eyebrow={t("shell.home.moreData", "More market data")} title={t("shell.home.moreDataTitle", "Fuel mix, price signals and demand by district")} />
               <div className="space-y-6">
@@ -1449,7 +1449,7 @@ export default function Dashboard() {
 
 
           {/* ── Market overview (Pro) — deliberately low on the page ─────── */}
-          <section className="border-b border-border bg-background">
+          <section className="cv-auto border-b border-border bg-background">
             <div className="mx-auto max-w-[1560px] px-5 py-10 sm:px-6 lg:py-14">
               <ProFeatureLock label={t("shell.home.marketOverviewLock", "Full market overview")}>
                 <Suspense fallback={null}>

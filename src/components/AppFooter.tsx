@@ -118,7 +118,7 @@ export function AppFooter() {
 
   return (
     <footer
-      className="app-footer relative z-10 mt-16 border-t border-separator bg-surface-2/50 pb-32 pt-12 sm:pb-36 md:pb-10 md:pt-14"
+      className="app-footer cv-auto relative z-10 mt-16 border-t border-separator bg-surface-2/50 pb-32 pt-12 sm:pb-36 md:pb-10 md:pt-14"
       aria-labelledby="platform-footer-title"
     >
       <div className="layout-shell">
