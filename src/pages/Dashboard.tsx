@@ -978,7 +978,9 @@ export default function Dashboard() {
                             transition={motionStill ? { duration: 0 } : spring.snappy}
                             className={cn(
                               "absolute inset-0 -z-10 rounded-full border",
-                              heroFilmTone === "cinematic" ? "border-border bg-foreground/20" : "border-primary/40 bg-primary/10",
+                              // White, not theme tokens: the cinematic hero is dark in both themes
+                              // (bg-foreground/20 went near-black and vanished in light mode).
+                              heroFilmTone === "cinematic" ? "border-white/25 bg-white/20" : "border-primary/40 bg-primary/10",
                             )}
                           />
                         ) : null}
