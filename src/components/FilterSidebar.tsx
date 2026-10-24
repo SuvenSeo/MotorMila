@@ -406,7 +406,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
                     selected
                     onClick={chip.onRemove}
                     aria-label={t("search.removeFilterAria", "Remove filter {label}", { label: chip.label })}
-                    className={cn("max-w-full gap-1 pl-3 pr-2 capitalize", touch && "h-11")}
+                    className={cn("max-w-full gap-1 pl-3 pr-2", chip.key !== "q" && "capitalize", touch && "h-11")}
                   >
                     <span className="truncate">{chip.label}</span>
                     <X className="shrink-0 opacity-70" aria-hidden />

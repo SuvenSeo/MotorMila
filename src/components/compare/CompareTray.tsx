@@ -67,6 +67,7 @@ function CompareTrayPanel({ className }: { className?: string }) {
   const layoutT = calm ? { duration: 0 } : spring.snappy;
 
   const canCompare = count >= 2;
+  const [countBefore, countAfter] = t("compareTray.count", "{count} of {max} selected", { count: "\u0000", max }).split("\u0000");
   const slots = Array.from({ length: max }, (_, i) => items[i] ?? null);
 
   return (
@@ -179,18 +180,13 @@ function CompareTrayPanel({ className }: { className?: string }) {
             </AnimatePresence>
           </span>
           <span className="ml-1.5 flex min-w-0 items-center gap-1.5 truncate text-footnote font-semibold text-foreground">
-            {/* Count badge pops and the digit rolls on every change. */}
-            <m.span
-              key={count}
-              aria-hidden
-              initial={calm ? false : { scale: 0.7 }}
-              animate={{ scale: 1 }}
-              transition={spring.expressive}
-              className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-caption font-semibold text-primary-foreground"
-            >
+            {/* Same sentence; the count digit rolls on every change. */}
+            <span className="sr-only">{t("compareTray.count", "{count} of {max} selected", { count, max })}</span>
+            <span aria-hidden className="truncate">
+              {countBefore}
               <AnimatedNumber value={count} />
-            </m.span>
-            <span className="truncate">{t("compareTray.count", "{count} of {max} selected", { count, max })}</span>
+              {countAfter}
+            </span>
           </span>
           <ChevronUp
             className={cn("h-4 w-4 shrink-0 text-label-2 transition-transform duration-medium ease-standard", expanded && "rotate-180")}

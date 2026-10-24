@@ -127,7 +127,7 @@ function AlertMatchSection({ token }: { token: string }) {
   if (!token) return null;
 
   return (
-    <section aria-labelledby="match-results-heading">
+    <section aria-labelledby="match-results-heading" className="scroll-mt-24">
       <SectionTitle
         id="match-results-heading"
         eyebrow={t("alerts.liveResults", "Live results")}
@@ -646,7 +646,6 @@ export default function Alerts() {
             value: loading ? <Skeleton shape="text" className="mt-1.5 h-5 w-10" /> : <AnimatedNumber value={alerts.length} />,
             hint: fullAccess ? t("alerts.highlightActiveHint", "Saved alert rules") : t("alerts.highlightFreeLimit", "Free limit {n}", { n: FREE_ALERTS_LIMIT }),
           },
-          { label: t("alerts.highlightMatches", "Matches"), value: t("common.live", "Live"), hint: t("alerts.highlightMatchesHint", "Scan against inventory") },
           { label: t("alerts.highlightSync", "Sync"), value: token ? t("common.on", "On") : t("common.local", "Local"), hint: t("alerts.highlightSyncHint", "Server or device storage") },
         ]}
       />

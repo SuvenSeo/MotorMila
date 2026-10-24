@@ -438,7 +438,7 @@ export default function BestPicks() {
                     <div className="space-y-4">
                       <div className="flex items-center justify-between gap-3">
                         <span className="truncate text-footnote font-medium text-label-2">{featured.source}</span>
-                        <DealScoreExplainer listing={featured} score={score} t={t} />
+                        {score > 0 ? <DealScoreExplainer listing={featured} score={score} t={t} /> : null}
                       </div>
                       <Link to={`/listing/${featured.id}`} className="block no-underline">
                         <h2 className="font-display text-title1 font-semibold text-foreground transition-colors duration-short group-hover:text-primary">{featured.make} {featured.model}</h2>
@@ -449,12 +449,14 @@ export default function BestPicks() {
                         {sortMode === "affordability" && cashDown != null ? (
                           <p className="num text-footnote font-semibold text-primary">{t("picks.down", "{price} down", { price: formatPrice(cashDown) })}</p>
                         ) : (
-                          <p className="num text-footnote font-semibold text-deal-good-text">{t("picks.deal", "+{score} deal", { score: score.toFixed(0) })}</p>
+                          score > 0 ? <p className="num text-footnote font-semibold text-deal-good-text">{t("picks.deal", "+{score} deal", { score: score.toFixed(0) })}</p> : null
                         )}
                       </div>
-                      <div className="h-1.5 overflow-hidden rounded-full bg-foreground/10">
-                        <div className={cn("h-full origin-left rounded-full", dealMeter(score))} style={{ width: `${pct}%` }} />
-                      </div>
+                      {pct > 0 ? (
+                        <div className="h-1.5 overflow-hidden rounded-full bg-foreground/10">
+                          <div className={cn("h-full rounded-full", dealMeter(score))} style={{ width: `${pct}%` }} />
+                        </div>
+                      ) : null}
                     </div>
                     <div className="flex gap-2">
                       <Button asChild size="lg" className="flex-1">
@@ -513,7 +515,7 @@ export default function BestPicks() {
                         <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
                           <div className="flex items-center justify-between gap-3">
                             <span className="truncate text-footnote font-medium text-label-2">{listing.source}</span>
-                            <DealScoreExplainer listing={listing} score={score} t={t} />
+                            {score > 0 ? <DealScoreExplainer listing={listing} score={score} t={t} /> : null}
                           </div>
                           <Link to={`/listing/${listing.id}`} className="block no-underline">
                             <h3 className="truncate text-callout font-semibold text-foreground transition-colors duration-short group-hover:text-primary">{listing.make} {listing.model}</h3>
@@ -524,12 +526,14 @@ export default function BestPicks() {
                             {sortMode === "affordability" && cashDown != null ? (
                               <span className="num text-footnote font-semibold text-primary">{t("picks.down", "{price} down", { price: formatPrice(cashDown) })}</span>
                             ) : (
-                              <span className="num text-footnote font-semibold text-deal-good-text">+{score.toFixed(0)}</span>
+                              score > 0 ? <span className="num text-footnote font-semibold text-deal-good-text">+{score.toFixed(0)}</span> : null
                             )}
                           </div>
-                          <div className="mt-auto h-1.5 overflow-hidden rounded-full bg-foreground/10">
-                            <div className={cn("h-full rounded-full", dealMeter(score))} style={{ width: `${pct}%` }} />
-                          </div>
+                          {pct > 0 ? (
+                            <div className="mt-auto h-1.5 overflow-hidden rounded-full bg-foreground/10">
+                              <div className={cn("h-full rounded-full", dealMeter(score))} style={{ width: `${pct}%` }} />
+                            </div>
+                          ) : null}
                         </div>
                       </m.article>
                     );

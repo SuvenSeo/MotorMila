@@ -62,7 +62,7 @@ export function SearchPagination({ page, totalPages, total, pageSize, onPageChan
               onClick={() => onPageChange(item)}
               className={cn(
                 square,
-                "num relative font-semibold",
+                "num relative px-2 font-semibold",
                 item === page ? "text-primary-foreground hover:bg-transparent hover:text-primary-foreground" : "hidden text-label-2 sm:inline-flex",
               )}
             >
