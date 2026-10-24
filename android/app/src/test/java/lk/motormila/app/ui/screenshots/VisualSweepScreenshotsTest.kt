@@ -77,8 +77,8 @@ import org.junit.Test
  * `MM_SWEEP=1 ./gradlew :app:recordPaparazziPlayDebug --tests '*VisualSweepScreenshotsTest*'`
  * Images land in src/test/snapshots/images — do NOT commit them.
  */
-/** TEMPORARY: true only while the sweep renders in PR CI (no arm64 layoutlib locally). */
-private const val SWEEP_ALWAYS = true
+/** Set true (temporarily) to render the sweep in PR CI: the failure report then holds every image. */
+private const val SWEEP_ALWAYS = false
 
 class VisualSweepScreenshotsTest {
     @get:Rule
