@@ -39,6 +39,36 @@ function formatFullDate(iso: string, localeTag: string): string {
   return d.toLocaleDateString(localeTag, { day: "numeric", month: "short", year: "numeric" });
 }
 
+const NICE_MN_STEPS = [0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 2.5, 5, 10, 20, 25, 50, 100];
+
+/**
+ * Y axis in LKR millions with round, evenly spaced ticks (at most 5 gaps) and the
+ * domain snapped to them, so the top label is never an odd "7.2 Mn" that runs
+ * past the plot edge.
+ */
+export function niceMillionsAxis(values: number[], marketMedianLkr?: number | null): { domain: [number, number]; ticks: number[] } {
+  const all = [...values];
+  if (marketMedianLkr && marketMedianLkr > 0) all.push(marketMedianLkr / 1_000_000);
+  if (!all.length) return { domain: [0, 1], ticks: [0, 0.5, 1] };
+  const min = Math.min(...all);
+  const max = Math.max(...all);
+  const pad = Math.max((max - min) * 0.08, max * 0.03);
+  const lo0 = Math.max(0, min - pad);
+  const hi0 = max + pad;
+  const snap = (step: number): [number, number] => {
+    const lo = Math.floor(lo0 / step + 1e-9) * step;
+    return [lo, Math.max(Math.ceil(hi0 / step - 1e-9) * step, lo + step)];
+  };
+  const step = NICE_MN_STEPS.find((st) => {
+    const [lo, hi] = snap(st);
+    return (hi - lo) / st <= 5;
+  }) ?? NICE_MN_STEPS[NICE_MN_STEPS.length - 1];
+  const [lo, hi] = snap(step);
+  const ticks: number[] = [];
+  for (let i = 0; lo + i * step <= hi + step / 2; i++) ticks.push(Number((lo + i * step).toFixed(4)));
+  return { domain: [lo, hi], ticks };
+}
+
 function formatChangePct(value: number | null): string {
   if (value === null || !Number.isFinite(value)) return "—";
   return `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`;
@@ -72,16 +102,7 @@ export function ListingPriceTimeline({
     }));
   }, [points, localeTag]);
 
-  const yDomain = useMemo(() => {
-    // Use millions to match the price_million dataKey used by the Area chart.
-    const values = points.map((p) => p.price_lkr / 1_000_000);
-    if (marketMedianLkr && marketMedianLkr > 0) values.push(marketMedianLkr / 1_000_000);
-    if (!values.length) return [0, 1];
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    const pad = Math.max((max - min) * 0.12, max * 0.03);
-    return [Math.max(0, min - pad), max + pad];
-  }, [points, marketMedianLkr]);
+  const yAxis = useMemo(() => niceMillionsAxis(points.map((p) => p.price_lkr / 1_000_000), marketMedianLkr), [points, marketMedianLkr]);
 
   const changePct = history?.change_pct ?? null;
   const isDrop = changePct !== null && changePct < 0;
@@ -183,7 +204,7 @@ export function ListingPriceTimeline({
             className="h-full w-full"
           >
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 12, right: 8, left: -12, bottom: 4 }}>
+              <AreaChart data={chartData} margin={{ top: 12, right: 8, left: 0, bottom: 4 }}>
                 <defs>
                   <linearGradient id="listingPriceGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="var(--gold)" stopOpacity={0.28} />
@@ -201,7 +222,9 @@ export function ListingPriceTimeline({
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  domain={yDomain}
+                  domain={yAxis.domain}
+                  ticks={yAxis.ticks}
+                  interval={0}
                   tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12, fontWeight: 600 }}
                   tickFormatter={(value: number) => formatLkrAxisFromMillions(value)}
                   width={52}

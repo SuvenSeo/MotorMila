@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, m } from "motion/react";
 import {
@@ -30,6 +31,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { listItem, listStagger, scaleIn, tween } from "@/lib/motion";
 import { HOW_WE_PRICE_PATH } from "@/lib/howWePrice";
 import { cn } from "@/lib/utils";
+import { loadScriptFonts } from "@/lib/scriptFonts";
+import "@/styles/locale-labels.css";
 
 type LangOpt = {
   value: Language;
@@ -119,6 +122,13 @@ function LinkRow({ to, label }: { to: string; label: string }) {
 export default function Settings() {
   const { language, setLanguage, themeMode, setThemeMode, resolvedTheme, t } = useAppPreferences();
   const { pinned, clear } = useCompareTray();
+
+  // The picker shows each language in its own script; without these faces a
+  // device with no Sinhala/Tamil system font renders the rows blank.
+  useEffect(() => {
+    void loadScriptFonts("si");
+    void loadScriptFonts("ta");
+  }, []);
 
   const handleClearCompare = () => {
     clear();
@@ -234,10 +244,20 @@ export default function Settings() {
                     >
                       <span className="min-w-0">
                         <span className="flex items-center gap-2">
-                          <span className="text-body font-semibold text-foreground">{item.native}</span>
+                          <span
+                            lang={item.value}
+                            className={cn("text-body font-semibold text-foreground", item.value !== "en" && "locale-script-label")}
+                          >
+                            {item.native}
+                          </span>
                           {item.native !== item.fallback ? <span className="text-footnote text-label-2">{item.fallback}</span> : null}
                         </span>
-                        <span className="mt-0.5 block truncate text-footnote text-label-2">{item.hint}</span>
+                        <span
+                          lang={item.value}
+                          className={cn("mt-0.5 block text-footnote text-label-2", item.value !== "en" && "locale-script-text")}
+                        >
+                          {item.hint}
+                        </span>
                       </span>
                       <Tick on={active} />
                     </button>

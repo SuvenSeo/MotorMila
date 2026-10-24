@@ -910,22 +910,29 @@ export default function ProDashboard() {
     >
       <div className="sticky top-0 z-50 border-b border-separator bg-surface-1">
         <div className="mx-auto max-w-[1320px] flex min-h-14 items-center justify-between gap-4 px-5 py-2 sm:px-6">
-          <Link to="/" className="flex items-center gap-2 no-underline">
+          <Link to="/" className="flex min-w-0 shrink-0 items-center gap-2 no-underline">
             <img src="/logo.png" alt="Motormila" className="h-7 w-7 rounded-full ring-1 ring-border" />
             <div>
               <p className="text-footnote font-semibold text-foreground">Motormila</p>
-              <p className="text-caption font-medium text-label-2">{t("pro.workspace", "Pro Workspace")}</p>
+              <p className="whitespace-nowrap text-caption font-medium text-label-2">{t("pro.workspace", "Pro Workspace")}</p>
             </div>
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <Button type="button" variant="secondary" size="sm" onClick={handleRefresh} disabled={refreshing || loading}>
               <RefreshCw className={refreshing ? "animate-spin" : undefined} aria-hidden /> Refresh
             </Button>
             <Badge variant="info" className="hidden sm:inline-flex">
               <Crown aria-hidden /> {user?.plan || "pro"}
             </Badge>
-            <Button type="button" variant="ghost" size="sm" onClick={handleLogout} className="text-label-2 hover:text-deal-high-text">
-              <LogOut aria-hidden /> Sign out
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              aria-label="Sign out"
+              className="text-label-2 hover:text-deal-high-text"
+            >
+              <LogOut aria-hidden /> <span className="hidden sm:inline">Sign out</span>
             </Button>
           </div>
         </div>
@@ -933,7 +940,7 @@ export default function ProDashboard() {
 
       <main className="layout-shell relative z-10 space-y-8 py-8">
         <motion.header variants={itemVariants} className="pt-2 md:pt-4">
-          <div className="grid gap-6 lg:grid-cols-[1.4fr_0.6fr] lg:items-end">
+          <div className="grid gap-6 lg:grid-cols-[1.4fr_0.6fr] lg:items-center">
             <div>
               <p className="inline-flex items-center gap-1.5 text-footnote font-semibold text-primary">
                 <Lock className="h-4 w-4" aria-hidden="true" /> {t("pro.eyebrow", "Professional intelligence")}
@@ -1057,8 +1064,14 @@ export default function ProDashboard() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={snapshot?.source_coverage || []}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                      <XAxis dataKey="label" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <XAxis dataKey="label" interval={0} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis
+                        width={40}
+                        tickFormatter={(v: number) => (v >= 1000 ? `${Math.round(v / 100) / 10}k` : `${v}`)}
+                        tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
                       <Tooltip cursor={{ fill: "hsl(var(--muted) / 0.4)" }} contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, color: "hsl(var(--foreground))" }} labelStyle={{ color: "hsl(var(--foreground))" }} />
                       <Bar dataKey="count" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
                     </BarChart>

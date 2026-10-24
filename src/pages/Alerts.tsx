@@ -17,6 +17,7 @@ import { Chip } from "@/components/ui/chip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
+import { friendlyApiError } from "@/lib/apiErrorText";
 import { PageHeader } from "@/components/ui/page-header";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -114,7 +115,7 @@ function AlertMatchSection({ token }: { token: string }) {
       setMatchData(result);
       trackEvent("saved_search", { matches: result.results.length });
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("alerts.matchFailed", "Failed to fetch matches"));
+      setError(friendlyApiError(err, t("alerts.matchFailed", "Failed to fetch matches"), t));
     } finally {
       setLoading(false);
     }
@@ -195,7 +196,7 @@ function AlertMatchSection({ token }: { token: string }) {
                         <div className="min-w-0">
                           <p className="truncate text-body font-medium text-foreground">
                             {listing.title || `${listing.make} ${listing.model}`}
-                            {listing.year ? ` ${listing.year}` : ""}
+                            {listing.year && !(listing.title ?? "").includes(String(listing.year)) ? ` ${listing.year}` : ""}
                           </p>
                           <p className="mt-0.5 text-footnote text-label-2">
                             {listing.district || "LK"}
@@ -216,7 +217,7 @@ function AlertMatchSection({ token }: { token: string }) {
             </Card>
           ))}
           <p className="num text-right text-caption text-label-2">
-            {t("alerts.checkedAt", "Checked {time}", { time: new Date(matchData.checked_at).toLocaleTimeString() })}
+            {t("alerts.checkedAt", "Checked {time}", { time: new Date(matchData.checked_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) })}
           </p>
         </div>
       )}
@@ -688,7 +689,7 @@ export default function Alerts() {
 
             {!loading && error && alerts.length === 0 && (
               <Card padding="none">
-                <ErrorState body={error} onRetry={refresh} />
+                <ErrorState body={friendlyApiError(error, t("alerts.loadFailed", "Couldn't load your alerts."), t)} onRetry={refresh} />
               </Card>
             )}
 

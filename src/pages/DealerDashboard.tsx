@@ -702,8 +702,8 @@ export default function DealerDashboard() {
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={priceGaps}>
                           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                          <XAxis dataKey="district" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickLine={false} axisLine={false} />
-                          <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={(v) => `${v}%`} tickLine={false} axisLine={false} />
+                          <XAxis dataKey="district" interval={0} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} tickLine={false} axisLine={false} />
+                          <YAxis width={44} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={(v) => `${v}%`} tickLine={false} axisLine={false} />
                           <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} formatter={(v: number) => [`${v.toFixed(1)}%`, t("dealerDash.gap", "Gap")]} />
                           <Bar dataKey="gapPct" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                         </BarChart>

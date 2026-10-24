@@ -14,6 +14,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { useAuth } from "@/lib/authContext";
+import { friendlyApiError } from "@/lib/apiErrorText";
 import { fadeUp, listItem, listStagger, tween } from "@/lib/motion";
 import {
   deleteMyListing,
@@ -139,7 +140,7 @@ export default function Profile() {
             <Card padding="none">
               <ErrorState
                 title={t("profile.loadFailed", "Couldn't load your listings.")}
-                body={error}
+                body={friendlyApiError(error, t("profile.loadFailedBody", "Something went wrong on our side. Try again in a moment."), t)}
                 onRetry={() => {
                   setListings(null);
                   void load();
@@ -185,29 +186,35 @@ export default function Profile() {
                             )}
                           </p>
                         </div>
-                        <p className="shrink-0 text-body font-semibold tabular-nums text-foreground">
-                          {formatPriceLkrMillions(l.priceLkr)}
-                        </p>
-                      </div>
-                      <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
-                        {confirmId === l.id ? (
-                          <>
-                            <span className="text-footnote text-label-2">{t("profile.confirmDelete", "Delete this listing?")}</span>
-                            <Button size="sm" variant="destructive" loading={deletingId === l.id} onClick={() => void handleDelete(l.id)}>
+                        <div className="flex shrink-0 flex-col items-end gap-1">
+                          <p className="text-body font-semibold tabular-nums text-foreground">
+                            {formatPriceLkrMillions(l.priceLkr)}
+                          </p>
+                          {confirmId !== l.id ? (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="-mr-2 text-label-2 hover:text-deal-high-text"
+                              onClick={() => setConfirmId(l.id)}
+                            >
                               <Trash2 aria-hidden />
-                              {t("profile.confirmYes", "Yes, delete")}
+                              {t("profile.delete", "Delete")}
                             </Button>
-                            <Button size="sm" variant="secondary" disabled={deletingId === l.id} onClick={() => setConfirmId(null)}>
-                              {t("profile.confirmNo", "Keep it")}
-                            </Button>
-                          </>
-                        ) : (
-                          <Button size="sm" variant="ghost" className="text-label-2 hover:text-deal-high-text" onClick={() => setConfirmId(l.id)}>
-                            <Trash2 aria-hidden />
-                            {t("profile.delete", "Delete")}
-                          </Button>
-                        )}
+                          ) : null}
+                        </div>
                       </div>
+                      {confirmId === l.id ? (
+                        <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+                          <span className="text-footnote text-label-2">{t("profile.confirmDelete", "Delete this listing?")}</span>
+                          <Button size="sm" variant="destructive" loading={deletingId === l.id} onClick={() => void handleDelete(l.id)}>
+                            <Trash2 aria-hidden />
+                            {t("profile.confirmYes", "Yes, delete")}
+                          </Button>
+                          <Button size="sm" variant="secondary" disabled={deletingId === l.id} onClick={() => setConfirmId(null)}>
+                            {t("profile.confirmNo", "Keep it")}
+                          </Button>
+                        </div>
+                      ) : null}
                     </Card>
                   </m.li>
                 ))}

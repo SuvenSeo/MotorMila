@@ -23,3 +23,12 @@
   font-size: 1.08em;
   line-height: 1;
 }
+/* Longer native-script copy in the language picker (Settings hints): the
+   label subset above only holds the language names, so these runs use the full
+   Noto face, which Settings loads on mount. */
+.locale-script-text:lang(si) {
+  font-family: "Noto Sans Sinhala", "Nirmala UI", "Iskoola Pota", "Sinhala Sangam MN", var(--font-sans);
+}
+.locale-script-text:lang(ta) {
+  font-family: "Noto Sans Tamil", "Nirmala UI", "Latha", "Tamil Sangam MN", var(--font-sans);
+}
