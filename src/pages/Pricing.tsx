@@ -13,7 +13,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BRAND } from "@/lib/brand";
-import { ANNUAL_SAVE_NUDGE, DEALER_FAQ, DEALER_TIERS, PLAN_PRICES, PRICING_COMING_SOON, PRICING_FAQ, PRICING_TIERS, PRO_FREE_DURING_BETA, TRIAL_OFFER, formatLkr } from "@/lib/pricingContent";
+import { DEALER_FAQ, DEALER_TIERS, PLAN_PRICES, PRICING_COMING_SOON, PRICING_FAQ, PRICING_TIERS, PRO_FREE_DURING_BETA, TRIAL_OFFER, formatLkr } from "@/lib/pricingContent";
 import type { DealerTierCode } from "@/lib/pricingContent";
 import { createPayhereCheckout, getPayhereConfig, submitPayhereForm, type PayhereConfig } from "@/lib/moneyApi";
 import { PageCanvas } from "@/components/PageCanvas";
@@ -435,9 +435,14 @@ function DealerPlans() {
     <section id="dealer-plans" aria-labelledby="dealer-plans-heading" className="scroll-mt-24">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="mb-2 text-footnote font-semibold text-primary">Dealer plans</p>
-          <h2 id="dealer-plans-heading" className="font-display text-title2 font-semibold text-foreground">Priced by the size of your stock.</h2>
-          <p className="mt-2 max-w-2xl text-footnote text-label-2">{ANNUAL_SAVE_NUDGE.dealer}. Market comparisons are shown as medians and ranges, never copies of other sellers' ads.</p>
+          <p className="mb-2 text-footnote font-semibold text-primary">{t("acct.pricing.dealerEyebrow", "Dealer plans")}</p>
+          <h2 id="dealer-plans-heading" className="font-display text-title2 font-semibold text-foreground">
+            {t("acct.pricing.dealerTitle", "Priced by the size of your stock.")}
+          </h2>
+          <p className="mt-2 max-w-2xl text-footnote text-label-2">
+            {t("acct.pricing.dealerNudge", "Dealer annual saves 2 months: from LKR 29,900/yr vs LKR 2,990/mo")}.{" "}
+            {t("acct.pricing.dealerCompsNote", "Market comparisons are shown as medians and ranges, never copies of other sellers' ads.")}
+          </p>
         </div>
         <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
           <TabsList aria-label={t("acct.pricing.billingPeriod", "Billing period")}>
@@ -481,7 +486,10 @@ function DealerPlans() {
         ))}
       </div>
       <p className="mt-4 text-footnote text-label-2">
-        {config?.enabled ? "Card and wallet payments by PayHere." : "Pay by bank transfer or KOKO; card payments by PayHere are coming soon."} Prices in LKR. Cancel any time; your plan runs to the end of the paid period.
+        {config?.enabled
+          ? t("acct.pricing.dealerPayPayhere", "Card and wallet payments by PayHere.")
+          : t("acct.pricing.dealerPayManual", "Pay by bank transfer or KOKO; card payments by PayHere are coming soon.")}{" "}
+        {t("acct.pricing.dealerTerms", "Prices in LKR. Cancel any time; your plan runs to the end of the paid period.")}
       </p>
       {payhere && config && (
         <div className="mt-6">

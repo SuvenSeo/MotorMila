@@ -103,6 +103,13 @@ export const accountEn: Record<string, string> = {
   "acct.settings.themeLightHint": "Bright and high-contrast for daylight.",
   "acct.settings.unitsHint": "How prices and distances are shown across Motormila.",
   "acct.settings.unitsTitle": "Units and prices",
+  "acct.pricing.dealerEyebrow": "Dealer plans",
+  "acct.pricing.dealerTitle": "Priced by the size of your stock.",
+  "acct.pricing.dealerNudge": "Dealer annual saves 2 months: from LKR 29,900/yr vs LKR 2,990/mo",
+  "acct.pricing.dealerCompsNote": "Market comparisons are shown as medians and ranges, never copies of other sellers' ads.",
+  "acct.pricing.dealerPayPayhere": "Card and wallet payments by PayHere.",
+  "acct.pricing.dealerPayManual": "Pay by bank transfer or KOKO; card payments by PayHere are coming soon.",
+  "acct.pricing.dealerTerms": "Prices in LKR. Cancel any time; your plan runs to the end of the paid period.",
 };
 
 export const accountSi: Record<string, string> = {
@@ -204,6 +211,13 @@ export const accountSi: Record<string, string> = {
   "acct.settings.themeLightHint": "දිවා ආලෝකයට දීප්තිමත් සහ පැහැදිලි.",
   "acct.settings.unitsHint": "Motormila පුරා මිල සහ දුර පෙන්වන ආකාරය.",
   "acct.settings.unitsTitle": "ඒකක සහ මිල",
+  "acct.pricing.dealerEyebrow": "වෙළෙන්දා සැලසුම්",
+  "acct.pricing.dealerTitle": "ඔබේ තොගයේ ප්‍රමාණය අනුව මිල කර ඇත.",
+  "acct.pricing.dealerNudge": "වාර්ෂිකව ගෙවූ විට මාස 2ක් ඉතිරියි: වසරකට LKR 29,900 සිට (මසකට LKR 2,990 වෙනුවට)",
+  "acct.pricing.dealerCompsNote": "වෙළඳපොළ සැසඳීම් පෙන්වන්නේ මධ්‍යස්ථ අගයන් සහ පරාස ලෙසයි; වෙනත් විකුණුම්කරුවන්ගේ දැන්වීම්වල පිටපත් කිසිවිටෙක නොවේ.",
+  "acct.pricing.dealerPayPayhere": "කාඩ්පත් සහ ඩිජිටල් පසුම්බි ගෙවීම් PayHere හරහා.",
+  "acct.pricing.dealerPayManual": "බැංකු මාරුවකින් හෝ KOKO මගින් ගෙවන්න; PayHere හරහා කාඩ්පත් ගෙවීම් ළඟදීම.",
+  "acct.pricing.dealerTerms": "මිල ගණන් LKR වලින්. ඕනෑම වේලාවක අවලංගු කරන්න; ඔබේ සැලසුම ගෙවූ කාලය අවසන් වන තුරු ක්‍රියාත්මක වේ.",
 };
 
 export const accountTa: Record<string, string> = {
@@ -305,4 +319,11 @@ export const accountTa: Record<string, string> = {
   "acct.settings.themeLightHint": "பகல் வெளிச்சத்துக்கு பிரகாசமும் தெளிவும்.",
   "acct.settings.unitsHint": "Motormila முழுவதும் விலைகள் மற்றும் தூரங்கள் காட்டப்படும் விதம்.",
   "acct.settings.unitsTitle": "அலகுகள் மற்றும் விலைகள்",
+  "acct.pricing.dealerEyebrow": "டீலர் திட்டங்கள்",
+  "acct.pricing.dealerTitle": "உங்கள் இருப்பின் அளவுக்கேற்ப விலையிடப்பட்டது.",
+  "acct.pricing.dealerNudge": "ஆண்டுக் கட்டணத்தில் 2 மாதங்கள் சேமிப்பு: ஆண்டுக்கு LKR 29,900 முதல் (மாதம் LKR 2,990-க்குப் பதிலாக)",
+  "acct.pricing.dealerCompsNote": "சந்தை ஒப்பீடுகள் இடைநிலைகளாகவும் வரம்புகளாகவும் காட்டப்படும்; பிற விற்பனையாளர்களின் விளம்பரங்களின் நகல்களாக ஒருபோதும் அல்ல.",
+  "acct.pricing.dealerPayPayhere": "அட்டை மற்றும் வாலட் கட்டணங்கள் PayHere மூலம்.",
+  "acct.pricing.dealerPayManual": "வங்கிப் பரிமாற்றம் அல்லது KOKO மூலம் செலுத்துங்கள்; PayHere அட்டைக் கட்டணங்கள் விரைவில்.",
+  "acct.pricing.dealerTerms": "விலைகள் LKR-இல். எப்போது வேண்டுமானாலும் ரத்து செய்யலாம்; செலுத்திய காலம் முடியும் வரை உங்கள் திட்டம் இயங்கும்.",
 };
