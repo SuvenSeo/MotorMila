@@ -25,3 +25,26 @@
   X-Robots-Tag: noindex, nofollow
 /delete-account
   X-Robots-Tag: noindex, nofollow
+# Utility / account routes: never indexed (mirrors vercel.json; the shells also carry meta robots).
+/sign-in
+  X-Robots-Tag: noindex, nofollow
+/sign-up
+  X-Robots-Tag: noindex, nofollow
+/profile
+  X-Robots-Tag: noindex, nofollow
+/alerts
+  X-Robots-Tag: noindex, nofollow
+/settings
+  X-Robots-Tag: noindex, nofollow
+/dealer
+  X-Robots-Tag: noindex, nofollow
+/pro
+  X-Robots-Tag: noindex, nofollow
+/pro-preview
+  X-Robots-Tag: noindex, nofollow
+/hero-lab
+  X-Robots-Tag: noindex, nofollow
+/motormila/admin
+  X-Robots-Tag: noindex, nofollow
+/checkout/*
+  X-Robots-Tag: noindex, nofollow

@@ -13,12 +13,12 @@
 # infinite loop (it strips .html / index) and ignores it, and _redirects rules
 # win over static assets, so any broader rule would shadow the shells. Unknown
 # URLs fall through to the static 404.html with a real 404, as on Vercel.
-/admin / 200
-/price-index / 200
-/valuation / 200
-/leasing / 200
+# Retired paths: real 301s (raw HTML used to be the indexable home shell).
+/leasing /finance 301
+/admin /motormila/admin 301
+/price-index /trends 301
+/valuation /estimate 301
 /cars/:make/:model/:year / 200
 /locations/:district / 200
 /compare/:slug / 200
 /official-pulse/* / 200
-/checkout/return / 200
