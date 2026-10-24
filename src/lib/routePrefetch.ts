@@ -8,7 +8,7 @@ const exactLoaders: Record<string, () => Promise<unknown>> = {
   "/ev-hub": () => import("@/pages/EVHub"),
   "/ev-chargers": () => import("@/pages/EVChargers"),
   "/best-picks": () => import("@/pages/BestPicks"),
-  "/price-index": () => import("@/pages/PriceIndex"),
+  "/price-index": () => import("@/pages/Trends"), // redirects to /trends
   "/official-pulse": () => import("@/pages/OfficialPulse"),
   "/docs": () => import("@/pages/Docs"),
   "/pricing": () => import("@/pages/Pricing"),
