@@ -219,25 +219,25 @@ export const DistrictPriceHeatmap = memo(function DistrictPriceHeatmap({
                   {point.district}
                 </Tooltip>
                 <Popup autoPan keepInView autoPanPaddingTopLeft={[24, 84]} autoPanPaddingBottomRight={[24, 24]}>
-                  <div className="min-w-[200px] text-footnote space-y-1.5">
-                    <p className="font-bold text-body">{point.district}</p>
-                    <p>{t("districtMap.listings", "Listings")}: <span className="num">{point.listing_count.toLocaleString()}</span></p>
+                  <div className="min-w-[200px] space-y-1.5 text-footnote">
+                    <p className="text-body font-semibold">{point.district}</p>
+                    <p>{t("districtMap.listings", "Listings")}: <span className="tabular-nums">{point.listing_count.toLocaleString()}</span></p>
                     {point.median_price != null && (
                       <p>
                         {t("districtMap.median", "Median")}:{" "}
-                        <span className="num font-semibold">
+                        <span className="font-semibold tabular-nums">
                           {formatPriceLkrMillions(point.median_price)}
                         </span>
                       </p>
                     )}
                     <p>
                       {t("districtMap.avg", "Avg")}:{" "}
-                      <span className="num font-semibold">
+                      <span className="font-semibold tabular-nums">
                         {formatPriceLkrMillions(point.avg_price)}
                       </span>
                     </p>
                     {point.top_make && point.top_model && (
-                      <p className="text-muted-foreground text-caption">
+                      <p className="text-caption text-label-2">
                         {t("districtMap.top", "Top")}: {point.top_make} {point.top_model}
                         {point.top_model_count != null ? ` (${point.top_model_count})` : ""}
                       </p>
