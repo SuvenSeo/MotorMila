@@ -82,7 +82,7 @@ function ChannelCenterSection({ alertCount }: { alertCount: number }) {
         ) : (
           <span className="max-w-xs text-footnote text-label-2">
             {push.vapidMissing
-              ? t("alerts.pushUnsupported", "Push needs VAPID keys + HTTPS worker; in-app still works.")
+              ? t("alerts.pushUnsupported", "Browser push isn't available here yet; alerts still show in the app.")
               : t("alerts.pushOff", "Push off — enable in your browser for price-drop pings.")}
           </span>
         )}

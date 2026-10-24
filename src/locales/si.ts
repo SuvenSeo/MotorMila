@@ -107,7 +107,7 @@ export const si = {
   "alerts.pushEnable": "Push සක්‍රිය කරන්න",
   "alerts.pushOff": "Push අක්‍රියයි — මිල අඩු දැනුම්දීම් සඳහා බ්‍රවුසරයේ සක්‍රිය කරන්න.",
   "alerts.pushOn": "Push සක්‍රියයි",
-  "alerts.pushUnsupported": "Push සඳහා VAPID යතුරු + HTTPS worker අවශ්‍යයි; යෙදුම තුළ තවම ක්‍රියා කරයි.",
+  "alerts.pushUnsupported": "බ්‍රවුසර් push දැනුම්දීම් මෙහි තවම නැත; ඇඟවීම් යෙදුම තුළ තවමත් පෙන්වයි.",
   "alerts.quietHoursNote": "නිශ්ශබ්ද පැය 21:00–07:00 Asia/Colombo: විද්‍යුත් තැපෑල, WhatsApp, Telegram සහ push 07:00 සාරාංශයට පෝලිම් වේ. යෙදුම තුළ සැමවිටම ලැබේ.",
   "alerts.refreshAria": "ගැළපීම් නැවුම් කරන්න",
   "alerts.save": "ඇඟවීම සුරකින්න",

@@ -63,7 +63,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cardVariants } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { revealContainer, revealItem } from "@/lib/motion";
 import { BRAND } from "@/lib/brand";
@@ -99,12 +98,15 @@ const TAB_IDS: AdminTab[] = [
   "removals",
 ];
 
-function formatCount(value: number | undefined) {
-  return Number(value || 0).toLocaleString();
+// Missing data reads as "—", never as a real-looking 0.
+function formatCount(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) return "—";
+  return Number(value).toLocaleString();
 }
 
-function formatPrice(value: number | undefined) {
-  return `Rs ${Math.round(Number(value || 0)).toLocaleString()}`;
+function formatPrice(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(Number(value)) || Number(value) <= 0) return "—";
+  return `Rs ${Math.round(Number(value)).toLocaleString()}`;
 }
 
 function providerStatusLabel(provider: {

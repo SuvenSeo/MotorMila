@@ -107,7 +107,7 @@ export const ta = {
   "alerts.pushEnable": "Push இயக்கு",
   "alerts.pushOff": "Push அணைக்கப்பட்டுள்ளது — விலை-குறைப்பு அறிவிப்புக்கு உலாவியில் இயக்கவும்.",
   "alerts.pushOn": "Push இயக்கத்தில்",
-  "alerts.pushUnsupported": "Pushக்கு VAPID விசைகள் + HTTPS worker தேவை; ஆப் உள் தொடர்ந்தும் வேலை செய்யும்.",
+  "alerts.pushUnsupported": "உலாவி push அறிவிப்புகள் இங்கு இன்னும் கிடைக்கவில்லை; எச்சரிக்கைகள் ஆப்பில் தொடர்ந்து காட்டப்படும்.",
   "alerts.quietHoursNote": "அமைதி நேரம் 21:00–07:00 Asia/Colombo: மின்னஞ்சல், WhatsApp, Telegram & push 07:00 தொகுப்புக்கு வரிசையில். ஆப் உள் எப்போதும் வரும்.",
   "alerts.refreshAria": "பொருத்தங்களை புதுப்பி",
   "alerts.save": "விழிப்பூட்டலை சேமி",

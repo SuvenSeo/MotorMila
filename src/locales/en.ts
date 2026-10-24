@@ -98,7 +98,7 @@ export const en = {
   "alerts.pushEnable": "Enable push",
   "alerts.pushOff": "Push off — enable in your browser for price-drop pings.",
   "alerts.pushOn": "Push on",
-  "alerts.pushUnsupported": "Push needs VAPID keys + HTTPS worker; in-app still works.",
+  "alerts.pushUnsupported": "Browser push isn't available here yet; alerts still show in the app.",
   "alerts.quietHoursNote": "Quiet hours 21:00–07:00 Asia/Colombo: email, WhatsApp, Telegram & push queue for the 07:00 digest. In-app always delivers.",
   "alerts.refreshAria": "Refresh matches",
   "alerts.save": "Save alert",
