@@ -110,6 +110,14 @@ export const accountEn: Record<string, string> = {
   "acct.pricing.dealerPayPayhere": "Card and wallet payments by PayHere.",
   "acct.pricing.dealerPayManual": "Pay by bank transfer or KOKO; card payments by PayHere are coming soon.",
   "acct.pricing.dealerTerms": "Prices in LKR. Cancel any time; your plan runs to the end of the paid period.",
+  // Friendly API errors (src/lib/apiErrorText.ts) and signed-in load failures.
+  "apiError.session": "Your session has expired. Sign in again to continue.",
+  "apiError.forbidden": "Your account doesn't have access to this yet.",
+  "apiError.rateLimited": "Too many requests just now. Wait a moment and try again.",
+  "apiError.unavailable": "Motormila's servers are busy right now. Try again in a minute.",
+  "apiError.network": "We couldn't reach Motormila. Check your connection and try again.",
+  "alerts.loadFailed": "Couldn't load your alerts.",
+  "profile.loadFailedBody": "Something went wrong on our side. Try again in a moment.",
 };
 
 export const accountSi: Record<string, string> = {
@@ -218,6 +226,14 @@ export const accountSi: Record<string, string> = {
   "acct.pricing.dealerPayPayhere": "කාඩ්පත් සහ ඩිජිටල් පසුම්බි ගෙවීම් PayHere හරහා.",
   "acct.pricing.dealerPayManual": "බැංකු මාරුවකින් හෝ KOKO මගින් ගෙවන්න; PayHere හරහා කාඩ්පත් ගෙවීම් ළඟදීම.",
   "acct.pricing.dealerTerms": "මිල ගණන් LKR වලින්. ඕනෑම වේලාවක අවලංගු කරන්න; ඔබේ සැලසුම ගෙවූ කාලය අවසන් වන තුරු ක්‍රියාත්මක වේ.",
+  // Friendly API errors (src/lib/apiErrorText.ts) and signed-in load failures.
+  "apiError.session": "ඔබේ සැසිය කල් ඉකුත් වී ඇත. දිගටම යාමට නැවත පිවිසෙන්න.",
+  "apiError.forbidden": "ඔබේ ගිණුමට මෙයට තවම ප්‍රවේශය නැත.",
+  "apiError.rateLimited": "මේ මොහොතේ ඉල්ලීම් වැඩියි. මොහොතක් රැඳී නැවත උත්සාහ කරන්න.",
+  "apiError.unavailable": "Motormila සේවාදායක මේ මොහොතේ කාර්යබහුලයි. විනාඩියකින් නැවත උත්සාහ කරන්න.",
+  "apiError.network": "Motormila වෙත ළඟා විය නොහැකි විය. සම්බන්ධතාව පරීක්ෂා කර නැවත උත්සාහ කරන්න.",
+  "alerts.loadFailed": "ඔබේ ඇඟවීම් පූරණය කළ නොහැකි විය.",
+  "profile.loadFailedBody": "අපේ පැත්තෙන් යමක් වැරදුණා. මොහොතකින් නැවත උත්සාහ කරන්න.",
 };
 
 export const accountTa: Record<string, string> = {
@@ -326,4 +342,12 @@ export const accountTa: Record<string, string> = {
   "acct.pricing.dealerPayPayhere": "அட்டை மற்றும் வாலட் கட்டணங்கள் PayHere மூலம்.",
   "acct.pricing.dealerPayManual": "வங்கிப் பரிமாற்றம் அல்லது KOKO மூலம் செலுத்துங்கள்; PayHere அட்டைக் கட்டணங்கள் விரைவில்.",
   "acct.pricing.dealerTerms": "விலைகள் LKR-இல். எப்போது வேண்டுமானாலும் ரத்து செய்யலாம்; செலுத்திய காலம் முடியும் வரை உங்கள் திட்டம் இயங்கும்.",
+  // Friendly API errors (src/lib/apiErrorText.ts) and signed-in load failures.
+  "apiError.session": "உங்கள் அமர்வு காலாவதியாகிவிட்டது. தொடர மீண்டும் உள்நுழையவும்.",
+  "apiError.forbidden": "உங்கள் கணக்கிற்கு இதற்கான அணுகல் இன்னும் இல்லை.",
+  "apiError.rateLimited": "இப்போது அதிகமான கோரிக்கைகள். சிறிது நேரம் காத்திருந்து மீண்டும் முயற்சிக்கவும்.",
+  "apiError.unavailable": "Motormila சேவையகங்கள் இப்போது பரபரப்பாக உள்ளன. ஒரு நிமிடத்தில் மீண்டும் முயற்சிக்கவும்.",
+  "apiError.network": "Motormila-ஐ அடைய முடியவில்லை. இணைப்பை சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",
+  "alerts.loadFailed": "உங்கள் விழிப்பூட்டல்களை ஏற்ற முடியவில்லை.",
+  "profile.loadFailedBody": "எங்கள் பக்கத்தில் ஏதோ தவறு நடந்தது. சிறிது நேரத்தில் மீண்டும் முயற்சிக்கவும்.",
 };
