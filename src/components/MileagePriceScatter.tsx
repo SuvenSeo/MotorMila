@@ -57,6 +57,40 @@ export function paddedDomain(values: number[], step: number, padRatio = 0.08): [
   return [lo, hi > lo ? hi : lo + step];
 }
 
+/** Steps a mileage axis may use, so ticks always read as round numbers (25k, 50k, …). */
+const NICE_KM_STEPS = [1_000, 2_000, 5_000, 10_000, 20_000, 25_000, 50_000, 100_000, 200_000, 250_000, 500_000];
+
+/**
+ * Evenly spaced mileage ticks: picks the smallest round step that keeps the axis
+ * to at most `maxIntervals` gaps (7 still fits a 390px phone), then snaps the domain outward to that step so
+ * the first and last ticks sit on the plot edges.
+ */
+export function niceKmAxis(
+  values: number[],
+  maxIntervals = 7,
+  padRatio = 0.03,
+): { domain: [number, number]; ticks: number[]; step: number } {
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const pad = (max - min) * padRatio;
+  const lo0 = Math.max(0, min - pad);
+  const hi0 = max + pad;
+  let step = NICE_KM_STEPS[NICE_KM_STEPS.length - 1];
+  for (const s of NICE_KM_STEPS) {
+    const lo = Math.floor(lo0 / s) * s;
+    const hi = Math.max(Math.ceil(hi0 / s) * s, lo + s);
+    if ((hi - lo) / s <= maxIntervals) {
+      step = s;
+      break;
+    }
+  }
+  const lo = Math.floor(lo0 / step) * step;
+  const hi = Math.max(Math.ceil(hi0 / step) * step, lo + step);
+  const ticks: number[] = [];
+  for (let v = lo; v <= hi + step / 2; v += step) ticks.push(v);
+  return { domain: [lo, hi], ticks, step };
+}
+
 function formatKm(value: number): string {
   if (value >= 1000) return `${Math.round(value / 1000)}k`;
   return `${value}`;
@@ -85,8 +119,8 @@ export const MileagePriceScatter = memo(function MileagePriceScatter({
   );
   const state = isLoading ? "loading" : isError ? "error" : validPoints.length < SCATTER_MIN_POINTS ? "empty" : "ready";
   const draw = useChartDraw(state === "ready");
-  const xDomain = useMemo(
-    () => (validPoints.length ? paddedDomain(validPoints.map((p) => p.mileage), 10_000) : undefined),
+  const xAxis = useMemo(
+    () => (validPoints.length ? niceKmAxis(validPoints.map((p) => p.mileage)) : undefined),
     [validPoints],
   );
   const yDomain = useMemo(
@@ -127,7 +161,10 @@ export const MileagePriceScatter = memo(function MileagePriceScatter({
               type="number"
               dataKey="mileage"
               name="Mileage"
-              domain={xDomain}
+              domain={xAxis?.domain}
+              ticks={xAxis?.ticks}
+              interval={0}
+              allowDecimals={false}
               tickFormatter={formatKm}
               label={{
                 value: t("scatter.xLabel", "Mileage (km, thousands)"),
