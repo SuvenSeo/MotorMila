@@ -47,6 +47,7 @@ import { formatPriceLkrMillions } from "@/lib/formatting";
 import { authHeaders } from "@/lib/authToken";
 import { districtCoords, normalizeDistrictName } from "@/data/districts";
 import { QUERY_STALE } from "@/lib/queryPolicy";
+import type { ListingFmvDetail } from "@/types/fmv";
 import { cleanDistrict, computedDropPct, isPlausiblePriceDrop } from "@/lib/dataSanity";
 
 const DEFAULT_PRODUCTION_API = "https://seo292-vehicle-platform-backend.hf.space/api/v1";
@@ -1920,31 +1921,8 @@ export const getListingHistoryReport = async (id: string | number): Promise<Hist
   return fetchJSON<HistoryReport>(`/listings/${id}/history-report`);
 };
 
-export interface FmvMethodBreakdown {
-  base_median_lkr: number | null;
-  km_adjustment_lkr: number | null;
-  district_adjustment_lkr: number | null;
-  final_fmv_lkr: number | null;
-}
+export type { FmvMethodBreakdown, ListingFmvDetail } from "@/types/fmv";
 
-export interface ListingFmvDetail {
-  listing_id: number | null;
-  asking_lkr: number | null;
-  fmv_lkr: number | null;
-  deal_score: number | null;
-  delta_pct: number | null;
-  band: "below" | "fair" | "above" | null;
-  label: string | null;
-  method: string;
-  sample_count: number;
-  sample_size: number;
-  confidence: "high" | "medium" | "low" | "none";
-  comps_median_lkr: number | null;
-  km_adjustment_lkr?: number | null;
-  district_adjustment_lkr?: number | null;
-  method_breakdown?: FmvMethodBreakdown | null;
-  updated_at: string;
-}
 
 export const getListingFmv = async (id: string | number): Promise<ListingFmvDetail> => {
   try {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Command } from "cmdk";
@@ -50,8 +50,8 @@ function formatCount(n: number): string {
   return String(n);
 }
 
-export function CommandPalette() {
-  const [open, setOpen] = useState(false);
+export function CommandPalette({ defaultOpen = false }: { defaultOpen?: boolean } = {}) {
+  const [open, setOpen] = useState(defaultOpen);
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useAppPreferences();
@@ -95,10 +95,15 @@ export function CommandPalette() {
     };
   }, [open ]);
 
-  // Close whenever the route changes (selection navigated).
+  // Close whenever the route changes (selection navigated). Skips the mount
+  // run so a palette mounted already-open (lazy CommandPaletteHost) stays open.
+  const routeKey = `${location.pathname}${location.search}${location.hash}`;
+  const lastRouteKey = useRef(routeKey);
   useEffect(() => {
+    if (lastRouteKey.current === routeKey) return;
+    lastRouteKey.current = routeKey;
     setOpen(false);
-  }, [location.pathname, location.search, location.hash]);
+  }, [routeKey]);
 
   // ── Data (shared react-query caches — no duplicate fetching) ──
   const makesQuery = useQuery({

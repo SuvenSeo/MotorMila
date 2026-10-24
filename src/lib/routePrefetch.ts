@@ -1,32 +1,47 @@
-/** Map of pathname prefixes → lazy page factories used by hover/idle prefetch. */
+/**
+ * Hover / focus / idle prefetch of route chunks.
+ *
+ * This module imports no pages: App.tsx registers each route's loader (same
+ * `import()` specifier as its lazy component, so the same chunk) through
+ * `registerRouteLoaders`. That keeps routePrefetch out of the
+ * page → ListingCard → routePrefetch import cycle.
+ */
 
-const exactLoaders: Record<string, () => Promise<unknown>> = {
-  "/": () => import("@/pages/Dashboard"),
-  "/trends": () => import("@/pages/Trends"),
-  "/estimate": () => import("@/pages/Estimate"),
-  "/calculator": () => import("@/pages/Calculator"),
-  "/ev-hub": () => import("@/pages/EVHub"),
-  "/ev-chargers": () => import("@/pages/EVChargers"),
-  "/best-picks": () => import("@/pages/BestPicks"),
-  "/price-index": () => import("@/pages/Trends"), // redirects to /trends
-  "/official-pulse": () => import("@/pages/OfficialPulse"),
-  "/docs": () => import("@/pages/Docs"),
-  "/pricing": () => import("@/pages/Pricing"),
-  "/compare": () => import("@/pages/Compare"),
-  "/permits": () => import("@/pages/Permits"),
-  "/alerts": () => import("@/pages/Alerts"),
-  "/settings": () => import("@/pages/Settings"),
-  "/dealer": () => import("@/pages/DealerDashboard"),
-  "/mobile-app": () => import("@/pages/MobileApp"),
+/** Exact pathnames that have their own chunk key. */
+const EXACT_KEYS = new Set([
+  "/",
+  "/trends",
+  "/estimate",
+  "/calculator",
+  "/ev-hub",
+  "/ev-chargers",
+  "/best-picks",
+  "/price-index",
+  "/official-pulse",
+  "/docs",
+  "/pricing",
+  "/compare",
+  "/permits",
+  "/alerts",
+  "/settings",
+  "/dealer",
+  "/mobile-app",
   // The admin console is unlisted and credential-gated, so it is never warmed
   // from the public shell — only an explicit visit loads it.
-  "/pro": () => import("@/pages/ProDashboard"),
-  "/pro-preview": () => import("@/pages/ProPreview"),
-  "/sign-in": () => import("@/pages/SignIn"),
-  "/sign-up": () => import("@/pages/SignUp"),
-  "/privacy": () => import("@/pages/PrivacyPolicy"),
-  "/terms": () => import("@/pages/TermsOfService"),
-};
+  "/pro",
+  "/pro-preview",
+  "/sign-in",
+  "/sign-up",
+  "/privacy",
+  "/terms",
+]);
+
+/** Chunk key → loader, filled by App.tsx. */
+const loaders: Record<string, () => Promise<unknown>> = {};
+
+export function registerRouteLoaders(map: Record<string, () => Promise<unknown>>): void {
+  Object.assign(loaders, map);
+}
 
 const warmed = new Set<string>();
 
@@ -41,7 +56,7 @@ export function pathnameOf(href: string): string {
 }
 
 export function loaderKeyFor(pathname: string): string | null {
-  if (exactLoaders[pathname]) return pathname;
+  if (EXACT_KEYS.has(pathname)) return pathname;
   if (pathname.startsWith("/listing/")) return "listing-detail";
   if (pathname.startsWith("/official-pulse/guide/")) return "pulse-guide";
   if (pathname.startsWith("/official-pulse/")) return "pulse-detail";
@@ -51,35 +66,32 @@ export function loaderKeyFor(pathname: string): string | null {
   return null;
 }
 
-function loaderFor(pathname: string): (() => Promise<unknown>) | null {
-  if (exactLoaders[pathname]) return exactLoaders[pathname];
-  if (pathname.startsWith("/listing/")) return () => import("@/pages/ListingDetail");
-  if (pathname.startsWith("/official-pulse/guide/")) return () => import("@/pages/OfficialPulseGuide");
-  if (pathname.startsWith("/official-pulse/")) return () => import("@/pages/OfficialPulseDetail");
-  if (pathname.startsWith("/locations/")) return () => import("@/pages/DistrictHub");
-  const parts = pathname.split("/").filter(Boolean);
-  if (parts[0] === "cars") {
-    return parts.length >= 3
-      ? () => import("@/pages/MakeModelHub")
-      : () => import("@/pages/MakeHub");
-  }
-  return null;
-}
-
 /** Warm the JS chunk for a route so the next navigation skips the spinner. */
 export function prefetchRoute(href: string): void {
   const pathname = pathnameOf(href);
   if (!pathname) return;
   const key = loaderKeyFor(pathname);
-  const loader = loaderFor(pathname);
+  const loader = key ? loaders[key] : undefined;
   if (!key || !loader) return;
   if (warmed.has(key)) return;
   warmed.add(key);
-  void loader();
+  void loader().catch(() => {
+    // A failed warm-up must not poison the key: the real navigation retries.
+    warmed.delete(key);
+  });
 }
 
-/** After first paint, warm the tabs users tap most. */
+/** True when the visitor asked to save data or is on a slow connection. */
+function constrainedNetwork(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const c = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+  if (!c) return false;
+  return c.saveData === true || c.effectiveType === "slow-2g" || c.effectiveType === "2g" || c.effectiveType === "3g";
+}
+
+/** After first paint, warm the tabs users tap most (skipped on Save-Data / slow networks, where hover/tap intent still warms single routes). */
 export function prefetchAppShellRoutes(): void {
+  if (constrainedNetwork()) return;
   [
     "/trends",
     "/best-picks",

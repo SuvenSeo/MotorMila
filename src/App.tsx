@@ -8,12 +8,12 @@ import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { RouteFallback } from "@/components/RouteFallback";
 import { RouteTransition } from "@/components/RouteTransition";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
-import { prefetchAppShellRoutes } from "@/lib/routePrefetch";
+import { prefetchAppShellRoutes, registerRouteLoaders } from "@/lib/routePrefetch";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Navbar } from "@/components/Navbar";
-import { CommandPalette } from "@/components/CommandPalette";
+import { CommandPaletteHost } from "@/components/CommandPaletteHost";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { AppFooter } from "@/components/AppFooter";
 import { ScrollProgressBar } from "@/components/ScrollProgressBar";
@@ -81,6 +81,40 @@ const CheckoutReturn = lazyWithRetry(() => import("./pages/CheckoutReturn"));
 // ui/features: methodology explainer
 const HowWePrice = lazyWithRetry(() => import("./pages/HowWePrice"));
 const BotInfo = lazyWithRetry(() => import("./pages/BotInfo"));
+
+// Hover / focus / idle prefetch targets (lib/routePrefetch.ts imports no pages,
+// so the map lives here beside the lazy routes; same specifiers → same chunks).
+registerRouteLoaders({
+  "/": () => import("./pages/Dashboard"),
+  "/trends": () => import("./pages/Trends"),
+  "/price-index": () => import("./pages/Trends"), // redirects to /trends
+  "/estimate": () => import("./pages/Estimate"),
+  "/calculator": () => import("./pages/Calculator"),
+  "/ev-hub": () => import("./pages/EVHub"),
+  "/ev-chargers": () => import("./pages/EVChargers"),
+  "/best-picks": () => import("./pages/BestPicks"),
+  "/official-pulse": () => import("./pages/OfficialPulse"),
+  "/docs": () => import("./pages/Docs"),
+  "/pricing": () => import("./pages/Pricing"),
+  "/compare": () => import("./pages/Compare"),
+  "/permits": () => import("./pages/Permits"),
+  "/alerts": () => import("./pages/Alerts"),
+  "/settings": () => import("./pages/Settings"),
+  "/dealer": () => import("./pages/DealerDashboard"),
+  "/mobile-app": () => import("./pages/MobileApp"),
+  "/pro": () => import("./pages/ProDashboard"),
+  "/pro-preview": () => import("./pages/ProPreview"),
+  "/sign-in": () => import("./pages/SignIn"),
+  "/sign-up": () => import("./pages/SignUp"),
+  "/privacy": () => import("./pages/PrivacyPolicy"),
+  "/terms": () => import("./pages/TermsOfService"),
+  "listing-detail": () => import("./pages/ListingDetail"),
+  "pulse-guide": () => import("./pages/OfficialPulseGuide"),
+  "pulse-detail": () => import("./pages/OfficialPulseDetail"),
+  "district-hub": () => import("./pages/DistrictHub"),
+  "make-hub": () => import("./pages/MakeHub"),
+  "make-model-hub": () => import("./pages/MakeModelHub"),
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -154,7 +188,7 @@ function AppShell() {
       <SkipLink />
       <HashScroller />
       <Navbar />
-      <CommandPalette />
+      <CommandPaletteHost />
       {/* Feedback is a dialog opened from the menu / footer — no floating button. */}
       <Suspense fallback={null}>
         <FeedbackWidget />
