@@ -133,7 +133,11 @@ fun MmAnimatedText(
     }
     // Align from the right so "8.5 Mn" → "12.5 Mn" keeps the unit still.
     BoxWithConstraints(modifier.clearAndSetSemantics { contentDescription = text }) {
-    val fitted = rememberFittedTextStyle(text, style, constraints.maxWidth)
+    // Fit against the width the glyphs take ONE PER CELL (each AnimatedContent
+    // cell is ceil'd and loses kerning). Measuring the whole string here made
+    // "Rs 950,000" look like it fit while the per-char row overflowed by a few
+    // px and clipped the last zero ("Rs 950,00C" in the detail sticky bar).
+    val fitted = rememberPerGlyphFittedStyle(text, style, constraints.maxWidth)
     Row(
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -222,6 +226,35 @@ private fun rememberFittedTextStyle(
         }
     }
 }
+
+@Composable
+private fun rememberPerGlyphFittedStyle(
+    text: String,
+    style: TextStyle,
+    maxWidthPx: Int,
+    minScale: Float = 0.55f,
+): TextStyle {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    return remember(text, style, maxWidthPx, density, minScale) {
+        fitPerGlyphStyle(measurer, text, style, maxWidthPx, digitsAsStrip = false, minScale = minScale)
+    }
+}
+
+/**
+ * [style] shrunk (down to [minScale]) so single-line [text] fits [maxWidthPx]; for
+ * places that already know their width and cannot host a SubcomposeLayout.
+ */
+@Composable
+fun rememberFitTextStyle(text: String, style: TextStyle, maxWidthPx: Int, minScale: Float = 0.5f): TextStyle =
+    rememberFittedTextStyle(text, style, maxWidthPx, minScale)
+
+/**
+ * Pixel width [text] needs in [style] when rendered by [MmPrice] (one cell per glyph).
+ * Layouts that must reserve room for a price (e.g. the detail sticky bar) use this.
+ */
+internal fun mmPriceWidthPx(measurer: androidx.compose.ui.text.TextMeasurer, text: String, style: TextStyle): Int =
+    perGlyphWidthPx(measurer, text, style, digitsAsStrip = false)
 
 private data class PriceChar(val char: Char, val value: Double) {
     override fun equals(other: Any?): Boolean = other is PriceChar && other.char == char

@@ -27,6 +27,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -123,6 +124,8 @@ import lk.motormila.app.ui.components.ErrorState
 import lk.motormila.app.ui.components.FmvGauge
 import lk.motormila.app.ui.components.ListingImage
 import lk.motormila.app.ui.components.SlidingLkr
+import lk.motormila.app.ui.components.rememberSlidingLkrFitStyle
+import lk.motormila.app.ui.components.rememberFitTextStyle
 import lk.motormila.app.ui.components.listingCardKey
 import lk.motormila.app.ui.components.listingPriceKey
 import lk.motormila.app.ui.components.rememberReducedMotion
@@ -610,7 +613,7 @@ private fun detailContainerTransform(listingId: Int, fromCard: Boolean): Modifie
 }
 
 @Composable
-private fun PriceDealSection(
+internal fun PriceDealSection(
     listing: Listing,
     isPro: Boolean,
     onDealShown: () -> Unit,
@@ -719,7 +722,10 @@ private fun PriceSlot(
     // Shared bounds hug the price text (not the weight(1f) slot): matched
     // against the slot's full row width, the card's short "Rs 1.4 Mn" was
     // scaled up ~3x mid-morph.
-    Box(modifier = modifier) {
+    // The slot width is read once here so every price inside can shrink to fit
+    // it (never clip) at 200 % font scale or on narrow phones.
+    BoxWithConstraints(modifier = modifier) {
+        val slotWidthPx = constraints.maxWidth
         Box(Modifier.then(priceShared)) {
             Crossfade(
                 targetState = drop,
@@ -727,9 +733,14 @@ private fun PriceSlot(
                 label = "price-slot",
             ) { activeDrop ->
                 if (activeDrop != null) {
-                    PriceDropTicker(drop = activeDrop, priceStyle = priceStyle)
+                    PriceDropTicker(drop = activeDrop, priceStyle = priceStyle, maxWidthPx = slotWidthPx)
                 } else {
-                    Text(text = LkrFormat.priceFull(listing.priceLkr), style = priceStyle)
+                    lk.motormila.app.ui.components.MmFitText(
+                        text = LkrFormat.priceFull(listing.priceLkr),
+                        style = priceStyle,
+                        color = MotormilaOnSurface,
+                        minScale = 0.5f,
+                    )
                 }
             }
         }
@@ -776,10 +787,12 @@ private fun detectPriceDrop(listingId: Int, history: PriceHistory?): PriceDrop? 
  *
  * Reduced motion collapses the whole moment to a simple crossfade.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PriceDropTicker(
     drop: PriceDrop,
     priceStyle: TextStyle,
+    maxWidthPx: Int,
     modifier: Modifier = Modifier,
 ) {
     val reducedMotion = rememberReducedMotion()
@@ -789,7 +802,13 @@ private fun PriceDropTicker(
             animationSpec = tween(durationMillis = 200),
             label = "price-drop-reduced",
         ) { price ->
-            Text(text = LkrFormat.priceFull(price), style = priceStyle, modifier = modifier)
+            lk.motormila.app.ui.components.MmFitText(
+                text = LkrFormat.priceFull(price),
+                style = priceStyle,
+                color = MotormilaOnSurface,
+                modifier = modifier,
+                minScale = 0.5f,
+            )
         }
         return
     }
@@ -809,16 +828,33 @@ private fun PriceDropTicker(
         delay(150)
         haptics.tick()
     }
+    // Each price is fitted to the FULL slot width on its own (sized for the
+    // wider of old/new so the ticker never resizes mid-roll); the FlowRow puts
+    // the new price under the struck-through old one when both don't fit on
+    // one line (narrow phones, large font scale).
+    val newPriceStyle = rememberSlidingLkrFitStyle(
+        valueLkr = maxOf(drop.oldPriceLkr, drop.newPriceLkr),
+        style = priceStyle,
+        maxWidthPx = maxWidthPx,
+        full = true,
+    )
+    val oldBase = MaterialTheme.typography.headlineMedium.copy(
+        fontFeatureSettings = "tnum",
+        color = MotormilaSecondaryText,
+    )
+    val oldPriceStyle = rememberFitTextStyle(LkrFormat.full(drop.oldPriceLkr), oldBase, maxWidthPx)
     Box(modifier = modifier) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
             // Old price with a strike-through that draws left → right.
-            Box {
+            Box(Modifier.align(Alignment.CenterVertically)) {
                 Text(
                     text = LkrFormat.full(drop.oldPriceLkr),
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontFeatureSettings = "tnum",
-                        color = MotormilaSecondaryText,
-                    ),
+                    style = oldPriceStyle,
+                    maxLines = 1,
+                    softWrap = false,
                 )
                 Canvas(Modifier.matchParentSize()) {
                     val y = size.height / 2f
@@ -830,11 +866,11 @@ private fun PriceDropTicker(
                     )
                 }
             }
-            Spacer(Modifier.width(8.dp))
             SlidingLkr(
                 valueLkr = if (started) drop.newPriceLkr else drop.oldPriceLkr,
-                style = priceStyle,
+                style = newPriceStyle,
                 full = true,
+                modifier = Modifier.align(Alignment.CenterVertically),
             )
         }
         if (flash.value > 0.005f) {
@@ -1049,7 +1085,7 @@ private fun sourceDisplayName(source: String?): String =
 
 /** Deal ladder rungs: asking vs low/median/high markers. */
 @Composable
-private fun DealLadder(askingLkr: Double?, fmvLkr: Double?, modifier: Modifier = Modifier) {
+internal fun DealLadder(askingLkr: Double?, fmvLkr: Double?, modifier: Modifier = Modifier) {
     if (askingLkr == null || fmvLkr == null || fmvLkr <= 0) return
     MotormilaSurface(modifier = modifier) {
         Text(

@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
@@ -419,7 +420,27 @@ fun DetailActionBar(
     // Fixed chrome: cap Dynamic Type at 1.3x like an iOS toolbar so the price and the
     // button both fit at 200 %; the price additionally shrinks to fit (MmFitText).
     lk.motormila.app.ui.theme.CappedFontScale(max = 1.3f) {
-    Row(
+    // Full rupees normally; at large text the compact "Rs 1.2 Mn"
+    // (full figure is already in the page title block).
+    val largeText = androidx.compose.ui.platform.LocalConfiguration.current.fontScale > 1.15f
+    val priceMode = if (largeText) MmPriceMode.Compact else MmPriceMode.Full
+    val priceStyle = MmType.current.priceM
+    val fallback = stringResource(R.string.mm_price_on_request)
+    val priceText = when (priceMode) {
+        MmPriceMode.Compact -> MmPriceFormat.compact(priceLkr, fallback)
+        else -> MmPriceFormat.full(priceLkr, fallback)
+    }
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    // PRICE HAS PRIORITY (1.7.0 bug: "Rs 950,00C"). The Row measured the
+    // un-weighted button first, so "View on Riyasewana" took its full one-line
+    // width and the weighted price column got the leftovers. Now the price
+    // reserves its real per-glyph width; the button takes what is left (label
+    // wraps/ellipsizes) and, if that is under [MinButtonWidth], the bar stacks.
+    val priceWidthPx = remember(priceText, priceStyle, density) {
+        lk.motormila.app.ui.components.mmPriceWidthPx(measurer, priceText, priceStyle) + with(density) { 2.dp.roundToPx() }
+    }
+    androidx.compose.foundation.layout.BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding()
@@ -427,39 +448,70 @@ fun DetailActionBar(
             .padding(horizontal = 12.dp, vertical = 8.dp)
             .liquidGlass(MmShapes.xl, lk.motormila.app.ui.theme.GlassWeight.Regular, elevation = 18.dp)
             .padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(Modifier.weight(1f)) {
-            Text(
-                stringResource(R.string.mm_detail_asking),
-                style = MmType.current.caption,
-                color = c.textSecondary,
-                maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-            )
-            // Full rupees normally; at large text the compact "Rs 1.2 Mn"
-            // (full figure is already in the page title block) so the
-            // capsule never shows "Rs 1,200,0…".
-            val largeText = androidx.compose.ui.platform.LocalConfiguration.current.fontScale > 1.15f
-            MmPrice(
-                value = priceLkr,
-                mode = if (largeText) MmPriceMode.Compact else MmPriceMode.Full,
-                style = MmType.current.priceM,
-                fallback = stringResource(R.string.mm_price_on_request),
-            )
+        val maxW = constraints.maxWidth
+        val gapPx = with(density) { 12.dp.roundToPx() }
+        val minButtonPx = with(density) { MinButtonWidth.roundToPx() }
+        val stacked = onViewSource != null &&
+            maxW - priceWidthPx - gapPx < minButtonPx
+        val priceBlock: @Composable (Modifier) -> Unit = { m ->
+            Column(m) {
+                Text(
+                    stringResource(R.string.mm_detail_asking),
+                    style = MmType.current.caption,
+                    color = c.textSecondary,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                )
+                MmPrice(
+                    value = priceLkr,
+                    mode = priceMode,
+                    style = priceStyle,
+                    fallback = fallback,
+                )
+            }
         }
-        if (onViewSource != null) {
-            MmButton(
-                text = stringResource(R.string.listing_view_on_source, sourceName),
-                onClick = onViewSource,
-                trailingIcon = Icons.AutoMirrored.Filled.OpenInNew,
-                size = MmButtonSize.Medium,
-            )
+        if (stacked) {
+            Column(
+                Modifier.fillMaxWidth().padding(end = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                priceBlock(Modifier.fillMaxWidth())
+                MmButton(
+                    text = stringResource(R.string.listing_view_on_source, sourceName),
+                    onClick = onViewSource!!,
+                    trailingIcon = Icons.AutoMirrored.Filled.OpenInNew,
+                    size = MmButtonSize.Medium,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        } else {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                // The button (measured first) is capped so at least priceWidthPx
+                // is left; the weighted price column takes all of the rest.
+                priceBlock(Modifier.weight(1f))
+                if (onViewSource != null) {
+                    MmButton(
+                        text = stringResource(R.string.listing_view_on_source, sourceName),
+                        onClick = onViewSource,
+                        trailingIcon = Icons.AutoMirrored.Filled.OpenInNew,
+                        size = MmButtonSize.Medium,
+                        modifier = Modifier.widthIn(
+                            max = with(density) { (maxW - priceWidthPx - gapPx).coerceAtLeast(minButtonPx).toDp() },
+                        ),
+                    )
+                }
+            }
         }
     }
     }
 }
+
+/** Below this the "View on …" button would be unreadable next to the price: stack instead. */
+private val MinButtonWidth = 136.dp
 
 // ─────────────────────────────────────────────────────────────
 // Deal verdict row + "Why?" sheet + lease label
