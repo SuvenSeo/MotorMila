@@ -41,6 +41,7 @@ import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { getSurchargeCountdown } from "@/lib/importTaxModel";
 import { AFFORDABILITY_DEFAULTS } from "@/utils/affordability";
 import { useAppPreferences } from "@/lib/appPreferences";
+import { localizeCalcNote } from "@/lib/calcNotesI18n";
 import { useAuth } from "@/lib/authContext";
 import { FREE_CALCULATOR_TABS, freePlanText, hasFullPlatformAccess } from "@/lib/planLimits";
 import {
@@ -571,7 +572,7 @@ export default function Calculator() {
             </AnimatePresence>
             {lcResult.notes ? (
               <Notice tone="neutral" icon={CheckCircle2}>
-                <span className="text-label-2">{lcResult.notes}</span>
+                <span className="text-label-2">{localizeCalcNote(lcResult.notes, t)}</span>
               </Notice>
             ) : null}
           </div>
@@ -672,7 +673,7 @@ export default function Calculator() {
         footer={
           tcoResult.notes ? (
             <Notice tone="neutral">
-              <span className="text-label-2">{tcoResult.notes}</span>
+              <span className="text-label-2">{localizeCalcNote(tcoResult.notes, t)}</span>
             </Notice>
           ) : null
         }

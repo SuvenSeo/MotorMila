@@ -14,6 +14,7 @@ import {
 import { FileBadge, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { useAppPreferences } from "@/lib/appPreferences";
+import { localizeCalcNote } from "@/lib/calcNotesI18n";
 import { Badge } from "@/components/ui/badge";
 import { ErrorState } from "@/components/ui/error-state";
 import {
@@ -161,7 +162,7 @@ export function OwnershipCostsPanel({
           footer={
             <Notice tone="neutral" icon={Shield}>
               <span className="text-label-2">
-                {bundle.notes} {bundle.revenue_licence.schedule_note}
+                {localizeCalcNote(bundle.notes, t)} {localizeCalcNote(bundle.revenue_licence.schedule_note, t)}
               </span>
             </Notice>
           }
@@ -179,7 +180,7 @@ export function OwnershipCostsPanel({
           <Notice tone={statusTone} title={t("tools.own.importScreen", "Import screen · {status}", { status: statusLabel })}>
             <ul className="list-disc space-y-1 pl-4 text-label-2">
               {eligibility.reasons.map((reason) => (
-                <li key={reason}>{reason}</li>
+                <li key={reason}>{localizeCalcNote(reason, t)}</li>
               ))}
             </ul>
           </Notice>

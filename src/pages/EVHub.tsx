@@ -43,9 +43,9 @@ const EV_MODULE_DEFS = [
 ] as const;
 
 const OWNERSHIP_CHECK_DEFS = [
-  { label: "Battery reserve", value: "20-30%", note: "Guideline: keep this much SoH headroom when buying used" },
-  { label: "Home charging", value: "Priority", note: "Guideline: overnight charging beats public-charger dependence" },
-  { label: "Resale proof", value: "Records", note: "Guideline: battery reports protect resale value" },
+  { key: "batteryReserve", label: "Battery reserve", value: "20-30%", note: "Guideline: keep this much SoH headroom when buying used" },
+  { key: "homeCharging", label: "Home charging", value: "Priority", note: "Guideline: overnight charging beats public-charger dependence" },
+  { key: "resaleProof", label: "Resale proof", value: "Records", note: "Guideline: battery reports protect resale value" },
 ] as const;
 
 const TCO_FUEL_COST_PER_KM_PETROL_LKR = 28;
@@ -96,9 +96,9 @@ export default function EVHub() {
   }));
   const ownershipChecks = OWNERSHIP_CHECK_DEFS.map((c) => ({
     ...c,
-    label: t(`ev.ownership.${c.label.replace(" ", "")}`, c.label),
-    value: t(`ev.ownershipValue.${c.label.replace(" ", "")}`, c.value),
-    note: t(`ev.ownershipNote.${c.label.replace(" ", "")}`, c.note),
+    label: t(`ev.ownership.${c.key}`, c.label),
+    value: t(`ev.ownershipValue.${c.key}`, c.value),
+    note: t(`ev.ownershipNote.${c.key}`, c.note),
   }));
 
   const headerStats = pending || failed
