@@ -186,9 +186,9 @@ export default function DistrictHub() {
         {recentListings.length > 0 && (
           <m.section variants={revealItem}>
             <SectionHeading eyebrow={t("makeHub.liveInventory", "Live inventory")} title={t("districtHub.recent", "Recent listings")} />
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {recentListings.map((listing, i) => (
-                <m.div key={listing.id} variants={listItem} custom={i} initial="hidden" animate="show">
+                <m.div key={listing.id} variants={listItem} custom={i} initial="hidden" animate="show" className="min-w-0">
                   <ListingCard listing={listing} />
                 </m.div>
               ))}

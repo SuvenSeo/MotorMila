@@ -49,7 +49,29 @@ const METRIC_LABELS: Record<string, string> = {
   import_parity: "Import parity",
   revenue_licence: "Revenue licence",
   revenue_license: "Revenue licence",
+  reference_page_available: "Reference page available",
+  vehicle_tender_count: "Vehicle tenders",
+  document_count: "Documents published",
+  usd_lkr_spot: "USD/LKR spot rate",
 };
+
+/** Human labels for raw signal_type keys ("tender_sales"). */
+const TYPE_LABELS: Record<string, string> = {
+  landed_cost: "Landed cost",
+  tender_sales: "Tender sales",
+  transfers: "Transfers",
+  registrations: "Registrations",
+  exchange_rate: "Exchange rate",
+  import_parity: "Import parity",
+};
+
+/** Translated label for a signal_type; unknown keys fall back to spaced text. */
+export function labelPulseType(raw: string | null | undefined, t: TranslateFn = englishT): string {
+  const key = String(raw ?? "").trim().toLowerCase();
+  if (!key) return t("common.unknown", "Unknown");
+  const known = TYPE_LABELS[key];
+  return known ? t(`pulse.type.${key}`, known) : key.replace(/_/g, " ");
+}
 
 /** Turn a raw metric/category key ("import_cost") into a human title. */
 export function labelPulseMetric(raw: string | null | undefined, t: TranslateFn = englishT): string {

@@ -62,7 +62,7 @@ function bandColor(index: number): { bar: string; badge: "success" | "warning" |
 }
 
 export default function Trends() {
-  const { t } = useAppPreferences();
+  const { t, language } = useAppPreferences();
   const { hasProAccess, isAdmin } = useAuth();
   const fullAccess = hasFullPlatformAccess({ hasProAccess, isAdmin });
   const [makes, setMakes] = useState<{ make: string; count: number }[]>([]);
@@ -264,7 +264,7 @@ export default function Trends() {
         </m.div>
 
         <m.div variants={revealItem}>
-          <PriceHistoryChart title={chartTitle} points={visibleTrendData} isLoading={loading} coverageNote={coverageNote} emptyMessage={emptyMessage} emptyActionLabel={hasNarrow ? t("trends.broadenFilters", "Broaden filters") : undefined} onEmptyAction={hasNarrow ? () => { setDistrict("all"); setCondition("all"); } : undefined} />
+          <PriceHistoryChart title={chartTitle} points={visibleTrendData} isLoading={loading} coverageNote={language !== "en" && trendData.length > 1 && coverageNote && coverageNote.startsWith("Monthly medians") ? t("trends.coverageNote", coverageNote, { from: trendData[0].month, to: trendData[trendData.length - 1].month }) : coverageNote} emptyMessage={emptyMessage} emptyActionLabel={hasNarrow ? t("trends.broadenFilters", "Broaden filters") : undefined} onEmptyAction={hasNarrow ? () => { setDistrict("all"); setCondition("all"); } : undefined} />
           {!fullAccess ? (
             <UpgradePrompt
               className="mt-4"

@@ -88,7 +88,7 @@ export function ModelPriceTimeMachine({
   displayModel?: string;
 }) {
   const names = { make: displayMake ?? make, model: displayModel ?? model };
-  const { t } = useAppPreferences();
+  const { t, language } = useAppPreferences();
   const calm = useChartCalm();
   const [mode, setMode] = useState<Mode>("calendar");
 
@@ -147,18 +147,20 @@ export function ModelPriceTimeMachine({
         title={t("timeMachine.title", "{make} {model} over time", { ...names })}
         description={
           mode === "calendar"
-            ? data?.interpretation.calendar_series ||
+            ? // The API's interpretation text is English-only; use it only in English.
+              (language === "en" ? data?.interpretation.calendar_series : undefined) ||
               t("timeMachine.calendarDesc", "Median asking prices across calendar months from Motormila scans and archive backfills.")
-            : data?.interpretation.cross_section_by_yom ||
+            : (language === "en" ? data?.interpretation.cross_section_by_yom : undefined) ||
               t("timeMachine.yomDesc", "Today’s live listings grouped by year of manufacture — not calendar history.")
         }
       />
 
       <Card padding="md">
         <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)}>
-          <TabsList aria-label={t("timeMachine.viewAria", "Chart view")}>
-            <TabsTrigger value="calendar">{t("timeMachine.calendarTab", "Calendar history")}</TabsTrigger>
-            <TabsTrigger value="yom">{t("timeMachine.yomTab", "By manufacture year")}</TabsTrigger>
+          {/* Tamil/Sinhala tab labels are long: let the pills shrink and wrap on phones instead of overflowing. */}
+          <TabsList aria-label={t("timeMachine.viewAria", "Chart view")} className="h-auto max-w-full">
+            <TabsTrigger value="calendar" className="h-auto min-h-8 whitespace-normal py-1 text-center leading-tight">{t("timeMachine.calendarTab", "Calendar history")}</TabsTrigger>
+            <TabsTrigger value="yom" className="h-auto min-h-8 whitespace-normal py-1 text-center leading-tight">{t("timeMachine.yomTab", "By manufacture year")}</TabsTrigger>
           </TabsList>
         </Tabs>
 

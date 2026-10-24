@@ -62,8 +62,8 @@ export function NotFoundSearch() {
       </form>
       <ul className="mt-4 flex flex-wrap gap-2">
         {quick.map(({ to, label, icon: Icon }) => (
-          <li key={to}>
-            <Button asChild variant="secondary" size="sm" className="font-medium">
+          <li key={to} className="max-w-full">
+            <Button asChild variant="secondary" size="sm" className="h-auto min-h-9 max-w-full whitespace-normal py-1.5 text-center font-medium">
               <Link to={to} className="no-underline">
                 <Icon className="text-primary" aria-hidden />
                 {label}

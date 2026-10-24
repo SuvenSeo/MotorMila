@@ -1,5 +1,5 @@
 import { memo, useMemo } from "react";
-import { CircleMarker, MapContainer, Popup, TileLayer, Tooltip } from "react-leaflet";
+import { CircleMarker, MapContainer, Popup, Tooltip } from "react-leaflet";
 import { DistrictPrice } from "@/types/car";
 import { LazyMapMount } from "@/components/leaflet/LazyMapMount";
 import { MapResizeController } from "@/components/leaflet/MapResizeController";
@@ -180,15 +180,11 @@ export const DistrictPriceHeatmap = memo(function DistrictPriceHeatmap({
           maxBounds={SL_BOUNDS}
           maxBoundsViscosity={0.75}
           scrollWheelZoom
-          style={{ height: "100%", width: "100%" }}
+          style={{ height: "100%", width: "100%", background: "hsl(var(--surface-2))" }}
         >
           <MapResizeController bounds={SL_BOUNDS} />
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
-            url={`https://{s}.basemaps.cartocdn.com/${resolvedTheme === "dark" ? "dark_all" : "light_all"}/{z}/{x}/{y}{r}.png`}
-            key={resolvedTheme}
-            noWrap
-          />
+          {/* No raster basemap: CARTO basemaps now return "API KEY REQUIRED" tiles
+              without a key. The district boundaries layer is the map. */}
           <DistrictBoundaries
             fillFor={(name) => fillByDistrict.get(districtKey(name)) ?? null}
             highlight={highlightDistrict}

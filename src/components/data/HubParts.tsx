@@ -32,7 +32,7 @@ export function HubLinkTile({
   className?: string;
 }) {
   return (
-    <m.li variants={listItem} custom={index} initial="hidden" animate="show" className="list-none">
+    <m.li variants={listItem} custom={index} initial="hidden" animate="show" className="min-w-0 list-none">
       <Link
         to={to}
         className={cn(cardVariants({ variant: "interactive", padding: "sm" }), "group flex h-full flex-col no-underline", className)}
@@ -57,7 +57,9 @@ export function HubLinkTile({
 }
 
 export function HubTileGrid({ children, className }: { children: ReactNode; className?: string }) {
-  return <ul className={cn("grid gap-3 sm:grid-cols-2 lg:grid-cols-3", className)}>{children}</ul>;
+  // grid-cols-1 (minmax(0,1fr)) so a long model name truncates instead of widening
+  // the implicit track past the phone viewport.
+  return <ul className={cn("grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3", className)}>{children}</ul>;
 }
 
 export function HubTileSkeleton({ count = 6, tall = true }: { count?: number; tall?: boolean }) {

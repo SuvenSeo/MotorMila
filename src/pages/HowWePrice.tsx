@@ -88,8 +88,9 @@ export default function HowWePrice() {
           <p className="mb-2 text-footnote font-medium text-label-2">{t("howPrice.tocAria", "On this page")}</p>
           <ul className="flex flex-wrap gap-2">
             {toc.map((item) => (
-              <li key={item.id}>
-                <a href={`#${item.id}`} className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "no-underline")}>
+              <li key={item.id} className="max-w-full">
+                {/* Long si/ta labels wrap inside the pill instead of running off a phone screen. */}
+                <a href={`#${item.id}`} className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "h-auto min-h-9 max-w-full whitespace-normal py-1.5 text-center no-underline")}>
                   {item.label}
                 </a>
               </li>

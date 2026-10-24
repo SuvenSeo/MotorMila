@@ -7,7 +7,7 @@ import { QUERY_STALE } from "@/lib/queryPolicy";
 import {
   PULSE_SOURCE_GUIDES,
   localizePulseGuide,
-  labelPulseSource,
+  labelPulseSource, labelPulseType,
   matchPulseGuide,
   type PulseSourceGuide,
 } from "@/lib/officialPulseContent";
@@ -115,7 +115,7 @@ function GuideBody({ guide: sourceGuide }: { guide: PulseSourceGuide }) {
             })}
             description={t("pulse.relatedDesc", "Recent observations matching {source} · {type}.", {
               source: labelPulseSource(guide.source, t),
-              type: guide.signalType.replace(/_/g, " "),
+              type: labelPulseType(guide.signalType, t),
             })}
           />
           {signalsQuery.isPending ? (

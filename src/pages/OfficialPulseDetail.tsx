@@ -18,6 +18,7 @@ import {
   formatPulsePeriod,
   formatPulseValue,
   labelPulseMetric,
+  labelPulseType,
   labelPulseSource,
   localizePulseGuide,
   matchPulseGuide,
@@ -172,7 +173,7 @@ export default function OfficialPulseDetail() {
     },
     {
       label: t("pulse.metricLabel", "Metric"),
-      value: signal.metric.replace(/_/g, " ") || "—",
+      value: signal.metric ? labelPulseMetric(signal.metric, t) : "—",
       note: t("pulse.trackedField", "Tracked field"),
     },
     {
@@ -196,7 +197,7 @@ export default function OfficialPulseDetail() {
       </div>
       <PageHeader
         className="pt-3 sm:pt-4"
-        eyebrow={`${labelPulseSource(signal.source, t)} · ${signal.signal_type.replace(/_/g, " ")}`}
+        eyebrow={`${labelPulseSource(signal.source, t)} · ${labelPulseType(signal.signal_type, t)}`}
         eyebrowIcon={Landmark}
         title={title}
         description={

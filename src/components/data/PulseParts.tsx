@@ -10,6 +10,7 @@ import {
   formatPulsePeriod,
   formatPulseValue,
   labelPulseMetric,
+  labelPulseType,
   labelPulseSource,
   localizePulseGuide,
   matchPulseGuide,
@@ -69,13 +70,13 @@ export function PulseSignalCard({
           className="flex flex-1 flex-col rounded-control no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <p className="text-caption font-semibold text-primary">
-            {labelPulseSource(signal.source, t)} · {signal.signal_type.replace(/_/g, " ")}
+            {labelPulseSource(signal.source, t)} · {labelPulseType(signal.signal_type, t)}
           </p>
           <h3 className="mt-2 text-callout font-semibold text-foreground">{title}</h3>
           <p className="mt-4 font-display text-title2 font-semibold tabular-nums text-foreground [overflow-wrap:anywhere]">{value}</p>
           <p className="mt-1 text-caption text-label-2">
             {period ? t("pulse.period", "Period {period}", { period }) : t("pulse.latest", "Latest official pulse")}
-            {showMetric && signal.metric ? ` · ${signal.metric.replace(/_/g, " ")}` : null}
+            {showMetric && signal.metric ? ` · ${labelPulseMetric(signal.metric, t)}` : null}
           </p>
           <span className="mt-4 inline-flex items-center gap-1.5 text-footnote font-semibold text-primary">
             {ctaLabel}
