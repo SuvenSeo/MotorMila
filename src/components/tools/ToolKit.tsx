@@ -263,6 +263,14 @@ export function NumberField({
           // so "-500" can't produce negative duty lines.
           onChange(Math.min(max ?? Infinity, Math.max(min, next)));
         }}
+        onBlur={() => {
+          // Show the clamped value once the user leaves the field: when the state was
+          // already at the bound (e.g. 0), a typed "-500" never re-renders the text.
+          if (text === "") return;
+          const n = Number(text);
+          const clamped = Number.isFinite(n) ? Math.min(max ?? Infinity, Math.max(min, n)) : value;
+          if (!Number.isFinite(n) || clamped !== n) setText(emptyWhenZero && clamped === 0 ? "" : String(clamped));
+        }}
       />
     </Field>
   );
