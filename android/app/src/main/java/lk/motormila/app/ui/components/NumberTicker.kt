@@ -122,6 +122,9 @@ private fun RollingDigits(
     val cellLineHeight: TextUnit = remember(style) { rollingLineHeight(style) }
     val cellStyle = remember(style) {
         style.copy(
+            // Tabular figures: every digit cell is the widest digit, so without
+            // tnum a "1" floats in a wide cell ("1 ,284").
+            fontFeatureSettings = style.fontFeatureSettings ?: "tnum",
             lineHeight = cellLineHeight,
             lineHeightStyle = LineHeightStyle(
                 alignment = LineHeightStyle.Alignment.Center,

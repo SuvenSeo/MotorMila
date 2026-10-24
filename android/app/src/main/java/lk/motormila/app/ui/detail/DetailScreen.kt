@@ -1140,7 +1140,7 @@ private data class BentoSpecItem(
 )
 
 @Composable
-private fun BentoSpecsGrid(listing: Listing, modifier: Modifier = Modifier) {
+internal fun BentoSpecsGrid(listing: Listing, modifier: Modifier = Modifier) {
     val numberFormatter = remember { NumberFormat.getIntegerInstance(Locale.US) }
 
     val yearVal = listing.year?.toString() ?: "Unknown"
