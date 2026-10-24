@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import { animate, motion, useMotionValue, type PanInfo } from "motion/react";
 import { duration, ease, spring, useReducedMotionOrLowData } from "@/lib/motion";
 import { AnimatedNumber } from "@/components/ui/animated-number";
@@ -39,9 +39,32 @@ export function MobileFilterSheet({ open, onOpenChange, filters, onFiltersChange
   const { t } = useAppPreferences();
   const [draft, setDraft] = useState<FilterState>(filters);
 
-  useEffect(() => {
+  // Re-seed the draft from the applied filters while rendering (not in an
+  // effect), so opening the sheet is one render rather than two.
+  const [seed, setSeed] = useState({ open, filters });
+  if (seed.open !== open || (open && seed.filters !== filters)) {
+    setSeed({ open, filters });
     if (open) setDraft(filters);
-  }, [open, filters]);
+  }
+
+  // The filter panel (selects, sliders, makes combobox, ~40 chips) is the
+  // expensive part of the sheet. Paint the sheet frame first so its slide-in
+  // starts on the tap, then mount the panel in a transition on the next frame.
+  const [panelReady, setPanelReady] = useState(false);
+  useEffect(() => {
+    if (!open) {
+      setPanelReady(false);
+      return;
+    }
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => startTransition(() => setPanelReady(true)));
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [open]);
 
   const debouncedDraft = useDebounced({ ...draft, page: 1 }, 250);
   const countQuery = useQuery({
@@ -144,7 +167,18 @@ export function MobileFilterSheet({ open, onOpenChange, filters, onFiltersChange
         </SheetHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-          <FilterPanel filters={draft} onFiltersChange={setDraft} touch />
+          {panelReady ? (
+            <FilterPanel filters={draft} onFiltersChange={setDraft} touch />
+          ) : (
+            <div aria-hidden className="space-y-5 px-5 py-5">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div key={i} className="space-y-2.5">
+                  <div className="h-3 w-24 rounded-full bg-foreground/10" />
+                  <div className="h-11 rounded-control bg-foreground/[0.06]" />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div

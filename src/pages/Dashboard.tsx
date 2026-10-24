@@ -1,6 +1,7 @@
 import { scrollBehavior, duration, ease, spring, press, useReducedMotionOrLowData } from "@/lib/motion";
-import { startTransition, useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
+import { forwardRef, memo, startTransition, useDeferredValue, useImperativeHandle, useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
+import { useDeferredMount } from "@/hooks/useDeferredMount";
 import { AnimatePresence, m, motion } from "motion/react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -178,6 +179,27 @@ const MobileFilterSheet = lazyWithRetry(() =>
   import("@/components/MobileFilterSheet").then((m) => ({ default: m.MobileFilterSheet }))
 );
 
+type FilterSheetHandle = { open: () => void };
+
+/**
+ * Owns the mobile filter sheet's open state, so opening the sheet re-renders
+ * only the sheet — not the whole home page (cards, hero, charts). That full
+ * re-render was most of the ~750 ms filter-open INP at 4x CPU.
+ */
+const FilterSheetHost = memo(
+  forwardRef<FilterSheetHandle, { filters: FilterState; onFiltersChange: (f: FilterState) => void }>(
+    function FilterSheetHost({ filters, onFiltersChange }, ref) {
+      const [open, setOpen] = useState(false);
+      useImperativeHandle(ref, () => ({ open: () => setOpen(true) }), []);
+      return (
+        <Suspense fallback={null}>
+          <MobileFilterSheet open={open} onOpenChange={setOpen} filters={filters} onFiltersChange={onFiltersChange} />
+        </Suspense>
+      );
+    },
+  ),
+);
+
 const EMPTY_VELOCITY_POINTS: DistrictVelocityPoint[] = [];
 
 const HERO_POPULAR_SCANS = [
@@ -237,7 +259,7 @@ export default function Dashboard() {
   const liveMarketSnapshot = useLiveMarketSnapshot();
   // Persisted compare tray (localStorage) so selections survive navigation.
   const { pinned: comparePinned, toggle: toggleCompareTray } = useCompareTray();
-  const [showMobileFilter, setShowMobileFilter] = useState(false);
+  const filterSheetRef = useRef<FilterSheetHandle>(null);
   const [watchlistIds, setWatchlistIds] = useState<number[]>([]);
   const [heroSearch, setHeroSearch] = useState("");
   const [heroSearchMessage, setHeroSearchMessage] = useState<string | null>(null);
@@ -311,6 +333,14 @@ export default function Dashboard() {
   const makes = useMemo(() => makesQuery.data ?? [], [makesQuery.data]);
   const dashboardInsights: DashboardInsights | null = insightsQuery.data ?? null;
   const listings = useMemo(() => listingsQuery.data?.listings ?? [], [listingsQuery.data]);
+  // The grid (up to 24 cards with photos + motion) renders as a deferred,
+  // interruptible update: when the listings land the hero keeps painting
+  // (LCP) and taps stay responsive instead of waiting on one ~700 ms commit.
+  const gridListings = useDeferredValue(listings);
+  const gridCatchingUp = gridListings !== listings && gridListings.length === 0;
+  // Everything below the listings (market pulse, trust bar, district demand,
+  // Pro overview, sources) mounts a frame after the first paint.
+  const belowFoldReady = useDeferredMount();
   const total = listingsQuery.data?.total ?? 0;
   const loadingListings = listingsQuery.isPending;
   const refreshingListings = listingsQuery.isPlaceholderData && listingsQuery.isFetching;
@@ -1000,7 +1030,7 @@ export default function Dashboard() {
                 fullAccess={fullAccess}
               />
               <Chip
-                onClick={() => setShowMobileFilter(true)}
+                onClick={() => filterSheetRef.current?.open()}
                 className="h-11 lg:hidden"
                 aria-label={t("filter.title", "Filters")}
                 aria-pressed={undefined}
@@ -1093,7 +1123,7 @@ export default function Dashboard() {
               transition={{ duration: refreshingListings ? duration.short : duration.medium, ease: ease.standard }}
               aria-busy={refreshingListings || undefined}
             >
-              {loadingListings ? (
+              {loadingListings || gridCatchingUp ? (
                 <div className={marketView === "grid" ? "grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3" : "space-y-3"}>
                   {Array.from({ length: marketView === "grid" ? 9 : 6 }).map((_, i) => (
                     <ListingCardSkeleton key={`skel-${i}`} />
@@ -1119,7 +1149,7 @@ export default function Dashboard() {
               ) : marketView === "grid" ? (
                 <div className="content-in grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
                   {/* Cards self-reveal on scroll (ListingCard revealIndex caps the stagger). */}
-                  {listings.map((listing, index) => (
+                  {gridListings.map((listing, index) => (
                     <ListingCard key={listing.id} listing={listing} priority={index < 6} revealIndex={index} onCompareToggle={toggleCompare} isComparing={compareIdSet.has(listing.id)} onWatchlistToggle={toggleWatchlist} isWatchlisted={watchlistIdSet.has(listing.id)} />
                   ))}
                 </div>
@@ -1130,7 +1160,7 @@ export default function Dashboard() {
                   variants={cardContainerVariants}
                   className="space-y-3"
                 >
-                  {listings.map((listing) => {
+                  {gridListings.map((listing) => {
                     const hasPrice = isReasonableListingPrice(Number(listing.price_lkr));
                     return (
                       <motion.div key={listing.id} variants={cardItemVariants}>
@@ -1194,249 +1224,255 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* ── Market pulse — what's moving (below the listings grid) ───── */}
-      <RevealSection className="border-t border-border">
-        <div className="mx-auto max-w-[1560px] px-5 py-14 sm:px-6 lg:py-20">
-          <SectionHeader eyebrow={t("home.marketPulse", "Market pulse")} title={t("home.whatsMoving", "What's moving right now")} />
-          <div className="grid gap-10 lg:grid-cols-3">
+      {belowFoldReady ? (
+        <>
+          {/* ── Market pulse — what's moving (below the listings grid) ───── */}
+          <RevealSection className="border-t border-border">
+            <div className="mx-auto max-w-[1560px] px-5 py-14 sm:px-6 lg:py-20">
+              <SectionHeader eyebrow={t("home.marketPulse", "Market pulse")} title={t("home.whatsMoving", "What's moving right now")} />
+              <div className="grid gap-10 lg:grid-cols-3">
 
-            <div>
-              <div className="mb-5 flex items-center justify-between">
-                <h3 className="font-display text-body font-semibold tracking-tight text-foreground">{t("home.trendingModels", "Trending models")}</h3>
-                <Link to="/trends" className="flex items-center gap-1 text-caption font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright">
-                  All trends <ArrowUpRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
-              {trendingModels.length ? (
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {trendingModels.slice(0, 4).map((row) => (
-                    <button key={`${row.make}-${row.model}`} type="button" onClick={() => focusModel(row.make, row.model)}
-                      className="inventory-tile group/trend flex items-center gap-3 p-3 text-left active:scale-[0.99]"
-                    >
-                      <div className="h-12 w-16 shrink-0 overflow-hidden rounded-2xl bg-black/30">
-                        <VehicleThumbnail src={row.thumbnail_url} alt={`${row.make} ${row.model}`} className="w-full h-full object-cover" placeholderClassName="flex h-full w-full items-center justify-center bg-black/20" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-body font-semibold text-foreground">{row.make} {row.model}</p>
-                        <p className="mt-0.5 text-caption text-muted-foreground num">{row.listing_count.toLocaleString()} listed · avg {formatPrice(row.avg_price_lkr)}</p>
-                      </div>
-                      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover/trend:translate-x-0.5 group-hover/trend:text-primary" />
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-caption text-muted-foreground">{t("home.awaitingData", "Awaiting data")}</p>
-              )}
-            </div>
-
-            {/* Hot deals */}
-            <ProFeatureLock label={t("shell.home.bestDealsLock", "Best deals")}>
-            <div>
-              <div className="mb-5 flex items-center justify-between">
-                <h3 className="font-display text-body font-semibold tracking-tight text-foreground flex items-center gap-2">
-                  <Flame className="h-4 w-4 text-primary/70" /> Best deals
-                </h3>
-                <Link to="/best-picks" className="flex items-center gap-1 text-caption font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright">
-                  All picks <ArrowUpRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
-              {hotDeals.length ? (
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {hotDeals.slice(0, 4).map((row) => (
-                    <Link key={row.id} to={`/listing/${row.id}`}
-                      className="inventory-tile group/deal flex items-center gap-3 p-3 no-underline active:scale-[0.99]"
-                    >
-                      <div className="h-12 w-16 shrink-0 overflow-hidden rounded-2xl bg-black/30">
-                        <VehicleThumbnail src={row.thumbnail_url} listingId={row.id} alt={`${row.make} ${row.model}`} className="w-full h-full object-cover" placeholderClassName="flex h-full w-full items-center justify-center bg-black/20" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-body font-semibold text-foreground">{row.make} {row.model} {row.year}</p>
-                        <p className="mt-0.5 text-caption text-muted-foreground num">{formatPrice(row.price_lkr)} · {row.district || "LK"}</p>
-                      </div>
-                      <span className="inline-flex h-6 shrink-0 items-center rounded-full border border-deal-good/30 bg-deal-good/10 px-2.5 text-caption font-semibold tabular-nums text-deal-good-text">
-                        +{Number(row.deal_score || 0).toFixed(0)}
-                      </span>
+                <div>
+                  <div className="mb-5 flex items-center justify-between">
+                    <h3 className="font-display text-body font-semibold tracking-tight text-foreground">{t("home.trendingModels", "Trending models")}</h3>
+                    <Link to="/trends" className="flex items-center gap-1 text-caption font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright">
+                      All trends <ArrowUpRight className="h-3.5 w-3.5" />
                     </Link>
-                  ))}
+                  </div>
+                  {trendingModels.length ? (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {trendingModels.slice(0, 4).map((row) => (
+                        <button key={`${row.make}-${row.model}`} type="button" onClick={() => focusModel(row.make, row.model)}
+                          className="inventory-tile group/trend flex items-center gap-3 p-3 text-left active:scale-[0.99]"
+                        >
+                          <div className="h-12 w-16 shrink-0 overflow-hidden rounded-2xl bg-black/30">
+                            <VehicleThumbnail src={row.thumbnail_url} alt={`${row.make} ${row.model}`} className="w-full h-full object-cover" placeholderClassName="flex h-full w-full items-center justify-center bg-black/20" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-body font-semibold text-foreground">{row.make} {row.model}</p>
+                            <p className="mt-0.5 text-caption text-muted-foreground num">{row.listing_count.toLocaleString()} listed · avg {formatPrice(row.avg_price_lkr)}</p>
+                          </div>
+                          <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover/trend:translate-x-0.5 group-hover/trend:text-primary" />
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-caption text-muted-foreground">{t("home.awaitingData", "Awaiting data")}</p>
+                  )}
                 </div>
-              ) : (
-                <p className="text-caption text-muted-foreground">{t("home.noDeals", "No deals found in current slice")}</p>
-              )}
-            </div>
-            </ProFeatureLock>
-            {/* Price cuts (7d) */}
-            <div>
-              <div className="mb-5 flex items-center justify-between">
-                <h3 className="font-display text-body font-semibold tracking-tight text-foreground flex items-center gap-2">
-                  <TrendingDown className="h-4 w-4 text-deal-good-text" /> {t("home.priceCuts7d", "Price cuts · 7d")}
-                </h3>
-                <Link to="/best-picks" className="flex items-center gap-1 text-caption font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright">
-                  {t("home.allCuts", "All cuts")} <ArrowUpRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
-              {(dropsQuery.data || []).length ? (
-                <div className="grid gap-2">
-                  {(dropsQuery.data || []).slice(0, 4).map((drop) => (
-                    <Link key={drop.listing.id} to={`/listing/${drop.listing.id}`}
-                      className="inventory-tile group/drop flex items-center gap-3 p-3 no-underline active:scale-[0.99]"
-                    >
-                      <div className="h-12 w-16 shrink-0 overflow-hidden rounded-2xl bg-black/30">
-                        <VehicleThumbnail src={drop.listing.thumbnail_url} listingId={drop.listing.id} alt={`${drop.listing.make} ${drop.listing.model}`} className="w-full h-full object-cover" placeholderClassName="flex h-full w-full items-center justify-center bg-black/20" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-body font-semibold text-foreground">{drop.listing.make} {drop.listing.model}{drop.listing.year ? ` ${drop.listing.year}` : ""}</p>
-                        <p className="mt-0.5 text-caption text-muted-foreground num">
-                          <span className="line-through">{formatPrice(drop.previous_price_lkr)}</span>{" "}
-                          <span className="font-semibold text-foreground">{formatPrice(drop.new_price_lkr)}</span>
-                        </p>
-                      </div>
-                      <span className="inline-flex h-6 shrink-0 items-center rounded-full border border-deal-good/30 bg-deal-good/10 px-2.5 text-caption font-semibold tabular-nums text-deal-good-text">
-                        &minus;{drop.drop_pct}%
-                      </span>
+
+                {/* Hot deals */}
+                <ProFeatureLock label={t("shell.home.bestDealsLock", "Best deals")}>
+                <div>
+                  <div className="mb-5 flex items-center justify-between">
+                    <h3 className="font-display text-body font-semibold tracking-tight text-foreground flex items-center gap-2">
+                      <Flame className="h-4 w-4 text-primary/70" /> Best deals
+                    </h3>
+                    <Link to="/best-picks" className="flex items-center gap-1 text-caption font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright">
+                      All picks <ArrowUpRight className="h-3.5 w-3.5" />
                     </Link>
-                  ))}
+                  </div>
+                  {hotDeals.length ? (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {hotDeals.slice(0, 4).map((row) => (
+                        <Link key={row.id} to={`/listing/${row.id}`}
+                          className="inventory-tile group/deal flex items-center gap-3 p-3 no-underline active:scale-[0.99]"
+                        >
+                          <div className="h-12 w-16 shrink-0 overflow-hidden rounded-2xl bg-black/30">
+                            <VehicleThumbnail src={row.thumbnail_url} listingId={row.id} alt={`${row.make} ${row.model}`} className="w-full h-full object-cover" placeholderClassName="flex h-full w-full items-center justify-center bg-black/20" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-body font-semibold text-foreground">{row.make} {row.model} {row.year}</p>
+                            <p className="mt-0.5 text-caption text-muted-foreground num">{formatPrice(row.price_lkr)} · {row.district || "LK"}</p>
+                          </div>
+                          <span className="inline-flex h-6 shrink-0 items-center rounded-full border border-deal-good/30 bg-deal-good/10 px-2.5 text-caption font-semibold tabular-nums text-deal-good-text">
+                            +{Number(row.deal_score || 0).toFixed(0)}
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-caption text-muted-foreground">{t("home.noDeals", "No deals found in current slice")}</p>
+                  )}
                 </div>
-              ) : (
-                <p className="text-caption text-muted-foreground">{t("shell.home.noCuts", "No price cuts spotted in the last 7 days.")}</p>
-              )}
-            </div>
-          </div>
-        </div>
-      </RevealSection>
-
-      {/* ── Trust bar — only claims this page backs with data ─────── */}
-      <section className="border-b border-border bg-background">
-        <div className="mx-auto max-w-[1560px] px-5 py-8 sm:px-6">
-          <dl className="grid gap-x-8 gap-y-6 sm:grid-cols-3">
-            <div>
-              <dt className="text-footnote font-medium text-muted-foreground">{t("shell.home.trust.sources", "Sources")}</dt>
-              <dd className="mt-1 text-body font-semibold text-foreground">
-                {marketPulseSources > 0
-                  ? t("shell.home.trust.sourcesValue", "{n} Sri Lankan marketplaces, credited on every listing", { n: marketPulseSources })
-                  : t("shell.home.trust.sourcesFallback", "Sri Lankan marketplaces, credited on every listing")}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-footnote font-medium text-muted-foreground">{t("shell.home.trust.types", "Vehicle types")}</dt>
-              <dd className="mt-1 text-body font-semibold text-foreground">
-                {t("shell.home.trust.typesValue", "Cars, bikes, three-wheelers, vans and lorries")}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-footnote font-medium text-muted-foreground">{t("shell.home.trust.updated", "Last updated")}</dt>
-              <dd className="mt-1 text-body font-semibold text-foreground">
-                {listingFreshnessAt ? (
-                  <DataFreshnessIndicator
-                    latestListingAt={liveMarketSnapshot?.latest_listing_at}
-                    lastUpdated={stats?.last_updated}
-                    variant="subline"
-                    className="text-body font-semibold normal-case tracking-normal text-foreground"
-                  />
-                ) : (
-                  t("shell.home.trust.updatedPending", "Waiting for the first update")
-                )}
-              </dd>
-            </div>
-          </dl>
-        </div>
-      </section>
-
-      {/* ── MARKET PULSE ────────────────────────────────────────── */}
-      <RevealSection className="border-t border-border">
-        <div className="mx-auto max-w-[1560px] px-5 py-14 sm:px-6 lg:py-20">
-          <SectionHeader eyebrow={t("shell.home.moreData", "More market data")} title={t("shell.home.moreDataTitle", "Fuel mix, price signals and demand by district")} />
-          <div className="space-y-6">
-            <FuelMixStrip />
-            <MarketSignalsStrip />
-          </div>
-
-          {/* District demand velocity */}
-          <div className="mt-12 border-t border-border pt-8">
-            <ProFeatureLock label={t("shell.home.districtDemandLock", "Demand by district")}>
-            <div className="mb-5 flex items-center justify-between">
-              <div>
-                <p className="text-footnote font-medium text-primary">{t("shell.home.districtDemand", "Demand by district")}</p>
-                <h3 className="mt-1 font-display text-body font-semibold tracking-tight text-foreground">
-                  {t("shell.home.districtDemandTitle", "Where new ads are appearing — last 7 days")}
-                </h3>
-              </div>
-              <Link
-                to="/#market"
-                className="flex items-center gap-1 text-caption font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright"
-              >
-                {t("shell.home.allListings", "All listings")} <ArrowUpRight className="h-3 w-3" />
-              </Link>
-            </div>
-            <Suspense
-              fallback={
-                <div className="h-[420px] rounded-xl border border-border bg-card flex items-center justify-center">
-                  <div aria-hidden className="w-10 h-10 rounded-full border-2 border-primary/20 border-t-emerald-500 animate-spin" />
+                </ProFeatureLock>
+                {/* Price cuts (7d) */}
+                <div>
+                  <div className="mb-5 flex items-center justify-between">
+                    <h3 className="font-display text-body font-semibold tracking-tight text-foreground flex items-center gap-2">
+                      <TrendingDown className="h-4 w-4 text-deal-good-text" /> {t("home.priceCuts7d", "Price cuts · 7d")}
+                    </h3>
+                    <Link to="/best-picks" className="flex items-center gap-1 text-caption font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright">
+                      {t("home.allCuts", "All cuts")} <ArrowUpRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
+                  {(dropsQuery.data || []).length ? (
+                    <div className="grid gap-2">
+                      {(dropsQuery.data || []).slice(0, 4).map((drop) => (
+                        <Link key={drop.listing.id} to={`/listing/${drop.listing.id}`}
+                          className="inventory-tile group/drop flex items-center gap-3 p-3 no-underline active:scale-[0.99]"
+                        >
+                          <div className="h-12 w-16 shrink-0 overflow-hidden rounded-2xl bg-black/30">
+                            <VehicleThumbnail src={drop.listing.thumbnail_url} listingId={drop.listing.id} alt={`${drop.listing.make} ${drop.listing.model}`} className="w-full h-full object-cover" placeholderClassName="flex h-full w-full items-center justify-center bg-black/20" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-body font-semibold text-foreground">{drop.listing.make} {drop.listing.model}{drop.listing.year ? ` ${drop.listing.year}` : ""}</p>
+                            <p className="mt-0.5 text-caption text-muted-foreground num">
+                              <span className="line-through">{formatPrice(drop.previous_price_lkr)}</span>{" "}
+                              <span className="font-semibold text-foreground">{formatPrice(drop.new_price_lkr)}</span>
+                            </p>
+                          </div>
+                          <span className="inline-flex h-6 shrink-0 items-center rounded-full border border-deal-good/30 bg-deal-good/10 px-2.5 text-caption font-semibold tabular-nums text-deal-good-text">
+                            &minus;{drop.drop_pct}%
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-caption text-muted-foreground">{t("shell.home.noCuts", "No price cuts spotted in the last 7 days.")}</p>
+                  )}
                 </div>
-              }
-            >
-              <div className="space-y-4">
-                <ProvinceVelocityStrip
-                  data={velocityPoints}
-                  isLoading={velocityQuery.isPending}
-                  isError={velocityQuery.isError}
-                  onRetry={retryVelocity}
-                />
-                <DistrictVelocityMap
-                  data={velocityPoints}
-                  isLoading={velocityQuery.isPending}
-                  isError={velocityQuery.isError}
-                  onRetry={retryVelocity}
-                />
               </div>
-            </Suspense>
-            </ProFeatureLock>
-          </div>
-
-          {/* Tool links */}
-          <div className="mt-12 border-t border-border pt-8">
-            <p className="mb-4 text-footnote font-medium text-muted-foreground">{t("shell.nav.tools", "Tools")}</p>
-            <div className="flex flex-wrap gap-2">
-            {[
-              { label: t("shell.nav.valueMyVehicle", "What's my vehicle worth?"), to: "/estimate" },
-              { label: t("shell.nav.priceTrends", "Price trends"), to: "/trends" },
-              { label: t("shell.nav.importTax", "Import tax calculator"), to: "/calculator" },
-              { label: t("shell.nav.electric", "Electric & hybrid"), to: "/ev-hub" },
-              { label: t("shell.nav.officialUpdates", "Tax & customs updates"), to: "/official-pulse" },
-            ].map((tool) => (
-              <Link key={tool.label} to={tool.to}
-                className="group/tool flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2.5 text-caption font-semibold text-foreground no-underline transition-ui hover:border-primary/30 hover:bg-primary/[0.06] hover:shadow-soft active:scale-[0.98]"
-              >
-                {tool.label}
-                <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground transition-ui group-hover/tool:text-primary group-hover/tool:translate-x-0.5" />
-              </Link>
-            ))}
             </div>
-          </div>
-        </div>
-      </RevealSection>
+          </RevealSection>
+
+          {/* ── Trust bar — only claims this page backs with data ─────── */}
+          <section className="border-b border-border bg-background">
+            <div className="mx-auto max-w-[1560px] px-5 py-8 sm:px-6">
+              <dl className="grid gap-x-8 gap-y-6 sm:grid-cols-3">
+                <div>
+                  <dt className="text-footnote font-medium text-muted-foreground">{t("shell.home.trust.sources", "Sources")}</dt>
+                  <dd className="mt-1 text-body font-semibold text-foreground">
+                    {marketPulseSources > 0
+                      ? t("shell.home.trust.sourcesValue", "{n} Sri Lankan marketplaces, credited on every listing", { n: marketPulseSources })
+                      : t("shell.home.trust.sourcesFallback", "Sri Lankan marketplaces, credited on every listing")}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-footnote font-medium text-muted-foreground">{t("shell.home.trust.types", "Vehicle types")}</dt>
+                  <dd className="mt-1 text-body font-semibold text-foreground">
+                    {t("shell.home.trust.typesValue", "Cars, bikes, three-wheelers, vans and lorries")}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-footnote font-medium text-muted-foreground">{t("shell.home.trust.updated", "Last updated")}</dt>
+                  <dd className="mt-1 text-body font-semibold text-foreground">
+                    {listingFreshnessAt ? (
+                      <DataFreshnessIndicator
+                        latestListingAt={liveMarketSnapshot?.latest_listing_at}
+                        lastUpdated={stats?.last_updated}
+                        variant="subline"
+                        className="text-body font-semibold normal-case tracking-normal text-foreground"
+                      />
+                    ) : (
+                      t("shell.home.trust.updatedPending", "Waiting for the first update")
+                    )}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          </section>
+
+          {/* ── MARKET PULSE ────────────────────────────────────────── */}
+          <RevealSection className="border-t border-border">
+            <div className="mx-auto max-w-[1560px] px-5 py-14 sm:px-6 lg:py-20">
+              <SectionHeader eyebrow={t("shell.home.moreData", "More market data")} title={t("shell.home.moreDataTitle", "Fuel mix, price signals and demand by district")} />
+              <div className="space-y-6">
+                <FuelMixStrip />
+                <MarketSignalsStrip />
+              </div>
+
+              {/* District demand velocity */}
+              <div className="mt-12 border-t border-border pt-8">
+                <ProFeatureLock label={t("shell.home.districtDemandLock", "Demand by district")}>
+                <div className="mb-5 flex items-center justify-between">
+                  <div>
+                    <p className="text-footnote font-medium text-primary">{t("shell.home.districtDemand", "Demand by district")}</p>
+                    <h3 className="mt-1 font-display text-body font-semibold tracking-tight text-foreground">
+                      {t("shell.home.districtDemandTitle", "Where new ads are appearing — last 7 days")}
+                    </h3>
+                  </div>
+                  <Link
+                    to="/#market"
+                    className="flex items-center gap-1 text-caption font-medium text-muted-foreground no-underline transition-colors hover:text-primary-bright"
+                  >
+                    {t("shell.home.allListings", "All listings")} <ArrowUpRight className="h-3 w-3" />
+                  </Link>
+                </div>
+                <Suspense
+                  fallback={
+                    <div className="h-[420px] rounded-xl border border-border bg-card flex items-center justify-center">
+                      <div aria-hidden className="w-10 h-10 rounded-full border-2 border-primary/20 border-t-emerald-500 animate-spin" />
+                    </div>
+                  }
+                >
+                  <div className="space-y-4">
+                    <ProvinceVelocityStrip
+                      data={velocityPoints}
+                      isLoading={velocityQuery.isPending}
+                      isError={velocityQuery.isError}
+                      onRetry={retryVelocity}
+                    />
+                    <DistrictVelocityMap
+                      data={velocityPoints}
+                      isLoading={velocityQuery.isPending}
+                      isError={velocityQuery.isError}
+                      onRetry={retryVelocity}
+                    />
+                  </div>
+                </Suspense>
+                </ProFeatureLock>
+              </div>
+
+              {/* Tool links */}
+              <div className="mt-12 border-t border-border pt-8">
+                <p className="mb-4 text-footnote font-medium text-muted-foreground">{t("shell.nav.tools", "Tools")}</p>
+                <div className="flex flex-wrap gap-2">
+                {[
+                  { label: t("shell.nav.valueMyVehicle", "What's my vehicle worth?"), to: "/estimate" },
+                  { label: t("shell.nav.priceTrends", "Price trends"), to: "/trends" },
+                  { label: t("shell.nav.importTax", "Import tax calculator"), to: "/calculator" },
+                  { label: t("shell.nav.electric", "Electric & hybrid"), to: "/ev-hub" },
+                  { label: t("shell.nav.officialUpdates", "Tax & customs updates"), to: "/official-pulse" },
+                ].map((tool) => (
+                  <Link key={tool.label} to={tool.to}
+                    className="group/tool flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2.5 text-caption font-semibold text-foreground no-underline transition-ui hover:border-primary/30 hover:bg-primary/[0.06] hover:shadow-soft active:scale-[0.98]"
+                  >
+                    {tool.label}
+                    <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground transition-ui group-hover/tool:text-primary group-hover/tool:translate-x-0.5" />
+                  </Link>
+                ))}
+                </div>
+              </div>
+            </div>
+          </RevealSection>
 
 
-      {/* ── Market overview (Pro) — deliberately low on the page ─────── */}
-      <section className="border-b border-border bg-background">
-        <div className="mx-auto max-w-[1560px] px-5 py-10 sm:px-6 lg:py-14">
-          <ProFeatureLock label={t("shell.home.marketOverviewLock", "Full market overview")}>
-            <Suspense fallback={null}>
-              {!liveMarketSnapshot && !stats && !dashboardInsights ? (
-                <MarketIntelligenceSkeleton />
-              ) : (
-                <MarketIntelligencePanel snapshot={liveMarketSnapshot} stats={stats} insights={dashboardInsights} />
-              )}
-            </Suspense>
-          </ProFeatureLock>
-        </div>
-      </section>
+          {/* ── Market overview (Pro) — deliberately low on the page ─────── */}
+          <section className="border-b border-border bg-background">
+            <div className="mx-auto max-w-[1560px] px-5 py-10 sm:px-6 lg:py-14">
+              <ProFeatureLock label={t("shell.home.marketOverviewLock", "Full market overview")}>
+                <Suspense fallback={null}>
+                  {!liveMarketSnapshot && !stats && !dashboardInsights ? (
+                    <MarketIntelligenceSkeleton />
+                  ) : (
+                    <MarketIntelligencePanel snapshot={liveMarketSnapshot} stats={stats} insights={dashboardInsights} />
+                  )}
+                </Suspense>
+              </ProFeatureLock>
+            </div>
+          </section>
 
-      {/* ── Sources — static credit list (no marquee) ──────────────── */}
-      <SourceCredits
-        items={(liveMarketSnapshot?.source_status || [])
-          .filter((st) => Number(st.listings_found || 0) > 0)
-          .map((st) => ({ source: st.source, listings: Number(st.listings_found || 0) }))}
-      />
+          {/* ── Sources — static credit list (no marquee) ──────────────── */}
+          <SourceCredits
+            items={(liveMarketSnapshot?.source_status || [])
+              .filter((st) => Number(st.listings_found || 0) > 0)
+              .map((st) => ({ source: st.source, listings: Number(st.listings_found || 0) }))}
+          />
+        </>
+      ) : (
+        <div aria-hidden className="min-h-[1800px]" />
+      )}
 
       {/* ── DIALOGS ─────────────────────────────────────────────── */}
       <Dialog open={showMarketAlerts} onOpenChange={setShowMarketAlerts}>
@@ -1540,14 +1576,7 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      <Suspense fallback={null}>
-        <MobileFilterSheet
-          open={showMobileFilter}
-          onOpenChange={setShowMobileFilter}
-          filters={filters}
-          onFiltersChange={setFilters}
-        />
-      </Suspense>
+      <FilterSheetHost ref={filterSheetRef} filters={filters} onFiltersChange={setFilters} />
 
     </div>
   );
