@@ -10,13 +10,15 @@ import { cva, type VariantProps } from "class-variance-authority";
  * focus shows the one 2px ring. Legacy names (default/outline/ghost/glass/link,
  * default/xs size) map onto the set so older call sites keep working.
  */
-const PRIMARY = "bg-primary text-primary-foreground shadow-e1 hover:bg-primary/90";
-const SECONDARY = "border border-border bg-surface-2 text-foreground hover:bg-surface-3";
+// Hover lift (−1px) on fine pointers only, for the filled variants.
+const LIFT = "motion-safe:[@media(hover:hover)_and_(pointer:fine)]:hover:-translate-y-px";
+const PRIMARY = `${LIFT} bg-primary text-primary-foreground shadow-e1 hover:bg-primary/90`;
+const SECONDARY = `${LIFT} border border-border bg-surface-2 text-foreground hover:bg-surface-3`;
 const TERTIARY = "text-primary hover:bg-primary/10";
-const DESTRUCTIVE = "bg-destructive text-destructive-foreground shadow-e1 hover:bg-destructive/90";
+const DESTRUCTIVE = `${LIFT} bg-destructive text-destructive-foreground shadow-e1 hover:bg-destructive/90`;
 
 const buttonVariants = cva(
-  "relative inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-full font-semibold tracking-normal transition-ui duration-short ease-standard active:scale-[0.97] active:duration-micro motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-45 aria-busy:cursor-progress [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "relative inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-full font-semibold tracking-normal transition-ui duration-short ease-standard tap-44 active:scale-[0.97] active:duration-micro motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-45 aria-busy:cursor-progress [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {

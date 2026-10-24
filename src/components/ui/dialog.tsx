@@ -3,6 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { applyPressOrigin } from "@/lib/pointerOrigin";
 import { useAppPreferences } from "@/lib/appPreferences";
 
 function SrCloseLabel() {
@@ -36,11 +37,21 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+>(({ className, children, ...props }, ref) => {
+  // Scale in from the press that opened it (centre for keyboard opens).
+  const setRef = React.useCallback(
+    (node: React.ElementRef<typeof DialogPrimitive.Content> | null) => {
+      applyPressOrigin(node);
+      if (typeof ref === "function") ref(node);
+      else if (ref) ref.current = node;
+    },
+    [ref],
+  );
+  return (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
-      ref={ref}
+      ref={setRef}
       className={cn(
         "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 rounded-sheet border border-border bg-popover p-6 shadow-e3 mm-pop [--mm-origin:center]",
         className,
@@ -48,13 +59,14 @@ const DialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-surface/80 text-muted-foreground transition-ui hover:bg-surface hover:text-foreground hover:border-border active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none">
+      <DialogPrimitive.Close className="tap-44 absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-surface/80 text-muted-foreground transition-ui hover:bg-surface hover:text-foreground hover:border-border active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none">
         <X className="h-4 w-4" />
         <SrCloseLabel />
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
   </DialogPortal>
-));
+  );
+});
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (

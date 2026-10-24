@@ -1882,23 +1882,24 @@
 
   .mm-sheet[data-state="open"] { animation: var(--mm-sheet-in) var(--dur-long) var(--ease-standard) both; }
   .mm-sheet[data-state="closed"] { animation: var(--mm-sheet-out) var(--dur-medium) var(--ease-accelerate) both; }
-  .mm-sheet--bottom { --mm-sheet-in: mm-sheet-in-bottom; --mm-sheet-out: mm-sheet-out-bottom; }
-  .mm-sheet--top { --mm-sheet-in: mm-sheet-in-top; --mm-sheet-out: mm-sheet-out-top; }
-  .mm-sheet--left { --mm-sheet-in: mm-sheet-in-left; --mm-sheet-out: mm-sheet-out-left; }
-  .mm-sheet--right { --mm-sheet-in: mm-sheet-in-right; --mm-sheet-out: mm-sheet-out-right; }
+  /* Sheets grow from the edge they slide in from (scale 0.98 → 1 rides the slide). */
+  .mm-sheet--bottom { --mm-sheet-in: mm-sheet-in-bottom; --mm-sheet-out: mm-sheet-out-bottom; transform-origin: 50% 100%; }
+  .mm-sheet--top { --mm-sheet-in: mm-sheet-in-top; --mm-sheet-out: mm-sheet-out-top; transform-origin: 50% 0%; }
+  .mm-sheet--left { --mm-sheet-in: mm-sheet-in-left; --mm-sheet-out: mm-sheet-out-left; transform-origin: 0% 50%; }
+  .mm-sheet--right { --mm-sheet-in: mm-sheet-in-right; --mm-sheet-out: mm-sheet-out-right; transform-origin: 100% 50%; }
 
   @keyframes mm-pop-in { from { opacity: 0; scale: 0.96; } to { opacity: 1; scale: 1; } }
   @keyframes mm-pop-out { from { opacity: 1; scale: 1; } to { opacity: 0; scale: 0.96; } }
   @keyframes mm-fade-in { from { opacity: 0; } to { opacity: 1; } }
   @keyframes mm-fade-out { from { opacity: 1; } to { opacity: 0; } }
-  @keyframes mm-sheet-in-bottom { from { translate: 0 calc(100% + 16px); } to { translate: 0 0; } }
-  @keyframes mm-sheet-out-bottom { from { translate: 0 0; } to { translate: 0 calc(100% + 16px); } }
-  @keyframes mm-sheet-in-top { from { translate: 0 calc(-100% - 16px); } to { translate: 0 0; } }
-  @keyframes mm-sheet-out-top { from { translate: 0 0; } to { translate: 0 calc(-100% - 16px); } }
-  @keyframes mm-sheet-in-left { from { translate: calc(-100% - 16px) 0; } to { translate: 0 0; } }
-  @keyframes mm-sheet-out-left { from { translate: 0 0; } to { translate: calc(-100% - 16px) 0; } }
-  @keyframes mm-sheet-in-right { from { translate: calc(100% + 16px) 0; } to { translate: 0 0; } }
-  @keyframes mm-sheet-out-right { from { translate: 0 0; } to { translate: calc(100% + 16px) 0; } }
+  @keyframes mm-sheet-in-bottom { from { translate: 0 calc(100% + 16px); scale: 0.98; } to { translate: 0 0; } }
+  @keyframes mm-sheet-out-bottom { from { translate: 0 0; } to { translate: 0 calc(100% + 16px); scale: 0.98; } }
+  @keyframes mm-sheet-in-top { from { translate: 0 calc(-100% - 16px); scale: 0.98; } to { translate: 0 0; } }
+  @keyframes mm-sheet-out-top { from { translate: 0 0; } to { translate: 0 calc(-100% - 16px); scale: 0.98; } }
+  @keyframes mm-sheet-in-left { from { translate: calc(-100% - 16px) 0; scale: 0.98; } to { translate: 0 0; } }
+  @keyframes mm-sheet-out-left { from { translate: 0 0; } to { translate: calc(-100% - 16px) 0; scale: 0.98; } }
+  @keyframes mm-sheet-in-right { from { translate: calc(100% + 16px) 0; scale: 0.98; } to { translate: 0 0; } }
+  @keyframes mm-sheet-out-right { from { translate: 0 0; } to { translate: calc(100% + 16px) 0; scale: 0.98; } }
 
   /* ── Collapse / accordion body (components/ui/collapse.tsx) ─────────
      0fr → 1fr grid row: the browser animates the height natively (no JS

@@ -58,3 +58,19 @@ html[data-route-vt]::view-transition-new(root) {
   }
   .press:active:not(:disabled) { transform: none; }
 }
+
+/* ── 44px minimum hit area on touch (WCAG 2.5.5 / Apple HIG) ─────────────
+   Compact controls (32px chips, sm buttons, 32px close buttons) keep their
+   look; on coarse pointers an invisible ::after grows the hit box to at least
+   44×44, centred. min() keeps already-large controls untouched. The control
+   must be positioned (the kit's Button and Chip are `relative`). */
+@media (pointer: coarse) {
+  .tap-44::after {
+    content: "";
+    position: absolute;
+    top: min(0px, calc((100% - 44px) / 2));
+    bottom: min(0px, calc((100% - 44px) / 2));
+    left: min(0px, calc((100% - 44px) / 2));
+    right: min(0px, calc((100% - 44px) / 2));
+  }
+}
