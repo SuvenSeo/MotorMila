@@ -181,9 +181,10 @@ export default function SellYourCar() {
   ];
   const completed = checks.filter((c) => c.done).length;
 
+  /** Desktop only: on phones the form is the page and the preview would land under the publish button. */
   const preview = (
     <>
-      <Card variant="media" padding="none" aria-label={t("tools.sell.preview", "Ad preview")}>
+      <Card variant="media" padding="none" className="hidden lg:block" aria-label={t("tools.sell.preview", "Ad preview")}>
         <div className="relative aspect-[4/3] bg-surface-2">
           {cover && brokenCover !== cover ? (
             <img src={cover} alt="" className="content-in h-full w-full object-cover" onError={() => setBrokenCover(cover)} />
@@ -214,7 +215,7 @@ export default function SellYourCar() {
           </div>
         </div>
       </Card>
-      <Card padding="sm" className="sm:p-5">
+      <Card padding="sm" className="hidden sm:p-5 lg:block">
         <div className="flex items-baseline justify-between gap-3">
           <p className="text-footnote font-semibold text-foreground">{t("tools.sell.checklist", "Ready to publish")}</p>
           <p className="text-footnote tabular-nums text-label-2">

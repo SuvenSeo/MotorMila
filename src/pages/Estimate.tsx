@@ -298,7 +298,7 @@ export default function Estimate() {
               >
                 {i < step ? <Check className="h-3 w-3" /> : i + 1}
               </span>
-              <span className="hidden min-[400px]:inline">{label}</span>
+              <span className={cn(i === step ? "inline" : "hidden sm:inline")}>{label}</span>
             </li>
           ))}
         </ol>

@@ -144,7 +144,8 @@ export default function Calculator() {
   const [surchargeNotifyOn, setSurchargeNotifyOn] = useState(() => isSurchargeNotifySubscribed());
 
   const applyLiveFx = async ({ silent = false }: { silent?: boolean } = {}) => {
-    setFxLoading(true);
+    // The silent mount-time seed never spins the button; only a tap does.
+    if (!silent) setFxLoading(true);
     try {
       const quote = await getMacroContext();
       setMacro(quote);
