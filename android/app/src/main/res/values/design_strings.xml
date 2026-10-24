@@ -41,7 +41,6 @@
     <string name="mm_tools_alerts_sub">Get told when a price drops</string>
     <string name="mm_tools_account">Account &amp; settings</string>
     <string name="mm_tools_account_sub">Profile, language, theme and plan</string>
-    <string name="mm_assistant">Ask MotorMila AI</string>
     <string name="mm_detail_asking">Asking price</string>
     <string name="mm_price_on_request">Price on request</string>
     <string name="mm_why_title">Why this verdict?</string>
@@ -59,11 +58,11 @@
     <string name="mm_lease_short">Lease takeover</string>
     <string name="mm_home_title">Find a fair price.</string>
     <string name="mm_home_sub">Every car for sale in Sri Lanka, compared with what similar cars ask.</string>
-    <string name="mm_home_sub_count">%1$s cars for sale, compared with what similar cars ask.</string>
-    <string name="mm_home_sub_counts">%1$s cars for sale from %2$d sites, compared with what similar cars ask.</string>
+    <string name="mm_home_sub_count">%1$s vehicles for sale, compared with what similar cars ask.</string>
+    <string name="mm_home_sub_counts">%1$s vehicles for sale from %2$d sites, compared with what similar cars ask.</string>
     <string name="mm_home_search_hint">Make, model or paste a link</string>
     <string name="mm_see_all">See all</string>
-    <string name="mm_stat_listed">Cars listed</string>
+    <string name="mm_stat_listed">Vehicles listed</string>
     <string name="mm_stat_new24h">New today</string>
     <string name="mm_stat_avg_asking">Avg asking</string>
     <string name="mm_pct_below_typical">%1$d%% below typical</string>

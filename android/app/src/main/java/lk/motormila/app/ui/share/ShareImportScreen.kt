@@ -35,7 +35,7 @@ fun ShareImportScreen(
     sharedUrl: String?,
     onSearch: (ListingQuery) -> Unit,
     onCompare: (ids: List<Int>) -> Unit,
-    onValuation: (make: String, model: String) -> Unit,
+    onValuation: (make: String, model: String, year: Int?) -> Unit,
     onBrowse: () -> Unit,
 ) {
     val target = remember(sharedUrl) { parseSharedUrl(sharedUrl) }
@@ -46,7 +46,7 @@ fun ShareImportScreen(
         when (target) {
             is ShareTarget.Search -> onSearch(target.query)
             is ShareTarget.Compare -> onCompare(target.ids)
-            is ShareTarget.Valuation -> onValuation(target.make, target.model)
+            is ShareTarget.Valuation -> onValuation(target.make, target.model, target.year)
             is ShareTarget.Unsupported -> Unit // stay: error state below
         }
     }
@@ -81,7 +81,7 @@ fun ShareImportScreen(
                         is ShareTarget.Search -> PrimaryAction(stringResource(R.string.share_open_search), onClick = { onSearch(target.query) })
                         is ShareTarget.Compare -> PrimaryAction(stringResource(R.string.share_open_compare), onClick = { onCompare(target.ids) })
                         is ShareTarget.Valuation -> PrimaryAction(stringResource(R.string.share_open_valuation), onClick = {
-                            onValuation(target.make, target.model)
+                            onValuation(target.make, target.model, target.year)
                         })
                         else -> Unit
                     }

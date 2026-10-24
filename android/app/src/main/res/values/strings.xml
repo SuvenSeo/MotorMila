@@ -139,9 +139,13 @@
     <string name="sell_submitting">Listing\u2026</string>
     <string name="sell_login_required">Log in to list your vehicle on Motormila.</string>
     <string name="sell_login_cta">Log in / sign up</string>
+    <string name="sell_signed_out_title">Sell your car on Motormila</string>
+    <string name="sell_benefit_fast">List in under a minute — just the essentials</string>
+    <string name="sell_benefit_price">Buyers contact you directly by phone</string>
+    <string name="sell_benefit_reviewed">Every listing is reviewed before it goes live</string>
     <string name="sell_success_title">Listing submitted</string>
     <string name="sell_success_body">Your %1$s is pending review. We\'ll notify you once it\'s live.</string>
-    <!-- launch-polish: category chips, Home stats, search empty state, chat sheet -->
+    <!-- launch-polish: category chips, Home stats, search empty state -->
     <string name="vehicle_category_cars">Cars</string>
     <string name="vehicle_category_all">All vehicles</string>
     <string name="vehicle_category_bikes">Bikes</string>
@@ -157,6 +161,15 @@
     <string name="search_empty_reset">Reset filters</string>
     <string name="compare_selected_count">%1$d/%2$d selected</string>
     <string name="compare_cta">Compare</string>
+    <string name="compare_cta_count">Compare %1$d</string>
+    <string name="compare_clear">Clear</string>
+    <string name="compare_add">Compare</string>
+    <string name="compare_added">Added</string>
+    <string name="compare_add_cd">Add %1$s to compare</string>
+    <string name="compare_remove_cd">Remove %1$s from compare</string>
+    <string name="compare_tray_cd">Compare tray, %1$d of %2$d cars selected</string>
+    <string name="compare_pick_more">Pick one more</string>
+    <string name="listing_share_whatsapp_short">WhatsApp</string>
     <string name="home_live_listings">LIVE LISTINGS</string>
     <string name="home_data_fresh">DATA AS OF 1H AGO</string>
     <string name="home_avg_price">AVG PRICE</string>
@@ -165,13 +178,5 @@
     <string name="home_empty_title">No market data yet</string>
     <string name="home_empty_body">Pull to refresh — new listings appear here as scrapers run.</string>
     <string name="home_empty_cta">Browse all vehicles</string>
-    <string name="chat_subtitle">Real-time market intel, valuation guidance &amp; smart shortlists</string>
-    <string name="chat_hero_title">Ask the market assistant before you decide.</string>
-    <string name="chat_hero_body">I query live market listings across Sri Lanka, calculate Fair Market Value (FMV), surface deal risk, and explain CBSL automotive financing rules.</string>
-    <string name="chat_popular">POPULAR INQUIRIES</string>
-    <string name="chat_recommended">RECOMMENDED VEHICLES</string>
-    <string name="chat_thinking">Reading live market context…</string>
-    <string name="chat_input_hint">Ask about budget, value, listings…</string>
     <string name="calculating_cd">Calculating</string>
-    <string name="chat_sign_in_required">Sign in for live AI answers. Showing a quick offline answer for now.</string>
 </resources>

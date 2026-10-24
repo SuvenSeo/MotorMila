@@ -145,9 +145,13 @@
     <string name="sell_submitting">பட்டியலிடப்படுகிறது\u2026</string>
     <string name="sell_login_required">வாகனத்தைப் பட்டியலிட உள்நுழையவும்.</string>
     <string name="sell_login_cta">உள்நுழைக / பதிவு செய்க</string>
+    <string name="sell_signed_out_title">Motormila-இல் உங்கள் காரை விற்கவும்</string>
+    <string name="sell_benefit_fast">ஒரு நிமிடத்திற்குள் — அத்தியாவசியங்கள் மட்டும்</string>
+    <string name="sell_benefit_price">வாங்குபவர்கள் உங்களை நேரடியாக தொலைபேசியில் தொடர்புகொள்வார்கள்</string>
+    <string name="sell_benefit_reviewed">ஒவ்வொரு பட்டியலும் நேரலைக்கு முன் மதிப்பாய்வு செய்யப்படும்</string>
     <string name="sell_success_title">பட்டியல் சமர்ப்பிக்கப்பட்டது</string>
     <string name="sell_success_body">உங்கள் %1$s மதிப்பாய்வில் உள்ளது. நேரலைக்கு வந்ததும் தெரிவிப்போம்.</string>
-    <!-- launch-polish: category chips, Home stats, search empty state, chat sheet -->
+    <!-- launch-polish: category chips, Home stats, search empty state -->
     <string name="vehicle_category_cars">கார்கள்</string>
     <string name="vehicle_category_all">அனைத்து வாகனங்கள்</string>
     <string name="vehicle_category_bikes">பைக்குகள்</string>
@@ -163,6 +167,15 @@
     <string name="search_empty_reset">வடிகட்டிகளை மீட்டமை</string>
     <string name="compare_selected_count">%1$d/%2$d தேர்ந்தெடுக்கப்பட்டது</string>
     <string name="compare_cta">ஒப்பிடு</string>
+    <string name="compare_cta_count">ஒப்பிடு %1$d</string>
+    <string name="compare_clear">அழி</string>
+    <string name="compare_add">ஒப்பிடு</string>
+    <string name="compare_added">சேர்க்கப்பட்டது</string>
+    <string name="compare_add_cd">%1$s ஐ ஒப்பீட்டில் சேர்</string>
+    <string name="compare_remove_cd">%1$s ஐ ஒப்பீட்டிலிருந்து நீக்கு</string>
+    <string name="compare_tray_cd">ஒப்பீட்டுத் தட்டு, %2$d இல் %1$d கார்கள் தேர்ந்தெடுக்கப்பட்டன</string>
+    <string name="compare_pick_more">இன்னும் ஒன்றைத் தேர்ந்தெடு</string>
+    <string name="listing_share_whatsapp_short">WhatsApp</string>
     <string name="home_live_listings">நேரடி பட்டியல்கள்</string>
     <string name="home_data_fresh">1 மணி நேரத்துக்கு முந்தைய தரவு</string>
     <string name="home_avg_price">சராசரி விலை</string>
@@ -171,13 +184,5 @@
     <string name="home_empty_title">இன்னும் சந்தை தரவு இல்லை</string>
     <string name="home_empty_body">புதுப்பிக்க கீழே இழுக்கவும் — புதிய பட்டியல்கள் இங்கே தோன்றும்.</string>
     <string name="home_empty_cta">அனைத்து வாகனங்களையும் பார்</string>
-    <string name="chat_subtitle">நேரடி சந்தை தகவல், மதிப்பீட்டு வழிகாட்டல் &amp; ஸ்மார்ட் பட்டியல்கள்</string>
-    <string name="chat_hero_title">முடிவெடுக்கும் முன் சந்தை உதவியாளரிடம் கேளுங்கள்.</string>
-    <string name="chat_hero_body">இலங்கை முழுவதும் நேரடி வாகன பட்டியல்களைத் தேடி, நியாயமான சந்தை மதிப்பை (FMV) கணக்கிட்டு, டீல் அபாயத்தைக் காட்டி, CBSL வாகன நிதி விதிகளை விளக்குகிறேன்.</string>
-    <string name="chat_popular">பிரபலமான கேள்விகள்</string>
-    <string name="chat_recommended">பரிந்துரைக்கப்பட்ட வாகனங்கள்</string>
-    <string name="chat_thinking">நேரடி சந்தை தகவல்களைப் படிக்கிறது…</string>
-    <string name="chat_input_hint">பட்ஜெட், மதிப்பு, பட்டியல்கள் பற்றி கேளுங்கள்…</string>
     <string name="calculating_cd">கணக்கிடுகிறது</string>
-    <string name="chat_sign_in_required">நேரடி AI பதில்களுக்கு உள்நுழையவும். தற்போது விரைவான ஆஃப்லைன் பதில் காட்டப்படுகிறது.</string>
 </resources>

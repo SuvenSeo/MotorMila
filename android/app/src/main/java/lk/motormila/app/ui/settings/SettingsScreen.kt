@@ -50,6 +50,7 @@ import lk.motormila.app.data.remote.WEB_DELETE_ACCOUNT_URL
 import lk.motormila.app.ui.common.InsetGroup
 import lk.motormila.app.ui.common.InsetRow
 import lk.motormila.app.ui.common.InsetSwitchRow
+import lk.motormila.app.ui.common.InsetDivider
 import lk.motormila.app.ui.common.LowDataMode
 import lk.motormila.app.ui.common.MmScreen
 import lk.motormila.app.ui.common.MmSegmented
@@ -81,6 +82,7 @@ fun SettingsScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val theme by viewModel.theme.collectAsStateWithLifecycle()
+    val reduceTransparency by viewModel.reduceTransparency.collectAsStateWithLifecycle()
     val language by viewModel.language.collectAsStateWithLifecycle()
     val baseUrl by viewModel.baseUrl.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -89,6 +91,7 @@ fun SettingsScreen(
     val haptics = MmHaptics.current
     var feedbackOpen by rememberSaveable { mutableStateOf(false) }
     var logoutConfirm by rememberSaveable { mutableStateOf(false) }
+    var licencesOpen by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(state.error) {
         state.error?.let {
@@ -130,8 +133,10 @@ fun SettingsScreen(
     }
     if (logoutConfirm) {
         AlertDialog(
+            containerColor = lk.motormila.app.ui.components.glassSheetColor(),
+            shape = lk.motormila.app.ui.theme.MmShapes.xl,
             onDismissRequest = { logoutConfirm = false },
-            title = { Text(stringResource(R.string.settings_logout)) },
+            title = { lk.motormila.app.ui.components.WindowBackdropBlur(); Text(stringResource(R.string.settings_logout)) },
             text = { Text(stringResource(R.string.settings_logout_note)) },
             confirmButton = {
                 TextButton(onClick = { logoutConfirm = false; viewModel.onEvent(SettingsUiEvent.Logout) }) {
@@ -142,7 +147,7 @@ fun SettingsScreen(
         )
     }
 
-    MmScreen(title = stringResource(R.string.settings_title), snackbarHostState = snacks) {
+    MmScreen(title = stringResource(R.string.settings_title), snackbarHostState = snacks, edgeToEdge = true) {
         val c = MmColors.current
         LazyColumn(
             Modifier.fillMaxSize(),
@@ -151,18 +156,29 @@ fun SettingsScreen(
         ) {
             item(key = "appearance") {
                 InsetGroup(header = stringResource(R.string.settings_appearance)) {
-                    val options = listOf("dark", "light", "system")
+                    val options = listOf("light", "dark", "system")
                     Column(Modifier.padding(MmSpacing.md)) {
                         MmSegmented(
                             options = listOf(
-                                stringResource(R.string.settings_theme_dark),
                                 stringResource(R.string.settings_theme_light),
+                                stringResource(R.string.settings_theme_dark),
                                 stringResource(R.string.settings_theme_system),
                             ),
                             selectedIndex = options.indexOf(theme).coerceAtLeast(0),
-                            onSelect = { viewModel.onEvent(SettingsUiEvent.ThemeChanged(options[it])) },
+                            onSelect = {
+                                if (options[it] != theme) haptics.toggle()
+                                viewModel.onEvent(SettingsUiEvent.ThemeChanged(options[it]))
+                            },
                         )
                     }
+                    InsetDivider()
+                    InsetSwitchRow(
+                        title = stringResource(R.string.settings_reduce_transparency),
+                        subtitle = stringResource(R.string.settings_reduce_transparency_sub),
+                        checked = reduceTransparency,
+                        onCheckedChange = { viewModel.onEvent(SettingsUiEvent.ReduceTransparencyChanged(it)) },
+                        showDivider = false,
+                    )
                 }
             }
             item(key = "language") {
@@ -229,7 +245,14 @@ fun SettingsScreen(
             item(key = "legal") {
                 InsetGroup(header = stringResource(R.string.settings_legal)) {
                     InsetRow(stringResource(R.string.settings_privacy_title), icon = Icons.Filled.Policy, onClick = onPrivacyClick)
-                    InsetRow(stringResource(R.string.settings_terms_title), icon = Icons.Filled.Description, onClick = onTermsClick, showDivider = false)
+                    InsetRow(stringResource(R.string.settings_terms_title), icon = Icons.Filled.Description, onClick = onTermsClick)
+                    InsetRow(
+                        stringResource(R.string.settings_licences_title),
+                        subtitle = stringResource(R.string.settings_licences_body),
+                        icon = Icons.Filled.Description,
+                        showDivider = false,
+                        onClick = { licencesOpen = true },
+                    )
                 }
             }
             item(key = "account") {
@@ -274,6 +297,42 @@ fun SettingsScreen(
         }
     }
 
+    if (licencesOpen) {
+        MmSheet(onDismissRequest = { licencesOpen = false }, title = stringResource(R.string.settings_licences_title)) {
+            val licences = remember(context) {
+                runCatching {
+                    context.assets.list("licenses").orEmpty().sorted().map { name ->
+                        val title = name.removeSuffix(".txt").replace('_', ' ')
+                            .replace("OFL", "(SIL Open Font License 1.1)")
+                            .split(' ').joinToString(" ") { w -> w.replaceFirstChar { it.uppercase() } }
+                        title to context.assets.open("licenses/$name").bufferedReader().use { it.readText() }
+                    }
+                }.getOrDefault(emptyList())
+            }
+            LazyColumn(
+                Modifier.fillMaxWidth().padding(horizontal = MmSpacing.lg),
+                verticalArrangement = Arrangement.spacedBy(MmSpacing.md),
+            ) {
+                item {
+                    Text(
+                        stringResource(R.string.settings_licences_intro),
+                        style = MmType.current.bodyM,
+                        color = MmColors.current.textSecondary,
+                    )
+                }
+                licences.forEach { (title, body) ->
+                    item(key = title) {
+                        Column(verticalArrangement = Arrangement.spacedBy(MmSpacing.xs)) {
+                            Text(title, style = MmType.current.titleS, color = MmColors.current.textPrimary)
+                            Text(body, style = MmType.current.caption, color = MmColors.current.textSecondary)
+                        }
+                    }
+                }
+                item { Spacer(Modifier.height(MmSpacing.xl)) }
+            }
+        }
+    }
+
     if (feedbackOpen) {
         MmSheet(onDismissRequest = { feedbackOpen = false }, title = stringResource(R.string.settings_feedback)) {
             Column(Modifier.padding(horizontal = MmSpacing.lg), verticalArrangement = Arrangement.spacedBy(MmSpacing.md)) {
@@ -308,8 +367,10 @@ private fun DeleteAccountDialog(
     onDismiss: () -> Unit,
 ) {
     AlertDialog(
+        containerColor = lk.motormila.app.ui.components.glassSheetColor(),
+        shape = lk.motormila.app.ui.theme.MmShapes.xl,
         onDismissRequest = { if (!deleting) onDismiss() },
-        title = { Text(stringResource(R.string.account_delete_title)) },
+        title = { lk.motormila.app.ui.components.WindowBackdropBlur(); Text(stringResource(R.string.account_delete_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(stringResource(R.string.account_delete_body), style = MmType.current.bodyM)

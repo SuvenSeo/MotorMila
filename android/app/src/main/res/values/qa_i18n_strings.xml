@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mm_deal_score_label">Deal score</string>
+    <string name="mm_pill_sell_speed">SELL SPEED</string>
+    <string name="mm_pill_ad_health">AD HEALTH</string>
+    <string name="mm_deal_ladder">Deal ladder</string>
+    <string name="mm_search_results_cd">Search results</string>
+    <string name="mm_deal_rating_cd">Deal rating %1$s</string>
+    <string name="mm_locked_pro_cd">Locked for Pro members</string>
+    <string name="mm_fmv_confidence_hint">FMV · %1$s confidence · tap to explain</string>
+    <string name="mm_km_low_anomaly">LOW KM ANOMALY</string>
+    <string name="mm_km_high_usage">HIGH USAGE</string>
+    <string name="mm_km_below_avg">BELOW-AVG KM</string>
+    <string name="mm_km_typical">MILEAGE LOOKS TYPICAL</string>
+    <string name="mm_vehicle_search_cd">Vehicle search</string>
+    <string name="mm_voice_search_cd">Voice search</string>
+    <string name="mm_ladder_great">Great buy</string>
+    <string name="mm_ladder_fair">Fair (FMV)</string>
+    <string name="mm_ladder_high">High</string>
+    <string name="mm_best_deal_pro_cd">Best-deal sort needs Pro</string>
+    <string name="mm_open_filters_cd">Open filters</string>
+    <string name="mm_show_list_cd">Show as list</string>
+    <string name="mm_show_grid_cd">Show as grid</string>
+</resources>

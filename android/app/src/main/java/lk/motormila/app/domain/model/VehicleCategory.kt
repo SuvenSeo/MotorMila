@@ -16,6 +16,13 @@ enum class VehicleCategory(val apiValue: String?, val label: String) {
     VANS("vans", "Vans"),
     LORRIES("lorries", "Lorries"),
     BUSES("buses", "Buses"),
+    // Web parity (FilterSidebar VEHICLE_CATEGORY_VALUES): the rest of the
+    // backend's vehicle_category values.
+    HEAVY_DUTY("heavy-duty", "Heavy"),
+    TRACTORS("tractors", "Tractors"),
+    BOATS("boats", "Boats"),
+    BICYCLES("bicycles", "Cycles"),
+    OTHERS("others", "Other"),
     ;
 
     companion object {

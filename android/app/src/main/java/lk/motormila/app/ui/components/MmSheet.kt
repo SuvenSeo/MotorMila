@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -24,13 +26,15 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import lk.motormila.app.ui.theme.MmColors
+import lk.motormila.app.ui.theme.glassEdges
 import lk.motormila.app.ui.theme.MmMotion
 import lk.motormila.app.ui.theme.MmShapes
 import lk.motormila.app.ui.theme.MmSpacing
 import lk.motormila.app.ui.theme.MmType
 
 /**
- * Modal bottom sheet in the house style: 28dp top corners, raised surface,
+ * Modal bottom sheet in the house style: 32dp top corners, liquid-glass
+ * surface over a blurred app (cross-window blur, API 31+; opaque otherwise),
  * slim handle, scrim from tokens. The sheet itself uses M3's drag/settle;
  * the content rides in on a gentle spring (24dp rise + fade) so opening
  * feels physical rather than linear. Predictive back is handled by M3.
@@ -55,15 +59,21 @@ fun MmSheet(
     }
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
-        modifier = modifier,
+        // Never expand under the status bar (tall sheets at 200 % put the
+        // title under the clock).
+        modifier = modifier
+            .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.statusBars)
+            .glassEdges(MmShapes.sheet, c, sheen = !lk.motormila.app.ui.theme.glassIsSolid),
         sheetState = sheetState,
         shape = MmShapes.sheet,
-        containerColor = c.surfaceRaised,
+        containerColor = glassSheetColor(),
         contentColor = c.textPrimary,
         scrimColor = c.scrim,
         tonalElevation = 0.dp,
         dragHandle = { MmSheetHandle() },
     ) {
+        // Real blur of the app behind the sheet window (API 31+).
+        WindowBackdropBlur()
         Column(
             modifier = Modifier
                 .fillMaxWidth()

@@ -5,6 +5,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -169,6 +170,7 @@ fun AlertsScreen(
                         }
                     } else {
                         items(state.alerts, key = { it.id }) { alert ->
+                          Box(Modifier.animateItem(fadeInSpec = null, placementSpec = lk.motormila.app.ui.theme.MmMotion.itemPlacement, fadeOutSpec = androidx.compose.animation.core.spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow))) {
                             AlertRow(
                                 alert = alert,
                                 active = alert.active,
@@ -188,6 +190,7 @@ fun AlertsScreen(
                                     viewModel.onEvent(AlertsUiEvent.ToggleAlertDelivery(alert.id))
                                 },
                             )
+                          }
                         }
                     }
                 }

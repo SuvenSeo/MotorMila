@@ -5,8 +5,6 @@ import lk.motormila.app.data.remote.dto.AnalyticsEventRequestDto
 import lk.motormila.app.data.remote.dto.AnalyticsEventResponseDto
 import lk.motormila.app.data.remote.dto.ArbitrageGapDto
 import lk.motormila.app.data.remote.dto.BenchmarkUrlsRequestDto
-import lk.motormila.app.data.remote.dto.ChatRequestDto
-import lk.motormila.app.data.remote.dto.ChatResponseDto
 import lk.motormila.app.data.remote.dto.ChargingStationsDto
 import lk.motormila.app.data.remote.dto.CheckoutIntentRequestDto
 import lk.motormila.app.data.remote.dto.CheckoutIntentResponseDto
@@ -195,6 +193,7 @@ interface MotormilaApiService {
         @Query("sort") sort: String? = null,
         @Query("page") page: Int = 1,
         @Query("size") size: Int = 20,
+        @Query("include_archive") includeArchive: Boolean? = null,
     ): PagedListingsDto
 
     @GET("listings/{id}")
@@ -455,10 +454,6 @@ interface MotormilaApiService {
 
     @POST("notifications/read-all")
     suspend fun markAllNotificationsRead(): MarkAllReadDto
-
-    // ------------------------------------------------------------------- chat
-    @POST("chat")
-    suspend fun chat(@Body body: ChatRequestDto): ChatResponseDto
 
     // --------------------------------------------------------------- feedback
     @POST("feedback")

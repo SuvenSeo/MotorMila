@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.components
 
+import lk.motormila.app.ui.theme.tabular
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -370,7 +372,8 @@ fun MotormilaPillTabs(
                 val isSelected = index == safeSelected
                 val interaction = remember(label) { MutableInteractionSource() }
                 val labelColor by animateColorAsState(
-                    targetValue = if (isSelected) MotormilaOnSurface else MotormilaSecondaryText,
+                    // White on the brand-blue indicator (was near-black on blue in light).
+                    targetValue = if (isSelected) Color.White else MotormilaSecondaryText,
                     animationSpec = appleTween(220),
                     label = "pill-label",
                 )
@@ -492,7 +495,8 @@ fun MotormilaChoiceChip(
         label = "choice-border",
     )
     val labelColor by animateColorAsState(
-        targetValue = if (selected) MotormilaOnSurface else if (enabled) MotormilaOnSurface else MotormilaSecondaryText,
+        // White on the brand fill (was near-black on blue in light mode — low contrast).
+        targetValue = if (selected) Color.White else if (enabled) MotormilaOnSurface else MotormilaSecondaryText,
         animationSpec = appleTween(200),
         label = "choice-label",
     )
@@ -501,6 +505,8 @@ fun MotormilaChoiceChip(
         animationSpec = fluidSpring(),
         label = "choice-scale",
     )
+    // 48dp touch target, 36dp visible pill (was a 48dp blob that read as a
+    // circle for short labels and touched the button below).
     Box(
         modifier = Modifier
             .heightIn(min = 48.dp)
@@ -509,21 +515,25 @@ fun MotormilaChoiceChip(
                 scaleY = scale
             }
             .applePress(interaction, pressedScale = 0.96f)
-            .clip(CircleShape)
-            .background(if (enabled) fill else fill.copy(alpha = 0.45f))
-            .border(1.dp, border, CircleShape)
             .clickable(
                 enabled = enabled,
                 interactionSource = interaction,
                 indication = null,
                 onClick = { haptics.tick(); onClick() },
             )
-            .padding(horizontal = if (compact) 12.dp else 14.dp)
             .semantics { contentDescription = label }
             .then(modifier),
         contentAlignment = Alignment.Center,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier
+                .heightIn(min = if (compact) 32.dp else 36.dp)
+                .clip(CircleShape)
+                .background(if (enabled) fill else fill.copy(alpha = 0.45f))
+                .border(1.dp, border, CircleShape)
+                .padding(horizontal = if (compact) 12.dp else 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             if (leadingIcon != null) {
                 Icon(
                     leadingIcon,
@@ -561,11 +571,13 @@ fun MotormilaPrimaryButton(
         modifier = modifier
             .then(if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier)
             .heightIn(min = 48.dp)
-            .then(if (fillMaxWidth) Modifier else Modifier.padding(horizontal = 16.dp))
             .applePress(interaction, pressedScale = 0.97f)
             .clip(CircleShape)
             .background(if (canClick) MotormilaPrimary else MotormilaPrimary.copy(alpha = 0.35f))
             .clickable(enabled = canClick, interactionSource = interaction, indication = null, onClick = onClick)
+            // Inner padding: the label never touches the pill edge (was an outer
+            // margin, so wrap-content buttons hugged their text — "Browse listings").
+            .padding(horizontal = 20.dp, vertical = 6.dp)
             .semantics { contentDescription = label },
         contentAlignment = Alignment.Center,
     ) {
@@ -593,6 +605,7 @@ fun MotormilaPrimaryButton(
                 fontSize = 14.sp,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
         }
     }
@@ -613,8 +626,10 @@ fun MotormilaGhostButton(
             .heightIn(min = 48.dp)
             .applePress(interaction, pressedScale = 0.97f)
             .clip(CircleShape)
-            .border(1.dp, MotormilaGlassBorder, CircleShape)
+            // Visible hairline in both themes (glass border vanished on light/dark grounds).
+            .border(1.dp, lk.motormila.app.ui.theme.MmColors.current.outlineStrong, CircleShape)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 6.dp)
             .semantics { contentDescription = label },
         contentAlignment = Alignment.Center,
     ) {
@@ -633,6 +648,9 @@ fun MotormilaGhostButton(
                 color = MotormilaOnSurface,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
         }
     }
@@ -741,13 +759,19 @@ fun MotormilaMetricTile(
             .border(1.dp, MotormilaOutline, MotormilaRadius.md)
             .padding(horizontal = 12.dp, vertical = 12.dp),
     ) {
-        Text(
-            text = label.uppercase(),
-            fontSize = 9.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 0.8.sp,
-            color = MotormilaSecondaryText,
-        )
+        // Overline label: one line, capped at 1.3x — at 200 % three-up tiles
+        // broke it mid-word ("CURREN / T").
+        lk.motormila.app.ui.theme.CappedFontScale(max = 1.3f) {
+            Text(
+                text = label.uppercase(),
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.8.sp,
+                color = MotormilaSecondaryText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         Spacer(Modifier.height(4.dp))
         Text(
             text = value,
@@ -755,14 +779,14 @@ fun MotormilaMetricTile(
             // a metric tile must never ellipsis its headline value.
             fontSize = if (value.length > 8) 13.sp else 16.sp,
             fontWeight = FontWeight.Bold,
-            fontFamily = FontFamily.SansSerif,
+            style = LocalTextStyle.current.tabular(),
             color = MotormilaOnSurface,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
         if (!note.isNullOrBlank()) {
             Spacer(Modifier.height(2.dp))
-            Text(note, fontSize = 11.sp, color = MotormilaSecondaryText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(note, fontSize = 11.sp, lineHeight = 14.sp, color = MotormilaSecondaryText, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -796,7 +820,7 @@ fun MotormilaMetricTile(
         valueContent()
         if (!note.isNullOrBlank()) {
             Spacer(Modifier.height(2.dp))
-            Text(note, fontSize = 11.sp, color = MotormilaSecondaryText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(note, fontSize = 11.sp, lineHeight = 14.sp, color = MotormilaSecondaryText, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }
 }

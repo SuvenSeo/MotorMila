@@ -2,6 +2,7 @@
 
 package lk.motormila.app.ui.detail
 
+import lk.motormila.app.ui.theme.liquidGlass
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.core.Animatable
@@ -107,6 +108,8 @@ fun DetailGallery(
     onOpenViewer: (page: Int) -> Unit,
     modifier: Modifier = Modifier,
     pagerState: PagerState = rememberPagerState(pageCount = { images.size.coerceAtLeast(1) }),
+    /** The card's hero URL: its decoded bitmap stands in while page 0 loads (no mid-morph flash). */
+    heroPlaceholderUrl: String? = null,
 ) {
     val sharedScope = LocalSharedTransitionScope.current
     val animatedScope = LocalNavAnimatedVisibilityScope.current
@@ -115,7 +118,7 @@ fun DetailGallery(
             Modifier.sharedElement(
                 rememberSharedContentState(key = listingHeroKey(listingId)),
                 animatedScope,
-                boundsTransform = { _, _ -> MmMotion.gentle() },
+                boundsTransform = lk.motormila.app.ui.components.motormilaSharedBoundsTransform(),
             )
         }
     } else {
@@ -140,6 +143,7 @@ fun DetailGallery(
         ) { page ->
             MmImage(
                 url = images[page],
+                placeholderKey = if (page == 0) heroPlaceholderUrl else null,
                 contentDescription = "Photo ${page + 1} of $title",
                 modifier = Modifier
                     .fillMaxSize()
@@ -412,24 +416,35 @@ fun DetailActionBar(
     modifier: Modifier = Modifier,
 ) {
     val c = MmColors.current
+    // Fixed chrome: cap Dynamic Type at 1.3x like an iOS toolbar so the price and the
+    // button both fit at 200 %; the price additionally shrinks to fit (MmFitText).
+    lk.motormila.app.ui.theme.CappedFontScale(max = 1.3f) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(c.surfaceOverlay.copy(alpha = 0.97f))
-            .drawBehind { drawLine(c.outline, Offset(0f, 0f), Offset(size.width, 0f), 1f) }
             .navigationBarsPadding()
-            .padding(horizontal = MmSpacing.gutter, vertical = 12.dp),
+            // Floating liquid-glass capsule over the scrolling page.
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .liquidGlass(MmShapes.xl, lk.motormila.app.ui.theme.GlassWeight.Regular, elevation = 18.dp)
+            .padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Column(Modifier.weight(1f)) {
             Text(
                 stringResource(R.string.mm_detail_asking),
                 style = MmType.current.caption,
                 color = c.textSecondary,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
+            // Full rupees normally; at large text the compact "Rs 1.2 Mn"
+            // (full figure is already in the page title block) so the
+            // capsule never shows "Rs 1,200,0…".
+            val largeText = androidx.compose.ui.platform.LocalConfiguration.current.fontScale > 1.15f
             MmPrice(
                 value = priceLkr,
-                mode = MmPriceMode.Full,
+                mode = if (largeText) MmPriceMode.Compact else MmPriceMode.Full,
                 style = MmType.current.priceM,
                 fallback = stringResource(R.string.mm_price_on_request),
             )
@@ -442,6 +457,7 @@ fun DetailActionBar(
                 size = MmButtonSize.Medium,
             )
         }
+    }
     }
 }
 

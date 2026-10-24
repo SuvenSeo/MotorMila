@@ -104,6 +104,10 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <!-- Shared web searches: the web keeps filters on the root URL ("/?make=Toyota&fuel_type=hybrid")
+                     or /search?…; resolveMotormilaDeepLink maps them to Search with the same filters. -->
+                <data android:scheme="https" android:host="motormila.pages.dev" android:path="/" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/search" />
                 <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/listing" />
                 <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/cars" />
                 <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/locations" />

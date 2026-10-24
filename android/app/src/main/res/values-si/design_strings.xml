@@ -29,7 +29,6 @@
     <string name="mm_tools_ev">EV මධ්‍යස්ථානය</string>
     <string name="mm_tools_alerts">මිල ඇඟවීම්</string>
     <string name="mm_tools_account">ගිණුම සහ සැකසුම්</string>
-    <string name="mm_assistant">MotorMila AI ගෙන් අසන්න</string>
     <string name="mm_detail_asking">ඉල්ලන මිල</string>
     <string name="mm_why_this_car">මෙම වාහනය</string>
     <string name="mm_pay_title">ගෙවීමට පෙර</string>
@@ -37,4 +36,7 @@
     <string name="mm_lease_short">ලීසිං භාරගැනීම</string>
     <string name="mm_home_title">සාධාරණ මිලක් සොයන්න.</string>
     <string name="mm_home_search_hint">නිෂ්පාදකයා, මාදිලිය හෝ සබැඳියක් අලවන්න</string>
+    <string name="mm_pay_2">CR (ලියාපදිංචි) පොත විකුණුම්කරුගේ හැඳුනුම්පත සහ කාරයේ චැසි සහ එන්ජින් අංක සමඟ ගැළපේදැයි පරීක්ෂා කරන්න.</string>
+    <string name="mm_pay_3">දිවා කාලයේ පොදු ස්ථානයක හමුවී, ස්වාධීන කාර්මිකයෙකු ලවා පරීක්ෂා කරවා ගන්න.</string>
+    <string name="mm_pay_4">පැවරුම් ලේඛන (MTA පෝරම) අත්සන් කළ පසුව පමණක් බැංකු මාරුවකින් ගෙවන්න.</string>
 </resources>

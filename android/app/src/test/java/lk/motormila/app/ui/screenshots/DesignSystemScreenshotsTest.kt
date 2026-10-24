@@ -148,8 +148,8 @@ class DesignSystemScreenshotsTest {
     private fun CardsGrid() {
         Column(Modifier.padding(MmSpacing.gutter), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                ListingCard(listing(1, "Toyota Aqua G", 6_450_000.0, 7_200_000.0, 10.4), isWatched = true, onClick = {}, onWatchToggle = {}, modifier = Modifier.weight(1f))
-                ListingCard(listing(2, "Suzuki Wagon R Stingray", 5_900_000.0, 5_800_000.0, 1.0), isWatched = false, onClick = {}, onWatchToggle = {}, modifier = Modifier.weight(1f))
+                ListingCard(listing(1, "Toyota Aqua G", 6_450_000.0, 7_200_000.0, 10.4), isWatched = true, onClick = {}, onWatchToggle = {}, modifier = Modifier.weight(1f), compareSelected = true, onCompareToggle = {})
+                ListingCard(listing(2, "Suzuki Wagon R Stingray", 5_900_000.0, 5_800_000.0, 1.0), isWatched = false, onClick = {}, onWatchToggle = {}, modifier = Modifier.weight(1f), compareSelected = false, onCompareToggle = {})
             }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ListingCard(listing(3, "Honda Vezel RS", 11_750_000.0, 10_600_000.0, -6.0), isWatched = false, onClick = {}, onWatchToggle = {}, modifier = Modifier.weight(1f))
@@ -198,7 +198,7 @@ class DesignSystemScreenshotsTest {
         Page(true) {
             Box(Modifier.fillMaxSize()) {
                 ToolsScreen({}, {}, {}, {}, {}, {}, {}, {}, {})
-                MmBottomBar(motormilaTabItems(mapOf("watchlist" to 3)), MotormilaTabs.TOOLS, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter))
+                MmBottomBar(motormilaTabItems(mapOf("watchlist" to 3)), MotormilaTabs.TOOLS, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp, vertical = 12.dp))
             }
         }
     }
@@ -213,12 +213,12 @@ class DesignSystemScreenshotsTest {
                     primaryAction = "Reset filters" to {},
                     modifier = Modifier.align(Alignment.Center),
                 )
-                MmBottomBar(motormilaTabItems(emptyMap()), MotormilaTabs.BUY, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter))
+                MmBottomBar(motormilaTabItems(emptyMap()), MotormilaTabs.BUY, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp, vertical = 12.dp))
             }
         }
     }
 
-    @Test fun splash_dark() = paparazzi.snapshot { Page(true) { SplashScreen(onDone = {}) } }
+    @Test fun splash_dark() = paparazzi.snapshot { Page(true) { SplashScreen(onDone = {}, animate = false) } }
 
     // ---------------- Home / Search / Filters (screenshot-only fixtures) ----------------
 
@@ -256,7 +256,7 @@ class DesignSystemScreenshotsTest {
                 state = homeState(), live = emptyList(), onRefresh = {}, onRetry = {}, onDismissCached = {},
                 banner = {}, onListingClick = {}, onSearchClick = {}, onAlertsClick = {}, onSeeAll = {},
             )
-            MmBottomBar(motormilaTabItems(emptyMap()), MotormilaTabs.BUY, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter))
+            MmBottomBar(motormilaTabItems(emptyMap()), MotormilaTabs.BUY, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp, vertical = 12.dp))
         }
     }
 
@@ -276,7 +276,18 @@ class DesignSystemScreenshotsTest {
                 SortFilterRow(sort = "newest", onSort = {}, onFilters = {}, onCreateAlert = {}, gridMode = true, onToggleLayout = {})
                 CardsGrid()
             }
-            MmBottomBar(motormilaTabItems(emptyMap()), MotormilaTabs.BUY, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter))
+            Column(Modifier.align(Alignment.BottomCenter)) {
+                lk.motormila.app.ui.search.CompareTray(
+                    count = 2,
+                    onCompare = {},
+                    onClear = {},
+                    thumbnails = listOf(
+                        lk.motormila.app.ui.search.CompareThumb(1, null),
+                        lk.motormila.app.ui.search.CompareThumb(2, null),
+                    ),
+                )
+                MmBottomBar(motormilaTabItems(emptyMap()), MotormilaTabs.BUY, onSelect = {}, modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp))
+            }
         }
     }
 
@@ -291,7 +302,7 @@ class DesignSystemScreenshotsTest {
             Box(Modifier.fillMaxSize().background(MmColors.current.scrim))
             MmSheetFrame(title = "Filters", modifier = Modifier.align(Alignment.BottomCenter)) {
                 FilterSheetBody(
-                    draft = FilterDraft(make = "Toyota", priceMaxLkr = 9_500_000f, fuelType = "hybrid", condition = "reconditioned"),
+                    draft = FilterDraft(make = "Toyota", model = "Aqua", priceMin = 3_000_000.0, priceMax = 9_500_000.0, yearMin = 2014, fuelType = "hybrid", condition = "reconditioned"),
                     onDraftChange = {},
                     makes = listOf("Toyota", "Honda", "Suzuki", "Nissan"),
                     districts = listOf("Colombo", "Gampaha", "Kandy", "Kurunegala", "Galle", "Kalutara"),
@@ -306,13 +317,13 @@ class DesignSystemScreenshotsTest {
 
     @Test fun filter_sheet_light() = paparazzi.snapshot { Page(false) { FilterSample() } }
 
-    @Test fun splash_light() = paparazzi.snapshot { Page(false) { SplashScreen(onDone = {}) } }
+    @Test fun splash_light() = paparazzi.snapshot { Page(false) { SplashScreen(onDone = {}, animate = false) } }
 
     @Test fun tools_light() = paparazzi.snapshot {
         Page(false) {
             Box(Modifier.fillMaxSize()) {
                 ToolsScreen({}, {}, {}, {}, {}, {}, {}, {}, {})
-                MmBottomBar(motormilaTabItems(mapOf("watchlist" to 3)), MotormilaTabs.TOOLS, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter))
+                MmBottomBar(motormilaTabItems(mapOf("watchlist" to 3)), MotormilaTabs.TOOLS, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp, vertical = 12.dp))
             }
         }
     }

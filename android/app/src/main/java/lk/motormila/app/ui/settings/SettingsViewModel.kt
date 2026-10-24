@@ -58,6 +58,7 @@ sealed interface SettingsUiEvent {
     data object Logout : SettingsUiEvent
     data object ConsumeLoggedOut : SettingsUiEvent
     data object DismissError : SettingsUiEvent
+    data class ReduceTransparencyChanged(val enabled: Boolean) : SettingsUiEvent
 }
 
 @HiltViewModel
@@ -74,7 +75,7 @@ class SettingsViewModel @Inject constructor(
 
     val theme: StateFlow<String> = settingsStore.observe()
         .map { it.theme }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "system")
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsStore.DEFAULT_THEME)
 
     val language: StateFlow<String> = settingsStore.observe()
         .map { LocaleHelper.normalize(it.language) }
@@ -86,6 +87,9 @@ class SettingsViewModel @Inject constructor(
     val defaultSort: StateFlow<String> = settingsStore.observe()
         .map { it.sort }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "newest")
+    val reduceTransparency: StateFlow<Boolean> = settingsStore.observe()
+        .map { it.reduceTransparency }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
     val biometricEnabled: StateFlow<Boolean> = settingsStore.observe()
         .map { it.biometricEnabled }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
@@ -116,6 +120,7 @@ class SettingsViewModel @Inject constructor(
             }
             is SettingsUiEvent.DistrictChanged -> launch { settingsStore.setDistrict(event.district) }
             is SettingsUiEvent.SortChanged -> launch { settingsStore.setSort(event.sort) }
+            is SettingsUiEvent.ReduceTransparencyChanged -> launch { settingsStore.setReduceTransparency(event.enabled) }
             is SettingsUiEvent.BiometricChanged -> launch { settingsStore.setBiometricEnabled(event.enabled) }
             is SettingsUiEvent.BaseUrlChanged -> launch {
                 settingsStore.setBaseUrlOverride(event.url.ifBlank { null })

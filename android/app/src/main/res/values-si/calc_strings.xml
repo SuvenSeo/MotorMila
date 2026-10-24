@@ -77,4 +77,15 @@
     <string name="calc_cd_upgrade">Pro වෙත උත්ශ්‍රේණි කරන්න</string>
     <string name="calc_cd_tab_locked">%1$s, Pro අවශ්‍යයි</string>
     <string name="calc_cd_fuel">ඉන්ධන වර්ගය %1$s</string>
+    <string name="calc_error_down_pct">0 සහ 100 අතර මූලික ගෙවීම් ප්‍රතිශතයක් ඇතුළත් කරන්න.</string>
+    <string name="calc_error_rate_pct">වාර්ෂික පොලී අනුපාත ප්‍රතිශතය ඇතුළත් කරන්න.</string>
+    <string name="calc_error_consideration">වාහනයේ සලකා බැලීමේ මුදල (විකුණුම් මිල) රුපියල්වලින් ඇතුළත් කරන්න.</string>
+    <string name="calc_lease_hint">CBSL මගී වාහන LTV සීමාව සාමාන්‍යයෙන් උපරිම 50% ණය මුදලකි. සූත්‍රය සම්මත ක්‍රමක්ෂය ණයකි.</string>
+    <string name="calc_lease_ltv_warn">මූලික ගෙවීම පොදු 50% CBSL මගී වාහන LTV සීමාවට වඩා අඩුයි — බැංකු මෙම ව්‍යුහය ප්‍රතික්ෂේප කළ හැක.</string>
+    <string name="calc_ownership_hint">ආදායම් බලපත්‍රය, තෙවන පාර්ශ්ව රක්ෂණය, විකල්ප පැවරුම් ගාස්තු සහ දුම් පරීක්ෂණය සජීවී ගණක සේවාවලින්.</string>
+    <string name="calc_ownership_consideration">සලකා බැලීමේ මුදල / විකුණුම් මිල (රු.)</string>
+    <string name="calc_ownership_include_transfer">අයිතිය පැවරීමේ ගාස්තු ඇතුළත් කරන්න</string>
+    <string name="calc_permits_hint">පරිපාලක විසින් ඇතුළත් කළ සහ ස්වයංක්‍රීයව එකතු කළ බලපත්‍ර මිල. බලපත්‍ර තිරයේ ඇති එම දත්තම.</string>
+    <string name="calc_permits_empty">තවම බලපත්‍ර මිල ගණන් නැත. API එකට දත්ත ඇතුළත් වූ පසු නැවුම් කරන්න.</string>
+    <string name="calc_depreciation_hint" formatted="false">දළ ලියා හැරිය වටිනාකම: වසර තුනක් පුරා 12% / 9% / 8%. බැංකු අවශේෂ වටිනාකමක් නොවේ.</string>
 </resources>

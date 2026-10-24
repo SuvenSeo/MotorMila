@@ -54,13 +54,20 @@ enum class BrandLogoSize(
     LARGE(markSize = 56.dp, textSize = 28.sp, lockupHeight = 52.dp, showTagline = true),
 }
 
+/** Width / height of the brand v2 wordmark vectors (viewport 505.86 x 83). */
+const val MOTORMILA_WORDMARK_ASPECT: Float = 505.86f / 83f
+
+/** Theme-matched brand v2 wordmark vector. */
+fun motormilaWordmarkRes(isDark: Boolean): Int =
+    if (isDark) R.drawable.motormila_wordmark_on_dark else R.drawable.motormila_wordmark_on_light
+
 /**
  * Official Motormila brand lockup.
  *
  * Brand bible: the Apex M is the only mark and "motormila" must never be set in
  * plain type next to it — so the lockup is the official `logo-wordmark`
- * artwork (mark + Space Grotesk wordmark), never composed text. The mark-only
- * variant keeps the in-app `motormila_logo` glyph in the rounded squircle.
+ * artwork (brand v2: traced mark + Open Sans Bold lettering), never composed
+ * text. The mark-only variant shows `motormila_mark` in the rounded squircle.
  */
 @Composable
 fun BrandLogo(
@@ -80,30 +87,36 @@ fun BrandLogo(
                 .border(1.dp, MotormilaOutline, RoundedCornerShape(size.markSize * 0.24f)),
             contentAlignment = Alignment.Center,
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.motormila_logo),
-                contentDescription = "Motormila",
-                modifier = Modifier.size(size.markSize),
-            )
+            // Brand v2 mark (vector, crisp at any density) on Ink, as the old
+            // blue-on-Ink bitmap was.
+            Box(
+                Modifier.size(size.markSize).background(Color(0xFF09090B)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.motormila_mark),
+                    contentDescription = "Motormila",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(size.markSize * 0.66f),
+                )
+            }
         }
         return
     }
 
     Column(modifier = modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            // Transparent lockups per theme (the old Ink-baked logo_wordmark showed
-            // as a black box in Light mode). 1200x220 artwork has no padding, so
-            // 0.7x height keeps the same visual width as the old 4000x1040 lockup.
+            // Brand v2 lockup (fixed M size/baseline/weight), transparent vector
+            // per theme so it stays crisp at every density and font scale.
             Image(
                 painter = painterResource(
-                    id = if (lk.motormila.app.ui.theme.MmColors.current.isDark) R.drawable.logo_wordmark_on_dark
-                    else R.drawable.logo_wordmark_on_light,
+                    id = motormilaWordmarkRes(lk.motormila.app.ui.theme.MmColors.current.isDark),
                 ),
                 contentDescription = "Motormila",
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .height(size.lockupHeight * 0.7f)
-                    .aspectRatio(1200f / 220f),
+                    .aspectRatio(MOTORMILA_WORDMARK_ASPECT),
             )
 
             if (showLiveIndicator) {

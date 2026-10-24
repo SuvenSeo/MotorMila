@@ -13,6 +13,8 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDeepLink
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
 
 val LocalSharedTransitionScope = staticCompositionLocalOf<SharedTransitionScope?> { null }
 
@@ -39,7 +41,27 @@ inline fun <reified T : Any> NavGraphBuilder.motormilaComposable(
 ) {
     composable<T>(deepLinks = deepLinks) {
         CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
-            content(it)
+            // Every page is opaque (window ground + the dark ambient bloom), so
+            // a push slides a solid page over a solid page instead of two
+            // see-through layers overlapping mid-transition.
+            // A card-opened Detail is the exception: it draws its own ground
+            // inside the card's sharedBounds, so the page beneath stays visible
+            // around the growing card.
+            val opaque = it.navKind() != NavKind.DETAIL_CARD
+            androidx.compose.foundation.layout.Box(
+                androidx.compose.ui.Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (opaque) {
+                            androidx.compose.ui.Modifier.background(lk.motormila.app.ui.theme.MmColors.current.background)
+                        } else {
+                            androidx.compose.ui.Modifier
+                        },
+                    ),
+            ) {
+                if (opaque) lk.motormila.app.ui.theme.MotormilaAmbient()
+                content(it)
+            }
         }
     }
 }

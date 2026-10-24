@@ -47,7 +47,7 @@ import lk.motormila.app.ui.theme.MmType
 import lk.motormila.app.ui.theme.MmHaptics
 
 /** Corner radius of grouped inset sections (iOS Settings-like). */
-val InsetShape = RoundedCornerShape(16.dp)
+val InsetShape = RoundedCornerShape(24.dp)
 
 /**
  * A grouped inset section: optional small header above, rounded surface

@@ -127,22 +127,30 @@ fun TrendLineChart(
                 }
             }
             // Y axis labels (right side, like most market charts)
+            // Axis labels are chart chrome: capped at 1.15x and single-line so
+            // "100.0" never wraps to "100 / .0" at 200 %.
+            lk.motormila.app.ui.theme.CappedFontScale(max = 1.15f) {
             Box(Modifier.width(56.dp).height(height)) {
                 if (ticks.size == 3) {
-                    Text(yLabel(ticks[2]), style = type.caption, color = c.textTertiary, modifier = Modifier.padding(start = 6.dp))
+                    Text(yLabel(ticks[2]), style = type.caption, color = c.textTertiary, maxLines = 1, softWrap = false, modifier = Modifier.padding(start = 6.dp))
                     Text(
                         yLabel(ticks[1]),
                         style = type.caption,
                         color = c.textTertiary,
+                        maxLines = 1,
+                        softWrap = false,
                         modifier = Modifier.padding(start = 6.dp, top = height / 2 - 8.dp),
                     )
                     Text(
                         yLabel(ticks[0]),
                         style = type.caption,
                         color = c.textTertiary,
+                        maxLines = 1,
+                        softWrap = false,
                         modifier = Modifier.padding(start = 6.dp, top = height - 16.dp),
                     )
                 }
+            }
             }
         }
         if (xLabels.isNotEmpty()) {

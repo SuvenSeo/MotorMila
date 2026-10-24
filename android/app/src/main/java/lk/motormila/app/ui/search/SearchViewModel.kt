@@ -27,8 +27,11 @@ import lk.motormila.app.domain.repository.ListingSorts
 import lk.motormila.app.domain.usecase.GetListingsPagingUseCase
 import lk.motormila.app.domain.usecase.ObserveSessionUseCase
 import lk.motormila.app.domain.usecase.ToggleWatchlistUseCase
+import lk.motormila.app.domain.usecase.ObserveWatchlistUseCase
 import lk.motormila.app.ui.navigation.Search
 import lk.motormila.app.ui.navigation.searchArgsToQuery
+import lk.motormila.app.ui.navigation.toWebFilters
+import lk.motormila.app.ui.navigation.withWebFilters
 import lk.motormila.app.domain.model.VehicleCategory
 import lk.motormila.app.domain.model.VehicleCategoryRules
 import javax.inject.Inject
@@ -47,6 +50,14 @@ fun ListingQuery.withDefaultCategory(): ListingQuery {
     return copy(vehicleCategory = if (carIntent) VehicleCategory.DEFAULT.apiValue else null)
 }
 
+/** All 25 districts (same set as web src/data/districts.ts), busiest markets first. */
+val SRI_LANKA_DISTRICTS: List<String> = listOf(
+    "Colombo", "Gampaha", "Kandy", "Kurunegala", "Galle", "Kalutara", "Matara", "Ratnapura",
+    "Kegalle", "Puttalam", "Anuradhapura", "Badulla", "Hambantota", "Nuwara Eliya", "Matale",
+    "Jaffna", "Polonnaruwa", "Ampara", "Batticaloa", "Trincomalee", "Monaragala", "Vavuniya",
+    "Kilinochchi", "Mannar", "Mullaitivu",
+)
+
 /** Web parity (Compare.tsx / compareSlug.ts): tray holds at most 3 ids. */
 const val MAX_COMPARE_IDS = 3
 
@@ -62,12 +73,19 @@ data class SearchUiState(
     val showFilterSheet: Boolean = false,
     val makes: List<String> = emptyList(),
     val districts: List<String> = emptyList(),
+    /** Models of [modelsMake] for the dependent Model picker. */
+    val models: List<String> = emptyList(),
+    val modelsMake: String? = null,
+    /** Listing sources (ikman, riyasewana…) for the Source filter. */
+    val sources: List<String> = emptyList(),
     val alertSaved: Boolean = false,
     val error: String? = null,
     /** Free tier has no deal_score — backend forces `newest` (BestPicks.tsx parity). */
     val isPro: Boolean = false,
     /** One-shot: SearchScreen launches the system recogniser then [SearchViewModel.consumeVoice]. */
     val pendingVoice: Boolean = false,
+    /** Saved listing ids (card heart state), same source as Best Picks. */
+    val watchedIds: Set<Int> = emptySet(),
 )
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -79,10 +97,14 @@ class SearchViewModel @Inject constructor(
     private val listings: ListingRepository,
     private val alerts: AlertsRepository,
     private val savedStateHandle: SavedStateHandle,
+    private val observeWatchlist: ObserveWatchlistUseCase,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(SearchUiState())
+    private val _state = MutableStateFlow(SearchUiState(districts = SRI_LANKA_DISTRICTS))
     val state: StateFlow<SearchUiState> = _state.asStateFlow()
+
+    /** Ids whose entrance already played (survives Search leaving composition while Detail is open). */
+    val revealedIds: HashSet<Int> = HashSet()
 
     private val queryFlow = MutableStateFlow("")
     private val pagingKey = MutableStateFlow(defaultSearchQuery())
@@ -96,12 +118,19 @@ class SearchViewModel @Inject constructor(
         .cachedIn(viewModelScope)
 
     init {
-        runCatching { savedStateHandle.toRoute<Search>() }.getOrNull()?.let { applyRouteArgs(it) }
+        val route = runCatching { savedStateHandle.toRoute<Search>() }.getOrNull()
+        route?.let { applyRouteArgs(it) }
+        // Filters survive process death / config change (SavedStateHandle),
+        // unless this entry was opened with explicit args.
+        if (_state.value.filters == defaultSearchQuery()) {
+            restoreSavedFilters()?.let { applyFilters(it) }
+        }
         viewModelScope.launch {
             observeSession().collect { session ->
                 val isPro = session?.isPro == true
                 val current = _state.value
-                val nextFilters = if (!isPro && current.filters.sort != ListingSorts.NEWEST) {
+                // Only the deal-score sort is Pro (backend downgrades it for free plans).
+                val nextFilters = if (!isPro && current.filters.sort == ListingSorts.DEAL_SCORE) {
                     current.filters.copy(sort = ListingSorts.NEWEST)
                 } else {
                     current.filters
@@ -113,17 +142,26 @@ class SearchViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
+            runCatching {
+                observeWatchlist().collect { rows ->
+                    _state.value = _state.value.copy(watchedIds = rows.map { it.listingId }.toSet())
+                }
+            }
+        }
+        viewModelScope.launch {
             try {
                 _state.value = _state.value.copy(
                     makes = listings.makes(),
-                    districts = listOf(
-                        "Colombo", "Gampaha", "Kandy", "Galle", "Kurunegala",
-                        "Jaffna", "Negombo", "Matara", "Anuradhapura", "Badulla",
-                    ),
                 )
             } catch (_: Exception) {
             }
         }
+        viewModelScope.launch {
+            runCatching { listings.sources() }.getOrNull()?.let { src ->
+                _state.value = _state.value.copy(sources = src.filter { it.isNotBlank() }.distinct())
+            }
+        }
+        _state.value.filters.make?.let { loadModels(it) }
         // Debounced suggestions.
         viewModelScope.launch {
             queryFlow.debounce(300).distinctUntilChanged().collect { q ->
@@ -142,6 +180,11 @@ class SearchViewModel @Inject constructor(
     fun onQueryChange(q: String) {
         queryFlow.value = q
         _state.value = _state.value.copy(query = q)
+        // Clearing the field (✕ or deleting the text) drops the keyword filter too,
+        // otherwise the results stay filtered by a query the field no longer shows.
+        if (q.isBlank() && _state.value.filters.keyword != null) {
+            applyFilters(_state.value.filters.copy(keyword = null))
+        }
     }
 
     fun onSearch(q: String) {
@@ -171,14 +214,75 @@ class SearchViewModel @Inject constructor(
     fun applyFilters(query: ListingQuery) {
         _state.value = _state.value.copy(filters = query, showFilterSheet = false, error = null)
         pagingKey.value = query
+        saveFilters(query)
+    }
+
+    /** Models for the dependent Model picker (cached per make). */
+    fun loadModels(make: String?) {
+        if (make.isNullOrBlank()) {
+            _state.value = _state.value.copy(models = emptyList(), modelsMake = null)
+            return
+        }
+        if (_state.value.modelsMake == make && _state.value.models.isNotEmpty()) return
+        _state.value = _state.value.copy(models = emptyList(), modelsMake = make)
+        viewModelScope.launch {
+            val models = runCatching { listings.models(make) }.getOrDefault(emptyList())
+            if (_state.value.modelsMake == make) {
+                _state.value = _state.value.copy(models = models.filter { it.isNotBlank() }.distinct())
+            }
+        }
+    }
+
+    /** Live total for the sheet's "Show N results" (backend `total`); null when unknown/offline. */
+    suspend fun countFor(query: ListingQuery): Int? = listings.count(query)
+
+    /** Removes one active filter (the dismissible chips above the results). */
+    fun removeFilter(key: String) {
+        val f = _state.value.filters
+        applyFilters(
+            when (key) {
+                "make" -> f.copy(make = null, model = null)
+                "model" -> f.copy(model = null)
+                "price" -> f.copy(priceMin = null, priceMax = null)
+                "year" -> f.copy(yearMin = null, yearMax = null)
+                "mileage" -> f.copy(mileageMax = null)
+                "fuel" -> f.copy(fuelType = null)
+                "transmission" -> f.copy(transmission = null)
+                "condition" -> f.copy(condition = null)
+                "body" -> f.copy(bodyType = null)
+                "district" -> f.copy(district = null)
+                "source" -> f.copy(source = null)
+                "noprice" -> f.copy(priceAvailability = null)
+                "archive" -> f.copy(includeArchive = false)
+                else -> f
+            },
+        )
+    }
+
+    private fun saveFilters(q: ListingQuery) {
+        savedStateHandle[SAVED_FILTERS_KEY] = arrayListOf(
+            q.make.orEmpty(), q.model.orEmpty(), q.district.orEmpty(), q.sort, q.toWebFilters().orEmpty(),
+        )
+    }
+
+    private fun restoreSavedFilters(): ListingQuery? {
+        val saved = savedStateHandle.get<ArrayList<String>>(SAVED_FILTERS_KEY) ?: return null
+        if (saved.size < 5) return null
+        return ListingQuery(
+            make = saved[0].ifBlank { null },
+            model = saved[1].ifBlank { null },
+            district = saved[2].ifBlank { null },
+            sort = saved[3].ifBlank { ListingSorts.NEWEST },
+            vehicleCategory = VehicleCategory.DEFAULT.apiValue,
+        ).withWebFilters(saved[4].ifBlank { null })
     }
 
     fun onSortChange(sort: String) {
-        // Free tier has no deal_score/median — backend forces `newest`.
-        if (!_state.value.isPro && sort != ListingSorts.NEWEST) {
+        // Free tier has no deal_score — only that sort is Pro; price/km/newest stay free.
+        if (!_state.value.isPro && sort == ListingSorts.DEAL_SCORE) {
             applyFilters(_state.value.filters.copy(sort = ListingSorts.NEWEST))
             _state.value = _state.value.copy(
-                error = "Free plan sorts by newest — upgrade to Pro for deal-score sort",
+                error = "Best-deal sort is a Pro feature — upgrade to Pro to sort by deal score",
             )
             return
         }
@@ -285,6 +389,7 @@ class SearchViewModel @Inject constructor(
             incoming.district != null ||
             incoming.make != null ||
             incoming.model != null ||
+            !route.filters.isNullOrBlank() ||
             !route.sort.isNullOrBlank()
         if (hasArgs) {
             applyIncomingQuery(incoming.withDefaultCategory())
@@ -299,5 +404,6 @@ class SearchViewModel @Inject constructor(
 
     companion object {
         private const val VOICE_CONSUMED_KEY = "pending_voice_consumed"
+        private const val SAVED_FILTERS_KEY = "search_filters_v1"
     }
 }

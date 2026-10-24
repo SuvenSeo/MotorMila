@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
  * | [MotormilaRadius.xs] | 12 dp | inner chips, mini bars, avatars-in-tile |
  * | [MotormilaRadius.sm] | 16 dp | nested tiles, inputs, small list rows |
  * | [MotormilaRadius.md] | 20 dp | compact cards, snackbars |
- * | [MotormilaRadius.lg] | 28 dp | **standard card / glass surface** |
+ * | [MotormilaRadius.lg] | 24 dp | **standard card / glass surface** |
  * | [MotormilaRadius.xl] | 32 dp | sheets, dialogs, hero surfaces |
  * | [MotormilaRadius.pill] | 50 % | buttons, chips, nav dock, badges |
  */
@@ -24,7 +24,7 @@ object MotormilaRadius {
     val xs = RoundedCornerShape(12.dp)
     val sm = RoundedCornerShape(16.dp)
     val md = RoundedCornerShape(20.dp)
-    val lg = RoundedCornerShape(28.dp)
+    val lg = RoundedCornerShape(24.dp)
     val xl = RoundedCornerShape(32.dp)
 
     /** Fully-round capsule. Prefer this over arbitrary large dp values. */

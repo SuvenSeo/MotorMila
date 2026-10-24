@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -62,7 +63,7 @@ fun PriceIndexPane(
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(14.dp),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 28.dp),
+        contentPadding = lk.motormila.app.ui.common.mmScreenPadding(bottom = 12.dp),
     ) {
         item {
             Column(Modifier.motormilaReveal()) {
@@ -97,26 +98,29 @@ fun PriceIndexPane(
         } else {
             item {
                 Row(
-                    Modifier.fillMaxWidth().motormilaReveal(delayMillis = 40),
+                    Modifier
+                        .fillMaxWidth()
+                        .height(androidx.compose.foundation.layout.IntrinsicSize.Min)
+                        .motormilaReveal(delayMillis = 40),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     MotormilaMetricTile(
                         label = "Current",
                         value = latest?.indexValue?.let { formatIndexValue(it) } ?: "—",
                         note = index.basePeriod?.let { "base ${PriceIndexFormat.periodLabel(it)} = 100" },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
                     )
                     MotormilaMetricTile(
                         label = "Since base",
                         value = PriceIndexFormat.pct(change),
                         note = "whole tracked window",
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
                     )
                     MotormilaMetricTile(
                         label = "MoM",
                         value = PriceIndexFormat.pct(latest?.momChangePct),
                         note = latest?.period?.let { PriceIndexFormat.periodLabel(it) },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
                     )
                 }
             }

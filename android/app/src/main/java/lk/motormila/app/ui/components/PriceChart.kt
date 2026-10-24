@@ -1,5 +1,8 @@
 package lk.motormila.app.ui.components
 
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -50,7 +53,7 @@ fun PriceChart(
     LaunchedEffect(points) { started = true }
     val progress by animateFloatAsState(
         targetValue = if (started) 1f else 0f,
-        animationSpec = tween(if (reducedMotion) 1 else 700),
+        animationSpec = if (reducedMotion) snap() else spring(dampingRatio = 1f, stiffness = Spring.StiffnessVeryLow, visibilityThreshold = 0.001f),
         label = "price-draw-in",
     )
     var scrub by remember { mutableFloatStateOf(-1f) }

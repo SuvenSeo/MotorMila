@@ -1,5 +1,6 @@
 package lk.motormila.app.ui.home
 
+import lk.motormila.app.ui.theme.tabular
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -14,6 +15,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import lk.motormila.app.ui.theme.glassBackdrop as glassBackdropOfImpl
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -205,16 +209,28 @@ fun HomeContent(
     onPermitsClick: () -> Unit = {},
 ) {
 
+    // Edge-to-edge: the feed scrolls under a glass status-bar strip (top) and
+    // the floating glass tab bar (bottom).
+    val chrome = lk.motormila.app.ui.LocalBottomChrome.current
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val homeBackdrop = androidx.compose.runtime.remember { dev.chrisbanes.haze.HazeState() }
+    val statusTop = androidx.compose.foundation.layout.WindowInsets.statusBars
+        .asPaddingValues().calculateTopPadding()
+    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
     MmPullToRefresh(
         isRefreshing = state.isRefreshing,
         onRefresh = onRefresh,
-        modifier = Modifier.fillMaxSize(),
+        indicatorTop = statusTop,
+        modifier = Modifier
+            .fillMaxSize()
+            .glassBackdropOfImpl(homeBackdrop),
     ) {
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize(),
-            // Extra bottom clearance so the last card clears the nav dock
-            // and the floating AI/scan buttons instead of sliding under them.
-            contentPadding = PaddingValues(bottom = 128.dp),
+            // Content clears the status bar at rest and the floating glass
+            // tab bar at the end.
+            contentPadding = PaddingValues(top = statusTop, bottom = chrome.contentPadding),
             // Generous 22dp rhythm between sections — the web's airy,
             // confident feel rather than a cramped feed.
             verticalArrangement = Arrangement.spacedBy(MmSpacing.xxl),
@@ -347,6 +363,15 @@ fun HomeContent(
                 }
             }
         }
+    }
+    // Glass strip under the status bar once the feed scrolls beneath it.
+    lk.motormila.app.ui.components.GlassStatusBarStrip(
+        backdrop = homeBackdrop,
+        alpha = {
+            if (listState.firstVisibleItemIndex > 0) 1f
+            else (listState.firstVisibleItemScrollOffset / 40f).coerceIn(0f, 1f)
+        },
+    )
     }
 }
 
@@ -576,7 +601,7 @@ internal fun PriceDropCard(
             )
             Column(Modifier.padding(12.dp)) {
                 Text(title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                Text(newPrice, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                Text(newPrice, style = (MaterialTheme.typography.titleMedium).tabular(), fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(4.dp))
                 Row(
                     modifier = Modifier

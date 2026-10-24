@@ -198,7 +198,8 @@ fun BestPicksScreen(
                     } else if (state.unlocked) {
                         items(
                             count = pagingItems.itemCount,
-                            key = { index -> pagingItems[index]?.id ?: -index },
+                            key = { index -> pagingItems.peek(index)?.id ?: -index - 1 },
+                            contentType = { "pick" },
                         ) { index ->
                             val listing = pagingItems[index]
                             if (listing != null) {
@@ -408,7 +409,7 @@ private fun CutRow(drop: PriceDrop, onClick: () -> Unit) {
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontWeight = FontWeight.Bold,
                     color = MotormilaGood,
-                    fontFamily = FontFamily.Monospace,
+                    fontFeatureSettings = "tnum",
                 ),
             )
         }
@@ -418,14 +419,14 @@ private fun CutRow(drop: PriceDrop, onClick: () -> Unit) {
                 style = MaterialTheme.typography.labelSmall.copy(
                     color = MotormilaSecondaryText,
                     textDecoration = TextDecoration.LineThrough,
-                    fontFamily = FontFamily.Monospace,
+                    fontFeatureSettings = "tnum",
                 ),
             )
             Text(
                 lk.motormila.app.ui.common.mn(drop.newPriceLkr),
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace,
+                    fontFeatureSettings = "tnum",
                 ),
             )
         }

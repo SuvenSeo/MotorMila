@@ -126,7 +126,7 @@ internal fun MakeHubMetricCard(
             text = value,
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Monospace,
+                fontFeatureSettings = "tnum",
                 color = valueColor,
             ),
         )
@@ -251,7 +251,7 @@ private fun MakeHubTrendRow(point: TrendPoint) {
             Text(
                 period,
                 style = MaterialTheme.typography.labelMedium.copy(
-                    fontFamily = FontFamily.Monospace,
+                    fontFeatureSettings = "tnum",
                     color = MotormilaPrimaryBright,
                 ),
             )
@@ -259,7 +259,7 @@ private fun MakeHubTrendRow(point: TrendPoint) {
                 price,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.SemiBold,
-                    fontFamily = FontFamily.Monospace,
+                    fontFeatureSettings = "tnum",
                 ),
                 modifier = Modifier.weight(1f),
             )

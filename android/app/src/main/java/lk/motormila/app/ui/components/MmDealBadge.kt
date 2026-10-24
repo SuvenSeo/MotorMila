@@ -1,5 +1,6 @@
 package lk.motormila.app.ui.components
 
+import lk.motormila.app.ui.theme.mmTappable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -50,13 +51,16 @@ fun MmDealBadge(
     val bg = if (onImage) Color(0xCC0B0B0F) else d.container
     val fg = if (onImage) (if (tone == MmDealTone.NEUTRAL) Color.White else d.solid.lighten()) else d.content
     val whyLabel = stringResource(R.string.mm_deal_why)
+    // On a photo the pill shares a fixed 4:3 frame with the save button, so its
+    // text is capped at 1.15x (iOS-style) — at 200 % it read "Near …" / "Rs 0.…".
+    lk.motormila.app.ui.theme.CappedFontScale(max = if (onImage) 1.15f else 2f) {
     Row(
         modifier = modifier
             .clip(MmShapes.pill)
             .background(bg)
             .then(
                 if (onWhy != null) {
-                    Modifier.clickable(role = Role.Button, onClickLabel = whyLabel, onClick = onWhy)
+                    Modifier.mmTappable(role = Role.Button, onClickLabel = whyLabel, pressedScale = 1f, onClick = onWhy)
                 } else {
                     Modifier
                 },
@@ -71,10 +75,11 @@ fun MmDealBadge(
         } else {
             Box(Modifier.size(6.dp).clip(MmShapes.pill).background(if (onImage) fg else d.solid))
         }
-        Text(label, style = MmType.current.labelS, color = fg, maxLines = 1)
+        Text(label, style = MmType.current.labelS, color = fg, modifier = Modifier.weight(1f, fill = false), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         if (onWhy != null) {
             Icon(Icons.AutoMirrored.Outlined.HelpOutline, null, tint = fg.copy(alpha = 0.8f), modifier = Modifier.size(14.dp))
         }
+    }
     }
 }
 

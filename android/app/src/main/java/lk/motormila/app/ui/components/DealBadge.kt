@@ -74,11 +74,12 @@ fun DealBadge(
         )
     }
     val (container, content, border, text) = style
+    val dealRatingCd = stringResource(lk.motormila.app.R.string.mm_deal_rating_cd, text)
     Row(
         modifier = modifier
             .background(container, MotormilaRadius.pill)
             .border(1.dp, border, MotormilaRadius.pill)
-            .semantics { contentDescription = "Deal rating $text" }
+            .semantics { contentDescription = dealRatingCd }
             .padding(horizontal = 9.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -110,8 +111,9 @@ fun LockedValue(
     placeholder: String = "8.4",
     modifier: Modifier = Modifier,
 ) {
+    val lockedCd = stringResource(lk.motormila.app.R.string.mm_locked_pro_cd)
     Box(
-        modifier = modifier.semantics { contentDescription = "Locked for Pro members" },
+        modifier = modifier.semantics { contentDescription = lockedCd },
         contentAlignment = Alignment.Center,
     ) {
         Text(

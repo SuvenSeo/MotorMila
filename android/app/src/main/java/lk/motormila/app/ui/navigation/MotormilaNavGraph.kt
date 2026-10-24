@@ -9,6 +9,11 @@ import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -163,8 +168,20 @@ fun MotormilaNavGraph(
             return@LaunchedEffect
         }
         val target = startDeepLink?.let { resolveMotormilaDeepLink(it) } ?: return@LaunchedEffect
+        // Routes with arguments (search query, sign-up tab, compare ids…) must
+        // not reuse the current entry via singleTop, or a second deep link to
+        // the same screen silently drops its new arguments. Replace it instead.
+        // ListingDetail too: a link to a listing that is already on top reused the
+        // entry with its old scroll position, so the gallery was off-screen (D2).
+        val carriesArgs = target is Search || target is Login || target is Compare ||
+            target is Alerts || target is Valuation || target is ListingDetail
+        val current = navController.currentDestination
         navController.navigate(target) {
-            launchSingleTop = true
+            if (carriesArgs && current != null && current.hasRoute(target::class)) {
+                popUpTo(current.id) { inclusive = true }
+            } else {
+                launchSingleTop = true
+            }
         }
     }
 
@@ -193,15 +210,22 @@ fun MotormilaNavGraph(
                 }
             },
             onScan = { navController.navigate(PlateScan) },
-            onOpenListing = { id -> navController.navigate(ListingDetail(id)) },
         ) { innerPadding ->
+            // Edge-to-edge: every screen owns its status-bar inset (glass top
+            // bars draw under it). Tab roots let content scroll under the
+            // floating glass tab bar and pad via LocalBottomChrome; Detail
+            // owns its bottom action bar; other pushed routes keep the
+            // gesture/nav-bar inset here so nothing ends under it.
+            val navInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            val isDetail = currentDestination?.hasRoute<ListingDetail>() == true
+            val isSplash = currentDestination?.hasRoute<Splash>() == true
+            val bottomPad = if (showBottomBar || isDetail || isSplash) 0.dp else navInset
             Box(
                 Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    // Children must not re-apply the insets the shell already
-                    // padded (avoids a double status-bar gap under MmTopBar).
-                    .consumeWindowInsets(innerPadding)
+                    .padding(bottom = bottomPad)
+                    .consumeWindowInsets(PaddingValues(bottom = bottomPad))
             ) {
                 updateState.available?.let { update ->
                     AppUpdateDialog(
@@ -218,30 +242,10 @@ fun MotormilaNavGraph(
                 NavHost(
                     navController = navController,
                     startDestination = if (sharedUrl != null) ShareImport(sharedUrl) else Splash,
-                    enterTransition = {
-                        motormilaEnterTransition(
-                            reducedMotion,
-                            isTabSwitch(initialState.destination.route, targetState.destination.route),
-                        )
-                    },
-                    exitTransition = {
-                        motormilaExitTransition(
-                            reducedMotion,
-                            isTabSwitch(initialState.destination.route, targetState.destination.route),
-                        )
-                    },
-                    popEnterTransition = {
-                        motormilaPopEnterTransition(
-                            reducedMotion,
-                            isTabSwitch(initialState.destination.route, targetState.destination.route),
-                        )
-                    },
-                    popExitTransition = {
-                        motormilaPopExitTransition(
-                            reducedMotion,
-                            isTabSwitch(initialState.destination.route, targetState.destination.route),
-                        )
-                    },
+                    enterTransition = { motormilaEnter(reducedMotion) },
+                    exitTransition = { motormilaExit(reducedMotion) },
+                    popEnterTransition = { motormilaPopEnter(reducedMotion) },
+                    popExitTransition = { motormilaPopExit(reducedMotion) },
                 ) {
                     motormilaComposable<Splash> {
                         SplashGate(
@@ -305,16 +309,16 @@ fun MotormilaNavGraph(
                             onPermitsClick = { navController.navigate(Permits) },
                         )
                     }
-                    motormilaComposable<Search>(
-                        deepLinks = listOf(
-                            navDeepLink<Search>(basePath = "motormila://search"),
-                            navDeepLink { uriPattern = "motormila://search?q={q}&district={district}&voice={voice}" },
-                            navDeepLink { uriPattern = "motormila://search" },
-                        ),
-                    ) {
+                    // No Navigation-level deep links here: NavHost's automatic cold-start
+                    // handling matched motormila://search?… against the route's own fields
+                    // only, silently dropping web filter keys (fuel_type, transmission…) and
+                    // relaunching the task. resolveMotormilaDeepLink (Splash / onNewIntent)
+                    // maps every key into Search.filters instead.
+                    motormilaComposable<Search> {
                         SearchScreen(
-                            onListingClick = { id -> navController.navigate(ListingDetail(id)) },
+                            onListingClick = { id -> navController.navigate(ListingDetail(id, fromCard = true)) },
                             onCompare = { ids -> navController.navigate(Compare(ids)) },
+                            onOpenSharedUrl = { url -> navController.navigate(ShareImport(url)) },
                         )
                     }
                     motormilaComposable<Watchlist>(
@@ -383,9 +387,11 @@ fun MotormilaNavGraph(
                         val route = entry.toRoute<ListingDetail>()
                         ListingDetailScreen(
                             listingId = route.id,
+                            fromCard = route.fromCard,
                             onBack = { navController.popBackStack() },
                             onCompare = { ids -> navController.navigate(Compare(ids)) },
                             onEstimate = { navController.navigate(Valuation()) },
+                            onOpenListing = { id -> navController.navigate(ListingDetail(id)) },
                         )
                     }
                     motormilaComposable<Compare>(
@@ -510,8 +516,8 @@ fun MotormilaNavGraph(
                                     popUpTo(route) { inclusive = true }
                                 }
                             },
-                            onValuation = { make, model ->
-                                navController.navigate(Valuation(make, model)) {
+                            onValuation = { make, model, year ->
+                                navController.navigate(Valuation(make, model, year)) {
                                     popUpTo(route) { inclusive = true }
                                 }
                             },
@@ -568,7 +574,7 @@ fun MotormilaNavGraph(
                     ) {
                         BestPicksScreen(
                             onBack = { navController.popBackStack() },
-                            onListingClick = { id -> navController.navigate(ListingDetail(id)) },
+                            onListingClick = { id -> navController.navigate(ListingDetail(id, fromCard = true)) },
                             onSeeAllSearch = {
                                 navController.navigate(Search(sort = "deal_score"))
                             },
@@ -586,7 +592,7 @@ fun MotormilaNavGraph(
                             onModelClick = { make, model ->
                                 navController.navigate(MakeModelHub(make, model))
                             },
-                            onListingClick = { id -> navController.navigate(ListingDetail(id)) },
+                            onListingClick = { id -> navController.navigate(ListingDetail(id, fromCard = true)) },
                             onSeeAllSearch = { make ->
                                 navController.navigate(Search(make = make))
                             },
@@ -601,7 +607,7 @@ fun MotormilaNavGraph(
                         MakeModelHubScreen(
                             onBack = { navController.popBackStack() },
                             onMakeClick = { make -> navController.navigate(MakeHub(make)) },
-                            onListingClick = { id -> navController.navigate(ListingDetail(id)) },
+                            onListingClick = { id -> navController.navigate(ListingDetail(id, fromCard = true)) },
                             onSeeAllSearch = { make, model ->
                                 navController.navigate(Search(make = make, model = model))
                             },
@@ -618,7 +624,7 @@ fun MotormilaNavGraph(
                     ) {
                         DistrictHubScreen(
                             onBack = { navController.popBackStack() },
-                            onListingClick = { id -> navController.navigate(ListingDetail(id)) },
+                            onListingClick = { id -> navController.navigate(ListingDetail(id, fromCard = true)) },
                             onModelClick = { make, model ->
                                 navController.navigate(MakeModelHub(make, model))
                             },

@@ -25,6 +25,8 @@ data class Search(
     val sort: String? = null,
     val voice: Boolean = false,
     val plate: String? = null,
+    /** Extra web-format filters (year/price/mileage/fuel/…), see SearchArgs.WEB_FILTER_KEYS. */
+    val filters: String? = null,
 )
 
 @Serializable
@@ -37,13 +39,17 @@ data object Insights
 data object Profile
 
 @Serializable
-data class ListingDetail(val id: Int)
+data class ListingDetail(
+    val id: Int,
+    /** Opened from a listing card: Detail is a container transform of that card (see NavMotion). */
+    val fromCard: Boolean = false,
+)
 
 @Serializable
 data class Compare(val ids: List<Int>)
 
 @Serializable
-data class Valuation(val make: String? = null, val model: String? = null)
+data class Valuation(val make: String? = null, val model: String? = null, val year: Int? = null)
 
 @Serializable
 data class Alerts(val listingId: Int = 0)
@@ -190,7 +196,21 @@ internal fun resolveParsedDeepLink(parsed: ParsedDeepLink): Any? {
     val host = parsed.host
     val segments = parsed.pathSegments
     if (scheme == "https" && host == HTTPS_APP_HOST) {
+        // A shared web search ("/?make=Toyota&year_min=2015…" or /search?…)
+        // opens Search with the same filters.
+        if ((segments.isEmpty() || segments == listOf("search")) && parsed.query.keys.any { it in WEB_SEARCH_KEYS }) {
+            return Search(
+                q = parsed.queryOrNull("q"),
+                district = parsed.queryOrNull("district"),
+                make = parsed.queryOrNull("make"),
+                model = parsed.queryOrNull("model"),
+                sort = parsed.queryOrNull("sort"),
+                filters = encodeWebFilters(parsed.query),
+            )
+        }
         if (segments.isEmpty()) return Home
+        // Bare /search (no filters) opens Search.
+        if (segments == listOf("search")) return Search()
         if (segments.size >= 2 && segments[0] == "listing") {
             return segments[1].toIntOrNull()?.let { ListingDetail(it) }
         }
@@ -256,6 +276,7 @@ internal fun resolveParsedDeepLink(parsed: ParsedDeepLink): Any? {
             sort = parsed.queryOrNull("sort"),
             voice = parsed.flagQuery("voice"),
             plate = parsed.queryOrNull("plate"),
+            filters = encodeWebFilters(parsed.query),
         )
         "watchlist" -> Watchlist
         "picks" -> BestPicks

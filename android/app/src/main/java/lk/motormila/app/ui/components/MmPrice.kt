@@ -9,7 +9,14 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.times
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -121,12 +128,13 @@ fun MmAnimatedText(
 ) {
     val reduced = MmMotion.reduced
     if (!animate || reduced) {
-        Text(text, modifier = modifier, style = style, color = color, maxLines = 1)
+        MmFitText(text = text, style = style, color = color, modifier = modifier)
         return
     }
     // Align from the right so "8.5 Mn" → "12.5 Mn" keeps the unit still.
+    BoxWithConstraints(modifier.clearAndSetSemantics { contentDescription = text }) {
+    val fitted = rememberFittedTextStyle(text, style, constraints.maxWidth)
     Row(
-        modifier = modifier.clearAndSetSemantics { contentDescription = text },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val chars = text.toCharArray()
@@ -149,9 +157,68 @@ fun MmAnimatedText(
                 },
                 label = "price-char-$keyFromEnd",
             ) { pc ->
-                Text(pc.char.toString(), style = style, color = color, maxLines = 1)
+                Text(pc.char.toString(), style = fitted, color = color, maxLines = 1, softWrap = false)
             }
             }
+        }
+    }
+    }
+}
+
+/**
+ * Single-line text that shrinks its font (down to [minScale] of the style's size) instead of
+ * wrapping or clipping when it does not fit the available width — the iOS
+ * `adjustsFontSizeToFitWidth` behaviour. Used for prices so "Rs 1.2 Mn" never loses its unit
+ * at large font scales (audit: 200 % font-scale clipping of card + detail prices).
+ */
+@Composable
+fun MmFitText(
+    text: String,
+    style: TextStyle,
+    color: Color,
+    modifier: Modifier = Modifier,
+    minScale: Float = 0.55f,
+) {
+    BoxWithConstraints(modifier) {
+        val fitted = rememberFittedTextStyle(text, style, constraints.maxWidth, minScale)
+        Text(
+            text,
+            style = fitted,
+            color = color,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun rememberFittedTextStyle(
+    text: String,
+    style: TextStyle,
+    maxWidthPx: Int,
+    minScale: Float = 0.55f,
+): TextStyle {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    return remember(text, style, maxWidthPx, density, minScale) {
+        if (maxWidthPx == Constraints.Infinity || maxWidthPx <= 0 || !style.fontSize.isSp) {
+            return@remember style
+        }
+        val width = measurer.measure(
+            text = text,
+            style = style,
+            softWrap = false,
+            maxLines = 1,
+        ).size.width
+        if (width <= maxWidthPx) {
+            style
+        } else {
+            val scale = (maxWidthPx.toFloat() / width * 0.98f).coerceIn(minScale, 1f)
+            style.copy(
+                fontSize = scale * style.fontSize,
+                letterSpacing = if (style.letterSpacing.isSp) scale * style.letterSpacing else style.letterSpacing,
+            )
         }
     }
 }

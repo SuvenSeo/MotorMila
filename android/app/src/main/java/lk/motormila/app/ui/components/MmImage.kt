@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -17,9 +15,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
-import coil3.compose.SubcomposeAsyncImage
-import coil3.compose.SubcomposeAsyncImageContent
-import coil3.compose.AsyncImagePainter
+import coil3.compose.AsyncImage
+import androidx.compose.runtime.remember
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import lk.motormila.app.R
@@ -27,10 +24,17 @@ import lk.motormila.app.ui.theme.MmColors
 import lk.motormila.app.ui.theme.MmMotion
 
 /**
- * Remote image with a 280ms crossfade (off under reduced motion) and a calm
- * placeholder: the full MotorMila lockup, faded, centred on the raised
- * surface. The same placeholder shows when the URL is null or fails, so a
- * listing without photos never looks broken. Previews/screenshots always
+ * Remote image, smooth-scroll edition: a single [AsyncImage] (no
+ * subcomposition per cell — SubcomposeAsyncImage re-ran a subcomposition on
+ * every state change, which showed up as jank while flinging the grid) drawn
+ * over the calm MotorMila placeholder, which simply stays underneath (and is
+ * what shows when the URL is null or fails). Crossfade 280 ms (off under
+ * reduced motion).
+ *
+ * Memory cache is keyed by URL so a card's photo and Detail's hero share one
+ * entry; [placeholderKey] (Detail page 0 passes the card's hero URL) shows the
+ * already-decoded card bitmap while the larger one loads, so the card → Detail
+ * morph never flashes the placeholder mid-flight. Previews/screenshots always
  * render the placeholder.
  */
 @Composable
@@ -39,6 +43,7 @@ fun MmImage(
     contentDescription: String?,
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
+    placeholderKey: String? = null,
 ) {
     val c = MmColors.current
     val reduced = MmMotion.reduced
@@ -47,20 +52,22 @@ fun MmImage(
         return
     }
     val context = LocalContext.current
-    SubcomposeAsyncImage(
-        model = ImageRequest.Builder(context)
+    val request = remember(context, url, placeholderKey, reduced) {
+        ImageRequest.Builder(context)
             .data(url)
+            .memoryCacheKey(url)
+            .apply { (placeholderKey ?: url).let { placeholderMemoryCacheKey(it) } }
             .crossfade(if (reduced) 0 else MmMotion.Base)
-            .build(),
-        contentDescription = contentDescription,
-        contentScale = contentScale,
-        modifier = modifier.background(c.surfaceRaised),
-    ) {
-        val state by painter.state.collectAsState()
-        when (state) {
-            is AsyncImagePainter.State.Success -> SubcomposeAsyncImageContent()
-            else -> MmImagePlaceholder(Modifier.fillMaxSize())
-        }
+            .build()
+    }
+    Box(modifier.background(c.surfaceRaised)) {
+        MmImagePlaceholder(Modifier.matchParentSize())
+        AsyncImage(
+            model = request,
+            contentDescription = contentDescription,
+            contentScale = contentScale,
+            modifier = Modifier.matchParentSize(),
+        )
     }
 }
 
@@ -73,13 +80,13 @@ fun MmImagePlaceholder(modifier: Modifier = Modifier) {
     ) {
         Image(
             painter = painterResource(
-                if (c.isDark) R.drawable.logo_wordmark_on_dark else R.drawable.logo_wordmark_on_light,
+                motormilaWordmarkRes(c.isDark),
             ),
             contentDescription = null,
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .fillMaxWidth(0.42f)
-                .aspectRatio(1200f / 220f)
+                .aspectRatio(MOTORMILA_WORDMARK_ASPECT)
                 .alpha(if (c.isDark) 0.22f else 0.28f),
         )
     }

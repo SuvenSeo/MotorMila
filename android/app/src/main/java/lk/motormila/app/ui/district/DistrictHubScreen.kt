@@ -1,5 +1,8 @@
 package lk.motormila.app.ui.district
 
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -109,6 +112,8 @@ fun DistrictHubScreen(
             onBack()
         },
         snackbarHostState = snacks,
+        // The hero already shows the title: compact glass bar only (audit B10).
+        largeTitle = false,
     ) {
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
@@ -353,7 +358,7 @@ private fun DistrictMetricCard(
             text = value,
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Monospace,
+                fontFeatureSettings = "tnum",
                 color = valueColor,
             ),
         )
@@ -420,7 +425,7 @@ private fun NearbyDistrictChip(
             price,
             style = MaterialTheme.typography.bodyMedium.copy(
                 fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Monospace,
+                fontFeatureSettings = "tnum",
             ),
         )
         val new7d = item.new7dCount
@@ -490,7 +495,7 @@ private fun TopModelCard(
             text = price,
             style = MaterialTheme.typography.titleMedium.copy(
                 fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Monospace,
+                fontFeatureSettings = "tnum",
             ),
         )
     }
@@ -557,7 +562,7 @@ private fun VelocityRow(
 ) {
     val fraction by animateFloatAsState(
         targetValue = point.listingCount.toFloat() / max,
-        animationSpec = tween(if (reducedMotion) 1 else 700, easing = AppleEasing),
+        animationSpec = if (reducedMotion) snap() else spring(dampingRatio = 0.9f, stiffness = Spring.StiffnessLow, visibilityThreshold = 0.001f),
         label = "velocity-bar",
     )
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {

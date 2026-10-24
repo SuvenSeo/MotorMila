@@ -1,5 +1,6 @@
 package lk.motormila.app.ui.valuation
 
+import lk.motormila.app.ui.theme.mmTappable
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
@@ -98,7 +99,8 @@ fun ValuationScreen(
     viewModel: ValuationViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    MmScreen(title = stringResource(R.string.scr_val_title)) {
+    // Edge-to-edge: the wizard scrolls under the glass header (round 4).
+    MmScreen(title = stringResource(R.string.scr_val_title), edgeToEdge = true) {
         ValuationContent(
             state = state,
             onEvent = viewModel::onEvent,
@@ -121,8 +123,7 @@ fun ValuationContent(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = MmSpacing.lg)
-            .padding(bottom = MmSpacing.huge),
+            .padding(lk.motormila.app.ui.common.mmScreenPadding(horizontal = MmSpacing.lg, bottom = MmSpacing.huge)),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.Speed, contentDescription = null, tint = c.brandText, modifier = Modifier.size(14.dp))
@@ -605,7 +606,7 @@ private fun ResultBody(state: ValuationUiState, result: QuizResult, onOpenListin
                     Modifier
                         .fillMaxWidth()
                         .heightIn(min = 52.dp)
-                        .clickable(role = Role.Button) { onOpenListing(comp.id) }
+                        .mmTappable(role = Role.Button, pressedScale = 1f) { onOpenListing(comp.id) }
                         .padding(horizontal = MmSpacing.lg, vertical = MmSpacing.sm),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {

@@ -29,7 +29,6 @@
     <string name="mm_tools_ev">EV மையம்</string>
     <string name="mm_tools_alerts">விலை எச்சரிக்கைகள்</string>
     <string name="mm_tools_account">கணக்கு மற்றும் அமைப்புகள்</string>
-    <string name="mm_assistant">MotorMila AI இடம் கேளுங்கள்</string>
     <string name="mm_detail_asking">கேட்கும் விலை</string>
     <string name="mm_why_this_car">இந்த வாகனம்</string>
     <string name="mm_pay_title">பணம் செலுத்தும் முன்</string>
@@ -37,4 +36,7 @@
     <string name="mm_lease_short">லீசிங் பொறுப்பேற்பு</string>
     <string name="mm_home_title">நியாயமான விலையைக் கண்டறியுங்கள்.</string>
     <string name="mm_home_search_hint">தயாரிப்பு, மாடல் அல்லது இணைப்பை ஒட்டவும்</string>
+    <string name="mm_pay_2">CR (பதிவு) புத்தகம் விற்பனையாளரின் அடையாள அட்டையுடனும் காரின் சேசிஸ், எஞ்சின் எண்களுடனும் பொருந்துகிறதா எனச் சரிபாருங்கள்.</string>
+    <string name="mm_pay_3">பகல் நேரத்தில் பொது இடத்தில் சந்தித்து, சுயாதீன மெக்கானிக் மூலம் பரிசோதனை செய்யுங்கள்.</string>
+    <string name="mm_pay_4">உரிமை மாற்ற ஆவணங்கள் (MTA படிவங்கள்) கையொப்பமிடப்பட்ட பின்னரே வங்கிப் பரிமாற்றம் மூலம் பணம் செலுத்துங்கள்.</string>
 </resources>

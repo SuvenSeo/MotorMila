@@ -106,7 +106,7 @@ fun NotificationsScreen(
                             itemsIndexed(state.items, key = { _, n -> n.id }) { index, n ->
                                 NotificationRow(
                                     n = n,
-                                    modifier = Modifier.cascadeEntrance(index),
+                                    modifier = Modifier.animateItem(fadeInSpec = null, placementSpec = lk.motormila.app.ui.theme.MmMotion.itemPlacement, fadeOutSpec = androidx.compose.animation.core.spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow)).cascadeEntrance(index),
                                     onOpen = {
                                         if (!reducedMotion) haptics.tick()
                                         viewModel.onEvent(NotificationsUiEvent.MarkRead(n.id.toString()))

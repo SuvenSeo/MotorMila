@@ -93,6 +93,8 @@ fun MakeHubScreen(
             onBack()
         },
         snackbarHostState = snacks,
+        // The hero already shows the title: compact glass bar only (audit B10).
+        largeTitle = false,
     ) {
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
@@ -249,7 +251,7 @@ private fun MakeHubModelRow(
                     price,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace,
+                        fontFeatureSettings = "tnum",
                     ),
                 )
             }

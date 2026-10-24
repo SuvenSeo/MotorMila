@@ -348,7 +348,7 @@ private fun SignalCard(
                 formatPulseValue(signal),
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace,
+                    fontFeatureSettings = "tnum",
                 ),
             )
             Text(
@@ -520,7 +520,7 @@ private fun PermitCard(permit: Permit) {
                 price,
                 style = MaterialTheme.typography.titleSmall.copy(
                     fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace,
+                    fontFeatureSettings = "tnum",
                     color = MotormilaPrimaryBright,
                 ),
             )

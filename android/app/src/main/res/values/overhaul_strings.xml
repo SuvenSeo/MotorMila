@@ -73,9 +73,8 @@
     <string name="ui_auth_email">Email</string>
     <string name="ui_auth_invite_token">Invite token</string>
     <string name="ui_auth_name">Name</string>
-    <string name="ui_chat_retry">Retry</string>
     <string name="ui_components_filters">Filters</string>
-    <string name="ui_components_search_make_model_e_g">Search make, model… (e.g. Aqua G)</string>
+    <string name="ui_components_search_make_model_e_g">Search make or model</string>
     <string name="ui_dealer_gap">Gap</string>
     <string name="ui_dealer_median">Median</string>
     <string name="ui_dealer_one_url_per_line_ikman">One URL per line (ikman / riyasewana / patpat)</string>
@@ -122,4 +121,7 @@
     <string name="ui_valuation_target_district">Target district</string>
     <string name="ui_valuation_transmission">Transmission</string>
     <string name="update_install_permission_hint">Allow MotorMila to install apps on the screen that just opened, then tap Update now again.</string>
+    <string name="settings_licences_title">Open-source licences</string>
+    <string name="settings_licences_body">Fonts and libraries bundled with the app</string>
+    <string name="settings_licences_intro">MotorMila ships Cal Sans and Noto Sans under the SIL Open Font License 1.1. Full texts below.</string>
 </resources>

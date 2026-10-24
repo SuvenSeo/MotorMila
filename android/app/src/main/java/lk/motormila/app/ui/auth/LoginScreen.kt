@@ -1,5 +1,6 @@
 package lk.motormila.app.ui.auth
 
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
@@ -112,10 +113,14 @@ fun LoginScreen(
         }
         if (state.shakeToken > 0 && !reducedMotion) {
             shake.snapTo(0f)
-            shake.animateTo(14f, tween(60))
-            shake.animateTo(-14f, tween(60))
-            shake.animateTo(10f, tween(60))
-            shake.animateTo(0f, tween(80))
+            // iOS-style "wrong password" shake: one impulse into an
+            // under-damped spring that settles on its own.
+            shake.snapTo(0f)
+            shake.animateTo(
+                0f,
+                spring(dampingRatio = 0.18f, stiffness = 1800f),
+                initialVelocity = 900f,
+            )
         }
     }
 

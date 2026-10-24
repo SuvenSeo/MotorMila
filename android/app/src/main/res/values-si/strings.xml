@@ -145,9 +145,13 @@
     <string name="sell_submitting">ලැයිස්තු කරමින්\u2026</string>
     <string name="sell_login_required">වාහනය ලැයිස්තු කිරීමට ලොග් වන්න.</string>
     <string name="sell_login_cta">ලොග් වන්න / ලියාපදිංචි වන්න</string>
+    <string name="sell_signed_out_title">Motormila හි ඔබේ වාහනය විකුණන්න</string>
+    <string name="sell_benefit_fast">විනාඩියකට අඩු කාලයකින් — අත්‍යවශ්‍ය දේ පමණි</string>
+    <string name="sell_benefit_price">ගැනුම්කරුවන් ඔබට දුරකථනයෙන් සෘජුවම සම්බන්ධ වේ</string>
+    <string name="sell_benefit_reviewed">සෑම ලැයිස්තුවක්ම සජීවී වීමට පෙර සමාලෝචනය කෙරේ</string>
     <string name="sell_success_title">ලැයිස්තුව යොමු කෙරේ</string>
     <string name="sell_success_body">ඔබේ %1$s සමාලෝචනයට යටත්. සජීවී වූ වහාම දැනුම් දෙන්නෙමු.</string>
-    <!-- launch-polish: category chips, Home stats, search empty state, chat sheet -->
+    <!-- launch-polish: category chips, Home stats, search empty state -->
     <string name="vehicle_category_cars">කාර්</string>
     <string name="vehicle_category_all">සියලු වාහන</string>
     <string name="vehicle_category_bikes">යතුරුපැදි</string>
@@ -163,6 +167,15 @@
     <string name="search_empty_reset">පෙරහන් යළි සකසන්න</string>
     <string name="compare_selected_count">%1$d/%2$d තෝරා ඇත</string>
     <string name="compare_cta">සසඳන්න</string>
+    <string name="compare_cta_count">සසඳන්න %1$d</string>
+    <string name="compare_clear">මකන්න</string>
+    <string name="compare_add">සසඳන්න</string>
+    <string name="compare_added">එක් කළා</string>
+    <string name="compare_add_cd">%1$s සැසඳීමට එක් කරන්න</string>
+    <string name="compare_remove_cd">%1$s සැසඳීමෙන් ඉවත් කරන්න</string>
+    <string name="compare_tray_cd">සැසඳීම් තැටිය, කාර් %2$d න් %1$d ක් තෝරා ඇත</string>
+    <string name="compare_pick_more">තවත් එකක් තෝරන්න</string>
+    <string name="listing_share_whatsapp_short">WhatsApp</string>
     <string name="home_live_listings">සජීවී දැන්වීම්</string>
     <string name="home_data_fresh">පැයකට පෙර දත්ත</string>
     <string name="home_avg_price">සාමාන්‍ය මිල</string>
@@ -171,13 +184,5 @@
     <string name="home_empty_title">තවම වෙළඳපොළ දත්ත නැත</string>
     <string name="home_empty_body">නැවුම් කිරීමට පහළට අදින්න — නව දැන්වීම් මෙහි දිස්වේ.</string>
     <string name="home_empty_cta">සියලු වාහන බලන්න</string>
-    <string name="chat_subtitle">තත්‍ය කාලීන වෙළඳපොළ තොරතුරු, තක්සේරු මඟපෙන්වීම සහ ස්මාර්ට් කෙටි ලැයිස්තු</string>
-    <string name="chat_hero_title">තීරණය කිරීමට පෙර වෙළඳපොළ සහායකයාගෙන් අසන්න.</string>
-    <string name="chat_hero_body">මම ශ්‍රී ලංකාව පුරා සජීවී වාහන දැන්වීම් විමසා, සාධාරණ වෙළඳපොළ වටිනාකම (FMV) ගණනය කර, ගනුදෙනු අවදානම පෙන්වා, CBSL වාහන මූල්‍යකරණ නීති පැහැදිලි කරමි.</string>
-    <string name="chat_popular">ජනප්‍රිය විමසීම්</string>
-    <string name="chat_recommended">නිර්දේශිත වාහන</string>
-    <string name="chat_thinking">සජීවී වෙළඳපොළ තොරතුරු කියවමින්…</string>
-    <string name="chat_input_hint">අයවැය, වටිනාකම, දැන්වීම් ගැන අසන්න…</string>
     <string name="calculating_cd">ගණනය කරමින්</string>
-    <string name="chat_sign_in_required">සජීවී AI පිළිතුරු සඳහා ලොග් වන්න. දැනට ඉක්මන් නොබැඳි පිළිතුරක් පෙන්වයි.</string>
 </resources>

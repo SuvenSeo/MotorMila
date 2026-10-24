@@ -35,6 +35,7 @@ private const val SNAPSHOT_BASE_URL = "https://motormila.pages.dev/snapshots/lat
 /** Live API: fail fast on cold/sleeping backend so snapshot fallback wins. */
 private const val LIVE_CONNECT_TIMEOUT_S = 8L
 private const val LIVE_READ_TIMEOUT_S = 10L
+private const val SLOW_SEARCH_TIMEOUT_S = 35L
 
 /** Snapshot CDN (Cloudflare): normally <2 s; fail fast if it's hanging too. */
 private const val SNAPSHOT_CONNECT_TIMEOUT_S = 8L
@@ -81,9 +82,23 @@ object NetworkModule {
     @Singleton
     fun provideRetrofit(client: OkHttpClient, json: Json): Retrofit {
         val base = BuildConfig.BASE_URL.trim().trimEnd('/') + "/"
+        // Filtered listing searches / counts take 10-30 s on the backend; the 15 s
+        // callTimeout made them fall back to the (small) offline snapshot. Search
+        // calls get a longer budget; everything else keeps the snappy client.
+        val slow = client.newBuilder()
+            .readTimeout(SLOW_SEARCH_TIMEOUT_S, TimeUnit.SECONDS)
+            .callTimeout(SLOW_SEARCH_TIMEOUT_S + 5, TimeUnit.SECONDS)
+            .build()
         return Retrofit.Builder()
             .baseUrl(base)
-            .client(client)
+            .callFactory { request ->
+                val path = request.url.encodedPath.trimEnd('/')
+                if (path.endsWith("/listings") || path.endsWith("/listings/count")) {
+                    slow.newCall(request)
+                } else {
+                    client.newCall(request)
+                }
+            }
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
     }

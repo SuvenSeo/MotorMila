@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.permits
 
+import lk.motormila.app.ui.theme.tabular
+import androidx.compose.material3.LocalTextStyle
 import lk.motormila.app.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
@@ -166,7 +168,7 @@ private fun PermitRowCard(permit: Permit, delayMillis: Int) {
             }
             Text(
                 lk.motormila.app.ui.common.mn(permit.marketPriceLkr),
-                fontFamily = FontFamily.Monospace,
+                style = LocalTextStyle.current.tabular(),
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
                 color = MotormilaPrimaryBright,

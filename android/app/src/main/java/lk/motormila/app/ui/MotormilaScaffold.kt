@@ -1,23 +1,24 @@
 package lk.motormila.app.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Handyman
@@ -28,34 +29,55 @@ import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.Handyman
 import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.Sell
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import dev.chrisbanes.haze.HazeState
 import lk.motormila.app.R
-import lk.motormila.app.ui.chat.AIChatBottomSheet
 import lk.motormila.app.ui.components.MmBottomBar
 import lk.motormila.app.ui.components.MmBottomBarItem
+import lk.motormila.app.ui.components.MmTabBarMetrics
+import lk.motormila.app.ui.components.MmTabBarState
 import lk.motormila.app.ui.home.badgeFor
-import lk.motormila.app.ui.theme.MmColors
+import lk.motormila.app.ui.theme.LocalGlassEnv
 import lk.motormila.app.ui.theme.MmMotion
-import lk.motormila.app.ui.theme.MmShapes
-import lk.motormila.app.ui.theme.mmPress
+import lk.motormila.app.ui.theme.glassBackdrop
+import lk.motormila.app.ui.theme.rememberGlassEnv
+
+/**
+ * What the floating glass tab bar occupies at the bottom of the window, so
+ * edge-to-edge screens can let content scroll *under* it and still end clear
+ * of it.
+ *
+ * @param barVisible the tab bar is shown on this route.
+ * @param contentPadding bottom content padding a scrolling list should add
+ *   (bar + gesture inset + breathing room). 16.dp on routes without a bar.
+ * @param barTop distance from the window bottom to the top of the expanded
+ *   bar (where trays / snackbars should sit). 0 when there is no bar.
+ * @param minimize 0 = bar expanded, 1 = minimised (read it in draw/layout only).
+ */
+@Immutable
+data class MmBottomChrome(
+    val barVisible: Boolean = false,
+    val contentPadding: Dp = 16.dp,
+    val barTop: Dp = 0.dp,
+    val minimize: State<Float>? = null,
+    /** Height the bar loses when minimised (trays slide down by this × [minimize]). */
+    val minimizeDrop: Dp = 0.dp,
+)
+
+val LocalBottomChrome = compositionLocalOf { MmBottomChrome() }
 
 /** Bottom-bar tab keys (Buy, Prices, Tools, Sell, Saved). */
 object MotormilaTabs {
@@ -76,15 +98,17 @@ fun motormilaTabItems(badges: Map<String, Int>): List<MmBottomBarItem> = listOf(
 )
 
 /**
- * App shell: [MmBottomBar] (sliding indicator, icon spring, haptics) and a
- * single quiet AI-assistant button on the Buy and Prices tabs. Plate scan
- * moved to the Tools tab (and the search bar), so content is no longer
- * covered by a floating FAB stack.
+ * App shell, edge-to-edge: content fills the whole window and scrolls under
+ * a floating liquid-glass tab bar (real backdrop blur, see LiquidGlass.kt).
+ * Scrolling down minimises the bar to its selected tab;
+ * scrolling up restores it.
  *
  * [selected] is a [MotormilaTabs] key, or "" for full-screen routes.
  * [onScan] is kept for API compatibility (Tools owns the entry now).
+ *
+ * The content lambda receives zero padding: each screen owns its insets
+ * (status bar via its top bar; bottom via [LocalBottomChrome]).
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MotormilaScaffold(
     selected: String,
@@ -92,71 +116,86 @@ fun MotormilaScaffold(
     badges: Map<String, Int> = emptyMap(),
     onNavigate: (route: String) -> Unit,
     onScan: () -> Unit,
-    onOpenListing: ((Int) -> Unit)? = null,
     onReselect: (route: String) -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
-    var showAIChat by rememberSaveable { mutableStateOf(false) }
     val reduced = MmMotion.reduced
-    val showAssistant = showBottomBar && (selected == MotormilaTabs.BUY || selected == MotormilaTabs.PRICES)
-
-    Scaffold(
-        containerColor = Color.Transparent,
-        bottomBar = {
-            AnimatedVisibility(
-                visible = showBottomBar,
-                enter = if (reduced) fadeIn(tween(0)) else slideInVertically(MmMotion.snappy()) { it } + fadeIn(tween(MmMotion.Fast)),
-                exit = if (reduced) fadeOut(tween(0)) else slideOutVertically(tween(MmMotion.Fast, easing = MmMotion.Exit)) { it } + fadeOut(tween(MmMotion.Fast)),
-            ) {
-                MmBottomBar(
-                    items = motormilaTabItems(badges),
-                    selectedKey = selected,
-                    onSelect = { onNavigate(it.key) },
-                    onReselect = { onReselect(it.key) },
-                )
-            }
-        },
-        floatingActionButton = {
-            AnimatedVisibility(
-                visible = showAssistant,
-                enter = if (reduced) fadeIn(tween(0)) else scaleIn(MmMotion.snappy(), initialScale = 0.8f) + fadeIn(tween(MmMotion.Fast)),
-                exit = if (reduced) fadeOut(tween(0)) else scaleOut(tween(MmMotion.Fast), targetScale = 0.8f) + fadeOut(tween(MmMotion.Fast)),
-            ) {
-                AssistantButton(onClick = { showAIChat = true })
-            }
-        },
-        content = content,
+    val density = LocalDensity.current
+    val barState = remember(density) { MmTabBarState(thresholdPx = with(density) { 28.dp.toPx() }) }
+    LaunchedEffect(selected, showBottomBar) { barState.expand() }
+    val minimize = animateFloatAsState(
+        targetValue = if (barState.minimized && showBottomBar) 1f else 0f,
+        animationSpec = if (reduced) tween(0) else spring(dampingRatio = 0.86f, stiffness = 420f),
+        label = "chrome-minimise",
     )
 
-    if (showAIChat) {
-        AIChatBottomSheet(
-            onDismissRequest = { showAIChat = false },
-            onOpenListing = { listingId ->
-                showAIChat = false
-                onOpenListing?.invoke(listingId) ?: onNavigate("listing/$listingId")
-            },
-        )
+    val backdrop = remember { HazeState() }
+    val glassEnv = rememberGlassEnv(backdrop)
+    val navInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val barTop = navInset + MmTabBarMetrics.bottomGap + MmTabBarMetrics.height
+    val chrome = remember(showBottomBar, navInset, minimize) {
+        if (showBottomBar) {
+            MmBottomChrome(
+                barVisible = true,
+                contentPadding = barTop + 20.dp,
+                barTop = barTop,
+                minimize = minimize,
+                minimizeDrop = MmTabBarMetrics.height - MmTabBarMetrics.minimizedHeight,
+            )
+        } else {
+            // Pushed edge-to-edge screens: the end of the scroll clears the
+            // gesture/nav bar, not just 16dp.
+            MmBottomChrome(barVisible = false, contentPadding = navInset + 16.dp, barTop = 0.dp)
+        }
     }
-}
 
-@Composable
-private fun AssistantButton(onClick: () -> Unit) {
-    val c = MmColors.current
-    val interaction = remember { MutableInteractionSource() }
-    val label = stringResource(R.string.mm_assistant)
-    Box(
-        modifier = Modifier
-            .padding(bottom = 4.dp)
-            .size(52.dp)
-            .mmPress(interaction, 0.92f)
-            .shadow(12.dp, MmShapes.pill, ambientColor = Color.Black, spotColor = Color.Black)
-            .clip(MmShapes.pill)
-            .background(c.surfaceHigh)
-            .border(1.dp, c.outlineStrong, MmShapes.pill)
-            .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = label },
-        contentAlignment = Alignment.Center,
+    CompositionLocalProvider(
+        LocalGlassEnv provides glassEnv,
+        LocalBottomChrome provides chrome,
     ) {
-        Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = c.brandText, modifier = Modifier.size(22.dp))
+        Box(Modifier.fillMaxSize()) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .glassBackdrop(backdrop)
+                    .nestedScroll(barState.connection),
+            ) {
+                // Inside the backdrop, glass must not sample its own source
+                // (Haze skips self-sampling and would draw nothing): content
+                // glass uses screen-local backdrops or the translucent tint.
+                CompositionLocalProvider(LocalGlassEnv provides glassEnv.copy(backdrop = null)) {
+                    content(PaddingValues(0.dp))
+                }
+            }
+
+            AnimatedVisibility(
+                visible = showBottomBar,
+                modifier = Modifier.align(Alignment.BottomCenter),
+                enter = if (reduced) fadeIn(tween(0)) else slideInVertically(spring(dampingRatio = 0.8f, stiffness = 420f)) { it } + fadeIn(tween(MmMotion.Fast)),
+                exit = if (reduced) fadeOut(tween(0)) else slideOutVertically(tween(MmMotion.Fast, easing = MmMotion.Exit)) { it } + fadeOut(tween(MmMotion.Fast)),
+            ) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(
+                            start = MmTabBarMetrics.sideInset,
+                            end = MmTabBarMetrics.sideInset,
+                            bottom = MmTabBarMetrics.bottomGap,
+                        ),
+                    verticalAlignment = Alignment.Bottom,
+                ) {
+                    MmBottomBar(
+                        items = motormilaTabItems(badges),
+                        selectedKey = selected,
+                        onSelect = { onNavigate(it.key) },
+                        onReselect = { onReselect(it.key) },
+                        minimized = barState.minimized,
+                        onExpand = barState::expand,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        }
     }
 }

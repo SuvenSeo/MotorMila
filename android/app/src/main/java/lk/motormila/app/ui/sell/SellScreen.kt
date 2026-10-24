@@ -1,5 +1,17 @@
 package lk.motormila.app.ui.sell
 
+import lk.motormila.app.ui.common.mmScreenSafe
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
+import lk.motormila.app.ui.theme.MotormilaPrimaryBright
+import lk.motormila.app.ui.theme.MotormilaPrimarySoft
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -57,42 +69,24 @@ fun SellScreen(
 
     lk.motormila.app.ui.common.MmScreen(
         title = stringResource(R.string.sell_title),
-        onBack = onBack,
+        // Tab root: no back chevron (onBack kept for API compatibility).
+        showBack = false,
+        edgeToEdge = true,
     ) {
         when {
-            !loggedIn -> {
-                MotormilaSurface(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.padding(24.dp),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.sell_login_required),
-                            fontSize = 15.sp,
-                            color = MotormilaOnSurface,
-                        )
-                        MotormilaPrimaryButton(
-                            label = stringResource(R.string.sell_login_cta),
-                            onClick = onLoginClick,
-                        )
-                    }
-                }
+            !loggedIn -> Box(Modifier.mmScreenSafe()) { SellSignedOutCard(onLoginClick = onLoginClick) }
+            state.created != null -> Box(Modifier.mmScreenSafe()) {
+                SellSuccessCard(
+                    make = state.created!!.make,
+                    model = state.created!!.model,
+                )
             }
-            state.created != null -> SellSuccessCard(
-                make = state.created!!.make,
-                model = state.created!!.model,
-            )
             else -> {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(lk.motormila.app.ui.common.mmScreenPadding(horizontal = 16.dp, top = 12.dp, bottom = 12.dp)),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Text(
@@ -197,6 +191,94 @@ fun SellScreen(
                 }
             }
         }
+    }
+}
+
+/**
+ * Signed-out Sell state: a compact, content-height card (hero icon, title, three benefit rows,
+ * sign-in CTA) instead of a full-height slab with a single line (audit B12).
+ */
+@Composable
+private fun SellSignedOutCard(onLoginClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+    ) {
+        MotormilaSurface(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 24.dp),
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .background(MotormilaPrimarySoft),
+                ) {
+                    Icon(
+                        Icons.Filled.DirectionsCar,
+                        contentDescription = null,
+                        tint = MotormilaPrimaryBright,
+                        modifier = Modifier.size(28.dp),
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.sell_signed_out_title),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MotormilaOnSurface,
+                    textAlign = TextAlign.Center,
+                )
+                Text(
+                    text = stringResource(R.string.sell_login_required),
+                    fontSize = 14.sp,
+                    color = MotormilaSecondaryText,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.height(4.dp))
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    SellBenefitRow(stringResource(R.string.sell_benefit_fast))
+                    SellBenefitRow(stringResource(R.string.sell_benefit_price))
+                    SellBenefitRow(stringResource(R.string.sell_benefit_reviewed))
+                }
+                Spacer(Modifier.height(4.dp))
+                MotormilaPrimaryButton(
+                    label = stringResource(R.string.sell_login_cta),
+                    onClick = onLoginClick,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SellBenefitRow(text: String) {
+    Row(
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Icon(
+            Icons.Filled.CheckCircle,
+            contentDescription = null,
+            tint = MotormilaGood,
+            modifier = Modifier.size(18.dp),
+        )
+        Text(
+            text = text,
+            fontSize = 14.sp,
+            color = MotormilaOnSurface,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 

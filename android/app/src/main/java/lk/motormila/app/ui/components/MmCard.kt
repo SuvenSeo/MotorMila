@@ -3,6 +3,7 @@ package lk.motormila.app.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -42,6 +43,7 @@ fun MmCard(
 ) {
     val c = MmColors.current
     val interaction = remember { MutableInteractionSource() }
+    val haptics = lk.motormila.app.ui.theme.MmHaptics.current
     val bg = color ?: when (style) {
         MmCardStyle.Filled -> c.surface
         MmCardStyle.Outlined -> Color.Transparent
@@ -50,9 +52,31 @@ fun MmCard(
     Column(
         modifier = modifier
             .then(if (onClick != null) Modifier.mmPress(interaction) else Modifier)
+            // Light mode: depth from a soft, low-opacity shadow (Apple grouped
+            // style), no hard outline. Dark mode keeps a hairline because
+            // shadows vanish on near-black grounds.
+            .then(
+                if (!c.isDark && style != MmCardStyle.Outlined) {
+                    Modifier.shadow(
+                        elevation = if (style == MmCardStyle.Elevated) 14.dp else 8.dp,
+                        shape = shape,
+                        clip = false,
+                        ambientColor = Color.Black.copy(alpha = 0.05f),
+                        spotColor = Color.Black.copy(alpha = 0.10f),
+                    )
+                } else {
+                    Modifier
+                },
+            )
             .clip(shape)
             .background(bg)
-            .border(1.dp, if (style == MmCardStyle.Outlined) c.outlineStrong else c.outline, shape)
+            .then(
+                when {
+                    style == MmCardStyle.Outlined -> Modifier.border(1.dp, c.outlineStrong, shape)
+                    c.isDark -> Modifier.border(0.5.dp, c.outline, shape)
+                    else -> Modifier
+                },
+            )
             .then(
                 if (onClick != null) {
                     Modifier.clickable(
@@ -60,8 +84,10 @@ fun MmCard(
                         indication = ripple(),
                         role = Role.Button,
                         onClickLabel = onClickLabel,
-                        onClick = onClick,
-                    )
+                    ) {
+                        haptics.press()
+                        onClick()
+                    }
                 } else {
                     Modifier
                 },

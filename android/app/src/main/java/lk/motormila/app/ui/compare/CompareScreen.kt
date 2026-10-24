@@ -1,5 +1,6 @@
 package lk.motormila.app.ui.compare
 
+import lk.motormila.app.ui.theme.mmTappable
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -8,6 +9,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.platform.LocalDensity
+import lk.motormila.app.ui.theme.CappedFontScale
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,6 +25,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
@@ -62,10 +67,10 @@ import lk.motormila.app.ui.theme.MmShapes
 import lk.motormila.app.ui.theme.MmSpacing
 import lk.motormila.app.ui.theme.MmType
 
-private val LabelWidth = 104.dp
-private val ColumnWidth = 156.dp
+private val LabelWidth = 108.dp
+private val MinColumnWidth = 128.dp
+private val MaxColumnWidth = 220.dp
 private val RowHeight = 52.dp
-private val HeaderHeight = 200.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -172,9 +177,12 @@ private fun rowLabel(key: String): String = stringResource(
 )
 
 /**
- * Matrix with a sticky spec-label column: labels stay put while the car
- * columns scroll horizontally; the whole thing scrolls vertically together.
+ * Matrix with a sticky spec-label column AND a sticky car header: the car
+ * photos/names stay pinned while the spec rows scroll vertically, and header +
+ * rows scroll horizontally together (one shared ScrollState). Two cars fill
+ * the width exactly; three or four scroll, with the next column peeking.
  * Best numeric values are tinted green; rows where cars differ get a brand dot.
+ * Row heights follow the font scale (capped at 1.5x) so 2-line values never clip.
  */
 @Composable
 fun CompareMatrix(
@@ -189,59 +197,196 @@ fun CompareMatrix(
     val type = MmType.current
     val format = rememberCompareFormat()
     val allRows = remember(items, format) { CompareLogic.rows(items, format) }
-    val rows = if (onlyDifferences && items.size > 1) allRows.filter { it.differs || it.best != null } else allRows
+    // Rows where no car has a value (Fuel/Gearbox/Engine are often missing
+    // from the sources) are hidden and named once in a small "No data" note.
+    val (filledRows, emptyRows) = remember(allRows) {
+        allRows.partition { r -> r.values.any { v -> v.isNotBlank() && v != "—" } }
+    }
+    val rows = if (onlyDifferences && items.size > 1) filledRows.filter { it.differs || it.best != null } else filledRows
     val hScroll = rememberScrollState()
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = MmSpacing.huge)) {
-        Row(
-            Modifier.padding(horizontal = MmSpacing.lg, vertical = MmSpacing.sm),
-            horizontalArrangement = Arrangement.spacedBy(MmSpacing.sm),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                stringResource(R.string.scr_cmp_count, items.size, CompareUiState.MAX_IDS),
-                style = type.label,
-                color = c.textSecondary,
-                modifier = Modifier.weight(1f),
-            )
-            if (items.size > 1) {
-                MmChip(
-                    label = stringResource(R.string.scr_cmp_only_diff),
-                    selected = onlyDifferences,
-                    onClick = { onToggleDifferences(!onlyDifferences) },
-                )
-            }
-        }
-        Row(Modifier.animateContentSize(MmMotion.orSnap(MmMotion.reduced, MmMotion.standard()))) {
-            // Sticky label column
-            Column(Modifier.width(LabelWidth).padding(start = MmSpacing.lg)) {
-                Spacer(Modifier.height(HeaderHeight))
-                rows.forEach { row ->
-                    Row(Modifier.height(RowHeight), verticalAlignment = Alignment.CenterVertically) {
-                        if (row.differs) {
-                            Box(Modifier.size(6.dp).clip(MmShapes.pill).background(c.brand))
-                            Spacer(Modifier.width(6.dp))
-                        }
-                        Text(rowLabel(row.key), style = type.labelS, color = c.textSecondary, maxLines = 2)
+    CappedFontScale(max = 1.5f) {
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
+            // Label and car columns widen with the text size so words never break
+            // mid-word ("Conditio/n", "hatchbac/k", "Volkswa/gen") at large text.
+            val growth = 1f + (fontScale - 1f) * 0.7f
+            val labelW = (if (maxWidth < 380.dp) 96.dp else LabelWidth) * growth
+            val avail = maxWidth - labelW - MmSpacing.lg
+            val colW = when {
+                items.size <= 2 -> avail / 2
+                else -> avail / 2.4f
+            }.coerceIn(MinColumnWidth * fontScale, MaxColumnWidth * fontScale)
+            val rowH = RowHeight * fontScale
+            val showAdd = items.size < CompareUiState.MAX_IDS
+            Column(Modifier.fillMaxSize()) {
+                Row(
+                    Modifier.padding(horizontal = MmSpacing.lg, vertical = MmSpacing.sm),
+                    horizontalArrangement = Arrangement.spacedBy(MmSpacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        stringResource(R.string.scr_cmp_count, items.size, CompareUiState.MAX_IDS),
+                        style = type.label,
+                        color = c.textSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (items.size > 1) {
+                        MmChip(
+                            label = stringResource(R.string.scr_cmp_only_diff),
+                            selected = onlyDifferences,
+                            onClick = { onToggleDifferences(!onlyDifferences) },
+                        )
                     }
                 }
-                Row(Modifier.height(RowHeight), verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.scr_cmp_deal), style = type.labelS, color = c.textSecondary)
+                // Sticky car header.
+                Row(Modifier.fillMaxWidth().padding(bottom = MmSpacing.xs)) {
+                    Spacer(Modifier.width(labelW))
+                    Row(Modifier.horizontalScroll(hScroll).padding(end = MmSpacing.lg)) {
+                        items.forEach { item -> CarHeader(item, colW, onOpenDetail, onRemove) }
+                        if (showAdd) AddColumn(colW, onAdd)
+                    }
                 }
-            }
-            // Scrolling car columns
-            Row(Modifier.horizontalScroll(hScroll).padding(end = MmSpacing.lg)) {
-                items.forEachIndexed { col, item ->
-                    CarColumn(item, col, rows, onOpenDetail, onRemove)
+                Box(Modifier.fillMaxWidth().height(0.5.dp).background(c.outline))
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(bottom = MmSpacing.huge),
+                ) {
+                    Row(Modifier.animateContentSize(MmMotion.orSnap(MmMotion.reduced, MmMotion.standard()))) {
+                        // Sticky label column
+                        Column(Modifier.width(labelW)) {
+                            rows.forEach { row ->
+                                LabelCell(rowH) {
+                                    if (row.differs) {
+                                        Box(Modifier.size(6.dp).clip(MmShapes.pill).background(c.brand))
+                                        Spacer(Modifier.width(6.dp))
+                                    }
+                                    Text(
+                                        rowLabel(row.key),
+                                        style = type.labelS,
+                                        color = c.textSecondary,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
+                            LabelCell(rowH, divider = false) {
+                                Text(
+                                    stringResource(R.string.scr_cmp_deal),
+                                    style = type.labelS,
+                                    color = c.textSecondary,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                        // Scrolling car columns (same ScrollState as the header).
+                        Row(Modifier.horizontalScroll(hScroll).padding(end = MmSpacing.lg)) {
+                            items.forEachIndexed { col, item ->
+                                CarColumn(item, col, rows, colW, rowH)
+                            }
+                            if (showAdd) Spacer(Modifier.width(colW))
+                        }
+                    }
+                    if (emptyRows.isNotEmpty()) {
+                        val names = emptyRows.map { rowLabel(it.key) }.joinToString(" · ")
+                        Row(
+                            Modifier.padding(start = MmSpacing.lg, end = MmSpacing.lg, top = MmSpacing.md),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                Icons.Outlined.Info,
+                                contentDescription = null,
+                                tint = c.textTertiary,
+                                modifier = Modifier.size(14.dp),
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                stringResource(R.string.scr_cmp_no_data, names),
+                                style = type.caption,
+                                color = c.textSecondary,
+                            )
+                        }
+                    }
+                    Text(
+                        stringResource(R.string.scr_cmp_note),
+                        style = type.caption,
+                        color = c.textTertiary,
+                        modifier = Modifier.padding(horizontal = MmSpacing.lg, vertical = MmSpacing.md),
+                    )
                 }
-                if (items.size < CompareUiState.MAX_IDS) AddColumn(onAdd)
             }
         }
-        Text(
-            stringResource(R.string.scr_cmp_note),
-            style = type.caption,
-            color = c.textTertiary,
-            modifier = Modifier.padding(horizontal = MmSpacing.lg, vertical = MmSpacing.md),
-        )
+    }
+}
+
+@Composable
+private fun LabelCell(rowH: androidx.compose.ui.unit.Dp, divider: Boolean = true, content: @Composable () -> Unit) {
+    val c = MmColors.current
+    Box(Modifier.fillMaxWidth().height(rowH)) {
+        Row(
+            Modifier.fillMaxSize().padding(start = MmSpacing.lg, end = MmSpacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+        ) { content() }
+        if (divider) {
+            Box(
+                Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = MmSpacing.lg)
+                    .fillMaxWidth()
+                    .height(0.5.dp)
+                    .background(c.outline),
+            )
+        }
+    }
+}
+
+@Composable
+private fun CarHeader(
+    item: Listing,
+    colW: androidx.compose.ui.unit.Dp,
+    onOpenDetail: (Int) -> Unit,
+    onRemove: (Int) -> Unit,
+) {
+    val c = MmColors.current
+    val type = MmType.current
+    Box(Modifier.width(colW).padding(horizontal = 4.dp)) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .mmTappable(role = Role.Button, shape = MmShapes.md, onClickLabel = item.displayName) { onOpenDetail(item.id) }
+                .clip(MmShapes.md)
+                .background(c.surface),
+        ) {
+            Box {
+                MmImage(
+                    url = item.heroImageUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxWidth().aspectRatio(16f / 10f),
+                )
+                MmIconButton(
+                    icon = Icons.Filled.Close,
+                    contentDescription = stringResource(R.string.scr_cmp_remove, item.displayName),
+                    onClick = { onRemove(item.id) },
+                    style = lk.motormila.app.ui.components.MmIconButtonStyle.Glass,
+                    visualSize = 28.dp,
+                    modifier = Modifier.align(Alignment.TopEnd),
+                )
+            }
+            Text(
+                item.displayName,
+                style = type.label,
+                color = c.textPrimary,
+                minLines = 2,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = MmSpacing.sm, vertical = MmSpacing.sm),
+            )
+        }
     }
 }
 
@@ -250,92 +395,80 @@ private fun CarColumn(
     item: Listing,
     col: Int,
     rows: List<CompareLogic.Row>,
-    onOpenDetail: (Int) -> Unit,
-    onRemove: (Int) -> Unit,
+    colW: androidx.compose.ui.unit.Dp,
+    rowH: androidx.compose.ui.unit.Dp,
 ) {
     val c = MmColors.current
     val type = MmType.current
-    Column(
-        Modifier
-            .width(ColumnWidth)
-            .padding(start = MmSpacing.sm),
-    ) {
-        Column(
-            Modifier
-                .height(HeaderHeight)
-                .clip(MmShapes.md)
-                .background(c.surface)
-                .clickable(role = Role.Button, onClickLabel = item.displayName) { onOpenDetail(item.id) },
-        ) {
-            Box {
-                MmImage(
-                    url = item.heroImageUrl,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxWidth().aspectRatio(4f / 3f),
-                )
-                MmIconButton(
-                    icon = Icons.Filled.Close,
-                    contentDescription = stringResource(R.string.scr_cmp_remove, item.displayName),
-                    onClick = { onRemove(item.id) },
-                    style = lk.motormila.app.ui.components.MmIconButtonStyle.Glass,
-                    visualSize = 32.dp,
-                    modifier = Modifier.align(Alignment.TopEnd),
-                )
-            }
-            Text(
-                item.displayName,
-                style = type.titleS,
-                color = c.textPrimary,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(horizontal = MmSpacing.sm, vertical = MmSpacing.xs),
-            )
-        }
+    Column(Modifier.width(colW)) {
         rows.forEach { row ->
             val isBest = row.best == col
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(RowHeight)
-                    .padding(vertical = 3.dp)
-                    .clip(MmShapes.xs)
-                    .background(if (isBest) c.dealGreatContainer else androidx.compose.ui.graphics.Color.Transparent)
-                    .padding(horizontal = MmSpacing.sm),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                Text(
-                    row.values.getOrElse(col) { "—" },
-                    style = if (row.key == "price") type.priceS else type.bodyM,
-                    color = if (isBest) c.onDealGreat else c.textPrimary,
-                    fontWeight = if (row.differs || isBest) FontWeight.SemiBold else FontWeight.Normal,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
+            Box(Modifier.fillMaxWidth().height(rowH)) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 4.dp, vertical = 4.dp)
+                        .clip(MmShapes.xs)
+                        .background(if (isBest) c.dealGreatContainer else androidx.compose.ui.graphics.Color.Transparent)
+                        .padding(horizontal = MmSpacing.sm),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    Text(
+                        row.values.getOrElse(col) { "—" },
+                        style = if (row.key == "price") type.priceS else type.bodyM,
+                        color = if (isBest) c.onDealGreat else c.textPrimary,
+                        fontWeight = if (row.differs || isBest) FontWeight.SemiBold else FontWeight.Normal,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Box(
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .height(0.5.dp)
+                        .background(c.outline),
                 )
             }
         }
-        Box(Modifier.height(RowHeight), contentAlignment = Alignment.CenterStart) {
-            MmDealBadge(band = item.dealBand(), modifier = Modifier.padding(start = MmSpacing.xs))
+        Box(Modifier.height(rowH).padding(start = MmSpacing.sm), contentAlignment = Alignment.CenterStart) {
+            MmDealBadge(band = item.dealBand())
         }
     }
 }
 
 @Composable
-private fun AddColumn(onAdd: () -> Unit) {
+private fun AddColumn(colW: androidx.compose.ui.unit.Dp, onAdd: () -> Unit) {
     val c = MmColors.current
-    Box(
-        Modifier
-            .padding(start = MmSpacing.sm)
-            .width(ColumnWidth)
-            .height(HeaderHeight)
-            .clip(MmShapes.md)
-            .border(1.dp, c.outlineStrong, MmShapes.md)
-            .clickable(role = Role.Button, onClick = onAdd),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Filled.Add, contentDescription = null, tint = c.brandText)
-            Spacer(Modifier.height(MmSpacing.xs))
-            Text(stringResource(R.string.scr_cmp_add), style = MmType.current.label, color = c.brandText)
+    val type = MmType.current
+    Box(Modifier.width(colW).padding(horizontal = 4.dp)) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .mmTappable(role = Role.Button, shape = MmShapes.md, onClick = onAdd)
+                .clip(MmShapes.md)
+                .border(1.dp, c.outlineStrong, MmShapes.md),
+        ) {
+            // Same structure as CarHeader (16:10 slot + 2-line title) so the
+            // add tile always matches the car headers' height.
+            Box(Modifier.fillMaxWidth().aspectRatio(16f / 10f), contentAlignment = Alignment.Center) {
+                Box(
+                    Modifier.size(40.dp).clip(MmShapes.pill).background(c.brandContainer),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = null, tint = c.onBrandContainer)
+                }
+            }
+            Text(
+                stringResource(R.string.scr_cmp_add),
+                style = type.label,
+                color = c.brandText,
+                minLines = 2,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = MmSpacing.sm, vertical = MmSpacing.sm),
+            )
         }
     }
 }

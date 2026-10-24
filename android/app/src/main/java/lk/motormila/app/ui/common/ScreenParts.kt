@@ -1,5 +1,6 @@
 package lk.motormila.app.ui.common
 
+import lk.motormila.app.ui.theme.mmTappable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -83,8 +84,20 @@ fun trendColor(trend: Trend): Color {
     }
 }
 
-/** Standard content padding for screen lists. */
-val ScreenPadding = PaddingValues(start = MmSpacing.lg, end = MmSpacing.lg, top = MmSpacing.sm, bottom = MmSpacing.huge)
+/**
+ * Standard content padding for screen lists. Inside an edge-to-edge
+ * [MmScreen] it also clears the glass header and the floating tab bar.
+ */
+val ScreenPadding: PaddingValues
+    @Composable get() {
+        val i = LocalMmScreenInsets.current
+        return PaddingValues(
+            start = MmSpacing.lg,
+            end = MmSpacing.lg,
+            top = MmSpacing.sm + i.top,
+            bottom = MmSpacing.xxxl + i.bottom,
+        )
+    }
 
 /** Skeleton placeholder for a card list (loading state). */
 @Composable
@@ -118,7 +131,7 @@ fun ScreenError(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier.fillMaxSize().padding(MmSpacing.xxl), contentAlignment = Alignment.Center) {
+    Box(modifier.fillMaxSize().mmScreenSafe().padding(MmSpacing.xxl), contentAlignment = Alignment.Center) {
         MmEmptyState(
             icon = Icons.Filled.CloudOff,
             title = stringResource(R.string.scr_error_title),
@@ -153,21 +166,10 @@ fun MmStepper(
 ) {
     val c = MmColors.current
     val haptics = MmHaptics.current
-    Row(
-        modifier
-            .fillMaxWidth()
-            .clip(MmShapes.sm)
-            .background(c.surfaceRaised)
-            .border(1.dp, c.outline, MmShapes.sm)
-            .padding(horizontal = MmSpacing.xs),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            label,
-            style = MmType.current.bodyM,
-            color = c.textSecondary,
-            modifier = Modifier.weight(1f).padding(start = MmSpacing.md),
-        )
+    // Large Dynamic Type (> 1.3x): the label no longer fits beside − value + and broke
+    // mid-word ("manufactur / e"), so it moves onto its own line above the controls.
+    val largeText = androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f
+    val controls: @Composable () -> Unit = {
         MmIconButton(
             icon = Icons.Filled.Remove,
             contentDescription = stringResource(R.string.scr_decrease, label),
@@ -188,6 +190,37 @@ fun MmStepper(
             onClick = { haptics.press(); onValueChange((value + step).coerceIn(range)) },
         )
     }
+    val container = modifier
+        .fillMaxWidth()
+        .clip(MmShapes.sm)
+        .background(c.surfaceRaised)
+        .border(1.dp, c.outline, MmShapes.sm)
+        .padding(horizontal = MmSpacing.xs)
+    if (largeText) {
+        androidx.compose.foundation.layout.Column(container.padding(top = MmSpacing.sm)) {
+            Text(
+                label,
+                style = MmType.current.bodyM,
+                color = c.textSecondary,
+                modifier = Modifier.padding(start = MmSpacing.md),
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) { controls() }
+        }
+    } else {
+        Row(container, verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                label,
+                style = MmType.current.bodyM,
+                color = c.textSecondary,
+                modifier = Modifier.weight(1f).padding(start = MmSpacing.md),
+            )
+            controls()
+        }
+    }
 }
 
 /** Field-looking button that opens a picker. */
@@ -205,12 +238,12 @@ fun MmSelectField(
         Text(label, style = MmType.current.label, color = c.textSecondary, modifier = Modifier.padding(bottom = MmSpacing.xs))
         Row(
             Modifier
+                .mmTappable(enabled = enabled, role = Role.Button, shape = MmShapes.sm, onClick = onClick)
                 .fillMaxWidth()
                 .heightIn(min = 52.dp)
                 .clip(MmShapes.sm)
                 .background(c.surfaceRaised)
                 .border(1.dp, c.outline, MmShapes.sm)
-                .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
                 .padding(horizontal = MmSpacing.lg),
             verticalAlignment = Alignment.CenterVertically,
         ) {

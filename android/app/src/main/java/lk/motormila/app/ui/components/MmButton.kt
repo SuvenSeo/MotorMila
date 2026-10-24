@@ -86,7 +86,7 @@ fun MmButton(
                 if (haptic) haptics.press()
                 onClick()
             }
-            .padding(PaddingValues(horizontal = size.hPad)),
+            .padding(PaddingValues(horizontal = size.hPad, vertical = 6.dp)),
         contentAlignment = Alignment.Center,
     ) {
         Row(
@@ -99,8 +99,11 @@ fun MmButton(
                 text = text,
                 style = if (size == MmButtonSize.Small) MmType.current.labelS else MmType.current.label,
                 color = fg,
-                maxLines = 1,
+                // Two centred lines before ellipsis: long labels at 200 % / in
+                // si-ta ("Sign in or create acco…") stay whole.
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
             if (trailingIcon != null) Icon(trailingIcon, null, tint = fg, modifier = Modifier.size(size.icon))
         }
@@ -132,6 +135,7 @@ fun MmIconButton(
     visualSize: Dp = 40.dp,
 ) {
     val c = MmColors.current
+    val haptics = MmHaptics.current
     val interaction = remember { MutableInteractionSource() }
     val (bg, fg) = when (style) {
         MmIconButtonStyle.Plain -> Color.Transparent to c.textPrimary
@@ -146,8 +150,10 @@ fun MmIconButton(
                 indication = null,
                 enabled = enabled,
                 role = Role.Button,
-                onClick = onClick,
-            ),
+            ) {
+                haptics.press()
+                onClick()
+            },
         contentAlignment = Alignment.Center,
     ) {
         Box(

@@ -1,5 +1,6 @@
 package lk.motormila.app.ui.pricing
 
+import lk.motormila.app.ui.theme.mmTappable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
@@ -7,6 +8,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -80,7 +82,7 @@ fun PricingScreen(
             viewModel.consumeMessage()
         }
     }
-    MmScreen(title = stringResource(R.string.scr_price_title), onBack = onBack, snackbarHostState = snacks) {
+    MmScreen(title = stringResource(R.string.scr_price_title), onBack = onBack, snackbarHostState = snacks, edgeToEdge = true) {
         PricingContent(
             isPro = state.isPro,
             externalCheckout = BuildConfig.EXTERNAL_CHECKOUT_ENABLED,
@@ -219,9 +221,12 @@ private fun PlanCard(
 ) {
     val c = MmColors.current
     val type = MmType.current
+    // Highlighted plan = solid surface + brand ring (was a translucent brand
+    // wash that rendered as a heavy saturated-blue slab under the card shadow).
     MmCard(
-        Modifier.fillMaxWidth(),
-        color = if (highlighted) c.brandContainer.copy(alpha = 0.35f) else null,
+        Modifier
+            .fillMaxWidth()
+            .then(if (highlighted) Modifier.border(1.5.dp, c.brand.copy(alpha = 0.6f), MmShapes.lg) else Modifier),
     ) {
         Text(name.uppercase(), style = type.overline, color = c.brandText)
         Spacer(Modifier.height(MmSpacing.sm))
@@ -278,10 +283,10 @@ private fun FaqRow(question: String, answer: String, open: Boolean, onToggle: ()
     val rotation by animateFloatAsState(if (open) 180f else 0f, MmMotion.orSnap(reduced, MmMotion.standard()), label = "faq-chevron")
     Column(
         Modifier
+            .mmTappable(role = Role.Button, shape = MmShapes.md, onClick = onToggle)
             .fillMaxWidth()
             .clip(MmShapes.md)
             .background(c.surface)
-            .clickable(role = Role.Button, onClick = onToggle)
             .padding(MmSpacing.lg),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {

@@ -2,10 +2,10 @@
 <resources>
     <!-- API 27+ overlay: adds windowLightNavigationBar to the base theme. -->
     <style name="Theme.Motormila" parent="Theme.AppCompat.NoActionBar">
-        <item name="android:windowBackground">@color/motormila_bg</item>
+        <item name="android:windowBackground">@color/window_bg</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
     </style>
 </resources>

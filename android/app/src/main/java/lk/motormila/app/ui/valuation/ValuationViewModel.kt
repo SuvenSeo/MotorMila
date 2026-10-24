@@ -90,7 +90,9 @@ class ValuationViewModel @Inject constructor(
         val route = runCatching { savedStateHandle.toRoute<ValuationRoute>() }.getOrNull()
         val make = route?.make?.trim().orEmpty()
         val model = route?.model?.trim().orEmpty()
-        _state.update { it.copy(make = make, model = model) }
+        // Shared ad links carry the model year in the slug; prefill it when plausible.
+        val year = route?.year?.takeIf { it in 1950..(Calendar.getInstance().get(Calendar.YEAR) + 1) }
+        _state.update { it.copy(make = make, model = model, year = year ?: it.year) }
         viewModelScope.launch {
             val makes = runCatching { listings.makes() }.getOrDefault(emptyList())
             _state.update { it.copy(makes = makes.filter { m -> m.isNotBlank() }.distinct(), makesLoading = false) }

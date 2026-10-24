@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mm_deal_score_label">டீல் மதிப்பெண்</string>
+    <string name="mm_pill_sell_speed">விற்பனை வேகம்</string>
+    <string name="mm_pill_ad_health">விளம்பர நிலை</string>
+    <string name="mm_deal_ladder">டீல் ஏணி</string>
+    <string name="mm_search_results_cd">தேடல் முடிவுகள்</string>
+    <string name="mm_deal_rating_cd">டீல் மதிப்பீடு %1$s</string>
+    <string name="mm_locked_pro_cd">Pro உறுப்பினர்களுக்கு மட்டும்</string>
+    <string name="mm_fmv_confidence_hint">நியாய சந்தை மதிப்பு · நம்பகத்தன்மை %1$s · விளக்கத்துக்குத் தட்டவும்</string>
+    <string name="mm_km_low_anomaly">அசாதாரணமாகக் குறைந்த கி.மீ</string>
+    <string name="mm_km_high_usage">அதிக பயன்பாடு</string>
+    <string name="mm_km_below_avg">சராசரிக்குக் குறைவான கி.மீ</string>
+    <string name="mm_km_typical">வழக்கமான ஓட்ட தூரம்</string>
+    <string name="mm_vehicle_search_cd">வாகனத் தேடல்</string>
+    <string name="mm_voice_search_cd">குரல் தேடல்</string>
+    <string name="mm_ladder_great">சிறந்த வாங்குதல்</string>
+    <string name="mm_ladder_fair">நியாயமானது (FMV)</string>
+    <string name="mm_ladder_high">அதிகம்</string>
+    <string name="mm_best_deal_pro_cd">சிறந்த டீல் வரிசைக்கு Pro தேவை</string>
+    <string name="mm_open_filters_cd">வடிப்பான்களைத் திற</string>
+    <string name="mm_show_list_cd">பட்டியலாகக் காட்டு</string>
+    <string name="mm_show_grid_cd">கட்டமாகக் காட்டு</string>
+</resources>

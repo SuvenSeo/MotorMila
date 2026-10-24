@@ -83,7 +83,7 @@ fun OfficialPulseDetailScreen(
                         signalDetailValue(signal),
                         style = MaterialTheme.typography.headlineMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace,
+                            fontFeatureSettings = "tnum",
                         ),
                     )
                     Text(

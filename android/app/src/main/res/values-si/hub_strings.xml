@@ -28,7 +28,7 @@
     <string name="hub_home_permits_hint">ආනයන බලපත්‍ර මිල ගණන්</string>
 
     <!-- EV Hub -->
-    <string name="hub_ev_title">EV Hub</string>
+    <string name="hub_ev_title">EV මධ්‍යස්ථානය</string>
     <string name="hub_ev_eyebrow">EV බුද්ධිය</string>
     <string name="hub_ev_headline">EV මිලදී ගැනීමේ සංඥා.</string>
     <string name="hub_ev_description">ශ්‍රී ලංකා EV වෙළඳපොළ සඳහා බැටරි සෞඛ්‍යය, චාර්ජ් ගැළපීම සහ බදු සංඥා.</string>

@@ -43,7 +43,8 @@ class ListingPagingSource(
                 bodyType = query.bodyType,
                 district = query.district,
                 vehicleCategory = query.vehicleCategory,
-                priceAvailability = null,
+                priceAvailability = query.priceAvailability,
+                includeArchive = query.includeArchive.takeIf { it },
                 sort = query.sort,
                 page = page,
                 // Always send the same page size — using params.loadSize on

@@ -1,5 +1,6 @@
 package lk.motormila.app.ui.home
 
+import lk.motormila.app.ui.theme.mmTappable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -77,7 +78,7 @@ fun MmSectionHeader(title: String, onSeeAll: (() -> Unit)?, modifier: Modifier =
                 color = c.brandText,
                 modifier = Modifier
                     .clip(MmShapes.pill)
-                    .clickable(role = Role.Button, onClick = onSeeAll)
+                    .mmTappable(role = Role.Button, onClick = onSeeAll)
                     .padding(horizontal = 12.dp, vertical = 14.dp),
             )
         }
@@ -112,10 +113,21 @@ private fun Divider() {
 @Composable
 private fun Stat(value: String, label: String, modifier: Modifier) {
     val c = MmColors.current
-    Column(modifier.padding(horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, style = MmType.current.priceM, color = c.textPrimary, maxLines = 1)
-        Spacer(Modifier.height(2.dp))
-        Text(label, style = MmType.current.caption, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    // Three numbers share one row: cap the font scale so 200% never clips
+    // "90,624" to "90,62"; labels wrap to two lines instead of ellipsising.
+    lk.motormila.app.ui.theme.CappedFontScale(max = 1.3f) {
+        Column(modifier.padding(horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(value, style = MmType.current.priceM, color = c.textPrimary, maxLines = 1, softWrap = false)
+            Spacer(Modifier.height(2.dp))
+            Text(
+                label,
+                style = MmType.current.caption,
+                color = c.textTertiary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+        }
     }
 }
 
@@ -142,8 +154,12 @@ fun HomeShortcutGrid(
     )
     Column(modifier.fillMaxWidth().padding(horizontal = MmSpacing.gutter), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         items.chunked(3).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                row.forEach { s -> ShortcutTile(s, Modifier.weight(1f)) }
+            // Equal-height tiles even when one title wraps to two lines.
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Min),
+            ) {
+                row.forEach { s -> ShortcutTile(s, Modifier.weight(1f).fillMaxHeight()) }
             }
         }
     }
@@ -169,7 +185,18 @@ private fun ShortcutTile(s: Shortcut, modifier: Modifier) {
             Icon(s.icon, contentDescription = null, tint = c.onBrandContainer, modifier = Modifier.size(21.dp))
         }
         Spacer(Modifier.height(8.dp))
-        Text(s.title, style = MmType.current.labelS, color = c.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // Two centred lines (Sinhala/Tamil titles and 200 % text no longer cut
+        // to "හොඳම තෝරා…" / "Best p…"); scale capped like other fixed tiles.
+        lk.motormila.app.ui.theme.CappedFontScale(max = 1.3f) {
+            Text(
+                s.title,
+                style = MmType.current.labelS,
+                color = c.textPrimary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+        }
     }
 }
 
@@ -261,7 +288,7 @@ fun HomeTrendingList(models: List<TrendingModel>, onClick: (TrendingModel) -> Un
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .clickable(role = Role.Button) { onClick(m) }
+                    .mmTappable(role = Role.Button, pressedScale = 1f) { onClick(m) }
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

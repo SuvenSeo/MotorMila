@@ -12,12 +12,14 @@ import androidx.compose.animation.core.SpringSpec
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
@@ -100,6 +102,27 @@ object MmMotion {
      */
     fun pageSpring(): SpringSpec<Float> = spring(dampingRatio = 0.9f, stiffness = 380f)
 
+    /**
+     * Container transform (card -> Detail and back, compare tray -> Compare,
+     * hub tiles): ONE spring for every shared bound of the morph — container,
+     * photo, title, price — so they travel together and land on the same
+     * frame. (Before, the photo rode a 260-stiffness spring while title/price
+     * rode 700 and the page a 280 ms fade-through + scale, so parts arrived at
+     * different times and the morph looked like it broke in the middle.)
+     */
+    fun containerSpring(): SpringSpec<androidx.compose.ui.geometry.Rect> = spring(
+        dampingRatio = 0.88f,
+        stiffness = 360f,
+        visibilityThreshold = androidx.compose.ui.geometry.Rect.VisibilityThreshold,
+    )
+
+    /** Float twin of [containerSpring] (fades / corner radius riding the same morph). */
+    fun containerSpringF(): SpringSpec<Float> = spring(dampingRatio = 0.88f, stiffness = 360f, visibilityThreshold = 0.001f)
+
+    /** Dp twin of [containerSpring]. */
+    fun containerSpringDp(): SpringSpec<androidx.compose.ui.unit.Dp> =
+        spring(dampingRatio = 0.88f, stiffness = 360f, visibilityThreshold = androidx.compose.ui.unit.Dp.VisibilityThreshold)
+
     /** Material fade-through with a slight scale: forward navigation. */
     fun fadeThroughEnter(reduced: Boolean = false): EnterTransition =
         if (reduced) EnterTransition.None
@@ -117,10 +140,20 @@ object MmMotion {
         else fadeIn(tween(Base, delayMillis = 60, easing = Standard)) +
             scaleIn(pageSpring(), initialScale = 1.02f)
 
+    /**
+     * Pop (and predictive-back preview, which seeks this with the gesture):
+     * the page shrinks toward a card (0.9), drifts toward the back edge and
+     * fades late — like the system back preview, so the user sees where back
+     * leads before committing.
+     */
     fun fadeThroughPopExit(reduced: Boolean = false): ExitTransition =
         if (reduced) ExitTransition.None
-        else fadeOut(tween(Fast - 60, easing = Exit)) +
-            scaleOut(pageSpring(), targetScale = 0.96f)
+        else fadeOut(tween(Base, delayMillis = 60, easing = Exit)) +
+            scaleOut(pageSpring(), targetScale = 0.9f) +
+            slideOutHorizontally(pageSpringInt()) { it / 10 }
+
+    /** Int-offset twin of [pageSpring] for slide transitions. */
+    fun pageSpringInt(): SpringSpec<IntOffset> = spring(dampingRatio = 0.9f, stiffness = 380f, visibilityThreshold = IntOffset(1, 1))
 
     /** Content swap (loading → content, tab panes). */
     fun crossfade(reduced: Boolean = false): ContentTransform =

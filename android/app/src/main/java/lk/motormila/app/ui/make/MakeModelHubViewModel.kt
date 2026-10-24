@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import lk.motormila.app.core.common.AppError
 import lk.motormila.app.core.network.ErrorMapper
+import lk.motormila.app.core.network.runCatchingWithTimeout
 import lk.motormila.app.domain.model.Listing
 import lk.motormila.app.domain.model.MakeModelInsight
 import lk.motormila.app.domain.repository.ListingQuery
@@ -121,9 +122,9 @@ class MakeModelHubViewModel @Inject constructor(
                     offline = false,
                 )
             }
-            val insightDef = async { runCatching { stats.makeModelInsight(makeSlug, modelSlug) } }
+            val insightDef = async { runCatchingWithTimeout { stats.makeModelInsight(makeSlug, modelSlug) } }
             val listingsDef = async {
-                runCatching {
+                runCatchingWithTimeout {
                     listings.searchPage(
                         ListingQuery(
                             make = makeSlug,

@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Motormila opening animation (wordmark). Total 900 ms. See SPLASH_ANIMATION_SPEC.md. -->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:drawable="@drawable/motormila_wordmark_on_light">
+    <target android:name="m_stem_left_clip">
+        <aapt:attr name="android:animation">
+            <set android:ordering="together">
+            <set android:ordering="sequentially">
+
+                <objectAnimator android:propertyName="pathData" android:valueType="pathType" android:valueFrom="M1.5,80.03 L27.25,80.03 L27.25,80.03 L1.5,80.03 Z" android:valueTo="M1.5,80.03 L27.25,80.03 L27.25,19.44 L1.5,19.44 Z" android:duration="240" android:interpolator="@android:interpolator/fast_out_slow_in"/>
+            </set>
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="m_v_clip">
+        <aapt:attr name="android:animation">
+            <set android:ordering="together">
+            <set android:ordering="sequentially">
+                <objectAnimator android:propertyName="pathData" android:valueType="pathType" android:valueFrom="M19.35,80.27 L79.54,80.27 L79.54,80.27 L19.35,80.27 Z" android:valueTo="M19.35,80.27 L79.54,80.27 L79.54,80.27 L19.35,80.27 Z" android:duration="60"/>
+                <objectAnimator android:propertyName="pathData" android:valueType="pathType" android:valueFrom="M19.35,80.27 L79.54,80.27 L79.54,80.27 L19.35,80.27 Z" android:valueTo="M19.35,80.27 L79.54,80.27 L79.54,4.05 L19.35,4.05 Z" android:duration="260" android:interpolator="@android:interpolator/fast_out_slow_in"/>
+            </set>
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="m_stem_right_clip">
+        <aapt:attr name="android:animation">
+            <set android:ordering="together">
+            <set android:ordering="sequentially">
+                <objectAnimator android:propertyName="pathData" android:valueType="pathType" android:valueFrom="M71.57,80.3 L96.3,80.3 L96.3,80.3 L71.57,80.3 Z" android:valueTo="M71.57,80.3 L96.3,80.3 L96.3,80.3 L71.57,80.3 Z" android:duration="120"/>
+                <objectAnimator android:propertyName="pathData" android:valueType="pathType" android:valueFrom="M71.57,80.3 L96.3,80.3 L96.3,80.3 L71.57,80.3 Z" android:valueTo="M71.57,80.3 L96.3,80.3 L96.3,24.86 L71.57,24.86 Z" android:duration="240" android:interpolator="@android:interpolator/fast_out_slow_in"/>
+            </set>
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="arrow">
+        <aapt:attr name="android:animation">
+            <set android:ordering="together">
+            <set android:ordering="sequentially">
+                <objectAnimator android:propertyName="scaleX" android:valueType="floatType" android:valueFrom="0" android:valueTo="0" android:duration="300"/>
+                <objectAnimator android:propertyName="scaleX" android:valueType="floatType" android:valueFrom="0" android:valueTo="1" android:duration="320" android:interpolator="@android:anim/overshoot_interpolator"/>
+            </set>
+            <set android:ordering="sequentially">
+                <objectAnimator android:propertyName="scaleY" android:valueType="floatType" android:valueFrom="0" android:valueTo="0" android:duration="300"/>
+                <objectAnimator android:propertyName="scaleY" android:valueType="floatType" android:valueFrom="0" android:valueTo="1" android:duration="320" android:interpolator="@android:anim/overshoot_interpolator"/>
+            </set>
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="letter_1_o">
+        <aapt:attr name="android:animation">
+            <set android:ordering="together">
+            <set android:ordering="sequentially">
+                <objectAnimator android:propertyName="translateY" android:valueType="floatType" android:valueFrom="13.16" android:valueTo="13.16" android:duration="380"/>
+                <objectAnimator android:propertyName="translateY" android:valueType="floatType" android:valueFrom="13.16" android:valueTo="0" android:duration="240" android:interpolator="@android:interpolator/decelerate_cubic"/>
+            </set>
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="letter_1_o_path">
+        <aapt:attr name="android:animation">
+            <set android:ordering="together">
+            <set android:ordering="sequentially">
+                <objectAnimator android:propertyName="fillAlpha" android:valueType="floatType" android:valueFrom="0" android:valueTo="0" android:duration="380"/>
+                <objectAnimator android:propertyName="fillAlpha" android:valueType="floatType" android:valueFrom="0" android:valueTo="1" android:duration="240" android:interpolator="@android:interpolator/decelerate_cubic"/>
+            </set>
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="letter_2_t">
+        <aapt:attr name="android:animation">
+            <set android:ordering="together">
+            <set android:ordering="sequentially">
+                <objectAnimator android:propertyName="translateY" android:valueType="floatType" android:valueFrom="13.16" android:valueTo="13.16" android:duration="420"/>
+                <objectAnimator android:propertyName="translateY" android:valueType="floatType" android:valueFrom="13.16" android:valueTo="0" android:duration="240" android:interpolator="@android:interpolator/decelerate_cubic"/>
+            </set>
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="letter_2_t_path">
+        <aapt:attr name="android:animation">
+            <set android:ordering="together">
+            <set android:ordering="sequentially">
+                <objectAnimator android:propertyName="fillAlpha" android:valueType="floatType" android:valueFrom="0" android:valueTo="0" android:duration="420"/>
+                <objectAnimator android:propertyName="fillAlpha" android:valueType="floatType" android:valueFrom="0" android:valueTo="1" android:duration="240" android:interpolator="@android:interpolator/decelerate_cubic"/>
+            </set>
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="letter_3_o">
+        <aapt:attr name="android:animation">
+            <set android:ordering="together">
+            <set android:ordering="sequentially">
+                <objectAnimator android:propertyName="translateY" android:valueType="floatType" android:valueFrom="13.16" android:valueTo="13.16" android:duration="460"/>
+                <objectAnimator android:propertyName="translateY" android:valueType="floatType" android:valueFrom="13.16" android:valueTo="0" android:duration="240" android:interpolator="@android:interpolator/decelerate_cubic"/>
+            </set>
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="letter_3_o_path">
+        <aapt:attr name="android:animation">
+            <set android:ordering="together">
+            <set android:ordering="sequentially">
+                <objectAnimator android:propertyName="fillAlpha" android:valueType="floatType" android:valueFrom="0" android:valueTo="0" android:duration="460"/>
+                <objectAnimator android:propertyName="fillAlpha" android:valueType="floatType" android:valueFrom="0" android:valueTo="1" android:duration="240" android:interpolator="@android:interpolator/decelerate_cubic"/>
+            </set>
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="letter_4_r">
+        <aapt:attr name="android:animation">
+            <set android:ordering="together">
+            <set android:ordering="sequentially">
+                <objectAnimator android:propertyName="translateY" android:valueType="floatType" android:valueFrom="13.16" android:valueTo="13.16" android:duration="500"/>
+                <objectAnimator android:propertyName="translateY" android:valueType="floatType" android:valueFrom="13.16" android:valueTo="0" android:duration="240" android:interpolator="@android:interpolator/decelerate_cubic"/>
+            </set>
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="letter_4_r_path">
+        <aapt:attr name="android:animation">
+            <set android:ordering="together">
+            <set android:ordering="sequentially">
+                <objectAnimator android:propertyName="fillAlpha" android:valueType="floatType" android:valueFrom="0" android:valueTo="0" android:duration="500"/>
+                <objectAnimator android:propertyName="fillAlpha" android:valueType="floatType" android:valueFrom="0" android:valueTo="1" android:duration="240" android:interpolator="@android:interpolator/decelerate_cubic"/>
+            </set>
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="letter_5_m">
+        <aapt:attr name="android:animation">
+            <set android:ordering="together">
+            <set android:ordering="sequentially">
+                <objectAnimator android:propertyName="translateY" android:valueType="floatType" android:valueFrom="13.16" android:valueTo="13.16" android:duration="540"/>
+                <objectAnimator android:propertyName="translateY" android:valueType="floatType" android:valueFrom="13.16" android:valueTo="0" android:duration="240" android:interpolator="@android:interpolator/decelerate_cubic"/>
+            </set>
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="letter_5_m_path">
+        <aapt:attr name="android:animation">
+            <set android:ordering="together">
+            <set android:ordering="sequentially">
+                <objectAnimator android:propertyName="fillAlpha" android:valueType="floatType" android:valueFrom="0" android:valueTo="0" android:duration="540"/>
+                <objectAnimator android:propertyName="fillAlpha" android:valueType="floatType" android:valueFrom="0" android:valueTo="1" android:duration="240" android:interpolator="@android:interpolator/decelerate_cubic"/>
+            </set>
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="letter_6_i">
+        <aapt:attr name="android:animation">
+            <set android:ordering="together">
+            <set android:ordering="sequentially">
+                <objectAnimator android:propertyName="translateY" android:valueType="floatType" android:valueFrom="13.16" android:valueTo="13.16" android:duration="580"/>
+                <objectAnimator android:propertyName="translateY" android:valueType="floatType" android:valueFrom="13.16" android:valueTo="0" android:duration="240" android:interpolator="@android:interpolator/decelerate_cubic"/>
+            </set>
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="letter_6_i_path">
+        <aapt:attr name="android:animation">
+            <set android:ordering="together">
+            <set android:ordering="sequentially">
+                <objectAnimator android:propertyName="fillAlpha" android:valueType="floatType" android:valueFrom="0" android:valueTo="0" android:duration="580"/>
+                <objectAnimator android:propertyName="fillAlpha" android:valueType="floatType" android:valueFrom="0" android:valueTo="1" android:duration="240" android:interpolator="@android:interpolator/decelerate_cubic"/>
+            </set>
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="letter_7_l">
+        <aapt:attr name="android:animation">
+            <set android:ordering="together">
+            <set android:ordering="sequentially">
+                <objectAnimator android:propertyName="translateY" android:valueType="floatType" android:valueFrom="13.16" android:valueTo="13.16" android:duration="620"/>
+                <objectAnimator android:propertyName="translateY" android:valueType="floatType" android:valueFrom="13.16" android:valueTo="0" android:duration="240" android:interpolator="@android:interpolator/decelerate_cubic"/>
+            </set>
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="letter_7_l_path">
+        <aapt:attr name="android:animation">
+            <set android:ordering="together">
+            <set android:ordering="sequentially">
+                <objectAnimator android:propertyName="fillAlpha" android:valueType="floatType" android:valueFrom="0" android:valueTo="0" android:duration="620"/>
+                <objectAnimator android:propertyName="fillAlpha" android:valueType="floatType" android:valueFrom="0" android:valueTo="1" android:duration="240" android:interpolator="@android:interpolator/decelerate_cubic"/>
+            </set>
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="letter_8_a">
+        <aapt:attr name="android:animation">
+            <set android:ordering="together">
+            <set android:ordering="sequentially">
+                <objectAnimator android:propertyName="translateY" android:valueType="floatType" android:valueFrom="13.16" android:valueTo="13.16" android:duration="660"/>
+                <objectAnimator android:propertyName="translateY" android:valueType="floatType" android:valueFrom="13.16" android:valueTo="0" android:duration="240" android:interpolator="@android:interpolator/decelerate_cubic"/>
+            </set>
+            </set>
+        </aapt:attr>
+    </target>
+    <target android:name="letter_8_a_path">
+        <aapt:attr name="android:animation">
+            <set android:ordering="together">
+            <set android:ordering="sequentially">
+                <objectAnimator android:propertyName="fillAlpha" android:valueType="floatType" android:valueFrom="0" android:valueTo="0" android:duration="660"/>
+                <objectAnimator android:propertyName="fillAlpha" android:valueType="floatType" android:valueFrom="0" android:valueTo="1" android:duration="240" android:interpolator="@android:interpolator/decelerate_cubic"/>
+            </set>
+            </set>
+        </aapt:attr>
+    </target>
+</animated-vector>

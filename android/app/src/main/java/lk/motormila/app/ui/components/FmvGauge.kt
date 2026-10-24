@@ -1,5 +1,8 @@
 package lk.motormila.app.ui.components
 
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -51,14 +54,19 @@ fun FmvGauge(
         else -> (((fmv.askingLkr / fmv.fmvLkr) - 0.7) / 0.6).toFloat()
     }.coerceIn(0f, 1f)
     val animated by animateFloatAsState(
-        targetValue = if (started) fraction else 0.5f,
-        animationSpec = tween(if (reducedMotion) 1 else 700),
+        // Signature needle: sweeps in from the left stop, overshoots past the
+        // reading and settles with a damped wobble (under-damped spring).
+        targetValue = if (started) fraction else 0f,
+        animationSpec = if (reducedMotion) snap() else spring(dampingRatio = 0.42f, stiffness = 110f),
         label = "fmv-needle",
     )
     val track = MaterialTheme.colorScheme.surfaceVariant
     val good = MaterialTheme.colorScheme.primary
     val warn = MaterialTheme.colorScheme.secondary
     val bad = MaterialTheme.colorScheme.error
+    // Needle follows the text colour so it reads on light and dark cards.
+    val needle = MaterialTheme.colorScheme.onSurface
+    val hub = MaterialTheme.colorScheme.surface
     val gaugePress = remember { MutableInteractionSource() }
     Column(
         modifier = modifier
@@ -78,12 +86,20 @@ fun FmvGauge(
     ) {
         Canvas(modifier = Modifier.width(120.dp).height(68.dp)) {
             val stroke = 10.dp.toPx()
-            // Background semicircle + colored thirds.
+            // A true semicircle whose centre is the needle pivot (the arc used
+            // to fill the 120x68 box as an ellipse, leaving the pivot below it).
+            val cx = size.width / 2f
+            val cy = size.height - stroke / 2f
+            val arcR = minOf(size.width / 2f - stroke / 2f, cy - stroke / 2f)
+            val arcTopLeft = Offset(cx - arcR, cy - arcR)
+            val arcSize = Size(arcR * 2f, arcR * 2f)
             drawArc(
                 color = track,
                 startAngle = 180f,
                 sweepAngle = 180f,
                 useCenter = false,
+                topLeft = arcTopLeft,
+                size = arcSize,
                 style = Stroke(width = stroke, cap = StrokeCap.Butt),
             )
             val thirds = listOf(good, good, warn, warn, bad, bad)
@@ -93,21 +109,21 @@ fun FmvGauge(
                     startAngle = 180f + i * 30f,
                     sweepAngle = 30f,
                     useCenter = false,
+                    topLeft = arcTopLeft,
+                    size = arcSize,
                     style = Stroke(width = stroke, cap = StrokeCap.Butt),
                 )
             }
             // Needle.
-            val cx = size.width / 2f
-            val cy = size.height - stroke / 2f
-            val r = size.width / 2f - stroke
+            val r = arcR - stroke
             val angle = Math.PI * (1.0 - animated)
             val tip = Offset(
                 cx + (r * Math.cos(angle)).toFloat(),
                 cy - (r * Math.sin(angle)).toFloat(),
             )
-            drawLine(Color.Black.copy(alpha = 0.75f), Offset(cx, cy), tip, strokeWidth = 4.dp.toPx(), cap = StrokeCap.Round)
-            drawCircle(Color.Black.copy(alpha = 0.75f), radius = 5.dp.toPx(), center = Offset(cx, cy))
-            drawCircle(Color.White, radius = 2.dp.toPx(), center = Offset(cx, cy))
+            drawLine(needle.copy(alpha = 0.85f), Offset(cx, cy), tip, strokeWidth = 4.dp.toPx(), cap = StrokeCap.Round)
+            drawCircle(needle, radius = 5.dp.toPx(), center = Offset(cx, cy))
+            drawCircle(hub, radius = 2.dp.toPx(), center = Offset(cx, cy))
         }
         Text(
             text = LkrFormat.full(fmv.fmvLkr),
@@ -116,7 +132,7 @@ fun FmvGauge(
             color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
-            text = "FMV · ${fmv.confidence} confidence · tap to explain",
+            text = androidx.compose.ui.res.stringResource(lk.motormila.app.R.string.mm_fmv_confidence_hint, fmv.confidence),
             fontSize = 11.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

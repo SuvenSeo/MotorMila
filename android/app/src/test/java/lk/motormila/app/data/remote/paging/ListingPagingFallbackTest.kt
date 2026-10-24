@@ -31,7 +31,7 @@ class ListingPagingFallbackTest {
         coEvery {
             api.searchListings(
                 any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any(),
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
             )
         } throws error
         return api
@@ -92,7 +92,7 @@ class ListingPagingFallbackTest {
         coEvery {
             api.searchListings(
                 any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any(),
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
             )
         } returns PagedListingsDto(items = snapshotRows.take(2), total = 40, page = 1, size = 20, pages = 2)
         val flags = mutableListOf<Boolean>()
