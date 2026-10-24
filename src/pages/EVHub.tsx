@@ -138,7 +138,7 @@ export default function EVHub() {
 
       <FreePlanBanner />
 
-      <PageBody className="space-y-14 pt-0 lg:space-y-20 lg:pt-0">
+      <PageBody className="space-y-14 pt-0 lg:space-y-20 lg:px-8 lg:pt-0">
         {/* Live inventory — one number leads */}
         <m.section variants={revealItem}>
           <SectionHeading title={t("ev.liveInventory", "Live EV inventory")} />

@@ -123,7 +123,7 @@ export default function EVChargers() {
         }
       />
 
-      <PageBody className="space-y-8 pt-0 lg:space-y-10 lg:pt-0">
+      <PageBody className="space-y-8 pt-0 lg:space-y-10 lg:px-8 lg:pt-0">
         <m.section variants={revealItem}>
           <Card padding="md" className="flex flex-wrap items-end gap-4">
             <div className="min-w-[12rem] flex-1 sm:flex-none">

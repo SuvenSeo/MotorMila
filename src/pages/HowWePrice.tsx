@@ -82,7 +82,8 @@ export default function HowWePrice() {
         )}
       />
 
-      <PageBody narrow className="pb-20 pt-0 lg:pt-0">
+      <PageBody className="pb-20 pt-0 lg:px-8 lg:pt-0">
+        <div className="max-w-3xl">
         <nav aria-label={t("howPrice.tocAria", "On this page")} className="mb-6">
           <p className="mb-2 text-footnote font-medium text-label-2">{t("howPrice.tocAria", "On this page")}</p>
           <ul className="flex flex-wrap gap-2">
@@ -241,6 +242,7 @@ export default function HowWePrice() {
           <Button asChild size="lg" variant="secondary">
             <Link to="/">{t("howPrice.cta.browse", "Browse listings")}</Link>
           </Button>
+        </div>
         </div>
       </PageBody>
     </PageCanvas>

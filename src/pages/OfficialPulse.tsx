@@ -100,7 +100,7 @@ export default function OfficialPulse() {
         }
       />
 
-      <PageBody className="space-y-14 pt-0 lg:space-y-20 lg:pt-0">
+      <PageBody className="space-y-14 pt-0 lg:space-y-20 lg:px-8 lg:pt-0">
         <m.section variants={revealItem}>
           <SectionHeading
             eyebrow={t("pulse.guidesEyebrow", "How to read it")}
