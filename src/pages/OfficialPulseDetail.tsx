@@ -26,6 +26,7 @@ import { formatRelativeTime } from "@/lib/formatting";
 import { getMarketSignal } from "@/services/api";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { cn } from "@/lib/utils";
+import { safeExternalUrl } from "@/lib/safeExternalUrl";
 import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
 import { Button } from "@/components/ui/button";
@@ -151,7 +152,9 @@ export default function OfficialPulseDetail() {
     t("pulse.marketSignal", "Market signal");
   const period = formatPulsePeriod(signal.period_year, signal.period_month);
   const value = formatPulseValue(signal.value_numeric, signal.unit, signal.metric);
-  const hasSourceUrl = Boolean(signal.source_url?.trim());
+  // Backend data: only http(s) URLs may become a link (no javascript:/data:).
+  const sourceHref = safeExternalUrl(signal.source_url);
+  const hasSourceUrl = Boolean(sourceHref);
   const observedLabel = signal.observed_at ? formatRelativeTime(signal.observed_at) : null;
 
   const facts = [
@@ -271,9 +274,9 @@ export default function OfficialPulseDetail() {
                     {t("pulse.originalSourceHint", "Optional external reference. Primary explanation stays in Motormila above.")}
                   </p>
                   <a
-                    href={signal.source_url}
+                    href={sourceHref ?? undefined}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     className="mt-3 inline-flex items-center gap-1.5 text-footnote font-semibold text-primary no-underline hover:underline"
                   >
                     <ExternalLink aria-hidden className="h-4 w-4" />

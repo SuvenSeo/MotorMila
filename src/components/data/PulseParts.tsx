@@ -15,6 +15,7 @@ import {
   matchPulseGuide,
 } from "@/lib/officialPulseContent";
 import { Card, cardVariants } from "@/components/ui/card";
+import { safeExternalUrl } from "@/lib/safeExternalUrl";
 
 /** Bulleted guide card ("Why it matters", "How we read it"). */
 export function PulseGuideList({ icon: Icon, title, items }: { icon: LucideIcon; title: string; items: string[] }) {
@@ -56,7 +57,9 @@ export function PulseSignalCard({
   const title = guide?.title || labelPulseMetric(signal.category || signal.metric, t) || t("pulse.marketSignal", "Market signal");
   const period = formatPulsePeriod(signal.period_year, signal.period_month);
   const value = formatPulseValue(signal.value_numeric, signal.unit, signal.metric);
-  const hasSourceUrl = Boolean(signal.source_url?.trim());
+  // Backend data: only http(s) URLs may become a link (no javascript:/data:).
+  const sourceHref = safeExternalUrl(signal.source_url);
+  const hasSourceUrl = Boolean(sourceHref);
 
   return (
     <m.li variants={listItem} custom={index} initial="hidden" animate="show" className="list-none">
@@ -81,9 +84,9 @@ export function PulseSignalCard({
         </Link>
         {hasSourceUrl ? (
           <a
-            href={signal.source_url}
+            href={sourceHref ?? undefined}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="mt-3 inline-flex items-center gap-1.5 self-start text-caption font-medium text-label-2 no-underline transition-colors duration-short hover:text-foreground"
           >
             <ExternalLink aria-hidden className="h-3.5 w-3.5" />
