@@ -881,17 +881,17 @@ export default function ProDashboard() {
 
   const getModeDetail = (id: WorkspaceTab): string => {    switch (id) {
       case "overview":
-        return `${fmtCount(snapshot?.hot_deal_count)} hot deals`;
+        return t("pro.mode.hotDeals", "{count} hot deals", { count: fmtCount(snapshot?.hot_deal_count) });
       case "vehicles":
-        return `${filteredLanes.length.toLocaleString()} lanes in focus`;
+        return t("pro.mode.lanesInFocus", "{count} lanes in focus", { count: filteredLanes.length.toLocaleString() });
       case "areas":
-        return topDistrict ? `${topDistrict.district} leads supply` : "District profiles";
+        return topDistrict ? t("pro.mode.leadsSupply", "{district} leads supply", { district: topDistrict.district }) : t("pro.mode.districtProfiles", "District profiles");
       case "trends": {
         const [trendMake, trendModel] = trendLaneKey.split("|||");
-        return trendMake && trendModel ? `${trendMake} ${trendModel}` : "Lane price history";
+        return trendMake && trendModel ? `${trendMake} ${trendModel}` : t("pro.mode.laneHistory", "Lane price history");
       }
       case "sources":
-        return `${snapshot?.source_count || 0} live sources`;
+        return t("pro.mode.liveSources", "{count} live sources", { count: String(snapshot?.source_count || 0) });
       case "reports":
         return "PDF, Word, CSV, JSON";
       default: {
@@ -929,10 +929,10 @@ export default function ProDashboard() {
               variant="ghost"
               size="sm"
               onClick={handleLogout}
-              aria-label="Sign out"
+              aria-label={t("nav.signOut", "Sign out")}
               className="text-label-2 hover:text-deal-high-text"
             >
-              <LogOut aria-hidden /> <span className="hidden sm:inline">Sign out</span>
+              <LogOut aria-hidden /> <span className="hidden sm:inline">{t("nav.signOut", "Sign out")}</span>
             </Button>
           </div>
         </div>
@@ -1007,10 +1007,10 @@ export default function ProDashboard() {
                 Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-32 rounded-xl" />)
               ) : (
                 <>
-                  <MetricCard label={t("pro.metric.pricedListings", "Priced Listings")} value={fmtCount(snapshot?.total_listings)} numeric={snapshot?.total_listings} compact detail="Non-outlier market depth" icon={Database} />
-                  <MetricCard label={t("pro.metric.medianPrice", "Median Price")} value={fmtMoney(snapshot?.median_price_lkr)} detail="Current market center" icon={BarChart3} />
-                  <MetricCard label={t("pro.metric.new7Days", "New 7 Days")} value={fmtCount(snapshot?.new_listings_7d)} numeric={snapshot?.new_listings_7d} compact detail="Fresh supply signal" icon={Activity} />
-                  <MetricCard label={t("pro.metric.hotDeals", "Hot Deals")} value={fmtCount(snapshot?.hot_deal_count)} numeric={snapshot?.hot_deal_count} compact detail="Deal score qualified" icon={ShieldCheck} />
+                  <MetricCard label={t("pro.metric.pricedListings", "Priced Listings")} value={fmtCount(snapshot?.total_listings)} numeric={snapshot?.total_listings} compact detail={t("pro.metric.pricedListingsDetail", "Non-outlier market depth")} icon={Database} />
+                  <MetricCard label={t("pro.metric.medianPrice", "Median Price")} value={fmtMoney(snapshot?.median_price_lkr)} detail={t("pro.metric.medianPriceDetail", "Current market center")} icon={BarChart3} />
+                  <MetricCard label={t("pro.metric.new7Days", "New 7 Days")} value={fmtCount(snapshot?.new_listings_7d)} numeric={snapshot?.new_listings_7d} compact detail={t("pro.metric.new7DaysDetail", "Fresh supply signal")} icon={Activity} />
+                  <MetricCard label={t("pro.metric.hotDeals", "Hot Deals")} value={fmtCount(snapshot?.hot_deal_count)} numeric={snapshot?.hot_deal_count} compact detail={t("pro.metric.hotDealsDetail", "Deal score qualified")} icon={ShieldCheck} />
                 </>
               )}
             </div>
@@ -1131,8 +1131,8 @@ export default function ProDashboard() {
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-caption font-semibold text-label-2">
                 {hasProAccess
-                  ? `${filteredLanes.length.toLocaleString()} lanes in focus`
-                  : `Trial: 1 lane visible${lockedLaneCount > 0 ? ` · ${lockedLaneCount} locked` : ""}`}
+                  ? t("pro.mode.lanesInFocus", "{count} lanes in focus", { count: filteredLanes.length.toLocaleString() })
+                  : `${t("pro.trialOneLane", "Trial: 1 lane visible")}${lockedLaneCount > 0 ? ` · ${t("pro.lockedCount", "{count} locked", { count: String(lockedLaneCount) })}` : ""}`}
               </span>
               <span className="flex-1" />
               <Button type="button" variant="secondary" size="sm" onClick={() => runLanePack("csv")} disabled={loading || displayLanes.length === 0}>

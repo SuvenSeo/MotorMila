@@ -151,7 +151,7 @@ export default function SafeTransfer() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    document.title = "Safe-Transfer Kit: vehicle ownership transfer in Sri Lanka | Motormila";
+    // Title/description come from RouteMeta (translated, matches the prerendered shell).
     try {
       setChecked(JSON.parse(localStorage.getItem(CHECK_KEY) || "{}") || {});
     } catch {

@@ -7,6 +7,8 @@
 export const accountEn: Record<string, string> = {
   "acct.checkout.backToPricing": "Back to pricing",
   "acct.checkout.checkFailed": "Couldn't check the payment.",
+  "acct.checkout.checkAgain": "Check again",
+  "acct.checkout.lookupFailedBody": "Your payment may still have gone through. Check again in a minute, or open your account to see your plan.",
   "acct.checkout.eyebrow": "Checkout",
   "acct.checkout.failedBody": "No money was taken for this order, or it was cancelled. You can try again or pay by bank transfer or KOKO.",
   "acct.checkout.failedTitle": "Payment not completed",
@@ -123,6 +125,8 @@ export const accountEn: Record<string, string> = {
 export const accountSi: Record<string, string> = {
   "acct.checkout.backToPricing": "මිල ගණන් වෙත ආපසු",
   "acct.checkout.checkFailed": "ගෙවීම පරීක්ෂා කිරීමට නොහැකි විය.",
+  "acct.checkout.checkAgain": "නැවත පරීක්ෂා කරන්න",
+  "acct.checkout.lookupFailedBody": "ඔබේ ගෙවීම සාර්ථක වී තිබිය හැක. මිනිත්තුවකින් නැවත පරීක්ෂා කරන්න, නැතහොත් ඔබේ සැලසුම බැලීමට ගිණුම විවෘත කරන්න.",
   "acct.checkout.eyebrow": "ගෙවීම",
   "acct.checkout.failedBody": "මෙම ඇණවුම සඳහා මුදල් අය කර නැත, නැතහොත් එය අවලංගු කර ඇත. නැවත උත්සාහ කරන්න, නැතහොත් බැංකු හුවමාරුවෙන් හෝ KOKO මඟින් ගෙවන්න.",
   "acct.checkout.failedTitle": "ගෙවීම සම්පූර්ණ නොවීය",
@@ -239,6 +243,8 @@ export const accountSi: Record<string, string> = {
 export const accountTa: Record<string, string> = {
   "acct.checkout.backToPricing": "விலைப் பக்கத்திற்குத் திரும்பு",
   "acct.checkout.checkFailed": "கட்டணத்தைச் சரிபார்க்க முடியவில்லை.",
+  "acct.checkout.checkAgain": "மீண்டும் சரிபார்",
+  "acct.checkout.lookupFailedBody": "உங்கள் கட்டணம் வெற்றிகரமாகச் சென்றிருக்கலாம். ஒரு நிமிடத்தில் மீண்டும் சரிபார்க்கவும், அல்லது உங்கள் திட்டத்தைப் பார்க்க கணக்கைத் திறக்கவும்.",
   "acct.checkout.eyebrow": "கட்டணம்",
   "acct.checkout.failedBody": "இந்த ஆர்டருக்குப் பணம் எடுக்கப்படவில்லை, அல்லது அது ரத்து செய்யப்பட்டது. மீண்டும் முயலலாம், அல்லது வங்கிப் பரிமாற்றம் அல்லது KOKO மூலம் செலுத்தலாம்.",
   "acct.checkout.failedTitle": "கட்டணம் நிறைவடையவில்லை",

@@ -71,8 +71,9 @@ type ThemeMode = "dark" | "light" | "system";
 /** Card header used by every settings group. */
 function GroupHeader({ icon: Icon, title, hint, aside }: { icon: typeof Moon; title: string; hint?: string; aside?: React.ReactNode }) {
   return (
-    <div className="mb-5 flex items-start justify-between gap-3">
-      <div className="flex items-start gap-3">
+    // flex-wrap: a long status badge (si/ta) drops under the title on phones instead of running off-screen.
+    <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+      <div className="flex min-w-0 flex-1 basis-56 items-start gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
           <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />
         </span>
@@ -331,7 +332,7 @@ export default function Settings() {
                 </div>
               </dl>
               <div className="mt-2 border-t border-separator pt-4">
-                <Button asChild variant="tertiary" size="sm" className="-ml-3">
+                <Button asChild variant="tertiary" size="sm" className="-ml-3 h-auto min-h-9 whitespace-normal text-left">
                   <Link to={HOW_WE_PRICE_PATH}>
                     {t("acct.settings.howWePrice", "How we score prices")}
                     <ArrowUpRight aria-hidden />

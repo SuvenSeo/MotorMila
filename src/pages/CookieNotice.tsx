@@ -19,7 +19,18 @@ export default function CookieNotice() {
           MotorMila uses a small number of cookies and browser storage items. We don't use advertising cookies, and we
           don't let ad networks track you across sites.
         </p>
-        <TableContainer className="shadow-e1">
+        {/* Phones: one card per item, so no column is cut off behind a sideways scroll. */}
+        <dl className="space-y-3 sm:hidden">
+          {ITEMS.map((item) => (
+            <div key={item.name} className="rounded-card border border-border bg-surface-1 p-4 shadow-e1">
+              <dt className="text-body font-semibold text-foreground">{item.name}</dt>
+              <dd className="mt-0.5 text-footnote text-label-2">{item.kind}</dd>
+              <dd className="mt-2 text-footnote text-label-1">{item.purpose}</dd>
+              <dd className="mt-1 text-footnote text-label-2">{item.lasts}</dd>
+            </div>
+          ))}
+        </dl>
+        <TableContainer className="hidden shadow-e1 sm:block">
           <Table className="min-w-[560px]">
             <TableHeader>
               <TableRow>

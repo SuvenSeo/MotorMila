@@ -85,7 +85,7 @@ export default function Afford() {
   const [a, setA] = useState<AffordabilityAssumptions>(DEFAULT_AFFORDABILITY_ASSUMPTIONS);
 
   useEffect(() => {
-    document.title = "What car can I afford? Sri Lanka budget search | Motormila";
+    // Title/description come from RouteMeta (translated, matches the prerendered shell).
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
       if (saved && typeof saved === "object") {

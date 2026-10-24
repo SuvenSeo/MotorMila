@@ -14,6 +14,7 @@ import { fadeUp, listItem, listStagger } from "@/lib/motion";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { formatPriceLkrMillions } from "@/lib/formatting";
 import { getProVehicleLanes } from "@/services/api";
+import { getStoredAuthToken } from "@/lib/authToken";
 
 export type ProPreviewSampleLane = {
   name: string;
@@ -86,6 +87,12 @@ export default function ProPreview({ sampleLane, gaps, trialCtaTo = "/pricing#ge
 
   useEffect(() => {
     if (sampleLane) return;
+    // Pro lanes need a session: signed-out visitors (most preview traffic) get the
+    // labelled example straight away instead of a guaranteed 401.
+    if (!getStoredAuthToken()) {
+      setLaneState("example");
+      return;
+    }
     let cancelled = false;
     getProVehicleLanes({ limit: 1 })
       .then((lanes) => {
@@ -113,7 +120,17 @@ export default function ProPreview({ sampleLane, gaps, trialCtaTo = "/pricing#ge
   }, [sampleLane]);
 
   const lane = { ...PRO_PREVIEW_SAMPLE_LANE_DEFAULT, ...liveLane, ...sampleLane };
-  const gapCards = gaps ?? PRO_PREVIEW_GAPS_DEFAULT;
+  // Default cards are translated; caller-supplied gaps render as given.
+  const gapCards =
+    gaps ??
+    PRO_PREVIEW_GAPS_DEFAULT.map((gap, i) => {
+      const keys = [
+        ["acct.proPreview.gapDistricts.title", "acct.proPreview.gapDistricts.body", "acct.proPreview.gapDistricts.meta"],
+        ["acct.proPreview.gapHistory.title", "acct.proPreview.gapHistory.body", "acct.proPreview.gapHistory.meta"],
+        ["acct.proPreview.gapExports.title", "acct.proPreview.gapExports.body", "acct.proPreview.gapExports.meta"],
+      ][i];
+      return keys ? { title: t(keys[0], gap.title), body: t(keys[1], gap.body), meta: t(keys[2], gap.meta) } : gap;
+    });
   const unlocks = [
     t("acct.proPreview.unlock1", "Pro dashboard with deal scores"),
     t("acct.proPreview.unlock2", "District detail and full price history"),
@@ -182,7 +199,8 @@ export default function ProPreview({ sampleLane, gaps, trialCtaTo = "/pricing#ge
                             <TableHead>{t("acct.proPreview.colVehicle", "Vehicle")}</TableHead>
                             <TableHead numeric>{t("acct.proPreview.colListings", "Listings")}</TableHead>
                             <TableHead numeric>{t("acct.proPreview.colMedian", "Median")}</TableHead>
-                            <TableHead>{t("acct.proPreview.colArea", "Top area")}</TableHead>
+                            {/* Phones: the area is already in the sentence below, so drop the column instead of clipping it. */}
+                            <TableHead className="hidden sm:table-cell">{t("acct.proPreview.colArea", "Top area")}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -192,7 +210,7 @@ export default function ProPreview({ sampleLane, gaps, trialCtaTo = "/pricing#ge
                               <AnimatedNumber value={lane.listings} />
                             </TableCell>
                             <TableCell numeric className="font-semibold text-primary">{lane.median}</TableCell>
-                            <TableCell className="text-label-2">{lane.district}</TableCell>
+                            <TableCell className="hidden text-label-2 sm:table-cell">{lane.district}</TableCell>
                           </TableRow>
                         </TableBody>
                       </Table>

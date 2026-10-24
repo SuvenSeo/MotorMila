@@ -30,12 +30,12 @@ import { fadeUp, listItem, listStagger, revealContainer, scaleIn } from "@/lib/m
 const WAITLIST_KEY = "motormila.mobile_waitlist";
 
 /** Live sideload release — keep in step with android/app/build.gradle.kts + public/app/latest-release.json. */
-const APK_VERSION = "1.6.1";
+const APK_VERSION = "1.6.5";
 const APK_SIZE = "16.9 MB";
 // Public R2 download: the source repo is private, so the APK ships from the
 // public motormila-snapshots bucket (published by .github/workflows/android-release.yml).
 const APK_URL = `https://pub-f15911ef9a914db9a44e1fd6b47dfe4e.r2.dev/app/motormila-${APK_VERSION}.apk`;
-const APK_SHA256 = "7e180043cdeb15176f4d1080301a2449fd7d818bba9774c0fcfae498e4de95fc";
+const APK_SHA256 = "7f4e604375e2b724d95b35ee4ff8b8f9eb1a9f9f8cbc650d70324228e6f6040f";
 
 type Feature = {
   icon: React.ComponentType<{ className?: string }>;
@@ -286,7 +286,7 @@ export default function MobileApp() {
             </m.p>
 
             <m.div variants={fadeUp} className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-3">
-              <Button asChild size="lg">
+              <Button asChild size="lg" className="h-auto min-h-12 max-w-full whitespace-normal py-2.5 text-left">
                 <a href={APK_URL}>
                   <Download aria-hidden />
                   {t("acct.mobile.downloadCta", "Download the preview · {size}", { size: APK_SIZE })}

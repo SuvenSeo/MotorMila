@@ -40,8 +40,8 @@ export default function Docs() {
       />
 
       <div className="layout-shell pb-20">
-        <div className="grid gap-8 lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-16">
-          <aside className="lg:sticky lg:top-28 lg:self-start">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-16">
+          <aside className="min-w-0 lg:sticky lg:top-28 lg:self-start">
             {/* Mobile: a horizontal row of jump links. Desktop: scroll-spy list. */}
             <nav
               aria-label={t("docs.sectionsAria", "Documentation sections")}

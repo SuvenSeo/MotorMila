@@ -26,7 +26,14 @@ import {
   formatRelativeTime,
 } from "@/lib/formatting";
 
-function humanizeStatus(status: string): string {
+function humanizeStatus(status: string, t: (key: string, fallback?: string) => string): string {
+  const s = status.toLowerCase();
+  // Known review states get translated labels; anything else is humanized as-is.
+  if (s.includes("pending") || s.includes("review")) return t("acct.profile.status.pending", "Pending review");
+  if (s.includes("live") || s.includes("publish") || s.includes("approv") || s === "active") return t("acct.profile.status.live", "Live");
+  if (s.includes("reject") || s.includes("declin")) return t("acct.profile.status.rejected", "Rejected");
+  if (s.includes("sold")) return t("acct.profile.status.sold", "Sold");
+  if (s.includes("expire")) return t("acct.profile.status.expired", "Expired");
   return status
     .replace(/[_-]+/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
@@ -177,7 +184,7 @@ export default function Profile() {
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <h3 className="truncate text-body font-semibold text-foreground">{listingTitle(l)}</h3>
-                            <Badge variant={statusTone(l.status)}>{humanizeStatus(l.status)}</Badge>
+                            <Badge variant={statusTone(l.status)}>{humanizeStatus(l.status, t)}</Badge>
                           </div>
                           <p className="mt-1.5 text-footnote text-label-2">
                             {[l.year, l.fuelType, l.transmission, l.district].filter(Boolean).join(" · ")}

@@ -66,7 +66,7 @@ export function PageHeader({
           ) : null}
           <Heading
             className={cn(
-              "font-display font-semibold text-foreground [text-wrap:balance]",
+              "font-display font-semibold text-foreground [overflow-wrap:break-word] [text-wrap:balance]",
               large ? "text-hero" : "text-title1",
             )}
           >
