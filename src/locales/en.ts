@@ -587,6 +587,8 @@ export const en = {
   "listing.description": "Description",
   "listing.fmv": "Fair market value",
   "listing.importDutyTax": "Import duty and tax",
+  "listing.importDutyRegistered": "This vehicle is already registered in Sri Lanka, so import duty doesn't apply to buying it. Curious what importing the same spec fresh would cost under today's gazette?",
+  "listing.modelFreshImport": "Model a fresh import",
   "listing.insight": "Motormila Insight",
   "listing.inspection": "Inspection",
   "listing.marketPeers": "Market peers",

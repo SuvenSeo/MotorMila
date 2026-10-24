@@ -279,8 +279,8 @@ export default function MakeModelHub() {
             </div>
           )}
           <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start">
-            <ModelTrendPanel make={makeParam} model={modelParam} />
-            <BuyOrWaitCard make={makeParam} model={modelParam} />
+            <ModelTrendPanel make={makeParam} model={modelParam} displayMake={makeDisplay} displayModel={modelDisplay} />
+            <BuyOrWaitCard make={makeParam} model={modelParam} displayMake={makeDisplay} displayModel={modelDisplay} />
           </div>
         </m.section>
 
@@ -321,7 +321,7 @@ export default function MakeModelHub() {
         )}
 
         <m.div variants={revealItem}>
-          <ModelPriceTimeMachine make={makeParam} model={modelParam} />
+          <ModelPriceTimeMachine make={makeParam} model={modelParam} displayMake={makeDisplay} displayModel={modelDisplay} />
         </m.div>
 
         <m.section variants={revealItem}>

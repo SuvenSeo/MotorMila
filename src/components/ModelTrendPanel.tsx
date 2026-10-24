@@ -37,7 +37,19 @@ export function shortMonth(key: string): string {
  * stable slate). Loading → chart skeleton; <2 points → empty state; error →
  * retry, all in the same footprint.
  */
-export function ModelTrendPanel({ make, model }: { make: string; model: string }) {
+export function ModelTrendPanel({
+  make,
+  model,
+  displayMake,
+  displayModel,
+}: {
+  make: string;
+  model: string;
+  /** Human casing for copy (route params can be lowercase slugs). */
+  displayMake?: string;
+  displayModel?: string;
+}) {
+  const names = { make: displayMake ?? make, model: displayModel ?? model };
   const { t } = useAppPreferences();
   const calm = useChartCalm();
   const { data, isLoading, isError, refetch } = useQuery({
@@ -70,7 +82,7 @@ export function ModelTrendPanel({ make, model }: { make: string; model: string }
         <div className="min-w-0">
           <p className="text-footnote font-semibold text-primary">{t("modelTrend.eyebrow", "Price history")}</p>
           <h3 className="mt-1 font-display text-title3 font-semibold text-foreground">
-            {t("modelTrend.title", "{make} {model} — 12-month trend", { make, model })}
+            {t("modelTrend.title", "{make} {model} — 12-month trend", { ...names })}
           </h3>
           <p className="mt-1 text-footnote text-label-2">{t("modelTrend.sub", "Median asking price · trailing 12 months")}</p>
         </div>
@@ -87,18 +99,17 @@ export function ModelTrendPanel({ make, model }: { make: string; model: string }
         className="mt-5"
         heightClass="h-64 sm:h-72"
         emptyTitle={t("modelTrend.emptyTitle", "Not enough months yet")}
-        emptyBody={t("modelTrend.emptyBody", "The trend line appears once two months of {make} {model} ads are in.", { make, model })}
+        emptyBody={t("modelTrend.emptyBody", "The trend line appears once two months of {make} {model} ads are in.", { ...names })}
         errorTitle={t("modelTrend.errorTitle", "The trend didn't load")}
         onRetry={() => void refetch()}
         label={t("modelTrend.aria", "{make} {model} median asking price, {n} months, latest {price}", {
-          make,
-          model,
+          ...names,
           n: chartData.length,
           price: formatPrice(last),
         })}
       >
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+          <AreaChart data={chartData} margin={{ top: 14, right: 8, bottom: 0, left: 0 }}>
             <defs>
               <linearGradient id="modelTrendFill" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={stroke} stopOpacity={0.22} />
@@ -112,7 +123,7 @@ export function ModelTrendPanel({ make, model }: { make: string; model: string }
               domain={domain ?? ["auto", "auto"]}
               tickFormatter={(v: number) => formatMnShort(v)}
               tickCount={4}
-              width={56}
+              width={68}
             />
             <Tooltip
               {...chartTooltip(calm)}

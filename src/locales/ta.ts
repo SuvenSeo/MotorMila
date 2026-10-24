@@ -596,6 +596,8 @@ export const ta = {
   "listing.description": "விளக்கம்",
   "listing.fmv": "நியாயமான சந்தை மதிப்பு",
   "listing.importDutyTax": "இறக்குமதி வரி மற்றும் வரி",
+  "listing.importDutyRegistered": "இந்த வாகனம் ஏற்கனவே இலங்கையில் பதிவு செய்யப்பட்டுள்ளதால், அதை வாங்குவதற்கு இறக்குமதி வரி பொருந்தாது. இதே விவரக்குறிப்புடன் புதிதாக இறக்குமதி செய்ய இன்றைய வர்த்தமானியின்படி எவ்வளவு செலவாகும் என்று பார்க்க விரும்புகிறீர்களா?",
+  "listing.modelFreshImport": "புதிய இறக்குமதியைக் கணக்கிடுங்கள்",
   "listing.insight": "Motormila நுண்ணறிவு",
   "listing.inspection": "ஆய்வு",
   "listing.marketPeers": "சந்தை சகாக்கள்",

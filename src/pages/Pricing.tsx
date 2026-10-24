@@ -609,7 +609,7 @@ export default function Pricing() {
         <m.section {...onScrollReveal} variants={fadeUp} aria-labelledby="compare-heading" className="mx-auto max-w-4xl">
           <SectionTitle id="compare-heading" eyebrow={t("pricing.compare", "Compare")} title={t("shell.pricing.compareTitle", "Free and Pro side by side.")} />
           <TableContainer className="shadow-e1">
-            <Table className="min-w-[26rem]">
+            <Table className="min-w-[20rem]">
               <TableHeader>
                 <TableRow>
                   <TableHead>{t("pricing.capability", "Capability")}</TableHead>
@@ -650,7 +650,7 @@ export default function Pricing() {
 
         {/* Dealers: real, sellable plans — kept off the main plan grid, one tap away. */}
         {/* Accordion: content stays in the DOM (hidden) so dealer prices remain indexable. */}
-        <m.div {...onScrollReveal} variants={fadeUp} id="for-dealers" className="mx-auto max-w-5xl scroll-mt-24">
+        <m.div {...onScrollReveal} variants={fadeUp} id="for-dealers" className="mx-auto max-w-4xl scroll-mt-24">
           <Card padding="none">
             <button
               type="button"

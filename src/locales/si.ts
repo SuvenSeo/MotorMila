@@ -596,6 +596,8 @@ export const si = {
   "listing.description": "විස්තරය",
   "listing.fmv": "සාධාරණ වෙළඳපොළ වටිනාකම",
   "listing.importDutyTax": "ආනයන බදු සහ බදු",
+  "listing.importDutyRegistered": "මෙම වාහනය දැනටමත් ශ්‍රී ලංකාවේ ලියාපදිංචි කර ඇති නිසා, එය මිලදී ගැනීමට ආනයන තීරුබදු අදාළ නොවේ. එම පිරිවිතරයම අලුතින් ආනයනය කිරීමට අද ගැසට් පත්‍රය අනුව කොපමණ වැය වේදැයි බැලීමට කැමතිද?",
+  "listing.modelFreshImport": "අලුත් ආනයනයක් ගණනය කරන්න",
   "listing.insight": "Motormila විශ්ලේෂණය",
   "listing.inspection": "පරීක්ෂණය",
   "listing.marketPeers": "වෙළඳපොළ සමකාලීන",

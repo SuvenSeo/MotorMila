@@ -14,7 +14,21 @@ import { ErrorState } from "@/components/ui/error-state";
  * ModelTrendPanel charts (shared React Query key, so no extra request).
  * Always labelled indicative: it describes the recent trend, not the future.
  */
-export function BuyOrWaitCard({ make, model, className }: { make: string; model: string; className?: string }) {
+export function BuyOrWaitCard({
+  make,
+  model,
+  className,
+  displayMake,
+  displayModel,
+}: {
+  make: string;
+  model: string;
+  className?: string;
+  /** Human casing for copy (route params can be lowercase slugs). */
+  displayMake?: string;
+  displayModel?: string;
+}) {
+  const names = { make: displayMake ?? make, model: displayModel ?? model };
   const { t } = useAppPreferences();
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["model-trend-panel", make, model],
@@ -89,7 +103,7 @@ export function BuyOrWaitCard({ make, model, className }: { make: string; model:
         {t(
           "outlook.disclaimer",
           "Based on median asking prices of {make} {model} ads, not sale prices. Confidence: {confidence}. Duty, surcharge or loan-cap changes can move prices quickly. This isn't financial advice.",
-          { make, model, confidence: t(`outlook.conf.${outlook.confidence}`, outlook.confidence) },
+          { ...names, confidence: t(`outlook.conf.${outlook.confidence}`, outlook.confidence) },
         )}
       </p>
     </Card>

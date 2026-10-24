@@ -135,8 +135,8 @@ export function MobileAppPromo() {
       <div className="pointer-events-auto flex w-full max-w-md items-center gap-2.5 rounded-2xl border border-border bg-card py-2 pl-3 pr-1.5 text-foreground shadow-soft-lg motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
         <Smartphone className="h-4 w-4 shrink-0 text-primary" aria-hidden />
         <p className="min-w-0 flex-1 text-footnote leading-snug">
-          <span className="font-semibold">{t("mobile.promoTitleShort", "Motormila for Android (preview)")}</span>
-          <span className="text-muted-foreground"> · {t("mobile.promoBodyShort", "price-drop alerts and plate scan")}</span>
+          <span className="block font-semibold">{t("mobile.promoTitleShort", "Motormila for Android (preview)")}</span>
+          <span className="block text-muted-foreground">{t("mobile.promoBodyShort", "price-drop alerts and plate scan")}</span>
         </p>
         <Link
           to="/mobile-app"

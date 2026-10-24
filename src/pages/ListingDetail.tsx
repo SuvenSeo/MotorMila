@@ -696,20 +696,21 @@ export default function ListingDetail() {
                         initialFuelType={importFuelType}
                       />
                     ) : (
-                      <div className="page-panel flex flex-col justify-between gap-3 rounded-[1.75rem] p-6">
+                      <div className={cn(cardVariants({ padding: "md" }), "flex flex-col gap-4")}>
                         <div>
-                          <h2 className="field-label text-foreground">{t("listing.importDutyTax", "Import duty and tax")}</h2>
-                          <p className="mt-2 text-caption leading-relaxed text-muted-foreground">
-                            This vehicle is already registered in Sri Lanka, so import duty doesn't
-                            apply to buying it. Curious what importing the same spec fresh would cost
-                            under today's gazette?
+                          <h2 className="text-footnote font-semibold text-primary">{t("listing.importDutyTax", "Import duty and tax")}</h2>
+                          <p className="mt-2 text-footnote leading-relaxed text-label-2">
+                            {t(
+                              "listing.importDutyRegistered",
+                              "This vehicle is already registered in Sri Lanka, so import duty doesn't apply to buying it. Curious what importing the same spec fresh would cost under today's gazette?",
+                            )}
                           </p>
                         </div>
                         <Link
                           to={`/calculator?tab=landed-cost&fuel=${importFuelType}${typeof listing.engine_cc === 'number' ? `&cc=${listing.engine_cc}` : ''}`}
-                          className="inline-flex w-fit items-center gap-1.5 rounded-2xl border border-primary/20 bg-primary/10 px-3 py-2 text-caption font-semibold text-primary-bright no-underline transition-ui hover:bg-primary/15"
+                          className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "w-fit no-underline")}
                         >
-                          Model a fresh import <ArrowRight aria-hidden className="h-3 w-3" />
+                          {t("listing.modelFreshImport", "Model a fresh import")} <ArrowRight aria-hidden />
                         </Link>
                       </div>
                     )}
@@ -765,7 +766,9 @@ export default function ListingDetail() {
             )}
             {trackedDays && (
               <p className="text-caption leading-relaxed text-muted-foreground">
-                {t("listing.insightLine", "Tracked for {days} days.", { days: trackedDays })}
+                {trackedDays === 1
+                  ? t("listing.insightLineOne", "Tracked for 1 day.")
+                  : t("listing.insightLine", "Tracked for {days} days.", { days: trackedDays })}
                 {avgPeerDays ? ` ${t("listing.insightPeers", "Similar ads average {days} days.", { days: avgPeerDays })}` : ''}
               </p>
             )}

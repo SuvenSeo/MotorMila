@@ -94,7 +94,7 @@ export function LeaseCalculator({
               id="lease-term"
               value={String(years)}
               onValueChange={(v) => setYears(Number(v))}
-              options={[3, 5, 7].map((y) => ({ value: String(y), label: t("tools.lease.years", "{n} years ({m} mo)", { n: y, m: y * 12 }) }))}
+              options={[3, 5, 7].map((y) => ({ value: String(y), label: t("tools.lease.yearsShort", "{n} years", { n: y }) }))}
             />
           </Field>
         </div>

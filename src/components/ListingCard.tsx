@@ -64,6 +64,8 @@ function formatToken(value: string | undefined | null): string | null {
 }
 
 function formatMileage(value: number | null | undefined): string | null {
+  // Missing mileage must not read as "0 km" (Number(null) === 0).
+  if (value === null || value === undefined || String(value).trim() === "") return null;
   const km = Number(value);
   if (!Number.isFinite(km) || km < 0) return null;
   if (km >= 1000) {

@@ -78,10 +78,16 @@ function mergeCalendarSeries(
 export function ModelPriceTimeMachine({
   make,
   model,
+  displayMake,
+  displayModel,
 }: {
   make: string;
   model: string;
+  /** Human casing for copy (route params can be lowercase slugs). */
+  displayMake?: string;
+  displayModel?: string;
 }) {
+  const names = { make: displayMake ?? make, model: displayModel ?? model };
   const { t } = useAppPreferences();
   const calm = useChartCalm();
   const [mode, setMode] = useState<Mode>("calendar");
@@ -138,7 +144,7 @@ export function ModelPriceTimeMachine({
     <section className="space-y-5">
       <SectionHeading
         eyebrow={t("timeMachine.eyebrow", "Price Time Machine")}
-        title={t("timeMachine.title", "{make} {model} over time", { make, model })}
+        title={t("timeMachine.title", "{make} {model} over time", { ...names })}
         description={
           mode === "calendar"
             ? data?.interpretation.calendar_series ||
@@ -170,8 +176,8 @@ export function ModelPriceTimeMachine({
           onRetry={() => void historyQuery.refetch()}
           label={
             mode === "calendar"
-              ? t("timeMachine.calendarAria", "{make} {model} median asking price by month, {n} months", { make, model, n: calendarPoints })
-              : t("timeMachine.yomAria", "{make} {model} median asking price by manufacture year, {n} years", { make, model, n: yomPoints })
+              ? t("timeMachine.calendarAria", "{make} {model} median asking price by month, {n} months", { ...names, n: calendarPoints })
+              : t("timeMachine.yomAria", "{make} {model} median asking price by manufacture year, {n} years", { ...names, n: yomPoints })
           }
         >
           {mode === "calendar" ? (
