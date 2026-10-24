@@ -15,8 +15,20 @@ import { ErrorState } from "@/components/ui/error-state";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { SectionHeading } from "@/components/ui/section-heading";
 
+/**
+ * Post-freeze premium in percent (one decimal), or null when either median is
+ * missing or the cohorts are not like-for-like (post/pre outside 0.5x–4x, e.g. a
+ * make that sold motorbikes before the freeze and cars after).
+ */
+export function importEraPremiumPct(pre: number | null | undefined, post: number | null | undefined): number | null {
+  if (!pre || !post || pre <= 0 || post <= 0) return null;
+  const ratio = post / pre;
+  if (ratio > 4 || ratio < 0.5) return null;
+  return Math.round((ratio - 1) * 1000) / 10;
+}
+
 export function ImportEraPublicSection() {
-  const { t } = useAppPreferences();
+  const { t, localeTag } = useAppPreferences();
   const [data, setData] = useState<ImportEraSplitData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -75,7 +87,10 @@ export function ImportEraPublicSection() {
           {data.makes.slice(0, 6).map((row, i) => {
             const pre = row.pre_freeze.median_price_lkr;
             const post = row.post_freeze.median_price_lkr;
-            const premium = pre && post && pre > 0 ? Math.round(((post - pre) / pre) * 1000) / 10 : null;
+            const premium = importEraPremiumPct(pre, post);
+            // A make whose cohorts mix vehicle types (Honda: motorbikes before the
+            // freeze, cars after) yields a meaningless "+2349%": say so instead.
+            const mixedCohort = premium == null && pre != null && post != null && pre > 0 && post > 0;
             return (
               <m.article
                 key={row.make}
@@ -97,7 +112,7 @@ export function ImportEraPublicSection() {
                         {c.value != null ? formatPrice(c.value) : "—"}
                       </p>
                       <p className="text-caption tabular-nums text-label-2">
-                        {t("importEra.listings", "{n} listings", { n: c.count })}
+                        {t("importEra.listings", "{n} listings", { n: Number(c.count || 0).toLocaleString(localeTag) })}
                       </p>
                     </div>
                   ))}
@@ -109,6 +124,10 @@ export function ImportEraPublicSection() {
                       {premium >= 0 ? "+" : ""}
                       {premium}%
                     </span>
+                  </p>
+                ) : mixedCohort ? (
+                  <p className="mt-3 text-caption text-label-2">
+                    {t("importEra.mixedCohort", "Mixed vehicle types, so no like-for-like premium")}
                   </p>
                 ) : null}
               </m.article>

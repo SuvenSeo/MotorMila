@@ -25,7 +25,7 @@ import { useAppPreferences } from "@/lib/appPreferences";
 import { useAuth } from "@/lib/authContext";
 import {
   FREE_TRENDS_MONTHS,
-  freePlanCopy,
+  freePlanText,
   hasFullPlatformAccess,
   takeLastMonths,
 } from "@/lib/planLimits";
@@ -268,8 +268,8 @@ export default function Trends() {
           {!fullAccess ? (
             <UpgradePrompt
               className="mt-4"
-              title={freePlanCopy.trendsTitle}
-              body={freePlanCopy.trendsBody}
+              title={freePlanText(t, "trendsTitle")}
+              body={freePlanText(t, "trendsBody")}
               variant="strip"
             />
           ) : null}

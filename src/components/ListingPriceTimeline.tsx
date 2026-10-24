@@ -103,6 +103,12 @@ export function ListingPriceTimeline({
   }, [points, localeTag]);
 
   const yAxis = useMemo(() => niceMillionsAxis(points.map((p) => p.price_lkr / 1_000_000), marketMedianLkr), [points, marketMedianLkr]);
+  // Fixed 52px clipped the lead digit of quarter-million ticks ("2.25 Mn" read
+  // ".25 Mn"); size the axis to its longest label (12px semibold ≈ 7.2px/char).
+  const yAxisWidth = useMemo(() => {
+    const longest = Math.max(0, ...yAxis.ticks.map((v) => formatLkrAxisFromMillions(v).length));
+    return Math.max(44, Math.ceil(longest * 7.2) + 8);
+  }, [yAxis.ticks]);
 
   const changePct = history?.change_pct ?? null;
   const isDrop = changePct !== null && changePct < 0;
@@ -227,7 +233,7 @@ export function ListingPriceTimeline({
                   interval={0}
                   tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12, fontWeight: 600 }}
                   tickFormatter={(value: number) => formatLkrAxisFromMillions(value)}
-                  width={52}
+                  width={yAxisWidth}
                 />
                 <Tooltip
                   formatter={(value: number) => [formatPriceLkrMillions(Number(value) * 1_000_000), t("priceTimeline.askingPrice", "Asking price")]}

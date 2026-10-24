@@ -70,7 +70,7 @@ import { HeroBanners } from "@/components/HeroBanners";
 import { ProFeatureLock } from "@/components/ProFeatureLock";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { useAuth } from "@/lib/authContext";
-import { freePlanCopy, hasFullPlatformAccess } from "@/lib/planLimits";
+import { freePlanText, hasFullPlatformAccess } from "@/lib/planLimits";
 import { trackEvent } from "@/lib/analytics";
 import { DEFAULT_SORT, EMPTY_FILTERS, useSearchFilters } from "@/lib/searchUrlState";
 import { normalizeSearchQuery, resolveSearchAlias } from "@/lib/searchAliases";
@@ -316,7 +316,8 @@ export default function Dashboard() {
   const refreshingListings = listingsQuery.isPlaceholderData && listingsQuery.isFetching;
   const listingsFailed = listingsQuery.isError;
 
-  const serverAlerts = useServerMarketAlerts();
+  // The home feed never lists server alerts, it only mirrors local ones up.
+  const serverAlerts = useServerMarketAlerts({ autoLoad: false });
 
   useEffect(() => {
     setWatchlistIds(loadWatchlistIds());
@@ -565,7 +566,8 @@ export default function Dashboard() {
     setShowMarketAlerts(true);
 
     const newAlert = next[0];
-    if (newAlert) {
+    // The alerts API is sign-in only; anonymous alerts stay in localStorage.
+    if (newAlert && isAuthenticated) {
       serverAlerts.create({
         make: filters.make ?? undefined,
         model: filters.model ?? undefined,
@@ -579,7 +581,7 @@ export default function Dashboard() {
         // Server unavailable — localStorage copy is the fallback.
       });
     }
-  }, [alertPriceInput, filters, serverAlerts]);
+  }, [alertPriceInput, filters, isAuthenticated, serverAlerts]);
 
   const deleteMarketAlert = useCallback((id: string) => {
     const alertToDelete = marketAlerts.find((a) => a.id === id);
@@ -1178,8 +1180,8 @@ export default function Dashboard() {
                 <div className="mt-6">
                   <UpgradePrompt
                     variant="strip"
-                    title={freePlanCopy.scoresTitle}
-                    body={freePlanCopy.scoresBody}
+                    title={freePlanText(t, "scoresTitle")}
+                    body={freePlanText(t, "scoresBody")}
                   />
                 </div>
               ) : null}

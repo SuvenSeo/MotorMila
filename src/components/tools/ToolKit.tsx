@@ -433,9 +433,10 @@ export function ResultCard({
       className={cn("content-in overflow-hidden", emphasis && "border-primary/20", className)}
     >
       <div className={cn("transition-opacity duration-short ease-standard", busy && "opacity-60")}>
-        <div className="flex items-start justify-between gap-3">
-          <p className="text-footnote font-semibold text-primary">{label}</p>
-          {badge}
+        {/* Wraps so a long Tamil/Sinhala badge drops under the label instead of overflowing the card on phones. */}
+        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
+          <p className="min-w-0 text-footnote font-semibold text-primary">{label}</p>
+          {badge ? <div className="min-w-0 max-w-full">{badge}</div> : null}
         </div>
         <p className="mt-2 font-display text-large font-semibold text-foreground">{value}</p>
         {caption ? <p className="mt-1 text-footnote text-label-2">{caption}</p> : null}

@@ -2247,6 +2247,7 @@ async function deriveFuelMixFromCatalog(): Promise<FuelMixData | null> {
   };
 }
 
+
 async function deriveEvInsightFromCatalog(): Promise<EvInsightData | null> {
   let catalog: CarListing[] | null;
   let catalogSize: number;
@@ -2270,12 +2271,16 @@ async function deriveEvInsightFromCatalog(): Promise<EvInsightData | null> {
     return p !== null && p >= MIN_REASONABLE_PRICE_LKR ? p : null;
   };
   const evRows = catalog.filter((row) => offlineFuelCategory(row.fuel_type) === "electric");
-  const evPrices = evRows.map(priced).filter((p): p is number => p !== null);
+  // Price and model stats compare against a hybrid car (the Aqua), so they use
+  // electric cars only: e-scooters and electric three-wheelers made up two thirds
+  // of EV rows and dragged the "median EV price" to Rs 0.65 Mn.
+  const evCarRows = evRows.filter((row) => !NON_CAR_CATEGORIES.has(String(row.vehicle_category || "").toLowerCase()));
+  const evPrices = evCarRows.map(priced).filter((p): p is number => p !== null);
   const byModel = new Map<string, { make: string; model: string; prices: number[]; count: number }>();
-  for (const row of evRows) {
+  for (const row of evCarRows) {
     const make = String(row.make || "").trim();
     const model = String(row.model || "").trim();
-    if (!make || !model) continue;
+    if (!make || !model || model.toLowerCase() === "other") continue;
     const key = `${make}|||${model}`;
     const entry = byModel.get(key) || { make, model, prices: [], count: 0 };
     entry.count += 1;

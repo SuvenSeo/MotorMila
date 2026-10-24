@@ -44,7 +44,7 @@ import { useAppPreferences } from '@/lib/appPreferences';
 import { useAuth } from '@/lib/authContext';
 import {
   FREE_SIMILAR_LIMIT,
-  freePlanCopy,
+  freePlanText,
   hasFullPlatformAccess,
 } from '@/lib/planLimits';
 import type { ImportFuelType } from '@/lib/importTaxModel';
@@ -487,7 +487,7 @@ export default function ListingDetail() {
   // Pro upsell sits *below* the FMV card, never between price and valuation.
   const renderProUpsell = () =>
     !fullAccess && !lease.isLeaseTakeover ? (
-      <UpgradePrompt title={freePlanCopy.scoresTitle} body={freePlanCopy.scoresBody} variant="strip" />
+      <UpgradePrompt title={freePlanText(t, "scoresTitle")} body={freePlanText(t, "scoresBody")} variant="strip" />
     ) : null;
 
   const actionBtn = cn(buttonVariants({ variant: "secondary", size: "icon" }), "text-muted-foreground hover:text-foreground [&_svg]:size-4");

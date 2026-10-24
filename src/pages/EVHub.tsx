@@ -183,7 +183,7 @@ export default function EVHub() {
                 loading={pending}
                 label={t("ev.medianPriceLabel", "Median EV price")}
                 value={<LkrValue value={medianEvPrice} />}
-                hint={t("ev.medianPriceNote", "Median price across all priced EV listings")}
+                hint={t("ev.medianCarPriceNote", "Median asking price of electric cars (bikes and three-wheelers excluded)")}
               />
             </div>
           )}

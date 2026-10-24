@@ -166,7 +166,7 @@ function PicksSkeleton() {
     <div className="space-y-14 lg:space-y-20" aria-hidden>
       <div className={cardVariants({ variant: "media", padding: "none", className: "grid lg:grid-cols-[1.1fr_1fr]" })}>
         <Skeleton className="aspect-[16/10] w-full rounded-none lg:aspect-auto lg:min-h-80" />
-        <div className="flex flex-col justify-between gap-6 p-6 sm:p-8">
+        <div className="flex min-w-0 flex-col justify-between gap-6 p-6 sm:p-8">
           <div className="space-y-4">
             <Skeleton shape="text" className="h-3 w-24" />
             <Skeleton shape="title" className="h-9 w-3/4" />
@@ -428,7 +428,7 @@ export default function BestPicks() {
                   variants={revealItem}
                   className={cn(
                     cardVariants({ variant: "media", padding: "none" }),
-                    "group content-in grid transition-[border-color,box-shadow] duration-medium ease-decelerate hover:border-primary/30 hover:shadow-e2 lg:grid-cols-[1.1fr_1fr]",
+                    "group content-in grid grid-cols-1 transition-[border-color,box-shadow] duration-medium ease-decelerate hover:border-primary/30 hover:shadow-e2 lg:grid-cols-[1.1fr_1fr]",
                   )}
                 >
                   <Link to={`/listing/${featured.id}`} tabIndex={-1} aria-hidden className="listing-card-photo block aspect-[16/10] overflow-hidden bg-surface-2 no-underline lg:aspect-auto lg:min-h-80">
@@ -444,7 +444,7 @@ export default function BestPicks() {
                         <h2 className="font-display text-title1 font-semibold text-foreground transition-colors duration-short group-hover:text-primary">{featured.make} {featured.model}</h2>
                         <p className="num mt-1.5 text-body text-label-2">{featured.year || t("common.na", "N/A")} · {featured.district || "LK"}</p>
                       </Link>
-                      <div className="flex items-baseline justify-between gap-3 border-t border-separator pt-4">
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-t border-separator pt-4">
                         <p className="num font-display text-title1 font-semibold text-foreground">{formatPrice(Number(featured.price_lkr || 0))}</p>
                         {sortMode === "affordability" && cashDown != null ? (
                           <p className="num text-footnote font-semibold text-primary">{t("picks.down", "{price} down", { price: formatPrice(cashDown) })}</p>
@@ -458,8 +458,8 @@ export default function BestPicks() {
                         </div>
                       ) : null}
                     </div>
-                    <div className="flex gap-2">
-                      <Button asChild size="lg" className="flex-1">
+                    <div className="flex flex-wrap gap-2">
+                      <Button asChild size="lg" className="min-w-0 flex-1">
                         <Link to={`/listing/${featured.id}`} className="no-underline">{t("picks.openDetail", "Open detail")}</Link>
                       </Button>
                       {featured.external_url && (

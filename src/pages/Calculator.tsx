@@ -42,7 +42,7 @@ import { getSurchargeCountdown } from "@/lib/importTaxModel";
 import { AFFORDABILITY_DEFAULTS } from "@/utils/affordability";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { useAuth } from "@/lib/authContext";
-import { FREE_CALCULATOR_TABS, freePlanCopy, hasFullPlatformAccess } from "@/lib/planLimits";
+import { FREE_CALCULATOR_TABS, freePlanText, hasFullPlatformAccess } from "@/lib/planLimits";
 import {
   consumeSurchargeLapseNotification,
   isSurchargeNotifySubscribed,
@@ -399,7 +399,7 @@ export default function Calculator() {
   const fuelOptions = FUEL_TYPES.map((fuel) => ({ value: fuel, label: t(`fuel.${fuel}`, fuel) }));
   const onDeviceBadge = (offline?: boolean) =>
     offline ? (
-      <Badge variant="neutral" title={t("calc.offlineBadge", "On-device calculation — server unreachable, same gazette schedules.")}>
+      <Badge variant="neutral" title={t("calc.offlineBadge", "Calculated on this device with the same gazette schedules the server uses.")}>
         {t("tools.calc.onDevice", "On device")}
       </Badge>
     ) : null;
@@ -722,7 +722,7 @@ export default function Calculator() {
         <FreePlanBanner />
       </div>
       {!tabUnlocked ? (
-        <UpgradePrompt title={freePlanCopy.calcTitle} body={freePlanCopy.calcBody} className="mx-auto max-w-xl" />
+        <UpgradePrompt title={freePlanText(t, "calcTitle")} body={freePlanText(t, "calcBody")} className="mx-auto max-w-xl" />
       ) : (
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
           {tabs.length > 1 ? (

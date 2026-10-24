@@ -23,7 +23,7 @@ import { getStoredAuthToken } from "@/lib/authToken";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { useAuth } from "@/lib/authContext";
 import {
-  freePlanCopy,
+  freePlanText,
   hasFullPlatformAccess,
 } from "@/lib/planLimits";
 import type { ProMarketSnapshot } from "@/types/pro";
@@ -514,7 +514,7 @@ export default function DealerDashboard() {
 
       <div className="layout-shell pb-20">
         {!fullAccess ? (
-          <UpgradePrompt className="mb-6" title={freePlanCopy.dealerTitle} body={freePlanCopy.dealerBody} variant="strip" />
+          <UpgradePrompt className="mb-6" title={freePlanText(t, "dealerTitle")} body={freePlanText(t, "dealerBody")} variant="strip" />
         ) : null}
 
         {dashboardError ? (
@@ -534,11 +534,11 @@ export default function DealerDashboard() {
                 <h2 className="text-callout font-semibold text-foreground">{t("dealer.commandStack", "Command stack")}</h2>
                 <ul className="mt-3 divide-y divide-separator" aria-label={t("dealer.commandStack", "Command stack")}>
                   {[
-                    { label: t("dealer.turnover", "Inventory Turnover"), meta: turnoverData.length ? `${turnoverData.length} models` : null },
-                    { label: t("dealer.priceGapScanner", "Price Gap Scanner"), meta: priceGaps.length ? `${priceGaps.length} districts` : null },
-                    { label: t("dealer.districtDemand", "District Demand"), meta: districtDemand.length ? `${districtDemand.length} zones` : null },
-                    { label: t("dealer.leadNotifications", "Lead Notifications"), meta: notifications.length > 1 ? t("common.live", "Live") : "standby" },
-                    { label: t("dealer.benchmark", "Inventory Benchmark"), meta: "URL upload" },
+                    { label: t("dealer.turnover", "Inventory Turnover"), meta: turnoverData.length ? t("dealer.meta.models", "{count} models", { count: String(turnoverData.length) }) : null },
+                    { label: t("dealer.priceGapScanner", "Price Gap Scanner"), meta: priceGaps.length ? t("dealer.meta.districts", "{count} districts", { count: String(priceGaps.length) }) : null },
+                    { label: t("dealer.districtDemand", "District Demand"), meta: districtDemand.length ? t("dealer.meta.zones", "{count} zones", { count: String(districtDemand.length) }) : null },
+                    { label: t("dealer.leadNotifications", "Lead Notifications"), meta: notifications.length > 1 ? t("common.live", "Live") : t("dealer.meta.standby", "standby") },
+                    { label: t("dealer.benchmark", "Inventory Benchmark"), meta: t("dealer.meta.urlUpload", "URL upload") },
                   ].map((i) => (
                     <li key={i.label} className="flex items-center justify-between gap-2 py-2.5">
                       <span className="text-footnote text-foreground">{i.label}</span>
@@ -755,7 +755,7 @@ export default function DealerDashboard() {
                   <div id="benchmark">
                     <WidgetShell
                       title={t("dealer.benchmark", "Inventory Benchmark")}
-                      subtitle="Paste listing URLs to benchmark against the current market"
+                      subtitle={t("dealer.benchmarkSubtitle", "Paste listing URLs to benchmark against the current market")}
                       collapsed={collapsed.inventoryBenchmark}
                       onToggle={() => toggle("inventoryBenchmark")}
                     >
@@ -764,10 +764,10 @@ export default function DealerDashboard() {
                   </div>
                 </div>
               ) : (
-                <ProFeatureLock label={freePlanCopy.dealerTitle} className="min-h-[18rem]">
+                <ProFeatureLock label={freePlanText(t, "dealerTitle")} className="min-h-[18rem]">
                   <Card padding="lg" className="opacity-80">
                     <p className="text-callout font-semibold text-foreground">{t("dealer.turnover", "Inventory Turnover")}</p>
-                    <p className="mt-2 text-footnote text-label-2">{freePlanCopy.dealerBody}</p>
+                    <p className="mt-2 text-footnote text-label-2">{freePlanText(t, "dealerBody")}</p>
                   </Card>
                 </ProFeatureLock>
               )}

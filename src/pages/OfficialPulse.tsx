@@ -25,7 +25,7 @@ import { useAppPreferences } from "@/lib/appPreferences";
 import { useAuth } from "@/lib/authContext";
 import { FreePlanBanner } from "@/components/FreePlanBanner";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
-import { FREE_PULSE_LIMIT, freePlanCopy, hasFullPlatformAccess } from "@/lib/planLimits";
+import { FREE_PULSE_LIMIT, freePlanText, hasFullPlatformAccess } from "@/lib/planLimits";
 
 type SourceFilter = "all" | string;
 
@@ -204,8 +204,8 @@ export default function OfficialPulse() {
               {!fullAccess ? (
                 <UpgradePrompt
                   className="mt-6"
-                  title={freePlanCopy.pulseTitle}
-                  body={freePlanCopy.pulseBody}
+                  title={freePlanText(t, "pulseTitle")}
+                  body={freePlanText(t, "pulseBody")}
                 />
               ) : null}
             </>
