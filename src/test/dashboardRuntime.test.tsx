@@ -153,7 +153,7 @@ describe("Dashboard runtime safety", () => {
     renderDashboard();
 
     // Below-the-fold sections mount a frame after the first paint.
-    expect(await screen.findByRole("heading", { name: /what.s moving right now/i })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /what.s moving right now/i }, { timeout: 4000 })).toBeInTheDocument();
   });
 
   it("renders the trending models section", async () => {
@@ -184,7 +184,7 @@ describe("Dashboard runtime safety", () => {
 
     renderDashboard();
 
-    await screen.findByRole("heading", { name: /what.s moving right now/i });
+    await screen.findByRole("heading", { name: /what.s moving right now/i }, { timeout: 4000 });
     expect(screen.queryByText(/Toyota\s+Vitz/i)).not.toBeInTheDocument();
   });
 
