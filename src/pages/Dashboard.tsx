@@ -31,8 +31,12 @@ import { Chip } from "@/components/ui/chip";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AnimatedNumber } from "@/components/ui/animated-number";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { TrendingDown,
+  BellOff,
+  Heart,
   ArrowRight,
   ArrowUpRight,
   ExternalLink,
@@ -1020,16 +1024,16 @@ export default function Dashboard() {
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <Reveal className="flex flex-col gap-2 sm:gap-2.5">
               <div className="flex items-baseline gap-2.5">
-                <h2 className="text-body font-semibold tracking-tight text-foreground">
+                <h2 className="text-title3 font-semibold text-foreground">
                   {isPriceUnavailableMode ? t("common.unpricedInventory", "Unpriced inventory") : t("common.inventory", "Inventory")}
                 </h2>
                 {loadingListings ? (
-                  <span className="inline-block h-4 w-14 animate-pulse rounded bg-foreground/[0.03]" aria-hidden />
+                  <Skeleton shape="text" className="h-4 w-16" />
                 ) : (
-                  <span className="text-footnote font-medium text-muted-foreground num" aria-live="polite">
+                  <span className="content-in num text-footnote font-medium text-label-2" aria-live="polite">
                     <AnimatedNumber value={total} />
                     {!isPriceUnavailableMode && activeFilterLabels.length === 0 ? (
-                      <span className="ml-1 text-muted-foreground">priced</span>
+                      <span className="ml-1">{t("home.pricedSuffix", "priced")}</span>
                     ) : null}
                   </span>
                 )}
@@ -1102,18 +1106,20 @@ export default function Dashboard() {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9, transition: { duration: duration.short, ease: ease.accelerate } }}
                     transition={spring.snappy}
-                    className="inline-flex h-7 items-center rounded-full border border-border bg-surface-2 px-2.5 text-caption font-medium text-muted-foreground"
-                  >{label}</motion.span>
+                    className="inline-flex"
+                  ><Badge variant="neutral" className="h-7 px-3 text-footnote font-medium capitalize">{label}</Badge></motion.span>
                 ))}
-                <motion.button key="__clear" layout={!motionStill} transition={spring.snappy} type="button" onClick={() => setFilters({ ...EMPTY_FILTERS })}
-                  className="inline-flex h-7 items-center rounded-full px-2.5 text-caption font-semibold text-primary transition-colors duration-short hover:bg-primary/10 active:scale-[0.97]"
-                >{t("common.clearAll", "Clear all")}</motion.button>
+                <motion.span key="__clear" layout={!motionStill} transition={spring.snappy} className="inline-flex">
+                  <Button type="button" variant="tertiary" size="sm" className="h-7 px-3" onClick={() => setFilters({ ...EMPTY_FILTERS })}>
+                    {t("common.clearAll", "Clear all")}
+                  </Button>
+                </motion.span>
               </AnimatePresence>
             </div>
           )}
 
           {newLiveListingsAvailable && (
-            <Card padding="none" className="content-in mb-5 flex items-center justify-between border-primary/20 bg-primary/5 px-4 py-2">
+            <Card padding="none" className="content-in mb-5 flex items-center justify-between gap-3 border-primary/20 bg-primary/5 px-4 py-2">
               <span className="text-footnote font-semibold text-primary">{t("home.newListings", "New listings available")}</span>
               <Button type="button" variant="tertiary" size="sm" onClick={() => { setFilters((p) => ({ ...p, sort: "newest", page: 1 })); setNewLiveListingsAvailable(false); }}>
                 {t("common.refresh", "Refresh")}
@@ -1131,7 +1137,7 @@ export default function Dashboard() {
 
           {/* Filters + Grid */}
           <div className="flex flex-col items-start gap-6 lg:flex-row">
-            <div className="w-full shrink-0 self-start lg:sticky lg:top-20 lg:w-[300px]">
+            <div className="hidden w-full shrink-0 self-start lg:sticky lg:top-20 lg:block lg:w-80">
               <FilterSidebar filters={filters} onFiltersChange={setFilters} />
             </div>
 
@@ -1148,16 +1154,13 @@ export default function Dashboard() {
                   ))}
                 </div>
               ) : listingsFailed ? (
-                <Card className="content-in flex flex-col items-center justify-center gap-3 px-4 py-20 text-center">
-                  <p className="text-footnote font-semibold text-foreground">
-                    {t("home.listingsErrorTitle", "We couldn't load listings just now")}
-                  </p>
-                  <p className="max-w-sm text-footnote text-muted-foreground">
-                    {t("home.listingsErrorBody", "This is usually a short outage on our side. Your filters are kept. Try again in a moment.")}
-                  </p>
-                  <Button type="button" variant="secondary" onClick={retryListings}>
-                    {t("common.retry", "Retry")}
-                  </Button>
+                <Card padding="none" className="py-6">
+                  <ErrorState
+                    title={t("home.listingsErrorTitle", "We couldn't load listings just now")}
+                    body={t("home.listingsErrorBody", "This is usually a short outage on our side. Your filters are kept. Try again in a moment.")}
+                    onRetry={retryListings}
+                    retryLabel={t("common.retry", "Retry")}
+                  />
                 </Card>
               ) : listings.length === 0 ? (
                 <NoResultsState
@@ -1168,7 +1171,7 @@ export default function Dashboard() {
                   isSignedIn={isAuthenticated}
                 />
               ) : marketView === "grid" ? (
-                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+                <div className="content-in grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
                   {/* Cards self-reveal on scroll (ListingCard revealIndex caps the stagger). */}
                   {listings.map((listing, index) => (
                     <ListingCard key={listing.id} listing={listing} priority={index < 6} revealIndex={index} onCompareToggle={toggleCompare} isComparing={compareIdSet.has(listing.id)} onWatchlistToggle={toggleWatchlist} isWatchlisted={watchlistIdSet.has(listing.id)} />
@@ -1185,28 +1188,35 @@ export default function Dashboard() {
                     const hasPrice = isReasonableListingPrice(Number(listing.price_lkr));
                     return (
                       <motion.div key={listing.id} variants={cardItemVariants}>
-                        <Link to={`/listing/${listing.id}`} className="inventory-tile group flex items-center gap-4 p-3 no-underline active:scale-[0.99]">
-                          <div className="h-16 w-24 shrink-0 overflow-hidden rounded-2xl bg-black/30">
-                            <VehicleThumbnail src={pickVehicleImageUrl([listing.thumbnail_url, ...(Array.isArray(listing.images) ? listing.images : [])], [listing.detail_url])} listingId={listing.id} source={listing.source} alt={`${listing.make} ${listing.model}`} className="w-full h-full object-cover" />
+                        <Link
+                          to={`/listing/${listing.id}`}
+                          className={cn(
+                            "group flex items-center gap-4 rounded-card border border-border bg-surface-1 p-3 no-underline shadow-e1",
+                            "transition-ui duration-short ease-standard [@media(hover:hover)_and_(pointer:fine)]:hover:-translate-y-0.5 [@media(hover:hover)_and_(pointer:fine)]:hover:shadow-e2 active:scale-[0.99] motion-reduce:transform-none",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          )}
+                        >
+                          <div className="h-16 w-24 shrink-0 overflow-hidden rounded-control bg-surface-2">
+                            <VehicleThumbnail src={pickVehicleImageUrl([listing.thumbnail_url, ...(Array.isArray(listing.images) ? listing.images : [])], [listing.detail_url])} listingId={listing.id} source={listing.source} alt={`${listing.make} ${listing.model}`} className="h-full w-full object-cover" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-body font-semibold text-foreground group-hover:text-primary transition-colors">{listing.make} {listing.model} {listing.variant || ""}</p>
-                            <p className="mt-0.5 truncate text-caption text-muted-foreground">{listing.year || "N/A"} · {listing.district || "N/A"} · {listing.source}</p>
+                            <p className="truncate text-body font-semibold text-foreground transition-colors duration-short group-hover:text-primary">{listing.make} {listing.model} {listing.variant || ""}</p>
+                            <p className="num mt-0.5 truncate text-footnote text-label-2">{[listing.year, listing.district, listing.source].filter(Boolean).join(" · ")}</p>
                           </div>
                           <div className="shrink-0 text-right">
                             {hasPrice ? (
-                              <p className="text-body font-bold text-foreground num">{formatPrice(Number(listing.price_lkr))}</p>
-                            ) : <PriceUnavailableBadge label="N/A" className="text-caption" />}
+                              <p className="num text-body font-semibold text-foreground">{formatPrice(Number(listing.price_lkr))}</p>
+                            ) : <PriceUnavailableBadge label={t("common.na", "N/A")} className="text-caption" />}
                             {fullAccess && listing.deal_score != null && (
-                              <p className={`mt-0.5 text-caption font-bold num ${Number(listing.deal_score) >= 0 ? "text-primary-bright" : "text-muted-foreground"}`}>
-                                {Number(listing.deal_score) >= 0 ? "+" : ""}{Number(listing.deal_score).toFixed(0)} deal
+                              <p className={cn("num mt-0.5 text-caption font-semibold", Number(listing.deal_score) >= 0 ? "text-deal-good-text" : "text-label-2")}>
+                                {t("home.dealScoreShort", "{score} deal", { score: `${Number(listing.deal_score) >= 0 ? "+" : ""}${Number(listing.deal_score).toFixed(0)}` })}
                               </p>
                             )}
                             {!fullAccess && (
-                              <p className="mt-0.5 text-caption font-semibold text-muted-foreground/70">Pro score</p>
+                              <p className="mt-0.5 text-caption font-medium text-label-2">{t("home.proScore", "Pro score")}</p>
                             )}
                           </div>
-                          <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+                          <ArrowRight aria-hidden className="hidden h-4 w-4 shrink-0 text-label-2 transition-transform duration-short ease-standard group-hover:translate-x-0.5 group-hover:text-primary sm:block" />
                         </Link>
                       </motion.div>
                     );
@@ -1484,25 +1494,32 @@ export default function Dashboard() {
 
       {/* ── DIALOGS ─────────────────────────────────────────────── */}
       <Dialog open={showMarketAlerts} onOpenChange={setShowMarketAlerts}>
-        <DialogContent className="max-h-[86vh] max-w-2xl overflow-y-auto rounded-3xl border-border bg-card text-foreground">
+        <DialogContent className="max-h-[86vh] max-w-2xl overflow-y-auto text-foreground">
           <DialogHeader>
-            <DialogTitle className="font-display text-callout font-semibold tracking-tight">Market alerts</DialogTitle>
+            <DialogTitle className="text-title3 font-semibold">{t("home.marketAlertsTitle", "Market alerts")}</DialogTitle>
           </DialogHeader>
           <Card padding="sm" className="bg-surface-2 shadow-none">
-            <p className="text-caption font-medium text-muted-foreground">{t("shell.home.currentSearch", "Current search")}</p>
-            <p className="mt-1.5 text-footnote font-semibold text-foreground">{currentAlertSummary}</p>
+            <p className="text-caption font-medium text-label-2">{t("shell.home.currentSearch", "Current search")}</p>
+            <p className="mt-1 text-body font-semibold text-foreground">{currentAlertSummary}</p>
             <div className="mt-3 flex gap-2">
-              <Input value={alertPriceInput} onChange={(e) => setAlertPriceInput(e.target.value.replace(/[^\d]/g, ""))} inputMode="numeric" placeholder="Target max price (LKR)" className="h-9 flex-1 rounded-2xl border-border bg-transparent text-body md:text-footnote" />
-              <Button type="button" size="sm" className="h-9" onClick={saveCurrentMarketAlert}>{t("common.save", "Save")}</Button>
+              <Input
+                value={alertPriceInput}
+                onChange={(e) => setAlertPriceInput(e.target.value.replace(/[^\d]/g, ""))}
+                inputMode="numeric"
+                placeholder={t("home.alertTargetPlaceholder", "Target max price (LKR)")}
+                aria-label={t("home.alertTargetPlaceholder", "Target max price (LKR)")}
+                className="num flex-1"
+              />
+              <Button type="button" onClick={saveCurrentMarketAlert}>{t("common.save", "Save")}</Button>
             </div>
           </Card>
           {marketAlerts.length ? (
             <div className="space-y-1.5">
               {marketAlerts.map((alert) => (
-                <div key={alert.id} className="flex items-center justify-between gap-3 rounded-card border border-border bg-surface-2 p-3 transition-colors duration-short hover:bg-surface-3">
+                <div key={alert.id} className="flex items-center justify-between gap-3 rounded-card border border-border bg-surface-1 p-3 transition-colors duration-short hover:bg-surface-2">
                   <div className="min-w-0">
-                    <p className="truncate text-footnote font-semibold text-foreground">{alert.label}</p>
-                    <p className="mt-0.5 text-caption text-muted-foreground">{alert.target_price_lkr ? `Under ${formatPrice(alert.target_price_lkr)}` : t("home.newListingsAvailable", "New listings available")}</p>
+                    <p className="truncate text-body font-semibold text-foreground">{alert.label}</p>
+                    <p className="num mt-0.5 text-footnote text-label-2">{alert.target_price_lkr ? t("alerts.underPrice", "Under {price}", { price: formatPrice(alert.target_price_lkr) }) : t("home.newListingsAvailable", "New listings available")}</p>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Button type="button" variant="tertiary" size="sm" onClick={() => { setFilters({ ...(alert.filters as FilterState), sort: alert.filters.sort || DEFAULT_SORT, page: 1 }); setShowMarketAlerts(false); scrollToMarket(); }}>{t("common.open", "Open")}</Button>
@@ -1511,24 +1528,38 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
-          ) : <p className="py-6 text-center text-caption text-muted-foreground">No alerts saved</p>}
+          ) : (
+            <EmptyState
+              icon={BellOff}
+              title={t("home.noAlertsTitle", "No alerts saved")}
+              body={t("home.noAlertsBody", "Set a target price above and we'll watch this search for you.")}
+              className="py-8"
+            />
+          )}
         </DialogContent>
       </Dialog>
 
       <Dialog open={showSavedListings} onOpenChange={setShowSavedListings}>
-        <DialogContent className="max-h-[86vh] max-w-2xl overflow-y-auto rounded-3xl border-border bg-card text-foreground">
+        <DialogContent className="max-h-[86vh] max-w-2xl overflow-y-auto text-foreground">
           <DialogHeader>
-            <DialogTitle className="font-display text-callout font-semibold tracking-tight">Saved listings</DialogTitle>
+            <DialogTitle className="text-title3 font-semibold">{t("home.savedListingsTitle", "Saved listings")}</DialogTitle>
           </DialogHeader>
           {savedListingsLoading ? (
-            <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} shape="row" className="h-16" />)}</div>
+            <div className="space-y-1.5" aria-busy="true">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} shape="row" className="h-16" />)}</div>
           ) : savedListings.length ? (
-            <div className="space-y-1.5">
+            <div className="content-in space-y-1.5">
+              <AnimatePresence initial={false}>
               {savedListings.map((listing) => (
-                <div key={listing.id} className="flex items-center justify-between gap-3 rounded-card border border-border bg-surface-2 p-3 transition-colors duration-short hover:bg-surface-3">
+                <motion.div
+                  key={listing.id}
+                  layout={!motionStill}
+                  exit={{ opacity: 0, scale: motionStill ? 1 : 0.98, transition: { duration: duration.short, ease: ease.accelerate } }}
+                  transition={spring.snappy}
+                  className="flex items-center justify-between gap-3 rounded-card border border-border bg-surface-1 p-3 transition-colors duration-short hover:bg-surface-2"
+                >
                   <div className="min-w-0">
-                    <p className="truncate text-footnote font-semibold text-foreground">{listing.make} {listing.model} {listing.year || ""}</p>
-                    <p className="mt-0.5 text-caption text-muted-foreground">{listing.district || "LK"} · {isReasonableListingPrice(Number(listing.price_lkr || 0)) ? formatPrice(listing.price_lkr) : "N/A"}</p>
+                    <p className="truncate text-body font-semibold text-foreground">{listing.make} {listing.model} {listing.year || ""}</p>
+                    <p className="num mt-0.5 text-footnote text-label-2">{listing.district || "LK"} · {isReasonableListingPrice(Number(listing.price_lkr || 0)) ? formatPrice(listing.price_lkr) : t("common.na", "N/A")}</p>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Button type="button" variant="ghost" size="sm" onClick={() => toggleWatchlist(listing)}>{t("home.remove", "Remove")}</Button>
@@ -1538,25 +1569,28 @@ export default function Dashboard() {
                       </Link>
                     </Button>
                   </div>
-                </div>
+                </motion.div>
               ))}
+              </AnimatePresence>
             </div>
+          ) : savedListingsError ? (
+            <ErrorState body={savedListingsError} className="py-8" />
           ) : (
-            <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
-              <p className="text-footnote font-bold text-foreground">{t("home.noSavedTitle", "Nothing saved yet")}</p>
-              <p className="max-w-xs text-caption leading-relaxed text-muted-foreground">
-                {t("home.noSavedBody", "Tap the bookmark on any listing and it will wait for you here.")}
-              </p>
-              <Link
-                to="/#market"
-                onClick={() => setShowSavedListings(false)}
-                className="min-h-11 rounded-full bg-primary px-5 py-3 text-footnote font-bold text-primary-foreground no-underline transition-ui hover:bg-primary/95 active:scale-[0.97]"
-              >
-                {t("common.browseInventory", "Browse inventory")}
-              </Link>
-            </div>
+            <EmptyState
+              icon={Heart}
+              title={t("home.noSavedTitle", "Nothing saved yet")}
+              body={t("home.noSavedBodyHeart", "Tap the heart on any listing and it will wait for you here.")}
+              className="py-8"
+              action={
+                <Button asChild>
+                  <Link to="/#market" onClick={() => setShowSavedListings(false)} className="no-underline">
+                    {t("common.browseInventory", "Browse inventory")}
+                  </Link>
+                </Button>
+              }
+            />
           )}
-          {savedListingsError && <p className="text-caption text-primary-bright">{savedListingsError}</p>}
+          {savedListingsError && savedListings.length > 0 ? <p className="text-footnote text-deal-high-text">{savedListingsError}</p> : null}
         </DialogContent>
       </Dialog>
 

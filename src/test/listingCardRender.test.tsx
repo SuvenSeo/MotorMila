@@ -80,8 +80,8 @@ describe("ListingCard render states and interactions", () => {
 
     // Surface now routes through the semantic token (theme-adaptive) rather
     // than the old hardcoded dark-glass fill.
-    expect(card.className).toContain("liquid-panel");
-    expect(card.className).toContain("rounded-3xl");
+    expect(card.className).toContain("bg-surface-1");
+    expect(card.className).toContain("rounded-card");
     expect(cardLink).toHaveAttribute("href", "/listing/11");
     expect(card.querySelector("button")).not.toBeInTheDocument();
   });

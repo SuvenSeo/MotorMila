@@ -29,6 +29,9 @@ import { estimateListingMonthly, formatMonthlyLkr } from "@/lib/listingFinance";
 import { DealBadge } from "@/components/listing/DealBadge";
 import { CompareGlyph, SaveHeartIcon } from "@/components/listing/SaveHeart";
 import { fadeIn, fadeUp, hoverLift, press, useReducedMotionOrLowData } from "@/lib/motion";
+import { cardVariants } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { navigateWithHeroTransition, revealDelay, useCanHover, visibleCardImage, withShowDelay } from "@/components/listing/listingMotion";
 
 interface ListingCardProps {
@@ -192,7 +195,10 @@ export const ListingCard = memo(function ListingCard({
       {...(calm ? {} : press)}
       {...(canHover && !calm ? hoverLift : {})}
       aria-label={t("listingCard.aria", "{title} listing card", { title: listingTitle || "Vehicle" })}
-      className="liquid-panel vehicle-card group relative isolate h-full overflow-hidden rounded-3xl border border-transparent shadow-soft transition-[border-color,box-shadow] duration-medium ease-decelerate hover:border-primary/35 hover:shadow-soft-xl motion-reduce:transition-none"
+      className={cn(
+        cardVariants({ variant: "media", padding: "none" }),
+        "group isolate h-full transition-[border-color,box-shadow] duration-medium ease-decelerate hover:border-primary/30 hover:shadow-e2 motion-reduce:transition-none",
+      )}
       onPointerEnter={() => {
         // Only warm the route chunk. Data prefetch on hover used to pull the
         // whole snapshot catalogue (tens of MB) the first time a card was hovered.
@@ -208,11 +214,11 @@ export const ListingCard = memo(function ListingCard({
           const to = `/listing/${listing.id}`;
           if (navigateWithHeroTransition(() => navigate(to), visibleCardImage(cardRef.current))) e.preventDefault();
         }}
-        className="absolute inset-0 z-10 rounded-3xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        className="absolute inset-0 z-10 rounded-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       />
 
       <div ref={controlsRef} className="pointer-events-none relative z-20 flex h-full flex-col">
-        <div className="listing-card-photo relative aspect-[16/10] overflow-hidden bg-muted">
+        <div className="listing-card-photo relative aspect-[16/10] overflow-hidden bg-surface-2">
           <ListingImageCarousel
             images={galleryImages}
             listingId={listing.id}
@@ -228,7 +234,8 @@ export const ListingCard = memo(function ListingCard({
 
           {conditionLabel && (
             <div className="absolute left-3 top-3 flex items-center gap-1.5">
-              <span className="rounded-full border border-border bg-black/70 px-2.5 py-0.5 text-caption font-semibold tracking-tight text-white">
+              {/* Over the photo: dark chip regardless of theme. */}
+              <span className="inline-flex h-6 items-center rounded-full bg-black/60 px-2.5 text-caption font-semibold text-white">
                 {conditionLabel}
               </span>
             </div>
@@ -239,28 +246,28 @@ export const ListingCard = memo(function ListingCard({
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onWatchlistToggle(listing); }}
-                className={`pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border transition-[background-color,border-color,color,transform] duration-short active:scale-90 motion-reduce:active:scale-100 ${
+                className={`pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border transition-[background-color,border-color,color,transform] duration-short ease-standard active:scale-90 active:duration-micro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 ${
                   isWatchlisted
                     ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-black/60 text-white/90 border-border hover:text-white hover:bg-black/75"
+                    : "border-transparent bg-black/55 text-white hover:bg-black/70"
                 }`}
                 aria-label={isWatchlisted ? t("listingCard.removeWatchlist", "Remove from watchlist") : t("listingCard.addWatchlist", "Add to watchlist")}
               >
-                <SaveHeartIcon saved={Boolean(isWatchlisted)} className="w-3.5 h-3.5" />
+                <SaveHeartIcon saved={Boolean(isWatchlisted)} className="h-4 w-4" />
               </button>
             )}
             {onCompareToggle && (
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onCompareToggle(listing); }}
-                className={`pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border transition-[background-color,border-color,color,transform] duration-short active:scale-90 motion-reduce:active:scale-100 ${
+                className={`pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border transition-[background-color,border-color,color,transform] duration-short ease-standard active:scale-90 active:duration-micro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 ${
                   isComparing
                     ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-black/60 text-white/90 border-border hover:text-white hover:bg-black/75"
+                    : "border-transparent bg-black/55 text-white hover:bg-black/70"
                 }`}
                 aria-label={isComparing ? t("listingCard.removeCompare", "Remove from comparison") : t("listingCard.addCompare", "Add to comparison")}
               >
-                <CompareGlyph active={Boolean(isComparing)} className="h-3 w-3" />
+                <CompareGlyph active={Boolean(isComparing)} className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
@@ -273,7 +280,7 @@ export const ListingCard = memo(function ListingCard({
             ) : (
               <PriceUnavailableBadge
                 label={t("listingCard.priceUnavailable", "Price unavailable")}
-                className="bg-black/75 border-primary/40 text-primary-bright px-2 py-0.5 text-caption tracking-caps"
+                className="border-transparent bg-black/60 px-2.5 py-0.5 text-caption text-white"
               />
             )}
             {monthly && (
@@ -291,13 +298,13 @@ export const ListingCard = memo(function ListingCard({
           </div>
         </div>
 
-        <div className="flex flex-1 flex-col gap-3.5 p-5">
+        <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
           <div className="flex items-start justify-between gap-3">
-            <h3 className="font-display text-callout font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary truncate">
+            <h3 className="truncate text-callout font-semibold text-foreground transition-colors duration-short group-hover:text-primary">
               {listingTitle}
             </h3>
             {listing.year ? (
-              <span className="shrink-0 text-footnote font-semibold text-muted-foreground num">{listing.year}</span>
+              <span className="num shrink-0 text-footnote font-semibold text-label-2">{listing.year}</span>
             ) : null}
           </div>
 
@@ -306,29 +313,27 @@ export const ListingCard = memo(function ListingCard({
           {(listing.is_active === false || showDropBadge || daysOnMarketLabel || showSites) && (
             <div className="flex flex-wrap gap-1.5">
               {listing.is_active === false && (
-                <span className="inline-flex items-center rounded-full border border-deal-caution/30 bg-deal-caution/10 px-2 py-0.5 text-caption font-semibold text-deal-caution-text">
-                  {t("listingCard.archived", "Archived / Past ad")}
-                </span>
+                <Badge variant="warning">{t("listingCard.archived", "Archived / Past ad")}</Badge>
               )}
               {showDropBadge && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-caption font-semibold text-foreground">
-                  <TrendingDown className="h-3 w-3 text-primary" aria-hidden />
+                <Badge variant="info">
+                  <TrendingDown aria-hidden />
                   {dropPctLabel
                     ? t("listingCard.priceDroppedPct", "Price dropped {pct}%", { pct: dropPctLabel })
                     : t("listingCard.priceDropped", "Price dropped")}
-                </span>
+                </Badge>
               )}
               {daysOnMarketLabel && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-caption font-medium text-muted-foreground num">
-                  <Clock className="h-3 w-3" aria-hidden />
+                <Badge variant="neutral" className="num font-medium">
+                  <Clock aria-hidden />
                   {daysOnMarketLabel}
-                </span>
+                </Badge>
               )}
               {showSites && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-caption font-medium text-muted-foreground num">
-                  <Layers className="h-3 w-3" aria-hidden />
+                <Badge variant="neutral" className="num font-medium">
+                  <Layers aria-hidden />
                   {t("listingCard.onSites", "On {n} sites", { n: sites })}
-                </span>
+                </Badge>
               )}
             </div>
           )}
@@ -336,10 +341,10 @@ export const ListingCard = memo(function ListingCard({
           {specPills.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {specPills.map((p) => (
-                <span key={p.key} className={`spec-pill${p.key === "km" || p.key === "cc" ? " num" : ""}`}>
-                  {p.icon && <Gauge className="h-3 w-3 text-muted-foreground/70" aria-hidden />}
+                <Badge key={p.key} variant="outline" className={cn("font-medium text-label-2", (p.key === "km" || p.key === "cc") && "num")}>
+                  {p.icon && <Gauge aria-hidden />}
                   {p.text}
-                </span>
+                </Badge>
               ))}
             </div>
           )}
@@ -361,12 +366,12 @@ export const ListingCard = memo(function ListingCard({
             {fmv != null && (
               <>
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="text-caption font-medium text-muted-foreground num">
+                  <p className="num text-caption font-medium text-label-2">
                     {t("listingCard.typical", "Typical {price}", { price: formatPrice(fmv.fmv_lkr) })}
                   </p>
                   <p className={`text-caption font-semibold num ${DEAL_TEXT_CLASSES[fmvKind]}`}>{fmv.label}</p>
                 </div>
-                <div className="relative mb-2 h-1.5 overflow-hidden rounded-full bg-foreground/[0.08]">
+                <div className="relative mb-2 h-1.5 overflow-hidden rounded-full bg-foreground/10">
                   <div
                     className={`absolute inset-y-0 left-0 rounded-full transition-ui duration-long motion-reduce:transition-none ${DEAL_BAR_CLASSES[fmvKind]}`}
                     style={{ width: `${marketPosition}%` }}
@@ -376,7 +381,7 @@ export const ListingCard = memo(function ListingCard({
             )}
             {pricePoints.length >= 2 && (
               <div className="flex items-center justify-end gap-1.5">
-                <span className="text-caption text-muted-foreground">
+                <span className="text-caption text-label-2">
                   {t("listingCard.priceMoves", "{n} price changes", { n: pricePoints.length - 1 })}
                 </span>
                 <PriceSparkline
@@ -392,21 +397,21 @@ export const ListingCard = memo(function ListingCard({
             )}
           </div>
 
-          <div className="flex items-center justify-between pt-3.5 border-t border-border">
+          <div className="flex items-center justify-between gap-3 border-t border-separator pt-3">
             <div className="min-w-0">
               {listing.district && (
-                <p className="flex items-center gap-1.5 text-caption font-medium text-foreground/80 truncate">
-                  <MapPin className="h-3 w-3 shrink-0 text-muted-foreground/70" />
+                <p className="flex items-center gap-1.5 truncate text-footnote font-medium text-foreground">
+                  <MapPin className="h-3.5 w-3.5 shrink-0 text-label-2" aria-hidden />
                   {listing.district}
                 </p>
               )}
-              <p className="mt-0.5 text-caption text-muted-foreground truncate">
+              <p className="mt-0.5 truncate text-caption text-label-2">
                 {t("listingCard.listedOn", "Listed on {source}", { source: attribution.sourceName })}
                 {attribution.checkedAgo ? ` · ${t("listingCard.checked", "checked {ago}", { ago: attribution.checkedAgo })}` : ""}
               </p>
             </div>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border transition-ui group-hover:border-primary/30 group-hover:bg-primary/10">
-              <ArrowRight className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-medium group-hover:translate-x-1 group-hover:text-primary" />
+            <div aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 transition-colors duration-short group-hover:bg-primary/10">
+              <ArrowRight className="h-4 w-4 text-label-2 transition-transform duration-medium ease-standard group-hover:translate-x-0.5 group-hover:text-primary" />
             </div>
           </div>
         </div>
