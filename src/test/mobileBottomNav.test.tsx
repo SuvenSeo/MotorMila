@@ -66,10 +66,11 @@ describe("MobileBottomNav", () => {
     others.forEach((l) => expect(l).not.toHaveAttribute("aria-current"));
   });
 
-  it("truncates labels so long si/ta words never collide", () => {
+  it("keeps whole-word labels (no ellipsis) and equal tab widths so si/ta words never collide", () => {
     renderNav();
     const label = screen.getByText(/^prices$/i);
-    expect(label.className).toContain("truncate");
+    expect(label.className).toContain("bottom-nav-label");
+    expect(label.className).not.toContain("truncate");
     const link = screen.getByRole("link", { name: /^prices$/i });
     expect(link.className).toContain("min-w-[3.5rem]");
   });
