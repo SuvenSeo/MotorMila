@@ -6,6 +6,7 @@ import { VehicleThumbnail } from "@/components/VehicleThumbnail";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { formatSourceName } from "@/lib/sourceAttribution";
 import { spring, useReducedMotionOrLowData } from "@/lib/motion";
+import { viewTransitionInFlight } from "@/lib/viewTransition";
 
 // Lightbox JS + CSS load only when someone taps a photo (low-end Android first).
 const ListingLightbox = lazy(() => import("@/components/listing/ListingLightbox"));
@@ -59,9 +60,27 @@ export function ListingImageCarousel({
   const reduced = useMemo(prefersReducedMotion, []);
   const calm = useReducedMotionOrLowData();
   const ringId = useId();
+  // Detail hero: Embla starts after the card → listing View Transition. Its
+  // init measure forced a style + layout of the whole incoming page inside the
+  // route commit (~40 ms at 4× CPU); slide 0 renders statically until then.
+  const [carouselLive, setCarouselLive] = useState(!isDetail);
+  useEffect(() => {
+    if (carouselLive || !multi) return;
+    let raf = 0;
+    let timer = 0;
+    const go = () => {
+      if (viewTransitionInFlight()) timer = window.setTimeout(go, 50);
+      else raf = window.requestAnimationFrame(() => setCarouselLive(true));
+    };
+    timer = window.setTimeout(go, 0);
+    return () => {
+      window.clearTimeout(timer);
+      window.cancelAnimationFrame(raf);
+    };
+  }, [carouselLive, multi]);
   const [emblaRef, emblaApi] = useEmblaCarousel({
     // Single-photo listings skip Embla's measuring work entirely.
-    active: multi,
+    active: multi && carouselLive,
     // Detail: no loop so the first/last photo rubber-bands against the edge
     // (Embla's built-in edge resistance); cards keep looping arrows.
     loop: multi && !isDetail,

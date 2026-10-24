@@ -65,21 +65,26 @@ export function getListingRecencyLabel(iso: string | null, t: TranslateFn = engl
  * the moment Motormila first spotted the ad, which is the closest the
  * pipeline gets to the true publication time (scrapes run 3x daily).
  */
+// Built once: toLocale*String(…, options) constructs a new Intl formatter on
+// every call (~5 ms each at 4× CPU), and the listing page formats on each render.
+let listedDateFmt: Intl.DateTimeFormat | null = null;
+let listedTimeFmt: Intl.DateTimeFormat | null = null;
+
 export function formatListedDateTime(iso: string | null | undefined): string | null {
   const ts = parseFlexibleTime(iso);
   if (ts === null) return null;
   const d = new Date(ts);
-  const date = d.toLocaleDateString("en-GB", {
+  listedDateFmt ??= new Intl.DateTimeFormat("en-GB", {
     timeZone: "Asia/Colombo",
     day: "numeric",
     month: "short",
     year: "numeric",
   });
-  const time = d.toLocaleTimeString("en-US", {
+  listedTimeFmt ??= new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Colombo",
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
   });
-  return `${date}, ${time}`;
+  return `${listedDateFmt.format(d)}, ${listedTimeFmt.format(d)}`;
 }

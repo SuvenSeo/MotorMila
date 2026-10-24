@@ -17,7 +17,8 @@ import { vehicleTokenLabel } from "@/lib/vehicleTokens";
 import { summarizeFmv } from "@/lib/fmv";
 import { useAuth } from "@/lib/authContext";
 import { hasFullPlatformAccess } from "@/lib/planLimits";
-import { prefetchRoute } from "@/lib/routePrefetch";
+import { prefetchRoute, warmDisplayBoldFont } from "@/lib/routePrefetch";
+import { prefetchListingBundle, seedListing } from "@/lib/listingHandoff";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { canonicalizeMake, canonicalizeModel } from "@/lib/makeNormalization";
 import { usePriceSparklines } from "@/hooks/usePriceSparklines";
@@ -209,6 +210,14 @@ export const ListingCard = memo(function ListingCard({
         // whole snapshot catalogue (tens of MB) the first time a card was hovered.
         prefetchRoute(`/listing/${listing.id}`);
       }}
+      onPointerDown={(e) => {
+        // A press is a near-certain open: start the chunk and the detail data
+        // now (~100 ms ahead of the click on touch). Primary button only.
+        if (e.button !== 0) return;
+        prefetchRoute(`/listing/${listing.id}`);
+        prefetchListingBundle(listing.id);
+        warmDisplayBoldFont();
+      }}
     >
       <Link
         to={`/listing/${listing.id}`}
@@ -217,7 +226,9 @@ export const ListingCard = memo(function ListingCard({
           // Card → detail photo continuity (View Transitions, feature-detected).
           if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
           const to = `/listing/${listing.id}`;
-          if (navigateWithHeroTransition(() => navigate(to), visibleCardImage(cardRef.current))) e.preventDefault();
+          const photo = visibleCardImage(cardRef.current);
+          seedListing(listing, photo && photo.complete && photo.naturalWidth > 0 ? photo.currentSrc || photo.src : null);
+          if (navigateWithHeroTransition(() => navigate(to), photo)) e.preventDefault();
         }}
         className="absolute inset-0 z-10 rounded-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       />

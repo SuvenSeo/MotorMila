@@ -21,13 +21,23 @@ html[data-listing-vt]::view-transition-new(root) {
   animation-duration: var(--dur-short);
   animation-timing-function: var(--ease-standard);
 }
+/* With the card's photo under the detail hero, the hero shows nothing (not the
+ * muted pending tile) until its full-size file has loaded. */
+[data-hero-ph] img[data-listing-hero][data-pending="true"] {
+  background-color: transparent;
+  animation: none;
+}
 /* While the hero morph is captured, show the new route at rest (the route
- * cross-fade would otherwise snapshot it at opacity 0) and drop the old one. */
-html[data-listing-vt="hero"] .route-stage:has(img[data-listing-hero]) {
+ * cross-fade would otherwise snapshot it at opacity 0) and drop the old one.
+ * The stage holding the hero is marked from JS (listingMotion.ts): the old
+ * `.route-stage:has(img[data-listing-hero])` form made every DOM insert under
+ * the page re-check :has() and restyle the whole page (~500 elements, ~40 ms
+ * at 4× CPU) on each frame the below-the-fold sections mounted. */
+html[data-listing-vt="hero"] .route-stage[data-vt-hero-stage] {
   opacity: 1 !important;
   transform: none !important;
 }
-html[data-listing-vt="hero"] .route-stage:not(:has(img[data-listing-hero])) {
+html[data-listing-vt="hero"] .route-stage:not([data-vt-hero-stage]) {
   display: none !important;
 }
 

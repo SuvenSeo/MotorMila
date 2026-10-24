@@ -27,16 +27,29 @@ interface ListingPriceTimelineProps {
   isLoading?: boolean;
 }
 
+// One Intl formatter per locale + shape: toLocaleDateString(…, options) builds a
+// new one per call, and the axis formats every tick on every render.
+const dateFormatters = new Map<string, Intl.DateTimeFormat>();
+function dateFormatter(localeTag: string, withYear: boolean): Intl.DateTimeFormat {
+  const key = `${localeTag}|${withYear ? "y" : ""}`;
+  let fmt = dateFormatters.get(key);
+  if (!fmt) {
+    fmt = new Intl.DateTimeFormat(localeTag, withYear ? { day: "numeric", month: "short", year: "numeric" } : { day: "numeric", month: "short" });
+    dateFormatters.set(key, fmt);
+  }
+  return fmt;
+}
+
 function formatAxisDate(iso: string, localeTag: string): string {
   const d = new Date(iso);
   if (!Number.isFinite(d.getTime())) return "";
-  return d.toLocaleDateString(localeTag, { day: "numeric", month: "short" });
+  return dateFormatter(localeTag, false).format(d);
 }
 
 function formatFullDate(iso: string, localeTag: string): string {
   const d = new Date(iso);
   if (!Number.isFinite(d.getTime())) return "—";
-  return d.toLocaleDateString(localeTag, { day: "numeric", month: "short", year: "numeric" });
+  return dateFormatter(localeTag, true).format(d);
 }
 
 const NICE_MN_STEPS = [0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 2.5, 5, 10, 20, 25, 50, 100];

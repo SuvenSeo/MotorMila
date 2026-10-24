@@ -1,6 +1,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
-import { useDeferredMount } from '@/hooks/useDeferredMount';
+import { DeferredSection } from '@/components/DeferredSection';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   ArrowLeft, ExternalLink, MapPin, Calendar,
@@ -8,7 +9,8 @@ import {
   Car as CarIcon, ArrowRight, Zap, Sparkles, ShieldCheck, Clock, Database, AlertTriangle, PlugZap, Scale,
   TrendingDown, Layers
 } from 'lucide-react';
-import { getListing, getListingFmv, getListingGeo, getListingHistoryReport, getListingPriceHistory, getListingSafetyResearch, getSimilarListings, formatPrice } from '@/services/api';
+import { getListingGeo, getListingHistoryReport, getListingSafetyResearch, formatPrice } from '@/services/api';
+import { peekListingSeed, takeListingBundle } from '@/lib/listingHandoff';
 import { TrustCheckPanel } from '@/components/TrustCheckPanel';
 import { SnapshotModeNotice } from '@/components/SnapshotModeNotice';
 import { getSourceAttribution } from '@/lib/sourceAttribution';
@@ -103,7 +105,12 @@ export default function ListingDetail() {
   const { t, localeTag, language } = useAppPreferences();
   const { hasProAccess, isAdmin } = useAuth();
   const fullAccess = hasFullPlatformAccess({ hasProAccess, isAdmin });
-  const [listing, setListing] = useState<CarListing | null>(null);
+  // A card tap hands over its listing + decoded photo (lib/listingHandoff):
+  // the header and hero paint at once while the detail data loads.
+  const [seed] = useState(() => peekListingSeed(id));
+  const [listing, setListing] = useState<CarListing | null>(seed?.listing ?? null);
+  /** The detail bundle (listing, similar, history, FMV) has arrived. */
+  const [dataReady, setDataReady] = useState(false);
   const [similar, setSimilar] = useState<CarListing[]>([]);
   const [sellerProfile, setSellerProfile] = useState<SellerTrustProfile | null>(null);
   const [priceHistory, setPriceHistory] = useState<PriceHistoryInfo | null>(null);
@@ -112,13 +119,19 @@ export default function ListingDetail() {
   const [listingGeo, setListingGeo] = useState<EnrichmentEnvelope | null>(null);
   /** Cross-site linked listings; null = history service unavailable. */
   const [relatedListings, setRelatedListings] = useState<TrustRelatedListing[] | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!seed);
   const { toggle: toggleCompare, isPinned: isPinnedForCompare } = useCompareTray();
   const [watchlisted, setWatchlisted] = useState(false);
-  // Trust check, finance planner, safety/geo cards and similar cars are below
-  // the fold: mount them a frame after the hero so the card → listing open
-  // paints (and morphs) without waiting on them.
-  const restReady = useDeferredMount(listing !== null);
+  // Everything below the price waits for the detail data, then mounts one
+  // section per frame (DeferredSection): the card → listing open used to
+  // commit the whole below-the-fold as one 100–170 ms long task. The finance
+  // planner (Radix slider measures on mount) and similar cars (Embla) mount
+  // only near the viewport or once idle.
+  const rest = listing !== null && dataReady;
+  // The price/typical-price blocks exist twice (mobile flow, desktop sidebar)
+  // and CSS hid one: render only the one this layout shows.
+  const isDesktop = useMediaQuery('(min-width: 1024px)', true);
+  const isMobileFlow = !isDesktop || typeof window === 'undefined' || typeof window.matchMedia !== 'function';
 
   const handleWatchlistToggle = () => {
     if (!listing) return;
@@ -196,19 +209,15 @@ export default function ListingDetail() {
     if (!id) return;
     window.scrollTo(0, 0); // peer links navigate mid-scroll; open each listing at the top
     let cancelled = false;
-    setLoading(true); setSellerProfile(null); setPriceHistory(null); setFmvDetail(null); setSafetyResearch(null); setListingGeo(null); setRelatedListings(null);
-    Promise.all([
-      getListing(id).catch(() => null),
-      getSimilarListings(id).catch(() => []),
-      // seller-profile is retired (410): seller contact happens on the source site.
-      Promise.resolve(null as SellerTrustProfile | null),
-      getListingPriceHistory(id).catch(() => null),
-      getListingFmv(id).catch(() => null),
-    ])
-      .then(([detail, sim, profile, history, fmv]) => {
+    const handed = peekListingSeed(id);
+    if (handed) { setListing(handed.listing); setLoading(false); } else setLoading(true);
+    setDataReady(false); setSellerProfile(null); setPriceHistory(null); setFmvDetail(null); setSafetyResearch(null); setListingGeo(null); setRelatedListings(null);
+    // seller-profile is retired (410): seller contact happens on the source site.
+    takeListingBundle(id)
+      .then(([detail, sim, history, fmv]) => {
         // Ignore a slow response for a listing the user already navigated away from.
         if (cancelled) return;
-        setListing(detail); setSimilar(sim); setSellerProfile(profile); setPriceHistory(history); setFmvDetail(fmv); setLoading(false);
+        setListing(detail); setSimilar(sim); setPriceHistory(history); setFmvDetail(fmv); setLoading(false); setDataReady(true);
         setWatchlisted(detail ? loadWatchlistIds().includes(Number(detail.id)) : false);
         if (detail) {
           document.title = `${detail.title} — Motormila`;
@@ -323,7 +332,8 @@ export default function ListingDetail() {
   const fmvLkr = fmvDetail?.fmv_lkr && fmvDetail.fmv_lkr > 0 ? fmvDetail.fmv_lkr : hasMedian ? median : null;
   // null deal_score = rating suppressed server-side (thin cohort / old vehicle / extreme price / free plan)
   const ratingAllowed = fullAccess && listing.deal_score !== null && listing.deal_score !== undefined;
-  const deal = computeDealBadge({
+  // No deal call until the FMV is in (a seeded first paint has only the card's data).
+  const deal: ReturnType<typeof computeDealBadge> = !dataReady ? { kind: 'none', gapLkr: 0, gapPctBelow: 0 } : computeDealBadge({
     askingLkr: hasPrice ? listingPrice : null,
     fmvLkr,
     confidence: fmvDetail?.confidence ?? null,
@@ -379,6 +389,7 @@ export default function ListingDetail() {
     { label: t("common.body", "Body"), value: vehicleTokenLabel("body", listing.body_type, t), icon: CarIcon },
   ].filter((s): s is { label: string; value: string; icon: typeof Calendar } => Boolean(s.value));
 
+  const heroPlaceholder = seed?.heroSrc && String(seed.listing.id) === String(listing.id) ? seed.heroSrc : null;
   const priceCut = priceHistory && priceHistory.cut_count > 0 ? priceHistory : null;
 
   // ── Blocks (some render in both the mobile flow and the desktop sidebar) ──
@@ -591,11 +602,27 @@ export default function ListingDetail() {
         <div className="grid gap-6 lg:grid-cols-[1.75fr_1fr] lg:items-start lg:gap-8">
 
           {/* ── MAIN ──────────────────────────────────────────── */}
-          <div className="min-w-0 space-y-6">
+          {/* flex gap, not space-y: Tailwind's `space-y > :not([hidden]) ~ :not([hidden])`
+              makes Chrome restyle the whole column on every child insert (~550
+              elements, ~35 ms at 4× CPU per deferred section). */}
+          <div className="flex min-w-0 flex-col gap-6">
 
             {/* 1. Gallery — the car is the hero; overlays stay dark (they sit on the photo) */}
-            <motion.div variants={revealItem} data-listing-gallery className={cn(cardVariants({ variant: "media" }), "rounded-sheet")}>
+            <motion.div variants={revealItem} data-listing-gallery data-hero-ph={heroPlaceholder ? "" : undefined} className={cn(cardVariants({ variant: "media" }), "rounded-sheet")}>
               <div className="group relative aspect-[16/10] min-h-[220px] overflow-hidden bg-black/40">
+                {heroPlaceholder && (
+                  // The card's photo (already decoded): shows under the hero
+                  // until the full-size photo lands, and is what the card → listing
+                  // View Transition morphs into when the hero isn't ready yet.
+                  <img
+                    src={heroPlaceholder}
+                    alt=""
+                    aria-hidden
+                    data-listing-hero-ph=""
+                    referrerPolicy="no-referrer"
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                )}
                 <ListingImageCarousel
                   images={galleryImages}
                   listingId={listing.id}
@@ -603,7 +630,7 @@ export default function ListingDetail() {
                   variant="detail"
                   source={listing.source}
                   priority
-                  className="h-full w-full"
+                  className="relative h-full w-full"
                   imageClassName="transition-transform duration-long ease-decelerate group-hover:scale-[1.02] motion-reduce:transform-none"
                 />
                 <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 to-transparent" />
@@ -631,13 +658,16 @@ export default function ListingDetail() {
             </motion.div>
 
             {/* 2. Price + badge (mobile flow; desktop shows it in the sidebar) */}
+            {isMobileFlow && (
             <motion.div variants={revealItem} className="space-y-3 lg:hidden">
               {renderPriceBlock('mobile')}
               <BeforeYouPayStrip collapsible idSuffix="mobile" />
             </motion.div>
+            )}
 
             {/* 3. Key specs — only what we actually know */}
-            {keySpecs.length > 0 && (
+            {rest && keySpecs.length > 0 && (
+              <DeferredSection minHeight={180}>
               <motion.section {...onScroll} aria-labelledby="key-specs-title" className="space-y-3">
                 <h2 id="key-specs-title" className="text-caption font-semibold text-muted-foreground">{t("listing.keySpecs", "Key specs")}</h2>
                 <dl className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
@@ -653,16 +683,22 @@ export default function ListingDetail() {
                 </dl>
                 <MileageTrustChip mileageKm={listing.mileage_km} year={listing.year} />
               </motion.section>
+              </DeferredSection>
             )}
 
             {/* 4. FMV / why (mobile flow) + Pro upsell below it */}
+            {rest && isMobileFlow && (
+            <DeferredSection minHeight={280}>
             <motion.div {...onScroll} className="space-y-3 lg:hidden">
               {renderFmvCard()}
               {renderProUpsell()}
             </motion.div>
+            </DeferredSection>
+            )}
 
             {/* 5. Price history */}
-            {priceHistory && priceHistory.points.length > 0 && (
+            {rest && priceHistory && priceHistory.points.length > 0 && (
+              <DeferredSection minHeight={224}>
               <motion.div {...onScroll}>
                 <Suspense fallback={<div className="h-56 rounded-2xl border border-border bg-card skeleton-shimmer" />}>
                   <ListingPriceTimeline
@@ -672,11 +708,13 @@ export default function ListingDetail() {
                   />
                 </Suspense>
               </motion.div>
+              </DeferredSection>
             )}
 
-            {restReady ? (
+            {rest ? (
               <>
               {/* 6. Trust Check */}
+              <DeferredSection minHeight={420}>
               <motion.div {...onScroll} className="cv-section">
                 <TrustCheckPanel
                   listing={listing}
@@ -685,15 +723,18 @@ export default function ListingDetail() {
                 />
               </motion.div>
               {listing.id != null && <ListingHistoryReport listingId={listing.id} />}
+              </DeferredSection>
 
               {/* 7. Finance planner */}
               {hasPrice && (lease.isLeaseTakeover ? (
+                <DeferredSection minHeight={140}>
                 <motion.section {...onScroll} className={cn(cardVariants({ padding: "md" }), "cv-section")}>
                   <h2 className="text-caption font-semibold text-muted-foreground">{t("listing.ownershipPlanning", "Ownership planning")}</h2>
                   <p className="mt-2 text-footnote leading-relaxed text-muted-foreground">
                     {t("listing.leaseNoFinance", "Finance estimates are hidden: the price on a lease takeover isn't the full price. Ask the seller for the settlement letter from the finance company first.")}
                   </p>
                 </motion.section>
+                </DeferredSection>
               ) : (() => {
                 // brand_new already covers API-normalized "unregistered"/new imports
                 const isUnregistered =
@@ -705,6 +746,7 @@ export default function ListingDetail() {
                   year: listing.year,
                 });
                 return (
+                  <DeferredSection lazy minHeight={520}>
                   <motion.div {...onScroll} className="cv-section space-y-4">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <h2 className="text-caption font-semibold text-muted-foreground">{t("listing.ownershipPlanning", "Ownership planning")}</h2>
@@ -742,18 +784,22 @@ export default function ListingDetail() {
                       )}
                     </div>
                   </motion.div>
+                  </DeferredSection>
                 );
               })())}
 
               {/* 8. Details */}
+              <DeferredSection minHeight={150}>
               <motion.div {...onScroll} className={cn(cardVariants({ padding: "md" }), "cv-section")}>
                 <h2 className="mb-3 text-caption font-semibold text-muted-foreground">{t("listing.description", "Description")}</h2>
                 <p className="whitespace-pre-wrap text-footnote font-medium leading-[1.8] text-muted-foreground">
                   {listing.description || t("listing.noDescription", "The seller didn't add a description. Open the original ad for full details.")}
                 </p>
               </motion.div>
+              </DeferredSection>
 
               {/* Seller — info only; the one contact CTA lives in the price card / sticky bar */}
+              <DeferredSection minHeight={150}>
               <motion.section {...onScroll} aria-labelledby="seller-title" className={cn(cardVariants({ padding: "md" }), "cv-section")}>
                 <div className="mb-3 flex items-center gap-2">
                   <ShieldCheck aria-hidden className="h-4 w-4 text-primary" />
@@ -765,7 +811,9 @@ export default function ListingDetail() {
                   {t("listing.sellerContactNote", "Contact the seller through {source}. Motormila doesn't share seller phone numbers.", { source: attribution.sourceName })}
                 </p>
               </motion.section>
+              </DeferredSection>
 
+              <DeferredSection minHeight={150}>
               <motion.div {...onScroll} className="cv-section">
                 <ListingLeadActions
                   listingId={listing.id ?? undefined}
@@ -774,7 +822,9 @@ export default function ListingDetail() {
                   district={listing.district ?? undefined}
                 />
               </motion.div>
+              </DeferredSection>
 
+              <DeferredSection minHeight={300}>
               <div className="grid gap-5 md:grid-cols-2">
                 {listing.make && (
                   <motion.div {...onScroll} className="cv-section">
@@ -785,10 +835,13 @@ export default function ListingDetail() {
                   <ListingGeoCard geo={listingGeo} />
                 </motion.div>
               </div>
+              </DeferredSection>
               {listing.make && (
+                <DeferredSection minHeight={200}>
                 <motion.div {...onScroll} className="cv-section">
                   <NhtsaModelsCard make={listing.make} model={listing.model ?? undefined} compact vin={listingVin(listing)} />
                 </motion.div>
+                </DeferredSection>
               )}
               {trackedDays && (
                 <p className="text-caption leading-relaxed text-muted-foreground">
@@ -800,13 +853,15 @@ export default function ListingDetail() {
               )}
 
               {/* 9. Similar */}
-              <motion.div {...onScroll} className="cv-section">
-                <SimilarCarsStrip
-                  listings={visibleSimilar}
-                  fullAccess={fullAccess}
-                  title={t("listing.similarTitle", "Similar vehicles")}
-                />
-              </motion.div>
+              <DeferredSection lazy minHeight={300}>
+                <motion.div {...onScroll} className="cv-section">
+                  <SimilarCarsStrip
+                    listings={visibleSimilar}
+                    fullAccess={fullAccess}
+                    title={t("listing.similarTitle", "Similar vehicles")}
+                  />
+                </motion.div>
+              </DeferredSection>
               </>
             ) : (
               <div aria-hidden className="min-h-[1200px]" />
@@ -814,10 +869,11 @@ export default function ListingDetail() {
           </div>
 
           {/* ── SIDEBAR (desktop) ─────────────────────────────── */}
-          <aside className="hidden space-y-5 lg:sticky lg:top-20 lg:block">
+          {isDesktop && (
+          <aside className="hidden flex-col gap-5 lg:sticky lg:top-20 lg:flex">
             <motion.div variants={revealItem}>{renderPriceBlock('desktop')}</motion.div>
-            <motion.div variants={revealItem}>{renderFmvCard()}</motion.div>
-            {renderProUpsell() && <motion.div variants={revealItem}>{renderProUpsell()}</motion.div>}
+            {rest && <DeferredSection first minHeight={280}><motion.div variants={revealItem}>{renderFmvCard()}</motion.div></DeferredSection>}
+            {rest && renderProUpsell() && <DeferredSection first><motion.div variants={revealItem}>{renderProUpsell()}</motion.div></DeferredSection>}
             {importFuelType === 'electric' && (
               <Link
                 to="/ev-hub"
@@ -827,6 +883,7 @@ export default function ListingDetail() {
               </Link>
             )}
           </aside>
+          )}
         </div>
       </div>
 

@@ -89,9 +89,23 @@ function constrainedNetwork(): boolean {
   return c.saveData === true || c.effectiveType === "slow-2g" || c.effectiveType === "2g" || c.effectiveType === "3g";
 }
 
+/**
+ * The bold Cal Sans face (weights 650+) is first used by the listing page.
+ * Loading it there swapped every heading's font mid card → listing open and
+ * restyled the page twice (~50 ms each at 4× CPU); warm it while idle instead.
+ */
+export function warmDisplayBoldFont(): void {
+  try {
+    void document.fonts?.load('700 16px "Cal Sans"');
+  } catch {
+    /* fonts API missing: swap happens on first use, as before */
+  }
+}
+
 /** After first paint, warm the tabs users tap most (skipped on Save-Data / slow networks, where hover/tap intent still warms single routes). */
 export function prefetchAppShellRoutes(): void {
   if (constrainedNetwork()) return;
+  warmDisplayBoldFont();
   [
     "/trends",
     "/best-picks",

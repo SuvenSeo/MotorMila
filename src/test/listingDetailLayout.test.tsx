@@ -1,5 +1,5 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Route, Routes } from "react-router-dom";
 import type { CarListing } from "@/types/car";
 
@@ -93,16 +93,49 @@ describe("ListingDetail layout", () => {
 
     const sticky = screen.getByRole("region", { name: /price and contact/i });
     expect(within(sticky).getByRole("link", { name: /view on ikman/i })).toHaveAttribute("target", "_blank");
-    // Sticky bar (mobile) + sidebar (desktop) = two CTAs total, never the old header/seller duplicates.
-    expect(screen.getAllByRole("link", { name: /view on ikman|contact seller/i })).toHaveLength(2);
+    // Mobile layout: the sticky bar is the one CTA (the desktop sidebar isn't rendered),
+    // never the old header/seller duplicates.
+    expect(screen.getAllByRole("link", { name: /view on ikman|contact seller/i })).toHaveLength(1);
 
     const priceHeadings = screen.getAllByText("Asking price");
-    const specs = screen.getByRole("heading", { name: /key specs/i });
+    // Key specs mount just after the hero (DeferredSection), so wait for them.
+    const specs = await screen.findByRole("heading", { name: /key specs/i });
     // eslint-disable-next-line no-bitwise
     expect(priceHeadings[0].compareDocumentPosition(specs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     // Safety strip links to the transfer guide.
     expect(screen.getAllByRole("link", { name: /safe transfer checklist/i })[0]).toHaveAttribute("href", "/safe-transfer");
+  });
+
+  describe("on desktop (min-width: 1024px)", () => {
+    const original = window.matchMedia;
+    beforeEach(() => {
+      window.matchMedia = ((query: string) => ({
+        ...original(query),
+        matches: /\(min-width:\s*(\d+)px\)/.test(query) && Number(/(\d+)px/.exec(query)?.[1]) <= 1440,
+      })) as typeof window.matchMedia;
+    });
+    afterEach(() => {
+      window.matchMedia = original;
+    });
+
+    it("renders the sidebar: sticky bar + sidebar = two CTAs", async () => {
+      vi.mocked(api.getListing).mockResolvedValue(listing());
+      renderDetail();
+      await screen.findByRole("heading", { level: 1, name: /toyota aqua/i });
+
+      const sticky = screen.getByRole("region", { name: /price and contact/i });
+      expect(within(sticky).getByRole("link", { name: /view on ikman/i })).toHaveAttribute("target", "_blank");
+      // Sticky bar (mobile) + sidebar (desktop) = two CTAs total, never the old header/seller duplicates.
+      expect(screen.getAllByRole("link", { name: /view on ikman|contact seller/i })).toHaveLength(2);
+      const sidebar = document.querySelector("aside");
+      expect(sidebar).not.toBeNull();
+      expect(within(sidebar as HTMLElement).getByRole("link", { name: /view on ikman/i })).toHaveAttribute("target", "_blank");
+
+      // The mobile price block isn't rendered on desktop: one "Asking price" heading, in the sidebar.
+      expect(within(sidebar as HTMLElement).getAllByText("Asking price").length).toBeGreaterThan(0);
+      expect(await screen.findByRole("heading", { name: /key specs/i })).toBeInTheDocument();
+    });
   });
 
   it("labels lease takeovers and gives no deal rating or finance estimate", async () => {

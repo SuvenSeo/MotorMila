@@ -83,7 +83,9 @@ export function MobileAppPromo() {
     const onScroll = () => {
       if (!frame) frame = window.requestAnimationFrame(update);
     };
-    update();
+    // First read on the next frame: reading scrollY inside the route commit
+    // forced a full style + layout of the incoming page in that same task.
+    frame = window.requestAnimationFrame(update);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       window.removeEventListener("scroll", onScroll);
