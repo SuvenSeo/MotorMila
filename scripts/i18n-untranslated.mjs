@@ -41,7 +41,7 @@ const KEEP_KEYS = new Set([
   "adminLogin.path", "alerts.channelTelegram", "footer.ardenoStudio", "nav.github", "trans.tiptronic",
   "ev.chargersSourceValue", "seo.botTitle",
   // Dealer plan names are product names, like "Pro" (the FAQ copy uses them as-is too).
-  "pricing.dealerTier.starter.name", "pricing.dealerTier.yard.name", "pulseGuide.cbsl_fx.short", "search.preset50to75L", "search.preset75to100L",
+  "pricing.dealerTier.starter.name", "pricing.dealerTier.yard.name", "acct.proPreview.gapExports.meta", "pulseGuide.cbsl_fx.short", "search.preset50to75L", "search.preset75to100L",
 ]);
 
 function skippable(v) {

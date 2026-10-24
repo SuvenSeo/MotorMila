@@ -70,7 +70,8 @@ export function LegalPageShell({
     if (!root) return;
     const sections = Array.from(root.querySelectorAll<HTMLElement>("section[data-legal-section]"));
     const next = sections.map((s) => ({ id: s.id, title: s.dataset.legalSection ?? "" }));
-    setToc((prev) => (prev.map((p) => p.id).join("|") === next.map((n) => n.id).join("|") ? prev : next));
+    const sig = (list: { id: string; title: unknown }[]) => list.map((i) => `${i.id}:${String(i.title)}`).join("|");
+    setToc((prev) => (sig(prev) === sig(next) ? prev : next));
   }, [children]);
   const active = useScrollSpy(toc.map((i) => i.id));
 

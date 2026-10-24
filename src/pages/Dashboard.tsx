@@ -857,6 +857,9 @@ export default function Dashboard() {
                           role="option"
                           id={`hero-suggestion-${idx}`}
                           aria-selected={idx === heroActiveIdx}
+                          // Combobox options are picked with the arrow keys (aria-activedescendant), not Tab:
+                          // the list unmounts 120ms after the input blurs, so a tabbable option dropped focus to <body>.
+                          tabIndex={-1}
                           onMouseDown={(e) => e.preventDefault()}
                           onClick={() => {
                             setHeroSearch(item.label);
@@ -881,6 +884,7 @@ export default function Dashboard() {
                             <button
                               key={`${s.id}-${s.make}-${s.model}`} type="button" role="option"
                               id={`hero-suggestion-${idx}`}
+                              tabIndex={-1}
                               aria-selected={idx === heroActiveIdx}
                               onMouseDown={(e) => e.preventDefault()} onClick={() => applyHeroSuggestion(s)}
                               className={`flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-left transition-colors hover:bg-surface ${idx === heroActiveIdx ? "bg-surface" : ""}`}

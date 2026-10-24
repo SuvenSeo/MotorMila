@@ -1725,8 +1725,6 @@ export const ta = {
   "common.off": "முடக்கம்",
   "common.open": "திற",
   "ev.chargersCountPendingHint": "சார்ஜர் வரைபடம் புதுப்பிக்கப்படுகிறது",
-  "footer.fontCredit": "எழுத்துரு: Mark Davis வடிவமைத்த Cal Sans, SIL Open Font License உரிமத்தின் கீழ்.",
-  "footer.fontLicence": "உரிமம்",
   "home.newListings": "புதிய விளம்பரங்கள் கிடைக்கின்றன",
   "home.viewMode": "காட்சி",
   "seo.botTitle": "MotorMilaBot — {site}",

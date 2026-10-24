@@ -1725,8 +1725,6 @@ export const si = {
   "common.off": "අක්‍රීය",
   "common.open": "විවෘත කරන්න",
   "ev.chargersCountPendingHint": "ආරෝපණ ස්ථාන සිතියම යාවත්කාලීන වෙමින්",
-  "footer.fontCredit": "අකුරු: Mark Davis නිර්මාණය කළ Cal Sans, SIL Open Font License යටතේ.",
-  "footer.fontLicence": "බලපත්‍රය",
   "home.newListings": "නව දැන්වීම් ලැබී ඇත",
   "home.viewMode": "පෙන්වීම",
   "seo.botTitle": "MotorMilaBot — {site}",

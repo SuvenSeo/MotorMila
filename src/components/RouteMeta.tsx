@@ -433,12 +433,15 @@ export function RouteMeta() {
           ],
         );
       } else if (hub.kind === "compare") {
+        // Listing ids mean nothing to a reader; the Compare page swaps in the
+        // vehicle names once the listings load (see Compare.tsx).
         const label = hub.ids.length >= 2 ? hub.ids.join(" vs ") : "vehicles";
         meta = {
-          title: `Compare ${label} — Side-by-Side Prices & Specs | ${SITE}`,
-          description:
-            `Side-by-side comparison of listings ${label}: price (LKR), mileage, ` +
-            `district, fuel and fair-value verdict on ${SITE}.`,
+          title: t("seo.compareSlugTitle", "Compare vehicles — Side-by-Side Prices & Specs | {site}", siteVars),
+          description: t(
+            "seo.compareDesc",
+            "Side-by-side Sri Lankan vehicle comparison: price, mileage, district and fair-value verdict.",
+          ),
         };
         ogImage = `${ORIGIN}/api/compare-og?slug=${hub.ids.join("-vs-")}`;
         jsonLd = {

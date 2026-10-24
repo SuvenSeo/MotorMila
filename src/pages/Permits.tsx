@@ -37,6 +37,26 @@ function permitTypeLabel(raw: string): string {
   return PERMIT_TYPE_LABELS[raw] ?? raw.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/**
+ * Known permit names (as seeded by the permitsale scraper / admin) -> locale key.
+ * Matched case- and whitespace-insensitively; unknown names render as-is.
+ */
+const PERMIT_NAME_KEYS: Record<string, string> = {
+  "assembled vehicle permit (general)": "permits.name.assembled_general",
+  "full import permit": "permits.name.full_import",
+  "category i retirement permit": "permits.name.retirement_cat1",
+  "category ii retirement permit": "permits.name.retirement_cat2",
+  "category iii retirement permit": "permits.name.retirement_cat3",
+  "government doctor permit": "permits.name.gov_doctor",
+  "government mp / state officer permit": "permits.name.gov_mp_state_officer",
+  "special ev import permit (remittance)": "permits.name.special_ev_remittance",
+  "foreign employment ev permit": "permits.name.foreign_employment_ev",
+};
+
+function permitNameKey(raw: string): string | undefined {
+  return PERMIT_NAME_KEYS[String(raw ?? "").trim().replace(/\s+/g, " ").toLowerCase()];
+}
+
 function formatLkr(value: number): string {
   return formatLkrCompact(value);
 }
@@ -44,11 +64,13 @@ function formatLkr(value: number): string {
 function PermitRow({ permit, index }: { permit: PermitInfo; index: number }) {
   const { t } = useAppPreferences();
   const typeLabel = t(`permits.type.${permit.permit_type}`, permitTypeLabel(permit.permit_type));
+  const nameKey = permitNameKey(permit.permit_name);
+  const name = nameKey ? t(nameKey, permit.permit_name) : permit.permit_name;
   return (
     // Rows fade in once (opacity only), stagger capped at 8 rows.
     <TableRow className="content-in" style={{ animationDelay: `${staggerDelay(index)}s` }}>
       <TableCell>
-        <p className="text-footnote font-semibold text-foreground">{permit.permit_name}</p>
+        <p className="text-footnote font-semibold text-foreground">{name}</p>
         <Badge variant="neutral" className="mt-1.5 sm:hidden">{typeLabel}</Badge>
       </TableCell>
       <TableCell className="hidden sm:table-cell">

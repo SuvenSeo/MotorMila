@@ -10,9 +10,23 @@ import { Toc, useScrollSpy } from "@/components/ui/toc";
 import { fadeUp } from "@/lib/motion";
 import { useAppPreferences } from "@/lib/appPreferences";
 
+const routeKey = (label: string) => `docs.route.${label.toLowerCase().replace(/[^a-z]+/g, "_")}`;
+
 export default function Docs() {
   const { t } = useAppPreferences();
   const active = useScrollSpy(DOCS_SECTIONS.map((s) => s.id));
+  // English lives in docsContent.ts; si/ta come from locales/content.ts by position.
+  const sections = DOCS_SECTIONS.map((s) => {
+    const k = `docs.s.${s.id}`;
+    return {
+      ...s,
+      title: t(`${k}.title`, s.title),
+      summary: t(`${k}.summary`, s.summary),
+      body: s.body.map((p, i) => t(`${k}.body.${i}`, p)),
+      bullets: s.bullets?.map((b, i) => t(`${k}.bullet.${i}`, b)),
+      relatedRoutes: s.relatedRoutes?.map((r) => ({ ...r, label: t(routeKey(r.label), r.label) })),
+    };
+  });
   return (
     <PageCanvas ambient="none">
       <PageHeader
@@ -47,7 +61,7 @@ export default function Docs() {
               aria-label={t("docs.sectionsAria", "Documentation sections")}
               className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 sm:-mx-6 sm:px-6 lg:hidden"
             >
-              {DOCS_SECTIONS.map((section) => (
+              {sections.map((section) => (
                 <Button key={section.id} asChild variant="secondary" size="sm" className="shrink-0 font-medium">
                   <a href={`#${section.id}`} className="no-underline">
                     {section.title}
@@ -57,7 +71,7 @@ export default function Docs() {
             </nav>
             <Toc
               className="hidden lg:block"
-              items={DOCS_SECTIONS.map((s) => ({ id: s.id, title: s.title }))}
+              items={sections.map((s) => ({ id: s.id, title: s.title }))}
               active={active}
               label={t("docs.sectionsAria", "Documentation sections")}
               heading={t("docs.onThisPage", "On this page")}
@@ -65,15 +79,15 @@ export default function Docs() {
           </aside>
 
           <div className="min-w-0 space-y-6">
-            {DOCS_SECTIONS.map((section) => (
+            {sections.map((section) => (
               <m.section key={section.id} id={section.id} variants={fadeUp} className="scroll-mt-28">
                 <Card padding="lg">
                   <h2 className="font-display text-title2 font-semibold text-foreground">{section.title}</h2>
                   <p className="mt-2 max-w-prose text-callout text-label-2">{section.summary}</p>
 
                   <div className="mt-5 max-w-prose space-y-4">
-                    {section.body.map((paragraph) => (
-                      <p key={paragraph.slice(0, 48)} className="text-body text-label-1 [text-wrap:pretty]">
+                    {section.body.map((paragraph, pi) => (
+                      <p key={`${section.id}-p${pi}`} className="text-body text-label-1 [text-wrap:pretty]">
                         {paragraph}
                       </p>
                     ))}
@@ -81,8 +95,8 @@ export default function Docs() {
 
                   {section.bullets && section.bullets.length > 0 && (
                     <ul className="mt-6 max-w-prose space-y-2 border-t border-separator pt-5">
-                      {section.bullets.map((bullet) => (
-                        <li key={bullet} className="flex gap-3 text-body text-label-2">
+                      {section.bullets.map((bullet, bi) => (
+                        <li key={`${section.id}-b${bi}`} className="flex gap-3 text-body text-label-2">
                           <span aria-hidden className="mt-2.5 h-1 w-1 shrink-0 rounded-full bg-primary" />
                           <span>{bullet}</span>
                         </li>
@@ -93,7 +107,7 @@ export default function Docs() {
                   {section.relatedRoutes && section.relatedRoutes.length > 0 && (
                     <div className="mt-6 flex flex-wrap gap-2">
                       {section.relatedRoutes.map((route) => (
-                        <Button key={route.to + route.label} asChild variant="secondary" size="sm" className="font-medium">
+                        <Button key={route.to} asChild variant="secondary" size="sm" className="font-medium">
                           <Link to={route.to}>
                             {route.label}
                             <ArrowUpRight aria-hidden className="text-label-2" />

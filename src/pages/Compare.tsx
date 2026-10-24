@@ -23,6 +23,7 @@ import { formatSourceName } from "@/lib/sourceAttribution";
 import { howWePriceHref } from "@/lib/howWePrice";
 import { useLowData } from "@/hooks/useLowData";
 import { cn } from "@/lib/utils";
+import { BRAND } from "@/lib/brand";
 import { useCompare } from "@/components/compare/CompareContext";
 import { AnimatePresence, motion } from "motion/react";
 import { duration, ease, spring, useReducedMotionOrLowData } from "@/lib/motion";
@@ -123,6 +124,22 @@ export default function Compare() {
       cancelled = true;
     };
   }, [idsKey, reloadKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Page title names the cars (not listing ids), in the reader's language.
+  const titleNames = listings
+    .map((l) => [l.year, l.make, l.model].filter(Boolean).join(" ").trim())
+    .filter(Boolean)
+    .join(t("comparePage.vs", " vs "));
+  useEffect(() => {
+    if (listings.length < 2 || !titleNames) return;
+    const title = t("seo.compareNamedTitle", "{names} compared — {site}", { names: titleNames, site: BRAND.siteName });
+    // Run after RouteMeta's route-level title on the same commit.
+    const id = window.setTimeout(() => {
+      document.title = title;
+      document.querySelector('meta[property="og:title"]')?.setAttribute("content", title);
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [titleNames, listings.length, t]);
 
   const removeId = (id: number) => {
     compare.remove(id);

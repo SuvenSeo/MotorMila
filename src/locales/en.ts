@@ -1725,8 +1725,6 @@ export const en = {
   "common.off": "Off",
   "common.open": "Open",
   "ev.chargersCountPendingHint": "Charger map updating",
-  "footer.fontCredit": "Set in Cal Sans by Mark Davis, under the SIL Open Font License.",
-  "footer.fontLicence": "Licence",
   "home.newListings": "New listings available",
   "home.viewMode": "View",
   "seo.botTitle": "MotorMilaBot — {site}",

@@ -180,12 +180,6 @@ export function AppFooter() {
             <p className="text-caption text-label-2">
               {t("footer.copyright", "© {year} Ardeno Studio. Built in Sri Lanka.", { year })}
             </p>
-            <p className="text-caption text-label-2">
-              {t("footer.fontCredit", "Set in Cal Sans by Mark Davis, under the SIL Open Font License.")}{" "}
-              <a href="/fonts/cal-sans/OFL.txt" className="underline decoration-border underline-offset-2 hover:text-foreground">
-                {t("footer.fontLicence", "Licence")}
-              </a>
-            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
