@@ -2,6 +2,7 @@ import { scrollBehavior, duration, ease, spring, press, useReducedMotionOrLowDat
 import { forwardRef, memo, startTransition, useDeferredValue, useImperativeHandle, useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { useDeferredMount } from "@/hooks/useDeferredMount";
+import { useOffscreenPause } from "@/hooks/useOffscreenPause";
 import { AnimatePresence, m, motion } from "motion/react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -260,6 +261,9 @@ export default function Dashboard() {
   // Persisted compare tray (localStorage) so selections survive navigation.
   const { pinned: comparePinned, toggle: toggleCompareTray } = useCompareTray();
   const filterSheetRef = useRef<FilterSheetHandle>(null);
+  const heroSectionRef = useRef<HTMLElement>(null);
+  // CSS loops inside the hero pause once it scrolls off screen.
+  useOffscreenPause(heroSectionRef);
   const [watchlistIds, setWatchlistIds] = useState<number[]>([]);
   const [heroSearch, setHeroSearch] = useState("");
   const [heroSearchMessage, setHeroSearchMessage] = useState<string | null>(null);
@@ -696,6 +700,7 @@ export default function Dashboard() {
 
       {/* ── HERO — cinematic showroom ─────────────────────────────── */}
       <section
+        ref={heroSectionRef}
         id="overview"
         className={cn(
           "hero-cinematic relative -mt-[var(--nav-offset)] overflow-hidden border-b border-border pt-[var(--nav-offset)]",

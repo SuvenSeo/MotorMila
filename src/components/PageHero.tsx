@@ -1,4 +1,6 @@
+import { useRef } from "react";
 import { motion } from "motion/react";
+import { useOffscreenPause } from "@/hooks/useOffscreenPause";
 import type { LucideIcon } from "lucide-react";
 import { AtmosphericImage } from "@/components/AtmosphericImage";
 import { revealItem } from "@/lib/motion";
@@ -88,6 +90,9 @@ export function PageHero({
   mediaTone = "brand",
   variant = "tool",
 }: PageHeroProps) {
+  const heroRef = useRef<HTMLElement>(null);
+  // The live eyebrow dot (and any media loop) pauses once the hero scrolls away.
+  useOffscreenPause(heroRef);
   const centered = align === "center";
   if (variant === "tool") {
     return (
@@ -112,6 +117,7 @@ export function PageHero({
 
   return (
     <motion.section
+      ref={heroRef}
       variants={revealItem}
       className={cn(
         "page-hero platform-hero",

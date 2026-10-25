@@ -1,0 +1,23 @@
+/* Hero rotating word (HeroFlipWords). Compositor-only: each letter rises and
+   fades in on a staggered keyframe; the outgoing word lifts and fades out.
+   Before, motion drove y + opacity + blur per letter from rAF on the main
+   thread (~0.6 s of per-frame JS and blur repaints every 2.8 s). */
+.flip-word-in .flip-letter {
+  animation: flip-letter-in var(--dur-long) var(--ease-decelerate) both;
+}
+@keyframes flip-letter-in {
+  from { opacity: 0; transform: translate3d(0, 0.35em, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+.flip-word-out {
+  pointer-events: none;
+  animation: flip-word-out var(--dur-short) var(--ease-accelerate) both;
+}
+@keyframes flip-word-out {
+  to { opacity: 0; transform: translate3d(0, -0.3em, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flip-word-in .flip-letter,
+  .flip-word-out { animation: none; }
+  .flip-word-out { display: none; }
+}

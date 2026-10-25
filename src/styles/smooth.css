@@ -1,0 +1,45 @@
+/* ============================================================================
+   Smoothness pass (web/smooth-everything). Rules that keep idle pages off the
+   main thread and keep every running animation on the compositor.
+   ========================================================================== */
+
+/* ── Reveal (components/motion/Reveal.tsx): once, compositor-only ───────── */
+.mm-reveal {
+  opacity: 0;
+}
+.mm-reveal[data-shown="true"] {
+  animation: mm-reveal-in var(--dur-medium) var(--ease-decelerate) both;
+}
+@keyframes mm-reveal-in {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mm-reveal[data-shown="true"] { animation-name: mm-reveal-fade; animation-duration: var(--dur-micro); }
+}
+html.low-data .mm-reveal { opacity: 1; animation: none !important; }
+@keyframes mm-reveal-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── Loops pause while off screen (hooks/useOffscreenPause.ts) ──────────── */
+[data-offscreen="true"],
+[data-offscreen="true"] *,
+[data-offscreen="true"]::before,
+[data-offscreen="true"]::after,
+[data-offscreen="true"] *::before,
+[data-offscreen="true"] *::after {
+  animation-play-state: paused !important;
+}
+
+/* ── Skeletons: off-screen shimmers are skipped entirely ──────────────────
+   content-visibility:auto skips rendering (and the shimmer keyframe) for
+   skeletons outside the viewport; a loading grid had ~90 of them ticking.
+   Skeletons are empty boxes sized by their classes, so size containment
+   while skipped changes nothing. */
+.skeleton-shimmer {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 1px;
+}
+

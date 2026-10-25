@@ -48,7 +48,9 @@ html[data-listing-vt="hero"] .route-stage:not([data-vt-hero-stage]) {
    decoded. */
 img[data-pending="true"] {
   background-color: hsl(var(--muted));
-  animation: photo-pending 1.6s var(--ease-standard) infinite alternate;
+  /* A few breaths, then a still placeholder: a lazy photo that never scrolls
+     in would otherwise breathe (and keep frames coming) forever. */
+  animation: photo-pending 1.6s ease-in-out 8 alternate;
 }
 @keyframes photo-pending {
   from { opacity: 1; }

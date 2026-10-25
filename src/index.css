@@ -2,6 +2,7 @@
 @import "./styles/fonts.css";
 @import "./styles/tokens.css";
 @import "./styles/motion.css";
+@import "./styles/smooth.css";
 
 @tailwind base;
 @tailwind components;
@@ -940,15 +941,18 @@
       linear-gradient(180deg, rgba(6, 4, 3, 0.34) 0%, transparent 26%, rgba(6, 4, 3, 0.76) 100%);
   }
 
+  /* One cinematic settle on arrival (the photo eases in from a slight push),
+     then the frame holds still. The old 32 s infinite ken-burns kept the page
+     producing main-thread frames forever — ~20% of the main thread on an
+     idle home page at 4× CPU, even when scrolled away. */
   .hero-cinematic__media {
     transform-origin: 62% 42%;
-    will-change: transform;
-    animation: ken-burns 32s var(--ease-standard) infinite alternate;
+    animation: hero-settle 2.4s var(--ease-decelerate) both;
   }
 
-  @keyframes ken-burns {
-    from { transform: scale(1) translate3d(0, 0, 0); }
-    to   { transform: scale(1.09) translate3d(-1.6%, -1%, 0); }
+  @keyframes hero-settle {
+    from { transform: scale(1.06) translate3d(-1%, -0.6%, 0); }
+    to   { transform: scale(1) translate3d(0, 0, 0); }
   }
 
   .hero-cinematic__vignette {
@@ -2646,12 +2650,23 @@ body.cursor-custom-active * { cursor: auto; }
 .cursor-dot, .cursor-ring { display: none; }
 
 /* Live pulse dot — slow, calm */
+/* Transform + opacity only (was an animated box-shadow: a repaint every
+   frame on every page with a hero eyebrow). The element (or its ::before)
+   carries the dot colour; the ring is the dot scaling out and fading. */
 @keyframes live-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4); }
-  60%      { box-shadow: 0 0 0 6px hsl(var(--primary) / 0); }
+  0%       { transform: scale(1); opacity: 0.55; }
+  60%, 100% { transform: scale(2.6); opacity: 0; }
 }
 
-.animate-live-dot { animation: live-pulse 3s ease-in-out infinite; }
+.animate-live-dot { position: relative; }
+.animate-live-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: hsl(var(--primary));
+  animation: live-pulse 3s ease-in-out infinite;
+}
 
 /* ==========================================================================
    UI review batch 3 (#11–16)
