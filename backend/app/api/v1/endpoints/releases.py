@@ -64,6 +64,7 @@ def _env_payload() -> Optional[dict]:
         "apk_url": _env("APP_RELEASE_APK_URL"),
         "notes": _env("APP_RELEASE_NOTES"),
         "published_at": _env("APP_RELEASE_PUBLISHED_AT"),
+        "sha256": _env("APP_RELEASE_SHA256"),
         "source": "env",
     }
 
@@ -187,6 +188,9 @@ def latest_app_release() -> dict:
         "apk_url": github_payload.get("apk_url"),
         "notes": github_payload.get("notes"),
         "published_at": github_payload.get("published_at"),
+        # The Android updater refuses to install an APK without a matching
+        # SHA-256, so the fallback must pass the manifest's digest through.
+        "sha256": github_payload.get("sha256"),
         "min_supported_version_code": 0,
         "source": github_payload.get("source") or "none",
     }
