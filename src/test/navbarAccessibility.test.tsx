@@ -111,6 +111,16 @@ describe("Navbar accessibility active-state", () => {
     expect(header).toHaveAttribute("data-scrolled", "true");
     expect(header).toHaveAttribute("data-nav-mode", "compact");
 
+    // Hysteresis: hovering just under the 24px "compact" threshold keeps the
+    // capsule (no flicker when a trackpad settles near it)…
+    act(() => {
+      window.scrollY = 16;
+      fireEvent.scroll(window);
+      queuedFrame?.(0);
+    });
+    expect(header).toHaveAttribute("data-scrolled", "true");
+    expect(header).toHaveAttribute("data-capsule", "true");
+
     act(() => {
       window.scrollY = 0;
       fireEvent.scroll(window);
@@ -118,6 +128,9 @@ describe("Navbar accessibility active-state", () => {
     });
     expect(header).toHaveAttribute("data-scrolled", "false");
     expect(header).toHaveAttribute("data-nav-mode", "full");
+    expect(header).toHaveAttribute("data-capsule", "false");
+    // …and the top ↔ capsule glide is armed only by a real switch.
+    expect(header).toHaveAttribute("data-morphed", "true");
     requestAnimationFrameSpy.mockRestore();
   });
 

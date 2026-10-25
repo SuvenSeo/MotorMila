@@ -1322,23 +1322,29 @@
     background: hsl(var(--card) / 0.9);
   }
 
-  /* ── Site header (polish/round2) ────────────────────────────────
+  /* ── Site header (polish/round2 · motion pass web/navbar-motion) ──
      At the top: transparent, full-width, heroes run underneath.
-     Scrolled: the header morphs into a floating rounded capsule — an
-     inset, translucent blurred pill with a hairline and soft shadow.
-     The morph is driven by the data-scrolled state (not per-pixel):
-       · the capsule (.site-nav-bg, an empty decorative layer) eases its
-         inset + radius from full-bleed to the pill;
-       · the row's inline padding eases from the full-row inset to the
-         capsule interior (a 64px fixed box, so the relayout is trivial),
-         which keeps the 3-column grid itself inside the pill — the centre
-         group stays centred and the side clusters can never slide over it
-         (polish r3; the old translateX glide overlapped "More" at ≥1280);
+     Capsule (scrolled, or menu open): a floating, inset, translucent
+     blurred pill with a hairline and soft shadow.
+     The switch is one attribute flip (data-capsule, written by Navbar's
+     rAF-throttled scroll listener with hysteresis — never per pixel, never
+     a React render), and every frame of the morph runs on the compositor:
+       · the capsule (.site-nav-bg) is laid out ONCE at its final geometry,
+         blur and shadow included; the morph only crossfades it and scales
+         it from the full-bleed bar (--cap-sx/--cap-sy, set by fitNav) —
+         no inset / radius / backdrop-filter / box-shadow animation;
+       · the row's inline padding switches in a single step (a 64px fixed
+         box, so one tiny relayout at the flip), and the side clusters glide
+         from their old spot on `translate` keyframes (a CSS FLIP, distance
+         --nav-shift from fitNav), so the grid keeps the centre group centred
+         and the clusters can never slide over it;
        · the row rises 2px so it sits centred in the shorter pill.
      The header box stays 64px tall, so nothing below it reflows. */
   .site-nav-header {
-    --nav-morph-dur: 380ms;
-    --nav-morph-ease: var(--ease-decelerate);
+    /* Apple-style spring-ish curve: fast start, long soft settle. */
+    --ease-nav: cubic-bezier(0.32, 0.72, 0, 1);
+    --nav-morph-dur: 420ms;
+    --nav-morph-ease: var(--ease-nav);
     /* Capsule geometry */
     --cap-max: 1280px;
     --cap-gap: 10px;       /* min distance from the viewport edge */
@@ -1349,9 +1355,13 @@
     --row-pad: 12px;       /* .site-nav padding-inline (mirrors below) */
     --row-max: 1560px;
     --hdr-w: 100vw;
+    /* Morph geometry, measured by fitNav (fallbacks ≈ a phone). */
+    --nav-shift: 8px;
+    --cap-sx: 1.06;
+    --cap-sy: 1.23;
     container-type: inline-size;
     transform: translate3d(0, 0, 0);
-    transition: transform var(--dur-medium) var(--ease-standard);
+    transition: transform 440ms var(--ease-nav);
   }
 
   @supports (width: 1cqw) {
@@ -1363,47 +1373,46 @@
   }
 
   .site-nav-header[data-hidden="true"] {
-    /* Clear the capsule's top gap too. */
+    /* Clear the capsule's top gap too. Hiding eases out a touch quicker. */
     transform: translate3d(0, calc(-100% - 12px), 0);
+    transition-duration: 360ms;
   }
 
+  /* The capsule: final geometry always; the full-bar pose is a transform. */
   .site-nav-bg {
     position: absolute;
-    inset: 0;
+    top: var(--cap-top);
+    height: calc(var(--nav-height) - var(--cap-top) - var(--cap-bottom));
+    left: max(var(--cap-gap), calc((var(--hdr-w) - var(--cap-max)) / 2));
+    right: max(var(--cap-gap), calc((var(--hdr-w) - var(--cap-max)) / 2));
     pointer-events: none;
     opacity: 0;
-    border-radius: 0;
-    border: 1px solid transparent;
-    background: hsl(var(--background) / 0.7);
+    transform: translate3d(0, -2px, 0) scale(var(--cap-sx), var(--cap-sy));
+    transform-origin: 50% 50%;
+    border-radius: var(--cap-radius);
+    border: 1px solid hsl(var(--foreground) / 0.09);
+    background: hsl(var(--background) / 0.76);
     backdrop-filter: blur(16px) saturate(1.7);
     -webkit-backdrop-filter: blur(16px) saturate(1.7);
-    box-shadow: none;
-    transition:
-      inset var(--nav-morph-dur) var(--nav-morph-ease),
-      border-radius var(--nav-morph-dur) var(--nav-morph-ease),
-      opacity calc(var(--nav-morph-dur) * 0.6) var(--ease-standard),
-      border-color var(--nav-morph-dur) var(--ease-standard),
-      box-shadow var(--nav-morph-dur) var(--ease-standard);
-  }
-
-  .site-nav-header[data-scrolled="true"] .site-nav-bg,
-  .site-nav-header[data-menu-open="true"] .site-nav-bg {
-    opacity: 1;
-    inset:
-      var(--cap-top)
-      max(var(--cap-gap), calc((var(--hdr-w) - var(--cap-max)) / 2))
-      var(--cap-bottom);
-    border-radius: var(--cap-radius);
-    background: hsl(var(--background) / 0.76);
-    border-color: hsl(var(--foreground) / 0.09);
     box-shadow:
       0 10px 30px -10px rgb(0 0 0 / 0.18),
       0 2px 6px -2px rgb(0 0 0 / 0.08),
       inset 0 1px 0 rgb(255 255 255 / 0.55);
+    will-change: transform, opacity;
+    transition:
+      transform var(--nav-morph-dur) var(--nav-morph-ease),
+      opacity 220ms var(--ease-standard);
   }
 
-  .theme-dark .site-nav-header[data-scrolled="true"] .site-nav-bg,
-  .theme-dark .site-nav-header[data-menu-open="true"] .site-nav-bg {
+  .site-nav-header[data-capsule="true"] .site-nav-bg {
+    opacity: 1;
+    transform: none;
+    transition:
+      transform var(--nav-morph-dur) var(--nav-morph-ease),
+      opacity 260ms var(--ease-standard);
+  }
+
+  .theme-dark .site-nav-bg {
     background: hsl(var(--card) / 0.74);
     border-color: hsl(var(--foreground) / 0.1);
     box-shadow:
@@ -1417,9 +1426,11 @@
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
+  html.low-data.theme-dark .site-nav-bg { background: hsl(var(--card) / 0.97); }
 
   /* The row's content box tracks the capsule: full-row inset at the top,
-     capsule interior when scrolled (never narrower-than-top inset). */
+     capsule interior in the capsule (never narrower-than-top inset). The
+     switch is instant; the clusters' glide below hides it. */
   .site-nav-header .site-nav {
     --nav-pad-top: max(var(--row-pad), calc((var(--hdr-w) - var(--row-max)) / 2 + var(--row-pad)));
     --nav-pad-cap: max(
@@ -1427,46 +1438,90 @@
       calc(max(var(--cap-gap), (var(--hdr-w) - var(--cap-max)) / 2) + var(--cap-pad))
     );
     padding-inline: var(--nav-pad-top);
-    transition: padding-inline var(--nav-morph-dur) var(--nav-morph-ease);
+    contain: layout style;
   }
 
-  .site-nav-header[data-scrolled="true"] .site-nav,
-  .site-nav-header[data-menu-open="true"] .site-nav {
+  .site-nav-header[data-capsule="true"] .site-nav {
     padding-inline: var(--nav-pad-cap);
   }
 
-  .site-nav-header .site-nav > * {
+  .site-nav-header .site-nav {
     transition: transform var(--nav-morph-dur) var(--nav-morph-ease);
   }
 
-  .site-nav-header[data-scrolled="true"] .site-nav > *,
-  .site-nav-header[data-menu-open="true"] .site-nav > * {
+  .site-nav-header[data-capsule="true"] .site-nav {
     transform: translate3d(0, 2px, 0);
   }
 
-  /* Inside the pill the centre group drops its own tray so the pill
-     reads as one surface. */
-  .site-nav-header .site-nav__center {
-    transition:
-      background-color var(--nav-morph-dur) var(--ease-standard),
-      border-color var(--nav-morph-dur) var(--ease-standard);
-  }
+  /* CSS FLIP for the side clusters (only after a real switch, so first
+     paint never animates). Four names so each direction restarts. */
+  .site-nav-header[data-morphed="true"][data-capsule="true"] .site-nav > :first-child { animation: nav-glide-cap-l var(--nav-morph-dur) var(--nav-morph-ease) both; }
+  .site-nav-header[data-morphed="true"][data-capsule="true"] .site-nav > :last-child { animation: nav-glide-cap-r var(--nav-morph-dur) var(--nav-morph-ease) both; }
+  .site-nav-header[data-morphed="true"][data-capsule="false"] .site-nav > :first-child { animation: nav-glide-top-l var(--nav-morph-dur) var(--nav-morph-ease) both; }
+  .site-nav-header[data-morphed="true"][data-capsule="false"] .site-nav > :last-child { animation: nav-glide-top-r var(--nav-morph-dur) var(--nav-morph-ease) both; }
+  @keyframes nav-glide-cap-l { from { translate: calc(var(--nav-shift) * -1) 0; } to { translate: 0 0; } }
+  @keyframes nav-glide-cap-r { from { translate: var(--nav-shift) 0; } to { translate: 0 0; } }
+  @keyframes nav-glide-top-l { from { translate: var(--nav-shift) 0; } to { translate: 0 0; } }
+  @keyframes nav-glide-top-r { from { translate: calc(var(--nav-shift) * -1) 0; } to { translate: 0 0; } }
 
-  .site-nav-header[data-scrolled="true"] .site-nav__center {
+  /* The centre group's tray: two pre-painted layers (theme tray, smoked
+     hero tray) that crossfade by opacity — inside the pill both fade out so
+     the pill reads as one surface. No colour transitions → no repaints. */
+  .site-nav-header .site-nav__center {
+    position: relative;
+    isolation: isolate;
     background: transparent;
     border-color: transparent;
   }
+  .site-nav-header .site-nav__center::before,
+  .site-nav-header .site-nav__center::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    z-index: -1;
+    border-radius: inherit;
+    border: 1px solid hsl(var(--border) / 0.8);
+    background: hsl(var(--foreground) / 0.04);
+    pointer-events: none;
+    transition: opacity var(--nav-morph-dur) var(--ease-standard);
+  }
+  .site-nav-header .site-nav__center::after {
+    opacity: 0;
+    border-color: rgb(255 255 255 / 0.16);
+    background: rgb(0 0 0 / 0.28);
+  }
+  .site-nav-header[data-over-hero="true"] .site-nav__center::before { opacity: 0; }
+  .site-nav-header[data-over-hero="true"] .site-nav__center::after { opacity: 1; }
+  .site-nav-header[data-capsule="true"] .site-nav__center::before { opacity: 0; }
 
+  /* Wordmark: both inks stacked, crossfaded (no display swap → no relayout
+     when the header leaves the home hero). */
+  .site-nav__brand-logo .brand-wordmark-lockup { display: grid; }
+  .site-nav__brand-logo .brand-wordmark-lockup > img {
+    grid-area: 1 / 1;
+    display: block;
+    transition: opacity var(--nav-morph-dur) var(--ease-standard);
+  }
+  .site-nav__brand-logo .brand-wordmark-lockup > img:last-child { opacity: 0; }
+  .theme-dark .site-nav__brand-logo .brand-wordmark-lockup > img:first-child { opacity: 0; }
+  .theme-dark .site-nav__brand-logo .brand-wordmark-lockup > img:last-child { opacity: 1; }
+
+  /* Reduced motion: the capsule just fades; nothing slides or scales. */
   @media (prefers-reduced-motion: reduce) {
-    .site-nav-bg,
+    .site-nav-header { transition: opacity 160ms linear !important; }
+    .site-nav-header[data-hidden="true"] { transform: none; opacity: 0; pointer-events: none; }
+    .site-nav-bg { transform: none !important; transition: opacity 160ms linear !important; }
     .site-nav-header .site-nav,
     .site-nav-header .site-nav > *,
-    .site-nav-header .site-nav__center { transition: none !important; }
+    .site-nav-header .site-nav__center::before,
+    .site-nav-header .site-nav__center::after,
+    .site-nav__brand-logo .brand-wordmark-lockup > img { transition: none !important; animation: none !important; }
   }
 
   html.low-data .site-nav-bg,
   html.low-data .site-nav-header .site-nav,
-  html.low-data .site-nav-header .site-nav > * { transition: none; }
+  html.low-data .site-nav-header .site-nav > * { transition: none; animation: none; }
+  html.low-data .site-nav-bg { transform: none; }
 
   .site-nav {
     position: relative;
@@ -1546,7 +1601,10 @@
     color: hsl(var(--foreground) / 0.66);
     text-decoration: none;
     outline: none;
-    transition: color var(--dur-short) var(--ease-standard), background-color var(--dur-short) var(--ease-standard);
+    transition:
+      color var(--dur-short) var(--ease-standard),
+      background-color var(--dur-short) var(--ease-standard),
+      transform 420ms cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   @media (min-width: 1024px) and (max-width: 1279px) {
@@ -1557,7 +1615,8 @@
   .site-nav__link[data-active="true"] { color: hsl(var(--foreground)); font-weight: 600; background: transparent; }
   .site-nav__link[aria-expanded="true"] { color: hsl(var(--foreground)); background: hsl(var(--foreground) / 0.07); }
   .site-nav__link:focus-visible { box-shadow: 0 0 0 2px hsl(var(--primary) / 0.55); }
-  .site-nav__link:active { transform: scale(0.97); }
+  /* Press: sink to 0.96 fast, spring back on release (Apple-style). */
+  .site-nav__link:active { transform: scale(0.96); transition-duration: var(--dur-short), var(--dur-short), 90ms; }
   @media (prefers-reduced-motion: reduce) { .site-nav__link:active, .nav-control:active { transform: none; } }
 
   /* ── Header over the home hero photo (top of "/", not scrolled) ──
@@ -1565,12 +1624,8 @@
      transparent header switches to light ink there too: light-lettering
      wordmark (the same dark-theme SVG), white links, smoked controls.
      Scrolling morphs back into the theme capsule. */
-  .site-nav-header[data-over-hero="true"] .brand-wordmark-lockup img:first-child { display: none; }
-  .site-nav-header[data-over-hero="true"] .brand-wordmark-lockup img:last-child { display: block; }
-  .site-nav-header[data-over-hero="true"] .site-nav__center {
-    border-color: rgb(255 255 255 / 0.16);
-    background: rgb(0 0 0 / 0.28);
-  }
+  .site-nav-header[data-over-hero="true"] .brand-wordmark-lockup > img:first-child { opacity: 0; }
+  .site-nav-header[data-over-hero="true"] .brand-wordmark-lockup > img:last-child { opacity: 1; }
   .site-nav-header[data-over-hero="true"] .site-nav__link { color: rgb(255 255 255 / 0.78); }
   .site-nav-header[data-over-hero="true"] .site-nav__link:hover,
   .site-nav-header[data-over-hero="true"] .site-nav__link[data-active="true"],
@@ -1619,7 +1674,11 @@
       color var(--dur-short) var(--ease-standard),
       border-color var(--dur-short) var(--ease-standard),
       box-shadow var(--dur-short) var(--ease-standard),
-      transform var(--dur-micro) var(--ease-standard);
+      transform 420ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .nav-control:hover { border-color: hsl(var(--foreground) / 0.16); }
   }
 
   .nav-control:hover,
@@ -1629,7 +1688,7 @@
     color: hsl(var(--foreground));
   }
 
-  .nav-control:active { transform: scale(0.97); }
+  .nav-control:active { transform: scale(0.96); transition-duration: var(--dur-short), var(--dur-short), var(--dur-short), var(--dur-short), 90ms; }
   .nav-control:focus-visible { box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary) / 0.55); }
   .nav-control--icon { width: 36px; padding: 0; }
 
@@ -1643,7 +1702,14 @@
     transform-origin: top right;
   }
 
-  .site-menu-panel-wrap > div { width: 100%; }
+  /* The capsule is row-height only (so the morph never resizes a blurred
+     layer); the open menu panel brings its own glass. */
+  .site-menu-panel-wrap > div {
+    width: 100%;
+    backdrop-filter: blur(16px) saturate(1.7);
+    -webkit-backdrop-filter: blur(16px) saturate(1.7);
+  }
+  html.low-data .site-menu-panel-wrap > div { backdrop-filter: none; -webkit-backdrop-filter: none; }
 
   @media (min-width: 640px) {
     .site-menu-panel-wrap { padding-inline: 20px; }
