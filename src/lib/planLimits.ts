@@ -79,3 +79,13 @@ export const freePlanCopy = {
   dealerBody: "Claim and basic yard tools are open. Deep dealer intelligence unlocks on Pro / Dealer.",
   genericCta: "Notify me",
 } as const;
+
+export type FreePlanCopyKey = keyof typeof freePlanCopy;
+
+/** freePlanCopy line in the active language (keys `plan.free.<key>` in locales/strings.ts). */
+export function freePlanText(
+  t: (key: string, fallback?: string) => string,
+  key: FreePlanCopyKey,
+): string {
+  return t(`plan.free.${key}`, freePlanCopy[key]);
+}

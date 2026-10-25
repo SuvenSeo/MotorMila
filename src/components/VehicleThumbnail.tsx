@@ -1,5 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { formatSourceName } from "@/lib/sourceAttribution";
+import { imageHostBlocked, isRemoteImage, marketplaceSrcSet, noteImageResult } from "@/lib/listingImage";
 
 interface VehicleThumbnailProps {
   src?: string | null;
@@ -13,7 +14,7 @@ interface VehicleThumbnailProps {
   /** First-screen images should load eagerly to protect LCP. */
   priority?: boolean;
   sizes?: string;
-  /** Fade the real photo in once decoded (placeholder colour shows underneath). Skipped for priority images (LCP). */
+  /** Fade the real photo in once decoded (neutral shimmer shows underneath). Skipped for priority images (LCP). */
   fadeIn?: boolean;
   /** Motion hooks: "card" = card photo (view-transition source), "hero" = detail hero (target). */
   marker?: "card" | "hero";
@@ -29,9 +30,9 @@ function escapeSvgText(value: string): string {
 
 /**
  * Branded placeholder (brand bible: Ink ground, Motormila Blue accent, no car
- * clip-art). Used both as the `<img>` background while the photo loads (so a
- * slow or blocked source never shows a blank tile) and as the final image when
- * the source refuses to serve it (riyasewana hot-link 403s, proxy 401s).
+ * clip-art). Used as the final image when a listing has no photo or the source
+ * refuses to serve it (riyasewana hot-link 403s). While a photo loads, a
+ * neutral skeleton shimmer shows instead.
  *
  * Everything sits inside a crop-safe box (x 180–780, y 70–530 of 960×600), so
  * the Apex M mark and the full "Motormila" wordmark survive `object-cover`
@@ -64,9 +65,9 @@ function createFallbackThumbnailDataUri(label: string, source?: string | null): 
     <path d="M78,62 L97,43"/>
     <path d="M97,43 L87.5,43 M97,43 L97,52.5"/>
   </g>
-  <text x="402" y="198" textLength="246" lengthAdjust="spacingAndGlyphs" fill="#FFFFFF" font-family="Space Grotesk,Inter,system-ui,sans-serif" font-weight="700" font-size="62">otormila</text>
-  <text x="480" y="282" fill="#FFFFFF" fill-opacity="0.86" font-family="Space Grotesk,Inter,system-ui,sans-serif" font-weight="700" font-size="${labelSize}" text-anchor="middle"${labelFit}>${safeLabel}</text>
-  <text x="480" y="326" fill="#FFFFFF" fill-opacity="0.55" font-family="Inter,system-ui,sans-serif" font-size="24" text-anchor="middle">${sourceLine}</text>
+  <text x="402" y="198" textLength="246" lengthAdjust="spacingAndGlyphs" fill="#FFFFFF" font-family="Cal Sans,Arial,sans-serif" font-weight="700" font-size="62">otormila</text>
+  <text x="480" y="282" fill="#FFFFFF" fill-opacity="0.86" font-family="Cal Sans,Arial,sans-serif" font-weight="700" font-size="${labelSize}" text-anchor="middle"${labelFit}>${safeLabel}</text>
+  <text x="480" y="326" fill="#FFFFFF" fill-opacity="0.55" font-family="Cal Sans Text,Arial,sans-serif" font-size="24" text-anchor="middle">${sourceLine}</text>
 </svg>`;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
@@ -91,8 +92,9 @@ export const VehicleThumbnail = memo(function VehicleThumbnail({
   const candidates = useMemo(() => {
     const list: string[] = [];
     // Direct first: riyasewana 403s seen from datacenter IPs may not apply to
-    // Sri Lankan residential visitors, so never skip the original.
-    if (src) list.push(src);
+    // Sri Lankan residential visitors, so the original is always tried unless
+    // this session already watched its host refuse several photos in a row.
+    if (src && !imageHostBlocked(src)) list.push(src);
     if (proxyUrl) list.push(proxyUrl);
     list.push(fallbackSrc);
     return list;
@@ -104,8 +106,16 @@ export const VehicleThumbnail = memo(function VehicleThumbnail({
   const imageSrc = candidates[Math.min(attempt, candidates.length - 1)];
   const isPlaceholder = imageSrc === fallbackSrc;
   const fade = fadeIn && !priority && !isPlaceholder;
+  const srcSet = isPlaceholder ? undefined : marketplaceSrcSet(imageSrc);
+  const remote = !isPlaceholder && isRemoteImage(imageSrc);
   const imgRef = useRef<HTMLImageElement>(null);
   const [loaded, setLoaded] = useState(false);
+  // React 18 drops camelCase fetchPriority; set the real attribute so the LCP
+  // photo (detail hero / first cards) is fetched ahead of everything else.
+  useEffect(() => {
+    if (priority) imgRef.current?.setAttribute("fetchpriority", "high");
+    else imgRef.current?.removeAttribute("fetchpriority");
+  }, [priority]);
   useEffect(() => {
     // Cached photos can finish before React attaches onLoad.
     const el = imgRef.current;
@@ -120,19 +130,28 @@ export const VehicleThumbnail = memo(function VehicleThumbnail({
       width={480}
       height={300}
       className={className}
+      srcSet={srcSet}
+      sizes={srcSet ? sizes : undefined}
+      referrerPolicy={remote ? "no-referrer" : undefined}
       loading={priority ? "eager" : "lazy"}
       decoding="async"
-      sizes={sizes}
       data-placeholder={isPlaceholder ? "true" : undefined}
       data-fade-in={fade ? "" : undefined}
       data-loaded={fade ? String(loaded) : undefined}
+      data-pending={!isPlaceholder && !loaded ? "true" : undefined}
       data-card-photo={marker === "card" ? "" : undefined}
       data-listing-hero={marker === "hero" ? "" : undefined}
-      onLoad={fade ? () => setLoaded(true) : undefined}
-      // The placeholder paints underneath until the real photo arrives: no blank tiles.
-      style={isPlaceholder || fade ? undefined : { backgroundImage: `url("${fallbackSrc}")`, backgroundSize: "cover", backgroundPosition: "center" }}
+      onLoad={() => {
+        setLoaded(true);
+        if (remote) noteImageResult(imageSrc, true);
+      }}
+      // While the photo is in flight a neutral shimmer shows (img[data-pending],
+      // listing-motion.css). The branded lockup is only the final state for a
+      // listing with no usable photo; flashing it before every photo read as broken.
       onError={() => {
-        if (!isPlaceholder) setAttempt((a) => a + 1);
+        if (isPlaceholder) return;
+        if (remote) noteImageResult(imageSrc, false);
+        setAttempt((a) => a + 1);
       }}
     />
   );

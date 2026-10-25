@@ -1,4 +1,26 @@
 {
+  "redirects": [
+    {
+      "source": "/leasing",
+      "destination": "/finance",
+      "permanent": true
+    },
+    {
+      "source": "/admin",
+      "destination": "/motormila/admin",
+      "permanent": true
+    },
+    {
+      "source": "/price-index",
+      "destination": "/trends",
+      "permanent": true
+    },
+    {
+      "source": "/valuation",
+      "destination": "/estimate",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/v1/:path*",
@@ -14,10 +36,6 @@
         }
       ],
       "destination": "/api/listing-og?id=:id"
-    },
-    {
-      "source": "/(admin|price-index|valuation|leasing)",
-      "destination": "/"
     },
     {
       "source": "/listing/:id",
@@ -45,10 +63,6 @@
     },
     {
       "source": "/official-pulse/:path*",
-      "destination": "/"
-    },
-    {
-      "source": "/checkout/return",
       "destination": "/"
     }
   ],
@@ -82,7 +96,7 @@
       ]
     },
     {
-      "source": "/(sign-in|sign-up|profile|alerts|settings|dealer|pro|pro-preview|admin|hero-lab|motormila/admin)",
+      "source": "/(sign-in|sign-up|profile|alerts|settings|dealer|pro|pro-preview|admin|hero-lab|motormila/admin|checkout/return)",
       "headers": [
         {
           "key": "X-Robots-Tag",

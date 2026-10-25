@@ -25,6 +25,8 @@ function usePageVisible(): boolean {
 }
 
 const letterStagger = 0.028;
+/** Sinhala (U+0D80–0DFF) and Tamil (U+0B80–0BFF). */
+const COMPLEX_SCRIPT = /[\u0B80-\u0BFF\u0D80-\u0DFF]/;
 
 /**
  * Rotating accent word for the home hero. Every word is laid into the same
@@ -88,11 +90,14 @@ export function HeroFlipWords({ words, interval = 2800, align = "start", classNa
               opacity: 0,
               y: "-0.3em",
               filter: "blur(4px)",
-              transition: { duration: duration.fast, ease: ease.exit },
+              transition: { duration: duration.short, ease: ease.accelerate },
             },
           }}
         >
-          {Array.from(current).map((ch, i) => (
+          {/* Sinhala/Tamil letters are built from several code points (virama, ZWJ,
+              vowel signs); splitting them breaks the conjuncts, so those words
+              animate as one unit. */}
+          {(COMPLEX_SCRIPT.test(current) ? [current] : Array.from(current)).map((ch, i) => (
             <m.span
               key={`${ch}-${i}`}
               className="inline-block"
@@ -102,7 +107,7 @@ export function HeroFlipWords({ words, interval = 2800, align = "start", classNa
                   opacity: 1,
                   y: 0,
                   filter: "blur(0px)",
-                  transition: { duration: duration.slow, ease: ease.emphasized },
+                  transition: { duration: duration.long, ease: ease.decelerate },
                 },
               }}
             >

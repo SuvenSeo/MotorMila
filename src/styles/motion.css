@@ -1,0 +1,99 @@
+/* ============================================================================
+   Motion system — CSS side (web/premium-p0). Tokens: src/index.css :root
+   (--ease-standard|decelerate|accelerate, --dur-micro|short|medium|long),
+   JS mirror src/lib/motion.ts. Transform + opacity only.
+   ========================================================================== */
+
+/* ── Route View Transition: overlapping cross-fade + 8px rise ──────────── */
+html[data-route-vt]::view-transition-old(root) {
+  animation: vt-route-out var(--dur-short) var(--ease-accelerate) both;
+}
+html[data-route-vt]::view-transition-new(root) {
+  animation: vt-route-in var(--dur-medium) var(--ease-decelerate) both;
+}
+@keyframes vt-route-out {
+  to { opacity: 0; }
+}
+@keyframes vt-route-in {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+}
+
+/* Chrome that persists across routes holds still (no cross-fade flicker). */
+.site-nav-header { view-transition-name: site-nav; }
+.bottom-nav { view-transition-name: bottom-nav; }
+::view-transition-group(site-nav),
+::view-transition-group(bottom-nav) {
+  animation-duration: 0s;
+}
+
+/* ── Interaction primitives ───────────────────────────────────────────── */
+/* One press: scale 0.97, 100ms in, spring-ish out. */
+.press {
+  transition: transform var(--dur-short) var(--ease-standard);
+}
+.press:active:not(:disabled) {
+  transform: scale(0.97);
+  transition-duration: var(--dur-micro);
+}
+/* One focus ring: 2px, offset, never on mouse click. */
+.focus-ring:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Skeleton → content cross-fade (wrap content in .content-in on mount). */
+.content-in {
+  animation: content-in var(--dur-medium) var(--ease-decelerate) both;
+}
+@keyframes content-in {
+  from { opacity: 0; }
+}
+
+/* ── Reduced motion: opacity at 100ms, no View Transition movement ─────── */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+  .press:active:not(:disabled) { transform: none; }
+}
+
+/* ── 44px minimum hit area on touch (WCAG 2.5.5 / Apple HIG) ─────────────
+   Compact controls (32px chips, sm buttons, 32px close buttons) keep their
+   look; on coarse pointers an invisible ::after grows the hit box to at least
+   44×44, centred. min() keeps already-large controls untouched. The control
+   must be positioned (the kit's Button and Chip are `relative`). */
+@media (pointer: coarse) {
+  .tap-44::after,
+  .nav-control::after,
+  .site-nav__brand-link::after {
+    content: "";
+    position: absolute;
+    top: min(0px, calc((100% - 44px) / 2));
+    bottom: min(0px, calc((100% - 44px) / 2));
+    left: min(0px, calc((100% - 44px) / 2));
+    right: min(0px, calc((100% - 44px) / 2));
+  }
+}
+
+/* ── Off-screen sections skip rendering work ─────────────────────────────
+   Long below-the-fold blocks (home market sections, footer): style, layout
+   and paint are skipped until they near the viewport, so page-wide style
+   recalcs (dialog scroll lock, theme switch) and scroll frames stay cheap.
+   `auto` remembers the real height once rendered. */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 900px;
+}
+
+/* Listing-page sections below the hero (trust check, finance, details,
+   seller, safety, similar). They mount a frame after the card → listing
+   open; off-screen ones then skip style/layout until scrolled near.
+   Paint containment would clip the cards' shadows, so the clip edge is
+   pushed out by the deepest shadow. */
+.cv-section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 420px;
+  overflow-clip-margin: 32px;
+}

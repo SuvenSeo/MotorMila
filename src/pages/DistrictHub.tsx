@@ -2,17 +2,23 @@ import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { m } from "motion/react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, MapPin } from "lucide-react";
+import { ArrowRight, Car, MapPin } from "lucide-react";
 import { getDistrictQuickInsight, getDistrictPrices, getListings, formatPrice } from "@/services/api";
-import { revealContainer, revealItem } from "@/lib/motion";
+import { listItem, revealItem } from "@/lib/motion";
 import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
-import { PageHero } from "@/components/PageHero";
 import { ListingCard } from "@/components/ListingCard";
-import { SectionHeader } from "@/components/SectionHeader";
 import { DistrictPriceHeatmap } from "@/components/DistrictPriceHeatmap";
 import { DistrictVelocityList } from "@/components/DistrictVelocityList";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { SectionHeading } from "@/components/ui/section-heading";
+import { StatTile, CountValue, LkrValue } from "@/components/ui/stat-tile";
+import { HubLinkTile, HubTileGrid, HubTileSkeleton } from "@/components/data/HubParts";
 import { BRAND } from "@/lib/brand";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { useAppPreferences } from "@/lib/appPreferences";
@@ -85,51 +91,47 @@ export default function DistrictHub() {
   }, [title, description, districtParam]);
 
   const isPending = insightQuery.isPending;
+  const isError = insightQuery.isError && !insight;
   const recentListings = listingsQuery.data?.listings?.slice(0, 4) ?? [];
 
+  const stats = [
+    { label: t("makeHub.liveListings", "Live listings"), value: <CountValue value={insight ? insight.listing_count : null} /> },
+    { label: t("makeHub.avgPrice", "Average price"), value: <LkrValue value={insight?.avg_price_lkr ?? null} /> },
+    { label: t("makeHub.medianPrice", "Median price"), value: <LkrValue value={insight?.median_price_lkr ?? null} /> },
+  ];
+
   return (
-    <PageCanvas>
-      <PageHero
-        theme="default"
+    <PageCanvas ambient="none">
+      <PageHeader
         eyebrow={t("districtHub.eyebrow", "District hub")}
         eyebrowIcon={MapPin}
-        watermarkIcon={MapPin}
         title={isPending ? districtDisplay : canonicalDistrict}
         description={t("districtHub.description", "Live inventory, average prices, and top models in {district}.", { district: canonicalDistrict })}
       />
 
-      <PageBody className="space-y-16 lg:space-y-24">
-        <section>
-          <div className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-border bg-border shadow-soft sm:grid-cols-3">
-            {[
-              {
-                label: t("makeHub.liveListings", "Live listings"),
-                value: isPending ? "…" : insight ? insight.listing_count.toLocaleString() : t("common.na", "N/A"),
-              },
-              {
-                label: t("makeHub.avgPrice", "Average price"),
-                value: isPending ? "…" : formatPrice(insight?.avg_price_lkr ?? null),
-              },
-              {
-                label: t("makeHub.medianPrice", "Median price"),
-                value: isPending ? "…" : formatPrice(insight?.median_price_lkr ?? null),
-              },
-            ].map((card) => (
-              <div key={card.label} className="bg-card p-6">
-                <p className="text-[12px] font-semibold text-muted-foreground">
-                  {card.label}
-                </p>
-                <p className="num mt-2.5 text-3xl font-bold tracking-tight text-foreground">{card.value}</p>
-              </div>
-            ))}
-          </div>
-        </section>
+      <PageBody className="space-y-14 pt-0 lg:space-y-20 lg:pt-0">
+        <m.section variants={revealItem} aria-label={t("districtHub.statsAria", "{district} market figures", { district: canonicalDistrict })}>
+          {isError ? (
+            <Card padding="none">
+              <ErrorState
+                title={t("districtHub.errorTitle", "District figures didn't load")}
+                body={t("districtHub.errorBody", "The map and listings below still work. Try again in a moment.")}
+                onRetry={() => void insightQuery.refetch()}
+              />
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {stats.map((card) => (
+                <StatTile key={card.label} label={card.label} value={card.value} loading={isPending} />
+              ))}
+            </div>
+          )}
+        </m.section>
 
         <m.section variants={revealItem}>
-          <SectionHeader
+          <SectionHeading
             eyebrow={t("districtHub.priceMapEyebrow", "District price map")}
             title={t("districtHub.priceMapTitle", "Sri Lanka price landscape")}
-            className="mb-8"
           />
           <DistrictPriceHeatmap
             data={districtPricesQuery.data ?? []}
@@ -140,30 +142,42 @@ export default function DistrictHub() {
           />
         </m.section>
 
-        {insight && insight.top_models.length > 0 && (
+        {isPending ? (
           <m.section variants={revealItem}>
-            <SectionHeader eyebrow={t("makeHub.models", "Models")} title={t("districtHub.popular", "Popular in {district}", { district: canonicalDistrict })} className="mb-8" />
-            <m.div variants={revealContainer} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {insight.top_models.map((entry) => (
-                <Link
-                  key={`${entry.make}-${entry.model}`}
-                  to={`/cars/${encodeURIComponent(entry.make)}/${encodeURIComponent(entry.model)}`}
-                  className="group rounded-2xl border border-border bg-card p-5 shadow-soft transition-all hover:-translate-y-1 hover:border-primary/30 no-underline"
-                >
-                  <p className="text-[14px] font-bold text-foreground">
-                    {entry.make} {entry.model}
-                  </p>
-                  <p className="mt-1 text-[11px] font-medium text-muted-foreground">
-                    {entry.listing_count} {t("common.listings", "listings")}
-                  </p>
-                  <p className="num mt-3 text-lg font-bold text-foreground">
-                    {entry.avg_price_lkr ? formatPrice(entry.avg_price_lkr) : t("common.priceNa", "Price N/A")}
-                  </p>
-                </Link>
-              ))}
-            </m.div>
+            <SectionHeading eyebrow={t("makeHub.models", "Models")} title={t("districtHub.popular", "Popular in {district}", { district: districtDisplay })} />
+            <HubTileSkeleton />
           </m.section>
-        )}
+        ) : insight && insight.top_models.length > 0 ? (
+          <m.section variants={revealItem}>
+            <SectionHeading eyebrow={t("makeHub.models", "Models")} title={t("districtHub.popular", "Popular in {district}", { district: canonicalDistrict })} />
+            <HubTileGrid>
+              {insight.top_models.map((entry, i) => (
+                <HubLinkTile
+                  key={`${entry.make}-${entry.model}`}
+                  index={i}
+                  to={`/cars/${encodeURIComponent(entry.make)}/${encodeURIComponent(entry.model)}`}
+                  title={`${entry.make} ${entry.model}`}
+                  meta={
+                    <Badge variant="neutral" className="tabular-nums">
+                      {entry.listing_count} {t("common.listings", "listings")}
+                    </Badge>
+                  }
+                  value={entry.avg_price_lkr ? formatPrice(entry.avg_price_lkr) : t("common.priceNa", "Price N/A")}
+                />
+              ))}
+            </HubTileGrid>
+          </m.section>
+        ) : !isError ? (
+          <m.section variants={revealItem}>
+            <Card padding="none">
+              <EmptyState
+                icon={Car}
+                title={t("districtHub.emptyTitle", "No models ranked in {district} yet", { district: canonicalDistrict })}
+                body={t("districtHub.emptyBody", "Popular models show up once enough local ads are indexed.")}
+              />
+            </Card>
+          </m.section>
+        ) : null}
 
         <m.section variants={revealItem}>
           <DistrictVelocityList />
@@ -171,20 +185,20 @@ export default function DistrictHub() {
 
         {recentListings.length > 0 && (
           <m.section variants={revealItem}>
-            <SectionHeader eyebrow={t("makeHub.liveInventory", "Live inventory")} title={t("districtHub.recent", "Recent listings")} className="mb-8" />
-            <m.div variants={revealContainer} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {recentListings.map((listing) => (
-                <m.div key={listing.id} variants={revealItem}>
+            <SectionHeading eyebrow={t("makeHub.liveInventory", "Live inventory")} title={t("districtHub.recent", "Recent listings")} />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {recentListings.map((listing, i) => (
+                <m.div key={listing.id} variants={listItem} custom={i} initial="hidden" animate="show" className="min-w-0">
                   <ListingCard listing={listing} />
                 </m.div>
               ))}
-            </m.div>
+            </div>
           </m.section>
         )}
 
-        <Button asChild className="w-full sm:w-auto">
+        <Button asChild size="lg" className="w-full sm:w-auto">
           <Link to={`/?district=${encodeURIComponent(districtParam)}#market`}>
-            {t("districtHub.browse", "Browse {district} listings", { district: canonicalDistrict })} <ArrowRight className="h-4 w-4" aria-hidden />
+            {t("districtHub.browse", "Browse {district} listings", { district: canonicalDistrict })} <ArrowRight aria-hidden />
           </Link>
         </Button>
       </PageBody>

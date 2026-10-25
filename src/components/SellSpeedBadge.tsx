@@ -67,7 +67,7 @@ export function SellSpeedBadge({ make, model, stats, className }: SellSpeedBadge
     <span
       title={detail}
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[12px] font-semibold text-sky-700 dark:text-sky-300",
+        "inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-caption font-semibold text-primary",
         className,
       )}
     >

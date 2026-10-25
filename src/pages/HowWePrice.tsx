@@ -4,7 +4,12 @@ import { AlertTriangle, BarChart3, Clock, Database, Gauge, Info, Scale, ShieldCh
 import type { LucideIcon } from "lucide-react";
 import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
-import { PageHero } from "@/components/PageHero";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
+import { cardVariants } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { LISTING_SOURCES } from "@/lib/listingSources";
 import { HOW_WE_PRICE_ANCHORS } from "@/lib/howWePrice";
@@ -37,16 +42,16 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <Reveal as="section" id={id} aria-labelledby={`${id}-title`} className="scroll-mt-24 rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
-      <div className="mb-3 flex items-center gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-surface">
-          <Icon className="h-4 w-4 text-primary" aria-hidden />
+    <Reveal as="section" id={id} aria-labelledby={`${id}-title`} className={cn(cardVariants({ padding: "md" }), "scroll-mt-24")}>
+      <div className="mb-4 flex items-center gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Icon className="h-5 w-5" aria-hidden />
         </span>
-        <h2 id={`${id}-title`} className="text-base font-semibold text-foreground sm:text-lg">
+        <h2 id={`${id}-title`} className="font-display text-title3 font-semibold text-foreground">
           {title}
         </h2>
       </div>
-      <div className="space-y-3 text-[14px] leading-relaxed text-foreground/85">{children}</div>
+      <div className="space-y-3 text-body text-label-2 [&_strong]:text-foreground">{children}</div>
     </Reveal>
   );
 }
@@ -66,28 +71,26 @@ export default function HowWePrice() {
   ];
 
   return (
-    <PageCanvas ambient="subtle">
-      <PageHero
-        theme="valuation"
+    <PageCanvas ambient="none">
+      <PageHeader
         eyebrow={t("howPrice.eyebrow", "Methodology")}
         eyebrowIcon={Scale}
-        title={<>{t("howPrice.title", "How we score prices")}</>}
+        title={t("howPrice.title", "How we score prices")}
         description={t(
           "howPrice.description",
           "Plain-language notes on how MotorMila works out a fair price, what the deal badges mean, and where the numbers can be wrong.",
         )}
       />
 
-      <PageBody narrow className="pb-20">
-        <nav aria-label={t("howPrice.tocAria", "On this page")} className="mb-6 rounded-2xl border border-border bg-surface/60 p-4">
-          <p className="mb-2 text-[12px] font-semibold text-muted-foreground">{t("howPrice.tocAria", "On this page")}</p>
+      <PageBody className="pb-20 pt-0 lg:pt-0">
+        <div className="max-w-3xl">
+        <nav aria-label={t("howPrice.tocAria", "On this page")} className="mb-6">
+          <p className="mb-2 text-footnote font-medium text-label-2">{t("howPrice.tocAria", "On this page")}</p>
           <ul className="flex flex-wrap gap-2">
             {toc.map((item) => (
-              <li key={item.id}>
-                <a
-                  href={`#${item.id}`}
-                  className="inline-flex min-h-9 items-center rounded-full border border-border bg-card px-3 text-[12px] font-medium text-foreground no-underline hover:border-primary/40"
-                >
+              <li key={item.id} className="max-w-full">
+                {/* Long si/ta labels wrap inside the pill instead of running off a phone screen. */}
+                <a href={`#${item.id}`} className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "h-auto min-h-9 max-w-full whitespace-normal py-1.5 text-center no-underline")}>
                   {item.label}
                 </a>
               </li>
@@ -136,9 +139,9 @@ export default function HowWePrice() {
                 { term: t("howPrice.conf.low", "Low"), desc: t("howPrice.conf.lowDesc", "Fewer than {n} matches, or only a model average. Treat it as a rough guide.", { n: MEDIUM_CONF_COMPS }) },
                 { term: t("howPrice.conf.none", "None"), desc: t("howPrice.conf.noneDesc", "Too little data. We show no deal call rather than guess.") },
               ].map((row) => (
-                <div key={row.term} className="rounded-xl border border-border bg-surface p-3">
-                  <dt className="text-[13px] font-semibold text-foreground">{row.term}</dt>
-                  <dd className="mt-1 text-[13px] text-muted-foreground">{row.desc}</dd>
+                <div key={row.term} className="rounded-control bg-surface-2 p-3">
+                  <dt className="text-footnote font-semibold text-foreground">{row.term}</dt>
+                  <dd className="mt-1 text-footnote text-label-2">{row.desc}</dd>
                 </div>
               ))}
             </dl>
@@ -179,7 +182,7 @@ export default function HowWePrice() {
               <li>{t("howPrice.verify.deposit", "never send an advance or “holding” deposit")}</li>
             </ul>
             <p>
-              <Link to="/safe-transfer" className="font-semibold text-primary-bright">
+              <Link to="/safe-transfer" className="font-semibold text-primary underline-offset-2 hover:underline">
                 {t("howPrice.verify.kit", "Open the Safe-Transfer Kit")}
               </Link>
             </p>
@@ -194,17 +197,17 @@ export default function HowWePrice() {
             </p>
             <ul className="flex flex-wrap gap-2" aria-label={t("howPrice.sources.listAria", "Listing sources")}>
               {LISTING_SOURCES.map((s) => (
-                <li key={s.domain} className="rounded-full border border-border bg-surface px-3 py-1 text-[12px] text-foreground">
-                  {s.name}
+                <li key={s.domain}>
+                  <Badge variant="neutral">{s.name}</Badge>
                 </li>
               ))}
             </ul>
-            <p className="text-[13px] text-muted-foreground">
+            <p className="text-footnote text-label-2">
               {t(
                 "howPrice.sources.p2",
                 "Listings belong to their sellers and source sites. MotorMila is independent and not affiliated with them. Sellers can ask us to remove an ad.",
               )}{" "}
-              <Link to="/removal" className="font-semibold text-primary-bright">
+              <Link to="/removal" className="font-semibold text-primary underline-offset-2 hover:underline">
                 {t("howPrice.sources.removal", "Request removal")}
               </Link>
             </p>
@@ -231,19 +234,16 @@ export default function HowWePrice() {
         </div>
 
         <div className="mt-8 flex flex-wrap gap-3">
-          <Link
-            to="/estimate"
-            className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 text-[13px] font-semibold text-primary-foreground no-underline hover:bg-primary/90"
-          >
-            <Gauge className="h-4 w-4" aria-hidden />
-            {t("howPrice.cta.estimate", "Estimate my car")}
-          </Link>
-          <Link
-            to="/"
-            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-5 text-[13px] font-semibold text-foreground no-underline hover:border-primary/40"
-          >
-            {t("howPrice.cta.browse", "Browse listings")}
-          </Link>
+          <Button asChild size="lg">
+            <Link to="/estimate">
+              <Gauge aria-hidden />
+              {t("howPrice.cta.estimate", "Estimate my car")}
+            </Link>
+          </Button>
+          <Button asChild size="lg" variant="secondary">
+            <Link to="/">{t("howPrice.cta.browse", "Browse listings")}</Link>
+          </Button>
+        </div>
         </div>
       </PageBody>
     </PageCanvas>

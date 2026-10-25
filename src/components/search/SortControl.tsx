@@ -44,15 +44,15 @@ export function SortControl({ value, onChange, priceUnavailable = false, fullAcc
         aria-label={t("filter.sortAria", "Sort listings")}
         title={current === "best_match" ? t("search.bestMatchHint", "Priced listings with photos first, then newest. Never paid placement.") : undefined}
         className={cn(
-          "h-11 min-w-[11rem] gap-1.5 rounded-full border-border bg-card px-3.5 text-[13px] font-medium text-foreground sm:h-9",
+          "h-11 w-auto min-w-44 gap-2 rounded-full bg-surface-1 px-4 text-footnote font-semibold sm:h-9",
           className,
         )}
       >
-        <ArrowDownUp aria-hidden className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+        <ArrowDownUp aria-hidden className="h-4 w-4 shrink-0 text-label-2" />
         <span className="sr-only">{t("filter.sort", "Sort")}: </span>
         <SelectValue />
       </SelectTrigger>
-      <SelectContent className="rounded-2xl">
+      <SelectContent align="end">
         {options.map((option) => (
           <SelectItem key={option.value} value={option.value}>
             {option.label}

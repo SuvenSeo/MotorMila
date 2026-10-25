@@ -1,5 +1,5 @@
 import { BrandLogo } from "@/components/BrandLogo";
-import { scrollBehavior, spring, transition as motionTransition, usePrefersReducedMotionOrLowData } from "@/lib/motion";
+import { scrollBehavior, spring, tween as motionTween, usePrefersReducedMotionOrLowData } from "@/lib/motion";
 import { prefetchRoute } from "@/lib/routePrefetch";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, LayoutGroup, m, motion } from "motion/react";
@@ -22,8 +22,9 @@ import { openCommandPalette } from "@/lib/commandPalette";
 import { openFeedbackDialog } from "@/lib/feedbackEvents";
 import { FEEDBACK_LINK, MORE_LINKS, NAV_DESTINATIONS, isDestinationActive, type NavLinkItem } from "@/lib/siteNav";
 import { NavFreshnessIndicator } from "@/components/NavFreshnessIndicator";
-import { cn } from "@/lib/utils";
+import { NavMoreMenu } from "@/components/NavMoreMenu";
 import { fitNav } from "@/lib/navFit";
+import { cn } from "@/lib/utils";
 
 const SCROLLED_AT = 24;
 const HIDE_AFTER = 96;
@@ -34,10 +35,10 @@ const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayout
  * Site header (polish/shell).
  *
  * One 64px row on a 3-column grid: brand left · five destinations centred on
- * the viewport (lg+) with a "More" button for every other route · actions
- * right (search, freshness hint, language, bell, account), all 36px controls.
- * Below lg the destinations live in the bottom nav (mobile) / menu panel and a
- * hamburger replaces "More".
+ * the viewport (lg+) with a compact "More" dropdown (NavMoreMenu) holding only
+ * the routes no destination reaches · actions right (search, freshness hint,
+ * language, bell, account), all 36px controls. Below lg the destinations live
+ * in the bottom nav (mobile) / hamburger menu panel, which lists every route.
  *
  * Transparent at the top so page heroes run underneath it; a translucent
  * blurred background + hairline fade in once the page scrolls. On phones the
@@ -150,11 +151,12 @@ export function Navbar() {
   return (
     <header
       ref={headerRef}
-      className="site-nav-header fixed inset-x-0 top-0 z-header"
+      className="site-nav-header right-scroll-bar-position fixed inset-x-0 top-0 z-header"
       data-scrolled={isScrolled}
       data-nav-mode={isScrolled ? "compact" : "full"}
       data-hidden={hidden}
       data-menu-open={menuOpen}
+      data-over-hero={pathname === "/" && !isScrolled && !menuOpen}
       data-fit="0"
     >
       <div aria-hidden className="site-nav-bg" />
@@ -163,7 +165,7 @@ export function Navbar() {
         <div className="flex min-w-0 items-center justify-self-start">
           <Link
             to="/"
-            className="site-nav__brand-link group flex shrink-0 items-center rounded-xl no-underline outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary/50"
+            className="site-nav__brand-link group relative flex shrink-0 items-center rounded-xl no-underline outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary/50"
             aria-label={t("nav.homeAria", "Motormila home")}
           >
             <BrandLogo className="site-nav__brand-logo" size="nav" showTagline={false} />
@@ -205,21 +207,7 @@ export function Navbar() {
               );
             })}
             <span aria-hidden className="mx-1 h-4 w-px bg-border" />
-            <button
-              type="button"
-              onClick={() => setMenuOpen((open) => !open)}
-              className="site-nav__link gap-1"
-              data-active={false}
-              aria-expanded={menuOpen}
-              aria-controls="site-menu"
-              aria-label={menuOpen ? t("nav.closeMenu", "Close menu") : t("nav.more", "More")}
-            >
-              <span className="relative z-10">{t("nav.more", "More")}</span>
-              <ChevronDown
-                className={cn("relative z-10 h-3.5 w-3.5 opacity-70 transition-transform duration-200", menuOpen && "rotate-180")}
-                aria-hidden
-              />
-            </button>
+            <NavMoreMenu pathname={pathname} t={t} />
           </div>
         </LayoutGroup>
 
@@ -234,7 +222,7 @@ export function Navbar() {
           >
             <Search className="h-4 w-4" aria-hidden />
             <span className="nav-search__label">{t("nav.search", "Search")}</span>
-            <kbd className="nav-search__kbd rounded-md border border-border px-1.5 text-[10.5px] font-medium text-muted-foreground">
+            <kbd className="nav-search__kbd rounded-md border border-border px-1.5 text-caption font-medium text-muted-foreground">
               Ctrl K
             </kbd>
           </button>
@@ -261,8 +249,8 @@ export function Navbar() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" sideOffset={8} className="w-56">
-                <DropdownMenuLabel className="text-[12px] font-medium text-muted-foreground">
-                  {user.name ? <span className="block truncate text-[13px] font-semibold text-foreground">{user.name}</span> : null}
+                <DropdownMenuLabel className="text-caption font-medium text-muted-foreground">
+                  {user.name ? <span className="block truncate text-footnote font-semibold text-foreground">{user.name}</span> : null}
                   {hasProAccess ? t("common.pro", "Pro") : t("shell.nav.freePlan", "Free plan")}
                 </DropdownMenuLabel>
                 {hasProAccess ? (
@@ -306,7 +294,7 @@ export function Navbar() {
         </div>
       </nav>
 
-      {/* Menu panel — every route, grouped under its destination */}
+      {/* Hamburger menu panel (below lg) — every route, grouped under its destination */}
       <AnimatePresence>
         {menuOpen && (
           <m.div
@@ -315,17 +303,43 @@ export function Navbar() {
             className="site-menu-panel-wrap"
             aria-label={t("nav.navigationMenu", "Navigation menu")}
             initial={calm ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: -4 }}
-            animate={{ opacity: 1, scale: 1, y: 0, transition: motionTransition.fast }}
-            exit={calm ? { opacity: 0 } : { opacity: 0, scale: 0.98, y: -4, transition: motionTransition.exit }}
+            animate={{ opacity: 1, scale: 1, y: 0, transition: motionTween.short }}
+            exit={calm ? { opacity: 0 } : { opacity: 0, scale: 0.98, y: -4, transition: motionTween.exit }}
             onKeyDown={(e) => {
               if (e.key === "Escape") setMenuOpen(false);
             }}
           >
             <div className="max-h-[min(78vh,720px)] overflow-y-auto overscroll-contain rounded-3xl border border-border bg-popover/[0.98] p-3.5 shadow-soft-lg">
               <div className="grid gap-4 sm:grid-cols-2">
-                {NAV_DESTINATIONS.map((dest) => (
-                  <MenuGroup key={dest.id} title={label(dest)} items={dest.items} pathname={pathname} onPick={goTo} t={t} />
-                ))}
+                {/* Destinations collapse to one row each (the current one starts open) so the panel stays short. */}
+                <div className="grid content-start gap-0.5">
+                  {NAV_DESTINATIONS.map((dest) => {
+                    const DestIcon = dest.icon;
+                    const current = isDestinationActive(dest, pathname);
+                    return (
+                      <details key={dest.id} className="site-menu-dest group/dest mm-disclosure" open={current || undefined}>
+                        <summary className="flex cursor-pointer list-none items-center gap-2.5 rounded-xl px-2.5 py-2 outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary/50 [&::-webkit-details-marker]:hidden">
+                          <span
+                            className={cn(
+                              "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border",
+                              current ? "border-primary/30 bg-primary/[0.12] text-primary" : "border-border bg-foreground/[0.03] text-muted-foreground",
+                            )}
+                          >
+                            <DestIcon className="h-3.5 w-3.5" aria-hidden />
+                          </span>
+                          <span className="flex-1 text-[13px] font-semibold tracking-tight text-foreground">{label(dest)}</span>
+                          <ChevronDown
+                            className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 group-open/dest:rotate-180 motion-reduce:transition-none"
+                            aria-hidden
+                          />
+                        </summary>
+                        <div className="pb-1 pl-5">
+                          <MenuGroup items={dest.items} pathname={pathname} onPick={goTo} t={t} />
+                        </div>
+                      </details>
+                    );
+                  })}
+                </div>
                 <div>
                   <MenuGroup title={t("footer.more", "More")} items={MORE_LINKS} pathname={pathname} onPick={goTo} t={t} />
                   <button
@@ -339,7 +353,7 @@ export function Navbar() {
                     <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border bg-foreground/[0.03] text-muted-foreground">
                       <FEEDBACK_LINK.icon className="h-3.5 w-3.5" aria-hidden />
                     </span>
-                    <span className="text-[12.5px] font-semibold tracking-tight text-foreground">{label(FEEDBACK_LINK)}</span>
+                    <span className="text-footnote font-semibold tracking-tight text-foreground">{label(FEEDBACK_LINK)}</span>
                   </button>
                 </div>
               </div>
@@ -349,7 +363,7 @@ export function Navbar() {
                   <LocaleSwitcher showName />
                   <NavFreshnessIndicator className="!inline-flex" />
                 </div>
-                <span className="hidden items-center gap-1.5 text-[11.5px] text-muted-foreground md:inline-flex">
+                <span className="hidden items-center gap-1.5 text-caption text-muted-foreground md:inline-flex">
                   <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
                   {t("nav.navigationMenu", "Navigation menu")}
                 </span>
@@ -386,7 +400,7 @@ function MenuGroup({
   onPick,
   t,
 }: {
-  title: string;
+  title?: string;
   items: NavLinkItem[];
   pathname: string;
   onPick: (href: string) => void;
@@ -394,7 +408,7 @@ function MenuGroup({
 }) {
   return (
     <div>
-      <p className="px-2 pb-1.5 pt-1 text-[11px] font-semibold text-muted-foreground">{title}</p>
+      {title ? <p className="px-2 pb-1.5 pt-1 text-caption font-semibold text-muted-foreground">{title}</p> : null}
       <div className="grid gap-0.5">
         {items.map((item) => {
           const Icon = item.icon;
@@ -421,11 +435,11 @@ function MenuGroup({
                 <Icon className="h-3.5 w-3.5" aria-hidden />
               </span>
               <span className="min-w-0">
-                <span className="block truncate text-[12.5px] font-semibold tracking-tight text-foreground">
+                <span className="block truncate text-footnote font-semibold tracking-tight text-foreground">
                   {t(item.labelKey, item.fallback)}
                 </span>
                 {item.detailKey ? (
-                  <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                  <span className="mt-0.5 block truncate text-caption text-muted-foreground">
                     {t(item.detailKey, item.detailFallback)}
                   </span>
                 ) : null}

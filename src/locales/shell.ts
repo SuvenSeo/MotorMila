@@ -53,8 +53,14 @@ export const shellEn: Record<string, string> = {
   "shell.nav.proPreviewDetail": "What Pro will include",
   "shell.nav.howItWorks": "How it works",
   "shell.nav.howItWorksDetail": "Where prices and scores come from",
-  "shell.nav.mobileAppDetail": "Android app, coming soon",
+  "shell.nav.mobileAppDetail": "Android preview, ready to download",
   "shell.nav.feedback": "Send feedback",
+  "shell.nav.feedbackDetail": "Report a problem or suggest an idea",
+  // Desktop "More" dropdown
+  "nav.moreGroupPlans": "Plans",
+  "nav.moreGroupHelp": "Help",
+  "footer.privacyShort": "Privacy",
+  "footer.termsShort": "Terms",
   // Header freshness hint
   "shell.fresh.short": "Updates behind",
   "shell.fresh.stale": "Listings may be out of date",
@@ -166,34 +172,4 @@ export const shellEn: Record<string, string> = {
   "shell.calc.hlShare": "Share",
   "shell.calc.hlShareValue": "Link",
   "shell.calc.hlShareHint": "Send any scenario as a link",
-};
-
-export const shellSi: Record<string, string> = {
-  "shell.nav.buy": "මිලදී ගන්න",
-  "shell.nav.prices": "මිල ගණන්",
-  "shell.nav.tools": "මෙවලම්",
-  "shell.nav.sell": "විකුණන්න",
-  "shell.nav.saved": "සුරැකි",
-  "shell.nav.language": "භාෂාව",
-  "shell.home.cat.cars": "කාර්",
-  "shell.home.cat.bikes": "බයික්",
-  "shell.home.cat.threeWheelers": "ත්‍රීවීල්",
-  "shell.home.cat.vans": "වෑන්",
-  "shell.home.cat.lorries": "ලොරි",
-  "shell.home.bodyDual": "{live} සජීවී වාහන දැන්වීම් · ශ්‍රී ලංකාවේ වෙබ් අඩවි {sources}කින් නිරීක්ෂණය කරන ලද 360,000+ ඓතිහාසික වාර්තා, මිල ඉතිහාසය සහ සාධාරණ මිල පරාසය සමඟ.",
-};
-
-export const shellTa: Record<string, string> = {
-  "shell.nav.buy": "வாங்க",
-  "shell.nav.prices": "விலைகள்",
-  "shell.nav.tools": "கருவிகள்",
-  "shell.nav.sell": "விற்க",
-  "shell.nav.saved": "சேமித்தவை",
-  "shell.nav.language": "மொழி",
-  "shell.home.cat.cars": "கார்கள்",
-  "shell.home.cat.bikes": "பைக்குகள்",
-  "shell.home.cat.threeWheelers": "முச்சக்கர வண்டிகள்",
-  "shell.home.cat.vans": "வேன்கள்",
-  "shell.home.cat.lorries": "லாரிகள்",
-  "shell.home.bodyDual": "{live} நேரடி வாகன விளம்பரங்கள் · {sources} இலங்கை தளங்களில் கண்காணிக்கப்பட்ட 360,000+ வரலாற்றுப் பதிவுகள், விலை வரலாறு மற்றும் நியாயமான விலை வரம்புடன்.",
 };

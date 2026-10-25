@@ -1,6 +1,13 @@
 import { computeDealLadder } from "@/lib/dealLadder";
 import { formatPrice } from "@/services/api";
 import { cn } from "@/lib/utils";
+import { useAppPreferences } from "@/lib/appPreferences";
+
+const BAND_LABEL = {
+  good_deal: ["listingMeta.goodDeal", "Good Deal"],
+  fair: ["listingMeta.fairPrice", "Fair Price"],
+  overpriced: ["listingMeta.overpriced", "Overpriced"],
+} as const;
 
 interface DealLadderProps {
   askingPrice: number;
@@ -10,7 +17,7 @@ interface DealLadderProps {
 
 const RUNG_TONE = {
   good_deal: {
-    active: "border-emerald-500/35 bg-emerald-500/10 text-emerald-300",
+    active: "border-deal-good/35 bg-deal-good/10 text-deal-good-text",
     idle: "border-border/60 text-muted-foreground",
   },
   fair: {
@@ -18,44 +25,51 @@ const RUNG_TONE = {
     idle: "border-border/60 text-muted-foreground",
   },
   overpriced: {
-    active: "border-rose-500/35 bg-rose-500/10 text-rose-300",
+    active: "border-deal-high/35 bg-deal-high/10 text-deal-high-text",
     idle: "border-border/60 text-muted-foreground",
   },
 } as const;
 
 export function DealLadder({ askingPrice, marketMedianLkr, className }: DealLadderProps) {
+  const { t } = useAppPreferences();
   const ladder = computeDealLadder({ askingPrice, marketMedianLkr });
   if (!ladder) return null;
+  const bandName = (band: keyof typeof BAND_LABEL) => t(BAND_LABEL[band][0], BAND_LABEL[band][1]);
 
   return (
     <div className={cn("mt-4 border-t border-border pt-3", className)}>
-      <p className="text-[12px] font-medium text-muted-foreground">
-        Deal ladder
+      <p className="text-caption font-medium text-muted-foreground">
+        {t("dealLadder.title", "Deal ladder")}
       </p>
-      <p className="mt-2 text-[13px] font-semibold text-foreground">
+      <p className="mt-2 text-footnote font-semibold text-foreground">
         {ladder.band === "good_deal" ? (
-          ladder.headline
+          t("dealLadder.already", "Already a Good Deal")
         ) : ladder.cutToGoodDeal > 0 ? (
-          <>
-            Cut{" "}
-            <span className="num text-primary">{formatPrice(ladder.cutToGoodDeal)}</span> to
-            hit Good Deal
-          </>
+          (() => {
+            const [before, after] = t("dealLadder.cut", "Cut {amount} to hit Good Deal", { amount: "\u0000" }).split("\u0000");
+            return (
+              <>
+                {before}
+                <span className="num text-primary">{formatPrice(ladder.cutToGoodDeal)}</span>
+                {after}
+              </>
+            );
+          })()
         ) : (
-          ladder.headline
+          bandName(ladder.band)
         )}
       </p>
-      <p className="mt-1 text-[11px] text-muted-foreground">
-        Current band:{" "}
+      <p className="mt-1 text-caption text-muted-foreground">
+        {t("dealLadder.currentBand", "Current band:")}{" "}
         <span
           className={cn(
             "font-semibold",
-            ladder.band === "good_deal" && "text-emerald-400",
+            ladder.band === "good_deal" && "text-deal-good-text",
             ladder.band === "fair" && "text-primary",
-            ladder.band === "overpriced" && "text-rose-400",
+            ladder.band === "overpriced" && "text-deal-high-text",
           )}
         >
-          {ladder.bandLabel}
+          {bandName(ladder.band)}
         </span>
       </p>
 
@@ -73,11 +87,11 @@ export function DealLadder({ askingPrice, marketMedianLkr, className }: DealLadd
             <li
               key={rung.band}
               className={cn(
-                "flex items-center justify-between rounded-2xl border px-2.5 py-1.5 text-[12px] font-medium",
+                "flex items-center justify-between rounded-2xl border px-2.5 py-1.5 text-caption font-medium",
                 rung.active ? tone.active : tone.idle,
               )}
             >
-              <span>{rung.label}{rung.active ? " · you" : ""}</span>
+              <span>{bandName(rung.band)}{rung.active ? t("dealLadder.you", " · you") : ""}</span>
               <span className="num font-medium normal-case tracking-normal opacity-80">{priceHint}</span>
             </li>
           );

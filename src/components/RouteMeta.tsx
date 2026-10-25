@@ -346,6 +346,42 @@ export function RouteMeta() {
         title: t("seo.termsTitle", "Terms of Service — {site}", siteVars),
         description: t("seo.termsDesc", "The terms that govern use of Motormila."),
       },
+      "/cookies": {
+        title: t("seo.cookiesTitle", "Cookie Notice — {site}", siteVars),
+        description: t("seo.cookiesDesc", "How MotorMila uses cookies and browser storage."),
+      },
+      "/removal": {
+        title: t("seo.removalTitle", "Request Data Removal — {site}", siteVars),
+        description: t("seo.removalDesc", "Ask MotorMila to remove your listing data or photos."),
+      },
+      "/delete-account": {
+        title: t("seo.deleteAccountTitle", "Delete Your Account — {site}", siteVars),
+        description: t("seo.deleteAccountDesc", "Delete your MotorMila account and associated data."),
+      },
+      "/finance": {
+        title: t("seo.financeTitle", "Vehicle Finance — {site}", siteVars),
+        description: t("seo.financeDesc", "Request lease and finance quotes for your vehicle purchase in Sri Lanka."),
+      },
+      "/inspection": {
+        title: t("seo.inspectionTitle", "Vehicle Inspection — {site}", siteVars),
+        description: t("seo.inspectionDesc", "Book a pre-purchase vehicle inspection in Sri Lanka."),
+      },
+      "/insurance": {
+        title: t("seo.insuranceTitle", "Vehicle Insurance — {site}", siteVars),
+        description: t("seo.insuranceDesc", "Request motor insurance quotes in Sri Lanka."),
+      },
+      "/safe-transfer": {
+        title: t("seo.safeTransferTitle", "Safe Vehicle Transfer Kit — {site}", siteVars),
+        description: t("seo.safeTransferDesc", "Transfer vehicle ownership safely in Sri Lanka: checklist, sale agreement, transfer costs and the 14-day rule."),
+      },
+      "/afford": {
+        title: t("seo.affordTitle", "What Can I Afford — {site}", siteVars),
+        description: t("seo.affordDesc", "Find Sri Lankan vehicles that fit your down payment and monthly budget, with local lease rates and CBSL loan limits."),
+      },
+      "/checkout/return": {
+        title: t("seo.checkoutTitle", "Checkout — {site}", siteVars),
+        description: defaultDescription,
+      },
     };
 
     let meta: Meta | undefined = routeMeta[pathname];
@@ -397,12 +433,15 @@ export function RouteMeta() {
           ],
         );
       } else if (hub.kind === "compare") {
+        // Listing ids mean nothing to a reader; the Compare page swaps in the
+        // vehicle names once the listings load (see Compare.tsx).
         const label = hub.ids.length >= 2 ? hub.ids.join(" vs ") : "vehicles";
         meta = {
-          title: `Compare ${label} — Side-by-Side Prices & Specs | ${SITE}`,
-          description:
-            `Side-by-side comparison of listings ${label}: price (LKR), mileage, ` +
-            `district, fuel and fair-value verdict on ${SITE}.`,
+          title: t("seo.compareSlugTitle", "Compare vehicles — Side-by-Side Prices & Specs | {site}", siteVars),
+          description: t(
+            "seo.compareDesc",
+            "Side-by-side Sri Lankan vehicle comparison: price, mileage, district and fair-value verdict.",
+          ),
         };
         ogImage = `${ORIGIN}/api/compare-og?slug=${hub.ids.join("-vs-")}`;
         jsonLd = {

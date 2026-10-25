@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 /**
  * Bottom-dock helpers (ui/shell). The dock is the one bottom area shared by the
@@ -40,8 +40,36 @@ export function useDockTypingFlag() {
   }, []);
 }
 
+/*
+ * Extra dock height claimed by a transient strip (the app promo). It used to be
+ * a custom property on <html>; changing a custom property there restyles every
+ * element on the page (~250 ms at 4x CPU on home, a visible scroll hitch when
+ * the promo appeared). Now only the consumers update: the shell's bottom spacer
+ * (a plain height) and the compare tray (its own inline --dock-extra).
+ */
+let dockExtra = 0;
+const listeners = new Set<() => void>();
+
 /** Claim (or release with 0) extra dock height so floating buttons stack above a strip. */
 export function setDockExtra(px: number) {
   if (typeof document === "undefined") return;
-  document.documentElement.style.setProperty("--dock-extra", `${Math.max(0, Math.round(px))}px`);
+  const next = Math.max(0, Math.round(px));
+  if (next === dockExtra) return;
+  dockExtra = next;
+  document.querySelectorAll<HTMLElement>("[data-dock-spacer]").forEach((el) => {
+    el.style.height = next ? `${next}px` : "";
+  });
+  listeners.forEach((fn) => fn());
+}
+
+function subscribe(fn: () => void) {
+  listeners.add(fn);
+  return () => {
+    listeners.delete(fn);
+  };
+}
+
+/** Current extra dock height in px (re-renders the caller when it changes). */
+export function useDockExtra(): number {
+  return useSyncExternalStore(subscribe, () => dockExtra, () => 0);
 }

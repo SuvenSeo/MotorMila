@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "motion/react";
+import { AnimatePresence, m } from "motion/react";
 import { useQuery } from "@tanstack/react-query";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { AlertTriangle, BarChart3, Bell, ChevronDown, ChevronUp, RefreshCw, ShieldCheck, Upload } from "lucide-react";
+import { BarChart3, Bell, ChevronDown, ShieldCheck, Upload } from "lucide-react";
 import {
   benchmarkDealerUrls,
   claimDealerProfile,
@@ -22,18 +23,28 @@ import { getStoredAuthToken } from "@/lib/authToken";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { useAuth } from "@/lib/authContext";
 import {
-  freePlanCopy,
+  freePlanText,
   hasFullPlatformAccess,
 } from "@/lib/planLimits";
 import type { ProMarketSnapshot } from "@/types/pro";
-import { revealItem, springSoft } from "@/lib/motion";
-import { PageBody } from "@/components/PageBody";
+import { fadeIn, fadeUp, listItem, listStagger, spring, usePrefersReducedMotionOrLowData } from "@/lib/motion";
 import { PageCanvas } from "@/components/PageCanvas";
-import { PageHero } from "@/components/PageHero";
+import { AnimatedNumber } from "@/components/ui/animated-number";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/ui/page-header";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { PLAN_PRICES, formatLkr } from "@/lib/pricingContent";
 import { FreePlanBanner } from "@/components/FreePlanBanner";
 import { ProFeatureLock } from "@/components/ProFeatureLock";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
-import { SectionHeader } from "@/components/SectionHeader";
 import {
   buildDealerNotifications,
   buildDistrictDemandRows,
@@ -41,7 +52,6 @@ import {
   buildTurnoverSeries,
 } from "@/lib/dealerDashboardData";
 import { DEALER_PLAYBOOK, DEALER_QUICK_TOOLS } from "@/lib/dealerPlaybook";
-import { visuals } from "@/lib/visualAssets";
 import { trackEvent } from "@/lib/analytics";
 
 type WidgetKey = "turnover" | "priceGap" | "districtDemand" | "inventoryBenchmark";
@@ -49,13 +59,25 @@ type WidgetKey = "turnover" | "priceGap" | "districtDemand" | "inventoryBenchmar
 const TOOLTIP_STYLE = {
   background: "hsl(var(--card))",
   border: "1px solid hsl(var(--border))",
-  borderRadius: "10px",
-  fontSize: "11px",
+  borderRadius: "var(--radius-control)",
+  fontSize: "12px",
   color: "hsl(var(--foreground))",
-  boxShadow: "var(--shadow-md)",
+  boxShadow: "var(--shadow-e2)",
 } as const;
 
 const TOOLTIP_LABEL_STYLE = { color: "hsl(var(--muted-foreground))" } as const;
+
+/** "1,234" that rolls on change; plain text stays for screen readers (and tests). */
+function Num({ value }: { value: number }) {
+  return (
+    <>
+      <span className="sr-only">{value.toLocaleString()}</span>
+      <span aria-hidden>
+        <AnimatedNumber value={value} />
+      </span>
+    </>
+  );
+}
 
 function WidgetShell({
   title,
@@ -78,50 +100,49 @@ function WidgetShell({
   emptyMessage?: string;
   children: React.ReactNode;
 }) {
+  const calm = usePrefersReducedMotionOrLowData();
   return (
-    <section className="rounded-2xl border border-border bg-card p-6 shadow-soft">
+    <Card>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-[12px] font-semibold text-muted-foreground/80">Dealer Intelligence</p>
-          <h3 className="mt-1 font-display text-[15px] font-bold tracking-tight text-foreground">{title}</h3>
-          <p className="mt-0.5 text-[11px] text-muted-foreground font-medium">{subtitle}</p>
+          <h3 className="text-callout font-semibold text-foreground">{title}</h3>
+          <p className="mt-0.5 text-footnote text-label-2">{subtitle}</p>
         </div>
-        <button type="button" onClick={onToggle} className="flex h-7 w-7 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground active:scale-[0.95]" aria-label={collapsed ? `Expand ${title}` : `Collapse ${title}`} aria-expanded={!collapsed}>
-          {collapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
-        </button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          onClick={onToggle}
+          aria-label={collapsed ? `Expand ${title}` : `Collapse ${title}`}
+          aria-expanded={!collapsed}
+        >
+          <m.span animate={{ rotate: collapsed ? 0 : 180 }} transition={calm ? { duration: 0 } : spring.snappy} className="inline-flex">
+            <ChevronDown aria-hidden />
+          </m.span>
+        </Button>
       </div>
       {!collapsed && (
-        <div className="mt-4 border-t border-border pt-4">
+        <div className="mt-4 border-t border-separator pt-4">
           {loading ? (
-            <div className="flex min-h-[180px] items-center justify-center">
-              <div aria-hidden className="h-7 w-7 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
-            </div>
+            <Skeleton shape="chart" className="h-[13rem]" />
           ) : error ? (
-            <div className="flex min-h-[180px] flex-col items-center justify-center gap-3 text-center">
-              <AlertTriangle className="h-4 w-4 text-rose-500 dark:text-rose-400" />
-              <p className="text-[11px] text-muted-foreground">{error}</p>
-              {onRetry ? (
-                <button type="button" onClick={onRetry} className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[10px] font-semibold text-foreground transition-all hover:border-primary/40 hover:bg-surface active:scale-[0.97]">
-                  <RefreshCw className="h-3 w-3" /> Retry
-                </button>
-              ) : null}
-            </div>
+            <ErrorState body={error} onRetry={onRetry} className="py-8" />
           ) : emptyMessage ? (
-            <p className="py-8 text-center text-[11px] text-muted-foreground">{emptyMessage}</p>
+            <EmptyState icon={BarChart3} title={emptyMessage} className="py-8" />
           ) : (
-            children
+            <div className="content-in">{children}</div>
           )}
         </div>
       )}
-    </section>
+    </Card>
   );
 }
 
 function gapTone(pct: number | null): string {
-  if (pct === null) return "text-muted-foreground";
-  if (pct <= -5) return "text-emerald-600 dark:text-emerald-400";
-  if (pct >= 5) return "text-rose-600 dark:text-rose-400";
-  return "text-amber-600 dark:text-amber-400";
+  if (pct === null) return "text-label-2";
+  if (pct <= -5) return "text-deal-good-text";
+  if (pct >= 5) return "text-deal-high-text";
+  return "text-deal-caution-text";
 }
 
 function ClaimYardCard() {
@@ -175,94 +196,53 @@ function ClaimYardCard() {
     }
   };
 
+  const fields = [
+    { id: "dealer-name", label: t("dealerDash.yardName", "Yard / brand name"), value: displayName, set: setDisplayName, placeholder: "Colombo Auto Hub" },
+    { id: "dealer-pattern", label: t("dealerDash.sellerName", "Seller name on ads"), value: pattern, set: setPattern, placeholder: "Auto Hub LK" },
+    { id: "dealer-url", label: t("dealerDash.yardUrl", "Listing / yard URL"), value: claimedUrl, set: setClaimedUrl, placeholder: "https://ikman.lk/en/shops/...", inputMode: "url" as const },
+    { id: "dealer-phone", label: t("dealerDash.phone", "WhatsApp / phone"), value: phone, set: setPhone, placeholder: "0771234567", inputMode: "tel" as const },
+  ];
+
   return (
-    <section className="rounded-2xl border border-border bg-card p-5 shadow-soft">
+    <Card>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[12px] font-semibold text-primary">{t("dealer.claimYard", "Claim your yard")}</p>
-          <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">{t("dealer.profile", "Dealer profile")}</h2>
-          <p className="mt-1 max-w-xl text-[12px] text-muted-foreground">
+          <p className="text-footnote font-semibold text-primary">{t("dealer.claimYard", "Claim your yard")}</p>
+          <h2 className="mt-1 text-callout font-semibold text-foreground">{t("dealer.profile", "Dealer profile")}</h2>
+          <p className="mt-1 max-w-xl text-footnote text-label-2">
             {t("dealer.claimHint", "Claim a seller name so Motormila can match your live inventory and show pricing vs market.")}
           </p>
         </div>
         {profile && (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="content-in flex flex-wrap items-center gap-2">
             {profile.status === "verified" && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[12px] font-semibold text-emerald-700 dark:text-emerald-400">
-                <ShieldCheck className="h-3 w-3" aria-hidden />
+              <Badge variant="success">
+                <ShieldCheck aria-hidden />
                 {t("dealer.verified", "Verified dealer")}
-              </span>
+              </Badge>
             )}
-            <span className="rounded-full border border-border bg-surface px-3 py-1 text-[12px] font-semibold text-muted-foreground">
+            <Badge variant="neutral">
               {profile.status} · {profile.matched_listings} matched
               {profile.subscription_status && profile.subscription_status !== "none"
                 ? ` · ${profile.plan || "dealer"}/${profile.subscription_status}`
                 : ""}
-            </span>
+            </Badge>
           </div>
         )}
       </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div>
-          <label htmlFor="dealer-name" className="mb-1 block text-[11px] font-semibold text-muted-foreground">
-            Yard / brand name
-          </label>
-          <input
-            id="dealer-name"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            className="h-9 w-full rounded-2xl border border-border bg-surface px-3 text-sm text-foreground"
-            placeholder="Colombo Auto Hub"
-          />
-        </div>
-        <div>
-          <label htmlFor="dealer-pattern" className="mb-1 block text-[11px] font-semibold text-muted-foreground">
-            Seller name on ads
-          </label>
-          <input
-            id="dealer-pattern"
-            value={pattern}
-            onChange={(e) => setPattern(e.target.value)}
-            className="h-9 w-full rounded-2xl border border-border bg-surface px-3 text-sm text-foreground"
-            placeholder="Auto Hub LK"
-          />
-        </div>
-        <div>
-          <label htmlFor="dealer-url" className="mb-1 block text-[11px] font-semibold text-muted-foreground">
-            Listing / yard URL
-          </label>
-          <input
-            id="dealer-url"
-            value={claimedUrl}
-            onChange={(e) => setClaimedUrl(e.target.value)}
-            className="h-9 w-full rounded-2xl border border-border bg-surface px-3 text-sm text-foreground"
-            placeholder="https://ikman.lk/en/shops/..."
-            inputMode="url"
-          />
-        </div>
-        <div>
-          <label htmlFor="dealer-phone" className="mb-1 block text-[11px] font-semibold text-muted-foreground">
-            WhatsApp / phone
-          </label>
-          <input
-            id="dealer-phone"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="h-9 w-full rounded-2xl border border-border bg-surface px-3 text-sm text-foreground"
-            placeholder="0771234567"
-          />
-        </div>
+      <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {fields.map((f) => (
+          <div key={f.id} className="space-y-2">
+            <Label htmlFor={f.id}>{f.label}</Label>
+            <Input id={f.id} value={f.value} onChange={(e) => f.set(e.target.value)} placeholder={f.placeholder} inputMode={f.inputMode} />
+          </div>
+        ))}
       </div>
-      {error && <p className="mt-2 text-[11px] text-destructive">{error}</p>}
-      <button
-        type="button"
-        onClick={() => void handleClaim()}
-        disabled={saving}
-        className="mt-4 inline-flex h-9 items-center rounded-full bg-primary px-4 text-[11px] font-bold text-white disabled:opacity-40"
-      >
-        {saving ? t("common.saving", "Saving…") : profile ? t("dealer.updateClaim", "Update claim") : t("dealer.claimProfile", "Claim profile")}
-      </button>
-    </section>
+      {error && <p role="alert" className="content-in mt-3 text-footnote font-medium text-deal-high-text">{error}</p>}
+      <Button type="button" className="mt-5" onClick={() => void handleClaim()} loading={saving}>
+        {profile ? t("dealer.updateClaim", "Update claim") : t("dealer.claimProfile", "Claim profile")}
+      </Button>
+    </Card>
   );
 }
 
@@ -284,7 +264,7 @@ function InventoryBenchmark() {
       const data = await benchmarkDealerUrls(urls);
       setResults(data);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Request failed");
+      setSubmitError(err instanceof Error ? err.message : t("dealerDash.requestFailed", "Request failed"));
     } finally {
       setLoading(false);
     }
@@ -301,126 +281,113 @@ function InventoryBenchmark() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-border bg-surface p-4">
-        <label className="block text-[12px] font-semibold text-muted-foreground/80 mb-2 font-semibold">
-          Listing URLs <span className="normal-case font-normal">(one per line, max 50)</span>
-        </label>
-        <textarea
+      <div className="space-y-2">
+        <Label htmlFor="benchmark-urls">
+          {t("dealerDash.listingUrls", "Listing URLs")} <span className="font-normal text-label-2">{t("dealerDash.onePerLineMax50", "(one per line, max 50)")}</span>
+        </Label>
+        <Textarea
+          id="benchmark-urls"
           ref={textareaRef}
           value={urlsText}
           onChange={(e) => setUrlsText(e.target.value)}
           placeholder={"https://ikman.lk/en/ad/toyota-vitz-2018-for-sale-...\nhttps://riyasewana.com/listing/..."}
           rows={5}
-          className="w-full resize-none rounded-xl border border-border bg-card px-3 py-2.5 text-[12px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/40"
+          className="resize-none font-code text-footnote"
         />
-        <div className="mt-3 flex items-center justify-between gap-3">
-          <span className="text-[10px] text-muted-foreground font-bold num">{urlCount > 0 ? `${urlCount} URL${urlCount === 1 ? "" : "s"}` : t("dealer.pasteUrls", "Paste URLs above")}</span>
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+          <span className="text-footnote font-medium tabular-nums text-label-2">
+            {urlCount > 0 ? `${urlCount} URL${urlCount === 1 ? "" : "s"}` : t("dealer.pasteUrls", "Paste URLs above")}
+          </span>
           <div className="flex items-center gap-2">
             {(results !== null || urlsText) && (
-              <button
-                type="button"
-                onClick={handleClear}
-                className="inline-flex h-8 items-center rounded-full border border-border bg-surface px-3 text-[10px] font-bold text-muted-foreground transition-all hover:text-foreground hover:bg-card active:scale-[0.97]"
-              >
+              <Button type="button" variant="ghost" size="sm" onClick={handleClear}>
                 Clear
-              </button>
+              </Button>
             )}
-            <button
-              type="button"
-              onClick={() => void handleSubmit()}
-              disabled={loading || !urlCount}
-              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-primary px-4 text-[10px] font-bold text-white shadow-soft transition-all hover:bg-primary/95 active:scale-[0.97] disabled:opacity-40"
-            >
-              {loading ? (
-                <span className="flex items-center gap-1.5">
-                  <span aria-hidden className="h-3 w-3 animate-spin rounded-full border border-current/30 border-t-current" />
-                  Benchmarking…
-                </span>
-              ) : (
-                <>
-                  <Upload className="h-3 w-3" />
-                  Benchmark
-                </>
-              )}
-            </button>
+            <Button type="button" size="sm" onClick={() => void handleSubmit()} disabled={!urlCount} loading={loading}>
+              <Upload aria-hidden />
+              Benchmark
+            </Button>
           </div>
         </div>
       </div>
 
+      {loading ? (
+        <div className="space-y-2" aria-hidden>
+          <Skeleton shape="row" className="h-10" />
+          <Skeleton shape="row" className="h-12" />
+          <Skeleton shape="row" className="h-12" />
+        </div>
+      ) : null}
+
       {submitError && (
-        <div className="flex items-start gap-2 rounded-xl border border-rose-500/20 bg-rose-500/5 px-3 py-2.5">
-          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-500 dark:text-rose-400" />
-          <p className="text-[11px] text-rose-700 dark:text-rose-300 font-medium">{submitError}</p>
+        <div role="alert" className="content-in rounded-control border border-deal-high/30 bg-deal-high/10 px-3 py-2.5 text-footnote font-medium text-deal-high-text">
+          {submitError}
         </div>
       )}
 
       {results !== null && results.length > 0 && (
-        <div className="overflow-x-auto rounded-xl border border-border bg-surface">
-          <table className="w-full min-w-[600px] text-[11px]">
-            <thead>
-              <tr className="border-b border-border bg-card">
-                <th className="px-3 py-2.5 text-left font-bold text-muted-foreground/80">URL</th>
-                <th className="px-3 py-2.5 text-left font-bold text-muted-foreground/80">Vehicle</th>
-                <th className="px-3 py-2.5 text-right font-bold text-muted-foreground/80">Listing price</th>
-                <th className="px-3 py-2.5 text-right font-bold text-muted-foreground/80">Market median</th>
-                <th className="px-3 py-2.5 text-right font-bold text-muted-foreground/80">Gap</th>
-              </tr>
-            </thead>
-            <tbody>
+        <TableContainer className="content-in">
+          <Table className="min-w-[37.5rem]">
+            <TableHeader>
+              <TableRow>
+                <TableHead>URL</TableHead>
+                <TableHead>{t("dealerDash.vehicle", "Vehicle")}</TableHead>
+                <TableHead numeric>{t("dealerDash.listingPrice", "Listing price")}</TableHead>
+                <TableHead numeric>{t("dealerDash.marketMedian", "Market median")}</TableHead>
+                <TableHead numeric>{t("dealerDash.gap", "Gap")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {results.map((row, idx) => (
-                <tr key={row.url + String(idx)} className="border-b border-border last:border-0 transition-colors hover:bg-card">
-                  <td className="max-w-[180px] px-3 py-2.5">
-                    <a
-                      href={row.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block truncate text-primary hover:underline font-medium"
-                      title={row.url}
-                    >
-                      {row.url.replace(/^https?:\/\//, "").slice(0, 45)}{row.url.length > 50 ? "…" : ""}
+                <TableRow key={row.url + String(idx)}>
+                  <TableCell className="max-w-[11.25rem]">
+                    <a href={row.url} target="_blank" rel="noopener noreferrer" className="block truncate font-medium text-primary hover:underline" title={row.url}>
+                      {row.url.replace(/^https?:\/\//, "").slice(0, 45)}
+                      {row.url.length > 50 ? "…" : ""}
                     </a>
-                    {row.error && (
-                      <span className="mt-0.5 block text-[9px] text-rose-600 dark:text-rose-400">{row.error}</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2.5 text-foreground font-medium">
+                    {row.error && <span className="mt-0.5 block text-caption text-deal-high-text">{row.error}</span>}
+                  </TableCell>
+                  <TableCell className="font-medium">
                     {row.make ? (
                       <span>
-                        {row.make}{row.model ? ` ${row.model}` : ""}{row.year ? ` (${row.year})` : ""}
+                        {row.make}
+                        {row.model ? ` ${row.model}` : ""}
+                        {row.year ? ` (${row.year})` : ""}
                       </span>
                     ) : (
-                      <span className="text-muted-foreground">—</span>
+                      <span className="text-label-3">—</span>
                     )}
-                  </td>
-                  <td className="px-3 py-2.5 text-right num text-foreground font-medium">
-                    {row.listing_price != null ? formatPrice(row.listing_price) : <span className="text-muted-foreground">—</span>}
-                  </td>
-                  <td className="px-3 py-2.5 text-right num text-foreground font-medium">
+                  </TableCell>
+                  <TableCell numeric className="font-medium">
+                    {row.listing_price != null ? formatPrice(row.listing_price) : <span className="text-label-3">—</span>}
+                  </TableCell>
+                  <TableCell numeric className="font-medium">
                     {row.market_median != null ? (
                       <span title={`${row.comparable_count} comparables`}>
                         {formatPrice(row.market_median)}
-                        <span className="ml-1 text-[9px] text-muted-foreground">({row.comparable_count})</span>
+                        <span className="ml-1 text-caption text-label-2">({row.comparable_count})</span>
                       </span>
                     ) : (
-                      <span className="text-muted-foreground">—</span>
+                      <span className="text-label-3">—</span>
                     )}
-                  </td>
-                  <td className={`px-3 py-2.5 text-right num font-bold ${gapTone(row.price_gap_pct)}`}>
+                  </TableCell>
+                  <TableCell numeric className={`font-semibold ${gapTone(row.price_gap_pct)}`}>
                     {row.price_gap_pct != null ? (
                       `${row.price_gap_pct > 0 ? "+" : ""}${row.price_gap_pct.toFixed(1)}%`
                     ) : (
-                      <span className="font-normal text-muted-foreground">—</span>
+                      <span className="font-normal text-label-3">—</span>
                     )}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
 
       {results !== null && results.length === 0 && (
-        <p className="py-6 text-center text-[11px] text-muted-foreground">{t("dealer.noResults", "No results returned.")}</p>
+        <EmptyState icon={Upload} title={t("dealer.noResults", "No results returned.")} className="py-8" />
       )}
     </div>
   );
@@ -451,8 +418,9 @@ export default function DealerDashboard() {
 
   const turnoverData = useMemo(() => buildTurnoverSeries(insights), [insights]);
   const priceGaps = useMemo(() => buildDistrictPriceGaps(districts), [districts]);
+  const isMobile = useIsMobile();
   const districtDemand = useMemo(() => buildDistrictDemandRows(districts), [districts]);
-  const notifications = useMemo(() => buildDealerNotifications(insights, stats), [insights, stats]);
+  const notifications = useMemo(() => buildDealerNotifications(insights, stats, t), [insights, stats, t]);
 
   const metrics = useMemo(() => {
     const liveLeads = insights?.new_listings_24h ?? stats?.listings_this_week ?? proSnapshot?.new_listings_7d ?? null;
@@ -464,25 +432,25 @@ export default function DealerDashboard() {
 
     return [
       {
-        label: "Live leads",
-        value: liveLeads != null ? liveLeads.toLocaleString() : "—",
-        delta: stats?.listings_this_week ? `${stats.listings_this_week.toLocaleString()} this week` : "Syncing market feed",
-        tone: liveLeads != null ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground",
+        label: t("dealerDash.liveLeads", "Live leads"),
+        value: liveLeads,
+        delta: stats?.listings_this_week ? t("dealerDash.thisWeek", "{n} this week", { n: stats.listings_this_week.toLocaleString() }) : t("dealerDash.syncingFeed", "Syncing market feed"),
+        tone: liveLeads != null ? "text-deal-good-text" : "text-label-2",
       },
       {
-        label: "Arbitrage alerts",
-        value: arbitrageAlerts != null ? arbitrageAlerts.toLocaleString() : "—",
-        delta: topGapDistrict ? `Highest gap in ${topGapDistrict}` : "Scanning district spreads",
-        tone: "text-muted-foreground",
+        label: t("dealerDash.arbitrageAlerts", "Arbitrage alerts"),
+        value: arbitrageAlerts,
+        delta: topGapDistrict ? t("dealerDash.highestGap", "Highest gap in {district}", { district: topGapDistrict }) : t("dealerDash.scanningSpreads", "Scanning district spreads"),
+        tone: "text-label-2",
       },
       {
-        label: "Finance ready",
-        value: financeReady != null ? financeReady.toLocaleString() : "—",
-        delta: financeReady != null ? "High deal-score listings" : "Awaiting deal signals",
-        tone: "text-muted-foreground",
+        label: t("dealerDash.financeReady", "Finance ready"),
+        value: financeReady,
+        delta: financeReady != null ? t("dealerDash.highDealScore", "High deal-score listings") : t("dealerDash.awaitingSignals", "Awaiting deal signals"),
+        tone: "text-label-2",
       },
     ];
-  }, [insights, stats, proSnapshot, priceGaps]);
+  }, [insights, stats, proSnapshot, priceGaps, t]);
 
   const trustScore = useMemo(() => {
     if (!stats?.total_listings) return null;
@@ -509,7 +477,7 @@ export default function DealerDashboard() {
   const activeNotif =
     notifications[notifIdx] ??
     notifications[0] ??
-    "Market intelligence syncs from live listing data when available.";
+    t("dealerDash.notifFallback", "Market intelligence syncs from live listing data when available.");
   const toggle = (k: WidgetKey) => setCollapsed((p) => ({ ...p, [k]: !p[k] }));
 
   const retryAll = () => {
@@ -520,300 +488,308 @@ export default function DealerDashboard() {
   };
 
   return (
-    <PageCanvas>
-      <PageHero
-        theme="dealer"
+    <PageCanvas ambient="none">
+      <PageHeader
+        size="compact"
         eyebrow={t("dealer.eyebrow", "Dealer workspace")}
-        watermarkIcon={BarChart3}
-        title={<>{t("dealer.commandCenter", "Dealer command center")}<span className="text-sheen">.</span></>}
+        eyebrowIcon={BarChart3}
+        title={t("dealer.commandCenter", "Dealer command center")}
         description={t("dealer.description", "Arbitrage, demand mapping, and lead flow intelligence.")}
-        media={visuals.pageAdminBg}
-        mediaPosition="center"
-        mediaTone="brand"
-        highlights={[
-          { label: t("common.inventory", "Inventory"), value: t("common.live", "Live"), hint: "Public market browse" },
-          { label: "Pulse", value: "Gov", hint: "Official import signals" },
-          { label: t("dealer.plans", "Dealer plans"), value: t("common.pro", "Pro"), hint: "Dealer workspace tiers" },
-        ]}
         actions={
           <>
-            <Link to="/#market" className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-[12px] font-semibold text-muted-foreground no-underline shadow-soft transition-all hover:border-primary/40 hover:text-foreground hover:bg-surface active:scale-[0.98]">{t("dealer.openPublicInventory", "Open public inventory")}</Link>
-            <Link to="/pricing" className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-[12px] font-semibold text-muted-foreground no-underline shadow-soft transition-all hover:border-primary/40 hover:text-foreground hover:bg-surface active:scale-[0.98]">Dealer plans</Link>
-            <Link to="/official-pulse" className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-[12px] font-semibold text-muted-foreground no-underline shadow-soft transition-all hover:border-primary/40 hover:text-foreground hover:bg-surface active:scale-[0.98]">Official pulse</Link>
+            <Button asChild variant="secondary" size="sm">
+              <Link to="/#market">{t("dealer.openPublicInventory", "Open public inventory")}</Link>
+            </Button>
+            <Button asChild variant="secondary" size="sm">
+              <Link to="/pricing">{t("dealer.plans", "Dealer plans")}</Link>
+            </Button>
+            <Button asChild variant="secondary" size="sm">
+              <Link to="/official-pulse">{t("nav.officialPulse", "Official Pulse")}</Link>
+            </Button>
           </>
         }
       />
 
       <FreePlanBanner />
 
-      <PageBody className="py-10 lg:py-14">
+      <div className="layout-shell pb-20">
         {!fullAccess ? (
-          <UpgradePrompt
-            className="mb-6"
-            title={freePlanCopy.dealerTitle}
-            body={freePlanCopy.dealerBody}
-            variant="strip"
-          />
+          <UpgradePrompt className="mb-6" title={freePlanText(t, "dealerTitle")} body={freePlanText(t, "dealerBody")} variant="strip" />
         ) : null}
 
         {dashboardError ? (
-          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-500 dark:text-rose-400" />
-            <div className="min-w-0">
-              <p className="text-[12px] font-bold text-foreground">{t("dealer.unavailable", "Dealer data unavailable")}</p>
-              <p className="mt-1 text-[11px] text-muted-foreground font-medium">{dashboardError}</p>
-              <button type="button" onClick={retryAll} className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[10px] font-bold text-foreground transition-all hover:border-primary/40 hover:bg-card active:scale-[0.97]">
-                <RefreshCw className="h-3 w-3" /> Retry
-              </button>
-            </div>
-          </div>
+          <Card padding="none" className="mb-6">
+            <ErrorState title={t("dealer.unavailable", "Dealer data unavailable")} body={dashboardError} onRetry={retryAll} className="py-10" />
+          </Card>
         ) : null}
 
-        <div className="mb-6">
+        <m.div variants={fadeUp} className="mb-6">
           <ClaimYardCard />
-        </div>
+        </m.div>
 
-        <div className="grid gap-6 lg:grid-cols-[268px_1fr]">
-          <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
-            <motion.div variants={revealItem} className="rounded-2xl border border-border bg-card p-5 shadow-soft">
-              <p className="text-[12px] font-semibold text-primary-bright">Motormila</p>
-              <h2 className="mt-2 font-display text-lg font-bold tracking-tight text-foreground">Command stack</h2>
-              <nav className="mt-4 space-y-1" aria-label={t("dealer.commandStack", "Command stack")}>
-                {[
-                  { label: t("dealer.turnover", "Inventory Turnover"), meta: turnoverData.length ? `${turnoverData.length} models` : "—" },
-                  { label: t("dealer.priceGapScanner", "Price Gap Scanner"), meta: priceGaps.length ? `${priceGaps.length} districts` : "—" },
-                  { label: t("dealer.districtDemand", "District Demand"), meta: districtDemand.length ? `${districtDemand.length} zones` : "—" },
-                  { label: t("dealer.leadNotifications", "Lead Notifications"), meta: notifications.length > 1 ? t("common.live", "Live").toLowerCase() : "standby" },
-                  { label: t("dealer.benchmark", "Inventory Benchmark"), meta: "URL upload" },
-                ].map((i) => (
-                  <div key={i.label} className="flex items-center justify-between rounded-2xl border border-border bg-surface px-3 py-2 transition-all hover:border-primary/40 hover:bg-card">
-                    <span className="text-[11px] text-foreground font-medium">{i.label}</span>
-                    <span className="text-[9px] font-bold text-primary-bright num">{i.meta}</span>
-                  </div>
-                ))}
-                <div className="pt-3">
-                  <p className="mb-2 px-1 text-[11px] font-medium text-muted-foreground/80">{t("dealer.quickTools", "Quick tools")}</p>
-                  {DEALER_QUICK_TOOLS.map((tool) => (
-                    <Link
-                      key={tool.id}
-                      to={tool.to}
-                      className="mb-1 flex items-center justify-between rounded-2xl border border-border bg-surface px-3 py-2 no-underline transition-all hover:border-primary/40 hover:bg-card last:mb-0"
-                    >
-                      <span className="min-w-0">
-                        <span className="block text-[11px] text-foreground font-medium">{tool.title}</span>
-                        <span className="block text-[9px] text-muted-foreground font-medium">{tool.description}</span>
-                      </span>
-                    </Link>
+        <div className="grid gap-6 lg:grid-cols-[17rem_minmax(0,1fr)]">
+          <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+            <m.div variants={fadeUp}>
+              <Card padding="sm">
+                <h2 className="text-callout font-semibold text-foreground">{t("dealer.commandStack", "Command stack")}</h2>
+                <ul className="mt-3 divide-y divide-separator" aria-label={t("dealer.commandStack", "Command stack")}>
+                  {[
+                    { label: t("dealer.turnover", "Inventory Turnover"), meta: turnoverData.length ? t("dealer.meta.models", "{count} models", { count: String(turnoverData.length) }) : null },
+                    { label: t("dealer.priceGapScanner", "Price Gap Scanner"), meta: priceGaps.length ? t("dealer.meta.districts", "{count} districts", { count: String(priceGaps.length) }) : null },
+                    { label: t("dealer.districtDemand", "District Demand"), meta: districtDemand.length ? t("dealer.meta.zones", "{count} zones", { count: String(districtDemand.length) }) : null },
+                    { label: t("dealer.leadNotifications", "Lead Notifications"), meta: notifications.length > 1 ? t("common.live", "Live") : t("dealer.meta.standby", "standby") },
+                    { label: t("dealer.benchmark", "Inventory Benchmark"), meta: t("dealer.meta.urlUpload", "URL upload") },
+                  ].map((i) => (
+                    <li key={i.label} className="flex items-center justify-between gap-2 py-2.5">
+                      <span className="text-footnote text-foreground">{i.label}</span>
+                      {dashboardLoading && i.meta === null ? (
+                        <Skeleton shape="text" className="h-3 w-14" />
+                      ) : (
+                        <span className="text-footnote font-medium tabular-nums text-label-2">{i.meta ?? "—"}</span>
+                      )}
+                    </li>
                   ))}
-                </div>
-              </nav>
-            </motion.div>
-            <motion.div variants={revealItem} className="rounded-2xl border border-border bg-card p-4 shadow-soft">
-              <div className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-primary-bright" /><p className="text-[10px] font-bold text-primary-bright">{t("dealer.trustTier", "Trust tier")}</p></div>
-              {dashboardLoading ? (
-                <div className="mt-3 h-8 animate-pulse rounded-full bg-surface" />
-              ) : (
-                <>
-                  <p className="mt-2 flex items-baseline gap-1">
-                    <span className="num text-2xl font-bold text-foreground">{trustScore ?? "—"}</span>
-                    {trustScore != null ? <span className="text-[11px] text-muted-foreground font-bold">/100</span> : null}
-                  </p>
-                  {trustScore != null ? (
-                    <div className="mt-2 h-1 overflow-hidden rounded-full bg-surface"><div className="h-full rounded-full bg-primary" style={{ width: `${trustScore}%` }} /></div>
-                  ) : (
-                    <p className="mt-2 text-[10px] text-muted-foreground font-medium">Trust score needs listing volume data.</p>
-                  )}
-                </>
-              )}
-            </motion.div>
+                </ul>
+                <p className="mb-1 mt-4 text-caption font-semibold uppercase tracking-caps text-label-2">{t("dealer.quickTools", "Quick tools")}</p>
+                <ul className="space-y-1">
+                  {DEALER_QUICK_TOOLS.map((tool) => (
+                    <li key={tool.id}>
+                      <Link
+                        to={tool.to}
+                        className="block rounded-control px-2 py-2 no-underline transition-colors duration-short ease-standard hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <span className="block text-footnote font-medium text-foreground">{t(`dealerTools.${tool.id}.title`, tool.title)}</span>
+                        <span className="block text-caption text-label-2">{t(`dealerTools.${tool.id}.description`, tool.description)}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            </m.div>
+            <m.div variants={fadeUp}>
+              <Card padding="sm">
+                <p className="flex items-center gap-1.5 text-footnote font-semibold text-primary">
+                  <ShieldCheck className="h-4 w-4" aria-hidden />
+                  {t("dealer.trustTier", "Trust tier")}
+                </p>
+                {dashboardLoading ? (
+                  <Skeleton className="mt-3 h-12 w-full" />
+                ) : trustScore != null ? (
+                  <div className="content-in">
+                    <p className="mt-2 flex items-baseline gap-1">
+                      <span className="text-title2 font-semibold text-foreground">
+                        <Num value={trustScore} />
+                      </span>
+                      <span className="text-footnote text-label-2">/100</span>
+                    </p>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-3">
+                      <m.div
+                        className="h-full origin-left rounded-full bg-primary"
+                        initial={{ scaleX: 0 }}
+                        animate={{ scaleX: trustScore / 100 }}
+                        transition={spring.smooth}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <p className="mt-2 text-footnote text-label-2">{t("dealerDash.trustScoreNeedsListingVolume", "Trust score needs listing volume data.")}</p>
+                )}
+              </Card>
+            </m.div>
           </aside>
 
-          <main className="space-y-6">
-            {/* Featured KPI bento: primary metric towers over the pair */}
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {metrics.map((m, idx) => {
+          <div className="min-w-0 space-y-6">
+            {/* KPI bento: the primary metric spans two columns */}
+            <m.div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" variants={listStagger}>
+              {metrics.map((metric, idx) => {
                 const featured = idx === 0;
                 return (
-                  <motion.div
-                    key={m.label}
-                    variants={revealItem}
-                    whileHover={featured ? { y: -2 } : undefined}
-                    transition={springSoft}
-                    className={`group rounded-2xl border border-border bg-card shadow-soft transition-all hover:border-primary/30 ${featured ? "sm:col-span-2 p-6" : "p-5"}`}
-                  >
-                    <p className="text-[12px] font-semibold text-muted-foreground/80">{m.label}</p>
-                    {dashboardLoading ? (
-                      <div className={`mt-3 animate-pulse rounded-full bg-surface ${featured ? "h-12 w-28" : "h-8 w-16"}`} />
-                    ) : (
-                      <p className={`num mt-2 font-bold text-foreground ${featured ? "text-4xl sm:text-5xl" : "text-2xl"}`}>{m.value}</p>
-                    )}
-                    <p className={`mt-1 text-[11px] font-semibold ${m.tone}`}>{m.delta}</p>
-                  </motion.div>
+                  <m.div key={metric.label} variants={listItem} custom={idx} className={featured ? "sm:col-span-2" : undefined}>
+                    <Card padding={featured ? "md" : "sm"} className="h-full">
+                      <p className="text-footnote font-medium text-label-2">{metric.label}</p>
+                      {dashboardLoading ? (
+                        <Skeleton className={featured ? "mt-3 h-12 w-28" : "mt-3 h-8 w-16"} />
+                      ) : (
+                        <p className={`content-in mt-2 font-semibold text-foreground ${featured ? "font-display text-large" : "text-title2"}`}>
+                          {metric.value != null ? <Num value={metric.value} /> : <span className="text-label-3">—</span>}
+                        </p>
+                      )}
+                      <p className={`mt-1 text-footnote font-medium ${metric.tone}`}>{metric.delta}</p>
+                    </Card>
+                  </m.div>
                 );
               })}
-            </div>
+            </m.div>
 
-            <motion.div variants={revealItem} key={activeNotif} className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 shadow-soft">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary-bright"><Bell className="h-3.5 w-3.5" /></div>
+            <Card padding="sm" className="flex items-start gap-3" aria-live="polite">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
+                <Bell className="h-4 w-4" aria-hidden />
+              </span>
               <div className="min-w-0">
-                <p className="text-[10px] font-bold text-primary-bright">Lead notification</p>
-                <p className="mt-1 text-[12px] text-foreground font-medium leading-relaxed">{activeNotif}</p>
+                <p className="text-footnote font-semibold text-primary">{t("dealerDash.leadNotification", "Lead notification")}</p>
+                <AnimatePresence mode="wait" initial={false}>
+                  <m.p key={activeNotif} variants={fadeIn} initial="hidden" animate="show" exit="exit" className="mt-0.5 text-footnote text-foreground">
+                    {activeNotif}
+                  </m.p>
+                </AnimatePresence>
               </div>
-            </motion.div>
+            </Card>
 
-            <div className="pt-4">
-              <SectionHeader
-                eyebrow="Playbook"
-                title="What dealers and brokers use this for"
-                description="Operator workflows from stock pricing to import duty, alerts, and weekly yard review."
-              />
-              <div className="grid gap-3 sm:grid-cols-2">
+            <section className="pt-4">
+              <p className="text-footnote font-semibold text-primary">{t("dealerDash.playbook", "Playbook")}</p>
+              <h2 className="mt-1 font-display text-title2 font-semibold text-foreground">{t("dealerDash.whatDealersAndBrokersUse", "What dealers and brokers use this for")}</h2>
+              <p className="mt-1 max-w-2xl text-body text-label-2">{t("dealerDash.operatorWorkflowsFromStockPricing", "Operator workflows from stock pricing to import duty, alerts, and weekly yard review.")}</p>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 {DEALER_PLAYBOOK.map((item) => (
-                  <motion.div
-                    key={item.id}
-                    variants={revealItem}
-                    className="rounded-2xl border border-border bg-card p-5 shadow-soft transition-all hover:border-primary/30"
-                  >
-                    <p className="text-[11px] font-medium text-primary-bright">{item.forWhom}</p>
-                    <h3 className="mt-1.5 font-display text-[14px] font-bold tracking-tight text-foreground">{item.title}</h3>
-                    <p className="mt-2 text-[11px] text-muted-foreground font-medium leading-relaxed">{item.problem}</p>
-                    <p className="mt-2 text-[11px] text-foreground font-medium leading-relaxed">{item.whatMotormilaDoes}</p>
-                    <Link
-                      to={item.whereToGo.to}
-                      className="mt-4 inline-flex text-[12px] font-semibold text-primary-bright no-underline transition-colors hover:text-primary"
-                    >
-                      {item.whereToGo.label} →
-                    </Link>
-                  </motion.div>
+                  <Card key={item.id} className="flex flex-col">
+                    <p className="text-footnote font-medium text-primary">{t(`dealerPlaybook.for.${item.forWhom}`, item.forWhom)}</p>
+                    <h3 className="mt-1 text-body font-semibold text-foreground">{t(`dealerPlaybook.${item.id}.title`, item.title)}</h3>
+                    <p className="mt-2 text-footnote text-label-2">{t(`dealerPlaybook.${item.id}.problem`, item.problem)}</p>
+                    <p className="mt-2 flex-1 text-footnote text-label-1">{t(`dealerPlaybook.${item.id}.does`, item.whatMotormilaDoes)}</p>
+                    <Button asChild variant="tertiary" size="sm" className="-ml-3 mt-3 self-start">
+                      <Link to={item.whereToGo.to}>{t(`dealerPlaybook.${item.id}.cta`, item.whereToGo.label)} →</Link>
+                    </Button>
+                  </Card>
                 ))}
               </div>
-            </div>
+            </section>
 
-            <div className="pt-4">
-              <SectionHeader
-                eyebrow="Analytics"
-                title="Inventory & benchmark analytics"
-                description="Momentum, price spread, and district demand across your live market feed."
-              />
+            <section className="pt-4">
+              <p className="text-footnote font-semibold text-primary">{t("dealerDash.analytics", "Analytics")}</p>
+              <h2 className="mt-1 font-display text-title2 font-semibold text-foreground">{t("dealerDash.inventoryBenchmarkAnalytics", "Inventory & benchmark analytics")}</h2>
+              <p className="mb-5 mt-1 max-w-2xl text-body text-label-2">{t("dealerDash.momentumPriceSpreadAndDistrict", "Momentum, price spread, and district demand across your live market feed.")}</p>
 
               {fullAccess ? (
-              <div className="space-y-5">
-                <WidgetShell
-                  title={t("dealer.turnover", "Inventory Turnover")}
-                  subtitle={turnoverData.length ? "Trending model momentum and listing volume" : "Trending model momentum from market insights"}
-                  collapsed={collapsed.turnover}
-                  onToggle={() => toggle("turnover")}
-                  loading={insightsQuery.isPending}
-                  error={insightsQuery.isError ? "Unable to load turnover insights." : null}
-                  onRetry={() => void insightsQuery.refetch()}
-                  emptyMessage={!insightsQuery.isPending && !turnoverData.length ? "No trending model data yet." : undefined}
-                >
-                  <div className="h-[260px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={turnoverData}>
-                        <defs><linearGradient id="turnoverArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.3} /><stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} /></linearGradient></defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                        <XAxis dataKey="week" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} tickLine={false} axisLine={false} />
-                        <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} tickLine={false} axisLine={false} />
-                        <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} />
-                        <Area type="monotone" dataKey="sellThrough" name="Momentum index" stroke="hsl(var(--primary))" fill="url(#turnoverArea)" strokeWidth={2} />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </WidgetShell>
-
-                <WidgetShell
-                  title={t("dealer.priceGaps", "Price Gaps")}
-                  subtitle="District spread vs national median"
-                  collapsed={collapsed.priceGap}
-                  onToggle={() => toggle("priceGap")}
-                  loading={districtsQuery.isPending}
-                  error={districtsQuery.isError ? "Unable to load district pricing." : null}
-                  onRetry={() => void districtsQuery.refetch()}
-                  emptyMessage={!districtsQuery.isPending && !priceGaps.length ? "No district price gaps mapped yet." : undefined}
-                >
-                  <div className="h-[240px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={priceGaps}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                        <XAxis dataKey="district" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} tickLine={false} axisLine={false} />
-                        <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} tickFormatter={(v) => `${v}%`} tickLine={false} axisLine={false} />
-                        <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} formatter={(v: number) => [`${v.toFixed(1)}%`, "Gap"]} />
-                        <Bar dataKey="gapPct" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </WidgetShell>
-
-                <WidgetShell
-                  title={t("dealer.districtDemand", "District Demand")}
-                  subtitle="Supply concentration and average deal floor"
-                  collapsed={collapsed.districtDemand}
-                  onToggle={() => toggle("districtDemand")}
-                  loading={districtsQuery.isPending}
-                  error={districtsQuery.isError ? "Unable to load district demand." : null}
-                  onRetry={() => void districtsQuery.refetch()}
-                  emptyMessage={!districtsQuery.isPending && !districtDemand.length ? "No district demand data yet." : undefined}
-                >
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {districtDemand.map((d) => (
-                      <div key={d.district} className="rounded-xl border border-border bg-surface p-4 transition-all hover:border-primary/40 hover:bg-card hover:shadow-soft">
-                        <div className="flex items-center justify-between">
-                          <p className="text-[12px] font-bold text-foreground">{d.district}</p>
-                          <span className="text-[10px] font-bold text-primary-bright num">Demand {d.demandScore}</span>
-                        </div>
-                        <div className="mt-2 space-y-1">
-                          <div className="flex justify-between text-[10px] font-medium"><span className="text-muted-foreground">Top model</span><span className="text-foreground">{d.topModel}</span></div>
-                          <div className="flex justify-between text-[10px] font-medium"><span className="text-muted-foreground">Avg price</span><span className="text-foreground num">{d.avgPrice > 0 ? formatPrice(d.avgPrice) : "—"}</span></div>
-                        </div>
-                        <div className="mt-2 h-1 overflow-hidden rounded-full bg-card"><div className="h-full rounded-full bg-primary" style={{ width: `${d.demandScore}%` }} /></div>
-                      </div>
-                    ))}
-                  </div>
-                </WidgetShell>
-
-                <div id="benchmark">
+                <div className="space-y-5">
                   <WidgetShell
-                    title={t("dealer.benchmark", "Inventory Benchmark")}
-                    subtitle="Paste listing URLs to benchmark against the current market"
-                    collapsed={collapsed.inventoryBenchmark}
-                    onToggle={() => toggle("inventoryBenchmark")}
+                    title={t("dealer.turnover", "Inventory Turnover")}
+                    subtitle={turnoverData.length ? t("dealerDash.turnoverSub", "Trending model momentum and listing volume") : t("dealerDash.turnoverSubInsights", "Trending model momentum from market insights")}
+                    collapsed={collapsed.turnover}
+                    onToggle={() => toggle("turnover")}
+                    loading={insightsQuery.isPending}
+                    error={insightsQuery.isError ? t("dealerDash.turnoverError", "Unable to load turnover insights.") : null}
+                    onRetry={() => void insightsQuery.refetch()}
+                    emptyMessage={!insightsQuery.isPending && !turnoverData.length ? t("dealerDash.turnoverEmpty", "No trending model data yet.") : undefined}
                   >
-                    <InventoryBenchmark />
+                    <div className="h-[16.25rem]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={turnoverData}>
+                          <defs>
+                            <linearGradient id="turnoverArea" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                          <XAxis dataKey="week" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickLine={false} axisLine={false} />
+                          <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickLine={false} axisLine={false} />
+                          <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} />
+                          <Area type="monotone" dataKey="sellThrough" name={t("dealerDash.momentumIndex", t("dealerDash.momentumIndex", "Momentum index"))} stroke="hsl(var(--primary))" fill="url(#turnoverArea)" strokeWidth={2} />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
                   </WidgetShell>
-                </div>
-              </div>
-              ) : (
-                <ProFeatureLock label={freePlanCopy.dealerTitle} className="min-h-[18rem]">
-                  <div className="rounded-2xl border border-border bg-card p-8 opacity-80">
-                    <p className="font-display text-lg font-bold text-foreground">{t("dealer.turnover", "Inventory Turnover")}</p>
-                    <p className="mt-2 text-sm text-muted-foreground">{freePlanCopy.dealerBody}</p>
+
+                  <WidgetShell
+                    title={t("dealer.priceGaps", "Price Gaps")}
+                    subtitle={t("dealerDash.priceGapSub", t("dealerDash.priceGapSub", "District spread vs national median"))}
+                    collapsed={collapsed.priceGap}
+                    onToggle={() => toggle("priceGap")}
+                    loading={districtsQuery.isPending}
+                    error={districtsQuery.isError ? t("dealerDash.priceGapError", "Unable to load district pricing.") : null}
+                    onRetry={() => void districtsQuery.refetch()}
+                    emptyMessage={!districtsQuery.isPending && !priceGaps.length ? t("dealerDash.priceGapEmpty", "No district price gaps mapped yet.") : undefined}
+                  >
+                    <div className="h-[15rem]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={priceGaps}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                          <XAxis
+                            dataKey="district"
+                            interval={0}
+                            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                            tickLine={false}
+                            axisLine={false}
+                            // Five district names don't fit side by side on a phone; slant them.
+                            angle={isMobile ? -35 : 0}
+                            textAnchor={isMobile ? "end" : "middle"}
+                            height={isMobile ? 56 : 30}
+                          />
+                          <YAxis width={44} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={(v) => `${v}%`} tickLine={false} axisLine={false} />
+                          <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} formatter={(v: number) => [`${v.toFixed(1)}%`, t("dealerDash.gap", "Gap")]} />
+                          <Bar dataKey="gapPct" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </WidgetShell>
+
+                  <WidgetShell
+                    title={t("dealer.districtDemand", "District Demand")}
+                    subtitle={t("dealerDash.demandSub", t("dealerDash.demandSub", "Supply concentration and average deal floor"))}
+                    collapsed={collapsed.districtDemand}
+                    onToggle={() => toggle("districtDemand")}
+                    loading={districtsQuery.isPending}
+                    error={districtsQuery.isError ? t("dealerDash.demandError", "Unable to load district demand.") : null}
+                    onRetry={() => void districtsQuery.refetch()}
+                    emptyMessage={!districtsQuery.isPending && !districtDemand.length ? t("dealerDash.demandEmpty", "No district demand data yet.") : undefined}
+                  >
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {districtDemand.map((d) => (
+                        <div key={d.district} className="rounded-control bg-surface-2 p-4">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-footnote font-semibold text-foreground">{d.district}</p>
+                            <span className="text-footnote font-semibold tabular-nums text-primary">Demand {d.demandScore}</span>
+                          </div>
+                          <dl className="mt-2 space-y-1 text-footnote">
+                            <div className="flex justify-between gap-2"><dt className="text-label-2">{t("dealerDash.topModel", "Top model")}</dt><dd className="text-foreground">{d.topModel}</dd></div>
+                            <div className="flex justify-between gap-2"><dt className="text-label-2">{t("dealerDash.avgPrice", "Avg price")}</dt><dd className="tabular-nums text-foreground">{d.avgPrice > 0 ? formatPrice(d.avgPrice) : "—"}</dd></div>
+                          </dl>
+                          <div className="mt-2 h-1 overflow-hidden rounded-full bg-surface-3">
+                            <div className="h-full origin-left rounded-full bg-primary" style={{ transform: `scaleX(${Math.max(0, Math.min(100, d.demandScore)) / 100})` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </WidgetShell>
+
+                  <div id="benchmark">
+                    <WidgetShell
+                      title={t("dealer.benchmark", "Inventory Benchmark")}
+                      subtitle={t("dealer.benchmarkSubtitle", "Paste listing URLs to benchmark against the current market")}
+                      collapsed={collapsed.inventoryBenchmark}
+                      onToggle={() => toggle("inventoryBenchmark")}
+                    >
+                      <InventoryBenchmark />
+                    </WidgetShell>
                   </div>
+                </div>
+              ) : (
+                <ProFeatureLock label={freePlanText(t, "dealerTitle")} className="min-h-[18rem]">
+                  <Card padding="lg" className="opacity-80">
+                    <p className="text-callout font-semibold text-foreground">{t("dealer.turnover", "Inventory Turnover")}</p>
+                    <p className="mt-2 text-footnote text-label-2">{freePlanText(t, "dealerBody")}</p>
+                  </Card>
                 </ProFeatureLock>
               )}
-            </div>
+            </section>
 
-            <motion.div
-              variants={revealItem}
-              className="rounded-2xl border border-border bg-card p-6 shadow-soft"
-            >
-              <p className="text-[12px] font-semibold text-primary-bright">Dealer plan</p>
-              <h3 className="mt-2 font-display text-[15px] font-bold tracking-tight text-foreground">
-                Full dealer workspace is part of Dealer plan — LKR 1,999/mo
+            <Card>
+              <p className="text-footnote font-semibold text-primary">{t("dealer.plans", "Dealer plans")}</p>
+              <h3 className="mt-1 text-callout font-semibold text-foreground">
+                {t("acct.dealer.planTitle", "The full dealer workspace is part of the Dealer plans, from {price}/mo", {
+                  price: formatLkr(PLAN_PRICES.dealer_starter.monthly),
+                })}
               </h3>
-              <p className="mt-2 max-w-xl text-[12px] text-muted-foreground font-medium leading-relaxed">
-                Keep using the command center today. Upgrade when you want billed seats, saved yard workflows, and priority market sync.
+              <p className="mt-2 max-w-xl text-footnote text-label-2">
+                {t("dealerDash.keepUsingTheCommandCenter", "Keep using the command center today. Upgrade when you want billed seats, saved yard workflows, and priority market sync.")}
               </p>
-              <Link
-                to="/pricing"
-                className="mt-4 inline-flex h-10 items-center rounded-full border border-border bg-surface px-5 text-[12px] font-semibold text-foreground no-underline shadow-soft transition-all hover:border-primary/40 hover:bg-card active:scale-[0.98]"
-              >
-                View dealer plans
-              </Link>
-            </motion.div>
-          </main>
+              <Button asChild variant="secondary" className="mt-4">
+                <Link to="/pricing#for-dealers">{t("dealerDash.viewDealerPlans", "View dealer plans")}</Link>
+              </Button>
+            </Card>
+          </div>
         </div>
-      </PageBody>
+      </div>
     </PageCanvas>
   );
 }

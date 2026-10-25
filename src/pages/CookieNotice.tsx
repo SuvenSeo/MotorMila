@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Cookie } from "lucide-react";
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { LegalPageShell, LegalSection, PRIVACY_EMAIL } from "@/components/money/LegalPageShell";
 
 const ITEMS: { name: string; kind: string; purpose: string; lasts: string }[] = [
@@ -18,28 +19,39 @@ export default function CookieNotice() {
           MotorMila uses a small number of cookies and browser storage items. We don't use advertising cookies, and we
           don't let ad networks track you across sites.
         </p>
-        <div className="overflow-x-auto rounded-2xl border border-border">
-          <table className="w-full min-w-[560px] text-left text-[12px]">
-            <thead className="bg-surface">
-              <tr>
-                <th className="px-3 py-2 font-semibold">Name</th>
-                <th className="px-3 py-2 font-semibold">Type</th>
-                <th className="px-3 py-2 font-semibold">Why</th>
-                <th className="px-3 py-2 font-semibold">How long</th>
-              </tr>
-            </thead>
-            <tbody>
+        {/* Phones: one card per item, so no column is cut off behind a sideways scroll. */}
+        <dl className="space-y-3 sm:hidden">
+          {ITEMS.map((item) => (
+            <div key={item.name} className="rounded-card border border-border bg-surface-1 p-4 shadow-e1">
+              <dt className="text-body font-semibold text-foreground">{item.name}</dt>
+              <dd className="mt-0.5 text-footnote text-label-2">{item.kind}</dd>
+              <dd className="mt-2 text-footnote text-label-1">{item.purpose}</dd>
+              <dd className="mt-1 text-footnote text-label-2">{item.lasts}</dd>
+            </div>
+          ))}
+        </dl>
+        <TableContainer className="hidden shadow-e1 sm:block">
+          <Table className="min-w-[560px]">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Why</TableHead>
+                <TableHead>How long</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {ITEMS.map((item) => (
-                <tr key={item.name} className="border-t border-border align-top">
-                  <td className="px-3 py-2 font-semibold text-foreground">{item.name}</td>
-                  <td className="px-3 py-2">{item.kind}</td>
-                  <td className="px-3 py-2">{item.purpose}</td>
-                  <td className="px-3 py-2">{item.lasts}</td>
-                </tr>
+                <TableRow key={item.name} className="align-top">
+                  <TableCell className="font-semibold">{item.name}</TableCell>
+                  <TableCell className="text-label-2">{item.kind}</TableCell>
+                  <TableCell>{item.purpose}</TableCell>
+                  <TableCell className="text-label-2">{item.lasts}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </TableContainer>
       </LegalSection>
       <LegalSection title="Your choices">
         <p>

@@ -1,14 +1,19 @@
-import { memo, startTransition, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { memo, startTransition, useId, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { FilterState, Condition, BodyType, Transmission, FuelType, SortOption, VehicleCategory } from "@/types/car";
 import { getListingSources, getMakes, getModels, type ListingSourceStat } from "@/services/api";
 import { SRI_LANKA_DISTRICTS } from "@/data/districts";
 import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { X } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
-import { duration, ease, press, spring, useReducedMotionOrLowData } from "@/lib/motion";
+import { AnimatePresence, m } from "motion/react";
+import { duration, ease, spring, useReducedMotionOrLowData } from "@/lib/motion";
+import { Chip } from "@/components/ui/chip";
+import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { formatLkrRange } from "@/lib/price";
 import { cn } from "@/lib/utils";
@@ -85,50 +90,36 @@ function formatMileage(value?: number, anyLabel = "Any") {
 
 function FilterGroup({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <section className="border-t border-border pt-3 first:border-0 first:pt-0">
-      <p className="tech-label mb-2 text-muted-foreground">{label}</p>
+    <section className="border-t border-separator pt-4 first:border-0 first:pt-0">
+      <p className="mb-2.5 text-footnote font-semibold text-foreground">{label}</p>
       {children}
     </section>
   );
 }
 
+/** One filter option: the kit Chip (selected = filled). Touch drawer: 44px rows. */
 function PillButton({
   active,
   onClick,
   children,
+  touch,
 }: {
   active: boolean;
   onClick: () => void;
   children: ReactNode;
+  touch?: boolean;
 }) {
   return (
-    <button
-      type="button"
-      data-pill=""
-      aria-pressed={active}
-      onClick={onClick}
-      className={`rounded-full border px-3 py-1 text-caption font-medium transition-all duration-150 active:scale-[0.97] ${
-        active
-          ? "border-primary/40 bg-primary/15 text-primary shadow-sm"
-          : "border-transparent bg-surface/70 text-muted-foreground hover:border-primary/40 hover:text-foreground hover:bg-surface"
-      }`}
-    >
+    <Chip selected={active} onClick={onClick} className={touch ? "h-11 px-4" : undefined}>
       {children}
-    </button>
+    </Chip>
   );
-}
-
-function selectTriggerClass() {
-  return "h-9 rounded-full border-transparent bg-surface/70 px-3.5 text-sm text-foreground transition-all duration-150 hover:border-primary/40 focus:ring-2 focus:ring-primary/20";
-}
-
-function selectContentClass() {
-  return "max-h-64 rounded-2xl border-transparent bg-popover/95 text-foreground backdrop-blur-2xl shadow-soft-xl";
 }
 
 export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterPanelProps) {
   const { t } = useAppPreferences();
   const motionStill = useReducedMotionOrLowData();
+  const archiveSwitchId = useId();
   const [makes, setMakes] = useState<{ make: string; count: number }[]>([]);
   const [modelsList, setModelsList] = useState<{ model: string; count: number }[]>([]);
   const [sourceOptions, setSourceOptions] = useState<ListingSourceStat[]>([]);
@@ -362,109 +353,86 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
     return chips;
   }, [activeCategory, filters, priceAvailability, setInventoryMode, setVehicleCategory, t, update, vehicleCategoryOptions]);
 
-  const sliderClass =
-    "py-1 [&>span:first-child]:h-2 [&>span:first-child]:bg-secondary [&>span:first-child>span]:bg-gradient-to-r [&>span:first-child>span]:from-primary [&>span:first-child>span]:to-primary";
+  const selectTriggerClass = touch ? "h-11" : undefined;
+  const fieldClass = touch ? "h-11" : undefined;
 
   return (
-    <div
-      className={`space-y-3 px-3 py-3 text-sm ${
-        touch ? "[&_[data-pill]]:min-h-11 [&_[data-pill]]:px-3.5 [&_button[role=combobox]]:h-11" : ""
-      }`}
-    >
-      <div className={`${touch ? "" : "sticky top-0 z-10 "}space-y-3 rounded-[1.75rem] border border-transparent bg-card/85 px-3.5 py-3 shadow-soft backdrop-blur-xl`}>
-        {/* In the drawer the sheet header already shows "Filters" + "Clear all". */}
-        {/* Not rendered (rather than display:none) in the drawer: a hidden
-            child still got space-y margin and left a gap above "With price". */}
+    <div className={cn("space-y-4 text-footnote", touch ? "px-5 py-4" : "p-4")}>
+      <div
+        className={cn(
+          "space-y-3",
+          // Desktop rail: the header + active chips stay pinned while the groups scroll.
+          !touch && "sticky top-0 z-10 -mx-4 -mt-4 bg-surface-1 px-4 pb-1 pt-4",
+        )}
+      >
+        {/* In the drawer the sheet header already shows "Filters" + "Clear all".
+            Not rendered (rather than display:none) there: a hidden child still
+            got space-y margin and left a gap above "With price". */}
         {touch ? null : (
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-semibold tracking-tight text-foreground">{t("filter.title", "Filters")}</p>
-          {activeChips.length > 0 ? (
-            <button
-              type="button"
-              onClick={clear}
-              className="text-caption font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {t("common.clearAll", "Clear all")}
-            </button>
-          ) : null}
-        </div>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-callout font-semibold text-foreground">{t("filter.title", "Filters")}</h2>
+            {activeChips.length > 0 ? (
+              <Button type="button" variant="tertiary" size="sm" className="h-7 px-2.5" onClick={clear}>
+                {t("common.clearAll", "Clear all")}
+              </Button>
+            ) : null}
+          </div>
         )}
 
         {activeChips.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
             <AnimatePresence initial={false} mode="popLayout">
               {activeChips.map((chip) => (
-                <motion.button
+                <m.span
                   key={chip.key}
-                  type="button"
-                  onClick={chip.onRemove}
                   layout={!motionStill}
-                  initial={{ opacity: 0, scale: 0.9 }}
+                  initial={motionStill ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9, transition: { duration: duration.fast, ease: ease.exit } }}
-                  transition={spring.snappy}
-                  whileTap={motionStill ? undefined : press.whileTap}
-                  className="inline-flex max-w-full items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-caption font-medium text-primary-bright"
+                  exit={{ opacity: 0, scale: motionStill ? 1 : 0.9, transition: { duration: duration.short, ease: ease.accelerate } }}
+                  transition={motionStill ? { duration: duration.micro } : spring.snappy}
+                  className="inline-flex max-w-full"
                 >
-                  <span className="truncate">{chip.label}</span>
-                  <X className="h-3 w-3 shrink-0 opacity-70" />
-                </motion.button>
+                  <Chip
+                    selected
+                    onClick={chip.onRemove}
+                    aria-label={t("search.removeFilterAria", "Remove filter {label}", { label: chip.label })}
+                    className={cn("max-w-full gap-1 pl-3 pr-2", chip.key !== "q" && "capitalize", touch && "h-11")}
+                  >
+                    <span className="truncate">{chip.label}</span>
+                    <X className="shrink-0 opacity-70" aria-hidden />
+                  </Chip>
+                </m.span>
               ))}
             </AnimatePresence>
           </div>
         ) : null}
 
-        <div className="flex gap-1 rounded-full border border-transparent bg-surface/80 p-1">
-          <button
-            type="button"
-            onClick={() => setInventoryMode("priced")}
-            className={`flex-1 rounded-full px-2.5 py-1 text-caption font-medium transition-all ${
-              priceAvailability === "priced" ? "bg-primary/15 text-primary-bright shadow-xs" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {t("filter.withPrice", "With price")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setInventoryMode("unavailable")}
-            className={`flex-1 rounded-full px-2.5 py-1 text-caption font-medium transition-all ${
-              priceAvailability === "unavailable" ? "bg-primary/15 text-primary-bright shadow-xs" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {t("filter.noPrice", "No price")}
-          </button>
-        </div>
+        <SegmentedControl
+          value={priceAvailability}
+          onValueChange={(v) => setInventoryMode(v)}
+          aria-label={t("filter.priceModeAria", "Listings with or without a price")}
+          size={touch ? "touch" : "md"}
+          options={[
+            { value: "priced", label: t("filter.withPrice", "With price") },
+            { value: "unavailable", label: t("filter.noPrice", "No price") },
+          ]}
+        />
 
-        <button
-          type="button"
-          onClick={() => update({ include_archive: !filters.include_archive })}
-          className={cn(
-            "flex w-full items-center justify-between rounded-full border px-3 py-1.5 text-caption font-medium transition-all",
-            filters.include_archive
-              ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold shadow-xs"
-              : "border-border/60 bg-surface/80 text-muted-foreground hover:text-foreground hover:border-border",
-          )}
-        >
-          <span className="flex items-center gap-1.5">
-            <span
-              className={cn(
-                "h-2 w-2 rounded-full",
-                filters.include_archive ? "bg-amber-500" : "bg-muted-foreground/40",
-              )}
-            />
-            {t("filter.includeArchive", "Include 360K+ price archive")}
+        <label htmlFor={archiveSwitchId} className={cn("flex cursor-pointer items-center justify-between gap-3", touch ? "min-h-11" : "min-h-8")}>
+          <span className="min-w-0">
+            <span className="block text-footnote font-medium text-foreground">
+              {t("filter.includeArchive", "Include 360K+ price archive")}
+            </span>
+            <span className="block text-caption text-label-2">
+              {t("filter.includeArchiveHint", "Adds older ads for price history")}
+            </span>
           </span>
-          <span
-            className={cn(
-              "rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
-              filters.include_archive
-                ? "bg-amber-500/20 text-amber-700 dark:text-amber-300"
-                : "bg-muted/50 text-muted-foreground",
-            )}
-          >
-            {filters.include_archive ? t("common.on", "On") : t("common.off", "Off")}
-          </span>
-        </button>
+          <Switch
+            id={archiveSwitchId}
+            checked={Boolean(filters.include_archive)}
+            onCheckedChange={(next) => update({ include_archive: next })}
+          />
+        </label>
       </div>
 
       <FilterGroup label={t("filter.vehicle", "Vehicle")}>
@@ -472,6 +440,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
           {vehicleCategoryOptions.map((option) => (
             <PillButton
               key={option.value}
+              touch={touch}
               active={activeCategory === option.value}
               onClick={() => setVehicleCategory(option.value)}
             >
@@ -494,7 +463,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
           }}
           placeholder={t("filter.searchPlaceholder", "Make, model, year…")}
           aria-label={t("filter.searchAria", "Search listings")}
-          className="h-9 rounded-full border-transparent bg-surface/70 text-sm text-foreground"
+          className={fieldClass}
         />
       </FilterGroup>
 
@@ -519,14 +488,14 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
                 onChange={(event) => setModelSearchQuery(event.target.value)}
                 placeholder={t("filter.findModel", "Find model…")}
                 aria-label={t("common.model", "Model")}
-                className="h-9 rounded-full border-transparent bg-surface/70 text-sm text-foreground"
+                className={fieldClass}
               />
             ) : null}
             <Select value={filters.model || ALL_OPTION} onValueChange={(value) => update({ model: value === ALL_OPTION ? undefined : value })}>
-              <SelectTrigger aria-label={t("filter.byModelAria", "Filter by model")} className={selectTriggerClass()}>
+              <SelectTrigger aria-label={t("filter.byModelAria", "Filter by model")} className={selectTriggerClass}>
                 <SelectValue placeholder={t("common.allModels", "All models")} />
               </SelectTrigger>
-              <SelectContent className={selectContentClass()}>
+              <SelectContent className="max-h-64">
                 <SelectItem value={ALL_OPTION}>{t("common.allModels", "All models")}</SelectItem>
                 {filteredModels.map((model) => (
                   <SelectItem key={model.model} value={model.model}>
@@ -541,7 +510,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
 
       <FilterGroup label={t("filter.price", "Price")}>
         {priceAvailability === "unavailable" ? (
-          <p className="text-caption text-muted-foreground">{t("filter.priceUnavailableHint", "Switch to \"With price\" to filter by budget.")}</p>
+          <p className="text-footnote text-label-2">{t("filter.priceUnavailableHint", "Switch to \"With price\" to filter by budget.")}</p>
         ) : (
           <PriceRangeFilter
             filters={filters}
@@ -552,7 +521,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
       </FilterGroup>
 
       <FilterGroup label={t("common.year", "Year")}>
-        <p className="num mb-2 text-caption font-medium text-foreground">
+        <p className="num mb-1 text-footnote font-medium text-foreground">
           {yearRange[0]} – {yearRange[1]}
         </p>
         <Slider
@@ -568,8 +537,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
               year_max: value[1] === MAX_YEAR ? undefined : value[1],
             })
           }
-          className={sliderClass}
-        />
+                  />
       </FilterGroup>
 
       <FilterGroup label={t("common.fuel", "Fuel")}>
@@ -577,6 +545,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
           {fuelOptions.map((option) => (
             <PillButton
               key={option.value ?? "all"}
+              touch={touch}
               active={filters.fuel_type === option.value || (!filters.fuel_type && !option.value)}
               onClick={() => update({ fuel_type: option.value })}
             >
@@ -591,6 +560,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
           {transmissionOptions.map((option) => (
             <PillButton
               key={option.value ?? "all"}
+              touch={touch}
               active={filters.transmission === option.value || (!filters.transmission && !option.value)}
               onClick={() => update({ transmission: option.value })}
             >
@@ -605,6 +575,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
           {conditionOptions.map((option) => (
             <PillButton
               key={option.label}
+              touch={touch}
               active={filters.condition === option.value}
               onClick={() => update({ condition: option.value })}
             >
@@ -620,6 +591,7 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
             {carBodyOptions.map((option) => (
               <PillButton
                 key={option.label}
+                touch={touch}
                 active={filters.body_type === option.value || (!filters.body_type && !option.value)}
                 onClick={() => update({ body_type: option.value })}
               >
@@ -646,9 +618,9 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
               inputMode="numeric"
               placeholder={t("filter.maxKm", "Max km")}
               aria-label={t("filter.maxMileageAria", "Maximum mileage")}
-              className="h-9 flex-1 rounded-full border-transparent bg-surface/70 text-sm text-foreground"
+              className={cn("num flex-1", fieldClass)}
             />
-            <span className="num shrink-0 text-caption font-medium text-muted-foreground">{formatMileage(mileageValue === MAX_MILEAGE ? undefined : mileageValue, t("filter.anyMileage", "Any"))}</span>
+            <span className="num shrink-0 text-footnote font-medium text-label-2">{formatMileage(mileageValue === MAX_MILEAGE ? undefined : mileageValue, t("filter.anyMileage", "Any"))}</span>
           </div>
           <Slider
             thumbLabel={t("filter.maxMileageSlider", "Maximum mileage slider")}
@@ -662,17 +634,16 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
               setMileageInput(String(nextMileage));
             }}
             onValueCommit={(value) => update({ mileage_max: value[0] === MAX_MILEAGE ? undefined : value[0] })}
-            className={sliderClass}
-          />
+                      />
         </div>
       </FilterGroup>
 
       <FilterGroup label={t("common.district", "District")}>
         <Select value={filters.district || ALL_OPTION} onValueChange={(value) => update({ district: value === ALL_OPTION ? undefined : value })}>
-          <SelectTrigger aria-label={t("filter.byDistrictAria", "Filter by district")} className={selectTriggerClass()}>
+          <SelectTrigger aria-label={t("filter.byDistrictAria", "Filter by district")} className={selectTriggerClass}>
             <SelectValue placeholder={t("common.allDistricts", "All districts")} />
           </SelectTrigger>
-          <SelectContent className={selectContentClass()}>
+          <SelectContent className="max-h-64">
             <SelectItem value={ALL_OPTION}>{t("common.allDistricts", "All districts")}</SelectItem>
             {SRI_LANKA_DISTRICTS.map((district) => (
               <SelectItem key={district} value={district}>
@@ -685,10 +656,10 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
 
       <FilterGroup label={t("common.source", "Source")}>
         <Select value={filters.source || ALL_OPTION} onValueChange={(value) => update({ source: value === ALL_OPTION ? undefined : value })}>
-          <SelectTrigger aria-label={t("filter.bySourceAria", "Filter by source")} className={selectTriggerClass()}>
+          <SelectTrigger aria-label={t("filter.bySourceAria", "Filter by source")} className={selectTriggerClass}>
             <SelectValue placeholder={t("common.allSources", "All sources")} />
           </SelectTrigger>
-          <SelectContent className={selectContentClass()}>
+          <SelectContent className="max-h-64">
             <SelectItem value={ALL_OPTION}>{t("common.allSources", "All sources")}</SelectItem>
             {sourceOptions.map((source) => (
               <SelectItem key={source.source} value={source.source}>
@@ -708,8 +679,10 @@ export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterP
 
 export const FilterSidebar = memo(function FilterSidebar({ filters, onFiltersChange }: FilterSidebarProps) {
   return (
-    <aside className="surface surface--glass filter-command-rail hidden w-full max-h-[calc(100vh-7.5rem)] overflow-y-auto rounded-[2rem] border border-transparent shadow-soft lg:block">
-      <FilterPanel filters={filters} onFiltersChange={onFiltersChange} />
+    <aside className="hidden w-full lg:block">
+      <Card padding="none" className="max-h-[calc(100vh-7.5rem)] overflow-y-auto overscroll-contain">
+        <FilterPanel filters={filters} onFiltersChange={onFiltersChange} />
+      </Card>
     </aside>
   );
 });

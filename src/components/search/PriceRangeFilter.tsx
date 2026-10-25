@@ -4,6 +4,8 @@ import type { FilterState } from "@/types/car";
 import { getListingPriceSample, getListings } from "@/services/api";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
+import { Chip } from "@/components/ui/chip";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { formatLkrCompact, groupThousands } from "@/lib/price";
 import { formatPriceInputDisplay, parsePriceInput } from "@/lib/priceParse";
@@ -134,23 +136,27 @@ export function PriceRangeFilter({ filters, onCommit, touch = false }: PriceRang
     commit(min, max);
   };
 
-  const inputClass = cn(
-    "num rounded-full border-transparent bg-surface/70 text-base text-foreground md:text-sm",
-    touch ? "h-11" : "h-9",
-  );
+  const inputClass = cn("num", touch ? "h-11" : "h-10");
+  // Same sentence with the number rolling between counts.
+  const [countBefore, countAfter] = t("search.resultsInRange", "{n} listings", { n: "\u0000" }).split("\u0000");
   const loLabel = draft.min ? formatLkrCompact(draft.min) : t("search.anyMin", "No min");
   const hiLabel = draft.max ? formatLkrCompact(draft.max) : t("search.anyMax", "No max");
 
   return (
     <div className="space-y-2.5">
       <div className="flex items-baseline justify-between gap-2">
-        <p className="num text-caption font-medium text-foreground">
+        <p className="num text-footnote font-medium text-foreground">
           {loLabel} – {hiLabel}
         </p>
-        <p className="num text-caption text-muted-foreground" aria-live="polite">
-          {liveCount === undefined
-            ? "\u00a0"
-            : t("search.resultsInRange", "{n} listings", { n: liveCount.toLocaleString() })}
+        <p className="num text-caption text-label-2" aria-live="polite">
+          {liveCount === undefined ? (
+            "\u00a0"
+          ) : (
+            <>
+              <span className="sr-only">{t("search.resultsInRange", "{n} listings", { n: liveCount.toLocaleString() })}</span>
+              <span aria-hidden>{countBefore}<AnimatedNumber value={liveCount} />{countAfter}</span>
+            </>
+          )}
         </p>
       </div>
 
@@ -163,11 +169,11 @@ export function PriceRangeFilter({ filters, onCommit, touch = false }: PriceRang
                  data changes just snap to the new height. */
               <m.div
                 key={i}
-                className={cn("flex-1 origin-bottom rounded-t-sm transition-colors duration-200", inRange ? "bg-primary/55" : "bg-muted-foreground/20")}
+                className={cn("flex-1 origin-bottom rounded-t-sm transition-colors duration-short", inRange ? "bg-primary/60" : "bg-foreground/10")}
                 style={{ height: `${count === 0 ? 0 : Math.max(8, (count / histMax) * 100)}%` }}
                 initial={motionStill ? false : { scaleY: 0 }}
                 animate={{ scaleY: 1 }}
-                transition={{ duration: duration.slow, ease: ease.emphasized, delay: Math.min(i, 8) * 0.02 }}
+                transition={{ duration: duration.long, ease: ease.decelerate, delay: Math.min(i, 8) * 0.02 }}
               />
             );
           })}
@@ -195,17 +201,10 @@ export function PriceRangeFilter({ filters, onCommit, touch = false }: PriceRang
           const hi = (value[1] ?? PRICE_STEP_LAST_INDEX) === PRICE_STEP_LAST_INDEX ? undefined : stepIndexToPrice(value[1]);
           commit(lo, hi);
         }}
-        className={cn(
-          "py-1 [&>span:first-child]:h-2",
-          // Thumb grab "spring": scale with an overshoot curve (transform only;
-          // the primitive positions thumbs itself, which we never animate).
-          !motionStill &&
-            "[&_[role=slider]]:transition-transform [&_[role=slider]]:duration-300 [&_[role=slider]]:ease-[cubic-bezier(0.34,1.56,0.64,1)] [&_[role=slider]:active]:scale-125 [&_[role=slider]:focus-visible]:scale-110",
-        )}
       />
 
       {sampleSize >= 8 ? (
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-caption text-label-2">
           {t("search.histogramNote", "Bars: asking prices of {n} recent matches", { n: sampleSize })}
         </p>
       ) : null}
@@ -214,21 +213,14 @@ export function PriceRangeFilter({ filters, onCommit, touch = false }: PriceRang
         {PRESETS.map((preset) => {
           const active = filters.price_min === preset.min && filters.price_max === preset.max;
           return (
-            <button
+            <Chip
               key={preset.key}
-              type="button"
-              aria-pressed={active}
+              selected={active}
               onClick={() => (active ? commit(undefined, undefined) : commit(preset.min, preset.max))}
-              className={cn(
-                "rounded-full border px-3 text-caption font-medium transition-colors active:scale-[0.97]",
-                touch ? "min-h-11 py-2" : "py-1",
-                active
-                  ? "border-primary/40 bg-primary/15 text-primary"
-                  : "border-transparent bg-surface/70 text-muted-foreground hover:border-primary/40 hover:text-foreground",
-              )}
+              className={cn("num", touch && "h-11 px-4")}
             >
               {t(preset.key, preset.fallback)}
-            </button>
+            </Chip>
           );
         })}
       </div>
@@ -276,11 +268,11 @@ export function PriceRangeFilter({ filters, onCommit, touch = false }: PriceRang
         />
       </div>
       {inputError ? (
-        <p role="alert" className="text-[11px] font-medium text-destructive">
+        <p role="alert" className="text-caption font-medium text-destructive">
           {inputError}
         </p>
       ) : (
-        <p className="text-[11px] text-muted-foreground">{t("search.priceInputHint", "Type 8.5 Mn, 85L or Rs 7,250,000")}</p>
+        <p className="text-caption text-label-2">{t("search.priceInputHint", "Type 8.5 Mn, 85L or Rs 7,250,000")}</p>
       )}
     </div>
   );

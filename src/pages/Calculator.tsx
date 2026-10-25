@@ -1,64 +1,55 @@
-import { useState, useEffect, useRef } from "react";
-import { Link, useSearchParams } from "react-router-dom";
-import { m, motion, AnimatePresence } from "motion/react";
-import { duration, ease, spring, useReducedMotionOrLowData } from "@/lib/motion";
-import { formatPrice, getPermits, getMacroContext, type LandedCostResult, type TcoResult, type PermitInfo, type MacroContext } from "@/services/api";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { AnimatePresence, m } from "motion/react";
+import { Banknote, Bell, BellOff, Calculator as CalculatorIcon, CheckCircle2, FileBadge, Gauge, Link2, RefreshCw, WalletCards } from "lucide-react";
+import { toast } from "sonner";
+import { tween } from "@/lib/motion";
+import { formatPrice, getMacroContext, type LandedCostResult, type TcoResult, type MacroContext } from "@/services/api";
 import {
   calculateLandedCostResilient as calculateLandedCost,
   calculateTcoResilient as calculateTco,
+  calculateLandedCostOffline,
+  calculateTcoOffline,
   type OfflineFlag,
 } from "@/lib/offlineCalculators";
-import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ErrorState } from "@/components/ui/error-state";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Banknote,
-  Gauge,
-  WalletCards,
-  FileText,
-  TrendingDown,
-  Compass,
-  AlertTriangle,
-  CheckCircle,
-  Link2,
-  Bell,
-  BellOff,
-  RefreshCw,
-  FileBadge,
-  Lock,
-} from "lucide-react";
+  AdornedInput,
+  AnimatedLkr,
+  CheckRow,
+  ChoiceChips,
+  Field,
+  FormCard,
+  Notice,
+  NumberField,
+  ResultCard,
+  ResultRow,
+  ResultRows,
+  ResultSkeleton,
+  ToolGrid,
+  ToolPage,
+} from "@/components/tools/ToolKit";
 import { LeaseCalculator } from "@/components/LeaseCalculator";
 import { CashToOwnStrip } from "@/components/CashToOwnStrip";
 import { OwnershipCostsPanel } from "@/components/OwnershipCostsPanel";
-import { PageBody } from "@/components/PageBody";
-import { PageCanvas } from "@/components/PageCanvas";
-import { PageHero } from "@/components/PageHero";
 import { FreePlanBanner } from "@/components/FreePlanBanner";
-import { FlowLkr, FlowNumber } from "@/components/motion/FlowNumber";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
-import { toast } from "sonner";
 import { getSurchargeCountdown } from "@/lib/importTaxModel";
-import { computeCashToOwn, EV_HOME_CHARGER_LKR } from "@/lib/cashToOwn";
-import {
-  AFFORDABILITY_DEFAULTS,
-  dsrPreCheck,
-  leaseVsLoanRows,
-  maxPriceFromInstalment,
-  monthlyForPrice,
-} from "@/utils/affordability";
+import { AFFORDABILITY_DEFAULTS } from "@/utils/affordability";
 import { useAppPreferences } from "@/lib/appPreferences";
+import { localizeCalcNote } from "@/lib/calcNotesI18n";
 import { useAuth } from "@/lib/authContext";
-import {
-  FREE_CALCULATOR_TABS,
-  freePlanCopy,
-  hasFullPlatformAccess,
-} from "@/lib/planLimits";
+import { FREE_CALCULATOR_TABS, freePlanText, hasFullPlatformAccess } from "@/lib/planLimits";
 import {
   consumeSurchargeLapseNotification,
   isSurchargeNotifySubscribed,
   subscribeSurchargeLapseNotify,
   unsubscribeSurchargeLapseNotify,
 } from "@/lib/surchargeAlert";
-import { visuals } from "@/lib/visualAssets";
-import { formatLkrMonthly } from "@/lib/price";
 
 type TabType = "landed-cost" | "lease" | "tco" | "ownership" | "permits" | "depreciation";
 type FuelType = "petrol" | "diesel" | "hybrid" | "electric";
@@ -69,7 +60,8 @@ const FREE_TAB_SET = new Set<string>(FREE_CALCULATOR_TABS);
 /**
  * Tabs that are not real calculators yet (hard-coded benchmark tables) stay
  * hidden for everyone; /permits has the permit page. Locked tabs are hidden
- * too — we only show calculators this visitor can actually run.
+ * too — we only show calculators this visitor can actually run. The ids stay
+ * valid in the URL so old shared links fall back to the landed-cost tab.
  */
 const UNFINISHED_TABS = new Set<TabType>(["permits", "depreciation"]);
 function visibleTabsFor(fullAccess: boolean): TabType[] {
@@ -104,19 +96,6 @@ function boolParam(params: URLSearchParams, key: string, fallback: boolean): boo
   if (raw === null) return fallback;
   return raw !== "0" && raw !== "false";
 }
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 15 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: "spring" as const,
-      stiffness: 220,
-      damping: 24
-    }
-  }
-} as const;
 
 /** Display FX at 2 dp (e.g. 330.60); the unrounded rate is kept for the math. */
 function formatFxDisplay(rate: number): string {
@@ -156,29 +135,18 @@ export default function Calculator() {
   // What this exact import saves if the 50% surcharge lapses on schedule.
   const [lcLapseSavings, setLcLapseSavings] = useState<number | null>(null);
   const [lcLoading, setLcLoading] = useState(false);
+  const [lcError, setLcError] = useState<string | null>(null);
   const [macro, setMacro] = useState<MacroContext | null>(null);
   const [fxLoading, setFxLoading] = useState(false);
   const [fxUserOverridden, setFxUserOverridden] = useState(() => searchParams.has("fx"));
   const [fxFocused, setFxFocused] = useState(false);
   const [fxText, setFxText] = useState("");
-  const motionStill = useReducedMotionOrLowData();
-  const tabStripRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    // Keep the active tab fully visible in the mobile scroll strip.
-    // Horizontal only — never scroll the page vertically.
-    const strip = tabStripRef.current;
-    const el = strip?.querySelector<HTMLElement>(`[data-tab="${activeTab}"]`);
-    if (!strip || !el || strip.scrollWidth <= strip.clientWidth) return;
-    const left = el.offsetLeft - 8;
-    const right = el.offsetLeft + el.offsetWidth + 24;
-    if (left < strip.scrollLeft) strip.scrollLeft = left;
-    else if (right > strip.scrollLeft + strip.clientWidth) strip.scrollLeft = right - strip.clientWidth;
-  }, [activeTab]);
   const surchargeCountdown = getSurchargeCountdown();
   const [surchargeNotifyOn, setSurchargeNotifyOn] = useState(() => isSurchargeNotifySubscribed());
 
   const applyLiveFx = async ({ silent = false }: { silent?: boolean } = {}) => {
-    setFxLoading(true);
+    // The silent mount-time seed never spins the button; only a tap does.
+    if (!silent) setFxLoading(true);
     try {
       const quote = await getMacroContext();
       setMacro(quote);
@@ -188,21 +156,22 @@ export default function Calculator() {
       }
       if (!silent) {
         if (quote.fallback) {
-          toast.message("Using reference FX rate", {
-            description: "Live FX feed is unreachable right now — Rs 300 / USD reference rate applied. Confirm with your bank before committing.",
+          toast.message(t("tools.calc.fxReferenceTitle", "Using reference FX rate"), {
+            description: t(
+              "tools.calc.fxReferenceBody",
+              "Live FX feed is unreachable right now. The Rs 300 / USD reference rate is applied. Confirm with your bank before committing.",
+            ),
           });
         } else {
-          toast.success(`Live FX · Rs ${formatFxDisplay(quote.usd_lkr)} / USD`, {
-            description: quote.reference_date
-              ? `CBSL-linked print · ref ${quote.reference_date}`
-              : quote.source,
+          toast.success(t("tools.calc.fxLiveToast", "Live FX · Rs {rate} / USD", { rate: formatFxDisplay(quote.usd_lkr) }), {
+            description: quote.reference_date ? t("tools.calc.fxRef", "CBSL-linked print · ref {date}", { date: quote.reference_date }) : quote.source,
           });
         }
       }
     } catch (e: unknown) {
       if (!silent) {
-        const message = e instanceof Error ? e.message : "Could not fetch FX";
-        toast.error("Live FX unavailable", { description: message });
+        const message = e instanceof Error ? e.message : t("tools.calc.fxFailed", "Could not fetch FX");
+        toast.error(t("tools.calc.fxUnavailable", "Live FX unavailable"), { description: message });
       }
     } finally {
       setFxLoading(false);
@@ -233,26 +202,28 @@ export default function Calculator() {
     if (surchargeNotifyOn) {
       unsubscribeSurchargeLapseNotify();
       setSurchargeNotifyOn(false);
-      toast.message("Surcharge lapse reminder cleared");
+      toast.message(t("calc.reminderCleared", "Surcharge lapse reminder cleared"));
       return;
     }
     subscribeSurchargeLapseNotify();
     setSurchargeNotifyOn(true);
     toast.success(
-      `We'll remind you here when the 50% CID surcharge lapses (gazetted ${surchargeCountdown.expiryLabel}).`,
+      t("calc.reminderSet", "We'll remind you here when the 50% CID surcharge lapses (gazetted {date}).", {
+        date: surchargeCountdown.expiryLabel,
+      }),
     );
   };
 
-  // Lease / Cash-to-own state (original logic wrapper)
+  // Lease / Cash-to-own state. The financing-discovery params (ev, sal, com,
+  // inst, rate, yrs) are kept so shared links round-trip unchanged.
   const [leasePrice, setLeasePrice] = useState(() => numParam(searchParams, "price", 15000000));
   const [leaseCc, setLeaseCc] = useState(() => numParam(searchParams, "leasecc", 1500));
-  // Financing discovery (B3-E): EV charger allowance, DSR pre-check, instalment budget.
-  const [isEV, setIsEV] = useState(() => boolParam(searchParams, "ev", false));
-  const [salary, setSalary] = useState(() => numParam(searchParams, "sal", 0));
-  const [existingCommit, setExistingCommit] = useState(() => numParam(searchParams, "com", 0));
-  const [budget, setBudget] = useState(() => numParam(searchParams, "inst", AFFORDABILITY_DEFAULTS.budgetRs, { positive: true }));
-  const [finRate, setFinRate] = useState(() => numParam(searchParams, "rate", AFFORDABILITY_DEFAULTS.annualRatePct, { positive: true }));
-  const [finYears, setFinYears] = useState(() => Math.min(10, Math.max(1, numParam(searchParams, "yrs", AFFORDABILITY_DEFAULTS.termYears, { positive: true }))));
+  const [isEV] = useState(() => boolParam(searchParams, "ev", false));
+  const [salary] = useState(() => numParam(searchParams, "sal", 0));
+  const [existingCommit] = useState(() => numParam(searchParams, "com", 0));
+  const [budget] = useState(() => numParam(searchParams, "inst", AFFORDABILITY_DEFAULTS.budgetRs, { positive: true }));
+  const [finRate] = useState(() => numParam(searchParams, "rate", AFFORDABILITY_DEFAULTS.annualRatePct, { positive: true }));
+  const [finYears] = useState(() => Math.min(10, Math.max(1, numParam(searchParams, "yrs", AFFORDABILITY_DEFAULTS.termYears, { positive: true }))));
 
   // TCO Calculator State (seeded from the shareable URL when present)
   const [tcoDailyKm, setTcoDailyKm] = useState(() => numParam(searchParams, "km", 40));
@@ -265,49 +236,39 @@ export default function Calculator() {
   const [tcoDepreciation, setTcoDepreciation] = useState(() => numParam(searchParams, "dep", 100000));
   const [tcoResult, setTcoResult] = useState<(TcoResult & OfflineFlag) | null>(null);
   const [tcoLoading, setTcoLoading] = useState(false);
+  const [tcoError, setTcoError] = useState<string | null>(null);
 
-  // Permit state
-  const [permits, setPermits] = useState<PermitInfo[]>([]);
-  const [permitsLoading, setPermitsLoading] = useState(false);
+  const errorMessage = (e: unknown) => {
+    const raw = e instanceof Error ? e.message : "";
+    return !raw || raw === "Failed to fetch" || raw.includes("NetworkError")
+      ? t("calc.networkError", "Could not reach the calculation API. Check your connection and try again.")
+      : raw;
+  };
 
-  // Fetch permits on tab mount
-  useEffect(() => {
-    if (activeTab === "permits") {
-      setPermitsLoading(true);
-      getPermits()
-        .then((data) => {
-          setPermits(data);
-          // If empty, seed mock data in UI for rich preview representation
-          if (data.length === 0) {
-            setPermits([
-              { id: 1, permit_name: "Government Doctor Permit", permit_type: "duty_free", market_price_lkr: 5500000 },
-              { id: 2, permit_name: "Government MP / State Officer Permit", permit_type: "duty_free", market_price_lkr: 9800000 },
-              { id: 3, permit_name: "Special EV Import Permit (Remittance)", permit_type: "ev", market_price_lkr: 2200000 },
-              { id: 4, permit_name: "Foreign Employment EV Permit", permit_type: "ev", market_price_lkr: 1800000 },
-            ]);
-          }
-        })
-        .catch(() => {
-          toast.error(t("calc.networkErrorToast", "Network error"), {
-            description: t("calc.permitsLoadError", "Failed to load permit prices. Showing benchmark rates."),
-          });
-        })
-        .finally(() => setPermitsLoading(false));
-    }
-  }, [activeTab, t]);
-
-  // Run calculations automatically or on submit
+  const lcRequest = useRef(0);
   const runLandedCostCalc = async () => {
+    const id = ++lcRequest.current;
+    const payload = {
+      cif_usd: cifUsd,
+      exchange_rate: exchangeRate,
+      fuel_type: lcFuelType,
+      engine_cc: lcFuelType !== "electric" ? lcEngineCc : undefined,
+      motor_kw: lcFuelType === "electric" ? lcMotorKw : undefined,
+      apply_sscl: applySscl,
+    };
+    // Instant answer from the on-device gazette engine while the live API
+    // (which can take a cold start) responds; the live figures then roll in.
+    // Only when there is no live result on screen, so a warm API never flickers.
+    setLcResult((prev) => {
+      if (prev && !prev.offline) return prev;
+      try {
+        return { ...calculateLandedCostOffline({ ...payload, apply_surcharge: applySurcharge }), offline: true };
+      } catch {
+        return prev;
+      }
+    });
     setLcLoading(true);
     try {
-      const payload = {
-        cif_usd: cifUsd,
-        exchange_rate: exchangeRate,
-        fuel_type: lcFuelType,
-        engine_cc: lcFuelType !== "electric" ? lcEngineCc : undefined,
-        motor_kw: lcFuelType === "electric" ? lcMotorKw : undefined,
-        apply_sscl: applySscl,
-      };
       const [res, resWithoutSurcharge] = await Promise.all([
         calculateLandedCost({ ...payload, apply_surcharge: applySurcharge }),
         // Second variant powers the "if the surcharge lapses" delta.
@@ -315,45 +276,53 @@ export default function Calculator() {
           ? calculateLandedCost({ ...payload, apply_surcharge: false })
           : Promise.resolve(null),
       ]);
+      if (id !== lcRequest.current) return;
       setLcResult(res);
-      setLcLapseSavings(
-        resWithoutSurcharge ? Math.max(0, res.landed_cost - resWithoutSurcharge.landed_cost) : null,
-      );
+      setLcError(null);
+      setLcLapseSavings(resWithoutSurcharge ? Math.max(0, res.landed_cost - resWithoutSurcharge.landed_cost) : null);
     } catch (e: unknown) {
-      const raw = e instanceof Error ? e.message : "An error occurred.";
-      const message =
-        raw === "Failed to fetch" || raw.includes("NetworkError")
-          ? "Could not reach the calculation API. Check your connection and try again."
-          : raw;
-      toast.error("Calculation failed", { description: message });
+      if (id !== lcRequest.current) return;
+      const message = errorMessage(e);
+      setLcError(message);
+      toast.error(t("calc.calcFailed", "Calculation failed"), { description: message });
     } finally {
-      setLcLoading(false);
+      if (id === lcRequest.current) setLcLoading(false);
     }
   };
 
+  const tcoRequest = useRef(0);
   const runTcoCalc = async () => {
+    const id = ++tcoRequest.current;
+    const input = {
+      daily_km: tcoDailyKm,
+      fuel_type: tcoFuelType,
+      mileage_kmpl: tcoKmpl,
+      lease_installment: tcoLease,
+      insurance_annual: tcoInsurance,
+      service_annual: tcoService,
+      tyres_annual: tcoTyres,
+      resale_loss_annual: tcoDepreciation,
+    };
     setTcoLoading(true);
+    // On-device figures fill the card while the live API answers (see landed cost).
+    void calculateTcoOffline(input)
+      .then((offline) => {
+        if (id !== tcoRequest.current) return;
+        setTcoResult((prev) => (prev && !prev.offline ? prev : { ...offline, offline: true }));
+      })
+      .catch(() => undefined);
     try {
-      const res = await calculateTco({
-        daily_km: tcoDailyKm,
-        fuel_type: tcoFuelType,
-        mileage_kmpl: tcoKmpl,
-        lease_installment: tcoLease,
-        insurance_annual: tcoInsurance,
-        service_annual: tcoService,
-        tyres_annual: tcoTyres,
-        resale_loss_annual: tcoDepreciation,
-      });
+      const res = await calculateTco(input);
+      if (id !== tcoRequest.current) return;
       setTcoResult(res);
+      setTcoError(null);
     } catch (e: unknown) {
-      const raw = e instanceof Error ? e.message : "An error occurred.";
-      const message =
-        raw === "Failed to fetch" || raw.includes("NetworkError")
-          ? "Could not reach the calculation API. Check your connection and try again."
-          : raw;
-      toast.error("Calculation failed", { description: message });
+      if (id !== tcoRequest.current) return;
+      const message = errorMessage(e);
+      setTcoError(message);
+      toast.error(t("calc.calcFailed", "Calculation failed"), { description: message });
     } finally {
-      setTcoLoading(false);
+      if (id === tcoRequest.current) setTcoLoading(false);
     }
   };
 
@@ -362,14 +331,12 @@ export default function Calculator() {
   useEffect(() => {
     const timer = setTimeout(() => void runLandedCostCalc(), 350);
     return () => clearTimeout(timer);
-    // Recalculate only when landed-cost inputs change (not when helper identity changes).
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional input-driven recalculation
   }, [cifUsd, exchangeRate, lcFuelType, lcEngineCc, lcMotorKw, applySurcharge, applySscl]);
 
   useEffect(() => {
     const timer = setTimeout(() => void runTcoCalc(), 350);
     return () => clearTimeout(timer);
-    // Recalculate only when TCO inputs change (not when helper identity changes).
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional input-driven recalculation
   }, [tcoDailyKm, tcoFuelType, tcoKmpl, tcoLease, tcoInsurance, tcoService, tcoTyres, tcoDepreciation]);
 
@@ -430,699 +397,369 @@ export default function Calculator() {
     }
   };
 
-  return (
-    <PageCanvas>
-      <PageHero
-        theme="calculator"
-        eyebrow={t("shell.calc.eyebrow", "Calculator")}
-        eyebrowIcon={Compass}
-        watermarkIcon={Banknote}
-        title={<>{t("shell.calc.title", "Import tax calculator")}<span className="text-sheen">.</span></>}
-        description={t("shell.calc.description", "Work out what an imported vehicle costs once it lands: customs duty, surcharge, excise, SSCL and VAT on the CIF price, using the current gazette rates.")}
-        media={visuals.alt2PageInsuranceFinance}
-        mediaPosition="center 30%"
-        mediaTone="brand"
-        highlights={[
-          { label: t("shell.calc.hlFx", "Exchange rate"), value: "CBSL", hint: t("shell.calc.hlFxHint", "Latest published rate") },
-          { label: t("shell.calc.hlTax", "Taxes"), value: "5", hint: t("shell.calc.hlTaxHint", "Duty, surcharge, excise, SSCL, VAT") },
-          { label: t("shell.calc.hlShare", "Share"), value: t("shell.calc.hlShareValue", "Link"), hint: t("shell.calc.hlShareHint", "Send any scenario as a link") },
-        ]}
-      />
+  const fuelOptions = FUEL_TYPES.map((fuel) => ({ value: fuel, label: t(`fuel.${fuel}`, fuel) }));
+  const onDeviceBadge = (offline?: boolean) =>
+    offline ? (
+      <Badge variant="neutral" title={t("calc.offlineBadge", "Calculated on this device with the same gazette schedules the server uses.")}>
+        {t("tools.calc.onDevice", "On device")}
+      </Badge>
+    ) : null;
 
-      <FreePlanBanner />
+  const tabs = [
+    { id: "landed-cost" as const, label: t("calc.tab.landed", "Landed Cost"), icon: Banknote },
+    { id: "lease" as const, label: t("calc.tab.lease", "Lease Scenario"), icon: WalletCards },
+    { id: "tco" as const, label: t("calc.tab.tco", "Ownership TCO"), icon: Gauge },
+    { id: "ownership" as const, label: t("calc.tab.ownership", "On-road fees"), icon: FileBadge },
+  ].filter((tab) => visibleTabs.includes(tab.id));
 
-      {(lcResult?.offline || tcoResult?.offline) && (
-        <div className="mx-auto max-w-[1320px] px-4 pt-4">
-          <p className="inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-400/10 px-3 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-200">
-            {t("calc.offlineBadge", "On-device calculation — server unreachable, same gazette schedules.")}
-          </p>
-        </div>
-      )}
+  /* ── Landed cost ──────────────────────────────────────────────────────── */
+  const surchargeNotice = (
+    <Notice
+      tone="caution"
+      title={
+        surchargeCountdown.expired
+          ? t("calc.surchargeExpired", "The 50% CID surcharge's gazetted 3-month period has ended")
+          : t("calc.surchargeActive", "50% CID surcharge in force — set to lapse in {days} day(s)", { days: surchargeCountdown.daysLeft })
+      }
+      action={
+        !surchargeCountdown.expired ? (
+          <Button type="button" variant="secondary" size="sm" onClick={toggleSurchargeNotify} aria-pressed={surchargeNotifyOn}>
+            {surchargeNotifyOn ? <BellOff aria-hidden /> : <Bell aria-hidden />}
+            {surchargeNotifyOn ? t("calc.reminderOn", "Reminder on — tap to clear") : t("calc.notifySurcharge", "Notify me when the surcharge drops")}
+          </Button>
+        ) : null
+      }
+    >
+      <p className="text-label-2">
+        {surchargeCountdown.expired
+          ? t("calc.surchargeExpiredHint", "No extension has been gazetted as of our last review — verify current customs rates before committing an import.")
+          : t("calc.surchargeActiveHint", "Gazetted expiry {date} · no extension decision announced · LCs opened on or before 15 May 2026 are exempt", {
+              date: surchargeCountdown.expiryLabel,
+            })}
+      </p>
+    </Notice>
+  );
 
-      <PageBody className="space-y-0 pb-0">
-      <m.div variants={itemVariants} className="flex max-w-[1320px] flex-wrap items-center justify-end gap-3 pb-6 sm:flex-nowrap sm:justify-start">
-        {visibleTabs.length > 1 ? (
-        /* Mobile: full-width horizontally scrollable strip; labels never truncate
-            (whitespace-nowrap + shrink-0), edge fade hints there is more. */
-        <div
-          ref={tabStripRef}
-          className="flex w-full min-w-0 flex-nowrap gap-1 overflow-x-auto overscroll-x-contain rounded-full border border-border bg-card p-1.5 shadow-soft scroll-px-2 [mask-image:linear-gradient(to_right,transparent,#000_12px,#000_calc(100%-24px),transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:w-auto sm:flex-none sm:flex-wrap sm:overflow-visible sm:[mask-image:none]"
-        >
-          {[
-            { id: "landed-cost", label: t("calc.tab.landed", "Landed Cost"), icon: Banknote },
-            { id: "lease", label: t("calc.tab.lease", "Lease Scenario"), icon: WalletCards },
-            { id: "tco", label: t("calc.tab.tco", "Ownership TCO"), icon: Gauge },
-            { id: "ownership", label: t("calc.tab.ownership", "On-road fees"), icon: FileBadge },
-            { id: "permits", label: t("calc.tab.permits", "Permit Tracker"), icon: FileText },
-            { id: "depreciation", label: t("calc.tab.depreciation", "Retention Curves"), icon: TrendingDown },
-          ].filter((tab) => visibleTabs.includes(tab.id as TabType)).map((tab) => {
-            const Icon = tab.icon;
-            const locked = !fullAccess && !FREE_TAB_SET.has(tab.id);
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                data-tab={tab.id}
-                onClick={() => setActiveTab(tab.id as TabType)}
-                aria-pressed={activeTab === tab.id}
-                className={`relative flex min-h-[40px] shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold tracking-wide transition-colors z-10 active:scale-[0.97] ${
-                  activeTab === tab.id
-                    ? "text-black font-bold"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {activeTab === tab.id && (
-                  /* layoutId needs the full motion feature set (not domAnimation) */
-                  <motion.div
-                    layoutId="active-tab-indicator"
-                    className="absolute inset-0 bg-primary rounded-full -z-10 shadow-soft"
-                    transition={spring.snappy}
-                  />
-                )}
-                {locked ? <Lock className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-        ) : (
-          <div className="min-w-0 flex-1" />
-        )}
-        <button
-          onClick={() => void copyShareLink()}
-          className="flex shrink-0 items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-xs font-semibold tracking-wide text-muted-foreground shadow-soft transition-colors hover:text-foreground active:scale-[0.97]"
-          title={t("calc.shareTitle", "Copy a shareable link to this calculation")}
-        >
-          <Link2 className="h-3.5 w-3.5" />
-          {t("calc.share", "Share")}
-        </button>
-      </m.div>
-
-      <div className="mx-auto max-w-[1320px] px-5 pb-16 sm:px-6 relative z-10">
-        {!tabUnlocked ? (
-          <UpgradePrompt
-            title={freePlanCopy.calcTitle}
-            body={freePlanCopy.calcBody}
-            className="max-w-xl mx-auto"
-          />
-        ) : (
-        <AnimatePresence mode="wait">
-          {activeTab === "landed-cost" && (
-            <m.div
-              key="landed-cost-tab"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.2 }}
-              className="grid gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]"
-            >
-              {/* Surcharge countdown — time-boxed gazette moment */}
-              <div className="lg:col-span-2 rounded-2xl border border-amber-500/25 bg-amber-400/[0.06] p-4">
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                    <span className="text-xs font-bold text-amber-700 dark:text-amber-300">
-                      {surchargeCountdown.expired
-                        ? t("calc.surchargeExpired", "The 50% CID surcharge's gazetted 3-month period has ended")
-                        : t("calc.surchargeActive", "50% CID surcharge in force — set to lapse in {days} day(s)", { days: surchargeCountdown.daysLeft })}
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-semibold text-muted-foreground">
-                    {surchargeCountdown.expired
-                      ? t("calc.surchargeExpiredHint", "No extension has been gazetted as of our last review — verify current customs rates before committing an import.")
-                      : t("calc.surchargeActiveHint", "Gazetted expiry {date} · no extension decision announced · LCs opened on or before 15 May 2026 are exempt", { date: surchargeCountdown.expiryLabel })}
-                  </span>
-                  {!surchargeCountdown.expired && (
-                    <button
-                      type="button"
-                      onClick={toggleSurchargeNotify}
-                      aria-pressed={surchargeNotifyOn}
-                      className="inline-flex min-h-[36px] items-center gap-1.5 rounded-2xl border border-amber-500/30 bg-amber-400/10 px-3 py-1.5 text-[11px] font-bold text-amber-800 transition-colors hover:bg-amber-400/20 dark:text-amber-200"
-                    >
-                      {surchargeNotifyOn ? (
-                        <>
-                          <BellOff className="h-3.5 w-3.5" aria-hidden />
-                          {t("calc.reminderOn", "Reminder on — tap to clear")}
-                        </>
-                      ) : (
-                        <>
-                          <Bell className="h-3.5 w-3.5" aria-hidden />
-                          {t("calc.notifySurcharge", "Notify me when the surcharge drops")}
-                        </>
-                      )}
-                    </button>
-                  )}
-                  <AnimatePresence initial={false}>
-                    {!surchargeCountdown.expired && applySurcharge && lcLapseSavings !== null && lcLapseSavings > 0 && (
-                      <m.span
-                        initial={{ opacity: 0, scale: 0.92 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.92 }}
-                        transition={{ duration: 0.18 }}
-                        className="w-full text-center sm:w-auto sm:text-left sm:ml-auto rounded-full border border-emerald-500/25 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 num"
-                      >
-                        {t("calc.lapseSavings", "This import lands {amount} cheaper if it lapses", { amount: formatPrice(lcLapseSavings) })}
-                      </m.span>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </div>
-
-              {/* Inputs */}
-              <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-soft h-fit space-y-5">
-                <div className="flex items-center gap-3 border-b border-border pb-4">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-2xl border border-border bg-surface">
-                    <Banknote className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="text-[14px] font-bold text-foreground">{t("calc.importConfig", "Import Configuration")}</h2>
-                    <p className="text-[10px] text-muted-foreground font-semibold">{t("calc.importConfigHint", "Taxes compounding on CIF valuation")}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <label htmlFor="lc-cif" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.cifUsd", "CIF Price (USD)")}</label>
-                      <Input id="lc-cif" type="number" value={cifUsd} onChange={(e) => setCifUsd(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label htmlFor="lc-fx" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.exchangeRate", "Exchange Rate (LKR)")}</label>
-                      <div className="flex gap-2">
-                        <Input
-                          id="lc-fx"
-                          type="number"
-                          inputMode="decimal"
-                          step="0.01"
-                          // Show 2 dp; full CBSL precision stays in state for the math.
-                          value={fxFocused ? fxText : formatFxDisplay(exchangeRate)}
-                          onFocus={() => {
-                            setFxText(formatFxDisplay(exchangeRate));
-                            setFxFocused(true);
-                          }}
-                          onBlur={() => setFxFocused(false)}
-                          onChange={(e) => {
-                            setFxText(e.target.value);
-                            const next = Number(e.target.value);
-                            if (Number.isFinite(next) && next > 0) {
-                              setFxUserOverridden(true);
-                              setExchangeRate(next);
-                            }
-                          }}
-                          className="num bg-surface border-border focus-visible:ring-primary/40"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => void applyLiveFx()}
-                          disabled={fxLoading}
-                          className="inline-flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-2xl border border-border bg-surface px-3 text-[10px] font-bold text-foreground transition-colors hover:border-primary/40 disabled:opacity-60"
-                          title="Pull latest CBSL-linked USD/LKR"
-                        >
-                          <RefreshCw className={`h-3.5 w-3.5 ${fxLoading ? "animate-spin" : ""}`} />
-                          Live FX
-                        </button>
-                      </div>
-                      {macro ? (
-                        <p className="text-[10px] font-semibold text-muted-foreground">
-                          {macro.fallback ? (
-                            <span className="text-deal-amber">Reference rate — live FX unavailable · </span>
-                          ) : (
-                            <>Feed {macro.source.replace(/_/g, " ")} </>
-                          )}
-                          {macro.reference_date ? `· ref ${macro.reference_date}` : ""}
-                          {macro.inflation_yoy_percent != null
-                            ? ` · CCPI YoY ${macro.inflation_yoy_percent}%`
-                            : ""}
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[12px] font-medium text-muted-foreground/80">{t("calc.fuelCategory", "Fuel Category")}</label>
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {(["petrol", "diesel", "hybrid", "electric"] as const).map((fuel) => (
-                        <button
-                          key={fuel}
-                          onClick={() => setLcFuelType(fuel)}
-                          aria-pressed={lcFuelType === fuel}
-                          className={`min-h-[36px] rounded-2xl border py-2.5 text-[10px] font-bold capitalize transition-all active:scale-[0.97] ${
-                            lcFuelType === fuel
-                              ? "border-primary/40 bg-primary/10 text-primary-bright"
-                              : "border-border bg-surface text-muted-foreground hover:text-foreground hover:border-primary/40"
-                          }`}
-                        >
-                          {fuel}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {lcFuelType !== "electric" ? (
-                    <div className="space-y-1.5">
-                      <label htmlFor="lc-cc" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.engineCc", "Engine Capacity (CC)")}</label>
-                      <Input id="lc-cc" type="number" value={lcEngineCc} onChange={(e) => setLcEngineCc(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
-                      {lcFuelType === "hybrid" && lcEngineCc > 1500 && (
-                        <p className="flex items-center gap-1.5 text-[10px] text-amber-600 dark:text-amber-400 font-semibold mt-1">
-                          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                          Capacity is above the 1500cc cliff. Excise rate steps up significantly.
-                        </p>
-                      )}
-                    </div>
+  const landedForm = (
+    <>
+      {surchargeNotice}
+      <FormCard icon={Banknote} title={t("calc.importConfig", "Import Configuration")} description={t("calc.importConfigHint", "Taxes compounding on CIF valuation")}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <NumberField id="lc-cif" label={t("calc.cifUsd", "CIF Price (USD)")} value={cifUsd} onChange={setCifUsd} prefix="$" step={500} />
+          <Field
+            label={t("calc.exchangeRate", "Exchange Rate (LKR)")}
+            htmlFor="lc-fx"
+            hint={
+              macro ? (
+                <>
+                  {macro.fallback ? (
+                    <span className="text-deal-caution-text">{t("tools.calc.fxReferenceShort", "Reference rate · live FX unavailable")}</span>
                   ) : (
-                    <div className="space-y-1.5">
-                      <label htmlFor="lc-kw" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.motorKw", "Motor Power (kW)")}</label>
-                      <Input id="lc-kw" type="number" value={lcMotorKw} onChange={(e) => setLcMotorKw(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
-                    </div>
+                    t("tools.calc.fxFeed", "Feed {source}", { source: macro.source.replace(/_/g, " ") })
                   )}
-
-                  <div className="space-y-3 pt-3 border-t border-border">
-                    <label className="flex items-center gap-3 cursor-pointer text-xs font-semibold text-muted-foreground hover:text-foreground">
-                      <input type="checkbox" checked={applySurcharge} onChange={(e) => setApplySurcharge(e.target.checked)} className="accent-primary h-4 w-4 rounded" />
-                      Apply 50% CID Gazette Surcharge (Compounding)
-                    </label>
-                    <label className="flex items-center gap-3 cursor-pointer text-xs font-semibold text-muted-foreground hover:text-foreground">
-                      <input type="checkbox" checked={applySscl} onChange={(e) => setApplySscl(e.target.checked)} className="accent-primary h-4 w-4 rounded" />
-                      Apply 2.5% SSCL Levy
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              {/* Landed Cost Results — the number is the hero */}
-              <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-soft-lg space-y-6">
-                <div>
-                  <h3 className="text-sm font-bold text-foreground">{t("calc.breakdown", "Landed Cost breakdown")}</h3>
-                  <p className="text-[10px] text-muted-foreground font-semibold mt-0.5">{t("calc.breakdownHint", "Indicative tax components based on 2026 gazette calculations")}</p>
-                </div>
-
-                {lcLoading && !lcResult ? (
-                  <div className="h-64 flex items-center justify-center">
-                    <div role="status" aria-label="Calculating" className="h-6 w-6 animate-spin rounded-full border border-t-transparent border-primary" />
-                  </div>
-                ) : lcResult ? (
-                  <div className={`space-y-5 transition-opacity duration-200 ${lcLoading ? "opacity-60" : "opacity-100"}`}>
-                    <motion.div layout={!motionStill} transition={spring.gentle} className="space-y-3 border-b border-border pb-4">
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>{t("calc.baseCif", "Base CIF LKR Equivalent")}</span>
-                        <span className="font-semibold text-foreground num">{formatPrice(lcResult.cif_lkr)}</span>
-                      </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>{t("calc.cid", "Customs Import Duty (20%)")}</span>
-                        <span className="font-semibold text-foreground num">{formatPrice(lcResult.cid)}</span>
-                      </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>{t("calc.surchargeOnCid", "Surcharge on CID (50% Surcharge)")}</span>
-                        <span className="font-semibold text-foreground num">{formatPrice(lcResult.surcharge)}</span>
-                      </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>{t("calc.excise", "Excise Duty (Capacity Banded)")}</span>
-                        <span className="font-semibold text-foreground num">{formatPrice(lcResult.excise)}</span>
-                      </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>{t("calc.sscl", "SSCL (2.5%)")}</span>
-                        <span className="font-semibold text-foreground num">{formatPrice(lcResult.sscl)}</span>
-                      </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>{t("calc.vat", "VAT (18% Compounded)")}</span>
-                        <span className="font-semibold text-foreground num">{formatPrice(lcResult.vat)}</span>
-                      </div>
-                      <AnimatePresence initial={false}>
-                        {lcResult.luxury_tax > 0 && (
-                          <motion.div
-                            key="luxury"
-                            layout={!motionStill}
-                            initial={{ opacity: 0, y: -4 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, transition: { duration: duration.fast, ease: ease.exit } }}
-                            transition={spring.gentle}
-                            className="flex justify-between text-xs text-rose-600 dark:text-rose-400 font-semibold"
-                          >
-                            <span>{t("calc.luxuryTax", "Luxury Tax (Excess Portion)")}</span>
-                            <span className="num">{formatPrice(lcResult.luxury_tax)}</span>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </motion.div>
-
-                    {/* Featured readout — landed cost towers, total taxes demoted below it */}
-                    <motion.div layout={!motionStill ? "position" : false} transition={spring.gentle} aria-live="polite" className="rounded-2xl border border-primary/25 bg-primary/5 p-5 sm:p-6 shadow-soft">
-                      <span className="text-[12px] font-semibold text-primary-bright">{t("calc.estLanded", "Est. Landed Cost")}</span>
-                      <div className="display-1 text-foreground num mt-2">
-                        {lcResult.landed_cost == null || !Number.isFinite(lcResult.landed_cost) ? (
-                          "N/A"
-                        ) : (
-                          <FlowLkr value={lcResult.landed_cost} label={formatPrice(lcResult.landed_cost)} />
-                        )}
-                      </div>
-                      <div className="mt-4 flex items-center gap-3 border-t border-primary/15 pt-3">
-                        <span className="text-[12px] font-medium text-muted-foreground">Total Taxes &amp; Duties</span>
-                        <span className="ml-auto text-sm font-bold text-primary num">
-                          <FlowLkr value={lcResult.total_tax} prefixPlus label={`+${formatPrice(lcResult.total_tax)}`} />
-                        </span>
-                      </div>
-                    </motion.div>
-
-                    <div className="rounded-2xl bg-surface border border-border p-3 flex gap-2">
-                      <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                      <p className="text-[10px] leading-relaxed text-muted-foreground font-semibold">{lcResult.notes}</p>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            </m.div>
-          )}
-
-          {activeTab === "lease" && (
-            <m.div
-              key="lease-tab"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.2 }}
-              className="grid gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]"
-            >
-              {/* ORIGINAL CONFIG INPUTS */}
-              <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-soft h-fit space-y-5">
-                <div className="flex items-center gap-3 border-b border-border pb-4">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-2xl border border-border bg-surface">
-                    <WalletCards className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="text-[14px] font-bold text-foreground">{t("calc.leaseAssumptions", "Lease Assumptions")}</h2>
-                    <p className="text-[10px] text-muted-foreground font-semibold">{t("calc.leaseAssumptionsHint", "Bases for loan to value margins")}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <label htmlFor="lease-price" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.vehicleValuation", "Vehicle Valuation (LKR)")}</label>
-                    <Input id="lease-price" type="number" value={leasePrice} onChange={(e) => setLeasePrice(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40 font-semibold text-foreground text-base" />
-                    <p className="text-[10px] text-muted-foreground font-semibold num">{formatPrice(leasePrice)}</p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label htmlFor="lease-cc" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.engineCc", "Engine Capacity (CC)")}</label>
-                    <Input id="lease-cc" type="number" value={leaseCc} onChange={(e) => setLeaseCc(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
-                  </div>
-                </div>
-              </div>
-
-              {/* RENDER DUAL PANELS */}
-              <div className="space-y-6">
-                {/* CBSL 40/60 LTV arbitrage — regulation-made, nobody else surfaces it */}
-                <AnimatePresence initial={false}>
-                {leasePrice >= 1_000_000 && (() => {
-                  const usedDown = leasePrice * 0.4;   // 60% LTV on registered used
-                  const newDown = leasePrice * 0.6;    // 40% LTV on new/unregistered
-                  const usedBudgetFromNewDown = newDown / 0.4; // same cash, used market
-                  return (
-                    <m.div
-                      key="ltv-arbitrage"
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.25 }}
-                      className="overflow-hidden rounded-2xl border border-primary/20 bg-primary/[0.05] shadow-soft"
-                    >
-                      <div className="p-4">
-                      <div className="flex items-start gap-2.5">
-                        <Compass className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                        <div className="space-y-1.5">
-                          <p className="text-xs font-bold text-foreground">{t("calc.ltvTitle", "The 40/60 rule is working in your favour on used cars")}</p>
-                          <p className="text-[11px] leading-relaxed text-muted-foreground font-medium">
-                            CBSL caps financing at <span className="font-bold text-foreground">40%</span> for brand-new or unregistered vehicles but{" "}
-                            <span className="font-bold text-foreground">60%</span> for registered used (&gt;1yr). For this{" "}
-                            <span className="num font-bold text-foreground">{formatPrice(leasePrice)}</span> vehicle: registered used needs{" "}
-                            <span className="num font-bold text-emerald-600 dark:text-emerald-400">{formatPrice(usedDown)}</span> down; new or unregistered needs{" "}
-                            <span className="num font-bold text-rose-600 dark:text-rose-400">{formatPrice(newDown)}</span> — the same cash that would stretch to a{" "}
-                            <span className="num font-bold text-foreground">{formatPrice(usedBudgetFromNewDown)}</span> registered used car.
-                          </p>
-                          <p className="text-[10px] font-semibold text-muted-foreground">
-                            CBSL Act Directions No. 01 of 2026 (from 25 May 2026) · banks may apply stricter internal caps
-                          </p>
-                        </div>
-                      </div>
-                      </div>
-                    </m.div>
-                  );
-                })()}
-                </AnimatePresence>
-                <div>
-                  <span className="text-[12px] font-medium text-muted-foreground">{t("calc.cashRequirements", "Cash requirements")}</span>
-                  <CashToOwnStrip priceLkr={leasePrice} financeClass="registered_used" />
-                </div>
-                <div>
-                  <span className="text-[12px] font-medium text-muted-foreground">{t("calc.leaseModeling", "Lease Scenario modeling")}</span>
-                  <LeaseCalculator price={leasePrice} financeClass="registered_used" />
-                </div>
-              </div>
-            </m.div>
-          )}
-
-          {activeTab === "tco" && (
-            <m.div
-              key="tco-tab"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.2 }}
-              className="grid gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]"
-            >
-              {/* Inputs */}
-              <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-soft space-y-4 h-fit">
-                <div className="flex items-center gap-3 border-b border-border pb-4">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-2xl border border-border bg-surface">
-                    <Gauge className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="text-[14px] font-bold text-foreground">{t("calc.tcoAssumptions", "TCO Assumptions")}</h2>
-                    <p className="text-[10px] text-muted-foreground font-semibold">{t("calc.tcoAssumptionsHint", "Commute, service, and amortization")}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <label htmlFor="tco-km" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.dailyCommute", "Daily Commute (KM)")}</label>
-                    <Input id="tco-km" type="number" value={tcoDailyKm} onChange={(e) => setTcoDailyKm(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label htmlFor="tco-kmpl" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.fuelEfficiency", "Fuel Efficiency (KMPL)")}</label>
-                    <Input id="tco-kmpl" type="number" value={tcoKmpl} onChange={(e) => setTcoKmpl(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[12px] font-medium text-muted-foreground/80">Fuel Type</label>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {(["petrol", "diesel", "hybrid", "electric"] as const).map((fuel) => (
-                      <button
-                        key={fuel}
-                        onClick={() => setTcoFuelType(fuel)}
-                        aria-pressed={tcoFuelType === fuel}
-                        className={`min-h-[36px] rounded-2xl border py-2.5 text-[10px] font-bold capitalize transition-all active:scale-[0.97] ${
-                          tcoFuelType === fuel
-                            ? "border-primary/40 bg-primary/10 text-primary-bright"
-                            : "border-border bg-surface text-muted-foreground hover:text-foreground hover:border-primary/40"
-                        }`}
-                      >
-                        {fuel}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label htmlFor="tco-lease" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.monthlyLease", "Monthly Lease (LKR)")}</label>
-                  <Input id="tco-lease" type="number" value={tcoLease} onChange={(e) => setTcoLease(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 border-t border-border pt-4 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <label htmlFor="tco-ins" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.annualInsurance", "Annual Insurance")}</label>
-                    <Input id="tco-ins" type="number" value={tcoInsurance} onChange={(e) => setTcoInsurance(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label htmlFor="tco-svc" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.annualService", "Annual Service")}</label>
-                    <Input id="tco-svc" type="number" value={tcoService} onChange={(e) => setTcoService(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <label htmlFor="tco-tyres" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.annualTyres", "Annual Tyres")}</label>
-                    <Input id="tco-tyres" type="number" value={tcoTyres} onChange={(e) => setTcoTyres(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label htmlFor="tco-dep" className="text-[12px] font-medium text-muted-foreground/80">{t("calc.annualResaleLoss", "Annual Resale Loss")}</label>
-                    <Input id="tco-dep" type="number" value={tcoDepreciation} onChange={(e) => setTcoDepreciation(Number(e.target.value))} className="num bg-surface border-border focus-visible:ring-primary/40" />
-                  </div>
-                </div>
-              </div>
-
-              {/* TCO Results — monthly cost is the hero number */}
-              <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-soft-lg space-y-6">
-                <div>
-                  <h3 className="text-sm font-bold text-foreground">{t("calc.tcoBreakdown", "Monthly Cost of Ownership breakdown")}</h3>
-                  <p className="text-[10px] text-muted-foreground font-semibold mt-0.5">{t("calc.tcoBreakdownHint", "Calculated using live Octane API price metrics")}</p>
-                </div>
-
-                {tcoLoading && !tcoResult ? (
-                  <div className="h-64 flex items-center justify-center">
-                    <div role="status" aria-label="Calculating" className="h-6 w-6 animate-spin rounded-full border border-t-transparent border-primary" />
-                  </div>
-                ) : tcoResult ? (
-                  <div className={`space-y-5 transition-opacity duration-200 ${tcoLoading ? "opacity-60" : "opacity-100"}`}>
-                    <div className="space-y-3 border-b border-border pb-4">
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>Live fuel/energy price benchmark</span>
-                        <span className="font-semibold text-foreground num">Rs. {tcoResult.fuel_price_lkr.toLocaleString()} / L or kWh</span>
-                      </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>Monthly fuel/energy consumption</span>
-                        <span className="font-semibold text-foreground num">{formatLkrMonthly(tcoResult.fuel_cost_monthly)}</span>
-                      </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>Monthly lease installments</span>
-                        <span className="font-semibold text-foreground num">{formatLkrMonthly(tcoResult.lease_cost_monthly)}</span>
-                      </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>Amortized service, insurance, tyres & depreciation</span>
-                        <span className="font-semibold text-foreground num">{formatLkrMonthly(tcoResult.overhead_cost_monthly)}</span>
-                      </div>
-                    </div>
-
-                    <div aria-live="polite" className="rounded-2xl border border-primary/25 bg-primary/5 p-6 text-center shadow-soft">
-                      <span className="text-[12px] font-semibold text-primary-bright">{t("calc.tcoTotal", "Total ownership cost / month")}</span>
-                      <p className="display-1 text-foreground mt-2 num">
-                        <FlowNumber value={Math.round(tcoResult.total_tco_monthly)} prefix="Rs " suffix="/mo" label={formatLkrMonthly(tcoResult.total_tco_monthly)} />
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl bg-surface border border-border p-3 flex gap-2">
-                      <Compass className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <p className="text-[10px] leading-relaxed text-muted-foreground font-semibold">{tcoResult.notes}</p>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            </m.div>
-          )}
-
-          {activeTab === "ownership" && (
-            <m.div
-              key="ownership-tab"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.2 }}
-            >
-              <OwnershipCostsPanel
-                initialFuel={lcFuelType}
-                initialCc={lcEngineCc}
-                initialPrice={leasePrice}
+                  {macro.reference_date ? ` · ref ${macro.reference_date}` : ""}
+                  {macro.inflation_yoy_percent != null ? ` · CCPI YoY ${macro.inflation_yoy_percent}%` : ""}
+                </>
+              ) : undefined
+            }
+          >
+            <div className="flex gap-2">
+              <AdornedInput
+                id="lc-fx"
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                prefix="Rs"
+                aria-describedby={macro ? "lc-fx-hint" : undefined}
+                // Show 2 dp; full CBSL precision stays in state for the math.
+                value={fxFocused ? fxText : formatFxDisplay(exchangeRate)}
+                onFocus={() => {
+                  setFxText(formatFxDisplay(exchangeRate));
+                  setFxFocused(true);
+                }}
+                onBlur={() => setFxFocused(false)}
+                onChange={(e) => {
+                  setFxText(e.target.value);
+                  const next = Number(e.target.value);
+                  if (Number.isFinite(next) && next > 0) {
+                    setFxUserOverridden(true);
+                    setExchangeRate(next);
+                  }
+                }}
               />
-            </m.div>
-          )}
+              <Button
+                type="button"
+                variant="secondary"
+                className="shrink-0 px-3.5"
+                onClick={() => void applyLiveFx()}
+                loading={fxLoading}
+                title={t("tools.calc.liveFxTitle", "Pull the latest CBSL-linked USD/LKR rate")}
+              >
+                <RefreshCw aria-hidden />
+                {t("tools.calc.liveFx", "Live FX")}
+              </Button>
+            </div>
+          </Field>
+        </div>
 
-          {activeTab === "permits" && (
-            <m.div
-              key="permits-tab"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-6"
-            >
-              <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-soft">
-                <div className="mb-4">
-                  <h3 className="text-sm font-bold text-foreground">{t("calc.permitsTitle", "Live Permit Black Market Tracker")}</h3>
-                  <p className="text-[10px] text-muted-foreground font-semibold mt-0.5">{t("calc.permitsHint", "Indicative values of transferable and EV remittance import licenses")}</p>
-                </div>
+        <ChoiceChips label={t("calc.fuelCategory", "Fuel Category")} value={lcFuelType} options={fuelOptions} onChange={setLcFuelType} fill />
 
-                {permitsLoading ? (
-                  <div className="h-32 flex items-center justify-center">
-                    <div role="status" aria-label="Calculating" className="h-6 w-6 animate-spin rounded-full border border-t-transparent border-primary" />
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse text-left text-xs">
-                      <thead>
-                        <tr className="border-b border-border text-muted-foreground text-[11px] font-semibold">
-                          <th className="py-3 px-4">{t("calc.permitName", "Permit Name")}</th>
-                          <th className="py-3 px-4">{t("calc.permitType", "Type")}</th>
-                          <th className="py-3 px-4 text-right">{t("calc.permitPremium", "Premium Value (LKR)")}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {permits.map((permit) => (
-                          <tr key={permit.id} className="border-b border-border hover:bg-surface transition-colors">
-                            <td className="py-4 px-4 font-semibold text-foreground">{permit.permit_name}</td>
-                            <td className="py-4 px-4 capitalize font-medium text-muted-foreground">{permit.permit_type.replace("_", " ")}</td>
-                            <td className="py-4 px-4 text-right font-bold text-primary num">{formatPrice(permit.market_price_lkr)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </m.div>
-          )}
-
-          {activeTab === "depreciation" && (
-            <m.div
-              key="depreciation-tab"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-6"
-            >
-              <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-soft">
-                <div className="mb-6">
-                  <h3 className="text-sm font-bold text-foreground">{t("calc.retentionTitle", "Sri Lanka Value Retention Curves")}</h3>
-                  <p className="text-[10px] text-muted-foreground font-semibold mt-0.5">{t("calc.retentionHint", "Asset retention curves demonstrating how specific models retain value in the local market")}</p>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  {[
-                    { model: "Suzuki Wagon R", type: "Kei Car / Hybrid", values: ["92%", "85%", "78%"], tone: "text-emerald-600 dark:text-emerald-400", border: "border-emerald-500/25", note: "The gold standard of value retention. Heavy demand for daily urban runs." },
-                    { model: "Honda Vezel Hybrid", type: "Crossover", values: ["82%", "65%", "48%"], tone: "text-amber-600 dark:text-amber-400", border: "border-amber-500/25", note: "Drops heavily after 3 years once the hybrid battery pack warranty expires." },
-                    { model: "Toyota Land Cruiser Prado", type: "Luxury SUV", values: ["95%", "92%", "88%"], tone: "text-primary", border: "border-primary/25", note: "Prado holds extreme value due to luxury status symbol and low import options." },
-                    { model: "Nissan Leaf EV", type: "Full EV", values: ["60%", "38%", "20%"], tone: "text-rose-600 dark:text-rose-400", border: "border-rose-500/25", note: "Fastest depreciation curve due to battery degradation fears." },
-                  ].map((curve) => (
-                    <div key={curve.model} className={`data-card border ${curve.border} bg-surface p-4 flex flex-col justify-between`}>
-                      <div>
-                        <span className="text-[11px] font-medium text-muted-foreground">{curve.type}</span>
-                        <h4 className="text-sm font-bold text-foreground mt-1">{curve.model}</h4>
-
-                        <div className="mt-4 space-y-2 border-b border-border pb-4">
-                          <div className="flex justify-between text-xs">
-                            <span className="text-muted-foreground">{t("calc.year1", "Year 1")}</span>
-                            <span className={`font-bold num ${curve.tone}`}>{curve.values[0]}</span>
-                          </div>
-                          <div className="flex justify-between text-xs">
-                            <span className="text-muted-foreground">{t("calc.year3", "Year 3")}</span>
-                            <span className={`font-bold num ${curve.tone}`}>{curve.values[1]}</span>
-                          </div>
-                          <div className="flex justify-between text-xs">
-                            <span className="text-muted-foreground">{t("calc.year5", "Year 5")}</span>
-                            <span className={`font-bold num ${curve.tone}`}>{curve.values[2]}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <p className="text-[10px] leading-relaxed text-muted-foreground font-semibold mt-4">{curve.note}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </m.div>
-          )}
-        </AnimatePresence>
+        {lcFuelType !== "electric" ? (
+          <div>
+            <NumberField id="lc-cc" label={t("calc.engineCc", "Engine Capacity (CC)")} value={lcEngineCc} onChange={setLcEngineCc} suffix="cc" step={50} />
+            <AnimatePresence initial={false}>
+              {lcFuelType === "hybrid" && lcEngineCc > 1500 ? (
+                <m.p
+                  key="cc-cliff"
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0, transition: tween.enter }}
+                  exit={{ opacity: 0, transition: tween.exit }}
+                  className="mt-1.5 text-caption font-medium text-deal-caution-text"
+                >
+                  {t("calc.ccCliffWarn", "Capacity is above the 1500cc cliff. Excise rate steps up significantly.")}
+                </m.p>
+              ) : null}
+            </AnimatePresence>
+          </div>
+        ) : (
+          <NumberField id="lc-kw" label={t("calc.motorKw", "Motor Power (kW)")} value={lcMotorKw} onChange={setLcMotorKw} suffix="kW" step={5} />
         )}
+
+        <div className="-mx-2 border-t border-separator pt-3">
+          <CheckRow id="lc-surcharge" checked={applySurcharge} onCheckedChange={setApplySurcharge}>
+            <span className="text-footnote">{t("calc.applySurcharge", "Apply 50% CID Gazette Surcharge (Compounding)")}</span>
+          </CheckRow>
+          <CheckRow id="lc-sscl" checked={applySscl} onCheckedChange={setApplySscl}>
+            <span className="text-footnote">{t("calc.applySscl", "Apply 2.5% SSCL Levy")}</span>
+          </CheckRow>
+        </div>
+      </FormCard>
+    </>
+  );
+
+  const landedResult =
+    lcLoading && !lcResult ? (
+      <ResultSkeleton rows={6} label={t("tools.calculating", "Calculating")} />
+    ) : lcResult ? (
+      <ResultCard
+        busy={lcLoading && !lcResult.offline}
+        label={t("calc.estLanded", "Est. Landed Cost")}
+        badge={onDeviceBadge(lcResult.offline)}
+        value={Number.isFinite(lcResult.landed_cost) ? <AnimatedLkr value={lcResult.landed_cost} /> : t("tools.notAvailable", "Not available")}
+        caption={
+          <>
+            {t("calc.totalTaxes", "Total Taxes & Duties")}{" "}
+            <span className="font-semibold text-primary">
+              <AnimatedLkr value={lcResult.total_tax} plus />
+            </span>
+          </>
+        }
+        footer={
+          <div className="space-y-3">
+            <AnimatePresence initial={false}>
+              {!surchargeCountdown.expired && applySurcharge && lcLapseSavings !== null && lcLapseSavings > 0 ? (
+                <m.div
+                  key="lapse"
+                  initial={{ opacity: 0, scale: 0.97 }}
+                  animate={{ opacity: 1, scale: 1, transition: tween.enter }}
+                  exit={{ opacity: 0, transition: tween.exit }}
+                >
+                  <Notice tone="success">
+                    {t("calc.lapseSavings", "This import lands {amount} cheaper if it lapses", { amount: formatPrice(lcLapseSavings) })}
+                  </Notice>
+                </m.div>
+              ) : null}
+            </AnimatePresence>
+            {lcResult.notes ? (
+              <Notice tone="neutral" icon={CheckCircle2}>
+                <span className="text-label-2">{localizeCalcNote(lcResult.notes, t)}</span>
+              </Notice>
+            ) : null}
+          </div>
+        }
+      >
+        <p className="mb-3 text-caption text-label-2">{t("calc.breakdownHint", "Indicative tax components based on 2026 gazette calculations")}</p>
+        <ResultRows>
+          <ResultRow label={t("calc.baseCif", "Base CIF LKR Equivalent")} value={<AnimatedLkr value={lcResult.cif_lkr} />} />
+          <ResultRow label={t("calc.cid", "Customs Import Duty (20%)")} value={<AnimatedLkr value={lcResult.cid} />} />
+          <ResultRow label={t("calc.surchargeOnCid", "Surcharge on CID (50% Surcharge)")} value={<AnimatedLkr value={lcResult.surcharge} />} />
+          <ResultRow label={t("calc.excise", "Excise Duty (Capacity Banded)")} value={<AnimatedLkr value={lcResult.excise} />} />
+          <ResultRow label={t("calc.sscl", "SSCL (2.5%)")} value={<AnimatedLkr value={lcResult.sscl} />} />
+          <ResultRow label={t("calc.vat", "VAT (18% Compounded)")} value={<AnimatedLkr value={lcResult.vat} />} />
+          {lcResult.luxury_tax > 0 ? (
+            <ResultRow tone="danger" label={t("calc.luxuryTax", "Luxury Tax (Excess Portion)")} value={<AnimatedLkr value={lcResult.luxury_tax} />} />
+          ) : null}
+        </ResultRows>
+      </ResultCard>
+    ) : lcError ? (
+      <ErrorState className="rounded-card border border-border bg-surface-1 py-10 shadow-e1" body={lcError} onRetry={() => void runLandedCostCalc()} />
+    ) : (
+      <ResultSkeleton rows={6} label={t("tools.calculating", "Calculating")} />
+    );
+
+  /* ── Lease ────────────────────────────────────────────────────────────── */
+  const usedDown = leasePrice * 0.4; // 60% LTV on registered used
+  const newDown = leasePrice * 0.6; // 40% LTV on new/unregistered
+  const usedBudgetFromNewDown = newDown / 0.4; // same cash, used market
+
+  const leaseForm = (
+    <>
+      <FormCard icon={WalletCards} title={t("calc.leaseAssumptions", "Lease Assumptions")} description={t("calc.leaseAssumptionsHint", "Bases for loan to value margins")}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <NumberField
+            id="lease-price"
+            label={t("calc.vehicleValuation", "Vehicle Valuation (LKR)")}
+            value={leasePrice}
+            onChange={setLeasePrice}
+            prefix="Rs"
+            step={100_000}
+            hint={formatPrice(leasePrice)}
+          />
+          <NumberField id="lease-cc" label={t("calc.engineCc", "Engine Capacity (CC)")} value={leaseCc} onChange={setLeaseCc} suffix="cc" step={50} />
+        </div>
+      </FormCard>
+      {/* CBSL 40/60 LTV arbitrage — regulation-made, nobody else surfaces it */}
+      {leasePrice >= 1_000_000 ? (
+        <Notice tone="info" title={t("calc.ltvTitle", "The 40/60 rule is working in your favour on used cars")}>
+          <p className="text-label-2">
+            {t(
+              "tools.calc.ltvBody",
+              "CBSL caps financing at 40% for brand-new or unregistered vehicles but 60% for registered used (over 1 year). For this {price} vehicle, registered used needs {usedDown} down; new or unregistered needs {newDown}. The same cash would stretch to a {usedBudget} registered used car.",
+              {
+                price: formatPrice(leasePrice),
+                usedDown: formatPrice(usedDown),
+                newDown: formatPrice(newDown),
+                usedBudget: formatPrice(usedBudgetFromNewDown),
+              },
+            )}
+          </p>
+          <p className="mt-1.5 text-caption text-label-2">
+            {t("tools.calc.ltvSource", "CBSL Act Directions No. 01 of 2026 (from 25 May 2026) · banks may apply stricter internal caps")}
+          </p>
+        </Notice>
+      ) : null}
+      <CashToOwnStrip priceLkr={leasePrice} financeClass="registered_used" />
+    </>
+  );
+
+  /* ── TCO ──────────────────────────────────────────────────────────────── */
+  const tcoForm = (
+    <FormCard icon={Gauge} title={t("calc.tcoAssumptions", "TCO Assumptions")} description={t("calc.tcoAssumptionsHint", "Commute, service, and amortization")}>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <NumberField id="tco-km" label={t("calc.dailyCommute", "Daily Commute (KM)")} value={tcoDailyKm} onChange={setTcoDailyKm} suffix="km" step={5} />
+        <NumberField id="tco-kmpl" label={t("calc.fuelEfficiency", "Fuel Efficiency (KMPL)")} value={tcoKmpl} onChange={setTcoKmpl} suffix="km/l" step={0.5} />
       </div>
-      </PageBody>
-    </PageCanvas>
+      <ChoiceChips label={t("tools.calc.fuelType", "Fuel type")} value={tcoFuelType} options={fuelOptions} onChange={setTcoFuelType} fill />
+      <NumberField id="tco-lease" label={t("calc.monthlyLease", "Monthly Lease (LKR)")} value={tcoLease} onChange={setTcoLease} prefix="Rs" step={5_000} />
+      <div className="grid gap-4 border-t border-separator pt-4 sm:grid-cols-2">
+        <NumberField id="tco-ins" label={t("calc.annualInsurance", "Annual Insurance")} value={tcoInsurance} onChange={setTcoInsurance} prefix="Rs" step={5_000} />
+        <NumberField id="tco-svc" label={t("calc.annualService", "Annual Service")} value={tcoService} onChange={setTcoService} prefix="Rs" step={5_000} />
+        <NumberField id="tco-tyres" label={t("calc.annualTyres", "Annual Tyres")} value={tcoTyres} onChange={setTcoTyres} prefix="Rs" step={5_000} />
+        <NumberField id="tco-dep" label={t("calc.annualResaleLoss", "Annual Resale Loss")} value={tcoDepreciation} onChange={setTcoDepreciation} prefix="Rs" step={10_000} />
+      </div>
+    </FormCard>
+  );
+
+  const tcoResultView =
+    tcoLoading && !tcoResult ? (
+      <ResultSkeleton rows={4} label={t("tools.calculating", "Calculating")} />
+    ) : tcoResult ? (
+      <ResultCard
+        busy={tcoLoading && !tcoResult.offline}
+        label={t("calc.tcoTotal", "Total ownership cost / month")}
+        badge={onDeviceBadge(tcoResult.offline)}
+        value={<AnimatedLkr value={tcoResult.total_tco_monthly} mode="monthly" />}
+        caption={t("calc.tcoBreakdown", "Monthly Cost of Ownership breakdown")}
+        footer={
+          tcoResult.notes ? (
+            <Notice tone="neutral">
+              <span className="text-label-2">{localizeCalcNote(tcoResult.notes, t)}</span>
+            </Notice>
+          ) : null
+        }
+      >
+        <ResultRows>
+          <ResultRow
+            label={t("tools.calc.fuelBenchmark", "Fuel / energy price benchmark")}
+            value={t("tools.calc.perUnit", "Rs {price} / L or kWh", { price: tcoResult.fuel_price_lkr.toLocaleString("en-US") })}
+          />
+          <ResultRow label={t("tools.calc.fuelMonthly", "Fuel / energy each month")} value={<AnimatedLkr value={tcoResult.fuel_cost_monthly} mode="monthly" />} />
+          <ResultRow label={t("tools.calc.leaseMonthly", "Lease instalments")} value={<AnimatedLkr value={tcoResult.lease_cost_monthly} mode="monthly" />} />
+          <ResultRow
+            label={t("tools.calc.overheadMonthly", "Service, insurance, tyres and resale loss")}
+            value={<AnimatedLkr value={tcoResult.overhead_cost_monthly} mode="monthly" />}
+          />
+        </ResultRows>
+      </ResultCard>
+    ) : tcoError ? (
+      <ErrorState className="rounded-card border border-border bg-surface-1 py-10 shadow-e1" body={tcoError} onRetry={() => void runTcoCalc()} />
+    ) : (
+      <ResultSkeleton rows={4} label={t("tools.calculating", "Calculating")} />
+    );
+
+  return (
+    <ToolPage
+      header={
+        <PageHeader
+          eyebrow={t("shell.calc.eyebrow", "Calculator")}
+          eyebrowIcon={CalculatorIcon}
+          title={t("shell.calc.title", "Import tax calculator")}
+          description={t(
+            "shell.calc.description",
+            "Work out what an imported vehicle costs once it lands: customs duty, surcharge, excise, SSCL and VAT on the CIF price, using the current gazette rates.",
+          )}
+          actions={
+            tabUnlocked ? (
+              <Button variant="secondary" onClick={() => void copyShareLink()} title={t("calc.shareTitle", "Copy a shareable link to this calculation")}>
+                <Link2 aria-hidden />
+                {t("calc.share", "Share")}
+              </Button>
+            ) : null
+          }
+        />
+      }
+    >
+      <div className="mb-5 empty:hidden">
+        <FreePlanBanner />
+      </div>
+      {!tabUnlocked ? (
+        <UpgradePrompt title={freePlanText(t, "calcTitle")} body={freePlanText(t, "calcBody")} className="mx-auto max-w-xl" />
+      ) : (
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
+          {tabs.length > 1 ? (
+            /* Mobile: the strip scrolls sideways; labels never truncate. */
+            <div className="-mx-5 mb-5 overflow-x-auto px-5 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden">
+              <TabsList aria-label={t("tools.calc.tabsLabel", "Calculators")}>
+                {tabs.map(({ id, label, icon: Icon }) => (
+                  <TabsTrigger key={id} value={id}>
+                    <Icon className="h-4 w-4" aria-hidden />
+                    {label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
+          ) : null}
+
+          <TabsContent value="landed-cost" className="mt-0">
+            <ToolGrid form={landedForm} result={landedResult} />
+          </TabsContent>
+          {visibleTabs.includes("lease") ? (
+            <TabsContent value="lease" className="mt-0">
+              <ToolGrid form={leaseForm} result={<LeaseCalculator price={leasePrice} financeClass="registered_used" />} />
+            </TabsContent>
+          ) : null}
+          {visibleTabs.includes("tco") ? (
+            <TabsContent value="tco" className="mt-0">
+              <ToolGrid form={tcoForm} result={tcoResultView} />
+            </TabsContent>
+          ) : null}
+          {visibleTabs.includes("ownership") ? (
+            <TabsContent value="ownership" className="mt-0">
+              <OwnershipCostsPanel initialFuel={lcFuelType} initialCc={lcEngineCc} initialPrice={leasePrice} />
+            </TabsContent>
+          ) : null}
+        </Tabs>
+      )}
+    </ToolPage>
   );
 }

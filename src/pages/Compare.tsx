@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowUpRight, Info, Link2, Plus, Scale, Search, X } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { Switch } from "@/components/ui/switch";
+import { AnimatedNumber } from "@/components/ui/animated-number";
+import { TableContainer, Table, TableHeader, TableBody } from "@/components/ui/table";
 import { toast } from "sonner";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { getListingFmv, getListingsBatch } from "@/services/api";
@@ -9,10 +18,12 @@ import { PageCanvas } from "@/components/PageCanvas";
 import { formatLkrFull } from "@/lib/price";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { buildCompareLink } from "@/lib/compareTray";
+import { canonicalComparePath, fromCompareSlug } from "@/lib/compareSlug";
 import { formatSourceName } from "@/lib/sourceAttribution";
 import { howWePriceHref } from "@/lib/howWePrice";
 import { useLowData } from "@/hooks/useLowData";
 import { cn } from "@/lib/utils";
+import { BRAND } from "@/lib/brand";
 import { useCompare } from "@/components/compare/CompareContext";
 import { AnimatePresence, motion } from "motion/react";
 import { duration, ease, spring, useReducedMotionOrLowData } from "@/lib/motion";
@@ -59,14 +70,17 @@ export default function Compare() {
   const [error, setError] = useState<string | null>(null);
   const [highlight, setHighlight] = useState(true);
   const [onlyDiff, setOnlyDiff] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const motionCalm = useReducedMotionOrLowData();
 
+  // Canonical slug path (/compare/12-vs-45) wins; legacy ?ids=12,45 still works.
+  const { slug } = useParams<{ slug?: string }>();
+  const navigate = useNavigate();
   const rawIds = searchParams.get("ids") ?? "";
-  const urlIds = useMemo(
-    () =>
-      [...new Set(rawIds.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => Number.isFinite(n) && n > 0))].slice(0, MAX_COMPARE),
-    [rawIds],
-  );
+  const urlIds = useMemo(() => {
+    if (slug) return fromCompareSlug(slug).slice(0, MAX_COMPARE);
+    return [...new Set(rawIds.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => Number.isFinite(n) && n > 0))].slice(0, MAX_COMPARE);
+  }, [rawIds, slug]);
   // Direct visit to /compare (nav, bookmark): fall back to the tray selection.
   const trayKey = compare.items.map((p) => p.id).join(",");
   const ids = useMemo(
@@ -109,11 +123,31 @@ export default function Compare() {
     return () => {
       cancelled = true;
     };
-  }, [idsKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [idsKey, reloadKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Page title names the cars (not listing ids), in the reader's language.
+  const titleNames = listings
+    .map((l) => [l.year, l.make, l.model].filter(Boolean).join(" ").trim())
+    .filter(Boolean)
+    .join(t("comparePage.vs", " vs "));
+  useEffect(() => {
+    if (listings.length < 2 || !titleNames) return;
+    const title = t("seo.compareNamedTitle", "{names} compared — {site}", { names: titleNames, site: BRAND.siteName });
+    // Run after RouteMeta's route-level title on the same commit.
+    const id = window.setTimeout(() => {
+      document.title = title;
+      document.querySelector('meta[property="og:title"]')?.setAttribute("content", title);
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [titleNames, listings.length, t]);
 
   const removeId = (id: number) => {
     compare.remove(id);
     const remaining = ids.filter((n) => n !== id);
+    if (slug) {
+      navigate(remaining.length >= 2 ? canonicalComparePath(remaining) : remaining.length ? `/compare?ids=${remaining.join(",")}` : "/compare", { replace: true });
+      return;
+    }
     setSearchParams(remaining.length ? { ids: remaining.join(",") } : {}, { replace: true });
   };
 
@@ -161,7 +195,7 @@ export default function Compare() {
           <span>
             {lkr(v)}
             {fmv?.confidence && fmv.confidence !== "none" ? (
-              <span className="block text-[11px] font-normal text-muted-foreground">
+              <span className="block text-caption font-normal text-label-2">
                 {t(`comparePage.conf.${fmv.confidence}`, `${token(fmv.confidence)} confidence`)}
               </span>
             ) : null}
@@ -172,7 +206,7 @@ export default function Compare() {
         const pct = vsFmvPct(l, fmv);
         if (pct === null) return "—";
         const gap = Math.abs((askingPrice(l) ?? 0) - (fmvFor(l, fmv) ?? 0));
-        const tone = pct <= -5 ? "text-emerald-600 dark:text-emerald-400" : pct >= 8 ? "text-rose-600 dark:text-rose-400" : "text-foreground";
+        const tone = pct <= -5 ? "text-deal-good-text" : pct >= 8 ? "text-deal-high-text" : "text-foreground";
         const label =
           Math.abs(pct) < 0.5
             ? t("comparePage.atFmv", "At FMV")
@@ -182,7 +216,7 @@ export default function Compare() {
         return (
           <span className={tone}>
             {label}
-            <span className="block text-[11px] font-normal text-muted-foreground">
+            <span className="block text-caption font-normal text-label-2">
               {pct > 0 ? "+" : ""}
               {pct.toFixed(1)}%
             </span>
@@ -195,7 +229,7 @@ export default function Compare() {
         return (
           <span>
             {lkr(m.monthlyLkr)}
-            <span className="block text-[11px] font-normal text-muted-foreground">
+            <span className="block text-caption font-normal text-label-2">
               {t("comparePage.monthlyDown", "after {down} down", { down: lkr(m.downLkr) })}
             </span>
           </span>
@@ -257,23 +291,25 @@ export default function Compare() {
         columnHelper.display({
           id: `l-${l.id}`,
           header: () => (
-            <div className="flex min-w-0 flex-col gap-2">
+            <div className="content-in flex min-w-0 flex-col gap-2.5 normal-case tracking-normal">
               {!lowData && l.thumbnail_url ? (
-                <img src={l.thumbnail_url} alt="" loading="lazy" decoding="async" className="aspect-[4/3] w-full rounded-lg bg-surface object-cover" />
+                <img src={l.thumbnail_url} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" width={480} height={360} className="aspect-[4/3] w-full rounded-control bg-surface-2 object-cover" />
               ) : null}
               <div className="flex items-start justify-between gap-1">
-                <Link to={`/listing/${l.id}`} className="min-w-0 text-[13px] font-semibold leading-snug text-foreground no-underline hover:text-primary-bright">
+                <Link to={`/listing/${l.id}`} className="min-w-0 text-body font-semibold leading-snug text-foreground no-underline transition-colors duration-short hover:text-primary">
                   {l.year} {l.make} {l.model}
-                  {l.variant ? <span className="block text-[11px] font-normal text-muted-foreground">{l.variant}</span> : null}
+                  {l.variant ? <span className="block text-footnote font-normal text-label-2">{l.variant}</span> : null}
                 </Link>
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-sm"
                   onClick={() => removeId(Number(l.id))}
-                  aria-label={t("compareTray.removeAria", "Remove {name} from compare", { name: `${l.make} ${l.model}` })}
-                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-surface hover:text-foreground"
+                  aria-label={t("compareTray.removeAria", "Remove {name} from compare", { name: [l.make, l.model].filter(Boolean).join(" ") })}
+                  className="-mr-1 -mt-1 text-label-2"
                 >
-                  <X className="h-3.5 w-3.5" aria-hidden />
-                </button>
+                  <X aria-hidden />
+                </Button>
               </div>
               <SellSpeedBadge make={l.make} model={l.model} className="self-start" />
             </div>
@@ -282,7 +318,7 @@ export default function Compare() {
             const r = ctx.row.original;
             const isBest = highlight && r.best.has(index);
             return (
-              <span className={cn("block", isBest && "font-bold text-emerald-700 dark:text-emerald-400")}>
+              <span className={cn("block", isBest && "font-semibold text-deal-good-text")}>
                 {renderCell(r.def.key, l)}
                 {isBest ? <span className="sr-only"> {t("comparePage.bestSr", "(best)")}</span> : null}
               </span>
@@ -298,91 +334,110 @@ export default function Compare() {
   const table = useReactTable({ data: visibleRows, columns, getCoreRowModel: getCoreRowModel() });
 
   const hasIds = ids.length > 0;
+  const [rowsBefore, rowsAfter] = t("comparePage.rowsShown", "{n} rows", { n: "\u0000" }).split("\u0000");
   const enough = listings.length >= 2;
+
+  const switchRow = "inline-flex min-h-11 cursor-pointer select-none items-center gap-2.5 text-footnote font-medium text-foreground sm:min-h-9";
 
   return (
     <PageCanvas ambient="none">
-      <div className="mx-auto max-w-6xl px-4 py-8 md:px-6">
-        <div className="mb-6 flex items-start gap-3">
-          <Link
-            to="/"
-            className="mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground no-underline hover:bg-accent hover:text-foreground"
-            aria-label={t("comparePage.back", "Back to listings")}
-          >
+      <PageHeader
+        eyebrow={
+          <Link to="/" className="inline-flex items-center gap-1 text-primary no-underline transition-opacity duration-short hover:opacity-80">
             <ArrowLeft className="h-4 w-4" aria-hidden />
+            {t("comparePage.back", "Back to listings")}
           </Link>
-          <div className="min-w-0">
-            <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-              {t("comparePage.title", "Compare cars")}
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {t("comparePage.subtitle", "Side by side, up to {max} cars. Prices are asking prices from the original ads.", { max: MAX_COMPARE })}
-            </p>
-          </div>
-        </div>
+        }
+        title={t("comparePage.title", "Compare cars")}
+        description={t("comparePage.subtitle", "Side by side, up to {max} cars. Prices are asking prices from the original ads.", { max: MAX_COMPARE })}
+        actions={
+          !error && enough ? (
+            <>
+              {listings.length < MAX_COMPARE ? (
+                <Button asChild variant="secondary">
+                  <Link to="/" className="no-underline">
+                    <Plus aria-hidden />
+                    {t("comparePage.addMore", "Add a car")}
+                  </Link>
+                </Button>
+              ) : null}
+              <Button type="button" variant="secondary" onClick={copyLink}>
+                <Link2 aria-hidden />
+                {t("comparePage.share", "Share")}
+              </Button>
+            </>
+          ) : undefined
+        }
+      />
 
+      <div className="layout-shell pb-16">
         {loading && listings.length === 0 && (
-          <div className="space-y-2" aria-busy="true">
-            <div className="h-28 animate-pulse rounded-2xl border border-border bg-surface" />
-            <div className="h-64 animate-pulse rounded-2xl border border-border bg-surface" />
+          <div className="space-y-3" aria-busy="true" aria-label={t("comparePage.loading", "Loading cars to compare")}>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {Array.from({ length: Math.max(2, ids.length) }).map((_, i) => (
+                <Skeleton key={i} shape="card" />
+              ))}
+            </div>
+            <Skeleton shape="chart" className="h-96" />
           </div>
         )}
 
         {!loading && error && (
-          <div role="alert" className="rounded-2xl border border-destructive/20 bg-destructive/5 px-5 py-4 text-sm text-destructive">
-            {error}
-          </div>
+          <Card padding="none">
+            <ErrorState
+              title={t("comparePage.errorTitle", "These cars didn't load")}
+              body={error}
+              onRetry={() => setReloadKey((k) => k + 1)}
+            />
+          </Card>
         )}
 
         {!loading && !error && (!hasIds || !enough) && (
-          <div className="flex flex-col items-center rounded-3xl border border-dashed border-border bg-card/85 px-6 py-14 text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary-bright">
-              <Scale className="h-7 w-7" aria-hidden />
-            </div>
-            <h2 className="mb-2 font-display text-xl font-semibold text-foreground">
-              {listings.length === 1 ? t("comparePage.needOneMore", "Add one more car to compare") : t("comparePage.emptyTitle", "No cars selected yet")}
-            </h2>
-            <p className="mb-6 max-w-sm text-sm text-muted-foreground">
-              {t("comparePage.emptyBody", "Tap “Compare” on any listing to add it here. You can pick up to {max}.", { max: MAX_COMPARE })}
-            </p>
-            <Link to="/" className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-5 text-[13px] font-semibold text-foreground no-underline hover:bg-surface">
-              <Search className="h-4 w-4" aria-hidden />
-              {t("comparePage.browse", "Browse listings")}
-            </Link>
-          </div>
+          <Card padding="none">
+            <EmptyState
+              icon={Scale}
+              title={listings.length === 1 ? t("comparePage.needOneMore", "Add one more car to compare") : t("comparePage.emptyTitle", "No cars selected yet")}
+              body={t("comparePage.emptyBody", "Tap “Compare” on any listing to add it here. You can pick up to {max}.", { max: MAX_COMPARE })}
+              className="py-16"
+              action={
+                <Button asChild>
+                  <Link to="/" className="no-underline">
+                    <Search aria-hidden />
+                    {t("comparePage.browse", "Browse listings")}
+                  </Link>
+                </Button>
+              }
+            />
+          </Card>
         )}
 
         {!error && enough && (
-          <>
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <label className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-3 text-[12px] font-semibold text-foreground">
-                  <input type="checkbox" className="h-4 w-4 accent-[hsl(var(--primary))]" checked={highlight} onChange={(e) => setHighlight(e.target.checked)} />
+          <div className="content-in">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
+                <label className={switchRow}>
+                  <Switch checked={highlight} onCheckedChange={setHighlight} size="sm" />
                   {t("comparePage.highlight", "Highlight differences")}
                 </label>
-                <label className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-3 text-[12px] font-semibold text-foreground">
-                  <input type="checkbox" className="h-4 w-4 accent-[hsl(var(--primary))]" checked={onlyDiff} onChange={(e) => setOnlyDiff(e.target.checked)} />
+                <label className={switchRow}>
+                  <Switch checked={onlyDiff} onCheckedChange={setOnlyDiff} size="sm" />
                   {t("comparePage.onlyDiff", "Hide identical rows")}
                 </label>
               </div>
-              <div className="flex items-center gap-2">
-                {listings.length < MAX_COMPARE ? (
-                  <Link to="/" className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border bg-card px-3 text-[12px] font-semibold text-foreground no-underline hover:border-primary/40">
-                    <Plus className="h-3.5 w-3.5" aria-hidden />
-                    {t("comparePage.addMore", "Add a car")}
-                  </Link>
-                ) : null}
-                <button type="button" onClick={copyLink} className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border bg-card px-3 text-[12px] font-semibold text-foreground hover:border-primary/40">
-                  <Link2 className="h-3.5 w-3.5" aria-hidden />
-                  {t("comparePage.share", "Share")}
-                </button>
-              </div>
+              <p className="num text-footnote text-label-2" aria-live="polite">
+                <span className="sr-only">{t("comparePage.rowsShown", "{n} rows", { n: visibleRows.length })}</span>
+                <span aria-hidden>
+                  {rowsBefore}
+                  <AnimatedNumber value={visibleRows.length} />
+                  {rowsAfter}
+                </span>
+              </p>
             </div>
 
-            <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-soft">
-              <table className="w-full border-separate border-spacing-0 text-left text-[13px]">
+            <TableContainer className="shadow-e1">
+              <Table className="border-separate border-spacing-0 text-left">
                 <caption className="sr-only">{t("comparePage.caption", "Specification comparison")}</caption>
-                <thead>
+                <TableHeader className="static bg-surface-1 [&_tr]:border-0">
                   {table.getHeaderGroups().map((hg) => (
                     <tr key={hg.id}>
                       {hg.headers.map((header, i) => (
@@ -390,20 +445,19 @@ export default function Compare() {
                           key={header.id}
                           scope="col"
                           className={cn(
-                            "border-b border-border bg-card p-3 align-top font-normal",
+                            "border-b border-separator bg-surface-1 p-3 text-left align-top font-normal sm:p-4",
                             i === 0
-                              ? "sticky left-0 w-[112px] min-w-[112px] sm:w-[160px] sm:min-w-[160px]"
-                              : "min-w-[150px] sm:min-w-[180px]",
+                              ? "sticky left-0 z-[1] w-28 min-w-28 sm:w-40 sm:min-w-40"
+                              : "min-w-40 sm:min-w-48",
                           )}
-                          style={i === 0 ? { zIndex: "var(--z-base, 1)" as unknown as number } : undefined}
                         >
                           {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                         </th>
                       ))}
                     </tr>
                   ))}
-                </thead>
-                <tbody>
+                </TableHeader>
+                <TableBody>
                   {/* "Hide identical rows" fades rows out/in; the rest glide into place (layout). */}
                   <AnimatePresence initial={false}>
                   {table.getRowModel().rows.map((row) => {
@@ -415,10 +469,10 @@ export default function Compare() {
                         key={r.def.key}
                         layout={motionCalm ? false : "position"}
                         initial={{ opacity: 0 }}
-                        animate={{ opacity: 1, transition: { duration: motionCalm ? 0 : duration.base, ease: ease.standard } }}
-                        exit={{ opacity: 0, transition: { duration: motionCalm ? 0 : duration.fast, ease: ease.exit } }}
+                        animate={{ opacity: 1, transition: { duration: motionCalm ? 0 : duration.medium, ease: ease.standard } }}
+                        exit={{ opacity: 0, transition: { duration: motionCalm ? 0 : duration.short, ease: ease.accelerate } }}
                         transition={motionCalm ? { duration: 0 } : spring.snappy}
-                        className={cn("transition-colors duration-200", dim && "text-muted-foreground")}
+                        className={cn("transition-colors duration-short", dim && "text-label-2")}
                       >
                         {row.getVisibleCells().map((cell, i) =>
                           i === 0 ? (
@@ -426,17 +480,16 @@ export default function Compare() {
                               key={cell.id}
                               scope="row"
                               className={cn(
-                                "sticky left-0 border-b border-border/70 bg-card p-3 text-[12px] font-semibold transition-colors duration-200",
-                                tint ? "text-foreground" : "text-muted-foreground",
+                                "sticky left-0 z-[1] border-b border-separator bg-surface-1 p-3 text-left text-footnote font-semibold transition-colors duration-short sm:px-4",
+                                tint ? "text-foreground" : "text-label-2",
                               )}
-                              style={{ zIndex: "var(--z-base, 1)" as unknown as number }}
                             >
                               {/* Highlight tint fades (opacity) instead of snapping. */}
                               <span aria-hidden className="cmp-tint bg-primary/[0.07]" data-on={tint ? "true" : "false"} />
                               <span className="relative">{flexRender(cell.column.columnDef.cell, cell.getContext())}</span>
                             </th>
                           ) : (
-                            <td key={cell.id} className={cn("num relative border-b border-border/70 p-3 align-top", tint ? "text-foreground" : "")}>
+                            <td key={cell.id} className={cn("num relative border-b border-separator p-3 align-top text-body sm:px-4", tint ? "text-foreground" : "")}>
                               <span aria-hidden className="cmp-tint bg-primary/[0.04]" data-on={tint ? "true" : "false"} />
                               <span className="relative block">{flexRender(cell.column.columnDef.cell, cell.getContext())}</span>
                             </td>
@@ -446,21 +499,21 @@ export default function Compare() {
                     );
                   })}
                   </AnimatePresence>
-                </tbody>
-              </table>
-            </div>
+                </TableBody>
+              </Table>
+            </TableContainer>
 
-            <div className="mt-3 space-y-1.5 text-[12px] text-muted-foreground">
+            <div className="mt-4 space-y-1.5 text-footnote text-label-2">
               <p className="flex items-start gap-1.5">
-                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                 <span>
                   {t(
                     "comparePage.fmvNote",
                     "FMV is what similar cars are typically asking, not a sale price or valuation.",
                   )}{" "}
-                  <a href={howWePriceHref("fmv")} className="font-semibold text-primary-bright">
+                  <a href={howWePriceHref("fmv")} className="font-semibold text-primary">
                     {t("comparePage.howLink", "How we score prices")}
-                    <ArrowUpRight className="ml-0.5 inline h-3 w-3" aria-hidden />
+                    <ArrowUpRight className="ml-0.5 inline h-3.5 w-3.5" aria-hidden />
                   </a>
                 </span>
               </p>
@@ -471,7 +524,7 @@ export default function Compare() {
                 )}
               </p>
             </div>
-          </>
+          </div>
         )}
       </div>
     </PageCanvas>

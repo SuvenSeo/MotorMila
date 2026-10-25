@@ -5,6 +5,7 @@
  */
 import { flushSync } from "react-dom";
 import { useEffect, useState } from "react";
+import { rootProjectionNode } from "motion/react";
 import type { Transition, Variants } from "motion/react";
 import "@/styles/listing-motion.css";
 
@@ -68,6 +69,10 @@ function waitForHero(timeoutMs: number): Promise<HTMLImageElement | null> {
     const tick = () => {
       const hero = document.querySelector<HTMLImageElement>("img[data-listing-hero]");
       if (hero && hero.complete && hero.naturalWidth > 0) return resolve(hero);
+      // The card's own photo, handed to the detail gallery (lib/listingHandoff):
+      // already decoded, so the morph doesn't wait on the full-size download.
+      const placeholder = document.querySelector<HTMLImageElement>("img[data-listing-hero-ph]");
+      if (placeholder && placeholder.complete && placeholder.naturalWidth > 0) return resolve(placeholder);
       if (performance.now() - start > timeoutMs) return resolve(null);
       window.setTimeout(tick, 16);
     };
@@ -88,6 +93,8 @@ export function navigateWithHeroTransition(navigate: () => void, cardImage: HTML
   const html = document.documentElement;
   if (cardImage) cardImage.style.setProperty("view-transition-name", HERO_VT_NAME);
   let hero: HTMLImageElement | null = null;
+  let stage: Element | null = null;
+  let projectionRoot: { blockUpdate: () => void; unblockUpdate: () => void } | null = null;
   try {
     const vt = doc.startViewTransition!(async () => {
       if (cardImage) cardImage.style.removeProperty("view-transition-name");
@@ -95,17 +102,29 @@ export function navigateWithHeroTransition(navigate: () => void, cardImage: HTML
       // the animation, and a framer cross-fade (mode="wait") would hold the old
       // page on screen past the hero wait and double-animate.
       html.setAttribute(VT_ATTR, "pending");
+      // Hold Motion's layout projection while the page swaps: every `layoutId`
+      // element that unmounts with the outgoing page (tab / segment pills)
+      // calls willUpdate(), which measures scroll + every layout node and
+      // forced a style recalc of the whole page inside the route commit. Nothing
+      // layout-animates across this transition (the active nav tab stays Buy).
+      projectionRoot = rootProjectionNode.current ?? null;
+      projectionRoot?.blockUpdate();
       flushSync(navigate);
       hero = cardImage ? await waitForHero(180) : null;
       if (hero) {
         hero.style.setProperty("view-transition-name", HERO_VT_NAME);
+        stage = hero.closest(".route-stage");
+        stage?.setAttribute("data-vt-hero-stage", "");
         html.setAttribute(VT_ATTR, "hero");
       } else {
         html.setAttribute(VT_ATTR, "fade");
       }
     });
     const cleanup = () => {
+      projectionRoot?.unblockUpdate();
+      projectionRoot = null;
       html.removeAttribute(VT_ATTR);
+      stage?.removeAttribute("data-vt-hero-stage");
       hero?.style.removeProperty("view-transition-name");
       cardImage?.style.removeProperty("view-transition-name");
     };

@@ -1,5 +1,6 @@
 import { pickVehicleImageUrl } from "@/lib/listingImage";
 import { parseFlexibleTime } from "@/lib/parseTime";
+import { englishT, type TranslateFn } from "@/lib/translate";
 
 type ListingImageSource = {
   thumbnail_url?: string | null;
@@ -20,10 +21,10 @@ export function getListingImageUrl(listing: ListingImageSource): string | null {
   );
 }
 
-export function getListingDealLabel(rawScore: number): "Good Deal" | "Fair Price" | "Overpriced" {
-  if (Number.isFinite(rawScore) && rawScore >= 8) return "Good Deal";
-  if (Number.isFinite(rawScore) && rawScore <= -5) return "Overpriced";
-  return "Fair Price";
+export function getListingDealLabel(rawScore: number, t: TranslateFn = englishT): string {
+  if (Number.isFinite(rawScore) && rawScore >= 8) return t("listingMeta.goodDeal", "Good Deal");
+  if (Number.isFinite(rawScore) && rawScore <= -5) return t("listingMeta.overpriced", "Overpriced");
+  return t("listingMeta.fairPrice", "Fair Price");
 }
 
 export function getListingDaysOnMarket(iso: string | null | undefined): number | null {
@@ -34,25 +35,25 @@ export function getListingDaysOnMarket(iso: string | null | undefined): number |
   return Math.floor(diffMs / 86_400_000);
 }
 
-export function getListingDaysOnMarketLabel(iso: string | null | undefined): string | null {
+export function getListingDaysOnMarketLabel(iso: string | null | undefined, t: TranslateFn = englishT): string | null {
   const days = getListingDaysOnMarket(iso);
   if (days === null) return null;
-  if (days === 0) return "Listed today";
-  if (days === 1) return "Listed 1 day";
-  return `Listed ${days} days`;
+  if (days === 0) return t("listingMeta.listedToday", "Listed today");
+  if (days === 1) return t("listingMeta.listedOneDay", "Listed 1 day");
+  return t("listingMeta.listedDays", "Listed {n} days", { n: days });
 }
 
-export function getListingRecencyLabel(iso: string | null): string {
+export function getListingRecencyLabel(iso: string | null, t: TranslateFn = englishT, localeTag = "en-LK"): string {
   const ts = parseFlexibleTime(iso);
-  if (ts === null) return "Today";
+  if (ts === null) return t("listingMeta.today", "Today");
   const d = new Date(ts);
   const now = new Date();
   const diffHrs = Math.floor((now.getTime() - d.getTime()) / 3_600_000);
-  if (diffHrs < 1) return "Just now";
-  if (diffHrs < 24) return `${diffHrs}h ago`;
+  if (diffHrs < 1) return t("listingMeta.justNow", "Just now");
+  if (diffHrs < 24) return t("common.hoursAgo", "{n}h ago", { n: diffHrs });
   const diffDays = Math.floor(diffHrs / 24);
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return d.toLocaleDateString("en-LK", {
+  if (diffDays < 7) return t("common.daysAgo", "{n}d ago", { n: diffDays });
+  return d.toLocaleDateString(localeTag, {
     month: "short",
     day: "numeric",
   });
@@ -64,21 +65,26 @@ export function getListingRecencyLabel(iso: string | null): string {
  * the moment Motormila first spotted the ad, which is the closest the
  * pipeline gets to the true publication time (scrapes run 3x daily).
  */
+// Built once: toLocale*String(…, options) constructs a new Intl formatter on
+// every call (~5 ms each at 4× CPU), and the listing page formats on each render.
+let listedDateFmt: Intl.DateTimeFormat | null = null;
+let listedTimeFmt: Intl.DateTimeFormat | null = null;
+
 export function formatListedDateTime(iso: string | null | undefined): string | null {
   const ts = parseFlexibleTime(iso);
   if (ts === null) return null;
   const d = new Date(ts);
-  const date = d.toLocaleDateString("en-GB", {
+  listedDateFmt ??= new Intl.DateTimeFormat("en-GB", {
     timeZone: "Asia/Colombo",
     day: "numeric",
     month: "short",
     year: "numeric",
   });
-  const time = d.toLocaleTimeString("en-US", {
+  listedTimeFmt ??= new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Colombo",
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
   });
-  return `${date}, ${time}`;
+  return `${listedDateFmt.format(d)}, ${listedTimeFmt.format(d)}`;
 }

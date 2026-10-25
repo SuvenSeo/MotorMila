@@ -46,7 +46,7 @@ export function SaveHeartIcon({ saved, className }: { saved: boolean; className?
         className="inline-flex"
         initial={flipped && !calm ? { scale: saved ? 0.55 : 0.85 } : false}
         animate={{ scale: 1 }}
-        transition={spring.bouncy}
+        transition={spring.expressive}
       >
         <Heart className={cn(className, saved && "fill-current")} />
       </m.span>
@@ -70,7 +70,7 @@ export function CompareGlyph({
     if (active && !prev.current) haptic(8);
     prev.current = active;
   }, [active]);
-  const t = calm ? { duration: 0 } : { duration: duration.fast, ease: ease.standard };
+  const t = calm ? { duration: 0 } : { duration: duration.short, ease: ease.standard };
   return (
     <span className="relative inline-flex items-center justify-center" aria-hidden>
       <AnimatePresence mode="popLayout" initial={false}>
@@ -79,7 +79,7 @@ export function CompareGlyph({
             key="check"
             className="inline-flex"
             initial={{ opacity: 0, scale: 0.4, rotate: -45 }}
-            animate={{ opacity: 1, scale: 1, rotate: 0, transition: calm ? { duration: 0 } : spring.bouncy }}
+            animate={{ opacity: 1, scale: 1, rotate: 0, transition: calm ? { duration: 0 } : spring.expressive }}
             exit={{ opacity: 0, scale: 0.4, transition: t }}
           >
             <Check className={className} />

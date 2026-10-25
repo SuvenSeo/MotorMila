@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { m } from "motion/react";
 import { CarListing } from "@/types/car";
 import { formatPrice } from "@/services/api";
@@ -13,10 +13,12 @@ import { HybridCliffBadge } from "@/components/HybridCliffBadge";
 import { plausibleEngineCc } from "@/lib/engineCapacity";
 import { MileageTrustChip } from "@/components/MileageTrustChip";
 import { computeMileageTrust } from "@/lib/mileageTrust";
+import { vehicleTokenLabel } from "@/lib/vehicleTokens";
 import { summarizeFmv } from "@/lib/fmv";
 import { useAuth } from "@/lib/authContext";
 import { hasFullPlatformAccess } from "@/lib/planLimits";
-import { prefetchRoute } from "@/lib/routePrefetch";
+import { prefetchRoute, warmDisplayBoldFont } from "@/lib/routePrefetch";
+import { prefetchListingBundle, seedListing } from "@/lib/listingHandoff";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { canonicalizeMake, canonicalizeModel } from "@/lib/makeNormalization";
 import { usePriceSparklines } from "@/hooks/usePriceSparklines";
@@ -29,6 +31,9 @@ import { estimateListingMonthly, formatMonthlyLkr } from "@/lib/listingFinance";
 import { DealBadge } from "@/components/listing/DealBadge";
 import { CompareGlyph, SaveHeartIcon } from "@/components/listing/SaveHeart";
 import { fadeIn, fadeUp, hoverLift, press, useReducedMotionOrLowData } from "@/lib/motion";
+import { cardVariants } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { navigateWithHeroTransition, revealDelay, useCanHover, visibleCardImage, withShowDelay } from "@/components/listing/listingMotion";
 
 interface ListingCardProps {
@@ -48,19 +53,9 @@ interface ListingCardProps {
   revealIndex?: number;
 }
 
-/** Title-cases an enum token; returns null for empty/unknown so the pill is hidden. */
-function formatToken(value: string | undefined | null): string | null {
-  if (!value) return null;
-  const clean = value.replace(/[_-]/g, " ").trim();
-  if (!clean || /^(unknown|n\/?a|none|other|-)$/i.test(clean)) return null;
-  return clean
-    .split(" ")
-    .filter(Boolean)
-    .map((part) => part[0].toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
 function formatMileage(value: number | null | undefined): string | null {
+  // Missing mileage must not read as "0 km" (Number(null) === 0).
+  if (value === null || value === undefined || String(value).trim() === "") return null;
   const km = Number(value);
   if (!Number.isFinite(km) || km < 0) return null;
   if (km >= 1000) {
@@ -80,6 +75,9 @@ function formatEngineCc(value: number | null | undefined): string | null {
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
+
+/** Listing ids whose card already played its reveal this session. */
+const REVEALED_LISTINGS = new Set<number | string>();
 
 export const ListingCard = memo(function ListingCard({
   listing,
@@ -111,6 +109,9 @@ export const ListingCard = memo(function ListingCard({
   }, []);
   const calm = useReducedMotionOrLowData();
   const canHover = useCanHover();
+  // Reveal once per session: a card the visitor already saw (back from a
+  // listing, a re-sort, page 2 → page 1) is simply there, no second stagger.
+  const [alreadyRevealed] = useState(() => listing.id != null && REVEALED_LISTINGS.has(listing.id));
   // Scroll-in reveal (once). Reduced motion / low data: opacity only.
   const revealVariants = useMemo(
     () => withShowDelay(calm ? fadeIn : fadeUp, calm ? 0 : revealDelay(revealIndex)),
@@ -118,7 +119,7 @@ export const ListingCard = memo(function ListingCard({
   );
   // Full photo set (primary first); single-image listings behave exactly as before.
   const galleryImages = getListingImageList(listing);
-  const daysOnMarketLabel = getListingDaysOnMarketLabel(listing.first_seen_at || listing.scraped_at);
+  const daysOnMarketLabel = getListingDaysOnMarketLabel(listing.first_seen_at || listing.scraped_at, t);
   const priceValue = Number(listing.price_lkr || 0);
   const hasKnownPrice = isReasonableListingPrice(priceValue);
   const median = Number(listing.market_median_lkr);
@@ -136,7 +137,7 @@ export const ListingCard = memo(function ListingCard({
     isLeaseTakeover: isLease,
     ratingAllowed: fullAccess && listing.deal_score !== null && listing.deal_score !== undefined,
   });
-  const fmv = hasKnownPrice && !isLease ? summarizeFmv(priceValue, hasMedian ? median : 0) : null;
+  const fmv = hasKnownPrice && !isLease ? summarizeFmv(priceValue, hasMedian ? median : 0, t) : null;
   const marketDeltaPct = fmv ? fmv.delta_pct : null;
   const marketPosition = marketDeltaPct === null ? 50 : clamp(50 - marketDeltaPct, 8, 92);
   // FMV tone follows the deal badge so a "verify" outlier is never painted green.
@@ -172,11 +173,11 @@ export const ListingCard = memo(function ListingCard({
   const sites = Number(seenOnSites);
   const showSites = Number.isFinite(sites) && sites >= 2;
 
-  const conditionLabel = formatToken(listing.condition);
+  const conditionLabel = vehicleTokenLabel("condition", listing.condition, t);
   const specPills = [
-    { key: "tx", text: formatToken(listing.transmission), icon: true },
+    { key: "tx", text: vehicleTokenLabel("transmission", listing.transmission, t), icon: true },
     { key: "km", text: formatMileage(listing.mileage_km), icon: false },
-    { key: "fuel", text: formatToken(listing.fuel_type), icon: false },
+    { key: "fuel", text: vehicleTokenLabel("fuel", listing.fuel_type, t), icon: false },
     { key: "cc", text: formatEngineCc(listing.engine_cc), icon: false },
   ].filter((p): p is { key: string; text: string; icon: boolean } => Boolean(p.text));
   const mileageKnown = computeMileageTrust({ mileageKm: listing.mileage_km, year: listing.year }).risk !== "unknown";
@@ -185,18 +186,46 @@ export const ListingCard = memo(function ListingCard({
     <m.article
       ref={cardRef}
       role="article"
-      initial="hidden"
+      initial={alreadyRevealed ? false : "hidden"}
       whileInView="show"
       viewport={{ once: true, amount: 0.15 }}
       variants={revealVariants}
+      onViewportEnter={() => {
+        if (listing.id != null) REVEALED_LISTINGS.add(listing.id);
+      }}
       {...(calm ? {} : press)}
       {...(canHover && !calm ? hoverLift : {})}
+      // Motion's whileTap adds tabindex="0"; the title link and buttons inside are the tab stops.
+      tabIndex={-1}
       aria-label={t("listingCard.aria", "{title} listing card", { title: listingTitle || "Vehicle" })}
-      className="liquid-panel vehicle-card group relative isolate h-full overflow-hidden rounded-3xl border border-transparent shadow-soft transition-[border-color,box-shadow] duration-300 ease-apple hover:border-primary/35 hover:shadow-soft-xl motion-reduce:transition-none"
+      className={cn(
+        cardVariants({ variant: "media", padding: "none" }),
+        // Off-screen cards skip style/layout/paint while scrolling (sized from
+        // their last render; 440px until then).
+        "[content-visibility:auto] [contain-intrinsic-size:auto_440px]",
+        "group isolate h-full transition-[border-color,box-shadow] duration-medium ease-decelerate hover:border-primary/30 hover:shadow-e2 motion-reduce:transition-none",
+      )}
       onPointerEnter={() => {
         // Only warm the route chunk. Data prefetch on hover used to pull the
         // whole snapshot catalogue (tens of MB) the first time a card was hovered.
         prefetchRoute(`/listing/${listing.id}`);
+      }}
+      onPointerDown={(e) => {
+        // A press is a near-certain open: start the chunk and the detail data
+        // ahead of the click (~100 ms on touch). Primary button only. Started
+        // after the press has painted (rAF → task) so the four fetches and the
+        // chunk preload stay out of the tap's INP; a click that lands first
+        // just fetches from the detail page (and this then does nothing).
+        if (e.button !== 0) return;
+        const id = listing.id;
+        window.requestAnimationFrame(() => {
+          window.setTimeout(() => {
+            if (window.location.pathname === `/listing/${id}`) return;
+            prefetchRoute(`/listing/${id}`);
+            prefetchListingBundle(id);
+            warmDisplayBoldFont();
+          }, 0);
+        });
       }}
     >
       <Link
@@ -206,13 +235,15 @@ export const ListingCard = memo(function ListingCard({
           // Card → detail photo continuity (View Transitions, feature-detected).
           if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
           const to = `/listing/${listing.id}`;
-          if (navigateWithHeroTransition(() => navigate(to), visibleCardImage(cardRef.current))) e.preventDefault();
+          const photo = visibleCardImage(cardRef.current);
+          seedListing(listing, photo && photo.complete && photo.naturalWidth > 0 ? photo.currentSrc || photo.src : null);
+          if (navigateWithHeroTransition(() => navigate(to), photo)) e.preventDefault();
         }}
-        className="absolute inset-0 z-10 rounded-3xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        className="absolute inset-0 z-10 rounded-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       />
 
       <div ref={controlsRef} className="pointer-events-none relative z-20 flex h-full flex-col">
-        <div className="listing-card-photo relative aspect-[16/10] overflow-hidden bg-muted">
+        <div className="listing-card-photo relative aspect-[16/10] overflow-hidden bg-surface-2">
           <ListingImageCarousel
             images={galleryImages}
             listingId={listing.id}
@@ -228,7 +259,8 @@ export const ListingCard = memo(function ListingCard({
 
           {conditionLabel && (
             <div className="absolute left-3 top-3 flex items-center gap-1.5">
-              <span className="rounded-full border border-white/10 bg-black/70 px-2.5 py-0.5 text-[11px] font-semibold tracking-tight text-white backdrop-blur-md">
+              {/* Over the photo: dark chip regardless of theme. */}
+              <span className="inline-flex h-6 items-center rounded-full bg-black/60 px-2.5 text-caption font-semibold text-white">
                 {conditionLabel}
               </span>
             </div>
@@ -239,46 +271,46 @@ export const ListingCard = memo(function ListingCard({
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onWatchlistToggle(listing); }}
-                className={`pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur-md transition-[background-color,border-color,color,transform] duration-150 active:scale-90 motion-reduce:active:scale-100 ${
+                className={`tap-44 pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border transition-[background-color,border-color,color,transform] duration-short ease-standard active:scale-90 active:duration-micro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 ${
                   isWatchlisted
                     ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-black/60 text-white/90 border-white/8 hover:text-white hover:bg-black/75"
+                    : "border-transparent bg-black/55 text-white hover:bg-black/70"
                 }`}
                 aria-label={isWatchlisted ? t("listingCard.removeWatchlist", "Remove from watchlist") : t("listingCard.addWatchlist", "Add to watchlist")}
               >
-                <SaveHeartIcon saved={Boolean(isWatchlisted)} className="w-3.5 h-3.5" />
+                <SaveHeartIcon saved={Boolean(isWatchlisted)} className="h-4 w-4" />
               </button>
             )}
             {onCompareToggle && (
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onCompareToggle(listing); }}
-                className={`pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur-md transition-[background-color,border-color,color,transform] duration-150 active:scale-90 motion-reduce:active:scale-100 ${
+                className={`tap-44 pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border transition-[background-color,border-color,color,transform] duration-short ease-standard active:scale-90 active:duration-micro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 ${
                   isComparing
                     ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-black/60 text-white/90 border-white/8 hover:text-white hover:bg-black/75"
+                    : "border-transparent bg-black/55 text-white hover:bg-black/70"
                 }`}
                 aria-label={isComparing ? t("listingCard.removeCompare", "Remove from comparison") : t("listingCard.addCompare", "Add to comparison")}
               >
-                <CompareGlyph active={Boolean(isComparing)} className="h-3 w-3" />
+                <CompareGlyph active={Boolean(isComparing)} className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
 
           <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-3">
             {hasKnownPrice ? (
-              <p className="font-display text-[1.35rem] font-semibold leading-none tracking-tight text-white num [text-shadow:0_1px_8px_rgba(0,0,0,0.55)]">
+              <p className="font-display text-title3 font-semibold leading-none tracking-tight text-white num [text-shadow:0_1px_8px_rgba(0,0,0,0.55)]">
                 {formatPrice(priceValue)}
               </p>
             ) : (
               <PriceUnavailableBadge
                 label={t("listingCard.priceUnavailable", "Price unavailable")}
-                className="bg-black/75 border-primary/40 text-primary-bright px-2 py-0.5 text-[11px] tracking-[0.08em]"
+                className="border-transparent bg-black/60 px-2.5 py-0.5 text-caption text-white"
               />
             )}
             {monthly && (
               <p
-                className="shrink-0 text-right text-[11px] font-medium leading-tight text-white/85 num"
+                className="shrink-0 text-right text-caption font-medium leading-tight text-white/85 num"
                 title={t("listingCard.monthlyTitle", "Estimate: {ltv}% loan (CBSL cap), {rate}% a year over {years} years. Banks set the final terms.", {
                   ltv: monthly.ltvPct,
                   rate: monthly.ratePct,
@@ -291,13 +323,13 @@ export const ListingCard = memo(function ListingCard({
           </div>
         </div>
 
-        <div className="flex flex-1 flex-col gap-3.5 p-5">
+        <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
           <div className="flex items-start justify-between gap-3">
-            <h3 className="font-display text-[1.05rem] font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary truncate">
+            <h3 className="truncate text-callout font-semibold text-foreground transition-colors duration-short group-hover:text-primary">
               {listingTitle}
             </h3>
             {listing.year ? (
-              <span className="shrink-0 text-[13px] font-semibold text-muted-foreground num">{listing.year}</span>
+              <span className="num shrink-0 text-footnote font-semibold text-label-2">{listing.year}</span>
             ) : null}
           </div>
 
@@ -306,29 +338,27 @@ export const ListingCard = memo(function ListingCard({
           {(listing.is_active === false || showDropBadge || daysOnMarketLabel || showSites) && (
             <div className="flex flex-wrap gap-1.5">
               {listing.is_active === false && (
-                <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-                  {t("listingCard.archived", "Archived / Past ad")}
-                </span>
+                <Badge variant="warning">{t("listingCard.archived", "Archived / Past ad")}</Badge>
               )}
               {showDropBadge && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] font-semibold text-foreground">
-                  <TrendingDown className="h-3 w-3 text-sky-600 dark:text-sky-400" aria-hidden />
+                <Badge variant="info">
+                  <TrendingDown aria-hidden />
                   {dropPctLabel
                     ? t("listingCard.priceDroppedPct", "Price dropped {pct}%", { pct: dropPctLabel })
                     : t("listingCard.priceDropped", "Price dropped")}
-                </span>
+                </Badge>
               )}
               {daysOnMarketLabel && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] font-medium text-muted-foreground num">
-                  <Clock className="h-3 w-3" aria-hidden />
+                <Badge variant="neutral" className="num font-medium">
+                  <Clock aria-hidden />
                   {daysOnMarketLabel}
-                </span>
+                </Badge>
               )}
               {showSites && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] font-medium text-muted-foreground num">
-                  <Layers className="h-3 w-3" aria-hidden />
+                <Badge variant="neutral" className="num font-medium">
+                  <Layers aria-hidden />
                   {t("listingCard.onSites", "On {n} sites", { n: sites })}
-                </span>
+                </Badge>
               )}
             </div>
           )}
@@ -336,10 +366,10 @@ export const ListingCard = memo(function ListingCard({
           {specPills.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {specPills.map((p) => (
-                <span key={p.key} className={`spec-pill${p.key === "km" || p.key === "cc" ? " num" : ""}`}>
-                  {p.icon && <Gauge className="h-3 w-3 text-muted-foreground/70" aria-hidden />}
+                <Badge key={p.key} variant="outline" className={cn("font-medium text-label-2", (p.key === "km" || p.key === "cc") && "num")}>
+                  {p.icon && <Gauge aria-hidden />}
                   {p.text}
-                </span>
+                </Badge>
               ))}
             </div>
           )}
@@ -353,7 +383,7 @@ export const ListingCard = memo(function ListingCard({
             <MileageTrustChip
               mileageKm={listing.mileage_km}
               year={listing.year}
-              className="self-start !px-2 !py-0.5 !text-[11px]"
+              className="self-start !px-2 !py-0.5 !text-caption"
             />
           )}
 
@@ -361,14 +391,14 @@ export const ListingCard = memo(function ListingCard({
             {fmv != null && (
               <>
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="text-[11px] font-medium text-muted-foreground num">
+                  <p className="num text-caption font-medium text-label-2">
                     {t("listingCard.typical", "Typical {price}", { price: formatPrice(fmv.fmv_lkr) })}
                   </p>
-                  <p className={`text-[11px] font-semibold num ${DEAL_TEXT_CLASSES[fmvKind]}`}>{fmv.label}</p>
+                  <p className={`text-caption font-semibold num ${DEAL_TEXT_CLASSES[fmvKind]}`}>{fmv.label}</p>
                 </div>
-                <div className="relative mb-2 h-1.5 overflow-hidden rounded-full bg-foreground/[0.08]">
+                <div className="relative mb-2 h-1.5 overflow-hidden rounded-full bg-foreground/10">
                   <div
-                    className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 motion-reduce:transition-none ${DEAL_BAR_CLASSES[fmvKind]}`}
+                    className={`absolute inset-y-0 left-0 rounded-full transition-ui duration-long motion-reduce:transition-none ${DEAL_BAR_CLASSES[fmvKind]}`}
                     style={{ width: `${marketPosition}%` }}
                   />
                 </div>
@@ -376,7 +406,7 @@ export const ListingCard = memo(function ListingCard({
             )}
             {pricePoints.length >= 2 && (
               <div className="flex items-center justify-end gap-1.5">
-                <span className="text-[11px] text-muted-foreground">
+                <span className="text-caption text-label-2">
                   {t("listingCard.priceMoves", "{n} price changes", { n: pricePoints.length - 1 })}
                 </span>
                 <PriceSparkline
@@ -392,21 +422,21 @@ export const ListingCard = memo(function ListingCard({
             )}
           </div>
 
-          <div className="flex items-center justify-between pt-3.5 border-t border-white/5">
+          <div className="flex items-center justify-between gap-3 border-t border-separator pt-3">
             <div className="min-w-0">
               {listing.district && (
-                <p className="flex items-center gap-1.5 text-[12px] font-medium text-foreground/80 truncate">
-                  <MapPin className="h-3 w-3 shrink-0 text-muted-foreground/70" />
+                <p className="flex items-center gap-1.5 truncate text-footnote font-medium text-foreground">
+                  <MapPin className="h-3.5 w-3.5 shrink-0 text-label-2" aria-hidden />
                   {listing.district}
                 </p>
               )}
-              <p className="mt-0.5 text-[11px] text-muted-foreground truncate">
+              <p className="mt-0.5 truncate text-caption text-label-2">
                 {t("listingCard.listedOn", "Listed on {source}", { source: attribution.sourceName })}
                 {attribution.checkedAgo ? ` · ${t("listingCard.checked", "checked {ago}", { ago: attribution.checkedAgo })}` : ""}
               </p>
             </div>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border transition-all group-hover:border-primary/30 group-hover:bg-primary/10">
-              <ArrowRight className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-300 group-hover:translate-x-1 group-hover:text-primary" />
+            <div aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 transition-colors duration-short group-hover:bg-primary/10">
+              <ArrowRight className="h-4 w-4 text-label-2 transition-transform duration-medium ease-standard group-hover:translate-x-0.5 group-hover:text-primary" />
             </div>
           </div>
         </div>

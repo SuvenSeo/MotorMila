@@ -89,7 +89,7 @@ export function DealBadge({ badge, tone = "soft", size = "sm", why, className }:
         data-deal-kind={badge.kind}
         className={cn(
           "inline-flex items-center gap-1 rounded-full border font-semibold num leading-tight",
-          size === "md" ? "px-3 py-1 text-[13px]" : "px-2.5 py-0.5 text-[11.5px]",
+          size === "md" ? "px-3 py-1 text-footnote" : "px-2.5 py-0.5 text-caption",
           palette,
         )}
       >
@@ -108,7 +108,7 @@ export function DealBadge({ badge, tone = "soft", size = "sm", why, className }:
             e.preventDefault();
             setOpen((v) => !v);
           }}
-          className="pointer-events-auto inline-flex min-h-[28px] items-center gap-0.5 rounded-full px-1.5 text-[12px] font-semibold text-muted-foreground underline decoration-dotted underline-offset-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="pointer-events-auto inline-flex min-h-[28px] items-center gap-0.5 rounded-full px-1.5 text-caption font-semibold text-muted-foreground underline decoration-dotted underline-offset-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Info aria-hidden className="h-3 w-3" />
           {t("deal.why", "Why?")}
@@ -130,7 +130,7 @@ export function DealBadge({ badge, tone = "soft", size = "sm", why, className }:
           className="absolute left-0 top-full z-50 mt-2 block w-[min(18rem,calc(100vw-2.5rem))] rounded-xl border border-border bg-popover p-3.5 text-left text-popover-foreground shadow-soft-xl"
         >
           <span className="mb-1.5 flex items-start justify-between gap-2">
-            <span className="text-[12px] font-semibold text-foreground">{t("deal.whyTitle", "How we judged this price")}</span>
+            <span className="text-caption font-semibold text-foreground">{t("deal.whyTitle", "How we judged this price")}</span>
             <button
               type="button"
               aria-label={t("deal.close", "Close")}
@@ -140,7 +140,7 @@ export function DealBadge({ badge, tone = "soft", size = "sm", why, className }:
               <X aria-hidden className="h-3.5 w-3.5" />
             </button>
           </span>
-          <span className="block space-y-1.5 text-[12px] leading-relaxed text-muted-foreground">
+          <span className="block space-y-1.5 text-caption leading-relaxed text-muted-foreground">
             {why?.fmvLkr != null && why.fmvLkr > 0 && (
               <span className="block">
                 {t("deal.whyTypical", "Typical asking price for similar vehicles: {fmv}.", { fmv: formatLkrShort(why.fmvLkr) })}
@@ -172,13 +172,13 @@ export function DealBadge({ badge, tone = "soft", size = "sm", why, className }:
                 )}
               </span>
             )}
-            <span className="block text-[11px]">
+            <span className="block text-caption">
               {t("deal.whyAsking", "These are asking prices on listing sites, not sale prices.")}
             </span>
             <Link
               to={howWePriceHref("fmv")}
               onClick={() => setOpen(false)}
-              className="inline-flex min-h-[28px] items-center text-[12px] font-semibold text-primary-bright underline underline-offset-2 hover:text-foreground"
+              className="inline-flex min-h-[28px] items-center text-caption font-semibold text-primary-bright underline underline-offset-2 hover:text-foreground"
             >
               {t("deal.howWePrice", "How we price →")}
             </Link>

@@ -161,7 +161,7 @@ function AnimatedBar({
   return (
     <g
       opacity={isFaded ? fadedOpacity : 1}
-      style={{ transition: "opacity 0.15s ease-in-out" }}
+      style={{ transition: "opacity 0.15s ease-standard" }}
     >
       <motion.rect
         animate={target}
@@ -431,7 +431,7 @@ const BarInner = memo(function BarInner({
             ry={effectiveRy}
             style={{
               cursor: "default",
-              transition: "opacity 0.15s ease-in-out",
+              transition: "opacity 0.15s ease-standard",
             }}
             width={barW}
             x={x}

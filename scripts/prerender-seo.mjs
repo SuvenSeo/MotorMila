@@ -87,6 +87,7 @@ const STATIC_ROUTES = {
   "/pro-preview": [`Pro Preview — ${SITE}`, DEFAULT_DESC, false],
   "/hero-lab": [`Hero Lab — ${SITE}`, DEFAULT_DESC, false],
   "/motormila/admin": [`Admin — ${SITE}`, DEFAULT_DESC, false],
+  "/checkout/return": [`Checkout — ${SITE}`, DEFAULT_DESC, false],
 };
 
 function crumbs(list) {

@@ -1,19 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, ArrowRight, Check, Gauge, Info, RotateCcw, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, Car, Check, Gauge, Info, RotateCcw, SearchX, ShieldCheck } from "lucide-react";
+import { AnimatePresence, m, type Variants } from "motion/react";
 import { estimatePrice, getMakes, getModels, getSnapshotModelComps } from "@/services/api";
 import { SRI_LANKA_DISTRICTS } from "@/data/districts";
-import { PageBody } from "@/components/PageBody";
-import { PageCanvas } from "@/components/PageCanvas";
 import { SellerFairAskCard } from "@/components/SellerFairAskCard";
+import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Chip } from "@/components/ui/chip";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
+import { SimpleSelect } from "@/components/ui/select";
+import { AdornedInput, AnimatedLkr, ChoiceChips, Field, Notice, ToolGrid, ToolPage } from "@/components/tools/ToolKit";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { useAuth } from "@/lib/authContext";
 import { hasFullPlatformAccess } from "@/lib/planLimits";
 import { howWePriceHref } from "@/lib/howWePrice";
 import { cn } from "@/lib/utils";
-import { AnimatePresence, m, type Variants } from "motion/react";
-import { duration, ease, press, spring, useReducedMotionOrLowData } from "@/lib/motion";
-import { formatLkrCompact } from "@/lib/price";
+import { duration, ease, spring, useReducedMotionOrLowData } from "@/lib/motion";
 import {
   QUIZ_QUESTIONS,
   estimateFromComps,
@@ -29,11 +35,12 @@ import {
 } from "@/lib/estimateQuiz";
 
 /**
- * /estimate — valuation as a short quiz (ui/features).
+ * /estimate — valuation as a short quiz (ui/features; kit + tool template in web/p1-tools).
  * Car → mileage/registration → 5 one-tap condition questions → range.
  * No sign-up. The estimate request starts as soon as step 2 is done, so the
  * result is ready by the time the quiz ends. Live estimate API first, then
- * saved snapshot comps through the offline FMV engine.
+ * saved snapshot comps through the offline FMV engine. On desktop a sticky
+ * summary shows the car and, once ready, the range.
  */
 
 type Step = 0 | 1 | 2 | 3;
@@ -41,30 +48,20 @@ type Step = 0 | 1 | 2 | 3;
 const NOW_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: NOW_YEAR + 1 - 1990 + 1 }, (_, i) => NOW_YEAR + 1 - i);
 
-const fieldClass =
-  "h-12 w-full rounded-xl border border-border bg-surface px-3 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50";
-const chipBase =
-  "inline-flex min-h-12 items-center justify-center rounded-xl border px-4 text-[14px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
-
 function slug(value: string): string {
   return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
-/** Compact, millions-only (site-wide rule): "Rs 6.85 Mn". */
-function lkr(n: number): string {
-  return formatLkrCompact(n);
-}
-
 /** Direction-aware horizontal step slide (dir 1 = forward, -1 = back). */
 const stepSlide: Variants = {
-  enter: (dir: number) => ({ opacity: 0, x: dir * 28 }),
-  center: { opacity: 1, x: 0, transition: { duration: duration.base, ease: ease.emphasized } },
-  exit: (dir: number) => ({ opacity: 0, x: dir * -28, transition: { duration: duration.fast, ease: ease.exit } }),
+  enter: (dir: number) => ({ opacity: 0, x: dir * 24 }),
+  center: { opacity: 1, x: 0, transition: { duration: duration.medium, ease: ease.decelerate } },
+  exit: (dir: number) => ({ opacity: 0, x: dir * -24, transition: { duration: duration.short, ease: ease.accelerate } }),
 };
 const stepFade: Variants = {
   enter: { opacity: 0 },
-  center: { opacity: 1, transition: { duration: duration.fast } },
-  exit: { opacity: 0, transition: { duration: duration.instant } },
+  center: { opacity: 1, transition: { duration: duration.short } },
+  exit: { opacity: 0, transition: { duration: duration.micro } },
 };
 
 export default function Estimate() {
@@ -76,6 +73,8 @@ export default function Estimate() {
   const [step, setStep] = useState<Step>(0);
   const [qIndex, setQIndex] = useState(0);
   const [makes, setMakes] = useState<{ make: string; count: number }[]>([]);
+  const [makesState, setMakesState] = useState<"loading" | "ready" | "error">("loading");
+  const [makesAttempt, setMakesAttempt] = useState(0);
   const [models, setModels] = useState<{ model: string; count: number }[]>([]);
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
@@ -91,8 +90,23 @@ export default function Estimate() {
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
-    getMakes().then(setMakes).catch(() => setMakes([]));
-  }, []);
+    let cancelled = false;
+    setMakesState("loading");
+    getMakes()
+      .then((list) => {
+        if (cancelled) return;
+        setMakes(list);
+        setMakesState(list.length ? "ready" : "error");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setMakes([]);
+        setMakesState("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [makesAttempt]);
   useEffect(() => {
     setModels([]);
     if (!make) return;
@@ -249,301 +263,379 @@ export default function Estimate() {
     [make, model],
   );
 
-  return (
-    <PageCanvas ambient="subtle">
-      <PageBody narrow className="max-w-xl py-8 sm:py-12">
-        <div className="mb-5">
-          <p className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-primary-bright">
-            <Gauge className="h-3.5 w-3.5" aria-hidden />
-            {t("quiz.eyebrow", "Free valuation · no sign-up")}
-          </p>
-          <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-            {t("quiz.title", "What's your car worth?")}
-          </h1>
-        </div>
+  const registrationOptions: Array<{ value: Registration; label: string }> = [
+    { value: "used", label: t("quiz.reg.used", "Registered (used)") },
+    { value: "reconditioned", label: t("quiz.reg.recon", "Unregistered (recondition)") },
+    { value: "brand_new", label: t("quiz.reg.new", "Brand new") },
+  ];
+  const registrationLabel = registrationOptions.find((o) => o.value === registration)?.label;
+  const answeredCount = QUIZ_QUESTIONS.filter((q) => answers[q]).length;
+  const carLabel = [step0Valid ? year : null, make, model].filter(Boolean).join(" ");
 
-        {/* Progress */}
-        <div className="mb-5" aria-label={t("quiz.progressAria", "Progress")}>
-          <ol className="mb-2 flex justify-between text-[11px] font-semibold text-muted-foreground">
-            {stepLabels.map((label, i) => (
-              <li key={label} aria-current={i === step ? "step" : undefined} className={cn(i <= step && "text-foreground")}>
-                {label}
-              </li>
-            ))}
-          </ol>
-          <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progressPct)}>
-            {/* scaleX (transform-only) with a spring instead of animating width. */}
-            <m.div
-              className="h-full w-full origin-left rounded-full bg-primary"
-              initial={false}
-              animate={{ scaleX: progressPct / 100 }}
-              transition={motionStill ? { duration: 0 } : spring.gentle}
-            />
-          </div>
-        </div>
+  const stepHeading = (text: string) => (
+    <h2 ref={headingRef} tabIndex={-1} className="text-title3 font-semibold text-foreground outline-none">
+      {text}
+    </h2>
+  );
 
-        <div className="overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
-          <AnimatePresence mode="wait" initial={false} custom={nav.dir}>
-          <m.div
-            key={navPos}
-            custom={nav.dir}
-            variants={motionStill ? stepFade : stepSlide}
-            initial="enter"
-            animate="center"
-            exit="exit"
-          >
-          {step === 0 && (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (step0Valid) setStep(1);
-              }}
-              className="space-y-4"
+  const quizCard = (
+    <Card padding="none" className="overflow-hidden">
+      {/* Progress */}
+      <div className="border-b border-separator px-5 pb-4 pt-5 sm:px-6" aria-label={t("quiz.progressAria", "Progress")}>
+        <ol className="mb-2.5 flex justify-between gap-2 text-caption font-medium text-label-2">
+          {stepLabels.map((label, i) => (
+            <li
+              key={label}
+              aria-current={i === step ? "step" : undefined}
+              className={cn("inline-flex items-center gap-1.5 transition-colors duration-short ease-standard", i <= step && "text-foreground")}
             >
-              <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold text-foreground outline-none">
-                {t("quiz.s0.title", "Which car?")}
-              </h2>
-              <div>
-                <label htmlFor="q-make" className="mb-1.5 block text-[13px] font-semibold text-muted-foreground">{t("common.make", "Make")}</label>
-                <select id="q-make" className={fieldClass} value={make} onChange={(e) => { setMake(e.target.value); setModel(""); }}>
-                  <option value="">{t("common.selectMake", "Select make")}</option>
-                  {makes.map((m) => <option key={m.make} value={m.make}>{m.make}</option>)}
-                </select>
-              </div>
-              <div>
-                <label htmlFor="q-model" className="mb-1.5 block text-[13px] font-semibold text-muted-foreground">{t("common.model", "Model")}</label>
-                <select id="q-model" className={fieldClass} value={model} onChange={(e) => setModel(e.target.value)} disabled={!make}>
-                  <option value="">{make && models.length === 0 ? t("quiz.loadingModels", "Loading models…") : t("common.selectModel", "Select model")}</option>
-                  {models.map((m) => <option key={m.model} value={m.model}>{m.model}</option>)}
-                </select>
-              </div>
-              <div>
-                <label htmlFor="q-year" className="mb-1.5 block text-[13px] font-semibold text-muted-foreground">{t("quiz.year", "Year of manufacture")}</label>
-                <select id="q-year" className={fieldClass} value={year} onChange={(e) => setYear(Number(e.target.value))}>
-                  {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-                </select>
-              </div>
-              <button type="submit" disabled={!step0Valid} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-[14px] font-semibold text-primary-foreground disabled:opacity-40">
-                {t("quiz.next", "Next")} <ArrowRight className="h-4 w-4" aria-hidden />
-              </button>
-            </form>
-          )}
-
-          {step === 1 && (
-            <form onSubmit={(e) => { e.preventDefault(); goToQuiz(); }} className="space-y-5">
-              <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold text-foreground outline-none">
-                {t("quiz.s1.title", "Mileage and registration")}
-              </h2>
-              <fieldset>
-                <legend className="mb-2 text-[13px] font-semibold text-muted-foreground">{t("quiz.registration", "Registration")}</legend>
-                <div className="grid gap-2 sm:grid-cols-3">
-                  {([
-                    ["used", t("quiz.reg.used", "Registered (used)")],
-                    ["reconditioned", t("quiz.reg.recon", "Unregistered (recondition)")],
-                    ["brand_new", t("quiz.reg.new", "Brand new")],
-                  ] as Array<[Registration, string]>).map(([value, label]) => (
-                    <button
-                      key={value}
-                      type="button"
-                      aria-pressed={registration === value}
-                      onClick={() => setRegistration(value)}
-                      className={cn(chipBase, registration === value ? "border-primary bg-primary/15 text-foreground" : "border-border bg-surface text-foreground hover:border-primary/40")}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </fieldset>
-              <div>
-                <label htmlFor="q-km" className="mb-1.5 block text-[13px] font-semibold text-muted-foreground">{t("quiz.mileage", "Mileage (km)")}</label>
-                <input
-                  id="q-km"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  placeholder={t("quiz.mileagePh", "e.g. 65000")}
-                  className={cn(fieldClass, "num")}
-                  value={mileage}
-                  onChange={(e) => setMileage(e.target.value.replace(/[^\d,]/g, ""))}
-                />
-              </div>
-              <div>
-                <label htmlFor="q-district" className="mb-1.5 block text-[13px] font-semibold text-muted-foreground">{t("quiz.district", "District")}</label>
-                <select id="q-district" className={fieldClass} value={district} onChange={(e) => setDistrict(e.target.value)}>
-                  {SRI_LANKA_DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
-                </select>
-              </div>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => setStep(0)} className="inline-flex h-12 items-center justify-center gap-1.5 rounded-full border border-border bg-card px-5 text-[14px] font-semibold text-foreground">
-                  <ArrowLeft className="h-4 w-4" aria-hidden /> {t("quiz.back", "Back")}
-                </button>
-                <button type="submit" disabled={!step1Valid} className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-primary text-[14px] font-semibold text-primary-foreground disabled:opacity-40">
-                  {t("quiz.next", "Next")} <ArrowRight className="h-4 w-4" aria-hidden />
-                </button>
-              </div>
-            </form>
-          )}
-
-          {step === 2 && (() => {
-            const q = QUIZ_QUESTIONS[qIndex];
-            const def = QUESTIONS[q];
-            return (
-              <div className="space-y-4">
-                <p className="text-[12px] font-semibold text-muted-foreground">
-                  {t("quiz.qCount", "Question {n} of {total}", { n: qIndex + 1, total: QUIZ_QUESTIONS.length })}
-                </p>
-                <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold text-foreground outline-none">{def.title}</h2>
-                <div className="grid gap-2">
-                  {def.options.map((o) => (
-                    <m.button
-                      key={o.value}
-                      type="button"
-                      {...(motionStill ? {} : press)}
-                      onClick={() => answer(q, o.value)}
-                      aria-pressed={answers[q] === o.value}
-                      className={cn(chipBase, "justify-between", answers[q] === o.value ? "border-primary bg-primary/15" : "border-border bg-surface hover:border-primary/40", "text-foreground")}
-                    >
-                      {o.label}
-                      {answers[q] === o.value ? (
-                        <m.span
-                          initial={motionStill ? false : { scale: 0, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          transition={spring.bouncy}
-                          className="inline-flex"
-                        >
-                          <Check className="h-4 w-4 text-primary" aria-hidden />
-                        </m.span>
-                      ) : null}
-                    </m.button>
-                  ))}
-                </div>
-                <div className="flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={() => (qIndex === 0 ? setStep(1) : setQIndex((i) => i - 1))}
-                    className="inline-flex min-h-11 items-center gap-1.5 text-[13px] font-semibold text-muted-foreground hover:text-foreground"
-                  >
-                    <ArrowLeft className="h-4 w-4" aria-hidden /> {t("quiz.back", "Back")}
-                  </button>
-                  <button type="button" onClick={skipQuestion} className="inline-flex min-h-11 items-center text-[13px] font-semibold text-muted-foreground hover:text-foreground">
-                    {t("quiz.skip", "Skip")}
-                  </button>
-                </div>
-              </div>
-            );
-          })()}
-
-          {step === 3 && (
-            <div className="space-y-4" aria-live="polite">
-              <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold text-foreground outline-none">
-                {year} {make} {model}
-              </h2>
-
-              {loading && (
-                <div className="space-y-2" aria-busy="true">
-                  <p className="text-[13px] text-muted-foreground">{t("quiz.loading", "Checking comparable listings…")}</p>
-                  <div className="h-20 animate-pulse rounded-xl bg-surface" />
-                </div>
-              )}
-
-              {!loading && failed && (
-                <div role="alert" className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[13px] text-foreground">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
-                  <span>
-                    {t("quiz.noData", "We don't have enough comparable ads for this car to give an honest range. Try a nearby year, or check similar listings.")}
-                  </span>
-                </div>
-              )}
-
-              {!loading && result && band && (
-                <>
-                  <div className="rounded-2xl border border-primary/20 bg-surface p-4">
-                    <p className="text-[12px] font-semibold text-muted-foreground">{t("quiz.rangeLabel", "Typical asking range for similar cars")}</p>
-                    <p className="num mt-1 text-3xl font-bold leading-tight tracking-tight text-foreground">
-                      {lkr(result.low)} – {lkr(result.high)}
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-1.5 text-[11px] font-semibold">
-                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-primary-bright">
-                        <ShieldCheck className="h-3 w-3" aria-hidden /> {confidenceLabel}
-                      </span>
-                      <span className="rounded-full border border-border bg-card px-2.5 py-1 text-muted-foreground">
-                        {t("quiz.comps", "{n} comparable ads", { n: result.comparable_count.toLocaleString() })}
-                      </span>
-                      {result.source === "snapshot" && (
-                        <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-amber-700 dark:text-amber-300">
-                          {t("quiz.snapshot", "From saved data — live service unavailable")}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Where this car sits in the range */}
-                  <div className="rounded-xl border border-border bg-surface p-4">
-                    <p className="text-[13px] font-semibold text-foreground">
-                      {position === "upper"
-                        ? t("quiz.pos.upper", "Your answers point to the upper part of the range")
-                        : position === "lower"
-                          ? t("quiz.pos.lower", "Your answers point to the lower part of the range")
-                          : t("quiz.pos.middle", "Your answers point to the middle of the range")}
-                    </p>
-                    <div className="relative mt-3 h-2 rounded-full bg-muted" aria-hidden>
-                      <m.div
-                        className="absolute inset-y-0 rounded-full bg-primary"
-                        initial={motionStill ? false : { opacity: 0, scaleX: 0.2 }}
-                        animate={{ opacity: 1, scaleX: 1 }}
-                        transition={{ ...spring.gentle, delay: 0.15 }}
-                        style={{
-                          left: `${((band.from - result.low) / Math.max(1, result.high - result.low)) * 100}%`,
-                          width: `${((band.to - band.from) / Math.max(1, result.high - result.low)) * 100}%`,
-                        }}
-                      />
-                    </div>
-                    <p className="num mt-2 text-[13px] font-semibold text-foreground">
-                      ≈ {lkr(band.from)} – {lkr(band.to)}
-                    </p>
-                    <p className="mt-1 text-[11px] text-muted-foreground">
-                      {t("quiz.posNote", "A rule of thumb from your answers. It doesn't change the market range, which comes from real ads.")}
-                    </p>
-                  </div>
-
-                  {flags.length > 0 && (
-                    <ul className="space-y-2">
-                      {flags.map((f) => (
-                        <li key={f.key} className={cn("flex items-start gap-2 rounded-xl border p-3 text-[13px]", f.severity === "high" ? "border-rose-500/30 bg-rose-500/10" : "border-amber-500/30 bg-amber-500/10")}>
-                          <AlertTriangle className={cn("mt-0.5 h-4 w-4 shrink-0", f.severity === "high" ? "text-rose-600" : "text-amber-600")} aria-hidden />
-                          <span className="text-foreground">{FLAG_TEXT[f.key]}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-
-                  <p className="flex items-start gap-1.5 text-[12px] text-muted-foreground">
-                    <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-                    <span>
-                      {t("quiz.honesty", "These are asking prices. Final sale prices are usually lower after negotiation.")}{" "}
-                      <a href={howWePriceHref("askingVsSale")} className="font-semibold text-primary-bright">{t("quiz.howLink", "How we score prices")}</a>
-                    </span>
-                  </p>
-
-                  {fullAccess && (
-                    <SellerFairAskCard marketMedian={result.median} make={make} model={model} year={year} />
-                  )}
-                </>
-              )}
-
-              <div className="flex flex-wrap gap-2 pt-1">
-                <Link to={hubHref} className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-primary px-5 text-[13px] font-semibold text-primary-foreground no-underline hover:bg-primary/90">
-                  {t("quiz.seeSimilar", "See similar listings")} <ArrowRight className="h-4 w-4" aria-hidden />
-                </Link>
-                <button type="button" onClick={restart} className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-card px-5 text-[13px] font-semibold text-foreground">
-                  <RotateCcw className="h-4 w-4" aria-hidden /> {t("quiz.restart", "Start over")}
-                </button>
-              </div>
-            </div>
-          )}
-          </m.div>
-          </AnimatePresence>
+              <span
+                className={cn(
+                  "flex h-5 w-5 items-center justify-center rounded-full border text-caption tabular-nums transition-colors duration-short ease-standard",
+                  i < step ? "border-transparent bg-primary text-primary-foreground" : i === step ? "border-primary text-primary" : "border-border",
+                )}
+                aria-hidden
+              >
+                {i < step ? <Check className="h-3 w-3" /> : i + 1}
+              </span>
+              <span className={cn(i === step ? "inline" : "hidden sm:inline")}>{label}</span>
+            </li>
+          ))}
+        </ol>
+        <div
+          className="h-1 overflow-hidden rounded-full bg-surface-2"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(progressPct)}
+        >
+          {/* scaleX (transform-only) with a spring instead of animating width. */}
+          <m.div
+            className="h-full w-full origin-left rounded-full bg-primary"
+            initial={false}
+            animate={{ scaleX: progressPct / 100 }}
+            transition={motionStill ? { duration: 0 } : spring.smooth}
+          />
         </div>
-      </PageBody>
-    </PageCanvas>
+      </div>
+
+      <div className="overflow-hidden p-5 sm:p-6">
+        <AnimatePresence mode="wait" initial={false} custom={nav.dir}>
+          <m.div key={navPos} custom={nav.dir} variants={motionStill ? stepFade : stepSlide} initial="enter" animate="center" exit="exit">
+            {step === 0 && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (step0Valid) setStep(1);
+                }}
+                className="space-y-4"
+              >
+                {stepHeading(t("quiz.s0.title", "Which car?"))}
+                <Field label={t("common.make", "Make")} htmlFor="q-make">
+                  <SimpleSelect
+                    id="q-make"
+                    value={make}
+                    onValueChange={(v) => {
+                      setMake(v);
+                      setModel("");
+                    }}
+                    disabled={makesState === "loading" && makes.length === 0}
+                    placeholder={makesState === "loading" ? t("tools.est.loadingMakes", "Loading makes…") : t("common.selectMake", "Select make")}
+                    options={makes.map((mk) => ({ value: mk.make, label: mk.make }))}
+                  />
+                </Field>
+                {makesState === "error" ? (
+                  <Notice
+                    tone="caution"
+                    role="alert"
+                    title={t("tools.est.makesError", "We couldn't load the list of makes.")}
+                    action={
+                      <Button type="button" variant="secondary" size="sm" onClick={() => setMakesAttempt((n) => n + 1)}>
+                        <RotateCcw aria-hidden />
+                        {t("ui.error.retry", "Try again")}
+                      </Button>
+                    }
+                  />
+                ) : null}
+                <Field label={t("common.model", "Model")} htmlFor="q-model">
+                  <SimpleSelect
+                    id="q-model"
+                    value={model}
+                    onValueChange={setModel}
+                    disabled={!make}
+                    placeholder={make && models.length === 0 ? t("quiz.loadingModels", "Loading models…") : t("common.selectModel", "Select model")}
+                    options={models.map((md) => ({ value: md.model, label: md.model }))}
+                  />
+                </Field>
+                <Field label={t("quiz.year", "Year of manufacture")} htmlFor="q-year">
+                  <SimpleSelect
+                    id="q-year"
+                    value={String(year)}
+                    onValueChange={(v) => setYear(Number(v))}
+                    options={YEARS.map((y) => ({ value: String(y), label: y }))}
+                  />
+                </Field>
+                <Button type="submit" size="lg" disabled={!step0Valid} className="w-full">
+                  {t("quiz.next", "Next")} <ArrowRight aria-hidden />
+                </Button>
+              </form>
+            )}
+
+            {step === 1 && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  goToQuiz();
+                }}
+                className="space-y-5"
+              >
+                {stepHeading(t("quiz.s1.title", "Mileage and registration"))}
+                <ChoiceChips label={t("quiz.registration", "Registration")} value={registration as Registration} options={registrationOptions} onChange={setRegistration} />
+                <Field label={t("quiz.mileage", "Mileage (km)")} htmlFor="q-km">
+                  <AdornedInput
+                    id="q-km"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    suffix="km"
+                    placeholder={t("quiz.mileagePh", "e.g. 65000")}
+                    value={mileage}
+                    onChange={(e) => setMileage(e.target.value.replace(/[^\d,]/g, ""))}
+                  />
+                </Field>
+                <Field label={t("quiz.district", "District")} htmlFor="q-district">
+                  <SimpleSelect
+                    id="q-district"
+                    value={district}
+                    onValueChange={setDistrict}
+                    options={SRI_LANKA_DISTRICTS.map((d) => ({ value: d, label: d }))}
+                  />
+                </Field>
+                <div className="flex gap-2">
+                  <Button type="button" variant="secondary" size="lg" onClick={() => setStep(0)}>
+                    <ArrowLeft aria-hidden /> {t("quiz.back", "Back")}
+                  </Button>
+                  <Button type="submit" size="lg" disabled={!step1Valid} className="flex-1">
+                    {t("quiz.next", "Next")} <ArrowRight aria-hidden />
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {step === 2 &&
+              (() => {
+                const q = QUIZ_QUESTIONS[qIndex];
+                const def = QUESTIONS[q];
+                return (
+                  <div className="space-y-4">
+                    <p className="text-footnote font-medium text-label-2">
+                      {t("quiz.qCount", "Question {n} of {total}", { n: qIndex + 1, total: QUIZ_QUESTIONS.length })}
+                    </p>
+                    {stepHeading(def.title)}
+                    <div className="grid gap-2" role="group" aria-label={def.title}>
+                      {def.options.map((o) => {
+                        const selected = answers[q] === o.value;
+                        return (
+                          <Chip
+                            key={o.value}
+                            selected={selected}
+                            onClick={() => answer(q, o.value)}
+                            className="h-12 w-full justify-between rounded-control px-4 text-body"
+                          >
+                            {o.label}
+                            {selected ? (
+                              <m.span
+                                initial={motionStill ? false : { scale: 0, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={spring.expressive}
+                                className="inline-flex"
+                              >
+                                <Check aria-hidden />
+                              </m.span>
+                            ) : null}
+                          </Chip>
+                        );
+                      })}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Button type="button" variant="ghost" onClick={() => (qIndex === 0 ? setStep(1) : setQIndex((i) => i - 1))}>
+                        <ArrowLeft aria-hidden /> {t("quiz.back", "Back")}
+                      </Button>
+                      <Button type="button" variant="ghost" onClick={skipQuestion}>
+                        {t("quiz.skip", "Skip")}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })()}
+
+            {step === 3 && (
+              <div className="space-y-4" aria-live="polite">
+                {stepHeading(`${year} ${make} ${model}`)}
+
+                {loading && (
+                  <div className="space-y-3" aria-busy="true">
+                    <p className="text-footnote text-label-2">{t("quiz.loading", "Checking comparable listings…")}</p>
+                    <Skeleton className="h-28 w-full" />
+                    <Skeleton className="h-24 w-full" />
+                  </div>
+                )}
+
+                {!loading && failed && (
+                  <EmptyState
+                    icon={SearchX}
+                    className="py-8"
+                    title={t("tools.est.noDataTitle", "Not enough comparable ads")}
+                    body={t(
+                      "quiz.noData",
+                      "We don't have enough comparable ads for this car to give an honest range. Try a nearby year, or check similar listings.",
+                    )}
+                  />
+                )}
+
+                {!loading && result && band && (
+                  <div className="content-in space-y-4">
+                    <div className="rounded-card border border-primary/20 bg-primary/5 p-4 sm:p-5">
+                      <p className="text-footnote font-semibold text-primary">{t("quiz.rangeLabel", "Typical asking range for similar cars")}</p>
+                      <p className="mt-1.5 font-display text-title1 font-semibold text-foreground">
+                        <AnimatedLkr value={result.low} /> <span className="text-label-2">–</span> <AnimatedLkr value={result.high} />
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        <Badge variant="info">
+                          <ShieldCheck aria-hidden /> {confidenceLabel}
+                        </Badge>
+                        <Badge variant="neutral">{t("quiz.comps", "{n} comparable ads", { n: result.comparable_count.toLocaleString() })}</Badge>
+                        {result.source === "snapshot" && <Badge variant="warning">{t("quiz.snapshot", "From saved data — live service unavailable")}</Badge>}
+                      </div>
+                    </div>
+
+                    {/* Where this car sits in the range */}
+                    <div className="rounded-card border border-border bg-surface-2 p-4">
+                      <p className="text-footnote font-semibold text-foreground">
+                        {position === "upper"
+                          ? t("quiz.pos.upper", "Your answers point to the upper part of the range")
+                          : position === "lower"
+                            ? t("quiz.pos.lower", "Your answers point to the lower part of the range")
+                            : t("quiz.pos.middle", "Your answers point to the middle of the range")}
+                      </p>
+                      <div className="relative mt-3 h-2 rounded-full bg-surface-3" aria-hidden>
+                        <m.div
+                          className="absolute inset-y-0 origin-left rounded-full bg-primary"
+                          initial={motionStill ? false : { opacity: 0, scaleX: 0.2 }}
+                          animate={{ opacity: 1, scaleX: 1 }}
+                          transition={{ ...spring.smooth, delay: 0.15 }}
+                          style={{
+                            left: `${((band.from - result.low) / Math.max(1, result.high - result.low)) * 100}%`,
+                            width: `${((band.to - band.from) / Math.max(1, result.high - result.low)) * 100}%`,
+                          }}
+                        />
+                      </div>
+                      <p className="mt-2 text-footnote font-semibold tabular-nums text-foreground">
+                        ≈ <AnimatedLkr value={band.from} /> – <AnimatedLkr value={band.to} />
+                      </p>
+                      <p className="mt-1 text-caption text-label-2">
+                        {t("quiz.posNote", "A rule of thumb from your answers. It doesn't change the market range, which comes from real ads.")}
+                      </p>
+                    </div>
+
+                    {flags.length > 0 && (
+                      <ul className="space-y-2">
+                        {flags.map((f) => (
+                          <li key={f.key}>
+                            <Notice tone={f.severity === "high" ? "danger" : "caution"} icon={AlertTriangle}>
+                              {FLAG_TEXT[f.key]}
+                            </Notice>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    <p className="flex items-start gap-1.5 text-caption text-label-2">
+                      <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                      <span>
+                        {t("quiz.honesty", "These are asking prices. Final sale prices are usually lower after negotiation.")}{" "}
+                        <a href={howWePriceHref("askingVsSale")} className="font-semibold text-primary">
+                          {t("quiz.howLink", "How we score prices")}
+                        </a>
+                      </span>
+                    </p>
+
+                    {fullAccess && <SellerFairAskCard marketMedian={result.median} make={make} model={model} year={year} />}
+                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <Button asChild>
+                    <Link to={hubHref}>
+                      {t("quiz.seeSimilar", "See similar listings")} <ArrowRight aria-hidden />
+                    </Link>
+                  </Button>
+                  <Button type="button" variant="secondary" onClick={restart}>
+                    <RotateCcw aria-hidden /> {t("quiz.restart", "Start over")}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </m.div>
+        </AnimatePresence>
+      </div>
+    </Card>
+  );
+
+  const summaryRow = (label: string, value: React.ReactNode, done: boolean) => (
+    <div className="flex items-baseline justify-between gap-4 text-footnote">
+      <dt className="text-label-2">{label}</dt>
+      <dd className={cn("text-right font-semibold", done ? "text-foreground" : "text-label-3")}>{value}</dd>
+    </div>
+  );
+
+  /** Desktop-only sticky summary: what we're valuing, and the range once it's ready. */
+  const summary = (
+    <Card className="hidden lg:block" aria-label={t("tools.est.summary", "Your car")}>
+      <div className="flex items-center gap-3">
+        <span className="flex h-9 w-9 items-center justify-center rounded-control bg-primary/10 text-primary">
+          <Car className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+        </span>
+        <div className="min-w-0">
+          <p className="text-footnote font-semibold text-primary">{t("tools.est.summary", "Your car")}</p>
+          <p className="truncate text-callout font-semibold text-foreground">{carLabel || t("tools.est.pickCar", "Pick a make and model")}</p>
+        </div>
+      </div>
+      <dl className="mt-5 space-y-2.5 border-t border-separator pt-4">
+        {summaryRow(t("quiz.registration", "Registration"), registrationLabel ?? "—", Boolean(registrationLabel))}
+        {summaryRow(
+          t("quiz.mileage", "Mileage (km)"),
+          mileage ? `${Number(mileage.replace(/[^\d]/g, "")).toLocaleString("en-US")} km` : "—",
+          Boolean(mileage),
+        )}
+        {summaryRow(t("quiz.district", "District"), district, step > 0)}
+        {summaryRow(
+          t("quiz.step.condition", "Condition"),
+          t("tools.est.answered", "{n} of {total} answered", { n: answeredCount, total: QUIZ_QUESTIONS.length }),
+          answeredCount > 0,
+        )}
+      </dl>
+      <div className="mt-5 border-t border-separator pt-4">
+        <p className="text-footnote font-semibold text-label-2">{t("quiz.rangeLabel", "Typical asking range for similar cars")}</p>
+        {step >= 2 && loading ? (
+          <Skeleton className="mt-2 h-9 w-4/5 rounded-control" />
+        ) : result && step >= 2 ? (
+          <p className="content-in mt-1.5 font-display text-title2 font-semibold text-foreground">
+            <AnimatedLkr value={result.low} /> <span className="text-label-2">–</span> <AnimatedLkr value={result.high} />
+          </p>
+        ) : (
+          <p className="mt-1.5 text-footnote text-label-2">{t("tools.est.rangeLater", "Ready after the car and mileage steps.")}</p>
+        )}
+      </div>
+    </Card>
+  );
+
+  return (
+    <ToolPage
+      header={
+        <PageHeader eyebrow={t("quiz.eyebrow", "Free valuation · no sign-up")} eyebrowIcon={Gauge} title={t("quiz.title", "What's your car worth?")} />
+      }
+    >
+      <ToolGrid form={quizCard} result={summary} />
+    </ToolPage>
   );
 }

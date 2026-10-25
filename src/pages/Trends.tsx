@@ -3,6 +3,13 @@ import { m } from "motion/react";
 import { getMakes, getModels, getPriceTrendSeries, getHybridBands, formatPrice } from "@/services/api";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { SectionHeading } from "@/components/ui/section-heading";
 import { SRI_LANKA_DISTRICTS } from "@/data/districts";
 import { PriceHistoryChart } from "@/components/PriceHistoryChart";
 import { TrendKpis } from "@/components/TrendKpis";
@@ -10,20 +17,18 @@ import { ImportEraPublicSection } from "@/components/ImportEraPublicSection";
 import { RotateCcw, Zap, BarChart3 } from "lucide-react";
 import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
-import { PageHero } from "@/components/PageHero";
 import { FreePlanBanner } from "@/components/FreePlanBanner";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { ProFeatureLock } from "@/components/ProFeatureLock";
-import { revealItem } from "@/lib/motion";
+import { revealItem, staggerDelay, tween } from "@/lib/motion";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { useAuth } from "@/lib/authContext";
 import {
   FREE_TRENDS_MONTHS,
-  freePlanCopy,
+  freePlanText,
   hasFullPlatformAccess,
   takeLastMonths,
 } from "@/lib/planLimits";
-import { visuals } from "@/lib/visualAssets";
 import type { HybridBandsData, PriceTrendPoint } from "@/types/car";
 import {
   getExciseRatePerCc,
@@ -46,19 +51,18 @@ function exciseLabelFor(ccMax: number | null): string {
   return `Rs. ${HYBRID_BAND_EXCISE.midLow.toLocaleString()}–${HYBRID_BAND_EXCISE.midHigh.toLocaleString()}/cc`;
 }
 
-/** Band colour from low to high tax burden. Signal hues carry light + dark
- * variants so the text meets contrast on both themes (bars stay saturated). */
-function bandColor(index: number): { bar: string; badge: string; text: string } {
+/** Band colour from low to high tax burden (deal tokens; text meets contrast in both themes). */
+function bandColor(index: number): { bar: string; badge: "success" | "warning" | "danger"; text: string } {
   const palette = [
-    { bar: "bg-emerald-500", badge: "bg-emerald-500/10 border-emerald-500/25", text: "text-emerald-700 dark:text-emerald-400" },
-    { bar: "bg-amber-500",   badge: "bg-amber-500/10 border-amber-500/25",     text: "text-amber-700 dark:text-amber-400"   },
-    { bar: "bg-rose-500",    badge: "bg-rose-500/10 border-rose-500/25",        text: "text-rose-700 dark:text-rose-400"    },
+    { bar: "bg-deal-good", badge: "success" as const, text: "text-deal-good-text" },
+    { bar: "bg-deal-caution", badge: "warning" as const, text: "text-deal-caution-text" },
+    { bar: "bg-deal-high", badge: "danger" as const, text: "text-deal-high-text" },
   ];
   return palette[Math.min(index, palette.length - 1)];
 }
 
 export default function Trends() {
-  const { t } = useAppPreferences();
+  const { t, language } = useAppPreferences();
   const { hasProAccess, isAdmin } = useAuth();
   const fullAccess = hasFullPlatformAccess({ hasProAccess, isAdmin });
   const [makes, setMakes] = useState<{ make: string; count: number }[]>([]);
@@ -144,148 +148,142 @@ export default function Trends() {
     return value;
   };
 
-  const selectTriggerClass = "h-11 rounded-full border-border bg-surface text-sm text-foreground";
-  const selectContentClass = "border-border bg-popover text-popover-foreground";
-  const fieldLabelClass = "text-[12px] font-semibold text-muted-foreground";
+  const fieldLabelClass = "text-footnote font-medium text-label-2";
+  const lanes = [
+    { id: "make", label: selectedMake || "—" },
+    { id: "model", label: selectedModel || "—" },
+    { id: "condition", label: conditionLabel(condition) },
+    { id: "district", label: district === "all" ? t("trends.allLk", "All Sri Lanka") : district },
+  ];
 
   return (
-    <PageCanvas>
+    <PageCanvas ambient="none">
       <FreePlanBanner />
-      <PageHero
-        theme="trends"
+      <PageHeader
         eyebrow={t("trends.eyebrow", "Trend studio")}
-        watermarkIcon={BarChart3}
-        title={<>{t("trends.title", "Price trends.")}</>}
+        eyebrowIcon={BarChart3}
+        title={t("trends.title", "Price trends.")}
         description={t("trends.description", "Track median price movement for any vehicle lane across Sri Lanka.")}
-        media={visuals.priceIntelligenceBg}
-        mediaPosition="center"
-        mediaTone="brand"
-        highlights={[
-          { label: "Coverage", value: "All LK", hint: "District-level price lanes" },
-          { label: "Hybrid lens", value: "Tax bands", hint: "Excise cliff intelligence" },
-          { label: "History", value: "Monthly", hint: "Median price trajectories" },
+        stats={[
+          { label: t("trends.stat.coverage", "Coverage"), value: t("trends.allLk", "All Sri Lanka"), hint: t("trends.stat.coverageHint", "District-level price lanes") },
+          { label: t("trends.stat.hybrid", "Hybrid lens"), value: t("trends.stat.hybridValue", "Tax bands"), hint: t("trends.stat.hybridHint", "Excise cliff insight") },
+          { label: t("trends.stat.history", "History"), value: t("trends.stat.historyValue", "Monthly"), hint: t("trends.stat.historyHint", "Median price over time") },
         ]}
       />
 
-      <PageBody className="space-y-6">
+      <PageBody className="space-y-6 pt-0 lg:pt-0">
         {/* Controls */}
-        <m.div variants={revealItem} className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-1.5">
-              <label htmlFor="t-make" className={fieldLabelClass}>{t("common.make", "Make")}</label>
-              <Select value={selectedMake} onValueChange={setSelectedMake}>
-                <SelectTrigger id="t-make" className={selectTriggerClass}><SelectValue placeholder={t("common.selectMake", "Select make")} /></SelectTrigger>
-                <SelectContent className={selectContentClass}>
-                  {makes.map((m) => <SelectItem key={m.make} value={m.make}>{m.make}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <label htmlFor="t-model" className={fieldLabelClass}>{t("common.model", "Model")}</label>
-              <Select value={selectedModel} onValueChange={setSelectedModel} disabled={!selectedMake || !modelsList.length}>
-                <SelectTrigger id="t-model" className={selectTriggerClass}><SelectValue placeholder={t("common.selectModel", "Select model")} /></SelectTrigger>
-                <SelectContent className={selectContentClass}>
-                  {modelsList.map((m) => <SelectItem key={m.model} value={m.model}>{m.model}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <label htmlFor="t-cond" className={fieldLabelClass}>{t("common.condition", "Condition")}</label>
-              {fullAccess ? (
-                <Select value={condition} onValueChange={setCondition}>
-                  <SelectTrigger id="t-cond" className={selectTriggerClass}><SelectValue /></SelectTrigger>
-                  <SelectContent className={selectContentClass}>
-                    <SelectItem value="all">{t("common.any", "Any")}</SelectItem>
-                    <SelectItem value="used">{t("condition.used", "Used")}</SelectItem>
-                    <SelectItem value="reconditioned">{t("condition.reconditioned", "Reconditioned")}</SelectItem>
-                    <SelectItem value="brand_new">{t("condition.brandNew", "Brand New")}</SelectItem>
+        <m.div variants={revealItem}>
+          <Card padding="md">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="space-y-1.5">
+                <label htmlFor="t-make" className={fieldLabelClass}>{t("common.make", "Make")}</label>
+                <Select value={selectedMake} onValueChange={setSelectedMake}>
+                  <SelectTrigger id="t-make"><SelectValue placeholder={t("common.selectMake", "Select make")} /></SelectTrigger>
+                  <SelectContent>
+                    {makes.map((m) => <SelectItem key={m.make} value={m.make}>{m.make}</SelectItem>)}
                   </SelectContent>
                 </Select>
-              ) : (
-                <ProFeatureLock
-                  density="compact"
-                  label={t("trends.lock.conditionFilter", "Condition filter")}
-                  className="flex min-h-[2.75rem] w-full justify-start rounded-full"
-                >
-                  <div className={`${selectTriggerClass} flex h-10 items-center px-3 text-sm text-muted-foreground`}>
-                    {t("common.any", "Any")}
-                  </div>
-                </ProFeatureLock>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <label htmlFor="t-dist" className={fieldLabelClass}>{t("common.district", "District")}</label>
-              {fullAccess ? (
-                <Select value={district} onValueChange={setDistrict}>
-                  <SelectTrigger id="t-dist" className={selectTriggerClass}><SelectValue /></SelectTrigger>
-                  <SelectContent className={selectContentClass}>
-                    <SelectItem value="all">{t("common.allDistricts", "All districts")}</SelectItem>
-                    {SRI_LANKA_DISTRICTS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="t-model" className={fieldLabelClass}>{t("common.model", "Model")}</label>
+                <Select value={selectedModel} onValueChange={setSelectedModel} disabled={!selectedMake || !modelsList.length}>
+                  <SelectTrigger id="t-model"><SelectValue placeholder={t("common.selectModel", "Select model")} /></SelectTrigger>
+                  <SelectContent>
+                    {modelsList.map((m) => <SelectItem key={m.model} value={m.model}>{m.model}</SelectItem>)}
                   </SelectContent>
                 </Select>
-              ) : (
-                <ProFeatureLock
-                  density="compact"
-                  label={t("trends.lock.districtFilter", "District filter")}
-                  className="flex min-h-[2.75rem] w-full justify-start rounded-full"
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="t-cond" className={fieldLabelClass}>{t("common.condition", "Condition")}</label>
+                {fullAccess ? (
+                  <Select value={condition} onValueChange={setCondition}>
+                    <SelectTrigger id="t-cond"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("common.any", "Any")}</SelectItem>
+                      <SelectItem value="used">{t("condition.used", "Used")}</SelectItem>
+                      <SelectItem value="reconditioned">{t("condition.reconditioned", "Reconditioned")}</SelectItem>
+                      <SelectItem value="brand_new">{t("condition.brandNew", "Brand New")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <ProFeatureLock
+                    density="compact"
+                    label={t("trends.lock.conditionFilter", "Condition filter")}
+                    className="h-10 w-full justify-start rounded-control"
+                  >
+                    <span />
+                  </ProFeatureLock>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="t-dist" className={fieldLabelClass}>{t("common.district", "District")}</label>
+                {fullAccess ? (
+                  <Select value={district} onValueChange={setDistrict}>
+                    <SelectTrigger id="t-dist"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("common.allDistricts", "All districts")}</SelectItem>
+                      {SRI_LANKA_DISTRICTS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <ProFeatureLock
+                    density="compact"
+                    label={t("trends.lock.districtFilter", "District filter")}
+                    className="h-10 w-full justify-start rounded-control"
+                  >
+                    <span />
+                  </ProFeatureLock>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-separator pt-4">
+              <span className="text-footnote font-medium text-label-2">{t("trends.lane", "Lane:")}</span>
+              {lanes.map((chip) => (
+                <Badge key={chip.id} variant="neutral">{chip.label}</Badge>
+              ))}
+              {hasNarrow && (
+                <Button
+                  type="button"
+                  variant="tertiary"
+                  size="sm"
+                  onClick={() => { setDistrict("all"); setCondition("all"); }}
+                  className="ml-auto"
                 >
-                  <div className={`${selectTriggerClass} flex h-10 items-center px-3 text-sm text-muted-foreground`}>
-                    {t("common.allDistricts", "All districts")}
-                  </div>
-                </ProFeatureLock>
+                  <RotateCcw aria-hidden /> {t("trends.resetFilters", "Reset filters")}
+                </Button>
               )}
             </div>
-          </div>
-
-          <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-border pt-4">
-            <span className={fieldLabelClass}>{t("trends.lane", "Lane:")}</span>
-            {[
-              { id: "make", label: selectedMake || "—" },
-              { id: "model", label: selectedModel || "—" },
-              { id: "condition", label: conditionLabel(condition) },
-              { id: "district", label: district === "all" ? "All LK" : district },
-            ].map((chip) => (
-              <span key={chip.id} className="rounded-full border border-border bg-surface px-2.5 py-1 text-[10px] font-semibold text-muted-foreground">{chip.label}</span>
-            ))}
-            {hasNarrow && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => { setDistrict("all"); setCondition("all"); }}
-                className="ml-auto h-8 gap-1.5 px-3 text-xs font-semibold text-muted-foreground"
-              >
-                <RotateCcw aria-hidden /> {t("trends.resetFilters", "Reset filters")}
-              </Button>
-            )}
-          </div>
+          </Card>
         </m.div>
 
-        {/* KPI strip — Tremor cards + sparklines from the real series (#7 UI review) */}
+        {/* KPI strip — token sparklines from the real series */}
         <m.div variants={revealItem}>
-          <TrendKpis points={visibleTrendData} />
+          <TrendKpis points={visibleTrendData} loading={loading && visibleTrendData.length === 0} />
         </m.div>
 
-        {/* Chart — PriceHistoryChart owns its own theme-aware surface + Recharts */}
         <m.div variants={revealItem}>
-          <PriceHistoryChart title={chartTitle} points={visibleTrendData} isLoading={loading} coverageNote={coverageNote} emptyMessage={emptyMessage} emptyActionLabel={hasNarrow ? t("trends.broadenFilters", "Broaden filters") : undefined} onEmptyAction={hasNarrow ? () => { setDistrict("all"); setCondition("all"); } : undefined} />
+          <PriceHistoryChart title={chartTitle} points={visibleTrendData} isLoading={loading} coverageNote={language !== "en" && trendData.length > 1 && coverageNote && coverageNote.startsWith("Monthly medians") ? t("trends.coverageNote", coverageNote, { from: trendData[0].month, to: trendData[trendData.length - 1].month }) : coverageNote} emptyMessage={emptyMessage} emptyActionLabel={hasNarrow ? t("trends.broadenFilters", "Broaden filters") : undefined} onEmptyAction={hasNarrow ? () => { setDistrict("all"); setCondition("all"); } : undefined} />
           {!fullAccess ? (
             <UpgradePrompt
               className="mt-4"
-              title={freePlanCopy.trendsTitle}
-              body={freePlanCopy.trendsBody}
+              title={freePlanText(t, "trendsTitle")}
+              body={freePlanText(t, "trendsBody")}
               variant="strip"
             />
           ) : null}
         </m.div>
 
-        <m.div variants={revealItem} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3">
-          <p className="text-[11px] font-medium text-muted-foreground">
-            {selectedMake && selectedModel
-              ? t("trends.medianNote", "Median advertised prices grouped by month from the public Sri Lanka snapshot.")
-              : t("trends.chooseLane", "Choose a make and model to render the trajectory.")}
-          </p>
-          <span className="shrink-0 text-[10px] font-semibold text-primary-bright num">{t("common.publicData", "Public data")}</span>
+        <m.div variants={revealItem}>
+          <Card padding="sm" className="flex flex-wrap items-center justify-between gap-3 shadow-none">
+            <p className="text-footnote text-label-2">
+              {selectedMake && selectedModel
+                ? t("trends.medianNote", "Median advertised prices grouped by month from the public Sri Lanka snapshot.")
+                : t("trends.chooseLane", "Choose a make and model to render the trajectory.")}
+            </p>
+            <Badge variant="info">{t("common.publicData", "Public data")}</Badge>
+          </Card>
         </m.div>
 
         {/* ── HYBRID TAX ARBITRAGE (Pro depth) ─────────────────── */}
@@ -297,15 +295,13 @@ export default function Trends() {
               error={hybridError}
             />
           ) : (
-            <ProFeatureLock
-              label={t("pro.lock.hybridTitle", "Hybrid tax bands — Pro")}
-              className="min-h-[12rem] rounded-xl"
-            >
-              <div className="rounded-xl border border-border bg-surface p-6">
-                <p className="font-display text-lg font-bold text-foreground">{t("trends.hybridTitle", "Hybrid Tax Arbitrage")}</p>
-                <p className="mt-2 text-sm text-muted-foreground">{t("pro.lock.preview", "Preview locked on Free")}</p>
-              </div>
-            </ProFeatureLock>
+            <Card padding="md">
+              <p className="font-display text-title3 font-semibold text-foreground">{t("trends.hybridTitle", "Hybrid tax arbitrage bands")}</p>
+              <p className="mt-1 text-footnote text-label-2">{t("pro.lock.preview", "Preview locked on Free")}</p>
+              <ProFeatureLock label={t("pro.lock.hybridTitle", "Hybrid tax bands — Pro")} className="mt-4">
+                <span />
+              </ProFeatureLock>
+            </Card>
           )}
         </m.div>
 
@@ -331,59 +327,49 @@ function HybridTaxArbitrageSection({ data, loading, error }: HybridTaxArbitrageS
 
   const bands = data?.bands ?? [];
   const maxMedian = Math.max(...bands.map((b) => b.median_price_lkr ?? 0), 1);
+  const rs = (n: number) => `Rs. ${n.toLocaleString()}`;
 
   return (
-    <section
-      aria-labelledby="hybrid-tax-heading"
-      className="rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6"
-    >
-      <div className="mb-6 flex items-start justify-between gap-3">
-        <div className="max-w-2xl">
-          <p className="inline-flex items-center gap-2 text-[0.6875rem] font-medium tracking-tight text-primary-bright">
-            <span aria-hidden className="h-1 w-1 rounded-full bg-primary-bright" />
-            {t("trends.hybridEyebrow", "Import tax intelligence")}
-          </p>
-          <h2
-            id="hybrid-tax-heading"
-            className="display-2 mt-2 text-foreground"
-          >
-            {t("trends.hybridTitle", "Hybrid tax arbitrage bands")}
-          </h2>
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            {t("trends.hybridBody", "Median market prices vs excise duty across three engine-cc bands. The 1,500 cc cliff creates a pricing discontinuity worth exploiting.")}
-          </p>
-        </div>
-      </div>
+    <Card padding="md" aria-labelledby="hybrid-tax-heading" role="region">
+      <SectionHeading
+        id="hybrid-tax-heading"
+        eyebrow={t("trends.hybridEyebrow", "Import tax intelligence")}
+        title={t("trends.hybridTitle", "Hybrid tax arbitrage bands")}
+        description={t("trends.hybridBody", "Median market prices vs excise duty across three engine-cc bands. The 1,500 cc cliff creates a pricing discontinuity worth exploiting.")}
+      />
 
       {loading && (
         <div
+          role="status"
           aria-busy="true"
           aria-label={t("trends.hybridLoadingAria", "Loading hybrid band data")}
           className="space-y-3"
         >
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-16 animate-pulse rounded-2xl bg-foreground/[0.04]" />
+            <Skeleton key={i} shape="row" className="h-24" />
           ))}
         </div>
       )}
 
       {!loading && error && (
-        <div className="rounded-2xl border border-border bg-surface px-4 py-6 text-center">
-          <p className="text-[12px] text-muted-foreground">{error}</p>
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            {t("trends.hybridErrorHint", "Excise cliff insight is still available below from the static tax model.")}
-          </p>
-        </div>
+        <ErrorState
+          className="py-8"
+          title={error}
+          body={t("trends.hybridErrorHint", "Excise cliff insight is still available below from the static tax model.")}
+        />
       )}
 
       {!loading && !error && bands.length === 0 && (
-        <div className="rounded-2xl border border-border bg-surface px-4 py-6 text-center">
-          <p className="text-[12px] text-muted-foreground">{t("trends.hybridEmpty", "No hybrid band data available yet.")}</p>
-        </div>
+        <EmptyState
+          className="py-8"
+          icon={BarChart3}
+          title={t("trends.hybridEmpty", "No hybrid band data available yet.")}
+          body={t("trends.hybridEmptyBody", "Bands fill in once enough hybrid listings carry an engine size.")}
+        />
       )}
 
       {!loading && !error && bands.length > 0 && (
-        <div className="space-y-4" role="list" aria-label="Hybrid engine bands">
+        <ul className="content-in space-y-3" aria-label={t("trends.hybridListAria", "Hybrid engine bands")}>
           {bands.map((band, idx) => {
             const colors = bandColor(idx);
             const barPct = band.median_price_lkr
@@ -392,107 +378,92 @@ function HybridTaxArbitrageSection({ data, loading, error }: HybridTaxArbitrageS
             const isCliffBand = band.cc_max !== null && band.cc_max <= HYBRID_EXCISE_CLIFF_CC;
 
             return (
-              <div
+              <li
                 key={band.label}
-                role="listitem"
                 aria-label={`${band.label} hybrid band`}
-                className="rounded-xl border border-border bg-surface p-4"
+                className="rounded-card border border-border bg-surface-2 p-4"
               >
-                <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${colors.badge} ${colors.text}`}>
-                      {band.label}
-                    </span>
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant={colors.badge}>{band.label}</Badge>
                     {isCliffBand && (
-                      <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
-                        {t("trends.taxCliff", "Tax cliff ↓")}
-                      </span>
+                      <Badge variant="success">{t("trends.taxCliff", "Tax cliff ↓")}</Badge>
                     )}
                   </div>
                   <div className="flex items-center gap-3 text-right">
-                    <span className="text-[11px] text-muted-foreground num">
+                    <span className="text-caption tabular-nums text-label-2">
                       {band.count.toLocaleString()} {t("common.listings", "listings")}
                     </span>
                     {band.median_price_lkr !== null && (
-                      <span className="text-[13px] font-bold text-foreground num">
+                      <span className="text-callout font-semibold tabular-nums text-foreground">
                         {formatPrice(band.median_price_lkr)}
                       </span>
                     )}
                   </div>
                 </div>
 
-                {/* Bar */}
-                <div className="mb-2.5 h-3 w-full overflow-hidden rounded-full bg-foreground/[0.06]">
-                  <div
+                {/* Bar: transform-only draw-in (scaleX from the left), capped at the long token */}
+                <div className="mb-3 h-2.5 w-full overflow-hidden rounded-full bg-surface-3">
+                  <m.div
                     role="img"
                     aria-label={`${band.label} median price bar ${barPct}%`}
-                    className={`h-full rounded-full transition-all duration-500 ${colors.bar}`}
-                    style={{ width: `${barPct}%` }}
+                    data-pct={barPct}
+                    className={`h-full w-full origin-left rounded-full ${colors.bar}`}
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: barPct / 100 }}
+                    transition={{ ...tween.long, delay: staggerDelay(idx) }}
                   />
                 </div>
 
-                {/* Excise note */}
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-caption text-label-2">
                   {t("trends.exciseDuty", "Excise duty:")}{" "}
-                  <span className={`font-semibold ${colors.text}`}>
+                  <span className={`font-semibold tabular-nums ${colors.text}`}>
                     {exciseLabelFor(band.cc_max)}
                   </span>
                   {isCliffBand && (
-                    <span className="ml-2 text-emerald-700 dark:text-emerald-400">
+                    <span className="ml-2 text-deal-good-text">
                       {t("trends.lowestHybridRate", "· lowest hybrid rate")}
                     </span>
                   )}
                 </p>
-              </div>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
 
-      {/* ── Cliff insight card ── */}
-      <div className="mt-5 rounded-2xl border border-amber-500/20 bg-amber-500/[0.05] p-4">
+      {/* ── Cliff insight ── */}
+      <div className="mt-5 rounded-card border border-deal-caution/30 bg-deal-caution/10 p-4">
         <div className="mb-2 flex items-center gap-2">
-          <Zap className="h-4 w-4 text-amber-600 dark:text-amber-400" aria-hidden />
-          <p className="text-[12px] font-semibold text-amber-700 dark:text-amber-400">
+          <Zap className="h-4 w-4 text-deal-caution-text" aria-hidden />
+          <p className="text-footnote font-semibold text-deal-caution-text">
             {t("trends.cliffTitle", "1,500 cc excise cliff")}
           </p>
         </div>
-        <p className="text-[13px] text-muted-foreground leading-relaxed">
-          At exactly{" "}
-          <span className="font-semibold text-foreground num">
-            {cliffInsight.cliffCc.toLocaleString()} cc
-          </span>{" "}
-          the hybrid excise rate jumps from{" "}
-          <span className="font-semibold text-foreground num">
-            Rs. {cliffInsight.rateAtOrBelowCliff.toLocaleString()}/cc
-          </span>{" "}
-          to{" "}
-          <span className="font-semibold text-foreground num">
-            Rs. {cliffInsight.rateAboveCliff.toLocaleString()}/cc
-          </span>
-          , adding{" "}
-          <span className="font-semibold text-amber-700 dark:text-amber-300 num">
-            Rs. {cliffInsight.exciseStepUp.toLocaleString()}
-          </span>{" "}
-          in excise duty crossing one cc. Buyers sourcing ≤ 1,500 cc hybrids
-          also save{" "}
-          <span className="font-semibold text-emerald-700 dark:text-emerald-300 num">
-            Rs. {cliffInsight.exciseSavingVsPetrolAtCliff.toLocaleString()}
-          </span>{" "}
-          in excise versus the equivalent petrol band at this capacity.
+        <p className="text-footnote tabular-nums text-foreground">
+          {t(
+            "trends.cliffBody",
+            "At exactly {cc} cc the hybrid excise rate jumps from {low}/cc to {high}/cc, adding {step} in excise duty for one extra cc. Buyers sourcing hybrids of 1,500 cc or less also save {saving} in excise versus the equivalent petrol band at this capacity.",
+            {
+              cc: cliffInsight.cliffCc.toLocaleString(),
+              low: rs(cliffInsight.rateAtOrBelowCliff),
+              high: rs(cliffInsight.rateAboveCliff),
+              step: rs(cliffInsight.exciseStepUp),
+              saving: rs(cliffInsight.exciseSavingVsPetrolAtCliff),
+            },
+          )}
         </p>
-        <p className="mt-2 text-[10px] font-medium text-muted-foreground">
-          Rates from the indicative 2025–2026 Sri Lanka excise schedule ·{" "}
-          verify against the latest gazette before transacting.
+        <p className="mt-2 text-caption text-label-2">
+          {t("trends.cliffSource", "Rates from the indicative 2025–2026 Sri Lanka excise schedule · verify against the latest gazette before transacting.")}
         </p>
       </div>
 
-      <div className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-4">
-        <p className="text-[11px] text-muted-foreground">
-          Median prices from live market snapshot · excise rates from the 2025–2026 import tax model.
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-separator pt-4">
+        <p className="text-caption text-label-2">
+          {t("trends.hybridFoot", "Median prices from the live market snapshot · excise rates from the 2025–2026 import tax model.")}
         </p>
-        <span className="shrink-0 text-[10px] font-semibold text-amber-700 dark:text-amber-400 num">{t("trends.taxModel", "Tax model")}</span>
+        <Badge variant="warning">{t("trends.taxModel", "Tax model")}</Badge>
       </div>
-    </section>
+    </Card>
   );
 }

@@ -17,6 +17,7 @@ import {
   Settings,
   ShieldCheck,
   Smartphone,
+  Sparkles,
   Star,
   Store,
   Tag,
@@ -135,12 +136,12 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   },
 ];
 
-/** Secondary links: header "More" menu, mobile menu and footer. */
+/** Secondary links: header "More" dropdown (NavMoreMenu), mobile menu and footer. */
 export const MORE_LINKS: NavLinkItem[] = [
   { key: "pricing", labelKey: "nav.pricing", fallback: "Pricing", detailKey: "shell.nav.pricingDetail", detailFallback: "Free during beta", href: "/pricing", icon: Crown },
-  { key: "pro-preview", labelKey: "shell.nav.proPreview", fallback: "Pro preview", detailKey: "shell.nav.proPreviewDetail", detailFallback: "What Pro will include", href: "/pro-preview", icon: Crown },
+  { key: "pro-preview", labelKey: "shell.nav.proPreview", fallback: "Pro preview", detailKey: "shell.nav.proPreviewDetail", detailFallback: "What Pro will include", href: "/pro-preview", icon: Sparkles },
   { key: "docs", labelKey: "shell.nav.howItWorks", fallback: "How it works", detailKey: "shell.nav.howItWorksDetail", detailFallback: "Where prices and scores come from", href: "/docs", icon: BookOpen },
-  { key: "mobile-app", labelKey: "nav.mobileApp", fallback: "Mobile App", detailKey: "shell.nav.mobileAppDetail", detailFallback: "Android app, coming soon", href: "/mobile-app", icon: Smartphone },
+  { key: "mobile-app", labelKey: "nav.mobileApp", fallback: "Mobile App", detailKey: "shell.nav.mobileAppDetail", detailFallback: "Android preview, ready to download", href: "/mobile-app", icon: Smartphone },
   { key: "settings", labelKey: "nav.settings", fallback: "Settings", detailKey: "nav.settingsDetail", detailFallback: "Language, theme and preferences", href: "/settings", icon: Settings, requiresAuth: true },
 ];
 

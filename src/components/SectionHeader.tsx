@@ -22,7 +22,7 @@ export function SectionHeader({
     <div className={cn("mb-10 flex flex-col justify-between gap-5 md:flex-row md:items-end", className)}>
       <div className="max-w-2xl animate-fade-up">
         {eyebrow ? (
-          <p className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-primary">
+          <p className="mb-3 inline-flex items-center gap-2 text-footnote font-medium text-primary">
             <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-primary" />
             {eyebrow}
           </p>
@@ -31,7 +31,7 @@ export function SectionHeader({
           {title}
         </h2>
         {description ? (
-          <p className="mt-3 text-base leading-relaxed text-muted-foreground sm:text-base">{description}</p>
+          <p className="mt-3 text-body leading-relaxed text-muted-foreground sm:text-body">{description}</p>
         ) : null}
       </div>
       {actions ? (

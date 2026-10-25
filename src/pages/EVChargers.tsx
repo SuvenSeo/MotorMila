@@ -7,9 +7,15 @@ import { getChargingStations } from "@/services/api";
 import type { ChargingStation } from "@/services/api";
 import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
-import { PageHero } from "@/components/PageHero";
-import { SectionHeader } from "@/components/SectionHeader";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { SectionHeading } from "@/components/ui/section-heading";
+import { CountValue } from "@/components/ui/stat-tile";
 import {
   Select,
   SelectContent,
@@ -17,10 +23,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { revealItem } from "@/lib/motion";
+import { listItem, revealItem } from "@/lib/motion";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { visuals } from "@/lib/visualAssets";
 import { SRI_LANKA_DISTRICTS, SL_DISTRICT_COORDS, districtCoords, normalizeDistrictName } from "@/data/districts";
 
 const DEFAULT_DISTRICT = "Colombo";
@@ -40,7 +45,7 @@ function connectorLabel(station: ChargingStation): string {
     .filter(Boolean);
   if (parts.length) return parts.join(" · ");
   if (station.power_kw != null) return `${station.power_kw} kW`;
-  return "Connector type unlisted";
+  return "";
 }
 
 export default function EVChargers() {
@@ -80,29 +85,28 @@ export default function EVChargers() {
     setParams(next, { replace: true });
   };
 
+  const count = stationsQuery.data?.count ?? stations.length;
+  const nextRadius = RADIUS_OPTIONS.find((km) => km > radiusKm);
+
   return (
-    <PageCanvas ambient="subtle">
-      <PageHero
-        theme="ev"
+    <PageCanvas ambient="none">
+      <PageHeader
         eyebrow={t("ev.chargersEyebrow", "EV charging")}
         eyebrowIcon={PlugZap}
-        watermarkIcon={Zap}
-        title={<>{t("ev.chargersTitle", "Public chargers in Sri Lanka.")}</>}
+        title={t("ev.chargersTitle", "Public chargers in Sri Lanka.")}
         description={t(
           "ev.chargersDescription",
           "Cached Open Charge Map points for Sri Lanka. This is not live occupancy — confirm a stall before you travel.",
         )}
-        media={visuals.alt2HeroUltrawidePanorama}
-        mediaPosition="center 45%"
-        mediaTone="brand"
-        highlights={[
+        stats={[
           {
             label: t("ev.chargersCountLabel", "Stations in radius"),
-            value: stationsQuery.isPending ? "…" : String(stationsQuery.data?.count ?? 0),
-            hint: t("ev.chargersCountHint", "{radius} km of {district}", {
-              radius: radiusKm,
-              district,
-            }),
+            // An empty cache is "not loaded yet", not a real zero: never headline "0".
+            value: stationsQuery.isPending ? "—" : <CountValue value={count > 0 ? count : null} />,
+            hint:
+              !stationsQuery.isPending && !(count > 0)
+                ? t("ev.chargersCountPendingHint", "Charger map updating")
+                : t("ev.chargersCountHint", "{radius} km of {district}", { radius: radiusKm, district }),
           },
           {
             label: t("ev.chargersSourceLabel", "Source"),
@@ -111,110 +115,122 @@ export default function EVChargers() {
           },
         ]}
         actions={
-          <Button asChild variant="outline">
+          <Button asChild variant="secondary">
             <Link to="/ev-hub">
-              {t("ev.backToHub", "EV Hub")} <ArrowRight className="h-4 w-4" aria-hidden />
+              {t("ev.backToHub", "EV Hub")} <ArrowRight aria-hidden />
             </Link>
           </Button>
         }
       />
 
-      <PageBody className="space-y-10 lg:space-y-14">
-        <m.section variants={revealItem} className="flex flex-wrap items-end gap-4">
-          <div className="min-w-[12rem]">
-            <p className="mb-2 text-[12px] font-semibold text-muted-foreground">
-              {t("common.district", "District")}
-            </p>
-            <Select value={district} onValueChange={(value) => updateParam("district", value)}>
-              <SelectTrigger aria-label={t("common.district", "District")}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {districtOptions.map((name) => (
-                  <SelectItem key={name} value={name}>
-                    {name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="min-w-[10rem]">
-            <p className="mb-2 text-[12px] font-semibold text-muted-foreground">
-              {t("ev.chargersRadius", "Radius")}
-            </p>
-            <Select value={String(radiusKm)} onValueChange={(value) => updateParam("radius_km", value)}>
-              <SelectTrigger aria-label={t("ev.chargersRadius", "Radius")}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {RADIUS_OPTIONS.map((km) => (
-                  <SelectItem key={km} value={String(km)}>
-                    {km} km
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <PageBody className="space-y-8 pt-0 lg:space-y-10 lg:pt-0">
+        <m.section variants={revealItem}>
+          <Card padding="md" className="flex flex-wrap items-end gap-4">
+            <div className="min-w-[12rem] flex-1 sm:flex-none">
+              <label htmlFor="ev-district" className="mb-1.5 block text-footnote font-medium text-label-2">
+                {t("common.district", "District")}
+              </label>
+              <Select value={district} onValueChange={(value) => updateParam("district", value)}>
+                <SelectTrigger id="ev-district" aria-label={t("common.district", "District")}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {districtOptions.map((name) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="min-w-[10rem] flex-1 sm:flex-none">
+              <label htmlFor="ev-radius" className="mb-1.5 block text-footnote font-medium text-label-2">
+                {t("ev.chargersRadius", "Radius")}
+              </label>
+              <Select value={String(radiusKm)} onValueChange={(value) => updateParam("radius_km", value)}>
+                <SelectTrigger id="ev-radius" aria-label={t("ev.chargersRadius", "Radius")}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {RADIUS_OPTIONS.map((km) => (
+                    <SelectItem key={km} value={String(km)}>
+                      {km} km
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </Card>
         </m.section>
 
         <m.section variants={revealItem}>
-          <SectionHeader title={t("ev.chargersNearby", "Nearby stations")} className="mb-6" />
+          <SectionHeading title={t("ev.chargersNearby", "Nearby stations")} />
           {stationsQuery.isPending ? (
-            <div className="grid gap-3">
+            <div className="grid gap-3" aria-hidden>
               {Array.from({ length: 4 }).map((_, index) => (
-                <div key={index} className="data-card h-28 animate-pulse p-5" />
+                <Skeleton key={index} className="h-32" />
               ))}
             </div>
+          ) : stationsQuery.isError ? (
+            <Card padding="none">
+              <ErrorState
+                title={t("ev.chargersError", "Chargers didn't load")}
+                onRetry={() => void stationsQuery.refetch()}
+              />
+            </Card>
           ) : stations.length === 0 ? (
-            <div className="data-card p-8 text-center">
-              <MapPin className="mx-auto mb-3 h-5 w-5 text-muted-foreground/50" aria-hidden />
-              <p className="text-[14px] font-semibold text-foreground">
-                {t("ev.chargersEmpty", "No cached chargers in this radius")}
-              </p>
-              <p className="mx-auto mt-2 max-w-md text-[13px] text-muted-foreground">
-                {t(
+            <Card padding="none">
+              <EmptyState
+                icon={MapPin}
+                title={t("ev.chargersEmpty", "No cached chargers in this radius")}
+                body={t(
                   "ev.chargersEmptyHint",
-                  "The Sri Lanka Open Charge Map cache is empty or this district has no points yet. Widen the radius, or ask an admin to refresh the cache.",
+                  "We refresh the Sri Lanka charger map from Open Charge Map every week, and this area has no points yet. Try a wider radius, or check back soon.",
                 )}
-              </p>
-            </div>
+                actionLabel={nextRadius ? t("ev.chargersWiden", "Widen to {km} km", { km: nextRadius }) : undefined}
+                onAction={nextRadius ? () => updateParam("radius_km", String(nextRadius)) : undefined}
+              />
+            </Card>
           ) : (
-            <ul className="grid gap-3">
-              {stations.map((station) => (
-                <li key={station.ocm_id} className="data-card p-5 sm:p-6">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-[15px] font-bold text-foreground">
-                        {station.name || t("ev.chargersUnnamed", "Unnamed station")}
+            <ul key={`${district}-${radiusKm}`} className="content-in grid gap-3">
+              {stations.map((station, i) => {
+                const connectors = connectorLabel(station) || t("ev.chargersConnectorUnlisted", "Connector type unlisted");
+                return (
+                  <m.li key={station.ocm_id} variants={listItem} custom={i} initial="hidden" animate="show" className="list-none">
+                    <Card padding="md">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-callout font-semibold text-foreground">
+                            {station.name || t("ev.chargersUnnamed", "Unnamed station")}
+                          </p>
+                          <p className="mt-1 text-footnote text-label-2">
+                            {[station.operator, station.address || station.town].filter(Boolean).join(" · ")}
+                          </p>
+                        </div>
+                        <Badge variant="neutral" className="tabular-nums">
+                          {station.distance_km.toFixed(1)} km
+                        </Badge>
+                      </div>
+                      <p className="mt-3 inline-flex items-center gap-1.5 text-footnote text-foreground">
+                        <Zap aria-hidden className="h-4 w-4 text-primary" />
+                        {connectors}
                       </p>
-                      <p className="mt-1 text-[12px] font-medium text-muted-foreground">
-                        {[station.operator, station.address || station.town].filter(Boolean).join(" · ")}
-                      </p>
-                    </div>
-                    <span className="num shrink-0 rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] font-bold text-foreground">
-                      {station.distance_km.toFixed(1)} km
-                    </span>
-                  </div>
-                  <p className="mt-3 text-[12px] font-medium text-foreground">{connectorLabel(station)}</p>
-                  {station.status ? (
-                    <p className="mt-1 text-[11px] text-muted-foreground">{station.status}</p>
-                  ) : null}
-                  <a
-                    href={osmStationUrl(station.lat, station.lng)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-4 inline-flex items-center gap-1.5 text-[12px] font-semibold text-primary no-underline hover:underline"
-                  >
-                    {t("ev.chargersOpenMap", "Open in OpenStreetMap")}
-                    <ExternalLink className="h-3 w-3" aria-hidden />
-                  </a>
-                </li>
-              ))}
+                      {station.status ? <p className="mt-1 text-caption text-label-2">{station.status}</p> : null}
+                      <Button asChild variant="tertiary" size="sm" className="-ml-3 mt-3">
+                        <a href={osmStationUrl(station.lat, station.lng)} target="_blank" rel="noopener noreferrer">
+                          {t("ev.chargersOpenMap", "Open in OpenStreetMap")}
+                          <ExternalLink aria-hidden />
+                        </a>
+                      </Button>
+                    </Card>
+                  </m.li>
+                );
+              })}
             </ul>
           )}
         </m.section>
 
-        <p className="text-[12px] font-medium leading-relaxed text-muted-foreground">
+        <p className="text-caption text-label-2">
           {limitation} {attribution}
         </p>
       </PageBody>

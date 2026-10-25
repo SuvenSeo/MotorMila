@@ -235,26 +235,16 @@ export const featuresEn: Record<string, string> = {
   "sellFast.label": "Likely to sell fast",
   "seo.howWePriceDesc": "How MotorMila estimates fair market value from comparable Sri Lankan listings, what confidence levels and deal badges mean, and the limits of asking-price data.",
   "seo.howWePriceTitle": "How we score prices — {site}",
-};
-
-export const featuresSi: Record<string, string> = {
-  ...featuresEn,
-  "compareTray.compare": "සසඳන්න",
-  "compareTray.add": "සසඳන්න",
-  "quiz.next": "ඊළඟ",
-  "quiz.back": "ආපසු",
-  "notFound.searchBtn": "සොයන්න",
-  "deleteAcct.cancel": "අවලංගු කරන්න",
-  "comparePage.share": "බෙදාගන්න",
-};
-
-export const featuresTa: Record<string, string> = {
-  ...featuresEn,
-  "compareTray.compare": "ஒப்பிடு",
-  "compareTray.add": "ஒப்பிடு",
-  "quiz.next": "அடுத்து",
-  "quiz.back": "பின்",
-  "notFound.searchBtn": "தேடு",
-  "deleteAcct.cancel": "ரத்து செய்",
-  "comparePage.share": "பகிர்",
+  "outlook.insufficient.headline": "Not enough price history yet",
+  "outlook.insufficient.advice": "We need at least three months of comparable ads to read a trend. Judge each car on its own price against similar ads.",
+  "outlook.easing.headline": "Prices have been easing",
+  "outlook.easing.advice": "Median asking prices fell over recent months. If you're not in a hurry, waiting and watching for price drops may pay off. Trends can reverse with duty or policy changes.",
+  "outlook.firming.headline": "Prices have been rising",
+  "outlook.firming.advice": "Median asking prices rose over recent months. If you've found a fairly priced car, waiting may cost more. A rising trend isn't guaranteed to continue.",
+  "outlook.steady.headline": "Prices have been steady",
+  "outlook.steady.advice": "No clear direction in recent months. Buy when you find the right car at a fair price, and don't wait for the market.",
+  "outlook.conf.low": "low",
+  "outlook.conf.medium": "medium",
+  "footer.services": "Sell & services",
+  "footer.account": "Account & help",
 };

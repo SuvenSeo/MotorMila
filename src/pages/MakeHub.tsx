@@ -1,16 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { motion } from "motion/react";
+import { m } from "motion/react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, BarChart2, Car, MapPin, Search } from "lucide-react";
+import { ArrowRight, Car, MapPin, Search } from "lucide-react";
 import { getMakeInsight, getListings, getModels, formatPrice } from "@/services/api";
-import { revealContainer, revealItem } from "@/lib/motion";
+import { listItem, revealItem } from "@/lib/motion";
 import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
-import { PageHero } from "@/components/PageHero";
 import { ListingCard } from "@/components/ListingCard";
-import { SectionHeader } from "@/components/SectionHeader";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { SectionHeading } from "@/components/ui/section-heading";
+import { StatTile, CountValue, LkrValue } from "@/components/ui/stat-tile";
+import { HubLinkTile, HubTileGrid, HubTileSkeleton } from "@/components/data/HubParts";
+import { cn } from "@/lib/utils";
 import { BRAND } from "@/lib/brand";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { useAppPreferences } from "@/lib/appPreferences";
@@ -89,6 +97,7 @@ export default function MakeHub() {
   }, [title, description, makeParam]);
 
   const isPending = insightQuery.isPending;
+  const isError = insightQuery.isError && !insight;
   const recentListings = listingsQuery.data?.listings?.slice(0, 4) ?? [];
 
   // Full model browser: prefer the endpoint's cleaned all_models; fall back
@@ -114,163 +123,166 @@ export default function MakeHub() {
     return allModels.filter((entry) => entry.model.toLowerCase().includes(q));
   }, [allModels, modelFilter]);
   const popularModels = insight?.top_models ?? [];
+  const modelHref = (model: string) => `/cars/${encodeURIComponent(makeParam)}/${encodeURIComponent(model)}`;
+  const nothingYet =
+    !isPending && !isError && popularModels.length === 0 && allModels.length === 0 && !(insight?.top_districts?.length);
+
+  const stats = [
+    {
+      label: t("makeHub.liveListings", "Live listings"),
+      value: <CountValue value={insight ? insight.total : null} />,
+    },
+    // Price stats only render when the data has them; a snapshot
+    // derived without prices shows just the live-listings card.
+    ...(isPending || insight?.avg_price_lkr != null
+      ? [{ label: t("makeHub.avgPrice", "Average price"), value: <LkrValue value={insight?.avg_price_lkr ?? null} /> }]
+      : []),
+    ...(isPending || insight?.median_price_lkr != null
+      ? [{ label: t("makeHub.medianPrice", "Median price"), value: <LkrValue value={insight?.median_price_lkr ?? null} /> }]
+      : []),
+  ];
 
   return (
-    <PageCanvas>
-      <PageHero
-        theme="default"
+    <PageCanvas ambient="none">
+      <PageHeader
         eyebrow={t("makeHub.eyebrow", "Make hub")}
         eyebrowIcon={Car}
-        watermarkIcon={BarChart2}
         title={isPending ? makeDisplay : canonicalMake}
         description={t("makeHub.description", "Used {make} prices, popular models, and district demand across Sri Lanka.", { make: canonicalMake })}
       />
 
-      <PageBody className="space-y-16 lg:space-y-24">
-        <section>
-          <div className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-border bg-border shadow-soft sm:grid-cols-3">
-            {[
-              {
-                label: t("makeHub.liveListings", "Live listings"),
-                value: isPending ? "…" : insight ? insight.total.toLocaleString() : t("common.na", "N/A"),
-              },
-              // Price stats only render when the data has them; a snapshot
-              // derived without prices shows just the live-listings card.
-              ...(isPending || insight?.avg_price_lkr != null
-                ? [
-                    {
-                      label: t("makeHub.avgPrice", "Average price"),
-                      value: isPending ? "…" : formatPrice(insight?.avg_price_lkr ?? null),
-                    },
-                  ]
-                : []),
-              ...(isPending || insight?.median_price_lkr != null
-                ? [
-                    {
-                      label: t("makeHub.medianPrice", "Median price"),
-                      value: isPending ? "…" : formatPrice(insight?.median_price_lkr ?? null),
-                    },
-                  ]
-                : []),
-            ].map((card) => (
-              <div key={card.label} className="bg-card p-6">
-                <p className="text-[12px] font-semibold text-muted-foreground">
-                  {card.label}
-                </p>
-                <p className="num mt-2.5 text-3xl font-bold tracking-tight text-foreground">{card.value}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {popularModels.length > 0 && (
-          <motion.section variants={revealItem}>
-            <SectionHeader eyebrow={t("makeHub.models", "Models")} title={t("makeHub.popularModels", "Popular {make} models", { make: canonicalMake })} className="mb-8" />
-            <motion.div variants={revealContainer} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {popularModels.map((entry) => (
-                <Link
-                  key={entry.model}
-                  to={`/cars/${encodeURIComponent(makeParam)}/${encodeURIComponent(entry.model)}`}
-                  className="group rounded-2xl border border-border bg-card p-5 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg no-underline"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-[14px] font-bold tracking-tight text-foreground">{entry.model}</p>
-                    <span className="num shrink-0 rounded-full border border-border bg-surface px-2.5 py-0.5 text-[10px] font-bold text-muted-foreground">
-                      {entry.count}
-                    </span>
-                  </div>
-                  {entry.avg_price_lkr != null && (
-                    <p className="num mt-3 text-lg font-bold tracking-tight text-foreground">
-                      {formatPrice(entry.avg_price_lkr)}
-                    </p>
-                  )}
-                </Link>
+      <PageBody className="space-y-14 pt-0 lg:space-y-20 lg:pt-0">
+        <m.section variants={revealItem} aria-label={t("makeHub.statsAria", "{make} market figures", { make: canonicalMake })}>
+          {isError ? (
+            <Card padding="none">
+              <ErrorState
+                title={t("makeHub.errorTitle", "Market figures didn't load")}
+                body={t("makeHub.errorBody", "Listings below still work. Try again in a moment.")}
+                onRetry={() => void insightQuery.refetch()}
+              />
+            </Card>
+          ) : (
+            <div className={cn("grid grid-cols-1 gap-3", stats.length === 3 ? "sm:grid-cols-3" : stats.length === 2 ? "sm:grid-cols-2" : "sm:max-w-sm")}>
+              {stats.map((card) => (
+                <StatTile key={card.label} label={card.label} value={card.value} loading={isPending} />
               ))}
-            </motion.div>
-          </motion.section>
-        )}
+            </div>
+          )}
+        </m.section>
+
+        {isPending ? (
+          <m.section variants={revealItem}>
+            <SectionHeading eyebrow={t("makeHub.models", "Models")} title={t("makeHub.popularModels", "Popular {make} models", { make: makeDisplay })} />
+            <HubTileSkeleton />
+          </m.section>
+        ) : popularModels.length > 0 ? (
+          <m.section variants={revealItem}>
+            <SectionHeading eyebrow={t("makeHub.models", "Models")} title={t("makeHub.popularModels", "Popular {make} models", { make: canonicalMake })} />
+            <HubTileGrid>
+              {popularModels.map((entry, i) => (
+                <HubLinkTile
+                  key={entry.model}
+                  index={i}
+                  to={modelHref(entry.model)}
+                  title={entry.model}
+                  meta={<Badge variant="neutral" className="tabular-nums">{entry.count}</Badge>}
+                  value={entry.avg_price_lkr != null ? formatPrice(entry.avg_price_lkr) : undefined}
+                />
+              ))}
+            </HubTileGrid>
+          </m.section>
+        ) : null}
 
         {allModels.length > 0 && (
-          <motion.section variants={revealItem}>
-            <SectionHeader
+          <m.section variants={revealItem}>
+            <SectionHeading
               eyebrow={t("makeHub.allModelsEyebrow", "Browse")}
               title={t("makeHub.allModels", "All {make} models", { make: canonicalMake })}
-              className="mb-8"
             />
             {allModels.length > 12 && (
-              <div className="relative mb-6 max-w-sm">
-                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-                <input
+              <div className="relative mb-5 max-w-sm">
+                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-label-3" aria-hidden />
+                <Input
+                  type="search"
                   value={modelFilter}
                   onChange={(e) => setModelFilter(e.target.value)}
                   placeholder={t("makeHub.findModel", "Find a model…")}
                   aria-label={t("makeHub.findModel", "Find a model…")}
-                  className="h-11 w-full rounded-xl border border-border bg-surface pl-10 pr-4 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/40"
+                  className="pl-10"
                 />
               </div>
             )}
             {visibleModels.length > 0 ? (
-              <motion.div variants={revealContainer} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {visibleModels.map((entry) => (
-                  <Link
+              <HubTileGrid>
+                {visibleModels.map((entry, i) => (
+                  <HubLinkTile
                     key={entry.model}
-                    to={`/cars/${encodeURIComponent(makeParam)}/${encodeURIComponent(entry.model)}`}
-                    className="group flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 no-underline"
-                  >
-                    <p className="text-[14px] font-bold tracking-tight text-foreground">{entry.model}</p>
-                    <span className="num shrink-0 rounded-full border border-border bg-surface px-2.5 py-0.5 text-[10px] font-bold text-muted-foreground">
-                      {entry.count}
-                    </span>
-                  </Link>
+                    index={i}
+                    to={modelHref(entry.model)}
+                    title={entry.model}
+                    meta={<Badge variant="neutral" className="tabular-nums">{entry.count}</Badge>}
+                  />
                 ))}
-              </motion.div>
+              </HubTileGrid>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                {t("makeHub.noModelMatch", "No models match “{q}”.", { q: modelFilter.trim() })}
-              </p>
+              <Card padding="none">
+                <EmptyState
+                  icon={Search}
+                  title={t("makeHub.noModelMatch", "No models match “{q}”.", { q: modelFilter.trim() })}
+                  actionLabel={t("makeHub.clearSearch", "Clear search")}
+                  onAction={() => setModelFilter("")}
+                />
+              </Card>
             )}
-          </motion.section>
+          </m.section>
         )}
 
         {insight && insight.top_districts.length > 0 && (
-          <motion.section variants={revealItem}>
-            <SectionHeader eyebrow={t("makeHub.geography", "Geography")} title={t("makeHub.topDistricts", "Top districts")} className="mb-8" />
-            <motion.div variants={revealContainer} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {insight.top_districts.map((entry) => (
-                <Link
+          <m.section variants={revealItem}>
+            <SectionHeading eyebrow={t("makeHub.geography", "Geography")} title={t("makeHub.topDistricts", "Top districts")} />
+            <HubTileGrid>
+              {insight.top_districts.map((entry, i) => (
+                <HubLinkTile
                   key={entry.district}
+                  index={i}
                   to={`/locations/${encodeURIComponent(entry.district)}`}
-                  className="group rounded-2xl border border-border bg-card p-5 shadow-soft transition-all hover:-translate-y-1 hover:border-primary/30 no-underline"
-                >
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-3.5 w-3.5 text-primary" aria-hidden />
-                    <p className="text-[14px] font-bold text-foreground">{entry.district}</p>
-                  </div>
-                  <p className="num mt-3 text-lg font-bold text-foreground">
-                    {entry.avg_price_lkr != null ? formatPrice(entry.avg_price_lkr) : t("common.priceNa", "Price N/A")}
-                  </p>
-                </Link>
+                  icon={<MapPin className="h-4 w-4 shrink-0 text-primary" aria-hidden />}
+                  title={entry.district}
+                  value={entry.avg_price_lkr != null ? formatPrice(entry.avg_price_lkr) : t("common.priceNa", "Price N/A")}
+                />
               ))}
-            </motion.div>
-          </motion.section>
+            </HubTileGrid>
+          </m.section>
         )}
+
+        {nothingYet ? (
+          <m.section variants={revealItem}>
+            <Card padding="none">
+              <EmptyState
+                icon={Car}
+                title={t("makeHub.emptyTitle", "No {make} listings indexed yet", { make: canonicalMake })}
+                body={t("makeHub.emptyBody", "Models and districts appear here as soon as the next scan finds {make} ads.", { make: canonicalMake })}
+              />
+            </Card>
+          </m.section>
+        ) : null}
 
         {recentListings.length > 0 && (
-          <motion.section variants={revealItem}>
-            <SectionHeader eyebrow={t("makeHub.liveInventory", "Live inventory")} title={t("makeHub.recent", "Recent listings")} className="mb-8" />
-            <motion.div variants={revealContainer} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {recentListings.map((listing) => (
-                <motion.div key={listing.id} variants={revealItem}>
+          <m.section variants={revealItem}>
+            <SectionHeading eyebrow={t("makeHub.liveInventory", "Live inventory")} title={t("makeHub.recent", "Recent listings")} />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {recentListings.map((listing, i) => (
+                <m.div key={listing.id} variants={listItem} custom={i} initial="hidden" animate="show" className="min-w-0">
                   <ListingCard listing={listing} />
-                </motion.div>
+                </m.div>
               ))}
-            </motion.div>
-          </motion.section>
+            </div>
+          </m.section>
         )}
 
-        <Button asChild className="w-full sm:w-auto">
+        <Button asChild size="lg" className="w-full sm:w-auto">
           <Link to={`/?make=${encodeURIComponent(makeParam)}#market`}>
-            {t("makeHub.browseAll", "Browse all {make} listings", { make: canonicalMake })} <ArrowRight className="h-4 w-4" aria-hidden />
+            {t("makeHub.browseAll", "Browse all {make} listings", { make: canonicalMake })} <ArrowRight aria-hidden />
           </Link>
         </Button>
       </PageBody>

@@ -2,8 +2,10 @@ import { memo, useMemo } from "react";
 import type { DistrictVelocityPoint } from "@/types/car";
 import {
   aggregateDistrictVelocityByProvince,
+  provinceKey,
   type ProvinceVelocityPoint,
 } from "@/lib/provinceMap";
+import { useAppPreferences } from "@/lib/appPreferences";
 
 interface ProvinceVelocityStripProps {
   data: DistrictVelocityPoint[];
@@ -49,35 +51,41 @@ function ProvinceCell({
   maxScore: number;
   maxCount: number;
 }) {
+  const { t } = useAppPreferences();
+  const provinceName = t(provinceKey(point.province), point.province);
   const color = velocityColor(point.velocity_score, maxScore);
   const intensity = maxCount > 0 ? clamp(point.listing_count / maxCount, 0.18, 1) : 0.18;
 
   return (
     <article
-      className="relative min-w-0 overflow-hidden rounded-xl border border-border px-3 py-3 transition-all duration-300 ease-apple hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-soft"
+      className="relative min-w-0 overflow-hidden rounded-xl border border-border px-3 py-3 transition-ui duration-medium ease-decelerate hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-soft"
       style={{
         background: `linear-gradient(160deg, ${color.replace("rgb", "rgba").replace(")", `, ${0.22 + intensity * 0.35})`)} 0%, rgba(17,17,17,0.85) 100%)`,
         boxShadow: `inset 0 0 0 1px ${color.replace("rgb", "rgba").replace(")", ", 0.25)")}`,
       }}
-      title={`${point.province}: ${formatVelocityPct(point.velocity_score)} velocity · ${point.listing_count.toLocaleString()} listings`}
+      title={t("provinceVelocity.cellTitle", "{province}: {pct} velocity · {n} listings", {
+        province: provinceName,
+        pct: formatVelocityPct(point.velocity_score),
+        n: point.listing_count.toLocaleString(),
+      })}
     >
       <div
         className="absolute inset-x-0 top-0 h-1"
         style={{ background: color, opacity: 0.85 }}
         aria-hidden
       />
-      <p className="text-[12px] font-semibold text-foreground/90">
-        {point.province}
+      <p className="text-caption font-semibold text-foreground/90">
+        {provinceName}
       </p>
       {/* Cell background is an always-dark data-viz gradient (not a theme surface), so text stays fixed-light regardless of theme */}
-      <p className="mt-2 num text-lg font-semibold tracking-tight text-emerald-300">
+      <p className="mt-2 num text-callout font-semibold tracking-tight text-deal-good-text">
         {formatVelocityPct(point.velocity_score)}
       </p>
-      <p className="mt-1 text-[11px] text-muted-foreground num">
-        {point.listing_count.toLocaleString()} listings
+      <p className="mt-1 text-caption text-muted-foreground num">
+        {t("provinceVelocity.listings", "{n} listings", { n: point.listing_count.toLocaleString() })}
       </p>
-      <p className="mt-0.5 text-[10px] text-muted-foreground/80 num">
-        +{point.new_7d_count.toLocaleString()} new · 7d
+      <p className="mt-0.5 text-caption text-muted-foreground/80 num">
+        {t("provinceVelocity.new7d", "+{n} new · 7d", { n: point.new_7d_count.toLocaleString() })}
       </p>
     </article>
   );
@@ -89,6 +97,7 @@ export const ProvinceVelocityStrip = memo(function ProvinceVelocityStrip({
   isError,
   onRetry,
 }: ProvinceVelocityStripProps) {
+  const { t } = useAppPreferences();
   const provinces = useMemo(() => aggregateDistrictVelocityByProvince(data), [data]);
 
   const maxScore = useMemo(
@@ -120,16 +129,16 @@ export const ProvinceVelocityStrip = memo(function ProvinceVelocityStrip({
   if (isError) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border bg-surface px-4 py-6 text-center">
-        <p className="text-sm text-muted-foreground">
-          Province velocity temporarily unavailable — market API returned an error.
+        <p className="text-footnote text-muted-foreground">
+          {t("provinceVelocity.error", "Province velocity temporarily unavailable — market API returned an error.")}
         </p>
         {onRetry ? (
           <button
             type="button"
             onClick={onRetry}
-            className="rounded-2xl border border-border bg-card px-3 py-1.5 text-[12px] font-medium text-foreground transition-colors hover:border-primary/30 hover:text-primary-bright"
+            className="rounded-2xl border border-border bg-card px-3 py-1.5 text-caption font-medium text-foreground transition-colors hover:border-primary/30 hover:text-primary-bright"
           >
-            Retry
+            {t("common.retry", "Retry")}
           </button>
         ) : null}
       </div>
@@ -138,8 +147,8 @@ export const ProvinceVelocityStrip = memo(function ProvinceVelocityStrip({
 
   if (!provinces.length) {
     return (
-      <div className="rounded-xl border border-border bg-surface px-4 py-6 text-center text-sm text-muted-foreground">
-        Province velocity unavailable — district points not yet indexed.
+      <div className="rounded-xl border border-border bg-surface px-4 py-6 text-center text-footnote text-muted-foreground">
+        {t("provinceVelocity.empty", "Province velocity unavailable — district points not yet indexed.")}
       </div>
     );
   }
@@ -147,18 +156,18 @@ export const ProvinceVelocityStrip = memo(function ProvinceVelocityStrip({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2 text-[12px] font-semibold text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2 text-caption font-semibold text-muted-foreground">
           <span className="rounded-2xl border border-border bg-surface px-2.5 py-1 text-foreground">
-            Province rollup
+            {t("provinceVelocity.rollup", "Province rollup")}
           </span>
           <span className="rounded-2xl border border-border bg-surface px-2.5 py-1">
-            Sum volume · weighted velocity
+            {t("provinceVelocity.method", "Sum volume · weighted velocity")}
           </span>
         </div>
         {hottest ? (
-          <p className="text-[11px] text-muted-foreground">
-            Hottest:{" "}
-            <span className="font-semibold text-emerald-600 dark:text-emerald-400">{hottest.province}</span>
+          <p className="text-caption text-muted-foreground">
+            {t("provinceVelocity.hottest", "Hottest:")}{" "}
+            <span className="font-semibold text-deal-good-text">{t(provinceKey(hottest.province), hottest.province)}</span>
             <span className="num"> · {formatVelocityPct(hottest.velocity_score)}</span>
           </p>
         ) : null}
@@ -167,7 +176,7 @@ export const ProvinceVelocityStrip = memo(function ProvinceVelocityStrip({
       <div
         className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-9"
         role="list"
-        aria-label="Province demand velocity"
+        aria-label={t("provinceVelocity.aria", "Province demand velocity")}
       >
         {provinces.map((point) => (
           <div key={point.province} role="listitem">

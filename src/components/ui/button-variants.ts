@@ -1,30 +1,52 @@
 import { cva, type VariantProps } from "class-variance-authority";
 
+/**
+ * Button — 4 variants × 3 sizes (web/premium-p0).
+ *   primary     filled brand blue (one per view)
+ *   secondary   quiet filled surface
+ *   tertiary    text-only, tinted on hover
+ *   destructive filled red
+ * Sizes sm 32 · md 40 · lg 48 (+ icon / icon-sm squares). Press scales to 0.97,
+ * focus shows the one 2px ring. Legacy names (default/outline/ghost/glass/link,
+ * default/xs size) map onto the set so older call sites keep working.
+ */
+// Hover lift (−1px) on fine pointers only, for the filled variants.
+const LIFT = "motion-safe:[@media(hover:hover)_and_(pointer:fine)]:hover:-translate-y-px";
+const PRIMARY = `${LIFT} bg-primary text-primary-foreground shadow-e1 hover:bg-primary/90`;
+const SECONDARY = `${LIFT} border border-border bg-surface-2 text-foreground hover:bg-surface-3`;
+const TERTIARY = "text-primary hover:bg-primary/10";
+const DESTRUCTIVE = `${LIFT} bg-destructive text-destructive-foreground shadow-e1 hover:bg-destructive/90`;
+
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-semibold tracking-[-0.01em] ring-offset-background transition-[color,background-color,border-color,box-shadow,transform] duration-[var(--dur-fast)] ease-[var(--ease-standard)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.97] motion-reduce:active:scale-100 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "relative inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-full font-semibold tracking-normal transition-ui duration-short ease-standard tap-44 active:scale-[0.97] active:duration-micro motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-45 aria-busy:cursor-progress [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground shadow-soft hover:bg-primary/90 hover:shadow-soft-lg active:scale-[0.97]",
-        destructive: "bg-destructive text-destructive-foreground shadow-soft hover:bg-destructive/90 active:scale-[0.97]",
-        outline: "border border-border bg-card/60 text-foreground backdrop-blur-xl hover:bg-card/90 hover:border-primary/30 hover:shadow-soft dark:border-white/10 dark:bg-white/[0.05] dark:hover:bg-white/[0.09] active:scale-[0.97]",
-        secondary: "bg-secondary text-secondary-foreground backdrop-blur-md hover:bg-secondary/80 hover:shadow-soft active:scale-[0.97]",
-        ghost: "text-foreground/80 hover:bg-accent/80 hover:text-foreground active:scale-[0.97]",
-        link: "text-primary underline-offset-4 hover:underline",
-        glass: "border border-border bg-card/50 text-foreground backdrop-blur-2xl shadow-soft hover:bg-card/80 active:scale-[0.97] dark:border-white/10 dark:bg-white/[0.06] dark:hover:bg-white/[0.10]",
+        primary: PRIMARY,
+        secondary: SECONDARY,
+        tertiary: TERTIARY,
+        destructive: DESTRUCTIVE,
+        // legacy aliases
+        default: PRIMARY,
+        outline: SECONDARY,
+        glass: SECONDARY,
+        ghost: "text-foreground/80 hover:bg-surface-2 hover:text-foreground",
+        link: "text-primary underline-offset-4 hover:underline active:scale-100",
       },
       size: {
-        default: "h-10 px-5 py-2",
-        xs: "h-7 px-3 text-2xs",
-        sm: "h-8 px-3.5 text-sm",
-        lg: "h-12 px-8 text-base",
-        icon: "h-10 w-10",
-        "icon-sm": "h-8 w-8",
+        sm: "h-8 px-3.5 text-footnote [&_svg]:size-4",
+        md: "h-10 px-5 text-body [&_svg]:size-4",
+        lg: "h-12 px-7 text-callout [&_svg]:size-5",
+        icon: "h-10 w-10 [&_svg]:size-5",
+        "icon-sm": "h-8 w-8 [&_svg]:size-4",
+        // legacy aliases
+        default: "h-10 px-5 text-body [&_svg]:size-4",
+        xs: "h-8 px-3 text-caption [&_svg]:size-4",
       },
     },
     defaultVariants: {
-      variant: "default",
-      size: "default",
+      variant: "primary",
+      size: "md",
     },
   },
 );

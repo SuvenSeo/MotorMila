@@ -33,7 +33,7 @@ function TickerChange({ pct, stableLabel }: { pct: number | null; stableLabel: s
   const tone = changeTone(pct);
   const Icon = tone === "up" ? ArrowUpRight : tone === "down" ? ArrowDownRight : Minus;
   return (
-    <span className={cn("inline-flex items-center gap-0.5 num text-[11px] font-semibold", TONE_STYLES[tone].text)}>
+    <span className={cn("inline-flex items-center gap-0.5 num text-caption font-semibold", TONE_STYLES[tone].text)}>
       <Icon className="h-3 w-3" aria-hidden />
       {tone === "stable" ? stableLabel : formatChangePct(Number(pct))}
     </span>
@@ -88,7 +88,7 @@ export const MarketTicker = memo(function MarketTicker({ rows, onSelect }: Marke
       ? { animationPlayState: "paused" as const }
       : undefined;
   const stableLabel = t("ticker.stable", "stable");
-  const itemClass = "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-1 py-0.5 align-middle text-[12px]";
+  const itemClass = "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-1 py-0.5 align-middle text-caption";
   return (
     <section ref={ref} aria-label="Trending models ticker" className="market-ticker border-b border-border bg-surface/60">
       <div className="market-ticker__viewport relative flex overflow-hidden">

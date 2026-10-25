@@ -37,15 +37,15 @@ export function AddToCompareButton({
         }
       }}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border font-semibold transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.97] motion-reduce:active:scale-100",
-        size === "sm" ? "min-h-9 px-3 text-[12px]" : "min-h-11 px-4 text-[13px]",
+        "inline-flex select-none items-center gap-1.5 rounded-full border font-semibold transition-[background-color,border-color,color,transform] duration-short ease-standard active:scale-[0.97] active:duration-micro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100",
+        size === "sm" ? "h-9 px-3.5 text-footnote" : "h-11 px-4 text-body",
         active
-          ? "border-primary/40 bg-primary/15 text-primary-bright"
-          : "border-border bg-card text-foreground hover:border-primary/40",
+          ? "border-primary/30 bg-primary/10 text-primary"
+          : "border-border bg-surface-1 text-foreground hover:bg-surface-2",
         className,
       )}
     >
-      <CompareGlyph active={active} idle={Scale} className="h-3.5 w-3.5" />
+      <CompareGlyph active={active} idle={Scale} className="h-4 w-4" />
       {active ? t("compareTray.added", "Comparing") : t("compareTray.add", "Compare")}
     </button>
   );

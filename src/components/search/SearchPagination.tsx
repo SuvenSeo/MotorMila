@@ -1,7 +1,10 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { m } from "motion/react";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { cn } from "@/lib/utils";
 import { paginationItems } from "@/lib/searchSuggestions";
+import { Button } from "@/components/ui/button";
+import { spring, useReducedMotionOrLowData } from "@/lib/motion";
 
 export interface SearchPaginationProps {
   page: number;
@@ -11,20 +14,21 @@ export interface SearchPaginationProps {
   onPageChange: (page: number) => void;
 }
 
+/** Results pages: range caption + prev / numbered / next (kit Buttons). The current page carries a pill that slides between numbers. */
 export function SearchPagination({ page, totalPages, total, pageSize, onPageChange }: SearchPaginationProps) {
   const { t } = useAppPreferences();
+  const calm = useReducedMotionOrLowData();
   if (totalPages <= 1) return null;
   const from = (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
-  const btn =
-    "flex h-11 min-w-11 items-center justify-center rounded-full border border-border px-2 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-30 sm:h-9 sm:min-w-9";
+  const square = "h-11 min-w-11 px-0 sm:h-9 sm:min-w-9";
 
   return (
     <nav
       aria-label={t("search.paginationAria", "Results pages")}
-      className="mt-8 flex flex-col items-center gap-3 border-t border-border pt-6 sm:flex-row sm:justify-between"
+      className="mt-10 flex flex-col items-center gap-3 border-t border-separator pt-6 sm:flex-row sm:justify-between"
     >
-      <p className="text-[12px] text-muted-foreground">
+      <p className="num text-footnote text-label-2">
         {t("search.showingRange", "{from}–{to} of {total}", {
           from: from.toLocaleString(),
           to: to.toLocaleString(),
@@ -32,42 +36,59 @@ export function SearchPagination({ page, totalPages, total, pageSize, onPageChan
         })}
       </p>
       <div className="flex items-center gap-1">
-        <button
+        <Button
           type="button"
+          variant="secondary"
+          size="icon"
           aria-label={t("search.prevPage", "Previous page")}
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
-          className={btn}
+          className={square}
         >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
+          <ChevronLeft aria-hidden />
+        </Button>
         {paginationItems(page, totalPages).map((item, i) =>
           item === "gap" ? (
-            <span key={`gap-${i}`} aria-hidden className="hidden px-1 text-muted-foreground sm:inline">
+            <span key={`gap-${i}`} aria-hidden className="hidden px-1 text-label-2 sm:inline">
               …
             </span>
           ) : (
-            <button
+            <Button
               key={item}
               type="button"
+              variant="ghost"
               aria-current={item === page ? "page" : undefined}
               aria-label={t("search.pageN", "Page {n}", { n: item })}
               onClick={() => onPageChange(item)}
-              className={cn(btn, "num", item === page ? "border-primary/40 bg-primary/10 font-semibold text-primary-bright" : "hidden sm:flex")}
+              className={cn(
+                square,
+                "num relative px-2 font-semibold",
+                item === page ? "text-primary-foreground hover:bg-transparent hover:text-primary-foreground" : "hidden text-label-2 sm:inline-flex",
+              )}
             >
-              {item}
-            </button>
+              {item === page ? (
+                <m.span
+                  layoutId="search-page-pill"
+                  aria-hidden
+                  className="absolute inset-0 rounded-full bg-primary shadow-e1"
+                  transition={calm ? { duration: 0 } : spring.snappy}
+                />
+              ) : null}
+              <span className="relative">{item}</span>
+            </Button>
           ),
         )}
-        <button
+        <Button
           type="button"
+          variant="secondary"
+          size="icon"
           aria-label={t("search.nextPage", "Next page")}
           disabled={page >= totalPages}
           onClick={() => onPageChange(page + 1)}
-          className={btn}
+          className={square}
         >
-          <ChevronRight className="h-4 w-4" />
-        </button>
+          <ChevronRight aria-hidden />
+        </Button>
       </div>
     </nav>
   );

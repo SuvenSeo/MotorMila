@@ -3,20 +3,19 @@ import { Area, AreaChart, YAxis } from "recharts";
 import { Minus, TrendingDown, TrendingUp } from "lucide-react";
 import type { PriceTrendPoint } from "@/types/car";
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
-import { changeTone, formatChangePct, formatMnShort, paddedDomain, TONE_STYLES } from "@/lib/dataSanity";
-import { formatPriceLkrMillions } from "@/lib/formatting";
+import { formatChangePct, formatMnShort, paddedDomain } from "@/lib/dataSanity";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { cn } from "@/lib/utils";
-import type { ReactNode } from "react";
-import { CountUpOnView, FlowLkr } from "@/components/motion/FlowNumber";
+import { Badge } from "@/components/ui/badge";
+import { StatTile, LkrValue, CountValue, FlowValue } from "@/components/ui/stat-tile";
+import { toneBadge, toneColor, toneFor } from "@/components/ui/chart-theme";
 
 /**
- * KPI strip for the Trends page. Three cards with mini sparklines (shadcn
- * chart on Recharts), computed from the real visible trend series: current
- * median, change vs the oldest month, and sample coverage.
- * Returns null when there is no series to summarize.
+ * KPI strip for the Trends page: current median, change vs the oldest month,
+ * and sample coverage, each with a token-coloured sparkline from the real
+ * visible series. Loading shows three tile skeletons; no series → null (the
+ * chart below carries the empty state).
  */
-export function TrendKpis({ points }: { points: PriceTrendPoint[] }) {
+export function TrendKpis({ points, loading = false }: { points: PriceTrendPoint[]; loading?: boolean }) {
   const { t } = useAppPreferences();
   const kpis = useMemo(() => {
     const clean = points.filter((p) => Number.isFinite(p.median_price) && p.median_price > 0);
@@ -30,78 +29,82 @@ export function TrendKpis({ points }: { points: PriceTrendPoint[] }) {
     return { first, last, changePct, spark, totalSamples, months: clean.length, domain };
   }, [points]);
 
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" aria-busy="true">
+        {[0, 1, 2].map((i) => (
+          <StatTile key={i} loading label={"\u00a0"} value={null} hint=" " />
+        ))}
+      </div>
+    );
+  }
   if (!kpis) return null;
 
-  const tone = changeTone(kpis.changePct);
+  const tone = toneFor(kpis.changePct);
   const DeltaIcon = tone === "down" ? TrendingDown : tone === "up" ? TrendingUp : Minus;
   const chartConfig = {
-    median: { label: t("trendKpis.median", "Median"), color: TONE_STYLES[tone].stroke },
+    median: { label: t("trendKpis.median", "Median"), color: toneColor(tone) },
   } satisfies ChartConfig;
-
   const changeRounded = Math.round(kpis.changePct * 10) / 10;
-  const cards: Array<{ label: string; value: string; sub: string; delta?: boolean; animated?: ReactNode }> = [
-    {
-      label: t("trendKpis.medianNow", "Median now"),
-      value: formatPriceLkrMillions(kpis.last.median_price),
-      animated: <FlowLkr countUp value={kpis.last.median_price} label={formatPriceLkrMillions(kpis.last.median_price)} />,
-      sub: `${formatMnShort(kpis.last.median_price)} · ${kpis.last.month}`,
-    },
-    {
-      label: t("trendKpis.changeVs", "Change vs {month}", { month: kpis.first.month }),
-      value: tone === "stable" ? t("trendTone.stableShort", "Stable") : formatChangePct(kpis.changePct),
-      animated:
-        tone === "stable" ? undefined : (
-          <CountUpOnView
-            value={Math.abs(changeRounded)}
-            prefix={changeRounded > 0 ? "+" : changeRounded < 0 ? "\u2212" : ""}
-            suffix="%"
-            format={{ minimumFractionDigits: 1, maximumFractionDigits: 1 }}
-            label={formatChangePct(kpis.changePct)}
-          />
-        ),
-      sub: t("trendKpis.window", "Across the visible window"),
-      delta: true,
-    },
-    {
-      label: t("trendKpis.sampled", "Listings sampled"),
-      value: kpis.totalSamples.toLocaleString("en-LK"),
-      animated: <CountUpOnView value={kpis.totalSamples} label={kpis.totalSamples.toLocaleString("en-LK")} />,
-      sub: t("trendKpis.months", "{n} months of history", { n: kpis.months }),
-    },
-  ];
+
+  const spark = (
+    <ChartContainer config={chartConfig} className="mt-3 aspect-auto h-12 w-full" aria-hidden>
+      <AreaChart data={kpis.spark} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
+        {kpis.domain && <YAxis hide domain={kpis.domain} />}
+        <Area
+          dataKey="median"
+          type="monotone"
+          stroke="var(--color-median)"
+          strokeWidth={2}
+          fill="var(--color-median)"
+          fillOpacity={0.12}
+          isAnimationActive={false}
+          dot={false}
+        />
+      </AreaChart>
+    </ChartContainer>
+  );
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label={t("trendKpis.aria", "Trend key figures")}>
-      {cards.map((c) => (
-        <div key={c.label} className="rounded-2xl border border-border bg-card p-4 shadow-soft">
-          <p className="text-[12px] font-semibold text-muted-foreground">{c.label}</p>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <p className="num text-[1.5rem] font-bold leading-tight tracking-tight text-foreground">{c.animated ?? c.value}</p>
-            {c.delta && (
-              <span className={cn("inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-bold", TONE_STYLES[tone].chip)}>
-                <DeltaIcon className="h-3 w-3" aria-hidden />
-                {tone === "stable" ? `<1%` : `${Math.abs(kpis.changePct).toFixed(1)}%`}
-              </span>
-            )}
-          </div>
-          <p className="mt-0.5 text-[11px] font-medium text-muted-foreground">{c.sub}</p>
-          <ChartContainer config={chartConfig} className="mt-2 aspect-auto h-14 w-full" aria-hidden>
-            <AreaChart data={kpis.spark} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
-              {kpis.domain && <YAxis hide domain={kpis.domain} />}
-              <Area
-                dataKey="median"
-                type="monotone"
-                stroke="var(--color-median)"
-                strokeWidth={2}
-                fill="var(--color-median)"
-                fillOpacity={0.12}
-                isAnimationActive={false}
-                dot={false}
+      <StatTile
+        label={t("trendKpis.medianNow", "Median now")}
+        value={<LkrValue value={kpis.last.median_price} />}
+        hint={`${formatMnShort(kpis.last.median_price)} · ${kpis.last.month}`}
+      >
+        {spark}
+      </StatTile>
+      <StatTile
+        label={t("trendKpis.changeVs", "Change vs {month}", { month: kpis.first.month })}
+        value={
+          <span className="inline-flex flex-wrap items-center gap-2">
+            {tone === "stable" ? (
+              t("trendTone.stableShort", "Stable")
+            ) : (
+              <FlowValue
+                value={changeRounded}
+                format={{ minimumFractionDigits: 1, maximumFractionDigits: 1, signDisplay: "exceptZero" }}
+                suffix="%"
+                label={formatChangePct(kpis.changePct)}
               />
-            </AreaChart>
-          </ChartContainer>
-        </div>
-      ))}
+            )}
+            <Badge variant={toneBadge(tone)} className="font-sans">
+              <DeltaIcon aria-hidden />
+              {tone === "stable" ? "<1%" : tone === "up" ? t("trendTone.up", "Price up") : t("trendTone.down", "Price down")}
+            </Badge>
+          </span>
+        }
+        hint={t("trendKpis.window", "Across the visible window")}
+      >
+        {spark}
+      </StatTile>
+      <StatTile
+        label={t("trendKpis.sampled", "Listings sampled")}
+        value={<CountValue value={kpis.totalSamples} />}
+        hint={t("trendKpis.months", "{n} months of history", { n: kpis.months })}
+      >
+        {spark}
+      </StatTile>
     </div>
   );
 }

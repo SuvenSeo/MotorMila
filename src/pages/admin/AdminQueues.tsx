@@ -2,8 +2,13 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ExternalLink, RefreshCw, X } from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { SimpleSelect } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 import {
   approveListing,
   getAdminLeads,
@@ -36,47 +41,51 @@ function lkr(n: number | null | undefined): string {
 
 function Panel({ title, hint, children, onRefresh, filters }: { title: string; hint: string; children: React.ReactNode; onRefresh: () => void; filters?: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border border-border bg-card p-5 shadow-soft">
+    <Card>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold text-foreground">{title}</h2>
-          <p className="text-[12px] text-muted-foreground">{hint}</p>
+          <h2 className="text-callout font-semibold text-foreground">{title}</h2>
+          <p className="mt-0.5 text-footnote text-label-2">{hint}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {filters}
-          <button type="button" onClick={onRefresh} className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-[12px] font-semibold text-foreground hover:border-primary/40">
-            <RefreshCw className="h-3.5 w-3.5" aria-hidden /> Refresh
-          </button>
+          <Button type="button" variant="secondary" size="sm" onClick={onRefresh}>
+            <RefreshCw aria-hidden /> Refresh
+          </Button>
         </div>
       </div>
       {children}
-    </section>
+    </Card>
   );
 }
 
 function FilterSelect<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: Array<[NoInfer<T>, string]>; onChange: (v: NoInfer<T>) => void }) {
   return (
-    <label className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-muted-foreground">
+    <span className="inline-flex items-center gap-2 text-footnote font-medium text-label-2">
       {label}
-      <select value={value} onChange={(e) => onChange(e.target.value as T)} className="h-9 rounded-full border border-border bg-surface px-3 text-[12px] text-foreground">
-        {options.map(([v, l]) => (
-          <option key={v} value={v}>
-            {l}
-          </option>
-        ))}
-      </select>
-    </label>
+      <SimpleSelect
+        aria-label={label}
+        value={value}
+        onValueChange={(v) => onChange(v as T)}
+        options={options.map(([v, l]) => ({ value: v, label: l }))}
+        className="h-8 w-[8.5rem]"
+      />
+    </span>
   );
 }
 
 function StateBlock({ loading, error, empty }: { loading: boolean; error: unknown; empty: boolean }) {
-  if (loading) return <div className="space-y-2"><Skeleton className="h-16 rounded-xl" /><Skeleton className="h-16 rounded-xl" /></div>;
-  if (error) return <p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-[13px] text-destructive">{error instanceof Error ? error.message : "Failed to load."}</p>;
-  if (empty) return <p className="rounded-xl border border-dashed border-border p-6 text-center text-[13px] text-muted-foreground">Nothing here. Queue is clear.</p>;
+  if (loading)
+    return (
+      <div className="space-y-2" aria-busy="true">
+        <Skeleton shape="row" className="h-20" />
+        <Skeleton shape="row" className="h-20" />
+      </div>
+    );
+  if (error) return <ErrorState title="Couldn't load this queue" body={error instanceof Error ? error.message : "Failed to load."} className="py-8" />;
+  if (empty) return <EmptyState icon={Check} title="Nothing here. Queue is clear." className="rounded-control border border-dashed border-border py-8" />;
   return null;
 }
-
-const actionBtn = "inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-semibold disabled:opacity-40";
 
 // ── Moderation queue ────────────────────────────────────────────────────────
 export function ModerationQueuePanel() {
@@ -102,35 +111,35 @@ export function ModerationQueuePanel() {
       <StateBlock loading={q.isLoading} error={q.error} empty={!q.isLoading && !q.error && items.length === 0} />
       <ul className="space-y-2">
         {items.map((it) => (
-          <li key={it.id} className="rounded-xl border border-border bg-surface/60 p-3">
+          <li key={it.id} className="rounded-control border border-border bg-surface-2 p-3.5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <p className="text-[14px] font-semibold text-foreground">
+                <p className="text-body font-semibold text-foreground">
                   {it.title || [it.year, it.make, it.model].filter(Boolean).join(" ") || `Listing #${it.id}`}
                 </p>
-                <p className="text-[12px] text-muted-foreground">
+                <p className="text-footnote text-label-2">
                   #{it.id} · {lkr(it.priceLkr)} · {it.district || "—"} · {it.status || "—"} · submitted {fmtDate(it.createdAt)}
                   {it.contactName ? ` · by ${it.contactName}` : ""}
                 </p>
-                {it.description ? <p className="mt-1 line-clamp-3 text-[12px] text-foreground/80">{it.description}</p> : null}
+                {it.description ? <p className="mt-1 line-clamp-3 text-caption text-label-1">{it.description}</p> : null}
                 {Array.isArray(it.images) && it.images.length > 0 ? (
                   <div className="mt-2 flex gap-1.5 overflow-x-auto">
                     {it.images.slice(0, 4).map((src) => (
-                      <img key={src} src={src} alt="" loading="lazy" className="h-14 w-20 shrink-0 rounded-md border border-border object-cover" />
+                      <img key={src} src={src} alt="" loading="lazy" className="h-14 w-20 shrink-0 rounded-control border border-border object-cover" />
                     ))}
                   </div>
                 ) : null}
               </div>
               <div className="flex gap-2">
-                <button
+                <Button
                   type="button"
                   disabled={approve.isPending || it.status === "published" || it.status === "removed"}
                   onClick={() => approve.mutate(it.id)}
-                  className={cn(actionBtn, "bg-emerald-600 text-white hover:bg-emerald-600/90")}
-                >
-                  <Check className="h-3.5 w-3.5" aria-hidden /> Approve
-                </button>
-                <button
+                  size="sm"
+                  className="bg-deal-good text-deal-good-foreground hover:bg-deal-good/90">
+                  <Check aria-hidden /> Approve
+                </Button>
+                <Button
                   type="button"
                   disabled={reject.isPending || it.status === "draft"}
                   onClick={() => {
@@ -138,10 +147,12 @@ export function ModerationQueuePanel() {
                     if (reason === undefined) return;
                     reject.mutate({ id: it.id, reason });
                   }}
-                  className={cn(actionBtn, "border border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/15")}
+                  size="sm"
+                  variant="secondary"
+                  className="text-deal-high-text"
                 >
-                  <X className="h-3.5 w-3.5" aria-hidden /> Reject
-                </button>
+                  <X aria-hidden /> Reject
+                </Button>
               </div>
             </div>
           </li>
@@ -179,11 +190,11 @@ export function LeadsPanel() {
       <StateBlock loading={q.isLoading} error={q.error} empty={!q.isLoading && !q.error && items.length === 0} />
       <ul className="space-y-2">
         {items.map((l) => (
-          <li key={l.id} className="rounded-xl border border-border bg-surface/60 p-3">
+          <li key={l.id} className="rounded-control border border-border bg-surface-2 p-3.5">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0 flex-1 text-[12px] text-muted-foreground">
-                <p className="text-[14px] font-semibold text-foreground">
-                  {l.kind} · {l.name || "—"} <span className="font-normal text-muted-foreground">· {l.status}</span>
+              <div className="min-w-0 flex-1 text-caption text-label-2">
+                <p className="text-body font-semibold text-foreground">
+                  {l.kind} · {l.name || "—"} <span className="font-normal text-label-2">· {l.status}</span>
                 </p>
                 <p>
                   {l.phone || "—"}
@@ -195,15 +206,15 @@ export function LeadsPanel() {
                   {l.routed_to ? ` · routed to ${l.routed_to}` : ""}
                   {l.delivery_status ? ` (${l.delivery_status})` : ""}
                 </p>
-                {l.notes ? <p className="mt-1 text-foreground/80">{l.notes}</p> : null}
+                {l.notes ? <p className="mt-1 text-label-1">{l.notes}</p> : null}
               </div>
               <div className="flex flex-wrap gap-2">
-                <button type="button" disabled={update.isPending || l.status === "contacted"} onClick={() => update.mutate({ id: l.id, next: "contacted" })} className={cn(actionBtn, "bg-primary text-primary-foreground")}>
-                  <Check className="h-3.5 w-3.5" aria-hidden /> Contacted
-                </button>
-                <button type="button" disabled={update.isPending || l.status === "closed"} onClick={() => update.mutate({ id: l.id, next: "closed" })} className={cn(actionBtn, "border border-border bg-card text-foreground")}>
+                <Button type="button" disabled={update.isPending || l.status === "contacted"} onClick={() => update.mutate({ id: l.id, next: "contacted" })} size="sm">
+                  <Check aria-hidden /> Contacted
+                </Button>
+                <Button type="button" disabled={update.isPending || l.status === "closed"} onClick={() => update.mutate({ id: l.id, next: "closed" })} size="sm" variant="secondary">
                   Close
-                </button>
+                </Button>
               </div>
             </div>
           </li>
@@ -245,29 +256,29 @@ export function RemovalRequestsPanel() {
           const overdue = r.status === "open" && r.dueAt && Date.parse(r.dueAt) < now;
           const href = r.listingUrl ? safeExternalUrl(r.listingUrl) : null;
           return (
-            <li key={r.id} className="rounded-xl border border-border bg-surface/60 p-3">
+            <li key={r.id} className="rounded-control border border-border bg-surface-2 p-3.5">
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0 flex-1 text-[12px] text-muted-foreground">
-                  <p className="text-[14px] font-semibold text-foreground">
+                <div className="min-w-0 flex-1 text-caption text-label-2">
+                  <p className="text-body font-semibold text-foreground">
                     {r.reference} · {r.reason || r.kind}{" "}
-                    {overdue ? <span className="ml-1 rounded-full bg-destructive/15 px-2 py-0.5 text-[11px] font-bold text-destructive">Overdue</span> : null}
+                    {overdue ? <Badge variant="danger" className="ml-1.5 align-middle">Overdue</Badge> : null}
                   </p>
                   <p>
                     {r.name || "—"} · {r.email || "—"}
                     {r.requesterRole ? ` · ${r.requesterRole}` : ""} · due {fmtDate(r.dueAt)}
                   </p>
                   {href ? (
-                    <a href={href} target="_blank" rel="noopener noreferrer nofollow" className="inline-flex items-center gap-1 break-all text-primary-bright">
+                    <a href={href} target="_blank" rel="noopener noreferrer nofollow" className="inline-flex items-center gap-1 break-all text-primary">
                       {r.listingUrl} <ExternalLink className="h-3 w-3" aria-hidden />
                     </a>
                   ) : null}
-                  {r.details ? <p className="mt-1 text-foreground/80">{r.details}</p> : null}
+                  {r.details ? <p className="mt-1 text-label-1">{r.details}</p> : null}
                   {r.resolutionNote ? <p className="mt-1 italic">Note: {r.resolutionNote}</p> : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {r.status === "open" ? (
                     <>
-                      <button
+                      <Button
                         type="button"
                         disabled={resolve.isPending}
                         onClick={() => {
@@ -275,11 +286,11 @@ export function RemovalRequestsPanel() {
                           if (note === undefined) return;
                           resolve.mutate({ id: r.id, next: "actioned", note });
                         }}
-                        className={cn(actionBtn, "bg-emerald-600 text-white hover:bg-emerald-600/90")}
-                      >
-                        <Check className="h-3.5 w-3.5" aria-hidden /> Approve
-                      </button>
-                      <button
+                        size="sm"
+                  className="bg-deal-good text-deal-good-foreground hover:bg-deal-good/90">
+                        <Check aria-hidden /> Approve
+                      </Button>
+                      <Button
                         type="button"
                         disabled={resolve.isPending}
                         onClick={() => {
@@ -287,15 +298,17 @@ export function RemovalRequestsPanel() {
                           if (note === undefined) return;
                           resolve.mutate({ id: r.id, next: "rejected", note });
                         }}
-                        className={cn(actionBtn, "border border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/15")}
+                        size="sm"
+                        variant="secondary"
+                        className="text-deal-high-text"
                       >
-                        <X className="h-3.5 w-3.5" aria-hidden /> Reject
-                      </button>
+                        <X aria-hidden /> Reject
+                      </Button>
                     </>
                   ) : (
-                    <button type="button" disabled={resolve.isPending} onClick={() => resolve.mutate({ id: r.id, next: "open" })} className={cn(actionBtn, "border border-border bg-card text-foreground")}>
+                    <Button type="button" disabled={resolve.isPending} onClick={() => resolve.mutate({ id: r.id, next: "open" })} size="sm" variant="secondary">
                       Reopen
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>

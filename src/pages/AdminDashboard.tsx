@@ -60,6 +60,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cardVariants } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { revealContainer, revealItem } from "@/lib/motion";
 import { BRAND } from "@/lib/brand";
@@ -95,12 +98,15 @@ const TAB_IDS: AdminTab[] = [
   "removals",
 ];
 
-function formatCount(value: number | undefined) {
-  return Number(value || 0).toLocaleString();
+// Missing data reads as "—", never as a real-looking 0.
+function formatCount(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) return "—";
+  return Number(value).toLocaleString();
 }
 
-function formatPrice(value: number | undefined) {
-  return `Rs ${Math.round(Number(value || 0)).toLocaleString()}`;
+function formatPrice(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(Number(value)) || Number(value) <= 0) return "—";
+  return `Rs ${Math.round(Number(value)).toLocaleString()}`;
 }
 
 function providerStatusLabel(provider: {
@@ -127,16 +133,16 @@ function MetricTile({
   icon: typeof Users;
 }) {
   return (
-    <div className="metric-tile group p-5 transition-all hover:-translate-y-0.5 hover:border-primary/25">
+    <div className={cardVariants({ padding: "md" })}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="tech-label text-muted-foreground">{label}</p>
-          <p className="mt-3 font-display text-[1.85rem] font-semibold tracking-tight text-foreground num">
+          <p className="text-footnote font-medium text-label-2">{label}</p>
+          <p className="mt-3 font-display text-title1 font-semibold tabular-nums text-foreground">
             {value}
           </p>
-          {hint ? <p className="mt-1.5 text-[12px] text-muted-foreground">{hint}</p> : null}
+          {hint ? <p className="mt-1.5 text-caption text-label-2">{hint}</p> : null}
         </div>
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 transition-colors group-hover:border-primary/30">
+        <div className="flex h-10 w-10 items-center justify-center rounded-control bg-primary/10">
           <Icon className="h-4 w-4 text-primary" aria-hidden />
         </div>
       </div>
@@ -153,17 +159,17 @@ function StatBars({
 }) {
   const max = Math.max(1, ...rows.map((row) => row.count));
   if (rows.length === 0) {
-    return <p className="text-[13px] text-muted-foreground">No data yet.</p>;
+    return <EmptyState icon={BarChart3} title="No data yet." className="py-8" />;
   }
   return (
     <div className="space-y-2">
       {rows.map((row) => (
         <div key={`${labelKey || "row"}-${row.label}`}>
-          <div className="mb-1 flex items-center justify-between gap-2 text-[12px]">
+          <div className="mb-1 flex items-center justify-between gap-2 text-caption">
             <span className="truncate font-semibold text-foreground">{row.label}</span>
-            <span className="num text-muted-foreground">{row.count.toLocaleString()}</span>
+            <span className="num text-label-2">{row.count.toLocaleString()}</span>
           </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-surface">
+          <div className="h-1.5 overflow-hidden">
             <div
               className="h-full rounded-full bg-primary/70"
               style={{ width: `${Math.max(4, (row.count / max) * 100)}%` }}
@@ -397,25 +403,24 @@ export default function AdminDashboard() {
       <div className="relative mx-auto max-w-[1320px] space-y-8 px-5 py-10 sm:px-6 lg:py-12">
         <motion.header variants={revealItem} className="flex flex-wrap items-end justify-between gap-6">
           <div className="max-w-2xl">
-            <p className="section-eyebrow mb-3 inline-flex items-center gap-2">
-              <Shield className="h-3.5 w-3.5" aria-hidden />
+            <p className="mb-2 inline-flex items-center gap-1.5 text-footnote font-semibold text-primary">
+              <Shield className="h-4 w-4" aria-hidden />
               Owner console
             </p>
-            <h1 className="display-1 text-foreground">
+            <h1 className="font-display text-title1 font-semibold text-foreground">
               {t("admin.title", "{brand} control.", { brand: BRAND.name })}
             </h1>
-            <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground">
+            <p className="mt-2 text-body text-label-2">
               Signed in as {user?.email || "admin"}. Manage seats, scrapers, analytics, feedback,
               dealers, permits, and platform security from one place.
             </p>
           </div>
           <Button
             type="button"
-            variant="outline"
-            className="h-11 gap-2 rounded-full border-border bg-card px-5 shadow-soft"
+            variant="secondary"
             onClick={refreshAll}
           >
-            <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+            <RefreshCw aria-hidden />
             Refresh all
           </Button>
         </motion.header>
@@ -456,7 +461,7 @@ export default function AdminDashboard() {
         </motion.section>
 
         <Tabs value={activeTab} onValueChange={setTab} className="space-y-6">
-          <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-2xl border border-border bg-card p-1.5">
+          <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-card bg-surface-2 p-1.5">
             {[
               { id: "overview", label: "Overview", icon: Sparkles },
               { id: "users", label: "Users", icon: Users },
@@ -476,7 +481,7 @@ export default function AdminDashboard() {
                 <TabsTrigger
                   key={tab.id}
                   value={tab.id}
-                  className="gap-1.5 rounded-xl px-3 py-2 text-[11px] font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                  className="gap-1.5"
                 >
                   <Icon className="h-3.5 w-3.5" />
                   {tab.label}
@@ -487,8 +492,8 @@ export default function AdminDashboard() {
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid gap-6 xl:grid-cols-2">
-              <div className="data-card p-6">
-                <h2 className="font-display text-lg font-semibold">Quick links</h2>
+              <div className={cardVariants({ padding: "lg" })}>
+                <h2 className="font-display text-callout font-semibold">Quick links</h2>
                 <div className="mt-4 grid gap-2 sm:grid-cols-2">
                   {[
                     { to: "/", label: "Dashboard" },
@@ -503,53 +508,53 @@ export default function AdminDashboard() {
                     <Link
                       key={item.to}
                       to={item.to}
-                      className="inline-flex items-center justify-between rounded-xl border border-border bg-surface px-3.5 py-2.5 text-[13px] font-semibold text-foreground no-underline transition-colors hover:border-primary/30"
+                      className="inline-flex items-center justify-between rounded-control border border-border bg-surface-2 px-3.5 py-2.5 text-footnote font-semibold text-foreground no-underline transition-colors hover:border-primary/30"
                     >
                       {item.label}
-                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                      <ExternalLink className="h-3.5 w-3.5 text-label-2" />
                     </Link>
                   ))}
                 </div>
               </div>
-              <div className="data-card p-6">
-                <h2 className="font-display text-lg font-semibold">Live market glance</h2>
+              <div className={cardVariants({ padding: "lg" })}>
+                <h2 className="font-display text-callout font-semibold">Live market glance</h2>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-xl border border-border bg-surface p-4">
-                    <p className="text-[12px] font-medium text-muted-foreground">
+                  <div className="rounded-control border border-border bg-surface-2 p-4">
+                    <p className="text-caption font-medium text-label-2">
                       Avg ask
                     </p>
-                    <p className="mt-2 text-lg font-semibold num">
+                    <p className="mt-2 text-callout font-semibold num">
                       {formatPrice(analytics?.listings.avgPriceLkr)}
                     </p>
                   </div>
-                  <div className="rounded-xl border border-border bg-surface p-4">
-                    <p className="text-[12px] font-medium text-muted-foreground">
+                  <div className="rounded-control border border-border bg-surface-2 p-4">
+                    <p className="text-caption font-medium text-label-2">
                       Active alerts
                     </p>
-                    <p className="mt-2 text-lg font-semibold num">
+                    <p className="mt-2 text-callout font-semibold num">
                       {formatCount(analytics?.alerts.active)}
                     </p>
                   </div>
-                  <div className="rounded-xl border border-border bg-surface p-4">
-                    <p className="text-[12px] font-medium text-muted-foreground">
+                  <div className="rounded-control border border-border bg-surface-2 p-4">
+                    <p className="text-caption font-medium text-label-2">
                       Market signals
                     </p>
-                    <p className="mt-2 text-lg font-semibold num">
+                    <p className="mt-2 text-callout font-semibold num">
                       {formatCount(analytics?.signals.total)}
                     </p>
                   </div>
-                  <div className="rounded-xl border border-border bg-surface p-4">
-                    <p className="text-[12px] font-medium text-muted-foreground">
+                  <div className="rounded-control border border-border bg-surface-2 p-4">
+                    <p className="text-caption font-medium text-label-2">
                       Scrape health
                     </p>
-                    <p className="mt-2 text-lg font-semibold num">
+                    <p className="mt-2 text-callout font-semibold num">
                       {formatCount(analytics?.scrapes.success)} ok /{" "}
                       {formatCount(analytics?.scrapes.failed)} fail
                     </p>
                   </div>
                 </div>
                 {systemQuery.data ? (
-                  <p className="mt-4 text-[12px] text-muted-foreground">
+                  <p className="mt-4 text-caption text-label-2">
                     DB {systemQuery.data.databaseOk ? "ok" : "down"} · App gate{" "}
                     {systemQuery.data.flags.appAccessEnforced ? "on" : "off"} · Pro gate{" "}
                     {systemQuery.data.flags.proAccessEnforced ? "on" : "off"}
@@ -562,10 +567,10 @@ export default function AdminDashboard() {
             </div>
 
             <div className="grid gap-6 xl:grid-cols-2">
-              <div className="data-card p-6">
+              <div className={cardVariants({ padding: "lg" })}>
                 <div className="mb-4 flex items-center gap-2">
                   <Activity className="h-4 w-4 text-primary" />
-                  <h2 className="font-display text-lg font-semibold">Top makes · live</h2>
+                  <h2 className="font-display text-callout font-semibold">Top makes · live</h2>
                 </div>
                 <StatBars
                   rows={(overview?.topMakes || []).map((row) => ({
@@ -574,24 +579,24 @@ export default function AdminDashboard() {
                   }))}
                 />
               </div>
-              <div className="data-card p-6">
+              <div className={cardVariants({ padding: "lg" })}>
                 <div className="mb-4 flex items-center gap-2">
                   <Database className="h-4 w-4 text-primary" />
-                  <h2 className="font-display text-lg font-semibold">Recent scrapes</h2>
+                  <h2 className="font-display text-callout font-semibold">Recent scrapes</h2>
                 </div>
                 <div className="space-y-2">
                   {(overview?.recentScrapes || []).slice(0, 8).map((run) => (
                     <div
                       key={run.id}
-                      className="rounded-xl border border-border bg-surface/70 px-3.5 py-3"
+                      className="rounded-control border border-border bg-surface-2 px-3.5 py-3"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-[13px] font-semibold">{run.source}</p>
-                        <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                        <p className="text-footnote font-semibold">{run.source}</p>
+                        <span className="rounded-full border border-border px-2 py-0.5 text-caption font-medium text-label-2">
                           {run.status || "—"}
                         </span>
                       </div>
-                      <p className="mt-1.5 text-[11px] text-muted-foreground">
+                      <p className="mt-1.5 text-caption text-label-2">
                         found {run.listingsFound.toLocaleString()} · new{" "}
                         {run.listingsNew.toLocaleString()}
                       </p>
@@ -603,11 +608,11 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="users" className="space-y-4">
-            <div className="premium-surface overflow-hidden p-0 shadow-soft-lg">
+            <div className={cardVariants({ variant: "media" })}>
               <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border px-6 py-5">
                 <div>
-                  <h2 className="font-display text-lg font-semibold">Users & plans</h2>
-                  <p className="mt-1 text-[12px] text-muted-foreground">
+                  <h2 className="font-display text-callout font-semibold">Users & plans</h2>
+                  <p className="mt-1 text-caption text-label-2">
                     Search, filter, upgrade, demote, or disable seats. Changes invalidate their
                     sessions.
                   </p>
@@ -617,10 +622,10 @@ export default function AdminDashboard() {
                     value={userQuery}
                     onChange={(e) => setUserQuery(e.target.value)}
                     placeholder="Search email or name"
-                    className="h-10 w-[220px] rounded-full bg-surface"
+                    className="h-10 w-[220px]"
                   />
                   <Select value={userPlanFilter} onValueChange={setUserPlanFilter}>
-                    <SelectTrigger className="h-10 w-[140px] rounded-full bg-surface">
+                    <SelectTrigger className="h-10 w-[140px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -635,35 +640,35 @@ export default function AdminDashboard() {
               </div>
               <div className="p-6">
                 {usersQuery.isLoading ? (
-                  <Skeleton className="h-44 rounded-2xl" />
+                  <Skeleton className="h-44" />
                 ) : (usersQuery.data?.users || []).length === 0 ? (
-                  <p className="text-[13px] text-muted-foreground">No users match.</p>
+                  <EmptyState icon={Users} title="No users match." className="py-8" />
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[900px] text-left text-sm">
-                      <thead>
-                        <tr className="border-b border-border text-[11px] font-medium text-muted-foreground">
-                          <th className="pb-3 pr-3 font-bold">User</th>
-                          <th className="pb-3 pr-3 font-bold">Plan</th>
-                          <th className="pb-3 pr-3 font-bold">Role</th>
-                          <th className="pb-3 pr-3 font-bold">Last login</th>
-                          <th className="pb-3 pr-3 font-bold">Status</th>
-                          <th className="pb-3 font-bold">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                  <TableContainer className="border-0">
+                    <Table className="min-w-[900px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>User</TableHead>
+                          <TableHead>Plan</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead>Last login</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {(usersQuery.data?.users || []).map((row: AdminUser) => (
-                          <tr key={row.id} className="border-b border-border/60 last:border-0">
-                            <td className="py-4 pr-3">
+                          <TableRow key={row.id}>
+                            <TableCell>
                               <p className="font-semibold text-foreground">{row.name}</p>
-                              <p className="text-[11px] text-muted-foreground">{row.email}</p>
+                              <p className="text-caption text-label-2">{row.email}</p>
                               {row.invitedByEmail ? (
-                                <p className="text-[10px] text-muted-foreground">
+                                <p className="text-caption text-label-2">
                                   invited by {row.invitedByEmail}
                                 </p>
                               ) : null}
-                            </td>
-                            <td className="py-4 pr-3">
+                            </TableCell>
+                            <TableCell>
                               <Select
                                 value={row.plan}
                                 onValueChange={(plan) =>
@@ -673,7 +678,7 @@ export default function AdminDashboard() {
                                   })
                                 }
                               >
-                                <SelectTrigger className="h-9 w-[128px] rounded-full bg-surface">
+                                <SelectTrigger className="h-9 w-[128px]">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -683,8 +688,8 @@ export default function AdminDashboard() {
                                   <SelectItem value="enterprise">Enterprise</SelectItem>
                                 </SelectContent>
                               </Select>
-                            </td>
-                            <td className="py-4 pr-3">
+                            </TableCell>
+                            <TableCell>
                               <Select
                                 value={row.role}
                                 onValueChange={(role) =>
@@ -694,7 +699,7 @@ export default function AdminDashboard() {
                                   })
                                 }
                               >
-                                <SelectTrigger className="h-9 w-[118px] rounded-full bg-surface">
+                                <SelectTrigger className="h-9 w-[118px]">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -702,19 +707,19 @@ export default function AdminDashboard() {
                                   <SelectItem value="admin">Admin</SelectItem>
                                 </SelectContent>
                               </Select>
-                            </td>
-                            <td className="py-4 pr-3 text-[11px] text-muted-foreground">
+                            </TableCell>
+                            <TableCell className="text-caption text-label-2">
                               {row.lastLoginAt
                                 ? new Date(row.lastLoginAt).toLocaleString()
                                 : "Never"}
-                            </td>
-                            <td className="py-4 pr-3">
-                              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
+                            </TableCell>
+                            <TableCell>
+                              <span className="inline-flex items-center gap-1.5 text-caption font-semibold text-label-2">
                                 {row.isActive ? <Check className="h-3.5 w-3.5 text-primary" /> : null}
                                 {row.isActive ? "Active" : "Disabled"} · {row.subscriptionStatus}
                               </span>
-                            </td>
-                            <td className="py-4">
+                            </TableCell>
+                            <TableCell>
                               <Button
                                 type="button"
                                 size="sm"
@@ -730,21 +735,21 @@ export default function AdminDashboard() {
                               >
                                 {row.isActive ? "Disable" : "Enable"}
                               </Button>
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
                 )}
               </div>
             </div>
           </TabsContent>
 
           <TabsContent value="invites" className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-            <div className="premium-surface p-6 sm:p-7 shadow-soft-lg">
-              <h2 className="font-display text-xl font-semibold">Invite by email</h2>
-              <p className="mt-1 text-[12px] text-muted-foreground">
+            <div className={cardVariants({ padding: "lg" })}>
+              <h2 className="font-display text-title3 font-semibold">Invite by email</h2>
+              <p className="mt-1 text-caption text-label-2">
                 Only invited addresses can create an account.
               </p>
               <form onSubmit={onInvite} className="mt-6 space-y-4">
@@ -756,7 +761,7 @@ export default function AdminDashboard() {
                     placeholder="dealer@example.com"
                     value={inviteEmail}
                     onChange={(event) => setInviteEmail(event.target.value)}
-                    className="h-11 rounded-xl bg-surface"
+                    className="h-11"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -766,7 +771,7 @@ export default function AdminDashboard() {
                       value={invitePlan}
                       onValueChange={(value) => setInvitePlan(value as typeof invitePlan)}
                     >
-                      <SelectTrigger className="h-11 rounded-xl bg-surface">
+                      <SelectTrigger className="h-11">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -783,7 +788,7 @@ export default function AdminDashboard() {
                       value={inviteRole}
                       onValueChange={(value) => setInviteRole(value as typeof inviteRole)}
                     >
-                      <SelectTrigger className="h-11 rounded-xl bg-surface">
+                      <SelectTrigger className="h-11">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -803,9 +808,9 @@ export default function AdminDashboard() {
                 </Button>
               </form>
               {lastInviteLink ? (
-                <div className="mt-5 rounded-2xl border border-primary/20 bg-primary/[0.06] p-4">
-                  <p className="tech-label text-primary-bright">Share this link</p>
-                  <p className="mt-2 break-all text-[12px] font-medium leading-relaxed">
+                <div className="mt-5 rounded-card border border-primary/25 bg-primary/5 p-4">
+                  <p className="text-footnote font-semibold text-primary">Share this link</p>
+                  <p className="mt-2 break-all text-caption font-medium leading-relaxed">
                     {lastInviteLink}
                   </p>
                   <Button
@@ -823,25 +828,25 @@ export default function AdminDashboard() {
             </div>
 
             <div className="space-y-4">
-              <div className="data-card p-6">
-                <h3 className="font-display text-lg font-semibold">
+              <div className={cardVariants({ padding: "lg" })}>
+                <h3 className="font-display text-callout font-semibold">
                   Pending ({pendingInvites.length})
                 </h3>
                 <div className="mt-4 space-y-2">
                   {pendingInvites.length === 0 ? (
-                    <p className="text-[13px] text-muted-foreground">No pending invites.</p>
+                    <EmptyState icon={MailPlus} title="No pending invites." className="py-8" />
                   ) : (
                     pendingInvites.map((invite: AdminInvite) => {
                       const link = `${window.location.origin}${invite.signupPath}`;
                       return (
                         <div
                           key={invite.id}
-                          className="rounded-xl border border-border bg-surface/80 p-4"
+                          className="rounded-control border border-border bg-surface-2 p-4"
                         >
                           <div className="flex flex-wrap items-center justify-between gap-3">
                             <div>
-                              <p className="text-[14px] font-semibold">{invite.email}</p>
-                              <p className="text-[11px] font-medium text-muted-foreground">
+                              <p className="text-body font-semibold">{invite.email}</p>
+                              <p className="text-caption font-medium text-label-2">
                                 {invite.plan} · {invite.role}
                                 {invite.expiresAt
                                   ? ` · expires ${new Date(invite.expiresAt).toLocaleDateString()}`
@@ -875,16 +880,16 @@ export default function AdminDashboard() {
                   )}
                 </div>
               </div>
-              <div className="data-card p-6">
-                <h3 className="font-display text-lg font-semibold">Invite history</h3>
+              <div className={cardVariants({ padding: "lg" })}>
+                <h3 className="font-display text-callout font-semibold">Invite history</h3>
                 <div className="mt-4 max-h-[320px] space-y-2 overflow-y-auto">
                   {allInvites.map((invite) => (
                     <div
                       key={`hist-${invite.id}`}
-                      className="flex items-center justify-between gap-3 rounded-2xl border border-border/70 px-3 py-2 text-[12px]"
+                      className="flex items-center justify-between gap-3 rounded-control border border-border/70 px-3 py-2 text-caption"
                     >
                       <span className="truncate font-medium">{invite.email}</span>
-                      <span className="shrink-0 font-medium text-muted-foreground">
+                      <span className="shrink-0 font-medium text-label-2">
                         {invite.status} · {invite.plan}
                       </span>
                     </div>
@@ -914,10 +919,10 @@ export default function AdminDashboard() {
                 Trigger alt sync
               </Button>
             </div>
-            <div className="premium-surface overflow-hidden p-0">
+            <div className={cardVariants({ variant: "media" })}>
               <div className="border-b border-border px-6 py-4">
-                <h2 className="font-display text-lg font-semibold">Scrape runs</h2>
-                <p className="text-[12px] text-muted-foreground">
+                <h2 className="font-display text-callout font-semibold">Scrape runs</h2>
+                <p className="text-caption text-label-2">
                   Full error text visible to session admins.
                   {pipelineQuery.data?.orphansReconciled
                     ? ` Reconciled ${pipelineQuery.data.orphansReconciled} orphan run(s).`
@@ -926,36 +931,36 @@ export default function AdminDashboard() {
               </div>
               <div className="overflow-x-auto p-6">
                 {pipelineQuery.isLoading ? (
-                  <Skeleton className="h-40 rounded-2xl" />
+                  <Skeleton className="h-40" />
                 ) : (
-                  <table className="w-full min-w-[800px] text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-border text-[11px] font-medium text-muted-foreground">
-                        <th className="pb-3 pr-3">Source</th>
-                        <th className="pb-3 pr-3">Status</th>
-                        <th className="pb-3 pr-3">Found</th>
-                        <th className="pb-3 pr-3">New</th>
-                        <th className="pb-3 pr-3">Started</th>
-                        <th className="pb-3">Error</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  <Table className="min-w-[800px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Source</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Found</TableHead>
+                        <TableHead>New</TableHead>
+                        <TableHead>Started</TableHead>
+                        <TableHead>Error</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {(pipelineQuery.data?.runs || []).map((run) => (
-                        <tr key={run.id} className="border-b border-border/50">
-                          <td className="py-3 pr-3 font-semibold">{run.source}</td>
-                          <td className="py-3 pr-3">{run.status || "—"}</td>
-                          <td className="py-3 pr-3 num">{run.listingsFound}</td>
-                          <td className="py-3 pr-3 num">{run.listingsNew}</td>
-                          <td className="py-3 pr-3 text-[11px] text-muted-foreground">
+                        <TableRow key={run.id}>
+                          <TableCell className="font-semibold">{run.source}</TableCell>
+                          <TableCell>{run.status || "—"}</TableCell>
+                          <TableCell className="num">{run.listingsFound}</TableCell>
+                          <TableCell className="num">{run.listingsNew}</TableCell>
+                          <TableCell className="text-caption text-label-2">
                             {run.startedAt ? new Date(run.startedAt).toLocaleString() : "—"}
-                          </td>
-                          <td className="max-w-[280px] truncate py-3 text-[11px] text-rose-600">
+                          </TableCell>
+                          <TableCell className="max-w-[280px] truncate text-caption text-deal-high-text">
                             {run.errorMessage || ""}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 )}
               </div>
             </div>
@@ -963,7 +968,7 @@ export default function AdminDashboard() {
 
           <TabsContent value="analytics" className="space-y-6">
             {analyticsQuery.isLoading ? (
-              <Skeleton className="h-64 rounded-2xl" />
+              <Skeleton className="h-64" />
             ) : analytics ? (
               <>
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -993,8 +998,8 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div className="grid gap-6 xl:grid-cols-3">
-                  <div className="data-card p-6">
-                    <h3 className="mb-4 font-display text-lg font-semibold">Listings by source</h3>
+                  <div className={cardVariants({ padding: "lg" })}>
+                    <h3 className="mb-4 font-display text-callout font-semibold">Listings by source</h3>
                     <StatBars
                       rows={analytics.listings.bySource.map((row) => ({
                         label: row.source,
@@ -1002,8 +1007,8 @@ export default function AdminDashboard() {
                       }))}
                     />
                   </div>
-                  <div className="data-card p-6">
-                    <h3 className="mb-4 font-display text-lg font-semibold">Listings by district</h3>
+                  <div className={cardVariants({ padding: "lg" })}>
+                    <h3 className="mb-4 font-display text-callout font-semibold">Listings by district</h3>
                     <StatBars
                       rows={analytics.listings.byDistrict.map((row) => ({
                         label: row.district,
@@ -1011,8 +1016,8 @@ export default function AdminDashboard() {
                       }))}
                     />
                   </div>
-                  <div className="data-card p-6">
-                    <h3 className="mb-4 font-display text-lg font-semibold">Users by plan</h3>
+                  <div className={cardVariants({ padding: "lg" })}>
+                    <h3 className="mb-4 font-display text-callout font-semibold">Users by plan</h3>
                     <StatBars
                       rows={analytics.users.byPlan.map((row) => ({
                         label: row.plan,
@@ -1023,35 +1028,35 @@ export default function AdminDashboard() {
                 </div>
               </>
             ) : (
-              <p className="text-sm text-muted-foreground">Analytics unavailable.</p>
+              <p className="text-footnote text-label-2">Analytics unavailable.</p>
             )}
           </TabsContent>
 
           <TabsContent value="feedback" className="space-y-4">
-            <div className="premium-surface overflow-hidden p-0">
+            <div className={cardVariants({ variant: "media" })}>
               <div className="border-b border-border px-6 py-4">
-                <h2 className="font-display text-lg font-semibold">Feedback inbox</h2>
-                <p className="text-[12px] text-muted-foreground">
+                <h2 className="font-display text-callout font-semibold">Feedback inbox</h2>
+                <p className="text-caption text-label-2">
                   Triage bugs, ideas, and data reports from the in-app widget.
                 </p>
               </div>
               <div className="space-y-3 p-6">
                 {feedbackQuery.isLoading ? (
-                  <Skeleton className="h-40 rounded-2xl" />
+                  <Skeleton className="h-40" />
                 ) : (feedbackQuery.data?.feedback || []).length === 0 ? (
-                  <p className="text-[13px] text-muted-foreground">No feedback yet.</p>
+                  <EmptyState icon={LifeBuoy} title="No feedback yet." className="py-8" />
                 ) : (
                   (feedbackQuery.data?.feedback || []).map((item) => (
-                    <div key={item.id} className="rounded-2xl border border-border bg-surface p-4">
+                    <div key={item.id} className="rounded-control border border-border bg-surface-2 p-4">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                          <p className="text-[12px] font-medium text-primary/80">
+                          <p className="text-caption font-medium text-primary/80">
                             {item.category} · {item.status}
                           </p>
-                          <p className="mt-2 text-[14px] font-medium leading-relaxed text-foreground">
+                          <p className="mt-2 text-body font-medium leading-relaxed text-foreground">
                             {item.message}
                           </p>
-                          <p className="mt-2 text-[11px] text-muted-foreground">
+                          <p className="mt-2 text-caption text-label-2">
                             {item.email || "anonymous"}
                             {item.route ? ` · ${item.route}` : ""}
                             {item.createdAt
@@ -1065,7 +1070,7 @@ export default function AdminDashboard() {
                             feedbackMutation.mutate({ id: item.id, status })
                           }
                         >
-                          <SelectTrigger className="h-9 w-[130px] rounded-full bg-card">
+                          <SelectTrigger className="h-9 w-[130px] rounded-full bg-surface-1">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -1086,44 +1091,44 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="dealers" className="space-y-4">
-            <div className="premium-surface overflow-hidden p-0">
+            <div className={cardVariants({ variant: "media" })}>
               <div className="border-b border-border px-6 py-4">
-                <h2 className="font-display text-lg font-semibold">Dealer claims</h2>
-                <p className="text-[12px] text-muted-foreground">
+                <h2 className="font-display text-callout font-semibold">Dealer claims</h2>
+                <p className="text-caption text-label-2">
                   Verify pending yards without the separate dealer admin token.
                 </p>
               </div>
               <div className="overflow-x-auto p-6">
                 {dealersQuery.isLoading ? (
-                  <Skeleton className="h-40 rounded-2xl" />
+                  <Skeleton className="h-40" />
                 ) : (dealersQuery.data?.dealers || []).length === 0 ? (
-                  <p className="text-[13px] text-muted-foreground">No dealer profiles yet.</p>
+                  <EmptyState icon={Store} title="No dealer profiles yet." className="py-8" />
                 ) : (
-                  <table className="w-full min-w-[760px] text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-border text-[11px] font-medium text-muted-foreground">
-                        <th className="pb-3 pr-3">Dealer</th>
-                        <th className="pb-3 pr-3">Contact</th>
-                        <th className="pb-3 pr-3">Status</th>
-                        <th className="pb-3">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  <Table className="min-w-[760px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Dealer</TableHead>
+                        <TableHead>Contact</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {(dealersQuery.data?.dealers || []).map((dealer) => (
-                        <tr key={dealer.id} className="border-b border-border/50">
-                          <td className="py-3 pr-3">
+                        <TableRow key={dealer.id}>
+                          <TableCell>
                             <p className="font-semibold">{dealer.displayName}</p>
-                            <p className="text-[11px] text-muted-foreground">
+                            <p className="text-caption text-label-2">
                               {dealer.sellerNamePattern || dealer.claimedUrl || "—"}
                             </p>
-                          </td>
-                          <td className="py-3 pr-3 text-[12px] text-muted-foreground">
+                          </TableCell>
+                          <TableCell className="text-caption text-label-2">
                             {dealer.contactEmail || dealer.contactPhone || "—"}
-                          </td>
-                          <td className="py-3 pr-3 text-[11px] font-medium">
+                          </TableCell>
+                          <TableCell className="text-caption font-medium">
                             {dealer.status}
-                          </td>
-                          <td className="py-3">
+                          </TableCell>
+                          <TableCell>
                             {dealer.status !== "verified" ? (
                               <Button
                                 type="button"
@@ -1134,21 +1139,21 @@ export default function AdminDashboard() {
                                 Verify
                               </Button>
                             ) : (
-                              <span className="text-[11px] text-muted-foreground">Verified</span>
+                              <span className="text-caption text-label-2">Verified</span>
                             )}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 )}
               </div>
             </div>
           </TabsContent>
 
           <TabsContent value="permits" className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-            <div className="premium-surface p-6">
-              <h2 className="font-display text-lg font-semibold">Upsert permit price</h2>
+            <div className={cardVariants({ padding: "lg" })}>
+              <h2 className="font-display text-callout font-semibold">Upsert permit price</h2>
               <form
                 className="mt-4 space-y-3"
                 onSubmit={(event) => {
@@ -1164,14 +1169,14 @@ export default function AdminDashboard() {
                   value={permitName}
                   onChange={(e) => setPermitName(e.target.value)}
                   placeholder="Permit name"
-                  className="h-11 rounded-xl bg-surface"
+                  className="h-11"
                   required
                 />
                 <Input
                   value={permitType}
                   onChange={(e) => setPermitType(e.target.value)}
                   placeholder="Type (duty_free / ev)"
-                  className="h-11 rounded-xl bg-surface"
+                  className="h-11"
                   required
                 />
                 <Input
@@ -1179,7 +1184,7 @@ export default function AdminDashboard() {
                   value={permitPrice}
                   onChange={(e) => setPermitPrice(e.target.value)}
                   placeholder="Market price LKR"
-                  className="h-11 rounded-xl bg-surface num"
+                  className="h-11 num"
                   required
                 />
                 <Button type="submit" className="h-11 w-full rounded-full" disabled={permitMutation.isPending}>
@@ -1187,25 +1192,25 @@ export default function AdminDashboard() {
                 </Button>
               </form>
             </div>
-            <div className="data-card p-6">
-              <h3 className="font-display text-lg font-semibold">Current permits</h3>
+            <div className={cardVariants({ padding: "lg" })}>
+              <h3 className="font-display text-callout font-semibold">Current permits</h3>
               <div className="mt-4 space-y-2">
                 {(permitsQuery.data?.permits || []).map((permit) => (
                   <div
                     key={permit.id}
-                    className="flex items-center justify-between rounded-xl border border-border bg-surface px-3.5 py-3"
+                    className="flex items-center justify-between rounded-control border border-border bg-surface-2 px-3.5 py-3"
                   >
                     <div>
-                      <p className="text-[13px] font-semibold">{permit.permitName}</p>
-                      <p className="text-[11px] text-muted-foreground">{permit.permitType}</p>
+                      <p className="text-footnote font-semibold">{permit.permitName}</p>
+                      <p className="text-caption text-label-2">{permit.permitType}</p>
                     </div>
-                    <p className="num text-[13px] font-semibold">
+                    <p className="num text-footnote font-semibold">
                       {formatPrice(permit.marketPriceLkr)}
                     </p>
                   </div>
                 ))}
                 {!permitsQuery.isLoading && (permitsQuery.data?.permits || []).length === 0 ? (
-                  <p className="text-[13px] text-muted-foreground">No permits configured.</p>
+                  <EmptyState icon={Crown} title="No permits configured." className="py-8" />
                 ) : null}
               </div>
             </div>
@@ -1223,12 +1228,12 @@ export default function AdminDashboard() {
 
           <TabsContent value="system" className="space-y-6">
             <div className="grid gap-6 xl:grid-cols-2">
-              <div className="data-card p-6">
-                <h2 className="font-display text-lg font-semibold">Security & config</h2>
+              <div className={cardVariants({ padding: "lg" })}>
+                <h2 className="font-display text-callout font-semibold">Security & config</h2>
                 {systemQuery.isLoading ? (
-                  <Skeleton className="mt-4 h-40 rounded-2xl" />
+                  <Skeleton className="mt-4 h-40" />
                 ) : systemQuery.data ? (
-                  <ul className="mt-4 space-y-2 text-[13px]">
+                  <ul className="mt-4 space-y-2 text-footnote">
                     {[
                       ["Database", systemQuery.data.databaseOk ? "ok" : "down"],
                       ["App access enforced", String(systemQuery.data.flags.appAccessEnforced)],
@@ -1242,18 +1247,18 @@ export default function AdminDashboard() {
                     ].map(([label, value]) => (
                       <li
                         key={label}
-                        className="flex items-center justify-between rounded-2xl border border-border bg-surface px-3 py-2"
+                        className="flex items-center justify-between rounded-control border border-border bg-surface-2 px-3 py-2"
                       >
-                        <span className="text-muted-foreground">{label}</span>
+                        <span className="text-label-2">{label}</span>
                         <span className="font-semibold text-foreground">{value}</span>
                       </li>
                     ))}
                   </ul>
                 ) : null}
               </div>
-              <div className="data-card p-6">
-                <h2 className="font-display text-lg font-semibold">Ops tools</h2>
-                <p className="mt-2 text-[13px] text-muted-foreground">
+              <div className={cardVariants({ padding: "lg" })}>
+                <h2 className="font-display text-callout font-semibold">Ops tools</h2>
+                <p className="mt-2 text-footnote text-label-2">
                   Clear the 1-hour market stats cache so summary / district endpoints recompute
                   immediately after data changes.
                 </p>
@@ -1266,32 +1271,32 @@ export default function AdminDashboard() {
                   Clear stats cache
                 </Button>
                 {systemQuery.data?.statsCacheKeys?.length ? (
-                  <p className="mt-3 text-[11px] text-muted-foreground">
+                  <p className="mt-3 text-caption text-label-2">
                     Keys: {systemQuery.data.statsCacheKeys.join(", ")}
                   </p>
                 ) : (
-                  <p className="mt-3 text-[11px] text-muted-foreground">No cache rows currently.</p>
+                  <p className="mt-3 text-caption text-label-2">No cache rows currently.</p>
                 )}
               </div>
             </div>
-            <div className="data-card p-6">
-              <h2 className="font-display text-lg font-semibold">Enrichment providers</h2>
-              <p className="mt-2 text-[13px] text-muted-foreground">
+            <div className={cardVariants({ padding: "lg" })}>
+              <h2 className="font-display text-callout font-semibold">Enrichment providers</h2>
+              <p className="mt-2 text-footnote text-label-2">
                 Third-party research adapters. Keys stay on the backend. A failed provider must
                 never take down listing pages.
               </p>
               {systemQuery.isLoading ? (
-                <Skeleton className="mt-4 h-32 rounded-2xl" />
+                <Skeleton className="mt-4 h-32" />
               ) : systemQuery.data?.providers?.length ? (
                 <ul className="mt-4 grid gap-2 md:grid-cols-2">
                   {systemQuery.data.providers.map((provider) => (
                     <li
                       key={provider.id}
-                      className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-3 py-2 text-[13px]"
+                      className="flex items-center justify-between gap-3 rounded-control border border-border bg-surface-2 px-3 py-2 text-footnote"
                     >
                       <span className="min-w-0">
                         <span className="block font-semibold text-foreground">{provider.label}</span>
-                        <span className="block text-[11px] text-muted-foreground">
+                        <span className="block text-caption text-label-2">
                           {provider.lastRun?.endedAt
                             ? `Last run ${new Date(provider.lastRun.endedAt).toLocaleString()}`
                             : "No ingest run recorded"}
@@ -1304,7 +1309,7 @@ export default function AdminDashboard() {
                   ))}
                 </ul>
               ) : (
-                <p className="mt-4 text-[13px] text-muted-foreground">Provider health unavailable.</p>
+                <p className="mt-4 text-footnote text-label-2">Provider health unavailable.</p>
               )}
               <Button
                 type="button"
@@ -1315,7 +1320,7 @@ export default function AdminDashboard() {
               >
                 {revcarPilotMutation.isPending ? "Running spec pilot…" : "Run RevCarData 100-record pilot"}
               </Button>
-              <p className="mt-2 text-[11px] text-muted-foreground">
+              <p className="mt-2 text-caption text-label-2">
                 Match-rate sample only. Foreign MSRP is never written into LKR fair market value.
               </p>
             </div>

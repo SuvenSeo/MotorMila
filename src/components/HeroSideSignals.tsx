@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCountUp } from "@/hooks/useCountUp";
-import { prefersReducedMotion, springSoft } from "@/lib/motion";
+import { prefersReducedMotion, spring } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { formatPrice } from "@/services/api";
 import { VehicleThumbnail } from "@/components/VehicleThumbnail";
@@ -96,15 +96,15 @@ function SignalChip({
   const inner = (
     <span className={cn("flex w-full items-center gap-3", align === "right" && "flex-row-reverse text-right")}>
       {thumb ?? (
-        <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-gradient-to-br from-white/[0.14] to-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
-          <Icon className="h-5 w-5 text-primary drop-shadow-[0_2px_6px_hsl(var(--primary)/0.5)]" aria-hidden />
+        <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-gradient-to-br from-white/[0.14] to-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+          <Icon className="h-5 w-5 text-primary drop-shadow-e1" aria-hidden />
         </span>
       )}
       <span className={cn("min-w-0 flex-1", align === "right" && "items-end")}>
-        <span className="block truncate text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+        <span className="block truncate text-caption font-semibold uppercase tracking-caps text-muted-foreground">
           {label}
         </span>
-        <span className="mt-1 block truncate text-[15px] font-semibold tracking-tight text-foreground num">
+        <span className="mt-1 block truncate text-body font-semibold tracking-tight text-foreground num">
           {value}
         </span>
       </span>
@@ -120,7 +120,7 @@ function SignalChip({
     <motion.div
       initial={{ opacity: 0, y: 14, x: align === "left" ? -12 : 12 }}
       animate={{ opacity: 1, y: 0, x: 0 }}
-      transition={{ delay, ...springSoft }}
+      transition={{ delay, ...spring.smooth }}
       className={cn(
         "hero-signal-float-wrap",
         `hero-signal-float-wrap--float-${float}`,
@@ -242,7 +242,7 @@ export function HeroSideSignals({
                   src={priceDrop.thumbnail_url}
                   listingId={priceDrop.id}
                   alt={`${priceDrop.make} ${priceDrop.model}`}
-                  ring="ring-emerald-400/30"
+                  ring="ring-deal-good/30"
                 />
               }
               value={`−${priceDrop.drop_pct}% · ${formatPrice(priceDrop.new_price_lkr)}`}
@@ -286,7 +286,7 @@ export function HeroSideSignals({
                 <ListingThumb
                   src={hotDeal.thumbnail_url}
                   alt={`${hotDeal.make} ${hotDeal.model}`}
-                  ring="ring-amber-400/30"
+                  ring="ring-deal-caution/30"
                 />
               }
               value={`${hotDeal.price_lkr ? formatPrice(hotDeal.price_lkr) : "—"}${

@@ -6,6 +6,7 @@ import { VehicleThumbnail } from "@/components/VehicleThumbnail";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { formatSourceName } from "@/lib/sourceAttribution";
 import { spring, useReducedMotionOrLowData } from "@/lib/motion";
+import { viewTransitionInFlight } from "@/lib/viewTransition";
 
 // Lightbox JS + CSS load only when someone taps a photo (low-end Android first).
 const ListingLightbox = lazy(() => import("@/components/listing/ListingLightbox"));
@@ -24,6 +25,9 @@ interface ListingImageCarouselProps {
   /** Source marketplace, shown on the branded placeholder and as photo credit. */
   source?: string | null;
 }
+
+/** Listing grid: 1 column < 768px, 2 columns to 1279px, then 3 columns in a ≤1560px frame. */
+const CARD_SIZES = "(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 520px";
 
 function stop(e: React.SyntheticEvent) {
   e.stopPropagation();
@@ -56,8 +60,25 @@ export function ListingImageCarousel({
   const reduced = useMemo(prefersReducedMotion, []);
   const calm = useReducedMotionOrLowData();
   const ringId = useId();
+  // Detail hero: Embla starts after the card → listing View Transition. Its
+  // init measure (which runs on construction, even inactive) forced a style + layout of the whole incoming page inside the
+  // route commit (~40 ms at 4× CPU); slide 0 renders statically until then.
+  const [carouselLive, setCarouselLive] = useState(!isDetail);
+  useEffect(() => {
+    if (carouselLive || !multi) return;
+    let raf = 0;
+    let timer = 0;
+    const go = () => {
+      if (viewTransitionInFlight()) timer = window.setTimeout(go, 50);
+      else raf = window.requestAnimationFrame(() => setCarouselLive(true));
+    };
+    timer = window.setTimeout(go, 0);
+    return () => {
+      window.clearTimeout(timer);
+      window.cancelAnimationFrame(raf);
+    };
+  }, [carouselLive, multi]);
   const [emblaRef, emblaApi] = useEmblaCarousel({
-    // Single-photo listings skip Embla's measuring work entirely.
     active: multi,
     // Detail: no loop so the first/last photo rubber-bands against the edge
     // (Embla's built-in edge resistance); cards keep looping arrows.
@@ -74,6 +95,27 @@ export function ListingImageCarousel({
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxRequested, setLightboxRequested] = useState(false);
   const sourceName = formatSourceName(source);
+  // Only mount the photos someone can see or is about to: the current slide,
+  // plus its neighbours once the carousel is touched/hovered (cards) or right
+  // away (detail). Every card used to download all of its slides up front —
+  // ~50 full-size photos (≈8 MB) on the home grid.
+  const [mounted, setMounted] = useState<ReadonlySet<number>>(() => new Set(isDetail && multi ? [0, 1, count - 1] : [0]));
+  const prime = useCallback(
+    (center: number) => {
+      if (!multi) return;
+      setMounted((cur) => {
+        const want = [center, (center + 1) % count, (center - 1 + count) % count];
+        if (want.every((i) => cur.has(i))) return cur;
+        const next = new Set(cur);
+        want.forEach((i) => next.add(i));
+        return next;
+      });
+    },
+    [multi, count],
+  );
+  useEffect(() => {
+    if (index !== 0) prime(index);
+  }, [index, prime]);
 
   useEffect(() => {
     if (!emblaApi) return;
@@ -95,8 +137,10 @@ export function ListingImageCarousel({
   const imagesKey = images.join("|");
   useEffect(() => {
     setIndex(0);
+    setMounted(new Set(isDetail && multi ? [0, 1, count - 1] : [0]));
     emblaApi?.reInit();
     emblaApi?.scrollTo(0, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only on a new photo set
   }, [imagesKey, emblaApi]);
 
   // Keyboard navigation (detail only); ignored while typing or in the lightbox.
@@ -139,7 +183,7 @@ export function ListingImageCarousel({
     });
 
   const arrowClass =
-    "pointer-events-auto absolute top-1/2 z-30 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/55 text-white opacity-0 backdrop-blur-md transition-opacity hover:bg-black/80 focus-visible:opacity-100 group-hover:opacity-100 max-sm:opacity-100";
+    "tap-44 pointer-events-auto absolute top-1/2 z-30 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-black/55 text-white opacity-0 transition-opacity hover:bg-black/80 focus-visible:opacity-100 group-hover:opacity-100 max-sm:opacity-100";
 
   return (
     <div
@@ -147,9 +191,15 @@ export function ListingImageCarousel({
       aria-roledescription="carousel"
       aria-label={t("listingImage.carousel", "Listing photos")}
       className={className}
+      onPointerEnter={multi ? () => prime(index) : undefined}
+      onFocus={multi ? () => prime(index) : undefined}
     >
       <div className="relative h-full w-full overflow-hidden">
-        <div ref={emblaRef} className="h-full w-full overflow-hidden">
+        {/* Embla attaches only when it has work to do: it builds its engine (and
+            measures every slide, forcing a style + layout of the page) on
+            construction even with `active: false`, so single-photo listings and
+            the detail hero before the card → listing transition get no viewport ref. */}
+        <div ref={multi && carouselLive ? emblaRef : undefined} className="h-full w-full overflow-hidden">
           <div className="flex h-full w-full touch-pan-y">
             {images.map((src, i) => (
               <div
@@ -157,7 +207,9 @@ export function ListingImageCarousel({
                 className="h-full w-full min-w-0 shrink-0 grow-0 basis-full"
                 aria-hidden={multi && i !== index}
               >
-                {isDetail ? (
+                {!mounted.has(i) ? (
+                  <div className="h-full w-full bg-muted" />
+                ) : isDetail ? (
                   <button
                     type="button"
                     className="block h-full w-full cursor-zoom-in"
@@ -184,6 +236,7 @@ export function ListingImageCarousel({
                     alt={i === 0 ? alt : `${alt} — ${label(i)}`}
                     source={source}
                     priority={priority && i === 0}
+                    sizes={CARD_SIZES}
                     marker="card"
                     fadeIn
                     className={`h-full w-full object-cover${imageClassName ? ` ${imageClassName}` : ""}`}
@@ -219,7 +272,7 @@ export function ListingImageCarousel({
               <ChevronRight aria-hidden className="h-4 w-4" />
             </button>
             {/* Top-centre: bottom corners carry price / deal / source overlays. */}
-            <span className="pointer-events-none absolute left-1/2 top-2.5 z-30 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/10 bg-black/60 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-white backdrop-blur-md">
+            <span className="pointer-events-none absolute left-1/2 top-2.5 z-30 flex -translate-x-1/2 items-center gap-1 rounded-full border border-border bg-black/60 px-2 py-0.5 text-caption font-semibold tabular-nums text-white">
               <Camera aria-hidden className="h-3 w-3" />
               {index + 1}/{count}
             </span>
@@ -232,7 +285,7 @@ export function ListingImageCarousel({
             {index < 8 && (
               <m.span
                 aria-hidden
-                className="pointer-events-none absolute left-0 top-1/2 h-1.5 w-1.5 -mt-[3px] rounded-full bg-white shadow-[0_0_0_1.5px_rgba(255,255,255,0.35)]"
+                className="pointer-events-none absolute left-0 top-1/2 h-1.5 w-1.5 -mt-[3px] rounded-full bg-foreground shadow-[0_0_0_1.5px_rgba(255,255,255,0.35)]"
                 initial={false}
                 animate={{ x: index * 10 }}
                 transition={calm ? { duration: 0 } : spring.snappy}
@@ -248,7 +301,7 @@ export function ListingImageCarousel({
                   stop(e);
                   goTo(i);
                 }}
-                className="h-1.5 w-1.5 rounded-full bg-white/45 transition-opacity hover:bg-white/75"
+                className="h-1.5 w-1.5 rounded-full bg-foreground/45 transition-opacity hover:bg-foreground/75"
               />
             ))}
           </span>
@@ -262,7 +315,7 @@ export function ListingImageCarousel({
               stop(e);
               openLightbox(e.currentTarget.parentElement);
             }}
-            className="absolute right-2.5 top-2.5 z-30 flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/55 text-white backdrop-blur-md transition-colors hover:bg-black/80"
+            className="tap-44 absolute right-2.5 top-2.5 z-30 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-black/55 text-white transition-colors hover:bg-black/80"
           >
             <Expand aria-hidden className="h-4 w-4" />
           </button>

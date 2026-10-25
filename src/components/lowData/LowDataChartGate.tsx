@@ -31,13 +31,13 @@ export function LowDataChartGate({
       onClick={() => setRevealed(true)}
       style={{ minHeight }}
       className={cn(
-        "flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-surface/60 p-4 text-center text-[13px] font-semibold text-foreground hover:border-primary/40",
+        "flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-surface/60 p-4 text-center text-footnote font-semibold text-foreground hover:border-primary/40",
         className,
       )}
     >
       <BarChart3 className="h-5 w-5 text-primary" aria-hidden />
       <span>{label ? t("lowData.chartTapNamed", "Tap to load: {label}", { label }) : t("lowData.chartTap", "Tap to load chart")}</span>
-      <span className="text-[11px] font-normal text-muted-foreground">{t("lowData.chartHint", "Low-data mode is on")}</span>
+      <span className="text-caption font-normal text-muted-foreground">{t("lowData.chartHint", "Low-data mode is on")}</span>
     </button>
   );
 }

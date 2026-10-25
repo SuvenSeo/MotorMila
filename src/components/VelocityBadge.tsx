@@ -10,9 +10,9 @@ export interface VelocityBadgeProps {
 }
 
 const TONE: Record<Exclude<VelocityBand, "unknown">, string> = {
-  fast: "border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300",
-  steady: "border-sky-500/25 bg-sky-500/10 text-sky-600 dark:text-sky-300",
-  slow: "border-rose-500/25 bg-rose-500/10 text-rose-600 dark:text-rose-300",
+  fast: "border-deal-good/25 bg-deal-good/10 text-deal-good-text",
+  steady: "border-primary/25 bg-primary/10 text-primary",
+  slow: "border-deal-high/25 bg-deal-high/10 text-deal-high-text",
 };
 
 const LABEL: Record<Exclude<VelocityBand, "unknown">, string> = {
@@ -34,7 +34,7 @@ export function VelocityBadge({ medianDomDays, firstSeenAt, lastSeenAt, classNam
     <span
       title={domDays !== null ? `~${domDays} days on market` : "Velocity signal"}
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[12px] font-medium",
+        "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-2 py-1 text-caption font-medium",
         TONE[band],
         className,
       )}

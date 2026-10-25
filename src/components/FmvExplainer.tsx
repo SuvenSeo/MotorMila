@@ -57,45 +57,43 @@ const STRINGS: Record<FmvLocale, Copy> = {
     close: "Close",
     howLink: "How we score prices →",
   },
-  // STUB (si): core keys translated, detail rows fall back to English until localised.
   si: {
     trigger: "මෙම FMV එක ඇයි?",
     title: "සාධාරණ අගය තක්සේරු කළ ආකාරය",
-    comps: (n) => `Based on ${n} similar listing${n === 1 ? "" : "s"} on the market right now. [si stub]`,
-    noComps: "Not enough similar listings for a strong estimate. [si stub]",
+    comps: (n) => `දැනට වෙළඳපොළේ ඇති සමාන දැන්වීම් ${n} ක් මත පදනම්ව.`,
+    noComps: "ශක්තිමත් තක්සේරුවකට ප්‍රමාණවත් සමාන දැන්වීම් නැත — මෙම FMV දළ මඟපෙන්වීමක් ලෙස සලකන්න.",
     confidence: {
-      high: "High confidence [si stub].",
-      medium: "Medium confidence [si stub].",
-      low: "Low confidence [si stub].",
-      none: "No confidence rating [si stub].",
+      high: "ඉහළ විශ්වාසය — සමීප ගැලපීම් බොහොමයක් ඇත.",
+      medium: "මධ්‍යම විශ්වාසය — හොඳ ගැලපීම්, කුඩා වෙනස්කම් ඇත.",
+      low: "අඩු විශ්වාසය — ගැලපීම් ස්වල්පයි, මිල වෙනස් විය හැක.",
+      none: "විශ්වාස ශ්‍රේණියක් නැත — දත්ත ඉතා අඩුයි.",
     },
-    km: (v) => `Mileage adjustment: ${v}. [si stub]`,
-    kmMissing: "Mileage is already factored into the model average. [si stub]",
-    district: (v) => `District adjustment: ${v}. [si stub]`,
-    districtMissing: "Location is already factored into the model average. [si stub]",
-    updated: (v) => `Updated ${v}. [si stub]`,
+    km: (v) => `ධාවන දුර ගැලපුම: ${v}. වැඩි ධාවන දුර FMV අඩු කරයි, අඩු ධාවන දුර එය වැඩි කරයි.`,
+    kmMissing: "ධාවන දුර දැනටමත් මාදිලි සාමාන්‍යයට ඇතුළත් කර ඇත.",
+    district: (v) => `දිස්ත්‍රික් ගැලපුම: ${v}. සමහර දිස්ත්‍රික්කවල මිල ඉහළයි.`,
+    districtMissing: "ස්ථානය දැනටමත් මාදිලි සාමාන්‍යයට ඇතුළත් කර ඇත.",
+    updated: (v) => `යාවත්කාලීන කළේ ${v}.`,
     close: "වසන්න",
-    howLink: "How we score prices →",
+    howLink: "අපි මිල ලකුණු කරන ආකාරය →",
   },
-  // STUB (ta): core keys translated, detail rows fall back to English until localised.
   ta: {
     trigger: "இந்த FMV ஏன்?",
     title: "நியாயமான மதிப்பை மதிப்பிட்ட விதம்",
-    comps: (n) => `Based on ${n} similar listing${n === 1 ? "" : "s"} on the market right now. [ta stub]`,
-    noComps: "Not enough similar listings for a strong estimate. [ta stub]",
+    comps: (n) => `தற்போது சந்தையில் உள்ள ${n} ஒத்த விளம்பரங்களின் அடிப்படையில்.`,
+    noComps: "வலுவான மதிப்பீட்டுக்குப் போதுமான ஒத்த விளம்பரங்கள் இல்லை — இந்த FMV-ஐ தோராயமான வழிகாட்டியாகக் கொள்ளுங்கள்.",
     confidence: {
-      high: "High confidence [ta stub].",
-      medium: "Medium confidence [ta stub].",
-      low: "Low confidence [ta stub].",
-      none: "No confidence rating [ta stub].",
+      high: "அதிக நம்பகத்தன்மை — நெருக்கமான பொருத்தங்கள் நிறைய உள்ளன.",
+      medium: "நடுத்தர நம்பகத்தன்மை — நல்ல பொருத்தங்கள், சிறு வேறுபாடுகள் உள்ளன.",
+      low: "குறைந்த நம்பகத்தன்மை — சில பொருத்தங்களே, விலை மாறலாம்.",
+      none: "நம்பகத்தன்மை மதிப்பீடு இல்லை — தரவு மிகக் குறைவு.",
     },
-    km: (v) => `Mileage adjustment: ${v}. [ta stub]`,
-    kmMissing: "Mileage is already factored into the model average. [ta stub]",
-    district: (v) => `District adjustment: ${v}. [ta stub]`,
-    districtMissing: "Location is already factored into the model average. [ta stub]",
-    updated: (v) => `Updated ${v}. [ta stub]`,
+    km: (v) => `மைலேஜ் சரிசெய்தல்: ${v}. அதிக மைலேஜ் FMV-ஐக் குறைக்கும், குறைந்த மைலேஜ் அதை உயர்த்தும்.`,
+    kmMissing: "மைலேஜ் ஏற்கனவே மாடல் சராசரியில் சேர்க்கப்பட்டுள்ளது.",
+    district: (v) => `மாவட்ட சரிசெய்தல்: ${v}. சில மாவட்டங்களில் விலைகள் அதிகம்.`,
+    districtMissing: "இருப்பிடம் ஏற்கனவே மாடல் சராசரியில் சேர்க்கப்பட்டுள்ளது.",
+    updated: (v) => `புதுப்பிக்கப்பட்டது ${v}.`,
     close: "மூடு",
-    howLink: "How we score prices →",
+    howLink: "விலைகளை எப்படி மதிப்பிடுகிறோம் →",
   },
 };
 
@@ -159,7 +157,7 @@ export function FmvExplainer({
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[12px] font-semibold text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
+        className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-caption font-semibold text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
       >
         <Info className="h-3 w-3" aria-hidden />
         {t.trigger}
@@ -173,7 +171,7 @@ export function FmvExplainer({
           className="absolute left-0 top-full z-40 mt-2 w-72 rounded-xl border border-border bg-popover p-4 text-left shadow-soft-xl"
         >
           <div className="mb-2 flex items-start justify-between gap-2">
-            <h4 className="text-[12px] font-semibold text-primary-bright">
+            <h4 className="text-caption font-semibold text-primary-bright">
               {t.title}
             </h4>
             <button
@@ -187,12 +185,12 @@ export function FmvExplainer({
           </div>
 
           {fmvLkr != null && Number(fmvLkr) > 0 && (
-            <p className="num text-sm font-extrabold text-foreground">
+            <p className="num text-footnote font-extrabold text-foreground">
               {formatPriceLkrMillions(Number(fmvLkr))}
             </p>
           )}
 
-          <ul className="mt-2 space-y-1.5 text-[12px] leading-relaxed text-muted-foreground">
+          <ul className="mt-2 space-y-1.5 text-caption leading-relaxed text-muted-foreground">
             <li>• {count > 0 ? t.comps(count) : t.noComps}</li>
             <li>• {t.confidence[confidence] ?? t.confidence.none}</li>
             <li>
@@ -213,7 +211,7 @@ export function FmvExplainer({
             {updatedLabel && <li>• {t.updated(updatedLabel)}</li>}
           </ul>
           {/* Plain anchor (not <Link>) so the explainer also renders outside a Router. */}
-          <a href={howWePriceHref("fmv")} className="mt-2 inline-block text-[11px] font-semibold text-primary-bright">
+          <a href={howWePriceHref("fmv")} className="mt-2 inline-block text-caption font-semibold text-primary-bright">
             {t.howLink}
           </a>
         </div>

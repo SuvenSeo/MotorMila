@@ -136,9 +136,11 @@ export const HERO_VARIANTS: HeroVariant[] = [
     align: "center",
     tone: "dark",
     hideSideSignals: false,
+    // Theme-independent dark scrim: white copy stays AA on the bright aerial
+    // in both themes. A centre pool sits behind the headline and search.
     scrims: [
-      "bg-gradient-to-b from-background/62 via-background/26 to-background/92",
-      "bg-[radial-gradient(ellipse_72%_58%_at_50%_42%,transparent_32%,hsl(var(--background)/0.5)_100%)]",
+      "bg-gradient-to-b from-black/55 via-black/30 to-black/75",
+      "bg-[radial-gradient(ellipse_60%_52%_at_50%_48%,rgba(0,0,0,0.38)_0%,transparent_72%)]",
     ],
   },
 ];

@@ -1,11 +1,18 @@
 import { memo, useMemo } from "react";
-import { CircleMarker, MapContainer, Popup, TileLayer, Tooltip } from "react-leaflet";
+import { CircleMarker, MapContainer, Popup, Tooltip } from "react-leaflet";
 import { DistrictPrice } from "@/types/car";
 import { LazyMapMount } from "@/components/leaflet/LazyMapMount";
 import { MapResizeController } from "@/components/leaflet/MapResizeController";
 import { DistrictBoundaries, districtKey } from "@/components/leaflet/DistrictBoundaries";
 import { formatPriceLkrMillions } from "@/lib/formatting";
 import "leaflet/dist/leaflet.css";
+import { MapPin } from "lucide-react";
+import { useAppPreferences } from "@/lib/appPreferences";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
 
 interface DistrictPriceHeatmapProps {
   data: DistrictPrice[];
@@ -22,25 +29,59 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
-function toRgb(hex: string) {
-  const clean = hex.replace("#", "");
-  const value = Number.parseInt(clean, 16);
-  return { r: (value >> 16) & 255, g: (value >> 8) & 255, b: value & 255 };
+type Rgb = [number, number, number];
+
+/** Read an HSL triplet token ("211 100% 45%") from :root and convert to RGB. */
+function tokenRgb(name: string, fallback: Rgb): Rgb {
+  if (typeof window === "undefined" || typeof document === "undefined") return fallback;
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const m = raw.match(/^(-?[\d.]+)(?:deg)?\s+([\d.]+)%\s+([\d.]+)%/);
+  if (!m) return fallback;
+  const h = Number(m[1]) / 360;
+  const sat = Number(m[2]) / 100;
+  const l = Number(m[3]) / 100;
+  if (sat === 0) return [l * 255, l * 255, l * 255].map(Math.round) as Rgb;
+  const q = l < 0.5 ? l * (1 + sat) : l + sat - l * sat;
+  const p = 2 * l - q;
+  const hue = (tt: number) => {
+    let x = tt;
+    if (x < 0) x += 1;
+    if (x > 1) x -= 1;
+    if (x < 1 / 6) return p + (q - p) * 6 * x;
+    if (x < 1 / 2) return q;
+    if (x < 2 / 3) return p + (q - p) * (2 / 3 - x) * 6;
+    return p;
+  };
+  return [hue(h + 1 / 3), hue(h), hue(h - 1 / 3)].map((v) => Math.round(v * 255)) as Rgb;
 }
 
-function lerpColor(from: string, to: string, ratio: number) {
-  const s = toRgb(from);
-  const e = toRgb(to);
+function lerpRgb(from: Rgb, to: Rgb, ratio: number) {
   const t = clamp(ratio, 0, 1);
-  return `rgb(${Math.round(s.r + (e.r - s.r) * t)}, ${Math.round(s.g + (e.g - s.g) * t)}, ${Math.round(s.b + (e.b - s.b) * t)})`;
+  return `rgb(${Math.round(from[0] + (to[0] - from[0]) * t)}, ${Math.round(from[1] + (to[1] - from[1]) * t)}, ${Math.round(from[2] + (to[2] - from[2]) * t)})`;
 }
 
-/** Map price ratio (0–1) to a cool-blue → warm-amber gradient. */
-function priceColor(price: number, minPrice: number, maxPrice: number): string {
-  if (maxPrice <= minPrice) return "rgb(99, 102, 241)";
+type Scale = { low: Rgb; mid: Rgb; high: Rgb };
+
+/** Price scale from semantic tokens: low = primary, middle = deal-fair, high = deal-caution. */
+function useTokenScale(theme: string): Scale {
+  return useMemo(
+    () => ({
+      low: tokenRgb("--primary", [0, 103, 230]),
+      mid: tokenRgb("--deal-fair", [84, 99, 120]),
+      high: tokenRgb("--deal-caution", [245, 159, 10]),
+    }),
+    // Re-read the tokens when the theme flips.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [theme],
+  );
+}
+
+/** Map price ratio (0–1) onto the token scale. */
+function priceColor(price: number, minPrice: number, maxPrice: number, scale: Scale): string {
+  if (maxPrice <= minPrice) return lerpRgb(scale.low, scale.low, 0);
   const ratio = clamp((price - minPrice) / (maxPrice - minPrice), 0, 1);
-  if (ratio < 0.5) return lerpColor("#4f46e5", "#14b8a6", ratio * 2);
-  return lerpColor("#14b8a6", "#f59e0b", (ratio - 0.5) * 2);
+  if (ratio < 0.5) return lerpRgb(scale.low, scale.mid, ratio * 2);
+  return lerpRgb(scale.mid, scale.high, (ratio - 0.5) * 2);
 }
 
 function priceRadius(price: number, minPrice: number, maxPrice: number): number {
@@ -56,85 +97,79 @@ export const DistrictPriceHeatmap = memo(function DistrictPriceHeatmap({
   isError,
   onRetry,
 }: DistrictPriceHeatmapProps) {
+  const { t, resolvedTheme } = useAppPreferences();
+  const scale = useTokenScale(resolvedTheme);
   const points = useMemo(
     () => data.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng) && p.avg_price > 0),
     [data],
   );
-
   const prices = useMemo(() => points.map((p) => p.median_price ?? p.avg_price), [points]);
   const minPrice = useMemo(() => Math.min(...prices), [prices]);
   const maxPrice = useMemo(() => Math.max(...prices), [prices]);
-
   const highlightKey = highlightDistrict?.trim().toLowerCase();
 
   // Choropleth fill from the same price scale as the markers.
   const fillByDistrict = useMemo(() => {
     const m = new Map<string, string>();
-    for (const p of points) m.set(districtKey(p.district), priceColor(p.median_price ?? p.avg_price, minPrice, maxPrice));
+    for (const p of points) m.set(districtKey(p.district), priceColor(p.median_price ?? p.avg_price, minPrice, maxPrice, scale));
     return m;
-  }, [points, minPrice, maxPrice]);
+  }, [points, minPrice, maxPrice, scale]);
   const styleKey = useMemo(() => Array.from(fillByDistrict.entries()).map((e) => e.join(":")).join(","), [fillByDistrict]);
+  const highlightStroke = useMemo(() => lerpRgb(scale.high, scale.high, 0), [scale]);
 
   if (isLoading) {
     return (
-      <div className="h-[420px] rounded-xl border border-border bg-card overflow-hidden flex flex-col items-center justify-center space-y-4">
-        <div className="w-12 h-12 rounded-full border-2 border-primary/20 border-t-primary animate-spin mb-4" />
-        <p className="text-sm font-semibold tracking-tight text-primary/80">Loading price map</p>
-        <p className="text-xs text-muted-foreground font-medium">Mapping district price levels…</p>
+      <div role="status" className="relative">
+        <Skeleton className="h-[420px]" />
+        <span className="sr-only">{t("districtMap.loading", "Loading price map")}</span>
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="flex h-[420px] flex-col items-center justify-center gap-3 rounded-xl border border-border bg-surface px-4 text-center">
-        <p className="text-sm text-muted-foreground">
-          District price data temporarily unavailable.
-        </p>
-        {onRetry ? (
-          <button
-            type="button"
-            onClick={onRetry}
-            className="rounded-2xl border border-border bg-card px-3 py-1.5 text-[12px] font-medium text-foreground transition-colors hover:border-primary/30 hover:text-primary-bright"
-          >
-            Retry
-          </button>
-        ) : null}
-      </div>
+      <Card padding="none" className="flex h-[420px] items-center justify-center">
+        <ErrorState
+          title={t("districtMap.error", "District price data temporarily unavailable.")}
+          onRetry={onRetry}
+          retryLabel={t("common.retry", "Retry")}
+        />
+      </Card>
     );
   }
 
   if (!points.length) {
     return (
-      <div className="h-[420px] rounded-xl border border-border bg-surface flex items-center justify-center text-muted-foreground text-sm">
-        District price data unavailable — no priced listings indexed yet.
-      </div>
+      <Card padding="none" className="flex h-[420px] items-center justify-center">
+        <EmptyState
+          icon={MapPin}
+          title={t("districtMap.emptyTitle", "No district prices yet")}
+          body={t("districtMap.empty", "District price data unavailable — no priced listings indexed yet.")}
+        />
+      </Card>
     );
   }
 
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3 text-[12px] font-semibold">
-        <div className="rounded-2xl border border-border bg-surface px-3 py-1.5 text-foreground">
-          Color = avg district price
-        </div>
-        <div className="rounded-2xl border border-border bg-surface px-3 py-1.5 text-foreground">
-          Size = relative price level
-        </div>
-        <div className="flex items-center gap-2 rounded-2xl border border-border bg-surface px-3 py-1.5 text-muted-foreground">
-          <span className="text-indigo-500 dark:text-indigo-400">Low</span>
-          <div className="h-1.5 w-20 rounded-full bg-gradient-to-r from-[#4f46e5] via-[#14b8a6] to-[#f59e0b]" />
-          <span className="text-amber-500">High</span>
-        </div>
-      </div>
+  const gradient = `linear-gradient(to right, ${lerpRgb(scale.low, scale.low, 0)}, ${lerpRgb(scale.mid, scale.mid, 0)}, ${lerpRgb(scale.high, scale.high, 0)})`;
 
-      <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-semibold text-muted-foreground">
-        <span className="num">Min: {formatPriceLkrMillions(minPrice)}</span>
-        <span className="num">Max: {formatPriceLkrMillions(maxPrice)}</span>
+  return (
+    <div className="content-in space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="neutral">{t("districtMap.colorKey", "Color = avg district price")}</Badge>
+        <Badge variant="neutral">{t("districtMap.sizeKey", "Size = relative price level")}</Badge>
+        <Badge variant="neutral" className="gap-2">
+          <span>{t("districtMap.low", "Low")}</span>
+          <span aria-hidden className="h-1.5 w-16 rounded-full" style={{ backgroundImage: gradient }} />
+          <span>{t("districtMap.high", "High")}</span>
+        </Badge>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 text-caption font-semibold tabular-nums text-label-2">
+        <span>{t("districtMap.min", "Min: {price}", { price: formatPriceLkrMillions(minPrice) })}</span>
+        <span>{t("districtMap.max", "Max: {price}", { price: formatPriceLkrMillions(maxPrice) })}</span>
       </div>
 
       <LazyMapMount
-        className="overflow-hidden rounded-xl border border-border shadow-soft"
+        className="overflow-hidden rounded-card border border-border shadow-e1"
         style={{ height: 420 }}
       >
         <MapContainer
@@ -145,14 +180,11 @@ export const DistrictPriceHeatmap = memo(function DistrictPriceHeatmap({
           maxBounds={SL_BOUNDS}
           maxBoundsViscosity={0.75}
           scrollWheelZoom
-          style={{ height: "100%", width: "100%" }}
+          style={{ height: "100%", width: "100%", background: "hsl(var(--surface-2))" }}
         >
           <MapResizeController bounds={SL_BOUNDS} />
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-            noWrap
-          />
+          {/* No raster basemap: CARTO basemaps now return "API KEY REQUIRED" tiles
+              without a key. The district boundaries layer is the map. */}
           <DistrictBoundaries
             fillFor={(name) => fillByDistrict.get(districtKey(name)) ?? null}
             highlight={highlightDistrict}
@@ -161,7 +193,7 @@ export const DistrictPriceHeatmap = memo(function DistrictPriceHeatmap({
 
           {points.map((point) => {
             const displayPrice = point.median_price ?? point.avg_price;
-            const color = priceColor(displayPrice, minPrice, maxPrice);
+            const color = priceColor(displayPrice, minPrice, maxPrice, scale);
             const radius = priceRadius(displayPrice, minPrice, maxPrice);
             const isHighlighted =
               highlightKey != null &&
@@ -173,7 +205,7 @@ export const DistrictPriceHeatmap = memo(function DistrictPriceHeatmap({
                 center={[point.lat, point.lng]}
                 radius={radius}
                 pathOptions={{
-                  color: isHighlighted ? "#fbbf24" : color,
+                  color: isHighlighted ? highlightStroke : color,
                   fillColor: color,
                   weight: isHighlighted ? 2.5 : 1.3,
                   fillOpacity: 0.75,
@@ -183,26 +215,26 @@ export const DistrictPriceHeatmap = memo(function DistrictPriceHeatmap({
                   {point.district}
                 </Tooltip>
                 <Popup autoPan keepInView autoPanPaddingTopLeft={[24, 84]} autoPanPaddingBottomRight={[24, 24]}>
-                  <div className="min-w-[200px] text-sm space-y-1.5">
-                    <p className="font-bold text-base">{point.district}</p>
-                    <p>Listings: <span className="num">{point.listing_count.toLocaleString()}</span></p>
+                  <div className="min-w-[200px] space-y-1.5 text-footnote">
+                    <p className="text-body font-semibold">{point.district}</p>
+                    <p>{t("districtMap.listings", "Listings")}: <span className="tabular-nums">{point.listing_count.toLocaleString()}</span></p>
                     {point.median_price != null && (
                       <p>
-                        Median:{" "}
-                        <span className="num font-semibold">
+                        {t("districtMap.median", "Median")}:{" "}
+                        <span className="font-semibold tabular-nums">
                           {formatPriceLkrMillions(point.median_price)}
                         </span>
                       </p>
                     )}
                     <p>
-                      Avg:{" "}
-                      <span className="num font-semibold">
+                      {t("districtMap.avg", "Avg")}:{" "}
+                      <span className="font-semibold tabular-nums">
                         {formatPriceLkrMillions(point.avg_price)}
                       </span>
                     </p>
                     {point.top_make && point.top_model && (
-                      <p className="text-muted-foreground text-xs">
-                        Top: {point.top_make} {point.top_model}
+                      <p className="text-caption text-label-2">
+                        {t("districtMap.top", "Top")}: {point.top_make} {point.top_model}
                         {point.top_model_count != null ? ` (${point.top_model_count})` : ""}
                       </p>
                     )}

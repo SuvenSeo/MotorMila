@@ -35,7 +35,9 @@
 
   /* Height the bottom nav reserves on mobile: 12px gap + 64px bar + safe area. */
   --dock-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
-  /* Extra stack height claimed by a transient strip (app promo) above the nav. */
+  /* Extra stack height claimed by a transient strip (app promo) above the nav.
+     Stays 0 here: lib/dock.ts writes it on the consumers only (a change on
+     :root restyles the whole page). */
   --dock-extra: 0px;
   --dock-gap: 0.75rem;
 }
@@ -52,7 +54,7 @@
   position: fixed;
   bottom: calc(var(--dock-bottom) + var(--dock-extra) + var(--dock-gap));
   z-index: var(--z-floating);
-  transition: bottom 200ms ease, opacity 150ms ease, transform 150ms ease;
+  transition: bottom var(--dur-short) var(--ease-standard), opacity var(--dur-short) var(--ease-standard), transform var(--dur-short) var(--ease-standard);
 }
 
 /* Transient strip sitting directly on top of the nav (mobile) / corner (desktop). */
@@ -64,7 +66,8 @@
 
 /* Page content never ends under the dock: room for nav + the compare tray. */
 .app-shell-dock-pad {
-  padding-bottom: calc(var(--dock-bottom) + var(--dock-extra) + 4.5rem);
+  /* + the [data-dock-spacer] height while the app promo strip is up. */
+  padding-bottom: calc(var(--dock-bottom) + 4.5rem);
 }
 @media (min-width: 768px) {
   .app-shell-dock-pad { padding-bottom: 0; }

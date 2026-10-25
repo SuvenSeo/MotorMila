@@ -3,6 +3,7 @@ import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { fieldClass } from "@/components/ui/input";
 
 const Select = SelectPrimitive.Root;
 
@@ -17,14 +18,15 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex h-10 w-full items-center justify-between rounded-input border border-border bg-card/60 px-4 py-2 text-sm text-foreground ring-offset-background placeholder:text-muted-foreground backdrop-blur-xl mm-field focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.05] [&>span]:line-clamp-1",
+      fieldClass,
+      "flex h-10 items-center justify-between gap-2 py-2 text-left data-[placeholder]:text-label-3 data-[state=open]:border-primary data-[state=open]:ring-4 data-[state=open]:ring-ring/15 [&>span]:line-clamp-1",
       className,
     )}
     {...props}
   >
     {children}
     <SelectPrimitive.Icon asChild>
-      <ChevronDown className="h-4 w-4 opacity-50" />
+      <ChevronDown className="h-4 w-4 shrink-0 text-label-2 transition-transform duration-short ease-standard group-data-[state=open]:rotate-180" />
     </SelectPrimitive.Icon>
   </SelectPrimitive.Trigger>
 ));
@@ -66,7 +68,7 @@ const SelectContent = React.forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        "mm-pop [--mm-origin:var(--radix-select-content-transform-origin,top)] relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-2xl border border-border bg-popover/95 text-popover-foreground shadow-soft-xl backdrop-blur-2xl dark:border-white/10 dark:bg-card/95",
+        "mm-pop [--mm-origin:var(--radix-select-content-transform-origin,top)] relative z-50 max-h-[min(24rem,var(--radix-select-content-available-height))] min-w-[8rem] overflow-hidden rounded-card border border-border bg-popover text-popover-foreground shadow-e2",
         position === "popper" &&
           "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
         className,
@@ -94,7 +96,7 @@ const SelectLabel = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Label>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Label>
 >(({ className, ...props }, ref) => (
-  <SelectPrimitive.Label ref={ref} className={cn("py-1.5 pl-8 pr-2 text-sm font-semibold", className)} {...props} />
+  <SelectPrimitive.Label ref={ref} className={cn("py-1.5 pl-8 pr-2 text-footnote font-semibold", className)} {...props} />
 ));
 SelectLabel.displayName = SelectPrimitive.Label.displayName;
 
@@ -105,14 +107,14 @@ const SelectItem = React.forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex w-full cursor-default select-none items-center rounded-lg py-1.5 pl-8 pr-2 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 focus:bg-accent focus:text-accent-foreground",
+      "relative flex min-h-9 w-full cursor-default select-none items-center rounded-control py-2 pl-8 pr-3 text-body outline-none transition-colors duration-micro data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[state=checked]:font-semibold focus:bg-surface-2 focus:text-foreground",
       className,
     )}
     {...props}
   >
     <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
       <SelectPrimitive.ItemIndicator>
-        <Check className="h-4 w-4" />
+        <Check className="h-4 w-4 text-primary" />
       </SelectPrimitive.ItemIndicator>
     </span>
 
@@ -129,7 +131,66 @@ const SelectSeparator = React.forwardRef<
 ));
 SelectSeparator.displayName = SelectPrimitive.Separator.displayName;
 
+/** Sentinel for an empty-value option: Radix Select forbids value="". */
+const EMPTY = "__mm_empty__";
+
+export type SimpleSelectOption = { value: string; label: React.ReactNode; disabled?: boolean };
+
+/**
+ * Drop-in replacement for a native <select>: options array, string value
+ * ("" allowed for "Any"/placeholder rows), same trigger look as Input.
+ */
+function SimpleSelect({
+  value,
+  onValueChange,
+  options,
+  placeholder,
+  id,
+  name,
+  className,
+  disabled,
+  required,
+  "aria-label": ariaLabel,
+  "aria-invalid": ariaInvalid,
+}: {
+  value: string;
+  onValueChange: (value: string) => void;
+  options: SimpleSelectOption[];
+  placeholder?: string;
+  id?: string;
+  name?: string;
+  className?: string;
+  disabled?: boolean;
+  required?: boolean;
+  "aria-label"?: string;
+  "aria-invalid"?: boolean;
+}) {
+  const hasEmpty = options.some((o) => o.value === "");
+  const toInner = (v: string) => (v === "" ? (hasEmpty ? EMPTY : undefined) : v);
+  return (
+    <Select
+      value={toInner(value)}
+      onValueChange={(v) => onValueChange(v === EMPTY ? "" : v)}
+      disabled={disabled}
+      required={required}
+      name={name}
+    >
+      <SelectTrigger id={id} className={className} aria-label={ariaLabel} aria-invalid={ariaInvalid}>
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((o) => (
+          <SelectItem key={o.value || EMPTY} value={o.value === "" ? EMPTY : o.value} disabled={o.disabled}>
+            {o.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 export {
+  SimpleSelect,
   Select,
   SelectGroup,
   SelectValue,

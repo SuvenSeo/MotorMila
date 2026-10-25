@@ -141,4 +141,41 @@ describe("Navbar accessibility active-state", () => {
     expect(screen.getByRole("button", { name: /sign in with email and password/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /keep browsing without signing in/i })).toBeInTheDocument();
   });
+
+  it("opens a compact More menu holding only routes the destinations do not reach", async () => {
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <AppPreferencesProvider>
+            <MemoryRouter initialEntries={["/"]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+              <Navbar />
+            </MemoryRouter>
+          </AppPreferencesProvider>
+        </AuthProvider>,
+      );
+    });
+
+    const trigger = screen.getByRole("button", { name: /^more$/i });
+    expect(trigger).toHaveAttribute("aria-haspopup", "menu");
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+
+    act(() => {
+      trigger.focus();
+      fireEvent.keyDown(trigger, { key: "Enter" });
+    });
+
+    const menu = await screen.findByRole("menu");
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    const items = Array.from(menu.querySelectorAll('[role="menuitem"]')).map((el) => el.textContent ?? "");
+    expect(items.some((text) => /pricing/i.test(text))).toBe(true);
+    expect(items.some((text) => /how it works/i.test(text))).toBe(true);
+    // No repeats of the five destinations' own sections.
+    expect(items.some((text) => /price trends|import tax calculator|sell your vehicle|browse all vehicles/i.test(text))).toBe(false);
+
+    act(() => {
+      fireEvent.keyDown(menu, { key: "Escape" });
+    });
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+  });
 });

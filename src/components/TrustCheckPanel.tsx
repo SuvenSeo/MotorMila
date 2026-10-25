@@ -8,11 +8,11 @@ import { cn } from "@/lib/utils";
 const DMT_VEHICLE_INFO_URL = "https://eservices.motortraffic.gov.lk/VehicleInfo/home";
 const CUSTOMS_VERIFY_URL = "https://services.customs.gov.lk/vehicles";
 
-const LEVEL_STYLE: Record<SignalLevel, { icon: typeof Info; tone: string; label: string }> = {
-  high: { icon: ShieldAlert, tone: "text-rose-700 dark:text-rose-300 bg-rose-500/10 border-rose-500/25", label: "Check carefully" },
-  medium: { icon: AlertTriangle, tone: "text-amber-800 dark:text-amber-300 bg-amber-400/10 border-amber-500/25", label: "Worth checking" },
-  info: { icon: Info, tone: "text-foreground bg-muted/60 border-border", label: "Good to know" },
-  ok: { icon: CheckCircle2, tone: "text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border-emerald-500/25", label: "Looks normal" },
+const LEVEL_STYLE: Record<SignalLevel, { icon: typeof Info; tone: string; label: readonly [string, string] }> = {
+  high: { icon: ShieldAlert, tone: "text-deal-high-text bg-deal-high/10 border-deal-high/25", label: ["trust.level.high", "Check carefully"] },
+  medium: { icon: AlertTriangle, tone: "text-deal-caution-text bg-deal-caution/10 border-deal-caution/25", label: ["trust.level.medium", "Worth checking"] },
+  info: { icon: Info, tone: "text-foreground bg-muted/60 border-border", label: ["trust.level.info", "Good to know"] },
+  ok: { icon: CheckCircle2, tone: "text-deal-good-text bg-deal-good/10 border-deal-good/25", label: ["trust.level.ok", "Looks normal"] },
 };
 
 /**
@@ -24,8 +24,8 @@ export function TrustCheckPanel(props: TrustInput & { className?: string }) {
   const { t } = useAppPreferences();
   const { className, listing, pricePoints, related, now } = props;
   const report = useMemo(
-    () => buildTrustReport({ listing, pricePoints, related, now }),
-    [listing, pricePoints, related, now],
+    () => buildTrustReport({ listing, pricePoints, related, now, t }),
+    [listing, pricePoints, related, now, t],
   );
   const HeaderIcon = report.highCount > 0 ? ShieldAlert : ShieldCheck;
 
@@ -44,10 +44,10 @@ export function TrustCheckPanel(props: TrustInput & { className?: string }) {
           <HeaderIcon className="h-4 w-4" aria-hidden />
         </span>
         <div className="min-w-0">
-          <h2 id="trust-check-title" className="text-[15px] font-semibold text-foreground">
+          <h2 id="trust-check-title" className="text-body font-semibold text-foreground">
             {t("trust.title", "Trust Check")}
           </h2>
-          <p className="mt-0.5 text-[13px] text-muted-foreground" aria-live="polite">
+          <p className="mt-0.5 text-footnote text-muted-foreground" aria-live="polite">
             {report.summary}
           </p>
         </div>
@@ -62,18 +62,18 @@ export function TrustCheckPanel(props: TrustInput & { className?: string }) {
               <div className="flex items-start gap-2.5">
                 <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                 <div className="min-w-0">
-                  <p className="text-[13px] font-semibold leading-snug">
-                    <span className="sr-only">{style.label}: </span>
+                  <p className="text-footnote font-semibold leading-snug">
+                    <span className="sr-only">{t(style.label[0], style.label[1])}: </span>
                     {signal.title}
                   </p>
-                  <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">{signal.detail}</p>
+                  <p className="mt-1 text-footnote leading-relaxed text-muted-foreground">{signal.detail}</p>
                 </div>
               </div>
             </li>
           );
         })}
         {!report.crossSiteAvailable && (
-          <li className="rounded-2xl border border-dashed border-border px-3.5 py-3 text-[12.5px] text-muted-foreground">
+          <li className="rounded-2xl border border-dashed border-border px-3.5 py-3 text-footnote text-muted-foreground">
             {t(
               "trust.crossSiteUnavailable",
               "We couldn't load cross-site history right now, so duplicate-ad and odometer checks are skipped. Try again later.",
@@ -83,8 +83,8 @@ export function TrustCheckPanel(props: TrustInput & { className?: string }) {
       </ul>
 
       <div className="mt-4 rounded-2xl bg-muted/50 p-3.5">
-        <p className="text-[13px] font-semibold text-foreground">{t("trust.verifyTitle", "Before you pay, verify it yourself")}</p>
-        <ul className="mt-2 space-y-1.5 text-[12.5px] leading-relaxed text-muted-foreground">
+        <p className="text-footnote font-semibold text-foreground">{t("trust.verifyTitle", "Before you pay, verify it yourself")}</p>
+        <ul className="mt-2 space-y-1.5 text-footnote leading-relaxed text-muted-foreground">
           <li>
             <a href={DMT_VEHICLE_INFO_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-medium text-primary underline-offset-2 hover:underline">
               {t("trust.dmt", "DMT vehicle record")} <ExternalLink className="h-3 w-3" aria-hidden />
@@ -107,7 +107,7 @@ export function TrustCheckPanel(props: TrustInput & { className?: string }) {
         </ul>
       </div>
 
-      <p className="mt-3 text-[11.5px] leading-relaxed text-muted-foreground">
+      <p className="mt-3 text-caption leading-relaxed text-muted-foreground">
         {t(
           "trust.disclaimer",
           "These are automated risk signals from asking prices and ad text. They aren't a verdict on the car or the seller. Motormila hasn't inspected this vehicle.",

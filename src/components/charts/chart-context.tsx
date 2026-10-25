@@ -23,6 +23,7 @@ import {
   useMemo,
 } from "react";
 import type { ChartPhase, ChartStatus } from "./chart-phase";
+import type { LineConfig, Margin, TooltipData } from "./chart-types";
 import type { ReferenceAreaConfig } from "./reference-area-config";
 import type { ChartSelection } from "./use-chart-interaction";
 import { DEFAULT_Y_AXIS_ID } from "./y-axis-scales";
@@ -60,33 +61,7 @@ export const defaultScatterColors = [
   "var(--chart-5)",
 ] as const;
 
-export interface Margin {
-  top: number;
-  right: number;
-  bottom: number;
-  left: number;
-}
-
-export interface TooltipData {
-  /** The data point being hovered */
-  point: Record<string, unknown>;
-  /** Index in the data array */
-  index: number;
-  /** X position in pixels (relative to chart area) */
-  x: number;
-  /** Y positions for each line, keyed by dataKey */
-  yPositions: Record<string, number>;
-  /** X positions for each series (for grouped bars), keyed by dataKey */
-  xPositions?: Record<string, number>;
-}
-
-export interface LineConfig {
-  dataKey: string;
-  stroke: string;
-  strokeWidth: number;
-  /** Scale group id (Recharts `yAxisId`). Default: `"left"`. */
-  yAxisId?: string | number;
-}
+export type { LineConfig, Margin, TooltipData } from "./chart-types";
 
 /**
  * Hover/selection state — every field here changes on mouse movement.

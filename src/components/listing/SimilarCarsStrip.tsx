@@ -57,7 +57,7 @@ export function SimilarCarsStrip({ listings, fullAccess, title }: SimilarCarsStr
   return (
     <section aria-labelledby="similar-cars-title" className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <h2 id="similar-cars-title" className="text-[15px] font-bold text-foreground">{title}</h2>
+        <h2 id="similar-cars-title" className="text-body font-bold text-foreground">{title}</h2>
         {listings.length > 1 && (
           <div className="hidden gap-1.5 sm:flex">
             <button
@@ -85,7 +85,7 @@ export function SimilarCarsStrip({ listings, fullAccess, title }: SimilarCarsStr
       {listings.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card py-6 text-center">
           <CarIcon aria-hidden className="mx-auto mb-2 h-5 w-5 text-muted-foreground/40" />
-          <p className="text-[12px] text-muted-foreground">{t("listing.noPeers", "No active peers tracked.")}</p>
+          <p className="text-caption text-muted-foreground">{t("listing.noPeers", "No active peers tracked.")}</p>
         </div>
       ) : (
         <div ref={emblaRef} className="-mx-1 overflow-hidden px-1">
@@ -112,15 +112,15 @@ export function SimilarCarsStrip({ listings, fullAccess, title }: SimilarCarsStr
                       <VehicleThumbnail src={img} listingId={s.id} alt={name} source={s.source} sizes="(max-width: 640px) 68vw, 30vw" className="h-full w-full object-cover" />
                     </div>
                     <div className="space-y-1.5 p-3">
-                      <p className="truncate text-[12.5px] font-semibold text-foreground">
+                      <p className="truncate text-footnote font-semibold text-foreground">
                         {name}{s.year ? ` · ${s.year}` : ""}
                       </p>
-                      <p className="num text-[15px] font-extrabold text-foreground">
+                      <p className="num text-body font-extrabold text-foreground">
                         {priced ? formatPrice(price) : t("listing.unlisted", "Unlisted")}
                       </p>
                       {badge.kind !== "none" && badge.kind !== "lease" && <DealBadge badge={badge} tone="soft" />}
                       {badge.kind === "lease" && (
-                        <p className="text-[11px] font-semibold text-sky-700 dark:text-sky-300">{t("listing.sticky.lease", "Lease takeover — not full price")}</p>
+                        <p className="text-caption font-semibold text-primary">{t("listing.sticky.lease", "Lease takeover — not full price")}</p>
                       )}
                     </div>
                   </Link>

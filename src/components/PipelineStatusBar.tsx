@@ -133,7 +133,7 @@ export const PipelineStatusBar = memo(function PipelineStatusBar({
     <div className="console-section overflow-hidden">
       <div className="flex flex-col gap-4 border-b border-border px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <span className="w-2.5 h-2.5 rounded-full shadow-[0_0_10px_rgba(216,155,53,0.8)]" style={{ backgroundColor: statusColor(overall) }} />
+          <span className="w-2.5 h-2.5 rounded-full shadow-e1" style={{ backgroundColor: statusColor(overall) }} />
           <span className="tech-label text-muted-foreground">Data Pipeline</span>
           <span className="status-chip px-2.5 py-1">
             {overallLabel}
@@ -183,7 +183,7 @@ export const PipelineStatusBar = memo(function PipelineStatusBar({
                       : "never synced"}
                   </span>
                   {stale ? (
-                    <span className="rounded border border-primary/25 bg-primary/10 px-1.5 py-0.5 text-[12px] font-medium text-primary-bright">
+                    <span className="rounded border border-primary/25 bg-primary/10 px-1.5 py-0.5 text-caption font-medium text-primary-bright">
                       stale
                     </span>
                   ) : null}
@@ -222,7 +222,7 @@ export const PipelineStatusBar = memo(function PipelineStatusBar({
                         className={`w-4 h-4 shrink-0 ${job.status === "running" ? "animate-spin" : ""}`}
                         style={{ color }}
                       />
-                      <p className="text-sm font-semibold text-foreground truncate">{prettifyJobName(job.name)}</p>
+                      <p className="text-footnote font-semibold text-foreground truncate">{prettifyJobName(job.name)}</p>
                     </div>
                     <span className="tech-label rounded-full border border-border bg-card px-2 py-1 text-foreground">
                       {job.status}

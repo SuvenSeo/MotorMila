@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Command } from "cmdk";
@@ -50,8 +50,8 @@ function formatCount(n: number): string {
   return String(n);
 }
 
-export function CommandPalette() {
-  const [open, setOpen] = useState(false);
+export function CommandPalette({ defaultOpen = false }: { defaultOpen?: boolean } = {}) {
+  const [open, setOpen] = useState(defaultOpen);
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useAppPreferences();
@@ -95,10 +95,15 @@ export function CommandPalette() {
     };
   }, [open ]);
 
-  // Close whenever the route changes (selection navigated).
+  // Close whenever the route changes (selection navigated). Skips the mount
+  // run so a palette mounted already-open (lazy CommandPaletteHost) stays open.
+  const routeKey = `${location.pathname}${location.search}${location.hash}`;
+  const lastRouteKey = useRef(routeKey);
   useEffect(() => {
+    if (lastRouteKey.current === routeKey) return;
+    lastRouteKey.current = routeKey;
     setOpen(false);
-  }, [location.pathname, location.search, location.hash]);
+  }, [routeKey]);
 
   // ── Data (shared react-query caches — no duplicate fetching) ──
   const makesQuery = useQuery({
@@ -161,22 +166,22 @@ export function CommandPalette() {
             <Command.Input
               autoFocus
               placeholder={t("palette.placeholder", "Search makes, models, or go to…")}
-              className="w-full bg-transparent py-3.5 text-[15px] outline-none placeholder:text-muted-foreground"
+              className="w-full bg-transparent py-3.5 text-body outline-none placeholder:text-muted-foreground"
             />
-            <kbd className="hidden shrink-0 rounded-md border border-border bg-foreground/[0.04] px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground sm:inline-block">
+            <kbd className="hidden shrink-0 rounded-md border border-border bg-foreground/[0.04] px-1.5 py-0.5 text-caption font-semibold text-muted-foreground sm:inline-block">
               ESC
             </kbd>
           </div>
 
           <Command.List className="max-h-[62vh] overflow-y-auto overscroll-contain p-2">
-            <Command.Empty className="px-4 py-8 text-center text-sm text-muted-foreground">
+            <Command.Empty className="px-4 py-8 text-center text-footnote text-muted-foreground">
               {t("palette.empty", "No matches. Try a make like Toyota or a model like Corolla.")}
             </Command.Empty>
 
             {makes.length > 0 && (
               <Command.Group
                 heading={t("palette.makes", "Makes")}
-                className="px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5"
+                className="px-2 pb-1 pt-2 text-caption font-semibold uppercase tracking-caps text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5"
               >
                 {makes.map((m) => (
                   <Command.Item
@@ -184,13 +189,13 @@ export function CommandPalette() {
                     value={`make ${m.make}`}
                     keywords={[`${m.count} listings`]}
                     onSelect={() => go(`/cars/${encodeURIComponent(m.make)}`)}
-                    className="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm outline-none data-[selected=true]:bg-primary/10"
+                    className="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-footnote outline-none data-[selected=true]:bg-primary/10"
                   >
                     <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-foreground/[0.04] text-muted-foreground group-data-[selected=true]:border-primary/30 group-data-[selected=true]:text-primary">
                       <Car className="h-4 w-4" aria-hidden />
                     </span>
                     <span className="min-w-0 flex-1 truncate font-medium">{m.make}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">
+                    <span className="shrink-0 text-caption text-muted-foreground">
                       {formatCount(m.count)}
                     </span>
                     <ChevronRight
@@ -205,7 +210,7 @@ export function CommandPalette() {
             {models.length > 0 && (
               <Command.Group
                 heading={t("palette.models", "Models")}
-                className="px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5"
+                className="px-2 pb-1 pt-2 text-caption font-semibold uppercase tracking-caps text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5"
               >
                 {models.map((m) => (
                   <Command.Item
@@ -215,13 +220,13 @@ export function CommandPalette() {
                     onSelect={() =>
                       go(`/cars/${encodeURIComponent(m.make)}/${encodeURIComponent(m.model)}`)
                     }
-                    className="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm outline-none data-[selected=true]:bg-primary/10"
+                    className="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-footnote outline-none data-[selected=true]:bg-primary/10"
                   >
                     <span className="min-w-0 flex-1 truncate">
                       <span className="font-medium">{m.model}</span>
                       <span className="text-muted-foreground"> · {m.make}</span>
                     </span>
-                    <span className="shrink-0 text-xs text-muted-foreground">
+                    <span className="shrink-0 text-caption text-muted-foreground">
                       {formatCount(m.count)}
                     </span>
                     <ChevronRight
@@ -235,20 +240,20 @@ export function CommandPalette() {
 
             <Command.Group
               heading={t("palette.actions", "Go to")}
-              className="px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5"
+              className="px-2 pb-1 pt-2 text-caption font-semibold uppercase tracking-caps text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5"
             >
               {ACTIONS.map((a) => (
                 <Command.Item
                   key={`action:${a.id}`}
                   value={`go to ${a.label} ${a.hint}`}
                   onSelect={() => go(a.to)}
-                  className="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm outline-none data-[selected=true]:bg-primary/10"
+                  className="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-footnote outline-none data-[selected=true]:bg-primary/10"
                 >
                   <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-foreground/[0.04] text-muted-foreground group-data-[selected=true]:border-primary/30 group-data-[selected=true]:text-primary">
                     <a.icon className="h-4 w-4" aria-hidden />
                   </span>
                   <span className="min-w-0 flex-1 truncate font-medium">{a.label}</span>
-                  <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
+                  <span className="hidden shrink-0 text-caption text-muted-foreground sm:inline">
                     {a.hint}
                   </span>
                 </Command.Item>
@@ -256,7 +261,7 @@ export function CommandPalette() {
             </Command.Group>
           </Command.List>
 
-          <div className="hidden items-center gap-4 border-t border-border px-4 py-2.5 text-[11px] text-muted-foreground sm:flex">
+          <div className="hidden items-center gap-4 border-t border-border px-4 py-2.5 text-caption text-muted-foreground sm:flex">
             <span className="flex items-center gap-1.5">
               <kbd className="rounded border border-border bg-foreground/[0.04] px-1">↑↓</kbd>
               {t("palette.navigate", "navigate")}

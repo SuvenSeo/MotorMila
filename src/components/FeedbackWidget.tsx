@@ -87,7 +87,7 @@ export function FeedbackWidget() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg border-border bg-card text-foreground">
           <DialogHeader>
-            <DialogTitle className="font-display text-2xl tracking-tight">{t("feedback.title", "Send Feedback")}</DialogTitle>
+            <DialogTitle className="font-display text-title2 tracking-tight">{t("feedback.title", "Send Feedback")}</DialogTitle>
             <DialogDescription className="sr-only">
               {t("feedback.description", "Send a bug, idea, data, user experience, or general note to the Motormila team.")}
             </DialogDescription>
@@ -102,7 +102,7 @@ export function FeedbackWidget() {
                     key={option.value}
                     type="button"
                     onClick={() => setCategory(option.value)}
-                    className={`inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-semibold transition-colors duration-200 active:scale-95 ${
+                    className={`inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-caption font-semibold transition-colors duration-short active:scale-95 ${
                       category === option.value
                         ? "border-primary/35 bg-primary/12 text-primary"
                         : "border-border bg-surface text-muted-foreground hover:border-primary/40 hover:text-foreground"
@@ -119,7 +119,7 @@ export function FeedbackWidget() {
               value={message}
               onChange={(event) => setMessage(event.target.value)}
               placeholder={t("feedback.placeholder", "What should Motormila fix or improve?")}
-              className="min-h-[130px] rounded-xl border-border bg-surface text-sm text-foreground placeholder:text-muted-foreground"
+              className="min-h-[130px] rounded-xl border-border bg-surface text-footnote text-foreground placeholder:text-muted-foreground"
             />
 
             <Input
@@ -127,7 +127,7 @@ export function FeedbackWidget() {
               onChange={(event) => setEmail(event.target.value)}
               type="email"
               placeholder={t("feedback.emailOptional", "Email optional")}
-              className="h-10 rounded-xl border-border bg-surface text-sm text-foreground"
+              className="h-10 rounded-xl border-border bg-surface text-footnote text-foreground"
             />
 
             <div className="flex items-center justify-between gap-3">
@@ -137,7 +137,7 @@ export function FeedbackWidget() {
               <Button
                 disabled={!canSubmit}
                 onClick={submit}
-              className="h-10 rounded-full bg-primary px-4 text-xs font-semibold text-primary-foreground transition-transform duration-200 hover:bg-primary active:scale-95 disabled:opacity-50 disabled:active:scale-100"
+              className="h-10 rounded-full bg-primary px-4 text-caption font-semibold text-primary-foreground transition-transform duration-short hover:bg-primary active:scale-95 disabled:opacity-50 disabled:active:scale-100"
               >
                 <Send className="mr-2 h-3.5 w-3.5" />
                 {submitting ? t("feedback.sending", "Sending") : t("feedback.send", "Send")}

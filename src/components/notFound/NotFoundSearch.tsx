@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Gauge, Scale, Search, Tag } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { HOW_WE_PRICE_PATH } from "@/lib/howWePrice";
 
@@ -29,7 +32,7 @@ export function NotFoundSearch() {
   ];
 
   return (
-    <div className="mb-10 rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
+    <Card>
       <form
         role="search"
         onSubmit={(e) => {
@@ -43,30 +46,32 @@ export function NotFoundSearch() {
           {t("notFound.searchLabel", "Search vehicles")}
         </label>
         <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-          <input
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-label-2" aria-hidden />
+          <Input
             id="nf-search"
             type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder={t("notFound.searchPh", "Search make, model or year — e.g. Toyota Aqua 2015")}
-            className="h-12 w-full rounded-xl border border-border bg-surface pl-9 pr-3 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            className="h-12 pl-10"
           />
         </div>
-        <button type="submit" className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-[14px] font-semibold text-primary-foreground hover:bg-primary/90">
+        <Button type="submit" size="lg">
           {t("notFound.searchBtn", "Search")}
-        </button>
+        </Button>
       </form>
       <ul className="mt-4 flex flex-wrap gap-2">
         {quick.map(({ to, label, icon: Icon }) => (
-          <li key={to}>
-            <Link to={to} className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-border bg-surface px-3.5 text-[13px] font-medium text-foreground no-underline hover:border-primary/40">
-              <Icon className="h-3.5 w-3.5 text-primary" aria-hidden />
-              {label}
-            </Link>
+          <li key={to} className="max-w-full">
+            <Button asChild variant="secondary" size="sm" className="h-auto min-h-9 max-w-full whitespace-normal py-1.5 text-center font-medium">
+              <Link to={to} className="no-underline">
+                <Icon className="text-primary" aria-hidden />
+                {label}
+              </Link>
+            </Button>
           </li>
         ))}
       </ul>
-    </div>
+    </Card>
   );
 }

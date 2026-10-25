@@ -1,32 +1,45 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowRight, Camera, CheckCircle2, Loader2, MapPin, Phone, Tag, User } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowRight, Camera, Car, Check, CheckCircle2, Circle, FileText, ImageOff, LogIn, MapPin, Phone, Tag, X } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { createMyListing, type MyListingInput } from "@/services/api";
 import { trackEvent } from "@/lib/analytics";
-import { PageCanvas } from "@/components/PageCanvas";
-import { PageHero } from "@/components/PageHero";
+import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
-import { MovingBorder } from "@/components/ui/MovingBorder";
-import { StatefulButton, type StatefulButtonState } from "@/components/ui/StatefulButton";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { SimpleSelect } from "@/components/ui/select";
+import { AdornedInput, AnimatedLkr, ChoiceChips, Field, FormCard, Notice, ToolGrid, ToolPage } from "@/components/tools/ToolKit";
 
 const MAKES = [
   "Toyota", "Suzuki", "Honda", "Nissan", "Mitsubishi", "Mazda",
   "Hyundai", "Kia", "BMW", "Mercedes-Benz", "Audi", "Perodua",
   "Micro", "DFSK", "Chery", "BYD", "MG", "Other",
 ];
-const FUEL_TYPES = ["Petrol", "Diesel", "Hybrid", "Electric", "CNG"];
-const TRANSMISSIONS = ["Automatic", "Manual", "CVT"];
-const CONDITIONS = ["Used", "Reconditioned", "Brand New"];
-const CATEGORIES = [
-  { key: "cars", label: "Car" },
-  { key: "bikes", label: "Bike" },
-  { key: "tuk", label: "Tuk" },
-  { key: "van", label: "Van" },
-  { key: "suv", label: "SUV" },
+// Values stay English (they are sent to the API); labels are translated.
+const FUEL_TYPES = [
+  { value: "Petrol", key: "fuel.petrol" },
+  { value: "Diesel", key: "fuel.diesel" },
+  { value: "Hybrid", key: "fuel.hybrid" },
+  { value: "Electric", key: "fuel.electric" },
+  { value: "CNG", key: "fuel.cng" },
 ];
+const TRANSMISSIONS = [
+  { value: "Automatic", key: "trans.automatic" },
+  { value: "Manual", key: "trans.manual" },
+  { value: "CVT", key: "trans.cvt" },
+];
+const CONDITIONS = [
+  { value: "Used", key: "condition.used" },
+  { value: "Reconditioned", key: "condition.reconditioned" },
+  { value: "Brand New", key: "condition.brandNew" },
+];
+const CATEGORY_KEYS = ["cars", "bikes", "tuk", "van", "suv"] as const;
 const DISTRICTS = [
   "Colombo", "Gampaha", "Kalutara", "Kandy", "Matale", "Nuwara Eliya",
   "Galle", "Matara", "Hambantota", "Jaffna", "Kilinochchi", "Mannar",
@@ -75,6 +88,7 @@ export default function SellYourCar() {
   const [successFlash, setSuccessFlash] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [brokenCover, setBrokenCover] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.email) {
@@ -104,12 +118,7 @@ export default function SellYourCar() {
   }, []);
 
   const canSubmit = useMemo(
-    () =>
-      form.make.trim() &&
-      form.model.trim() &&
-      form.contactPhone.trim() &&
-      !submitting &&
-      isAuthenticated,
+    () => form.make.trim() && form.model.trim() && form.contactPhone.trim() && !submitting && isAuthenticated,
     [form.make, form.model, form.contactPhone, submitting, isAuthenticated],
   );
 
@@ -151,7 +160,7 @@ export default function SellYourCar() {
           hasPrice: Boolean(payload.priceLkr),
           imageCount: payload.imageUrls?.length ?? 0,
         });
-        // Let the button celebrate the publish before the form swaps out (#10 UI review).
+        // Let the button show the tick before the form swaps out.
         setSuccessFlash(true);
         await new Promise((resolve) => window.setTimeout(resolve, 800));
         setDone(true);
@@ -166,379 +175,302 @@ export default function SellYourCar() {
     [canSubmit, form, isAuthenticated, t],
   );
 
-  return (
-    <PageCanvas>
-      <PageHero
-        eyebrow={t("sell.eyebrow", "Sell your car")}
-        title={t("sell.title", "List your vehicle on Motormila")}
-        description={t(
-          "sell.subtitle",
-          "Reach thousands of buyers searching the Sri Lankan market. Free to list — your ad goes live after a quick review.",
-        )}
-      />
+  const categories = CATEGORY_KEYS.map((key) => ({
+    value: key,
+    label: t(`tools.sell.cat.${key}`, { cars: "Car", bikes: "Bike", tuk: "Tuk", van: "Van", suv: "SUV" }[key]),
+  }));
+  const req = <span className="text-deal-high-text"> *</span>;
 
-      {done ? (
-        <section className="mx-auto max-w-xl px-5 py-16 text-center">
-          <div className="liquid-panel rounded-[2rem] p-10">
-            <CheckCircle2 className="mx-auto h-14 w-14 text-primary-bright" aria-hidden />
-            <h2 className="mt-5 font-display text-2xl font-semibold tracking-tight text-foreground">
-              {t("sell.doneTitle", "Listing submitted!")}
-            </h2>
-            <p className="mx-auto mt-3 max-w-sm text-[13px] leading-relaxed text-muted-foreground">
-              {t(
-                "sell.doneBody",
-                "Your vehicle is queued for review. We'll publish it to the market shortly.",
-              )}{" "}
-              <button
-                type="button"
-                onClick={() => navigate("/profile")}
-                className="font-semibold text-primary-bright underline-offset-2 hover:underline"
-              >
-                {t("sell.manageListings", "Manage your listings")}
-              </button>
-            </p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <Button onClick={() => navigate("/")} variant="default">
-                {t("sell.backToMarket", "Back to market")}
-                <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setForm(INITIAL);
-                  setDone(false);
-                }}
-              >
-                {t("sell.listAnother", "List another vehicle")}
-              </Button>
-            </div>
-          </div>
-        </section>
-      ) : (
-        <section className="mx-auto max-w-3xl px-5 pb-20">
-          {!isAuthenticated && (
-            <div className="liquid-panel mb-6 rounded-2xl border border-primary/25 bg-primary/5 px-5 py-4">
-              <p className="text-[13px] leading-relaxed text-foreground">
-                {t("sell.signInNotice", "You need to sign in to publish a listing.")}{" "}
-                <button
-                  type="button"
-                  onClick={() => navigate("/sign-in")}
-                  className="font-semibold text-primary-bright underline-offset-2 hover:underline"
-                >
-                  {t("sell.signInCta", "Sign in")}
-                </button>
-              </p>
+  /* ── Live ad preview (sticky on desktop) ──────────────────────────────── */
+  const previewTitle =
+    form.title.trim() || [form.year, form.make, form.model].filter(Boolean).join(" ") || t("tools.sell.previewEmpty", "Your vehicle");
+  const cover = form.imageUrls[0];
+  const price = Number(form.priceLkr);
+  const mileage = Number(form.mileage);
+  const checks = [
+    { done: Boolean(form.make && form.model.trim()), label: t("tools.sell.check.vehicle", "Make and model") },
+    { done: Boolean(form.priceLkr), label: t("tools.sell.check.price", "Asking price") },
+    { done: form.imageUrls.length > 0, label: t("tools.sell.check.photos", "At least one photo") },
+    { done: Boolean(form.district), label: t("tools.sell.check.location", "District") },
+    { done: Boolean(form.contactPhone.trim()), label: t("tools.sell.check.phone", "Phone number") },
+  ];
+  const completed = checks.filter((c) => c.done).length;
+
+  /** Desktop only: on phones the form is the page and the preview would land under the publish button. */
+  const preview = (
+    <>
+      <Card variant="media" padding="none" className="hidden lg:block" aria-label={t("tools.sell.preview", "Ad preview")}>
+        <div className="relative aspect-[4/3] bg-surface-2">
+          {cover && brokenCover !== cover ? (
+            <img src={cover} alt="" className="content-in h-full w-full object-cover" onError={() => setBrokenCover(cover)} />
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center gap-2 text-label-3">
+              {cover ? <ImageOff className="h-8 w-8" strokeWidth={1.5} aria-hidden /> : <Car className="h-10 w-10" strokeWidth={1.25} aria-hidden />}
+              <p className="text-footnote">{cover ? t("tools.sell.coverBroken", "This photo link doesn't load") : t("tools.sell.coverEmpty", "Your cover photo shows here")}</p>
             </div>
           )}
+          <Badge variant="neutral" className="absolute left-3 top-3 border-transparent bg-background/90">
+            {t("tools.sell.preview", "Ad preview")}
+          </Badge>
+        </div>
+        <div className="p-5">
+          <p className="truncate text-callout font-semibold text-foreground">{previewTitle}</p>
+          <p className="mt-1 font-display text-title2 font-semibold text-foreground">
+            {price > 0 ? <AnimatedLkr value={price} mode="full" /> : <span className="text-label-3">{t("tools.sell.noPrice", "Add a price")}</span>}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {mileage > 0 ? <Badge variant="neutral">{mileage.toLocaleString("en-US")} km</Badge> : null}
+            <Badge variant="neutral">{form.fuelType}</Badge>
+            <Badge variant="neutral">{form.transmission}</Badge>
+            {form.district ? (
+              <Badge variant="neutral">
+                <MapPin aria-hidden /> {form.city ? `${form.city}, ${form.district}` : form.district}
+              </Badge>
+            ) : null}
+          </div>
+        </div>
+      </Card>
+      <Card padding="sm" className="hidden sm:p-5 lg:block">
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="text-footnote font-semibold text-foreground">{t("tools.sell.checklist", "Ready to publish")}</p>
+          <p className="text-footnote tabular-nums text-label-2">
+            {completed} / {checks.length}
+          </p>
+        </div>
+        <ul className="mt-3 space-y-2">
+          {checks.map((c) => (
+            <li key={c.label} className={cn("flex items-center gap-2 text-footnote transition-colors duration-short ease-standard", c.done ? "text-foreground" : "text-label-2")}>
+              {c.done ? <CheckCircle2 className="h-4 w-4 text-deal-good-text" aria-hidden /> : <Circle className="h-4 w-4 text-label-3" aria-hidden />}
+              {c.label}
+            </li>
+          ))}
+        </ul>
+      </Card>
+    </>
+  );
 
-          <form onSubmit={onSubmit} className="liquid-panel space-y-8 rounded-[2rem] p-6 sm:p-9">
-            {error && (
-              <div role="alert" className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-[13px] text-red-200">
-                {error}
-              </div>
-            )}
+  /* ── Form ─────────────────────────────────────────────────────────────── */
+  const formView = (
+    <form onSubmit={onSubmit} className="space-y-5" noValidate>
+      {!isAuthenticated && (
+        <Notice
+          tone="info"
+          icon={LogIn}
+          title={t("sell.signInNotice", "You need to sign in to publish a listing.")}
+          action={
+            <Button type="button" size="sm" onClick={() => navigate("/sign-in")}>
+              {t("sell.signInCta", "Sign in")}
+            </Button>
+          }
+        />
+      )}
 
-            {/* Vehicle identity */}
-            <fieldset className="space-y-4">
-              <legend className="tech-label flex items-center gap-2 text-muted-foreground">
-                <Tag className="h-3.5 w-3.5" aria-hidden />
-                {t("sell.sectionVehicle", "Vehicle details")}
-              </legend>
+      <FormCard icon={Tag} title={t("sell.sectionVehicle", "Vehicle details")}>
+        <ChoiceChips label={t("tools.sell.category", "Type")} value={form.vehicleCategory as (typeof CATEGORY_KEYS)[number]} options={categories} onChange={(v) => setField("vehicleCategory", v)} />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={<>{t("sell.make", "Make")}{req}</>} htmlFor="sell-make">
+            <SimpleSelect
+              id="sell-make"
+              required
+              value={form.make}
+              onValueChange={(v) => setField("make", v)}
+              placeholder={t("sell.selectMake", "Select make")}
+              options={MAKES.map((mk) => ({ value: mk, label: mk }))}
+            />
+          </Field>
+          <Field label={<>{t("sell.model", "Model")}{req}</>} htmlFor="sell-model">
+            <Input id="sell-model" required value={form.model} onChange={(e) => setField("model", e.target.value)} placeholder={t("sell.modelPh", "e.g. Axio, Vitz, Hilux")} />
+          </Field>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Field label={t("sell.year", "Year")} htmlFor="sell-year">
+            <SimpleSelect
+              id="sell-year"
+              value={String(form.year)}
+              onValueChange={(v) => setField("year", v)}
+              placeholder={t("sell.selectYear", "Select year")}
+              options={Array.from({ length: 40 }, (_, i) => currentYear - i).map((y) => ({ value: String(y), label: y }))}
+            />
+          </Field>
+          <Field label={t("sell.price", "Price (LKR)")} htmlFor="sell-price">
+            <AdornedInput id="sell-price" type="number" min="0" inputMode="numeric" prefix="Rs" value={form.priceLkr} onChange={(e) => setField("priceLkr", e.target.value)} placeholder="5500000" />
+          </Field>
+          <Field label={t("sell.mileage", "Mileage (km)")} htmlFor="sell-mileage">
+            <AdornedInput id="sell-mileage" type="number" min="0" inputMode="numeric" suffix="km" value={form.mileage} onChange={(e) => setField("mileage", e.target.value)} placeholder="85000" />
+          </Field>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Field label={t("sell.fuel", "Fuel type")} htmlFor="sell-fuel">
+            <SimpleSelect id="sell-fuel" value={form.fuelType} onValueChange={(v) => setField("fuelType", v)} options={FUEL_TYPES.map((f) => ({ value: f.value, label: t(f.key, f.value) }))} />
+          </Field>
+          <Field label={t("sell.transmission", "Transmission")} htmlFor="sell-transmission">
+            <SimpleSelect
+              id="sell-transmission"
+              value={form.transmission}
+              onValueChange={(v) => setField("transmission", v)}
+              options={TRANSMISSIONS.map((tm) => ({ value: tm.value, label: t(tm.key, tm.value) }))}
+            />
+          </Field>
+          <Field label={t("sell.condition", "Condition")} htmlFor="sell-condition">
+            <SimpleSelect id="sell-condition" value={form.condition} onValueChange={(v) => setField("condition", v)} options={CONDITIONS.map((c) => ({ value: c.value, label: t(c.key, c.value) }))} />
+          </Field>
+        </div>
+      </FormCard>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block">
-                  <span className="mb-1.5 block text-caption font-medium text-foreground">
-                    {t("sell.make", "Make")} *
-                  </span>
-                  <select
-                    required
-                    value={form.make}
-                    onChange={(e) => setField("make", e.target.value)}
-                    className="h-11 w-full rounded-full border border-border/50 bg-surface/70 px-4 text-sm text-foreground focus:ring-2 focus:ring-primary/20"
-                  >
-                    <option value="">{t("sell.selectMake", "Select make")}</option>
-                    {MAKES.map((m) => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="mb-1.5 block text-caption font-medium text-foreground">
-                    {t("sell.model", "Model")} *
-                  </span>
-                  <Input
-                    required
-                    value={form.model}
-                    onChange={(e) => setField("model", e.target.value)}
-                    placeholder={t("sell.modelPh", "e.g. Axio, Vitz, Hilux")}
-                  />
-                </label>
-              </div>
+      <FormCard icon={MapPin} title={t("sell.sectionLocation", "Location")}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t("sell.district", "District")} htmlFor="sell-district">
+            <SimpleSelect
+              id="sell-district"
+              value={form.district}
+              onValueChange={(v) => setField("district", v)}
+              placeholder={t("sell.selectDistrict", "Select district")}
+              options={DISTRICTS.map((d) => ({ value: d, label: d }))}
+            />
+          </Field>
+          <Field label={t("sell.city", "City")} htmlFor="sell-city">
+            <Input id="sell-city" value={form.city} onChange={(e) => setField("city", e.target.value)} placeholder={t("sell.cityPh", "e.g. Dehiwala")} />
+          </Field>
+        </div>
+      </FormCard>
 
-              <div className="grid gap-4 sm:grid-cols-3">
-                <label className="block">
-                  <span className="mb-1.5 block text-caption font-medium text-foreground">
-                    {t("sell.year", "Year")}
-                  </span>
-                  <select
-                    value={form.year}
-                    onChange={(e) => setField("year", e.target.value)}
-                    className="h-11 w-full rounded-full border border-border/50 bg-surface/70 px-4 text-sm text-foreground"
-                  >
-                    <option value="">{t("sell.selectYear", "Select year")}</option>
-                    {Array.from({ length: 40 }, (_, i) => currentYear - i).map((y) => (
-                      <option key={y} value={y}>{y}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="mb-1.5 block text-caption font-medium text-foreground">
-                    {t("sell.price", "Price (LKR)")}
-                  </span>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={form.priceLkr}
-                    onChange={(e) => setField("priceLkr", e.target.value)}
-                    placeholder="e.g. 5500000"
-                  />
-                </label>
-                <label className="block">
-                  <span className="mb-1.5 block text-caption font-medium text-foreground">
-                    {t("sell.mileage", "Mileage (km)")}
-                  </span>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={form.mileage}
-                    onChange={(e) => setField("mileage", e.target.value)}
-                    placeholder="e.g. 85000"
-                  />
-                </label>
-              </div>
+      <FormCard icon={Camera} title={t("sell.sectionPhotos", "Photos")} description={t("sell.imageHint", "Add up to 12 photos. Hosted on any public image URL — the first becomes your cover.")}>
+        <div className="flex gap-2">
+          <Input
+            aria-label={t("sell.imageUrlPh", "Paste an image URL (https://…)")}
+            value={imageUrl}
+            onChange={(e) => setImageUrl(e.target.value)}
+            placeholder={t("sell.imageUrlPh", "Paste an image URL (https://…)")}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addImage();
+              }
+            }}
+          />
+          <Button type="button" variant="secondary" onClick={addImage} disabled={form.imageUrls.length >= 12 || !imageUrl.trim()}>
+            {t("sell.addImage", "Add")}
+          </Button>
+        </div>
+        {form.imageUrls.length > 0 && (
+          <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {form.imageUrls.map((u, i) => (
+              <li key={u + i} className="content-in group relative aspect-[4/3] overflow-hidden rounded-control border border-border bg-surface-2">
+                <img src={u} alt="" className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeImage(i)}
+                  aria-label={t("sell.remove", "Remove")}
+                  className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white transition-ui duration-short ease-standard active:scale-[0.97] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
+                >
+                  <X className="h-4 w-4" aria-hidden />
+                </button>
+                {i === 0 && (
+                  <Badge variant="solid" className="absolute bottom-1.5 left-1.5">
+                    {t("sell.cover", "Cover")}
+                  </Badge>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </FormCard>
 
-              <div className="grid gap-4 sm:grid-cols-3">
-                <label className="block">
-                  <span className="mb-1.5 block text-caption font-medium text-foreground">{t("sell.fuel", "Fuel type")}</span>
-                  <select
-                    value={form.fuelType}
-                    onChange={(e) => setField("fuelType", e.target.value)}
-                    className="h-11 w-full rounded-full border border-border/50 bg-surface/70 px-4 text-sm text-foreground"
-                  >
-                    {FUEL_TYPES.map((f) => <option key={f} value={f}>{f}</option>)}
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="mb-1.5 block text-caption font-medium text-foreground">{t("sell.transmission", "Transmission")}</span>
-                  <select
-                    value={form.transmission}
-                    onChange={(e) => setField("transmission", e.target.value)}
-                    className="h-11 w-full rounded-full border border-border/50 bg-surface/70 px-4 text-sm text-foreground"
-                  >
-                    {TRANSMISSIONS.map((tm) => <option key={tm} value={tm}>{tm}</option>)}
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="mb-1.5 block text-caption font-medium text-foreground">{t("sell.condition", "Condition")}</span>
-                  <select
-                    value={form.condition}
-                    onChange={(e) => setField("condition", e.target.value)}
-                    className="h-11 w-full rounded-full border border-border/50 bg-surface/70 px-4 text-sm text-foreground"
-                  >
-                    {CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </label>
-              </div>
+      <FormCard icon={FileText} title={t("sell.sectionDesc", "Description")}>
+        <Field label={t("sell.listingTitle", "Listing title")} htmlFor="sell-title">
+          <Input id="sell-title" value={form.title} onChange={(e) => setField("title", e.target.value)} placeholder={t("sell.titlePh", "e.g. 2018 Toyota Axio — well maintained, one owner")} />
+        </Field>
+        <Field label={t("sell.description", "Details")} htmlFor="sell-desc" aside={`${form.description.length} / 4000`}>
+          <Textarea
+            id="sell-desc"
+            value={form.description}
+            onChange={(e) => setField("description", e.target.value)}
+            rows={5}
+            maxLength={4000}
+            placeholder={t("sell.descPh", "Service history, condition, why you're selling, accessories, anything buyers should know…")}
+          />
+        </Field>
+      </FormCard>
 
-              <div className="flex flex-wrap gap-1.5">
-                {CATEGORIES.map((c) => (
-                  <button
-                    key={c.key}
-                    type="button"
-                    onClick={() => setField("vehicleCategory", c.key)}
-                    className={`rounded-full border px-3 py-1 text-caption font-medium transition-all active:scale-[0.97] ${
-                      form.vehicleCategory === c.key
-                        ? "border-primary/40 bg-primary/15 text-primary"
-                        : "border-border/50 bg-surface/70 text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                    }`}
-                  >
-                    {c.label}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
+      <FormCard icon={Phone} title={t("sell.sectionContact", "Contact")} description={t("sell.contactHint", "Your phone is shown to signed-in buyers so they can contact you directly.")}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t("sell.contactName", "Your name")} htmlFor="sell-contact-name">
+            <Input id="sell-contact-name" autoComplete="name" value={form.contactName} onChange={(e) => setField("contactName", e.target.value)} placeholder={t("sell.contactNamePh", "Name shown to buyers")} />
+          </Field>
+          <Field label={<>{t("sell.contactPhone", "Phone number")}{req}</>} htmlFor="sell-contact-phone">
+            <Input id="sell-contact-phone" type="tel" autoComplete="tel" required value={form.contactPhone} onChange={(e) => setField("contactPhone", e.target.value)} placeholder="07X XXX XXXX" />
+          </Field>
+        </div>
+      </FormCard>
 
-            {/* Location */}
-            <fieldset className="space-y-4">
-              <legend className="tech-label flex items-center gap-2 text-muted-foreground">
-                <MapPin className="h-3.5 w-3.5" aria-hidden />
-                {t("sell.sectionLocation", "Location")}
-              </legend>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block">
-                  <span className="mb-1.5 block text-caption font-medium text-foreground">{t("sell.district", "District")}</span>
-                  <select
-                    value={form.district}
-                    onChange={(e) => setField("district", e.target.value)}
-                    className="h-11 w-full rounded-full border border-border/50 bg-surface/70 px-4 text-sm text-foreground"
-                  >
-                    <option value="">{t("sell.selectDistrict", "Select district")}</option>
-                    {DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="mb-1.5 block text-caption font-medium text-foreground">{t("sell.city", "City")}</span>
-                  <Input
-                    value={form.city}
-                    onChange={(e) => setField("city", e.target.value)}
-                    placeholder={t("sell.cityPh", "e.g. Dehiwala")}
-                  />
-                </label>
-              </div>
-            </fieldset>
+      {error && (
+        <Notice tone="danger" role="alert">
+          {error}
+        </Notice>
+      )}
 
-            {/* Photos */}
-            <fieldset className="space-y-4">
-              <legend className="tech-label flex items-center gap-2 text-muted-foreground">
-                <Camera className="h-3.5 w-3.5" aria-hidden />
-                {t("sell.sectionPhotos", "Photos")}
-              </legend>
-              <div className="flex gap-2">
-                <Input
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder={t("sell.imageUrlPh", "Paste an image URL (https://…)")}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") { e.preventDefault(); addImage(); }
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <Button type="submit" size="lg" disabled={!canSubmit && !submitting && !successFlash} loading={submitting && !successFlash}>
+          {successFlash ? (
+            <>
+              <Check aria-hidden /> {t("sell.published", "Published!")}
+            </>
+          ) : (
+            <>
+              {t("sell.submitCta", "Publish listing")} <ArrowRight aria-hidden />
+            </>
+          )}
+        </Button>
+        <p className="text-caption text-label-2">{t("sell.reviewNote", "Listings go live after a quick review — usually within a few hours.")}</p>
+      </div>
+    </form>
+  );
+
+  return (
+    <ToolPage
+      header={
+        <PageHeader
+          eyebrow={t("sell.eyebrow", "Sell your car")}
+          eyebrowIcon={Tag}
+          title={t("sell.title", "List your vehicle on Motormila")}
+          description={t("sell.subtitle", "Reach thousands of buyers searching the Sri Lankan market. Free to list — your ad goes live after a quick review.")}
+        />
+      }
+    >
+      {done ? (
+        <Card className="mx-auto max-w-xl">
+          <EmptyState
+            icon={CheckCircle2}
+            title={t("sell.doneTitle", "Listing submitted!")}
+            body={t("sell.doneBody", "Your vehicle is queued for review. We'll publish it to the market shortly.")}
+            action={
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <Button asChild>
+                  <Link to="/">
+                    {t("sell.backToMarket", "Back to market")} <ArrowRight aria-hidden />
+                  </Link>
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setForm(INITIAL);
+                    setDone(false);
                   }}
-                />
-                <Button type="button" variant="outline" onClick={addImage} disabled={form.imageUrls.length >= 12}>
-                  {t("sell.addImage", "Add")}
+                >
+                  {t("sell.listAnother", "List another vehicle")}
                 </Button>
               </div>
-              <p className="text-caption text-muted-foreground">
-                {t("sell.imageHint", "Add up to 12 photos. Hosted on any public image URL — the first becomes your cover.")}
-              </p>
-              {form.imageUrls.length > 0 && (
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                  {form.imageUrls.map((u, i) => (
-                    <div key={u + i} className="group relative overflow-hidden rounded-2xl border border-border/50 aspect-[4/3]">
-                      <img src={u} alt="" className="h-full w-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(i)}
-                        className="absolute right-1.5 top-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100"
-                      >
-                        {t("sell.remove", "Remove")}
-                      </button>
-                      {i === 0 && (
-                        <span className="absolute bottom-1.5 left-1.5 rounded-full bg-primary px-2 py-0.5 text-[9px] font-bold text-primary-foreground">
-                          {t("sell.cover", "Cover")}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </fieldset>
-
-            {/* Description */}
-            <fieldset className="space-y-4">
-              <legend className="tech-label text-muted-foreground">{t("sell.sectionDesc", "Description")}</legend>
-              <label className="block">
-                <span className="mb-1.5 block text-caption font-medium text-foreground">{t("sell.listingTitle", "Listing title")}</span>
-                <Input
-                  value={form.title}
-                  onChange={(e) => setField("title", e.target.value)}
-                  placeholder={t("sell.titlePh", "e.g. 2018 Toyota Axio — well maintained, one owner")}
-                />
-              </label>
-              <label className="block">
-                <span className="mb-1.5 block text-caption font-medium text-foreground">{t("sell.description", "Details")}</span>
-                <textarea
-                  value={form.description}
-                  onChange={(e) => setField("description", e.target.value)}
-                  rows={5}
-                  maxLength={4000}
-                  placeholder={t(
-                    "sell.descPh",
-                    "Service history, condition, why you're selling, accessories, anything buyers should know…",
-                  )}
-                  className="w-full rounded-3xl border border-border/50 bg-surface/70 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20"
-                />
-              </label>
-            </fieldset>
-
-            {/* Contact */}
-            <fieldset className="space-y-4">
-              <legend className="tech-label flex items-center gap-2 text-muted-foreground">
-                <Phone className="h-3.5 w-3.5" aria-hidden />
-                {t("sell.sectionContact", "Contact")}
-              </legend>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block">
-                  <span className="mb-1.5 flex items-center gap-1 text-caption font-medium text-foreground">
-                    <User className="h-3 w-3" aria-hidden />
-                    {t("sell.contactName", "Your name")}
-                  </span>
-                  <Input
-                    value={form.contactName}
-                    onChange={(e) => setField("contactName", e.target.value)}
-                    placeholder={t("sell.contactNamePh", "Name shown to buyers")}
-                  />
-                </label>
-                <label className="block">
-                  <span className="mb-1.5 block text-caption font-medium text-foreground">
-                    {t("sell.contactPhone", "Phone number")} *
-                  </span>
-                  <Input
-                    required
-                    value={form.contactPhone}
-                    onChange={(e) => setField("contactPhone", e.target.value)}
-                    placeholder="07X XXX XXXX"
-                  />
-                </label>
-              </div>
-              <p className="text-caption text-muted-foreground">
-                {t("sell.contactHint", "Your phone is shown to signed-in buyers so they can contact you directly.")}
-              </p>
-            </fieldset>
-
-            <div className="flex flex-wrap items-center gap-3 border-t border-border/40 pt-6">
-              {/* Moving Border + Stateful Button (#10 UI review) */}
-              <MovingBorder radius="0.625rem">
-                <StatefulButton
-                  type="submit"
-                  disabled={!canSubmit}
-                  size="lg"
-                  state={(successFlash ? "success" : submitting ? "loading" : "idle") satisfies StatefulButtonState}
-                  idle={
-                    <>
-                      {t("sell.submitCta", "Publish listing")}
-                      <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
-                    </>
-                  }
-                  loading={
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                      {t("sell.submitting", "Publishing…")}
-                    </>
-                  }
-                  success={
-                    <>
-                      <CheckCircle2 className="mr-2 h-4 w-4" aria-hidden />
-                      {t("sell.published", "Published!")}
-                    </>
-                  }
-                />
-              </MovingBorder>
-              <p className="text-caption text-muted-foreground">
-                {t("sell.reviewNote", "Listings go live after a quick review — usually within a few hours.")}
-              </p>
-            </div>
-          </form>
-        </section>
+            }
+            hint={
+              <Link to="/profile" className="font-semibold text-primary underline-offset-2 hover:underline">
+                {t("sell.manageListings", "Manage your listings")}
+              </Link>
+            }
+          />
+        </Card>
+      ) : (
+        <ToolGrid form={formView} result={preview} />
       )}
-    </PageCanvas>
+    </ToolPage>
   );
 }

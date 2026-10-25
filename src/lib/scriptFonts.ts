@@ -4,7 +4,7 @@
  * Loaded only when the UI language is si / ta: each language's CSS is a
  * separate dynamic chunk, so English sessions never download them. Only the
  * script subset at two weights (400 body, 600 emphasis) is pulled in; Latin
- * glyphs keep Inter. The `:lang(si|ta)` font stacks live in styles/tokens.css.
+ * glyphs stay in Cal Sans. The `:lang(si|ta)` font stacks live in styles/tokens.css.
  */
 import type { Language } from "@/locales";
 

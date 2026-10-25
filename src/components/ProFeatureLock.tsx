@@ -55,7 +55,7 @@ export function ProFeatureLock({
         to="/pricing#get-started"
         onClick={onCtaClick}
         className={cn(
-          "inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-dashed border-border bg-foreground/[0.02] px-3 text-[11px] font-semibold text-muted-foreground no-underline transition-colors hover:border-primary/30 hover:text-foreground",
+          "inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-dashed border-border bg-foreground/[0.02] px-3 text-caption font-semibold text-muted-foreground no-underline transition-colors hover:border-primary/30 hover:text-foreground",
           className,
         )}
         title={t("shell.pro.lockBody", "This will be part of Pro. Everything else on MotorMila is free during beta.")}
@@ -64,7 +64,7 @@ export function ProFeatureLock({
         <span className="truncate">{label}</span>
         {/* Never "Pro · Pro" when the label already is the plan name. */}
         {label.trim().toLowerCase() !== t("common.pro", "Pro").trim().toLowerCase() ? (
-          <span className="shrink-0 text-[10px] font-medium text-muted-foreground/80">· {t("common.pro", "Pro")}</span>
+          <span className="shrink-0 text-caption font-medium text-muted-foreground/80">· {t("common.pro", "Pro")}</span>
         ) : null}
       </Link>
     );
@@ -82,13 +82,13 @@ export function ProFeatureLock({
           <Lock className="h-3.5 w-3.5" aria-hidden />
         </span>
         <div className="min-w-0">
-          <p className="text-[13px] font-semibold text-foreground">
+          <p className="text-footnote font-semibold text-foreground">
             {label}{" "}
-            <span className="ml-1 rounded-full border border-border px-2 py-0.5 text-[10.5px] font-medium text-muted-foreground">
+            <span className="ml-1 rounded-full border border-border px-2 py-0.5 text-caption font-medium text-muted-foreground">
               {t("shell.pro.badge", "Pro · coming soon")}
             </span>
           </p>
-          <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
+          <p className="mt-1 text-caption leading-relaxed text-muted-foreground">
             {t("shell.pro.lockBody", "This will be part of Pro. Everything else on MotorMila is free during beta.")}
           </p>
         </div>
@@ -96,7 +96,7 @@ export function ProFeatureLock({
       <Link
         to="/pricing#get-started"
         onClick={onCtaClick}
-        className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-border bg-card px-4 text-[12px] font-semibold text-foreground no-underline transition-colors hover:border-primary/35"
+        className="tap-44 relative inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-border bg-card px-4 text-caption font-semibold text-foreground no-underline transition-colors hover:border-primary/35"
       >
         <Bell className="h-3.5 w-3.5" aria-hidden />
         {t("shell.pro.notify", "Notify me")}

@@ -1,0 +1,68 @@
+/* ============================================================================
+   Cal Sans — the one Motormila typeface (SIL OFL 1.1, © The Cal Sans Project
+   Authors, https://github.com/calcom/sans, release v2.011). Self-hosted,
+   Latin-subset WOFF2 (public/fonts/cal-sans/, licence in OFL.txt there).
+
+   - "Cal Sans"       display optical size: headlines (600, 700)
+   - "Cal Sans Text"  Text UI optical size: body, UI, prices (400, 500, 600)
+
+   Text 400 and Display 600 are preloaded from index.html. The *Fallback faces
+   are metric-matched local Arial so the swap does not shift layout (CLS).
+   Sinhala/Tamil glyphs come from Noto Sans via the :lang() stacks in tokens.css.
+   ========================================================================== */
+
+@font-face {
+  font-family: "Cal Sans Text";
+  src: url("/fonts/cal-sans/cal-sans-text-400.woff2") format("woff2");
+  font-weight: 100 449;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Cal Sans Text";
+  src: url("/fonts/cal-sans/cal-sans-text-500.woff2") format("woff2");
+  font-weight: 450 549;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Cal Sans Text";
+  src: url("/fonts/cal-sans/cal-sans-text-600.woff2") format("woff2");
+  font-weight: 550 1000;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Cal Sans";
+  src: url("/fonts/cal-sans/cal-sans-display-600.woff2") format("woff2");
+  font-weight: 100 649;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Cal Sans";
+  src: url("/fonts/cal-sans/cal-sans-display-700.woff2") format("woff2");
+  font-weight: 650 1000;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Metric-matched fallbacks (measured against Arial/Helvetica advance widths
+   on a mixed English + price string; ascent 1800, descent 490 @ 2000 upm). */
+@font-face {
+  font-family: "Cal Sans Text Fallback";
+  src: local("Arial"), local("Helvetica"), local("Liberation Sans"), local("Roboto");
+  size-adjust: 106.6%;
+  ascent-override: 84.4%;
+  descent-override: 23%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "Cal Sans Fallback";
+  src: local("Arial Bold"), local("Arial-BoldMT"), local("Helvetica Bold"), local("Liberation Sans Bold"), local("Roboto Bold");
+  font-weight: 600 700;
+  size-adjust: 92.8%;
+  ascent-override: 97%;
+  descent-override: 26.4%;
+  line-gap-override: 0%;
+}

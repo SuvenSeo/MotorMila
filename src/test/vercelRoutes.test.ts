@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { isKnownRoutePath, isNoindexPath } from "@/lib/routeIndexing";
@@ -16,8 +16,33 @@ const root = path.resolve(__dirname, "../..");
 const appSource = readFileSync(path.join(root, "src/App.tsx"), "utf8");
 const vercel = JSON.parse(readFileSync(path.join(root, "vercel.json"), "utf8")) as {
   rewrites: Array<{ source: string; destination: string; has?: unknown }>;
+  redirects?: Array<{ source: string; destination: string; permanent?: boolean }>;
 };
+const cfRedirects = readFileSync(path.join(root, "public/_redirects"), "utf8")
+  .split("\n")
+  .map((line) => line.trim())
+  .filter((line) => line && !line.startsWith("#"))
+  .map((line) => {
+    const [from, to, status] = line.split(/\s+/);
+    return { from, to, status: Number(status || 302) };
+  });
 const prerenderSource = readFileSync(path.join(root, "scripts/prerender-seo.mjs"), "utf8");
+
+// Cloudflare Pages Functions (functions/listing/[id].js, functions/cars/[make]/...)
+// serve their own HTML shells, so those routes need no _redirects rule.
+function functionRoutes(dir: string, prefix = ""): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name.startsWith("_")) continue;
+    const seg = entry.name.replace(/\.js$/, "").replace(/^\[\[?([^\]]+)\]?\]$/, ":$1");
+    if (entry.isDirectory()) out.push(...functionRoutes(path.join(dir, entry.name), `${prefix}/${seg}`));
+    else if (entry.name.endsWith(".js")) out.push(seg === "index" ? prefix || "/" : `${prefix}/${seg}`);
+  }
+  return out;
+}
+const pagesFunctions = functionRoutes(path.join(root, "functions"))
+  .filter((r) => !r.startsWith("/api/"))
+  .map((r) => sourceToRegex(r));
 
 function sourceToRegex(source: string): RegExp {
   const pattern = source
@@ -61,8 +86,39 @@ describe("vercel SPA routing", () => {
     if (url === "/") return; // static index.html
     const viaRewrite = spaRules.some((re) => re.test(url));
     const viaShell = prerendered.has(url);
-    expect(viaRewrite || viaShell).toBe(true);
+    const viaRedirect = (vercel.redirects ?? []).some((r) => sourceToRegex(r.source).test(url));
+    expect(viaRewrite || viaShell || viaRedirect).toBe(true);
     expect(isKnownRoutePath(url)).toBe(true);
+  });
+
+  it.each(routePaths)("Cloudflare _redirects / shells cover %s", (routePath) => {
+    const url = sample(routePath);
+    if (url === "/") return;
+    const viaShell = prerendered.has(url);
+    const viaRule = cfRedirects.some((r) => sourceToRegex(r.from.replace(/\*$/, ":splat*")).test(url));
+    const viaFunction = pagesFunctions.some((re) => re.test(url));
+    expect(viaShell || viaRule || viaFunction).toBe(true);
+  });
+
+  it("301s retired paths instead of serving the indexable home shell", () => {
+    const expected: Record<string, string> = {
+      "/leasing": "/finance",
+      "/admin": "/motormila/admin",
+      "/price-index": "/trends",
+      "/valuation": "/estimate",
+    };
+    for (const [from, to] of Object.entries(expected)) {
+      expect(vercel.redirects).toContainEqual({ source: from, destination: to, permanent: true });
+      expect(cfRedirects).toContainEqual({ from, to, status: 301 });
+    }
+  });
+
+  it("never lets a _redirects 200 rule shadow a prerendered shell", () => {
+    for (const r of cfRedirects.filter((x) => x.status === 200 && x.to === "/")) {
+      for (const shell of prerendered) {
+        expect(sourceToRegex(r.from.replace(/\*$/, ":splat*")).test(shell)).toBe(false);
+      }
+    }
   });
 
   it("treats unknown paths as 404/noindex", () => {

@@ -149,16 +149,17 @@ describe("Dashboard runtime safety", () => {
     expect(heading.querySelector(".display-hero__accent")).not.toBeNull();
   });
 
-  it("renders the market pulse section without throwing", () => {
+  it("renders the market pulse section without throwing", async () => {
     renderDashboard();
 
-    expect(screen.getByRole("heading", { name: /what.s moving right now/i })).toBeInTheDocument();
+    // Below-the-fold sections mount a frame after the first paint.
+    expect(await screen.findByRole("heading", { name: /what.s moving right now/i }, { timeout: 4000 })).toBeInTheDocument();
   });
 
-  it("renders the trending models section", () => {
+  it("renders the trending models section", async () => {
     renderDashboard();
 
-    expect(screen.getByText(/trending models/i)).toBeInTheDocument();
+    expect(await screen.findByText(/trending models/i)).toBeInTheDocument();
   });
 
   it("hides spotlight deal card when dashboard insights only provide zero-priced deals", async () => {
@@ -183,7 +184,7 @@ describe("Dashboard runtime safety", () => {
 
     renderDashboard();
 
-    await screen.findByRole("heading", { name: /what.s moving right now/i });
+    await screen.findByRole("heading", { name: /what.s moving right now/i }, { timeout: 4000 });
     expect(screen.queryByText(/Toyota\s+Vitz/i)).not.toBeInTheDocument();
   });
 
@@ -265,7 +266,7 @@ describe("Home page order and honesty (ui/shell)", () => {
     // Listings section directly follows the hero.
     expect(hero!.nextElementSibling).toBe(market);
     // The Pro overview line (free users) sits after the listings, never blurred.
-    const proLine = screen.getByText(/full market overview/i);
+    const proLine = await screen.findByText(/full market overview/i);
     expect(market!.compareDocumentPosition(proLine) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryByText(/join the waitlist/i)).not.toBeInTheDocument();
     expect(document.querySelector(".blur-\\[7px\\]")).toBeNull();

@@ -1,7 +1,10 @@
 import { useId, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, Check, Loader2, Trash2 } from "lucide-react";
-import { INPUT_CLASS, LABEL_CLASS } from "@/components/money/formStyles";
+import { AlertTriangle, Check, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { deleteMyAccount, DeleteAccountError } from "@/lib/accountApi";
 import { useAuth } from "@/lib/authContext";
 import { useAppPreferences } from "@/lib/appPreferences";
@@ -66,37 +69,33 @@ export function SelfServeDeletion({ onDeleted }: { onDeleted?: () => void }) {
 
   if (phase === "done") {
     return (
-      <div role="status" className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-5">
-        <p className="flex items-center gap-2 text-[14px] font-semibold text-emerald-700 dark:text-emerald-400">
+      <div role="status" className="content-in rounded-card border border-deal-good/30 bg-deal-good/10 p-5">
+        <p className="flex items-center gap-2 text-body font-semibold text-deal-good-text">
           <Check aria-hidden className="h-4 w-4" /> {t("deleteAcct.doneTitle", "Your account has been deleted")}
         </p>
-        <p className="mt-2 text-[13px] text-foreground/80">
+        <p className="mt-2 text-footnote text-label-1">
           {deletedEmail
             ? t("deleteAcct.doneBodyEmail", "{email} and its saved searches, alerts and watchlist are gone. You've been signed out.", { email: deletedEmail })
             : t("deleteAcct.doneBody", "Your saved searches, alerts and watchlist are gone. You've been signed out.")}
         </p>
-        <Link to="/" className="mt-3 inline-flex min-h-11 items-center rounded-full border border-border bg-card px-5 text-[13px] font-semibold text-foreground no-underline">
-          {t("deleteAcct.home", "Back to MotorMila")}
-        </Link>
+        <Button asChild variant="secondary" className="mt-4 !no-underline">
+          <Link to="/">{t("deleteAcct.home", "Back to MotorMila")}</Link>
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 rounded-[1.75rem] border border-border bg-card p-6 shadow-soft">
-      <p className="text-[13px] text-foreground/85">
+    <Card className="space-y-4">
+      <p className="text-footnote text-label-2">
         {t("deleteAcct.signedInAs", "Signed in as {email}.", { email: user?.email ?? "" })}
       </p>
 
       {phase === "idle" && (
-        <button
-          type="button"
-          onClick={() => setPhase("confirm")}
-          className="inline-flex min-h-11 items-center gap-2 rounded-full border border-destructive/40 bg-destructive/10 px-5 text-[13px] font-semibold text-destructive hover:bg-destructive/15"
-        >
-          <Trash2 className="h-4 w-4" aria-hidden />
+        <Button type="button" variant="secondary" onClick={() => setPhase("confirm")} className="text-destructive">
+          <Trash2 aria-hidden />
           {t("deleteAcct.start", "Delete my account now")}
-        </button>
+        </Button>
       )}
 
       {(phase === "confirm" || phase === "deleting") && (
@@ -106,20 +105,20 @@ export function SelfServeDeletion({ onDeleted }: { onDeleted?: () => void }) {
             e.preventDefault();
             void onDelete();
           }}
-          className="space-y-4"
+          className="content-in space-y-4"
           aria-describedby={`${uid}-warn`}
         >
-          <p id={`${uid}-warn`} className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-[13px] text-foreground">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden />
+          <p id={`${uid}-warn`} className="flex items-start gap-2 rounded-control border border-deal-high/30 bg-deal-high/10 p-3 text-footnote text-foreground">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-deal-high-text" aria-hidden />
             {t("deleteAcct.warn", "This can't be undone. Any paid plan ends without a refund for unused time.")}
           </p>
           <div>
-            <label className={LABEL_CLASS} htmlFor={`${uid}-typed`}>
+            <Label className="mb-2 block" htmlFor={`${uid}-typed`}>
               {t("deleteAcct.typeLabel", "Type {word} to confirm", { word: confirmWord })}
-            </label>
-            <input
+            </Label>
+            <Input
               id={`${uid}-typed`}
-              className={INPUT_CLASS}
+              
               autoComplete="off"
               autoCapitalize="characters"
               value={typed}
@@ -127,13 +126,13 @@ export function SelfServeDeletion({ onDeleted }: { onDeleted?: () => void }) {
             />
           </div>
           <div>
-            <label className={LABEL_CLASS} htmlFor={`${uid}-pw`}>
+            <Label className="mb-2 block" htmlFor={`${uid}-pw`}>
               {t("deleteAcct.passwordLabel", "Password")}{" "}
-              <span className="font-normal text-muted-foreground">{t("deleteAcct.optional", "(optional extra check)")}</span>
-            </label>
-            <input
+              <span className="font-normal text-label-2">{t("deleteAcct.optional", "(optional extra check)")}</span>
+            </Label>
+            <Input
               id={`${uid}-pw`}
-              className={INPUT_CLASS}
+              
               type="password"
               autoComplete="current-password"
               value={password}
@@ -141,7 +140,7 @@ export function SelfServeDeletion({ onDeleted }: { onDeleted?: () => void }) {
             />
           </div>
           {error && (
-            <p role="alert" className="text-[13px] font-semibold text-destructive">
+            <p role="alert" className="content-in text-footnote font-semibold text-deal-high-text">
               {error.message}{" "}
               {error.signIn ? (
                 <Link to="/sign-in" state={{ from: { pathname: "/delete-account" } }} className="underline">
@@ -151,16 +150,13 @@ export function SelfServeDeletion({ onDeleted }: { onDeleted?: () => void }) {
             </p>
           )}
           <div className="flex flex-wrap gap-2">
-            <button
-              type="submit"
-              disabled={!canDelete || phase === "deleting"}
-              className="inline-flex min-h-11 items-center gap-2 rounded-full bg-destructive px-5 text-[13px] font-semibold text-destructive-foreground disabled:opacity-40"
-            >
-              {phase === "deleting" ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Trash2 className="h-4 w-4" aria-hidden />}
-              {phase === "deleting" ? t("deleteAcct.deleting", "Deleting…") : t("deleteAcct.confirm", "Permanently delete")}
-            </button>
-            <button
+            <Button type="submit" variant="destructive" disabled={!canDelete} loading={phase === "deleting"}>
+              <Trash2 aria-hidden />
+              {t("deleteAcct.confirm", "Permanently delete")}
+            </Button>
+            <Button
               type="button"
+              variant="secondary"
               disabled={phase === "deleting"}
               onClick={() => {
                 setPhase("idle");
@@ -168,13 +164,12 @@ export function SelfServeDeletion({ onDeleted }: { onDeleted?: () => void }) {
                 setPassword("");
                 setError(null);
               }}
-              className="inline-flex min-h-11 items-center rounded-full border border-border bg-card px-5 text-[13px] font-semibold text-foreground"
             >
               {t("deleteAcct.cancel", "Cancel")}
-            </button>
+            </Button>
           </div>
         </form>
       )}
-    </div>
+    </Card>
   );
 }

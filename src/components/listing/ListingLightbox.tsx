@@ -51,7 +51,9 @@ export default function ListingLightbox({
       styles={originStyle ? { root: originStyle } : undefined}
       // Pinch / double-tap / wheel zoom with spec easing.
       zoom={{ maxZoomPixelRatio: 3, scrollToZoom: true, pinchZoomV4: true }}
-      carousel={{ finite: images.length <= 1, preload: 1 }}
+      // Same Referer policy as the card/detail photos (VehicleThumbnail), so a
+      // photo that showed on the page also opens here.
+      carousel={{ finite: images.length <= 1, preload: 1, imageProps: { referrerPolicy: "no-referrer" } }}
       animation={
         reduced
           ? { fade: 0, swipe: 0, zoom: 0, navigation: 0 }
@@ -59,10 +61,12 @@ export default function ListingLightbox({
               fade: 280,
               swipe: 320,
               zoom: 280,
+              // Literal curves (same as --ease-standard / --ease-decelerate in index.css):
+              // swipe/navigation run through Element.animate(), which rejects var() easings.
               easing: {
                 fade: "cubic-bezier(0.2, 0, 0, 1)",
-                swipe: "cubic-bezier(0.3, 0, 0, 1)",
-                navigation: "cubic-bezier(0.3, 0, 0, 1)",
+                swipe: "cubic-bezier(0, 0, 0, 1)",
+                navigation: "cubic-bezier(0, 0, 0, 1)",
               },
             }
       }

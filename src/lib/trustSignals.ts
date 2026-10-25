@@ -8,6 +8,7 @@
  */
 import { parseFlexibleTime } from "@/lib/parseTime";
 import { formatLkrCompact } from "@/lib/price";
+import { englishT, type TranslateFn } from "@/lib/translate";
 
 export type SignalLevel = "high" | "medium" | "info" | "ok";
 
@@ -48,6 +49,8 @@ export interface TrustInput {
   /** Linked listings for the same vehicle (cross-site / relists). `null` = data unavailable. */
   related?: TrustRelatedListing[] | null;
   now?: number;
+  /** Translator (useAppPreferences().t); English when omitted. */
+  t?: TranslateFn;
 }
 
 export interface TrustReport {
@@ -68,13 +71,13 @@ export const ABOVE_MARKET = 0.2;
  * Advance-payment / absent-seller wording seen in vehicle scams (police and
  * CMTA advisories). Matched case-insensitively against title + description.
  */
-const SCAM_PATTERNS: Array<{ re: RegExp; label: string }> = [
-  { re: /\b(advance|deposit|booking fee|token amount)\b.{0,40}\b(pay|send|transfer|required|first)\b|\b(pay|send|transfer)\b.{0,30}\b(advance|deposit)\b/i, label: "asks for an advance or deposit" },
-  { re: /\b(going|leaving|migrating|moving)\s+(abroad|overseas)\b|\b(abroad|overseas)\b.{0,30}\b(sale|urgent|owner|leaving)\b|\b(i am|currently|now)\s+(in|at)\s+(dubai|qatar|saudi|kuwait|oman|uae|italy|korea|japan|australia|canada|uk)\b/i, label: "seller says they are abroad or leaving the country" },
-  { re: /\b(western union|money ?gram|crypto|bitcoin|usdt|gift card)\b/i, label: "mentions untraceable payment methods" },
-  { re: /\b(courier|ship|deliver)\b.{0,30}\b(the )?(vehicle|car|van|bike)\b.{0,30}\b(after|once)\b.{0,20}\b(pay|payment)\b/i, label: "offers delivery after payment, without a viewing" },
-  { re: /\b(no (inspection|viewing|test drive)|without (inspection|viewing))\b/i, label: "discourages inspection or a test drive" },
-  { re: /\bopen (papers|transfer|documents)\b/i, label: "mentions 'open papers' (unregistered transfer)" },
+const SCAM_PATTERNS: Array<{ re: RegExp; label: readonly [string, string] }> = [
+  { re: /\b(advance|deposit|booking fee|token amount)\b.{0,40}\b(pay|send|transfer|required|first)\b|\b(pay|send|transfer)\b.{0,30}\b(advance|deposit)\b/i, label: ["trust.sig.scam.advance", "asks for an advance or deposit"] },
+  { re: /\b(going|leaving|migrating|moving)\s+(abroad|overseas)\b|\b(abroad|overseas)\b.{0,30}\b(sale|urgent|owner|leaving)\b|\b(i am|currently|now)\s+(in|at)\s+(dubai|qatar|saudi|kuwait|oman|uae|italy|korea|japan|australia|canada|uk)\b/i, label: ["trust.sig.scam.abroad", "seller says they are abroad or leaving the country"] },
+  { re: /\b(western union|money ?gram|crypto|bitcoin|usdt|gift card)\b/i, label: ["trust.sig.scam.untraceable", "mentions untraceable payment methods"] },
+  { re: /\b(courier|ship|deliver)\b.{0,30}\b(the )?(vehicle|car|van|bike)\b.{0,30}\b(after|once)\b.{0,20}\b(pay|payment)\b/i, label: ["trust.sig.scam.delivery", "offers delivery after payment, without a viewing"] },
+  { re: /\b(no (inspection|viewing|test drive)|without (inspection|viewing))\b/i, label: ["trust.sig.scam.noInspection", "discourages inspection or a test drive"] },
+  { re: /\bopen (papers|transfer|documents)\b/i, label: ["trust.sig.scam.openPapers", "mentions 'open papers' (unregistered transfer)"] },
 ];
 
 function fmtLkr(n: number): string {
@@ -83,6 +86,7 @@ function fmtLkr(n: number): string {
 
 export function buildTrustReport(input: TrustInput): TrustReport {
   const { listing } = input;
+  const t = input.t ?? englishT;
   const now = input.now ?? Date.now();
   const signals: TrustSignal[] = [];
 
@@ -99,49 +103,49 @@ export function buildTrustReport(input: TrustInput): TrustReport {
       signals.push({
         id: "price-far-below",
         level: "high",
-        title: `Priced ${pct}% below similar cars`,
-        detail: `Market median for comparable ads is about ${fmtLkr(marketMedian)}. Prices this far under market are a common bait pattern. It can also mean damage, missing papers or a typo. See the car and the documents before paying anything.`,
+        title: t("trust.sig.below.title", "Priced {pct}% below similar cars", { pct }),
+        detail: t("trust.sig.farBelow.detail", "Market median for comparable ads is about {median}. Prices this far under market are a common bait pattern. It can also mean damage, missing papers or a typo. See the car and the documents before paying anything.", { median: fmtLkr(marketMedian) }),
       });
     } else if (delta <= -BELOW_MARKET) {
       signals.push({
         id: "price-below",
         level: "medium",
-        title: `Priced ${pct}% below similar cars`,
-        detail: `Could be a genuine deal. Ask why it's cheaper (accident history, repainting, overdue licence) and check it in person.`,
+        title: t("trust.sig.below.title", "Priced {pct}% below similar cars", { pct }),
+        detail: t("trust.sig.below.detail", "Could be a genuine deal. Ask why it's cheaper (accident history, repainting, overdue licence) and check it in person."),
       });
     } else if (delta >= ABOVE_MARKET) {
       signals.push({
         id: "price-above",
         level: "info",
-        title: `Priced ${pct}% above similar cars`,
-        detail: `Not a risk on its own. Expect room to negotiate unless the spec or condition is unusually good.`,
+        title: t("trust.sig.above.title", "Priced {pct}% above similar cars", { pct }),
+        detail: t("trust.sig.above.detail", "Not a risk on its own. Expect room to negotiate unless the spec or condition is unusually good."),
       });
     } else {
       signals.push({
         id: "price-in-band",
         level: "ok",
-        title: "Price is in the normal market range",
-        detail: `Within about ±${Math.round(BELOW_MARKET * 100)}% of the median for comparable ads (${fmtLkr(marketMedian)}).`,
+        title: t("trust.sig.inBand.title", "Price is in the normal market range"),
+        detail: t("trust.sig.inBand.detail", "Within about ±{band}% of the median for comparable ads ({median}).", { band: Math.round(BELOW_MARKET * 100), median: fmtLkr(marketMedian) }),
       });
     }
   } else {
     signals.push({
       id: "price-no-band",
       level: "info",
-      title: "Not enough comparable ads to judge the price",
-      detail: "Treat the asking price with care and compare a few similar ads yourself.",
+      title: t("trust.sig.noBand.title", "Not enough comparable ads to judge the price"),
+      detail: t("trust.sig.noBand.detail", "Treat the asking price with care and compare a few similar ads yourself."),
     });
   }
 
   // 2) Scam wording
   const text = `${listing.title || ""}\n${listing.description || ""}`;
-  const hits = SCAM_PATTERNS.filter((p) => p.re.test(text)).map((p) => p.label);
+  const hits = SCAM_PATTERNS.filter((p) => p.re.test(text)).map((p) => t(p.label[0], p.label[1]));
   if (hits.length) {
     signals.push({
       id: "scam-wording",
       level: hits.length > 1 || (hasPrice && hasMarket && price < marketMedian * (1 - BELOW_MARKET)) ? "high" : "medium",
-      title: "Ad wording matches common scam patterns",
-      detail: `The ad ${hits.join("; ")}. Never send an advance, deposit or "booking fee" before you've seen the car and its registration (CR) in person.`,
+      title: t("trust.sig.scam.title", "Ad wording matches common scam patterns"),
+      detail: t("trust.sig.scam.detail", "The ad {hits}. Never send an advance, deposit or \"booking fee\" before you've seen the car and its registration (CR) in person.", { hits: hits.join("; ") }),
     });
   }
 
@@ -158,11 +162,14 @@ export function buildTrustReport(input: TrustInput): TrustReport {
       signals.push({
         id: "cross-site",
         level: spread >= 0.15 ? "medium" : "info",
-        title: `Seen ${others.length + 1} times across ${sources.size} site${sources.size === 1 ? "" : "s"}`,
+        title:
+          sources.size === 1
+            ? t("trust.sig.cross.titleOne", "Seen {n} times on 1 site", { n: others.length + 1 })
+            : t("trust.sig.cross.title", "Seen {n} times across {sites} sites", { n: others.length + 1, sites: sources.size }),
         detail:
           spread >= 0.15
-            ? `Linked ads for what looks like the same car show prices up to ${Math.round(spread * 100)}% apart. Ask the seller which price is current.`
-            : "Same car, likely relisted or cross-posted. Normal for dealers. Check that the seller name matches across ads.",
+            ? t("trust.sig.cross.spread", "Linked ads for what looks like the same car show prices up to {pct}% apart. Ask the seller which price is current.", { pct: Math.round(spread * 100) })
+            : t("trust.sig.cross.same", "Same car, likely relisted or cross-posted. Normal for dealers. Check that the seller name matches across ads."),
       });
 
       // Odometer going down between observations of the same car
@@ -192,16 +199,16 @@ export function buildTrustReport(input: TrustInput): TrustReport {
         signals.push({
           id: "odometer-drop",
           level: "high",
-          title: "Mileage went down between linked ads",
-          detail: `An earlier ad for what looks like the same car showed ${dropFrom.toLocaleString("en-LK")} km. A later one shows ${dropTo.toLocaleString("en-LK")} km. That can be a typo, a mismatched link or a rolled-back odometer. Ask for service records and emission-test reports, which log mileage.`,
+          title: t("trust.sig.odoDrop.title", "Mileage went down between linked ads"),
+          detail: t("trust.sig.odoDrop.detail", "An earlier ad for what looks like the same car showed {from} km. A later one shows {to} km. That can be a typo, a mismatched link or a rolled-back odometer. Ask for service records and emission-test reports, which log mileage.", { from: dropFrom.toLocaleString("en-LK"), to: dropTo.toLocaleString("en-LK") }),
         });
       }
     } else {
       signals.push({
         id: "cross-site-none",
         level: "ok",
-        title: "No duplicate ads found on other sites",
-        detail: "We haven't linked this car to other ads in the sites we track.",
+        title: t("trust.sig.crossNone.title", "No duplicate ads found on other sites"),
+        detail: t("trust.sig.crossNone.detail", "We haven't linked this car to other ads in the sites we track."),
       });
     }
   }
@@ -217,16 +224,16 @@ export function buildTrustReport(input: TrustInput): TrustReport {
       signals.push({
         id: "mileage-low",
         level: "medium",
-        title: "Very low mileage for its age",
-        detail: `About ${Math.round(perYear).toLocaleString("en-LK")} km a year over ${age} years. That's possible, but it's also the pattern you'd see after an odometer rollback. Check wear on the pedals, seats and steering wheel against the stated mileage.`,
+        title: t("trust.sig.lowKm.title", "Very low mileage for its age"),
+        detail: t("trust.sig.lowKm.detail", "About {km} km a year over {age} years. That's possible, but it's also the pattern you'd see after an odometer rollback. Check wear on the pedals, seats and steering wheel against the stated mileage.", { km: Math.round(perYear).toLocaleString("en-LK"), age }),
       });
     }
   } else if (!(Number.isFinite(km) && km > 0)) {
     signals.push({
       id: "mileage-missing",
       level: "info",
-      title: "Mileage not stated",
-      detail: "Ask for the odometer reading and a recent photo of the dashboard.",
+      title: t("trust.sig.noKm.title", "Mileage not stated"),
+      detail: t("trust.sig.noKm.detail", "Ask for the odometer reading and a recent photo of the dashboard."),
     });
   }
 
@@ -243,8 +250,8 @@ export function buildTrustReport(input: TrustInput): TrustReport {
       signals.push({
         id: "price-cuts",
         level: "info",
-        title: `Price cut ${cuts}× since first seen`,
-        detail: `${fmtLkr(first)} → ${fmtLkr(last)} (${change.toFixed(1)}%). The seller may be motivated, which is useful when you negotiate.`,
+        title: t("trust.sig.cuts.title", "Price cut {n}× since first seen", { n: cuts }),
+        detail: t("trust.sig.cuts.detail", "{from} → {to} ({change}%). The seller may be motivated, which is useful when you negotiate.", { from: fmtLkr(first), to: fmtLkr(last), change: change.toFixed(1) }),
       });
     }
   }
@@ -252,8 +259,8 @@ export function buildTrustReport(input: TrustInput): TrustReport {
     signals.push({
       id: "long-on-market",
       level: "info",
-      title: `On the market for ${days} days`,
-      detail: "Long listings often accept lower offers. It's also worth asking why it hasn't sold.",
+      title: t("trust.sig.long.title", "On the market for {n} days", { n: days }),
+      detail: t("trust.sig.long.detail", "Long listings often accept lower offers. It's also worth asking why it hasn't sold."),
     });
   }
 
@@ -263,8 +270,8 @@ export function buildTrustReport(input: TrustInput): TrustReport {
     signals.push({
       id: "no-photos",
       level: "info",
-      title: "No photos in the ad",
-      detail: "Ask for recent photos, including the chassis-number plate and the registration document.",
+      title: t("trust.sig.noPhotos.title", "No photos in the ad"),
+      detail: t("trust.sig.noPhotos.detail", "Ask for recent photos, including the chassis-number plate and the registration document."),
     });
   }
 
@@ -272,10 +279,14 @@ export function buildTrustReport(input: TrustInput): TrustReport {
   const mediumCount = signals.filter((s) => s.level === "medium").length;
   const summary =
     highCount > 0
-      ? `${highCount + mediumCount} risk signal${highCount + mediumCount === 1 ? "" : "s"} to check before you pay`
+      ? highCount + mediumCount === 1
+        ? t("trust.summary.riskOne", "1 risk signal to check before you pay")
+        : t("trust.summary.risk", "{n} risk signals to check before you pay", { n: highCount + mediumCount })
       : mediumCount > 0
-        ? `${mediumCount} thing${mediumCount === 1 ? "" : "s"} worth checking`
-        : "No major risk signals in the data we have";
+        ? mediumCount === 1
+          ? t("trust.summary.checkOne", "1 thing worth checking")
+          : t("trust.summary.check", "{n} things worth checking", { n: mediumCount })
+        : t("trust.summary.none", "No major risk signals in the data we have");
 
   const order: Record<SignalLevel, number> = { high: 0, medium: 1, info: 2, ok: 3 };
   signals.sort((a, b) => order[a.level] - order[b.level]);

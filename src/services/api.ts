@@ -47,6 +47,7 @@ import { formatPriceLkrMillions } from "@/lib/formatting";
 import { authHeaders } from "@/lib/authToken";
 import { districtCoords, normalizeDistrictName } from "@/data/districts";
 import { QUERY_STALE } from "@/lib/queryPolicy";
+import type { ListingFmvDetail } from "@/types/fmv";
 import { cleanDistrict, computedDropPct, isPlausiblePriceDrop } from "@/lib/dataSanity";
 
 const DEFAULT_PRODUCTION_API = "https://seo292-vehicle-platform-backend.hf.space/api/v1";
@@ -1920,31 +1921,8 @@ export const getListingHistoryReport = async (id: string | number): Promise<Hist
   return fetchJSON<HistoryReport>(`/listings/${id}/history-report`);
 };
 
-export interface FmvMethodBreakdown {
-  base_median_lkr: number | null;
-  km_adjustment_lkr: number | null;
-  district_adjustment_lkr: number | null;
-  final_fmv_lkr: number | null;
-}
+export type { FmvMethodBreakdown, ListingFmvDetail } from "@/types/fmv";
 
-export interface ListingFmvDetail {
-  listing_id: number | null;
-  asking_lkr: number | null;
-  fmv_lkr: number | null;
-  deal_score: number | null;
-  delta_pct: number | null;
-  band: "below" | "fair" | "above" | null;
-  label: string | null;
-  method: string;
-  sample_count: number;
-  sample_size: number;
-  confidence: "high" | "medium" | "low" | "none";
-  comps_median_lkr: number | null;
-  km_adjustment_lkr?: number | null;
-  district_adjustment_lkr?: number | null;
-  method_breakdown?: FmvMethodBreakdown | null;
-  updated_at: string;
-}
 
 export const getListingFmv = async (id: string | number): Promise<ListingFmvDetail> => {
   try {
@@ -2247,6 +2225,7 @@ async function deriveFuelMixFromCatalog(): Promise<FuelMixData | null> {
   };
 }
 
+
 async function deriveEvInsightFromCatalog(): Promise<EvInsightData | null> {
   let catalog: CarListing[] | null;
   let catalogSize: number;
@@ -2270,12 +2249,16 @@ async function deriveEvInsightFromCatalog(): Promise<EvInsightData | null> {
     return p !== null && p >= MIN_REASONABLE_PRICE_LKR ? p : null;
   };
   const evRows = catalog.filter((row) => offlineFuelCategory(row.fuel_type) === "electric");
-  const evPrices = evRows.map(priced).filter((p): p is number => p !== null);
+  // Price and model stats compare against a hybrid car (the Aqua), so they use
+  // electric cars only: e-scooters and electric three-wheelers made up two thirds
+  // of EV rows and dragged the "median EV price" to Rs 0.65 Mn.
+  const evCarRows = evRows.filter((row) => !NON_CAR_CATEGORIES.has(String(row.vehicle_category || "").toLowerCase()));
+  const evPrices = evCarRows.map(priced).filter((p): p is number => p !== null);
   const byModel = new Map<string, { make: string; model: string; prices: number[]; count: number }>();
-  for (const row of evRows) {
+  for (const row of evCarRows) {
     const make = String(row.make || "").trim();
     const model = String(row.model || "").trim();
-    if (!make || !model) continue;
+    if (!make || !model || model.toLowerCase() === "other") continue;
     const key = `${make}|||${model}`;
     const entry = byModel.get(key) || { make, model, prices: [], count: 0 };
     entry.count += 1;

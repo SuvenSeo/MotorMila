@@ -52,12 +52,12 @@ export function NavFreshnessIndicator({ className }: { className?: string }) {
             aria-hidden
             className={cn(
               "absolute right-[7px] top-[7px] h-1.5 w-1.5 rounded-full ring-2 ring-background",
-              stale ? "bg-amber-500" : "bg-muted-foreground/60",
+              stale ? "bg-deal-caution" : "bg-muted-foreground/60",
             )}
           />
         </button>
       </TooltipTrigger>
-      <TooltipContent side="bottom" className="max-w-[260px] text-[12px] leading-relaxed">
+      <TooltipContent side="bottom" className="max-w-[260px] text-caption leading-relaxed">
         <p className="font-semibold">{ago ? t("shell.fresh.updatedAgo", "Updated {ago}", { ago }) : short}</p>
         <p className="mt-0.5 text-muted-foreground">{explain}</p>
       </TooltipContent>

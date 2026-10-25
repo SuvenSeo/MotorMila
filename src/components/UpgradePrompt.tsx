@@ -47,14 +47,14 @@ export function UpgradePrompt({
             <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
           </span>
           <div className="min-w-0">
-            <p className="text-[13px] font-semibold text-foreground">{title}</p>
-            <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">{body}</p>
+            <p className="text-footnote font-semibold text-foreground">{title}</p>
+            <p className="mt-0.5 text-caption leading-relaxed text-muted-foreground">{body}</p>
           </div>
         </div>
         <Link
           to="/pricing#get-started"
           onClick={onCtaClick}
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-[12px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/95 active:scale-[0.98]"
+          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-caption font-semibold text-primary-foreground no-underline shadow-soft transition-ui hover:bg-primary/95 active:scale-[0.98]"
         >
           <Bell className="h-3.5 w-3.5" aria-hidden />
           {resolvedCta}
@@ -66,16 +66,16 @@ export function UpgradePrompt({
 
   return (
     <div className={cn("premium-surface p-6 text-center shadow-soft-lg sm:p-8", className)}>
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[12px] font-semibold text-primary-bright">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-caption font-semibold text-primary-bright">
         <Sparkles className="h-3 w-3" aria-hidden />
         {t("shell.pro.badge", "Pro · coming soon")}
       </span>
-      <h3 className="mt-4 font-display text-xl font-semibold tracking-tight text-foreground sm:text-2xl">{title}</h3>
-      <p className="mx-auto mt-2 max-w-md text-[13px] leading-relaxed text-muted-foreground">{body}</p>
+      <h3 className="mt-4 font-display text-title3 font-semibold tracking-tight text-foreground sm:text-title2">{title}</h3>
+      <p className="mx-auto mt-2 max-w-md text-footnote leading-relaxed text-muted-foreground">{body}</p>
       <Link
         to="/pricing#get-started"
         onClick={onCtaClick}
-        className="mt-5 inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-[13px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/95 active:scale-[0.98]"
+        className="mt-5 inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-footnote font-semibold text-primary-foreground no-underline shadow-soft transition-ui hover:bg-primary/95 active:scale-[0.98]"
       >
         {resolvedCta}
         <ArrowRight className="h-4 w-4" aria-hidden />

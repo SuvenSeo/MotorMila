@@ -11,6 +11,7 @@
 
 import taxRates from "@/data/importTaxRates.json";
 import { formatLkrCompact } from "@/lib/price";
+import { englishT, type TranslateFn } from "@/lib/translate";
 
 export const TAX_MODEL_REVIEWED = taxRates.reviewed;
 
@@ -44,6 +45,8 @@ export interface ImportTaxInput {
   engineCc?: number;
   /** Motor power in kW — required for electric. */
   motorKw?: number;
+  /** Translator for line labels (useAppPreferences().t); English when omitted. */
+  t?: TranslateFn;
 }
 
 export interface ImportTaxLine {
@@ -192,6 +195,7 @@ export function getHybridCliffBadge(
 }
 
 export function computeImportTaxes(input: ImportTaxInput): ImportTaxResult {
+  const t = input.t ?? englishT;
   const cif = Math.max(0, Number(input.cifLkr) || 0);
 
   const cid = cif * CID_RATE;
@@ -203,12 +207,12 @@ export function computeImportTaxes(input: ImportTaxInput): ImportTaxResult {
     const kw = Math.max(0, Number(input.motorKw) || 0);
     const rate = bandRate(EXCISE_BANDS_PER_KW, kw);
     excise = kw * rate;
-    exciseNote = kw > 0 ? `Rs. ${rate.toLocaleString()} × ${kw.toLocaleString()} kW` : "Enter motor power (kW)";
+    exciseNote = kw > 0 ? `Rs. ${rate.toLocaleString()} × ${kw.toLocaleString()} kW` : t("taxModel.enterKw", "Enter motor power (kW)");
   } else {
     const cc = Math.max(0, Number(input.engineCc) || 0);
     const rate = bandRate(EXCISE_BANDS_PER_CC[input.fuelType], cc);
     excise = cc * rate;
-    exciseNote = cc > 0 ? `Rs. ${rate.toLocaleString()} × ${cc.toLocaleString()} cc` : "Enter engine capacity";
+    exciseNote = cc > 0 ? `Rs. ${rate.toLocaleString()} × ${cc.toLocaleString()} cc` : t("taxModel.enterCc", "Enter engine capacity");
   }
 
   const luxury = LUXURY_TAX[input.fuelType];
@@ -222,22 +226,22 @@ export function computeImportTaxes(input: ImportTaxInput): ImportTaxResult {
   const vat = (cif + cid + surcharge + excise + sscl) * VAT_RATE;
 
   const lines: ImportTaxLine[] = [
-    { key: "cid", label: `Customs Import Duty (${Math.round(CID_RATE * 100)}%)`, amount: cid },
-    { key: "surcharge", label: `CID Surcharge (${Math.round(CID_SURCHARGE_RATE * 100)}% of CID)`, amount: surcharge },
+    { key: "cid", label: t("taxModel.cid", "Customs Import Duty ({pct}%)", { pct: Math.round(CID_RATE * 100) }), amount: cid },
+    { key: "surcharge", label: t("taxModel.surcharge", "CID Surcharge ({pct}% of CID)", { pct: Math.round(CID_SURCHARGE_RATE * 100) }), amount: surcharge },
     {
       key: "excise",
-      label: input.fuelType === "electric" ? "Excise Duty (per kW band)" : "Excise Duty (per cm³ band)",
+      label: input.fuelType === "electric" ? t("taxModel.exciseKw", "Excise Duty (per kW band)") : t("taxModel.exciseCc", "Excise Duty (per cm³ band)"),
       amount: excise,
       note: exciseNote,
     },
-    { key: "sscl", label: `SSCL Levy (${(SSCL_RATE * 100).toFixed(1)}%)`, amount: sscl },
-    { key: "vat", label: `VAT (${Math.round(VAT_RATE * 100)}% on duty-inclusive + SSCL base)`, amount: vat },
+    { key: "sscl", label: t("taxModel.sscl", "SSCL Levy ({pct}%)", { pct: (SSCL_RATE * 100).toFixed(1) }), amount: sscl },
+    { key: "vat", label: t("taxModel.vat", "VAT ({pct}% on duty-inclusive + SSCL base)", { pct: Math.round(VAT_RATE * 100) }), amount: vat },
   ];
 
   if (luxuryTax > 0) {
     lines.push({
       key: "luxury",
-      label: `Luxury Tax (${Math.round(luxury.rateOnExcess * 100)}% of CIF above ${formatLkrCompact(luxury.thresholdLkr)})`,
+      label: t("taxModel.luxury", "Luxury Tax ({pct}% of CIF above {threshold})", { pct: Math.round(luxury.rateOnExcess * 100), threshold: formatLkrCompact(luxury.thresholdLkr) }),
       amount: luxuryTax,
     });
   }

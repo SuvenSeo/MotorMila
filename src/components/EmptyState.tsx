@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
+import { EmptyState as UiEmptyState } from "@/components/ui/empty-state";
 
 type EmptyStateProps = {
   headline: string;
@@ -10,29 +10,7 @@ type EmptyStateProps = {
   className?: string;
 };
 
-/** Illustration-less empty state: headline + body + optional action + hint. */
-export function EmptyState({ headline, body, actionLabel, onAction, hint, className }: EmptyStateProps) {
-  return (
-    <div
-      className={cn(
-        "flex flex-col items-center gap-3 rounded-[2rem] border border-dashed border-border px-6 py-16 text-center",
-        className,
-      )}
-      role="status"
-      aria-live="polite"
-    >
-      <p className="text-[14px] font-bold tracking-tight text-foreground">{headline}</p>
-      {body ? <div className="max-w-md text-sm font-medium text-muted-foreground">{body}</div> : null}
-      {actionLabel && onAction ? (
-        <button
-          type="button"
-          onClick={onAction}
-          className="min-h-11 rounded-full border border-border bg-card px-5 py-3 text-sm font-bold text-foreground transition-all hover:bg-surface active:scale-[0.97]"
-        >
-          {actionLabel}
-        </button>
-      ) : null}
-      {hint ? <div className="max-w-md text-2xs font-medium text-muted-foreground">{hint}</div> : null}
-    </div>
-  );
+/** Older API (headline) over the kit's EmptyState (components/ui/empty-state). */
+export function EmptyState({ headline, ...rest }: EmptyStateProps) {
+  return <UiEmptyState title={headline} {...rest} />;
 }

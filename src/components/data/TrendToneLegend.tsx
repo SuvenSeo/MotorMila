@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
-import { STABLE_BAND_PCT, TONE_STYLES } from "@/lib/dataSanity";
+import { STABLE_BAND_PCT } from "@/lib/dataSanity";
+import { toneColor } from "@/components/ui/chart-theme";
 import { useAppPreferences } from "@/lib/appPreferences";
 
 /**
@@ -18,12 +19,12 @@ export function TrendToneLegend({ className }: { className?: string }) {
   ];
   return (
     <ul
-      className={cn("flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-medium text-muted-foreground", className)}
+      className={cn("flex flex-wrap items-center gap-x-4 gap-y-1 text-caption text-label-2", className)}
       aria-label={t("trendTone.legendAria", "Price change colour legend")}
     >
       {items.map((i) => (
         <li key={i.tone} className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="h-2 w-2 rounded-full" style={{ backgroundColor: TONE_STYLES[i.tone].stroke }} />
+          <span aria-hidden className="h-2 w-2 rounded-full" style={{ backgroundColor: toneColor(i.tone) }} />
           {i.label}
         </li>
       ))}

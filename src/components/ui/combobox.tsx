@@ -1,6 +1,7 @@
 import { Check, ChevronsUpDown, Search } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useAppPreferences } from "@/lib/appPreferences";
 
 export interface ComboboxOption {
   value: string;
@@ -17,8 +18,8 @@ export function Combobox({
   options,
   value,
   onChange,
-  placeholder = "Select…",
-  allLabel = "All",
+  placeholder: placeholderProp,
+  allLabel: allLabelProp,
   hideLabel = false,
 }: {
   label: string;
@@ -30,6 +31,9 @@ export function Combobox({
   /** Keep the label for screen readers only (when a parent group already shows a heading). */
   hideLabel?: boolean;
 }) {
+  const { t } = useAppPreferences();
+  const placeholder = placeholderProp ?? t("combobox.select", "Select…");
+  const allLabel = allLabelProp ?? t("common.all", "All");
   const ALL_VALUE = "__all__";
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -79,7 +83,7 @@ export function Combobox({
     // Keyboard handling is delegated from the trigger button / search input inside.
     // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <div ref={rootRef} className="relative" onKeyDown={onKeyDown}>
-      <label className={hideLabel ? "sr-only" : "mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground"}>
+      <label className={hideLabel ? "sr-only" : "mb-1.5 block text-caption font-semibold uppercase tracking-caps text-muted-foreground"}>
         {label}
       </label>
       <button
@@ -90,7 +94,7 @@ export function Combobox({
         aria-label={label}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "flex min-h-[44px] w-full items-center justify-between gap-2 rounded-xl border bg-card px-3.5 text-left text-base text-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+          "flex min-h-[44px] w-full items-center justify-between gap-2 rounded-xl border bg-card px-3.5 text-left text-body text-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           open ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-muted-foreground/50",
         )}
       >
@@ -112,12 +116,12 @@ export function Combobox({
               onChange={(e) => setQuery(e.target.value)}
               placeholder={`Search ${label.toLowerCase()}…`}
               aria-label={`Search ${label}`}
-              className="h-11 w-full bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
+              className="h-11 w-full bg-transparent text-body text-foreground outline-none placeholder:text-muted-foreground"
             />
           </div>
           <ul id={listId} role="listbox" aria-label={label} className="max-h-56 overflow-auto py-1.5">
             {filtered.length === 0 && (
-              <li className="px-3.5 py-2.5 text-sm text-muted-foreground">No matches.</li>
+              <li className="px-3.5 py-2.5 text-footnote text-muted-foreground">{t("combobox.noMatches", "No matches.")}</li>
             )}
             {filtered.map((item, i) => {
               const selected = (value ?? ALL_VALUE) === item.value;
@@ -130,7 +134,7 @@ export function Combobox({
                     onMouseEnter={() => setActive(i)}
                     onClick={() => pick(item)}
                     className={cn(
-                      "flex min-h-[40px] w-full items-center gap-2 px-3.5 text-left text-base",
+                      "flex min-h-[40px] w-full items-center gap-2 px-3.5 text-left text-body",
                       i === active ? "bg-primary/10 text-foreground" : "text-foreground",
                       selected && "font-semibold",
                     )}

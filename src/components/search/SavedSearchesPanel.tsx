@@ -13,6 +13,8 @@ import {
 } from "@/lib/savedSearchAlerts";
 import { deleteSavedSearch, listSavedSearches, type SavedSearch, type SavedSearchFrequency } from "@/utils/savedSearches";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 
 const FREQUENCIES: Array<{ value: SavedSearchFrequency; key: string; fallback: string }> = [
   { value: "instant", key: "search.freqInstant", fallback: "Instant" },
@@ -79,54 +81,36 @@ export function SavedSearchesPanel({ filters, onOpen, touch = false }: SavedSear
     await removeSavedSearchAlert(search);
   };
 
-  const segBtn = (active: boolean) =>
-    cn(
-      "flex-1 rounded-full px-2 text-caption font-medium transition-colors",
-      touch ? "min-h-11" : "py-1",
-      active ? "bg-primary/15 text-primary-bright shadow-xs" : "text-muted-foreground hover:text-foreground",
-    );
-
   return (
-    <div className="space-y-2">
-      <div
-        role="radiogroup"
+    <div className="space-y-2.5">
+      <SegmentedControl
+        value={frequency}
+        onValueChange={(v: SavedSearchFrequency) => setFrequency(v)}
+        semantics="radio"
         aria-label={t("search.alertFrequency", "Alert frequency")}
-        className="flex gap-1 rounded-full bg-surface/80 p-1"
-      >
-        {FREQUENCIES.map((f) => (
-          <button
-            key={f.value}
-            type="button"
-            role="radio"
-            aria-checked={frequency === f.value}
-            onClick={() => setFrequency(f.value)}
-            className={segBtn(frequency === f.value)}
-          >
-            {t(f.key, f.fallback)}
-          </button>
-        ))}
-      </div>
-      <p className="text-[11px] text-muted-foreground">
+        size={touch ? "touch" : "md"}
+        options={FREQUENCIES.map((f) => ({ value: f.value as SavedSearchFrequency, label: t(f.key, f.fallback) }))}
+      />
+      <p className="text-caption text-label-2">
         {frequency === "daily"
           ? t("search.freqDailyHint", "One summary a day at 7am.")
           : frequency === "instant"
             ? t("search.freqInstantHint", "As soon as a match is listed.")
             : t("search.freqOffHint", "Saved on this device only, no alerts.")}
       </p>
-      <button
+      <Button
         type="button"
+        variant="secondary"
+        size={touch ? "lg" : "md"}
         onClick={save}
-        disabled={busy}
-        className={cn(
-          "inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-3 text-caption font-semibold text-primary-bright transition-colors hover:bg-primary/10 disabled:opacity-60",
-          touch ? "min-h-11" : "py-1.5",
-        )}
+        loading={busy}
+        className="w-full"
       >
-        <BellRing aria-hidden className="h-3.5 w-3.5" />
+        <BellRing aria-hidden />
         {t("search.saveThisSearch", "Save this search")}
-      </button>
+      </Button>
       {status ? (
-        <p role="status" className="text-[11px] text-muted-foreground">
+        <p role="status" className="content-in text-caption text-label-2">
           {statusText(status)}
         </p>
       ) : null}
@@ -138,7 +122,10 @@ export function SavedSearchesPanel({ filters, onOpen, touch = false }: SavedSear
               <button
                 type="button"
                 onClick={() => onOpen({ sort: "best_match", vehicle_category: "cars", ...search.filters, page: 1 } as FilterState)}
-                className="min-w-0 flex-1 truncate rounded-full px-2 py-1 text-left text-caption text-primary-bright hover:bg-primary/5"
+                className={cn(
+                  "min-w-0 flex-1 truncate rounded-control px-2 text-left text-footnote font-medium text-primary transition-colors duration-short hover:bg-primary/10 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  touch ? "min-h-11" : "min-h-8",
+                )}
                 title={search.name}
               >
                 {search.name}
@@ -146,7 +133,7 @@ export function SavedSearchesPanel({ filters, onOpen, touch = false }: SavedSear
               <Select value={search.frequency ?? "off"} onValueChange={(v) => void change(search, v as SavedSearchFrequency)}>
                 <SelectTrigger
                   aria-label={t("search.alertFrequencyFor", "Alert frequency for {name}", { name: search.name })}
-                  className="h-7 w-[5.5rem] rounded-full border-transparent bg-surface/70 px-2 text-[11px]"
+                  className={cn("w-24 px-2.5 text-caption", touch ? "h-11" : "h-8")}
                 >
                   <SelectValue />
                 </SelectTrigger>
@@ -158,19 +145,21 @@ export function SavedSearchesPanel({ filters, onOpen, touch = false }: SavedSear
                   ))}
                 </SelectContent>
               </Select>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size={touch ? "icon" : "icon-sm"}
                 onClick={() => void remove(search)}
                 aria-label={t("search.deleteSaved", "Delete {name}", { name: search.name })}
-                className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-surface hover:text-foreground"
+                className="text-label-2"
               >
-                <X className="h-3 w-3" />
-              </button>
+                <X aria-hidden />
+              </Button>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="text-caption text-muted-foreground">{t("filter.noSavedSearches", "No saved searches yet.")}</p>
+        <p className="text-caption text-label-2">{t("filter.noSavedSearches", "No saved searches yet.")}</p>
       )}
     </div>
   );

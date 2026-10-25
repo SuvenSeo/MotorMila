@@ -77,7 +77,7 @@ export const DistrictBoundaries = memo(function DistrictBoundaries({
     const fill = fillFor?.(name) ?? null;
     const isHi = highlightKey != null && districtKey(name) === highlightKey;
     return {
-      color: isHi ? "#fbbf24" : "rgba(148, 163, 184, 0.55)",
+      color: isHi ? "hsl(var(--deal-caution))" : "hsl(var(--label-3) / 0.55)",
       weight: isHi ? 2 : 0.8,
       fillColor: fill ?? "transparent",
       fillOpacity: fill ? 0.28 : 0,

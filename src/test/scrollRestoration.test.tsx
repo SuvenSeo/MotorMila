@@ -35,7 +35,7 @@ describe("ScrollRestoration", () => {
       </TestRouter>,
     );
 
-    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: "auto" });
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: "instant" });
     expect(screen.getByTestId("trends-page")).toBeInTheDocument();
   });
 

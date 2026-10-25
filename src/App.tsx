@@ -1,17 +1,19 @@
+import { useAppPreferences } from "@/lib/appPreferences";
 import { LazyMotion, MotionConfig, domAnimation } from "motion/react";
 import { Suspense, useEffect } from "react";
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, unstable_HistoryRouter as HistoryRouter, useLocation } from "react-router-dom";
+import { createViewTransitionHistory } from "@/lib/viewTransition";
 import { ScrollRestoration } from "@/components/ScrollRestoration";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { RouteFallback } from "@/components/RouteFallback";
 import { RouteTransition } from "@/components/RouteTransition";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
-import { prefetchAppShellRoutes } from "@/lib/routePrefetch";
+import { prefetchAppShellRoutes, registerRouteLoaders } from "@/lib/routePrefetch";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Navbar } from "@/components/Navbar";
-import { CommandPalette } from "@/components/CommandPalette";
+import { CommandPaletteHost } from "@/components/CommandPaletteHost";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { AppFooter } from "@/components/AppFooter";
 import { ScrollProgressBar } from "@/components/ScrollProgressBar";
@@ -27,7 +29,6 @@ const FeedbackWidget = lazyWithRetry(() =>
   import("@/components/FeedbackWidget").then((m) => ({ default: m.FeedbackWidget }))
 );
 import { CompareTray, CompareProvider } from "@/components/compare/CompareTray";
-import { FontStudioBar } from "@/components/FontStudioBar";
 // Trial banner lives in Pricing to avoid a new chunk; lazy keeps it out of first paint.
 const TrialCountdownBanner = lazyWithRetry(() =>
   import("./pages/Pricing").then((m) => ({ default: m.TrialCountdownBanner }))
@@ -81,6 +82,40 @@ const CheckoutReturn = lazyWithRetry(() => import("./pages/CheckoutReturn"));
 const HowWePrice = lazyWithRetry(() => import("./pages/HowWePrice"));
 const BotInfo = lazyWithRetry(() => import("./pages/BotInfo"));
 
+// Hover / focus / idle prefetch targets (lib/routePrefetch.ts imports no pages,
+// so the map lives here beside the lazy routes; same specifiers → same chunks).
+registerRouteLoaders({
+  "/": () => import("./pages/Dashboard"),
+  "/trends": () => import("./pages/Trends"),
+  "/price-index": () => import("./pages/Trends"), // redirects to /trends
+  "/estimate": () => import("./pages/Estimate"),
+  "/calculator": () => import("./pages/Calculator"),
+  "/ev-hub": () => import("./pages/EVHub"),
+  "/ev-chargers": () => import("./pages/EVChargers"),
+  "/best-picks": () => import("./pages/BestPicks"),
+  "/official-pulse": () => import("./pages/OfficialPulse"),
+  "/docs": () => import("./pages/Docs"),
+  "/pricing": () => import("./pages/Pricing"),
+  "/compare": () => import("./pages/Compare"),
+  "/permits": () => import("./pages/Permits"),
+  "/alerts": () => import("./pages/Alerts"),
+  "/settings": () => import("./pages/Settings"),
+  "/dealer": () => import("./pages/DealerDashboard"),
+  "/mobile-app": () => import("./pages/MobileApp"),
+  "/pro": () => import("./pages/ProDashboard"),
+  "/pro-preview": () => import("./pages/ProPreview"),
+  "/sign-in": () => import("./pages/SignIn"),
+  "/sign-up": () => import("./pages/SignUp"),
+  "/privacy": () => import("./pages/PrivacyPolicy"),
+  "/terms": () => import("./pages/TermsOfService"),
+  "listing-detail": () => import("./pages/ListingDetail"),
+  "pulse-guide": () => import("./pages/OfficialPulseGuide"),
+  "pulse-detail": () => import("./pages/OfficialPulseDetail"),
+  "district-hub": () => import("./pages/DistrictHub"),
+  "make-hub": () => import("./pages/MakeHub"),
+  "make-model-hub": () => import("./pages/MakeModelHub"),
+});
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -94,16 +129,18 @@ const queryClient = new QueryClient({
   },
 });
 
+/** Browser history whose route swaps run through a View Transition. */
+const appHistory = createViewTransitionHistory();
+
 const MinimalLoader = () => <RouteFallback />;
 
 /**
- * Internal hero A/B lab. It is a design tool, not a product surface, so it
- * stays reachable in dev (or with `?heroLab=1`) and redirects home otherwise.
+ * Internal hero A/B lab. It is a design tool, not a product surface: dev
+ * builds only. Production has no route for it (falls through to 404) and no
+ * `?heroLab=1` escape hatch.
  */
 function HeroLabGate() {
-  const { search } = useLocation();
-  const enabled = import.meta.env.DEV || new URLSearchParams(search).get("heroLab") === "1";
-  return enabled ? <HeroLab /> : <Navigate to="/" replace />;
+  return import.meta.env.DEV ? <HeroLab /> : <Navigate to="/" replace />;
 }
 
 function TrialBannerSlot() {  const { user } = useAuth();
@@ -136,6 +173,11 @@ function HashScroller() {
   return null;
 }
 
+function SkipLink() {
+  const { t } = useAppPreferences();
+  return <a href="#main-content" className="skip-to-content">{t("shell.skipToContent", "Skip to main content")}</a>;
+}
+
 function AppShell() {
   // Floating buttons step aside while a text field is focused (mobile keyboard).
   useDockTypingFlag();
@@ -143,10 +185,10 @@ function AppShell() {
     // app-shell-dock-pad: content and footer always clear the bottom dock
     // (mobile nav + compare tray). See src/styles/layers.css.
     <div className="min-h-screen app-shell app-shell-dock-pad selection:bg-primary/20 bg-background">
-      <a href="#main-content" className="skip-to-content">Skip to main content</a>
+      <SkipLink />
       <HashScroller />
       <Navbar />
-      <CommandPalette />
+      <CommandPaletteHost />
       {/* Feedback is a dialog opened from the menu / footer — no floating button. */}
       <Suspense fallback={null}>
         <FeedbackWidget />
@@ -164,7 +206,8 @@ function AppShell() {
       <MobileAppPromo />
       <CompareTray />
       <MobileBottomNav />
-      <FontStudioBar />
+      {/* Height = the promo strip's claim (lib/dock.ts setDockExtra), phones only. */}
+      <div data-dock-spacer aria-hidden className="md:hidden" />
     </div>
   );
 }
@@ -210,7 +253,7 @@ const App = () => {
             <ScrollProgressBar />
             {/* Toasts sit under the header, clear of the bottom dock (nav, compare). */}
             <Sonner position="top-center" offset={76} mobileOffset={{ top: 72 }} />
-            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <HistoryRouter history={appHistory} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <ScrollRestoration />
               <RouteMeta />
               <CompareProvider>
@@ -249,6 +292,7 @@ const App = () => {
                   <Route path="/insurance" element={<LeadRequest kind="insurance" />} />
                   <Route path="/checkout/return" element={<CheckoutReturn />} />
                   <Route path="/compare" element={<Compare />} />
+                  <Route path="/compare/:slug" element={<Compare />} />
                   <Route path="/how-we-price" element={<HowWePrice />} />
                   {/** Legacy valuation path: header/footer now point at /estimate. */}
                   <Route path="/valuation" element={<Navigate to="/estimate" replace />} />
@@ -274,11 +318,13 @@ const App = () => {
                     <SignUp />
                   </Suspense>
                 } />
-                <Route path="/hero-lab" element={
-                  <Suspense fallback={<MinimalLoader />}>
-                    <HeroLabGate />
-                  </Suspense>
-                } />
+                {import.meta.env.DEV ? (
+                  <Route path="/hero-lab" element={
+                    <Suspense fallback={<MinimalLoader />}>
+                      <HeroLabGate />
+                    </Suspense>
+                  } />
+                ) : null}
                 {/**
                  * Admin console: unlisted, credential-gated, and deliberately
                  * outside the marketing shell — no navbar, no footer, no links
@@ -303,7 +349,7 @@ const App = () => {
                 } />
               </Routes>
               </CompareProvider>
-            </BrowserRouter>
+            </HistoryRouter>
           </MotionConfig>
           </LazyMotion>
         </TooltipProvider>

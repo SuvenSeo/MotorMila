@@ -1,31 +1,38 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
+import { AnimatePresence, m } from "motion/react";
 import {
   ArrowUpRight,
   Bug,
   Check,
+  ChevronRight,
   Coins,
-  Database,
   Globe,
+  Info,
   Laptop,
   MessageSquare,
   Moon,
   Scale,
-  ShieldCheck,
   SlidersHorizontal,
   Sun,
   Trash2,
 } from "lucide-react";
-import { motion } from "motion/react";
 import { toast } from "sonner";
 import { useAppPreferences, type Language } from "@/lib/appPreferences";
 import { MAX_PINNED, useCompareTray } from "@/lib/compareTray";
 import { LowDataSettingsCard } from "@/components/lowData/LowDataSettingsCard";
 import { openFeedbackDialog } from "@/lib/feedbackEvents";
-import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
-import { PageHero } from "@/components/PageHero";
-import { revealContainer, revealItem } from "@/lib/motion";
+import { AnimatedNumber } from "@/components/ui/animated-number";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, cardVariants } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
+import { listItem, listStagger, scaleIn, tween } from "@/lib/motion";
+import { HOW_WE_PRICE_PATH } from "@/lib/howWePrice";
 import { cn } from "@/lib/utils";
+import { loadScriptFonts } from "@/lib/scriptFonts";
+import "@/styles/locale-labels.css";
 
 type LangOpt = {
   value: Language;
@@ -59,104 +66,110 @@ const LANGS: LangOpt[] = [
   },
 ];
 
-type ThemeOpt = {
-  mode: "dark" | "light" | "system";
-  label: string;
-  hint: string;
-  icon: typeof Moon;
-};
+type ThemeMode = "dark" | "light" | "system";
 
-const THEMES: ThemeOpt[] = [
-  {
-    mode: "dark",
-    label: "Dark",
-    hint: "Deep charcoal palette optimized for low-light vehicle analysis",
-    icon: Moon,
-  },
-  {
-    mode: "light",
-    label: "Light",
-    hint: "High-contrast day palette for bright daylight environments",
-    icon: Sun,
-  },
-  {
-    mode: "system",
-    label: "Auto (System)",
-    hint: "Dynamically synchronizes with your device operating system theme",
-    icon: Laptop,
-  },
-];
+/** Card header used by every settings group. */
+function GroupHeader({ icon: Icon, title, hint, aside }: { icon: typeof Moon; title: string; hint?: string; aside?: React.ReactNode }) {
+  return (
+    // flex-wrap: a long status badge (si/ta) drops under the title on phones instead of running off-screen.
+    <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+      <div className="flex min-w-0 flex-1 basis-56 items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
+          <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+        </span>
+        <div>
+          <h2 className="text-callout font-semibold text-foreground">{title}</h2>
+          {hint ? <p className="mt-0.5 text-footnote text-label-2">{hint}</p> : null}
+        </div>
+      </div>
+      {aside}
+    </div>
+  );
+}
+
+/** Selected tick that springs in. */
+function Tick({ on }: { on: boolean }) {
+  return (
+    <span
+      className={cn(
+        "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors duration-short ease-standard",
+        on ? "border-primary bg-primary text-primary-foreground" : "border-border",
+      )}
+      aria-hidden
+    >
+      <AnimatePresence initial={false}>
+        {on ? (
+          <m.span key="tick" variants={scaleIn} initial="hidden" animate="show" exit="exit" className="inline-flex">
+            <Check className="h-3.5 w-3.5" strokeWidth={3} />
+          </m.span>
+        ) : null}
+      </AnimatePresence>
+    </span>
+  );
+}
+
+function LinkRow({ to, label }: { to: string; label: string }) {
+  return (
+    <Link
+      to={to}
+      className="flex min-h-12 items-center justify-between gap-3 px-1 py-3 text-body text-foreground no-underline transition-colors duration-short ease-standard hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      {label}
+      <ChevronRight className="h-4 w-4 text-label-3" aria-hidden />
+    </Link>
+  );
+}
 
 export default function Settings() {
   const { language, setLanguage, themeMode, setThemeMode, resolvedTheme, t } = useAppPreferences();
   const { pinned, clear } = useCompareTray();
+
+  // The picker shows each language in its own script; without these faces a
+  // device with no Sinhala/Tamil system font renders the rows blank.
+  useEffect(() => {
+    void loadScriptFonts("si");
+    void loadScriptFonts("ta");
+  }, []);
 
   const handleClearCompare = () => {
     clear();
     toast.success(t("settings.compareCleared", "Compare tray cleared"));
   };
 
-  const themeDisplay =
-    themeMode === "system"
-      ? t("theme.auto", "Auto")
-      : themeMode === "dark"
-        ? t("theme.dark", "Dark")
-        : t("theme.light", "Light");
+  const THEMES: { mode: ThemeMode; label: string; hint: string; icon: typeof Moon }[] = [
+    { mode: "light", label: t("theme.light", "Light"), hint: t("acct.settings.themeLightHint", "Bright and high-contrast for daylight."), icon: Sun },
+    { mode: "dark", label: t("theme.dark", "Dark"), hint: t("acct.settings.themeDarkHint", "Easy on the eyes at night."), icon: Moon },
+    { mode: "system", label: t("theme.auto", "Auto"), hint: t("acct.settings.themeAutoHint", "Follows your device's setting."), icon: Laptop },
+  ];
 
-  const langDisplay =
-    language === "en" ? "English" : language === "si" ? "සිංහල" : "தமிழ்";
+  const group = "h-full";
 
   return (
-    <PageCanvas ambient="subtle">
-      <PageHero
-        theme="settings"
+    <PageCanvas ambient="none">
+      <PageHeader
+        size="compact"
         eyebrow={t("settings.eyebrow", "Preferences")}
         eyebrowIcon={SlidersHorizontal}
         title={t("settings.title", "Personalize Motormila")}
-        description={t(
-          "settings.description",
-          "Fine-tune visual appearance, language, market valuation defaults, and session storage.",
-        )}
-        highlights={[
-          { label: t("settings.highlightTheme", "Theme"), value: themeDisplay, hint: `Active: ${resolvedTheme}` },
-          { label: t("settings.highlightLanguage", "Language"), value: langDisplay, hint: "3 Localized Locales" },
-          { label: t("settings.highlightEngine", "Market Engine"), value: "Live", hint: "25 Districts Syncing" },
-        ]}
+        description={t("acct.settings.description", "Appearance, language, your compare tray and low-data mode. Saved on this device.")}
       />
 
-      <PageBody>
-        <motion.div
-          variants={revealContainer}
-          initial="hidden"
-          animate="show"
-          className="grid grid-cols-1 gap-6 lg:grid-cols-12"
-        >
-          {/* Card 1: Appearance & Theme Mode */}
-          <motion.div
-            inherit={false} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.12 }} variants={revealItem}
-            className="flex flex-col justify-between rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl sm:p-8 lg:col-span-7"
-          >
-            <div>
-              <div className="mb-6 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/80 bg-surface/80 text-primary">
-                    <Moon className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h2 className="text-base font-bold tracking-tight text-foreground">
-                      {t("ui.theme", "Theme & Appearance")}
-                    </h2>
-                    <p className="text-xs font-medium text-muted-foreground">
-                      {t("settings.themeHint", "Choose visual style for the entire app")}
-                    </p>
-                  </div>
-                </div>
-                <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-bold text-primary">
-                  {resolvedTheme === "dark" ? "Dark Active" : "Light Active"}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="layout-shell pb-20">
+        <m.div variants={listStagger} initial="hidden" animate="show" className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+          {/* Appearance */}
+          <m.div variants={listItem} custom={0} className="lg:col-span-7">
+            <Card className={group}>
+              <GroupHeader
+                icon={Moon}
+                title={t("ui.theme", "Theme")}
+                hint={t("settings.themeHint", "Choose visual style for the entire app")}
+                aside={
+                  <Badge variant="info">
+                    {resolvedTheme === "dark" ? t("acct.settings.darkActive", "Dark on") : t("acct.settings.lightActive", "Light on")}
+                  </Badge>
+                }
+              />
+              <div role="radiogroup" aria-label={t("ui.theme", "Theme")} className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {THEMES.map((item) => {
                   const Icon = item.icon;
                   const active = themeMode === item.mode;
@@ -164,440 +177,208 @@ export default function Settings() {
                     <button
                       key={item.mode}
                       type="button"
+                      role="radio"
+                      aria-checked={active}
                       onClick={() => setThemeMode(item.mode)}
-                      aria-pressed={active}
                       className={cn(
-                        "group relative flex flex-col justify-between overflow-hidden rounded-2xl border p-4 text-left transition-all duration-200 active:scale-[0.98]",
-                        active
-                          ? "border-primary/50 bg-primary/12 text-foreground shadow-soft ring-1 ring-primary/40"
-                          : "border-border/80 bg-surface/60 text-muted-foreground hover:border-primary/30 hover:bg-surface hover:text-foreground",
+                        cardVariants({ variant: "interactive", padding: "sm" }),
+                        "flex flex-col text-left shadow-none",
+                        active && "border-primary ring-1 ring-primary",
                       )}
                     >
-                      {/* Theme Preview Thumbnail */}
-                      <div
-                        className={cn(
-                          "mb-4 flex h-20 w-full flex-col justify-between rounded-xl border p-2.5 transition-colors",
-                          item.mode === "dark"
-                            ? "border-border bg-[#0b0f17] text-white"
-                            : item.mode === "light"
-                              ? "border-border bg-slate-100 text-slate-900"
-                              : "border-border bg-gradient-to-r from-[#0b0f17] via-[#0b0f17]/80 to-slate-100 text-white",
+                      {/* Theme preview: the dark half re-scopes the real dark tokens; the light half is a literal day swatch. */}
+                      <span aria-hidden className="mb-4 flex h-16 w-full overflow-hidden rounded-control border border-border">
+                        {(item.mode === "system" ? (["light", "dark"] as const) : [item.mode]).map((mode) =>
+                          mode === "dark" ? (
+                            <span key={mode} className="theme-dark flex flex-1 flex-col justify-between bg-background p-2">
+                              <span className="h-1.5 w-8 rounded-full bg-foreground/25" />
+                              <span className="space-y-1">
+                                <span className="block h-2 w-12 rounded-full bg-foreground/60" />
+                                <span className="block h-1.5 w-8 rounded-full bg-primary" />
+                              </span>
+                            </span>
+                          ) : (
+                            <span key={mode} className="flex flex-1 flex-col justify-between bg-white p-2">
+                              <span className="h-1.5 w-8 rounded-full bg-black/15" />
+                              <span className="space-y-1">
+                                <span className="block h-2 w-12 rounded-full bg-black/50" />
+                                <span className="block h-1.5 w-8 rounded-full bg-primary" />
+                              </span>
+                            </span>
+                          ),
                         )}
-                        aria-hidden="true"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div
-                            className={cn(
-                              "h-2 w-8 rounded-full",
-                              item.mode === "light" ? "bg-slate-300" : "bg-white/20",
-                            )}
-                          />
-                          <div
-                            className={cn(
-                              "h-2 w-2 rounded-full",
-                              active ? "bg-primary" : "bg-muted-foreground/30",
-                            )}
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <div
-                            className={cn(
-                              "h-2.5 w-14 rounded-full",
-                              item.mode === "light" ? "bg-slate-400" : "bg-white/30",
-                            )}
-                          />
-                          <div
-                            className={cn(
-                              "h-1.5 w-10 rounded-full",
-                              item.mode === "light" ? "bg-slate-300" : "bg-white/15",
-                            )}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Icon className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground")} />
-                          <span className="text-xs font-bold">{item.label}</span>
-                        </div>
-                        <span
-                          className={cn(
-                            "flex h-5 w-5 items-center justify-center rounded-full border transition-all",
-                            active
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : "border-border text-transparent",
-                          )}
-                        >
-                          <Check className="h-3 w-3 stroke-[3]" />
+                      </span>
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-2 text-body font-semibold text-foreground">
+                          <Icon className={cn("h-4 w-4", active ? "text-primary" : "text-label-2")} aria-hidden />
+                          {item.label}
                         </span>
-                      </div>
-                      <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                        {item.hint}
-                      </p>
+                        <Tick on={active} />
+                      </span>
+                      <span className="mt-1.5 text-footnote text-label-2">{item.hint}</span>
                     </button>
                   );
                 })}
               </div>
-            </div>
+            </Card>
+          </m.div>
 
-            <p className="mt-6 text-[11px] font-medium text-muted-foreground/80">
-              System mode automatically matches your operating system&apos;s day/night schedule.
-            </p>
-          </motion.div>
-
-          {/* Card 2: Language & Localization */}
-          <motion.div
-            inherit={false} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.12 }} variants={revealItem}
-            className="flex flex-col justify-between rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl sm:p-8 lg:col-span-5"
-          >
-            <div>
-              <div className="mb-6 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/80 bg-surface/80 text-primary">
-                  <Globe className="h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="text-base font-bold tracking-tight text-foreground">
-                    {t("ui.language", "Display Language")}
-                  </h2>
-                  <p className="text-xs font-medium text-muted-foreground">
-                    {t("settings.languageHint", "Set display language for navigation and labels")}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-3">
+          {/* Language */}
+          <m.div variants={listItem} custom={1} className="lg:col-span-5">
+            <Card className={group}>
+              <GroupHeader icon={Globe} title={t("ui.language", "Language")} hint={t("settings.languageHint", "Set display language for navigation and labels")} />
+              <div role="radiogroup" aria-label={t("ui.language", "Language")} className="space-y-2.5">
                 {LANGS.map((item) => {
                   const active = language === item.value;
                   return (
                     <button
                       key={item.value}
                       type="button"
+                      role="radio"
+                      aria-checked={active}
                       onClick={() => setLanguage(item.value)}
-                      aria-pressed={active}
                       className={cn(
-                        "flex w-full items-center justify-between rounded-2xl border px-4 py-3.5 text-left transition-all duration-200 active:scale-[0.98]",
-                        active
-                          ? "border-primary/45 bg-primary/12 text-foreground shadow-soft ring-1 ring-primary/30"
-                          : "border-border/80 bg-surface/60 text-muted-foreground hover:border-primary/30 hover:bg-surface hover:text-foreground",
+                        cardVariants({ variant: "interactive", padding: "none" }),
+                        "flex w-full items-center justify-between gap-3 px-4 py-3 text-left shadow-none",
+                        active && "border-primary ring-1 ring-primary",
                       )}
                     >
-                      <div className="min-w-0 pr-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-foreground">{item.fallback}</span>
-                          <span className="rounded-md bg-surface px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                      <span className="min-w-0">
+                        <span className="flex items-center gap-2">
+                          <span
+                            lang={item.value}
+                            className={cn("text-body font-semibold text-foreground", item.value !== "en" && "locale-script-label")}
+                          >
                             {item.native}
                           </span>
-                        </div>
-                        <span className="mt-0.5 block truncate text-[11px] text-muted-foreground font-medium">
+                          {item.native !== item.fallback ? <span className="text-footnote text-label-2">{item.fallback}</span> : null}
+                        </span>
+                        <span
+                          lang={item.value}
+                          className={cn("mt-0.5 block text-footnote text-label-2", item.value !== "en" && "locale-script-text")}
+                        >
                           {item.hint}
                         </span>
-                      </div>
-                      <span
-                        className={cn(
-                          "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-all",
-                          active
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-border text-transparent",
-                        )}
-                      >
-                        <Check className="h-3.5 w-3.5 stroke-[3]" />
                       </span>
+                      <Tick on={active} />
                     </button>
                   );
                 })}
               </div>
-            </div>
+            </Card>
+          </m.div>
 
-            <p className="mt-6 text-[11px] font-medium text-muted-foreground/80">
-              Language selections synchronize instantly across listings, calculator metrics, and filters.
-            </p>
-          </motion.div>
-
-          {/* Card 3: Regional Standards & Currency */}
-          <motion.div
-            inherit={false} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.12 }} variants={revealItem}
-            className="flex flex-col justify-between rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl sm:p-8 lg:col-span-6"
-          >
-            <div>
-              <div className="mb-6 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/80 bg-surface/80 text-primary">
-                    <Coins className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h2 className="text-base font-bold tracking-tight text-foreground">
-                      Market Standards & Currency
-                    </h2>
-                    <p className="text-xs font-medium text-muted-foreground">
-                      Conventions applied to vehicle prices and depreciation
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="rounded-2xl border border-border/70 bg-surface/50 p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-bold text-foreground">Base Currency</p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">
-                        Sri Lankan Rupee (LKR) formatted in Millions (e.g. Rs 14.5M)
-                      </p>
-                    </div>
-                    <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-mono font-bold text-primary">
-                      LKR (Rs)
-                    </span>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-border/70 bg-surface/50 p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-bold text-foreground">Price Baseline</p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">
-                        Fair Market Value (FMV) algorithm trained on Sri Lankan market sales
-                      </p>
-                    </div>
-                    <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-mono font-bold text-emerald-400">
-                      FMV v2.4
-                    </span>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-border/70 bg-surface/50 p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-bold text-foreground">Odometer Standard</p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">
-                        Metric Kilometers (km) with verified odometer checks
-                      </p>
-                    </div>
-                    <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-mono font-bold text-foreground">
-                      KM
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 flex items-center justify-between border-t border-border/60 pt-4">
-              <span className="text-[11px] font-medium text-muted-foreground">
-                Want to calculate custom loan lease terms?
-              </span>
-              <Link
-                to="/calculator"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline"
-              >
-                Loan Calculator
-                <ArrowUpRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-          </motion.div>
-
-          {/* Card 4: Compare Tray & Local Session */}
-          <motion.div
-            inherit={false} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.12 }} variants={revealItem}
-            className="flex flex-col justify-between rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl sm:p-8 lg:col-span-6"
-          >
-            <div>
-              <div className="mb-6 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/80 bg-surface/80 text-primary">
-                    <Scale className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h2 className="text-base font-bold tracking-tight text-foreground">
-                      Compare Tray & Local Storage
-                    </h2>
-                    <p className="text-xs font-medium text-muted-foreground">
-                      Pinned vehicles and offline local preferences
-                    </p>
-                  </div>
-                </div>
-                <span className="rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] font-mono font-bold text-foreground">
-                  {pinned.length} / {MAX_PINNED} Pinned
-                </span>
-              </div>
-
-              <div className="rounded-2xl border border-border/70 bg-surface/50 p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-bold text-foreground">Active Compare Tray</p>
-                    <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                      {pinned.length === 0
-                        ? `No vehicles are currently pinned. Pin up to ${MAX_PINNED} cars from search or market results to compare side-by-side.`
-                        : `You have ${pinned.length} vehicle${pinned.length > 1 ? "s" : ""} saved in your comparison session.`}
-                    </p>
-                  </div>
-                  {pinned.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={handleClearCompare}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-bold text-destructive transition-colors hover:bg-destructive/20 active:scale-95"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Clear
-                    </button>
-                  )}
-                </div>
-
-                {pinned.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2 pt-2 border-t border-border/40">
-                    {pinned.map((car) => (
-                      <span
-                        key={car.id}
-                        className="rounded-lg border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-foreground"
-                      >
-                        {car.make} {car.model}
-                      </span>
-                    ))}
-                  </div>
+          {/* Compare tray */}
+          <m.div variants={listItem} custom={2} className="lg:col-span-6">
+            <Card className={group}>
+              <GroupHeader
+                icon={Scale}
+                title={t("acct.settings.compareTitle", "Compare tray")}
+                hint={t("acct.settings.compareHint", "Cars you've pinned to compare side by side.")}
+                aside={
+                  <Badge variant="neutral" className="tabular-nums">
+                    <AnimatedNumber value={pinned.length} /> / {MAX_PINNED}
+                  </Badge>
+                }
+              />
+              <AnimatePresence mode="popLayout" initial={false}>
+                {pinned.length === 0 ? (
+                  <m.p key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1, transition: tween.enter }} exit={{ opacity: 0, transition: tween.exit }} className="rounded-control bg-surface-2 p-4 text-footnote text-label-2">
+                    {t("acct.settings.compareEmpty", "Nothing pinned yet. Pin up to {max} cars from search results to compare them.", { max: String(MAX_PINNED) })}
+                  </m.p>
+                ) : (
+                  <m.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1, transition: tween.enter }} exit={{ opacity: 0, transition: tween.exit }}>
+                    <ul className="flex flex-wrap gap-2">
+                      {pinned.map((car) => (
+                        <li key={car.id}>
+                          <Badge variant="outline" className="h-8 px-3 text-footnote font-medium">
+                            {car.make} {car.model}
+                          </Badge>
+                        </li>
+                      ))}
+                    </ul>
+                  </m.div>
                 )}
+              </AnimatePresence>
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-separator pt-4">
+                <Button asChild variant="tertiary" size="sm" className="-ml-3">
+                  <Link to="/compare">
+                    {t("acct.settings.openCompare", "Open Compare")}
+                    <ArrowUpRight aria-hidden />
+                  </Link>
+                </Button>
+                {pinned.length > 0 ? (
+                  <Button type="button" variant="ghost" size="sm" onClick={handleClearCompare} className="text-deal-high-text">
+                    <Trash2 aria-hidden />
+                    {t("acct.settings.clearCompare", "Clear tray")}
+                  </Button>
+                ) : null}
               </div>
+            </Card>
+          </m.div>
 
-              <div className="mt-4 rounded-2xl border border-border/70 bg-surface/50 p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-bold text-foreground">Browser Local Storage</p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">
-                      Preferences and pinned listings are stored securely on this device without tracking cookies.
-                    </p>
-                  </div>
-                  <Database className="h-5 w-5 text-muted-foreground/60 shrink-0 ml-3" />
+          {/* Units */}
+          <m.div variants={listItem} custom={3} className="lg:col-span-6">
+            <Card className={group}>
+              <GroupHeader icon={Coins} title={t("acct.settings.unitsTitle", "Units and prices")} hint={t("acct.settings.unitsHint", "How prices and distances are shown across Motormila.")} />
+              <dl className="divide-y divide-separator">
+                <div className="flex items-center justify-between gap-3 py-3">
+                  <dt className="text-body text-foreground">{t("acct.settings.currency", "Currency")}</dt>
+                  <dd className="text-footnote text-label-2">{t("acct.settings.currencyValue", "Sri Lankan rupees, in millions (Rs 14.5 Mn)")}</dd>
                 </div>
+                <div className="flex items-center justify-between gap-3 py-3">
+                  <dt className="text-body text-foreground">{t("acct.settings.distance", "Distance")}</dt>
+                  <dd className="text-footnote text-label-2">{t("acct.settings.distanceValue", "Kilometres (km)")}</dd>
+                </div>
+              </dl>
+              <div className="mt-2 border-t border-separator pt-4">
+                <Button asChild variant="tertiary" size="sm" className="-ml-3 h-auto min-h-9 whitespace-normal text-left">
+                  <Link to={HOW_WE_PRICE_PATH}>
+                    {t("acct.settings.howWePrice", "How we score prices")}
+                    <ArrowUpRight aria-hidden />
+                  </Link>
+                </Button>
               </div>
-            </div>
+            </Card>
+          </m.div>
 
-            <div className="mt-6 flex items-center justify-between border-t border-border/60 pt-4">
-              <span className="text-[11px] font-medium text-muted-foreground">
-                Side-by-side spec comparison
-              </span>
-              <Link
-                to="/compare"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline"
-              >
-                Go to Compare Page
-                <ArrowUpRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-          </motion.div>
-
-          {/* ui/features: low-data mode */}
-          <motion.div inherit={false} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.12 }} variants={revealItem} className="lg:col-span-12">
+          {/* Low-data mode */}
+          <m.div variants={listItem} custom={4} className="lg:col-span-12">
             <LowDataSettingsCard />
-          </motion.div>
+          </m.div>
 
-          {/* Card 5: Feedback & Issue Reporting Hub */}
-          <motion.div
-            inherit={false} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.12 }} variants={revealItem}
-            className="flex flex-col justify-between rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl sm:p-8 lg:col-span-7"
-          >
-            <div>
-              <div className="mb-6 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/80 bg-surface/80 text-primary">
-                  <Bug className="h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="text-base font-bold tracking-tight text-foreground">
-                    Have Feedback or Found a Bug?
-                  </h2>
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Direct community feedback pipeline to the engineering team
-                  </p>
-                </div>
-              </div>
-
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                Found a pricing anomaly, scraper discrepancy, or visual overlap? Use our built-in feedback tool.
-                It automatically includes your browser route context and is reviewed by the Motormila team.
+          {/* Feedback */}
+          <m.div variants={listItem} custom={5} className="lg:col-span-7">
+            <Card className={cn(group, "flex flex-col")}>
+              <GroupHeader icon={Bug} title={t("acct.settings.feedbackTitle", "Feedback or a bug?")} hint={t("acct.settings.feedbackHint", "Goes straight to the Motormila team.")} />
+              <p className="flex-1 text-body text-label-1">
+                {t(
+                  "acct.settings.feedbackBody",
+                  "Spotted a wrong price, a missing listing or something that looks off? Send it from here. We include the page you were on so we can find it quickly.",
+                )}
               </p>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                {["Bug Report", "Feature Idea", "Data Discrepancy", "UI / UX Polish", "General"].map((chip) => (
-                  <span
-                    key={chip}
-                    className="rounded-full border border-border bg-surface px-3 py-1 text-[11px] font-medium text-muted-foreground"
-                  >
-                    {chip}
-                  </span>
-                ))}
+              <div className="mt-5 border-t border-separator pt-4">
+                <Button type="button" onClick={() => openFeedbackDialog()}>
+                  <MessageSquare aria-hidden />
+                  {t("acct.settings.sendFeedback", "Send feedback")}
+                </Button>
               </div>
-            </div>
+            </Card>
+          </m.div>
 
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-border/60 pt-4">
-              <span className="text-[11px] font-medium text-muted-foreground">
-                Offline queue supported • Encrypted transit
-              </span>
-              <button
-                type="button"
-                onClick={() => openFeedbackDialog()}
-                className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-xs font-bold text-primary-foreground shadow-soft transition-all duration-200 hover:opacity-95 active:scale-95"
-              >
-                <MessageSquare className="h-4 w-4" />
-                Send Feedback
-              </button>
-            </div>
-          </motion.div>
-
-          {/* Card 6: Platform & System Status */}
-          <motion.div
-            inherit={false} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.12 }} variants={revealItem}
-            className="flex flex-col justify-between rounded-3xl border border-border/80 bg-card/85 p-6 shadow-soft backdrop-blur-xl sm:p-8 lg:col-span-5"
-          >
-            <div>
-              <div className="mb-6 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/80 bg-surface/80 text-primary">
-                  <ShieldCheck className="h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="text-base font-bold tracking-tight text-foreground">
-                    System & Security
-                  </h2>
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Platform telemetry and active runtime
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-surface/50 px-4 py-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="relative flex h-2.5 w-2.5">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                    </span>
-                    <span className="text-xs font-bold text-foreground">Market Scrapers & DB</span>
-                  </div>
-                  <span className="text-[11px] font-mono font-semibold text-emerald-400">Operational</span>
-                </div>
-
-                <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-surface/50 px-4 py-3">
-                  <span className="text-xs font-bold text-foreground">Client Build</span>
-                  <span className="text-[11px] font-mono text-muted-foreground">v1.4.2 Production</span>
-                </div>
-
-                <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-surface/50 px-4 py-3">
-                  <span className="text-xs font-bold text-foreground">Telemetry & Sentry</span>
-                  <span className="text-[11px] font-mono text-muted-foreground">Anonymous Errors Only</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 flex items-center justify-between border-t border-border/60 pt-4">
-              <span className="text-[11px] font-medium text-muted-foreground">
-                Read documentation & API guides
-              </span>
-              <Link
-                to="/docs"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline"
-              >
-                Docs
-                <ArrowUpRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-          </motion.div>
-        </motion.div>
-      </PageBody>
+          {/* About */}
+          <m.div variants={listItem} custom={6} className="lg:col-span-5">
+            <Card className={group}>
+              <GroupHeader icon={Info} title={t("acct.settings.aboutTitle", "About and your data")} />
+              <nav className="-my-1 divide-y divide-separator">
+                <LinkRow to="/docs" label={t("acct.settings.docs", "How Motormila works")} />
+                <LinkRow to="/privacy" label={t("acct.legal.link.privacy", "Privacy Policy")} />
+                <LinkRow to="/delete-account" label={t("acct.legal.link.delete", "Delete my account")} />
+              </nav>
+            </Card>
+          </m.div>
+        </m.div>
+      </div>
     </PageCanvas>
   );
 }

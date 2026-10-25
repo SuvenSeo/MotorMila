@@ -11,7 +11,10 @@ export interface FmvSummary {
   label: string;
 }
 
-export function summarizeFmv(asking: number, fmv: number): FmvSummary | null {
+type Translate = (key: string, fallback?: string, vars?: Record<string, string | number>) => string;
+
+/** `t` (from useAppPreferences) localises the label; without it the label is English. */
+export function summarizeFmv(asking: number, fmv: number, t?: Translate): FmvSummary | null {
   if (!Number.isFinite(asking) || !Number.isFinite(fmv) || asking <= 0 || fmv <= 0) {
     return null;
   }
@@ -21,13 +24,14 @@ export function summarizeFmv(asking: number, fmv: number): FmvSummary | null {
   if (delta_pct <= -5) band = "below";
   else if (delta_pct >= 8) band = "above";
 
-  const absPct = Math.abs(delta_pct);
+  const pct = Math.abs(delta_pct).toFixed(0);
+  const tr: Translate = t ?? ((_key, fallback = "", vars) => fallback.replace(/\{(\w+)\}/g, (_m, k) => String(vars?.[k] ?? "")));
   const label =
     band === "below"
-      ? `Priced ${absPct.toFixed(0)}% below FMV`
+      ? tr("fmv.band.below", "Priced {pct}% below FMV", { pct })
       : band === "above"
-        ? `Overpriced ${absPct.toFixed(0)}% vs FMV`
-        : "Near fair market value";
+        ? tr("fmv.band.above", "Overpriced {pct}% vs FMV", { pct })
+        : tr("fmv.band.near", "Near fair market value");
 
   return { fmv_lkr: fmv, asking_lkr: asking, delta_lkr, delta_pct, band, label };
 }

@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  formatPrice,
   type ImportEligibilityResult,
   type OwnershipBundleResult,
   type OwnershipVehicleClass,
@@ -8,20 +7,31 @@ import {
 import {
   calculateOwnershipBundleResilient as calculateOwnershipBundle,
   checkImportEligibilityResilient as checkImportEligibility,
+  calculateOwnershipBundleOffline,
+  checkImportEligibilityOffline,
   type OfflineFlag,
 } from "@/lib/offlineCalculators";
-import { Input } from "@/components/ui/input";
-import { AlertTriangle, CheckCircle, Shield, FileBadge } from "lucide-react";
+import { FileBadge, Shield } from "lucide-react";
 import { toast } from "sonner";
+import { useAppPreferences } from "@/lib/appPreferences";
+import { localizeCalcNote } from "@/lib/calcNotesI18n";
+import { Badge } from "@/components/ui/badge";
+import { ErrorState } from "@/components/ui/error-state";
+import {
+  AnimatedLkr,
+  CheckRow,
+  ChoiceChips,
+  FormCard,
+  Notice,
+  NumberField,
+  ResultCard,
+  ResultRow,
+  ResultRows,
+  ResultSkeleton,
+  ToolGrid,
+} from "@/components/tools/ToolKit";
 
 type FuelType = "petrol" | "diesel" | "hybrid" | "electric";
-
-const VEHICLE_CLASSES: { id: OwnershipVehicleClass; label: string }[] = [
-  { id: "motor_car", label: "Motor car" },
-  { id: "dual_purpose", label: "Dual purpose" },
-  { id: "motorcycle", label: "Motorcycle" },
-  { id: "three_wheeler", label: "Three-wheeler" },
-];
 
 const FUELS: FuelType[] = ["petrol", "diesel", "hybrid", "electric"];
 
@@ -34,6 +44,7 @@ export function OwnershipCostsPanel({
   initialCc?: number;
   initialPrice?: number;
 }) {
+  const { t } = useAppPreferences();
   const [vehicleClass, setVehicleClass] = useState<OwnershipVehicleClass>("motor_car");
   const [fuelType, setFuelType] = useState<FuelType>(initialFuel);
   const [engineCc, setEngineCc] = useState(initialCc);
@@ -44,262 +55,142 @@ export function OwnershipCostsPanel({
   const [bundle, setBundle] = useState<(OwnershipBundleResult & OfflineFlag) | null>(null);
   const [eligibility, setEligibility] = useState<(ImportEligibilityResult & OfflineFlag) | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
+  const request = useRef(0);
   useEffect(() => {
+    const bundleInput = {
+      vehicle_class: vehicleClass,
+      fuel_type: fuelType,
+      engine_cc: engineCc,
+      unladen_kg: unladenKg > 0 ? unladenKg : undefined,
+      consideration_lkr: consideration,
+      include_transfer: includeTransfer,
+    };
+    const eligibilityInput = { fuel_type: fuelType, model_year: modelYear };
+    // Instant on-device figures while the live API answers; never replaces a live result.
+    try {
+      const offlineBundle = calculateOwnershipBundleOffline(bundleInput);
+      const offlineElig = checkImportEligibilityOffline(eligibilityInput);
+      setBundle((prev) => (prev && !prev.offline ? prev : { ...offlineBundle, offline: true }));
+      setEligibility((prev) => (prev && !prev.offline ? prev : { ...offlineElig, offline: true }));
+    } catch {
+      /* the live call below still runs */
+    }
     const timer = setTimeout(() => {
+      const id = ++request.current;
       setLoading(true);
-      void Promise.all([
-        calculateOwnershipBundle({
-          vehicle_class: vehicleClass,
-          fuel_type: fuelType,
-          engine_cc: engineCc,
-          unladen_kg: unladenKg > 0 ? unladenKg : undefined,
-          consideration_lkr: consideration,
-          include_transfer: includeTransfer,
-        }),
-        checkImportEligibility({
-          fuel_type: fuelType,
-          model_year: modelYear,
-        }),
-      ])
+      void Promise.all([calculateOwnershipBundle(bundleInput), checkImportEligibility(eligibilityInput)])
         .then(([own, elig]) => {
+          if (id !== request.current) return;
           setBundle(own);
           setEligibility(elig);
+          setError(null);
         })
         .catch((e: unknown) => {
-          const message = e instanceof Error ? e.message : "Calculation failed";
-          toast.error("Ownership calc failed", { description: message });
+          if (id !== request.current) return;
+          const message = e instanceof Error ? e.message : t("calc.calcFailed", "Calculation failed");
+          setError(message);
+          toast.error(t("tools.own.failed", "Ownership calculation failed"), { description: message });
         })
-        .finally(() => setLoading(false));
+        .finally(() => {
+          if (id === request.current) setLoading(false);
+        });
     }, 350);
     return () => clearTimeout(timer);
-  }, [vehicleClass, fuelType, engineCc, unladenKg, consideration, includeTransfer, modelYear]);
+  }, [vehicleClass, fuelType, engineCc, unladenKg, consideration, includeTransfer, modelYear, attempt, t]);
 
+  const vehicleClasses: { value: OwnershipVehicleClass; label: string }[] = [
+    { value: "motor_car", label: t("tools.own.class.car", "Motor car") },
+    { value: "dual_purpose", label: t("tools.own.class.dual", "Dual purpose") },
+    { value: "motorcycle", label: t("tools.own.class.bike", "Motorcycle") },
+    { value: "three_wheeler", label: t("tools.own.class.tuk", "Three-wheeler") },
+  ];
   const statusTone =
+    eligibility?.status === "likely_allowed" ? "success" : eligibility?.status === "restricted" ? "danger" : "caution";
+  const statusLabel =
     eligibility?.status === "likely_allowed"
-      ? "border-emerald-500/25 bg-emerald-400/10 text-emerald-800 dark:text-emerald-200"
+      ? t("tools.own.status.allowed", "Likely allowed")
       : eligibility?.status === "restricted"
-        ? "border-rose-500/25 bg-rose-400/10 text-rose-800 dark:text-rose-200"
-        : "border-amber-500/25 bg-amber-400/10 text-amber-900 dark:text-amber-200";
+        ? t("tools.own.status.restricted", "Restricted")
+        : (eligibility?.status ?? "").replace(/_/g, " ");
 
-  return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-      <div className="h-fit space-y-5 rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
-        <div className="flex items-center gap-3 border-b border-border pb-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-2xl border border-border bg-surface">
-            <FileBadge className="h-4 w-4 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-[14px] font-bold text-foreground">On-road ownership costs</h2>
-            <p className="text-[10px] font-semibold text-muted-foreground">
-              Revenue licence · emission · third-party · transfer
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-[12px] font-medium text-muted-foreground/80">
-            Vehicle class
-          </label>
-          <div className="grid grid-cols-2 gap-1.5">
-            {VEHICLE_CLASSES.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setVehicleClass(item.id)}
-                aria-pressed={vehicleClass === item.id}
-                className={`min-h-[36px] rounded-full border py-2 text-[10px] font-bold transition-all active:scale-[0.97] ${
-                  vehicleClass === item.id
-                    ? "border-primary/40 bg-primary/10 text-primary-bright"
-                    : "border-border bg-surface text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-[12px] font-medium text-muted-foreground/80">
-            Fuel
-          </label>
-          <div className="grid grid-cols-4 gap-1.5">
-            {FUELS.map((fuel) => (
-              <button
-                key={fuel}
-                type="button"
-                onClick={() => setFuelType(fuel)}
-                aria-pressed={fuelType === fuel}
-                className={`min-h-[36px] rounded-full border py-2 text-[10px] font-bold capitalize transition-all active:scale-[0.97] ${
-                  fuelType === fuel
-                    ? "border-primary/40 bg-primary/10 text-primary-bright"
-                    : "border-border bg-surface text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                }`}
-              >
-                {fuel}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label htmlFor="own-cc" className="text-[12px] font-medium text-muted-foreground/80">
-              Engine CC
-            </label>
-            <Input
-              id="own-cc"
-              type="number"
-              value={engineCc}
-              onChange={(e) => setEngineCc(Number(e.target.value))}
-              className="num border-border bg-surface focus-visible:ring-primary/40"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label htmlFor="own-kg" className="text-[12px] font-medium text-muted-foreground/80">
-              Unladen kg (optional)
-            </label>
-            <Input
-              id="own-kg"
-              type="number"
-              value={unladenKg || ""}
-              placeholder="auto from CC"
-              onChange={(e) => setUnladenKg(Number(e.target.value) || 0)}
-              className="num border-border bg-surface focus-visible:ring-primary/40"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label htmlFor="own-year" className="text-[12px] font-medium text-muted-foreground/80">
-              Model year (import check)
-            </label>
-            <Input
-              id="own-year"
-              type="number"
-              value={modelYear}
-              onChange={(e) => setModelYear(Number(e.target.value))}
-              className="num border-border bg-surface focus-visible:ring-primary/40"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label htmlFor="own-price" className="text-[12px] font-medium text-muted-foreground/80">
-              Transfer consideration (LKR)
-            </label>
-            <Input
-              id="own-price"
-              type="number"
-              value={consideration}
-              onChange={(e) => setConsideration(Number(e.target.value))}
-              className="num border-border bg-surface focus-visible:ring-primary/40"
-            />
-          </div>
-        </div>
-
-        <label className="flex min-h-[40px] cursor-pointer items-center gap-2 text-xs font-semibold text-foreground">
-          <input
-            type="checkbox"
-            checked={includeTransfer}
-            onChange={(e) => setIncludeTransfer(e.target.checked)}
-            className="h-4 w-4 accent-primary"
-          />
-          Include ownership-transfer fees
-        </label>
+  const form = (
+    <FormCard icon={FileBadge} title={t("tools.own.title", "On-road ownership costs")} description={t("tools.own.subtitle", "Revenue licence · emission · third-party · transfer")}>
+      <ChoiceChips label={t("tools.own.class", "Vehicle class")} value={vehicleClass} options={vehicleClasses} onChange={setVehicleClass} />
+      <ChoiceChips
+        label={t("tools.own.fuel", "Fuel")}
+        value={fuelType}
+        options={FUELS.map((f) => ({ value: f, label: t(`fuel.${f}`, f) }))}
+        onChange={setFuelType}
+        fill
+      />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <NumberField id="own-cc" label={t("tools.own.cc", "Engine CC")} value={engineCc} onChange={setEngineCc} suffix="cc" step={50} />
+        <NumberField
+          id="own-kg"
+          label={t("tools.own.kg", "Unladen weight")}
+          optional
+          optionalLabel={t("tools.optional", "optional")}
+          value={unladenKg}
+          emptyWhenZero
+          onChange={setUnladenKg}
+          suffix="kg"
+          placeholder={t("tools.own.kgPh", "Worked out from CC")}
+        />
+        <NumberField id="own-year" label={t("tools.own.year", "Model year (import check)")} value={modelYear} onChange={setModelYear} step={1} inputMode="numeric" />
+        <NumberField id="own-price" label={t("tools.own.consideration", "Transfer value")} value={consideration} onChange={setConsideration} prefix="Rs" step={100_000} />
       </div>
-
-      <div className="space-y-6 rounded-2xl border border-border bg-card p-5 shadow-soft-lg sm:p-6">
-        <div>
-          <h3 className="text-sm font-bold text-foreground">First-year statutory outlay</h3>
-          <p className="mt-0.5 text-[10px] font-semibold text-muted-foreground">
-            Gazette-aligned planning figures — confirm eRL / insurer / RMV before paying
-            {bundle?.offline ? " · computed on-device" : ""}
-          </p>
-        </div>
-
-        {loading && !bundle ? (
-          <div className="flex h-48 items-center justify-center">
-            <div
-              role="status"
-              aria-label="Calculating"
-              className="h-6 w-6 animate-spin rounded-full border border-primary border-t-transparent"
-            />
-          </div>
-        ) : bundle ? (
-          <div className={`space-y-5 transition-opacity ${loading ? "opacity-60" : "opacity-100"}`}>
-            <div className="space-y-3 border-b border-border pb-4 text-xs">
-              <div className="flex justify-between text-muted-foreground">
-                <span>Revenue licence (base)</span>
-                <span className="num font-semibold text-foreground">
-                  {formatPrice(bundle.revenue_licence.base_fee_lkr)}
-                </span>
-              </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>Emission test (VET)</span>
-                <span className="num font-semibold text-foreground">
-                  {formatPrice(bundle.revenue_licence.emission_test_lkr)}
-                </span>
-              </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>Third-party insurance (CMT + stamp)</span>
-                <span className="num font-semibold text-foreground">
-                  {formatPrice(bundle.third_party_insurance.total_lkr)}
-                </span>
-              </div>
-              {bundle.transfer ? (
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Transfer processing + stamp estimate</span>
-                  <span className="num font-semibold text-foreground">
-                    {formatPrice(bundle.transfer.total_lkr)}
-                  </span>
-                </div>
-              ) : null}
-            </div>
-
-            <div
-              aria-live="polite"
-              className="rounded-2xl border border-primary/25 bg-primary/5 p-6 text-center shadow-soft"
-            >
-              <span className="text-[12px] font-semibold text-primary-bright">
-                Statutory cash this year
-              </span>
-              <p className="display-1 num mt-2 text-foreground">
-                {formatPrice(bundle.first_year_statutory_total_lkr)}
-              </p>
-            </div>
-
-            {eligibility ? (
-              <div className={`rounded-2xl border p-4 ${statusTone}`}>
-                <div className="flex items-start gap-2">
-                  {eligibility.status === "likely_allowed" ? (
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                  ) : (
-                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                  )}
-                  <div>
-                    <p className="text-xs font-bold capitalize">
-                      Import screen · {eligibility.status.replace(/_/g, " ")}
-                    </p>
-                    <ul className="mt-2 space-y-1 text-[10px] font-semibold leading-relaxed opacity-90">
-                      {eligibility.reasons.map((reason) => (
-                        <li key={reason}>• {reason}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-
-            <div className="flex gap-2 rounded-2xl border border-border bg-surface p-3">
-              <Shield className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <p className="text-[10px] font-semibold leading-relaxed text-muted-foreground">
-                {bundle.notes} {bundle.revenue_licence.schedule_note}
-              </p>
-            </div>
-          </div>
-        ) : null}
-      </div>
-    </div>
+      <CheckRow id="own-transfer" checked={includeTransfer} onCheckedChange={setIncludeTransfer} className="-mx-2">
+        <span className="text-footnote">{t("tools.own.includeTransfer", "Include ownership-transfer fees")}</span>
+      </CheckRow>
+    </FormCard>
   );
+
+  const result =
+    loading && !bundle ? (
+      <ResultSkeleton rows={4} label={t("tools.calculating", "Calculating")} />
+    ) : bundle ? (
+      <>
+        <ResultCard
+          busy={loading && !bundle.offline}
+          label={t("tools.own.total", "Statutory cash this year")}
+          badge={bundle.offline ? <Badge variant="neutral">{t("tools.calc.onDevice", "On device")}</Badge> : null}
+          value={<AnimatedLkr value={bundle.first_year_statutory_total_lkr} mode="full" />}
+          caption={t("tools.own.caption", "Gazette-aligned planning figures. Confirm with eRL, your insurer and the DMT before paying.")}
+          footer={
+            <Notice tone="neutral" icon={Shield}>
+              <span className="text-label-2">
+                {localizeCalcNote(bundle.notes, t)} {localizeCalcNote(bundle.revenue_licence.schedule_note, t)}
+              </span>
+            </Notice>
+          }
+        >
+          <ResultRows>
+            <ResultRow label={t("tools.own.licence", "Revenue licence (base)")} value={<AnimatedLkr value={bundle.revenue_licence.base_fee_lkr} mode="full" />} />
+            <ResultRow label={t("tools.own.emission", "Emission test (VET)")} value={<AnimatedLkr value={bundle.revenue_licence.emission_test_lkr} mode="full" />} />
+            <ResultRow label={t("tools.own.thirdParty", "Third-party insurance (CMT + stamp)")} value={<AnimatedLkr value={bundle.third_party_insurance.total_lkr} mode="full" />} />
+            {bundle.transfer ? (
+              <ResultRow label={t("tools.own.transfer", "Transfer processing + stamp estimate")} value={<AnimatedLkr value={bundle.transfer.total_lkr} mode="full" />} />
+            ) : null}
+          </ResultRows>
+        </ResultCard>
+        {eligibility ? (
+          <Notice tone={statusTone} title={t("tools.own.importScreen", "Import screen · {status}", { status: statusLabel })}>
+            <ul className="list-disc space-y-1 pl-4 text-label-2">
+              {eligibility.reasons.map((reason) => (
+                <li key={reason}>{localizeCalcNote(reason, t)}</li>
+              ))}
+            </ul>
+          </Notice>
+        ) : null}
+      </>
+    ) : error ? (
+      <ErrorState className="rounded-card border border-border bg-surface-1 py-10 shadow-e1" body={error} onRetry={() => setAttempt((n) => n + 1)} />
+    ) : (
+      <ResultSkeleton rows={4} label={t("tools.calculating", "Calculating")} />
+    );
+
+  return <ToolGrid form={form} result={result} />;
 }

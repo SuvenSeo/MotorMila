@@ -1,4 +1,5 @@
 import { memo, useMemo, type ReactNode } from "react";
+import { tween } from "@/lib/motion";
 import { Link } from "react-router-dom";
 import { motion } from "motion/react";
 import {
@@ -141,7 +142,7 @@ export const ComparisonModal = memo(function ComparisonModal({ listings, open, o
           return (
             <span className="inline-flex flex-wrap items-center gap-2">
               <DealScoreBadge score={score} />
-              <span className="text-[11px] font-medium text-muted-foreground">{getListingDealLabel(score)}</span>
+              <span className="text-caption font-medium text-muted-foreground">{getListingDealLabel(score)}</span>
             </span>
           );
         },
@@ -165,8 +166,8 @@ export const ComparisonModal = memo(function ComparisonModal({ listings, open, o
             <span
               className={cn(
                 "tabular-nums font-semibold",
-                below && "text-emerald-600 dark:text-emerald-400",
-                above && "text-rose-600 dark:text-rose-400",
+                below && "text-deal-good-text",
+                above && "text-deal-high-text",
                 !below && !above && "text-muted-foreground",
               )}
             >
@@ -206,7 +207,7 @@ export const ComparisonModal = memo(function ComparisonModal({ listings, open, o
         key: "condition",
         label: "Condition",
         group: "specs",
-        render: (listing) => <ConditionBadge condition={listing.condition} className="!text-[10px]" />,
+        render: (listing) => <ConditionBadge condition={listing.condition} className="!text-caption" />,
       },
       {
         key: "body",
@@ -355,20 +356,20 @@ export const ComparisonModal = memo(function ComparisonModal({ listings, open, o
                   <Scale className="h-3 w-3" />
                   Side-by-side
                 </div>
-                <DialogTitle className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-[1.75rem]">
+                <DialogTitle className="font-display text-title2 font-semibold tracking-tight text-foreground md:text-title2">
                   Compare vehicles
                 </DialogTitle>
-                <DialogDescription className="max-w-xl text-sm leading-relaxed text-muted-foreground">
+                <DialogDescription className="max-w-xl text-footnote leading-relaxed text-muted-foreground">
                   Leaders highlight the stronger number on each row. Open a listing when you&apos;ve picked a lane.
                 </DialogDescription>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-border bg-surface/80 px-3 py-1.5 text-[11px] font-semibold tabular-nums text-foreground backdrop-blur-sm">
+                <span className="rounded-full border border-border bg-surface px-3 py-1.5 text-caption font-semibold tabular-nums text-foreground">
                   {listings.length} vehicles
                 </span>
                 {priceSpreadLabel ? (
-                  <span className="rounded-full border border-border bg-surface/80 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground backdrop-blur-sm">
+                  <span className="rounded-full border border-border bg-surface px-3 py-1.5 text-caption font-semibold text-muted-foreground">
                     Spread <span className="tabular-nums text-foreground">{priceSpreadLabel}</span>
                   </span>
                 ) : null}
@@ -408,7 +409,7 @@ export const ComparisonModal = memo(function ComparisonModal({ listings, open, o
           <div className="min-w-[760px] px-4 pb-6 pt-4 md:px-5">
             {/* Sticky vehicle headers — card columns, no spreadsheet lines */}
             <div
-              className="sticky top-0 z-20 -mx-1 grid gap-3 bg-gradient-to-b from-card via-card to-card/90 px-1 pb-4 pt-1 backdrop-blur-xl"
+              className="sticky top-0 z-20 -mx-1 grid gap-3 bg-gradient-to-b from-card via-card to-card/90 px-1 pb-4 pt-1"
               style={{ gridTemplateColumns: columnTemplate }}
             >
               <div className="flex items-end pb-2">
@@ -427,7 +428,7 @@ export const ComparisonModal = memo(function ComparisonModal({ listings, open, o
                     key={listing.id}
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05, duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                    transition={{ ...tween.medium, delay: index * 0.05 }}
                     className={cn(
                       "relative overflow-hidden rounded-2xl border bg-surface/60 shadow-soft",
                       isBestDeal ? "border-primary/35 ring-1 ring-primary/15" : "border-border",
@@ -444,29 +445,29 @@ export const ComparisonModal = memo(function ComparisonModal({ listings, open, o
                           listingId={listing.id}
                           alt={`${listing.make} ${listing.model}`}
                           className="h-full w-full object-cover"
-                          placeholderClassName="flex h-full w-full items-center justify-center bg-muted text-[10px] font-medium text-muted-foreground"
+                          placeholderClassName="flex h-full w-full items-center justify-center bg-muted text-caption font-medium text-muted-foreground"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
                         <div className="absolute left-2 top-2 flex flex-wrap gap-1">
                           {isBestDeal ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-zinc-950/80 px-1.5 py-0.5 text-[11px] font-medium text-emerald-300 backdrop-blur-md">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-deal-good/30 bg-card px-1.5 py-0.5 text-caption font-medium text-deal-good-text">
                               <BadgeCheck className="h-2.5 w-2.5" />
                               Best deal
                             </span>
                           ) : null}
                           {isLowestPrice && !isBestDeal ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-zinc-950/80 px-1.5 py-0.5 text-[11px] font-medium text-zinc-100 backdrop-blur-md">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-1.5 py-0.5 text-caption font-medium text-foreground/90">
                               Lowest
                             </span>
                           ) : null}
                         </div>
                         <div className="absolute bottom-2 left-2 right-2">
                           {hasPrice ? (
-                            <p className="truncate text-base font-bold tabular-nums leading-none text-white drop-shadow-sm">
+                            <p className="truncate text-body font-bold tabular-nums leading-none text-white drop-shadow-sm">
                               {formatPrice(price)}
                             </p>
                           ) : (
-                            <p className="text-[12px] font-medium text-white/80">
+                            <p className="text-caption font-medium text-white/80">
                               Price N/A
                             </p>
                           )}
@@ -475,16 +476,16 @@ export const ComparisonModal = memo(function ComparisonModal({ listings, open, o
 
                       <div className="min-w-0 space-y-2">
                         <div>
-                          <p className="truncate font-display text-[15px] font-semibold tracking-tight text-foreground">
+                          <p className="truncate font-display text-body font-semibold tracking-tight text-foreground">
                             {listing.make} {listing.model}
                           </p>
-                          <p className="mt-0.5 truncate text-[11px] font-medium text-muted-foreground">
+                          <p className="mt-0.5 truncate text-caption font-medium text-muted-foreground">
                             {listing.year || "Year —"}
                             {listing.variant ? ` · ${listing.variant}` : ""}
                           </p>
                         </div>
 
-                        <div className="flex flex-wrap gap-1.5 text-[10px] font-medium text-muted-foreground">
+                        <div className="flex flex-wrap gap-1.5 text-caption font-medium text-muted-foreground">
                           <span className="inline-flex items-center gap-1 rounded-full bg-card/80 px-1.5 py-0.5">
                             <Gauge className="h-2.5 w-2.5" />
                             {formatMileageCompact(mileage)}
@@ -501,7 +502,7 @@ export const ComparisonModal = memo(function ComparisonModal({ listings, open, o
 
                         <Link
                           to={`/listing/${listing.id}`}
-                          className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-border bg-card text-[11px] font-semibold text-foreground no-underline transition-colors hover:border-primary/30 hover:bg-primary/10 hover:text-primary-bright"
+                          className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-border bg-card text-caption font-semibold text-foreground no-underline transition-colors hover:border-primary/30 hover:bg-primary/10 hover:text-primary-bright"
                         >
                           Open listing
                           <ArrowUpRight className="h-3.5 w-3.5" />
@@ -522,7 +523,7 @@ export const ComparisonModal = memo(function ComparisonModal({ listings, open, o
                     key={section.group}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 + sectionIndex * 0.06, duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                    transition={{ ...tween.medium, delay: 0.1 + sectionIndex * 0.06 }}
                     className="overflow-hidden rounded-2xl border border-border bg-surface/40 shadow-soft"
                   >
                     <div className="flex items-start justify-between gap-3 border-b border-border/70 px-4 py-3.5 md:px-5">
@@ -531,10 +532,10 @@ export const ComparisonModal = memo(function ComparisonModal({ listings, open, o
                           <Icon className="h-3.5 w-3.5" />
                         </div>
                         <div>
-                          <h3 className="font-display text-[15px] font-semibold tracking-tight text-foreground">
+                          <h3 className="font-display text-body font-semibold tracking-tight text-foreground">
                             {section.label}
                           </h3>
-                          <p className="mt-0.5 text-[11px] text-muted-foreground">{section.hint}</p>
+                          <p className="mt-0.5 text-caption text-muted-foreground">{section.hint}</p>
                         </div>
                       </div>
                     </div>
@@ -547,7 +548,7 @@ export const ComparisonModal = memo(function ComparisonModal({ listings, open, o
                           style={{ gridTemplateColumns: columnTemplate }}
                         >
                           <div className="min-w-0 pr-1">
-                            <p className="text-[12px] font-medium text-muted-foreground">
+                            <p className="text-caption font-medium text-muted-foreground">
                               {row.label}
                             </p>
                           </div>
@@ -558,7 +559,7 @@ export const ComparisonModal = memo(function ComparisonModal({ listings, open, o
                               <div
                                 key={`${row.key}-${listing.id}`}
                                 className={cn(
-                                  "relative min-h-[3.25rem] rounded-xl border px-3 py-2.5 text-sm transition-colors",
+                                  "relative min-h-[3.25rem] rounded-xl border px-3 py-2.5 text-footnote transition-colors",
                                   isBest
                                     ? "border-primary/30 bg-primary/10 shadow-[inset_0_1px_0_0_hsl(var(--primary)/0.18)]"
                                     : "border-border/70 bg-card/70 text-foreground",
@@ -567,7 +568,7 @@ export const ComparisonModal = memo(function ComparisonModal({ listings, open, o
                                 <div className="flex h-full min-w-0 items-center justify-between gap-2">
                                   <span className="min-w-0 truncate font-medium">{row.render(listing)}</span>
                                   {isBest ? (
-                                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-primary/25 bg-primary/15 px-2 py-0.5 text-[11px] font-medium text-primary-bright">
+                                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-primary/25 bg-primary/15 px-2 py-0.5 text-caption font-medium text-primary-bright">
                                       <Trophy className="h-2.5 w-2.5" />
                                       Best
                                     </span>
@@ -613,8 +614,8 @@ function VerdictChip({
       )}
     >
       <span className="shrink-0 opacity-80">{icon}</span>
-      <span className="shrink-0 text-[12px] font-medium">{label}</span>
-      <span className="truncate text-[12px] font-semibold text-foreground">{value}</span>
+      <span className="shrink-0 text-caption font-medium">{label}</span>
+      <span className="truncate text-caption font-semibold text-foreground">{value}</span>
     </div>
   );
 }

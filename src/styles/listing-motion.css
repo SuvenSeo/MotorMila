@@ -3,8 +3,8 @@
 
 /* ── Card → detail View Transition ─────────────────────────────────────── */
 ::view-transition-group(listing-hero) {
-  animation-duration: 0.35s;
-  animation-timing-function: var(--ease-emphasized, cubic-bezier(0.3, 0, 0, 1));
+  animation-duration: var(--dur-long);
+  animation-timing-function: var(--ease-decelerate);
 }
 ::view-transition-old(listing-hero),
 ::view-transition-new(listing-hero) {
@@ -13,36 +13,67 @@
   object-fit: cover;
   overflow: clip;
 }
-html[data-listing-vt] ::view-transition-old(root),
-html[data-listing-vt] ::view-transition-new(root) {
-  animation-duration: 0.18s;
-  animation-timing-function: var(--ease-standard, cubic-bezier(0.2, 0, 0, 1));
+/* No space before the pseudo: `html[x] ::view-transition-…` is a descendant
+   (universal) selector that never matches the root's pseudos and made every
+   toggle of the attribute restyle the whole page (3× per card → listing). */
+html[data-listing-vt]::view-transition-old(root),
+html[data-listing-vt]::view-transition-new(root) {
+  animation-duration: var(--dur-short);
+  animation-timing-function: var(--ease-standard);
+}
+/* With the card's photo under the detail hero, the hero shows nothing (not the
+ * muted pending tile) until its full-size file has loaded. */
+[data-hero-ph] img[data-listing-hero][data-pending="true"] {
+  background-color: transparent;
+  animation: none;
 }
 /* While the hero morph is captured, show the new route at rest (the route
- * cross-fade would otherwise snapshot it at opacity 0) and drop the old one. */
-html[data-listing-vt="hero"] .route-stage:has(img[data-listing-hero]) {
+ * cross-fade would otherwise snapshot it at opacity 0) and drop the old one.
+ * The stage holding the hero is marked from JS (listingMotion.ts): the old
+ * `.route-stage:has(img[data-listing-hero])` form made every DOM insert under
+ * the page re-check :has() and restyle the whole page (~500 elements, ~40 ms
+ * at 4× CPU) on each frame the below-the-fold sections mounted. */
+html[data-listing-vt="hero"] .route-stage[data-vt-hero-stage] {
   opacity: 1 !important;
   transform: none !important;
 }
-html[data-listing-vt="hero"] .route-stage:not(:has(img[data-listing-hero])) {
+html[data-listing-vt="hero"] .route-stage:not([data-vt-hero-stage]) {
   display: none !important;
 }
 
-/* ── Photo fade-in on load (placeholder colour shows underneath) ───────── */
-img[data-fade-in] {
-  opacity: 0;
-  transition: opacity var(--dur-base, 0.28s) var(--ease-standard, cubic-bezier(0.2, 0, 0, 1));
+/* ── Photo loading: neutral placeholder → photo cross-fade ───────────────
+   No branded logo tile before a photo: the frame shows the muted surface with
+   a soft opacity breath (compositor-only — the old background-position sweep
+   repainted every pending card on every frame) and the photo fades in once
+   decoded. */
+img[data-pending="true"] {
+  background-color: hsl(var(--muted));
+  animation: photo-pending 1.6s var(--ease-standard) infinite alternate;
+}
+@keyframes photo-pending {
+  from { opacity: 1; }
+  to { opacity: 0.55; }
 }
 img[data-fade-in][data-loaded="true"] {
-  opacity: 1;
+  animation: photo-reveal var(--dur-medium) var(--ease-standard) both;
+}
+@keyframes photo-reveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  img[data-pending="true"],
+  img[data-fade-in][data-loaded="true"] {
+    animation: none;
+  }
 }
 
 /* ── Card photo hover zoom (desktop only, inside the clipped frame) ────── */
 @media (hover: hover) and (pointer: fine) {
   .listing-card-photo img {
     transition:
-      transform 0.45s var(--ease-standard, cubic-bezier(0.2, 0, 0, 1)),
-      opacity var(--dur-base, 0.28s) var(--ease-standard, cubic-bezier(0.2, 0, 0, 1));
+      transform 0.45s var(--ease-standard),
+      opacity var(--dur-medium) var(--ease-standard);
   }
   .group:hover .listing-card-photo img {
     transform: scale(1.03);
@@ -60,7 +91,7 @@ img[data-fade-in][data-loaded="true"] {
   transform: scale(0.6);
 }
 .save-burst[data-play="true"] {
-  animation: save-burst 0.45s var(--ease-standard, cubic-bezier(0.2, 0, 0, 1)) forwards;
+  animation: save-burst var(--dur-long) var(--ease-standard) forwards;
 }
 @keyframes save-burst {
   0% { opacity: 0.55; transform: scale(0.6); }
@@ -70,7 +101,7 @@ img[data-fade-in][data-loaded="true"] {
 /* ── Lightbox zoom-from-thumbnail ───────────────────────────────────────── */
 .mm-lightbox-zoom .yarl__carousel {
   transform-origin: var(--mm-lb-ox, 50%) var(--mm-lb-oy, 50%);
-  animation: mm-lb-zoom 0.32s var(--ease-emphasized, cubic-bezier(0.3, 0, 0, 1)) both;
+  animation: mm-lb-zoom var(--dur-medium) var(--ease-decelerate) both;
 }
 @keyframes mm-lb-zoom {
   from { opacity: 0; transform: scale(0.55); }
@@ -83,20 +114,20 @@ img[data-fade-in][data-loaded="true"] {
   inset: 0;
   pointer-events: none;
   opacity: 0;
-  transition: opacity var(--dur-base, 0.28s) var(--ease-standard, cubic-bezier(0.2, 0, 0, 1));
+  transition: opacity var(--dur-medium) var(--ease-standard);
 }
 .cmp-tint[data-on="true"] {
   opacity: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  img[data-fade-in] { transition: none; }
   .group:hover .listing-card-photo img { transform: none; }
   .save-burst[data-play="true"] { animation: none; }
   .mm-lightbox-zoom .yarl__carousel { animation: none; }
   .cmp-tint { transition: none; }
 }
-html.low-data img[data-fade-in] { opacity: 1; transition: none; }
+html.low-data img[data-pending="true"],
+html.low-data img[data-fade-in][data-loaded="true"] { animation: none; }
 html.low-data .save-burst[data-play="true"],
 html.low-data .mm-lightbox-zoom .yarl__carousel { animation: none; }
 html.low-data .group:hover .listing-card-photo img { transform: none; }

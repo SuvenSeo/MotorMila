@@ -2,6 +2,8 @@ import { AlertTriangle, Clock3 } from "lucide-react";
 import { getListingDataFreshness, type ListingDataFreshness } from "@/lib/dataFreshness";
 import { cn } from "@/lib/utils";
 import { useStaleBannerSlot } from "@/lib/staleBannerSlot";
+import { useAppPreferences } from "@/lib/appPreferences";
+import type { TranslateFn } from "@/lib/translate";
 
 type DataFreshnessIndicatorProps = {
   latestListingAt?: string | null;
@@ -40,7 +42,8 @@ export function DataFreshnessIndicator({
   className,
   now,
 }: DataFreshnessIndicatorProps) {
-  const freshness = getListingDataFreshness({ latestListingAt, lastUpdated, now });
+  const { t } = useAppPreferences();
+  const freshness = getListingDataFreshness({ latestListingAt, lastUpdated, now, t });
   const tone = toneClasses(freshness.tone);
   // Only one stale-data banner per page, whoever asks first (snapshot notice wins).
   const ownsBannerSlot = useStaleBannerSlot(variant === "banner" && freshness.isStale, 0);
@@ -57,11 +60,11 @@ export function DataFreshnessIndicator({
       >
         <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary-bright" aria-hidden="true" />
         <div className="min-w-0">
-          <p className="text-[12px] font-semibold text-primary-bright">{freshness.staleNotice}</p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
-            {freshness.dataAsOfLabel} · Updated {freshness.relativeLabel}
+          <p className="text-caption font-semibold text-primary-bright">{freshness.staleNotice}</p>
+          <p className="mt-0.5 text-caption text-muted-foreground">
+            {freshness.dataAsOfLabel}
             {freshness.listingAt && freshness.statsAt && freshness.listingAt !== freshness.statsAt ? (
-              <span className="ml-1">· stats refreshed {freshness.statsAt ? formatStatsNote(freshness, now) : "pending"}</span>
+              <span className="ml-1">{t("freshness.statsRefreshed", "· stats refreshed {age}", { age: formatStatsNote(freshness, t, now) })}</span>
             ) : null}
           </p>
         </div>
@@ -79,11 +82,11 @@ export function DataFreshnessIndicator({
         className={cn("tech-label text-muted-foreground", className)}
         title={freshness.primaryAt ? freshness.absoluteLabel : undefined}
       >
-        {freshness.dataAsOfLabel} · Updated {freshness.relativeLabel}
+        {freshness.dataAsOfLabel}
         {freshness.listingAt && freshness.statsAt && freshness.listingAt !== freshness.statsAt ? (
-          <span> · stats {formatStatsNote(freshness, now)}</span>
+          <span>{t("freshness.statsNote", " · stats {age}", { age: formatStatsNote(freshness, t, now) })}</span>
         ) : null}
-        {freshness.isStale ? <span className="text-primary-bright"> · stale</span> : null}
+        {freshness.isStale ? <span className="text-primary-bright">{t("freshness.staleSuffix", " · stale")}</span> : null}
       </p>
     );
   }
@@ -91,7 +94,7 @@ export function DataFreshnessIndicator({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[12px] font-medium",
+        "inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-caption font-medium",
         tone.border,
         tone.text,
         className,
@@ -111,15 +114,15 @@ export function DataFreshnessIndicator({
         </span>
       )}
       {freshness.isStale ? (
-        <span>Stale · {freshness.compactLabel} · Updated {freshness.relativeLabel}</span>
+        <span>{t("freshness.staleBadge", "Stale · {age} old", { age: freshness.compactLabel })}</span>
       ) : (
-        <span>{freshness.dataAsOfLabel} · Updated {freshness.relativeLabel}</span>
+        <span>{freshness.dataAsOfLabel}</span>
       )}
     </span>
   );
 }
 
-function formatStatsNote(freshness: ListingDataFreshness, now?: Date) {
-  if (!freshness.statsAt) return "pending";
-  return getListingDataFreshness({ lastUpdated: freshness.statsAt, now }).relativeLabel;
+function formatStatsNote(freshness: ListingDataFreshness, t: TranslateFn, now?: Date) {
+  if (!freshness.statsAt) return t("freshness.pending", "pending");
+  return getListingDataFreshness({ lastUpdated: freshness.statsAt, now, t }).relativeLabel;
 }

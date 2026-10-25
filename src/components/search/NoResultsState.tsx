@@ -1,6 +1,9 @@
 import { useMemo } from "react";
 import { m } from "motion/react";
-import { duration, ease, fadeIn, scaleIn } from "@/lib/motion";
+import { fadeIn, scaleIn, useReducedMotionOrLowData, opacityOnly } from "@/lib/motion";
+import { Card } from "@/components/ui/card";
+import { Chip } from "@/components/ui/chip";
+import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Bell, MapPin, SearchX, Wallet, X } from "lucide-react";
 import type { FilterState } from "@/types/car";
@@ -8,6 +11,7 @@ import { nearbyDistricts, widenPrice } from "@/lib/searchSuggestions";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { formatLkrRange } from "@/lib/price";
 import { EMPTY_FILTERS } from "@/lib/searchUrlState";
+import { cn } from "@/lib/utils";
 
 export type AlertStatus = "idle" | "saving" | "saved" | "limit" | "error";
 
@@ -26,6 +30,7 @@ export interface NoResultsStateProps {
  */
 export function NoResultsState({ filters, onFiltersChange, onCreateAlert, alertStatus, isSignedIn }: NoResultsStateProps) {
   const { t } = useAppPreferences();
+  const calm = useReducedMotionOrLowData();
   const nearby = useMemo(() => nearbyDistricts(filters.district), [filters.district]);
   const hasPrice = Boolean(filters.price_min || filters.price_max);
 
@@ -56,39 +61,34 @@ export function NoResultsState({ filters, onFiltersChange, onCreateAlert, alertS
   }, [filters, hasPrice, t]);
 
   const apply = (patch: Partial<FilterState>) => onFiltersChange({ ...filters, ...patch, page: 1 });
-  const chip =
-    "inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-card px-3.5 text-[13px] font-medium text-foreground transition-colors hover:border-primary/40 hover:text-primary-bright active:scale-[0.98] sm:min-h-9";
+  const chip = "h-11 sm:h-9";
+  const sectionLabel = "mb-2 flex items-center gap-1.5 text-footnote font-medium text-label-2";
 
   return (
-    <m.div
-      initial="hidden"
-      animate="show"
-      variants={fadeIn}
-      className="rounded-[2rem] border border-dashed border-border px-5 py-10 text-center sm:px-8"
-    >
+    <Card padding="none" className="px-5 py-12 text-center sm:px-10 sm:py-16">
+    <m.div initial="hidden" animate="show" variants={fadeIn}>
       <m.span
-        className="block"
-        variants={scaleIn}
-        transition={{ duration: duration.slow, ease: ease.emphasized }}
+        className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-label-2"
+        variants={calm ? opacityOnly(scaleIn) : scaleIn}
       >
-        <SearchX aria-hidden className="mx-auto h-8 w-8 text-muted-foreground" />
+        <SearchX aria-hidden className="h-6 w-6" strokeWidth={1.75} />
       </m.span>
-      <p className="mt-3 text-[15px] font-semibold text-foreground">{t("search.noResultsTitle", "No listings match all of these filters")}</p>
-      <p className="mx-auto mt-1.5 max-w-md text-sm text-muted-foreground">
+      <h3 role="status" className="mt-4 text-title3 font-semibold text-foreground [text-wrap:balance]">{t("search.noResultsTitle", "No listings match all of these filters")}</h3>
+      <p className="mx-auto mt-1.5 max-w-md text-body text-label-2">
         {t("search.noResultsBody", "Try one of these, or get an alert when a match is listed.")}
       </p>
 
-      <div className="mx-auto mt-6 max-w-xl space-y-4 text-left">
+      <div className="mx-auto mt-8 max-w-xl space-y-5 text-left">
         {nearby.length ? (
           <div>
-            <p className="mb-2 flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground">
-              <MapPin aria-hidden className="h-3.5 w-3.5" /> {t("search.tryNearby", "Try a nearby district")}
+            <p className={sectionLabel}>
+              <MapPin aria-hidden className="h-4 w-4" /> {t("search.tryNearby", "Try a nearby district")}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {nearby.map((d) => (
-                <button key={d} type="button" className={chip} onClick={() => apply({ district: d })}>
+                <Chip key={d} className={chip} onClick={() => apply({ district: d })}>
                   {d}
-                </button>
+                </Chip>
               ))}
             </div>
           </div>
@@ -96,15 +96,15 @@ export function NoResultsState({ filters, onFiltersChange, onCreateAlert, alertS
 
         {hasPrice ? (
           <div>
-            <p className="mb-2 flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground">
-              <Wallet aria-hidden className="h-3.5 w-3.5" /> {t("search.widenPriceLabel", "Widen your budget")}
+            <p className={sectionLabel}>
+              <Wallet aria-hidden className="h-4 w-4" /> {t("search.widenPriceLabel", "Widen your budget")}
             </p>
             {(() => {
               const wider = widenPrice(filters.price_min, filters.price_max);
               return (
-                <button type="button" className={chip} onClick={() => apply(wider)}>
+                <Chip className={cn(chip, "num")} onClick={() => apply(wider)}>
                   {formatLkrRange(wider.price_min, wider.price_max)}
-                </button>
+                </Chip>
               );
             })()}
           </div>
@@ -112,59 +112,56 @@ export function NoResultsState({ filters, onFiltersChange, onCreateAlert, alertS
 
         {removable.length ? (
           <div>
-            <p className="mb-2 text-[12px] font-medium text-muted-foreground">{t("search.removeFilter", "Remove a filter")}</p>
+            <p className={sectionLabel}>{t("search.removeFilter", "Remove a filter")}</p>
             <div className="flex flex-wrap gap-1.5">
               {removable.map((item) => (
-                <button
+                <Chip
                   key={item.key}
-                  type="button"
                   className={chip}
                   onClick={() => apply(item.patch)}
                   aria-label={t("search.removeFilterAria", "Remove filter {label}", { label: item.label })}
                 >
-                  <span className="max-w-[12rem] truncate capitalize">{item.label}</span>
-                  <X aria-hidden className="h-3.5 w-3.5 opacity-70" />
-                </button>
+                  <span className="max-w-48 truncate capitalize">{item.label}</span>
+                  <X aria-hidden className="opacity-60" />
+                </Chip>
               ))}
             </div>
           </div>
         ) : null}
       </div>
 
-      <div className="mt-7 flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
-        <button
+      <div className="mt-8 flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-center">
+        <Button
           type="button"
           onClick={onCreateAlert}
-          disabled={alertStatus === "saving" || alertStatus === "saved"}
-          className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 text-[13px] font-semibold text-primary-foreground transition-colors hover:bg-primary/95 disabled:opacity-60"
+          loading={alertStatus === "saving"}
+          disabled={alertStatus === "saved"}
+          className="h-11 whitespace-normal"
         >
-          <Bell aria-hidden className="h-4 w-4" />
+          <Bell aria-hidden />
           {alertStatus === "saved"
             ? t("search.alertSaved", "Alert saved — we'll tell you when one is listed")
             : t("search.alertMe", "Alert me when one is listed")}
-        </button>
-        <button
-          type="button"
-          onClick={() => onFiltersChange({ ...EMPTY_FILTERS })}
-          className="min-h-11 rounded-full border border-border px-5 text-[13px] font-medium text-foreground transition-colors hover:bg-foreground/[0.03]"
-        >
+        </Button>
+        <Button type="button" variant="secondary" onClick={() => onFiltersChange({ ...EMPTY_FILTERS })} className="h-11">
           {t("search.clearAll", "Clear all filters")}
-        </button>
+        </Button>
       </div>
       {alertStatus === "limit" ? (
-        <p role="status" className="mt-3 text-[12px] text-muted-foreground">
+        <p role="status" className="content-in mt-3 text-footnote text-label-2">
           {isSignedIn
             ? t("search.alertLimitPro", "You've reached your alert limit. Remove one or upgrade for more.")
             : t("search.alertLimitGuest", "Your free alert is in use.")}{" "}
-          <Link to={isSignedIn ? "/alerts" : "/sign-in"} className="font-medium text-primary-bright">
+          <Link to={isSignedIn ? "/alerts" : "/sign-in"} className="font-semibold text-primary">
             {isSignedIn ? t("search.manageAlerts", "Manage alerts") : t("search.signInForAlerts", "Sign in to manage alerts")}
           </Link>
         </p>
       ) : alertStatus === "error" ? (
-        <p role="status" className="mt-3 text-[12px] text-muted-foreground">
+        <p role="status" className="content-in mt-3 text-footnote text-label-2">
           {t("search.alertSavedLocal", "Saved on this device. We couldn't reach the alert server just now.")}
         </p>
       ) : null}
     </m.div>
+    </Card>
   );
 }

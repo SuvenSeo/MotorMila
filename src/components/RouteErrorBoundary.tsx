@@ -1,11 +1,14 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { springSnappy } from "@/lib/motion";
+import { spring } from "@/lib/motion";
 import { motion } from "motion/react";
+import { useAppPreferences } from "@/lib/appPreferences";
+import { englishT, type TranslateFn } from "@/lib/translate";
 
 type RouteErrorBoundaryProps = {
   children: ReactNode;
   resetKey?: string;
+  t?: TranslateFn;
 };
 
 type RouteErrorBoundaryState = {
@@ -51,17 +54,18 @@ class RouteErrorBoundaryInner extends Component<RouteErrorBoundaryProps, RouteEr
 
   render() {
     if (!this.state.hasError) return this.props.children;
+    const t = this.props.t ?? englishT;
 
     return (
       <div className="mx-auto flex min-h-[50vh] max-w-lg items-center px-5 py-16 sm:px-6">
         <div className="w-full rounded-2xl border border-border bg-card p-8 text-center shadow-soft">
-          <p className="text-[12px] font-medium text-muted-foreground">Page error</p>
-          <h1 className="mt-3 font-display text-xl font-semibold text-foreground">This page failed to load.</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            A fresh deploy may have left an old tab cached. Reload to pull the latest app bundle.
+          <p className="text-caption font-medium text-muted-foreground">{t("routeError.eyebrow", "Page error")}</p>
+          <h1 className="mt-3 font-display text-title3 font-semibold text-foreground">{t("routeError.title", "This page failed to load.")}</h1>
+          <p className="mt-2 text-footnote text-muted-foreground">
+            {t("routeError.body", "A fresh deploy may have left an old tab cached. Reload to pull the latest app bundle.")}
           </p>
           {this.state.message ? (
-            <p className="mt-3 break-all rounded-2xl border border-border bg-surface px-3 py-2 font-mono text-[10px] text-muted-foreground">
+            <p className="mt-3 break-all rounded-2xl border border-border bg-surface px-3 py-2 font-mono text-caption text-muted-foreground">
               {this.state.message}
             </p>
           ) : null}
@@ -71,16 +75,16 @@ class RouteErrorBoundaryInner extends Component<RouteErrorBoundaryProps, RouteEr
               onClick={this.handleRetry}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.97 }}
-              transition={springSnappy}
-              className="h-9 rounded-2xl bg-primary px-5 text-[12px] font-semibold text-white"
+              transition={spring.snappy}
+              className="h-9 rounded-2xl bg-primary px-5 text-caption font-semibold text-white"
             >
-              Reload page
+              {t("routeError.reload", "Reload page")}
             </motion.button>
             <Link
               to="/"
-              className="h-9 rounded-2xl border border-border px-5 text-[12px] font-semibold text-foreground no-underline inline-flex items-center"
+              className="h-9 rounded-2xl border border-border px-5 text-caption font-semibold text-foreground no-underline inline-flex items-center"
             >
-              Back home
+              {t("routeError.home", "Back home")}
             </Link>
           </div>
         </div>
@@ -92,8 +96,9 @@ class RouteErrorBoundaryInner extends Component<RouteErrorBoundaryProps, RouteEr
 /** Resets the error UI when the route changes so "Back home" is not stuck. */
 export function RouteErrorBoundary({ children }: { children: ReactNode }) {
   const location = useLocation();
+  const { t } = useAppPreferences();
   return (
-    <RouteErrorBoundaryInner resetKey={`${location.pathname}${location.search}`}>
+    <RouteErrorBoundaryInner resetKey={`${location.pathname}${location.search}`} t={t}>
       {children}
     </RouteErrorBoundaryInner>
   );

@@ -1,4 +1,5 @@
-import { formatRelativeTime } from "@/lib/formatting";
+import { formatRelativeTime, formatRelativeTimeI18n } from "@/lib/formatting";
+import type { TranslateFn } from "@/lib/translate";
 import { parseFlexibleTime } from "@/lib/parseTime";
 
 export const LISTING_DATA_STALE_HOURS = 6;
@@ -78,6 +79,8 @@ export function getListingDataFreshness(
     latestListingAt?: string | null;
     lastUpdated?: string | null;
     now?: Date;
+    /** Translator (useAppPreferences().t); English when omitted. */
+    t?: TranslateFn;
   } = {},
 ): ListingDataFreshness {
   const now = options.now ?? new Date();
@@ -87,12 +90,21 @@ export function getListingDataFreshness(
   const ageMs = getListingAgeMs(primaryAt, now);
   const tone = resolveTone(ageMs);
   const isStale = tone === "stale";
-  const relativeLabel = primaryAt ? formatRelativeTime(primaryAt, now) : "awaiting sync";
+  const t = options.t;
+  const tr = (key: string, fallback: string, vars?: Record<string, string>) =>
+    t ? t(key, fallback, vars) : fallback.replace(/\{(\w+)\}/g, (m, k: string) => vars?.[k] ?? m);
+  const relativeLabel = primaryAt
+    ? t
+      ? formatRelativeTimeI18n(primaryAt, t, now)
+      : formatRelativeTime(primaryAt, now)
+    : tr("freshness.awaitingSync", "awaiting sync");
   const compactLabel = primaryAt ? formatCompactAge(primaryAt, now) : "—";
   const absoluteLabel = formatTimestampLocal(primaryAt);
-  const dataAsOfLabel = primaryAt ? `Data as of ${relativeLabel}` : "Data as of — · awaiting sync";
+  const dataAsOfLabel = primaryAt
+    ? tr("freshness.dataAsOf", "Data as of {age}", { age: relativeLabel })
+    : tr("freshness.dataAsOfPending", "Data as of — · awaiting sync");
   const staleNotice = isStale
-    ? `Listing data is ${compactLabel} old — counts and deal scores may lag live sources.`
+    ? tr("freshness.staleNotice", "Listing data is {age} old — counts and deal scores may lag live sources.", { age: compactLabel })
     : null;
 
   return {

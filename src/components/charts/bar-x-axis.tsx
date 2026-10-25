@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
+import { tween } from "@/lib/motion";
 import { memo, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
@@ -57,9 +58,9 @@ function BarXAxisLabel({
     >
       <motion.span
         animate={{ opacity }}
-        className={cn("whitespace-nowrap text-chart-label text-xs")}
+        className={cn("whitespace-nowrap text-chart-label text-caption")}
         initial={{ opacity: 1 }}
-        transition={{ duration: 0.4, ease: "easeInOut" }}
+        transition={tween.long}
       >
         {label}
       </motion.span>

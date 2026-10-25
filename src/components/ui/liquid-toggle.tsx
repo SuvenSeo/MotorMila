@@ -17,8 +17,8 @@ export function LiquidToggle({
   return (
     <div className={cn("liquid-toggle-card", className)}>
       <div className="min-w-0">
-        <p className="text-sm font-bold text-foreground">{label}</p>
-        {description ? <p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p> : null}
+        <p className="text-footnote font-bold text-foreground">{label}</p>
+        {description ? <p className="mt-1 text-caption leading-5 text-muted-foreground">{description}</p> : null}
       </div>
       <button
         type="button"

@@ -46,21 +46,80 @@
   --deal-red: var(--deal-high);
   --deal-red-foreground: var(--deal-high-foreground);
 
-  /* ── Radius scale ─────────────────────────────────────────────────── */
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 10px;     /* inputs, selects, small buttons */
-  --radius-lg: 12px;     /* cards (= --radius) */
-  --radius-xl: 14px;
-  --radius-2xl: 16px;    /* large panels, sheets, dialogs */
-  --radius-3xl: 20px;
-  --radius-4xl: 24px;    /* hero media */
+  /* ── Radius: 4 steps (web/premium-p0). Legacy names collapse onto them. */
+  --radius-control: 10px;  /* inputs, selects, small buttons, chips-as-rects */
+  --radius-card: 16px;     /* cards, panels, popovers */
+  --radius-sheet: 24px;    /* sheets, dialogs, hero media */
+  /* pill = 9999px */
+  --radius-xs: var(--radius-control);
+  --radius-sm: var(--radius-control);
+  --radius-md: var(--radius-control);
+  --radius-lg: var(--radius-card);
+  --radius-xl: var(--radius-card);
+  --radius-2xl: var(--radius-card);
+  --radius-3xl: var(--radius-sheet);
+  --radius-4xl: var(--radius-sheet);
+
+  /* ── Elevation: 3 steps. e1 resting card, e2 hover/popover, e3 sheet/modal. */
+  --shadow-e1: 0 1px 2px rgb(24 16 8 / 0.05), 0 0 0 1px rgb(24 16 8 / 0.04);
+  --shadow-e2: 0 8px 24px -6px rgb(24 16 8 / 0.12), 0 2px 6px rgb(24 16 8 / 0.05);
+  --shadow-e3: 0 24px 64px -12px rgb(24 16 8 / 0.22), 0 8px 20px rgb(24 16 8 / 0.08);
+  --shadow-sm: var(--shadow-e1);
+  --shadow-md: var(--shadow-e1);
+  --shadow-lg: var(--shadow-e2);
+  --shadow-xl: var(--shadow-e3);
+  --console-shadow: var(--shadow-e1);
+
+  /* ── Semantic surfaces and labels (Apple-style naming over the core HSL set) */
+  --surface-1: var(--card);          /* cards on the page */
+  --surface-2: var(--secondary);     /* raised fills, chips, wells */
+  --surface-3: var(--muted);         /* inset / pressed */
+  --label-1: var(--foreground);
+  --label-2: var(--muted-foreground);
+  --label-3: var(--muted-foreground);
+  --separator: var(--border);
+
+  /* ── Glass: two recipes only (nav, sheet). ≤3 blurred layers on screen. */
+  --glass-blur: 20px;
+  --glass-nav-fill: hsl(var(--background) / 0.9);
+  --glass-sheet-fill: hsl(var(--popover) / 0.9);
+
+  /* ── Type scale (mirrors src/styles/type-scale.ts) ───────────────── */
+  --text-caption: 0.75rem;     /* 12/16 */
+  --text-footnote: 0.8125rem;  /* 13/18 */
+  --text-body: 0.9375rem;      /* 15/22 */
+  --text-callout: 1.0625rem;   /* 17/24 */
+  --text-title3: 1.25rem;      /* 20/26 */
+  --text-title2: 1.5rem;       /* 24/30 */
+  --text-title1: 2rem;         /* 32/38 */
+  --text-large: 2.75rem;       /* 44/48 */
+  --text-hero: clamp(3rem, 1.6rem + 3.9vw, 5rem); /* 48 → 80 */
+  --tracking-tight: -0.02em;
+  /* Cal Sans Display (600/700) ships a narrow word space by design: 332/2000
+     = 0.166em, vs 0.213em in Cal Sans Text. With negative tracking the gap
+     between words collapsed ("Askingprice", "Sri Lanka'sentire"). Every
+     display-face rule takes looser tracking plus a word-spacing top-up so the
+     space lands at ~0.256em (~3.3px on a 13px label, ~20px on the 80px hero). */
+  --tracking-display: -0.01em;
+  --display-word-spacing: 0.1em;
+  --tracking-caps: 0.08em;
 
   /* ── Numerals — prices never fall back to a monospace face ───────── */
-  --font-numeric-stack: var(--font-numeric), "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-numeric-stack: var(--font-numeric), "Cal Sans Text Fallback", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 .theme-dark {
+  --shadow-e1: 0 1px 2px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(255 244 230 / 0.05);
+  --shadow-e2: 0 10px 28px -6px rgb(0 0 0 / 0.6), 0 0 0 1px rgb(255 244 230 / 0.06);
+  --shadow-e3: 0 28px 72px -12px rgb(0 0 0 / 0.75), 0 0 0 1px rgb(255 244 230 / 0.07);
+  --shadow-sm: var(--shadow-e1);
+  --shadow-md: var(--shadow-e1);
+  --shadow-lg: var(--shadow-e2);
+  --shadow-xl: var(--shadow-e3);
+  --console-shadow: var(--shadow-e1);
+  --label-3: 30 8% 50%;
+  --glass-blur: 20px;
+
   --primary-text: 213 100% 68%;          /* #5CA5FF — 7.8:1 on background */
   --brand-blue: 213 100% 60%;
 
@@ -86,16 +145,17 @@
 }
 
 /* Sinhala / Tamil: Noto faces are loaded on demand (src/lib/scriptFonts.ts)
-   and only referenced when <html lang> is si / ta. Latin glyphs keep Inter. */
+   and only referenced when <html lang> is si / ta. Cal Sans has no Sinhala or
+   Tamil glyphs, so Latin runs stay in Cal Sans and script runs fall to Noto. */
 :root:lang(si) {
-  --font-body: 'Inter', 'Noto Sans Sinhala', system-ui, sans-serif;
-  --font-sans: 'Inter', 'Noto Sans Sinhala', system-ui, sans-serif;
-  --font-display: 'Space Grotesk', 'Noto Sans Sinhala', 'Inter', sans-serif;
+  --font-body: "Cal Sans Text", "Noto Sans Sinhala", "Cal Sans Text Fallback", system-ui, sans-serif;
+  --font-sans: "Cal Sans Text", "Noto Sans Sinhala", "Cal Sans Text Fallback", system-ui, sans-serif;
+  --font-display: "Cal Sans", "Noto Sans Sinhala", "Cal Sans Fallback", system-ui, sans-serif;
 }
 :root:lang(ta) {
-  --font-body: 'Inter', 'Noto Sans Tamil', system-ui, sans-serif;
-  --font-sans: 'Inter', 'Noto Sans Tamil', system-ui, sans-serif;
-  --font-display: 'Space Grotesk', 'Noto Sans Tamil', 'Inter', sans-serif;
+  --font-body: "Cal Sans Text", "Noto Sans Tamil", "Cal Sans Text Fallback", system-ui, sans-serif;
+  --font-sans: "Cal Sans Text", "Noto Sans Tamil", "Cal Sans Text Fallback", system-ui, sans-serif;
+  --font-display: "Cal Sans", "Noto Sans Tamil", "Cal Sans Fallback", system-ui, sans-serif;
 }
 /* Sinhala/Tamil glyphs need more vertical room than Latin. */
 :root:lang(si) body,
@@ -112,7 +172,7 @@
   font-variant-numeric: tabular-nums lining-nums;
 }
 
-/* Chart text (Recharts) — numbers in Inter tabular, overriding any legacy
+/* Chart text (Recharts) — numbers in Cal Sans Text tabular, overriding any legacy
    per-chart font-family attribute (e.g. the removed demo-licensed "Nofex"). */
 .recharts-text,
 .recharts-cartesian-axis-tick-value {

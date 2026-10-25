@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import { animate, motion, useMotionValue, type PanInfo } from "motion/react";
 import { duration, ease, spring, useReducedMotionOrLowData } from "@/lib/motion";
-import { FlowNumber } from "@/components/motion/FlowNumber";
+import { AnimatedNumber } from "@/components/ui/animated-number";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { FilterState } from "@/types/car";
@@ -38,9 +39,32 @@ export function MobileFilterSheet({ open, onOpenChange, filters, onFiltersChange
   const { t } = useAppPreferences();
   const [draft, setDraft] = useState<FilterState>(filters);
 
-  useEffect(() => {
+  // Re-seed the draft from the applied filters while rendering (not in an
+  // effect), so opening the sheet is one render rather than two.
+  const [seed, setSeed] = useState({ open, filters });
+  if (seed.open !== open || (open && seed.filters !== filters)) {
+    setSeed({ open, filters });
     if (open) setDraft(filters);
-  }, [open, filters]);
+  }
+
+  // The filter panel (selects, sliders, makes combobox, ~40 chips) is the
+  // expensive part of the sheet. Paint the sheet frame first so its slide-in
+  // starts on the tap, then mount the panel in a transition on the next frame.
+  const [panelReady, setPanelReady] = useState(false);
+  useEffect(() => {
+    if (!open) {
+      setPanelReady(false);
+      return;
+    }
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => startTransition(() => setPanelReady(true)));
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [open]);
 
   const debouncedDraft = useDebounced({ ...draft, page: 1 }, 250);
   const countQuery = useQuery({
@@ -87,7 +111,7 @@ export function MobileFilterSheet({ open, onOpenChange, filters, onFiltersChange
     if (info.offset.y > 120 || info.velocity.y > 600) {
       const h = contentRef.current?.offsetHeight ?? window.innerHeight;
       setDragClosed(true);
-      void animate(dragY, h, { duration: duration.base, ease: ease.exit }).then(() => onOpenChange(false));
+      void animate(dragY, h, { duration: duration.medium, ease: ease.accelerate }).then(() => onOpenChange(false));
     } else {
       void animate(dragY, 0, spring.snappy);
     }
@@ -113,7 +137,7 @@ export function MobileFilterSheet({ open, onOpenChange, filters, onFiltersChange
         ref={contentRef}
         side="bottom"
         className={cn(
-          "flex h-[92dvh] max-h-[92dvh] flex-col gap-0 rounded-t-2xl border-t border-border bg-card p-0 text-foreground",
+          "flex h-[92dvh] max-h-[92dvh] flex-col gap-0 overflow-hidden bg-surface-1 p-0 text-foreground backdrop-blur-none",
           // Already slid off by the drag: skip the primitive's own exit slide.
           dragClosed && "data-[state=closed]:animate-none data-[state=closed]:duration-0",
         )}
@@ -124,48 +148,61 @@ export function MobileFilterSheet({ open, onOpenChange, filters, onFiltersChange
           aria-hidden
           className="flex shrink-0 cursor-grab touch-none justify-center pb-1 pt-2.5 active:cursor-grabbing"
         >
-          <span className="h-1 w-10 rounded-full bg-muted-foreground/30" />
+          <span className="h-1 w-10 rounded-full bg-foreground/20" />
         </motion.div>
-        <SheetHeader className="flex-row items-center justify-between space-y-0 border-b border-border px-5 pb-3 pt-1">
-          <SheetTitle className="text-base font-semibold text-foreground">{t("filter.title", "Filters")}</SheetTitle>
+        <SheetHeader className="flex-row items-center justify-between space-y-0 border-b border-separator px-5 pb-3 pt-1 text-left">
+          <SheetTitle className="text-title3 font-semibold text-foreground">{t("filter.title", "Filters")}</SheetTitle>
           <SheetDescription className="sr-only">
             {t("search.drawerDescription", "Refine listings, then show results.")}
           </SheetDescription>
-          <button
+          <Button
             type="button"
+            variant="tertiary"
             onClick={clear}
-            className="mr-8 min-h-11 rounded-full px-3 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+            className="mr-8 h-11"
             aria-label={t("filter.clearAllAria", "Clear all filters")}
           >
             {t("common.clearAll", "Clear all")}
-          </button>
+          </Button>
         </SheetHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-          <FilterPanel filters={draft} onFiltersChange={setDraft} touch />
+          {panelReady ? (
+            <FilterPanel filters={draft} onFiltersChange={setDraft} touch />
+          ) : (
+            <div aria-hidden className="space-y-5 px-5 py-5">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div key={i} className="space-y-2.5">
+                  <div className="h-3 w-24 rounded-full bg-foreground/10" />
+                  <div className="h-11 rounded-control bg-foreground/[0.06]" />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div
-          className="sticky bottom-0 z-10 border-t border-border bg-card/95 px-5 pt-3 backdrop-blur-md"
+          className="sticky bottom-0 z-10 border-t border-separator bg-surface-1 px-5 pt-3"
           style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
         >
-          <button
+          <Button
             type="button"
+            size="lg"
             onClick={apply}
             aria-live="polite"
             aria-label={showLabel}
-            className="num min-h-12 w-full rounded-xl bg-primary py-3 text-[14px] font-bold text-primary-foreground shadow-soft transition-colors hover:bg-primary/95 active:scale-[0.99]"
+            className="num w-full"
           >
             {showBefore !== null && count !== undefined ? (
               <span aria-hidden>
                 {showBefore}
-                <FlowNumber value={count} label={count.toLocaleString()} />
+                <AnimatedNumber value={count} />
                 {showAfter}
               </span>
             ) : (
               showLabel
             )}
-          </button>
+          </Button>
         </div>
       </SheetContent>
     </Sheet>

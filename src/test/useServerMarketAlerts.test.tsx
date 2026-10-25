@@ -72,4 +72,14 @@ describe("useServerMarketAlerts", () => {
       }),
     ).rejects.toThrow("network down");
   });
+
+  it("does not GET /alerts on mount when autoLoad is false (anonymous home feed)", async () => {
+    mocks.createAlert.mockResolvedValue(serverAlert());
+    const { result } = renderHook(() => useServerMarketAlerts({ autoLoad: false }));
+    await act(async () => {
+      await result.current.create({ make: "Toyota" } as AlertCreateInput);
+    });
+    expect(mocks.createAlert).toHaveBeenCalledTimes(1);
+    expect(mocks.getAlerts).not.toHaveBeenCalled();
+  });
 });

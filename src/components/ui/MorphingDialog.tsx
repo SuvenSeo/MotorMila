@@ -1,7 +1,9 @@
 import { useEffect, useId, useState, type ReactNode } from "react";
+import { tween } from "@/lib/motion";
 import { AnimatePresence, motion } from "motion/react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAppPreferences } from "@/lib/appPreferences";
 
 type MorphingDialogProps = {
   /** Unique namespace for the shared-layout morph. Auto-generated when omitted. */
@@ -33,6 +35,7 @@ export function MorphingDialog({
   triggerClassName,
   panelClassName,
 }: MorphingDialogProps) {
+  const { t } = useAppPreferences();
   const autoId = useId();
   const namespace = (id ?? autoId).replace(/[^a-zA-Z0-9-_]/g, "");
   const frameId = `morph-${namespace}`;
@@ -72,8 +75,8 @@ export function MorphingDialog({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            className="fixed inset-0 z-[70] flex items-end justify-center bg-background/70 p-4 backdrop-blur-sm sm:items-center"
+            transition={tween.short}
+            className="fixed inset-0 z-[70] flex items-end justify-center bg-background p-4 sm:items-center"
             onClick={() => setOpen(false)}
             aria-hidden={false}
           >
@@ -92,7 +95,7 @@ export function MorphingDialog({
               <motion.button
                 type="button"
                 onClick={() => setOpen(false)}
-                aria-label="Close dialog"
+                aria-label={t("morphingDialog.close", "Close dialog")}
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.15 }}
@@ -103,7 +106,7 @@ export function MorphingDialog({
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.12, duration: 0.22 }}
+                transition={{ ...tween.short, delay: 0.12 }}
               >
                 {children}
               </motion.div>

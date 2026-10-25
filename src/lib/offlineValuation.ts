@@ -11,7 +11,7 @@
  * Rule: any change to fmv.py / price_history.py MUST be mirrored here.
  */
 import type { CarListing, PriceHistoryInfo } from "@/types/car";
-import type { ListingFmvDetail } from "@/services/api";
+import type { ListingFmvDetail } from "@/types/fmv";
 
 /** Bump when fmv.py / price_history.py change and this file is re-synced. */
 export const OFFLINE_VALUATION_VERSION = "2026-09-21";

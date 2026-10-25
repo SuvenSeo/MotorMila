@@ -43,23 +43,23 @@ export default function HeroLab() {
   const copyPanel =
     variant.tone === "dark"
       ? ""
-      : "rounded-2xl bg-background/55 p-5 backdrop-blur-md sm:bg-background/40 sm:p-6";
+      : "rounded-2xl bg-background p-5 sm:bg-background/40 sm:p-6";
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-40 border-b border-border bg-card/90 px-4 py-3 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-border bg-card px-4 py-3">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-[12px] font-semibold text-muted-foreground">
+            <p className="text-caption font-semibold text-muted-foreground">
               Local hero lab
             </p>
-            <p className="text-sm font-semibold">
+            <p className="text-footnote font-semibold">
               Pick a version · then tell me the ID to ship
             </p>
           </div>
           <Link
             to={`/?hero=${activeId}`}
-            className="rounded-2xl border border-border bg-background px-3 py-2 text-[12px] font-bold hover:border-primary/40"
+            className="rounded-2xl border border-border bg-background px-3 py-2 text-caption font-bold hover:border-primary/40"
           >
             Open on home (needs sign-in)
           </Link>
@@ -76,8 +76,8 @@ export default function HeroLab() {
                   : "border-border bg-background hover:bg-surface"
               }`}
             >
-              <span className="block text-[12px] font-bold">{v.label}</span>
-              <span className="mt-0.5 block max-w-[180px] text-[10px] leading-snug text-muted-foreground">
+              <span className="block text-caption font-bold">{v.label}</span>
+              <span className="mt-0.5 block max-w-[180px] text-caption leading-snug text-muted-foreground">
                 {v.blurb}
               </span>
             </button>
@@ -106,14 +106,14 @@ export default function HeroLab() {
 
         <div className="relative z-10 mx-auto flex min-h-[78vh] max-w-[1560px] items-center px-5 py-16 sm:px-6">
           <div className={`w-full ${alignClass} ${copyPanel}`}>
-            <p className={`font-display text-4xl font-semibold tracking-tight sm:text-5xl ${copyTone}`}>
+            <p className={`font-display text-title1 font-semibold tracking-tight sm:text-large ${copyTone}`}>
               {BRAND.name}
             </p>
             <p
-              className={`mt-4 inline-flex rounded-full border px-3.5 py-1.5 text-[12px] font-semibold tracking-tight backdrop-blur-md ${
+              className={`mt-4 inline-flex rounded-full border px-3.5 py-1.5 text-caption font-semibold tracking-tight ${
                 variant.tone === "dark"
-                  ? "border-white/15 bg-white/10 text-white/80"
-                  : "border-border/80 bg-card/90 text-foreground/85"
+                  ? "border-border bg-foreground/10 text-white/80"
+                  : "border-border/80 bg-card text-foreground/85"
               }`}
             >
               Vehicle Intelligence · Sri Lanka
@@ -135,16 +135,16 @@ export default function HeroLab() {
                 centered ? "mx-auto" : ""
               } ${
                 variant.tone === "dark"
-                  ? "border-white/20 bg-white/10 text-white"
+                  ? "border-border bg-foreground/10 text-white"
                   : "border-border bg-card"
               }`}
             >
-              <span className="text-[13px] opacity-60">Search vehicles…</span>
-              <span className="ml-auto rounded-2xl bg-primary px-4 py-2 text-[12px] font-medium text-white">
+              <span className="text-footnote opacity-60">Search vehicles…</span>
+              <span className="ml-auto rounded-2xl bg-primary px-4 py-2 text-caption font-medium text-white">
                 Search
               </span>
             </div>
-            <p className={`mt-6 text-[11px] font-medium ${mutedTone}`}>
+            <p className={`mt-6 text-caption font-medium ${mutedTone}`}>
               Active: <span className="font-bold">{variant.id}</span> — {variant.blurb}
             </p>
           </div>
@@ -152,7 +152,7 @@ export default function HeroLab() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-10">
-        <h2 className="text-lg font-bold">All candidates at a glance</h2>
+        <h2 className="text-callout font-bold">All candidates at a glance</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {HERO_VARIANTS.map((v) => (
             <button
@@ -169,8 +169,8 @@ export default function HeroLab() {
                 sizes="400px"
               />
               <div className="p-3">
-                <p className="text-[13px] font-bold">{v.label}</p>
-                <p className="mt-1 text-[11px] text-muted-foreground">{v.blurb}</p>
+                <p className="text-footnote font-bold">{v.label}</p>
+                <p className="mt-1 text-caption text-muted-foreground">{v.blurb}</p>
               </div>
             </button>
           ))}

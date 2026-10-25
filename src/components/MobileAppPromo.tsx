@@ -83,7 +83,9 @@ export function MobileAppPromo() {
     const onScroll = () => {
       if (!frame) frame = window.requestAnimationFrame(update);
     };
-    update();
+    // First read on the next frame: reading scrollY inside the route commit
+    // forced a full style + layout of the incoming page in that same task.
+    frame = window.requestAnimationFrame(update);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       window.removeEventListener("scroll", onScroll);
@@ -132,18 +134,18 @@ export function MobileAppPromo() {
       aria-label={t("mobile.promoAria", "Motormila mobile app announcement")}
       className="dock-strip pointer-events-none inset-x-0 flex justify-center px-3 md:justify-end md:px-6"
     >
-      <div className="pointer-events-auto flex w-full max-w-md items-center gap-2.5 rounded-2xl border border-border bg-card/95 py-2 pl-3 pr-1.5 text-foreground shadow-soft-lg backdrop-blur-md motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
+      <div className="pointer-events-auto flex w-full max-w-md items-center gap-2.5 rounded-2xl border border-border bg-card py-2 pl-3 pr-1.5 text-foreground shadow-soft-lg motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
         <Smartphone className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-        <p className="min-w-0 flex-1 text-[12.5px] leading-snug">
-          <span className="font-semibold">{t("mobile.promoTitleShort", "Motormila for Android")}</span>
-          <span className="text-muted-foreground"> · {t("mobile.promoBodyShort", "price-drop alerts and plate scan")}</span>
+        <p className="min-w-0 flex-1 text-footnote leading-snug">
+          <span className="block font-semibold">{t("mobile.promoTitleShort", "Motormila for Android (preview)")}</span>
+          <span className="block text-muted-foreground">{t("mobile.promoBodyShort", "price-drop alerts and plate scan")}</span>
         </p>
         <Link
           to="/mobile-app"
           onClick={dismiss}
-          className="shrink-0 rounded-full bg-primary px-3 py-1.5 text-[12px] font-semibold text-primary-foreground no-underline transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="shrink-0 rounded-full bg-primary px-3 py-1.5 text-caption font-semibold text-primary-foreground no-underline transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
-          {t("mobile.promoCtaShort", "Get the app")}
+          {t("mobile.promoCtaShort", "Get the preview")}
         </Link>
         <button
           type="button"

@@ -5,7 +5,7 @@ const prefersReducedMotion = () =>
   window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 /**
- * Animates a number from its previous value up to `target` with a cubic ease-out.
+ * Animates a number from its previous value up to `target` with a cubic ease-decelerate.
  * Snaps instantly when the user prefers reduced motion. Re-runs whenever the
  * target changes, easing from wherever the display value currently sits.
  */
