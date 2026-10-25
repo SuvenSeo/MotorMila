@@ -4,5 +4,6 @@
   "apk_url": "https://pub-f15911ef9a914db9a44e1fd6b47dfe4e.r2.dev/app/motormila-1.7.2.apk",
   "published_at": "2026-10-25T11:39:04Z",
   "sha256": "b83ed83726bb591cbb1835fff84de69b3946f2cfbe86b10c78277ed7e4fe6b9a",
+  "min_supported_version_code": 0,
   "tag": "android-v1.7.2"
 }

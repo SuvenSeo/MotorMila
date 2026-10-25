@@ -30,12 +30,12 @@ import { fadeUp, listItem, listStagger, revealContainer, scaleIn } from "@/lib/m
 const WAITLIST_KEY = "motormila.mobile_waitlist";
 
 /** Live sideload release — keep in step with android/app/build.gradle.kts + public/app/latest-release.json. */
-const APK_VERSION = "1.7.1";
+const APK_VERSION = "1.7.2";
 const APK_SIZE = "5.4 MB";
 // Public R2 download: the source repo is private, so the APK ships from the
 // public motormila-snapshots bucket (published by .github/workflows/android-release.yml).
 const APK_URL = `https://pub-f15911ef9a914db9a44e1fd6b47dfe4e.r2.dev/app/motormila-${APK_VERSION}.apk`;
-const APK_SHA256 = "3896eda3a46917bf7ad5040de1d4baea09c0b459127fafc017e509c37c47b7e8";
+const APK_SHA256 = "b83ed83726bb591cbb1835fff84de69b3946f2cfbe86b10c78277ed7e4fe6b9a";
 
 type Feature = {
   icon: React.ComponentType<{ className?: string }>;
