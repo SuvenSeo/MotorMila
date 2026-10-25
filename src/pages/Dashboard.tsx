@@ -3,6 +3,7 @@ import { forwardRef, memo, startTransition, useDeferredValue, useImperativeHandl
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { useDeferredMount } from "@/hooks/useDeferredMount";
 import { useOffscreenPause } from "@/hooks/useOffscreenPause";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { AnimatePresence, m, motion } from "motion/react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -262,6 +263,7 @@ export default function Dashboard() {
   const { pinned: comparePinned, toggle: toggleCompareTray } = useCompareTray();
   const filterSheetRef = useRef<FilterSheetHandle>(null);
   const heroSectionRef = useRef<HTMLElement>(null);
+  const wideFilters = useMediaQuery("(min-width: 1024px)", true);
   // CSS loops inside the hero pause once it scrolls off screen.
   useOffscreenPause(heroSectionRef);
   const [watchlistIds, setWatchlistIds] = useState<number[]>([]);
@@ -1120,9 +1122,14 @@ export default function Dashboard() {
 
           {/* Filters + Grid */}
           <div className="flex flex-col items-start gap-6 lg:flex-row">
-            <div className="hidden w-full shrink-0 self-start lg:sticky lg:top-20 lg:block lg:w-80">
-              <FilterSidebar filters={filters} onFiltersChange={setFilters} />
-            </div>
+            {/* Desktop only: below lg the panel lives in the filter sheet. It used to
+                render here too, display:none — ~60 chips, sliders and comboboxes
+                (and Radix measuring them) on every phone load and filter change. */}
+            {wideFilters ? (
+              <div className="hidden w-full shrink-0 self-start lg:sticky lg:top-20 lg:block lg:w-80">
+                <FilterSidebar filters={filters} onFiltersChange={setFilters} />
+              </div>
+            ) : null}
 
             <m.div
               className="min-w-0 flex-1"

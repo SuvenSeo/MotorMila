@@ -24,7 +24,9 @@ function useScrolledPast(threshold: number) {
       frame = window.requestAnimationFrame(update);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
-    update();
+    // First read on the next frame: reading scrollY inside the mount commit
+    // forced a style + layout of the whole incoming home page in that task.
+    frame = window.requestAnimationFrame(update);
     return () => {
       window.removeEventListener("scroll", onScroll);
       if (frame) window.cancelAnimationFrame(frame);
