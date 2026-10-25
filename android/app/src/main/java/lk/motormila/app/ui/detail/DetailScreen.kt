@@ -115,6 +115,7 @@ import lk.motormila.app.domain.model.PriceHistory
 import lk.motormila.app.domain.model.SellerProfile
 import lk.motormila.app.ui.components.DealBadge
 import lk.motormila.app.ui.components.DealRing
+import lk.motormila.app.ui.components.headline
 import lk.motormila.app.ui.components.EmptyState
 import lk.motormila.app.ui.components.MmDealVerdict
 import lk.motormila.app.ui.components.MmLeaseTakeover
@@ -696,7 +697,15 @@ internal fun PriceDealSection(
             // Free tier already shows the PRO badge + locked "Deal score" row below;
             // an empty ring with a dash next to the price read as a broken widget.
             if (isPro && ok != null) {
-                DealRing(score = ok.dealScore, band = ok.band.toDealBand())
+                // Signed percent vs the typical asking price — the same number as the
+                // badge and gauge ("−12%" / "+6%"), never a bare score.
+                val sign = if (ok.gapPct < 0) "\u2212" else "+"
+                DealRing(
+                    score = ok.dealScore,
+                    band = ok.band.toDealBand(),
+                    label = if (ok.pct == 0) "0%" else "$sign${ok.pct}%",
+                    description = ok.headline(),
+                )
             }
         }
         if (isPro) {
