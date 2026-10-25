@@ -110,18 +110,23 @@ export function useChartDraw(ready: boolean) {
   const [drawn, setDrawn] = React.useState(false);
   const onAnimationEnd = React.useCallback(() => setDrawn(true), []);
   const ms = Math.round(duration.long * 1000);
-  // Scatter (and any series without onAnimationEnd) ends the draw on a timer.
+  // The draw ends on a timer just past the CSS wipe.
   React.useEffect(() => {
     if (!ready || drawn || calm) return;
     const id = window.setTimeout(() => setDrawn(true), ms + 250);
     return () => window.clearTimeout(id);
   }, [ready, drawn, calm, ms]);
+  // Smoothness pass: Recharts' own draw-in re-rendered every series through
+  // React on each animation frame (~1 s of 20–60 ms frames at 4x CPU on
+  // Trends). The series now render once, final, and a CSS clip-path wipe
+  // (left → right, the same look) reveals them; no per-frame JS.
   return {
-    isAnimationActive: !calm && ready && !drawn,
+    isAnimationActive: false,
     animationDuration: ms,
     animationEasing: "ease-out" as const,
     animationBegin: 0,
     onAnimationEnd,
+    className: !calm && ready && !drawn ? "chart-draw-in" : undefined,
   };
 }
 
