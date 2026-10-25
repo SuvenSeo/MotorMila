@@ -246,6 +246,8 @@ export function Navbar() {
                   {active && (
                     <motion.span
                       layoutId="desktop-nav-pill"
+                      // Measure only when the route changes, not on every Navbar render.
+                      layoutDependency={pathname}
                       className="site-nav__pill"
                       transition={calm ? { duration: 0 } : spring.snappy}
                       aria-hidden
