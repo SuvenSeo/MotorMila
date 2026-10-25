@@ -27,6 +27,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -123,6 +124,9 @@ import lk.motormila.app.ui.components.ErrorState
 import lk.motormila.app.ui.components.FmvGauge
 import lk.motormila.app.ui.components.ListingImage
 import lk.motormila.app.ui.components.SlidingLkr
+import lk.motormila.app.ui.components.fitWidth
+import lk.motormila.app.ui.components.rememberSlidingLkrFitStyle
+import lk.motormila.app.ui.components.rememberFitTextStyle
 import lk.motormila.app.ui.components.listingCardKey
 import lk.motormila.app.ui.components.listingPriceKey
 import lk.motormila.app.ui.components.rememberReducedMotion
@@ -610,7 +614,7 @@ private fun detailContainerTransform(listingId: Int, fromCard: Boolean): Modifie
 }
 
 @Composable
-private fun PriceDealSection(
+internal fun PriceDealSection(
     listing: Listing,
     isPro: Boolean,
     onDealShown: () -> Unit,
@@ -719,7 +723,10 @@ private fun PriceSlot(
     // Shared bounds hug the price text (not the weight(1f) slot): matched
     // against the slot's full row width, the card's short "Rs 1.4 Mn" was
     // scaled up ~3x mid-morph.
-    Box(modifier = modifier) {
+    // The slot width is read once here so every price inside can shrink to fit
+    // it (never clip) at 200 % font scale or on narrow phones.
+    BoxWithConstraints(modifier = modifier) {
+        val slotWidthPx = constraints.maxWidth
         Box(Modifier.then(priceShared)) {
             Crossfade(
                 targetState = drop,
@@ -727,9 +734,14 @@ private fun PriceSlot(
                 label = "price-slot",
             ) { activeDrop ->
                 if (activeDrop != null) {
-                    PriceDropTicker(drop = activeDrop, priceStyle = priceStyle)
+                    PriceDropTicker(drop = activeDrop, priceStyle = priceStyle, maxWidthPx = slotWidthPx)
                 } else {
-                    Text(text = LkrFormat.priceFull(listing.priceLkr), style = priceStyle)
+                    lk.motormila.app.ui.components.MmFitText(
+                        text = LkrFormat.priceFull(listing.priceLkr),
+                        style = priceStyle,
+                        color = MotormilaOnSurface,
+                        minScale = 0.5f,
+                    )
                 }
             }
         }
@@ -776,49 +788,62 @@ private fun detectPriceDrop(listingId: Int, history: PriceHistory?): PriceDrop? 
  *
  * Reduced motion collapses the whole moment to a simple crossfade.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PriceDropTicker(
     drop: PriceDrop,
     priceStyle: TextStyle,
+    maxWidthPx: Int,
     modifier: Modifier = Modifier,
 ) {
+    // Reduced motion: the same settled layout (struck-through old price + new
+    // price) without the roll, flash or haptic. It used to show only the new
+    // price, so reduced-motion users never saw that the price had dropped.
     val reducedMotion = rememberReducedMotion()
-    if (reducedMotion) {
-        Crossfade(
-            targetState = drop.newPriceLkr,
-            animationSpec = tween(durationMillis = 200),
-            label = "price-drop-reduced",
-        ) { price ->
-            Text(text = LkrFormat.priceFull(price), style = priceStyle, modifier = modifier)
-        }
-        return
-    }
     val haptics = rememberHaptics()
     var started by remember(drop.dropId) { mutableStateOf(false) }
     val strikeProgress by animateFloatAsState(
-        targetValue = if (started) 1f else 0f,
+        targetValue = if (started || reducedMotion) 1f else 0f,
         animationSpec = spring(dampingRatio = 1f, stiffness = Spring.StiffnessMediumLow, visibilityThreshold = 0.001f),
         label = "drop-strike",
     )
     val flash = remember(drop.dropId) { Animatable(0f) }
     LaunchedEffect(drop.dropId) {
         started = true
+        if (reducedMotion) return@LaunchedEffect
         // Green wash in, then out; the tick lands on settle (~900ms total).
         flash.animateTo(0.22f, tween(durationMillis = 150))
         flash.animateTo(0f, tween(durationMillis = 600))
         delay(150)
         haptics.tick()
     }
+    // Each price is fitted to the FULL slot width on its own (sized for the
+    // wider of old/new so the ticker never resizes mid-roll); the FlowRow puts
+    // the new price under the struck-through old one when both don't fit on
+    // one line (narrow phones, large font scale).
+    val newPriceStyle = rememberSlidingLkrFitStyle(
+        valueLkr = maxOf(drop.oldPriceLkr, drop.newPriceLkr),
+        style = priceStyle,
+        maxWidthPx = maxWidthPx,
+        full = true,
+    )
+    val oldBase = MaterialTheme.typography.headlineMedium.copy(
+        fontFeatureSettings = "tnum",
+        color = MotormilaSecondaryText,
+    )
+    val oldPriceStyle = rememberFitTextStyle(LkrFormat.full(drop.oldPriceLkr), oldBase, maxWidthPx)
     Box(modifier = modifier) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
             // Old price with a strike-through that draws left → right.
-            Box {
+            Box(Modifier.align(Alignment.CenterVertically)) {
                 Text(
                     text = LkrFormat.full(drop.oldPriceLkr),
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontFeatureSettings = "tnum",
-                        color = MotormilaSecondaryText,
-                    ),
+                    style = oldPriceStyle,
+                    maxLines = 1,
+                    softWrap = false,
                 )
                 Canvas(Modifier.matchParentSize()) {
                     val y = size.height / 2f
@@ -830,12 +855,22 @@ private fun PriceDropTicker(
                     )
                 }
             }
-            Spacer(Modifier.width(8.dp))
-            SlidingLkr(
-                valueLkr = if (started) drop.newPriceLkr else drop.oldPriceLkr,
-                style = priceStyle,
-                full = true,
-            )
+            if (reducedMotion) {
+                Text(
+                    text = LkrFormat.full(drop.newPriceLkr),
+                    style = newPriceStyle,
+                    maxLines = 1,
+                    softWrap = false,
+                    modifier = Modifier.align(Alignment.CenterVertically).fitWidth(),
+                )
+            } else {
+                SlidingLkr(
+                    valueLkr = if (started) drop.newPriceLkr else drop.oldPriceLkr,
+                    style = newPriceStyle,
+                    full = true,
+                    modifier = Modifier.align(Alignment.CenterVertically),
+                )
+            }
         }
         if (flash.value > 0.005f) {
             Box(
@@ -1049,7 +1084,7 @@ private fun sourceDisplayName(source: String?): String =
 
 /** Deal ladder rungs: asking vs low/median/high markers. */
 @Composable
-private fun DealLadder(askingLkr: Double?, fmvLkr: Double?, modifier: Modifier = Modifier) {
+internal fun DealLadder(askingLkr: Double?, fmvLkr: Double?, modifier: Modifier = Modifier) {
     if (askingLkr == null || fmvLkr == null || fmvLkr <= 0) return
     MotormilaSurface(modifier = modifier) {
         Text(
@@ -1083,13 +1118,29 @@ private fun LadderRung(label: String, value: Double, active: Boolean) {
                 .background(if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
         )
         Spacer(Modifier.width(8.dp))
-        Text(
-            label,
-            style = MaterialTheme.typography.labelLarge,
-            color = MotormilaOnSurface,
+        // FlowRow: at 200 % the unweighted price took the row and crushed the
+        // label to 3 chars per line (ta) or butted against it ("Great buyRs 106…").
+        // Now the price drops under the label when both don't fit.
+        @OptIn(ExperimentalLayoutApi::class)
+        FlowRow(
             modifier = Modifier.weight(1f),
-        )
-        Text(LkrFormat.full(value), style = (MaterialTheme.typography.labelLarge).tabular(), fontWeight = if (active) FontWeight.Bold else FontWeight.Normal)
+            horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
+        ) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                color = MotormilaOnSurface,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                LkrFormat.full(value),
+                style = (MaterialTheme.typography.labelLarge).tabular(),
+                fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.fitWidth(),
+            )
+        }
     }
 }
 
@@ -1104,7 +1155,7 @@ private data class BentoSpecItem(
 )
 
 @Composable
-private fun BentoSpecsGrid(listing: Listing, modifier: Modifier = Modifier) {
+internal fun BentoSpecsGrid(listing: Listing, modifier: Modifier = Modifier) {
     val numberFormatter = remember { NumberFormat.getIntegerInstance(Locale.US) }
 
     val yearVal = listing.year?.toString() ?: "Unknown"
@@ -1209,6 +1260,10 @@ private fun BentoCell(item: BentoSpecItem, modifier: Modifier = Modifier) {
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = 1.sp,
                     color = MotormilaSecondaryText,
+                    // "TRANSMISSION" broke mid-word ("TRANSMISSIO / N") at 130 %+.
+                    maxLines = 1,
+                    softWrap = false,
+                    modifier = Modifier.fitWidth(minScale = 0.5f),
                 )
                 Text(
                     text = item.value,
@@ -1216,6 +1271,8 @@ private fun BentoCell(item: BentoSpecItem, modifier: Modifier = Modifier) {
                     fontWeight = FontWeight.Bold,
                     color = MotormilaOnSurface,
                     maxLines = 1,
+                    softWrap = false,
+                    modifier = Modifier.fitWidth(minScale = 0.5f),
                 )
             }
         }

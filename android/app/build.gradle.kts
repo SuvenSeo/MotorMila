@@ -46,8 +46,8 @@ android {
         applicationId = "lk.motormila.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 18
-        versionName = "1.7.0"
+        versionCode = 19
+        versionName = "1.7.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -201,7 +201,7 @@ android {
         create("preview") {
             initWith(getByName("release"))
             applicationIdSuffix = ".debug"
-            // Production ships defaultConfig versionName ("1.7.0"); the
+            // Production ships defaultConfig versionName ("1.7.1"); the
             // preview sideload channel keeps its "-preview" label.
             versionNameSuffix = "-preview"
             isDebuggable = false

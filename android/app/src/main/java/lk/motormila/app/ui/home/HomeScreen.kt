@@ -449,10 +449,13 @@ internal fun HeroStatsCard(
                 .padding(16.dp)
         ) {
             // Eyebrow LIVE LISTINGS with DATA AS OF 1H AGO pill
-            Row(
+            // FlowRow: at 200 % / ta the pill used to get the leftover width and
+            // became a one-character-wide vertical strip. Now it wraps below.
+            @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+            androidx.compose.foundation.layout.FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Text(
                     text = stringResource(R.string.home_live_listings),
@@ -464,6 +467,7 @@ internal fun HeroStatsCard(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
+                        .align(Alignment.CenterVertically)
                         .clip(MotormilaRadius.pill)
                         .background(Color(0x1F00C853))
                         .border(1.dp, Color(0x3300C853), MotormilaRadius.pill)

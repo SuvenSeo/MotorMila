@@ -104,6 +104,9 @@ fun MmButton(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                // Label gives way first: a squeezed button kept squashing the
+                // trailing icon to a dot ("View on ikman.lk ·").
+                modifier = Modifier.weight(1f, fill = false),
             )
             if (trailingIcon != null) Icon(trailingIcon, null, tint = fg, modifier = Modifier.size(size.icon))
         }

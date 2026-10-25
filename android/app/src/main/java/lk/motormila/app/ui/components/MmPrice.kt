@@ -127,15 +127,23 @@ fun MmAnimatedText(
     animate: Boolean = true,
 ) {
     val reduced = MmMotion.reduced
-    if (!animate || reduced) {
-        MmFitText(text = text, style = style, color = color, modifier = modifier)
+    // Per-glyph cells split Sinhala/Tamil clusters (vowel signs drawn on dotted
+    // circles: "ඉල්ලීම මත මිල" fallback in si). Only animate plain ASCII.
+    val asciiOnly = text.all { it.code < 128 }
+    if (!animate || reduced || !asciiOnly) {
+        MmFitText(text = text, style = style, color = color, modifier = modifier, minScale = if (asciiOnly) 0.55f else 0.4f)
         return
     }
     // Align from the right so "8.5 Mn" → "12.5 Mn" keeps the unit still.
     BoxWithConstraints(modifier.clearAndSetSemantics { contentDescription = text }) {
-    val fitted = rememberFittedTextStyle(text, style, constraints.maxWidth)
+    // Fit against the width the glyphs take ONE PER CELL (each AnimatedContent
+    // cell is ceil'd and loses kerning). Measuring the whole string here made
+    // "Rs 950,000" look like it fit while the per-char row overflowed by a few
+    // px and clipped the last zero ("Rs 950,00C" in the detail sticky bar).
+    val fitted = rememberPerGlyphFittedStyle(text, style, constraints.maxWidth)
     Row(
         verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fitWidth(),
     ) {
         val chars = text.toCharArray()
         chars.forEachIndexed { index, ch ->
@@ -187,7 +195,9 @@ fun MmFitText(
             color = color,
             maxLines = 1,
             softWrap = false,
-            overflow = TextOverflow.Ellipsis,
+            // Anything the font step could not absorb is scaled on the layer,
+            // never ellipsized (a price must stay whole).
+            modifier = Modifier.fitWidth(minScale = 0.2f),
         )
     }
 }
@@ -205,23 +215,53 @@ private fun rememberFittedTextStyle(
         if (maxWidthPx == Constraints.Infinity || maxWidthPx <= 0 || !style.fontSize.isSp) {
             return@remember style
         }
-        val width = measurer.measure(
-            text = text,
-            style = style,
-            softWrap = false,
-            maxLines = 1,
-        ).size.width
-        if (width <= maxWidthPx) {
-            style
-        } else {
-            val scale = (maxWidthPx.toFloat() / width * 0.98f).coerceIn(minScale, 1f)
-            style.copy(
+        // Re-measure after each step: with Android 14+ NON-LINEAR font scaling a
+        // smaller sp is scaled up proportionally MORE, so one linear step left
+        // "Rs 1.85 Mn" still too wide at 200 % (cards showed "Rs 1.85 …").
+        // (fitPerGlyphStyle with one glyph = the whole string.)
+        var scale = 1f
+        var current = style
+        for (pass in 0 until 5) {
+            val width = measurer.measure(text = text, style = current, softWrap = false, maxLines = 1).size.width
+            if (width <= maxWidthPx || scale <= minScale) break
+            scale = (scale * maxWidthPx.toFloat() / width * 0.98f).coerceIn(minScale, 1f)
+            current = style.copy(
                 fontSize = scale * style.fontSize,
                 letterSpacing = if (style.letterSpacing.isSp) scale * style.letterSpacing else style.letterSpacing,
             )
         }
+        current
     }
 }
+
+@Composable
+private fun rememberPerGlyphFittedStyle(
+    text: String,
+    style: TextStyle,
+    maxWidthPx: Int,
+    minScale: Float = 0.55f,
+): TextStyle {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    return remember(text, style, maxWidthPx, density, minScale) {
+        fitPerGlyphStyle(measurer, text, style, maxWidthPx, digitsAsStrip = false, minScale = minScale)
+    }
+}
+
+/**
+ * [style] shrunk (down to [minScale]) so single-line [text] fits [maxWidthPx]; for
+ * places that already know their width and cannot host a SubcomposeLayout.
+ */
+@Composable
+fun rememberFitTextStyle(text: String, style: TextStyle, maxWidthPx: Int, minScale: Float = 0.5f): TextStyle =
+    rememberFittedTextStyle(text, style, maxWidthPx, minScale)
+
+/**
+ * Pixel width [text] needs in [style] when rendered by [MmPrice] (one cell per glyph).
+ * Layouts that must reserve room for a price (e.g. the detail sticky bar) use this.
+ */
+internal fun mmPriceWidthPx(measurer: androidx.compose.ui.text.TextMeasurer, text: String, style: TextStyle): Int =
+    perGlyphWidthPx(measurer, text, style, digitsAsStrip = false)
 
 private data class PriceChar(val char: Char, val value: Double) {
     override fun equals(other: Any?): Boolean = other is PriceChar && other.char == char
