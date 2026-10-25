@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { m, motion } from "motion/react";
 import useEmblaCarousel from "embla-carousel-react";
 import { Camera, ChevronLeft, ChevronRight, Expand } from "lucide-react";
@@ -63,9 +63,17 @@ export function ListingImageCarousel({
   // Detail hero: Embla starts after the card → listing View Transition. Its
   // init measure (which runs on construction, even inactive) forced a style + layout of the whole incoming page inside the
   // route commit (~40 ms at 4× CPU); slide 0 renders statically until then.
-  const [carouselLive, setCarouselLive] = useState(!isDetail);
+  // Cards: Embla starts on first intent (pointer over / focus / arrow or dot
+  // tap). Building one engine per card on mount measured every slide of
+  // every card (~200 ms of forced layout at 4× CPU on the home grid); until
+  // then slide 0 renders statically and arrows/dots queue their target.
+  const [carouselLive, setCarouselLive] = useState(false);
+  const [pendingSlide, setPendingSlide] = useState<number | null>(null);
+  const wake = useCallback(() => {
+    if (multi && !isDetail) setCarouselLive(true);
+  }, [multi, isDetail]);
   useEffect(() => {
-    if (carouselLive || !multi) return;
+    if (carouselLive || !multi || !isDetail) return;
     let raf = 0;
     let timer = 0;
     const go = () => {
@@ -77,7 +85,7 @@ export function ListingImageCarousel({
       window.clearTimeout(timer);
       window.cancelAnimationFrame(raf);
     };
-  }, [carouselLive, multi]);
+  }, [carouselLive, multi, isDetail]);
   const [emblaRef, emblaApi] = useEmblaCarousel({
     active: multi,
     // Detail: no loop so the first/last photo rubber-bands against the edge
@@ -129,13 +137,40 @@ export function ListingImageCarousel({
     };
   }, [emblaApi]);
 
-  const goTo = useCallback((i: number) => emblaApi?.scrollTo(i, reduced), [emblaApi, reduced]);
-  const prev = useCallback(() => emblaApi?.scrollPrev(reduced), [emblaApi, reduced]);
-  const next = useCallback(() => emblaApi?.scrollNext(reduced), [emblaApi, reduced]);
+  const goTo = useCallback(
+    (i: number) => {
+      if (emblaApi) emblaApi.scrollTo(i, reduced);
+      else {
+        setPendingSlide(i);
+        wake();
+      }
+    },
+    [emblaApi, reduced, wake],
+  );
+  const prev = useCallback(() => {
+    if (emblaApi) emblaApi.scrollPrev(reduced);
+    else goTo((index - 1 + count) % count);
+  }, [emblaApi, reduced, goTo, index, count]);
+  const next = useCallback(() => {
+    if (emblaApi) emblaApi.scrollNext(reduced);
+    else goTo((index + 1) % count);
+  }, [emblaApi, reduced, goTo, index, count]);
+  // An arrow/dot tapped before the engine existed plays once it is up.
+  useEffect(() => {
+    if (!emblaApi || pendingSlide === null) return;
+    prime(pendingSlide);
+    emblaApi.scrollTo(pendingSlide, reduced);
+    setPendingSlide(null);
+  }, [emblaApi, pendingSlide, reduced, prime]);
 
   // Reset when the listing changes.
   const imagesKey = images.join("|");
+  const lastImagesKey = useRef(imagesKey);
   useEffect(() => {
+    // Only a new photo set resets. The engine coming up (lazy init) must not
+    // snap back over a queued arrow/dot tap.
+    if (lastImagesKey.current === imagesKey) return;
+    lastImagesKey.current = imagesKey;
     setIndex(0);
     setMounted(new Set(isDetail && multi ? [0, 1, count - 1] : [0]));
     emblaApi?.reInit();
@@ -191,8 +226,8 @@ export function ListingImageCarousel({
       aria-roledescription="carousel"
       aria-label={t("listingImage.carousel", "Listing photos")}
       className={className}
-      onPointerEnter={multi ? () => prime(index) : undefined}
-      onFocus={multi ? () => prime(index) : undefined}
+      onPointerEnter={multi ? () => { prime(index); wake(); } : undefined}
+      onFocus={multi ? () => { prime(index); wake(); } : undefined}
     >
       <div className="relative h-full w-full overflow-hidden">
         {/* Embla attaches only when it has work to do: it builds its engine (and
