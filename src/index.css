@@ -943,13 +943,17 @@
   }
 
   /* One cinematic settle on arrival (the photo eases in from a slight push),
-     then the frame holds still. The old 32 s infinite ken-burns kept the page
-     producing main-thread frames forever — ~20% of the main thread on an
-     idle home page at 4× CPU, even when scrolled away. */
+     then the frame holds still. The 32 s infinite ken-burns was re-tested
+     after the idle fixes: its transform is composited (compositeFailed 0),
+     but while it runs every main-thread frame (any rAF consumer) re-samples
+     it, and the compositor re-rasters the scaled full-bleed photo — idle
+     main thread 6% → 21% at 390/4x, idle frame rate 60 → 29 fps at 1440. */
   .hero-cinematic__media {
     transform-origin: 62% 42%;
     animation: hero-settle 2.4s var(--ease-decelerate) both;
   }
+
+  html.low-data .hero-cinematic__media { animation: none; }
 
   @keyframes hero-settle {
     from { transform: scale(1.06) translate3d(-1%, -0.6%, 0); }
@@ -1317,14 +1321,18 @@
      never shows through the labels (audit: unreadable over Calculator/Sell). */
   .nav-glass {
     border: 1px solid hsl(var(--foreground) / 0.08);
+    /* Smoothness pass: a more solid tint (copy never bleeds through) and a
+       12px blur instead of the 40-44px --glass-blur. Blur cost grows with
+       the radius on every frame the page scrolls under this always-on bar;
+       behind a 94% fill a bigger radius was invisible anyway. */
     background: var(--glass-nav-fill);
-    backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
-    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
+    backdrop-filter: blur(12px) saturate(1.4);
+    -webkit-backdrop-filter: blur(12px) saturate(1.4);
     box-shadow: var(--shadow-e2);
     border-radius: 999px;
   }
   .theme-dark .nav-glass {
-    background: hsl(var(--card) / 0.9);
+    background: hsl(var(--card) / 0.94);
   }
 
   /* ── Site header (polish/round2 · motion pass web/navbar-motion) ──
@@ -1396,9 +1404,12 @@
     transform-origin: 50% 50%;
     border-radius: var(--cap-radius);
     border: 1px solid hsl(var(--foreground) / 0.09);
-    background: hsl(var(--background) / 0.76);
-    backdrop-filter: blur(16px) saturate(1.7);
-    -webkit-backdrop-filter: blur(16px) saturate(1.7);
+    /* Solid enough that body copy never reads through the links; 12px blur
+       (was 16px, saturate 1.7) keeps the frosted edge for less raster work
+       on every scrolled frame. */
+    background: hsl(var(--background) / 0.88);
+    backdrop-filter: blur(12px) saturate(1.5);
+    -webkit-backdrop-filter: blur(12px) saturate(1.5);
     box-shadow:
       0 10px 30px -10px rgb(0 0 0 / 0.18),
       0 2px 6px -2px rgb(0 0 0 / 0.08),
@@ -1418,7 +1429,7 @@
   }
 
   .theme-dark .site-nav-bg {
-    background: hsl(var(--card) / 0.74);
+    background: hsl(var(--card) / 0.88);
     border-color: hsl(var(--foreground) / 0.1);
     box-shadow:
       0 14px 40px -12px rgb(0 0 0 / 0.7),
