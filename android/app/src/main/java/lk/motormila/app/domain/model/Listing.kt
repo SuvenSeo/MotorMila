@@ -37,27 +37,44 @@ data class Listing(
     /** Compact LKR display ("Rs 12.45 Mn"), or "Price on request". */
     fun formattedPrice(): String = lk.motormila.app.core.format.LkrFormat.price(priceLkr)
 
+    /** Ad text + category/model the one price verdict reads. */
+    val priceContext: lk.motormila.app.core.price.PriceContext
+        get() = lk.motormila.app.core.price.PriceContext(category = vehicleCategory, model = model, title = title)
+
     /**
-     * Deal band for badges/rings.
-     * Backend: free-tier responses null out deal_score/market_median -> LOCKED.
-     * Thresholds mirror web client: >= 8 GREAT, >= 0 FAIR, < 0 HIGH (overpriced).
+     * The one price verdict from this row alone (cards, lists, compare): the
+     * stored cohort median is the reference. Same rules as the detail screen.
+     */
+    fun rowVerdict(): lk.motormila.app.core.price.PriceVerdict =
+        lk.motormila.app.core.price.PriceVerdicts.forListingRow(priceLkr, marketMedianLkr, priceContext)
+
+    /**
+     * Deal band for badges/rings, on the verdict thresholds: below typical at
+     * −5 % or more (GREAT), above at +8 % or more (HIGH), otherwise FAIR.
+     * LOCKED = no rating: free-tier rows (backend nulls deal_score/market_median)
+     * or a comparison the verdict withholds. Whether LOCKED shows a Pro lock is
+     * the caller's call (only for non-Pro users).
      */
     fun dealBand(): DealBand {
-        val score = dealScore ?: return DealBand.LOCKED
+        if (marketMedianLkr != null) {
+            val v = rowVerdict() as? lk.motormila.app.core.price.PriceVerdict.Ok ?: return DealBand.LOCKED
+            return v.band.toDealBand()
+        }
+        val score = dealScore?.takeIf { kotlin.math.abs(it) <= lk.motormila.app.core.price.PriceVerdicts.MAX_PLAUSIBLE_GAP_PCT }
+            ?: return DealBand.LOCKED
         return when {
-            score >= 8 -> DealBand.GREAT
-            score >= 0 -> DealBand.FAIR
-            else -> DealBand.HIGH
+            score >= lk.motormila.app.core.price.PriceVerdicts.BELOW_PCT -> DealBand.GREAT
+            score <= -lk.motormila.app.core.price.PriceVerdicts.ABOVE_PCT -> DealBand.HIGH
+            else -> DealBand.FAIR
         }
     }
 
-    /** Signed delta vs market median in percent; null when either side missing. */
-    fun deltaVsMedianPct(): Double? {
-        val price = priceLkr
-        val median = marketMedianLkr
-        if (price == null || median == null || median <= 0) return null
-        return ((price - median) / median) * 100.0
-    }
+    /**
+     * Signed delta vs the stored cohort median in percent (the verdict's gap);
+     * null when either side is missing or the verdict withholds the comparison.
+     */
+    fun deltaVsMedianPct(): Double? =
+        (rowVerdict() as? lk.motormila.app.core.price.PriceVerdict.Ok)?.gapPct
 
     val displayName: String
         get() = title.ifBlank { listOfNotNull(make, model, year?.toString()).joinToString(" ") }
@@ -71,4 +88,10 @@ enum class DealBand {
     FAIR,
     HIGH,
     LOCKED,
+}
+
+fun lk.motormila.app.core.price.VerdictBand.toDealBand(): DealBand = when (this) {
+    lk.motormila.app.core.price.VerdictBand.BELOW -> DealBand.GREAT
+    lk.motormila.app.core.price.VerdictBand.FAIR -> DealBand.FAIR
+    lk.motormila.app.core.price.VerdictBand.ABOVE -> DealBand.HIGH
 }

@@ -109,6 +109,7 @@ import lk.motormila.app.R
 import lk.motormila.app.core.format.LkrFormat
 import lk.motormila.app.domain.model.DealBand
 import lk.motormila.app.domain.model.Fmv
+import lk.motormila.app.domain.model.toDealBand
 import lk.motormila.app.domain.model.Listing
 import lk.motormila.app.domain.model.PriceHistory
 import lk.motormila.app.domain.model.SellerProfile
@@ -199,6 +200,24 @@ fun ListingDetailScreen(
     var viewerPage by remember { mutableStateOf<Int?>(null) }
     val mmHaptics = lk.motormila.app.ui.theme.MmHaptics.current
     var showWhy by remember { mutableStateOf(false) }
+    // THE price verdict for this listing — computed once and handed to every
+    // price panel (deal row, ring/badge, gauge, ladder, history line, Why sheet,
+    // share card) so they cannot contradict each other. FMV loaded: its
+    // estimate is the reference and the stored cohort median the cross-check;
+    // not loaded yet: the stored median, exactly like the card.
+    val priceVerdict = remember(state.listing, state.fmv) {
+        state.listing?.let { l ->
+            lk.motormila.app.core.price.PriceVerdicts.resolve(
+                priceLkr = l.priceLkr,
+                marketMedianLkr = l.marketMedianLkr,
+                ctx = l.priceContext,
+                fmv = state.fmv?.toReference(),
+            )
+        }
+    }
+    val isLease = remember(state.listing) {
+        state.listing?.let { MmLeaseTakeover.detect(it.title, it.model) } == true
+    }
 
     LaunchedEffect(listingId) {
         if (listingId > 0) {
@@ -299,14 +318,12 @@ fun ListingDetailScreen(
                             )
                         }
                         item {
-                            val verdict = remember(listing.id, listing.priceLkr, state.fmv) {
-                                MmDealVerdict.compute(
-                                    askingLkr = listing.priceLkr,
-                                    typicalLkr = state.fmv?.fmvLkr ?: listing.marketMedianLkr,
-                                    isLeaseTakeover = MmLeaseTakeover.detect(listing.title, listing.model),
-                                    weakEstimate = state.fmv?.confidence?.equals("low", ignoreCase = true) == true,
-                                    compsCount = state.fmv?.sampleCount?.takeIf { it > 0 },
-                                    ratingAllowed = listing.dealScore != null || state.fmv?.hasSignal == true,
+                            val verdict = remember(priceVerdict, isLease, state.isPro, state.fmv) {
+                                MmDealVerdict.from(
+                                    priceVerdict ?: listing.rowVerdict(),
+                                    isLeaseTakeover = isLease,
+                                    // Free rows carry no score; a loaded FMV verdict is shown to everyone.
+                                    ratingAllowed = state.isPro || state.fmv != null,
                                 )
                             }
                             DealVerdictRow(
@@ -320,8 +337,10 @@ fun ListingDetailScreen(
                                 listing = listing,
                                 isPro = state.isPro,
                                 history = state.history,
+                                verdict = priceVerdict,
                                 onDealShown = {
-                                    if ((listing.dealScore ?: 0.0) >= 8.0) {
+                                    val ok = priceVerdict as? lk.motormila.app.core.price.PriceVerdict.Ok
+                                    if (ok != null && ok.band == lk.motormila.app.core.price.VerdictBand.BELOW && !ok.verifyFirst) {
                                         haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     }
                                 },
@@ -334,27 +353,32 @@ fun ListingDetailScreen(
                                     val url = listing.externalUrl ?: listing.detailUrl
                                     if (url != null) openUrl(context, url)
                                 },
-                                onShareWhatsApp = { shareWhatsApp(context, listing, state.fmv) },
-                                onShare = { shareListing(context, listing, state.fmv) },
+                                onShareWhatsApp = { shareWhatsApp(context, listing, priceVerdict) },
+                                onShare = { shareListing(context, listing, priceVerdict) },
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             )
                         }
                         if (state.fmv != null) {
                             item {
                                 MotormilaSurface(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                    // Withheld → a plain "why there is no rating" card, never a gauge.
                                     FmvGauge(
-                                        fmv = state.fmv!!,
+                                        verdict = priceVerdict ?: listing.rowVerdict(),
+                                        askingLkr = listing.priceLkr,
+                                        confidence = state.fmv!!.confidence,
                                         onExplainClick = { showFmvExplain = true },
                                         modifier = Modifier.fillMaxWidth(),
                                     )
                                 }
                             }
-                            item {
-                                DealLadder(
-                                    askingLkr = listing.priceLkr,
-                                    fmvLkr = state.fmv!!.fmvLkr,
-                                    modifier = Modifier.padding(horizontal = 16.dp),
-                                )
+                            if (priceVerdict is lk.motormila.app.core.price.PriceVerdict.Ok) {
+                                item {
+                                    DealLadder(
+                                        verdict = priceVerdict,
+                                        askingLkr = listing.priceLkr,
+                                        modifier = Modifier.padding(horizontal = 16.dp),
+                                    )
+                                }
                             }
                         }
                         item {
@@ -381,7 +405,8 @@ fun ListingDetailScreen(
                             HistorySection(
                                 history = state.history,
                                 report = state.report,
-                                fmvLkr = state.fmv?.fmvLkr,
+                                // Typical line only when the verdict stands (never a withheld estimate).
+                                fmvLkr = (priceVerdict as? lk.motormila.app.core.price.PriceVerdict.Ok)?.referenceLkr,
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             )
                         }
@@ -458,7 +483,7 @@ fun ListingDetailScreen(
                             ) {
                                 MotormilaGhostButton(
                                     label = stringResource(R.string.listing_share_whatsapp),
-                                    onClick = { shareWhatsApp(context, listing, state.fmv) },
+                                    onClick = { shareWhatsApp(context, listing, priceVerdict) },
                                     fillMaxWidth = false,
                                     leadingIcon = Icons.AutoMirrored.Filled.Chat,
                                     modifier = Modifier.weight(1f),
@@ -496,7 +521,7 @@ fun ListingDetailScreen(
                     if (state.isWatched) mmHaptics.unsave() else mmHaptics.save()
                     viewModel.toggleWatch()
                 },
-                onShare = { listingNow?.let { shareListing(context, it, state.fmv) } },
+                onShare = { listingNow?.let { shareListing(context, it, priceVerdict) } },
                 modifier = Modifier.align(Alignment.TopStart),
             )
         }
@@ -515,17 +540,11 @@ fun ListingDetailScreen(
         }
     }
     if (showWhy && viewerListing != null) {
-        val typical = state.fmv?.fmvLkr ?: viewerListing.marketMedianLkr
+        val resolved = priceVerdict ?: viewerListing.rowVerdict()
         DealWhySheet(
-            verdict = MmDealVerdict.compute(
-                askingLkr = viewerListing.priceLkr,
-                typicalLkr = typical,
-                isLeaseTakeover = MmLeaseTakeover.detect(viewerListing.title, viewerListing.model),
-                weakEstimate = state.fmv?.confidence?.equals("low", ignoreCase = true) == true,
-                compsCount = state.fmv?.sampleCount?.takeIf { it > 0 },
-            ),
+            verdict = MmDealVerdict.from(resolved, isLeaseTakeover = isLease),
             askingLkr = viewerListing.priceLkr,
-            typicalLkr = typical,
+            typicalLkr = (resolved as? lk.motormila.app.core.price.PriceVerdict.Ok)?.referenceLkr,
             comparables = state.fmv?.sampleCount,
             onDismiss = { showWhy = false },
             onFullEstimate = {
@@ -546,17 +565,30 @@ fun ListingDetailScreen(
                 Text(stringResource(R.string.ui_detail_how_this_valuation_works), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineMedium)
                 Spacer(Modifier.height(8.dp))
                 val fmv = state.fmv!!
-                Text("Method: ${fmv.method ?: "comparable sales"}", style = MaterialTheme.typography.labelLarge)
-                Text("Sample: ${fmv.sampleCount} comparables · ${fmv.confidence} confidence", style = MaterialTheme.typography.labelLarge)
+                Text(
+                    stringResource(
+                        when (fmv.method) {
+                            "ols_comps" -> R.string.mm_method_model
+                            "adjusted_median" -> R.string.mm_method_adjusted
+                            else -> R.string.mm_method_cohort
+                        },
+                    ),
+                    style = MaterialTheme.typography.labelLarge,
+                )
+                if (fmv.sampleCount > 0) {
+                    Text(
+                        stringResource(R.string.mm_fmv_explain_sample, fmv.sampleCount, lk.motormila.app.ui.components.confidenceWord(fmv.confidence)),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "FMV compares this asking price against recent same make/model sales. " +
-                        "It is a guide, not a guarantee — always inspect the vehicle.",
+                    stringResource(R.string.mm_why_body),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(16.dp))
-                MotormilaPrimaryButton(label = "Get full estimate", onClick = onEstimate)
+                MotormilaPrimaryButton(label = stringResource(R.string.mm_why_full_estimate), onClick = onEstimate)
                 Spacer(Modifier.height(12.dp))
             }
         }
@@ -619,7 +651,11 @@ internal fun PriceDealSection(
     isPro: Boolean,
     onDealShown: () -> Unit,
     history: PriceHistory? = null,
+    /** The screen's one resolved verdict; null = the row's own (previews). */
+    verdict: lk.motormila.app.core.price.PriceVerdict? = null,
 ) {
+    val resolved = verdict ?: remember(listing) { listing.rowVerdict() }
+    val ok = resolved as? lk.motormila.app.core.price.PriceVerdict.Ok
     LaunchedEffect(listing.id) { onDealShown() }
     // The card container key (listingCardKey) lives ONLY on the Detail root
     // (detailContainerTransform). A second sharedBounds with the same key here
@@ -659,12 +695,14 @@ internal fun PriceDealSection(
             )
             // Free tier already shows the PRO badge + locked "Deal score" row below;
             // an empty ring with a dash next to the price read as a broken widget.
-            if (isPro && listing.dealScore != null) {
-                DealRing(score = listing.dealScore, band = listing.dealBand())
+            if (isPro && ok != null) {
+                DealRing(score = ok.dealScore, band = ok.band.toDealBand())
             }
         }
         if (isPro) {
-            DealBadge(band = listing.dealBand(), score = listing.dealScore)
+            // Same verdict as the deal row / gauge. Withheld: no badge here —
+            // the price card below says why (never a Pro lock for a Pro user).
+            if (ok != null) DealBadge(band = ok.band.toDealBand(), score = ok.dealScore, pct = ok.pct)
         } else {
             // Free tier: backend nulls deal_score — LOCKED badge + blurred value
             // gatekept behind UserSession.isPro (DOMAIN_CONTRACT §5).
@@ -1082,10 +1120,28 @@ private fun sourceDisplayName(source: String?): String =
     source?.trim()?.takeIf { it.isNotEmpty() }?.replaceFirstChar { it.uppercase() }
         ?: stringResource(R.string.listing_source_fallback)
 
-/** Deal ladder rungs: asking vs low/median/high markers. */
+/** Legacy entry (previews): the verdict from the two numbers alone. */
 @Composable
 internal fun DealLadder(askingLkr: Double?, fmvLkr: Double?, modifier: Modifier = Modifier) {
-    if (askingLkr == null || fmvLkr == null || fmvLkr <= 0) return
+    val v = lk.motormila.app.core.price.PriceVerdicts.verdict(askingLkr, fmvLkr) as? lk.motormila.app.core.price.PriceVerdict.Ok ?: return
+    DealLadder(verdict = v, askingLkr = askingLkr, modifier = modifier)
+}
+
+/**
+ * Deal ladder on the verdict bands: 5 %+ below typical · typical · 8 %+ above.
+ * The highlighted rung is the verdict's band, so it always agrees with the
+ * badge and gauge. Only drawn for an ok verdict.
+ */
+@Composable
+internal fun DealLadder(
+    verdict: lk.motormila.app.core.price.PriceVerdict.Ok,
+    askingLkr: Double?,
+    modifier: Modifier = Modifier,
+) {
+    if (askingLkr == null) return
+    val ref = verdict.referenceLkr
+    val belowPct = lk.motormila.app.core.price.PriceVerdicts.BELOW_PCT
+    val abovePct = lk.motormila.app.core.price.PriceVerdicts.ABOVE_PCT
     MotormilaSurface(modifier = modifier) {
         Text(
             stringResource(R.string.mm_deal_ladder),
@@ -1094,11 +1150,17 @@ internal fun DealLadder(askingLkr: Double?, fmvLkr: Double?, modifier: Modifier 
             color = MotormilaOnSurface,
         )
         Spacer(Modifier.height(8.dp))
-        val low = fmvLkr * 0.9
-        val high = fmvLkr * 1.1
-        LadderRung(stringResource(R.string.mm_ladder_great), low, askingLkr <= low)
-        LadderRung(stringResource(R.string.mm_ladder_fair), fmvLkr, askingLkr in low..high)
-        LadderRung(stringResource(R.string.mm_ladder_high), high, askingLkr > high)
+        LadderRung(
+            stringResource(R.string.mm_ladder_below, belowPct.toInt()),
+            ref * (1 - belowPct / 100.0),
+            verdict.band == lk.motormila.app.core.price.VerdictBand.BELOW,
+        )
+        LadderRung(stringResource(R.string.mm_ladder_typical), ref, verdict.band == lk.motormila.app.core.price.VerdictBand.FAIR)
+        LadderRung(
+            stringResource(R.string.mm_ladder_above, abovePct.toInt()),
+            ref * (1 + abovePct / 100.0),
+            verdict.band == lk.motormila.app.core.price.VerdictBand.ABOVE,
+        )
     }
 }
 
@@ -2135,12 +2197,12 @@ private fun openUrl(context: Context, url: String) {
     }
 }
 
-private fun shareListing(context: Context, listing: Listing, fmv: Fmv?) {
+private fun shareListing(context: Context, listing: Listing, verdict: lk.motormila.app.core.price.PriceVerdict?) {
     // Single share entry: FMV bitmap card + EXTRA_TEXT listing URL.
     // Web parity: singular /listing/{id} (App.tsx `/listing/:id`).
-    FmvShare.share(context, listing, fmv)
+    FmvShare.share(context, listing, verdict)
 }
 
-private fun shareWhatsApp(context: Context, listing: Listing, fmv: Fmv?) {
-    FmvShare.shareWhatsApp(context, listing, fmv)
+private fun shareWhatsApp(context: Context, listing: Listing, verdict: lk.motormila.app.core.price.PriceVerdict?) {
+    FmvShare.shareWhatsApp(context, listing, verdict)
 }

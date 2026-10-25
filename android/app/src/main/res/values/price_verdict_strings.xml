@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One price verdict (core/price/PriceVerdict.kt); same copy as web src/locales/*/listing.ts verdict.* keys. -->
+<resources>
+    <string name="mm_verdict_below">Priced %1$d%% below typical</string>
+    <string name="mm_verdict_above">Priced %1$d%% above typical</string>
+    <string name="mm_badge_below">%1$d%% below</string>
+    <string name="mm_badge_above">%1$d%% above</string>
+    <string name="mm_price_check_title">Price check</string>
+    <string name="mm_verdict_withheld_price">Asking price can\'t be rated</string>
+    <string name="mm_verdict_withheld_lease">Lease, rental or part-payment price</string>
+    <string name="mm_verdict_withheld_parts">Parts or damaged vehicle</string>
+    <string name="mm_verdict_withheld_inconsistent">Price doesn\'t line up with comparable ads</string>
+    <string name="mm_verdict_withheld_insufficient">Not enough comparable data</string>
+    <string name="mm_verdict_withheld_body_price">The price on this ad doesn\'t look like a full vehicle price (missing, a placeholder or too low), so we don\'t compare it.</string>
+    <string name="mm_verdict_withheld_body_lease">The ad looks like a lease takeover, rental or down payment, so the number isn\'t the full price. We don\'t compare it with typical prices.</string>
+    <string name="mm_verdict_withheld_body_parts">The ad looks like parts or a damaged vehicle, so typical prices for running vehicles don\'t apply.</string>
+    <string name="mm_verdict_withheld_body_inconsistent">This price is too far from comparable ads, or our estimates disagree, to rate it reliably. Check the ad details with the seller.</string>
+    <string name="mm_verdict_withheld_body_insufficient">We don\'t have enough similar ads to judge this price with confidence. Compare a few similar ads yourself.</string>
+    <string name="mm_ladder_below">%1$d%%+ below typical</string>
+    <string name="mm_ladder_typical">Typical asking price</string>
+    <string name="mm_ladder_above">%1$d%%+ above typical</string>
+    <string name="mm_fmv_hint">Typical asking price · %1$s confidence · tap to explain</string>
+    <string name="mm_conf_high">high</string>
+    <string name="mm_conf_medium">medium</string>
+    <string name="mm_conf_low">low</string>
+    <string name="mm_fmv_explain_sample">Based on %1$d similar ads · %2$s confidence</string>
+    <string name="mm_method_cohort">Method: typical asking price of similar ads</string>
+    <string name="mm_method_adjusted">Method: similar ads, adjusted for mileage and area</string>
+    <string name="mm_method_model">Method: price model fitted on similar ads</string>
+    <string name="share_card_typical">Typical asking %1$s</string>
+</resources>

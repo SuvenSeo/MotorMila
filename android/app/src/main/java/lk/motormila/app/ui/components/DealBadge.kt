@@ -46,25 +46,30 @@ fun DealBadge(
     score: Double?,
     modifier: Modifier = Modifier,
     lockedLabel: String = "PRO",
+    /** Whole percent from the one price verdict; when set the pill reads "12% below" / "Near typical" / "9% above". */
+    pct: Int? = null,
 ) {
+    val belowText = pct?.let { stringResource(lk.motormila.app.R.string.mm_badge_below, it) }
+    val aboveText = pct?.let { stringResource(lk.motormila.app.R.string.mm_badge_above, it) }
+    val nearText = stringResource(lk.motormila.app.R.string.mm_deal_fair)
     val style = when (band) {
         DealBand.GREAT -> DealBadgeStyle(
             container = MotormilaGoodContainer,
             content = lk.motormila.app.ui.theme.MotormilaGoodText,
             border = MotormilaGoodSoft,
-            text = if (score != null) "GREAT %.1f".format(score) else "GREAT",
+            text = belowText ?: if (score != null) "GREAT %.1f".format(score) else "GREAT",
         )
         DealBand.FAIR -> DealBadgeStyle(
             container = MotormilaPrimaryContainer,
             content = lk.motormila.app.ui.theme.MotormilaPrimaryBright,
             border = MotormilaPrimaryBorder,
-            text = if (score != null) "FAIR %.1f".format(score) else "FAIR",
+            text = if (pct != null) nearText else if (score != null) "FAIR %.1f".format(score) else "FAIR",
         )
         DealBand.HIGH -> DealBadgeStyle(
             container = androidx.compose.ui.graphics.Color(0x2EEF4444),
             content = lk.motormila.app.ui.theme.MotormilaBadText,
             border = androidx.compose.ui.graphics.Color(0x55EF4444),
-            text = "HIGH",
+            text = aboveText ?: "HIGH",
         )
         DealBand.LOCKED -> DealBadgeStyle(
             container = lk.motormila.app.ui.theme.MotormilaSurfaceHighest,

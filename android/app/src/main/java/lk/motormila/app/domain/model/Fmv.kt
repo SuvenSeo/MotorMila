@@ -14,8 +14,21 @@ data class Fmv(
     val label: String,
     val method: String?,
     val sampleCount: Int,
-    /** Backend confidence token: "high" | "medium" | "low". */
+    /** Backend confidence token: "high" | "medium" | "low" | "none". */
     val confidence: String,
+    /** Backend `verdict.reason` when the backend withheld the price verdict (fmv_lkr is null then). */
+    val withheldReason: String? = null,
+    /** Raw estimate even when the verdict is withheld (`estimate_lkr`); never shown as a verdict. */
+    val estimateLkr: Double? = null,
 ) {
-    val hasSignal: Boolean get() = fmvLkr != null && band != DealBand.LOCKED
+    val hasSignal: Boolean get() = fmvLkr != null && band != DealBand.LOCKED && withheldReason == null
+
+    /** What the one price verdict (core/price/PriceVerdict.kt) reads from this estimate. */
+    fun toReference(): lk.motormila.app.core.price.FmvReference = lk.motormila.app.core.price.FmvReference(
+        fmvLkr = fmvLkr,
+        sampleSize = sampleCount,
+        confidence = confidence,
+        method = method,
+        withheldReason = withheldReason,
+    )
 }

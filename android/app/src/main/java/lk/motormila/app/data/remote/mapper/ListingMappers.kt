@@ -1,5 +1,10 @@
 package lk.motormila.app.data.remote.mapper
 
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import lk.motormila.app.core.price.PriceContext
+import lk.motormila.app.core.price.PriceVerdicts
 import lk.motormila.app.data.local.db.entity.ListingEntity
 import lk.motormila.app.data.local.db.entity.PricePointEntity
 import lk.motormila.app.data.remote.dto.ComparableVehicleDto
@@ -32,9 +37,27 @@ import lk.motormila.app.domain.model.ValuationInput
 /**
  * DTO <-> domain <-> entity mappings for listings, FMV, history, seller.
  * Free-plan rule: backend nulls deal_score/market_median -> domain keeps nulls
- * and [Listing.dealBand] reports LOCKED. Never default them to 0.
+ * and [Listing.dealBand] reports LOCKED. Never default them to 0. Implausible
+ * stored signals are dropped the same way (see ListingDto.toDomain).
  */
-fun ListingDto.toDomain(): Listing = Listing(
+fun ListingDto.toDomain(): Listing {
+    // Data-boundary guard (same as web normalizeListing / backend CarListingRead):
+    // a stored score/median whose comparison the one verdict withholds (mixed
+    // "Other" cohort, unit slip, placeholder / lease / parts price, > ±60 %) is
+    // dropped, so no card, sort or badge shows "90 % below typical".
+    val plausible = PriceVerdicts.storedSignalIsPlausible(
+        priceLkr = priceLkr,
+        marketMedianLkr = marketMedianLkr,
+        dealScore = dealScore,
+        ctx = PriceContext(category = vehicleCategory, model = model, title = title),
+    )
+    return toDomainRaw(
+        dealScore = if (plausible) dealScore else null,
+        marketMedianLkr = if (plausible) marketMedianLkr else null,
+    )
+}
+
+private fun ListingDto.toDomainRaw(dealScore: Double?, marketMedianLkr: Double?): Listing = Listing(
     id = id,
     title = title ?: "",
     make = make,
@@ -210,20 +233,27 @@ fun SellerProfileDto.toDomain(): SellerProfile = SellerProfile(
 
 /**
  * FMV dict keys vary by backend method (adjusted-median vs OLS-ML).
- * Resolution order: explicit fmv -> predicted -> market median fallback (LOCKED).
+ * Resolution order: explicit fmv -> predicted. The current backend also sends
+ * the one price verdict object; when it says `withheld`, fmv_lkr is null and
+ * the band is LOCKED (no rating), whatever the legacy fields say.
+ * Bands follow the verdict thresholds: deal_score (positive = below typical)
+ * >= 5 below, <= -8 above, otherwise near typical.
  */
 fun FmvDto.toDomain(askingFallbackLkr: Double = 0.0): Fmv {
     val asking = askingLkr ?: askingPriceLkr ?: askingFallbackLkr
-    val fmv = fmvLkr ?: predictedPriceLkr
-    val delta = deltaPct ?: priceGapPct?.let { -it }
-    val score = dealScore
-    val band = when {
-        fmv == null || score == null -> DealBand.LOCKED
-        score >= 8 -> DealBand.GREAT
-        score >= 0 -> DealBand.FAIR
-        else -> DealBand.HIGH
+    val verdictObj = verdict as? JsonObject
+    val verdictStatus = (verdictObj?.get("status") as? JsonPrimitive)?.contentOrNull
+    val withheldReason = if (verdictStatus == "withheld") {
+        (verdictObj?.get("reason") as? JsonPrimitive)?.contentOrNull ?: "low_confidence"
+    } else {
+        null
     }
-    val label = label ?: verdict ?: when (band) {
+    val fmv = if (withheldReason != null) null else fmvLkr ?: predictedPriceLkr
+    val delta = if (withheldReason != null) null else deltaPct ?: priceGapPct?.let { -it }
+    val score = if (withheldReason != null) null else dealScore?.takeIf { kotlin.math.abs(it) <= PriceVerdicts.MAX_PLAUSIBLE_GAP_PCT }
+    val band = dealBandForScore(if (fmv == null) null else score)
+    val legacyLabel = (verdict as? JsonPrimitive)?.contentOrNull
+    val label = label ?: legacyLabel ?: when (band) {
         DealBand.GREAT -> "great_deal"
         DealBand.FAIR -> "fair"
         DealBand.HIGH -> "overpriced"
@@ -237,9 +267,19 @@ fun FmvDto.toDomain(askingFallbackLkr: Double = 0.0): Fmv {
         band = band,
         label = label,
         method = method ?: methodology,
-        sampleCount = sampleCount ?: comparableCount ?: 0,
+        sampleCount = sampleSize ?: sampleCount ?: comparableCount ?: 0,
         confidence = confidence ?: "low",
+        withheldReason = withheldReason,
+        estimateLkr = estimateLkr ?: fmv,
     )
+}
+
+/** deal_score (positive = below typical) -> band on the verdict thresholds (−5 % / +8 %). */
+fun dealBandForScore(score: Double?): DealBand = when {
+    score == null -> DealBand.LOCKED
+    score >= PriceVerdicts.BELOW_PCT -> DealBand.GREAT
+    score <= -PriceVerdicts.ABOVE_PCT -> DealBand.HIGH
+    else -> DealBand.FAIR
 }
 
 fun ComparableVehicleDto.toDomain(): Comparable = Comparable(

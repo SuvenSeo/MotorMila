@@ -18,9 +18,8 @@ import androidx.core.net.toUri
 import java.io.File
 import java.io.FileOutputStream
 import lk.motormila.app.R
-import lk.motormila.app.core.format.LkrFormat
-import lk.motormila.app.domain.model.DealBand
-import lk.motormila.app.domain.model.Fmv
+import lk.motormila.app.core.price.PriceVerdict
+import lk.motormila.app.core.price.VerdictBand
 import lk.motormila.app.domain.model.Listing
 
 /**
@@ -50,18 +49,18 @@ object FmvShare {
     const val WHATSAPP_PACKAGE = "com.whatsapp"
     const val WHATSAPP_BUSINESS_PACKAGE = "com.whatsapp.w4b"
 
-    fun share(context: Context, listing: Listing, fmv: Fmv?) {
+    fun share(context: Context, listing: Listing, verdict: PriceVerdict?) {
         val text = listingShareText(listing)
         val sent = runCatching {
-            val file = writeSharePng(context, listing, fmv)
+            val file = writeSharePng(context, listing, verdict)
             startImageShare(context, file, text, packageName = null)
         }.isSuccess
         if (!sent) shareTextOnly(context, text)
     }
 
-    fun shareWhatsApp(context: Context, listing: Listing, fmv: Fmv?) {
+    fun shareWhatsApp(context: Context, listing: Listing, verdict: PriceVerdict?) {
         val text = listingShareText(listing)
-        val png = runCatching { writeSharePng(context, listing, fmv) }.getOrNull()
+        val png = runCatching { writeSharePng(context, listing, verdict) }.getOrNull()
         if (png != null) {
             val imageSent = listOf(WHATSAPP_PACKAGE, WHATSAPP_BUSINESS_PACKAGE).any { pkg ->
                 runCatching { startImageShare(context, png, text, packageName = pkg) }.isSuccess
@@ -72,7 +71,7 @@ object FmvShare {
             val waMe = "https://wa.me/?text=${Uri.encode(text)}".toUri()
             context.startActivity(Intent(Intent.ACTION_VIEW, waMe))
         } catch (_: Exception) {
-            share(context, listing, fmv)
+            share(context, listing, verdict)
         }
     }
 
@@ -130,8 +129,8 @@ object FmvShare {
         }
     }
 
-    private fun writeSharePng(context: Context, listing: Listing, fmv: Fmv?): File {
-        val bitmap = renderShareCard(context, listing, fmv)
+    private fun writeSharePng(context: Context, listing: Listing, verdict: PriceVerdict?): File {
+        val bitmap = renderShareCard(context, listing, verdict)
         val dir = File(context.cacheDir, "share").apply { mkdirs() }
         val file = File(dir, "listing-${listing.id}.png")
         FileOutputStream(file).use { out ->
@@ -143,7 +142,7 @@ object FmvShare {
         return file
     }
 
-    private fun renderShareCard(context: Context, listing: Listing, fmv: Fmv?): Bitmap {
+    private fun renderShareCard(context: Context, listing: Listing, verdict: PriceVerdict?): Bitmap {
         val brandBlue = ContextCompat.getColor(context, R.color.motormila_gold) // remapped to Motormila Blue #0A7AFF (gold purge)
         val bg = ContextCompat.getColor(context, R.color.motormila_bg)
         val bitmap = Bitmap.createBitmap(CARD_WIDTH, CARD_HEIGHT, Bitmap.Config.ARGB_8888)
@@ -179,14 +178,18 @@ object FmvShare {
         canvas.drawText(lk.motormila.app.ui.common.mn(listing.priceLkr), pad, y, textPaint(brandBlue, 72f, bold = true))
         y += 68f
 
-        val fmvLine = fmvPriceCaption(context, fmv)
-        if (fmvLine != null) {
-            canvas.drawText(fmvLine, pad, y, textPaint(Color.WHITE, 32f, bold = false))
+        // Same verdict as the detail screen: typical price + band only when it
+        // stands; a withheld verdict shares the price alone (never a fake call).
+        val ok = verdict as? PriceVerdict.Ok
+        if (ok != null) {
+            canvas.drawText(
+                context.getString(R.string.share_card_typical, lk.motormila.app.ui.common.mn(ok.referenceLkr)),
+                pad,
+                y,
+                textPaint(Color.WHITE, 32f, bold = false),
+            )
             y += 52f
-        }
-        val band = fmvBandCaption(context, fmv)
-        if (band != null && fmv != null) {
-            drawBandPill(canvas, pad, y - 28f, band, bandColor(fmv.band))
+            drawBandPill(canvas, pad, y - 28f, verdictCaption(context, ok), verdictColor(ok))
         }
 
         val footer = textPaint(0xFF8E8E93.toInt(), 26f, bold = false).apply {
@@ -201,29 +204,18 @@ object FmvShare {
         return bitmap
     }
 
-    private fun fmvPriceCaption(context: Context, fmv: Fmv?): String? {
-        if (fmv == null || !fmv.hasSignal) return null
-        val value = fmv.fmvLkr ?: return null
-        return context.getString(R.string.share_card_fmv, lk.motormila.app.ui.common.mn(value))
+    private fun verdictCaption(context: Context, v: PriceVerdict.Ok): String = when {
+        v.verifyFirst -> context.getString(R.string.mm_deal_verify)
+        v.band == VerdictBand.BELOW -> context.getString(R.string.mm_verdict_below, v.pct)
+        v.band == VerdictBand.ABOVE -> context.getString(R.string.mm_verdict_above, v.pct)
+        else -> context.getString(R.string.mm_deal_near_typical)
     }
 
-    private fun fmvBandCaption(context: Context, fmv: Fmv?): String? {
-        if (fmv == null || !fmv.hasSignal) return null
-        val band = when (fmv.band) {
-            DealBand.GREAT -> context.getString(R.string.share_deal_great)
-            DealBand.FAIR -> context.getString(R.string.share_deal_fair)
-            DealBand.HIGH -> context.getString(R.string.share_deal_high)
-            DealBand.LOCKED -> return null
-        }
-        val delta = fmv.deltaPct?.let { LkrFormat.deltaPct(it) }?.takeIf { it.isNotBlank() }
-        return if (delta != null) "$band · $delta" else band
-    }
-
-    private fun bandColor(band: DealBand): Int = when (band) {
-        DealBand.GREAT -> 0xFF00C853.toInt()
-        DealBand.FAIR -> 0xFF0A7AFF.toInt()
-        DealBand.HIGH -> 0xFFEF4444.toInt()
-        DealBand.LOCKED -> 0xFF8E8E93.toInt()
+    private fun verdictColor(v: PriceVerdict.Ok): Int = when {
+        v.verifyFirst -> 0xFFF59F0A.toInt()
+        v.band == VerdictBand.BELOW -> 0xFF00C853.toInt()
+        v.band == VerdictBand.ABOVE -> 0xFFEF4444.toInt()
+        else -> 0xFF0A7AFF.toInt()
     }
 
     private fun drawBandPill(canvas: Canvas, x: Float, y: Float, text: String, color: Int) {

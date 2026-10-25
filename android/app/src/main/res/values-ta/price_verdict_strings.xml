@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One price verdict (core/price/PriceVerdict.kt); same copy as web src/locales/*/listing.ts verdict.* keys. -->
+<resources>
+    <string name="mm_verdict_below">வழக்கமான விலையை விட %1$d%% குறைவு</string>
+    <string name="mm_verdict_above">வழக்கமான விலையை விட %1$d%% அதிகம்</string>
+    <string name="mm_badge_below">%1$d%% குறைவு</string>
+    <string name="mm_badge_above">%1$d%% அதிகம்</string>
+    <string name="mm_price_check_title">விலைச் சரிபார்ப்பு</string>
+    <string name="mm_verdict_withheld_price">இந்தக் கேட்கும் விலையை மதிப்பிட முடியாது</string>
+    <string name="mm_verdict_withheld_lease">லீசிங், வாடகை அல்லது பகுதிக் கட்டண விலை</string>
+    <string name="mm_verdict_withheld_parts">உதிரிபாகங்கள் அல்லது சேதமடைந்த வாகனம்</string>
+    <string name="mm_verdict_withheld_inconsistent">விலை ஒத்த விளம்பரங்களுடன் பொருந்தவில்லை</string>
+    <string name="mm_verdict_withheld_insufficient">போதுமான ஒப்பீட்டுத் தரவு இல்லை</string>
+    <string name="mm_verdict_withheld_body_price">இந்த விளம்பரத்தில் உள்ள விலை முழு வாகன விலையாகத் தெரியவில்லை (இல்லை, மாதிரி எண் அல்லது மிகக் குறைவு), எனவே நாங்கள் அதை ஒப்பிடுவதில்லை.</string>
+    <string name="mm_verdict_withheld_body_lease">இந்த விளம்பரம் லீசிங் கைமாற்றம், வாடகை அல்லது முன்பணம் போலத் தெரிகிறது, எனவே இந்த எண் முழு விலை அல்ல. அதை வழக்கமான விலைகளுடன் நாங்கள் ஒப்பிடுவதில்லை.</string>
+    <string name="mm_verdict_withheld_body_parts">இந்த விளம்பரம் உதிரிபாகங்கள் அல்லது சேதமடைந்த வாகனம் போலத் தெரிகிறது, எனவே ஓடும் வாகனங்களின் வழக்கமான விலைகள் பொருந்தாது.</string>
+    <string name="mm_verdict_withheld_body_inconsistent">இந்த விலை ஒத்த விளம்பரங்களிலிருந்து மிகவும் விலகியுள்ளது, அல்லது எங்கள் மதிப்பீடுகள் முரண்படுகின்றன, எனவே நம்பகமாக மதிப்பிட முடியாது. விளம்பர விவரங்களை விற்பனையாளரிடம் உறுதிப்படுத்துங்கள்.</string>
+    <string name="mm_verdict_withheld_body_insufficient">இந்த விலையை நம்பிக்கையுடன் மதிப்பிட போதுமான ஒத்த விளம்பரங்கள் எங்களிடம் இல்லை. சில ஒத்த விளம்பரங்களை நீங்களே ஒப்பிடுங்கள்.</string>
+    <string name="mm_ladder_below">வழக்கத்தை விட %1$d%%+ குறைவு</string>
+    <string name="mm_ladder_typical">வழக்கமான கேட்கும் விலை</string>
+    <string name="mm_ladder_above">வழக்கத்தை விட %1$d%%+ அதிகம்</string>
+    <string name="mm_fmv_hint">வழக்கமான கேட்கும் விலை · நம்பகத்தன்மை %1$s · விளக்கத்துக்குத் தட்டவும்</string>
+    <string name="mm_conf_high">உயர்</string>
+    <string name="mm_conf_medium">நடுத்தர</string>
+    <string name="mm_conf_low">குறைந்த</string>
+    <string name="mm_fmv_explain_sample">%1$d ஒத்த விளம்பரங்களின் அடிப்படையில் · நம்பகத்தன்மை %2$s</string>
+    <string name="mm_method_cohort">முறை: ஒத்த விளம்பரங்களின் வழக்கமான கேட்கும் விலை</string>
+    <string name="mm_method_adjusted">முறை: ஓட்ட தூரம் மற்றும் பகுதிக்கு ஏற்ப சரிசெய்த ஒத்த விளம்பரங்கள்</string>
+    <string name="mm_method_model">முறை: ஒத்த விளம்பரங்களில் பொருத்திய விலை மாதிரி</string>
+    <string name="share_card_typical">வழக்கமான கேட்கும் விலை %1$s</string>
+</resources>

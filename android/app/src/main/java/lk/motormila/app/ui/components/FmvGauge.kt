@@ -33,12 +33,27 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import lk.motormila.app.core.format.LkrFormat
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.Icon
+import androidx.compose.ui.text.style.TextAlign
+import lk.motormila.app.core.price.PriceContext
+import lk.motormila.app.core.price.PriceVerdict
+import lk.motormila.app.core.price.PriceVerdicts
 import lk.motormila.app.domain.model.Fmv
+import lk.motormila.app.ui.theme.MmColors
+import lk.motormila.app.ui.theme.MmDealTone
+import lk.motormila.app.ui.theme.MmType
+import lk.motormila.app.ui.theme.deal
 import lk.motormila.app.ui.theme.applePress
 
 /**
- * 120dp semicircular FMV gauge. Needle position = asking vs FMV band.
- * [onExplainClick] opens the explain sheet (owned by DetailScreen).
+ * Legacy entry (previews / tests that only hold an [Fmv]): resolves the one
+ * verdict from the estimate alone, then draws [FmvGauge].
  */
 @Composable
 fun FmvGauge(
@@ -46,13 +61,35 @@ fun FmvGauge(
     onExplainClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val verdict = remember(fmv) {
+        PriceVerdicts.resolve(fmv.askingLkr, null, PriceContext(), fmv.toReference())
+    }
+    FmvGauge(verdict = verdict, askingLkr = fmv.askingLkr, confidence = fmv.confidence, onExplainClick = onExplainClick, modifier = modifier)
+}
+
+/**
+ * 120dp semicircular price gauge driven by THE price verdict (the same one the
+ * deal badge, ladder and share card read). Arc segments sit on the verdict
+ * bands (−5 % / +8 %), so the needle can never point at a colour the badge
+ * contradicts. A withheld verdict draws no gauge: [WithheldPriceCard] says why.
+ * [onExplainClick] opens the explain sheet (owned by DetailScreen).
+ */
+@Composable
+fun FmvGauge(
+    verdict: PriceVerdict,
+    askingLkr: Double?,
+    confidence: String?,
+    onExplainClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (verdict !is PriceVerdict.Ok || askingLkr == null) {
+        WithheldPriceCard(verdict as? PriceVerdict.Withheld ?: PriceVerdict.Withheld(lk.motormila.app.core.price.WithheldReason.NO_PRICE, null), modifier)
+        return
+    }
     val reducedMotion = rememberReducedMotion()
     var started by remember { mutableStateOf(false) }
-    LaunchedEffect(fmv) { started = true }
-    val fraction = when {
-        fmv.fmvLkr == null || fmv.fmvLkr <= 0 -> 0.5f
-        else -> (((fmv.askingLkr / fmv.fmvLkr) - 0.7) / 0.6).toFloat()
-    }.coerceIn(0f, 1f)
+    LaunchedEffect(verdict) { started = true }
+    val fraction = gaugeFraction(askingLkr / verdict.referenceLkr)
     val animated by animateFloatAsState(
         // Signature needle: sweeps in from the left stop, overshoots past the
         // reading and settles with a damped wobble (under-damped spring).
@@ -60,20 +97,24 @@ fun FmvGauge(
         animationSpec = if (reducedMotion) snap() else spring(dampingRatio = 0.42f, stiffness = 110f),
         label = "fmv-needle",
     )
-    val track = MaterialTheme.colorScheme.surfaceVariant
-    val good = MaterialTheme.colorScheme.primary
-    val warn = MaterialTheme.colorScheme.secondary
-    val bad = MaterialTheme.colorScheme.error
+    val c = MmColors.current
+    val track = c.surfaceHigh
+    val good = c.dealGood
+    val fair = c.dealFair
+    val high = c.dealHigh
     // Needle follows the text colour so it reads on light and dark cards.
     val needle = MaterialTheme.colorScheme.onSurface
     val hub = MaterialTheme.colorScheme.surface
     val gaugePress = remember { MutableInteractionSource() }
+    val headline = verdict.headline()
+    val toneColors = c.deal(verdict.tone)
+    val typicalLabel = androidx.compose.ui.res.stringResource(lk.motormila.app.R.string.mm_why_typical)
     Column(
         modifier = modifier
             .applePress(gaugePress)
             .semantics {
-                contentDescription = "Fair market value ${LkrFormat.full(fmv.fmvLkr)}, " +
-                    "asking ${LkrFormat.full(fmv.askingLkr)}, ${fmv.label}"
+                contentDescription = "$headline. $typicalLabel ${LkrFormat.full(verdict.referenceLkr)}, " +
+                    "${LkrFormat.full(askingLkr)}"
             }
             .clickable(
                 role = Role.Button,
@@ -86,8 +127,7 @@ fun FmvGauge(
     ) {
         Canvas(modifier = Modifier.width(120.dp).height(68.dp)) {
             val stroke = 10.dp.toPx()
-            // A true semicircle whose centre is the needle pivot (the arc used
-            // to fill the 120x68 box as an ellipse, leaving the pivot below it).
+            // A true semicircle whose centre is the needle pivot.
             val cx = size.width / 2f
             val cy = size.height - stroke / 2f
             val arcR = minOf(size.width / 2f - stroke / 2f, cy - stroke / 2f)
@@ -102,12 +142,18 @@ fun FmvGauge(
                 size = arcSize,
                 style = Stroke(width = stroke, cap = StrokeCap.Butt),
             )
-            val thirds = listOf(good, good, warn, warn, bad, bad)
-            thirds.forEachIndexed { i, c ->
+            // Segments on the verdict bands: below | near typical | above.
+            val belowEnd = gaugeFraction(1 - PriceVerdicts.BELOW_PCT / 100.0) * 180f
+            val aboveStart = gaugeFraction(1 + PriceVerdicts.ABOVE_PCT / 100.0) * 180f
+            listOf(
+                Triple(0f, belowEnd, good),
+                Triple(belowEnd, aboveStart - belowEnd, fair),
+                Triple(aboveStart, 180f - aboveStart, high),
+            ).forEach { (start, sweep, color) ->
                 drawArc(
-                    color = c,
-                    startAngle = 180f + i * 30f,
-                    sweepAngle = 30f,
+                    color = color,
+                    startAngle = 180f + start,
+                    sweepAngle = sweep,
                     useCenter = false,
                     topLeft = arcTopLeft,
                     size = arcSize,
@@ -126,15 +172,48 @@ fun FmvGauge(
             drawCircle(hub, radius = 2.dp.toPx(), center = Offset(cx, cy))
         }
         Text(
-            text = LkrFormat.full(fmv.fmvLkr),
+            text = headline,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 13.sp,
+            color = if (verdict.tone == MmDealTone.FAIR) c.textPrimary else toneColors.solid,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = LkrFormat.full(verdict.referenceLkr),
             fontWeight = FontWeight.Bold,
             fontSize = 15.sp,
             color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
-            text = androidx.compose.ui.res.stringResource(lk.motormila.app.R.string.mm_fmv_confidence_hint, fmv.confidence),
+            text = androidx.compose.ui.res.stringResource(lk.motormila.app.R.string.mm_fmv_hint, confidenceWord(confidence)),
             fontSize = 11.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
         )
+    }
+}
+
+/** Asking / typical ratio 0.7…1.3 → 0…1 along the arc. */
+private fun gaugeFraction(ratio: Double): Float = ((ratio - 0.7) / 0.6).toFloat().coerceIn(0f, 1f)
+
+/**
+ * No rating, said plainly: why we don't compare this price (unusable price,
+ * lease / rent, parts, inconsistent or too little data). Never a fake number.
+ */
+@Composable
+fun WithheldPriceCard(verdict: PriceVerdict.Withheld, modifier: Modifier = Modifier) {
+    val c = MmColors.current
+    val t = MmType.current
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            androidx.compose.ui.res.stringResource(lk.motormila.app.R.string.mm_price_check_title),
+            style = t.labelS,
+            color = c.textSecondary,
+        )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(Icons.Outlined.Info, contentDescription = null, tint = c.textSecondary, modifier = Modifier.size(18.dp))
+            Text(verdict.headline(), style = t.titleS, color = c.textPrimary)
+        }
+        Text(verdict.detail(), style = t.bodyS, color = c.textSecondary)
     }
 }
