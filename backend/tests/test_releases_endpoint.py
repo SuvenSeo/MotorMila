@@ -207,3 +207,30 @@ def test_github_fallback_disabled_without_explicit_repo(monkeypatch, client):
 
     assert response.status_code == 200
     assert response.json()["source"] == "none"
+
+
+def test_release_endpoint_passes_manifest_sha256_through(monkeypatch, client):
+    """The in-app updater refuses an APK without its SHA-256; /releases/app is
+    its fallback when the site manifest is unreachable, so it must carry it."""
+    monkeypatch.delenv("APP_RELEASE_VERSION", raising=False)
+    monkeypatch.setattr(
+        releases.urllib.request,
+        "urlopen",
+        lambda *_a, **_k: _FakeResponse(
+            {
+                "version": "1.7.2",
+                "version_code": 20,
+                "apk_url": "https://example.test/motormila-1.7.2.apk",
+                "published_at": "2026-10-25T11:39:00Z",
+                "sha256": "b83ed83726bb591cbb1835fff84de69b3946f2cfbe86b10c78277ed7e4fe6b9a",
+                "tag": "android-v1.7.2",
+            }
+        ),
+    )
+
+    body = client.get("/api/v1/releases/app").json()
+
+    assert body["version"] == "1.7.2"
+    assert body["version_code"] == 20
+    assert body["source"] == "site-manifest"
+    assert body["sha256"] == "b83ed83726bb591cbb1835fff84de69b3946f2cfbe86b10c78277ed7e4fe6b9a"
