@@ -1,4 +1,4 @@
-import { startTransition, useCallback, useEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { animate, motion, useMotionValue, type PanInfo } from "motion/react";
 import { duration, ease, spring, useReducedMotionOrLowData } from "@/lib/motion";
 import { AnimatedNumber } from "@/components/ui/animated-number";
@@ -66,7 +66,10 @@ export function MobileFilterSheet({ open, onOpenChange, filters, onFiltersChange
     };
   }, [open]);
 
-  const debouncedDraft = useDebounced({ ...draft, page: 1 }, 250);
+  // Memoised: a fresh object every render re-armed the debounce, whose
+  // setState re-rendered the sheet, every 250 ms forever — even while closed.
+  const countDraft = useMemo(() => ({ ...draft, page: 1 }), [draft]);
+  const debouncedDraft = useDebounced(countDraft, 250);
   const countQuery = useQuery({
     queryKey: ["listings", debouncedDraft],
     queryFn: () => getListings(debouncedDraft),
