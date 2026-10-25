@@ -2,13 +2,14 @@
  * Trust Check — client-side risk signals for one listing.
  *
  * Everything here is phrased as a *signal to check*, never a verdict: we see
- * asking prices and ad text, not the car or its papers. Inputs are data the
+ * asking prices and ad text, not the vehicle or its papers. Inputs are data the
  * page already has (the listing row, its snapshot price history, the optional
  * history report with cross-site links). No extra network calls.
  */
 import { parseFlexibleTime } from "@/lib/parseTime";
 import { formatLkrCompact } from "@/lib/price";
 import { englishT, type TranslateFn } from "@/lib/translate";
+import { isPowerOfTenApart, listingRowVerdict, withheldVerdictDetail, withheldVerdictHeadline, type PriceVerdict } from "@/lib/priceVerdict";
 
 export type SignalLevel = "high" | "medium" | "info" | "ok";
 
@@ -31,6 +32,9 @@ export interface TrustListingInput {
   first_seen_at?: string | null;
   images?: unknown[] | null;
   thumbnail_url?: string | null;
+  vehicle_category?: string | null;
+  model?: string | null;
+  variant?: string | null;
 }
 
 export interface TrustRelatedListing {
@@ -51,6 +55,11 @@ export interface TrustInput {
   now?: number;
   /** Translator (useAppPreferences().t); English when omitted. */
   t?: TranslateFn;
+  /**
+   * The page's one price verdict (src/lib/priceVerdict.ts resolveListingVerdict).
+   * When omitted it is derived from the listing row, exactly like a card.
+   */
+  verdict?: PriceVerdict | null;
 }
 
 export interface TrustReport {
@@ -62,10 +71,14 @@ export interface TrustReport {
   crossSiteAvailable: boolean;
 }
 
-/** Below-market thresholds (fraction under the market median). */
-export const FAR_BELOW_MARKET = 0.3;
-export const BELOW_MARKET = 0.15;
-export const ABOVE_MARKET = 0.2;
+/**
+ * Risk levels for the price signal. The band and percent come from the one
+ * price verdict, so Trust Check always says what the FMV card and the deal
+ * badge say; these only decide how loudly. Deep discounts (≥ 35 %, the
+ * verdict's verify-first zone) are high, ≥ 15 % medium. Gaps beyond ±60 %
+ * are never shown as a percentage (the verdict is withheld).
+ */
+export const BELOW_MARKET_MEDIUM_PCT = 15;
 
 /**
  * Advance-payment / absent-seller wording seen in vehicle scams (police and
@@ -91,33 +104,39 @@ export function buildTrustReport(input: TrustInput): TrustReport {
   const signals: TrustSignal[] = [];
 
   const price = Number(listing.price_lkr);
-  const marketMedian = Number(listing.market_median_lkr);
-  const hasPrice = Number.isFinite(price) && price >= 100_000;
-  const hasMarket = Number.isFinite(marketMedian) && marketMedian > 0;
+  const hasPrice = Number.isFinite(price) && price > 0;
+  const verdict = input.verdict ?? listingRowVerdict(listing);
 
-  // 1) Price vs market band
-  if (hasPrice && hasMarket) {
-    const delta = (price - marketMedian) / marketMedian;
-    const pct = Math.round(Math.abs(delta) * 100);
-    if (delta <= -FAR_BELOW_MARKET) {
+  // 1) Price vs comparable ads — the one verdict, never a second median.
+  if (verdict.status === "ok") {
+    const pct = verdict.pct;
+    const median = fmtLkr(verdict.referenceLkr);
+    if (verdict.band === "below" && verdict.verifyFirst) {
       signals.push({
         id: "price-far-below",
         level: "high",
-        title: t("trust.sig.below.title", "Priced {pct}% below similar cars", { pct }),
-        detail: t("trust.sig.farBelow.detail", "Market median for comparable ads is about {median}. Prices this far under market are a common bait pattern. It can also mean damage, missing papers or a typo. See the car and the documents before paying anything.", { median: fmtLkr(marketMedian) }),
+        title: t("trust.sig.belowAds.title", "Priced {pct}% below similar ads", { pct }),
+        detail: t("trust.sig.farBelow.detail", "Market median for comparable ads is about {median}. Prices this far under market are a common bait pattern. It can also mean damage, missing papers or a typo. See the vehicle and the documents before paying anything.", { median }),
       });
-    } else if (delta <= -BELOW_MARKET) {
+    } else if (verdict.band === "below" && pct >= BELOW_MARKET_MEDIUM_PCT) {
       signals.push({
         id: "price-below",
         level: "medium",
-        title: t("trust.sig.below.title", "Priced {pct}% below similar cars", { pct }),
+        title: t("trust.sig.belowAds.title", "Priced {pct}% below similar ads", { pct }),
         detail: t("trust.sig.below.detail", "Could be a genuine deal. Ask why it's cheaper (accident history, repainting, overdue licence) and check it in person."),
       });
-    } else if (delta >= ABOVE_MARKET) {
+    } else if (verdict.band === "below") {
+      signals.push({
+        id: "price-below-slight",
+        level: "ok",
+        title: t("trust.sig.belowAds.title", "Priced {pct}% below similar ads", { pct }),
+        detail: t("trust.sig.belowSlight.detail", "A modest discount on the typical asking price for comparable ads (about {median}). Still check it in person.", { median }),
+      });
+    } else if (verdict.band === "above") {
       signals.push({
         id: "price-above",
         level: "info",
-        title: t("trust.sig.above.title", "Priced {pct}% above similar cars", { pct }),
+        title: t("trust.sig.aboveAds.title", "Priced {pct}% above similar ads", { pct }),
         detail: t("trust.sig.above.detail", "Not a risk on its own. Expect room to negotiate unless the spec or condition is unusually good."),
       });
     } else {
@@ -125,15 +144,28 @@ export function buildTrustReport(input: TrustInput): TrustReport {
         id: "price-in-band",
         level: "ok",
         title: t("trust.sig.inBand.title", "Price is in the normal market range"),
-        detail: t("trust.sig.inBand.detail", "Within about ±{band}% of the median for comparable ads ({median}).", { band: Math.round(BELOW_MARKET * 100), median: fmtLkr(marketMedian) }),
+        detail: t("trust.sig.inBand.detailTypical", "Close to the typical asking price for comparable ads (about {median}).", { median }),
       });
     }
-  } else {
+  } else if (verdict.group === "insufficient_data" && verdict.reason !== "generic_model") {
     signals.push({
       id: "price-no-band",
       level: "info",
       title: t("trust.sig.noBand.title", "Not enough comparable ads to judge the price"),
       detail: t("trust.sig.noBand.detail", "Treat the asking price with care and compare a few similar ads yourself."),
+    });
+  } else {
+    // A price that doesn't line up with comparable ads (or our two estimates
+    // disagree), a parts/damage ad or a lease/part-payment number is something
+    // to check with the seller, so it sits with "Worth checking", never below
+    // lesser notes like a missing mileage. An unusable or unratable price is
+    // only good to know.
+    const worthChecking = verdict.group === "inconsistent_data" || verdict.group === "parts_or_damaged" || verdict.group === "lease_or_rent";
+    signals.push({
+      id: "price-no-band",
+      level: worthChecking ? "medium" : "info",
+      title: withheldVerdictHeadline(verdict, t),
+      detail: withheldVerdictDetail(verdict, t),
     });
   }
 
@@ -143,9 +175,9 @@ export function buildTrustReport(input: TrustInput): TrustReport {
   if (hits.length) {
     signals.push({
       id: "scam-wording",
-      level: hits.length > 1 || (hasPrice && hasMarket && price < marketMedian * (1 - BELOW_MARKET)) ? "high" : "medium",
+      level: hits.length > 1 || (verdict.status === "ok" && verdict.band === "below" && verdict.pct >= BELOW_MARKET_MEDIUM_PCT) ? "high" : "medium",
       title: t("trust.sig.scam.title", "Ad wording matches common scam patterns"),
-      detail: t("trust.sig.scam.detail", "The ad {hits}. Never send an advance, deposit or \"booking fee\" before you've seen the car and its registration (CR) in person.", { hits: hits.join("; ") }),
+      detail: t("trust.sig.scam.detail", "The ad {hits}. Never send an advance, deposit or \"booking fee\" before you've seen the vehicle and its registration (CR) in person.", { hits: hits.join("; ") }),
     });
   }
 
@@ -157,7 +189,12 @@ export function buildTrustReport(input: TrustInput): TrustReport {
     if (others.length) {
       const sources = new Set(others.map((r) => String(r.source || "").toLowerCase()).filter(Boolean));
       if (listing.source) sources.add(String(listing.source).toLowerCase());
-      const otherPrices = others.map((r) => Number(r.price_lkr)).filter((p) => Number.isFinite(p) && p >= 100_000);
+      // Linked prices a power of ten apart, or > 2.5× apart, are a unit slip or a
+      // mismatched link, not a real price spread — never print "900% apart".
+      const otherPrices = others
+        .map((r) => Number(r.price_lkr))
+        .filter((p) => Number.isFinite(p) && p >= 100_000)
+        .filter((p) => !hasPrice || (!isPowerOfTenApart(p, price) && Math.max(p, price) / Math.min(p, price) <= 2.5));
       const spread = hasPrice && otherPrices.length ? Math.max(...otherPrices.map((p) => Math.abs(p - price) / price)) : 0;
       signals.push({
         id: "cross-site",
@@ -168,8 +205,8 @@ export function buildTrustReport(input: TrustInput): TrustReport {
             : t("trust.sig.cross.title", "Seen {n} times across {sites} sites", { n: others.length + 1, sites: sources.size }),
         detail:
           spread >= 0.15
-            ? t("trust.sig.cross.spread", "Linked ads for what looks like the same car show prices up to {pct}% apart. Ask the seller which price is current.", { pct: Math.round(spread * 100) })
-            : t("trust.sig.cross.same", "Same car, likely relisted or cross-posted. Normal for dealers. Check that the seller name matches across ads."),
+            ? t("trust.sig.cross.spread", "Linked ads for what looks like the same vehicle show prices up to {pct}% apart. Ask the seller which price is current.", { pct: Math.round(spread * 100) })
+            : t("trust.sig.cross.same", "Same vehicle, likely relisted or cross-posted. Normal for dealers. Check that the seller name matches across ads."),
       });
 
       // Odometer going down between observations of the same car
@@ -200,7 +237,7 @@ export function buildTrustReport(input: TrustInput): TrustReport {
           id: "odometer-drop",
           level: "high",
           title: t("trust.sig.odoDrop.title", "Mileage went down between linked ads"),
-          detail: t("trust.sig.odoDrop.detail", "An earlier ad for what looks like the same car showed {from} km. A later one shows {to} km. That can be a typo, a mismatched link or a rolled-back odometer. Ask for service records and emission-test reports, which log mileage.", { from: dropFrom.toLocaleString("en-LK"), to: dropTo.toLocaleString("en-LK") }),
+          detail: t("trust.sig.odoDrop.detail", "An earlier ad for what looks like the same vehicle showed {from} km. A later one shows {to} km. That can be a typo, a mismatched link or a rolled-back odometer. Ask for service records and emission-test reports, which log mileage.", { from: dropFrom.toLocaleString("en-LK"), to: dropTo.toLocaleString("en-LK") }),
         });
       }
     } else {
@@ -208,7 +245,7 @@ export function buildTrustReport(input: TrustInput): TrustReport {
         id: "cross-site-none",
         level: "ok",
         title: t("trust.sig.crossNone.title", "No duplicate ads found on other sites"),
-        detail: t("trust.sig.crossNone.detail", "We haven't linked this car to other ads in the sites we track."),
+        detail: t("trust.sig.crossNone.detail", "We haven't linked this vehicle to other ads in the sites we track."),
       });
     }
   }
@@ -225,7 +262,7 @@ export function buildTrustReport(input: TrustInput): TrustReport {
         id: "mileage-low",
         level: "medium",
         title: t("trust.sig.lowKm.title", "Very low mileage for its age"),
-        detail: t("trust.sig.lowKm.detail", "About {km} km a year over {age} years. That's possible, but it's also the pattern you'd see after an odometer rollback. Check wear on the pedals, seats and steering wheel against the stated mileage.", { km: Math.round(perYear).toLocaleString("en-LK"), age }),
+        detail: t("trust.sig.lowKm.detail", "About {km} km a year over {age} years. That's possible, but it's also the pattern you'd see after an odometer rollback. Check wear on the seats and controls (pedals, steering wheel or handlebar grips) against the stated mileage.", { km: Math.round(perYear).toLocaleString("en-LK"), age }),
       });
     }
   } else if (!(Number.isFinite(km) && km > 0)) {
@@ -243,10 +280,11 @@ export function buildTrustReport(input: TrustInput): TrustReport {
   const days = firstSeen !== null ? Math.max(0, Math.floor((now - firstSeen) / 86_400_000)) : null;
   if (points.length >= 2) {
     const cuts = points.slice(1).filter((p, i) => p.price_lkr < points[i].price_lkr).length;
-    if (cuts > 0) {
-      const first = points[0].price_lkr;
-      const last = points[points.length - 1].price_lkr;
-      const change = ((last - first) / first) * 100;
+    const first = points[0].price_lkr;
+    const last = points[points.length - 1].price_lkr;
+    const change = ((last - first) / first) * 100;
+    // A unit slip or a ≥ 50 % "cut" is a parse artefact, not a motivated seller.
+    if (cuts > 0 && change < 0 && change > -50 && !isPowerOfTenApart(first, last)) {
       signals.push({
         id: "price-cuts",
         level: "info",

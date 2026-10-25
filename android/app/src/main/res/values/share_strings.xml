@@ -4,8 +4,4 @@
     <string name="share_listing_chooser">Share listing</string>
     <string name="share_card_brand">MOTORMILA</string>
     <string name="share_card_footer">motormila.lk</string>
-    <string name="share_card_fmv">FMV %1$s</string>
-    <string name="share_deal_great">Great deal</string>
-    <string name="share_deal_fair">Fair</string>
-    <string name="share_deal_high">Overpriced</string>
 </resources>

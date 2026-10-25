@@ -1,15 +1,16 @@
 import { BadgeCheck, Minus, TrendingUp, Zap } from "lucide-react";
 
 /**
- * Unified 4-tier deal taxonomy — single source of truth for TRACK C.
- * Thresholds stay compatible with the 3-tier backend (deal_scores.py):
- * score = (1 - price/median) * 100. Steal is a subset of Good Deal
- * (score >= 8), so existing Good Deal callers keep working.
+ * 4-tier deal taxonomy on the ONE verdict's bands (src/lib/priceVerdict.ts):
+ * score = (1 - price/median) * 100 = −gap%. A tier can never disagree with
+ * the deal badge ("Near typical" vs "Overpriced").
  *
- * - Steal:      score >= 15  (deep below FMV)
- * - Great:      score >= 8   (Good Deal band)
- * - Fair:       score > -5   (within FMV band)
- * - Overpriced: score <= -5
+ * - Steal:      score >= 15  (deep below typical)
+ * - Great:      score >= 5   (verdict "below")
+ * - Fair:       −8 < score < 5 (verdict "fair")
+ * - Overpriced: score <= −8  (verdict "above")
+ *
+ * |score| > 60 never reaches here: the data boundary drops implausible scores.
  *
  * Colours: one semantic token per tier (src/styles/TOKENS.md) —
  * steal→deal-great, great→deal-good, fair→deal-fair, overpriced→deal-high.
@@ -17,8 +18,8 @@ import { BadgeCheck, Minus, TrendingUp, Zap } from "lucide-react";
 export type DealTier = "steal" | "great" | "fair" | "overpriced";
 
 export const STEAL_SCORE = 15;
-export const GREAT_SCORE = 8;
-export const OVERPRICED_SCORE = -5;
+export const GREAT_SCORE = 5;
+export const OVERPRICED_SCORE = -8;
 
 export function getDealTier(score: number | string | null | undefined): DealTier {
   const s = Number(score ?? 0);

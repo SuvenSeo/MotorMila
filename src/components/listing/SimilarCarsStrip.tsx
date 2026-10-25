@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { listingPriceContext } from "@/lib/priceVerdict";
 import { Link } from "react-router-dom";
 import useEmblaCarousel from "embla-carousel-react";
 import { ChevronLeft, ChevronRight, Car as CarIcon } from "lucide-react";
@@ -99,6 +100,7 @@ export function SimilarCarsStrip({ listings, fullAccess, title }: SimilarCarsStr
                 fmvLkr: Number.isFinite(median) && median > 0 ? median : null,
                 isLeaseTakeover: isLeaseTakeoverListing(s),
                 ratingAllowed: fullAccess && s.deal_score !== null && s.deal_score !== undefined,
+                ...listingPriceContext(s),
               });
               const name = `${canonicalizeMake(s.make) || s.make} ${canonicalizeModel(s.model) || s.model}`;
               const img = getListingImageList(s)[0] ?? null;

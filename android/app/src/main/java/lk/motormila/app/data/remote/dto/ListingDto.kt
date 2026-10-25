@@ -133,10 +133,18 @@ data class FmvDto(
     @SerialName("delta_pct") val deltaPct: Double? = null,
     @SerialName("price_gap_pct") val priceGapPct: Double? = null,
     val label: String? = null,
-    val verdict: String? = null,
+    /**
+     * Legacy backends sent a string label here; the current backend sends the
+     * one price verdict object `{status, reason, band, pct, …}`
+     * (backend/app/utils/price_verdict.py). JsonElement accepts both — a String
+     * field crashed decoding on the object.
+     */
+    val verdict: JsonElement? = null,
+    @SerialName("estimate_lkr") val estimateLkr: Double? = null,
     val method: String? = null,
     val methodology: String? = null,
     @SerialName("sample_count") val sampleCount: Int? = null,
+    @SerialName("sample_size") val sampleSize: Int? = null,
     @SerialName("comparable_count") val comparableCount: Int? = null,
     val confidence: String? = null,
 )

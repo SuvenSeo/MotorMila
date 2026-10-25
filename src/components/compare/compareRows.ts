@@ -1,4 +1,5 @@
 import type { CarListing } from "@/types/car";
+import { isVerdictOk, resolveListingVerdict, type PriceVerdict } from "@/lib/priceVerdict";
 import { computeCashToOwn, inferFinanceClass, DEFAULT_INTEREST_RATE_PCT, DEFAULT_TERM_YEARS } from "@/lib/cashToOwn";
 import { isReasonableListingPrice } from "@/lib/formatting";
 
@@ -7,6 +8,16 @@ export interface CompareFmv {
   fmv: number | null;
   confidence: "high" | "medium" | "low" | "none" | null;
   comps: number | null;
+  method?: string | null;
+  verdict?: { status: string; reason: string | null } | null;
+}
+
+/** The one price verdict for a compare column (same as that listing's detail page). */
+export function compareVerdict(l: CarListing, fmv: CompareFmv | undefined): PriceVerdict {
+  return resolveListingVerdict(
+    l,
+    fmv ? { fmv_lkr: fmv.fmv, sample_size: fmv.comps, confidence: fmv.confidence, method: fmv.method ?? null, verdict: fmv.verdict ?? null } : null,
+  );
 }
 
 export type CompareRowKey =
@@ -48,19 +59,16 @@ export function askingPrice(l: CarListing): number | null {
   return p !== null && isReasonableListingPrice(p) ? p : null;
 }
 
+/** FMV shown in compare — only when the verdict stands (never a number we don't trust). */
 export function fmvFor(l: CarListing, fmv: CompareFmv | undefined): number | null {
-  const live = num(fmv?.fmv);
-  if (live !== null && live > 0) return live;
-  const median = num(l.market_median_lkr);
-  return median !== null && median > 0 ? median : null;
+  const v = compareVerdict(l, fmv);
+  return isVerdictOk(v) ? v.referenceLkr : null;
 }
 
-/** Asking vs FMV in % (negative = below FMV). */
+/** Asking vs FMV in % (negative = below FMV); null when the verdict is withheld. */
 export function vsFmvPct(l: CarListing, fmv: CompareFmv | undefined): number | null {
-  const price = askingPrice(l);
-  const ref = fmvFor(l, fmv);
-  if (price === null || ref === null) return null;
-  return ((price - ref) / ref) * 100;
+  const v = compareVerdict(l, fmv);
+  return isVerdictOk(v) ? v.gapPct : null;
 }
 
 export interface MonthlyEstimate {

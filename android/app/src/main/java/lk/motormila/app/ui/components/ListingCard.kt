@@ -174,14 +174,14 @@ fun ListingCard(
     } else {
         Modifier
     }
-    val verdict = remember(listing.id, listing.priceLkr, listing.marketMedianLkr) {
-        MmDealVerdict.compute(
-            askingLkr = listing.priceLkr,
-            typicalLkr = listing.marketMedianLkr,
+    // The one price verdict from the row (same rules as the detail screen).
+    val verdict = remember(listing.id, listing.priceLkr, listing.marketMedianLkr, listing.title, listing.model) {
+        MmDealVerdict.from(
+            listing.rowVerdict(),
             isLeaseTakeover = MmLeaseTakeover.detect(listing.title, listing.model),
-            ratingAllowed = listing.dealScore != null,
         )
     }
+    val isPro = LocalIsPro.current
     val priceText = MmPriceFormat.compact(listing.priceLkr, stringResource(R.string.mm_price_on_request))
 
     MmCard(
@@ -231,7 +231,9 @@ fun ListingCard(
                             .align(Alignment.TopStart)
                             .padding(start = 10.dp, top = 10.dp, end = 52.dp),
                     )
-                } else if (listing.dealBand() == DealBand.LOCKED && listing.priceLkr != null) {
+                } else if (!isPro && listing.dealBand() == DealBand.LOCKED && listing.priceLkr != null) {
+                    // Pro lock only for non-Pro users (free rows carry no score);
+                    // a Pro user's unrated ad simply has no badge.
                     MmDealBadge(
                         band = DealBand.LOCKED,
                         onImage = true,

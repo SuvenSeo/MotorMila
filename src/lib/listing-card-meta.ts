@@ -1,4 +1,5 @@
 import { pickVehicleImageUrl } from "@/lib/listingImage";
+import { VERDICT_ABOVE_PCT, VERDICT_BELOW_PCT } from "@/lib/priceVerdict";
 import { parseFlexibleTime } from "@/lib/parseTime";
 import { englishT, type TranslateFn } from "@/lib/translate";
 
@@ -21,9 +22,10 @@ export function getListingImageUrl(listing: ListingImageSource): string | null {
   );
 }
 
+/** Band label for a stored deal score (= −gap %), on the one verdict's bands (−5 % / +8 %). */
 export function getListingDealLabel(rawScore: number, t: TranslateFn = englishT): string {
-  if (Number.isFinite(rawScore) && rawScore >= 8) return t("listingMeta.goodDeal", "Good Deal");
-  if (Number.isFinite(rawScore) && rawScore <= -5) return t("listingMeta.overpriced", "Overpriced");
+  if (Number.isFinite(rawScore) && rawScore >= VERDICT_BELOW_PCT) return t("listingMeta.goodDeal", "Good Deal");
+  if (Number.isFinite(rawScore) && rawScore <= -VERDICT_ABOVE_PCT) return t("listingMeta.overpriced", "Overpriced");
   return t("listingMeta.fairPrice", "Fair Price");
 }
 

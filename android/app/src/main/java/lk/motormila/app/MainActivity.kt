@@ -47,6 +47,9 @@ class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var settingsStore: SettingsStore
 
+    @Inject
+    lateinit var sessionStore: lk.motormila.app.data.local.datastore.SessionStore
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Light-first: dark icons on the light window until the persisted
         // theme is read (a dark-theme user flips to light icons on frame 1).
@@ -87,6 +90,12 @@ class MainActivity : AppCompatActivity() {
                 .collectAsState(initial = null)
             val reducePref by remember { settingsStore.observe().map { it.reduceTransparency } }
                 .collectAsState(initial = false)
+            // Pro (server plan or local Play entitlement): cards show the Pro lock only to non-Pro users.
+            val isPro by remember {
+                kotlinx.coroutines.flow.combine(sessionStore.observe(), sessionStore.observePlayPro()) { session, playPro ->
+                    session?.isPro == true || playPro
+                }
+            }.collectAsState(initial = false)
             val dark = when (themePref) {
                 "dark" -> true
                 "system" -> isSystemInDarkTheme()
@@ -110,6 +119,7 @@ class MainActivity : AppCompatActivity() {
                     val systemHighContrast = lk.motormila.app.ui.theme.rememberSystemHighContrastText()
                     androidx.compose.runtime.CompositionLocalProvider(
                         lk.motormila.app.ui.theme.LocalReduceTransparency provides (reducePref || systemHighContrast),
+                        lk.motormila.app.ui.components.LocalIsPro provides isPro,
                     ) {
                         MotormilaNavGraph(
                             sharedUrl = sharedUrl,

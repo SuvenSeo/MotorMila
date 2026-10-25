@@ -154,6 +154,39 @@ describe("api module", () => {
     expect(detail.body_type).toBeUndefined();
   });
 
+  it("drops the card rating when the backend withholds the detail verdict (price_withheld_reason)", async () => {
+    const row = (id: number, extra: Record<string, unknown>) => ({
+      id,
+      source: "ikman",
+      source_id: `ik-${id}`,
+      url: `https://ikman.lk/en/ad/example-${id}`,
+      title: "Perodua Viva 2011",
+      make: "Perodua",
+      model: "Viva",
+      year: 2011,
+      vehicle_category: "wagons",
+      price_lkr: 4190000,
+      deal_score: 5.8,
+      market_median_lkr: 4450000,
+      scraped_at: "2026-10-20T00:00:00Z",
+      first_seen_at: "2026-10-20T00:00:00Z",
+      ...extra,
+    });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ items: [row(1, { price_withheld_reason: "thin_comps" }), row(2, {})], total: 2 }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const api: typeof import("@/services/api") = await import("@/services/api");
+    const { listings } = await api.getListings({ sort: "newest", page: 1 });
+    const withheld = listings.find((l) => l.id === 1)!;
+    const rated = listings.find((l) => l.id === 2)!;
+    expect(withheld.deal_score ?? null).toBeNull();
+    expect(withheld.market_median_lkr).toBeUndefined();
+    expect(rated.market_median_lkr).toBe(4450000);
+  });
+
   it("sends source filter when requesting listings", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,

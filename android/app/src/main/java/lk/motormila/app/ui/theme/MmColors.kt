@@ -171,12 +171,13 @@ fun MmColors.deal(tone: MmDealTone): MmDealColors = when (tone) {
 }
 
 /**
- * Maps the domain [DealBand] onto a tone. Domain bands are GREAT (score >= 8),
- * FAIR (>= 0), HIGH (< 0), LOCKED (free tier). CAUTION is for verify-first
+ * Maps the domain [DealBand] onto a tone. Domain bands follow the one price
+ * verdict: GREAT (5 % or more below typical), FAIR, HIGH (8 % or more above),
+ * LOCKED (no rating). CAUTION is for verify-first
  * verdicts (see lk.motormila.app.ui.components.MmDealVerdict).
  */
 fun DealBand.tone(score: Double? = null): MmDealTone = when (this) {
-    // Web: great = score >= 15, good = score >= 8 (domain GREAT band).
+    // Web: great = 15 % or more below, good = 5 % or more below (domain GREAT band).
     DealBand.GREAT -> if (score != null && score >= 15) MmDealTone.GREAT else MmDealTone.GOOD
     DealBand.FAIR -> MmDealTone.FAIR
     DealBand.HIGH -> MmDealTone.HIGH

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { VERIFY_BELOW_PCT } from "@/lib/priceVerdict";
 import { Link, useNavigate } from "react-router-dom";
 import { m } from "motion/react";
 import { cleanDistrict, isPlausiblePriceDrop } from "@/lib/dataSanity";
@@ -260,7 +261,8 @@ export default function BestPicks() {
           .flatMap((r) => r.listings)
           .filter((l) => isReasonableListingPrice(Number(l.price_lkr || 0)));
         const filtered = fullAccess
-          ? candidates.filter((l) => Number(l.deal_score || 0) >= MIN_DEAL_SCORE)
+          ? // ≥ 35 % below is the verdict's "verify first" bait shape, never a best pick.
+            candidates.filter((l) => Number(l.deal_score || 0) >= MIN_DEAL_SCORE && Number(l.deal_score) < VERIFY_BELOW_PCT)
           : candidates;
         filtered
           .sort((a, b) => Number(b.deal_score || 0) - Number(a.deal_score || 0))

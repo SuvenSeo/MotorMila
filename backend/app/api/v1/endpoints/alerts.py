@@ -4,6 +4,7 @@ from typing import List, Optional, Tuple
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
+from app.utils.price_verdict import plausible_deal_score
 from app.api.v1.endpoints.auth import (
     _extract_token,
     resolve_live_session,
@@ -388,7 +389,7 @@ def match_alerts(
                         deal_score=(
                             None
                             if free_browse
-                            else (float(row.deal_score) if row.deal_score is not None else None)
+                            else plausible_deal_score(row)
                         ),
                         thumbnail_url=row.thumbnail_url,
                     )

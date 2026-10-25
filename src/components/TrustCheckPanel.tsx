@@ -22,10 +22,10 @@ const LEVEL_STYLE: Record<SignalLevel, { icon: typeof Info; tone: string; label:
  */
 export function TrustCheckPanel(props: TrustInput & { className?: string }) {
   const { t } = useAppPreferences();
-  const { className, listing, pricePoints, related, now } = props;
+  const { className, listing, pricePoints, related, now, verdict } = props;
   const report = useMemo(
-    () => buildTrustReport({ listing, pricePoints, related, now, t }),
-    [listing, pricePoints, related, now, t],
+    () => buildTrustReport({ listing, pricePoints, related, now, t, verdict }),
+    [listing, pricePoints, related, now, t, verdict],
   );
   const HeaderIcon = report.highCount > 0 ? ShieldAlert : ShieldCheck;
 
@@ -97,7 +97,7 @@ export function TrustCheckPanel(props: TrustInput & { className?: string }) {
             </a>{" "}
             {t("trust.customsBody", "confirms an imported vehicle was cleared legally (chassis number + OTP; personal use).")}
           </li>
-          <li>{t("trust.noAdvance", "Never pay an advance or \u201cbooking fee\u201d before seeing the car and its papers in person.")}</li>
+          <li>{t("trust.noAdvance", "Never pay an advance or \u201cbooking fee\u201d before seeing the vehicle and its papers in person.")}</li>
           <li>
             <Link to="/safe-transfer" className="font-medium text-primary underline-offset-2 hover:underline">
               {t("trust.kit", "Safe-Transfer Kit")}
@@ -110,7 +110,7 @@ export function TrustCheckPanel(props: TrustInput & { className?: string }) {
       <p className="mt-3 text-caption leading-relaxed text-muted-foreground">
         {t(
           "trust.disclaimer",
-          "These are automated risk signals from asking prices and ad text. They aren't a verdict on the car or the seller. Motormila hasn't inspected this vehicle.",
+          "These are automated risk signals from asking prices and ad text. They aren't a verdict on the vehicle or the seller. Motormila hasn't inspected it.",
         )}
       </p>
     </section>

@@ -1,27 +1,27 @@
 import { formatLkrCompact } from "@/lib/price";
+import { priceVerdict, type PriceContext, type PriceVerdict } from "@/lib/priceVerdict";
 /**
- * Deal badge logic for listing cards and detail — one rule set, one palette.
+ * Deal badge for listing cards and detail — a VIEW of the one price verdict
+ * (src/lib/priceVerdict.ts), never a second rule set.
  *
  * Compares the asking price with the FMV (cohort/model estimate of typical
  * *asking* prices — never "market value" or a sale price) and turns the gap
  * into a rupee figure in millions ("Rs 0.42 Mn below typical").
  *
- * Honesty rules:
+ * Honesty rules (all from the verdict):
  * - Lease takeovers get no deal call at all (the price isn't the full price).
- * - Very cheap outliers (> VERIFY_BELOW_PCT below FMV) and below-FMV calls on
- *   low-confidence estimates are amber "Unusually low — verify first", never
- *   green: these are the classic bait-price / advance-fee scam shape.
- * - Bands match `summarizeFmv` (−5% / +8%) so card, detail and FMV text agree.
+ * - A withheld verdict (weak estimate, implausible gap, placeholder / parts /
+ *   rental price…) shows no badge rather than a fake-looking one.
+ * - Deep discounts (≥ 35 % below) are amber "Unusually low — verify first",
+ *   never green: the classic bait-price / advance-fee scam shape.
  */
 
 export type DealBadgeKind = "below" | "fair" | "above" | "verify" | "lease" | "none";
 export type DealConfidence = "high" | "medium" | "low" | "none";
 
-export const DEAL_BELOW_PCT = 5;
-export const DEAL_ABOVE_PCT = 8;
-export const VERIFY_BELOW_PCT = 35;
+export { VERDICT_BELOW_PCT as DEAL_BELOW_PCT, VERDICT_ABOVE_PCT as DEAL_ABOVE_PCT, VERIFY_BELOW_PCT, MIN_COMPS as MIN_COMPS_FOR_GREEN } from "@/lib/priceVerdict";
 
-export interface DealBadgeInput {
+export interface DealBadgeInput extends PriceContext {
   askingLkr: number | null | undefined;
   fmvLkr: number | null | undefined;
   /** FMV confidence when known (detail page). Unknown (card) is not penalised. */
@@ -30,11 +30,12 @@ export interface DealBadgeInput {
   compsCount?: number | null;
   isLeaseTakeover?: boolean;
   /**
-   * False when the server suppressed the rating (thin cohort, extreme price)
-   * or the plan doesn't include deal calls. Only safety labels
-   * (verify / lease) are shown then.
+   * False when the server suppressed the rating or the plan doesn't include
+   * deal calls. Only safety labels (verify / lease) are shown then.
    */
   ratingAllowed?: boolean;
+  /** The page's already-resolved verdict (detail page) — wins over the numbers above. */
+  verdict?: PriceVerdict | null;
 }
 
 export interface DealBadge {
@@ -43,38 +44,38 @@ export interface DealBadge {
   gapLkr: number;
   /** Positive = asking is below FMV. */
   gapPctBelow: number;
+  /** Whole percent from the verdict (0 for lease/none). */
+  pct?: number;
 }
 
-const NONE: DealBadge = { kind: "none", gapLkr: 0, gapPctBelow: 0 };
+const NONE: DealBadge = { kind: "none", gapLkr: 0, gapPctBelow: 0, pct: 0 };
 
-/** Minimum comps for a confident below-FMV (green) call when comps are known. */
-export const MIN_COMPS_FOR_GREEN = 5;
+export function dealBadgeFromVerdict(v: PriceVerdict, opts: { isLeaseTakeover?: boolean; ratingAllowed?: boolean } = {}): DealBadge {
+  if (opts.isLeaseTakeover) return { kind: "lease", gapLkr: 0, gapPctBelow: 0, pct: 0 };
+  if (v.status !== "ok") return NONE;
+  const base = { gapLkr: v.gapLkr, gapPctBelow: -v.gapPct, pct: v.pct };
+  // Safety first: shown regardless of plan / suppression.
+  if (v.verifyFirst) return { kind: "verify", ...base };
+  if (opts.ratingAllowed === false) return NONE;
+  return { kind: v.band, ...base };
+}
 
 export function computeDealBadge(input: DealBadgeInput): DealBadge {
-  if (input.isLeaseTakeover) return { kind: "lease", gapLkr: 0, gapPctBelow: 0 };
-
-  const asking = Number(input.askingLkr);
-  const fmv = Number(input.fmvLkr);
-  if (!Number.isFinite(asking) || !Number.isFinite(fmv) || asking <= 0 || fmv <= 0) return NONE;
-
-  const gapPctBelow = ((fmv - asking) / fmv) * 100;
-  const gapLkr = Math.abs(fmv - asking);
-  const confidence = input.confidence ?? null;
-  const comps = input.compsCount;
-  const weakEstimate =
-    confidence === "low" ||
-    confidence === "none" ||
-    (comps != null && Number.isFinite(Number(comps)) && Number(comps) < MIN_COMPS_FOR_GREEN);
-
-  // Safety first: shown regardless of plan / suppression.
-  if (gapPctBelow > VERIFY_BELOW_PCT) return { kind: "verify", gapLkr, gapPctBelow };
-  if (gapPctBelow >= DEAL_BELOW_PCT && weakEstimate) return { kind: "verify", gapLkr, gapPctBelow };
-
-  if (input.ratingAllowed === false) return NONE;
-
-  if (gapPctBelow >= DEAL_BELOW_PCT) return { kind: "below", gapLkr, gapPctBelow };
-  if (-gapPctBelow >= DEAL_ABOVE_PCT) return { kind: "above", gapLkr, gapPctBelow };
-  return { kind: "fair", gapLkr, gapPctBelow };
+  if (input.isLeaseTakeover) return { kind: "lease", gapLkr: 0, gapPctBelow: 0, pct: 0 };
+  const verdict =
+    input.verdict ??
+    priceVerdict({
+      asking: input.askingLkr,
+      reference: input.fmvLkr,
+      comps: input.compsCount,
+      confidence: input.confidence,
+      category: input.category,
+      model: input.model,
+      title: input.title,
+      description: input.description,
+      variant: input.variant,
+    });
+  return dealBadgeFromVerdict(verdict, { ratingAllowed: input.ratingAllowed });
 }
 
 /**

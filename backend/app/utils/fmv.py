@@ -8,16 +8,35 @@ XGBoost dependency required for HF image size.
 
 from __future__ import annotations
 
+import math
 from datetime import datetime, timezone
 from typing import Any, Optional
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.utils.price_verdict import (
+    MIN_COMPS,
+    asking_price_issue,
+    is_generic_model,
+    price_verdict,
+    stored_signal_is_plausible,
+    verdict_label,
+    withheld_verdict,
+)
 from db.models import CarListing, live_listing_filter
 
 _MIN_ML_COMPS = 8
 _MAX_COMPS = 80
+_FETCH_LIMIT = 160
 _YEAR_WINDOW = 2
+_WIDE_YEAR_WINDOW = 4
+# An OLS fit is only trusted when it stays this close to the robust
+# (mileage-adjusted) comps median; otherwise the median is the estimate.
+_OLS_MAX_DRIFT = 0.15
+# Live comps "corroborate" the stored cohort median when the two are within
+# this ratio of each other (±25 %); beyond it the estimates disagree.
+_AGREE_RATIO = 1.25
 
 
 def _condition_code(value: Optional[str]) -> float:
@@ -93,33 +112,97 @@ def _solve_ols(rows: list[list[float]], targets: list[float]) -> Optional[list[f
     return [mat[r][p] for r in range(p)]
 
 
+def _comp_is_usable(row: CarListing) -> bool:
+    """A comparable must itself be a real full asking price (same guards as
+    the verdict): no placeholder/deposit/part/lease prices in the cohort."""
+    return (
+        asking_price_issue(
+            row.price_lkr,
+            category=getattr(row, "vehicle_category", None),
+            title=getattr(row, "title", None),
+        )
+        is None
+    )
+
+
+def _trim_outliers(rows: list[CarListing]) -> list[CarListing]:
+    """Drop comps far from the cohort centre (Tukey fences on log price).
+
+    Log space because asking prices are right-skewed; 1.5×IQR is the usual
+    fence. A hard 0.4×–2.5× band around the median runs first so one
+    wrong-category row cannot widen the IQR it is judged by.
+    """
+    priced = [r for r in rows if r.price_lkr is not None and float(r.price_lkr) > 0]
+    if len(priced) < 4:
+        return priced
+    med = _median([float(r.price_lkr) for r in priced]) or 0.0
+    banded = [r for r in priced if med * 0.4 <= float(r.price_lkr) <= med * 2.5]
+    if len(banded) < 4:
+        return banded
+    logs = sorted(math.log(float(r.price_lkr)) for r in banded)
+    q1 = logs[len(logs) // 4]
+    q3 = logs[(3 * len(logs)) // 4]
+    iqr = q3 - q1
+    lo, hi = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+    return [r for r in banded if lo <= math.log(float(r.price_lkr)) <= hi]
+
+
 def _fetch_comps(db: Session, listing: CarListing) -> list[CarListing]:
+    """Comparable live listings for ``listing``.
+
+    Same make + model, same vehicle category (a Honda "Other" bucket holds
+    motorbikes *and* cars), nearest model years first, newest first. The old
+    version took an unordered ``LIMIT 240`` and, when that arbitrary slice had
+    < 8 rows in the ±2-year window, fell back to *all years* — so a 2024 Axio
+    was valued off 2005–2012 Axios ("Overpriced 72 %").
+    """
     make = (listing.make or "").strip()
     model = (listing.model or "").strip()
     if not make or not model:
         return []
 
-    q = (
-        db.query(CarListing)
-        .filter(
-            live_listing_filter(),
-            CarListing.make.ilike(make),
-            CarListing.model.ilike(model),
-            CarListing.price_lkr.isnot(None),
-            CarListing.id != listing.id,
-        )
-        .limit(_MAX_COMPS * 3)
-    )
+    filters = [
+        live_listing_filter(),
+        CarListing.make.ilike(make),
+        CarListing.model.ilike(model),
+        CarListing.price_lkr.isnot(None),
+        CarListing.id != listing.id,
+    ]
+    category = (getattr(listing, "vehicle_category", None) or "").strip()
+    if category:
+        filters.append(CarListing.vehicle_category == category)
+
     year = listing.year
-    rows = q.all()
+    rows: list[CarListing] = []
     if year is not None:
-        tight = [
-            r
-            for r in rows
-            if r.year is not None and abs(int(r.year) - int(year)) <= _YEAR_WINDOW
-        ]
-        if len(tight) >= _MIN_ML_COMPS:
-            rows = tight
+        for window in (_YEAR_WINDOW, _WIDE_YEAR_WINDOW):
+            rows = (
+                db.query(CarListing)
+                .filter(
+                    *filters,
+                    CarListing.year.isnot(None),
+                    CarListing.year.between(int(year) - window, int(year) + window),
+                )
+                .order_by(
+                    func.abs(CarListing.year - int(year)),
+                    CarListing.last_seen_at.desc(),
+                    CarListing.id.desc(),
+                )
+                .limit(_FETCH_LIMIT)
+                .all()
+            )
+            rows = _trim_outliers([r for r in rows if _comp_is_usable(r)])
+            if len(rows) >= _MIN_ML_COMPS:
+                break
+    else:
+        rows = (
+            db.query(CarListing)
+            .filter(*filters)
+            .order_by(CarListing.last_seen_at.desc(), CarListing.id.desc())
+            .limit(_FETCH_LIMIT)
+            .all()
+        )
+        rows = _trim_outliers([r for r in rows if _comp_is_usable(r)])
     return rows[:_MAX_COMPS]
 
 
@@ -138,19 +221,41 @@ def _adjusted_median_fmv(listing: CarListing, comps: list[CarListing]) -> Option
 
 
 def _ml_predict(listing: CarListing, comps: list[CarListing]) -> Optional[float]:
+    """OLS on (year, mileage, same district, condition), features centred.
+
+    Uncentred years (~2018) and kilometres made the normal equations badly
+    conditioned; the fit then landed anywhere inside the IQR clamp. Features
+    are centred on the comp means now, and the caller only accepts the fit
+    when it stays within ``_OLS_MAX_DRIFT`` of the robust median.
+    """
     if len(comps) < _MIN_ML_COMPS:
         return None
 
     district = (listing.district or "").strip().lower()
+    years = [float(r.year) for r in comps if r.year is not None]
+    kms = [float(r.mileage) / 1000.0 for r in comps if r.mileage is not None]
+    mean_year = sum(years) / len(years) if years else float(listing.year or 2015)
+    mean_km = sum(kms) / len(kms) if kms else 50.0
+
+    def feats(year: Optional[float], km: Optional[float], same: float, cond: float) -> list[float]:
+        y = (year if year is not None else mean_year) - mean_year
+        k = ((km / 1000.0) if km is not None else mean_km) - mean_km
+        return [1.0, y, k / 10.0, same, cond]
+
     features: list[list[float]] = []
     targets: list[float] = []
     for row in comps:
         if row.price_lkr is None:
             continue
-        year = float(row.year) if row.year is not None else float(listing.year or 2015)
-        mileage = float(row.mileage) / 1000.0 if row.mileage is not None else 50.0
         same_district = 1.0 if district and (row.district or "").strip().lower() == district else 0.0
-        features.append([1.0, year, mileage, same_district, _condition_code(getattr(row, "condition", None))])
+        features.append(
+            feats(
+                float(row.year) if row.year is not None else None,
+                float(row.mileage) if row.mileage is not None else None,
+                same_district,
+                _condition_code(getattr(row, "condition", None)),
+            )
+        )
         targets.append(float(row.price_lkr))
 
     if len(features) < _MIN_ML_COMPS:
@@ -160,30 +265,15 @@ def _ml_predict(listing: CarListing, comps: list[CarListing]) -> Optional[float]
     if beta is None:
         return None
 
-    target_year = float(listing.year) if listing.year is not None else float(
-        sum(r.year for r in comps if r.year is not None) / max(1, sum(1 for r in comps if r.year is not None))
-    )
-    target_mileage = float(listing.mileage) / 1000.0 if listing.mileage is not None else 50.0
-    x = [
-        1.0,
-        target_year,
-        target_mileage,
+    x = feats(
+        float(listing.year) if listing.year is not None else None,
+        float(listing.mileage) if listing.mileage is not None else None,
         1.0,  # prefer same-district valuation for the subject
         _condition_code(getattr(listing, "condition", None)),
-    ]
+    )
     predicted = sum(b * v for b, v in zip(beta, x))
-    if predicted <= 0:
+    if not math.isfinite(predicted) or predicted <= 0:
         return None
-
-    # Soft-clamp to the comps IQR so a wild OLS fit cannot escape the market.
-    prices = sorted(float(r.price_lkr) for r in comps if r.price_lkr is not None)
-    if len(prices) >= 4:
-        q1 = prices[len(prices) // 4]
-        q3 = prices[(3 * len(prices)) // 4]
-        lo = q1 * 0.75
-        hi = q3 * 1.25
-        predicted = min(max(predicted, lo), hi)
-
     return round(predicted, 2)
 
 
@@ -228,72 +318,124 @@ def _confidence_from_sample(sample_count: int, method: str) -> str:
     return "low"
 
 
+_CONF_ORDER = ["none", "low", "medium", "high"]
+
+
+def _cap(level: str, ceiling: str) -> str:
+    return level if _CONF_ORDER.index(level) <= _CONF_ORDER.index(ceiling) else ceiling
+
+
+def _dispersion(prices: list[float]) -> Optional[float]:
+    """(Q3 − Q1) / median of the comp prices — how mixed the cohort is."""
+    if len(prices) < 4:
+        return None
+    ordered = sorted(prices)
+    med = _median(ordered)
+    if not med:
+        return None
+    return (ordered[(3 * len(ordered)) // 4] - ordered[len(ordered) // 4]) / med
+
+
 def predict_listing_fmv(db: Session, listing: CarListing) -> dict[str, Any]:
-    """Return FMV payload for a listing (ML when possible, else adjusted median).
+    """Return the listing's FMV estimate **and the one price verdict** derived from it.
 
     Response fields:
-    - listing_id, asking_lkr, fmv_lkr, deal_score, delta_pct, band, label
-    - method: one of ``ols_comps``, ``adjusted_median``, ``cohort_median``, ``insufficient_data``
-    - sample_size / sample_count: number of live comparable listings used
-    - confidence: qualitative level — ``high`` / ``medium`` / ``low`` / ``none``
-    - comps_median_lkr: raw (unadjusted) median price of the comp set, or None
-    - km_adjustment_lkr: mileage-attributed split vs comps median (None when N/A)
-    - district_adjustment_lkr: district/model residual split (None when N/A)
-    - method_breakdown: additive walk {base_median_lkr, km/district splits, final_fmv_lkr}
-    - updated_at: ISO-8601 UTC timestamp of when this estimate was computed
+    - listing_id, asking_lkr
+    - fmv_lkr: the estimate every surface compares against, or ``None`` when the
+      verdict is withheld (so no client can print a typical price we don't trust)
+    - estimate_lkr: the raw estimate even when withheld (diagnostics / explainer)
+    - verdict: {status ok|withheld, reason, reason_group, band, gap_pct, pct,
+      verify_first, reference_lkr} — see app/utils/price_verdict.py
+    - deal_score: −gap_pct (positive = below typical) when the verdict is ok, else None
+    - delta_pct, band, label: legacy mirrors of the verdict (None when withheld)
+    - method: ``ols_comps`` / ``adjusted_median`` / ``cohort_median`` / ``insufficient_data``
+    - sample_size / sample_count, confidence (high/medium/low/none), comps_median_lkr,
+      km_adjustment_lkr, district_adjustment_lkr, method_breakdown, updated_at
+    """
+    return _fmv_from_comps(listing, _fetch_comps(db, listing))
+
+
+def _fmv_from_comps(listing: CarListing, comps: list[CarListing]) -> dict[str, Any]:
+    """predict_listing_fmv once the comparables are known (pure: no DB access).
+
+    Shared by the detail endpoint (one listing, its own comps query) and
+    batch_price_verdicts (a page of listing cards, one comps query), so a card
+    and its detail page reach the same verdict from the same comps.
     """
     asking = float(listing.price_lkr) if listing.price_lkr is not None else None
+    category = getattr(listing, "vehicle_category", None)
+    title = getattr(listing, "title", None)
     stored_median = float(listing.market_median_lkr) if listing.market_median_lkr is not None else None
-    deal_score = float(listing.deal_score) if listing.deal_score is not None else None
+    if stored_median is not None and not stored_signal_is_plausible(
+        price_lkr=asking, market_median_lkr=stored_median, category=category, model=listing.model, title=title
+    ):
+        stored_median = None
 
-    comps = _fetch_comps(db, listing)
     method = "insufficient_data"
     fmv: Optional[float] = None
     sample_count = len(comps)
-
-    ml_value = _ml_predict(listing, comps)
-    if ml_value is not None:
-        fmv = ml_value
-        method = "ols_comps"
-    else:
-        adjusted = _adjusted_median_fmv(listing, comps)
-        if adjusted is not None:
-            fmv = adjusted
-            method = "adjusted_median"
-        elif stored_median is not None:
-            fmv = stored_median
-            method = "cohort_median"
-
-    # Raw (unadjusted) median of the comp set for transparency.
     comp_prices = sorted(float(r.price_lkr) for r in comps if r.price_lkr is not None)
     comps_median_lkr: Optional[float] = _median(comp_prices)
 
-    band = None
-    delta_pct = None
-    label = None
-    # Suppress verdicts on thin cohorts — a 1-comp "Overpriced 12%" is noise.
-    _MIN_BAND_COMPS = 5
-    if (
-        asking is not None
-        and fmv is not None
-        and asking > 0
-        and fmv > 0
-        and sample_count >= _MIN_BAND_COMPS
-    ):
-        delta_pct = round(((asking - fmv) / fmv) * 100, 2)
-        if delta_pct <= -5:
-            band = "below"
-            label = f"Priced {abs(delta_pct):.0f}% below FMV"
-        elif delta_pct >= 8:
-            band = "above"
-            label = f"Overpriced {abs(delta_pct):.0f}% vs FMV"
+    adjusted = _adjusted_median_fmv(listing, comps)
+    ml_value = _ml_predict(listing, comps)
+    comps_estimate: Optional[float] = None
+    comps_method = "insufficient_data"
+    if ml_value is not None and adjusted and abs(ml_value / adjusted - 1) <= _OLS_MAX_DRIFT:
+        comps_estimate, comps_method = ml_value, "ols_comps"
+    elif adjusted is not None:
+        comps_estimate, comps_method = adjusted, "adjusted_median"
+
+    confidence = _confidence_from_sample(sample_count, comps_method)
+    spread = _dispersion(comp_prices)
+    if spread is not None and spread > 0.8:
+        confidence = _cap(confidence, "low")
+    elif spread is not None and spread > 0.5:
+        confidence = _cap(confidence, "medium")
+
+    # ONE number per listing. The stored cohort median is what every listing
+    # card / list / snapshot already compares against, so when live comps
+    # corroborate it (within ±25 %) it IS the FMV — card and detail page then
+    # cannot disagree. When the two estimates diverge, neither is trusted.
+    corroborated = False
+    disagree = False
+    if stored_median is not None and comps_estimate is not None:
+        ratio = max(stored_median, comps_estimate) / min(stored_median, comps_estimate)
+        if ratio <= _AGREE_RATIO:
+            fmv, method, corroborated = stored_median, "cohort_median", True
+            if sample_count >= 3:
+                confidence = confidence if _CONF_ORDER.index(confidence) >= 2 else "medium"
         else:
-            band = "fair"
-            label = "Near fair market value"
+            fmv, method, disagree = comps_estimate, comps_method, True
+            confidence = _cap(confidence, "low")
+    elif comps_estimate is not None:
+        fmv, method = comps_estimate, comps_method
+    elif stored_median is not None:
+        # No live comparables back the stored median: show it, never a verdict.
+        fmv, method, confidence = stored_median, "cohort_median", "low"
+    if is_generic_model(listing.model):
+        confidence = _cap(confidence, "low")
 
-    confidence = _confidence_from_sample(sample_count, method)
+    verdict = price_verdict(
+        asking,
+        fmv,
+        comps=max(sample_count, MIN_COMPS) if corroborated else sample_count,
+        confidence=confidence,
+        category=category,
+        model=listing.model,
+        title=title,
+    )
+    if disagree and verdict["status"] == "ok":
+        verdict = withheld_verdict("estimates_disagree", fmv)
+    elif disagree and verdict["reason"] == "low_confidence":
+        verdict = withheld_verdict("estimates_disagree", fmv)
+    ok = verdict["status"] == "ok"
+    delta_pct = verdict["gap_pct"] if ok else None
+    band = verdict["band"] if ok else None
+    label = verdict_label(verdict) if ok else None
+    deal_score = round(-float(verdict["gap_pct"]), 1) if ok else None
+
     updated_at = datetime.now(timezone.utc).isoformat()
-
     km_adjustment_lkr, district_adjustment_lkr = _estimate_adjustments(
         listing, comps, fmv, method, comps_median_lkr
     )
@@ -301,12 +443,15 @@ def predict_listing_fmv(db: Session, listing: CarListing) -> dict[str, Any]:
     return {
         "listing_id": int(listing.id) if listing.id is not None else None,
         "asking_lkr": asking,
-        "fmv_lkr": fmv,
+        "fmv_lkr": fmv if ok else None,
+        "estimate_lkr": fmv,
+        "verdict": verdict,
         "deal_score": deal_score,
         "delta_pct": delta_pct,
         "band": band,
         "label": label,
         "method": method,
+        "corroborated_by_comps": corroborated,
         "sample_count": sample_count,
         "sample_size": sample_count,
         "confidence": confidence,
@@ -317,7 +462,111 @@ def predict_listing_fmv(db: Session, listing: CarListing) -> dict[str, Any]:
             "base_median_lkr": comps_median_lkr,
             "km_adjustment_lkr": km_adjustment_lkr,
             "district_adjustment_lkr": district_adjustment_lkr,
-            "final_fmv_lkr": fmv,
+            "final_fmv_lkr": fmv if ok else None,
         },
         "updated_at": updated_at,
     }
+
+
+# ── Batch: verdicts for a page of listing cards ───────────────────────────
+
+_COMP_COLUMNS = (
+    "id", "make", "model", "vehicle_category", "year", "price_lkr", "mileage",
+    "district", "condition", "title", "last_seen_at",
+)
+# One page needs at most this many candidate comps; beyond it the batch falls
+# back to the per-listing query so the selection can never silently differ.
+_BATCH_ROW_CAP = 6000
+
+
+def _norm(value: Optional[str]) -> str:
+    return (value or "").strip().lower()
+
+
+def _group_key(listing: CarListing) -> Optional[tuple[str, str, str]]:
+    make, model = _norm(listing.make), _norm(listing.model)
+    if not make or not model:
+        return None
+    return make, model, (getattr(listing, "vehicle_category", None) or "").strip()
+
+
+def _recency_key(row: CarListing) -> tuple[float, int]:
+    seen = getattr(row, "last_seen_at", None)
+    ts = seen.timestamp() if isinstance(seen, datetime) else float("-inf")
+    return (-ts, -int(row.id or 0))
+
+
+def _select_comps(listing: CarListing, candidates: list[CarListing]) -> list[CarListing]:
+    """In-memory twin of _fetch_comps over pre-fetched candidates.
+
+    ``candidates`` must hold every live, priced row of the listing's
+    make/model/category in the widest year window (batch_price_verdicts
+    guarantees it). Same windows, order, fetch limit, usability filter and
+    outlier trim as the SQL path.
+    """
+    key = _group_key(listing)
+    if key is None:
+        return []
+    make, model, category = key
+    pool = [
+        r
+        for r in candidates
+        if r.id != listing.id
+        and r.price_lkr is not None
+        and _norm(r.make) == make
+        and _norm(r.model) == model
+        and (not category or (getattr(r, "vehicle_category", None) or "") == category)
+    ]
+    year = listing.year
+    rows: list[CarListing] = []
+    if year is not None:
+        y = int(year)
+        for window in (_YEAR_WINDOW, _WIDE_YEAR_WINDOW):
+            win = [r for r in pool if r.year is not None and y - window <= int(r.year) <= y + window]
+            win.sort(key=lambda r: (abs(int(r.year) - y), *_recency_key(r)))
+            rows = _trim_outliers([r for r in win[:_FETCH_LIMIT] if _comp_is_usable(r)])
+            if len(rows) >= _MIN_ML_COMPS:
+                break
+    else:
+        pool.sort(key=_recency_key)
+        rows = _trim_outliers([r for r in pool[:_FETCH_LIMIT] if _comp_is_usable(r)])
+    return rows[:_MAX_COMPS]
+
+
+def batch_price_verdicts(db: Session, listings: list[Any]) -> dict[int, dict[str, Any]]:
+    """The detail page's verdict for each listing on a page of cards.
+
+    One comps query for the whole page (grouped by make/model/category and
+    year range) instead of one per card. Returns {listing_id: verdict} for
+    every listing that has a stored median (the only rows a card rates).
+    """
+    targets = [l for l in listings if getattr(l, "market_median_lkr", None) is not None and _group_key(l)]
+    if not targets:
+        return {}
+    from sqlalchemy import and_, or_
+    from sqlalchemy.orm import load_only
+
+    groups: dict[tuple[str, str, str], list[Optional[int]]] = {}
+    for l in targets:
+        groups.setdefault(_group_key(l), []).append(l.year)
+    conds = []
+    for (make, model, category), years in groups.items():
+        parts = [func.lower(CarListing.make) == make, func.lower(CarListing.model) == model]
+        if category:
+            parts.append(CarListing.vehicle_category == category)
+        known = [int(y) for y in years if y is not None]
+        if known and len(known) == len(years):
+            parts.append(CarListing.year.between(min(known) - _WIDE_YEAR_WINDOW, max(known) + _WIDE_YEAR_WINDOW))
+        conds.append(and_(*parts))
+    candidates = (
+        db.query(CarListing)
+        .options(load_only(*[getattr(CarListing, c) for c in _COMP_COLUMNS]))
+        .filter(live_listing_filter(), CarListing.price_lkr.isnot(None), or_(*conds))
+        .limit(_BATCH_ROW_CAP + 1)
+        .all()
+    )
+    out: dict[int, dict[str, Any]] = {}
+    for l in targets:
+        comps = _fetch_comps(db, l) if len(candidates) > _BATCH_ROW_CAP else _select_comps(l, candidates)
+        out[int(l.id)] = _fmv_from_comps(l, comps)["verdict"]
+    return out

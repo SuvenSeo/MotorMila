@@ -1,4 +1,5 @@
 import { computeDealLadder } from "@/lib/dealLadder";
+import type { PriceVerdict } from "@/lib/priceVerdict";
 import { formatPrice } from "@/services/api";
 import { cn } from "@/lib/utils";
 import { useAppPreferences } from "@/lib/appPreferences";
@@ -12,6 +13,8 @@ const BAND_LABEL = {
 interface DealLadderProps {
   askingPrice: number;
   marketMedianLkr: number;
+  /** The page's one verdict — the ladder follows its band and hides when it is withheld. */
+  verdict?: PriceVerdict | null;
   className?: string;
 }
 
@@ -30,9 +33,9 @@ const RUNG_TONE = {
   },
 } as const;
 
-export function DealLadder({ askingPrice, marketMedianLkr, className }: DealLadderProps) {
+export function DealLadder({ askingPrice, marketMedianLkr, verdict, className }: DealLadderProps) {
   const { t } = useAppPreferences();
-  const ladder = computeDealLadder({ askingPrice, marketMedianLkr });
+  const ladder = computeDealLadder({ askingPrice, marketMedianLkr, verdict });
   if (!ladder) return null;
   const bandName = (band: keyof typeof BAND_LABEL) => t(BAND_LABEL[band][0], BAND_LABEL[band][1]);
 
@@ -76,11 +79,14 @@ export function DealLadder({ askingPrice, marketMedianLkr, className }: DealLadd
       <ol className="mt-3 space-y-1.5">
         {ladder.rungs.map((rung) => {
           const tone = RUNG_TONE[rung.band];
+          // Non-overlapping bounds: prices are shown rounded (Rs 7.74 Mn), so
+          // "≤ X" on Fair and "≥ X" on Overpriced printed the same number twice.
+          // Fair is the strict range between the other two.
           const priceHint =
             rung.band === "good_deal"
               ? `≤ ${formatPrice(ladder.goodDealPrice)}`
               : rung.band === "fair"
-                ? `≤ ${formatPrice(ladder.overpricedThreshold - 1)}`
+                ? `< ${formatPrice(ladder.overpricedThreshold)}`
                 : `≥ ${formatPrice(ladder.overpricedThreshold)}`;
 
           return (

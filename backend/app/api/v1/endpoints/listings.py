@@ -1,12 +1,14 @@
 from fastapi import APIRouter, Depends, Header, Query, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session, load_only
-from sqlalchemy import String, case, cast, func, desc, asc, and_, or_
+from sqlalchemy import String, case, cast, func, desc, asc, and_, or_, literal
 from typing import Optional, List, Dict, Any, Annotated
 from statistics import median
 from datetime import datetime, timedelta, timezone
+from app.utils.price_verdict import plausible_deal_score, plausible_deal_score_sql
 from app.utils.time import utc_now
 import ipaddress
+import logging
 import json
 import math
 import re
@@ -22,7 +24,7 @@ from app.services.nhtsa_specs import fetch_models_for_make as _nhtsa_fetch_model
 from app.services.safety_research import combined_research
 from app.services.geo_service import enrich_listing
 from app.utils.history_report import build_history_report
-from app.utils.fmv import predict_listing_fmv
+from app.utils.fmv import batch_price_verdicts, predict_listing_fmv
 from app.utils.price_history import summarize_price_history
 from app.utils.make_canonical import canonicalize_make, canonicalize_model, compact_key
 from app.utils.vehicle_category import category_sql_filter, resolve_browse_category
@@ -885,6 +887,35 @@ def _optional_text_param(value: object) -> Optional[str]:
     return normalized or None
 
 
+def _with_card_verdicts(db: Session, rows: list) -> List[CarListingRead]:
+    """Serialise listing cards so a card never rates what its detail page withholds.
+
+    The detail page's verdict (predict_listing_fmv) also needs live comparables:
+    with fewer than 5, or when they disagree with the stored cohort median, it
+    is withheld. The listing row alone can't show that, so the cards' rating
+    (deal_score + market_median_lkr) is dropped for those rows, and
+    ``price_withheld_reason`` says why (``thin_comps``, ``estimates_disagree``,
+    ``generic_model``...). One batched comps query per page
+    (app/utils/fmv.py batch_price_verdicts). Old clients just see an unscored row.
+    """
+    reads = [CarListingRead.model_validate(row) for row in rows]
+    scored = {read.id for read in reads if read.market_median_lkr is not None}
+    if not scored:
+        return reads
+    try:
+        verdicts = batch_price_verdicts(db, [row for row in rows if int(row.id) in scored])
+    except Exception:  # never fail a list page over a rating
+        logging.getLogger(__name__).warning("card verdict batch failed", exc_info=True)
+        return reads
+    for read in reads:
+        verdict = verdicts.get(read.id)
+        if verdict and verdict.get("status") == "withheld":
+            read.price_withheld_reason = verdict.get("reason")
+            read.deal_score = None
+            read.market_median_lkr = None
+    return reads
+
+
 @router.get("", response_model=ListingsResponse)
 def search_listings(
     request: Request,
@@ -1109,7 +1140,11 @@ def search_listings(
     elif sort == "oldest":
         q = q.order_by(asc(CarListing.first_seen_at))
     elif sort == "deal_score":
-        q = q.filter(CarListing.deal_score.isnot(None)).order_by(desc(CarListing.deal_score))
+        # Implausible stored scores (|gap| > 60 %) are served unscored, so they
+        # must not top the "best deal" sort either.
+        q = q.filter(
+            CarListing.deal_score.isnot(None), plausible_deal_score_sql(CarListing.deal_score)
+        ).order_by(desc(CarListing.deal_score))
     elif sort == "price_asc":
         q = q.order_by(CarListing.price_lkr.asc().nulls_last())
     elif sort == "price_desc":
@@ -1135,7 +1170,7 @@ def search_listings(
             item.market_median_lkr = None
 
     result = ListingsResponse(
-        items=items,
+        items=items if free_browse else _with_card_verdicts(db, items),
         total=total,
         page=page,
         size=size,
@@ -1787,7 +1822,7 @@ def estimate_custom_vehicle(payload: CustomVehicleEstimateRequest, db: Session =
             title=row.title or f"{row.make} {row.model} ({row.year})",
             price_lkr=float(row.price_lkr) if row.price_lkr is not None else None,
             district=row.district,
-            deal_score=float(row.deal_score) if row.deal_score is not None else None,
+            deal_score=plausible_deal_score(row),
             detail_url=f"/listing/{row.id}",
             external_url=row.url,
         )
@@ -1960,6 +1995,10 @@ def get_similar_listings(
         CarListing.make == listing.make,
         live_listing_filter(),
     ]
+    # Same kind of vehicle only: a Rs 735k motorbike's "similar" list must not
+    # be cars that happen to share a make and a price band.
+    if listing.vehicle_category:
+        filters.append(CarListing.vehicle_category == listing.vehicle_category)
 
     base_price = float(listing.price_lkr) if listing.price_lkr is not None else 0.0
     if base_price > 0:
@@ -1971,9 +2010,13 @@ def get_similar_listings(
     free_browse = _is_free_browse_plan(plan, role)
     limit = FREE_SIMILAR_LIMIT if free_browse else 6
 
+    # Same model first, then nearest model year (deterministic, not arbitrary).
+    same_model = case((CarListing.model == listing.model, 0), else_=1)
+    year_gap = func.abs(func.coalesce(CarListing.year, 0) - int(listing.year)) if listing.year else literal(0)
     similar = (
         db.query(CarListing)
         .filter(*filters)
+        .order_by(same_model, year_gap, desc(CarListing.last_seen_at))
         .limit(limit)
         .all()
     )
@@ -1982,5 +2025,6 @@ def get_similar_listings(
         for row in similar:
             row.deal_score = None
             row.market_median_lkr = None
+        return similar
 
-    return similar
+    return _with_card_verdicts(db, similar)

@@ -126,7 +126,8 @@ describe("ListingCard render states and interactions", () => {
     renderCard(<ListingCard listing={listing} />);
 
     expect(screen.getByText(/typical rs/i)).toBeInTheDocument();
-    expect(screen.getByText(/% below fmv/i)).toBeInTheDocument();
+    expect(screen.getByText("6% below typical")).toBeInTheDocument();
+    expect(screen.queryByText(/fmv|fair market/i)).toBeNull();
     // Rupee gap badge: 9.5M - 8.9M = Rs 0.6 Mn.
     expect(screen.getByText("Rs 0.6 Mn below typical")).toBeInTheDocument();
   });

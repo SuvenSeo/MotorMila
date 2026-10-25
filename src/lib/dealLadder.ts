@@ -1,26 +1,31 @@
+import { VERDICT_ABOVE_PCT, VERDICT_BELOW_PCT, type PriceVerdict } from "@/lib/priceVerdict";
+
 /**
- * CarGurus-style deal ladder thresholds aligned with FairPriceIndicator
- * and backend deal_scores: score = (1 - price/median) * 100.
+ * CarGurus-style deal ladder on the ONE verdict's bands (src/lib/priceVerdict.ts),
+ * so the ladder can never call a price "Overpriced" while the badge says
+ * "Near typical". score = (1 - price/median) * 100 (backend deal_scores).
  *
- * - Good Deal:  score >= 8  → price ≤ median × 0.92
- * - Overpriced: score ≤ -5 → price ≥ median × 1.05
+ * - Good Deal:  score >= 5  → price ≤ median × 0.95   (verdict "below")
+ * - Overpriced: score ≤ -8 → price ≥ median × 1.08   (verdict "above")
  * - Fair:       otherwise
  */
 
-export const GOOD_DEAL_SCORE = 8;
-export const OVERPRICED_SCORE = -5;
+export const GOOD_DEAL_SCORE = VERDICT_BELOW_PCT;
+export const OVERPRICED_SCORE = -VERDICT_ABOVE_PCT;
 
-/** Price multiplier for Good Deal (8% below median). */
-export const GOOD_DEAL_MULTIPLIER = 1 - GOOD_DEAL_SCORE / 100; // 0.92
+/** Price multiplier for Good Deal (5% below median). */
+export const GOOD_DEAL_MULTIPLIER = 1 - GOOD_DEAL_SCORE / 100; // 0.95
 
-/** Price multiplier for Overpriced threshold (5% above median). */
-export const OVERPRICED_MULTIPLIER = 1 - OVERPRICED_SCORE / 100; // 1.05
+/** Price multiplier for Overpriced threshold (8% above median). */
+export const OVERPRICED_MULTIPLIER = 1 - OVERPRICED_SCORE / 100; // 1.08
 
 export type DealBand = "good_deal" | "fair" | "overpriced";
 
 export interface DealLadderInput {
   askingPrice: number;
   marketMedianLkr: number;
+  /** The page's verdict: its band wins so ladder and badge agree to the rupee. */
+  verdict?: PriceVerdict | null;
 }
 
 export interface DealLadderRung {
@@ -86,6 +91,8 @@ function roundLkr(value: number): number {
  * Returns null when inputs are missing or non-positive.
  */
 export function computeDealLadder(input: DealLadderInput): DealLadderResult | null {
+  // A withheld verdict means no ladder: cut-to targets off a wrong median look fake.
+  if (input.verdict && input.verdict.status !== "ok") return null;
   const askingPrice = Number(input.askingPrice);
   const median = Number(input.marketMedianLkr);
 
@@ -96,7 +103,15 @@ export function computeDealLadder(input: DealLadderInput): DealLadderResult | nu
   const goodDealPrice = roundLkr(median * GOOD_DEAL_MULTIPLIER);
   const overpricedThreshold = roundLkr(median * OVERPRICED_MULTIPLIER);
   const dealScore = dealScoreFromPrice(askingPrice, median);
-  const band = bandFromDealScore(dealScore);
+  const v = input.verdict;
+  const band: DealBand =
+    v && v.status === "ok"
+      ? v.band === "below"
+        ? "good_deal"
+        : v.band === "above"
+          ? "overpriced"
+          : "fair"
+      : bandFromDealScore(dealScore);
   const cutToGoodDeal = Math.max(0, roundLkr(askingPrice - goodDealPrice));
   const cutToFair = band === "overpriced" ? Math.max(0, roundLkr(askingPrice - overpricedThreshold + 1)) : 0;
 
