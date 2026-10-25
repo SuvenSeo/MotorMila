@@ -58,8 +58,7 @@ import { SaveHeartIcon } from '@/components/listing/SaveHeart';
 import { trackEvent } from '@/lib/analytics';
 import { canonicalizeMake, canonicalizeModel } from '@/lib/makeNormalization';
 import { ListingLeadActions } from '@/components/money/ListingLeadActions';
-import { formatLkrFull } from '@/lib/price';
-import { computeDealBadge, dealBadgeFromVerdict, DEAL_TEXT_CLASSES } from '@/lib/dealBadge';
+import { computeDealBadge, dealBadgeFromVerdict, DEAL_TEXT_CLASSES, formatLkrShort } from '@/lib/dealBadge';
 import { detectListingLeaseTakeover } from '@/lib/leaseTakeover';
 import { estimateListingMonthly, formatMonthlyLkr } from '@/lib/listingFinance';
 import { DealBadge, type DealWhyData } from '@/components/listing/DealBadge';
@@ -482,7 +481,7 @@ export default function ListingDetail() {
         </p>
       ) : fmvSummary ? (
         <>
-          <p className="num mt-1 text-title2 font-extrabold tracking-tight text-foreground">{formatLkrFull(fmvSummary.fmv_lkr)}</p>
+          <p className="num mt-1 text-title2 font-extrabold tracking-tight text-foreground">{formatLkrShort(fmvSummary.fmv_lkr)}</p>
           <p className={`mt-0.5 text-footnote font-bold ${DEAL_TEXT_CLASSES[fmvKind]}`}>{fmvSummary.label}</p>
           {fmvDetail && fmvDetail.method !== "insufficient_data" && (
             <p className="mt-1 text-caption text-muted-foreground">
