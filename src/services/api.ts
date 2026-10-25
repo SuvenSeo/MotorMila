@@ -49,6 +49,7 @@ import { districtCoords, normalizeDistrictName } from "@/data/districts";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import type { ListingFmvDetail } from "@/types/fmv";
 import { cleanDistrict, computedDropPct, isPlausiblePriceDrop } from "@/lib/dataSanity";
+import { hasPlausibleStoredSignal, isGenericModel, VERIFY_BELOW_PCT } from "@/lib/priceVerdict";
 
 const DEFAULT_PRODUCTION_API = "https://seo292-vehicle-platform-backend.hf.space/api/v1";
 const HF_COLD_START_TIMEOUT_MS = 60_000;
@@ -529,6 +530,27 @@ function matchesBodyTypeFilter(listing: CarListing, bodyType: string): boolean {
   return false;
 }
 
+/**
+ * Data-boundary guard: a stored deal score / median whose comparison the one
+ * price verdict withholds (mixed-category cohort, placeholder/lease/parts
+ * price, > ±60 % gap…) is dropped here, so no card, list, tier, sort, chart or
+ * Trust Check can show "90% below similar cars" off it.
+ */
+function plausibleStoredSignal(raw: JsonRecord, model: string): { deal_score: number | null; market_median_lkr: number | undefined } {
+  const deal_score = toNumberOrNull(raw?.deal_score);
+  const market_median_lkr = toNumberOrNull(raw?.market_median_lkr) ?? undefined;
+  const ok = hasPlausibleStoredSignal({
+    price_lkr: toNumberOrNull(raw?.price_lkr),
+    market_median_lkr: market_median_lkr ?? null,
+    deal_score,
+    vehicle_category: typeof raw?.vehicle_category === "string" ? raw.vehicle_category : null,
+    model: model || (typeof raw?.model === "string" ? raw.model : null),
+    title: typeof raw?.title === "string" ? raw.title : null,
+    description: typeof raw?.description === "string" ? raw.description : null,
+  });
+  return ok ? { deal_score, market_median_lkr } : { deal_score: null, market_median_lkr: undefined };
+}
+
 function normalizeListing(raw: JsonRecord): CarListing {
   const sourceUrls = [raw?.url, raw?.detail_url, raw?.external_url];
   const images = Array.isArray(raw?.images)
@@ -561,8 +583,7 @@ function normalizeListing(raw: JsonRecord): CarListing {
     mileage_km: toNumberOrNull(raw?.mileage_km ?? raw?.mileage),
     engine_cc: toNumberOrNull(raw?.engine_cc ?? raw?.engine_capacity) ?? undefined,
     price_lkr: toNumberOrNull(raw?.price_lkr),
-    deal_score: toNumberOrNull(raw?.deal_score),
-    market_median_lkr: toNumberOrNull(raw?.market_median_lkr) ?? undefined,
+    ...plausibleStoredSignal(raw, model),
     condition,
     transmission,
     fuel_type: fuelType,
@@ -1140,6 +1161,18 @@ function normalizeDashboardInsights(data: Record<string, unknown>): DashboardIns
         // Drop unbrandable rows ("Other brand Other model") so a scrape
         // artifact can never be surfaced as a headline deal.
         if (isJunkMake(item.make)) {
+          return acc;
+        }
+        // A headline "hot deal" must survive the one price verdict: no generic
+        // "Other" model, no > ±60 % score, no verify-first bait discount.
+        const score = toNumberOrNull(item.deal_score);
+        const model = typeof item.model === "string" ? item.model : null;
+        if (
+          score === null ||
+          isGenericModel(model) ||
+          !hasPlausibleStoredSignal({ price_lkr: price, deal_score: score, model }) ||
+          score >= VERIFY_BELOW_PCT
+        ) {
           return acc;
         }
 
@@ -1941,6 +1974,15 @@ export const getListingFmv = async (id: string | number): Promise<ListingFmvDeta
       confidence: (data?.confidence as ListingFmvDetail["confidence"]) ?? "none",
       comps_median_lkr: toNumberOrNull(data?.comps_median_lkr),
       updated_at: String(data?.updated_at ?? ""),
+      estimate_lkr: toNumberOrNull(data?.estimate_lkr),
+      verdict:
+        data?.verdict && typeof data.verdict === "object"
+          ? {
+              status: String((data.verdict as JsonRecord).status ?? ""),
+              reason: (data.verdict as JsonRecord).reason ? String((data.verdict as JsonRecord).reason) : null,
+            }
+          : null,
+      corroborated_by_comps: data?.corroborated_by_comps === true,
     };
   } catch {
     const { predictFmvOffline } = await import("@/lib/offlineValuation");

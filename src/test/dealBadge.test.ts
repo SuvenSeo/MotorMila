@@ -27,7 +27,7 @@ describe("computeDealBadge", () => {
   });
 
   it("turns very cheap outliers amber, never green", () => {
-    const b = computeDealBadge({ askingLkr: 4_000_000, fmvLkr: 8_000_000, confidence: "high", compsCount: 80 });
+    const b = computeDealBadge({ askingLkr: 4_800_000, fmvLkr: 8_000_000, confidence: "high", compsCount: 80 });
     expect(b.kind).toBe("verify");
     expect(dealBadgeLabel(b, t)).toBe("Unusually low — verify first");
     expect(DEAL_BADGE_CLASSES.verify).toMatch(/deal-caution/);
@@ -35,12 +35,20 @@ describe("computeDealBadge", () => {
     expect(DEAL_SOFT_CLASSES.verify).not.toMatch(/emerald|green|deal-good/);
   });
 
-  it("treats a below-FMV call on a low-confidence estimate as verify", () => {
-    expect(computeDealBadge({ askingLkr: 7_000_000, fmvLkr: 8_000_000, confidence: "low" }).kind).toBe("verify");
-    expect(computeDealBadge({ askingLkr: 7_000_000, fmvLkr: 8_000_000, confidence: "none" }).kind).toBe("verify");
-    expect(computeDealBadge({ askingLkr: 7_000_000, fmvLkr: 8_000_000, compsCount: 2 }).kind).toBe("verify");
-    // Low confidence does not invent a warning for fair/expensive asks.
-    expect(computeDealBadge({ askingLkr: 8_000_000, fmvLkr: 8_000_000, confidence: "low" }).kind).toBe("fair");
+  it("shows no badge on a low-confidence / thin estimate (the verdict is withheld)", () => {
+    expect(computeDealBadge({ askingLkr: 7_000_000, fmvLkr: 8_000_000, confidence: "low" }).kind).toBe("none");
+    expect(computeDealBadge({ askingLkr: 7_000_000, fmvLkr: 8_000_000, confidence: "none" }).kind).toBe("none");
+    expect(computeDealBadge({ askingLkr: 7_000_000, fmvLkr: 8_000_000, compsCount: 2 }).kind).toBe("none");
+    expect(computeDealBadge({ askingLkr: 8_000_000, fmvLkr: 8_000_000, confidence: "low" }).kind).toBe("none");
+  });
+
+  it("never rates an implausible gap, a placeholder or a parts/rental ad", () => {
+    expect(computeDealBadge({ askingLkr: 735_000, fmvLkr: 7_201_142 }).kind).toBe("none");
+    expect(computeDealBadge({ askingLkr: 30_000_000, fmvLkr: 8_000_000 }).kind).toBe("none");
+    expect(computeDealBadge({ askingLkr: 1_234_567, fmvLkr: 1_300_000 }).kind).toBe("none");
+    expect(computeDealBadge({ askingLkr: 5_000_000, fmvLkr: 8_000_000, title: "Toyota Axio for parts" }).kind).toBe("none");
+    expect(computeDealBadge({ askingLkr: 5_000_000, fmvLkr: 5_200_000, title: "Prius for rent" }).kind).toBe("none");
+    expect(computeDealBadge({ askingLkr: 5_000_000, fmvLkr: 5_200_000, model: "Other" }).kind).toBe("none");
   });
 
   it("does not penalise unknown confidence (cards have only the median)", () => {
@@ -56,7 +64,7 @@ describe("computeDealBadge", () => {
 
   it("keeps safety labels when the rating is not allowed, hides the rest", () => {
     expect(computeDealBadge({ askingLkr: 7_000_000, fmvLkr: 8_000_000, ratingAllowed: false }).kind).toBe("none");
-    expect(computeDealBadge({ askingLkr: 3_000_000, fmvLkr: 8_000_000, ratingAllowed: false }).kind).toBe("verify");
+    expect(computeDealBadge({ askingLkr: 4_000_000, fmvLkr: 8_000_000, ratingAllowed: false }).kind).toBe("verify");
     expect(
       computeDealBadge({ askingLkr: 3_000_000, fmvLkr: 8_000_000, ratingAllowed: false, isLeaseTakeover: true }).kind,
     ).toBe("lease");

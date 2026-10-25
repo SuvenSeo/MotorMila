@@ -18,7 +18,8 @@ import { parseFlexibleTime } from '@/lib/parseTime';
 import type { TrustRelatedListing } from '@/lib/trustSignals';
 import type { EnrichmentEnvelope, ListingFmvDetail, SafetyResearchResponse } from '@/services/api';
 import type { CarListing, PriceHistoryInfo, SellerTrustProfile } from '@/types/car';
-import { summarizeFmv } from '@/lib/fmv';
+import { fmvSummaryFromVerdict } from '@/lib/fmv';
+import { isVerdictOk, resolveListingVerdict, withheldDetail, withheldHeadline } from '@/lib/priceVerdict';
 import { plausibleEngineCc } from '@/lib/engineCapacity';
 import { ListingImageCarousel } from '@/components/ListingImageCarousel';
 import { getListingImageList, pickVehicleImageUrl } from '@/lib/listingImage';
@@ -58,7 +59,7 @@ import { trackEvent } from '@/lib/analytics';
 import { canonicalizeMake, canonicalizeModel } from '@/lib/makeNormalization';
 import { ListingLeadActions } from '@/components/money/ListingLeadActions';
 import { formatLkrFull } from '@/lib/price';
-import { computeDealBadge, DEAL_TEXT_CLASSES } from '@/lib/dealBadge';
+import { computeDealBadge, dealBadgeFromVerdict, DEAL_TEXT_CLASSES } from '@/lib/dealBadge';
 import { detectListingLeaseTakeover } from '@/lib/leaseTakeover';
 import { estimateListingMonthly, formatMonthlyLkr } from '@/lib/listingFinance';
 import { DealBadge, type DealWhyData } from '@/components/listing/DealBadge';
@@ -189,17 +190,17 @@ export default function ListingDetail() {
     if (!listing) return;
     const price = Number(listing.price_lkr || 0);
     const priced = Number.isFinite(price) && price >= 100_000 && price <= 500_000_000;
-    const median = Number(listing.market_median_lkr);
+    const pinVerdict = resolveListingVerdict(listing, fmvDetail);
     const result = toggleCompare({
       id: Number(listing.id),
       make: listing.make,
       model: listing.model,
       year: listing.year,
       price_lkr: priced ? price : null,
-      fmv_lkr: fmvDetail?.fmv_lkr ?? (Number.isFinite(median) && median > 0 ? median : null),
+      fmv_lkr: isVerdictOk(pinVerdict) ? pinVerdict.referenceLkr : null,
       mileage_km: Number(listing.mileage_km) || null,
       district: listing.district,
-      deal_score: typeof listing.deal_score === 'number' ? listing.deal_score : null,
+      deal_score: isVerdictOk(pinVerdict) ? Math.round(-pinVerdict.gapPct * 10) / 10 : null,
     });
     if (result.atCap) toast.error(t("listing.compareFull", "Compare tray is full (max 4) — remove one first"));
     else if (result.pinned) toast.success(t("listing.compareAdded", "Pinned to compare tray"));
@@ -327,20 +328,18 @@ export default function ListingDetail() {
     : 'petrol';
 
   const lease = detectListingLeaseTakeover(listing);
-  const median = Number(listing.market_median_lkr);
-  const hasMedian = Number.isFinite(median) && median > 0;
-  const fmvLkr = fmvDetail?.fmv_lkr && fmvDetail.fmv_lkr > 0 ? fmvDetail.fmv_lkr : hasMedian ? median : null;
+  // THE price verdict for this listing: computed once from the FMV estimate
+  // (+ its comps/confidence) and handed to every panel below — deal badge,
+  // FMV card, deal ladder, Trust Check, price timeline, compare pin, sticky
+  // bar — so no two of them can contradict each other (src/lib/priceVerdict.ts).
+  const verdict = resolveListingVerdict(listing, fmvDetail);
+  const fmvLkr = isVerdictOk(verdict) ? verdict.referenceLkr : null;
   // null deal_score = rating suppressed server-side (thin cohort / old vehicle / extreme price / free plan)
   const ratingAllowed = fullAccess && listing.deal_score !== null && listing.deal_score !== undefined;
   // No deal call until the FMV is in (a seeded first paint has only the card's data).
-  const deal: ReturnType<typeof computeDealBadge> = !dataReady ? { kind: 'none', gapLkr: 0, gapPctBelow: 0 } : computeDealBadge({
-    askingLkr: hasPrice ? listingPrice : null,
-    fmvLkr,
-    confidence: fmvDetail?.confidence ?? null,
-    compsCount: fmvDetail ? fmvDetail.sample_size : null,
-    isLeaseTakeover: lease.isLeaseTakeover,
-    ratingAllowed,
-  });
+  const deal: ReturnType<typeof computeDealBadge> = !dataReady
+    ? { kind: 'none', gapLkr: 0, gapPctBelow: 0 }
+    : dealBadgeFromVerdict(verdict, { isLeaseTakeover: lease.isLeaseTakeover, ratingAllowed });
   const dealWhy: DealWhyData = {
     fmvLkr,
     askingLkr: hasPrice ? listingPrice : null,
@@ -348,8 +347,8 @@ export default function ListingDetail() {
     confidence: fmvDetail?.confidence ?? null,
     method: fmvDetail?.method ?? null,
   };
-  const fmvSummary = hasPrice && fmvLkr && !lease.isLeaseTakeover ? summarizeFmv(listingPrice, fmvLkr, t) : null;
-  const fmvKind = deal.kind === 'verify' ? 'verify' : fmvSummary?.band === 'below' ? 'below' : fmvSummary?.band === 'above' ? 'above' : 'fair';
+  const fmvSummary = hasPrice && !lease.isLeaseTakeover ? fmvSummaryFromVerdict(listingPrice, verdict, t) : null;
+  const fmvKind = fmvSummary?.verify_first ? 'verify' : fmvSummary?.band === 'below' ? 'below' : fmvSummary?.band === 'above' ? 'above' : 'fair';
   const monthly = hasPrice
     ? estimateListingMonthly({
         priceLkr: listingPrice,
@@ -492,7 +491,7 @@ export default function ListingDetail() {
           )}
           {hasPrice && (
             <div className="mt-3">
-              <DealLadder askingPrice={listingPrice} marketMedianLkr={fmvSummary.fmv_lkr} />
+              <DealLadder askingPrice={listingPrice} marketMedianLkr={fmvSummary.fmv_lkr} verdict={verdict} />
             </div>
           )}
           <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/70 pt-3">
@@ -512,6 +511,11 @@ export default function ListingDetail() {
           <p className="mt-2 text-caption text-muted-foreground">
             {t("deal.whyAsking", "These are asking prices on listing sites, not sale prices.")}
           </p>
+        </>
+      ) : verdict.status === "withheld" && verdict.group !== "insufficient_data" ? (
+        <>
+          <p className="mt-1 text-footnote font-bold text-foreground">{withheldHeadline(verdict.group, t)}</p>
+          <p className="mt-1 text-caption leading-relaxed text-muted-foreground">{withheldDetail(verdict.group, t)}</p>
         </>
       ) : (
         <p className="mt-2 text-caption text-muted-foreground">
@@ -703,7 +707,7 @@ export default function ListingDetail() {
                 <Suspense fallback={<div className="h-56 rounded-2xl border border-border bg-card skeleton-shimmer" />}>
                   <ListingPriceTimeline
                     history={priceHistory}
-                    marketMedianLkr={listing.market_median_lkr}
+                    marketMedianLkr={fmvLkr}
                     listingTitle={displayName}
                   />
                 </Suspense>
@@ -718,6 +722,7 @@ export default function ListingDetail() {
               <motion.div {...onScroll} className="cv-section">
                 <TrustCheckPanel
                   listing={listing}
+                  verdict={dataReady ? verdict : null}
                   pricePoints={priceHistory?.points ?? null}
                   related={relatedListings}
                 />

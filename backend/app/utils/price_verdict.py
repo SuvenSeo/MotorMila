@@ -145,7 +145,10 @@ def is_placeholder_price(price: float) -> bool:
 
 
 def is_generic_model(model: Optional[str]) -> bool:
-    return (model or "").strip().lower() in GENERIC_MODELS
+    """A bucket like "Other" (many models mixed). Unknown (None) is not penalised."""
+    if model is None:
+        return False
+    return model.strip().lower() in GENERIC_MODELS
 
 
 def price_floor_lkr(category: Optional[str]) -> float:

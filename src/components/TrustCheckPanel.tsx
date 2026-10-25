@@ -22,10 +22,10 @@ const LEVEL_STYLE: Record<SignalLevel, { icon: typeof Info; tone: string; label:
  */
 export function TrustCheckPanel(props: TrustInput & { className?: string }) {
   const { t } = useAppPreferences();
-  const { className, listing, pricePoints, related, now } = props;
+  const { className, listing, pricePoints, related, now, verdict } = props;
   const report = useMemo(
-    () => buildTrustReport({ listing, pricePoints, related, now, t }),
-    [listing, pricePoints, related, now, t],
+    () => buildTrustReport({ listing, pricePoints, related, now, t, verdict }),
+    [listing, pricePoints, related, now, t, verdict],
   );
   const HeaderIcon = report.highCount > 0 ? ShieldAlert : ShieldCheck;
 

@@ -3,6 +3,7 @@
  * `{ sparklines: { [listingId]: [[price, timestamp], ...] } }`).
  */
 import { parseFlexibleTime } from "@/lib/parseTime";
+import { MAX_UNCONFIRMED_DROP_PCT } from "@/lib/dataSanity";
 
 export interface PricePoint {
   price: number;
@@ -56,5 +57,8 @@ export function summarizePricePoints(points: PricePoint[]): PriceDropSummary | n
  */
 export function isMeaningfulDrop(summary: PriceDropSummary | null): boolean {
   if (!summary || !summary.dropped) return false;
+  // A ≥ 50 % net "cut" is the unit-slip / half-price parse signature
+  // (src/lib/dataSanity.ts MAX_UNCONFIRMED_DROP_PCT) — never a card badge.
+  if (summary.totalChangePct <= -MAX_UNCONFIRMED_DROP_PCT) return false;
   return summary.totalChangePct <= -1 && Math.abs(summary.totalChangeLkr) >= 25_000;
 }

@@ -5,6 +5,8 @@ describe("listing card metadata helpers", () => {
   it("maps deal scores to Good Deal, Fair Price, and Overpriced", () => {
     expect(getListingDealLabel(12)).toBe("Good Deal");
     expect(getListingDealLabel(3)).toBe("Fair Price");
+    expect(getListingDealLabel(5)).toBe("Good Deal");
+    expect(getListingDealLabel(-7)).toBe("Fair Price");
     expect(getListingDealLabel(-8)).toBe("Overpriced");
   });
 

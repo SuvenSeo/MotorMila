@@ -12,13 +12,18 @@
  */
 import type { CarListing, PriceHistoryInfo } from "@/types/car";
 import type { ListingFmvDetail } from "@/types/fmv";
+import { askingPriceIssue, isGenericModel, MIN_COMPS, priceVerdict, type PriceVerdict } from "@/lib/priceVerdict";
 
 /** Bump when fmv.py / price_history.py change and this file is re-synced. */
-export const OFFLINE_VALUATION_VERSION = "2026-09-21";
+export const OFFLINE_VALUATION_VERSION = "2026-10-25";
 
 const MIN_ML_COMPS = 8;
 const MAX_COMPS = 80;
+const FETCH_LIMIT = 160;
 const YEAR_WINDOW = 2;
+const WIDE_YEAR_WINDOW = 4;
+const OLS_MAX_DRIFT = 0.15;
+const AGREE_RATIO = 1.25;
 
 function conditionCode(value: unknown): number {
   const raw = String(value || "").trim().toLowerCase();
@@ -106,24 +111,66 @@ function listingMileage(row: CarListing): number | null {
   return n !== null && n > 0 ? n : null;
 }
 
+function compIsUsable(row: CarListing): boolean {
+  return askingPriceIssue(row.price_lkr, { category: row.vehicle_category, title: row.title }) === null;
+}
+
+/** Tukey fences on log price after a 0.4×–2.5× band around the median (fmv.py _trim_outliers). */
+function trimOutliers(rows: CarListing[]): CarListing[] {
+  const priced = rows.filter((r) => (listingPrice(r) ?? 0) > 0);
+  if (priced.length < 4) return priced;
+  const med = median(priced.map((r) => listingPrice(r) as number)) ?? 0;
+  const banded = priced.filter((r) => {
+    const p = listingPrice(r) as number;
+    return p >= med * 0.4 && p <= med * 2.5;
+  });
+  if (banded.length < 4) return banded;
+  const logs = banded.map((r) => Math.log(listingPrice(r) as number)).sort((x, y) => x - y);
+  const q1 = logs[Math.floor(logs.length / 4)];
+  const q3 = logs[Math.floor((3 * logs.length) / 4)];
+  const iqr = q3 - q1;
+  return banded.filter((r) => {
+    const l = Math.log(listingPrice(r) as number);
+    return l >= q1 - 1.5 * iqr && l <= q3 + 1.5 * iqr;
+  });
+}
+
+function seenTs(row: CarListing): number {
+  const t = Date.parse(String(row.last_seen_at || row.scraped_at || ""));
+  return Number.isFinite(t) ? t : 0;
+}
+
+/** Same make + model + vehicle category, nearest model years first (fmv.py _fetch_comps). */
 function fetchComps(catalog: CarListing[], listing: CarListing): CarListing[] {
   const make = String(listing.make || "").trim();
   const model = String(listing.model || "").trim();
   if (!make || !model) return [];
-  const year = numOrNull(listing.year);
-  let rows = catalog.filter(
+  const category = String(listing.vehicle_category || "").trim();
+  const year = numOrNull(listing.year) || null;
+  const base = catalog.filter(
     (row) =>
       row.id !== listing.id &&
       sameText(row.make, make) &&
       sameText(row.model, model) &&
+      (!category || sameText(row.vehicle_category, category)) &&
       listingPrice(row) !== null,
   );
+  const byRecency = (a: CarListing, b: CarListing) => seenTs(b) - seenTs(a) || Number(b.id) - Number(a.id);
+  let rows: CarListing[] = [];
   if (year !== null) {
-    const tight = rows.filter((row) => {
-      const y = numOrNull(row.year);
-      return y !== null && Math.abs(y - year) <= YEAR_WINDOW;
-    });
-    if (tight.length >= MIN_ML_COMPS) rows = tight;
+    for (const window of [YEAR_WINDOW, WIDE_YEAR_WINDOW]) {
+      const inWindow = base
+        .filter((row) => {
+          const y = numOrNull(row.year);
+          return y !== null && y > 0 && Math.abs(y - year) <= window;
+        })
+        .sort((a, b) => Math.abs(Number(a.year) - year) - Math.abs(Number(b.year) - year) || byRecency(a, b))
+        .slice(0, FETCH_LIMIT);
+      rows = trimOutliers(inWindow.filter(compIsUsable));
+      if (rows.length >= MIN_ML_COMPS) break;
+    }
+  } else {
+    rows = trimOutliers([...base].sort(byRecency).slice(0, FETCH_LIMIT).filter(compIsUsable));
   }
   return rows.slice(0, MAX_COMPS);
 }
@@ -138,44 +185,51 @@ function adjustedMedianFmv(listing: CarListing, comps: CarListing[]): number | n
   return median(prices);
 }
 
+/** Centred OLS (fmv.py _ml_predict); the caller accepts it only near the robust median. */
 function mlPredict(listing: CarListing, comps: CarListing[]): number | null {
   if (comps.length < MIN_ML_COMPS) return null;
   const district = String(listing.district || "").trim().toLowerCase();
-  const listingYear = numOrNull(listing.year);
+  const years = comps.map((r) => numOrNull(r.year)).filter((y): y is number => y !== null && y > 0);
+  const kms = comps.map(listingMileage).filter((k): k is number => k !== null).map((k) => k / 1000);
+  const meanYear = years.length ? years.reduce((a, b) => a + b, 0) / years.length : numOrNull(listing.year) || 2015;
+  const meanKm = kms.length ? kms.reduce((a, b) => a + b, 0) / kms.length : 50;
+  const feats = (year: number | null, km: number | null, same: number, cond: number) => [
+    1.0,
+    (year ?? meanYear) - meanYear,
+    ((km !== null ? km / 1000 : meanKm) - meanKm) / 10,
+    same,
+    cond,
+  ];
   const features: number[][] = [];
   const targets: number[] = [];
   for (const row of comps) {
     const price = listingPrice(row);
     if (price === null) continue;
-    const year = numOrNull(row.year) ?? listingYear ?? 2015;
-    const mileage = listingMileage(row) !== null ? (listingMileage(row) as number) / 1000 : 50.0;
-    const sameDistrict =
-      district && String(row.district || "").trim().toLowerCase() === district ? 1.0 : 0.0;
-    features.push([1.0, year, mileage, sameDistrict, conditionCode(row.condition)]);
+    const y = numOrNull(row.year);
+    const sameDistrict = district && String(row.district || "").trim().toLowerCase() === district ? 1.0 : 0.0;
+    features.push(feats(y && y > 0 ? y : null, listingMileage(row), sameDistrict, conditionCode(row.condition)));
     targets.push(price);
   }
   if (features.length < MIN_ML_COMPS) return null;
   const beta = solveOls(features, targets);
   if (!beta) return null;
-
-  const years = comps.map((r) => numOrNull(r.year)).filter((y): y is number => y !== null);
-  const targetYear = listingYear ?? (years.length > 0 ? years.reduce((a, b) => a + b, 0) / years.length : 2015);
-  const lm = listingMileage(listing);
-  const targetMileage = lm !== null ? lm / 1000 : 50.0;
-  const x = [1.0, targetYear, targetMileage, 1.0, conditionCode(listing.condition)];
-  let predicted = beta.reduce((acc, b, i) => acc + b * x[i], 0);
-  if (predicted <= 0) return null;
-
-  const prices = comps
-    .map(listingPrice)
-    .filter((p): p is number => p !== null)
-    .sort((a, b) => a - b);
-  if (prices.length >= 4) {
-    const q1 = prices[Math.floor(prices.length / 4)];
-    const q3 = prices[Math.floor((3 * prices.length) / 4)];
-    predicted = Math.min(Math.max(predicted, q1 * 0.75), q3 * 1.25);
-  }
+  const ly = numOrNull(listing.year);
+  const x = feats(ly && ly > 0 ? ly : null, listingMileage(listing), 1.0, conditionCode(listing.condition));
+  const predicted = beta.reduce((acc, b, i) => acc + b * x[i], 0);
+  if (!Number.isFinite(predicted) || predicted <= 0) return null;
   return Math.round(predicted * 100) / 100;
+}
+
+const CONF_ORDER = ["none", "low", "medium", "high"] as const;
+type Conf = (typeof CONF_ORDER)[number];
+function capConf(level: Conf, ceiling: Conf): Conf {
+  return CONF_ORDER.indexOf(level) <= CONF_ORDER.indexOf(ceiling) ? level : ceiling;
+}
+function dispersion(sorted: number[]): number | null {
+  if (sorted.length < 4) return null;
+  const med = median(sorted);
+  if (!med) return null;
+  return (sorted[Math.floor((3 * sorted.length) / 4)] - sorted[Math.floor(sorted.length / 4)]) / med;
 }
 
 function confidenceFromSample(sampleCount: number, method: string): ListingFmvDetail["confidence"] {
@@ -193,52 +247,82 @@ export interface OfflineFmvResult extends ListingFmvDetail {
 /** Mirrors `predict_listing_fmv` — comp set comes from the snapshot catalog. */
 export function predictFmvOffline(catalog: CarListing[], listing: CarListing): OfflineFmvResult {
   const asking = listingPrice(listing);
-  const storedMedian = numOrNull(
-    (listing as { market_median_lkr?: unknown }).market_median_lkr,
-  );
-  const dealScore = numOrNull((listing as { deal_score?: unknown }).deal_score);
+  let storedMedian = numOrNull((listing as { market_median_lkr?: unknown }).market_median_lkr);
+  const ctx = { category: listing.vehicle_category, model: listing.model, title: listing.title };
+  if (storedMedian !== null && priceVerdict({ asking, reference: storedMedian, ...ctx }).status !== "ok") storedMedian = null;
 
   const comps = fetchComps(catalog, listing);
   let method = "insufficient_data";
   let fmv: number | null = null;
-
-  const mlValue = mlPredict(listing, comps);
-  if (mlValue !== null) {
-    fmv = mlValue;
-    method = "ols_comps";
-  } else {
-    const adjusted = adjustedMedianFmv(listing, comps);
-    if (adjusted !== null) {
-      fmv = adjusted;
-      method = "adjusted_median";
-    } else if (storedMedian !== null) {
-      fmv = storedMedian;
-      method = "cohort_median";
-    }
-  }
-
   const compPrices = comps
     .map(listingPrice)
     .filter((p): p is number => p !== null)
     .sort((a, b) => a - b);
   const compsMedian = median(compPrices);
 
-  let band: ListingFmvDetail["band"] = null;
-  let deltaPct: number | null = null;
-  let label: string | null = null;
-  if (asking !== null && fmv !== null && asking > 0 && fmv > 0) {
-    deltaPct = Math.round(((asking - fmv) / fmv) * 100 * 100) / 100;
-    if (deltaPct <= -5) {
-      band = "below";
-      label = `Priced ${Math.abs(Math.round(deltaPct))}% below FMV`;
-    } else if (deltaPct >= 8) {
-      band = "above";
-      label = `Overpriced ${Math.abs(Math.round(deltaPct))}% vs FMV`;
-    } else {
-      band = "fair";
-      label = "Near fair market value";
-    }
+  const adjusted = adjustedMedianFmv(listing, comps);
+  const mlValue = mlPredict(listing, comps);
+  let compsEstimate: number | null = null;
+  let compsMethod = "insufficient_data";
+  if (mlValue !== null && adjusted && Math.abs(mlValue / adjusted - 1) <= OLS_MAX_DRIFT) {
+    compsEstimate = mlValue;
+    compsMethod = "ols_comps";
+  } else if (adjusted !== null) {
+    compsEstimate = adjusted;
+    compsMethod = "adjusted_median";
   }
+  let confidence: Conf = confidenceFromSample(comps.length, compsMethod);
+  const spread = dispersion(compPrices);
+  if (spread !== null && spread > 0.8) confidence = capConf(confidence, "low");
+  else if (spread !== null && spread > 0.5) confidence = capConf(confidence, "medium");
+
+  let corroborated = false;
+  let disagree = false;
+  if (storedMedian !== null && compsEstimate !== null) {
+    const ratio = Math.max(storedMedian, compsEstimate) / Math.min(storedMedian, compsEstimate);
+    if (ratio <= AGREE_RATIO) {
+      fmv = storedMedian;
+      method = "cohort_median";
+      corroborated = true;
+      if (comps.length >= 3 && CONF_ORDER.indexOf(confidence) < 2) confidence = "medium";
+    } else {
+      fmv = compsEstimate;
+      method = compsMethod;
+      disagree = true;
+      confidence = capConf(confidence, "low");
+    }
+  } else if (compsEstimate !== null) {
+    fmv = compsEstimate;
+    method = compsMethod;
+  } else if (storedMedian !== null) {
+    fmv = storedMedian;
+    method = "cohort_median";
+    confidence = "low";
+  }
+  if (isGenericModel(listing.model)) confidence = capConf(confidence, "low");
+
+  let verdict: PriceVerdict = priceVerdict({
+    asking,
+    reference: fmv,
+    comps: corroborated ? Math.max(comps.length, MIN_COMPS) : comps.length,
+    confidence,
+    ...ctx,
+  });
+  if (disagree && (verdict.status === "ok" || verdict.reason === "low_confidence")) {
+    verdict = { status: "withheld", reason: "estimates_disagree", group: "inconsistent_data", referenceLkr: fmv };
+  }
+  const okV = verdict.status === "ok" ? verdict : null;
+  const ok = okV !== null;
+  const deltaPct = okV ? okV.gapPct : null;
+  const band: ListingFmvDetail["band"] = okV ? okV.band : null;
+  const label = okV
+    ? okV.band === "below"
+      ? `Priced ${okV.pct}% below typical`
+      : okV.band === "above"
+        ? `Priced ${okV.pct}% above typical`
+        : "Near the typical price"
+    : null;
+  const dealScore = okV ? Math.round(-okV.gapPct * 10) / 10 : null;
 
   let kmAdj: number | null = null;
   let districtAdj: number | null = null;
@@ -255,7 +339,10 @@ export function predictFmvOffline(catalog: CarListing[], listing: CarListing): O
   return {
     listing_id: Number(listing.id) || null,
     asking_lkr: asking,
-    fmv_lkr: fmv,
+    fmv_lkr: ok ? fmv : null,
+    estimate_lkr: fmv,
+    verdict: ok ? { status: "ok", reason: null } : { status: "withheld", reason: verdict.status === "withheld" ? verdict.reason : null },
+    corroborated_by_comps: corroborated,
     deal_score: dealScore,
     delta_pct: deltaPct,
     band,
@@ -263,7 +350,7 @@ export function predictFmvOffline(catalog: CarListing[], listing: CarListing): O
     method,
     sample_count: comps.length,
     sample_size: comps.length,
-    confidence: confidenceFromSample(comps.length, method),
+    confidence,
     comps_median_lkr: compsMedian,
     km_adjustment_lkr: kmAdj,
     district_adjustment_lkr: districtAdj,
@@ -271,7 +358,7 @@ export function predictFmvOffline(catalog: CarListing[], listing: CarListing): O
       base_median_lkr: compsMedian,
       km_adjustment_lkr: kmAdj,
       district_adjustment_lkr: districtAdj,
-      final_fmv_lkr: fmv,
+      final_fmv_lkr: ok ? fmv : null,
     },
     updated_at: new Date().toISOString(),
     offline: true,

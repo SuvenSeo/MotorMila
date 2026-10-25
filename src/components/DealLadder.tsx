@@ -1,4 +1,5 @@
 import { computeDealLadder } from "@/lib/dealLadder";
+import type { PriceVerdict } from "@/lib/priceVerdict";
 import { formatPrice } from "@/services/api";
 import { cn } from "@/lib/utils";
 import { useAppPreferences } from "@/lib/appPreferences";
@@ -12,6 +13,8 @@ const BAND_LABEL = {
 interface DealLadderProps {
   askingPrice: number;
   marketMedianLkr: number;
+  /** The page's one verdict — the ladder follows its band and hides when it is withheld. */
+  verdict?: PriceVerdict | null;
   className?: string;
 }
 
@@ -30,9 +33,9 @@ const RUNG_TONE = {
   },
 } as const;
 
-export function DealLadder({ askingPrice, marketMedianLkr, className }: DealLadderProps) {
+export function DealLadder({ askingPrice, marketMedianLkr, verdict, className }: DealLadderProps) {
   const { t } = useAppPreferences();
-  const ladder = computeDealLadder({ askingPrice, marketMedianLkr });
+  const ladder = computeDealLadder({ askingPrice, marketMedianLkr, verdict });
   if (!ladder) return null;
   const bandName = (band: keyof typeof BAND_LABEL) => t(BAND_LABEL[band][0], BAND_LABEL[band][1]);
 

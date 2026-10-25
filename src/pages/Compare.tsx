@@ -13,6 +13,7 @@ import { TableContainer, Table, TableHeader, TableBody } from "@/components/ui/t
 import { toast } from "sonner";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { getListingFmv, getListingsBatch } from "@/services/api";
+import { withheldHeadline } from "@/lib/priceVerdict";
 import type { CarListing } from "@/types/car";
 import { PageCanvas } from "@/components/PageCanvas";
 import { formatLkrFull } from "@/lib/price";
@@ -32,6 +33,7 @@ import { SellSpeedBadge } from "@/components/SellSpeedBadge";
 import {
   COMPARE_ROWS,
   bestIndexes,
+  compareVerdict,
   fmvFor,
   monthlyEstimate,
   rowDiffers,
@@ -113,7 +115,7 @@ export default function Compare() {
           if (cancelled) return;
           setFmvById((prev) => ({
             ...prev,
-            [id]: { fmv: d.fmv_lkr, confidence: d.confidence ?? null, comps: d.sample_count ?? null },
+            [id]: { fmv: d.fmv_lkr, confidence: d.confidence ?? null, comps: d.sample_count ?? null, method: d.method ?? null, verdict: d.verdict ?? null },
           }));
         })
         .catch(() => {
@@ -204,9 +206,13 @@ export default function Compare() {
       }
       case "vsFmv": {
         const pct = vsFmvPct(l, fmv);
-        if (pct === null) return "—";
+        if (pct === null) {
+          const v = compareVerdict(l, fmv);
+          return v.status === "withheld" ? <span className="text-label-2">{withheldHeadline(v.group, t)}</span> : "—";
+        }
         const gap = Math.abs((askingPrice(l) ?? 0) - (fmvFor(l, fmv) ?? 0));
-        const tone = pct <= -5 ? "text-deal-good-text" : pct >= 8 ? "text-deal-high-text" : "text-foreground";
+        const v = compareVerdict(l, fmv);
+        const tone = v.status === "ok" && v.verifyFirst ? "text-deal-caution-text" : pct <= -5 ? "text-deal-good-text" : pct >= 8 ? "text-deal-high-text" : "text-foreground";
         const label =
           Math.abs(pct) < 0.5
             ? t("comparePage.atFmv", "At FMV")

@@ -23,4 +23,10 @@ export interface ListingFmvDetail {
   district_adjustment_lkr?: number | null;
   method_breakdown?: FmvMethodBreakdown | null;
   updated_at: string;
+  /** Raw estimate even when the verdict is withheld (fmv_lkr is null then). */
+  estimate_lkr?: number | null;
+  /** The backend's one price verdict (backend/app/utils/price_verdict.py). */
+  verdict?: { status: "ok" | "withheld" | string; reason: string | null } | null;
+  /** True when live comps corroborate the stored cohort median (it is then the FMV). */
+  corroborated_by_comps?: boolean;
 }

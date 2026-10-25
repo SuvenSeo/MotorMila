@@ -14,7 +14,9 @@ import { plausibleEngineCc } from "@/lib/engineCapacity";
 import { MileageTrustChip } from "@/components/MileageTrustChip";
 import { computeMileageTrust } from "@/lib/mileageTrust";
 import { vehicleTokenLabel } from "@/lib/vehicleTokens";
-import { summarizeFmv } from "@/lib/fmv";
+import { fmvSummaryFromVerdict } from "@/lib/fmv";
+import { listingRowVerdict } from "@/lib/priceVerdict";
+import { MAX_UNCONFIRMED_DROP_PCT } from "@/lib/dataSanity";
 import { useAuth } from "@/lib/authContext";
 import { hasFullPlatformAccess } from "@/lib/planLimits";
 import { prefetchRoute, warmDisplayBoldFont } from "@/lib/routePrefetch";
@@ -131,17 +133,21 @@ export const ListingCard = memo(function ListingCard({
 
   // null deal_score = rating suppressed server-side (thin cohort, old vehicle,
   // extreme price) or plan-gated — only safety labels (verify/lease) show then.
+  // One verdict (src/lib/priceVerdict.ts) for the badge AND the market bar, so
+  // they can't disagree with each other or with this listing's detail page.
+  const verdict = listingRowVerdict({ ...listing, price_lkr: hasKnownPrice ? priceValue : null, market_median_lkr: hasMedian ? median : null });
   const deal = computeDealBadge({
     askingLkr: hasKnownPrice ? priceValue : null,
     fmvLkr: hasMedian ? median : null,
     isLeaseTakeover: isLease,
     ratingAllowed: fullAccess && listing.deal_score !== null && listing.deal_score !== undefined,
+    verdict,
   });
-  const fmv = hasKnownPrice && !isLease ? summarizeFmv(priceValue, hasMedian ? median : 0, t) : null;
+  const fmv = hasKnownPrice && !isLease ? fmvSummaryFromVerdict(priceValue, verdict, t) : null;
   const marketDeltaPct = fmv ? fmv.delta_pct : null;
   const marketPosition = marketDeltaPct === null ? 50 : clamp(50 - marketDeltaPct, 8, 92);
   // FMV tone follows the deal badge so a "verify" outlier is never painted green.
-  const fmvKind = deal.kind === "verify" ? "verify" : fmv?.band === "below" ? "below" : fmv?.band === "above" ? "above" : "fair";
+  const fmvKind = fmv?.verify_first ? "verify" : fmv?.band === "below" ? "below" : fmv?.band === "above" ? "above" : "fair";
 
   const monthly = hasKnownPrice
     ? estimateListingMonthly({
@@ -163,7 +169,7 @@ export const ListingCard = memo(function ListingCard({
   const priceSummary = summarizePricePoints(pricePoints);
   const snapshotDropPct = Number(listing.price_drop_pct);
   const showDropBadge =
-    isMeaningfulDrop(priceSummary) || (Number.isFinite(snapshotDropPct) && snapshotDropPct >= 1 && snapshotDropPct < 80);
+    isMeaningfulDrop(priceSummary) || (Number.isFinite(snapshotDropPct) && snapshotDropPct >= 1 && snapshotDropPct < MAX_UNCONFIRMED_DROP_PCT);
   const dropPctLabel = priceSummary && priceSummary.totalChangePct < 0
     ? Math.abs(priceSummary.totalChangePct).toFixed(0)
     : Number.isFinite(snapshotDropPct) && snapshotDropPct > 0

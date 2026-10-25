@@ -18,7 +18,10 @@ import {
 import { CarListing } from "@/types/car";
 import { formatPrice } from "@/services/api";
 import { ConditionBadge } from "./ConditionBadge";
-import { DealScoreBadge } from "./DealScoreBadge";
+import { computeDealBadge, dealBadgeLabel, DEAL_SOFT_CLASSES } from "@/lib/dealBadge";
+import { isVerdictOk, listingPriceContext, listingRowVerdict } from "@/lib/priceVerdict";
+import { isLeaseTakeoverListing } from "@/lib/leaseTakeover";
+import { englishT as t } from "@/lib/translate";
 import {
   Dialog,
   DialogContent,
@@ -26,7 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getListingDealLabel, getListingImageUrl } from "@/lib/listing-card-meta";
+import { getListingImageUrl } from "@/lib/listing-card-meta";
 import { isReasonableListingPrice } from "@/lib/formatting";
 import { VehicleThumbnail } from "@/components/VehicleThumbnail";
 import { AtmosphericImage } from "@/components/AtmosphericImage";
@@ -135,18 +138,26 @@ export const ComparisonModal = memo(function ComparisonModal({ listings, open, o
         label: "Deal score",
         group: "value",
         render: (listing) => {
-          if (listing.deal_score === null || listing.deal_score === undefined) {
-            return <span className="text-muted-foreground">—</span>;
-          }
-          const score = Number(listing.deal_score);
+          // The one verdict (src/lib/priceVerdict.ts) — same call as the card badge.
+          const badge = computeDealBadge({
+            askingLkr: toNumber(listing.price_lkr),
+            fmvLkr: toNumber(listing.market_median_lkr),
+            isLeaseTakeover: isLeaseTakeoverListing(listing),
+            ratingAllowed: listing.deal_score !== null && listing.deal_score !== undefined,
+            ...listingPriceContext(listing),
+          });
+          const label = dealBadgeLabel(badge, t);
+          if (!label) return <span className="text-muted-foreground">—</span>;
           return (
-            <span className="inline-flex flex-wrap items-center gap-2">
-              <DealScoreBadge score={score} />
-              <span className="text-caption font-medium text-muted-foreground">{getListingDealLabel(score)}</span>
+            <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-caption font-semibold", badge.kind !== "none" && DEAL_SOFT_CLASSES[badge.kind])}>
+              {label}
             </span>
           );
         },
-        value: (listing) => toNumber(listing.deal_score),
+        value: (listing) => {
+          const v = listingRowVerdict(listing);
+          return isVerdictOk(v) ? -v.gapPct : null;
+        },
         better: "higher",
       },
       {
@@ -154,33 +165,28 @@ export const ComparisonModal = memo(function ComparisonModal({ listings, open, o
         label: "vs market",
         group: "value",
         render: (listing) => {
-          const price = toNumber(listing.price_lkr);
-          const median = toNumber(listing.market_median_lkr);
-          if (!isReasonableListingPrice(price) || median === null || median <= 0) {
-            return <span className="text-muted-foreground">—</span>;
-          }
-          const delta = ((price! - median) / median) * 100;
-          const below = delta < -0.5;
-          const above = delta > 0.5;
+          const v = listingRowVerdict(listing);
+          if (!isVerdictOk(v)) return <span className="text-muted-foreground">—</span>;
+          const below = v.band === "below";
+          const above = v.band === "above";
           return (
             <span
               className={cn(
                 "tabular-nums font-semibold",
-                below && "text-deal-good-text",
+                below && !v.verifyFirst && "text-deal-good-text",
+                below && v.verifyFirst && "text-deal-caution-text",
                 above && "text-deal-high-text",
                 !below && !above && "text-muted-foreground",
               )}
             >
-              {below ? "" : above ? "+" : ""}
-              {delta.toFixed(1)}%
+              {v.gapPct > 0 ? "+" : ""}
+              {v.gapPct.toFixed(1)}%
             </span>
           );
         },
         value: (listing) => {
-          const price = toNumber(listing.price_lkr);
-          const median = toNumber(listing.market_median_lkr);
-          if (!isReasonableListingPrice(price) || median === null || median <= 0) return null;
-          return ((price! - median) / median) * 100;
+          const v = listingRowVerdict(listing);
+          return isVerdictOk(v) ? v.gapPct : null;
         },
         better: "lower",
       },
@@ -294,7 +300,11 @@ export const ComparisonModal = memo(function ComparisonModal({ listings, open, o
   const bestDealListing = useMemo(
     () =>
       [...listings]
-        .filter((listing) => toNumber(listing.deal_score) !== null)
+        // Deep "verify first" discounts are the bait shape, never the "best deal".
+        .filter((listing) => {
+          const v = listingRowVerdict(listing);
+          return toNumber(listing.deal_score) !== null && isVerdictOk(v) && !v.verifyFirst;
+        })
         .sort((a, b) => Number(b.deal_score || 0) - Number(a.deal_score || 0))[0] ?? null,
     [listings],
   );
