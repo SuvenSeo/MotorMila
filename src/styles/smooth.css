@@ -43,3 +43,14 @@ html.low-data .mm-reveal { opacity: 1; animation: none !important; }
   contain-intrinsic-size: auto 1px;
 }
 
+/* ── Overlay-less popovers (Select, DropdownMenu): see PopoverShield ─────
+   Sits just below the popover's portal (same z as the header, later in the
+   DOM) and takes outside taps so Radix dismisses without click-through. */
+.mm-popover-shield {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-header);
+  pointer-events: auto;
+  background: transparent;
+  -webkit-tap-highlight-color: transparent;
+}
