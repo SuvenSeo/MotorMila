@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, Header, Query, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session, load_only
-from sqlalchemy import String, case, cast, func, desc, asc, and_, or_
+from sqlalchemy import String, case, cast, func, desc, asc, and_, or_, literal
 from typing import Optional, List, Dict, Any, Annotated
 from statistics import median
 from datetime import datetime, timedelta, timezone
+from app.utils.price_verdict import plausible_deal_score, plausible_deal_score_sql
 from app.utils.time import utc_now
 import ipaddress
 import json
@@ -1109,7 +1110,11 @@ def search_listings(
     elif sort == "oldest":
         q = q.order_by(asc(CarListing.first_seen_at))
     elif sort == "deal_score":
-        q = q.filter(CarListing.deal_score.isnot(None)).order_by(desc(CarListing.deal_score))
+        # Implausible stored scores (|gap| > 60 %) are served unscored, so they
+        # must not top the "best deal" sort either.
+        q = q.filter(
+            CarListing.deal_score.isnot(None), plausible_deal_score_sql(CarListing.deal_score)
+        ).order_by(desc(CarListing.deal_score))
     elif sort == "price_asc":
         q = q.order_by(CarListing.price_lkr.asc().nulls_last())
     elif sort == "price_desc":
@@ -1787,7 +1792,7 @@ def estimate_custom_vehicle(payload: CustomVehicleEstimateRequest, db: Session =
             title=row.title or f"{row.make} {row.model} ({row.year})",
             price_lkr=float(row.price_lkr) if row.price_lkr is not None else None,
             district=row.district,
-            deal_score=float(row.deal_score) if row.deal_score is not None else None,
+            deal_score=plausible_deal_score(row),
             detail_url=f"/listing/{row.id}",
             external_url=row.url,
         )
@@ -1960,6 +1965,10 @@ def get_similar_listings(
         CarListing.make == listing.make,
         live_listing_filter(),
     ]
+    # Same kind of vehicle only: a Rs 735k motorbike's "similar" list must not
+    # be cars that happen to share a make and a price band.
+    if listing.vehicle_category:
+        filters.append(CarListing.vehicle_category == listing.vehicle_category)
 
     base_price = float(listing.price_lkr) if listing.price_lkr is not None else 0.0
     if base_price > 0:
@@ -1971,9 +1980,13 @@ def get_similar_listings(
     free_browse = _is_free_browse_plan(plan, role)
     limit = FREE_SIMILAR_LIMIT if free_browse else 6
 
+    # Same model first, then nearest model year (deterministic, not arbitrary).
+    same_model = case((CarListing.model == listing.model, 0), else_=1)
+    year_gap = func.abs(func.coalesce(CarListing.year, 0) - int(listing.year)) if listing.year else literal(0)
     similar = (
         db.query(CarListing)
         .filter(*filters)
+        .order_by(same_model, year_gap, desc(CarListing.last_seen_at))
         .limit(limit)
         .all()
     )

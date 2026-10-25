@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import case, func, desc, and_, or_
 from typing import Optional
 from datetime import datetime, timedelta, timezone
+from app.utils.price_verdict import plausible_deal_score_sql
 from app.utils.districts import (
     SL_DISTRICT_COORDS,
     count_canonical_districts,
@@ -293,7 +294,7 @@ def get_stats_summary(response: Response = None, db: Session = Depends(get_db)):
             live_listing_filter(), CarListing.price_lkr.isnot(None)
         ).scalar()
         good_deals = db.query(func.count(CarListing.id)).filter(
-            CarListing.deal_score >= 20, live_listing_filter()
+            CarListing.deal_score >= 20, plausible_deal_score_sql(CarListing.deal_score), live_listing_filter()
         ).scalar() or 0
         this_week = db.query(func.count(CarListing.id)).filter(
             CarListing.first_seen_at >= seven_days_ago
@@ -1104,6 +1105,7 @@ def _compute_dashboard_insights_payload(db: Session) -> dict:
         .filter(
             CarListing.deal_score.isnot(None),
             CarListing.deal_score >= 8,
+            plausible_deal_score_sql(CarListing.deal_score),
             CarListing.price_lkr.isnot(None),
             CarListing.price_lkr >= MIN_REASONABLE_PRICE_LKR,
             live_listing_filter(),

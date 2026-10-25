@@ -1,9 +1,10 @@
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
 from typing import List, Optional
 from datetime import datetime
 from decimal import Decimal
 import re
 
+from app.utils.price_verdict import stored_signal_is_plausible
 from app.utils.thumbnail_urls import parse_image_list, upgrade_thumbnail_url
 
 
@@ -62,6 +63,26 @@ class CarListingRead(CarListingBase):
     is_active: bool = True
 
     model_config = ConfigDict(from_attributes=True)
+
+    @model_validator(mode="after")
+    def _drop_implausible_price_signal(self) -> "CarListingRead":
+        """Serve no deal score rather than a fake one (app/utils/price_verdict.py).
+
+        The stored score comes from make/model/year cohorts; a mixed cohort
+        ("Honda Other 2026": bikes + cars) or a placeholder/lease price gives
+        "90 % below similar cars". Those rows are served unscored, so every
+        client shows "Not enough comparable data" instead.
+        """
+        if self.market_median_lkr is not None and not stored_signal_is_plausible(
+            price_lkr=self.price_lkr,
+            market_median_lkr=self.market_median_lkr,
+            category=self.vehicle_category,
+            model=self.model,
+            title=self.title,
+        ):
+            self.deal_score = None
+            self.market_median_lkr = None
+        return self
 
 class ListingsResponse(BaseModel):
     items: List[CarListingRead]
