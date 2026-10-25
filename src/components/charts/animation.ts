@@ -10,7 +10,7 @@ export const DEFAULT_ANIMATION_DURATION_MS = 500;
 export const DEFAULT_CHART_ENTER_TRANSITION: Transition = {
   type: "tween",
   duration: DEFAULT_ANIMATION_DURATION_MS / 1000,
-  ease: [0.2, 0, 0, 1], // ease.standard
+  ease: [0.32, 0.72, 0, 1], // ease.standard
 };
 
 /**

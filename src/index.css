@@ -120,8 +120,9 @@
 
     /* ── Motion tokens (mirror of src/lib/motion.ts) ─────────────────────
        3 easings, 4 durations. Nothing else. Animate transform/opacity only. */
-    --ease-standard: cubic-bezier(0.2, 0, 0, 1);
-    --ease-decelerate: cubic-bezier(0, 0, 0, 1);
+    /* One spring-like curve for standard + enter motion (iOS sheet curve). */
+    --ease-standard: cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-decelerate: cubic-bezier(0.32, 0.72, 0, 1);
     --ease-accelerate: cubic-bezier(0.3, 0, 1, 1);
     --dur-micro: 100ms;
     --dur-short: 180ms;

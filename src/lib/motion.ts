@@ -39,9 +39,10 @@ export const duration = {
 
 /** Cubic-bezier easings. */
 export const ease = {
-  standard: [0.2, 0, 0, 1],
+  /** spring-like (iOS sheet curve) — the one curve for standard + enter motion */
+  standard: [0.32, 0.72, 0, 1],
   /** entering elements */
-  decelerate: [0, 0, 0, 1],
+  decelerate: [0.32, 0.72, 0, 1],
   /** leaving elements */
   accelerate: [0.3, 0, 1, 1],
 } as const satisfies Record<string, [number, number, number, number]>;

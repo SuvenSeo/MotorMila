@@ -29,8 +29,8 @@ export function AnimatedNumber({ value, format, locales = "en-LK", prefix, suffi
       animated={!calm}
       willChange
       className={cn("tabular-nums", className)}
-      transformTiming={{ duration: 400, easing: "cubic-bezier(0.2, 0, 0, 1)" }}
-      spinTiming={{ duration: 400, easing: "cubic-bezier(0.2, 0, 0, 1)" }}
+      transformTiming={{ duration: 400, easing: "cubic-bezier(0.32, 0.72, 0, 1)" }}
+      spinTiming={{ duration: 400, easing: "cubic-bezier(0.32, 0.72, 0, 1)" }}
       opacityTiming={{ duration: 180, easing: "ease-out" }}
     />
   );
