@@ -26,13 +26,38 @@ import { NavMoreMenu } from "@/components/NavMoreMenu";
 import { fitNav } from "@/lib/navFit";
 import { cn } from "@/lib/utils";
 
+/** Compact (capsule) on past this scroll offset… */
 const SCROLLED_AT = 24;
+/** …and back to the full row only below this one (hysteresis: no flicker
+ *  when a trackpad settles right on the threshold). */
+const UNSCROLLED_AT = 8;
 const HIDE_AFTER = 96;
-const HIDE_DELTA = 6;
+/** Scroll this far in one direction before the phone header hides/reveals. */
+const HIDE_DELTA = 10;
 const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
+type LiveHeader = { scrolled: boolean; hidden: boolean; menuOpen: boolean; pathname: string };
+
+/** Write the header's derived data-* attributes for a live state (writes only, no layout reads). */
+function paintHeader(header: HTMLElement, s: LiveHeader) {
+  const capsule = s.scrolled || s.menuOpen;
+  const set = (k: string, v: string) => {
+    if (header.dataset[k] !== v) header.dataset[k] = v;
+  };
+  set("scrolled", String(s.scrolled));
+  set("navMode", s.scrolled ? "compact" : "full");
+  set("hidden", String(s.hidden && !s.menuOpen));
+  set("menuOpen", String(s.menuOpen));
+  // The top ↔ capsule glide only plays for a real switch, never on first paint.
+  if (header.dataset.capsule && header.dataset.capsule !== String(capsule)) header.dataset.morphed = "true";
+  set("capsule", String(capsule));
+  set("overHero", String(s.pathname === "/" && !capsule));
+  const fit = capsule ? header.dataset.fitCap : header.dataset.fitTop;
+  if (fit) set("fit", fit);
+}
+
 /**
- * Site header (polish/shell).
+ * Site header (polish/shell; motion pass web/navbar-motion).
  *
  * One 64px row on a 3-column grid: brand left · five destinations centred on
  * the viewport (lg+) with a compact "More" dropdown (NavMoreMenu) holding only
@@ -40,39 +65,60 @@ const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayout
  * language, bell, account), all 36px controls. Below lg the destinations live
  * in the bottom nav (mobile) / hamburger menu panel, which lists every route.
  *
- * Transparent at the top so page heroes run underneath it; a translucent
- * blurred background + hairline fade in once the page scrolls. On phones the
- * header slides away while scrolling down and returns on scroll up.
+ * Transparent at the top so page heroes run underneath it; scrolling morphs it
+ * into a floating glass capsule. On phones it slides away while scrolling down
+ * and returns on scroll up.
+ *
+ * Motion contract (why it is smooth): scrolling never re-renders React. A
+ * passive, rAF-throttled listener writes the header's data-* attributes
+ * directly, and only when a state actually flips (with hysteresis). The morph
+ * itself is compositor-only — the capsule is a pre-sized, pre-blurred layer
+ * that crossfades + scales (index.css "Site header"), and the side clusters
+ * glide on `translate` keyframes (a CSS FLIP) instead of animating padding.
  */
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [signInOpen, setSignInOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [hidden, setHidden] = useState(false);
   const { user, logout, isAuthenticated, hasProAccess } = useAuth();
   const { t, language } = useAppPreferences();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const calm = usePrefersReducedMotionOrLowData();
-  const menuOpenRef = useRef(menuOpen);
-  menuOpenRef.current = menuOpen;
   const headerRef = useRef<HTMLElement>(null);
-  const capsule = isScrolled || menuOpen;
-  const capsuleRef = useRef(capsule);
-  capsuleRef.current = capsule;
+  // Live header state, owned by the DOM (data-* attributes), mirrored here so
+  // the scroll path never touches React state.
+  const live = useRef<LiveHeader>({ scrolled: false, hidden: false, menuOpen: false, pathname });
 
-  // Keep the three clusters from ever overlapping: re-fit on resize, on the
-  // top ↔ capsule switch, and whenever the clusters' content can change
-  // (sign-in state, user name, language, fonts).
+  // First paint: attributes in place before the browser draws the header.
   useIsoLayoutEffect(() => {
     const header = headerRef.current;
-    if (header) fitNav(header, capsule);
-  }, [capsule, isAuthenticated, user?.name, language]);
+    if (!header) return;
+    live.current.scrolled = window.scrollY > SCROLLED_AT;
+    paintHeader(header, live.current);
+  }, []);
+
+  // Menu / route changes re-derive the attributes; a new page always reveals the header.
+  useIsoLayoutEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    live.current.menuOpen = menuOpen;
+    live.current.pathname = pathname;
+    if (menuOpen) live.current.hidden = false;
+    paintHeader(header, live.current);
+  }, [menuOpen, pathname]);
+
+  // Keep the three clusters from ever overlapping: measure both the full-row
+  // and the capsule fit once per content/size change (never on scroll); the
+  // top ↔ capsule switch then just picks the precomputed level.
+  useIsoLayoutEffect(() => {
+    const header = headerRef.current;
+    if (header) fitNav(header, live.current.scrolled || live.current.menuOpen);
+  }, [isAuthenticated, user?.name, language]);
 
   useEffect(() => {
     const header = headerRef.current;
     if (!header) return;
-    const refit = () => fitNav(header, capsuleRef.current);
+    const refit = () => fitNav(header, live.current.scrolled || live.current.menuOpen);
     // Header width changes (resize) and cluster content changes that arrive
     // after mount (bell / freshness hint loading, name truncation, fonts).
     // fitNav ends on the same sizes it started from, so this cannot loop.
@@ -86,20 +132,31 @@ export function Navbar() {
   }, []);
 
   useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
     let frame = 0;
     let lastY = window.scrollY;
+    let anchorY = lastY; // where the current scroll direction started
+    let dir = 0;
     const mobile = window.matchMedia?.("(max-width: 767px)");
     const update = () => {
       frame = 0;
-      const y = window.scrollY;
-      const next = y > SCROLLED_AT;
-      setIsScrolled((cur) => (cur === next ? cur : next));
-      const delta = y - lastY;
-      if (Math.abs(delta) >= HIDE_DELTA || y <= SCROLLED_AT) {
-        const hide = Boolean(mobile?.matches) && !menuOpenRef.current && delta > 0 && y > HIDE_AFTER;
-        setHidden((cur) => (cur === hide ? cur : hide));
-        lastY = y;
+      const s = live.current;
+      const y = Math.max(0, window.scrollY);
+      const scrolled = s.scrolled ? y > UNSCROLLED_AT : y > SCROLLED_AT;
+      const d = Math.sign(y - lastY);
+      if (d !== 0 && d !== dir) {
+        dir = d;
+        anchorY = lastY;
       }
+      lastY = y;
+      let hidden = s.hidden;
+      if (!mobile?.matches || s.menuOpen || y <= HIDE_AFTER) hidden = false;
+      else if (Math.abs(y - anchorY) >= HIDE_DELTA) hidden = dir > 0;
+      if (scrolled === s.scrolled && hidden === s.hidden) return;
+      s.scrolled = scrolled;
+      s.hidden = hidden;
+      paintHeader(header, live.current);
     };
     const onScroll = () => {
       if (frame) return;
@@ -118,12 +175,9 @@ export function Navbar() {
   // Close the menu panel on navigation; always reveal the header on a new page.
   useEffect(() => {
     setMenuOpen(false);
-    setHidden(false);
+    live.current.hidden = false;
+    if (headerRef.current) paintHeader(headerRef.current, live.current);
   }, [pathname]);
-
-  useEffect(() => {
-    if (menuOpen) setHidden(false);
-  }, [menuOpen]);
 
   const goTo = (href: string) => {
     setMenuOpen(false);
@@ -152,11 +206,6 @@ export function Navbar() {
     <header
       ref={headerRef}
       className="site-nav-header right-scroll-bar-position fixed inset-x-0 top-0 z-header"
-      data-scrolled={isScrolled}
-      data-nav-mode={isScrolled ? "compact" : "full"}
-      data-hidden={hidden}
-      data-menu-open={menuOpen}
-      data-over-hero={pathname === "/" && !isScrolled && !menuOpen}
       data-fit="0"
     >
       <div aria-hidden className="site-nav-bg" />
