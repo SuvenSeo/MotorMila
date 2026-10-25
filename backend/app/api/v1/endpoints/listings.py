@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 from app.utils.price_verdict import plausible_deal_score, plausible_deal_score_sql
 from app.utils.time import utc_now
 import ipaddress
+import logging
 import json
 import math
 import re
@@ -23,7 +24,7 @@ from app.services.nhtsa_specs import fetch_models_for_make as _nhtsa_fetch_model
 from app.services.safety_research import combined_research
 from app.services.geo_service import enrich_listing
 from app.utils.history_report import build_history_report
-from app.utils.fmv import predict_listing_fmv
+from app.utils.fmv import batch_price_verdicts, predict_listing_fmv
 from app.utils.price_history import summarize_price_history
 from app.utils.make_canonical import canonicalize_make, canonicalize_model, compact_key
 from app.utils.vehicle_category import category_sql_filter, resolve_browse_category
@@ -886,6 +887,35 @@ def _optional_text_param(value: object) -> Optional[str]:
     return normalized or None
 
 
+def _with_card_verdicts(db: Session, rows: list) -> List[CarListingRead]:
+    """Serialise listing cards so a card never rates what its detail page withholds.
+
+    The detail page's verdict (predict_listing_fmv) also needs live comparables:
+    with fewer than 5, or when they disagree with the stored cohort median, it
+    is withheld. The listing row alone can't show that, so the cards' rating
+    (deal_score + market_median_lkr) is dropped for those rows, and
+    ``price_withheld_reason`` says why (``thin_comps``, ``estimates_disagree``,
+    ``generic_model``...). One batched comps query per page
+    (app/utils/fmv.py batch_price_verdicts). Old clients just see an unscored row.
+    """
+    reads = [CarListingRead.model_validate(row) for row in rows]
+    scored = {read.id for read in reads if read.market_median_lkr is not None}
+    if not scored:
+        return reads
+    try:
+        verdicts = batch_price_verdicts(db, [row for row in rows if int(row.id) in scored])
+    except Exception:  # never fail a list page over a rating
+        logging.getLogger(__name__).warning("card verdict batch failed", exc_info=True)
+        return reads
+    for read in reads:
+        verdict = verdicts.get(read.id)
+        if verdict and verdict.get("status") == "withheld":
+            read.price_withheld_reason = verdict.get("reason")
+            read.deal_score = None
+            read.market_median_lkr = None
+    return reads
+
+
 @router.get("", response_model=ListingsResponse)
 def search_listings(
     request: Request,
@@ -1140,7 +1170,7 @@ def search_listings(
             item.market_median_lkr = None
 
     result = ListingsResponse(
-        items=items,
+        items=items if free_browse else _with_card_verdicts(db, items),
         total=total,
         page=page,
         size=size,
@@ -1995,5 +2025,6 @@ def get_similar_listings(
         for row in similar:
             row.deal_score = None
             row.market_median_lkr = None
+        return similar
 
-    return similar
+    return _with_card_verdicts(db, similar)

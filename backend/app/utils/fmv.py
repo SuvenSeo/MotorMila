@@ -352,6 +352,16 @@ def predict_listing_fmv(db: Session, listing: CarListing) -> dict[str, Any]:
     - sample_size / sample_count, confidence (high/medium/low/none), comps_median_lkr,
       km_adjustment_lkr, district_adjustment_lkr, method_breakdown, updated_at
     """
+    return _fmv_from_comps(listing, _fetch_comps(db, listing))
+
+
+def _fmv_from_comps(listing: CarListing, comps: list[CarListing]) -> dict[str, Any]:
+    """predict_listing_fmv once the comparables are known (pure: no DB access).
+
+    Shared by the detail endpoint (one listing, its own comps query) and
+    batch_price_verdicts (a page of listing cards, one comps query), so a card
+    and its detail page reach the same verdict from the same comps.
+    """
     asking = float(listing.price_lkr) if listing.price_lkr is not None else None
     category = getattr(listing, "vehicle_category", None)
     title = getattr(listing, "title", None)
@@ -361,7 +371,6 @@ def predict_listing_fmv(db: Session, listing: CarListing) -> dict[str, Any]:
     ):
         stored_median = None
 
-    comps = _fetch_comps(db, listing)
     method = "insufficient_data"
     fmv: Optional[float] = None
     sample_count = len(comps)
@@ -457,3 +466,107 @@ def predict_listing_fmv(db: Session, listing: CarListing) -> dict[str, Any]:
         },
         "updated_at": updated_at,
     }
+
+
+# ── Batch: verdicts for a page of listing cards ───────────────────────────
+
+_COMP_COLUMNS = (
+    "id", "make", "model", "vehicle_category", "year", "price_lkr", "mileage",
+    "district", "condition", "title", "last_seen_at",
+)
+# One page needs at most this many candidate comps; beyond it the batch falls
+# back to the per-listing query so the selection can never silently differ.
+_BATCH_ROW_CAP = 6000
+
+
+def _norm(value: Optional[str]) -> str:
+    return (value or "").strip().lower()
+
+
+def _group_key(listing: CarListing) -> Optional[tuple[str, str, str]]:
+    make, model = _norm(listing.make), _norm(listing.model)
+    if not make or not model:
+        return None
+    return make, model, (getattr(listing, "vehicle_category", None) or "").strip()
+
+
+def _recency_key(row: CarListing) -> tuple[float, int]:
+    seen = getattr(row, "last_seen_at", None)
+    ts = seen.timestamp() if isinstance(seen, datetime) else float("-inf")
+    return (-ts, -int(row.id or 0))
+
+
+def _select_comps(listing: CarListing, candidates: list[CarListing]) -> list[CarListing]:
+    """In-memory twin of _fetch_comps over pre-fetched candidates.
+
+    ``candidates`` must hold every live, priced row of the listing's
+    make/model/category in the widest year window (batch_price_verdicts
+    guarantees it). Same windows, order, fetch limit, usability filter and
+    outlier trim as the SQL path.
+    """
+    key = _group_key(listing)
+    if key is None:
+        return []
+    make, model, category = key
+    pool = [
+        r
+        for r in candidates
+        if r.id != listing.id
+        and r.price_lkr is not None
+        and _norm(r.make) == make
+        and _norm(r.model) == model
+        and (not category or (getattr(r, "vehicle_category", None) or "") == category)
+    ]
+    year = listing.year
+    rows: list[CarListing] = []
+    if year is not None:
+        y = int(year)
+        for window in (_YEAR_WINDOW, _WIDE_YEAR_WINDOW):
+            win = [r for r in pool if r.year is not None and y - window <= int(r.year) <= y + window]
+            win.sort(key=lambda r: (abs(int(r.year) - y), *_recency_key(r)))
+            rows = _trim_outliers([r for r in win[:_FETCH_LIMIT] if _comp_is_usable(r)])
+            if len(rows) >= _MIN_ML_COMPS:
+                break
+    else:
+        pool.sort(key=_recency_key)
+        rows = _trim_outliers([r for r in pool[:_FETCH_LIMIT] if _comp_is_usable(r)])
+    return rows[:_MAX_COMPS]
+
+
+def batch_price_verdicts(db: Session, listings: list[Any]) -> dict[int, dict[str, Any]]:
+    """The detail page's verdict for each listing on a page of cards.
+
+    One comps query for the whole page (grouped by make/model/category and
+    year range) instead of one per card. Returns {listing_id: verdict} for
+    every listing that has a stored median (the only rows a card rates).
+    """
+    targets = [l for l in listings if getattr(l, "market_median_lkr", None) is not None and _group_key(l)]
+    if not targets:
+        return {}
+    from sqlalchemy import and_, or_
+    from sqlalchemy.orm import load_only
+
+    groups: dict[tuple[str, str, str], list[Optional[int]]] = {}
+    for l in targets:
+        groups.setdefault(_group_key(l), []).append(l.year)
+    conds = []
+    for (make, model, category), years in groups.items():
+        parts = [func.lower(CarListing.make) == make, func.lower(CarListing.model) == model]
+        if category:
+            parts.append(CarListing.vehicle_category == category)
+        known = [int(y) for y in years if y is not None]
+        if known and len(known) == len(years):
+            parts.append(CarListing.year.between(min(known) - _WIDE_YEAR_WINDOW, max(known) + _WIDE_YEAR_WINDOW))
+        conds.append(and_(*parts))
+    candidates = (
+        db.query(CarListing)
+        .options(load_only(*[getattr(CarListing, c) for c in _COMP_COLUMNS]))
+        .filter(live_listing_filter(), CarListing.price_lkr.isnot(None), or_(*conds))
+        .limit(_BATCH_ROW_CAP + 1)
+        .all()
+    )
+    out: dict[int, dict[str, Any]] = {}
+    for l in targets:
+        comps = _fetch_comps(db, l) if len(candidates) > _BATCH_ROW_CAP else _select_comps(l, candidates)
+        out[int(l.id)] = _fmv_from_comps(l, comps)["verdict"]
+    return out

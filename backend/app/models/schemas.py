@@ -61,6 +61,10 @@ class CarListingRead(CarListingBase):
     market_median_lkr: Optional[Decimal] = None
     is_outlier: bool
     is_active: bool = True
+    # Set on list/similar responses when the detail page's verdict is withheld
+    # (thin_comps, estimates_disagree, ...): the row is then served unscored so
+    # the card can't rate what the detail page won't. None = no reason known.
+    price_withheld_reason: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

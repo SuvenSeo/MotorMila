@@ -537,6 +537,11 @@ function matchesBodyTypeFilter(listing: CarListing, bodyType: string): boolean {
  * Trust Check can show "90% below similar cars" off it.
  */
 function plausibleStoredSignal(raw: JsonRecord, model: string): { deal_score: number | null; market_median_lkr: number | undefined } {
+  // The backend withholds this listing's detail verdict (thin or disagreeing
+  // comparables): the card must not rate it either (backend _with_card_verdicts).
+  if (typeof raw?.price_withheld_reason === "string" && raw.price_withheld_reason) {
+    return { deal_score: null, market_median_lkr: undefined };
+  }
   const deal_score = toNumberOrNull(raw?.deal_score);
   const market_median_lkr = toNumberOrNull(raw?.market_median_lkr) ?? undefined;
   const ok = hasPlausibleStoredSignal({

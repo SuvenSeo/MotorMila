@@ -43,6 +43,16 @@ Gap = (asking − reference) / reference × 100.
 - **Data boundary:** the backend (`CarListingRead`), web (`normalizeListing`) and
   Android (`ListingDto.toDomain`) drop a stored `deal_score` / `market_median_lkr`
   whose comparison is withheld, so no sort, tier or chart can use it.
+- **Card = detail:** the detail verdict also depends on live comparables (thin
+  or disagreeing comps withhold it), which the row alone can't show. Signed-in
+  (Pro) `GET /listings` and `/listings/{id}/similar` responses run the detail
+  verdict for the whole page in one batched comps query
+  (`app/utils/fmv.py batch_price_verdicts`, the in-memory twin of
+  `_fetch_comps`) and serve withheld rows unscored with
+  `price_withheld_reason` (e.g. `thin_comps`, `estimates_disagree`). Web
+  `normalizeListing` honours the flag too; older clients just see no score.
+  Free/anonymous responses already carry no score. R2 snapshots (static
+  fallback) don't run this yet: it needs the snapshot export to call it.
 
 Wording is always "typical asking price of similar ads" — never "market value"
 or a sale price.
