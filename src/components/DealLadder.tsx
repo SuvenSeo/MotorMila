@@ -79,11 +79,14 @@ export function DealLadder({ askingPrice, marketMedianLkr, verdict, className }:
       <ol className="mt-3 space-y-1.5">
         {ladder.rungs.map((rung) => {
           const tone = RUNG_TONE[rung.band];
+          // Non-overlapping bounds: prices are shown rounded (Rs 7.74 Mn), so
+          // "≤ X" on Fair and "≥ X" on Overpriced printed the same number twice.
+          // Fair is the strict range between the other two.
           const priceHint =
             rung.band === "good_deal"
               ? `≤ ${formatPrice(ladder.goodDealPrice)}`
               : rung.band === "fair"
-                ? `≤ ${formatPrice(ladder.overpricedThreshold - 1)}`
+                ? `< ${formatPrice(ladder.overpricedThreshold)}`
                 : `≥ ${formatPrice(ladder.overpricedThreshold)}`;
 
           return (

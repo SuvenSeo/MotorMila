@@ -13,7 +13,7 @@ import { TableContainer, Table, TableHeader, TableBody } from "@/components/ui/t
 import { toast } from "sonner";
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { getListingFmv, getListingsBatch } from "@/services/api";
-import { withheldHeadline } from "@/lib/priceVerdict";
+import { withheldVerdictHeadline } from "@/lib/priceVerdict";
 import type { CarListing } from "@/types/car";
 import { PageCanvas } from "@/components/PageCanvas";
 import { formatLkrFull } from "@/lib/price";
@@ -208,7 +208,7 @@ export default function Compare() {
         const pct = vsFmvPct(l, fmv);
         if (pct === null) {
           const v = compareVerdict(l, fmv);
-          return v.status === "withheld" ? <span className="text-label-2">{withheldHeadline(v.group, t)}</span> : "—";
+          return v.status === "withheld" ? <span className="text-label-2">{withheldVerdictHeadline(v, t)}</span> : "—";
         }
         const gap = Math.abs((askingPrice(l) ?? 0) - (fmvFor(l, fmv) ?? 0));
         const v = compareVerdict(l, fmv);

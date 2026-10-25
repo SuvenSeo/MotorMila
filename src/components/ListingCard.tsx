@@ -400,7 +400,7 @@ export const ListingCard = memo(function ListingCard({
                   <p className="num text-caption font-medium text-label-2">
                     {t("listingCard.typical", "Typical {price}", { price: formatPrice(fmv.fmv_lkr) })}
                   </p>
-                  <p className={`text-caption font-semibold num ${DEAL_TEXT_CLASSES[fmvKind]}`}>{fmv.label}</p>
+                  <p className={`text-caption font-semibold num ${DEAL_TEXT_CLASSES[fmvKind]}`}>{fmv.shortLabel}</p>
                 </div>
                 <div className="relative mb-2 h-1.5 overflow-hidden rounded-full bg-foreground/10">
                   <div

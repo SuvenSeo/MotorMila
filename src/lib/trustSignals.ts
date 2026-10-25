@@ -2,14 +2,14 @@
  * Trust Check — client-side risk signals for one listing.
  *
  * Everything here is phrased as a *signal to check*, never a verdict: we see
- * asking prices and ad text, not the car or its papers. Inputs are data the
+ * asking prices and ad text, not the vehicle or its papers. Inputs are data the
  * page already has (the listing row, its snapshot price history, the optional
  * history report with cross-site links). No extra network calls.
  */
 import { parseFlexibleTime } from "@/lib/parseTime";
 import { formatLkrCompact } from "@/lib/price";
 import { englishT, type TranslateFn } from "@/lib/translate";
-import { isPowerOfTenApart, listingRowVerdict, withheldDetail, withheldHeadline, type PriceVerdict } from "@/lib/priceVerdict";
+import { isPowerOfTenApart, listingRowVerdict, withheldVerdictDetail, withheldVerdictHeadline, type PriceVerdict } from "@/lib/priceVerdict";
 
 export type SignalLevel = "high" | "medium" | "info" | "ok";
 
@@ -116,7 +116,7 @@ export function buildTrustReport(input: TrustInput): TrustReport {
         id: "price-far-below",
         level: "high",
         title: t("trust.sig.belowAds.title", "Priced {pct}% below similar ads", { pct }),
-        detail: t("trust.sig.farBelow.detail", "Market median for comparable ads is about {median}. Prices this far under market are a common bait pattern. It can also mean damage, missing papers or a typo. See the car and the documents before paying anything.", { median }),
+        detail: t("trust.sig.farBelow.detail", "Market median for comparable ads is about {median}. Prices this far under market are a common bait pattern. It can also mean damage, missing papers or a typo. See the vehicle and the documents before paying anything.", { median }),
       });
     } else if (verdict.band === "below" && pct >= BELOW_MARKET_MEDIUM_PCT) {
       signals.push({
@@ -147,7 +147,7 @@ export function buildTrustReport(input: TrustInput): TrustReport {
         detail: t("trust.sig.inBand.detailTypical", "Close to the typical asking price for comparable ads (about {median}).", { median }),
       });
     }
-  } else if (verdict.group === "insufficient_data") {
+  } else if (verdict.group === "insufficient_data" && verdict.reason !== "generic_model") {
     signals.push({
       id: "price-no-band",
       level: "info",
@@ -155,11 +155,17 @@ export function buildTrustReport(input: TrustInput): TrustReport {
       detail: t("trust.sig.noBand.detail", "Treat the asking price with care and compare a few similar ads yourself."),
     });
   } else {
+    // A price that doesn't line up with comparable ads (or our two estimates
+    // disagree), a parts/damage ad or a lease/part-payment number is something
+    // to check with the seller, so it sits with "Worth checking", never below
+    // lesser notes like a missing mileage. An unusable or unratable price is
+    // only good to know.
+    const worthChecking = verdict.group === "inconsistent_data" || verdict.group === "parts_or_damaged" || verdict.group === "lease_or_rent";
     signals.push({
       id: "price-no-band",
-      level: "info",
-      title: withheldHeadline(verdict.group, t),
-      detail: withheldDetail(verdict.group, t),
+      level: worthChecking ? "medium" : "info",
+      title: withheldVerdictHeadline(verdict, t),
+      detail: withheldVerdictDetail(verdict, t),
     });
   }
 
@@ -171,7 +177,7 @@ export function buildTrustReport(input: TrustInput): TrustReport {
       id: "scam-wording",
       level: hits.length > 1 || (verdict.status === "ok" && verdict.band === "below" && verdict.pct >= BELOW_MARKET_MEDIUM_PCT) ? "high" : "medium",
       title: t("trust.sig.scam.title", "Ad wording matches common scam patterns"),
-      detail: t("trust.sig.scam.detail", "The ad {hits}. Never send an advance, deposit or \"booking fee\" before you've seen the car and its registration (CR) in person.", { hits: hits.join("; ") }),
+      detail: t("trust.sig.scam.detail", "The ad {hits}. Never send an advance, deposit or \"booking fee\" before you've seen the vehicle and its registration (CR) in person.", { hits: hits.join("; ") }),
     });
   }
 
@@ -199,8 +205,8 @@ export function buildTrustReport(input: TrustInput): TrustReport {
             : t("trust.sig.cross.title", "Seen {n} times across {sites} sites", { n: others.length + 1, sites: sources.size }),
         detail:
           spread >= 0.15
-            ? t("trust.sig.cross.spread", "Linked ads for what looks like the same car show prices up to {pct}% apart. Ask the seller which price is current.", { pct: Math.round(spread * 100) })
-            : t("trust.sig.cross.same", "Same car, likely relisted or cross-posted. Normal for dealers. Check that the seller name matches across ads."),
+            ? t("trust.sig.cross.spread", "Linked ads for what looks like the same vehicle show prices up to {pct}% apart. Ask the seller which price is current.", { pct: Math.round(spread * 100) })
+            : t("trust.sig.cross.same", "Same vehicle, likely relisted or cross-posted. Normal for dealers. Check that the seller name matches across ads."),
       });
 
       // Odometer going down between observations of the same car
@@ -231,7 +237,7 @@ export function buildTrustReport(input: TrustInput): TrustReport {
           id: "odometer-drop",
           level: "high",
           title: t("trust.sig.odoDrop.title", "Mileage went down between linked ads"),
-          detail: t("trust.sig.odoDrop.detail", "An earlier ad for what looks like the same car showed {from} km. A later one shows {to} km. That can be a typo, a mismatched link or a rolled-back odometer. Ask for service records and emission-test reports, which log mileage.", { from: dropFrom.toLocaleString("en-LK"), to: dropTo.toLocaleString("en-LK") }),
+          detail: t("trust.sig.odoDrop.detail", "An earlier ad for what looks like the same vehicle showed {from} km. A later one shows {to} km. That can be a typo, a mismatched link or a rolled-back odometer. Ask for service records and emission-test reports, which log mileage.", { from: dropFrom.toLocaleString("en-LK"), to: dropTo.toLocaleString("en-LK") }),
         });
       }
     } else {
@@ -239,7 +245,7 @@ export function buildTrustReport(input: TrustInput): TrustReport {
         id: "cross-site-none",
         level: "ok",
         title: t("trust.sig.crossNone.title", "No duplicate ads found on other sites"),
-        detail: t("trust.sig.crossNone.detail", "We haven't linked this car to other ads in the sites we track."),
+        detail: t("trust.sig.crossNone.detail", "We haven't linked this vehicle to other ads in the sites we track."),
       });
     }
   }
@@ -256,7 +262,7 @@ export function buildTrustReport(input: TrustInput): TrustReport {
         id: "mileage-low",
         level: "medium",
         title: t("trust.sig.lowKm.title", "Very low mileage for its age"),
-        detail: t("trust.sig.lowKm.detail", "About {km} km a year over {age} years. That's possible, but it's also the pattern you'd see after an odometer rollback. Check wear on the pedals, seats and steering wheel against the stated mileage.", { km: Math.round(perYear).toLocaleString("en-LK"), age }),
+        detail: t("trust.sig.lowKm.detail", "About {km} km a year over {age} years. That's possible, but it's also the pattern you'd see after an odometer rollback. Check wear on the seats and controls (pedals, steering wheel or handlebar grips) against the stated mileage.", { km: Math.round(perYear).toLocaleString("en-LK"), age }),
       });
     }
   } else if (!(Number.isFinite(km) && km > 0)) {

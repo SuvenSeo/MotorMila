@@ -329,7 +329,40 @@ export function verdictHeadline(v: PriceVerdict, t: Translate = plain): string {
     if (v.band === "above") return t("verdict.above", "Priced {pct}% above typical", { pct: v.pct });
     return t("deal.nearTypical", "Near typical price");
   }
+  return withheldVerdictHeadline(v, t);
+}
+
+/**
+ * Compact form for the listing-card market bar, which sits under the deal
+ * badge and next to "Typical Rs X": "12% below typical", "Near typical".
+ * Same band and percent as verdictHeadline; verify-first keeps its percent here
+ * because the badge above it already says "verify first".
+ */
+export function verdictShortLabel(v: PriceVerdictOk, t: Translate = plain): string {
+  if (v.band === "below") return t("verdict.short.below", "{pct}% below typical", { pct: v.pct });
+  if (v.band === "above") return t("verdict.short.above", "{pct}% above typical", { pct: v.pct });
+  return t("verdict.short.near", "Near typical");
+}
+
+/**
+ * Headline for a withheld verdict. Same as the group headline, except a
+ * listing whose model is "Other" says so: "not enough comparable data" would
+ * be wrong there (there may be plenty of ads — we just can't tell which match).
+ */
+export function withheldVerdictHeadline(v: Pick<PriceVerdictWithheld, "reason" | "group">, t: Translate = plain): string {
+  if (v.reason === "generic_model") return t("verdict.withheld.genericModel", "Model not specified in the ad");
   return withheldHeadline(v.group, t);
+}
+
+/** One plain sentence for a withheld verdict (reason-aware, see withheldVerdictHeadline). */
+export function withheldVerdictDetail(v: Pick<PriceVerdictWithheld, "reason" | "group">, t: Translate = plain): string {
+  if (v.reason === "generic_model") {
+    return t(
+      "verdict.withheldBody.genericModel",
+      "The ad lists the model as “Other”, so we can't match it with similar ads and don't rate its price. Compare a few ads for the same model yourself.",
+    );
+  }
+  return withheldDetail(v.group, t);
 }
 
 export function withheldHeadline(group: WithheldGroup, t: Translate = plain): string {

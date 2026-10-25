@@ -167,7 +167,7 @@ export function DealBadge({ badge, tone = "soft", size = "sm", why, className }:
               <span className="block font-medium text-deal-caution-text">
                 {t(
                   "deal.whyVerify",
-                  "More than {pct}% under typical, or a weak estimate. Bait prices are a common scam — see the car and the CR book before paying anything.",
+                  "More than {pct}% under typical, or a weak estimate. Bait prices are a common scam — see the vehicle and the CR book before paying anything.",
                   { pct: VERIFY_BELOW_PCT },
                 )}
               </span>

@@ -712,9 +712,11 @@ internal fun PriceDealSection(
             // Same verdict as the deal row / gauge. Withheld: no badge here —
             // the price card below says why (never a Pro lock for a Pro user).
             if (ok != null) DealBadge(band = ok.band.toDealBand(), score = ok.dealScore, pct = ok.pct)
-        } else {
+        } else if (ok != null) {
             // Free tier: backend nulls deal_score — LOCKED badge + blurred value
-            // gatekept behind UserSession.isPro (DOMAIN_CONTRACT §5).
+            // gatekept behind UserSession.isPro (DOMAIN_CONTRACT §5). Only when
+            // this listing has a rating to unlock: a Pro lock over a withheld
+            // verdict promises a score that doesn't exist.
             DealBadge(band = DealBand.LOCKED, score = null)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(

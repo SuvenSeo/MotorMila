@@ -10,11 +10,13 @@
     <string name="mm_verdict_withheld_lease">Lease, rental or part-payment price</string>
     <string name="mm_verdict_withheld_parts">Parts or damaged vehicle</string>
     <string name="mm_verdict_withheld_inconsistent">Price doesn\'t line up with comparable ads</string>
+    <string name="mm_verdict_withheld_generic_model">Model not specified in the ad</string>
     <string name="mm_verdict_withheld_insufficient">Not enough comparable data</string>
     <string name="mm_verdict_withheld_body_price">The price on this ad doesn\'t look like a full vehicle price (missing, a placeholder or too low), so we don\'t compare it.</string>
     <string name="mm_verdict_withheld_body_lease">The ad looks like a lease takeover, rental or down payment, so the number isn\'t the full price. We don\'t compare it with typical prices.</string>
     <string name="mm_verdict_withheld_body_parts">The ad looks like parts or a damaged vehicle, so typical prices for running vehicles don\'t apply.</string>
     <string name="mm_verdict_withheld_body_inconsistent">This price is too far from comparable ads, or our estimates disagree, to rate it reliably. Check the ad details with the seller.</string>
+    <string name="mm_verdict_withheld_body_generic_model">The ad lists the model as “Other”, so we can\'t match it with similar ads and don\'t rate its price. Compare a few ads for the same model yourself.</string>
     <string name="mm_verdict_withheld_body_insufficient">We don\'t have enough similar ads to judge this price with confidence. Compare a few similar ads yourself.</string>
     <string name="mm_ladder_below">%1$d%%+ below typical</string>
     <string name="mm_ladder_typical">Typical asking price</string>

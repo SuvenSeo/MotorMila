@@ -21,9 +21,9 @@ export function BeforeYouPayStrip({
 }) {
   const { t } = useAppPreferences();
   const tips = [
-    t("safety.noAdvance", "Never pay an advance or “booking fee” before you see the car."),
+    t("safety.noAdvance", "Never pay an advance or “booking fee” before you see the vehicle."),
     t("safety.noOtp", "Don't share OTPs or open payment links the seller sends."),
-    t("safety.abroad", "Be wary of sellers who say they're abroad and will ship the car."),
+    t("safety.abroad", "Be wary of sellers who say they're abroad and will ship the vehicle."),
     t("safety.crBook", "Check the CR book details with the DMT and match chassis and engine numbers."),
     t("safety.transfer", "Ownership must be transferred within 14 days — don't accept open papers."),
   ];

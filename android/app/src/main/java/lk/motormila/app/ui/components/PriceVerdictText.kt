@@ -6,6 +6,7 @@ import lk.motormila.app.R
 import lk.motormila.app.core.price.PriceVerdict
 import lk.motormila.app.core.price.VerdictBand
 import lk.motormila.app.core.price.WithheldGroup
+import lk.motormila.app.core.price.WithheldReason
 import lk.motormila.app.ui.theme.MmDealTone
 
 /** Copy for the one price verdict — same wording as web src/lib/priceVerdict.ts. */
@@ -17,7 +18,8 @@ fun PriceVerdict.headline(): String = when (this) {
         band == VerdictBand.ABOVE -> stringResource(R.string.mm_verdict_above, pct)
         else -> stringResource(R.string.mm_deal_near_typical)
     }
-    is PriceVerdict.Withheld -> when (group) {
+    // "Other" model: say so — "not enough comparable data" would be wrong (web withheldVerdictHeadline).
+    is PriceVerdict.Withheld -> if (reason == WithheldReason.GENERIC_MODEL) stringResource(R.string.mm_verdict_withheld_generic_model) else when (group) {
         WithheldGroup.PRICE_UNUSABLE -> stringResource(R.string.mm_verdict_withheld_price)
         WithheldGroup.LEASE_OR_RENT -> stringResource(R.string.mm_verdict_withheld_lease)
         WithheldGroup.PARTS_OR_DAMAGED -> stringResource(R.string.mm_verdict_withheld_parts)
@@ -28,7 +30,7 @@ fun PriceVerdict.headline(): String = when (this) {
 
 /** One plain sentence on why there is no rating. */
 @Composable
-fun PriceVerdict.Withheld.detail(): String = when (group) {
+fun PriceVerdict.Withheld.detail(): String = if (reason == WithheldReason.GENERIC_MODEL) stringResource(R.string.mm_verdict_withheld_body_generic_model) else when (group) {
     WithheldGroup.PRICE_UNUSABLE -> stringResource(R.string.mm_verdict_withheld_body_price)
     WithheldGroup.LEASE_OR_RENT -> stringResource(R.string.mm_verdict_withheld_body_lease)
     WithheldGroup.PARTS_OR_DAMAGED -> stringResource(R.string.mm_verdict_withheld_body_parts)

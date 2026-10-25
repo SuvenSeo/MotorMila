@@ -19,7 +19,7 @@ import type { TrustRelatedListing } from '@/lib/trustSignals';
 import type { EnrichmentEnvelope, ListingFmvDetail, SafetyResearchResponse } from '@/services/api';
 import type { CarListing, PriceHistoryInfo, SellerTrustProfile } from '@/types/car';
 import { fmvSummaryFromVerdict } from '@/lib/fmv';
-import { isVerdictOk, resolveListingVerdict, withheldDetail, withheldHeadline } from '@/lib/priceVerdict';
+import { isVerdictOk, priceFloorLkr, resolveListingVerdict, withheldVerdictDetail, withheldVerdictHeadline } from '@/lib/priceVerdict';
 import { plausibleEngineCc } from '@/lib/engineCapacity';
 import { ListingImageCarousel } from '@/components/ListingImageCarousel';
 import { getListingImageList, pickVehicleImageUrl } from '@/lib/listingImage';
@@ -318,7 +318,8 @@ export default function ListingDetail() {
   // Full gallery for the carousel (primary photo first).
   const galleryImages = getListingImageList(listing);
   const listingPrice = Number(listing.price_lkr || 0);
-  const hasPrice = Number.isFinite(listingPrice) && listingPrice >= 100_000 && listingPrice <= 500_000_000;
+  // Same floor as the verdict (bike 50k, three-wheeler 100k, car 300k): a Rs 85,000 bike is a price, not "Unlisted".
+  const hasPrice = Number.isFinite(listingPrice) && listingPrice >= Math.min(100_000, priceFloorLkr(listing.vehicle_category)) && listingPrice <= 500_000_000;
   // Map the listing's fuel label onto the import-tax model's fuel classes.
   const fuelRaw = String(listing.fuel_type || '').toLowerCase();
   const importFuelType: ImportFuelType =
@@ -512,10 +513,10 @@ export default function ListingDetail() {
             {t("deal.whyAsking", "These are asking prices on listing sites, not sale prices.")}
           </p>
         </>
-      ) : verdict.status === "withheld" && verdict.group !== "insufficient_data" ? (
+      ) : verdict.status === "withheld" && (verdict.group !== "insufficient_data" || verdict.reason === "generic_model") ? (
         <>
-          <p className="mt-1 text-footnote font-bold text-foreground">{withheldHeadline(verdict.group, t)}</p>
-          <p className="mt-1 text-caption leading-relaxed text-muted-foreground">{withheldDetail(verdict.group, t)}</p>
+          <p className="mt-1 text-footnote font-bold text-foreground">{withheldVerdictHeadline(verdict, t)}</p>
+          <p className="mt-1 text-caption leading-relaxed text-muted-foreground">{withheldVerdictDetail(verdict, t)}</p>
         </>
       ) : (
         <p className="mt-2 text-caption text-muted-foreground">
@@ -526,8 +527,10 @@ export default function ListingDetail() {
   );
 
   // Pro upsell sits *below* the FMV card, never between price and valuation.
+  // Only when this listing actually has a rating to unlock: "Deal scores are a
+  // Pro signal" under a withheld verdict promises a score that doesn't exist.
   const renderProUpsell = () =>
-    !fullAccess && !lease.isLeaseTakeover ? (
+    !fullAccess && !lease.isLeaseTakeover && dataReady && isVerdictOk(verdict) ? (
       <UpgradePrompt title={freePlanText(t, "scoresTitle")} body={freePlanText(t, "scoresBody")} variant="strip" />
     ) : null;
 
