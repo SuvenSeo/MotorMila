@@ -1,9 +1,8 @@
 {
-  "version": "1.7.1",
-  "version_code": 19,
-  "apk_url": "https://pub-f15911ef9a914db9a44e1fd6b47dfe4e.r2.dev/app/motormila-1.7.1.apk",
-  "published_at": "2026-10-25T04:01:22Z",
-  "sha256": "3896eda3a46917bf7ad5040de1d4baea09c0b459127fafc017e509c37c47b7e8",
-  "min_supported_version_code": 0,
-  "tag": "android-v1.7.1"
+  "version": "1.7.2",
+  "version_code": 20,
+  "apk_url": "https://pub-f15911ef9a914db9a44e1fd6b47dfe4e.r2.dev/app/motormila-1.7.2.apk",
+  "published_at": "2026-10-25T11:39:04Z",
+  "sha256": "b83ed83726bb591cbb1835fff84de69b3946f2cfbe86b10c78277ed7e4fe6b9a",
+  "tag": "android-v1.7.2"
 }
