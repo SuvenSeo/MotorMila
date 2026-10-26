@@ -4457,6 +4457,72 @@ export const createMyListing = async (input: MyListingInput): Promise<MyListing>
   return toMyListing(data);
 };
 
+/** Seller photo uploads (presigned R2 PUT). `enabled: false` hides the uploader. */
+export type UploadsConfig = {
+  enabled: boolean;
+  maxBytes: number;
+  maxFiles: number;
+  contentTypes: string[];
+};
+
+export type UploadTicket = {
+  uploadUrl: string;
+  publicUrl: string;
+  key: string;
+  headers: Record<string, string>;
+  expiresIn: number;
+};
+
+const UPLOADS_OFF: UploadsConfig = { enabled: false, maxBytes: 0, maxFiles: 12, contentTypes: [] };
+
+/**
+ * Probe whether the backend can issue upload URLs. Any failure (older backend
+ * without the route → 404, uploads unconfigured, network) reads as "off" so the
+ * Sell page falls back to adding photos by link.
+ */
+export const getUploadsConfig = async (): Promise<UploadsConfig> => {
+  try {
+    const url = new URL(`${API_BASE}/listings/mine/uploads/config`, window.location.origin).toString();
+    const response = await fetch(url, {
+      credentials: resolveFetchCredentials(),
+      headers: { Accept: "application/json", ...authHeaders() },
+    });
+    if (!response.ok) return UPLOADS_OFF;
+    const data = (await response.json()) as JsonRecord;
+    return {
+      enabled: data.enabled === true,
+      maxBytes: Number(data.max_bytes) || 0,
+      maxFiles: Number(data.max_files) || 12,
+      contentTypes: Array.isArray(data.content_types) ? data.content_types.map(String) : [],
+    };
+  } catch {
+    return UPLOADS_OFF;
+  }
+};
+
+export const requestUploadTicket = async (input: {
+  contentType: string;
+  size: number;
+  existingCount: number;
+}): Promise<UploadTicket> => {
+  const url = new URL(`${API_BASE}/listings/mine/uploads`, window.location.origin).toString();
+  const response = await fetch(url, {
+    method: "POST",
+    credentials: resolveFetchCredentials(),
+    headers: { "Content-Type": "application/json", Accept: "application/json", ...authHeaders() },
+    body: JSON.stringify({ content_type: input.contentType, size: input.size, existing_count: input.existingCount }),
+  });
+  if (!response.ok) throw await parseApiError(response);
+  const data = (await response.json()) as JsonRecord;
+  return {
+    uploadUrl: String(data.upload_url),
+    publicUrl: String(data.public_url),
+    key: String(data.key),
+    headers: (data.headers as Record<string, string>) || {},
+    expiresIn: Number(data.expires_in) || 0,
+  };
+};
+
 export const getMyListings = async (): Promise<MyListing[]> => {
   const items = await fetchJSON<JsonRecord[]>("/listings/mine", undefined, authHeaders());
   return Array.isArray(items) ? items.map(toMyListing) : [];

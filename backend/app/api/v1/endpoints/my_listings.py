@@ -20,6 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from app.api.v1.endpoints.auth import get_current_auth_payload
+from app.services import user_uploads
 from app.services.rate_limit import RateLimiter
 from db.models import CarListing
 from db.session import get_db
@@ -28,6 +29,9 @@ router = APIRouter()
 
 _write_limiter = RateLimiter(max_requests=30, window_seconds=60, tier="my-listings-write")
 _read_limiter = RateLimiter(max_requests=120, window_seconds=60, tier="my-listings-read")
+# Per-account (user_or_ip_key) cap on presigned upload URLs: one URL per photo,
+# so 40 / 10 min covers a full 12-photo listing plus retries.
+_upload_limiter = RateLimiter(max_requests=40, window_seconds=600, tier="my-listings-upload")
 # Content fields whose change on a published listing requires re-review.
 _REVIEWED_FIELDS = {
     "make", "model", "year", "price_lkr", "mileage", "fuel_type", "transmission",
@@ -117,6 +121,30 @@ class MyListingRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class UploadRequest(BaseModel):
+    content_type: str = Field(min_length=1, max_length=40)
+    size: int = Field(ge=1)
+    # Photos already attached to the listing (uploaded or linked), so the
+    # 12-photo cap holds across the whole listing, not per request.
+    existing_count: int = Field(default=0, ge=0, le=MAX_IMAGES)
+
+
+class UploadTicket(BaseModel):
+    upload_url: str
+    public_url: str
+    key: str
+    method: str = "PUT"
+    headers: dict
+    expires_in: int
+
+
+class UploadsConfigRead(BaseModel):
+    enabled: bool
+    max_bytes: int
+    max_files: int
+    content_types: List[str]
+
+
 # ── Helpers ────────────────────────────────────────────────────────────────
 
 def _owner_email(auth: dict) -> str:
@@ -160,6 +188,16 @@ def _to_read(row: CarListing) -> MyListingRead:
     )
 
 
+def _check_image_ownership(urls: List[str], owner: str) -> None:
+    """Uploaded-photo URLs must live under the caller's own key prefix."""
+    foreign = user_uploads.foreign_upload_urls(urls, owner)
+    if foreign:
+        raise HTTPException(
+            status_code=400,
+            detail="One or more photos were not uploaded from this account.",
+        )
+
+
 def _own_listing(db: Session, listing_id: int, owner: str) -> CarListing:
     row = (
         db.query(CarListing)
@@ -175,6 +213,57 @@ def _own_listing(db: Session, listing_id: int, owner: str) -> CarListing:
 
 
 # ── Endpoints ──────────────────────────────────────────────────────────────
+
+@router.get("/mine/uploads/config", response_model=UploadsConfigRead)
+def uploads_config(
+    request: Request,
+    auth: dict = Depends(get_current_auth_payload),
+):
+    """Whether photo uploads are available. The web UI hides the uploader when not."""
+    _read_limiter(request)
+    if not _owner_email(auth):
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    return UploadsConfigRead(
+        enabled=user_uploads.load_config() is not None,
+        max_bytes=user_uploads.MAX_UPLOAD_BYTES,
+        max_files=MAX_IMAGES,
+        content_types=sorted(user_uploads.CONTENT_TYPES),
+    )
+
+
+@router.post("/mine/uploads", response_model=UploadTicket, status_code=201)
+def create_upload_ticket(
+    payload: UploadRequest,
+    request: Request,
+    auth: dict = Depends(get_current_auth_payload),
+):
+    """A short-lived presigned PUT URL for one listing photo (R2).
+
+    503 when uploads are not configured on this deployment.
+    """
+    owner = _owner_email(auth)
+    if not owner:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    cfg = user_uploads.load_config()
+    if cfg is None:
+        raise HTTPException(status_code=503, detail="Photo uploads are not available right now.")
+    content_type = payload.content_type.strip().lower()
+    if content_type not in user_uploads.CONTENT_TYPES:
+        raise HTTPException(status_code=415, detail="Photos must be WebP or JPEG.")
+    if payload.size > user_uploads.MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="Photo is too large (max 1.5 MB).")
+    if payload.existing_count >= MAX_IMAGES:
+        raise HTTPException(status_code=400, detail=f"A listing can have at most {MAX_IMAGES} photos.")
+    _upload_limiter(request)
+    key = user_uploads.build_key(owner, content_type)
+    return UploadTicket(
+        upload_url=user_uploads.presign_put(cfg, key, content_type, payload.size),
+        public_url=user_uploads.public_url(cfg, key),
+        key=key,
+        headers={"Content-Type": content_type},
+        expires_in=user_uploads.PRESIGN_TTL_SECONDS,
+    )
+
 
 @router.get("/mine", response_model=List[MyListingRead])
 def list_my_listings(
@@ -215,6 +304,7 @@ def create_my_listing(
     # two users can list the same make/model without colliding.
     source_id = f"user-{owner}-{int(now.timestamp() * 1000)}"
     images = [str(u)[:2048] for u in (payload.image_urls or [])[:MAX_IMAGES] if str(u).strip()]
+    _check_image_ownership(images, owner)
 
     row = CarListing(
         source="motormila_user",
@@ -275,6 +365,8 @@ def update_my_listing(
     row = _own_listing(db, listing_id, owner)
 
     updates = payload.model_dump(exclude_unset=True)
+    if updates.get("image_urls"):
+        _check_image_ownership([str(u) for u in updates["image_urls"]], owner)
     content_changed = bool(_REVIEWED_FIELDS.intersection(updates))
     if "status" in updates:
         new_status = str(updates.pop("status") or "").strip().lower()
