@@ -29,6 +29,13 @@ interface ListingImageCarouselProps {
 /** Listing grid: 1 column < 768px, 2 columns to 1279px, then 3 columns in a ≤1560px frame. */
 const CARD_SIZES = "(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 520px";
 
+/**
+ * Photo each card was left on, per listing (this tab). A card that remounts —
+ * Back from the listing — shows the same photo, so the hero flies back into
+ * the picture the visitor tapped and nothing swaps under them.
+ */
+const CARD_SLIDES = new Map<number, number>();
+
 function stop(e: React.SyntheticEvent) {
   e.stopPropagation();
   e.preventDefault();
@@ -67,6 +74,11 @@ export function ListingImageCarousel({
   // tap). Building one engine per card on mount measured every slide of
   // every card (~200 ms of forced layout at 4× CPU on the home grid); until
   // then slide 0 renders statically and arrows/dots queue their target.
+  const [initialSlide] = useState(() => {
+    if (isDetail || listingId == null) return 0;
+    const saved = CARD_SLIDES.get(listingId) ?? 0;
+    return saved > 0 && saved < count ? saved : 0;
+  });
   const [carouselLive, setCarouselLive] = useState(false);
   const [pendingSlide, setPendingSlide] = useState<number | null>(null);
   const wake = useCallback(() => {
@@ -97,9 +109,10 @@ export function ListingImageCarousel({
     dragThreshold: 6,
     skipSnaps: false,
     duration: reduced ? 1 : isDetail ? 26 : 22,
+    startIndex: initialSlide,
   });
   const [lightboxOrigin, setLightboxOrigin] = useState<{ x: number; y: number } | null>(null);
-  const [index, setIndex] = useState(0);
+  const [index, setIndex] = useState(initialSlide);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxRequested, setLightboxRequested] = useState(false);
   const sourceName = formatSourceName(source);
@@ -107,7 +120,7 @@ export function ListingImageCarousel({
   // plus its neighbours once the carousel is touched/hovered (cards) or right
   // away (detail). Every card used to download all of its slides up front —
   // ~50 full-size photos (≈8 MB) on the home grid.
-  const [mounted, setMounted] = useState<ReadonlySet<number>>(() => new Set(isDetail && multi ? [0, 1, count - 1] : [0]));
+  const [mounted, setMounted] = useState<ReadonlySet<number>>(() => new Set(isDetail && multi ? [0, 1, count - 1] : [initialSlide]));
   const prime = useCallback(
     (center: number) => {
       if (!multi) return;
@@ -127,7 +140,14 @@ export function ListingImageCarousel({
 
   useEffect(() => {
     if (!emblaApi) return;
-    const onSelect = () => setIndex(emblaApi.selectedScrollSnap());
+    const onSelect = () => {
+      const i = emblaApi.selectedScrollSnap();
+      setIndex(i);
+      if (!isDetail && listingId != null) {
+        if (i > 0) CARD_SLIDES.set(listingId, i);
+        else CARD_SLIDES.delete(listingId);
+      }
+    };
     onSelect();
     emblaApi.on("select", onSelect);
     emblaApi.on("reInit", onSelect);
@@ -135,7 +155,7 @@ export function ListingImageCarousel({
       emblaApi.off("select", onSelect);
       emblaApi.off("reInit", onSelect);
     };
-  }, [emblaApi]);
+  }, [emblaApi, isDetail, listingId]);
 
   const goTo = useCallback(
     (i: number) => {
@@ -235,7 +255,12 @@ export function ListingImageCarousel({
             construction even with `active: false`, so single-photo listings and
             the detail hero before the card → listing transition get no viewport ref. */}
         <div ref={multi && carouselLive ? emblaRef : undefined} className="h-full w-full overflow-hidden">
-          <div className="flex h-full w-full touch-pan-y">
+          {/* A remounted card starts on its saved photo. The transform is set
+              once (constant prop) so React never fights Embla over it later. */}
+          <div
+            className="flex h-full w-full touch-pan-y"
+            style={initialSlide > 0 ? { transform: `translate3d(${-initialSlide * 100}%, 0, 0)` } : undefined}
+          >
             {images.map((src, i) => (
               <div
                 key={`${src}-${i}`}

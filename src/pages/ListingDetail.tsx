@@ -1,8 +1,8 @@
-import { Suspense, useState, useEffect } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
 import { DeferredSection } from '@/components/DeferredSection';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, useNavigationType, Link } from 'react-router-dom';
 import {
   ArrowLeft, ExternalLink, MapPin, Calendar,
   Share2, Fuel, Gauge, Settings2, MessageCircle,
@@ -94,6 +94,9 @@ export default function ListingDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const routerLocation = useLocation();
+  const navType = useNavigationType();
+  const navTypeRef = useRef(navType);
+  navTypeRef.current = navType;
   const motionCalm = useReducedMotionOrLowData();
   // Below-the-fold sections reveal once as they scroll in (opacity only when calm).
   const onScroll = {
@@ -207,7 +210,9 @@ export default function ListingDetail() {
 
   useEffect(() => {
     if (!id) return;
-    window.scrollTo(0, 0); // peer links navigate mid-scroll; open each listing at the top
+    // Peer links navigate mid-scroll: open each listing at the top. Back/forward
+    // keeps the restored position (ScrollRestoration).
+    if (navTypeRef.current !== 'POP') window.scrollTo(0, 0);
     let cancelled = false;
     const handed = peekListingSeed(id);
     if (handed) { setListing(handed.listing); setLoading(false); } else setLoading(true);

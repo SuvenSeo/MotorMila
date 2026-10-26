@@ -1,3 +1,4 @@
+import { viewTransitionInFlight } from "@/lib/viewTransition";
 import { startTransition, useEffect, useState } from "react";
 
 /**
@@ -17,11 +18,23 @@ export function useDeferredMount(enabled = true): boolean {
       setReady(true);
       return;
     }
+    let raf1 = 0;
     let raf2 = 0;
-    const raf1 = window.requestAnimationFrame(() => {
-      raf2 = window.requestAnimationFrame(() => startTransition(() => setReady(true)));
-    });
+    let poll = 0;
+    // Not under a running View Transition (Back from a listing morphs into the
+    // feed): DOM inserted mid-transition is restyled into every frame of it.
+    const start = () => {
+      if (viewTransitionInFlight()) {
+        poll = window.setTimeout(start, 50);
+        return;
+      }
+      raf1 = window.requestAnimationFrame(() => {
+        raf2 = window.requestAnimationFrame(() => startTransition(() => setReady(true)));
+      });
+    };
+    start();
     return () => {
+      window.clearTimeout(poll);
       window.cancelAnimationFrame(raf1);
       window.cancelAnimationFrame(raf2);
     };

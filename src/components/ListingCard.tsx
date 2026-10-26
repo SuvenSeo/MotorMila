@@ -36,6 +36,7 @@ import { fadeIn, fadeUp, hoverLift, press, useReducedMotionOrLowData } from "@/l
 import { cardVariants } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { markScrollAnchor } from "@/lib/scrollMemory";
 import { navigateWithHeroTransition, revealDelay, useCanHover, visibleCardImage, withShowDelay } from "@/components/listing/listingMotion";
 
 interface ListingCardProps {
@@ -192,6 +193,8 @@ export const ListingCard = memo(function ListingCard({
     <m.article
       ref={cardRef}
       role="article"
+      // Back from the listing scrolls this card back to where it was (lib/scrollMemory).
+      data-scroll-anchor={listing.id ?? undefined}
       initial={alreadyRevealed ? false : "hidden"}
       whileInView="show"
       viewport={{ once: true, amount: 0.15 }}
@@ -241,6 +244,7 @@ export const ListingCard = memo(function ListingCard({
           // Card → detail photo continuity (View Transitions, feature-detected).
           if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
           const to = `/listing/${listing.id}`;
+          markScrollAnchor(listing.id);
           const photo = visibleCardImage(cardRef.current);
           seedListing(listing, photo && photo.complete && photo.naturalWidth > 0 ? photo.currentSrc || photo.src : null);
           if (navigateWithHeroTransition(() => navigate(to), photo)) e.preventDefault();

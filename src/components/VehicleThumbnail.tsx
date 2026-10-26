@@ -20,6 +20,13 @@ interface VehicleThumbnailProps {
   marker?: "card" | "hero";
 }
 
+/**
+ * Photos this tab has already shown. A card that remounts (Back from a
+ * listing, page 2 → page 1) paints them straight away from the memory cache:
+ * no lazy wait, no pending breath, no second fade-in.
+ */
+const SHOWN_PHOTOS = new Set<string>();
+
 function escapeSvgText(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -105,11 +112,12 @@ export const VehicleThumbnail = memo(function VehicleThumbnail({
 
   const imageSrc = candidates[Math.min(attempt, candidates.length - 1)];
   const isPlaceholder = imageSrc === fallbackSrc;
-  const fade = fadeIn && !priority && !isPlaceholder;
+  const [seen] = useState(() => !isPlaceholder && SHOWN_PHOTOS.has(imageSrc));
+  const fade = fadeIn && !priority && !isPlaceholder && !seen;
   const srcSet = isPlaceholder ? undefined : marketplaceSrcSet(imageSrc);
   const remote = !isPlaceholder && isRemoteImage(imageSrc);
   const imgRef = useRef<HTMLImageElement>(null);
-  const [loaded, setLoaded] = useState(false);
+  const [loaded, setLoaded] = useState(seen);
   // React 18 drops camelCase fetchPriority; set the real attribute so the LCP
   // photo (detail hero / first cards) is fetched ahead of everything else.
   useEffect(() => {
@@ -119,7 +127,10 @@ export const VehicleThumbnail = memo(function VehicleThumbnail({
   useEffect(() => {
     // Cached photos can finish before React attaches onLoad.
     const el = imgRef.current;
-    setLoaded(Boolean(el && el.complete && el.naturalWidth > 0));
+    const done = Boolean(el && el.complete && el.naturalWidth > 0);
+    if (done && imageSrc !== fallbackSrc) SHOWN_PHOTOS.add(imageSrc);
+    setLoaded(done || seen);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-check per source only
   }, [imageSrc]);
 
   return (
@@ -133,7 +144,7 @@ export const VehicleThumbnail = memo(function VehicleThumbnail({
       srcSet={srcSet}
       sizes={srcSet ? sizes : undefined}
       referrerPolicy={remote ? "no-referrer" : undefined}
-      loading={priority ? "eager" : "lazy"}
+      loading={priority || seen ? "eager" : "lazy"}
       decoding="async"
       data-placeholder={isPlaceholder ? "true" : undefined}
       data-fade-in={fade ? "" : undefined}
@@ -143,6 +154,7 @@ export const VehicleThumbnail = memo(function VehicleThumbnail({
       data-listing-hero={marker === "hero" ? "" : undefined}
       onLoad={() => {
         setLoaded(true);
+        if (!isPlaceholder) SHOWN_PHOTOS.add(imageSrc);
         if (remote) noteImageResult(imageSrc, true);
       }}
       // While the photo is in flight a neutral shimmer shows (img[data-pending],

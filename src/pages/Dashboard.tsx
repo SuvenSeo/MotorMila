@@ -6,7 +6,7 @@ import { useOffscreenPause } from "@/hooks/useOffscreenPause";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { AnimatePresence, m, motion } from "motion/react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useNavigationType } from "react-router-dom";
 import { FilterState, CarListing, DashboardInsights, DistrictVelocityPoint } from "@/types/car";
 import { getPriceDrops,
   getStats, getListings, getMakes,
@@ -266,7 +266,9 @@ export default function Dashboard() {
   const wideFilters = useMediaQuery("(min-width: 1024px)", true);
   // CSS loops inside the hero pause once it scrolls off screen.
   useOffscreenPause(heroSectionRef);
-  const [watchlistIds, setWatchlistIds] = useState<number[]>([]);
+  // Read on first render (localStorage): loading them in an effect re-rendered
+  // the whole feed, every card included, right after it mounted.
+  const [watchlistIds, setWatchlistIds] = useState<number[]>(loadWatchlistIds);
   const [heroSearch, setHeroSearch] = useState("");
   const [heroSearchMessage, setHeroSearchMessage] = useState<string | null>(null);
   const [heroActiveIdx, setHeroActiveIdx] = useState(-1);
@@ -279,9 +281,28 @@ export default function Dashboard() {
   const [savedListings, setSavedListings] = useState<CarListing[]>([]);
   const [savedListingsLoading, setSavedListingsLoading] = useState(false);
   const [savedListingsError, setSavedListingsError] = useState<string | null>(null);
-  const [marketView, setMarketView] = useState<"grid" | "list">("grid");
+  // Kept for the tab session so Back from a listing returns to the same view
+  // (a grid ↔ list swap would change the page height under the restored scroll).
+  const [marketView, setMarketViewState] = useState<"grid" | "list">(() => {
+    try {
+      return window.sessionStorage.getItem("mm:market-view") === "list" ? "list" : "grid";
+    } catch {
+      return "grid";
+    }
+  });
+  const setMarketView = useCallback((view: "grid" | "list") => {
+    setMarketViewState(view);
+    try {
+      window.sessionStorage.setItem("mm:market-view", view);
+    } catch {
+      /* private mode */
+    }
+  }, []);
+  // Back/forward onto the feed: show the cached pages as they were, no
+  // background refetch that could reorder cards under the restored scroll.
+  const returning = useNavigationType() === "POP";
   const [newLiveListingsAvailable, setNewLiveListingsAvailable] = useState(false);
-  const [marketAlerts, setMarketAlerts] = useState<MarketAlert[]>([]);
+  const [marketAlerts, setMarketAlerts] = useState<MarketAlert[]>(loadMarketAlerts);
   const [showMarketAlerts, setShowMarketAlerts] = useState(false);
   const [alertPriceInput, setAlertPriceInput] = useState("");
   const liveListingAtRef = useRef<string | null>(null);
@@ -326,6 +347,7 @@ export default function Dashboard() {
     queryKey: ["listings", listingFilters],
     queryFn: () => getListings(listingFilters),
     staleTime: QUERY_STALE.listings,
+    refetchOnMount: !returning,
     // Keep the current grid on screen while the next filter/sort loads, then
     // crossfade — no skeleton flash, no scroll jump.
     placeholderData: keepPreviousData,
@@ -354,11 +376,6 @@ export default function Dashboard() {
 
   // The home feed never lists server alerts, it only mirrors local ones up.
   const serverAlerts = useServerMarketAlerts({ autoLoad: false });
-
-  useEffect(() => {
-    setWatchlistIds(loadWatchlistIds());
-    setMarketAlerts(loadMarketAlerts());
-  }, []);
 
   useEffect(() => { saveWatchlistIds(watchlistIds); }, [watchlistIds]);
 
@@ -1177,7 +1194,7 @@ export default function Dashboard() {
                   {gridListings.map((listing) => {
                     const hasPrice = isReasonableListingPrice(Number(listing.price_lkr));
                     return (
-                      <motion.div key={listing.id} variants={cardItemVariants}>
+                      <motion.div key={listing.id} variants={cardItemVariants} data-scroll-anchor={listing.id}>
                         <Link
                           to={`/listing/${listing.id}`}
                           className={cn(
