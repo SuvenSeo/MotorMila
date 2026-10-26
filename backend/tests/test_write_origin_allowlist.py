@@ -144,4 +144,18 @@ def test_suffix_env_extends(monkeypatch):
 
 def test_suffix_default_when_env_unset(monkeypatch):
     monkeypatch.delenv("TRUSTED_ORIGIN_SUFFIXES", raising=False)
-    assert _trusted_origin_suffixes() == ("-suvenseoras-projects.vercel.app",)
+    assert _trusted_origin_suffixes() == ("-suvenseoras-projects.vercel.app", ".motormila.pages.dev")
+
+
+def test_cf_pages_branch_preview_trusted(monkeypatch):
+    monkeypatch.delenv("TRUSTED_ORIGIN_SUFFIXES", raising=False)
+    assert _is_trusted_origin("https://web-smooth-everything.motormila.pages.dev")
+    assert not _is_trusted_origin("http://web-smooth-everything.motormila.pages.dev")
+    assert not _is_trusted_origin("https://evilmotormila.pages.dev")
+    assert not _is_trusted_origin("https://motormila.pages.dev.evil.com")
+
+
+def test_suffix_env_keeps_defaults(monkeypatch):
+    monkeypatch.setenv("TRUSTED_ORIGIN_SUFFIXES", ".example.lk")
+    sx = _trusted_origin_suffixes()
+    assert ".motormila.pages.dev" in sx and ".example.lk" in sx
