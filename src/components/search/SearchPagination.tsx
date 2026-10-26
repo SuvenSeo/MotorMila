@@ -69,6 +69,7 @@ export function SearchPagination({ page, totalPages, total, pageSize, onPageChan
               {item === page ? (
                 <m.span
                   layoutId="search-page-pill"
+                  layoutDependency={page}
                   aria-hidden
                   className="absolute inset-0 rounded-full bg-primary shadow-e1"
                   transition={calm ? { duration: 0 } : spring.snappy}

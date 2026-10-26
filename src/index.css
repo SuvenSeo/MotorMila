@@ -2,6 +2,7 @@
 @import "./styles/fonts.css";
 @import "./styles/tokens.css";
 @import "./styles/motion.css";
+@import "./styles/smooth.css";
 
 @tailwind base;
 @tailwind components;
@@ -119,8 +120,9 @@
 
     /* ── Motion tokens (mirror of src/lib/motion.ts) ─────────────────────
        3 easings, 4 durations. Nothing else. Animate transform/opacity only. */
-    --ease-standard: cubic-bezier(0.2, 0, 0, 1);
-    --ease-decelerate: cubic-bezier(0, 0, 0, 1);
+    /* One spring-like curve for standard + enter motion (iOS sheet curve). */
+    --ease-standard: cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-decelerate: cubic-bezier(0.32, 0.72, 0, 1);
     --ease-accelerate: cubic-bezier(0.3, 0, 1, 1);
     --dur-micro: 100ms;
     --dur-short: 180ms;
@@ -940,15 +942,22 @@
       linear-gradient(180deg, rgba(6, 4, 3, 0.34) 0%, transparent 26%, rgba(6, 4, 3, 0.76) 100%);
   }
 
+  /* One cinematic settle on arrival (the photo eases in from a slight push),
+     then the frame holds still. The 32 s infinite ken-burns was re-tested
+     after the idle fixes: its transform is composited (compositeFailed 0),
+     but while it runs every main-thread frame (any rAF consumer) re-samples
+     it, and the compositor re-rasters the scaled full-bleed photo — idle
+     main thread 6% → 21% at 390/4x, idle frame rate 60 → 29 fps at 1440. */
   .hero-cinematic__media {
     transform-origin: 62% 42%;
-    will-change: transform;
-    animation: ken-burns 32s var(--ease-standard) infinite alternate;
+    animation: hero-settle 2.4s var(--ease-decelerate) both;
   }
 
-  @keyframes ken-burns {
-    from { transform: scale(1) translate3d(0, 0, 0); }
-    to   { transform: scale(1.09) translate3d(-1.6%, -1%, 0); }
+  html.low-data .hero-cinematic__media { animation: none; }
+
+  @keyframes hero-settle {
+    from { transform: scale(1.06) translate3d(-1%, -0.6%, 0); }
+    to   { transform: scale(1) translate3d(0, 0, 0); }
   }
 
   .hero-cinematic__vignette {
@@ -1312,14 +1321,18 @@
      never shows through the labels (audit: unreadable over Calculator/Sell). */
   .nav-glass {
     border: 1px solid hsl(var(--foreground) / 0.08);
+    /* Smoothness pass: a more solid tint (copy never bleeds through) and a
+       12px blur instead of the 40-44px --glass-blur. Blur cost grows with
+       the radius on every frame the page scrolls under this always-on bar;
+       behind a 96-97% fill a bigger radius was invisible anyway. */
     background: var(--glass-nav-fill);
-    backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
-    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
+    backdrop-filter: blur(12px) saturate(1.4);
+    -webkit-backdrop-filter: blur(12px) saturate(1.4);
     box-shadow: var(--shadow-e2);
     border-radius: 999px;
   }
   .theme-dark .nav-glass {
-    background: hsl(var(--card) / 0.9);
+    background: hsl(var(--card) / 0.96);
   }
 
   /* ── Site header (polish/round2 · motion pass web/navbar-motion) ──
@@ -1391,9 +1404,12 @@
     transform-origin: 50% 50%;
     border-radius: var(--cap-radius);
     border: 1px solid hsl(var(--foreground) / 0.09);
-    background: hsl(var(--background) / 0.76);
-    backdrop-filter: blur(16px) saturate(1.7);
-    -webkit-backdrop-filter: blur(16px) saturate(1.7);
+    /* Solid enough that body copy never reads through the links; 12px blur
+       (was 16px, saturate 1.7) keeps the frosted edge for less raster work
+       on every scrolled frame. */
+    background: hsl(var(--background) / 0.92);
+    backdrop-filter: blur(12px) saturate(1.5);
+    -webkit-backdrop-filter: blur(12px) saturate(1.5);
     box-shadow:
       0 10px 30px -10px rgb(0 0 0 / 0.18),
       0 2px 6px -2px rgb(0 0 0 / 0.08),
@@ -1413,7 +1429,7 @@
   }
 
   .theme-dark .site-nav-bg {
-    background: hsl(var(--card) / 0.74);
+    background: hsl(var(--card) / 0.92);
     border-color: hsl(var(--foreground) / 0.1);
     box-shadow:
       0 14px 40px -12px rgb(0 0 0 / 0.7),
@@ -2646,12 +2662,23 @@ body.cursor-custom-active * { cursor: auto; }
 .cursor-dot, .cursor-ring { display: none; }
 
 /* Live pulse dot — slow, calm */
+/* Transform + opacity only (was an animated box-shadow: a repaint every
+   frame on every page with a hero eyebrow). The element (or its ::before)
+   carries the dot colour; the ring is the dot scaling out and fading. */
 @keyframes live-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4); }
-  60%      { box-shadow: 0 0 0 6px hsl(var(--primary) / 0); }
+  0%       { transform: scale(1); opacity: 0.55; }
+  60%, 100% { transform: scale(2.6); opacity: 0; }
 }
 
-.animate-live-dot { animation: live-pulse 3s ease-in-out infinite; }
+.animate-live-dot { position: relative; }
+.animate-live-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: hsl(var(--primary));
+  animation: live-pulse 3s ease-in-out infinite;
+}
 
 /* ==========================================================================
    UI review batch 3 (#11–16)

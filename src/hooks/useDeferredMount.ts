@@ -1,4 +1,6 @@
+import { viewTransitionInFlight } from "@/lib/viewTransition";
 import { startTransition, useEffect, useState } from "react";
+import { restorePending } from "@/lib/scrollMemory";
 
 /**
  * False on the first paint, true one frame later (as a transition, so React
@@ -8,20 +10,35 @@ import { startTransition, useEffect, useState } from "react";
  * animates first (card → listing open, sheet slide-in), the rest follows.
  * Nothing is deferred until `enabled` is true (e.g. once the data is in);
  * once true it stays true.
+ *
+ * Back/forward onto a spot below the first screen renders it at once: the
+ * scroll restore needs the page at full height (lib/scrollMemory).
  */
 export function useDeferredMount(enabled = true): boolean {
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(() => enabled && restorePending());
   useEffect(() => {
     if (!enabled || ready) return;
     if (typeof window === "undefined" || typeof window.requestAnimationFrame !== "function") {
       setReady(true);
       return;
     }
+    let raf1 = 0;
     let raf2 = 0;
-    const raf1 = window.requestAnimationFrame(() => {
-      raf2 = window.requestAnimationFrame(() => startTransition(() => setReady(true)));
-    });
+    let poll = 0;
+    // Not under a running View Transition (Back from a listing morphs into the
+    // feed): DOM inserted mid-transition is restyled into every frame of it.
+    const start = () => {
+      if (viewTransitionInFlight()) {
+        poll = window.setTimeout(start, 50);
+        return;
+      }
+      raf1 = window.requestAnimationFrame(() => {
+        raf2 = window.requestAnimationFrame(() => startTransition(() => setReady(true)));
+      });
+    };
+    start();
     return () => {
+      window.clearTimeout(poll);
       window.cancelAnimationFrame(raf1);
       window.cancelAnimationFrame(raf2);
     };

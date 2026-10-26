@@ -16,6 +16,7 @@ import { TrendKpis } from "@/components/TrendKpis";
 import { ImportEraPublicSection } from "@/components/ImportEraPublicSection";
 import { RotateCcw, Zap, BarChart3 } from "lucide-react";
 import { PageBody } from "@/components/PageBody";
+import { DeferredSection } from "@/components/DeferredSection";
 import { PageCanvas } from "@/components/PageCanvas";
 import { FreePlanBanner } from "@/components/FreePlanBanner";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
@@ -305,9 +306,11 @@ export default function Trends() {
           )}
         </m.div>
 
-        <m.div variants={revealItem}>
+        {/* Bottom of the page: mounts near the viewport or once idle, so its
+            render (and fetch) is not part of the first-load long tasks. */}
+        <DeferredSection lazy minHeight={420}>
           <ImportEraPublicSection />
-        </m.div>
+        </DeferredSection>
       </PageBody>
     </PageCanvas>
   );

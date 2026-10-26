@@ -81,7 +81,7 @@
 
   /* ── Glass: two recipes only (nav, sheet). ≤3 blurred layers on screen. */
   --glass-blur: 20px;
-  --glass-nav-fill: hsl(var(--background) / 0.9);
+  --glass-nav-fill: hsl(var(--background) / 0.97);
   --glass-sheet-fill: hsl(var(--popover) / 0.9);
 
   /* ── Type scale (mirrors src/styles/type-scale.ts) ───────────────── */

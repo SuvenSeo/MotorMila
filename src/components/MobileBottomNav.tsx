@@ -1,8 +1,9 @@
-import { LayoutGroup, m, motion } from "motion/react";
+import { useLayoutEffect, useRef } from "react";
+import { m } from "motion/react";
 import { useLocation } from "react-router-dom";
 import { PrefetchLink } from "@/components/PrefetchLink";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { spring, usePrefersReducedMotionOrLowData, tween } from "@/lib/motion";
+import { usePrefersReducedMotionOrLowData, tween } from "@/lib/motion";
 import { NAV_DESTINATIONS, isDestinationActive, type NavDestination } from "@/lib/siteNav";
 
 /**
@@ -13,10 +14,40 @@ import { NAV_DESTINATIONS, isDestinationActive, type NavDestination } from "@/li
  * capped (index.css .bottom-nav-label) so 200% text keeps whole words, and
  * every tab has a min width so Sinhala / Tamil words never collide.
  */
-function TabItem({ dest, calm }: { dest: NavDestination; calm: boolean }) {
+/** Index of the tab that was active before the current one (for the pill glide). */
+let lastActiveIndex = -1;
+/** Tab width, measured off the critical path (idle / resize), never in a route commit. */
+let tabWidth = 0;
+
+/**
+ * The active pill glides from the previous tab: a one-off WAAPI transform
+ * (compositor) armed when a tab becomes active. Replaces motion's shared
+ * `layoutId`, whose projection tree re-measured every tab (a forced layout)
+ * on each of the nav's re-renders — every search-param change on home.
+ */
+function useTabPillGlide(isActive: boolean, index: number, calm: boolean) {
+  const pillRef = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    if (!isActive) return;
+    const from = lastActiveIndex;
+    lastActiveIndex = index;
+    const pill = pillRef.current;
+    if (calm || from < 0 || from === index || !pill || typeof pill.animate !== "function") return;
+    const dx = (from - index) * tabWidth;
+    if (!dx) return;
+    pill.animate([{ transform: `translateX(${dx}px)` }, { transform: "translateX(0)" }], {
+      duration: 380,
+      easing: "cubic-bezier(0.32, 0.72, 0, 1)",
+    });
+  }, [isActive, index, calm]);
+  return pillRef;
+}
+
+function TabItem({ dest, index, calm }: { dest: NavDestination; index: number; calm: boolean }) {
   const { pathname } = useLocation();
   const { t } = useAppPreferences();
   const isActive = isDestinationActive(dest, pathname);
+  const pillRef = useTabPillGlide(isActive, index, calm);
   const Icon = dest.icon;
   const label = t(dest.labelKey, dest.fallback);
 
@@ -31,14 +62,7 @@ function TabItem({ dest, calm }: { dest: NavDestination; calm: boolean }) {
       }`}
     >
       <span className="relative flex h-7 w-10 items-center justify-center">
-        {isActive && (
-          <motion.span
-            layoutId="mobile-nav-pill"
-            className="absolute inset-0 rounded-full bg-primary/12"
-            transition={calm ? { duration: 0 } : spring.snappy}
-            aria-hidden
-          />
-        )}
+        {isActive && <span ref={pillRef} className="absolute inset-0 rounded-full bg-primary/12" aria-hidden />}
         {/* Micro-bounce: squish on tap, small hop when the tab becomes active. */}
         <m.span
           className="relative z-10 flex"
@@ -66,20 +90,32 @@ function TabItem({ dest, calm }: { dest: NavDestination; calm: boolean }) {
 export function MobileBottomNav() {
   const { t } = useAppPreferences();
   const calm = usePrefersReducedMotionOrLowData();
+  const navRef = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav || typeof ResizeObserver === "undefined") return;
+    // ResizeObserver delivers sizes after layout, so this never forces one.
+    const ro = new ResizeObserver(() => {
+      const tab = nav.querySelector<HTMLElement>(".bottom-nav-tab");
+      if (tab) tabWidth = tab.getBoundingClientRect().width;
+    });
+    const row = nav.querySelector(".bottom-nav-tab")?.parentElement;
+    if (row) ro.observe(row);
+    return () => ro.disconnect();
+  }, []);
 
   return (
     <nav
+      ref={navRef}
       aria-label={t("nav.mobileNavigation", "Mobile bottom navigation")}
       className="bottom-nav md:hidden fixed inset-x-3 bottom-3 z-bottom-nav pointer-events-auto"
       style={{ marginBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="nav-glass overflow-hidden rounded-full">
         <div className="flex min-h-16 items-stretch px-2">
-          <LayoutGroup id="mobile-bottom-nav">
-            {NAV_DESTINATIONS.map((dest) => (
-              <TabItem key={dest.id} dest={dest} calm={calm} />
-            ))}
-          </LayoutGroup>
+          {NAV_DESTINATIONS.map((dest, i) => (
+            <TabItem key={dest.id} dest={dest} index={i} calm={calm} />
+          ))}
         </div>
       </div>
     </nav>

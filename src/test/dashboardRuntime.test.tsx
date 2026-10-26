@@ -113,6 +113,13 @@ function renderDashboard(initialEntries: string[] = ["/"]) {
 }
 
 beforeEach(() => {
+  // Desktop viewport: the filter sidebar renders only at >= 1024px (below that
+  // it lives in the filter sheet).
+  const setupMatchMedia = window.matchMedia;
+  vi.spyOn(window, "matchMedia").mockImplementation((query: string) => ({
+    ...setupMatchMedia(query),
+    matches: /min-width:\s*1024px/.test(query),
+  }));
   vi.clearAllMocks();
   vi.mocked(api.getStats).mockResolvedValue(null);
   vi.mocked(api.getListings).mockResolvedValue({ listings: [], total: 0 });

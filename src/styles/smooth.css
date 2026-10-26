@@ -1,0 +1,92 @@
+/* ============================================================================
+   Smoothness pass (web/smooth-everything). Rules that keep idle pages off the
+   main thread and keep every running animation on the compositor.
+   ========================================================================== */
+
+/* ── Reveal (components/motion/Reveal.tsx): once, compositor-only ───────── */
+.mm-reveal {
+  opacity: 0;
+}
+.mm-reveal[data-shown="true"] {
+  animation: mm-reveal-in var(--dur-medium) var(--ease-decelerate) both;
+}
+@keyframes mm-reveal-in {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mm-reveal[data-shown="true"] { animation-name: mm-reveal-fade; animation-duration: var(--dur-micro); }
+}
+html.low-data .mm-reveal { opacity: 1; animation: none !important; }
+@keyframes mm-reveal-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── Loops pause while off screen (hooks/useOffscreenPause.ts) ──────────── */
+[data-offscreen="true"],
+[data-offscreen="true"] *,
+[data-offscreen="true"]::before,
+[data-offscreen="true"]::after,
+[data-offscreen="true"] *::before,
+[data-offscreen="true"] *::after {
+  animation-play-state: paused !important;
+}
+
+/* ── Skeletons: off-screen shimmers are skipped entirely ──────────────────
+   content-visibility:auto skips rendering (and the shimmer keyframe) for
+   skeletons outside the viewport; a loading grid had ~90 of them ticking.
+   Skeletons are empty boxes sized by their classes, so size containment
+   while skipped changes nothing. */
+.skeleton-shimmer {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 1px;
+}
+
+/* ── Overlay-less popovers (Select, DropdownMenu): see PopoverShield ─────
+   Sits just below the popover's portal (same z as the header, later in the
+   DOM) and takes outside taps so Radix dismisses without click-through. */
+.mm-popover-shield {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-header);
+  pointer-events: auto;
+  background: transparent;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── AnimatedNumber (components/ui/animated-number.tsx) ─────────────────
+   Each digit column clips a 0–9 strip and slides it by transform. The ghost
+   digit stays in flow for width + baseline; clip-path clips without turning
+   the column into a scroll container (which would move its baseline). */
+.roll-num { display: inline-block; white-space: nowrap; }
+.roll-num__row { display: inline; }
+.roll-num__digit {
+  position: relative;
+  display: inline-block;
+  clip-path: inset(0 -0.1em);
+}
+.roll-num__ghost { visibility: hidden; }
+.roll-num__strip {
+  position: absolute;
+  inset: 0 0 auto 0;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  transition: transform 400ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.roll-num--calm .roll-num__strip { transition: none; }
+@media (prefers-reduced-motion: reduce) { .roll-num__strip { transition: none; } }
+html.low-data .roll-num__strip { transition: none; }
+
+/* ── Chart draw-in (components/ui/chart-theme.tsx useChartDraw) ─────────
+   A one-off clip-path wipe of each series instead of Recharts re-rendering
+   the SVG from JS every frame. */
+.chart-draw-in {
+  animation: chart-draw-wipe var(--dur-long) var(--ease-decelerate) both;
+}
+@keyframes chart-draw-wipe {
+  from { clip-path: inset(-10% 100% -10% 0); }
+  to { clip-path: inset(-10% 0 -10% 0); }
+}
+@media (prefers-reduced-motion: reduce) { .chart-draw-in { animation: none; } }

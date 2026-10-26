@@ -1,13 +1,46 @@
 import { useMemo } from "react";
-import { Area, AreaChart, YAxis } from "recharts";
 import { Minus, TrendingDown, TrendingUp } from "lucide-react";
 import type { PriceTrendPoint } from "@/types/car";
-import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
 import { formatChangePct, formatMnShort, paddedDomain } from "@/lib/dataSanity";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { Badge } from "@/components/ui/badge";
 import { StatTile, LkrValue, CountValue, FlowValue } from "@/components/ui/stat-tile";
 import { toneBadge, toneColor, toneFor } from "@/components/ui/chart-theme";
+
+/**
+ * Plain-SVG sparkline (monotone-ish curve + soft fill). Three Recharts
+ * AreaCharts (each with a ResponsiveContainer measuring its box) cost ~150 ms
+ * of main thread at 4x CPU on every Trends load and filter change; a path
+ * string is microseconds and scales with the tile via viewBox.
+ */
+function Sparkline({ values, domain, color }: { values: number[]; domain: [number, number] | null; color: string }) {
+  const { line, area } = useMemo(() => {
+    const W = 100;
+    const H = 48;
+    const top = 2;
+    const [lo, hi] = domain ?? [Math.min(...values), Math.max(...values)];
+    const span = hi - lo || 1;
+    const pts = values.map((v, i) => [
+      values.length === 1 ? W / 2 : (i / (values.length - 1)) * W,
+      top + (1 - (v - lo) / span) * (H - top),
+    ]);
+    // Smooth through midpoints (quadratic), like Recharts' monotone look.
+    let d = `M${pts[0][0].toFixed(2)},${pts[0][1].toFixed(2)}`;
+    for (let i = 1; i < pts.length; i++) {
+      const [x0, y0] = pts[i - 1];
+      const [x1, y1] = pts[i];
+      const mx = (x0 + x1) / 2;
+      d += ` C${mx.toFixed(2)},${y0.toFixed(2)} ${mx.toFixed(2)},${y1.toFixed(2)} ${x1.toFixed(2)},${y1.toFixed(2)}`;
+    }
+    return { line: d, area: `${d} L${W},${H} L0,${H} Z` };
+  }, [values, domain]);
+  return (
+    <svg aria-hidden viewBox="0 0 100 48" preserveAspectRatio="none" className="mt-3 block h-12 w-full overflow-visible">
+      <path d={area} style={{ fill: color }} fillOpacity={0.12} stroke="none" />
+      <path d={line} fill="none" style={{ stroke: color }} strokeWidth={2} vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 /**
  * KPI strip for the Trends page: current median, change vs the oldest month,
@@ -26,7 +59,7 @@ export function TrendKpis({ points, loading = false }: { points: PriceTrendPoint
     const spark = clean.map((p) => ({ month: p.month, median: p.median_price }));
     const totalSamples = clean.reduce((a, p) => a + (Number(p.sample_count) || 0), 0);
     const domain = paddedDomain(spark.map((s) => s.median), 0.15);
-    return { first, last, changePct, spark, totalSamples, months: clean.length, domain };
+    return { first, last, changePct, sparkValues: spark.map((s) => s.median), totalSamples, months: clean.length, domain };
   }, [points]);
 
   if (loading) {
@@ -42,28 +75,9 @@ export function TrendKpis({ points, loading = false }: { points: PriceTrendPoint
 
   const tone = toneFor(kpis.changePct);
   const DeltaIcon = tone === "down" ? TrendingDown : tone === "up" ? TrendingUp : Minus;
-  const chartConfig = {
-    median: { label: t("trendKpis.median", "Median"), color: toneColor(tone) },
-  } satisfies ChartConfig;
   const changeRounded = Math.round(kpis.changePct * 10) / 10;
 
-  const spark = (
-    <ChartContainer config={chartConfig} className="mt-3 aspect-auto h-12 w-full" aria-hidden>
-      <AreaChart data={kpis.spark} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
-        {kpis.domain && <YAxis hide domain={kpis.domain} />}
-        <Area
-          dataKey="median"
-          type="monotone"
-          stroke="var(--color-median)"
-          strokeWidth={2}
-          fill="var(--color-median)"
-          fillOpacity={0.12}
-          isAnimationActive={false}
-          dot={false}
-        />
-      </AreaChart>
-    </ChartContainer>
-  );
+  const spark = <Sparkline values={kpis.sparkValues} domain={kpis.domain} color={toneColor(tone)} />;
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label={t("trendKpis.aria", "Trend key figures")}>

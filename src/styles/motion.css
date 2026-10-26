@@ -18,6 +18,13 @@ html[data-route-vt]::view-transition-new(root) {
   from { opacity: 0; transform: translate3d(0, 8px, 0); }
 }
 
+/* Back/forward restore (lib/scrollMemory): cards around the landing spot
+   render in full while it measures, so the restored offset is final. */
+[data-scroll-anchor][data-cv-render],
+.cv-auto[data-cv-render] {
+  content-visibility: visible;
+}
+
 /* Chrome that persists across routes holds still (no cross-fade flicker). */
 .site-nav-header { view-transition-name: site-nav; }
 .bottom-nav { view-transition-name: bottom-nav; }
@@ -55,6 +62,18 @@ html[data-route-vt]::view-transition-new(root) {
   ::view-transition-old(*),
   ::view-transition-new(*) {
     animation: none !important;
+  }
+  /* Back from a listing with reduced motion: no flight, just a quick fade. */
+  html[data-listing-vt="calm"]::view-transition-old(root) {
+    animation: vt-route-out var(--dur-short) linear both !important;
+  }
+  html[data-listing-vt="calm"]::view-transition-new(root) {
+    animation: fade-in var(--dur-short) linear both !important;
+  }
+  /* The held-still bars would otherwise show old and new on top of each other. */
+  html[data-listing-vt="calm"]::view-transition-old(site-nav),
+  html[data-listing-vt="calm"]::view-transition-old(bottom-nav) {
+    display: none !important;
   }
   .press:active:not(:disabled) { transform: none; }
 }

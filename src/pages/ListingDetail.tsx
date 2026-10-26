@@ -1,8 +1,8 @@
-import { Suspense, useState, useEffect } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
 import { DeferredSection } from '@/components/DeferredSection';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, useNavigationType, Link } from 'react-router-dom';
 import {
   ArrowLeft, ExternalLink, MapPin, Calendar,
   Share2, Fuel, Gauge, Settings2, MessageCircle,
@@ -10,7 +10,7 @@ import {
   TrendingDown, Layers
 } from 'lucide-react';
 import { getListingGeo, getListingHistoryReport, getListingSafetyResearch, formatPrice } from '@/services/api';
-import { peekListingSeed, takeListingBundle } from '@/lib/listingHandoff';
+import { peekListingSeed, peekRecentBundle, takeListingBundle, type ListingBundle } from '@/lib/listingHandoff';
 import { TrustCheckPanel } from '@/components/TrustCheckPanel';
 import { SnapshotModeNotice } from '@/components/SnapshotModeNotice';
 import { getSourceAttribution } from '@/lib/sourceAttribution';
@@ -94,6 +94,11 @@ export default function ListingDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const routerLocation = useLocation();
+  const navType = useNavigationType();
+  const navTypeRef = useRef(navType);
+  navTypeRef.current = navType;
+  const keyRef = useRef(routerLocation.key);
+  keyRef.current = routerLocation.key;
   const motionCalm = useReducedMotionOrLowData();
   // Below-the-fold sections reveal once as they scroll in (opacity only when calm).
   const onScroll = {
@@ -108,18 +113,21 @@ export default function ListingDetail() {
   // A card tap hands over its listing + decoded photo (lib/listingHandoff):
   // the header and hero paint at once while the detail data loads.
   const [seed] = useState(() => peekListingSeed(id));
-  const [listing, setListing] = useState<CarListing | null>(seed?.listing ?? null);
+  // Back/forward onto a listing this tab just showed: its bundle, painted at once.
+  // (Not on the first entry of a page load, which is also a POP.)
+  const [kept] = useState(() => (navType === 'POP' && routerLocation.key !== 'default' ? peekRecentBundle(id) : null));
+  const [listing, setListing] = useState<CarListing | null>(kept?.[0] ?? seed?.listing ?? null);
   /** The detail bundle (listing, similar, history, FMV) has arrived. */
-  const [dataReady, setDataReady] = useState(false);
-  const [similar, setSimilar] = useState<CarListing[]>([]);
+  const [dataReady, setDataReady] = useState(!!kept);
+  const [similar, setSimilar] = useState<CarListing[]>(kept?.[1] ?? []);
   const [sellerProfile, setSellerProfile] = useState<SellerTrustProfile | null>(null);
-  const [priceHistory, setPriceHistory] = useState<PriceHistoryInfo | null>(null);
-  const [fmvDetail, setFmvDetail] = useState<ListingFmvDetail | null>(null);
+  const [priceHistory, setPriceHistory] = useState<PriceHistoryInfo | null>(kept?.[2] ?? null);
+  const [fmvDetail, setFmvDetail] = useState<ListingFmvDetail | null>(kept?.[3] ?? null);
   const [safetyResearch, setSafetyResearch] = useState<SafetyResearchResponse | null>(null);
   const [listingGeo, setListingGeo] = useState<EnrichmentEnvelope | null>(null);
   /** Cross-site linked listings; null = history service unavailable. */
   const [relatedListings, setRelatedListings] = useState<TrustRelatedListing[] | null>(null);
-  const [loading, setLoading] = useState(!seed);
+  const [loading, setLoading] = useState(!seed && !kept);
   const { toggle: toggleCompare, isPinned: isPinnedForCompare } = useCompareTray();
   const [watchlisted, setWatchlisted] = useState(false);
   // Everything below the price waits for the detail data, then mounts one
@@ -207,23 +215,34 @@ export default function ListingDetail() {
 
   useEffect(() => {
     if (!id) return;
-    window.scrollTo(0, 0); // peer links navigate mid-scroll; open each listing at the top
+    // Peer links navigate mid-scroll: open each listing at the top. Back/forward
+    // keeps the restored position (ScrollRestoration).
+    if (navTypeRef.current !== 'POP') window.scrollTo(0, 0);
     let cancelled = false;
-    const handed = peekListingSeed(id);
-    if (handed) { setListing(handed.listing); setLoading(false); } else setLoading(true);
-    setDataReady(false); setSellerProfile(null); setPriceHistory(null); setFmvDetail(null); setSafetyResearch(null); setListingGeo(null); setRelatedListings(null);
-    // seller-profile is retired (410): seller contact happens on the source site.
-    takeListingBundle(id)
-      .then(([detail, sim, history, fmv]) => {
-        // Ignore a slow response for a listing the user already navigated away from.
-        if (cancelled) return;
-        setListing(detail); setSimilar(sim); setPriceHistory(history); setFmvDetail(fmv); setLoading(false); setDataReady(true);
-        setWatchlisted(detail ? loadWatchlistIds().includes(Number(detail.id)) : false);
-        if (detail) {
-          document.title = `${detail.title} — Motormila`;
-          trackEvent("listing_viewed", { listing_id: detail.id, make: detail.make, model: detail.model, source: detail.source });
-        }
-      });
+    const showBundle = ([detail, sim, history, fmv]: ListingBundle) => {
+      setListing(detail); setSimilar(sim); setPriceHistory(history); setFmvDetail(fmv); setLoading(false); setDataReady(true);
+      setWatchlisted(detail ? loadWatchlistIds().includes(Number(detail.id)) : false);
+      if (detail) document.title = `${detail.title} — Motormila`;
+    };
+    setSellerProfile(null); setSafetyResearch(null); setListingGeo(null); setRelatedListings(null);
+    // Back/forward onto a listing this tab just showed: paint it as it was (no
+    // skeleton), so the scroll restore finds the similar car the visitor tapped.
+    const back = navTypeRef.current === 'POP' && keyRef.current !== 'default' ? peekRecentBundle(id) : null;
+    if (back) showBundle(back);
+    else {
+      const handed = peekListingSeed(id);
+      if (handed) { setListing(handed.listing); setLoading(false); } else setLoading(true);
+      setDataReady(false); setPriceHistory(null); setFmvDetail(null);
+      // seller-profile is retired (410): seller contact happens on the source site.
+      takeListingBundle(id)
+        .then((bundle) => {
+          // Ignore a slow response for a listing the user already navigated away from.
+          if (cancelled) return;
+          showBundle(bundle);
+          const detail = bundle[0];
+          if (detail) trackEvent("listing_viewed", { listing_id: detail.id, make: detail.make, model: detail.model, source: detail.source });
+        });
+    }
     getListingSafetyResearch(id).then((r) => { if (!cancelled) setSafetyResearch(r); }).catch(() => setSafetyResearch(null));
     getListingGeo(id).then((g) => { if (!cancelled) setListingGeo(g); }).catch(() => setListingGeo(null));
     getListingHistoryReport(id)

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { m, motion } from "motion/react";
 import useEmblaCarousel from "embla-carousel-react";
 import { Camera, ChevronLeft, ChevronRight, Expand } from "lucide-react";
@@ -28,6 +28,13 @@ interface ListingImageCarouselProps {
 
 /** Listing grid: 1 column < 768px, 2 columns to 1279px, then 3 columns in a ≤1560px frame. */
 const CARD_SIZES = "(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 520px";
+
+/**
+ * Photo each card was left on, per listing (this tab). A card that remounts —
+ * Back from the listing — shows the same photo, so the hero flies back into
+ * the picture the visitor tapped and nothing swaps under them.
+ */
+const CARD_SLIDES = new Map<number, number>();
 
 function stop(e: React.SyntheticEvent) {
   e.stopPropagation();
@@ -63,9 +70,22 @@ export function ListingImageCarousel({
   // Detail hero: Embla starts after the card → listing View Transition. Its
   // init measure (which runs on construction, even inactive) forced a style + layout of the whole incoming page inside the
   // route commit (~40 ms at 4× CPU); slide 0 renders statically until then.
-  const [carouselLive, setCarouselLive] = useState(!isDetail);
+  // Cards: Embla starts on first intent (pointer over / focus / arrow or dot
+  // tap). Building one engine per card on mount measured every slide of
+  // every card (~200 ms of forced layout at 4× CPU on the home grid); until
+  // then slide 0 renders statically and arrows/dots queue their target.
+  const [initialSlide] = useState(() => {
+    if (isDetail || listingId == null) return 0;
+    const saved = CARD_SLIDES.get(listingId) ?? 0;
+    return saved > 0 && saved < count ? saved : 0;
+  });
+  const [carouselLive, setCarouselLive] = useState(false);
+  const [pendingSlide, setPendingSlide] = useState<number | null>(null);
+  const wake = useCallback(() => {
+    if (multi && !isDetail) setCarouselLive(true);
+  }, [multi, isDetail]);
   useEffect(() => {
-    if (carouselLive || !multi) return;
+    if (carouselLive || !multi || !isDetail) return;
     let raf = 0;
     let timer = 0;
     const go = () => {
@@ -77,7 +97,7 @@ export function ListingImageCarousel({
       window.clearTimeout(timer);
       window.cancelAnimationFrame(raf);
     };
-  }, [carouselLive, multi]);
+  }, [carouselLive, multi, isDetail]);
   const [emblaRef, emblaApi] = useEmblaCarousel({
     active: multi,
     // Detail: no loop so the first/last photo rubber-bands against the edge
@@ -89,9 +109,10 @@ export function ListingImageCarousel({
     dragThreshold: 6,
     skipSnaps: false,
     duration: reduced ? 1 : isDetail ? 26 : 22,
+    startIndex: initialSlide,
   });
   const [lightboxOrigin, setLightboxOrigin] = useState<{ x: number; y: number } | null>(null);
-  const [index, setIndex] = useState(0);
+  const [index, setIndex] = useState(initialSlide);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxRequested, setLightboxRequested] = useState(false);
   const sourceName = formatSourceName(source);
@@ -99,7 +120,7 @@ export function ListingImageCarousel({
   // plus its neighbours once the carousel is touched/hovered (cards) or right
   // away (detail). Every card used to download all of its slides up front —
   // ~50 full-size photos (≈8 MB) on the home grid.
-  const [mounted, setMounted] = useState<ReadonlySet<number>>(() => new Set(isDetail && multi ? [0, 1, count - 1] : [0]));
+  const [mounted, setMounted] = useState<ReadonlySet<number>>(() => new Set(isDetail && multi ? [0, 1, count - 1] : [initialSlide]));
   const prime = useCallback(
     (center: number) => {
       if (!multi) return;
@@ -119,7 +140,14 @@ export function ListingImageCarousel({
 
   useEffect(() => {
     if (!emblaApi) return;
-    const onSelect = () => setIndex(emblaApi.selectedScrollSnap());
+    const onSelect = () => {
+      const i = emblaApi.selectedScrollSnap();
+      setIndex(i);
+      if (!isDetail && listingId != null) {
+        if (i > 0) CARD_SLIDES.set(listingId, i);
+        else CARD_SLIDES.delete(listingId);
+      }
+    };
     onSelect();
     emblaApi.on("select", onSelect);
     emblaApi.on("reInit", onSelect);
@@ -127,15 +155,42 @@ export function ListingImageCarousel({
       emblaApi.off("select", onSelect);
       emblaApi.off("reInit", onSelect);
     };
-  }, [emblaApi]);
+  }, [emblaApi, isDetail, listingId]);
 
-  const goTo = useCallback((i: number) => emblaApi?.scrollTo(i, reduced), [emblaApi, reduced]);
-  const prev = useCallback(() => emblaApi?.scrollPrev(reduced), [emblaApi, reduced]);
-  const next = useCallback(() => emblaApi?.scrollNext(reduced), [emblaApi, reduced]);
+  const goTo = useCallback(
+    (i: number) => {
+      if (emblaApi) emblaApi.scrollTo(i, reduced);
+      else {
+        setPendingSlide(i);
+        wake();
+      }
+    },
+    [emblaApi, reduced, wake],
+  );
+  const prev = useCallback(() => {
+    if (emblaApi) emblaApi.scrollPrev(reduced);
+    else goTo((index - 1 + count) % count);
+  }, [emblaApi, reduced, goTo, index, count]);
+  const next = useCallback(() => {
+    if (emblaApi) emblaApi.scrollNext(reduced);
+    else goTo((index + 1) % count);
+  }, [emblaApi, reduced, goTo, index, count]);
+  // An arrow/dot tapped before the engine existed plays once it is up.
+  useEffect(() => {
+    if (!emblaApi || pendingSlide === null) return;
+    prime(pendingSlide);
+    emblaApi.scrollTo(pendingSlide, reduced);
+    setPendingSlide(null);
+  }, [emblaApi, pendingSlide, reduced, prime]);
 
   // Reset when the listing changes.
   const imagesKey = images.join("|");
+  const lastImagesKey = useRef(imagesKey);
   useEffect(() => {
+    // Only a new photo set resets. The engine coming up (lazy init) must not
+    // snap back over a queued arrow/dot tap.
+    if (lastImagesKey.current === imagesKey) return;
+    lastImagesKey.current = imagesKey;
     setIndex(0);
     setMounted(new Set(isDetail && multi ? [0, 1, count - 1] : [0]));
     emblaApi?.reInit();
@@ -191,8 +246,8 @@ export function ListingImageCarousel({
       aria-roledescription="carousel"
       aria-label={t("listingImage.carousel", "Listing photos")}
       className={className}
-      onPointerEnter={multi ? () => prime(index) : undefined}
-      onFocus={multi ? () => prime(index) : undefined}
+      onPointerEnter={multi ? () => { prime(index); wake(); } : undefined}
+      onFocus={multi ? () => { prime(index); wake(); } : undefined}
     >
       <div className="relative h-full w-full overflow-hidden">
         {/* Embla attaches only when it has work to do: it builds its engine (and
@@ -200,7 +255,12 @@ export function ListingImageCarousel({
             construction even with `active: false`, so single-photo listings and
             the detail hero before the card → listing transition get no viewport ref. */}
         <div ref={multi && carouselLive ? emblaRef : undefined} className="h-full w-full overflow-hidden">
-          <div className="flex h-full w-full touch-pan-y">
+          {/* A remounted card starts on its saved photo. The transform is set
+              once (constant prop) so React never fights Embla over it later. */}
+          <div
+            className="flex h-full w-full touch-pan-y"
+            style={initialSlide > 0 ? { transform: `translate3d(${-initialSlide * 100}%, 0, 0)` } : undefined}
+          >
             {images.map((src, i) => (
               <div
                 key={`${src}-${i}`}

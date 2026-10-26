@@ -3,6 +3,7 @@ import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { PopoverShield } from "@/components/ui/overlay-mark";
 import { fieldClass } from "@/components/ui/input";
 
 const Select = SelectPrimitive.Root;
@@ -76,6 +77,7 @@ const SelectContent = React.forwardRef<
       position={position}
       {...props}
     >
+      <PopoverShield />
       <SelectScrollUpButton />
       <SelectPrimitive.Viewport
         className={cn(

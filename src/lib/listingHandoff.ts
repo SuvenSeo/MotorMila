@@ -26,6 +26,36 @@ const SEED_TTL_MS = 30_000;
 const BUNDLE_TTL_MS = 15_000;
 const seeds = new Map<string, Seed>();
 const bundles = new Map<string, { promise: Promise<ListingBundle>; at: number }>();
+/**
+ * The last few bundles a detail page showed, kept for Back/forward: returning
+ * to a listing (listing → similar listing → Back) paints it straight away at
+ * full height, so the scroll restore lands on the link the visitor tapped
+ * instead of a skeleton that is still loading.
+ */
+const RECENT_TTL_MS = 10 * 60_000;
+const RECENT_MAX = 12;
+const recent = new Map<string, { bundle: ListingBundle; at: number }>();
+
+function remember(id: string, bundle: ListingBundle): ListingBundle {
+  if (bundle[0]) {
+    recent.delete(id);
+    recent.set(id, { bundle, at: Date.now() });
+    while (recent.size > RECENT_MAX) recent.delete(recent.keys().next().value as string);
+  }
+  return bundle;
+}
+
+/** A bundle this tab showed for `id` in the last few minutes (Back/forward). */
+export function peekRecentBundle(id: string | undefined): ListingBundle | null {
+  if (!id) return null;
+  const hit = recent.get(id);
+  if (!hit) return null;
+  if (Date.now() - hit.at > RECENT_TTL_MS) {
+    recent.delete(id);
+    return null;
+  }
+  return hit.bundle;
+}
 
 function fetchBundle(id: string): Promise<ListingBundle> {
   return Promise.all([
@@ -49,8 +79,8 @@ export function prefetchListingBundle(id: string | number | null | undefined): v
 export function takeListingBundle(id: string): Promise<ListingBundle> {
   const hit = bundles.get(id);
   bundles.delete(id);
-  if (hit && Date.now() - hit.at < BUNDLE_TTL_MS) return hit.promise;
-  return fetchBundle(id);
+  const promise = hit && Date.now() - hit.at < BUNDLE_TTL_MS ? hit.promise : fetchBundle(id);
+  return promise.then((b) => remember(id, b));
 }
 
 /** Remember the card's listing + the photo it is showing, for the detail page. */

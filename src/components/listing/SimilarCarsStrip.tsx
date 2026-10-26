@@ -25,6 +25,23 @@ interface SimilarCarsStripProps {
 export function SimilarCarsStrip({ listings, fullAccess, title }: SimilarCarsStripProps) {
   const { t } = useAppPreferences();
   const reduced = typeof window !== "undefined" && Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
+  // The strip paints first; Embla attaches in a later task (after that frame,
+  // or on first pointer/focus). Its init measures every slide — a forced
+  // style + layout of the page — which used to land in the same long task as
+  // the deferred mount of this section.
+  const [live, setLive] = useState(false);
+  useEffect(() => {
+    if (live || listings.length < 2) return;
+    let timer = 0;
+    const raf = window.requestAnimationFrame(() => {
+      timer = window.setTimeout(() => setLive(true), 0);
+    });
+    return () => {
+      window.cancelAnimationFrame(raf);
+      window.clearTimeout(timer);
+    };
+  }, [live, listings.length]);
+  const wake = useCallback(() => setLive(true), []);
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: "start",
     dragFree: true,
@@ -89,7 +106,12 @@ export function SimilarCarsStrip({ listings, fullAccess, title }: SimilarCarsStr
           <p className="text-caption text-muted-foreground">{t("listing.noPeers", "No active peers tracked.")}</p>
         </div>
       ) : (
-        <div ref={emblaRef} className="-mx-1 overflow-hidden px-1">
+        <div
+          ref={live ? emblaRef : undefined}
+          onPointerEnter={live ? undefined : wake}
+          onFocus={live ? undefined : wake}
+          className="-mx-1 overflow-hidden px-1"
+        >
           <ul className="flex touch-pan-y gap-3">
             {listings.map((s) => {
               const price = Number(s.price_lkr || 0);

@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { Format } from "@number-flow/react";
+import type { Format } from "@/components/ui/animated-number";
 
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
@@ -10,8 +10,8 @@ import { formatLkrCompact } from "@/lib/price";
 
 /**
  * Flowing number: the kit AnimatedNumber (tabular figures, motion tokens,
- * instant under reduced motion / low data). number-flow renders its value as
- * text and exposes it to assistive tech; `label` is the same value as plain
+ * instant under reduced motion / low data). AnimatedNumber exposes its value
+ * as text to assistive tech; `label` is the same value as plain
  * text, used as the tooltip so a copy/hover shows the formatted figure.
  */
 export function FlowValue({
