@@ -313,7 +313,6 @@ export function PhotoUploader({ photos, uploadsEnabled }: Props) {
           className={cn(
             "sell-dropzone rounded-card border border-dashed border-label-3/50 bg-surface-2/60",
             compact ? "flex items-center gap-3 px-3 py-3 text-left sm:px-4" : "px-4 py-6 text-center sm:py-8",
-            full && "opacity-60",
           )}
           data-over={over ? "true" : "false"}
           onDragEnter={(e) => {
@@ -344,7 +343,7 @@ export function PhotoUploader({ photos, uploadsEnabled }: Props) {
           >
             <ImagePlus className={compact ? "h-5 w-5" : "h-6 w-6"} strokeWidth={1.75} aria-hidden />
           </span>
-          <div className={cn(compact ? "min-w-0 flex-1" : "mt-3")}>
+          <div className={cn(compact ? (full ? "min-w-0 flex-1" : "hidden min-w-0 flex-1 sm:block") : "mt-3")}>
             <p className={cn("font-display font-semibold text-foreground", compact ? "text-body" : "text-callout")}>
               {full
                 ? t("sell.photos.limitTitle", "12 of 12 photos added")
@@ -352,9 +351,14 @@ export function PhotoUploader({ photos, uploadsEnabled }: Props) {
                   ? t("sell.photos.dropActive", "Drop to add")
                   : compact
                     ? t("sell.photos.addMore", "Add more photos")
-                    : t("sell.photos.drop", "Drag photos here")}
+                    : (
+                        <>
+                          <span className="[@media(hover:none)]:hidden">{t("sell.photos.drop", "Drag photos here")}</span>
+                          <span className="hidden [@media(hover:none)]:inline">{t("sell.photos.addTouch", "Add photos of your vehicle")}</span>
+                        </>
+                      )}
             </p>
-            <p className={cn("text-label-2", compact ? "hidden text-caption sm:block" : "mx-auto mt-1 max-w-sm text-footnote")}>
+            <p className={cn("text-label-2", compact ? (full ? "text-caption" : "hidden text-caption sm:block") : "mx-auto mt-1 max-w-sm text-footnote")}>
               {full
                 ? t("sell.photos.limitReached", "That's the maximum. Remove a photo to add another.")
                 : t("sell.photos.privacy", "Photos are resized before upload and their location data is removed.")}
@@ -375,16 +379,18 @@ export function PhotoUploader({ photos, uploadsEnabled }: Props) {
               e.target.value = "";
             }}
           />
+          {!full && (
           <Button
             type="button"
             size={compact ? "sm" : undefined}
             variant={compact ? "secondary" : undefined}
-            className={cn(compact ? "shrink-0" : "mt-4")}
+            className={cn(compact ? "flex-1 sm:flex-none" : "mt-4")}
             onClick={() => fileInput.current?.click()}
             disabled={full}
           >
             <ImagePlus aria-hidden /> {t("sell.photos.choose", "Choose photos")}
           </Button>
+          )}
         </div>
       )}
 
@@ -397,7 +403,9 @@ export function PhotoUploader({ photos, uploadsEnabled }: Props) {
       {items.length > 0 && (
         <>
           <p id={helpId} className="text-caption text-label-2">
-            {t("sell.photos.reorderHelp", "Drag to reorder — the first photo is your cover. With a keyboard, press Space on a photo, move it with the arrow keys, then press Space again.")}
+            <span className="[@media(hover:none)]:hidden">{t("sell.photos.reorderMouse", "Drag to reorder — the first photo is your cover.")}</span>
+            <span className="hidden [@media(hover:none)]:inline">{t("sell.photos.reorderTouch", "Press and hold a photo, then drag to reorder — the first one is your cover.")}</span>
+            <span className="sr-only"> {t("sell.photos.reorderKeys", "With a keyboard, press Space on a photo, move it with the arrow keys, then press Space again.")}</span>
           </p>
           <ul ref={listRef} className="relative grid grid-cols-3 gap-2 sm:grid-cols-4" aria-label={t("sell.photos.listLabel", "Your photos")}>
             {items.map((it, i) => {

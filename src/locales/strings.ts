@@ -612,7 +612,6 @@ export const stringsEn: Record<string, string> = {
   "sell.photos.privacy": "Photos are resized before upload and their location data is removed.",
   "sell.photos.processing": "Preparing photo…",
   "sell.photos.removeN": "Remove photo {n}",
-  "sell.photos.reorderHelp": "Drag to reorder — the first photo is your cover. With a keyboard, press Space on a photo, move it with the arrow keys, then press Space again.",
   "sell.photos.retry": "Retry",
   "sell.photos.retryN": "Retry photo {n}",
   "sell.photos.skipped": "Only {n} more fit — the rest were skipped.",
@@ -621,4 +620,8 @@ export const stringsEn: Record<string, string> = {
   "sell.photos.unreadable": "Can't read this file",
   "sell.photos.uploading": "Uploading {n}%",
   "sell.photos.waiting": "Waiting to upload…",
+  "sell.photos.addTouch": "Add photos of your vehicle",
+  "sell.photos.reorderKeys": "With a keyboard, press Space on a photo, move it with the arrow keys, then press Space again.",
+  "sell.photos.reorderMouse": "Drag to reorder — the first photo is your cover.",
+  "sell.photos.reorderTouch": "Press and hold a photo, then drag to reorder — the first one is your cover.",
 };

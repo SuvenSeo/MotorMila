@@ -607,7 +607,6 @@ export const stringsSi: Record<string, string> = {
   "sell.photos.privacy": "උඩුගත කිරීමට පෙර ඡායාරූපවල ප්‍රමාණය අඩු කර, ස්ථාන දත්ත ඉවත් කෙරේ.",
   "sell.photos.processing": "ඡායාරූපය සූදානම් කරමින්…",
   "sell.photos.removeN": "ඡායාරූපය {n} ඉවත් කරන්න",
-  "sell.photos.reorderHelp": "පිළිවෙළ වෙනස් කිරීමට ඇදගෙන යන්න — පළමු ඡායාරූපය ඔබේ කවරයයි. යතුරුපුවරුවෙන් නම්, ඡායාරූපයක් මත Space ඔබා, ඊතල යතුරුවලින් ගෙනගොස්, නැවත Space ඔබන්න.",
   "sell.photos.retry": "නැවත උත්සාහ කරන්න",
   "sell.photos.retryN": "ඡායාරූපය {n} නැවත උත්සාහ කරන්න",
   "sell.photos.skipped": "තවත් {n}ක් පමණක් ඇතුළත් කළ හැකියි — ඉතිරි ඒවා මඟ හැරියා.",
@@ -616,4 +615,8 @@ export const stringsSi: Record<string, string> = {
   "sell.photos.unreadable": "මෙම ගොනුව කියවිය නොහැක",
   "sell.photos.uploading": "උඩුගත කරමින් {n}%",
   "sell.photos.waiting": "උඩුගත කිරීමට රැඳී සිටී…",
+  "sell.photos.addTouch": "ඔබේ වාහනයේ ඡායාරූප එක් කරන්න",
+  "sell.photos.reorderKeys": "යතුරුපුවරුවෙන් නම්, ඡායාරූපයක් මත Space ඔබා, ඊතල යතුරුවලින් ගෙනගොස්, නැවත Space ඔබන්න.",
+  "sell.photos.reorderMouse": "පිළිවෙළ වෙනස් කිරීමට ඇදගෙන යන්න — පළමු ඡායාරූපය ඔබේ කවරයයි.",
+  "sell.photos.reorderTouch": "ඡායාරූපයක් ඔබාගෙන සිට, පිළිවෙළ වෙනස් කිරීමට ඇදගෙන යන්න — පළමුවැන්න ඔබේ කවරයයි.",
 };
