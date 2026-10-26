@@ -462,7 +462,7 @@ export function PhotoUploader({ photos, uploadsEnabled }: Props) {
                   </div>
 
                   {it.status === "error" && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/55 p-2 text-center text-white">
+                    <div className="absolute inset-0 flex flex-col items-start justify-end gap-1.5 bg-black/55 p-1.5 text-center text-white sm:items-center sm:justify-center sm:p-2">
                       <AlertCircle className="hidden h-5 w-5 sm:block" aria-hidden />
                       {/* Phone thumbnails are too small for icon + text + button; the button and the live region carry it. */}
                       <span className="hidden text-caption font-semibold leading-tight sm:block">{statusLabel(it)}</span>
@@ -470,10 +470,10 @@ export function PhotoUploader({ photos, uploadsEnabled }: Props) {
                         <button
                           type="button"
                           onClick={() => photos.retry(it.id)}
-                          className="inline-flex min-h-8 items-center gap-1 rounded-full bg-background/95 px-3 text-caption font-semibold text-foreground transition-ui duration-short ease-standard active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className="inline-flex min-h-8 min-w-8 items-center justify-center gap-1 rounded-full bg-background/95 px-2 text-caption sm:px-3 font-semibold text-foreground transition-ui duration-short ease-standard active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           aria-label={t("sell.photos.retryN", "Retry photo {n}", { n: i + 1 })}
                         >
-                          <RotateCw className="h-3.5 w-3.5" aria-hidden /> {t("sell.photos.retry", "Retry")}
+                          <RotateCw className="h-3.5 w-3.5" aria-hidden /> <span className="hidden sm:inline">{t("sell.photos.retry", "Retry")}</span>
                         </button>
                       )}
                     </div>
