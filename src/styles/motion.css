@@ -20,7 +20,8 @@ html[data-route-vt]::view-transition-new(root) {
 
 /* Back/forward restore (lib/scrollMemory): cards around the landing spot
    render in full while it measures, so the restored offset is final. */
-[data-scroll-anchor][data-cv-render] {
+[data-scroll-anchor][data-cv-render],
+.cv-auto[data-cv-render] {
   content-visibility: visible;
 }
 

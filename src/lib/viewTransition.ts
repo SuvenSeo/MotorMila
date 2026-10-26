@@ -23,7 +23,14 @@ import { createBrowserHistory, type BrowserHistory } from "@remix-run/router";
 type Listener = Parameters<BrowserHistory["listen"]>[0];
 import { flushSync } from "react-dom";
 import { rootProjectionNode } from "motion/react";
-import { beginScrollRestore, saveScroll, waitForScrollRestore } from "@/lib/scrollMemory";
+import {
+  beginScrollRestore,
+  markRestorePending,
+  markScrollAnchorFromEvent,
+  readScroll,
+  saveScroll,
+  waitForScrollRestore,
+} from "@/lib/scrollMemory";
 
 type ViewTransitionLike = { finished: Promise<void>; skipTransition?: () => void };
 type DocWithVT = Document & {
@@ -91,6 +98,9 @@ export function createViewTransitionHistory(): BrowserHistory {
   if (typeof window !== "undefined") {
     // A reload or a trip off-site keeps this entry's spot too.
     window.addEventListener("pagehide", () => saveScroll(lastKey));
+    // The card or listing link a tap/click lands on is the spot Back returns
+    // to (capture: runs before the link navigates).
+    window.addEventListener("click", (e) => markScrollAnchorFromEvent(e.target), true);
   }
 
   history.listen = (listener: Listener) =>
@@ -105,6 +115,9 @@ export function createViewTransitionHistory(): BrowserHistory {
       lastKey = update.location.key;
       const html = document.documentElement;
       if (update.action === "POP") {
+        // Before the returning page renders: its deferred sections mount at
+        // once so the saved spot exists on the first restore attempt.
+        markRestorePending(pathChanged ? readScroll(update.location.key) : undefined);
         const fromListing = /^\/listing\/([^/]+)\/?$/.exec(prevPath);
         if (
           !pathChanged ||

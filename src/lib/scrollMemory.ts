@@ -24,9 +24,45 @@ export const RESTORE_ATTR = "data-scroll-restore";
 /** Re-checks of the anchor after landing: off-screen cards (content-visibility)
  *  that come into range take their real height on the next frames. */
 const SETTLE_PASSES = 4;
+/** Anchor re-checks after landing where scroll anchoring holds the view (ms). */
+const GUARD_MS = [120, 360, 800, 1400];
+/** Denser where the browser has no scroll anchoring (Safari). */
+const GUARD_MS_NO_ANCHORING = [80, 180, 320, 520, 800, 1200, 1800, 2600];
 
 let store: Map<string, ScrollEntry> | null = null;
 let preferredAnchor: string | null = null;
+let preferredEl: Element | null = null;
+
+/**
+ * What counts as an anchor: listing cards (`data-scroll-anchor`) and every
+ * other link to a listing (the home's "What's moving" rows, price drops,
+ * similar cars, picks, compare, alerts…), so Back lands on the exact row
+ * whatever list it was in. A link inside a card is the card.
+ */
+const ANCHOR_SEL = '[data-scroll-anchor], a[href^="/listing/"]';
+const LINK_PREFIX = "link:";
+
+function isAnchor(el: Element): boolean {
+  if (el instanceof HTMLElement && el.dataset.scrollAnchor != null) return true;
+  return el.matches('a[href^="/listing/"]') && !el.parentElement?.closest("[data-scroll-anchor]");
+}
+
+function anchors(): HTMLElement[] {
+  return Array.from(document.querySelectorAll<HTMLElement>(ANCHOR_SEL)).filter(isAnchor);
+}
+
+/**
+ * Stable id of an anchor element: the card's `data-scroll-anchor`, or for a
+ * plain link its href plus which occurrence of that href it is (the same
+ * listing can be linked twice on one page: a photo and a title, a rail and
+ * the grid).
+ */
+function anchorId(el: HTMLElement, all: HTMLElement[] = anchors()): string {
+  if (el.dataset.scrollAnchor != null) return el.dataset.scrollAnchor;
+  const href = el.getAttribute("href") ?? "";
+  const n = all.filter((a) => a.dataset.scrollAnchor == null && a.getAttribute("href") === href).indexOf(el);
+  return `${LINK_PREFIX}${href}#${Math.max(0, n)}`;
+}
 
 function load(): Map<string, ScrollEntry> {
   if (store) return store;
@@ -52,6 +88,24 @@ function persist(): void {
 /** The card that was just tapped: preferred as the anchor when it is on screen. */
 export function markScrollAnchor(id: string | number | null | undefined): void {
   preferredAnchor = id == null ? null : String(id);
+  preferredEl = null;
+}
+
+/**
+ * The element a click/tap landed on, if it is (inside) an anchor: preferred as
+ * the anchor when it is on screen. Installed once by the router history
+ * (capture phase, so it runs before the link navigates).
+ */
+export function markScrollAnchorFromEvent(target: EventTarget | null): void {
+  if (!(target instanceof Element)) return;
+  let el: Element | null = target.closest(ANCHOR_SEL);
+  // A link inside a card counts as the card.
+  const card = el?.closest("[data-scroll-anchor]");
+  if (card) el = card;
+  if (el && isAnchor(el)) {
+    preferredEl = el;
+    preferredAnchor = null;
+  }
 }
 
 function navOffset(): number {
@@ -60,24 +114,37 @@ function navOffset(): number {
 }
 
 function anchorEl(id: string): HTMLElement | null {
+  if (id.startsWith(LINK_PREFIX)) {
+    const rest = id.slice(LINK_PREFIX.length);
+    const hash = rest.lastIndexOf("#");
+    const href = hash >= 0 ? rest.slice(0, hash) : rest;
+    const n = hash >= 0 ? Number(rest.slice(hash + 1)) || 0 : 0;
+    const same = anchors().filter((a) => a.dataset.scrollAnchor == null && a.getAttribute("href") === href);
+    return same[n] ?? same[same.length - 1] ?? null;
+  }
   const sel = typeof CSS !== "undefined" && CSS.escape ? CSS.escape(id) : id.replace(/"/g, '\\"');
   return document.querySelector<HTMLElement>(`[data-scroll-anchor="${sel}"]`);
 }
 
-/** The anchor the visitor is looking at: the tapped card, else the first card in view. */
+/** The anchor the visitor is looking at: the tapped card/link, else the first anchor in view. */
 export function findAnchor(): ScrollAnchor | undefined {
   if (typeof document === "undefined") return undefined;
   const vh = window.innerHeight;
   const top = navOffset();
-  const inView = (r: DOMRect) => r.bottom > top && r.top < vh;
+  const inView = (r: DOMRect) => r.height > 0 && r.bottom > top && r.top < vh;
+  if (preferredEl && preferredEl.isConnected && preferredEl instanceof HTMLElement) {
+    const r = preferredEl.getBoundingClientRect();
+    if (inView(r)) return { id: anchorId(preferredEl), top: r.top };
+  }
   if (preferredAnchor) {
     const el = anchorEl(preferredAnchor);
     const r = el?.getBoundingClientRect();
     if (el && r && inView(r)) return { id: preferredAnchor, top: r.top };
   }
-  for (const el of Array.from(document.querySelectorAll<HTMLElement>("[data-scroll-anchor]"))) {
+  const all = anchors();
+  for (const el of all) {
     const r = el.getBoundingClientRect();
-    if (inView(r)) return { id: el.dataset.scrollAnchor ?? "", top: r.top };
+    if (inView(r)) return { id: anchorId(el, all), top: r.top };
   }
   return undefined;
 }
@@ -93,6 +160,7 @@ export function saveScroll(key: string, entry: ScrollEntry = captureScroll()): v
   s.set(key, entry);
   while (s.size > MAX_ENTRIES) s.delete(s.keys().next().value as string);
   preferredAnchor = null;
+  preferredEl = null;
   persist();
 }
 
@@ -100,10 +168,34 @@ export function readScroll(key: string): ScrollEntry | undefined {
   return load().get(key);
 }
 
+/* ── Pending restore: lists render in full on the way back ─────────────── */
+
+let pendingRestore = false;
+
+/**
+ * Called by the router history on back/forward, before the returning page
+ * renders, when that entry has a saved spot below the first screen. While it
+ * is set, deferred below-the-fold blocks (useDeferredMount, DeferredSection)
+ * mount on the first render instead of a few frames later: the page has to be
+ * its full height, with the remembered card in it, for the restore to land on
+ * the first try (a short page clamped the restore and the late sections then
+ * pushed the content around).
+ */
+export function markRestorePending(entry: ScrollEntry | undefined): void {
+  pendingRestore = !!entry && typeof window !== "undefined" && entry.y > window.innerHeight * 0.5;
+}
+
+/** True while a back/forward restore is about to run or running. */
+export function restorePending(): boolean {
+  return pendingRestore;
+}
+
 /** Test hook. */
 export function resetScrollMemory(): void {
   store = new Map();
   preferredAnchor = null;
+  preferredEl = null;
+  pendingRestore = false;
   try {
     window.sessionStorage.removeItem(STORAGE_KEY);
   } catch {
@@ -151,7 +243,7 @@ export const RENDER_ATTR = "data-cv-render";
 function renderAroundViewport(): boolean {
   const vh = window.innerHeight;
   let marked = false;
-  for (const el of Array.from(document.querySelectorAll<HTMLElement>("[data-scroll-anchor]"))) {
+  for (const el of Array.from(document.querySelectorAll<HTMLElement>("[data-scroll-anchor], .cv-auto"))) {
     if (el.hasAttribute(RENDER_ATTR)) continue;
     const r = el.getBoundingClientRect();
     if (r.bottom > -vh && r.top < vh * 1.5) {
@@ -177,6 +269,7 @@ export function beginScrollRestore(): void {
 
 export function signalScrollRestored(): void {
   restoring = false;
+  pendingRestore = false;
   const w = waiters;
   waiters = [];
   w.forEach((fn) => fn());
@@ -202,19 +295,21 @@ export function waitForScrollRestore(ms: number): Promise<void> {
  * `maxMs`. Any wheel / touch / key input from the visitor ends it.
  * Returns a cancel function.
  */
-export function restoreScroll(entry: ScrollEntry, maxMs = 1600): () => void {
+export function restoreScroll(entry: ScrollEntry, maxMs = 2600): () => void {
   const html = document.documentElement;
   html.setAttribute(RESTORE_ATTR, "");
   beginScrollRestore();
   const start = performance.now();
   let timer = 0;
   let done = false;
+  const guards: number[] = [];
   const stopEvents = ["wheel", "touchstart", "keydown", "pointerdown"] as const;
   let landed = false;
   const stop = () => {
     if (done) return;
     done = true;
     window.clearTimeout(timer);
+    guards.forEach((g) => window.clearTimeout(g));
     stopEvents.forEach((e) => window.removeEventListener(e, stop, true));
     if (!landed) signalScrollRestored();
     html.removeAttribute(RESTORE_ATTR);
@@ -229,11 +324,23 @@ export function restoreScroll(entry: ScrollEntry, maxMs = 1600): () => void {
   // Browsers with scroll anchoring (Chromium, Firefox) hold the view still on
   // their own, so the extra forced layouts only run where it is missing.
   const needsSettle = typeof CSS === "undefined" || !CSS.supports?.("overflow-anchor", "auto");
+  // Scroll anchoring holds the view still while content above changes, but
+  // not in every case (content inserted above under a running View
+  // Transition, a section swapping its placeholder for a taller block, late
+  // data). A few cheap re-checks of the anchor after landing put it back if it
+  // slipped; any input from the visitor ends them.
+  const guard = () => {
+    html.removeAttribute(RESTORE_ATTR);
+    window.requestAnimationFrame(() => window.requestAnimationFrame(releaseRendered));
+    const at = needsSettle ? GUARD_MS_NO_ANCHORING : GUARD_MS;
+    for (const ms of at) guards.push(window.setTimeout(() => applyScroll(entry, true), ms));
+    guards.push(window.setTimeout(stop, at[at.length - 1] + 20));
+  };
   let passes = 0;
   const settle = () => {
     if (done) return;
     applyScroll(entry, true);
-    if (++passes >= SETTLE_PASSES) stop();
+    if (++passes >= SETTLE_PASSES) guard();
     else window.requestAnimationFrame(settle);
   };
   const attempt = () => {
@@ -246,7 +353,7 @@ export function restoreScroll(entry: ScrollEntry, maxMs = 1600): () => void {
       landed = true;
       signalScrollRestored();
       if (needsSettle) window.requestAnimationFrame(settle);
-      else stop();
+      else guard();
     } else timer = window.setTimeout(attempt, 16);
   };
   attempt();

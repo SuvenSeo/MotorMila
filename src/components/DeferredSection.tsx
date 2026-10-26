@@ -1,5 +1,6 @@
 import { startTransition, useEffect, useRef, useState, type ReactNode } from "react";
 import { viewTransitionInFlight } from "@/lib/viewTransition";
+import { restorePending } from "@/lib/scrollMemory";
 
 /**
  * Below-the-fold sections that mount one per frame, after the page above them
@@ -82,7 +83,9 @@ type Props = {
 };
 
 export function DeferredSection({ children, minHeight = 0, lazy = false, margin = "600px", idleAfter = 1500, first = false }: Props) {
-  const [ready, setReady] = useState(() => !canSchedule());
+  // Back/forward onto a spot further down: mount at once so the page has its
+  // full height (and the remembered link) for the scroll restore.
+  const [ready, setReady] = useState(() => !canSchedule() || restorePending());
   const jobRef = useRef<Job | null>(null);
   const holderRef = useRef<HTMLDivElement>(null);
 
