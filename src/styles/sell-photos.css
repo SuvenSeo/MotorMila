@@ -1,0 +1,73 @@
+/* Sell page photo uploader. Compositor-only motion: transform + opacity. */
+.sell-photos {
+  --sp-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --sp-dur: 320ms;
+}
+
+/* ── Drop zone ─────────────────────────────────────────────────────────── */
+.sell-dropzone {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+/* Drag-over tint is an overlay whose opacity animates (no background-colour transition). */
+.sell-dropzone::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: hsl(var(--primary) / 0.08);
+  opacity: 0;
+  transition: opacity var(--sp-dur) var(--sp-ease);
+}
+.sell-dropzone[data-over="true"]::before { opacity: 1; }
+.sell-dropzone__icon { transition: transform var(--sp-dur) var(--sp-ease); }
+.sell-dropzone[data-over="true"] .sell-dropzone__icon { transform: translateY(-2px) scale(1.08); }
+
+/* ── Thumbnails ────────────────────────────────────────────────────────── */
+.sell-thumb {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
+  will-change: auto;
+}
+.sell-thumb img { -webkit-user-drag: none; pointer-events: none; }
+.sell-thumb[data-dragging="true"] {
+  z-index: 20;
+  cursor: grabbing;
+  will-change: transform;
+  box-shadow: 0 18px 40px -12px rgb(0 0 0 / 0.45);
+}
+.sell-thumb[data-grabbed="true"] {
+  z-index: 10;
+  transform: scale(1.04);
+  transition: transform var(--sp-dur) var(--sp-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  .sell-thumb { cursor: grab; }
+}
+
+.sell-thumb-in { animation: sell-thumb-in var(--sp-dur) var(--sp-ease) both; }
+@keyframes sell-thumb-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Progress ring: the arc length jumps with each progress event (no animated
+   paint property); the indeterminate state spins via transform only. */
+.sell-ring__spin { animation: sell-ring-spin 900ms linear infinite; transform-origin: 50% 50%; }
+@keyframes sell-ring-spin { to { transform: rotate(360deg); } }
+
+.sell-fade-in { animation: sell-fade-in var(--sp-dur) var(--sp-ease) both; }
+@keyframes sell-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sell-thumb-in, .sell-fade-in { animation: none; }
+  .sell-ring__spin { animation-duration: 2.4s; }
+  .sell-dropzone__icon, .sell-dropzone::before, .sell-thumb[data-grabbed="true"] { transition: none; }
+}

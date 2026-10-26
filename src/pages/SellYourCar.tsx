@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Camera, Car, Check, CheckCircle2, Circle, FileText, ImageOff, LogIn, MapPin, Phone, Tag, X } from "lucide-react";
+import { ArrowRight, Camera, Car, Check, CheckCircle2, Circle, FileText, ImageOff, LogIn, MapPin, Phone, Tag } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { createMyListing, type MyListingInput } from "@/services/api";
+import { createMyListing, getUploadsConfig, requestUploadTicket, type MyListingInput } from "@/services/api";
+import { usePhotoUploads } from "@/hooks/usePhotoUploads";
+import { DEFAULT_MAX_BYTES, MAX_PHOTOS, doneUrls, hasFailures, isBusy } from "@/lib/photoUpload";
+import { PhotoUploader } from "@/components/sell/PhotoUploader";
 import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/page-header";
@@ -65,7 +68,6 @@ type FormState = {
   description: string;
   contactName: string;
   contactPhone: string;
-  imageUrls: string[];
 };
 
 const INITIAL: FormState = {
@@ -73,7 +75,6 @@ const INITIAL: FormState = {
   fuelType: "Petrol", transmission: "Automatic", condition: "Used",
   bodyType: "", vehicleCategory: "cars", district: "", city: "",
   title: "", description: "", contactName: "", contactPhone: "",
-  imageUrls: [],
 };
 
 const currentYear = new Date().getFullYear();
@@ -83,7 +84,8 @@ export default function SellYourCar() {
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState<FormState>(INITIAL);
-  const [imageUrl, setImageUrl] = useState("");
+  const [uploadsEnabled, setUploadsEnabled] = useState(false);
+  const [maxBytes, setMaxBytes] = useState(DEFAULT_MAX_BYTES);
   const [submitting, setSubmitting] = useState(false);
   const [successFlash, setSuccessFlash] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,30 +98,38 @@ export default function SellYourCar() {
     }
   }, [user]);
 
+  // Uploads need a signed-in account and a backend that can issue R2 URLs;
+  // otherwise the section falls back to adding photos by link.
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setUploadsEnabled(false);
+      return;
+    }
+    let cancelled = false;
+    void getUploadsConfig().then((cfg) => {
+      if (cancelled) return;
+      setUploadsEnabled(cfg.enabled);
+      if (cfg.maxBytes > 0) setMaxBytes(Math.min(cfg.maxBytes, DEFAULT_MAX_BYTES));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
+
+  const photos = usePhotoUploads({ requestTicket: requestUploadTicket, maxBytes });
+  const imageUrls = useMemo(() => doneUrls(photos.items), [photos.items]);
+  const photosBusy = isBusy(photos.items);
+  const photosFailed = hasFailures(photos.items);
+
   const setField = useCallback((key: keyof FormState, value: string) => {
     setForm((f) => ({ ...f, [key]: value }));
     setError(null);
   }, []);
 
-  const addImage = useCallback(() => {
-    const url = imageUrl.trim();
-    if (!url || form.imageUrls.length >= 12) return;
-    if (!/^https?:\/\//i.test(url)) {
-      setError(t("sell.imageUrlInvalid", "Image must be a valid http(s) URL."));
-      return;
-    }
-    setForm((f) => ({ ...f, imageUrls: [...f.imageUrls, url] }));
-    setImageUrl("");
-    setError(null);
-  }, [imageUrl, form.imageUrls.length, t]);
-
-  const removeImage = useCallback((idx: number) => {
-    setForm((f) => ({ ...f, imageUrls: f.imageUrls.filter((_, i) => i !== idx) }));
-  }, []);
-
   const canSubmit = useMemo(
-    () => form.make.trim() && form.model.trim() && form.contactPhone.trim() && !submitting && isAuthenticated,
-    [form.make, form.model, form.contactPhone, submitting, isAuthenticated],
+    () =>
+      form.make.trim() && form.model.trim() && form.contactPhone.trim() && !submitting && isAuthenticated && !photosBusy && !photosFailed,
+    [form.make, form.model, form.contactPhone, submitting, isAuthenticated, photosBusy, photosFailed],
   );
 
   const onSubmit = useCallback(
@@ -150,7 +160,7 @@ export default function SellYourCar() {
           description: form.description.trim() || undefined,
           contactName: form.contactName.trim() || undefined,
           contactPhone: form.contactPhone.trim(),
-          imageUrls: form.imageUrls,
+          imageUrls,
         };
         await createMyListing(payload);
         trackEvent("sell_listing_created", {
@@ -172,7 +182,7 @@ export default function SellYourCar() {
         setSuccessFlash(false);
       }
     },
-    [canSubmit, form, isAuthenticated, t],
+    [canSubmit, form, imageUrls, isAuthenticated, t],
   );
 
   const categories = CATEGORY_KEYS.map((key) => ({
@@ -184,13 +194,13 @@ export default function SellYourCar() {
   /* ── Live ad preview (sticky on desktop) ──────────────────────────────── */
   const previewTitle =
     form.title.trim() || [form.year, form.make, form.model].filter(Boolean).join(" ") || t("tools.sell.previewEmpty", "Your vehicle");
-  const cover = form.imageUrls[0];
+  const cover = photos.items[0]?.previewUrl ?? undefined;
   const price = Number(form.priceLkr);
   const mileage = Number(form.mileage);
   const checks = [
     { done: Boolean(form.make && form.model.trim()), label: t("tools.sell.check.vehicle", "Make and model") },
     { done: Boolean(form.priceLkr), label: t("tools.sell.check.price", "Asking price") },
-    { done: form.imageUrls.length > 0, label: t("tools.sell.check.photos", "At least one photo") },
+    { done: imageUrls.length > 0, label: t("tools.sell.check.photos", "At least one photo") },
     { done: Boolean(form.district), label: t("tools.sell.check.location", "District") },
     { done: Boolean(form.contactPhone.trim()), label: t("tools.sell.check.phone", "Phone number") },
   ];
@@ -334,46 +344,23 @@ export default function SellYourCar() {
         </div>
       </FormCard>
 
-      <FormCard icon={Camera} title={t("sell.sectionPhotos", "Photos")} description={t("sell.imageHint", "Add up to 12 photos. Hosted on any public image URL — the first becomes your cover.")}>
-        <div className="flex gap-2">
-          <Input
-            aria-label={t("sell.imageUrlPh", "Paste an image URL (https://…)")}
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            placeholder={t("sell.imageUrlPh", "Paste an image URL (https://…)")}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                addImage();
-              }
-            }}
-          />
-          <Button type="button" variant="secondary" onClick={addImage} disabled={form.imageUrls.length >= 12 || !imageUrl.trim()}>
-            {t("sell.addImage", "Add")}
-          </Button>
-        </div>
-        {form.imageUrls.length > 0 && (
-          <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {form.imageUrls.map((u, i) => (
-              <li key={u + i} className="content-in group relative aspect-[4/3] overflow-hidden rounded-control border border-border bg-surface-2">
-                <img src={u} alt="" className="h-full w-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => removeImage(i)}
-                  aria-label={t("sell.remove", "Remove")}
-                  className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white transition-ui duration-short ease-standard active:scale-[0.97] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
-                >
-                  <X className="h-4 w-4" aria-hidden />
-                </button>
-                {i === 0 && (
-                  <Badge variant="solid" className="absolute bottom-1.5 left-1.5">
-                    {t("sell.cover", "Cover")}
-                  </Badge>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
+      <FormCard
+        icon={Camera}
+        title={t("sell.sectionPhotos", "Photos")}
+        description={
+          uploadsEnabled
+            ? t("sell.photos.hint", "Add up to 12 photos from your phone or computer. The first one is your cover.")
+            : t("sell.imageHint", "Add up to 12 photos. Hosted on any public image URL — the first becomes your cover.")
+        }
+        action={
+          photos.items.length > 0 ? (
+            <span className="text-footnote tabular-nums text-label-2" aria-label={t("sell.photos.countLabel", "{n} of {max} photos", { n: photos.items.length, max: MAX_PHOTOS })}>
+              {photos.items.length} / {MAX_PHOTOS}
+            </span>
+          ) : undefined
+        }
+      >
+        <PhotoUploader photos={photos} uploadsEnabled={uploadsEnabled} />
       </FormCard>
 
       <FormCard icon={FileText} title={t("sell.sectionDesc", "Description")}>
@@ -421,7 +408,13 @@ export default function SellYourCar() {
             </>
           )}
         </Button>
-        <p className="text-caption text-label-2">{t("sell.reviewNote", "Listings go live after a quick review — usually within a few hours.")}</p>
+        <p className="text-caption text-label-2" aria-live="polite">
+          {photosBusy
+            ? t("sell.photos.pending", "Hold on — your photos are still uploading.")
+            : photosFailed
+              ? t("sell.photos.fixFailed", "Retry or remove the photos that didn't upload.")
+              : t("sell.reviewNote", "Listings go live after a quick review — usually within a few hours.")}
+        </p>
       </div>
     </form>
   );
@@ -454,6 +447,7 @@ export default function SellYourCar() {
                   variant="secondary"
                   onClick={() => {
                     setForm(INITIAL);
+                    photos.reset();
                     setDone(false);
                   }}
                 >
