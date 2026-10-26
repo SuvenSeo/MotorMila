@@ -73,7 +73,7 @@ export function PhotoUploader({ photos, uploadsEnabled }: Props) {
   const positions = useRef(new Map<string, { x: number; y: number }>());
   const drag = useRef<Drag | null>(null);
   const [over, setOver] = useState(false);
-  const [linkOpen, setLinkOpen] = useState(!uploadsEnabled);
+  const [linkOpen, setLinkOpen] = useState(false);
   const [link, setLink] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [announce, setAnnounce] = useState("");
@@ -81,11 +81,9 @@ export function PhotoUploader({ photos, uploadsEnabled }: Props) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
 
   const full = items.length >= MAX_PHOTOS;
+  const compact = items.length > 0;
+  const showLink = !uploadsEnabled || linkOpen;
   const total = items.length;
-
-  useEffect(() => {
-    if (!uploadsEnabled) setLinkOpen(true);
-  }, [uploadsEnabled]);
 
   /* ── Announce upload outcomes (not every percent) ──────────────────────── */
   const prevStatus = useRef(new Map<string, PhotoItem["status"]>());
@@ -313,7 +311,8 @@ export function PhotoUploader({ photos, uploadsEnabled }: Props) {
       {uploadsEnabled && (
         <div
           className={cn(
-            "sell-dropzone rounded-card border border-dashed border-label-3/50 bg-surface-2/60 px-4 py-6 text-center sm:py-8",
+            "sell-dropzone rounded-card border border-dashed border-label-3/50 bg-surface-2/60",
+            compact ? "flex items-center gap-3 px-3 py-3 text-left sm:px-4" : "px-4 py-6 text-center sm:py-8",
             full && "opacity-60",
           )}
           data-over={over ? "true" : "false"}
@@ -337,21 +336,30 @@ export function PhotoUploader({ photos, uploadsEnabled }: Props) {
             if (!full) add(e.dataTransfer.files);
           }}
         >
-          <span className="sell-dropzone__icon mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <ImagePlus className="h-6 w-6" strokeWidth={1.75} aria-hidden />
+          <span
+            className={cn(
+              "sell-dropzone__icon flex shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary",
+              compact ? "h-10 w-10" : "mx-auto h-12 w-12",
+            )}
+          >
+            <ImagePlus className={compact ? "h-5 w-5" : "h-6 w-6"} strokeWidth={1.75} aria-hidden />
           </span>
-          <p className="mt-3 font-display text-callout font-semibold text-foreground">
-            {full
-              ? t("sell.photos.limitTitle", "12 of 12 photos added")
-              : over
-                ? t("sell.photos.dropActive", "Drop to add")
-                : t("sell.photos.drop", "Drag photos here")}
-          </p>
-          <p className="mx-auto mt-1 max-w-sm text-footnote text-label-2">
-            {full
-              ? t("sell.photos.limitReached", "That's the maximum. Remove a photo to add another.")
-              : t("sell.photos.privacy", "Photos are resized before upload and their location data is removed.")}
-          </p>
+          <div className={cn(compact ? "min-w-0 flex-1" : "mt-3")}>
+            <p className={cn("font-display font-semibold text-foreground", compact ? "text-body" : "text-callout")}>
+              {full
+                ? t("sell.photos.limitTitle", "12 of 12 photos added")
+                : over
+                  ? t("sell.photos.dropActive", "Drop to add")
+                  : compact
+                    ? t("sell.photos.addMore", "Add more photos")
+                    : t("sell.photos.drop", "Drag photos here")}
+            </p>
+            <p className={cn("text-label-2", compact ? "hidden text-caption sm:block" : "mx-auto mt-1 max-w-sm text-footnote")}>
+              {full
+                ? t("sell.photos.limitReached", "That's the maximum. Remove a photo to add another.")
+                : t("sell.photos.privacy", "Photos are resized before upload and their location data is removed.")}
+            </p>
+          </div>
           <input
             ref={fileInput}
             id={inputId}
@@ -367,7 +375,14 @@ export function PhotoUploader({ photos, uploadsEnabled }: Props) {
               e.target.value = "";
             }}
           />
-          <Button type="button" className="mt-4" onClick={() => fileInput.current?.click()} disabled={full}>
+          <Button
+            type="button"
+            size={compact ? "sm" : undefined}
+            variant={compact ? "secondary" : undefined}
+            className={cn(compact ? "shrink-0" : "mt-4")}
+            onClick={() => fileInput.current?.click()}
+            disabled={full}
+          >
             <ImagePlus aria-hidden /> {t("sell.photos.choose", "Choose photos")}
           </Button>
         </div>
@@ -481,7 +496,7 @@ export function PhotoUploader({ photos, uploadsEnabled }: Props) {
         </p>
       )}
 
-      {uploadsEnabled && !linkOpen ? (
+      {!showLink ? (
         <Button type="button" variant="tertiary" size="sm" onClick={() => setLinkOpen(true)} aria-expanded={false} disabled={full}>
           <Link2 aria-hidden /> {t("sell.photos.addFromLink", "Add from link")}
         </Button>

@@ -584,6 +584,7 @@ export const stringsSi: Record<string, string> = {
   "plan.free.dealerBody": "හිමිකම් කීම සහ මූලික යාඩ් මෙවලම් විවෘතයි. ගැඹුරු dealer බුද්ධිය Pro / Dealer හි විවෘත වේ.",
   "plan.free.genericCta": "මට දන්වන්න",
   "sell.photos.addFromLink": "සබැඳියකින් එක් කරන්න",
+  "sell.photos.addMore": "තවත් ඡායාරූප එක් කරන්න",
   "sell.photos.announceFailed": "ඡායාරූපය {n} උඩුගත කළ නොහැකි විය.",
   "sell.photos.announceUploaded": "ඡායාරූපය {n} උඩුගත කළා.",
   "sell.photos.cancelled": "ගෙනයාම අවලංගු කළා.",

@@ -589,6 +589,7 @@ export const stringsEn: Record<string, string> = {
   "plan.free.dealerBody": "Claim and basic yard tools are open. Deep dealer intelligence unlocks on Pro / Dealer.",
   "plan.free.genericCta": "Notify me",
   "sell.photos.addFromLink": "Add from link",
+  "sell.photos.addMore": "Add more photos",
   "sell.photos.announceFailed": "Photo {n} couldn't be uploaded.",
   "sell.photos.announceUploaded": "Photo {n} uploaded.",
   "sell.photos.cancelled": "Move cancelled.",

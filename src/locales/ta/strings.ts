@@ -584,6 +584,7 @@ export const stringsTa: Record<string, string> = {
   "plan.free.dealerBody": "உரிமை கோரல் மற்றும் அடிப்படை யார்ட் கருவிகள் திறந்துள்ளன. ஆழமான டீலர் நுண்ணறிவு Pro / Dealerஇல் திறக்கும்.",
   "plan.free.genericCta": "எனக்கு அறிவிக்கவும்",
   "sell.photos.addFromLink": "இணைப்பிலிருந்து சேர்க்கவும்",
+  "sell.photos.addMore": "மேலும் புகைப்படங்களைச் சேர்க்கவும்",
   "sell.photos.announceFailed": "புகைப்படம் {n} ஐப் பதிவேற்ற முடியவில்லை.",
   "sell.photos.announceUploaded": "புகைப்படம் {n} பதிவேற்றப்பட்டது.",
   "sell.photos.cancelled": "நகர்த்தல் ரத்துசெய்யப்பட்டது.",
