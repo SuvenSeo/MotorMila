@@ -463,8 +463,9 @@ export function PhotoUploader({ photos, uploadsEnabled }: Props) {
 
                   {it.status === "error" && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/55 p-2 text-center text-white">
-                      <AlertCircle className="h-5 w-5" aria-hidden />
-                      <span className="text-caption font-semibold leading-tight">{statusLabel(it)}</span>
+                      <AlertCircle className="hidden h-5 w-5 sm:block" aria-hidden />
+                      {/* Phone thumbnails are too small for icon + text + button; the button and the live region carry it. */}
+                      <span className="hidden text-caption font-semibold leading-tight sm:block">{statusLabel(it)}</span>
                       {it.failedAt === "uploading" && (
                         <button
                           type="button"
