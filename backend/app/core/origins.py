@@ -92,9 +92,23 @@ def write_allowlist() -> set[str]:
     return allowed
 
 
+# Owner-controlled preview hostnames: Vercel team-scoped previews and
+# Cloudflare Pages branch previews (<branch>.motormila.pages.dev; only this
+# Pages project can mint subdomains under it).
+DEFAULT_TRUSTED_SUFFIXES: tuple[str, ...] = (
+    "-suvenseoras-projects.vercel.app",
+    ".motormila.pages.dev",
+)
+
+
 def trusted_origin_suffixes() -> tuple[str, ...]:
-    raw = os.getenv("TRUSTED_ORIGIN_SUFFIXES", "-suvenseoras-projects.vercel.app")
-    return tuple(entry.strip().lower() for entry in raw.split(",") if entry.strip())
+    """Defaults plus TRUSTED_ORIGIN_SUFFIXES (extends, never shrinks)."""
+    out = list(DEFAULT_TRUSTED_SUFFIXES)
+    for entry in os.getenv("TRUSTED_ORIGIN_SUFFIXES", "").split(","):
+        entry = entry.strip().lower()
+        if entry and entry not in out:
+            out.append(entry)
+    return tuple(out)
 
 
 def is_trusted_write_origin(origin: Optional[str]) -> bool:
