@@ -1492,8 +1492,8 @@
     border-color: rgb(255 255 255 / 0.16);
     background: rgb(0 0 0 / 0.28);
   }
-  .site-nav-header[data-over-hero="true"] .site-nav__center::before { opacity: 0; }
-  .site-nav-header[data-over-hero="true"] .site-nav__center::after { opacity: 1; }
+  :is(.site-nav-header[data-over-hero="true"], html:has([data-nav-stage]) .site-nav-header[data-capsule="false"]) .site-nav__center::before { opacity: 0; }
+  :is(.site-nav-header[data-over-hero="true"], html:has([data-nav-stage]) .site-nav-header[data-capsule="false"]) .site-nav__center::after { opacity: 1; }
   .site-nav-header[data-capsule="true"] .site-nav__center::before { opacity: 0; }
 
   /* Wordmark: both inks stacked, crossfaded (no display swap → no relayout
@@ -1621,30 +1621,31 @@
   .site-nav__link:active { transform: scale(0.96); transition-duration: var(--dur-short), var(--dur-short), 90ms; }
   @media (prefers-reduced-motion: reduce) { .site-nav__link:active, .nav-control:active { transform: none; } }
 
-  /* ── Header over the home hero photo (top of "/", not scrolled) ──
+  /* ── Header over a dark photo stage (top of "/", or any page that renders
+     a [data-nav-stage] band under the header — CineHeader, 404), not scrolled ──
      The hero copy is white over a dark scrim in both themes, so the
      transparent header switches to light ink there too: light-lettering
      wordmark (the same dark-theme SVG), white links, smoked controls.
      Scrolling morphs back into the theme capsule. */
-  .site-nav-header[data-over-hero="true"] .brand-wordmark-lockup > img:first-child { opacity: 0; }
-  .site-nav-header[data-over-hero="true"] .brand-wordmark-lockup > img:last-child { opacity: 1; }
-  .site-nav-header[data-over-hero="true"] .site-nav__link { color: rgb(255 255 255 / 0.78); }
-  .site-nav-header[data-over-hero="true"] .site-nav__link:hover,
-  .site-nav-header[data-over-hero="true"] .site-nav__link[data-active="true"],
-  .site-nav-header[data-over-hero="true"] .site-nav__link[aria-expanded="true"] { color: #fff; background: rgb(255 255 255 / 0.1); }
-  .site-nav-header[data-over-hero="true"] .site-nav__pill {
+  :is(.site-nav-header[data-over-hero="true"], html:has([data-nav-stage]) .site-nav-header[data-capsule="false"]) .brand-wordmark-lockup > img:first-child { opacity: 0; }
+  :is(.site-nav-header[data-over-hero="true"], html:has([data-nav-stage]) .site-nav-header[data-capsule="false"]) .brand-wordmark-lockup > img:last-child { opacity: 1; }
+  :is(.site-nav-header[data-over-hero="true"], html:has([data-nav-stage]) .site-nav-header[data-capsule="false"]) .site-nav__link { color: rgb(255 255 255 / 0.78); }
+  :is(.site-nav-header[data-over-hero="true"], html:has([data-nav-stage]) .site-nav-header[data-capsule="false"]) .site-nav__link:hover,
+  :is(.site-nav-header[data-over-hero="true"], html:has([data-nav-stage]) .site-nav-header[data-capsule="false"]) .site-nav__link[data-active="true"],
+  :is(.site-nav-header[data-over-hero="true"], html:has([data-nav-stage]) .site-nav-header[data-capsule="false"]) .site-nav__link[aria-expanded="true"] { color: #fff; background: rgb(255 255 255 / 0.1); }
+  :is(.site-nav-header[data-over-hero="true"], html:has([data-nav-stage]) .site-nav-header[data-capsule="false"]) .site-nav__pill {
     background: rgb(255 255 255 / 0.16);
     box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.28);
   }
-  .site-nav-header[data-over-hero="true"] .nav-control {
+  :is(.site-nav-header[data-over-hero="true"], html:has([data-nav-stage]) .site-nav-header[data-capsule="false"]) .nav-control {
     border-color: rgb(255 255 255 / 0.18);
     background: rgb(0 0 0 / 0.28);
     color: rgb(255 255 255 / 0.9);
   }
-  .site-nav-header[data-over-hero="true"] .nav-control:hover,
-  .site-nav-header[data-over-hero="true"] .nav-control[data-state="open"] { background: rgb(0 0 0 / 0.42); color: #fff; }
-  .site-nav-header[data-over-hero="true"] .nav-search__kbd { border-color: rgb(255 255 255 / 0.2); color: rgb(255 255 255 / 0.7); }
-  .site-nav-header[data-over-hero="true"] .bg-border { background: rgb(255 255 255 / 0.2); }
+  :is(.site-nav-header[data-over-hero="true"], html:has([data-nav-stage]) .site-nav-header[data-capsule="false"]) .nav-control:hover,
+  :is(.site-nav-header[data-over-hero="true"], html:has([data-nav-stage]) .site-nav-header[data-capsule="false"]) .nav-control[data-state="open"] { background: rgb(0 0 0 / 0.42); color: #fff; }
+  :is(.site-nav-header[data-over-hero="true"], html:has([data-nav-stage]) .site-nav-header[data-capsule="false"]) .nav-search__kbd { border-color: rgb(255 255 255 / 0.2); color: rgb(255 255 255 / 0.7); }
+  :is(.site-nav-header[data-over-hero="true"], html:has([data-nav-stage]) .site-nav-header[data-capsule="false"]) .bg-border { background: rgb(255 255 255 / 0.2); }
 
   .site-nav__pill {
     position: absolute;

@@ -26,7 +26,7 @@ const NotFound = () => {
 
   return (
     <div className="bg-background">
-      <section className="cine-stage cine-404 theme-dark relative -mt-[var(--nav-offset)] flex flex-col overflow-hidden pt-[var(--nav-offset)] text-foreground">
+      <section data-nav-stage className="cine-stage cine-404 theme-dark relative -mt-[var(--nav-offset)] flex flex-col overflow-hidden pt-[var(--nav-offset)] text-foreground">
         <div aria-hidden className="pointer-events-none absolute inset-0">
           <AtmosphericImage
             src={visuals.page404Night.src}

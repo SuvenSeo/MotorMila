@@ -25,6 +25,7 @@ type CineHeaderProps = {
 export function CineHeader({ eyebrow, lead, accent, body, image, imagePosition = "70% 50%", children, className }: CineHeaderProps) {
   return (
     <header
+      data-nav-stage
       className={`cine-stage theme-dark relative -mt-[var(--nav-offset)] overflow-hidden pt-[var(--nav-offset)] text-foreground ${className ?? ""}`}
     >
       <div aria-hidden className="pointer-events-none absolute inset-0">
