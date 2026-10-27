@@ -775,4 +775,5 @@ export const stringsSi: Record<string, string> = {
   "quiz.cine.accent": "සැබෑ වටිනාකම කීයද?",
   "afford.cine.lead": "මට දරාගත හැක්කේ",
   "afford.cine.accent": "කුමන වාහනයද?",
+  "listingCard.noPhoto": "ඡායාරූප නැත · {source} හි බලන්න",
 };

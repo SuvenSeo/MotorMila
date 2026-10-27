@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { m } from "motion/react";
 import { CarListing } from "@/types/car";
 import { formatPrice } from "@/services/api";
-import { Gauge, MapPin, ArrowRight, TrendingDown, Clock, Layers } from "lucide-react";
+import { MapPin, TrendingDown, Clock, Layers, ImageOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { ListingImageCarousel } from "@/components/ListingImageCarousel";
 import { PriceUnavailableBadge } from "@/components/PriceUnavailableBadge";
@@ -27,6 +27,8 @@ import { usePriceSparklines } from "@/hooks/usePriceSparklines";
 import { isMeaningfulDrop, summarizePricePoints, toPricePoints } from "@/lib/priceHistory";
 import { PriceSparkline } from "@/components/PriceSparkline";
 import { getSourceAttribution } from "@/lib/sourceAttribution";
+import { silhouetteFor } from "@/lib/vehicleSilhouette";
+import "@/styles/cinematic-pages.css";
 import { computeDealBadge, DEAL_BAR_CLASSES, DEAL_TEXT_CLASSES } from "@/lib/dealBadge";
 import { isLeaseTakeoverListing } from "@/lib/leaseTakeover";
 import { estimateListingMonthly, formatMonthlyLkr } from "@/lib/listingFinance";
@@ -187,6 +189,10 @@ export const ListingCard = memo(function ListingCard({
     { key: "fuel", text: vehicleTokenLabel("fuel", listing.fuel_type, t), icon: false },
     { key: "cc", text: formatEngineCc(listing.engine_cc), icon: false },
   ].filter((p): p is { key: string; text: string; icon: boolean } => Boolean(p.text));
+  const silhouette = useMemo(
+    () => silhouetteFor({ vehicle_category: listing.vehicle_category, body_type: listing.body_type, title: listing.title }),
+    [listing.vehicle_category, listing.body_type, listing.title],
+  );
   const mileageKnown = computeMileageTrust({ mileageKm: listing.mileage_km, year: listing.year }).risk !== "unknown";
 
   return (
@@ -261,11 +267,14 @@ export const ListingCard = memo(function ListingCard({
             variant="card"
             source={listing.source}
             priority={priority}
+            silhouette={silhouette}
             className="h-full w-full"
           />
-          {/* Bottom-only scrim: keeps the price legible without dimming the
-              placeholder lockup, which lives in the top 60% of the frame. */}
-          <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
+          {/* No usable photo: the silhouette plate gets a real caption (CSS :has, no JS). */}
+          <p className="cine-card__nophoto">
+            <ImageOff aria-hidden className="h-3.5 w-3.5" />
+            {t("listingCard.noPhoto", "No photo · see it on {source}", { source: attribution.sourceName })}
+          </p>
 
           {conditionLabel && (
             <div className="absolute left-3 top-3 flex items-center gap-1.5">
@@ -307,20 +316,38 @@ export const ListingCard = memo(function ListingCard({
             )}
           </div>
 
-          <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-3">
-            {hasKnownPrice ? (
-              <p className="font-display text-title3 font-semibold leading-none tracking-tight text-white num [text-shadow:0_1px_8px_rgba(0,0,0,0.55)]">
-                {formatPrice(priceValue)}
+        </div>
+
+        <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
+          <div className="min-w-0">
+            <div className="flex items-baseline justify-between gap-3">
+              <h3 className="truncate text-callout font-semibold text-foreground transition-colors duration-short group-hover:text-primary">
+                {listingTitle}
+              </h3>
+              {listing.year ? (
+                <span className="num shrink-0 text-footnote font-semibold text-label-2">{listing.year}</span>
+              ) : null}
+            </div>
+            {specPills.length > 0 && (
+              <p className="cine-card__specs mt-1 text-caption text-label-2">
+                {specPills.map((p) => (
+                  <span key={p.key} className={cn((p.key === "km" || p.key === "cc") && "num")}>
+                    {p.text}
+                  </span>
+                ))}
               </p>
+            )}
+          </div>
+
+          <div className="flex items-end justify-between gap-3">
+            {hasKnownPrice ? (
+              <p className="cine-card__price num text-title2 leading-none text-foreground">{formatPrice(priceValue)}</p>
             ) : (
-              <PriceUnavailableBadge
-                label={t("listingCard.priceUnavailable", "Price unavailable")}
-                className="border-transparent bg-black/60 px-2.5 py-0.5 text-caption text-white"
-              />
+              <PriceUnavailableBadge label={t("listingCard.priceUnavailable", "Price unavailable")} className="px-2.5 py-0.5 text-caption" />
             )}
             {monthly && (
               <p
-                className="shrink-0 text-right text-caption font-medium leading-tight text-white/85 num"
+                className="num shrink-0 text-right text-caption font-medium leading-tight text-label-2"
                 title={t("listingCard.monthlyTitle", "Estimate: {ltv}% loan (CBSL cap), {rate}% a year over {years} years. Banks set the final terms.", {
                   ltv: monthly.ltvPct,
                   rate: monthly.ratePct,
@@ -330,17 +357,6 @@ export const ListingCard = memo(function ListingCard({
                 {t("listingCard.monthly", "{amount} est. /mo", { amount: formatMonthlyLkr(monthly.monthlyLkr) })}
               </p>
             )}
-          </div>
-        </div>
-
-        <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
-          <div className="flex items-start justify-between gap-3">
-            <h3 className="truncate text-callout font-semibold text-foreground transition-colors duration-short group-hover:text-primary">
-              {listingTitle}
-            </h3>
-            {listing.year ? (
-              <span className="num shrink-0 text-footnote font-semibold text-label-2">{listing.year}</span>
-            ) : null}
           </div>
 
           {deal.kind !== "none" && <DealBadge badge={deal} tone="soft" className="self-start" />}
@@ -373,16 +389,6 @@ export const ListingCard = memo(function ListingCard({
             </div>
           )}
 
-          {specPills.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {specPills.map((p) => (
-                <Badge key={p.key} variant="outline" className={cn("font-medium text-label-2", (p.key === "km" || p.key === "cc") && "num")}>
-                  {p.icon && <Gauge aria-hidden />}
-                  {p.text}
-                </Badge>
-              ))}
-            </div>
-          )}
           <HybridCliffBadge
             fuelType={listing.fuel_type}
             engineCc={plausibleEngineCc(listing.engine_cc, listing.year)}
@@ -444,9 +450,6 @@ export const ListingCard = memo(function ListingCard({
                 {t("listingCard.listedOn", "Listed on {source}", { source: attribution.sourceName })}
                 {attribution.checkedAgo ? ` · ${t("listingCard.checked", "checked {ago}", { ago: attribution.checkedAgo })}` : ""}
               </p>
-            </div>
-            <div aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 transition-colors duration-short group-hover:bg-primary/10">
-              <ArrowRight className="h-4 w-4 text-label-2 transition-transform duration-medium ease-standard group-hover:translate-x-0.5 group-hover:text-primary" />
             </div>
           </div>
         </div>

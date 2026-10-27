@@ -780,4 +780,5 @@ export const stringsEn: Record<string, string> = {
   "quiz.cine.accent": "really worth?",
   "afford.cine.lead": "What can",
   "afford.cine.accent": "I afford?",
+  "listingCard.noPhoto": "No photo · see it on {source}",
 };

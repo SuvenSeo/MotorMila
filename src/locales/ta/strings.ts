@@ -775,4 +775,5 @@ export const stringsTa: Record<string, string> = {
   "quiz.cine.accent": "உண்மையான மதிப்பு என்ன?",
   "afford.cine.lead": "என்னால் எதை",
   "afford.cine.accent": "வாங்க முடியும்?",
+  "listingCard.noPhoto": "புகைப்படம் இல்லை · {source} இல் பார்க்கவும்",
 };

@@ -1,4 +1,5 @@
 import { scrollBehavior, duration, ease, spring, press, useReducedMotionOrLowData } from "@/lib/motion";
+import { silhouetteFor } from "@/lib/vehicleSilhouette";
 import { Fragment, forwardRef, memo, type CSSProperties, startTransition, useDeferredValue, useImperativeHandle, useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { useDeferredMount } from "@/hooks/useDeferredMount";
@@ -1112,7 +1113,7 @@ export default function Dashboard() {
                           )}
                         >
                           <div className="h-16 w-24 shrink-0 overflow-hidden rounded-control bg-surface-2">
-                            <VehicleThumbnail src={pickVehicleImageUrl([listing.thumbnail_url, ...(Array.isArray(listing.images) ? listing.images : [])], [listing.detail_url])} listingId={listing.id} source={listing.source} alt={`${listing.make} ${listing.model}`} className="h-full w-full object-cover" />
+                            <VehicleThumbnail src={pickVehicleImageUrl([listing.thumbnail_url, ...(Array.isArray(listing.images) ? listing.images : [])], [listing.detail_url])} listingId={listing.id} source={listing.source} alt={`${listing.make} ${listing.model}`} silhouette={silhouetteFor(listing)} className="h-full w-full object-cover" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-body font-semibold text-foreground transition-colors duration-short group-hover:text-primary">{listing.make} {listing.model} {listing.variant || ""}</p>
@@ -1120,7 +1121,7 @@ export default function Dashboard() {
                           </div>
                           <div className="shrink-0 text-right">
                             {hasPrice ? (
-                              <p className="num text-body font-semibold text-foreground">{formatPrice(Number(listing.price_lkr))}</p>
+                              <p className="cine-card__price num text-body text-foreground">{formatPrice(Number(listing.price_lkr))}</p>
                             ) : <PriceUnavailableBadge label={t("common.na", "N/A")} className="text-caption" />}
                             {fullAccess && listing.deal_score != null && (
                               <p className={cn("num mt-0.5 text-caption font-semibold", Number(listing.deal_score) >= 0 ? "text-deal-good-text" : "text-label-2")}>
