@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Camera, Car, Check, CheckCircle2, Circle, FileText, ImageOff, LogIn, MapPin, Phone, Tag } from "lucide-react";
+import { ArrowLeft, ArrowRight, Camera, Check, CheckCircle2, Circle, FileText, ImageOff, LogIn, MapPin, Pencil, Phone, Tag } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { createMyListing, getUploadsConfig, requestUploadTicket, type MyListingInput } from "@/services/api";
@@ -9,7 +9,9 @@ import { DEFAULT_MAX_BYTES, MAX_PHOTOS, doneUrls, hasFailures, isBusy } from "@/
 import { PhotoUploader } from "@/components/sell/PhotoUploader";
 import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
-import { PageHeader } from "@/components/ui/page-header";
+import { CineHeader } from "@/components/CineHeader";
+import { visuals } from "@/lib/visualAssets";
+import { silhouetteFor } from "@/lib/vehicleSilhouette";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -17,7 +19,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SimpleSelect } from "@/components/ui/select";
-import { AdornedInput, AnimatedLkr, ChoiceChips, Field, FormCard, Notice, ToolGrid, ToolPage } from "@/components/tools/ToolKit";
+import { AdornedInput, AnimatedLkr, ChoiceChips, Field, FormCard, Notice } from "@/components/tools/ToolKit";
+import "@/styles/cinematic-pages.css";
 
 const MAKES = [
   "Toyota", "Suzuki", "Honda", "Nissan", "Mitsubishi", "Mazda",
@@ -91,6 +94,10 @@ export default function SellYourCar() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [brokenCover, setBrokenCover] = useState<string | null>(null);
+  /** Guided flow: vehicle → price → photos → location & contact → review. */
+  const [step, setStep] = useState(0);
+  const [stepError, setStepError] = useState<string | null>(null);
+  const flowTop = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (user?.email) {
@@ -191,77 +198,184 @@ export default function SellYourCar() {
   }));
   const req = <span className="text-deal-high-text"> *</span>;
 
-  /* ── Live ad preview (sticky on desktop) ──────────────────────────────── */
+  /* ── Steps ────────────────────────────────────────────────────────────── */
+  const STEPS = [
+    { key: "vehicle", label: t("sell.step.vehicle", "Vehicle"), icon: Tag },
+    { key: "price", label: t("sell.step.price", "Price"), icon: FileText },
+    { key: "photos", label: t("sell.step.photos", "Photos"), icon: Camera },
+    { key: "contact", label: t("sell.step.contact", "Location & contact"), icon: Phone },
+    { key: "review", label: t("sell.step.review", "Review"), icon: CheckCircle2 },
+  ] as const;
+  const last = STEPS.length - 1;
+  /** Required fields per step (the rest are optional, as before). */
+  const stepProblem = (i: number): string | null => {
+    if (i === 0 && !(form.make.trim() && form.model.trim())) return t("sell.step.needVehicle", "Choose a make and type the model to continue.");
+    if (i === 3 && !form.contactPhone.trim()) return t("sell.step.needPhone", "Add a phone number so buyers can reach you.");
+    return null;
+  };
+  const goTo = (i: number) => {
+    setStepError(null);
+    setStep(Math.max(0, Math.min(last, i)));
+    const top = flowTop.current;
+    if (top && top.getBoundingClientRect().top < 0) top.scrollIntoView({ block: "start" });
+  };
+  const next = () => {
+    const problem = stepProblem(step);
+    if (problem) {
+      setStepError(problem);
+      return;
+    }
+    goTo(step + 1);
+  };
+
+  /* ── Live ad card ─────────────────────────────────────────────────────── */
   const previewTitle =
     form.title.trim() || [form.year, form.make, form.model].filter(Boolean).join(" ") || t("tools.sell.previewEmpty", "Your vehicle");
   const cover = photos.items[0]?.previewUrl ?? undefined;
   const price = Number(form.priceLkr);
   const mileage = Number(form.mileage);
+  const plate = silhouetteFor({
+    vehicle_category: { cars: "cars", bikes: "motorbikes", tuk: "three-wheelers", van: "vans", suv: "suvs" }[form.vehicleCategory] ?? "cars",
+  });
   const checks = [
-    { done: Boolean(form.make && form.model.trim()), label: t("tools.sell.check.vehicle", "Make and model") },
-    { done: Boolean(form.priceLkr), label: t("tools.sell.check.price", "Asking price") },
-    { done: imageUrls.length > 0, label: t("tools.sell.check.photos", "At least one photo") },
-    { done: Boolean(form.district), label: t("tools.sell.check.location", "District") },
-    { done: Boolean(form.contactPhone.trim()), label: t("tools.sell.check.phone", "Phone number") },
+    { done: Boolean(form.make && form.model.trim()), label: t("tools.sell.check.vehicle", "Make and model"), step: 0 },
+    { done: Boolean(form.priceLkr), label: t("tools.sell.check.price", "Asking price"), step: 1 },
+    { done: imageUrls.length > 0, label: t("tools.sell.check.photos", "At least one photo"), step: 2 },
+    { done: Boolean(form.district), label: t("tools.sell.check.location", "District"), step: 3 },
+    { done: Boolean(form.contactPhone.trim()), label: t("tools.sell.check.phone", "Phone number"), step: 3 },
   ];
   const completed = checks.filter((c) => c.done).length;
 
-  /** Desktop only: on phones the form is the page and the preview would land under the publish button. */
-  const preview = (
-    <>
-      <Card variant="media" padding="none" className="hidden lg:block" aria-label={t("tools.sell.preview", "Ad preview")}>
-        <div className="relative aspect-[4/3] bg-surface-2">
-          {cover && brokenCover !== cover ? (
-            <img src={cover} alt="" className="content-in h-full w-full object-cover" onError={() => setBrokenCover(cover)} />
-          ) : (
-            <div className="flex h-full flex-col items-center justify-center gap-2 text-label-3">
-              {cover ? <ImageOff className="h-8 w-8" strokeWidth={1.5} aria-hidden /> : <Car className="h-10 w-10" strokeWidth={1.25} aria-hidden />}
-              <p className="text-footnote">{cover ? t("tools.sell.coverBroken", "This photo link doesn't load") : t("tools.sell.coverEmpty", "Your cover photo shows here")}</p>
+  const adCard = (
+    <div className="overflow-hidden rounded-sheet border border-border bg-card shadow-e2" aria-label={t("tools.sell.preview", "Ad preview")}>
+      <div className="cine-adcard__photo">
+        {cover && brokenCover !== cover ? (
+          <img key={cover} src={cover} alt="" className="content-in" onError={() => setBrokenCover(cover)} />
+        ) : (
+          <>
+            <picture>
+              <source type="image/avif" srcSet={`${plate.avifSm} 480w, ${plate.avif} 960w`} sizes="420px" />
+              <img src={plate.webp} srcSet={`${plate.webpSm} 480w, ${plate.webp} 960w`} sizes="420px" alt="" />
+            </picture>
+            <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1.5 bg-gradient-to-t from-black/80 to-transparent px-4 pb-3 pt-10 text-caption font-medium text-white/80">
+              {cover ? <ImageOff className="h-3.5 w-3.5" aria-hidden /> : <Camera className="h-3.5 w-3.5" aria-hidden />}
+              {cover ? t("tools.sell.coverBroken", "This photo link doesn't load") : t("tools.sell.coverEmpty", "Your cover photo shows here")}
             </div>
-          )}
-          <Badge variant="neutral" className="absolute left-3 top-3 border-transparent bg-background/90">
-            {t("tools.sell.preview", "Ad preview")}
-          </Badge>
+          </>
+        )}
+        <span className="absolute left-3 top-3 rounded-full border border-white/15 bg-black/55 px-2.5 py-1 text-caption font-semibold text-white">
+          {t("tools.sell.preview", "Ad preview")}
+        </span>
+        {imageUrls.length > 1 && (
+          <span className="num absolute right-3 top-3 flex items-center gap-1 rounded-full border border-white/15 bg-black/55 px-2.5 py-1 text-caption font-semibold text-white">
+            <Camera aria-hidden className="h-3 w-3" /> {imageUrls.length}
+          </span>
+        )}
+      </div>
+      <div className="p-5">
+        <p className="truncate text-callout font-semibold text-foreground">{previewTitle}</p>
+        <p className="cine-card__price mt-1 text-title1 text-foreground">
+          {price > 0 ? <AnimatedLkr value={price} mode="full" /> : <span className="text-label-3">{t("tools.sell.noPrice", "Add a price")}</span>}
+        </p>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {mileage > 0 ? <Badge variant="neutral" className="num">{mileage.toLocaleString("en-US")} km</Badge> : null}
+          <Badge variant="neutral">{t(FUEL_TYPES.find((f) => f.value === form.fuelType)?.key ?? "", form.fuelType)}</Badge>
+          <Badge variant="neutral">{t(TRANSMISSIONS.find((f) => f.value === form.transmission)?.key ?? "", form.transmission)}</Badge>
+          {form.district ? (
+            <Badge variant="neutral">
+              <MapPin aria-hidden /> {form.city ? `${form.city}, ${form.district}` : form.district}
+            </Badge>
+          ) : null}
         </div>
-        <div className="p-5">
-          <p className="truncate text-callout font-semibold text-foreground">{previewTitle}</p>
-          <p className="mt-1 font-display text-title2 font-semibold text-foreground">
-            {price > 0 ? <AnimatedLkr value={price} mode="full" /> : <span className="text-label-3">{t("tools.sell.noPrice", "Add a price")}</span>}
-          </p>
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {mileage > 0 ? <Badge variant="neutral">{mileage.toLocaleString("en-US")} km</Badge> : null}
-            <Badge variant="neutral">{form.fuelType}</Badge>
-            <Badge variant="neutral">{form.transmission}</Badge>
-            {form.district ? (
-              <Badge variant="neutral">
-                <MapPin aria-hidden /> {form.city ? `${form.city}, ${form.district}` : form.district}
-              </Badge>
-            ) : null}
-          </div>
-        </div>
-      </Card>
-      <Card padding="sm" className="hidden sm:p-5 lg:block">
+        {form.description.trim() ? (
+          <p className="mt-3 line-clamp-2 text-footnote leading-relaxed text-label-2">{form.description.trim()}</p>
+        ) : null}
+      </div>
+      <div className="border-t border-border px-5 py-4">
         <div className="flex items-baseline justify-between gap-3">
           <p className="text-footnote font-semibold text-foreground">{t("tools.sell.checklist", "Ready to publish")}</p>
-          <p className="text-footnote tabular-nums text-label-2">
+          <p className="num text-footnote text-label-2">
             {completed} / {checks.length}
           </p>
         </div>
-        <ul className="mt-3 space-y-2">
+        <div className="cine-step-rail mt-2.5">
+          <span className="cine-step-rail__fill bg-deal-good" style={{ "--p": completed / checks.length } as CSSProperties} />
+        </div>
+        <ul className="mt-3 grid gap-1">
           {checks.map((c) => (
-            <li key={c.label} className={cn("flex items-center gap-2 text-footnote transition-colors duration-short ease-standard", c.done ? "text-foreground" : "text-label-2")}>
-              {c.done ? <CheckCircle2 className="h-4 w-4 text-deal-good-text" aria-hidden /> : <Circle className="h-4 w-4 text-label-3" aria-hidden />}
-              {c.label}
+            <li key={c.label}>
+              <button
+                type="button"
+                onClick={() => goTo(c.step)}
+                className={cn(
+                  "flex min-h-8 w-full items-center gap-2 rounded-control text-left text-footnote transition-colors duration-short ease-standard hover:text-foreground",
+                  c.done ? "text-foreground" : "text-label-2",
+                )}
+              >
+                {c.done ? <CheckCircle2 className="h-4 w-4 text-deal-good-text" aria-hidden /> : <Circle className="h-4 w-4 text-label-3" aria-hidden />}
+                {c.label}
+              </button>
             </li>
           ))}
         </ul>
-      </Card>
-    </>
+      </div>
+    </div>
   );
 
+  /* ── Step bar ─────────────────────────────────────────────────────────── */
+  const stepBar = (
+    <nav aria-label={t("sell.step.nav", "Listing steps")} className="mb-5">
+      <ol className="flex items-center gap-1.5 sm:gap-2">
+        {STEPS.map((s, i) => (
+          <li key={s.key} className={cn("flex min-w-0 items-center gap-1.5 sm:gap-2", i < last && "flex-1")}>
+            <button
+              type="button"
+              onClick={() => goTo(i)}
+              aria-current={i === step ? "step" : undefined}
+              data-state={i === step ? "current" : i < step ? "done" : "todo"}
+              className="flex min-h-11 shrink-0 items-center gap-2 rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <span className="cine-step-dot num">{i < step ? <Check className="h-3.5 w-3.5" aria-hidden /> : i + 1}</span>
+              <span className={cn("hidden whitespace-nowrap text-footnote font-semibold lg:inline", i === step ? "text-foreground" : "text-label-2")}>{s.label}</span>
+            </button>
+            {i < last && (
+              <span aria-hidden className="cine-step-rail min-w-3 flex-1">
+                <span className="cine-step-rail__fill" style={{ "--p": i < step ? 1 : 0 } as CSSProperties} />
+              </span>
+            )}
+          </li>
+        ))}
+      </ol>
+      <p className="mt-2 text-caption font-medium text-label-2 lg:hidden">
+        {t("sell.step.of", "Step {n} of {total}", { n: step + 1, total: STEPS.length })} · <span className="text-foreground">{STEPS[step].label}</span>
+      </p>
+    </nav>
+  );
+
+  const summaryRows: Array<{ label: string; value: string; step: number }> = [
+    { label: t("sell.step.vehicle", "Vehicle"), value: [form.year, form.make, form.model].filter(Boolean).join(" ") || "—", step: 0 },
+    { label: t("sell.step.price", "Price"), value: price > 0 ? `Rs ${price.toLocaleString("en-US")}` : "—", step: 1 },
+    { label: t("sell.step.photos", "Photos"), value: t("sell.photos.countLabel", "{n} of {max} photos", { n: photos.items.length, max: MAX_PHOTOS }), step: 2 },
+    { label: t("sell.district", "District"), value: [form.city, form.district].filter(Boolean).join(", ") || "—", step: 3 },
+    { label: t("sell.contactPhone", "Phone number"), value: form.contactPhone.trim() || "—", step: 3 },
+  ];
+
   /* ── Form ─────────────────────────────────────────────────────────────── */
+  // Every step stays mounted (hidden when not current): photo uploads keep
+  // running and the uploader keeps its state while the seller moves around.
   const formView = (
-    <form onSubmit={onSubmit} className="space-y-5" noValidate>
+    <form
+      onSubmit={(e) => {
+        if (step < last) {
+          e.preventDefault();
+          next();
+          return;
+        }
+        void onSubmit(e);
+      }}
+      className="space-y-5"
+      noValidate
+    >
       {!isAuthenticated && (
         <Notice
           tone="info"
@@ -275,6 +389,9 @@ export default function SellYourCar() {
         />
       )}
 
+      {stepBar}
+
+      <div hidden={step !== 0} className={step === 0 ? "cine-pane" : undefined}>
       <FormCard icon={Tag} title={t("sell.sectionVehicle", "Vehicle details")}>
         <ChoiceChips label={t("tools.sell.category", "Type")} value={form.vehicleCategory as (typeof CATEGORY_KEYS)[number]} options={categories} onChange={(v) => setField("vehicleCategory", v)} />
         <div className="grid gap-4 sm:grid-cols-2">
@@ -292,7 +409,7 @@ export default function SellYourCar() {
             <Input id="sell-model" required value={form.model} onChange={(e) => setField("model", e.target.value)} placeholder={t("sell.modelPh", "e.g. Axio, Vitz, Hilux")} />
           </Field>
         </div>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t("sell.year", "Year")} htmlFor="sell-year">
             <SimpleSelect
               id="sell-year"
@@ -301,9 +418,6 @@ export default function SellYourCar() {
               placeholder={t("sell.selectYear", "Select year")}
               options={Array.from({ length: 40 }, (_, i) => currentYear - i).map((y) => ({ value: String(y), label: y }))}
             />
-          </Field>
-          <Field label={t("sell.price", "Price (LKR)")} htmlFor="sell-price">
-            <AdornedInput id="sell-price" type="number" min="0" inputMode="numeric" prefix="Rs" value={form.priceLkr} onChange={(e) => setField("priceLkr", e.target.value)} placeholder="5500000" />
           </Field>
           <Field label={t("sell.mileage", "Mileage (km)")} htmlFor="sell-mileage">
             <AdornedInput id="sell-mileage" type="number" min="0" inputMode="numeric" suffix="km" value={form.mileage} onChange={(e) => setField("mileage", e.target.value)} placeholder="85000" />
@@ -326,24 +440,23 @@ export default function SellYourCar() {
           </Field>
         </div>
       </FormCard>
+      </div>
 
-      <FormCard icon={MapPin} title={t("sell.sectionLocation", "Location")}>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={t("sell.district", "District")} htmlFor="sell-district">
-            <SimpleSelect
-              id="sell-district"
-              value={form.district}
-              onValueChange={(v) => setField("district", v)}
-              placeholder={t("sell.selectDistrict", "Select district")}
-              options={DISTRICTS.map((d) => ({ value: d, label: d }))}
-            />
-          </Field>
-          <Field label={t("sell.city", "City")} htmlFor="sell-city">
-            <Input id="sell-city" value={form.city} onChange={(e) => setField("city", e.target.value)} placeholder={t("sell.cityPh", "e.g. Dehiwala")} />
-          </Field>
-        </div>
+      <div hidden={step !== 1} className={step === 1 ? "cine-pane" : undefined}>
+      <FormCard icon={FileText} title={t("sell.step.priceTitle", "Price and headline")} description={t("sell.step.priceHint", "Leave the price empty if you'd rather take offers. A clear headline gets more clicks.")}>
+        <Field label={t("sell.price", "Price (LKR)")} htmlFor="sell-price">
+          <AdornedInput id="sell-price" type="number" min="0" inputMode="numeric" prefix="Rs" value={form.priceLkr} onChange={(e) => setField("priceLkr", e.target.value)} placeholder="5500000" />
+        </Field>
+        <Field label={t("sell.listingTitle", "Listing title")} htmlFor="sell-title">
+          <Input id="sell-title" value={form.title} onChange={(e) => setField("title", e.target.value)} placeholder={t("sell.titlePh", "e.g. 2018 Toyota Axio — well maintained, one owner")} />
+        </Field>
+        <Link to="/estimate" className="inline-flex items-center gap-1.5 text-footnote font-semibold text-primary no-underline hover:underline">
+          {t("sell.step.checkValue", "Check what similar vehicles are listed for")} <ArrowRight aria-hidden className="h-3.5 w-3.5" />
+        </Link>
       </FormCard>
+      </div>
 
+      <div hidden={step !== 2} className={step === 2 ? "cine-pane" : undefined}>
       <FormCard
         icon={Camera}
         title={t("sell.sectionPhotos", "Photos")}
@@ -362,23 +475,25 @@ export default function SellYourCar() {
       >
         <PhotoUploader photos={photos} uploadsEnabled={uploadsEnabled} />
       </FormCard>
+      </div>
 
-      <FormCard icon={FileText} title={t("sell.sectionDesc", "Description")}>
-        <Field label={t("sell.listingTitle", "Listing title")} htmlFor="sell-title">
-          <Input id="sell-title" value={form.title} onChange={(e) => setField("title", e.target.value)} placeholder={t("sell.titlePh", "e.g. 2018 Toyota Axio — well maintained, one owner")} />
-        </Field>
-        <Field label={t("sell.description", "Details")} htmlFor="sell-desc" aside={`${form.description.length} / 4000`}>
-          <Textarea
-            id="sell-desc"
-            value={form.description}
-            onChange={(e) => setField("description", e.target.value)}
-            rows={5}
-            maxLength={4000}
-            placeholder={t("sell.descPh", "Service history, condition, why you're selling, accessories, anything buyers should know…")}
-          />
-        </Field>
+      <div hidden={step !== 3} className={step === 3 ? "cine-pane space-y-5" : "space-y-5"}>
+      <FormCard icon={MapPin} title={t("sell.sectionLocation", "Location")}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t("sell.district", "District")} htmlFor="sell-district">
+            <SimpleSelect
+              id="sell-district"
+              value={form.district}
+              onValueChange={(v) => setField("district", v)}
+              placeholder={t("sell.selectDistrict", "Select district")}
+              options={DISTRICTS.map((d) => ({ value: d, label: d }))}
+            />
+          </Field>
+          <Field label={t("sell.city", "City")} htmlFor="sell-city">
+            <Input id="sell-city" value={form.city} onChange={(e) => setField("city", e.target.value)} placeholder={t("sell.cityPh", "e.g. Dehiwala")} />
+          </Field>
+        </div>
       </FormCard>
-
       <FormCard icon={Phone} title={t("sell.sectionContact", "Contact")} description={t("sell.contactHint", "Your phone is shown to signed-in buyers so they can contact you directly.")}>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t("sell.contactName", "Your name")} htmlFor="sell-contact-name">
@@ -389,82 +504,138 @@ export default function SellYourCar() {
           </Field>
         </div>
       </FormCard>
+      </div>
 
-      {error && (
+      <div hidden={step !== 4} className={step === 4 ? "cine-pane space-y-5" : "space-y-5"}>
+        {/* Phones: the live card sits here, right above Publish. */}
+        <div className="lg:hidden">{adCard}</div>
+        <FormCard icon={FileText} title={t("sell.sectionDesc", "Description")}>
+          <Field label={t("sell.description", "Details")} htmlFor="sell-desc" aside={`${form.description.length} / 4000`}>
+            <Textarea
+              id="sell-desc"
+              value={form.description}
+              onChange={(e) => setField("description", e.target.value)}
+              rows={5}
+              maxLength={4000}
+              placeholder={t("sell.descPh", "Service history, condition, why you're selling, accessories, anything buyers should know…")}
+            />
+          </Field>
+        </FormCard>
+        <section aria-labelledby="sell-review-title" className="rounded-card border border-border bg-card">
+          <h2 id="sell-review-title" className="cine-eyebrow px-5 pt-4 text-muted-foreground">{t("sell.step.review", "Review")}</h2>
+          <dl className="mt-2 divide-y divide-border">
+            {summaryRows.map((r) => (
+              <div key={r.label} className="flex items-center gap-3 px-5 py-3">
+                <dt className="w-28 shrink-0 text-caption font-medium text-label-2 sm:w-36">{r.label}</dt>
+                <dd className="num min-w-0 flex-1 truncate text-footnote font-semibold text-foreground">{r.value}</dd>
+                <button
+                  type="button"
+                  onClick={() => goTo(r.step)}
+                  className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-control px-2 text-caption font-semibold text-primary hover:bg-primary/10"
+                >
+                  <Pencil aria-hidden className="h-3 w-3" /> {t("sell.step.edit", "Edit")}
+                </button>
+              </div>
+            ))}
+          </dl>
+        </section>
+      </div>
+
+      {(error || stepError) && (
         <Notice tone="danger" role="alert">
-          {error}
+          {error ?? stepError}
         </Notice>
       )}
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Button type="submit" size="lg" disabled={!canSubmit && !submitting && !successFlash} loading={submitting && !successFlash}>
-          {successFlash ? (
-            <>
-              <Check aria-hidden /> {t("sell.published", "Published!")}
-            </>
-          ) : (
-            <>
-              {t("sell.submitCta", "Publish listing")} <ArrowRight aria-hidden />
-            </>
-          )}
-        </Button>
-        <p className="text-caption text-label-2" aria-live="polite">
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
+        {step > 0 && (
+          <Button type="button" variant="secondary" size="lg" onClick={() => goTo(step - 1)}>
+            <ArrowLeft aria-hidden /> {t("sell.step.back", "Back")}
+          </Button>
+        )}
+        {step < last ? (
+          // Distinct keys: swapping one <button> from type=button to type=submit
+          // inside its own click would let the browser submit the form.
+          <Button key="next" type="button" size="lg" onClick={next}>
+            {t("sell.step.next", "Continue")} · {STEPS[step + 1].label} <ArrowRight aria-hidden />
+          </Button>
+        ) : (
+          <Button key="publish" type="submit" size="lg" disabled={!canSubmit && !submitting && !successFlash} loading={submitting && !successFlash}>
+            {successFlash ? (
+              <>
+                <Check aria-hidden /> {t("sell.published", "Published!")}
+              </>
+            ) : (
+              <>
+                {t("sell.submitCta", "Publish listing")} <ArrowRight aria-hidden />
+              </>
+            )}
+          </Button>
+        )}
+        <p className="text-caption text-label-2 sm:ml-1" aria-live="polite">
           {photosBusy
             ? t("sell.photos.pending", "Hold on — your photos are still uploading.")
             : photosFailed
               ? t("sell.photos.fixFailed", "Retry or remove the photos that didn't upload.")
-              : t("sell.reviewNote", "Listings go live after a quick review — usually within a few hours.")}
+              : step === last
+                ? t("sell.reviewNote", "Listings go live after a quick review — usually within a few hours.")
+                : null}
         </p>
       </div>
     </form>
   );
 
   return (
-    <ToolPage
-      header={
-        <PageHeader
-          eyebrow={t("sell.eyebrow", "Sell your car")}
-          eyebrowIcon={Tag}
-          title={t("sell.title", "List your vehicle on Motormila")}
-          description={t("sell.subtitle", "Reach thousands of buyers searching the Sri Lankan market. Free to list — your ad goes live after a quick review.")}
-        />
-      }
-    >
-      {done ? (
-        <Card className="mx-auto max-w-xl">
-          <EmptyState
-            icon={CheckCircle2}
-            title={t("sell.doneTitle", "Listing submitted!")}
-            body={t("sell.doneBody", "Your vehicle is queued for review. We'll publish it to the market shortly.")}
-            action={
-              <div className="flex flex-wrap items-center justify-center gap-3">
-                <Button asChild>
-                  <Link to="/">
-                    {t("sell.backToMarket", "Back to market")} <ArrowRight aria-hidden />
-                  </Link>
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setForm(INITIAL);
-                    photos.reset();
-                    setDone(false);
-                  }}
-                >
-                  {t("sell.listAnother", "List another vehicle")}
-                </Button>
-              </div>
-            }
-            hint={
-              <Link to="/profile" className="font-semibold text-primary underline-offset-2 hover:underline">
-                {t("sell.manageListings", "Manage your listings")}
-              </Link>
-            }
-          />
-        </Card>
-      ) : (
-        <ToolGrid form={formView} result={preview} />
-      )}
-    </ToolPage>
+    <div className="bg-background pb-24 lg:pb-20">
+      <CineHeader
+        eyebrow={t("sell.eyebrow", "Sell your car")}
+        lead={t("sell.cine.lead", "Your car,")}
+        accent={t("sell.cine.accent", "in its best light.")}
+        body={t("sell.subtitle", "Reach thousands of buyers searching the Sri Lankan market. Free to list — your ad goes live after a quick review.")}
+        image={visuals.authShowroom}
+        imagePosition="46% 58%"
+      />
+      <div ref={flowTop} className="mx-auto max-w-[1320px] scroll-mt-[calc(var(--nav-offset)+12px)] px-5 pt-8 sm:px-6 lg:pt-10">
+        {done ? (
+          <Card className="mx-auto max-w-xl">
+            <EmptyState
+              icon={CheckCircle2}
+              title={t("sell.doneTitle", "Listing submitted!")}
+              body={t("sell.doneBody", "Your vehicle is queued for review. We'll publish it to the market shortly.")}
+              action={
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  <Button asChild>
+                    <Link to="/">
+                      {t("sell.backToMarket", "Back to market")} <ArrowRight aria-hidden />
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setForm(INITIAL);
+                      photos.reset();
+                      setStep(0);
+                      setDone(false);
+                    }}
+                  >
+                    {t("sell.listAnother", "List another vehicle")}
+                  </Button>
+                </div>
+              }
+              hint={
+                <Link to="/profile" className="font-semibold text-primary underline-offset-2 hover:underline">
+                  {t("sell.manageListings", "Manage your listings")}
+                </Link>
+              }
+            />
+          </Card>
+        ) : (
+          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,26rem)] lg:gap-8">
+            <div className="min-w-0">{formView}</div>
+            <aside className="hidden lg:sticky lg:top-[calc(var(--nav-offset)+16px)] lg:block">{adCard}</aside>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
