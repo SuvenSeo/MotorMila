@@ -251,7 +251,7 @@ export default function SafeTransfer() {
                   <span className="flex-1 text-footnote font-semibold text-foreground">{phase.phase}</span>
                   <span className="num text-caption text-label-2">{phaseDone}/{phase.items.length}</span>
                 </legend>
-                <div className="-mx-2 divide-y divide-separator/70 border-t border-separator">
+                <div className="-mx-2 divide-y divide-border/60 border-t border-border/60">
                   {phase.items.map((item) => (
                     <CheckRow key={item.id} id={`transfer-${item.id}`} checked={!!checked[item.id]} onCheckedChange={() => toggle(item.id)} muted className="rounded-none">
                       {item.text}

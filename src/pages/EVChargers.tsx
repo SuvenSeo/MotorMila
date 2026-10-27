@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { m } from "motion/react";
-import type { CSSProperties } from "react";
 import { ArrowRight, ExternalLink, MapPin, Zap } from "lucide-react";
 import { getChargingStations } from "@/services/api";
 import type { ChargingStation } from "@/services/api";
@@ -11,7 +10,6 @@ import { PageCanvas } from "@/components/PageCanvas";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { CineHeader } from "@/components/CineHeader";
 import { CineSection } from "@/components/CineSection";
@@ -124,6 +122,8 @@ export default function EVChargers() {
   const nextRadius = RADIUS_OPTIONS.find((km) => km > radiusKm);
 
   const hasCount = !stationsQuery.isPending && count > 0;
+  // Loaded, no error, nothing cached here: one empty state, on the panel.
+  const emptyHere = !stationsQuery.isPending && !stationsQuery.isError && stations.length === 0;
 
   return (
     <PageCanvas ambient="none">
@@ -145,7 +145,7 @@ export default function EVChargers() {
 
       <PageBody className="space-y-12 pt-8 lg:space-y-14 lg:pt-12">
         {/* Dark map panel: the controls live on it, beside the radius plot. */}
-        <section className="cine-panel theme-dark grid gap-8 p-5 text-foreground sm:p-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-center" aria-label={t("ev.chargersRadius", "Radius")}>
+        <section className="cine-panel theme-dark grid gap-8 p-5 text-foreground sm:p-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] lg:items-center" aria-label={t("ev.chargersRadius", "Radius")}>
           <div className="min-w-0 space-y-6">
             <div aria-live="polite">
               {hasCount ? (
@@ -189,11 +189,30 @@ export default function EVChargers() {
                 />
               </div>
             </div>
+            {emptyHere ? (
+              <div className="border-t border-border pt-5">
+                <p className="flex items-center gap-2 text-callout font-semibold text-white">
+                  <MapPin aria-hidden className="h-4 w-4 text-white/70" />
+                  {t("ev.chargersEmpty", "No cached chargers in this radius")}
+                </p>
+                <p className="mt-1.5 max-w-lg text-footnote text-white/65">
+                  {t(
+                    "ev.chargersEmptyHint",
+                    "We refresh the Sri Lanka charger map from Open Charge Map every week, and this area has no points yet. Try a wider radius, or check back soon.",
+                  )}
+                </p>
+                {nextRadius ? (
+                  <Button type="button" className="mt-4" onClick={() => updateParam("radius_km", String(nextRadius))}>
+                    {t("ev.chargersWiden", "Widen to {km} km", { km: nextRadius })}
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
             <p className="text-caption text-white/55">
               {t("ev.chargersSourceValue", "Open Charge Map")} · {t("ev.chargersSourceHint", "Weekly cache, Sri Lanka only")}
             </p>
           </div>
-          <div className="mx-auto w-full max-w-[18rem] lg:max-w-none" style={{ "--cine-t0": "0.1s" } as CSSProperties}>
+          <div className="mx-auto w-full max-w-[16rem] lg:max-w-[20rem]">
             <RadiusPlot
               center={center}
               radiusKm={radiusKm}
@@ -203,6 +222,7 @@ export default function EVChargers() {
           </div>
         </section>
 
+        {emptyHere ? null : (
         <CineSection index="01" title={t("ev.chargersNearby", "Nearby stations")}>
           {stationsQuery.isPending ? (
             <div className="grid gap-3" aria-hidden>
@@ -215,19 +235,6 @@ export default function EVChargers() {
               <ErrorState
                 title={t("ev.chargersError", "Chargers didn't load")}
                 onRetry={() => void stationsQuery.refetch()}
-              />
-            </Card>
-          ) : stations.length === 0 ? (
-            <Card padding="none">
-              <EmptyState
-                icon={MapPin}
-                title={t("ev.chargersEmpty", "No cached chargers in this radius")}
-                body={t(
-                  "ev.chargersEmptyHint",
-                  "We refresh the Sri Lanka charger map from Open Charge Map every week, and this area has no points yet. Try a wider radius, or check back soon.",
-                )}
-                actionLabel={nextRadius ? t("ev.chargersWiden", "Widen to {km} km", { km: nextRadius }) : undefined}
-                onAction={nextRadius ? () => updateParam("radius_km", String(nextRadius)) : undefined}
               />
             </Card>
           ) : (
@@ -271,6 +278,7 @@ export default function EVChargers() {
             </ul>
           )}
         </CineSection>
+        )}
 
         <p className="text-caption text-label-2">
           {limitation} {attribution}

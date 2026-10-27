@@ -298,11 +298,14 @@ export default function BestPicks() {
       ? t("picks.rankAfford", "ranked by min cash down (CBSL LTV)")
       : t("picks.rankDeal", "ranked by deal strength");
   const hiddenPickCount = fullAccess ? 0 : Math.max(0, picks.length - FREE_BEST_PICKS_LIMIT);
-  // The week's biggest real cut: the largest plausible drop in the feed.
-  const biggestCut = useMemo(
-    () => drops.reduce<PriceDropItem | null>((best, d) => (!best || d.drop_pct > best.drop_pct ? d : best), null),
-    [drops],
-  );
+  // The week's biggest real cut: the largest plausible drop in the feed. Cuts
+  // of 35 %+ are the verdict's "verify first" shape, so they only lead when
+  // nothing smaller exists (they stay in the cuts list either way).
+  const biggestCut = useMemo(() => {
+    const largest = (items: PriceDropItem[]) =>
+      items.reduce<PriceDropItem | null>((best, d) => (!best || d.drop_pct > best.drop_pct ? d : best), null);
+    return largest(drops.filter((d) => d.drop_pct < VERIFY_BELOW_PCT)) ?? largest(drops);
+  }, [drops]);
   const pickPhoto = (l: CarListing) =>
     pickVehicleImageUrl([l.thumbnail_url, ...(Array.isArray(l.images) ? l.images : [])], [l.url, l.detail_url, l.external_url]);
   const pickSilhouette = (l: CarListing) => silhouetteFor({ vehicle_category: l.vehicle_category, body_type: l.body_type, title: l.title });

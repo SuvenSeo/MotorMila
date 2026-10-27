@@ -176,7 +176,7 @@ export default function EVHub() {
                 ))}
               </div>
             ) : (
-              <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <ul className={`grid gap-3 sm:grid-cols-2 lg:grid-cols-3 ${topModels.length >= 4 ? "xl:grid-cols-4" : ""}`}>
                 {topModels.map((model, i) => (
                   <m.li
                     key={`${model.make}-${model.model}`}
