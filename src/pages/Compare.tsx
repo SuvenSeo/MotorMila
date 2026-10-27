@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowUpRight, Info, Link2, Plus, Scale, Search, X } from "lucide-react";
-import { PageHeader } from "@/components/ui/page-header";
+import { ArrowLeft, ArrowUpRight, Info, Link2, Plus, Search, X } from "lucide-react";
+import { CineHeader } from "@/components/CineHeader";
+import { visuals } from "@/lib/visualAssets";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Switch } from "@/components/ui/switch";
 import { AnimatedNumber } from "@/components/ui/animated-number";
@@ -347,36 +347,38 @@ export default function Compare() {
 
   return (
     <PageCanvas ambient="none">
-      <PageHeader
+      <CineHeader
         eyebrow={
-          <Link to="/" className="inline-flex items-center gap-1 text-primary no-underline transition-opacity duration-short hover:opacity-80">
+          <Link to="/" className="inline-flex items-center gap-1 text-white/80 no-underline transition-opacity duration-short hover:opacity-80">
             <ArrowLeft className="h-4 w-4" aria-hidden />
             {t("comparePage.back", "Back to listings")}
           </Link>
         }
-        title={t("comparePage.title", "Compare cars")}
-        description={t("comparePage.subtitle", "Side by side, up to {max} cars. Prices are asking prices from the original ads.", { max: MAX_COMPARE })}
-        actions={
-          !error && enough ? (
-            <>
-              {listings.length < MAX_COMPARE ? (
-                <Button asChild variant="secondary">
-                  <Link to="/" className="no-underline">
-                    <Plus aria-hidden />
-                    {t("comparePage.addMore", "Add a car")}
-                  </Link>
-                </Button>
-              ) : null}
-              <Button type="button" variant="secondary" onClick={copyLink}>
-                <Link2 aria-hidden />
-                {t("comparePage.share", "Share")}
+        lead={t("comparePage.cine.lead", "Compare cars")}
+        accent={t("comparePage.cine.accent", "side by side.")}
+        body={t("comparePage.subtitle", "Side by side, up to {max} cars. Prices are asking prices from the original ads.", { max: MAX_COMPARE })}
+        image={visuals.pageCompareHero}
+        imagePosition="58% 60%"
+      >
+        {!error && enough ? (
+          <div className="flex flex-wrap gap-2">
+            {listings.length < MAX_COMPARE ? (
+              <Button asChild variant="secondary">
+                <Link to="/" className="no-underline">
+                  <Plus aria-hidden />
+                  {t("comparePage.addMore", "Add a car")}
+                </Link>
               </Button>
-            </>
-          ) : undefined
-        }
-      />
+            ) : null}
+            <Button type="button" variant="secondary" onClick={copyLink}>
+              <Link2 aria-hidden />
+              {t("comparePage.share", "Share")}
+            </Button>
+          </div>
+        ) : null}
+      </CineHeader>
 
-      <div className="layout-shell pb-16">
+      <div className="layout-shell pb-16 pt-8 lg:pt-12">
         {loading && listings.length === 0 && (
           <div className="space-y-3" aria-busy="true" aria-label={t("comparePage.loading", "Loading cars to compare")}>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -399,22 +401,65 @@ export default function Compare() {
         )}
 
         {!loading && !error && (!hasIds || !enough) && (
-          <Card padding="none">
-            <EmptyState
-              icon={Scale}
-              title={listings.length === 1 ? t("comparePage.needOneMore", "Add one more car to compare") : t("comparePage.emptyTitle", "No cars selected yet")}
-              body={t("comparePage.emptyBody", "Tap “Compare” on any listing to add it here. You can pick up to {max}.", { max: MAX_COMPARE })}
-              className="py-16"
-              action={
-                <Button asChild>
-                  <Link to="/" className="no-underline">
-                    <Search aria-hidden />
-                    {t("comparePage.browse", "Browse listings")}
-                  </Link>
-                </Button>
-              }
-            />
-          </Card>
+          <section className="cine-panel theme-dark p-5 text-foreground sm:p-8" aria-labelledby="compare-empty-title">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-xl">
+                <p className="cine-eyebrow text-white/60">
+                  {t("comparePage.cine.slotsKicker", "{n} of {max} slots filled", { n: listings.length, max: MAX_COMPARE })}
+                </p>
+                <h2 id="compare-empty-title" className="cine-display mt-3 text-[clamp(1.75rem,1.4rem+1.5vw,2.5rem)] text-white">
+                  {listings.length === 1 ? t("comparePage.needOneMore", "Add one more car to compare") : t("comparePage.emptyTitle", "No cars selected yet")}
+                </h2>
+                <p className="mt-3 text-body text-white/70">
+                  {t("comparePage.emptyBody", "Tap “Compare” on any listing to add it here. You can pick up to {max}.", { max: MAX_COMPARE })}
+                </p>
+              </div>
+              <Button asChild size="lg" className="self-start lg:self-auto">
+                <Link to="/" className="no-underline">
+                  {listings.length === 1 ? <Plus aria-hidden /> : <Search aria-hidden />}
+                  {listings.length === 1 ? t("comparePage.addMore", "Add a car") : t("comparePage.browse", "Browse listings")}
+                </Link>
+              </Button>
+            </div>
+            <ol className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+              {Array.from({ length: MAX_COMPARE }).map((_, i) => {
+                const l = listings[i];
+                const num = String(i + 1).padStart(2, "0");
+                return (
+                  <li key={l ? `l-${l.id}` : `slot-${i}`} className="cine-slot" data-filled={l ? "true" : "false"}>
+                    {l ? (
+                      <>
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="cine-slot__num" aria-hidden>{num}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => removeId(Number(l.id))}
+                            aria-label={t("compareTray.removeAria", "Remove {name} from compare", { name: [l.make, l.model].filter(Boolean).join(" ") })}
+                            className="-mr-1 -mt-1 text-white/70"
+                          >
+                            <X aria-hidden />
+                          </Button>
+                        </div>
+                        {!lowData && l.thumbnail_url ? (
+                          <img src={l.thumbnail_url} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" width={480} height={360} className="aspect-[16/10] w-full rounded-control bg-foreground/5 object-cover" />
+                        ) : null}
+                        <Link to={`/listing/${l.id}`} className="min-w-0 text-footnote font-semibold leading-snug text-white no-underline hover:text-[hsl(213_100%_75%)]">
+                          {l.year} {l.make} {l.model}
+                        </Link>
+                      </>
+                    ) : (
+                      <>
+                        <span className="cine-slot__num" aria-hidden>{num}</span>
+                        <span className="text-caption text-white/55">{t("comparePage.cine.openSlot", "Open slot")}</span>
+                      </>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
         )}
 
         {!error && enough && (
