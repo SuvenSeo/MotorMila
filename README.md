@@ -1,310 +1,397 @@
-<p align="center">
-  <img src="public/logo-wordmark.svg" alt="Motormila" width="280" />
-</p>
+<div align="center">
 
-<p align="center">
-  <strong>The fair mila for every motor.</strong><br />
-  Sri Lanka's vehicle price intelligence platform — every listing, every source, one honest number.
-</p>
+<a href="https://motormila.vercel.app">
+  <img src="public/brand-lockup.png" alt="MotorMila — Sri Lanka vehicle market intelligence" width="100%" />
+</a>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
-  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript 5" />
-  <img src="https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI" />
-  <img src="https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white" alt="SQLite" />
-  <img src="https://img.shields.io/badge/Playwright-2EAD33?style=flat-square&logo=playwright&logoColor=white" alt="Playwright" />
-  <img src="https://img.shields.io/badge/Android-Jetpack%20Compose-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Android Jetpack Compose" />
-  <img src="https://img.shields.io/badge/Deployed-Vercel%20%2B%20HF%20Spaces-000000?style=flat-square&logo=vercel&logoColor=white" alt="Vercel + HF Spaces" />
-  <img src="https://img.shields.io/badge/WCAG-2.2%20AA-3D9970?style=flat-square" alt="WCAG 2.2 AA" />
-</p>
+<br />
 
-<p align="center">
-  <a href="https://github.com/SuvenSeo/Vehicle-Platform/actions/workflows/ci.yml"><img src="https://github.com/SuvenSeo/Vehicle-Platform/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-</p>
+<strong>THE FAIR MILA FOR EVERY MOTOR.</strong>
 
-<p align="center">
-  <a href="https://motormila.vercel.app">🌐 Live App</a> ·
-  <a href="#features">Features</a> ·
-  <a href="#the-pipeline">The Pipeline</a> ·
-  <a href="#architecture">Architecture</a> ·
-  <a href="#quickstart">Quickstart</a> ·
-  <a href="#operations">Operations</a>
-</p>
+<br /><br />
 
----
+# THE MARKET MOVES.<br />KNOW WHERE YOU STAND.
 
-<p align="center">
-  <img src="https://img.shields.io/badge/📊_Listings-~275K-2563eb?style=for-the-badge" alt="275K listings" />
-  <img src="https://img.shields.io/badge/🌐_Sources-13+-059669?style=for-the-badge" alt="13+ sources" />
-  <img src="https://img.shields.io/badge/🔄_Refresh-3×%20daily-d97706?style=for-the-badge" alt="3x daily" />
-  <img src="https://img.shields.io/badge/💰_Cost-$0%2Fmo-7c3aed?style=for-the-badge" alt="Zero cost" />
-</p>
+**Sri Lanka's vehicle market, decoded.**<br />
+From fragmented listings to a clearer picture of prices, trends, and opportunities.
 
----
+<br />
 
-<img src="public/og-card.jpg" alt="Motormila dashboard" width="100%" />
+<a href="https://motormila.vercel.app"><strong>EXPLORE THE PLATFORM</strong></a>
+&nbsp;&nbsp;·&nbsp;&nbsp;
+<a href="#the-experience"><strong>DISCOVER THE EXPERIENCE</strong></a>
+&nbsp;&nbsp;·&nbsp;&nbsp;
+<a href="#built-for-the-real-market"><strong>HOW IT WORKS</strong></a>
+&nbsp;&nbsp;·&nbsp;&nbsp;
+<a href="#run-it-locally"><strong>BUILD WITH US</strong></a>
 
----
+<br /><br />
 
-## 🚗 What is Motormila?
+<a href="https://github.com/SuvenSeo/MotorMila/actions/workflows/ci.yml"><img src="https://github.com/SuvenSeo/MotorMila/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
+&nbsp;
+<img src="https://img.shields.io/badge/React_18-09090B?style=flat-square&logo=react&logoColor=0A7AFF" alt="React 18" />
+&nbsp;
+<img src="https://img.shields.io/badge/FastAPI-09090B?style=flat-square&logo=fastapi&logoColor=0A7AFF" alt="FastAPI" />
+&nbsp;
+<img src="https://img.shields.io/badge/Android-09090B?style=flat-square&logo=android&logoColor=0A7AFF" alt="Native Android" />
+&nbsp;
+<img src="https://img.shields.io/badge/Made_for-Sri_Lanka-0A7AFF?style=flat-square" alt="Made for Sri Lanka" />
 
-Motormila is a **vehicle market intelligence platform for Sri Lanka**. It watches every major used-car marketplace, deduplicates the same car across sites, and turns ~275,000 live listings into clear answers:
+<br /><br />
 
-> **What is this car actually worth today?** · Is it a good deal, or a trap? · Which districts move fastest? · Is the market going up or down — and where?
+<a href="https://motormila.vercel.app">
+  <img src="public/og-card.jpg" alt="MotorMila official product artwork" width="100%" />
+</a>
 
-Think Bloomberg terminal for the Sri Lankan second-hand car market — but free to browse, obsessive about fairness, and built on real listing data refreshed three times a day.
+<sub>ONE MARKET. THOUSANDS OF SIGNALS. A MORE INFORMED DECISION.</sub>
 
-### The problem it solves
-
-Sri Lanka's car market is fragmented across a dozen+ marketplaces with wildly different formats, currencies (LKR vs USD), duplicate postings, and no price history. Buyers guess. Sellers guess. Dealers hedge.
-
-Motormila fixes that with one obsessive idea: **watch everything, deduplicate ruthlessly, price honestly.**
-
-- **13+ sources scraped** — ikman, riyasewana, patpat, autolanka, autodirect, saleme, riyahub, dimo, hitad, cartivate, and more
-- **~275,000 listings tracked** with price history, not just snapshots
-- **Same car across sites merged** via VIN + multi-signal fuzzy matching — one canonical record, not five duplicates
-- **Refreshed 3× daily** (07:40 / 15:40 / 23:40 SLT) by an autonomous GitHub Actions fleet — **$0/month** infrastructure
+</div>
 
 ---
 
-## ✨ Features
+## The question behind every purchase.
 
-### 📊 Market Intelligence
-| | |
-|---|---|
-| **Live Market Snapshot** | Real-time SSE stream of market moves as scrapes land (`/stats/live/stream`) |
-| **Price Trends & Index** | Price trend series per make/model — see where a car's value is heading |
-| **District Intelligence** | Price maps + **district velocity** — where cars sell fastest |
-| **Dashboard Insights** | Auto-generated market signals, curated daily by the analysis pipeline |
+> ### “Is this vehicle actually worth the asking price?”
 
-### 💰 Valuation & Deals
-| | |
-|---|---|
-| **Fair Market Value (FMV)** | Per-listing valuation built from comparable live listings |
-| **Deal Score** | Every listing scored — spot underpriced gems and overpriced traps |
-| **Best Picks** | A daily shortlist of the sharpest deals on the market |
-| **Price Drop Alerts** | Get pinged when a watched car drops — thresholds, % moves, and more |
+A listing tells you what someone wants. It doesn't tell you what comparable vehicles are advertised for, how long an asking price has been changing, or whether the same vehicle appears somewhere else.
 
-### 🧭 Deep Research
-| | |
-|---|---|
-| **Make & Model Hubs** | `/cars/toyota/axio` — full market profile per car, per model |
-| **Listing History** | Per-listing price timeline, seller trust profile, similar cars |
-| **Compare Tool** | Side-by-side listings, spec sheets, and valuation |
-| **EV Hub** | Electric & hybrid market coverage, incl. hybrid tax trends |
-| **Official Pulse** | Import permits, official sources, and policy pulse in one place |
-| **Price Index** | A Bloomberg-style index of the whole SL used-car market |
+**MotorMila is built to close that information gap.**
 
-### 👑 Pro & Platform
-| | |
-|---|---|
-| **Pro Workspace** | Vehicle lanes, district deep-dives, **arbitrage gap detection** |
-| **Dealer Dashboard** | Fleet-level view for dealers & resellers |
-| **Invite-only Auth** | Plan-gated access, JWT sessions with instant revocation |
-| **Admin Console** | Invite users, assign Free/Pro plans, manage access |
+It brings together vehicle advertisements from Sri Lankan marketplaces, normalizes the messy details, identifies potential duplicates, and turns the resulting data into research tools for buyers, sellers, and automotive professionals.
 
-### 📱 Mobile
-A companion **native Android app** in `android/` — Kotlin, Jetpack Compose, Hilt, Paging 3, CameraX plate scan, and WorkManager sync. Home/profile hubs cover EV, Official Pulse, Best Picks, make/model/district pages, and the import calculator. Biometric unlock, share-URL import, FMV share cards, and local notifications are included. Play Billing and FCM are stubbed in v1 (server checkout-intent fallback; push routing is local-only until a Firebase backend lands).
+**Not another place to scroll through cars. A way to understand the market behind them.**
 
-Debug builds can point at a local FastAPI backend via `MOTORMILA_API_URL` / `-PmotormilaApiUrl` (emulator loopback: `http://10.0.2.2:8000/api/v1`). Release uses the HF Space API.
+<br />
 
-Windows / JDK 17 setup: [`android/README-WINDOWS-BUILD.md`](android/README-WINDOWS-BUILD.md).
+## The experience
 
----
+<table>
+<tr>
+<td width="50%" valign="top">
 
-## 🕸️ The Pipeline
+### 01 / DISCOVER
+**See the market, not just the listing.**
 
-Everything is automated. Nobody touches a database. The entire pipeline runs on **$0/month** — GitHub Actions (unlimited on public repos), HuggingFace Spaces (free tier), Vercel (hobby), and Cloudflare.
+Search and filter vehicle listings, explore make-and-model hubs, compare options, and jump to original marketplace listings.
 
-```mermaid
-flowchart LR
-    subgraph Sources["13+ Sri Lankan Marketplaces"]
-        IK[ikman.lk] --> GH
-        RI[riyasewana.com] --> GH
-        PA[patpat.lk] --> GH
-        AL[autolanka] --> GH
-        OT[9 more sources] --> GH
-    end
+</td>
+<td width="50%" valign="top">
 
-    subgraph GH["GitHub Actions fleet"]
-        SC["Scrape dumps<br/>3× daily"]
-        MA["Merge + analysis<br/>dedup · deal scores · signals"]
-        EX["Snapshot export<br/>→ Vercel deploy"]
-    end
+### 02 / VALUE
+**Put a price in context.**
 
-    SC --> REL[("GitHub Releases<br/>SQLite dumps")]
-    REL --> MA
-    MA --> REL2[("merged-db release<br/>canonical SQLite")]
-    REL2 --> EX
-    EX --> FE[("React frontend<br/>Vercel<br/>static snapshots")]
-    REL2 --> API[("FastAPI<br/>HF Spaces<br/>SQLite failover")]
-    API --> FE
-```
+Explore comparable asking prices, fair-market-value estimates, deal scores, and potential outliers before making a decision.
 
-**The zero-egress rule:** scrapers write to local SQLite (no database egress costs); the public site reads from static JSON snapshots, so the database is never hit by visitors. The backend API runs on SQLite failover for Pro features.
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
 
-| Workflow | Cadence | Job |
-|---|---|---|
-| **Manus Scrape Dump** | 3× daily (07:40 / 15:40 / 23:40 SLT) | All 13 sources → SQLite dumps to Releases |
-| **Manus to Live** | After each dump | Merge dumps → analysis → snapshot export → Vercel deploy |
-| **Keep HF Space Awake** | Every 30 min | Ping backend to prevent cold starts |
-| **Pipeline Monitor** | Continuous | Health checks + alerts |
-| **DB Backup** | Weekly | SQLite snapshots to Releases |
+### 03 / TRACK
+**Follow the movement.**
 
----
+Investigate listing price history, price changes, market trends, district-level patterns, and alerts for vehicles worth watching.
 
-## 🧱 Architecture
+</td>
+<td width="50%" valign="top">
 
-| Layer | Tech | Where |
-|---|---|---|
-| **Frontend** | React 18 · Vite · TypeScript · Tailwind · React Query · Recharts · Leaflet · framer-motion | Vercel |
-| **Backend** | FastAPI · SQLAlchemy · APScheduler · structlog · Playwright | HF Spaces |
-| **Database** | SQLite (zero-egress) · dumps versioned as GitHub Release assets | GitHub Releases |
-| **Snapshots** | Static JSON snapshots → Vercel deploy (same-origin, no CORS) | Vercel |
-| **Scrapers** | Python + Playwright (API-first, browser fallback), per-source isolation | GitHub Actions |
-| **Mobile** | Kotlin · Jetpack Compose · Hilt · Paging 3 · CameraX · WorkManager | `android/` |
-| **Quality** | Vitest · Testing Library · vitest-axe · ESLint · JUnit (Android) · GitHub Actions CI | CI |
+### 04 / GO DEEPER
+**Intelligence beyond browsing.**
 
-```
-.
-├── src/            # React frontend (pages, components, services, lib)
-├── backend/        # FastAPI app, scrapers, services, db models
-│   ├── app/scrapers/   # 13+ per-source scraper modules
-│   ├── app/services/   # market signals, aggregator, stats cache
-│   └── db/             # SQLAlchemy models + SQLite failover
-├── android/        # Native Android app (Jetpack Compose)
-├── api/            # (edge helpers)
-├── scripts/        # ops tooling (snapshot deploy, auth bootstrap)
-├── .github/workflows/  # scrape fleet, CI, backups, monitors
-└── docs/           # architecture & design docs
-```
+Research market indices, EV and hybrid segments, best picks, and deeper Pro/dealer workflows where access is enabled.
 
----
+</td>
+</tr>
+</table>
 
-## ⚡ Quickstart
+<details>
+<summary><strong>Explore the full feature map</strong></summary>
 
-### Prerequisites
-- Node 20+ · Python 3.12 · (optional) JDK 17 + Android SDK for the native app
+<br />
 
-### 1 · Frontend
+| Experience | What it brings together |
+|:--|:--|
+| **Market overview** | Listing aggregates, trends, price signals, and market activity |
+| **Make & model intelligence** | Model-specific listings, asking-price distributions, and research views |
+| **Fair Market Value** | Comparable-listing-based valuation estimates |
+| **Deal intelligence** | Listing scores, potential underpricing, and curated picks |
+| **History & alerts** | Price movements and watched-listing notifications |
+| **Geographic insights** | District-level prices, market distribution, and velocity indicators |
+| **Deep research** | Comparison tools, listing history, EV and hybrid insights, price index |
+| **Pro / dealer** | Deeper research and portfolio tools, subject to plan and access controls |
+| **Native Android** | Jetpack Compose companion with mobile-specific navigation and capabilities |
 
-```bash
-npm install
-npm run dev            # → http://localhost:8080 (proxies /api → 127.0.0.1:8000)
-```
+Product access and data availability may vary by feature, plan, and the freshness of each source.
 
-### 2 · Backend
+</details>
 
-```bash
+<br />
+
+## Built for the real market
+
+<div align="center">
+
+### Many marketplaces. One intelligence layer.
+
+*Collect → Clean → Connect → Understand → Explore*
+
+</div>
+
+MotorMila's collection architecture is designed around **13+ marketplace integrations** with independent source handling, scheduled scraping, and analysis workflows. Configured sources include ikman, Riyasewana, Auto Lanka, HitAd, AutoDirect, SaleMe, RiyaHub, Cartivate, and others.
+
+Sources differ in coverage, reliability, and anti-bot protections. A configured integration is not a guarantee that a source is currently returning fresh data.
+
+~~~mermaid
+flowchart TD
+    A["Sri Lankan vehicle marketplaces"] --> B["Source collectors<br/>Python · Playwright"]
+    B --> C["Normalization · validation<br/>duplicate detection"]
+    C --> D["SQLite · versioned data dumps"]
+    D --> E["Market analysis<br/>comparables · scoring · trends"]
+    E --> F["Static JSON snapshots"]
+    E --> G["FastAPI services"]
+    F --> H["MotorMila Web<br/>React · TypeScript · Vite"]
+    G --> H
+    G --> I["MotorMila Android<br/>Kotlin · Jetpack Compose"]
+~~~
+
+### Designed around data discipline
+
+| Principle | In practice |
+|:--|:--|
+| **Traceable sources** | Preserve the context of where a listing originated |
+| **Cleaner comparisons** | Normalize fields and detect likely cross-posted listings |
+| **Historical perspective** | Track changes instead of treating every advertisement as a timeless fact |
+| **Resilient ingestion** | Isolate collectors so one blocked source does not stop the whole pipeline |
+| **Efficient delivery** | Serve public market aggregates using exported snapshots where possible |
+| **Honest interpretation** | Distinguish advertised asking prices from confirmed sale prices |
+
+The scheduled collection workflow is configured for **three runs daily** at 07:40, 15:40, and 23:40 Sri Lanka time, with additional maintenance, monitoring, and recovery workflows. Actual freshness depends on successful execution and source availability.
+
+<br />
+
+## One product. Three surfaces.
+
+<table>
+<tr>
+<td width="33%" valign="top">
+
+**WEB EXPERIENCE**
+
+React 18, TypeScript, Vite, Tailwind CSS, data visualizations, maps, and responsive research views.
+
+<a href="https://motormila.vercel.app">Open the web app</a>
+
+</td>
+<td width="33%" valign="top">
+
+**INTELLIGENCE ENGINE**
+
+FastAPI, SQLAlchemy, Python collectors, scheduled jobs, analytics, and snapshot exports.
+
+<a href="backend/">Explore backend</a>
+
+</td>
+<td width="33%" valign="top">
+
+**NATIVE ANDROID**
+
+Kotlin, Jetpack Compose, Hilt, Paging 3, CameraX, WorkManager, and a mobile-first interface.
+
+<a href="android/">Explore Android</a>
+
+</td>
+</tr>
+</table>
+
+### The technology
+
+| Layer | Core technologies |
+|:--|:--|
+| **Web** | React · TypeScript · Vite · Tailwind CSS · TanStack Query · Recharts · Leaflet |
+| **API** | FastAPI · Python · SQLAlchemy |
+| **Collection** | Python · Playwright · source-specific scrapers |
+| **Data** | SQLite · versioned dumps · exported JSON snapshots · supporting cloud integrations |
+| **Android** | Kotlin · Jetpack Compose · Hilt · Paging 3 · CameraX · WorkManager |
+| **Delivery** | GitHub Actions · Vercel · Hugging Face Spaces · Cloudflare |
+| **Quality** | ESLint · TypeScript · Vitest · pytest · Android unit tests |
+
+<details>
+<summary><strong>Repository map</strong></summary>
+
+~~~text
+MotorMila/
+├── src/                 React web app: pages, design system, services
+├── public/              Brand assets, metadata, and public snapshots
+├── backend/             FastAPI, scraping, valuation, and data services
+├── android/             Native Android companion
+├── api/                 API integration helpers
+├── scripts/             Data export, maintenance, deployment tooling
+├── .github/workflows/   CI, scraping, monitoring, recovery, releases
+└── docs/                Engineering notes, operations, product plans
+~~~
+
+</details>
+
+<br />
+
+## Run it locally
+
+**Requirements:** Node.js 20+, Python 3.12, and (for Android) JDK 17 plus the Android SDK.
+
+### 01 — Start the API
+
+~~~bash
 cd backend
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+python -m venv .venv
+
+# macOS / Linux
+source .venv/bin/activate
+# Windows PowerShell: .\.venv\Scripts\Activate.ps1
+
 pip install -r requirements.txt
-# local dev uses SQLite — no external DB needed:
-ALLOW_SQLITE_FALLBACK=true \
-PRO_ACCESS_ENFORCED=false APP_ACCESS_ENFORCED=false \
-.venv/bin/uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
-```
+~~~
 
-> The SQLite DB starts **empty** — scrapers hit live external sites, so expect zeroes until a run lands. Insert rows into `car_listings` to demo the UI, or run a scrape:
-> ```bash
-> RUN_SCRAPERS=true SCRAPE_ENABLED_SOURCES=ikman python run_sync.py
-> ```
+Create a local, gitignored **backend/.env** with the following development settings:
 
-### 3 · Mobile (native Android)
+~~~dotenv
+ALLOW_SQLITE_FALLBACK=true
+PRO_ACCESS_ENFORCED=false
+APP_ACCESS_ENFORCED=false
+~~~
 
-```bash
+These settings are **for local development only**. They turn off access enforcement; do not deploy them to production.
+
+~~~bash
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+~~~
+
+The local SQLite database begins empty. Market views may show no data until listings have been imported or collected.
+
+### 02 — Start the web app
+
+Open a second terminal at the repository root:
+
+~~~bash
+npm ci
+npm run dev
+~~~
+
+The frontend runs on **http://localhost:8080** and proxies API requests to the local backend.
+
+### 03 — Build Android (optional)
+
+~~~bash
 cd android
-chmod +x gradlew
-./gradlew :app:assembleDebug          # APK: app/build/outputs/apk/debug/
-./gradlew :app:testDebugUnitTest      # JVM unit tests (no emulator)
-```
 
-Point a debug build at the local backend (emulator loopback):
+# macOS / Linux
+./gradlew :app:assembleDebug
 
-```bash
+# Windows
+gradlew.bat :app:assembleDebug
+~~~
+
+For emulator-to-local-API builds, use the documented API URL override:
+
+~~~bash
 ./gradlew :app:assembleDebug -PmotormilaApiUrl=http://10.0.2.2:8000/api/v1
-```
+~~~
 
-See [`android/README-WINDOWS-BUILD.md`](android/README-WINDOWS-BUILD.md) for JDK 17 / SDK setup.
+See the [Windows Android build guide](android/README-WINDOWS-BUILD.md) for SDK/JDK setup and environment details.
 
-### Verify
+### 04 — Run checks
 
-```bash
-npm run typecheck && npm run lint && npm run test && npm run build   # frontend
-cd backend && .venv/bin/python -m pytest tests                       # backend
-cd android && ./gradlew :app:testDebugUnitTest                       # Android JVM tests
-```
+~~~bash
+npm run typecheck
+npm run lint
+npm test
+npm run build
+
+# From backend/ with the virtual environment active
+python -m pytest tests
+
+# From android/
+./gradlew :app:testDebugUnitTest
+~~~
+
+The production-oriented web build also runs snapshot-sync and indexing scripts, so it may require network access or appropriately configured data inputs.
+
+<br />
+
+## Engineering the long game
+
+MotorMila is more than a screen on top of scraped listings. The repository contains the ingestion fleet, analysis services, web product, native Android client, access controls, deployment automation, and operational recovery tools.
+
+<details>
+<summary><strong>Operations & deployments</strong></summary>
+
+<br />
+
+| System | Implementation |
+|:--|:--|
+| **Scraper schedules** | GitHub Actions collectors and dump workflows |
+| **Data publication** | Merge/analysis/export pipelines and static snapshots |
+| **Backend hosting** | Hugging Face Spaces deployment workflow |
+| **Web delivery** | Vercel deployment and API routing |
+| **Reliability** | Monitoring, maintenance, backup, and disaster recovery workflows |
+| **Access** | Invite-based authentication and plan/role-based feature gates |
+
+Key workflows and procedures:
+
+- [Continuous integration](.github/workflows/ci.yml)
+- [Scheduled scraping](.github/workflows/manus-scrape-every-2h.yml)
+- [Merge to live](.github/workflows/manus-to-live.yml)
+- [Backend deployment](.github/workflows/deploy-hf-backend.yml)
+- [Disaster recovery plan](docs/disaster-recovery-plan.md)
+
+For production authentication, secrets and permission configuration, use the relevant operational documentation. Never reuse local development bypass settings in a public deployment.
+
+</details>
+
+<details>
+<summary><strong>Engineering documentation</strong></summary>
+
+<br />
+
+| Reference | Purpose |
+|:--|:--|
+| [Brand system](MOTORMILA-BRAND.md) | Official Apex M artwork, palette, typography, usage rules |
+| [Android data contract](android/DATA_CONTRACT.md) | API and mobile data expectations |
+| [Android domain contract](android/DOMAIN_CONTRACT.md) | Domain-level behavior and conventions |
+| [Scraping operations](docs/manus-scraping.md) | Collection pipeline and operational notes |
+| [Snapshot delivery](docs/public-snapshots-r2.md) | Public data exports and delivery |
+| [Recovery](docs/disaster-recovery-plan.md) | Restoration and incident procedures |
+| [Product roadmap](docs/platform-improvement-roadmap.md) | Planned improvements and development direction |
+
+</details>
+
+<br />
+
+## A note on market intelligence
+
+MotorMila analyzes information from vehicle advertisements and related sources. **An advertised price is not a verified transaction price**, and a model-derived fair-value estimate is not an inspection, appraisal, or guarantee. Listings can be stale, incomplete, duplicated, incorrect, or unavailable.
+
+Use the insights as **decision support**. Verify the vehicle, seller, documents, condition, and current listing details independently before committing to a purchase.
+
+<br />
 
 ---
 
-## 🔐 Auth & Pro Platform (production)
+<div align="center">
 
-Platform access is invite-only. Bootstrap an admin, then invite users from `/admin`:
+<img src="public/logo-mark-light.webp" width="64" alt="MotorMila Apex M" />
 
-```bash
-python scripts/bootstrap_platform_auth.py --email you@example.com --password '…' --name 'Owner'
-```
+### THE FAIR MILA FOR EVERY MOTOR.
 
-- Set `AUTH_TOKEN_SECRET` + `AUTH_USERS` on the **HF Space secrets** and `VITE_ENABLE_BACKEND_AUTH=true` on **Vercel**
-- Sessions re-check plan/role/active from the DB on every gated request; `token_version` kills old JWTs instantly
-- Optional: `RESEND_API_KEY` (email invites) · `BILLING_WEBHOOK_SECRET` (Stripe/PayHere plan upgrades) · `PUBLIC_APP_ORIGIN`
-- Local dev: `PRO_ACCESS_ENFORCED=false APP_ACCESS_ENFORCED=false` opts out of gating
+**Less noise. More context. Better decisions.**
 
----
+<a href="https://motormila.vercel.app"><strong>ENTER MOTORMILA</strong></a>
+&nbsp;&nbsp;·&nbsp;&nbsp;
+<a href="https://github.com/SuvenSeo/MotorMila/issues">ISSUES & FEEDBACK</a>
+&nbsp;&nbsp;·&nbsp;&nbsp;
+<a href="MOTORMILA-BRAND.md">THE BRAND</a>
 
-## 🚀 Deploying
+<br /><br />
 
-- **Backend → HF Spaces:** pushed automatically by `.github/workflows/deploy-hf-backend.yml`; verify with `curl https://seo292-vehicle-platform-backend.hf.space/health`
-- **Frontend → Vercel:** Git integration on `main`; `vercel.json` rewrites `/api/v1/*` to the HF Space (same-origin, no CORS headaches)
-- **Data → Vercel:** snapshots are exported and deployed to production by the scrape pipeline itself
+<sub>Designed and built for Sri Lanka. Powered by data. Guided by clarity.</sub>
 
-> ⚠️ **Vercel requires verified commits** — unsigned commits get deployments cancelled. Use SSH/GPG signing, or land commits via GitHub's web UI / PR merge (GitHub signs those automatically).
-
----
-
-## 🧪 Quality & Accessibility
-
-- **WCAG 2.2 AA** — axe-core reports **zero violations** on key pages; enforced by tests (`vitest-axe`)
-- **60+ component/unit tests** across dashboard, alerts, pricing gates, search, and accessibility
-- **CI** runs frontend typecheck + lint + test + build and backend `pytest` on every push/PR; Android JVM unit tests (`./gradlew :app:testDebugUnitTest`) run when `android/` or `.github/workflows/android.yml` change
-- **Error boundaries** everywhere — no silent blank screens
-- **Sentry** error tracking + Vercel Analytics on the live site
-
----
-
-## 🗺️ Roadmap
-
-- [x] 13+ sources live, ~275k listings, VIN + fuzzy dedup
-- [x] Valuation (FMV), deal scores, price alerts, district velocity
-- [x] Pro workspace: vehicle lanes, district profiles, arbitrage gaps
-- [x] Mobile companion app (native Android)
-- [x] Zero-cost infrastructure ($0/month)
-- [ ] 50+ sources (see `SCRAPER_ARCHITECTURE.md`)
-- [ ] LLM extraction for unstructured listing descriptions
-- [ ] Adaptive per-source scheduling based on market turnover
-- [ ] Historical price analytics & forecasting
-
----
-
-## 📚 Docs
-
-| Doc | What it covers |
-|---|---|
-| [`SCRAPER_ARCHITECTURE.md`](SCRAPER_ARCHITECTURE.md) | Scaling to 50+ sources, proxies, resilience |
-| [`docs/neon-egress-budget.md`](docs/neon-egress-budget.md) | Egress budget & snapshot strategy |
-| [`docs/MASTER PLAN FOR FUTURE OF MOTORMILA.txt`](docs/MASTER%20PLAN%20FOR%20FUTURE%20OF%20MOTORMILA.txt) | The long game |
-| [`docs/disaster-recovery-plan.md`](docs/disaster-recovery-plan.md) | Backup & recovery procedures |
-| [`android/README-WINDOWS-BUILD.md`](android/README-WINDOWS-BUILD.md) | Android JDK 17 setup, debug `BASE_URL`, unit tests |
-
----
-
-## 🤝 Contributing
-
-This repo is public. Issues and PRs are welcome — but please keep the zero-cost constraint in mind: every new dependency, workflow, or service should work within the free tier.
-
----
-
-<p align="center">
-  Built with obsession in Sri Lanka 🇱🇰<br />
-  <sub>Data is for intelligence, not for flipping the market — use the fair mila wisely.</sub>
-</p>
+</div>
