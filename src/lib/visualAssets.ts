@@ -51,6 +51,8 @@ import pageHomeHeroCoastalSm from "../../assets/page_home_hero_coastal-sm.webp";
 import pageHomeHeroNight from "../../assets/page_home_hero_night.webp";
 import pageHomeHeroNightSm from "../../assets/page_home_hero_night-sm.webp";
 import authShowroom from "../../assets/auth_showroom.webp";
+import page404Night from "../../assets/page_404_night.webp";
+import page404NightSm from "../../assets/page_404_night-sm.webp";
 import authShowroomSm from "../../assets/auth_showroom-sm.webp";
 import alt2PageFeaturesBg from "../../assets/alt2_page_features_bg.webp";
 import alt2PageFeaturesBgSm from "../../assets/alt2_page_features_bg-sm.webp";
@@ -65,6 +67,8 @@ import pageHomeHeroCoastalAvifSm from "../../assets/page_home_hero_coastal-sm.av
 import pageHomeHeroNightAvif from "../../assets/page_home_hero_night.avif";
 import pageHomeHeroNightAvifSm from "../../assets/page_home_hero_night-sm.avif";
 import authShowroomAvif from "../../assets/auth_showroom.avif";
+import page404NightAvif from "../../assets/page_404_night.avif";
+import page404NightAvifSm from "../../assets/page_404_night-sm.avif";
 import authShowroomAvifSm from "../../assets/auth_showroom-sm.avif";
 
 export type VisualAsset = {
@@ -105,6 +109,8 @@ export const visuals = {
   pageHomeHeroNight: pair(pageHomeHeroNight, pageHomeHeroNightSm),
   /** Auth visual panel: dark rain showroom, gold strip light (generated, no badges). */
   authShowroom: pair(authShowroom, authShowroomSm),
+  /** 404: a coastal road at night forking into the dark (generated, no text/plates). */
+  page404Night: pair(page404Night, page404NightSm),
 } as const;
 
 export type VisualKey = keyof typeof visuals;
@@ -127,4 +133,5 @@ export const HERO_AVIF: Record<string, HeroImageMeta> = {
   [pageHomeHeroCoastal]: { avif: pageHomeHeroCoastalAvif, avifSm: pageHomeHeroCoastalAvifSm, width: 1920, height: 823 },
   [pageHomeHeroNight]: { avif: pageHomeHeroNightAvif, avifSm: pageHomeHeroNightAvifSm, width: 1920, height: 815 },
   [authShowroom]: { avif: authShowroomAvif, avifSm: authShowroomAvifSm, width: 1152, height: 1430 },
+  [page404Night]: { avif: page404NightAvif, avifSm: page404NightAvifSm, width: 1920, height: 1072 },
 };

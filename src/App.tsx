@@ -296,6 +296,23 @@ const App = () => {
                   <Route path="/how-we-price" element={<HowWePrice />} />
                   {/** Legacy valuation path: header/footer now point at /estimate. */}
                   <Route path="/valuation" element={<Navigate to="/estimate" replace />} />
+                  {/* Common typed paths → the page they mean (also 301s in vercel.json / public/_redirects). */}
+                  <Route path="/prices" element={<Navigate to="/trends" replace />} />
+                  <Route path="/price" element={<Navigate to="/trends" replace />} />
+                  <Route path="/tools" element={<Navigate to="/calculator" replace />} />
+                  <Route path="/calculators" element={<Navigate to="/calculator" replace />} />
+                  <Route path="/tax-calculator" element={<Navigate to="/calculator" replace />} />
+                  <Route path="/import-calculator" element={<Navigate to="/calculator" replace />} />
+                  <Route path="/value" element={<Navigate to="/estimate" replace />} />
+                  <Route path="/saved" element={<Navigate to="/alerts" replace />} />
+                  <Route path="/watchlist" element={<Navigate to="/alerts" replace />} />
+                  <Route path="/sell-my-car" element={<Navigate to="/sell" replace />} />
+                  <Route path="/plans" element={<Navigate to="/pricing" replace />} />
+                  <Route path="/deals" element={<Navigate to="/best-picks" replace />} />
+                  <Route path="/app" element={<Navigate to="/mobile-app" replace />} />
+                  <Route path="/login" element={<Navigate to="/sign-in" replace />} />
+                  <Route path="/signin" element={<Navigate to="/sign-in" replace />} />
+                  <Route path="/signup" element={<Navigate to="/sign-up" replace />} />
                   <Route path="/permits" element={<Permits />} />
                   <Route path="/mobile-app" element={<MobileApp />} />
                   <Route path="/afford" element={<Afford />} />
