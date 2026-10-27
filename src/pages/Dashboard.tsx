@@ -619,7 +619,7 @@ export default function Dashboard() {
 
       {/* ── HERO — "Night drive" cinematic stage ───────────────────────
           Layers (back → front): photo plate (pointer + scroll parallax,
-          slow settle) · light bloom · scrim · one-shot light sweep · grain ·
+          slow settle) · light bloom · scrim · grain ·
           exposure lift · letterbox curtain. All transform/opacity. */}
       <section
         ref={heroSectionRef}
@@ -646,7 +646,6 @@ export default function Dashboard() {
             <div className="cine-hero__bloom" />
           </div>
           <div className="cine-hero__scrim" />
-          <div className="cine-sweep" />
           <div className="cine-grain" />
           <div className="cine-exposure" />
           <div className="cine-letterbox cine-letterbox--top" />
@@ -788,7 +787,7 @@ export default function Dashboard() {
                       enterKeyHint="search"
                       className="h-14 min-w-0 flex-1 bg-transparent text-body font-semibold text-white outline-none placeholder:text-white/45 [&::-webkit-search-cancel-button]:hidden"
                     />
-                    <Button type="button" onClick={runHeroSearch} size="md" className="cine-sheen mr-0.5 h-11 px-6 text-footnote">
+                    <Button type="button" onClick={runHeroSearch} size="md" className="mr-0.5 h-11 px-6 text-footnote">
                       {t("common.search", "Search")}
                     </Button>
                     </div>

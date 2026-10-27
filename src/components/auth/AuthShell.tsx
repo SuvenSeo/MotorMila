@@ -23,7 +23,7 @@ type AuthShellProps = {
 /**
  * Auth frame shared by Sign in and Sign up — the same "Night drive" film
  * language as the home hero. Desktop: form left, a tall cinematic showroom
- * panel right (pointer parallax, light strike, sweep, grain). Mobile: the
+ * panel right (pointer parallax, exposure fade, grain). Mobile: the
  * showroom is a band on top and the form rises over it as a sheet. The form
  * side follows the theme; the visual stays dark in both.
  */
@@ -64,9 +64,8 @@ export function AuthShell({ children, logoTo = "/", logoLabel = "Motormila home"
               <div className="cine-auth__glow" />
             </div>
             <div className="cine-auth__scrim" />
-            <div className="cine-sweep" />
             <div className="cine-grain" />
-            <div className="cine-exposure cine-exposure--strike" />
+            <div className="cine-exposure" />
           </div>
 
           {/* Mobile: logo over the band. */}

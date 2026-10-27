@@ -43,18 +43,6 @@
   100% { opacity: 0; visibility: hidden; }
 }
 
-/* Auth panel: the strip light "strikes" like a tube switching on. */
-.cine-exposure--strike { animation: cine-strike 1.6s linear both; }
-@keyframes cine-strike {
-  0% { opacity: 0.96; visibility: visible; }
-  18% { opacity: 0.96; }
-  22% { opacity: 0.5; }
-  27% { opacity: 0.9; }
-  33% { opacity: 0.35; }
-  38% { opacity: 0.75; }
-  100% { opacity: 0; visibility: hidden; }
-}
-
 /* Anamorphic letterbox bars that open like a curtain. */
 .cine-letterbox {
   position: absolute;
@@ -73,31 +61,6 @@
   0% { transform: scaleY(1); visibility: visible; }
   99% { transform: scaleY(0); visibility: visible; }
   100% { transform: scaleY(0); visibility: hidden; }
-}
-
-/* One diagonal light sweep across the whole stage. */
-.cine-sweep {
-  position: absolute;
-  inset: -10% -40%;
-  pointer-events: none;
-  mix-blend-mode: screen;
-  background: linear-gradient(
-    104deg,
-    transparent 38%,
-    rgba(255, 214, 160, 0.07) 45%,
-    rgba(255, 255, 255, 0.16) 50%,
-    rgba(150, 196, 255, 0.08) 55%,
-    transparent 62%
-  );
-  transform: translate3d(-55%, 0, 0);
-  visibility: hidden;
-  animation: cine-sweep 2.1s var(--cine-ease-in-out) 0.95s both;
-}
-@keyframes cine-sweep {
-  0% { transform: translate3d(-55%, 0, 0); opacity: 1; visibility: visible; }
-  85% { opacity: 1; }
-  99% { transform: translate3d(55%, 0, 0); opacity: 0; visibility: visible; }
-  100% { transform: translate3d(55%, 0, 0); opacity: 0; visibility: hidden; }
 }
 
 /* The photo eases in from a slow push, then holds still. */
@@ -233,14 +196,6 @@
   color: #fff;
   text-wrap: balance;
 }
-/* Brushed-chrome fill on each word (the gradient lives on the moving element,
-   so the clip travels with it). */
-.cine-title .cine-word__in {
-  background: linear-gradient(180deg, #ffffff 0%, #ffffff 46%, #c9d3e3 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
 .cine-title__accent {
   display: block;
   font-style: italic;
@@ -265,12 +220,12 @@
 
 .cine-body { color: rgba(255, 255, 255, 0.78); }
 
-/* Search: dark glass with a brushed-metal hairline border (no backdrop blur). */
+/* Search: dark glass with a flat hairline border (no backdrop blur). */
 .cine-search {
   position: relative;
   border-radius: 999px;
   padding: 1px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.08) 38%, rgba(255, 255, 255, 0.05) 62%, rgba(110, 170, 255, 0.55));
+  background: rgba(255, 255, 255, 0.16);
   box-shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(0, 0, 0, 0.2);
   transition: box-shadow var(--dur-medium) var(--ease-decelerate);
 }
@@ -323,7 +278,7 @@
 .cine-hud__card {
   border-radius: 1.25rem;
   padding: 1px;
-  background: linear-gradient(140deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.06) 45%, rgba(110, 170, 255, 0.45));
+  background: rgba(255, 255, 255, 0.14);
   box-shadow: 0 30px 80px -24px rgba(0, 0, 0, 0.85);
 }
 .cine-hud__body {
@@ -524,20 +479,6 @@
   opacity: 0.6;
 }
 
-/* Primary button sheen on hover (pointer devices only). */
-.cine-sheen { position: relative; overflow: hidden; isolation: isolate; }
-.cine-sheen::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.35) 50%, transparent 65%);
-  transform: translate3d(-120%, 0, 0);
-}
-@media (hover: hover) and (pointer: fine) {
-  .cine-sheen:hover::after { transition: transform 0.9s var(--cine-ease); transform: translate3d(120%, 0, 0); }
-}
-
 @media (min-width: 1024px) {
   .cine-auth__visual { height: auto; min-height: 100svh; padding: 0.75rem; position: sticky; top: 0; }
   .cine-auth__frame { border-radius: var(--radius-sheet, 1.75rem); }
@@ -557,8 +498,7 @@
 /* ── Reduced motion / low data: a still frame ────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .cine-exposure,
-  .cine-letterbox,
-  .cine-sweep { display: none; }
+  .cine-letterbox { display: none; }
   .cine-settle,
   .cine-in,
   .cine-word__in,
@@ -569,8 +509,7 @@
   .cine-depth { will-change: auto; }
 }
 html.low-data .cine-exposure,
-html.low-data .cine-letterbox,
-html.low-data .cine-sweep { display: none; }
+html.low-data .cine-letterbox { display: none; }
 html.low-data .cine-settle,
 html.low-data .cine-in,
 html.low-data .cine-word__in,

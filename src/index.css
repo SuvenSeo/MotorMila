@@ -679,20 +679,6 @@
       transform 0.45s var(--ease-decelerate);
   }
 
-  /* Apple-style light sweep across the glass on hover. */
-  .hero-signal-card::after {
-    content: "";
-    position: absolute;
-    inset: -2px;
-    background: linear-gradient(105deg, transparent 42%, hsl(0 0% 100% / 0.16) 50%, transparent 58%);
-    transform: translateX(-130%);
-    pointer-events: none;
-  }
-  .hero-signal-float-wrap:hover .hero-signal-card::after {
-    transform: translateX(130%);
-    transition: transform var(--dur-long) var(--ease-decelerate);
-  }
-
   .hero-signal-card::before {
     content: none;
   }
