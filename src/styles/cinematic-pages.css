@@ -105,25 +105,45 @@
 .cine-gallery__frame [role="tablist"] { margin-top: 0.75rem; padding-inline: 1.25rem; }
 @media (min-width: 640px) { .cine-gallery__frame [role="tablist"] { padding-inline: 1.5rem; } }
 @media (min-width: 768px) { .cine-gallery__frame [role="tablist"] { padding-inline: 0.25rem; } }
-/* Slides keep a 4:3 frame; on wide screens the next photo peeks in, dimmed. */
+/* One photo at a time: every slide fills the whole frame, so the active
+   photo always sits in the same box and nothing of its neighbours shows at
+   rest (the slide gap only appears mid-swipe). Phones: the frame is 4:3, the
+   photo covers it. md+: the frame is wider than most photos, so the photo is
+   contained over a heavily blurred, darkened copy of itself (never another
+   photo). Overlays (credit, counter, expand) pin to this frame's corners. */
 .cine-gallery__slide {
   position: relative;
   height: 100%;
   min-width: 0;
   flex: 0 0 100%;
   overflow: hidden;
-  transition: opacity 0.45s var(--cine-ease);
 }
+.cine-gallery__bg { display: none; }
 @media (min-width: 768px) {
   .cine-gallery__slide {
-    flex-basis: min(calc(var(--g-h) * 4 / 3), 100%);
     margin-right: 0.75rem;
     border-radius: var(--radius-card);
   }
-  .cine-gallery__track[data-single] .cine-gallery__slide { margin-right: 0; }
-  .cine-gallery__slide[aria-hidden="true"] { opacity: 0.38; }
+  .cine-gallery__slide:last-child { margin-right: 0; }
+  .cine-gallery__bg {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    background: #07090d;
+  }
+  /* Until the full photo lands the card photo underneath shows through. */
+  .cine-gallery__img[data-pending="true"] + .cine-gallery__bg { visibility: hidden; }
+  .cine-gallery__bg img {
+    transform: scale(1.18);
+    filter: blur(28px) brightness(0.42) saturate(1.15);
+  }
+  .cine-gallery__bg img[data-placeholder="true"] { display: none; }
+  .cine-gallery .cine-gallery__img { object-fit: contain; }
+  .cine-gallery .cine-gallery__img[data-placeholder="true"] { object-fit: cover; }
 }
-/* The card photo the hero morphs out of: same box as the first slide. */
+/* The card photo the hero morphs out of: same box and fit as the hero. */
 .cine-gallery__ph {
   position: absolute;
   inset: 0 auto 0 0;
@@ -133,16 +153,16 @@
 }
 @media (min-width: 768px) {
   .cine-gallery__ph {
-    width: min(calc(var(--g-h) * 4 / 3), 100%);
+    object-fit: contain;
     border-radius: var(--radius-card);
+    background: #07090d;
   }
-  .cine-gallery[data-single] .cine-gallery__ph { left: 50%; transform: translateX(-50%); }
 }
 
 /* No photo: the silhouette plate carries a real caption (name + source). */
 .cine-nophoto { display: none; }
-.cine-gallery:has(img[data-placeholder="true"]) .cine-nophoto { display: flex; }
-.cine-gallery:has(img[data-placeholder="true"]) .cine-gallery__credit { display: none; }
+.cine-gallery:has(img[data-placeholder="true"]:not(.cine-gallery__bg *)) .cine-nophoto { display: flex; }
+.cine-gallery:has(img[data-placeholder="true"]:not(.cine-gallery__bg *)) .cine-gallery__credit { display: none; }
 .cine-nophoto {
   position: absolute;
   top: auto;
@@ -462,8 +482,7 @@ html.theme-light .cine-plan:not(.cine-plan--pro) { box-shadow: 0 1px 2px hsl(220
   .cine-meter__dot,
   .cine-stack > span { animation: none !important; }
   .cine-bar > span,
-  .cine-step-rail__fill,
-  .cine-gallery__slide { transition: none !important; }
+  .cine-step-rail__fill { transition: none !important; }
 }
 html.low-data .cine-rise,
 html.low-data .cine-pane,
@@ -479,7 +498,7 @@ html.low-data .cine-step-rail__fill { transition: none !important; }
   -webkit-mask-image: radial-gradient(ellipse 72% 70% at 50% 48%, #000 58%, transparent 100%);
   mask-image: radial-gradient(ellipse 72% 70% at 50% 48%, #000 58%, transparent 100%);
 }
-.cine-gallery:has(img[data-placeholder="true"]) .cine-gallery__expand { display: none; }
+.cine-gallery:has(img[data-placeholder="true"]:not(.cine-gallery__bg *)) .cine-gallery__expand { display: none; }
 
 /* Static film grain (no animation). */
 .cine-grain-static {

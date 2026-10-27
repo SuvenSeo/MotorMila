@@ -295,7 +295,7 @@ export function ListingImageCarousel({
                 ) : isDetail ? (
                   <button
                     type="button"
-                    className="block h-full w-full cursor-zoom-in"
+                    className="relative isolate block h-full w-full cursor-zoom-in"
                     aria-label={t("listingImage.openPhoto", "Open {label} full screen", { label: label(i) })}
                     tabIndex={i === index ? 0 : -1}
                     onClick={(e) => openLightbox(e.currentTarget)}
@@ -310,8 +310,17 @@ export function ListingImageCarousel({
                       marker={i === 0 ? "hero" : undefined}
                       silhouette={silhouette}
                       fadeIn
-                      className={`h-full w-full object-cover${imageClassName ? ` ${imageClassName}` : ""}`}
+                      className={`${slideClassName ? "cine-gallery__img " : ""}h-full w-full object-cover${imageClassName ? ` ${imageClassName}` : ""}`}
                     />
+                    {slideClassName && (
+                      // Stage fill (md+): a heavily blurred, darkened copy of this
+                      // same photo (the 80px thumb, already loaded for the strip).
+                      // aria-hidden keeps it out of the hero-morph image lookup; it
+                      // follows the photo so a sibling rule hides it while the hero loads.
+                      <span aria-hidden="true" className="cine-gallery__bg">
+                        <VehicleThumbnail src={src} listingId={listingId} alt="" source={source} sizes="80px" className="h-full w-full object-cover" />
+                      </span>
+                    )}
                   </button>
                 ) : (
                   <VehicleThumbnail
@@ -356,8 +365,13 @@ export function ListingImageCarousel({
             >
               <ChevronRight aria-hidden className="h-4 w-4" />
             </button>
-            {/* Top-centre: bottom corners carry price / deal / source overlays. */}
-            <span className="pointer-events-none absolute left-1/2 top-2.5 z-30 flex -translate-x-1/2 items-center gap-1 rounded-full border border-border bg-black/60 px-2 py-0.5 text-caption font-semibold tabular-nums text-white">
+            {/* Cards: top-centre (bottom corners carry price / deal / source
+                overlays). Detail: bottom-right corner of the single photo frame. */}
+            <span
+              className={`pointer-events-none absolute z-30 flex items-center gap-1 rounded-full border border-border bg-black/60 px-2 py-0.5 text-caption font-semibold tabular-nums text-white ${
+                isDetail ? "cine-gallery__count bottom-3 right-3" : "left-1/2 top-2.5 -translate-x-1/2"
+              }`}
+            >
               <Camera aria-hidden className="h-3 w-3" />
               {index + 1}/{count}
             </span>
