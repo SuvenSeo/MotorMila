@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { m } from "motion/react";
-import { CalendarClock, ClipboardCheck, FileDown, FileText, Receipt, ShieldCheck } from "lucide-react";
+import type { CSSProperties } from "react";
+import { CalendarClock, FileDown, FileText, Receipt } from "lucide-react";
 import { toast } from "sonner";
-import { PageHeader } from "@/components/ui/page-header";
+import { CineHeader } from "@/components/CineHeader";
+import { visuals } from "@/lib/visualAssets";
+import "@/styles/cinematic-pages.css";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,14 +17,12 @@ import {
   FormCard,
   Notice,
   NumberField,
-  ResultCard,
   ResultRow,
   ResultRows,
   ToolGrid,
   ToolPage,
 } from "@/components/tools/ToolKit";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { spring, useReducedMotionOrLowData } from "@/lib/motion";
 import {
   buildAgreementParagraphs,
   EMPTY_AGREEMENT,
@@ -140,7 +140,6 @@ async function downloadAgreementPdf(fields: SaleAgreementFields) {
 /** Safe-Transfer Kit: ownership-transfer checklist, deadline, costs and a printable sale agreement. */
 export default function SafeTransfer() {
   const { t } = useAppPreferences();
-  const still = useReducedMotionOrLowData();
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [saleDate, setSaleDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [vehicleClass, setVehicleClass] = useState<TransferVehicleClass>("motor_car");
@@ -225,22 +224,45 @@ export default function SafeTransfer() {
         )}
       </Notice>
 
-      <FormCard icon={ClipboardCheck} title={t("transfer.checklist", "Transfer checklist")}>
-        <div className="space-y-6">
-          {CHECKLIST.map((phase) => (
-            <fieldset key={phase.phase}>
-              <legend className="mb-1.5 text-caption font-semibold uppercase tracking-caps text-label-2">{phase.phase}</legend>
-              <div className="-mx-2 space-y-0.5">
-                {phase.items.map((item) => (
-                  <CheckRow key={item.id} id={`transfer-${item.id}`} checked={!!checked[item.id]} onCheckedChange={() => toggle(item.id)} muted>
-                    {item.text}
-                  </CheckRow>
-                ))}
-              </div>
-            </fieldset>
-          ))}
+      <Card padding="none" className="overflow-visible">
+        {/* Progress rail: stays under the nav while the list scrolls. */}
+        <div className="cine-progress rounded-t-card border-b border-separator bg-surface-1/95 px-5 pb-4 pt-5 backdrop-blur-sm sm:px-6" aria-live="polite">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-callout font-semibold text-foreground">{t("transfer.checklist", "Transfer checklist")}</h2>
+            <p className="num text-footnote font-semibold text-label-2">
+              <span className="sr-only">{t("transfer.progress", "{done} of {total} done", { done, total })}</span>
+              <span aria-hidden>
+                <span className="text-foreground"><AnimatedNumber value={done} /></span> / {total}
+              </span>
+            </p>
+          </div>
+          <div className="cine-step-rail mt-3" aria-hidden>
+            <span className="cine-step-rail__fill" style={{ "--p": total ? done / total : 0 } as CSSProperties} />
+          </div>
+          <p className="mt-2 text-caption text-label-2">{t("tools.transfer.progressTitle", "Checklist progress")}</p>
         </div>
-      </FormCard>
+        <div className="space-y-6 px-5 py-5 sm:px-6">
+          {CHECKLIST.map((phase, pi) => {
+            const phaseDone = phase.items.filter((i) => checked[i.id]).length;
+            return (
+              <fieldset key={phase.phase}>
+                <legend className="mb-2 flex w-full items-baseline gap-3">
+                  <span className="font-display text-footnote font-semibold tabular-nums text-primary">{String(pi + 1).padStart(2, "0")}</span>
+                  <span className="flex-1 text-footnote font-semibold text-foreground">{phase.phase}</span>
+                  <span className="num text-caption text-label-2">{phaseDone}/{phase.items.length}</span>
+                </legend>
+                <div className="-mx-2 divide-y divide-separator/70 border-t border-separator">
+                  {phase.items.map((item) => (
+                    <CheckRow key={item.id} id={`transfer-${item.id}`} checked={!!checked[item.id]} onCheckedChange={() => toggle(item.id)} muted className="rounded-none">
+                      {item.text}
+                    </CheckRow>
+                  ))}
+                </div>
+              </fieldset>
+            );
+          })}
+        </div>
+      </Card>
     </>
   );
 
@@ -295,71 +317,78 @@ export default function SafeTransfer() {
     </>
   );
 
-  const result = (
-    <>
-      <Card aria-live="polite">
-        <p className="text-footnote font-semibold text-primary">{t("tools.transfer.progressTitle", "Checklist progress")}</p>
-        <span className="sr-only">{t("transfer.progress", "{done} of {total} done", { done, total })}</span>
-        <p className="mt-2 font-display text-large font-semibold text-foreground" aria-hidden>
-          <AnimatedNumber value={done} />
-          <span className="text-title2 text-label-2"> / {total}</span>
-        </p>
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-2" aria-hidden>
-          <m.div
-            className="h-full w-full origin-left rounded-full bg-primary"
-            initial={false}
-            animate={{ scaleX: total ? done / total : 0 }}
-            transition={still ? { duration: 0 } : spring.smooth}
-          />
-        </div>
-      </Card>
+  const costRows = [
+    { key: "fee", label: t("transfer.fee", "DMT transfer fee (indicative)"), value: cost.transferFeeLkr },
+    { key: "stamp", label: t("transfer.stampLine", "Stamp duty"), value: cost.stampDutyLkr },
+    { key: "extras", label: t("transfer.extrasLine", "Other"), value: cost.extrasLkr },
+  ];
 
-      <Card>
+  const result = (
+    <Card className="cine-result theme-dark content-in overflow-hidden bg-[hsl(var(--cine-ink))] text-foreground shadow-e2">
+      <div aria-hidden className="cine-result__light" />
+      <div className="relative">
         <div className="flex items-center gap-2">
-          <CalendarClock className="h-5 w-5 text-primary" strokeWidth={1.75} aria-hidden />
-          <h2 className="text-callout font-semibold text-foreground">{t("transfer.deadline", "Your transfer deadline")}</h2>
+          <CalendarClock className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} aria-hidden />
+          <h2 className="cine-eyebrow text-muted-foreground">{t("transfer.deadline", "Your transfer deadline")}</h2>
+        </div>
+        <div aria-live="polite">
+          {deadlineText ? (
+            <p className="mt-4 text-footnote text-label-2">
+              {t("transfer.submitBy", "Submit the transfer to the DMT by")}
+              <strong className="cine-display mt-2 block text-[clamp(1.75rem,1.45rem+1vw,2.25rem)] font-semibold tabular-nums text-foreground">{deadlineText}</strong>
+            </p>
+          ) : (
+            <p className="cine-display mt-4 text-[clamp(1.75rem,1.45rem+1vw,2.25rem)] text-foreground">—</p>
+          )}
+          <p className="mt-2 text-footnote text-label-2">
+            {strict
+              ? t("transfer.strictYes", "This falls within strict enforcement (from {date}).", { date: "1 Dec 2026" })
+              : t("transfer.strictNo", "The 14-day rule already applies. Strict enforcement starts {date}.", { date: "1 Dec 2026" })}
+          </p>
         </div>
         <Field label={t("transfer.saleDate", "Date of sale")} htmlFor="transfer-sale-date" className="mt-4">
-          <Input id="transfer-sale-date" type="date" value={saleDate} onChange={(e) => setSaleDate(e.target.value)} />
+          <Input id="transfer-sale-date" type="date" value={saleDate} onChange={(e) => setSaleDate(e.target.value)} className="[color-scheme:dark]" />
         </Field>
-        {deadlineText ? (
-          <p className="mt-4 text-body text-foreground" aria-live="polite">
-            {t("transfer.submitBy", "Submit the transfer to the DMT by")} <strong className="font-semibold tabular-nums">{deadlineText}</strong>.
-          </p>
-        ) : null}
-        <p className="mt-1.5 text-footnote text-label-2">
-          {strict
-            ? t("transfer.strictYes", "This falls within strict enforcement (from {date}).", { date: "1 Dec 2026" })
-            : t("transfer.strictNo", "The 14-day rule already applies. Strict enforcement starts {date}.", { date: "1 Dec 2026" })}
-        </p>
-      </Card>
 
-      <ResultCard
-        emphasis={false}
-        label={t("transfer.cost", "Transfer cost estimate")}
-        value={<AnimatedLkr value={cost.totalLkr} />}
-        caption={t("transfer.costNote", "Indicative only. Check current fees with the DMT. Late-transfer penalties aren't included.")}
-      >
-        <ResultRows>
-          <ResultRow label={t("transfer.fee", "DMT transfer fee (indicative)")} value={<AnimatedLkr value={cost.transferFeeLkr} />} />
-          <ResultRow label={t("transfer.stampLine", "Stamp duty")} value={<AnimatedLkr value={cost.stampDutyLkr} />} />
-          <ResultRow label={t("transfer.extrasLine", "Other")} value={<AnimatedLkr value={cost.extrasLkr} />} />
-        </ResultRows>
-      </ResultCard>
-    </>
+        <div className="mt-6 border-t border-separator pt-5" aria-live="polite">
+          <p className="cine-eyebrow text-muted-foreground">{t("transfer.cost", "Transfer cost estimate")}</p>
+          <p className="cine-display mt-3 text-[clamp(2rem,1.7rem+1.2vw,2.75rem)] leading-none text-foreground">
+            <AnimatedLkr value={cost.totalLkr} />
+          </p>
+          <ResultRows className="mt-5">
+            {costRows.map((r, i) => (
+              <ResultRow
+                key={r.key}
+                index={i}
+                label={r.label}
+                value={<AnimatedLkr value={r.value} />}
+                share={cost.totalLkr > 0 ? r.value / cost.totalLkr : 0}
+              />
+            ))}
+          </ResultRows>
+          <p className="mt-4 text-caption text-label-2">
+            {t("transfer.costNote", "Indicative only. Check current fees with the DMT. Late-transfer penalties aren't included.")}
+          </p>
+        </div>
+      </div>
+    </Card>
   );
 
   return (
     <ToolPage
+      className="pt-8 lg:pt-10"
       header={
-        <PageHeader
+        <CineHeader
+          compact
           eyebrow={t("transfer.eyebrow", "Safe-Transfer Kit")}
-          eyebrowIcon={ShieldCheck}
-          title={t("transfer.title", "Transfer ownership safely")}
-          description={t(
+          lead={t("transfer.cine.lead", "Transfer ownership")}
+          accent={t("transfer.cine.accent", "safely.")}
+          body={t(
             "transfer.description",
             "A step-by-step checklist, your 14-day deadline, a cost estimate and a sale agreement you can print. For buyers and sellers of used vehicles in Sri Lanka.",
           )}
+          image={visuals.trustVerification}
+          imagePosition="55% 50%"
         />
       }
     >

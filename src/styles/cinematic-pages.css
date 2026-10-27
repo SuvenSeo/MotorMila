@@ -581,3 +581,99 @@ html.low-data .cine-step-rail__fill { transition: none !important; }
 @keyframes cine-curtain { to { transform: translate3d(calc(100% + 48px), 0, 0); } }
 @media (prefers-reduced-motion: reduce) { .cine-chart__curtain-wrap { display: none; } }
 html.low-data .cine-chart__curtain-wrap { display: none; }
+
+/* ── Pages 2: compare, picks, pulse, permits, EV, transfer ──────────────── */
+
+/* A dark panel inside the page body (both themes): same ink as the header,
+   one static light pool. Pair with .theme-dark so tokens inside flip. */
+.cine-panel {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: var(--radius-sheet, 1.75rem);
+  border: 1px solid hsl(0 0% 100% / 0.08);
+  background:
+    radial-gradient(ellipse 70% 60% at 100% 0%, hsl(213 100% 55% / 0.16), transparent 65%),
+    hsl(var(--cine-ink));
+  color: hsl(0 0% 100%);
+}
+.cine-panel.theme-dark {
+  --surface-1: var(--card);
+  --surface-2: var(--secondary);
+  --surface-3: var(--muted);
+  --label-1: var(--foreground);
+  --label-2: var(--muted-foreground);
+  --label-3: var(--muted-foreground);
+  --separator: var(--border);
+  --deal-green: var(--deal-good);
+  --deal-amber: var(--deal-caution);
+  --deal-red: var(--deal-high);
+}
+html.theme-light .cine-panel { box-shadow: 0 1px 2px hsl(220 30% 10% / 0.06), 0 18px 40px -20px hsl(220 30% 10% / 0.35); }
+
+/* Hairline list: rows divided by rules, no boxes. */
+.cine-list > li + li { border-top: 1px solid hsl(var(--border)); }
+.cine-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 0.25rem;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.2s ease;
+}
+a.cine-row:hover { background: hsl(var(--foreground) / 0.03); }
+a.cine-row:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; border-radius: 0.5rem; }
+.cine-row__arrow { flex: none; margin-top: 0.2rem; transition: transform 0.2s var(--cine-ease); }
+a.cine-row:hover .cine-row__arrow { transform: translate3d(3px, 0, 0); }
+
+/* Compare: four numbered car slots. */
+.cine-slot {
+  position: relative;
+  display: flex;
+  min-height: 11rem;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: var(--radius-card);
+  border: 1px dashed hsl(0 0% 100% / 0.18);
+  background: hsl(0 0% 100% / 0.02);
+}
+.cine-slot[data-filled="true"] { border-style: solid; border-color: hsl(0 0% 100% / 0.14); background: hsl(0 0% 100% / 0.04); }
+.cine-slot__num {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 2.25rem;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  color: hsl(0 0% 100% / 0.22);
+}
+
+/* Permits: relative price rule under each row. */
+.cine-rule { display: block; height: 2px; border-radius: 2px; background: hsl(var(--foreground) / 0.08); overflow: hidden; }
+.cine-rule > span { display: block; height: 100%; background: hsl(213 100% 64%); transform-origin: left; transform: scaleX(var(--w, 0)); }
+
+/* EV chargers: schematic radius plot. */
+.cine-radar { width: 100%; height: auto; display: block; }
+.cine-radar__ring { fill: none; stroke: hsl(0 0% 100% / 0.12); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.cine-radar__ring--edge { stroke: hsl(213 100% 64% / 0.55); stroke-dasharray: 3 5; }
+.cine-radar__axis { stroke: hsl(0 0% 100% / 0.06); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.cine-radar__dot { fill: hsl(213 100% 66%); stroke: hsl(var(--cine-ink)); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.cine-radar__center { fill: hsl(0 0% 100%); }
+.cine-radar__dots { animation: cine-fade 0.6s var(--cine-ease) 0.1s both; }
+@keyframes cine-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* Safe transfer: checklist progress rail (sticky under the nav). */
+.cine-progress {
+  position: sticky;
+  top: calc(var(--nav-offset, 64px) + 0.5rem);
+  z-index: 5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cine-radar__dots { animation: none !important; }
+  .cine-row__arrow { transition: none !important; }
+}
+html.low-data .cine-radar__dots { animation: none !important; }

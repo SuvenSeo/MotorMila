@@ -2,23 +2,21 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { m } from "motion/react";
-import { ArrowRight, BookOpen, FileText, Landmark, Radio } from "lucide-react";
+import { ArrowRight, BookOpen, Landmark, Radio } from "lucide-react";
 import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
-import { listItem, revealItem } from "@/lib/motion";
+import { listItem } from "@/lib/motion";
 import { Button } from "@/components/ui/button";
-import { Card, cardVariants } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
-import { PageHeader } from "@/components/ui/page-header";
-import { SectionHeading } from "@/components/ui/section-heading";
+import { CineHeader } from "@/components/CineHeader";
+import { CineSection } from "@/components/CineSection";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CountValue } from "@/components/ui/stat-tile";
 import { PulseSignalCard } from "@/components/data/PulseParts";
 import { PULSE_SOURCE_GUIDES, labelPulseSource, localizePulseGuide } from "@/lib/officialPulseContent";
-import { cn } from "@/lib/utils";
 import { getMarketSignals, getVehicleNews } from "@/services/api";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { useAppPreferences } from "@/lib/appPreferences";
@@ -60,89 +58,83 @@ export default function OfficialPulse() {
   const newsItems = newsQuery.data ?? [];
   const pending = signalsQuery.isPending;
 
+  const headerStats = [
+    { label: t("pulse.signals", "Signals"), value: pending ? null : signals.length },
+    { label: t("pulse.sources", "Sources"), value: pending ? null : sourceChips.length },
+    { label: t("pulse.guides", "Guides"), value: PULSE_SOURCE_GUIDES.length },
+  ].filter((s): s is { label: string; value: number } => typeof s.value === "number" && s.value > 0);
+
   return (
     <PageCanvas ambient="none">
-      <FreePlanBanner />
-      <PageHeader
+      <CineHeader
         eyebrow={t("pulse.eyebrow", "Official pulse")}
-        eyebrowIcon={Landmark}
-        title={t("pulse.title", "Official pulse.")}
-        description={t("pulse.description", "Government & import market signals, explained in-platform.")}
-        stats={[
-          {
-            label: t("pulse.signals", "Signals"),
-            value: pending ? "—" : <CountValue value={signals.length || null} />,
-            hint: t("pulse.signalsHint", "Indexed official metrics"),
-          },
-          {
-            label: t("pulse.sources", "Sources"),
-            value: pending ? "—" : <CountValue value={sourceChips.length || null} />,
-            hint: t("pulse.sourcesHint", "Government and import feeds"),
-          },
-          {
-            label: t("pulse.guides", "Guides"),
-            value: <CountValue value={PULSE_SOURCE_GUIDES.length} />,
-            hint: t("pulse.guidesHint", "Explainer cards in-platform"),
-          },
-        ]}
-        actions={
-          <>
-            <Button asChild>
-              <Link to="/docs#official-pulse">
-                <BookOpen aria-hidden />
-                {t("pulse.readDocs", "Read the docs")}
-              </Link>
-            </Button>
-            <Button asChild variant="secondary">
-              <Link to="/pricing">{t("common.viewPricing", "View pricing")}</Link>
-            </Button>
-          </>
-        }
-      />
+        lead={t("pulse.cine.lead", "Official")}
+        accent={t("pulse.cine.accent", "pulse.")}
+        body={t("pulse.description", "Government & import market signals, explained in-platform.")}
+      >
+        {headerStats.length ? (
+          <dl className="mb-6 grid max-w-md grid-cols-3 gap-4">
+            {headerStats.map((stat) => (
+              <div key={stat.label} className="min-w-0 border-t border-foreground/15 pt-3">
+                <dt className="text-caption text-white/55">{stat.label}</dt>
+                <dd className="cine-display mt-1 text-title2 tabular-nums text-white">{stat.value.toLocaleString("en-US")}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : null}
+        <div className="flex flex-wrap gap-2">
+          <Button asChild>
+            <Link to="/docs#official-pulse">
+              <BookOpen aria-hidden />
+              {t("pulse.readDocs", "Read the docs")}
+            </Link>
+          </Button>
+          <Button asChild variant="secondary">
+            <Link to="/pricing">{t("common.viewPricing", "View pricing")}</Link>
+          </Button>
+        </div>
+      </CineHeader>
 
-      <PageBody className="space-y-14 pt-0 lg:space-y-20 lg:pt-0">
-        <m.section variants={revealItem}>
-          <SectionHeading
-            eyebrow={t("pulse.guidesEyebrow", "How to read it")}
-            title={t("pulse.guidesTitle", "Signal guides")}
-            description={t("pulse.guidesDesc", "Each source is explained in Motormila so you can act without leaving for a government site first.")}
-          />
-          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {PULSE_SOURCE_GUIDES.map((g) => localizePulseGuide(g, t)).map((guide, i) => (
-              <m.li key={guide.key} variants={listItem} custom={i} initial="hidden" animate="show" className="list-none">
-                <Link
-                  to={`/official-pulse/guide/${guide.key}`}
-                  className={cn(cardVariants({ variant: "interactive", padding: "md" }), "group flex h-full flex-col no-underline")}
-                >
-                  <p className="text-caption font-semibold text-primary">{labelPulseSource(guide.source, t)}</p>
-                  <h3 className="mt-2 text-callout font-semibold text-foreground">{guide.title}</h3>
-                  <p className="mt-2 flex-1 text-footnote text-label-2">{guide.summary}</p>
-                  <span className="mt-4 inline-flex items-center gap-1.5 text-footnote font-semibold text-primary">
-                    <FileText aria-hidden className="h-4 w-4" />
-                    {t("pulse.openGuide", "Open guide")}
-                    <ArrowRight aria-hidden className="h-4 w-4 transition-transform duration-short ease-standard group-hover:translate-x-0.5" />
+      <PageBody className="space-y-14 pt-8 lg:space-y-20 lg:pt-12">
+        <FreePlanBanner />
+
+        <CineSection
+          index="01"
+          title={t("pulse.guidesTitle", "Signal guides")}
+          body={t("pulse.guidesDesc", "Each source is explained in Motormila so you can act without leaving for a government site first.")}
+        >
+          <ul className="cine-list border-y border-border">
+            {PULSE_SOURCE_GUIDES.map((g) => localizePulseGuide(g, t)).map((guide) => (
+              <li key={guide.key}>
+                <Link to={`/official-pulse/guide/${guide.key}`} className="cine-row group sm:items-center">
+                  <span className="w-28 shrink-0 pt-0.5 text-caption font-semibold uppercase tracking-caps text-primary sm:w-36 sm:pt-0">
+                    {labelPulseSource(guide.source, t)}
                   </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-callout font-semibold text-foreground transition-colors duration-short group-hover:text-primary">{guide.title}</span>
+                    <span className="mt-0.5 block text-footnote text-label-2 sm:line-clamp-1">{guide.summary}</span>
+                  </span>
+                  <span className="sr-only">{t("pulse.openGuide", "Open guide")}</span>
+                  <ArrowRight aria-hidden className="cine-row__arrow h-4 w-4 text-primary" />
                 </Link>
-              </m.li>
+              </li>
             ))}
           </ul>
-        </m.section>
+        </CineSection>
 
-        <m.section variants={revealItem}>
-          <SectionHeading
-            eyebrow={t("pulse.feedEyebrow", "Live feed")}
-            title={t("pulse.feedTitle", "Recent market signals")}
-            description={t("pulse.feedDesc", "Latest DMT, Customs, CBSL FX, CCPI, and import-parity observations synced into Motormila.")}
-            actions={
-              <Badge variant="neutral">
-                <Radio aria-hidden className="text-primary" />
-                {fullAccess
-                  ? t("pulse.last48", "Last 48 observations")
-                  : t("pulse.lastFree", "Latest {n} on Free", { n: FREE_PULSE_LIMIT })}
-              </Badge>
-            }
-          />
-
+        <CineSection
+          index="02"
+          title={t("pulse.feedTitle", "Recent market signals")}
+          body={t("pulse.feedDesc", "Latest DMT, Customs, CBSL FX, CCPI, and import-parity observations synced into Motormila.")}
+          actions={
+            <Badge variant="neutral">
+              <Radio aria-hidden className="text-primary" />
+              {fullAccess
+                ? t("pulse.last48", "Last 48 observations")
+                : t("pulse.lastFree", "Latest {n} on Free", { n: FREE_PULSE_LIMIT })}
+            </Badge>
+          }
+        >
           {sourceChips.length > 0 ? (
             <Tabs value={sourceFilter} onValueChange={setSourceFilter} className="mb-6">
               <div className="-mx-1 max-w-full overflow-x-auto px-1 pb-1">
@@ -210,29 +202,26 @@ export default function OfficialPulse() {
               ) : null}
             </>
           )}
-        </m.section>
+        </CineSection>
 
         {newsItems.length > 0 ? (
-          <m.section variants={revealItem}>
-            <SectionHeading
-              eyebrow={t("pulse.newsEyebrow", "Policy desk")}
-              title={t("pulse.newsTitle", "Vehicle & policy headlines")}
-              description={t(
-                "pulse.newsDesc",
-                "Recent Helakuru Esana items filtered for vehicle, import, fuel, and transport keywords.",
-              )}
-            />
-            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <CineSection
+            index="03"
+            title={t("pulse.newsTitle", "Vehicle & policy headlines")}
+            body={t(
+              "pulse.newsDesc",
+              "Recent Helakuru Esana items filtered for vehicle, import, fuel, and transport keywords.",
+            )}
+          >
+            <ul className="cine-list border-y border-border">
               {newsItems.map((item, index) => (
-                <m.li key={item.id || `${item.title}-${index}`} variants={listItem} custom={index} initial="hidden" animate="show" className="list-none">
-                  <Card padding="md" className="h-full">
-                    <p className="text-caption font-semibold text-primary">Helakuru Esana</p>
-                    <p className="mt-2 text-footnote font-semibold text-foreground">{item.title}</p>
-                  </Card>
+                <m.li key={item.id || `${item.title}-${index}`} variants={listItem} custom={index} initial="hidden" animate="show" className="cine-row list-none">
+                  <span className="w-28 shrink-0 text-caption font-semibold uppercase tracking-caps text-primary sm:w-36">Helakuru Esana</span>
+                  <p className="min-w-0 flex-1 text-footnote font-semibold text-foreground">{item.title}</p>
                 </m.li>
               ))}
             </ul>
-          </m.section>
+          </CineSection>
         ) : null}
       </PageBody>
     </PageCanvas>

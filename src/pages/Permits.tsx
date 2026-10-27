@@ -1,22 +1,21 @@
+import type { CSSProperties } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { m } from "motion/react";
 import { ArrowRight, Calculator, FileText, Info, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getPermits } from "@/services/api";
 import type { PermitInfo } from "@/services/api";
-import { revealItem, staggerDelay } from "@/lib/motion";
+import { staggerDelay } from "@/lib/motion";
 import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Card, cardVariants } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
-import { PageHeader } from "@/components/ui/page-header";
-import { SectionHeading } from "@/components/ui/section-heading";
-import { CountValue } from "@/components/ui/stat-tile";
+import { CineHeader } from "@/components/CineHeader";
+import { CineFigure, CineSection } from "@/components/CineSection";
+import { visuals } from "@/lib/visualAssets";
 import { TableContainer, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { QUERY_STALE } from "@/lib/queryPolicy";
@@ -61,7 +60,7 @@ function formatLkr(value: number): string {
   return formatLkrCompact(value);
 }
 
-function PermitRow({ permit, index }: { permit: PermitInfo; index: number }) {
+function PermitRow({ permit, index, top }: { permit: PermitInfo; index: number; top: number }) {
   const { t } = useAppPreferences();
   const typeLabel = t(`permits.type.${permit.permit_type}`, permitTypeLabel(permit.permit_type));
   const nameKey = permitNameKey(permit.permit_name);
@@ -76,8 +75,13 @@ function PermitRow({ permit, index }: { permit: PermitInfo; index: number }) {
       <TableCell className="hidden sm:table-cell">
         <Badge variant="neutral">{typeLabel}</Badge>
       </TableCell>
-      <TableCell numeric className="font-semibold">
-        {formatLkr(permit.market_price_lkr)}
+      <TableCell numeric className="w-36 font-semibold sm:w-48">
+        <span className="cine-card__price block text-callout tabular-nums">{formatLkr(permit.market_price_lkr)}</span>
+        {top > 0 && permit.market_price_lkr > 0 ? (
+          <span aria-hidden className="cine-rule ml-auto mt-2 w-full max-w-[10rem]">
+            <span style={{ "--w": Math.min(1, permit.market_price_lkr / top) } as CSSProperties} />
+          </span>
+        ) : null}
       </TableCell>
     </TableRow>
   );
@@ -94,49 +98,55 @@ export default function Permits() {
 
   const permits = data ?? [];
   const typeCount = new Set(permits.map((p) => p.permit_type)).size;
+  // Headline: the highest listed permit price in the index (real rows only).
+  const topPermit = permits.reduce<PermitInfo | null>(
+    (best, p) => (Number(p.market_price_lkr) > 0 && (!best || p.market_price_lkr > best.market_price_lkr) ? p : best),
+    null,
+  );
+  const topPrice = topPermit?.market_price_lkr ?? 0;
+  const topName = topPermit ? (permitNameKey(topPermit.permit_name) ? t(permitNameKey(topPermit.permit_name)!, topPermit.permit_name) : topPermit.permit_name) : "";
 
   return (
     <PageCanvas ambient="none">
-      <PageHeader
+      <CineHeader
         eyebrow={t("permits.eyebrow", "Permit tracker")}
-        eyebrowIcon={FileText}
-        title={t("permits.title", "Vehicle Permit Market")}
-        description={t(
+        lead={t("permits.cine.lead", "Vehicle permit")}
+        accent={t("permits.cine.accent", "market.")}
+        body={t(
           "permits.description",
           "Indicative black-market and transferable permit prices in the Sri Lankan vehicle import market. Data is admin-seeded and updated by scraper.",
         )}
-        stats={[
-          {
-            label: t("permits.highlightPrices", "Market prices"),
-            value: t("permits.indicative", "Indicative"),
-            hint: t("permits.researchBased", "Research-doc baselines + live scrape"),
-          },
-          {
-            label: t("permits.highlightTypes", "Permit types"),
-            value: isLoading ? "—" : <CountValue value={typeCount || null} />,
-            hint: t("permits.typesHint", "Duty-free, EV"),
-          },
-          {
-            label: t("permits.highlightCount", "Entries"),
-            value: isLoading ? "—" : <CountValue value={permits.length || null} />,
-            hint: t("permits.entriesHint", "Admin + scraper seeded"),
-          },
-        ]}
-      />
+        image={visuals.alt2PageInsuranceFinance}
+        imagePosition="60% 50%"
+      >
+        <div className="min-h-[5.5rem]" aria-live="polite">
+          {isLoading ? (
+            <div className="space-y-3" aria-hidden>
+              <Skeleton shape="text" className="h-3 w-40 bg-foreground/10" />
+              <Skeleton shape="text" className="h-10 w-48 bg-foreground/10" />
+            </div>
+          ) : topPermit ? (
+            <CineFigure
+              label={t("permits.cine.topKicker", "Top permit price")}
+              value={formatLkr(topPrice)}
+              caption={t("permits.cine.topCaption", "{name} · {types} permit types, {n} entries tracked", { name: topName, types: typeCount, n: permits.length })}
+            />
+          ) : null}
+        </div>
+      </CineHeader>
 
-      <PageBody className="space-y-8 pt-0 lg:pt-0">
-        <m.section variants={revealItem}>
-          <SectionHeading
-            eyebrow={t("permits.sectionEyebrow", "Live data")}
-            title={t("permits.sectionTitle", "Permit price index")}
-            actions={
-              <Button type="button" variant="secondary" size="sm" onClick={() => void refetch()} disabled={isFetching}>
-                <RefreshCw className={isFetching ? "animate-spin motion-reduce:animate-none" : undefined} aria-hidden />
-                {t("common.refresh", "Refresh")}
-              </Button>
-            }
-          />
-
+      <PageBody className="space-y-12 pt-8 lg:pt-12">
+        <CineSection
+          index="01"
+          title={t("permits.sectionTitle", "Permit price index")}
+          body={t("permits.researchBased", "Research-doc baselines + live scrape")}
+          actions={
+            <Button type="button" variant="secondary" size="sm" onClick={() => void refetch()} disabled={isFetching}>
+              <RefreshCw className={isFetching ? "animate-spin motion-reduce:animate-none" : undefined} aria-hidden />
+              {t("common.refresh", "Refresh")}
+            </Button>
+          }
+        >
           {isLoading ? (
             <div className="space-y-2" aria-hidden>
               {Array.from({ length: 6 }).map((_, i) => (
@@ -168,28 +178,30 @@ export default function Permits() {
               />
             </Card>
           ) : (
-            <TableContainer className="shadow-e1">
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead>{t("permits.colName", "Permit name")}</TableHead>
-                    <TableHead className="hidden sm:table-cell">{t("permits.colType", "Type")}</TableHead>
-                    <TableHead numeric>{t("permits.colPrice", "Market price")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {permits.map((p, i) => (
-                    <PermitRow key={p.id} permit={p} index={i} />
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            <div className="cine-panel theme-dark p-2 text-foreground sm:p-4">
+              <TableContainer className="border-0 bg-transparent shadow-none">
+                <Table>
+                  <TableHeader className="bg-transparent">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead>{t("permits.colName", "Permit name")}</TableHead>
+                      <TableHead className="hidden sm:table-cell">{t("permits.colType", "Type")}</TableHead>
+                      <TableHead numeric>{t("permits.colPrice", "Market price")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {permits.map((p, i) => (
+                      <PermitRow key={p.id} permit={p} index={i} top={topPrice} />
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </div>
           )}
-        </m.section>
+        </CineSection>
 
-        {/* Contextual note */}
-        <m.div variants={revealItem}>
-          <Card padding="md" className="flex gap-3">
+        <div className="grid gap-6 border-t border-separator pt-6 lg:grid-cols-2">
+          {/* Contextual note */}
+          <div className="flex gap-3">
             <Info aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
             <div className="space-y-1">
               <p className="text-footnote font-semibold text-foreground">{t("permits.disclaimerTitle", "Indicative prices only")}</p>
@@ -200,31 +212,24 @@ export default function Permits() {
                 )}
               </p>
             </div>
-          </Card>
-        </m.div>
+          </div>
 
-        {/* Cross-link to Calculator */}
-        <m.div variants={revealItem}>
-          <Link
-            to="/calculator?tab=permits"
-            className={cn(cardVariants({ variant: "interactive", padding: "md" }), "group flex items-center justify-between gap-3 no-underline")}
-          >
-            <span className="flex items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Calculator aria-hidden className="h-5 w-5" />
+          {/* Cross-link to Calculator */}
+          <Link to="/calculator?tab=permits" className="cine-row group -my-1 items-center rounded-control">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Calculator aria-hidden className="h-5 w-5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-callout font-semibold text-foreground transition-colors duration-short group-hover:text-primary">
+                {t("permits.calcLink", "Import & Landed Cost Calculator")}
               </span>
-              <span>
-                <span className="block text-callout font-semibold text-foreground">
-                  {t("permits.calcLink", "Import & Landed Cost Calculator")}
-                </span>
-                <span className="block text-footnote text-label-2">
-                  {t("permits.calcLinkHint", "Factor permit costs into your total import estimate")}
-                </span>
+              <span className="block text-footnote text-label-2">
+                {t("permits.calcLinkHint", "Factor permit costs into your total import estimate")}
               </span>
             </span>
-            <ArrowRight aria-hidden className="h-4 w-4 shrink-0 text-primary transition-transform duration-short ease-standard group-hover:translate-x-0.5" />
+            <ArrowRight aria-hidden className="cine-row__arrow h-4 w-4 text-primary" />
           </Link>
-        </m.div>
+        </div>
       </PageBody>
     </PageCanvas>
   );
