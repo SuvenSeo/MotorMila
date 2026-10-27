@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, ArrowRight, Car, Check, Gauge, Info, RotateCcw, SearchX, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, Car, Check, Info, RotateCcw, SearchX, ShieldCheck } from "lucide-react";
 import { AnimatePresence, m, type Variants } from "motion/react";
 import { estimatePrice, getMakes, getModels, getSnapshotModelComps } from "@/services/api";
 import { SRI_LANKA_DISTRICTS } from "@/data/districts";
 import { SellerFairAskCard } from "@/components/SellerFairAskCard";
-import { PageHeader } from "@/components/ui/page-header";
+import { CineHeader } from "@/components/CineHeader";
+import { visuals } from "@/lib/visualAssets";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -631,8 +632,16 @@ export default function Estimate() {
 
   return (
     <ToolPage
+      className="pt-8 lg:pt-10"
       header={
-        <PageHeader eyebrow={t("quiz.eyebrow", "Free valuation · no sign-up")} eyebrowIcon={Gauge} title={t("quiz.title", "What's your car worth?")} />
+        <CineHeader
+          compact
+          eyebrow={t("quiz.eyebrow", "Free valuation · no sign-up")}
+          lead={t("quiz.cine.lead", "What's your car")}
+          accent={t("quiz.cine.accent", "really worth?")}
+          image={visuals.pageCompareHero}
+          imagePosition="50% 70%"
+        />
       }
     >
       <ToolGrid form={quizCard} result={summary} />

@@ -341,7 +341,7 @@ export default function SignUp() {
             <FieldError message={errors.confirm?.message} />
           </div>
           {serverAlert}
-          <Button type="submit" size="lg" className="cine-sheen w-full" loading={loading}>
+          <Button type="submit" size="lg" className="w-full" loading={loading}>
             {t("signup.startTrial", `Start ${selfServeTrialDays}-day trial`)}
             <ArrowRight aria-hidden />
           </Button>
@@ -400,7 +400,7 @@ export default function SignUp() {
               <FieldError message={errors.confirm?.message} />
             </div>
             {serverAlert}
-            <Button type="submit" size="lg" className="cine-sheen w-full" loading={loading}>
+            <Button type="submit" size="lg" className="w-full" loading={loading}>
               {t("signup.activate", "Activate account")}
               <ArrowRight aria-hidden />
             </Button>

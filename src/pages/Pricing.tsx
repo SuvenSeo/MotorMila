@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { AnimatePresence, m } from "motion/react";
 import { ArrowRight, ChevronDown, Check, CreditCard, MessageCircle, Sparkles, Timer, Users } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,14 +10,18 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PageHeader } from "@/components/ui/page-header";
+import { CineHeader } from "@/components/CineHeader";
+import { AtmosphericImage } from "@/components/AtmosphericImage";
+import { visuals } from "@/lib/visualAssets";
+import { cn } from "@/lib/utils";
+import "@/styles/cinematic-pages.css";
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BRAND } from "@/lib/brand";
 import { DEALER_FAQ, DEALER_TIERS, PLAN_PRICES, PRICING_COMING_SOON, PRICING_FAQ, PRICING_TIERS, PRO_FREE_DURING_BETA, TRIAL_OFFER, formatLkr } from "@/lib/pricingContent";
 import type { DealerTierCode } from "@/lib/pricingContent";
+import type { I18nText } from "@/lib/translate";
 import { createPayhereCheckout, getPayhereConfig, submitPayhereForm, type PayhereConfig } from "@/lib/moneyApi";
-import { PageCanvas } from "@/components/PageCanvas";
 import { duration, fadeUp, listItem, listStagger, scaleIn, spring, useReducedMotionOrLowData } from "@/lib/motion";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { friendlyApiError } from "@/lib/apiErrorText";
@@ -531,11 +535,25 @@ const onScrollReveal = {
 function SectionTitle({ id, eyebrow, title }: { id: string; eyebrow: string; title: string }) {
   return (
     <div className="mb-6">
-      <p className="mb-2 text-footnote font-semibold text-primary">{eyebrow}</p>
-      <h2 id={id} className="font-display text-title1 font-semibold text-foreground">
+      <p className="cine-eyebrow text-muted-foreground">{eyebrow}</p>
+      <h2 id={id} className="cine-display mt-3 text-[clamp(1.75rem,1.3rem+1.6vw,2.5rem)] text-foreground">
         {title}
       </h2>
     </div>
+  );
+}
+
+function FeatureList({ items, tone = "default" }: { items: readonly I18nText[]; tone?: "default" | "stage" }) {
+  const { t } = useAppPreferences();
+  return (
+    <ul className={cn("mt-6 flex-1 space-y-3 border-t pt-6", tone === "stage" ? "border-white/10" : "border-separator")}>
+      {items.map((feature) => (
+        <li key={feature[0]} className={cn("flex gap-2.5 text-footnote", tone === "stage" ? "text-white/85" : "text-label-1")}>
+          <Check aria-hidden className={cn("mt-0.5 h-4 w-4 shrink-0", tone === "stage" ? "text-[hsl(213_100%_70%)]" : "text-primary")} />
+          <span>{tx(t, feature)}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -552,77 +570,93 @@ export default function Pricing() {
     pro: cell(row.pro),
   }));
   // Free + one honest Pro card. Dealer plans live in their own section below.
-  const tiers = PRICING_TIERS.filter((tier) => tier.id === "free" || tier.id === "pro");
+  const free = PRICING_TIERS.find((tier) => tier.id === "free");
+  const pro = PRICING_TIERS.find((tier) => tier.id === "pro");
   return (
-    <PageCanvas ambient="none">
-      <PageHeader
-        size="large"
-        align="center"
+    <div className="bg-background">
+      <CineHeader
         eyebrow={t("pricing.eyebrow", "Plans")}
-        eyebrowIcon={Sparkles}
-        title={t("shell.pricing.title", "Free while we're in beta")}
-        description={t(
-          "shell.pricing.body",
-          "Search, price ranges, price history and the import tax calculator are free. Pro is coming soon — leave your email and we'll tell you before it launches.",
-        )}
-        actions={
-          <div className="flex w-full flex-col items-center gap-3">
-            <TrialCta />
-            <Button asChild variant="tertiary">
-              <Link to="/pro-preview">
-                {t("shell.pricing.whatPro", "What Pro will include")}
-                <ArrowRight aria-hidden />
-              </Link>
-            </Button>
-          </div>
-        }
-      />
+        lead={t("pricing.cine.lead", "Free while")}
+        accent={t("pricing.cine.accent", "we're in beta.")}
+        body={t("pricing.cine.body", "Search, price ranges, price history and the import tax calculator cost nothing. Pro is on the way, and we'll tell you before it starts.")}
+        image={visuals.pageHomeHeroDusk}
+        imagePosition="58% 78%"
+      >
+        <div className="flex flex-wrap items-center gap-3">
+          <Button asChild size="lg">
+            <a href="#plans">
+              {t("pricing.cine.seePlans", "See the plans")}
+              <ArrowRight aria-hidden />
+            </a>
+          </Button>
+          <Button asChild size="lg" variant="secondary">
+            <Link to="/pro-preview">{t("shell.pricing.whatPro", "What Pro will include")}</Link>
+          </Button>
+        </div>
+      </CineHeader>
 
-      <div className="layout-shell space-y-16 pb-20 lg:space-y-24 lg:pb-28">
-        <m.section {...onScrollReveal} variants={listStagger} aria-labelledby="tiers-heading" className="mx-auto max-w-4xl">
+      <div className="layout-shell space-y-16 pb-20 pt-10 md:pt-14 lg:space-y-24 lg:pb-28">
+        <section id="plans" aria-labelledby="tiers-heading" className="mx-auto max-w-5xl scroll-mt-24">
           <SectionTitle id="tiers-heading" eyebrow={t("pricing.plansEyebrow", "Plans")} title={t("shell.pricing.tiersTitle", "Two plans. One is free.")} />
-          <div className="grid gap-4 md:grid-cols-2">
-            {tiers.map((tier, i) => (
-              <m.div key={tier.id} variants={listItem} custom={i}>
-                <Card padding="lg" className={tier.id === "free" ? "flex h-full flex-col border-primary/40 shadow-e2" : "flex h-full flex-col"}>
+          <div className="grid gap-5 md:grid-cols-2">
+            {free ? (
+              <article className="cine-plan cine-rise flex flex-col p-6 sm:p-8" style={{ "--i": 0 } as CSSProperties} aria-labelledby="plan-free">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 id="plan-free" className="text-callout font-semibold text-foreground">{tx(t, free.name)}</h3>
+                  <Badge variant="success">{t("shell.pro.freeBeta", "Free during beta")}</Badge>
+                </div>
+                <p className="mt-6 flex items-baseline gap-2">
+                  <span className="cine-display num text-[clamp(2.75rem,2.2rem+2vw,3.75rem)] text-foreground">{tx(t, free.priceLkr)}</span>
+                  {free.priceNote ? <span className="text-footnote text-label-2">{tx(t, free.priceNote)}</span> : null}
+                </p>
+                <p className="mt-3 max-w-sm text-footnote leading-relaxed text-label-2">{tx(t, free.audience)}</p>
+                <FeatureList items={free.features} />
+                <Button asChild size="lg" className="mt-8 w-full">
+                  <Link to={free.ctaTo}>
+                    {tx(t, free.ctaLabel)}
+                    <ArrowRight aria-hidden />
+                  </Link>
+                </Button>
+              </article>
+            ) : null}
+            {pro ? (
+              <article
+                id="get-started"
+                className="cine-plan cine-plan--pro theme-dark cine-rise flex scroll-mt-24 flex-col overflow-hidden"
+                style={{ "--i": 1 } as CSSProperties}
+                aria-labelledby="plan-pro"
+              >
+                <div aria-hidden className="cine-plan__plate">
+                  <AtmosphericImage src={visuals.darkGarageSilhouette.src} srcSm={visuals.darkGarageSilhouette.srcSm} sizes="(min-width: 768px) 32rem, 100vw" style={{ objectPosition: "80% 70%" }} />
+                </div>
+                <div className="relative flex flex-1 flex-col px-6 pb-6 sm:px-8 sm:pb-8">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-footnote font-semibold text-label-2">{tx(t, tier.name)}</p>
-                    {tier.id === "free" ? (
-                      <Badge variant="success">{t("shell.pro.freeBeta", "Free during beta")}</Badge>
-                    ) : (
-                      <Badge variant="neutral">{t("shell.pro.badge", "Pro · coming soon")}</Badge>
-                    )}
+                    <h3 id="plan-pro" className="text-callout font-semibold text-white">{tx(t, pro.name)}</h3>
+                    <Badge variant="info">{t("shell.pro.badge", "Pro · coming soon")}</Badge>
                   </div>
-                  <div className="mt-3 flex items-baseline gap-1.5">
-                    <span className="font-display text-title1 font-semibold tabular-nums text-foreground">{tx(t, tier.priceLkr)}</span>
-                    {tier.priceNote ? <span className="text-footnote text-label-2">{tx(t, tier.priceNote)}</span> : null}
+                  <p className="cine-display mt-6 text-[clamp(2.25rem,1.9rem+1.6vw,3rem)] text-white">
+                    <em>{tx(t, pro.priceLkr)}</em>
+                  </p>
+                  {pro.annualNote ? <p className="mt-2 text-footnote text-white/70">{tx(t, pro.annualNote)}</p> : null}
+                  <p className="mt-3 max-w-sm text-footnote leading-relaxed text-white/70">{tx(t, pro.audience)}</p>
+                  <FeatureList items={pro.features} tone="stage" />
+                  <div className="mt-8">
+                    <p className="mb-3 text-footnote font-semibold text-white">{t("shell.pricing.ctaTitle", "Get an email when Pro launches.")}</p>
+                    <TrialCta className="flex w-full flex-wrap items-center gap-2" />
+                    <Link
+                      to="/pro-preview"
+                      className="mt-4 inline-flex min-h-11 items-center gap-1.5 text-footnote font-semibold text-white/80 no-underline hover:text-white"
+                    >
+                      {t("shell.pricing.whatPro", "What Pro will include")} <ArrowRight aria-hidden className="h-3.5 w-3.5" />
+                    </Link>
                   </div>
-                  {tier.id !== "free" && tier.annualNote ? <p className="mt-1 text-footnote text-label-2">{tx(t, tier.annualNote)}</p> : null}
-                  <p className="mt-3 text-footnote text-label-2">{tx(t, tier.audience)}</p>
-                  <ul className="mt-5 flex-1 space-y-2.5 border-t border-separator pt-5">
-                    {tier.features.map((feature) => (
-                      <li key={feature[0]} className="flex gap-2 text-footnote text-label-1">
-                        <Check aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                        <span>{tx(t, feature)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="mt-6">
-                    {tier.id === "pro" ? (
-                      <TrialCta />
-                    ) : (
-                      <Button asChild className="w-full">
-                        <Link to={tier.ctaTo}>{tx(t, tier.ctaLabel)}</Link>
-                      </Button>
-                    )}
-                  </div>
-                </Card>
-              </m.div>
-            ))}
+                </div>
+              </article>
+            ) : null}
           </div>
-        </m.section>
+        </section>
 
-        <m.section {...onScrollReveal} variants={fadeUp} aria-labelledby="compare-heading" className="mx-auto max-w-4xl">
+        <m.section {...onScrollReveal} variants={fadeUp} aria-labelledby="compare-heading" className="mx-auto max-w-5xl">
           <SectionTitle id="compare-heading" eyebrow={t("pricing.compare", "Compare")} title={t("shell.pricing.compareTitle", "Free and Pro side by side.")} />
           <TableContainer className="shadow-e1">
             <Table className="min-w-[20rem]">
@@ -650,7 +684,7 @@ export default function Pricing() {
           </TableContainer>
         </m.section>
 
-        <m.section {...onScrollReveal} variants={listStagger} aria-labelledby="faq-heading" className="mx-auto max-w-4xl">
+        <m.section {...onScrollReveal} variants={listStagger} aria-labelledby="faq-heading" className="mx-auto max-w-5xl">
           <SectionTitle id="faq-heading" eyebrow={t("pricing.faq", "FAQ")} title={t("pricing.faqTitle", "Common questions.")} />
           <div className="grid gap-4 md:grid-cols-2">
             {PRICING_FAQ.map((item, i) => (
@@ -662,18 +696,24 @@ export default function Pricing() {
               </m.div>
             ))}
           </div>
+          <p className="mt-6 text-footnote text-label-2">
+            {t("pricing.cine.moreQuestions", "Something else?")}{" "}
+            <a href={BRAND.contactMailto} className="font-semibold text-primary underline-offset-2 hover:underline">
+              {t("common.messageUs", "Message us")}
+            </a>
+          </p>
         </m.section>
 
         {/* Dealers: real, sellable plans — kept off the main plan grid, one tap away. */}
         {/* Accordion: content stays in the DOM (hidden) so dealer prices remain indexable. */}
-        <m.div {...onScrollReveal} variants={fadeUp} id="for-dealers" className="mx-auto max-w-4xl scroll-mt-24">
-          <Card padding="none">
+        <m.div {...onScrollReveal} variants={fadeUp} id="for-dealers" className="mx-auto max-w-5xl scroll-mt-24">
+          <div className="cine-plan overflow-hidden">
             <button
               type="button"
               aria-expanded={dealersOpen}
               aria-controls="for-dealers-panel"
               onClick={() => setDealersOpen((o) => !o)}
-              className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-card p-5 text-left transition-colors duration-short ease-standard hover:bg-surface-2/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-6"
+              className="flex w-full cursor-pointer items-center justify-between gap-3 p-5 text-left transition-colors duration-short ease-standard hover:bg-surface-2/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:p-6"
             >
               <span className="inline-flex items-center gap-2 text-callout font-semibold text-foreground">
                 <Users aria-hidden className="h-5 w-5 text-primary" />
@@ -706,24 +746,9 @@ export default function Pricing() {
                 ))}
               </div>
             </Collapse>
-          </Card>
-        </m.div>
-
-        <m.div id="get-started" {...onScrollReveal} variants={fadeUp} className="mx-auto max-w-4xl scroll-mt-24">
-          <Card padding="lg" className="flex flex-col gap-5 border-primary/25 bg-primary/5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="mb-1 text-footnote font-semibold text-primary">{t("common.pro", "Pro")}</p>
-              <h3 className="text-title3 font-semibold text-foreground">{t("shell.pricing.ctaTitle", "Get an email when Pro launches.")}</h3>
-            </div>
-            <div className="flex flex-col gap-2 sm:items-end">
-              <TrialCta />
-              <Button asChild variant="tertiary" size="sm">
-                <a href={BRAND.contactMailto}>{t("common.messageUs", "Message us")}</a>
-              </Button>
-            </div>
-          </Card>
+          </div>
         </m.div>
       </div>
-    </PageCanvas>
+    </div>
   );
 }

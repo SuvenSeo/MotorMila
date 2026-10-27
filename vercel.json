@@ -19,6 +19,86 @@
       "source": "/valuation",
       "destination": "/estimate",
       "permanent": true
+    },
+    {
+      "source": "/prices",
+      "destination": "/trends",
+      "permanent": true
+    },
+    {
+      "source": "/price",
+      "destination": "/trends",
+      "permanent": true
+    },
+    {
+      "source": "/tools",
+      "destination": "/calculator",
+      "permanent": true
+    },
+    {
+      "source": "/calculators",
+      "destination": "/calculator",
+      "permanent": true
+    },
+    {
+      "source": "/tax-calculator",
+      "destination": "/calculator",
+      "permanent": true
+    },
+    {
+      "source": "/import-calculator",
+      "destination": "/calculator",
+      "permanent": true
+    },
+    {
+      "source": "/value",
+      "destination": "/estimate",
+      "permanent": true
+    },
+    {
+      "source": "/saved",
+      "destination": "/alerts",
+      "permanent": true
+    },
+    {
+      "source": "/watchlist",
+      "destination": "/alerts",
+      "permanent": true
+    },
+    {
+      "source": "/sell-my-car",
+      "destination": "/sell",
+      "permanent": true
+    },
+    {
+      "source": "/plans",
+      "destination": "/pricing",
+      "permanent": true
+    },
+    {
+      "source": "/deals",
+      "destination": "/best-picks",
+      "permanent": true
+    },
+    {
+      "source": "/app",
+      "destination": "/mobile-app",
+      "permanent": true
+    },
+    {
+      "source": "/login",
+      "destination": "/sign-in",
+      "permanent": true
+    },
+    {
+      "source": "/signin",
+      "destination": "/sign-in",
+      "permanent": true
+    },
+    {
+      "source": "/signup",
+      "destination": "/sign-up",
+      "permanent": true
     }
   ],
   "rewrites": [

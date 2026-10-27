@@ -18,6 +18,23 @@
 /admin /motormila/admin 301
 /price-index /trends 301
 /valuation /estimate 301
+# Common typed paths (nav labels, old habits): real 301s to the page they mean.
+/prices /trends 301
+/price /trends 301
+/tools /calculator 301
+/calculators /calculator 301
+/tax-calculator /calculator 301
+/import-calculator /calculator 301
+/value /estimate 301
+/saved /alerts 301
+/watchlist /alerts 301
+/sell-my-car /sell 301
+/plans /pricing 301
+/deals /best-picks 301
+/app /mobile-app 301
+/login /sign-in 301
+/signin /sign-in 301
+/signup /sign-up 301
 /cars/:make/:model/:year / 200
 /locations/:district / 200
 /compare/:slug / 200

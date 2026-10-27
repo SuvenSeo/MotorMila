@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { ShieldAlert, ArrowRight, ChevronDown } from "lucide-react";
+import { useState } from "react";
+import { ShieldAlert, ArrowRight, ChevronDown, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppPreferences } from "@/lib/appPreferences";
 
@@ -20,31 +21,59 @@ export function BeforeYouPayStrip({
   idSuffix?: string;
 }) {
   const { t } = useAppPreferences();
+  // Short lead (scannable) + the full sentence. Each row can be ticked off
+  // while talking to the seller (local only, nothing is stored).
   const tips = [
-    t("safety.noAdvance", "Never pay an advance or “booking fee” before you see the vehicle."),
-    t("safety.noOtp", "Don't share OTPs or open payment links the seller sends."),
-    t("safety.abroad", "Be wary of sellers who say they're abroad and will ship the vehicle."),
-    t("safety.crBook", "Check the CR book details with the DMT and match chassis and engine numbers."),
-    t("safety.transfer", "Ownership must be transferred within 14 days — don't accept open papers."),
+    { lead: t("safety.lead.noAdvance", "No advance payments"), body: t("safety.noAdvance", "Never pay an advance or “booking fee” before you see the vehicle.") },
+    { lead: t("safety.lead.noOtp", "No OTPs or payment links"), body: t("safety.noOtp", "Don't share OTPs or open payment links the seller sends.") },
+    { lead: t("safety.lead.abroad", "Seller “abroad”? Walk away"), body: t("safety.abroad", "Be wary of sellers who say they're abroad and will ship the vehicle.") },
+    { lead: t("safety.lead.crBook", "Match the CR book"), body: t("safety.crBook", "Check the CR book details with the DMT and match chassis and engine numbers.") },
+    { lead: t("safety.lead.transfer", "Transfer within 14 days"), body: t("safety.transfer", "Ownership must be transferred within 14 days — don't accept open papers.") },
   ];
+  const [done, setDone] = useState<ReadonlySet<number>>(() => new Set());
   const titleId = `before-you-pay-${idSuffix}`;
   const list = (
     <>
-      <ul className="mt-2 space-y-1.5 text-footnote leading-relaxed text-muted-foreground">
-        {tips.map((tip) => (
-          <li key={tip} className="flex gap-2">
-            <span aria-hidden className="mt-[0.55em] h-1 w-1 shrink-0 rounded-full bg-deal-caution" />
-            <span>{tip}</span>
+      <ul className="mt-2">
+        {tips.map((tip, i) => (
+          <li key={tip.lead}>
+            <label className="cine-check">
+              <input
+                type="checkbox"
+                className="sr-only"
+                checked={done.has(i)}
+                onChange={() =>
+                  setDone((cur) => {
+                    const next = new Set(cur);
+                    if (next.has(i)) next.delete(i);
+                    else next.add(i);
+                    return next;
+                  })
+                }
+              />
+              <span aria-hidden className="cine-check__box">
+                <Check className="h-3 w-3" strokeWidth={3} />
+              </span>
+              <span className="cine-check__text min-w-0">
+                <span className="cine-check__lead block text-footnote font-semibold text-foreground">{tip.lead}</span>
+                <span className="mt-0.5 block text-caption leading-relaxed text-muted-foreground">{tip.body}</span>
+              </span>
+            </label>
           </li>
         ))}
       </ul>
-      <Link
-        to="/safe-transfer"
-        className="mt-3 inline-flex min-h-[36px] items-center gap-1 text-footnote font-semibold text-primary no-underline hover:underline"
-      >
-        {t("safety.transferLink", "Safe transfer checklist")}
-        <ArrowRight aria-hidden className="h-3.5 w-3.5" />
-      </Link>
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-2">
+        <span className="num text-caption font-medium text-muted-foreground" aria-live="polite">
+          {t("safety.progress", "{done} of {total} checked", { done: done.size, total: tips.length })}
+        </span>
+        <Link
+          to="/safe-transfer"
+          className="inline-flex min-h-[36px] items-center gap-1 text-footnote font-semibold text-primary no-underline hover:underline"
+        >
+          {t("safety.transferLink", "Safe transfer checklist")}
+          <ArrowRight aria-hidden className="h-3.5 w-3.5" />
+        </Link>
+      </div>
     </>
   );
   const heading = (
@@ -53,7 +82,7 @@ export function BeforeYouPayStrip({
       <span>{t("listing.beforeYouPayTitle", "Before you pay")}</span>
     </>
   );
-  const shell = cn("rounded-2xl border border-deal-caution/30 bg-deal-caution/[0.06] p-4", className);
+  const shell = cn("rounded-2xl border border-deal-caution/25 bg-deal-caution/[0.05] px-4 pb-3 pt-4", className);
 
   if (collapsible) {
     return (

@@ -2,8 +2,6 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Gauge, Scale, Search, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { HOW_WE_PRICE_PATH } from "@/lib/howWePrice";
 
@@ -32,7 +30,7 @@ export function NotFoundSearch() {
   ];
 
   return (
-    <Card>
+    <div>
       <form
         role="search"
         onSubmit={(e) => {
@@ -40,38 +38,37 @@ export function NotFoundSearch() {
           const query = q.trim();
           navigate(query ? `/?q=${encodeURIComponent(query)}#market` : "/#market");
         }}
-        className="flex flex-col gap-2 sm:flex-row"
+        className="cine-field flex items-center gap-2 p-1.5 pl-4"
       >
         <label htmlFor="nf-search" className="sr-only">
           {t("notFound.searchLabel", "Search vehicles")}
         </label>
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-label-2" aria-hidden />
-          <Input
-            id="nf-search"
-            type="search"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder={t("notFound.searchPh", "Search make, model or year — e.g. Toyota Aqua 2015")}
-            className="h-12 pl-10"
-          />
-        </div>
-        <Button type="submit" size="lg">
+        <Search className="h-4 w-4 shrink-0 text-white/60" aria-hidden />
+        <input
+          id="nf-search"
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={t("notFound.searchPh", "Search make, model or year — e.g. Toyota Aqua 2015")}
+          className="h-11 min-w-0 flex-1 bg-transparent text-body text-white placeholder:text-white/45 focus:outline-none"
+        />
+        <Button type="submit" size="md" className="h-11 shrink-0 px-5">
           {t("notFound.searchBtn", "Search")}
         </Button>
       </form>
       <ul className="mt-4 flex flex-wrap gap-2">
         {quick.map(({ to, label, icon: Icon }) => (
           <li key={to} className="max-w-full">
-            <Button asChild variant="secondary" size="sm" className="h-auto min-h-9 max-w-full whitespace-normal py-1.5 text-center font-medium">
-              <Link to={to} className="no-underline">
-                <Icon className="text-primary" aria-hidden />
-                {label}
-              </Link>
-            </Button>
+            <Link
+              to={to}
+              className="inline-flex min-h-9 max-w-full items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.04] px-3.5 py-1.5 text-footnote font-medium text-white/85 no-underline transition-colors hover:border-white/30 hover:bg-white/10 hover:text-white"
+            >
+              <Icon className="h-3.5 w-3.5 shrink-0 text-[hsl(213_100%_70%)]" aria-hidden />
+              {label}
+            </Link>
           </li>
         ))}
       </ul>
-    </Card>
+    </div>
   );
 }

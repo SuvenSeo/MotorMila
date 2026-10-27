@@ -187,7 +187,7 @@ export default function SignIn() {
             </m.p>
           )}
         </AnimatePresence>
-        <Button type="submit" size="lg" className="cine-sheen w-full" loading={loading}>
+        <Button type="submit" size="lg" className="w-full" loading={loading}>
           {t("signin.submit", "Sign in")}
           <ArrowRight aria-hidden />
         </Button>

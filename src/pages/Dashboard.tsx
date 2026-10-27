@@ -1,4 +1,5 @@
 import { scrollBehavior, duration, ease, spring, press, useReducedMotionOrLowData } from "@/lib/motion";
+import { silhouetteFor } from "@/lib/vehicleSilhouette";
 import { Fragment, forwardRef, memo, type CSSProperties, startTransition, useDeferredValue, useImperativeHandle, useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { useDeferredMount } from "@/hooks/useDeferredMount";
@@ -619,7 +620,7 @@ export default function Dashboard() {
 
       {/* ── HERO — "Night drive" cinematic stage ───────────────────────
           Layers (back → front): photo plate (pointer + scroll parallax,
-          slow settle) · light bloom · scrim · one-shot light sweep · grain ·
+          slow settle) · light bloom · scrim · grain ·
           exposure lift · letterbox curtain. All transform/opacity. */}
       <section
         ref={heroSectionRef}
@@ -646,7 +647,6 @@ export default function Dashboard() {
             <div className="cine-hero__bloom" />
           </div>
           <div className="cine-hero__scrim" />
-          <div className="cine-sweep" />
           <div className="cine-grain" />
           <div className="cine-exposure" />
           <div className="cine-letterbox cine-letterbox--top" />
@@ -788,7 +788,7 @@ export default function Dashboard() {
                       enterKeyHint="search"
                       className="h-14 min-w-0 flex-1 bg-transparent text-body font-semibold text-white outline-none placeholder:text-white/45 [&::-webkit-search-cancel-button]:hidden"
                     />
-                    <Button type="button" onClick={runHeroSearch} size="md" className="cine-sheen mr-0.5 h-11 px-6 text-footnote">
+                    <Button type="button" onClick={runHeroSearch} size="md" className="mr-0.5 h-11 px-6 text-footnote">
                       {t("common.search", "Search")}
                     </Button>
                     </div>
@@ -1113,7 +1113,7 @@ export default function Dashboard() {
                           )}
                         >
                           <div className="h-16 w-24 shrink-0 overflow-hidden rounded-control bg-surface-2">
-                            <VehicleThumbnail src={pickVehicleImageUrl([listing.thumbnail_url, ...(Array.isArray(listing.images) ? listing.images : [])], [listing.detail_url])} listingId={listing.id} source={listing.source} alt={`${listing.make} ${listing.model}`} className="h-full w-full object-cover" />
+                            <VehicleThumbnail src={pickVehicleImageUrl([listing.thumbnail_url, ...(Array.isArray(listing.images) ? listing.images : [])], [listing.detail_url])} listingId={listing.id} source={listing.source} alt={`${listing.make} ${listing.model}`} silhouette={silhouetteFor(listing)} className="h-full w-full object-cover" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-body font-semibold text-foreground transition-colors duration-short group-hover:text-primary">{listing.make} {listing.model} {listing.variant || ""}</p>
@@ -1121,7 +1121,7 @@ export default function Dashboard() {
                           </div>
                           <div className="shrink-0 text-right">
                             {hasPrice ? (
-                              <p className="num text-body font-semibold text-foreground">{formatPrice(Number(listing.price_lkr))}</p>
+                              <p className="cine-card__price num text-body text-foreground">{formatPrice(Number(listing.price_lkr))}</p>
                             ) : <PriceUnavailableBadge label={t("common.na", "N/A")} className="text-caption" />}
                             {fullAccess && listing.deal_score != null && (
                               <p className={cn("num mt-0.5 text-caption font-semibold", Number(listing.deal_score) >= 0 ? "text-deal-good-text" : "text-label-2")}>

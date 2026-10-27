@@ -32,6 +32,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { compactLkrParts } from "@/components/motion/FlowNumber";
 import { formatLkrCompact, formatLkrFull, formatLkrMonthly } from "@/lib/price";
+import "@/styles/cinematic-pages.css";
 
 /* ── Page frame ──────────────────────────────────────────────────────────── */
 
@@ -441,19 +442,34 @@ export function ResultCard({
     <Card
       aria-live="polite"
       aria-busy={busy || undefined}
-      className={cn("content-in overflow-hidden", emphasis && "border-primary/20", className)}
+      className={cn(
+        "content-in overflow-hidden",
+        // The one hero result on a page: a dark "night drive" stage in both
+        // themes (.theme-dark re-points every token inside it), lit by a
+        // single static light pool. No sweep, no sheen.
+        emphasis && "cine-result theme-dark bg-[hsl(var(--cine-ink))] text-foreground shadow-e2",
+        className,
+      )}
     >
-      <div className={cn("transition-opacity duration-short ease-standard", busy && "opacity-60")}>
+      {emphasis ? <div aria-hidden className="cine-result__light" /> : null}
+      <div className={cn("relative transition-opacity duration-short ease-standard", busy && "opacity-60")}>
         {/* Wraps so a long Tamil/Sinhala badge drops under the label instead of overflowing the card on phones. */}
         <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
-          <p className="min-w-0 text-footnote font-semibold text-primary">{label}</p>
+          <p className={cn("min-w-0", emphasis ? "cine-eyebrow text-muted-foreground" : "text-footnote font-semibold text-primary")}>{label}</p>
           {badge ? <div className="min-w-0 max-w-full">{badge}</div> : null}
         </div>
-        <p className="mt-2 font-display text-large font-semibold text-foreground">{value}</p>
-        {caption ? <p className="mt-1 text-footnote text-label-2">{caption}</p> : null}
+        <p
+          className={cn(
+            "text-foreground",
+            emphasis ? "cine-display mt-4 text-[clamp(2.25rem,1.85rem+1.5vw,3rem)] leading-none" : "mt-2 font-display text-large font-semibold",
+          )}
+        >
+          {value}
+        </p>
+        {caption ? <p className={cn("text-footnote text-label-2", emphasis ? "mt-3" : "mt-1")}>{caption}</p> : null}
         {children ? <div className="mt-5 border-t border-separator pt-4">{children}</div> : null}
       </div>
-      {footer ? <div className="mt-5">{footer}</div> : null}
+      {footer ? <div className="relative mt-5">{footer}</div> : null}
     </Card>
   );
 }
@@ -467,26 +483,47 @@ export function ResultRow({
   value,
   strong = false,
   tone,
+  share,
+  index = 0,
   className,
 }: {
   label: React.ReactNode;
   value: React.ReactNode;
   strong?: boolean;
   tone?: "danger" | "good";
+  /**
+   * Optional 0–1 share of the total: draws a hairline bar under the row that
+   * reveals once on mount, then eases to new values (transform only).
+   */
+  share?: number;
+  /** Stagger slot for the bar reveal. */
+  index?: number;
   className?: string;
 }) {
-  return (
+  const row = (
     <div
       className={cn(
         "flex items-baseline justify-between gap-4 text-footnote",
         strong && "border-t border-separator pt-2.5",
         tone === "danger" && "text-deal-high-text",
         tone === "good" && "text-deal-good-text",
-        className,
+        share === undefined && className,
       )}
     >
       <dt className={cn(tone ? "" : "text-label-2", strong && "font-semibold text-foreground")}>{label}</dt>
       <dd className={cn("shrink-0 text-right font-semibold tabular-nums", !tone && "text-foreground")}>{value}</dd>
+    </div>
+  );
+  if (share === undefined) return row;
+  const w = Number.isFinite(share) ? Math.max(0, Math.min(1, share)) : 0;
+  return (
+    <div className={className}>
+      {row}
+      <span aria-hidden className="cine-bar mt-1.5" data-tone={tone}>
+        <i className="cine-bar__reveal" style={{ "--i": index } as React.CSSProperties}>
+          <span style={{ "--w": w } as React.CSSProperties} />
+        </i>
+      </span>
     </div>
   );
 }
