@@ -43,10 +43,6 @@ From fragmented listings to a clearer picture of prices, trends, and opportuniti
 
 <br /><br />
 
-<a href="https://motormila.vercel.app">
-  <img src="public/og-card.jpg" alt="MotorMila official product artwork" width="100%" />
-</a>
-
 <sub>ONE MARKET. THOUSANDS OF SIGNALS. A MORE INFORMED DECISION.</sub>
 
 </div>
