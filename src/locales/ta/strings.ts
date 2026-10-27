@@ -764,4 +764,9 @@ export const stringsTa: Record<string, string> = {
   "sell.step.next": "தொடரவும்",
   "sell.cine.lead": "உங்கள் வாகனம்,",
   "sell.cine.accent": "அதன் சிறந்த ஒளியில்.",
+  "pricing.cine.lead": "பீட்டா காலத்தில்",
+  "pricing.cine.accent": "இலவசம்.",
+  "pricing.cine.body": "தேடல், விலை வரம்புகள், விலை வரலாறு மற்றும் இறக்குமதி வரி கணிப்பான் அனைத்தும் இலவசம். Pro விரைவில் வருகிறது; அது தொடங்கும் முன் உங்களுக்குத் தெரிவிப்போம்.",
+  "pricing.cine.seePlans": "திட்டங்களைப் பார்க்கவும்",
+  "pricing.cine.moreQuestions": "வேறு ஏதாவது கேள்வி உள்ளதா?",
 };

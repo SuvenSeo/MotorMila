@@ -764,4 +764,9 @@ export const stringsSi: Record<string, string> = {
   "sell.step.next": "ඉදිරියට",
   "sell.cine.lead": "ඔබේ වාහනය,",
   "sell.cine.accent": "එහි හොඳම ආලෝකයෙන්.",
+  "pricing.cine.lead": "බීටා අදියරේදී",
+  "pricing.cine.accent": "නොමිලේ.",
+  "pricing.cine.body": "සෙවීම, මිල පරාස, මිල ඉතිහාසය සහ ආනයන බදු ගණකය සම්පූර්ණයෙන්ම නොමිලේ. Pro ළඟදීම එනවා; එය ආරම්භ වීමට පෙර අපි ඔබට දන්වන්නෙමු.",
+  "pricing.cine.seePlans": "සැලසුම් බලන්න",
+  "pricing.cine.moreQuestions": "වෙනත් දෙයක් දැනගන්න ඕනෙද?",
 };

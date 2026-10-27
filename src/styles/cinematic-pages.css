@@ -349,6 +349,19 @@
   color: #fff;
 }
 
+/* Photo plate on the Pro card: one car under one light, fading into ink. */
+.cine-plan__plate { position: relative; aspect-ratio: 16 / 7; overflow: hidden; }
+.cine-plan__plate img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.9; }
+.cine-plan__plate::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 35%, hsl(var(--cine-ink)) 100%);
+}
+.cine-plan--pro .cine-plan__plate + div { margin-top: -1.5rem; }
+/* Light theme: the free card sits on paper, give it a soft lift. */
+html.theme-light .cine-plan:not(.cine-plan--pro) { box-shadow: 0 1px 2px hsl(220 30% 10% / 0.05), 0 12px 32px -16px hsl(220 30% 10% / 0.18); }
+
 /* ── Tools: hero result + breakdown bars ─────────────────────────────────── */
 .cine-result {
   border-radius: var(--radius-sheet, 1.75rem);

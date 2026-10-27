@@ -769,4 +769,9 @@ export const stringsEn: Record<string, string> = {
   "sell.step.next": "Continue",
   "sell.cine.lead": "Your car,",
   "sell.cine.accent": "in its best light.",
+  "pricing.cine.lead": "Free while",
+  "pricing.cine.accent": "we're in beta.",
+  "pricing.cine.body": "Search, price ranges, price history and the import tax calculator cost nothing. Pro is on the way, and we'll tell you before it starts.",
+  "pricing.cine.seePlans": "See the plans",
+  "pricing.cine.moreQuestions": "Something else?",
 };
