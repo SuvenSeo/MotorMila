@@ -367,15 +367,37 @@ html.theme-light .cine-plan:not(.cine-plan--pro) { box-shadow: 0 1px 2px hsl(220
   border-radius: var(--radius-sheet, 1.75rem);
   overflow: hidden;
 }
-.cine-bar { height: 8px; border-radius: 999px; background: hsl(0 0% 100% / 0.08); overflow: hidden; }
-.cine-bar > span {
+.cine-result { position: relative; isolation: isolate; }
+.cine-result__light {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 55% at 100% 0%, hsl(213 100% 55% / 0.2), transparent 65%),
+    radial-gradient(ellipse 50% 40% at 0% 100%, hsl(32 90% 55% / 0.08), transparent 70%);
+}
+/* Breakdown bars: the reveal (mount, once) and the value (eases on change)
+   are separate transforms so neither needs var() inside a keyframe. */
+.cine-bar { display: block; height: 4px; border-radius: 999px; background: hsl(var(--foreground) / 0.08); overflow: hidden; }
+.cine-bar__reveal {
   display: block;
   height: 100%;
-  border-radius: inherit;
+  transform-origin: left;
+  animation: cine-grow 0.9s var(--cine-ease) both;
+  animation-delay: calc(120ms + var(--i, 0) * 70ms);
+}
+.cine-bar__reveal > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: hsl(var(--primary));
   transform-origin: left;
   transform: scaleX(var(--w, 0));
-  transition: transform 0.8s var(--cine-ease);
+  transition: transform 0.6s var(--cine-ease);
 }
+.cine-result .cine-bar__reveal > span { background: hsl(213 100% 64%); }
+.cine-bar[data-tone="danger"] .cine-bar__reveal > span { background: hsl(var(--deal-high)); }
+.cine-bar[data-tone="good"] .cine-bar__reveal > span { background: hsl(var(--deal-good)); }
 .cine-stack { display: flex; height: 10px; gap: 2px; border-radius: 999px; overflow: hidden; }
 .cine-stack > span {
   height: 100%;
@@ -420,8 +442,9 @@ html.low-data .cine-rise,
 html.low-data .cine-pane,
 html.low-data .cine-meter__band,
 html.low-data .cine-meter__dot,
-html.low-data .cine-stack > span { animation: none !important; }
-html.low-data .cine-bar > span,
+html.low-data .cine-stack > span,
+html.low-data .cine-bar__reveal { animation: none !important; }
+html.low-data .cine-bar__reveal > span,
 html.low-data .cine-step-rail__fill { transition: none !important; }
 
 /* No-photo plate: feather its edges into the stage; nothing to expand. */

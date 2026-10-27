@@ -769,4 +769,10 @@ export const stringsSi: Record<string, string> = {
   "pricing.cine.body": "සෙවීම, මිල පරාස, මිල ඉතිහාසය සහ ආනයන බදු ගණකය සම්පූර්ණයෙන්ම නොමිලේ. Pro ළඟදීම එනවා; එය ආරම්භ වීමට පෙර අපි ඔබට දන්වන්නෙමු.",
   "pricing.cine.seePlans": "සැලසුම් බලන්න",
   "pricing.cine.moreQuestions": "වෙනත් දෙයක් දැනගන්න ඕනෙද?",
+  "calc.cine.lead": "එය මෙරටට පැමිණි විට",
+  "calc.cine.accent": "වැය වන මුදල.",
+  "quiz.cine.lead": "ඔබේ වාහනයේ",
+  "quiz.cine.accent": "සැබෑ වටිනාකම කීයද?",
+  "afford.cine.lead": "මට දරාගත හැක්කේ",
+  "afford.cine.accent": "කුමන වාහනයද?",
 };

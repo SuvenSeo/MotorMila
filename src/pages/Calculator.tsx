@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AnimatePresence, m } from "motion/react";
-import { Banknote, Bell, BellOff, Calculator as CalculatorIcon, CheckCircle2, FileBadge, Gauge, Link2, RefreshCw, WalletCards } from "lucide-react";
+import { Banknote, Bell, BellOff, CheckCircle2, FileBadge, Gauge, Link2, RefreshCw, WalletCards } from "lucide-react";
 import { toast } from "sonner";
 import { tween } from "@/lib/motion";
 import { formatPrice, getMacroContext, type LandedCostResult, type TcoResult, type MacroContext } from "@/services/api";
@@ -12,7 +12,8 @@ import {
   calculateTcoOffline,
   type OfflineFlag,
 } from "@/lib/offlineCalculators";
-import { PageHeader } from "@/components/ui/page-header";
+import { CineHeader } from "@/components/CineHeader";
+import { visuals } from "@/lib/visualAssets";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ErrorState } from "@/components/ui/error-state";
@@ -537,6 +538,10 @@ export default function Calculator() {
     </>
   );
 
+  // Each component's share of the landed cost, for the breakdown bars (display only).
+  const lcShare = (part: number) => (lcResult && lcResult.landed_cost > 0 ? part / lcResult.landed_cost : 0);
+  const tcoShare = (part: number) => (tcoResult && tcoResult.total_tco_monthly > 0 ? part / tcoResult.total_tco_monthly : 0);
+
   const landedResult =
     lcLoading && !lcResult ? (
       <ResultSkeleton rows={6} label={t("tools.calculating", "Calculating")} />
@@ -580,14 +585,14 @@ export default function Calculator() {
       >
         <p className="mb-3 text-caption text-label-2">{t("calc.breakdownHint", "Indicative tax components based on 2026 gazette calculations")}</p>
         <ResultRows>
-          <ResultRow label={t("calc.baseCif", "Base CIF LKR Equivalent")} value={<AnimatedLkr value={lcResult.cif_lkr} />} />
-          <ResultRow label={t("calc.cid", "Customs Import Duty (20%)")} value={<AnimatedLkr value={lcResult.cid} />} />
-          <ResultRow label={t("calc.surchargeOnCid", "Surcharge on CID (50% Surcharge)")} value={<AnimatedLkr value={lcResult.surcharge} />} />
-          <ResultRow label={t("calc.excise", "Excise Duty (Capacity Banded)")} value={<AnimatedLkr value={lcResult.excise} />} />
-          <ResultRow label={t("calc.sscl", "SSCL (2.5%)")} value={<AnimatedLkr value={lcResult.sscl} />} />
-          <ResultRow label={t("calc.vat", "VAT (18% Compounded)")} value={<AnimatedLkr value={lcResult.vat} />} />
+          <ResultRow label={t("calc.baseCif", "Base CIF LKR Equivalent")} value={<AnimatedLkr value={lcResult.cif_lkr} />} share={lcShare(lcResult.cif_lkr)} index={0} />
+          <ResultRow label={t("calc.cid", "Customs Import Duty (20%)")} value={<AnimatedLkr value={lcResult.cid} />} share={lcShare(lcResult.cid)} index={1} />
+          <ResultRow label={t("calc.surchargeOnCid", "Surcharge on CID (50% Surcharge)")} value={<AnimatedLkr value={lcResult.surcharge} />} share={lcShare(lcResult.surcharge)} index={2} />
+          <ResultRow label={t("calc.excise", "Excise Duty (Capacity Banded)")} value={<AnimatedLkr value={lcResult.excise} />} share={lcShare(lcResult.excise)} index={3} />
+          <ResultRow label={t("calc.sscl", "SSCL (2.5%)")} value={<AnimatedLkr value={lcResult.sscl} />} share={lcShare(lcResult.sscl)} index={4} />
+          <ResultRow label={t("calc.vat", "VAT (18% Compounded)")} value={<AnimatedLkr value={lcResult.vat} />} share={lcShare(lcResult.vat)} index={5} />
           {lcResult.luxury_tax > 0 ? (
-            <ResultRow tone="danger" label={t("calc.luxuryTax", "Luxury Tax (Excess Portion)")} value={<AnimatedLkr value={lcResult.luxury_tax} />} />
+            <ResultRow tone="danger" label={t("calc.luxuryTax", "Luxury Tax (Excess Portion)")} value={<AnimatedLkr value={lcResult.luxury_tax} />} share={lcShare(lcResult.luxury_tax)} index={6} />
           ) : null}
         </ResultRows>
       </ResultCard>
@@ -683,11 +688,11 @@ export default function Calculator() {
             label={t("tools.calc.fuelBenchmark", "Fuel / energy price benchmark")}
             value={t("tools.calc.perUnit", "Rs {price} / L or kWh", { price: tcoResult.fuel_price_lkr.toLocaleString("en-US") })}
           />
-          <ResultRow label={t("tools.calc.fuelMonthly", "Fuel / energy each month")} value={<AnimatedLkr value={tcoResult.fuel_cost_monthly} mode="monthly" />} />
-          <ResultRow label={t("tools.calc.leaseMonthly", "Lease instalments")} value={<AnimatedLkr value={tcoResult.lease_cost_monthly} mode="monthly" />} />
+          <ResultRow label={t("tools.calc.fuelMonthly", "Fuel / energy each month")} value={<AnimatedLkr value={tcoResult.fuel_cost_monthly} mode="monthly" />} share={tcoShare(tcoResult.fuel_cost_monthly)} index={0} />
+          <ResultRow label={t("tools.calc.leaseMonthly", "Lease instalments")} value={<AnimatedLkr value={tcoResult.lease_cost_monthly} mode="monthly" />} share={tcoShare(tcoResult.lease_cost_monthly)} index={1} />
           <ResultRow
             label={t("tools.calc.overheadMonthly", "Service, insurance, tyres and resale loss")}
-            value={<AnimatedLkr value={tcoResult.overhead_cost_monthly} mode="monthly" />}
+            value={<AnimatedLkr value={tcoResult.overhead_cost_monthly} mode="monthly" />} share={tcoShare(tcoResult.overhead_cost_monthly)} index={2}
           />
         </ResultRows>
       </ResultCard>
@@ -699,24 +704,27 @@ export default function Calculator() {
 
   return (
     <ToolPage
+      className="pt-8 lg:pt-10"
       header={
-        <PageHeader
+        <CineHeader
+          compact
           eyebrow={t("shell.calc.eyebrow", "Calculator")}
-          eyebrowIcon={CalculatorIcon}
-          title={t("shell.calc.title", "Import tax calculator")}
-          description={t(
+          lead={t("calc.cine.lead", "What it costs")}
+          accent={t("calc.cine.accent", "once it lands.")}
+          body={t(
             "shell.calc.description",
             "Work out what an imported vehicle costs once it lands: customs duty, surcharge, excise, SSCL and VAT on the CIF price, using the current gazette rates.",
           )}
-          actions={
-            tabUnlocked ? (
-              <Button variant="secondary" onClick={() => void copyShareLink()} title={t("calc.shareTitle", "Copy a shareable link to this calculation")}>
-                <Link2 aria-hidden />
-                {t("calc.share", "Share")}
-              </Button>
-            ) : null
-          }
-        />
+          image={visuals.pageHomeHeroNight}
+          imagePosition="62% 60%"
+        >
+          {tabUnlocked ? (
+            <Button variant="secondary" onClick={() => void copyShareLink()} title={t("calc.shareTitle", "Copy a shareable link to this calculation")}>
+              <Link2 aria-hidden />
+              {t("calc.share", "Share")}
+            </Button>
+          ) : null}
+        </CineHeader>
       }
     >
       <div className="mb-5 empty:hidden">

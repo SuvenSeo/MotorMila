@@ -774,4 +774,10 @@ export const stringsEn: Record<string, string> = {
   "pricing.cine.body": "Search, price ranges, price history and the import tax calculator cost nothing. Pro is on the way, and we'll tell you before it starts.",
   "pricing.cine.seePlans": "See the plans",
   "pricing.cine.moreQuestions": "Something else?",
+  "calc.cine.lead": "What it costs",
+  "calc.cine.accent": "once it lands.",
+  "quiz.cine.lead": "What's your car",
+  "quiz.cine.accent": "really worth?",
+  "afford.cine.lead": "What can",
+  "afford.cine.accent": "I afford?",
 };

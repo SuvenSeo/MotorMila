@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { RotateCcw, Search, SlidersHorizontal, Wallet } from "lucide-react";
-import { PageHeader } from "@/components/ui/page-header";
+import { CineHeader } from "@/components/CineHeader";
+import { visuals } from "@/lib/visualAssets";
 import { Button } from "@/components/ui/button";
 import {
   AnimatedLkr,
@@ -112,15 +113,19 @@ export default function Afford() {
 
   return (
     <ToolPage
+      className="pt-8 lg:pt-10"
       header={
-        <PageHeader
+        <CineHeader
+          compact
           eyebrow={t("afford.eyebrow", "Budget search")}
-          eyebrowIcon={Wallet}
-          title={t("afford.title", "What can I afford?")}
-          description={t(
+          lead={t("afford.cine.lead", "What can")}
+          accent={t("afford.cine.accent", "I afford?")}
+          body={t(
             "afford.description",
             "Enter the cash you have and what you can pay each month. We apply the CBSL loan-to-value caps, a lease rate and transfer costs, then show you the cars that fit.",
           )}
+          image={visuals.pageHomeHeroCoastal}
+          imagePosition="55% 65%"
         />
       }
     >

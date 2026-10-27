@@ -769,4 +769,10 @@ export const stringsTa: Record<string, string> = {
   "pricing.cine.body": "தேடல், விலை வரம்புகள், விலை வரலாறு மற்றும் இறக்குமதி வரி கணிப்பான் அனைத்தும் இலவசம். Pro விரைவில் வருகிறது; அது தொடங்கும் முன் உங்களுக்குத் தெரிவிப்போம்.",
   "pricing.cine.seePlans": "திட்டங்களைப் பார்க்கவும்",
   "pricing.cine.moreQuestions": "வேறு ஏதாவது கேள்வி உள்ளதா?",
+  "calc.cine.lead": "இறங்கியதும்",
+  "calc.cine.accent": "ஆகும் செலவு.",
+  "quiz.cine.lead": "உங்கள் காரின்",
+  "quiz.cine.accent": "உண்மையான மதிப்பு என்ன?",
+  "afford.cine.lead": "என்னால் எதை",
+  "afford.cine.accent": "வாங்க முடியும்?",
 };
