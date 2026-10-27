@@ -597,7 +597,8 @@ html.low-data .cine-chart__curtain-wrap { display: none; }
     hsl(var(--cine-ink));
   color: hsl(0 0% 100%);
 }
-.cine-panel.theme-dark {
+.cine-panel.theme-dark,
+.cine-topbar.theme-dark {
   --surface-1: var(--card);
   --surface-2: var(--secondary);
   --surface-3: var(--muted);
@@ -678,3 +679,10 @@ a.cine-row:hover .cine-row__arrow { transform: translate3d(3px, 0, 0); }
   .cine-row__arrow { transition: none !important; }
 }
 html.low-data .cine-radar__dots { animation: none !important; }
+
+/* ── Pro workspace: the sticky bar above its header (both themes) ─────────── */
+.cine-topbar {
+  background: hsl(var(--cine-ink));
+  border-bottom: 1px solid hsl(0 0% 100% / 0.08);
+  color: hsl(0 0% 100%);
+}

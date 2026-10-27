@@ -814,4 +814,12 @@ export const stringsSi: Record<string, string> = {
   "ev.cine.plotLabel": "{district} අවට කි.මී. {radius} ඇතුළත ආරෝපණ ස්ථාන සලකුණු කර ඇත",
   "transfer.cine.lead": "හිමිකාරිත්වය",
   "transfer.cine.accent": "ආරක්ෂිතව පවරන්න.",
+  "proPreview.cine.lead": "Pro වැඩබිම",
+  "proPreview.cine.accent": "පෙරදසුන.",
+  "proPreview.cine.priceKicker": "සැලසුම් කළ Pro මිල",
+  "proPreview.cine.priceCaption": "නැතහොත් වසරකට {yearly}, මාස දෙකක් නොමිලේ. බීටා කාලයේ නොමිලේ; එය ආරම්භ වීමට පෙර අපි ඔබට ඊමේල් කරන්නෙමු.",
+  "proPreview.cine.laneBody": "Pro සෑම මංතීරුවක්ම පෙන්වන ආකාරයට, එක් නිෂ්පාදක සහ මාදිලි මංතීරුවක්.",
+  "proPreview.cine.lockedTitle": "Pro තෙක් අගුළු දමා ඇත",
+  "proPreview.cine.lockedBody": "Pro දියත් වූ විට විවෘත වන ගැඹුරු දසුන් තුනක්.",
+  "proDash.cine.glanceTitle": "වෙළඳපොළ එක බැල්මකින්",
 };

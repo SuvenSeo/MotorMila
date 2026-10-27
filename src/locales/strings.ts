@@ -819,4 +819,12 @@ export const stringsEn: Record<string, string> = {
   "ev.cine.plotLabel": "Stations plotted around {district}, within {radius} km",
   "transfer.cine.lead": "Transfer ownership",
   "transfer.cine.accent": "safely.",
+  "proPreview.cine.lead": "Pro workspace",
+  "proPreview.cine.accent": "preview.",
+  "proPreview.cine.priceKicker": "Planned Pro price",
+  "proPreview.cine.priceCaption": "Or {yearly} a year, two months free. Free during beta, and we'll email you before it starts.",
+  "proPreview.cine.laneBody": "One make-and-model lane, the way Pro shows every lane.",
+  "proPreview.cine.lockedTitle": "Locked until Pro",
+  "proPreview.cine.lockedBody": "Three deeper views that open when Pro launches.",
+  "proDash.cine.glanceTitle": "Market at a glance",
 };
