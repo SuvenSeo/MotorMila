@@ -107,10 +107,11 @@ export default function OfficialPulse() {
             {PULSE_SOURCE_GUIDES.map((g) => localizePulseGuide(g, t)).map((guide) => (
               <li key={guide.key}>
                 <Link to={`/official-pulse/guide/${guide.key}`} className="cine-row group sm:items-center">
-                  <span className="w-28 shrink-0 pt-0.5 text-caption font-semibold uppercase tracking-caps text-primary sm:w-36 sm:pt-0">
+                  <span className="hidden w-36 shrink-0 text-caption font-semibold uppercase tracking-caps text-primary sm:block">
                     {labelPulseSource(guide.source, t)}
                   </span>
                   <span className="min-w-0 flex-1">
+                    <span className="block text-caption font-semibold uppercase tracking-caps text-primary sm:hidden">{labelPulseSource(guide.source, t)}</span>
                     <span className="block text-callout font-semibold text-foreground transition-colors duration-short group-hover:text-primary">{guide.title}</span>
                     <span className="mt-0.5 block text-footnote text-label-2 sm:line-clamp-1">{guide.summary}</span>
                   </span>
@@ -215,8 +216,8 @@ export default function OfficialPulse() {
           >
             <ul className="cine-list border-y border-border">
               {newsItems.map((item, index) => (
-                <m.li key={item.id || `${item.title}-${index}`} variants={listItem} custom={index} initial="hidden" animate="show" className="cine-row list-none">
-                  <span className="w-28 shrink-0 text-caption font-semibold uppercase tracking-caps text-primary sm:w-36">Helakuru Esana</span>
+                <m.li key={item.id || `${item.title}-${index}`} variants={listItem} custom={index} initial="hidden" animate="show" className="cine-row list-none flex-col gap-1 sm:flex-row sm:gap-4">
+                  <span className="shrink-0 text-caption font-semibold uppercase tracking-caps text-primary sm:w-36">Helakuru Esana</span>
                   <p className="min-w-0 flex-1 text-footnote font-semibold text-foreground">{item.title}</p>
                 </m.li>
               ))}

@@ -226,7 +226,7 @@ export default function SafeTransfer() {
 
       <Card padding="none" className="overflow-visible">
         {/* Progress rail: stays under the nav while the list scrolls. */}
-        <div className="cine-progress rounded-t-card border-b border-separator bg-surface-1/95 px-5 pb-4 pt-5 backdrop-blur-sm sm:px-6" aria-live="polite">
+        <div className="cine-progress rounded-t-card border-b border-separator bg-card/95 px-5 pb-4 pt-5 backdrop-blur-sm sm:px-6" aria-live="polite">
           <div className="flex items-baseline justify-between gap-3">
             <h2 className="text-callout font-semibold text-foreground">{t("transfer.checklist", "Transfer checklist")}</h2>
             <p className="num text-footnote font-semibold text-label-2">
@@ -251,7 +251,7 @@ export default function SafeTransfer() {
                   <span className="flex-1 text-footnote font-semibold text-foreground">{phase.phase}</span>
                   <span className="num text-caption text-label-2">{phaseDone}/{phase.items.length}</span>
                 </legend>
-                <div className="-mx-2 divide-y divide-border/60 border-t border-border/60">
+                <div className="-mx-2 divide-y divide-border border-t border-border">
                   {phase.items.map((item) => (
                     <CheckRow key={item.id} id={`transfer-${item.id}`} checked={!!checked[item.id]} onCheckedChange={() => toggle(item.id)} muted className="rounded-none">
                       {item.text}

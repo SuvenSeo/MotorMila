@@ -631,7 +631,7 @@ a.cine-row:hover .cine-row__arrow { transform: translate3d(3px, 0, 0); }
 .cine-slot {
   position: relative;
   display: flex;
-  min-height: 11rem;
+  min-height: 7.5rem;
   flex-direction: column;
   justify-content: space-between;
   gap: 0.75rem;
@@ -640,6 +640,7 @@ a.cine-row:hover .cine-row__arrow { transform: translate3d(3px, 0, 0); }
   border: 1px dashed hsl(0 0% 100% / 0.18);
   background: hsl(0 0% 100% / 0.02);
 }
+@media (min-width: 1024px) { .cine-slot { min-height: 11rem; } }
 .cine-slot[data-filled="true"] { border-style: solid; border-color: hsl(0 0% 100% / 0.14); background: hsl(0 0% 100% / 0.04); }
 .cine-slot__num {
   font-family: var(--font-display);
