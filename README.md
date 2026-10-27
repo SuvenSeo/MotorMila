@@ -10,9 +10,9 @@
 
 <br /><br />
 
-# THE MARKET MOVES.<br />KNOW WHERE YOU STAND.
+<h1>THE MARKET MOVES.<br />KNOW WHERE YOU STAND.</h1>
 
-**Sri Lanka's vehicle market, decoded.**<br />
+<strong>Sri Lanka's vehicle market, decoded.</strong><br />
 From fragmented listings to a clearer picture of prices, trends, and opportunities.
 
 <br />
@@ -69,36 +69,32 @@ It brings together vehicle advertisements from Sri Lankan marketplaces, normaliz
 <tr>
 <td width="50%" valign="top">
 
-### 01 / DISCOVER
-**See the market, not just the listing.**
-
-Search and filter vehicle listings, explore make-and-model hubs, compare options, and jump to original marketplace listings.
+<h3>01 / DISCOVER</h3>
+<p><strong>See the market, not just the listing.</strong></p>
+<p>Search and filter vehicle listings, explore make-and-model hubs, compare options, and jump to original marketplace listings.</p>
 
 </td>
 <td width="50%" valign="top">
 
-### 02 / VALUE
-**Put a price in context.**
-
-Explore comparable asking prices, fair-market-value estimates, deal scores, and potential outliers before making a decision.
+<h3>02 / VALUE</h3>
+<p><strong>Put a price in context.</strong></p>
+<p>Explore comparable asking prices, fair-market-value estimates, deal scores, and potential outliers before making a decision.</p>
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-### 03 / TRACK
-**Follow the movement.**
-
-Investigate listing price history, price changes, market trends, district-level patterns, and alerts for vehicles worth watching.
+<h3>03 / TRACK</h3>
+<p><strong>Follow the movement.</strong></p>
+<p>Investigate listing price history, price changes, market trends, district-level patterns, and alerts for vehicles worth watching.</p>
 
 </td>
 <td width="50%" valign="top">
 
-### 04 / GO DEEPER
-**Intelligence beyond browsing.**
-
-Research market indices, EV and hybrid segments, best picks, and deeper Pro/dealer workflows where access is enabled.
+<h3>04 / GO DEEPER</h3>
+<p><strong>Intelligence beyond browsing.</strong></p>
+<p>Research market indices, EV and hybrid segments, best picks, and deeper Pro/dealer workflows where access is enabled.</p>
 
 </td>
 </tr>
@@ -131,9 +127,9 @@ Product access and data availability may vary by feature, plan, and the freshnes
 
 <div align="center">
 
-### Many marketplaces. One intelligence layer.
+<h3>Many marketplaces. One intelligence layer.</h3>
 
-*Collect → Clean → Connect → Understand → Explore*
+<em>Collect → Clean → Connect → Understand → Explore</em>
 
 </div>
 
@@ -175,27 +171,24 @@ The scheduled collection workflow is configured for **three runs daily** at 07:4
 <tr>
 <td width="33%" valign="top">
 
-**WEB EXPERIENCE**
-
-React 18, TypeScript, Vite, Tailwind CSS, data visualizations, maps, and responsive research views.
+<strong>WEB EXPERIENCE</strong>
+<p>React 18, TypeScript, Vite, Tailwind CSS, data visualizations, maps, and responsive research views.</p>
 
 <a href="https://motormila.vercel.app">Open the web app</a>
 
 </td>
 <td width="33%" valign="top">
 
-**INTELLIGENCE ENGINE**
-
-FastAPI, SQLAlchemy, Python collectors, scheduled jobs, analytics, and snapshot exports.
+<strong>INTELLIGENCE ENGINE</strong>
+<p>FastAPI, SQLAlchemy, Python collectors, scheduled jobs, analytics, and snapshot exports.</p>
 
 <a href="backend/">Explore backend</a>
 
 </td>
 <td width="33%" valign="top">
 
-**NATIVE ANDROID**
-
-Kotlin, Jetpack Compose, Hilt, Paging 3, CameraX, WorkManager, and a mobile-first interface.
+<strong>NATIVE ANDROID</strong>
+<p>Kotlin, Jetpack Compose, Hilt, Paging 3, CameraX, WorkManager, and a mobile-first interface.</p>
 
 <a href="android/">Explore Android</a>
 
@@ -380,9 +373,9 @@ Use the insights as **decision support**. Verify the vehicle, seller, documents,
 
 <img src="public/logo-mark-light.webp" width="64" alt="MotorMila Apex M" />
 
-### THE FAIR MILA FOR EVERY MOTOR.
+<h3>THE FAIR MILA FOR EVERY MOTOR.</h3>
 
-**Less noise. More context. Better decisions.**
+<strong>Less noise. More context. Better decisions.</strong>
 
 <a href="https://motormila.vercel.app"><strong>ENTER MOTORMILA</strong></a>
 &nbsp;&nbsp;·&nbsp;&nbsp;
