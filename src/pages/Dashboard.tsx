@@ -70,7 +70,6 @@ import { loadMarketAlerts, patchMarketAlertServerId, removeMarketAlert, saveMark
 import { useServerMarketAlerts } from "@/hooks/useServerMarketAlerts";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { FreePlanBanner } from "@/components/FreePlanBanner";
-import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { HeroBanners } from "@/components/HeroBanners";
 import { ProFeatureLock } from "@/components/ProFeatureLock";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
@@ -613,7 +612,6 @@ export default function Dashboard() {
       {/* Banners float over the hero (which runs under the transparent header), so no strip appears above it. */}
       <HeroBanners>
         <FreePlanBanner />
-        <AnnouncementBanner />
       </HeroBanners>
       {showHeroLab ? (
         <HeroVariantPicker activeId={heroVariant.id} onSelect={setHeroVariantId} />
