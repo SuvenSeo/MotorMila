@@ -1,7 +1,11 @@
 <div align="center">
 
 <a href="https://motormila.vercel.app">
-  <img src="public/brand-lockup.png" alt="MotorMila — Sri Lanka vehicle market intelligence" width="100%" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="public/logo-wordmark-dark.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="public/logo-wordmark-light.svg" />
+    <img src="public/logo-wordmark-light.svg" alt="MotorMila — Sri Lanka vehicle market intelligence" width="680" />
+  </picture>
 </a>
 
 <br />
@@ -371,7 +375,13 @@ Use the insights as **decision support**. Verify the vehicle, seller, documents,
 
 <div align="center">
 
-<img src="public/logo-mark-light.webp" width="64" alt="MotorMila Apex M" />
+<a href="https://motormila.vercel.app">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="public/logo-wordmark-dark.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="public/logo-wordmark-light.svg" />
+    <img src="public/logo-wordmark-light.svg" alt="MotorMila" width="240" />
+  </picture>
+</a>
 
 <h3>THE FAIR MILA FOR EVERY MOTOR.</h3>
 
