@@ -7,6 +7,7 @@ import { useAppPreferences } from "@/lib/appPreferences";
 import { formatSourceName } from "@/lib/sourceAttribution";
 import { spring, useReducedMotionOrLowData } from "@/lib/motion";
 import { viewTransitionInFlight } from "@/lib/viewTransition";
+import type { Silhouette } from "@/lib/vehicleSilhouette";
 
 // Lightbox JS + CSS load only when someone taps a photo (low-end Android first).
 const ListingLightbox = lazy(() => import("@/components/listing/ListingLightbox"));
@@ -24,6 +25,14 @@ interface ListingImageCarouselProps {
   priority?: boolean;
   /** Source marketplace, shown on the branded placeholder and as photo credit. */
   source?: string | null;
+  /** No-photo plate: a vehicle-type silhouette instead of the branded SVG. */
+  silhouette?: Silhouette;
+  /** Detail filmstrip: per-slide sizing (replaces the full-width basis). */
+  slideClassName?: string;
+  /** Detail filmstrip: classes on the slide track. */
+  trackClassName?: string;
+  /** Classes for the photo viewport (default full height of the region). */
+  frameClassName?: string;
 }
 
 /** Listing grid: 1 column < 768px, 2 columns to 1279px, then 3 columns in a ≤1560px frame. */
@@ -59,6 +68,10 @@ export function ListingImageCarousel({
   imageClassName,
   priority = false,
   source,
+  silhouette,
+  slideClassName,
+  trackClassName,
+  frameClassName,
 }: ListingImageCarouselProps) {
   const { t } = useAppPreferences();
   const count = images.length;
@@ -219,15 +232,24 @@ export function ListingImageCarousel({
   };
 
   if (count === 0) {
-    // No usable photo: branded SVG placeholder (full lockup, overlay-safe).
-    return (
+    // No usable photo: the vehicle-type silhouette plate (or the branded SVG).
+    const plate = (
       <VehicleThumbnail
         src={null}
         alt={alt}
         source={source}
         priority={priority}
+        silhouette={silhouette}
         className={`h-full w-full object-cover${imageClassName ? ` ${imageClassName}` : ""}`}
       />
+    );
+    if (!slideClassName) return plate;
+    return (
+      <div className={className}>
+        <div className={`flex w-full justify-center ${frameClassName ?? "h-full"} ${trackClassName ?? ""}`} data-single="">
+          <div className={slideClassName}>{plate}</div>
+        </div>
+      </div>
     );
   }
 
@@ -249,7 +271,7 @@ export function ListingImageCarousel({
       onPointerEnter={multi ? () => { prime(index); wake(); } : undefined}
       onFocus={multi ? () => { prime(index); wake(); } : undefined}
     >
-      <div className="relative h-full w-full overflow-hidden">
+      <div className={`relative w-full overflow-hidden ${frameClassName ?? "h-full"}`}>
         {/* Embla attaches only when it has work to do: it builds its engine (and
             measures every slide, forcing a style + layout of the page) on
             construction even with `active: false`, so single-photo listings and
@@ -258,13 +280,14 @@ export function ListingImageCarousel({
           {/* A remounted card starts on its saved photo. The transform is set
               once (constant prop) so React never fights Embla over it later. */}
           <div
-            className="flex h-full w-full touch-pan-y"
+            className={`flex h-full w-full touch-pan-y${trackClassName ? ` ${trackClassName}` : ""}${!multi && slideClassName ? " justify-center" : ""}`}
+            data-single={multi ? undefined : ""}
             style={initialSlide > 0 ? { transform: `translate3d(${-initialSlide * 100}%, 0, 0)` } : undefined}
           >
             {images.map((src, i) => (
               <div
                 key={`${src}-${i}`}
-                className="h-full w-full min-w-0 shrink-0 grow-0 basis-full"
+                className={slideClassName ?? "h-full w-full min-w-0 shrink-0 grow-0 basis-full"}
                 aria-hidden={multi && i !== index}
               >
                 {!mounted.has(i) ? (
@@ -283,8 +306,9 @@ export function ListingImageCarousel({
                       alt={i === 0 ? alt : `${alt} — ${label(i)}`}
                       source={source}
                       priority={priority && i === 0}
-                      sizes="(max-width: 1024px) 100vw, 60vw"
+                      sizes="(max-width: 767px) 100vw, 800px"
                       marker={i === 0 ? "hero" : undefined}
+                      silhouette={silhouette}
                       fadeIn
                       className={`h-full w-full object-cover${imageClassName ? ` ${imageClassName}` : ""}`}
                     />
@@ -298,6 +322,7 @@ export function ListingImageCarousel({
                     priority={priority && i === 0}
                     sizes={CARD_SIZES}
                     marker="card"
+                    silhouette={silhouette}
                     fadeIn
                     className={`h-full w-full object-cover${imageClassName ? ` ${imageClassName}` : ""}`}
                   />
@@ -375,7 +400,7 @@ export function ListingImageCarousel({
               stop(e);
               openLightbox(e.currentTarget.parentElement);
             }}
-            className="tap-44 absolute right-2.5 top-2.5 z-30 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-black/55 text-white transition-colors hover:bg-black/80"
+            className="cine-gallery__expand tap-44 absolute right-2.5 top-2.5 z-30 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-black/55 text-white transition-colors hover:bg-black/80"
           >
             <Expand aria-hidden className="h-4 w-4" />
           </button>

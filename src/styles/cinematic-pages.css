@@ -1,0 +1,418 @@
+/* ============================================================================
+   Cinematic pages — listing detail, 404, sell, pricing, tools, cards.
+   Same "Night drive" language as cinematic.css: dark ink stages lit by
+   photography, editorial type, hairline rules. Motion is transform / opacity
+   only and one-shot (no loops, no sweeps, no sheen). Reduced motion and
+   low-data mode get a still frame.
+   ========================================================================== */
+
+:root {
+  --cine-ink: 222 40% 3%;
+  --cine-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Shared ──────────────────────────────────────────────────────────────── */
+
+/* A dark stage band (both themes). Pair with .theme-dark on the element so
+   every token inside it (buttons, chips, muted text) renders in dark. */
+.cine-stage {
+  position: relative;
+  isolation: isolate;
+  background: hsl(var(--cine-ink));
+  color: hsl(0 0% 100%);
+}
+/* Aliases resolve where they are declared (:root), so a nested .theme-dark
+   has to re-point them or light-mode values leak in (secondary buttons). */
+.cine-stage.theme-dark,
+.cine-plan--pro.theme-dark,
+.cine-result.theme-dark {
+  --surface-1: var(--card);
+  --surface-2: var(--secondary);
+  --surface-3: var(--muted);
+  --label-1: var(--foreground);
+  --label-2: var(--muted-foreground);
+  --label-3: var(--muted-foreground);
+  --separator: var(--border);
+  --deal-green: var(--deal-good);
+  --deal-amber: var(--deal-caution);
+  --deal-red: var(--deal-high);
+}
+.cine-stage::after {
+  /* Soft floor where the stage meets the page. */
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 1px;
+  background: hsl(0 0% 100% / 0.08);
+  pointer-events: none;
+}
+
+.cine-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.cine-eyebrow::before {
+  content: "";
+  width: 1.75rem;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.55;
+}
+:root:lang(si) .cine-eyebrow,
+:root:lang(ta) .cine-eyebrow { letter-spacing: 0; text-transform: none; }
+
+.cine-display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  word-spacing: var(--display-word-spacing);
+  text-wrap: balance;
+}
+.cine-display em {
+  font-style: italic;
+  color: hsl(var(--primary-bright, 213 100% 66%));
+}
+.cine-stage .cine-display em { color: hsl(213 100% 70%); }
+:root:lang(si) .cine-display,
+:root:lang(ta) .cine-display { letter-spacing: 0; line-height: 1.2; }
+
+/* One-shot rise for UI blocks (index via --i). */
+.cine-rise {
+  animation: cine-rise 0.8s var(--cine-ease) both;
+  animation-delay: calc(var(--cine-t0, 0.05s) + var(--i, 0) * 70ms);
+}
+@keyframes cine-rise {
+  from { opacity: 0; transform: translate3d(0, 14px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+/* ── Listing detail: stage + filmstrip gallery ──────────────────────────── */
+
+.cine-gallery {
+  --g-h: min(75vw, 560px);
+  position: relative;
+}
+@media (min-width: 768px) {
+  .cine-gallery { --g-h: clamp(340px, 56svh, 600px); }
+}
+.cine-gallery__frame { position: relative; }
+.cine-gallery__frame [role="tablist"] { margin-top: 0.75rem; padding-inline: 1.25rem; }
+@media (min-width: 640px) { .cine-gallery__frame [role="tablist"] { padding-inline: 1.5rem; } }
+@media (min-width: 768px) { .cine-gallery__frame [role="tablist"] { padding-inline: 0.25rem; } }
+/* Slides keep a 4:3 frame; on wide screens the next photo peeks in, dimmed. */
+.cine-gallery__slide {
+  position: relative;
+  height: 100%;
+  min-width: 0;
+  flex: 0 0 100%;
+  overflow: hidden;
+  transition: opacity 0.45s var(--cine-ease);
+}
+@media (min-width: 768px) {
+  .cine-gallery__slide {
+    flex-basis: min(calc(var(--g-h) * 4 / 3), 100%);
+    margin-right: 0.75rem;
+    border-radius: var(--radius-card);
+  }
+  .cine-gallery__track[data-single] .cine-gallery__slide { margin-right: 0; }
+  .cine-gallery__slide[aria-hidden="true"] { opacity: 0.38; }
+}
+/* The card photo the hero morphs out of: same box as the first slide. */
+.cine-gallery__ph {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 100%;
+  height: var(--g-h);
+  object-fit: cover;
+}
+@media (min-width: 768px) {
+  .cine-gallery__ph {
+    width: min(calc(var(--g-h) * 4 / 3), 100%);
+    border-radius: var(--radius-card);
+  }
+  .cine-gallery[data-single] .cine-gallery__ph { left: 50%; transform: translateX(-50%); }
+}
+
+/* No photo: the silhouette plate carries a real caption (name + source). */
+.cine-nophoto { display: none; }
+.cine-gallery:has(img[data-placeholder="true"]) .cine-nophoto { display: flex; }
+.cine-gallery:has(img[data-placeholder="true"]) .cine-gallery__credit { display: none; }
+.cine-nophoto {
+  position: absolute;
+  top: auto;
+  bottom: 0;
+  left: 50%;
+  width: 100%;
+  max-width: calc(var(--g-h) * 4 / 3);
+  transform: translateX(-50%);
+  z-index: 20;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 1.25rem 1rem 1.5rem;
+  text-align: center;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, hsl(var(--cine-ink) / 0.85) 55%);
+}
+.cine-nophoto a { pointer-events: auto; }
+
+/* AI Value meter under the price. */
+.cine-meter { position: relative; height: 6px; border-radius: 999px; }
+.cine-meter__band {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    hsl(var(--deal-good)) 0%,
+    hsl(var(--deal-good)) 36%,
+    hsl(var(--deal-fair)) 46%,
+    hsl(var(--deal-fair)) 58%,
+    hsl(var(--deal-high)) 70%,
+    hsl(var(--deal-high)) 100%
+  );
+  opacity: 0.9;
+}
+/* Full-width carrier: translating it by --x% of its own width = the track. */
+.cine-meter__carrier {
+  position: absolute;
+  inset: 0;
+  transform: translate3d(calc(var(--x, 50) * 1%), 0, 0);
+}
+/* The band draws in from the left, then the marker lands (no var() in the
+   keyframes, so both stay on the compositor). */
+.cine-meter__band { transform-origin: left; animation: cine-grow 0.9s var(--cine-ease) 0.15s both; }
+.cine-meter__dot { animation: cine-land 0.5s var(--cine-ease) 0.75s both; }
+@keyframes cine-land {
+  from { opacity: 0; transform: scale(0.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+.cine-meter__dot {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 999px;
+  background: hsl(var(--background));
+  border: 3px solid hsl(var(--foreground));
+  box-shadow: 0 2px 8px hsl(0 0% 0% / 0.35);
+}
+
+/* Spec grid: hairline cells, label over value. */
+.cine-specs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid hsl(var(--border));
+  border-left: 1px solid hsl(var(--border));
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+@media (min-width: 640px) { .cine-specs { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1280px) { .cine-specs { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.cine-specs > div {
+  padding: 0.875rem 1rem 1rem;
+  border-right: 1px solid hsl(var(--border));
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--card) / 0.5);
+}
+
+/* Before-you-pay checklist: tick rows. */
+.cine-check {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.625rem 0;
+  border-top: 1px solid hsl(var(--border) / 0.7);
+  cursor: pointer;
+}
+.cine-check:first-child { border-top: 0; }
+.cine-check__box {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.1rem;
+  border-radius: 999px;
+  border: 1.5px solid hsl(var(--deal-caution) / 0.7);
+  color: transparent;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+.cine-check input:checked + .cine-check__box {
+  background: hsl(var(--deal-good));
+  border-color: hsl(var(--deal-good));
+  color: hsl(var(--deal-good-foreground));
+}
+.cine-check input:focus-visible + .cine-check__box { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.cine-check input:checked ~ .cine-check__text .cine-check__lead { text-decoration: line-through; text-decoration-color: hsl(var(--muted-foreground) / 0.6); }
+
+/* ── 404 ─────────────────────────────────────────────────────────────────── */
+
+.cine-404 { min-height: calc(100svh - var(--nav-offset, 64px)); }
+.cine-404__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 60% 50%;
+}
+.cine-404__scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, hsl(var(--cine-ink) / 0.55) 0%, hsl(var(--cine-ink) / 0.2) 35%, hsl(var(--cine-ink) / 0.92) 78%, hsl(var(--cine-ink)) 100%);
+}
+@media (min-width: 1024px) {
+  .cine-404__scrim {
+    background:
+      linear-gradient(90deg, hsl(var(--cine-ink) / 0.92) 0%, hsl(var(--cine-ink) / 0.7) 34%, transparent 66%),
+      linear-gradient(180deg, transparent 60%, hsl(var(--cine-ink)) 100%);
+  }
+}
+.cine-404__code {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(5rem, 3rem + 10vw, 11rem);
+  line-height: 0.85;
+  letter-spacing: -0.05em;
+  color: transparent;
+  -webkit-text-stroke: 1px hsl(0 0% 100% / 0.45);
+}
+
+/* ── Glass field on a stage (search, inputs) ─────────────────────────────── */
+.cine-field {
+  border-radius: 999px;
+  border: 1px solid hsl(0 0% 100% / 0.16);
+  background: hsl(222 30% 8% / 0.88);
+  box-shadow: 0 20px 50px -20px hsl(0 0% 0% / 0.8);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.cine-field:focus-within {
+  border-color: hsl(213 100% 60% / 0.7);
+  box-shadow: 0 20px 50px -20px hsl(0 0% 0% / 0.85), 0 0 0 4px hsl(213 100% 55% / 0.22);
+}
+
+/* ── Sell: steps + live ad card ──────────────────────────────────────────── */
+.cine-steps { counter-reset: step; }
+.cine-step-dot {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--background));
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+[data-state="current"] > .cine-step-dot { background: hsl(var(--primary)); border-color: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+[data-state="done"] > .cine-step-dot { background: hsl(var(--primary) / 0.14); border-color: hsl(var(--primary) / 0.5); color: hsl(var(--primary)); }
+.cine-step-rail { position: relative; height: 2px; border-radius: 2px; background: hsl(var(--border)); overflow: hidden; }
+.cine-step-rail__fill {
+  position: absolute;
+  inset: 0;
+  background: hsl(var(--primary));
+  transform-origin: left;
+  transform: scaleX(var(--p, 0));
+  transition: transform 0.5s var(--cine-ease);
+}
+.cine-adcard__photo { aspect-ratio: 16 / 10; position: relative; overflow: hidden; background: hsl(var(--cine-ink)); }
+.cine-adcard__photo > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cine-pane { animation: cine-rise 0.5s var(--cine-ease) both; }
+
+/* ── Pricing ─────────────────────────────────────────────────────────────── */
+.cine-plan {
+  position: relative;
+  border-radius: var(--radius-sheet, 1.75rem);
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+}
+.cine-plan--pro {
+  border-color: hsl(0 0% 100% / 0.12);
+  background:
+    radial-gradient(ellipse 80% 60% at 85% 0%, hsl(213 100% 55% / 0.22), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 0% 100%, hsl(32 90% 55% / 0.1), transparent 70%),
+    hsl(var(--cine-ink));
+  color: #fff;
+}
+
+/* ── Tools: hero result + breakdown bars ─────────────────────────────────── */
+.cine-result {
+  border-radius: var(--radius-sheet, 1.75rem);
+  overflow: hidden;
+}
+.cine-bar { height: 8px; border-radius: 999px; background: hsl(0 0% 100% / 0.08); overflow: hidden; }
+.cine-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transform-origin: left;
+  transform: scaleX(var(--w, 0));
+  transition: transform 0.8s var(--cine-ease);
+}
+.cine-stack { display: flex; height: 10px; gap: 2px; border-radius: 999px; overflow: hidden; }
+.cine-stack > span {
+  height: 100%;
+  transform-origin: left;
+  animation: cine-grow 0.9s var(--cine-ease) both;
+  animation-delay: calc(var(--i, 0) * 90ms);
+}
+@keyframes cine-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* ── Listing cards ───────────────────────────────────────────────────────── */
+.cine-card__price {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.cine-card__verdict {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+.cine-card__verdict::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+/* ── Still frame ─────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .cine-rise,
+  .cine-pane,
+  .cine-meter__band,
+  .cine-meter__dot,
+  .cine-stack > span { animation: none !important; }
+  .cine-bar > span,
+  .cine-step-rail__fill,
+  .cine-gallery__slide { transition: none !important; }
+}
+html.low-data .cine-rise,
+html.low-data .cine-pane,
+html.low-data .cine-meter__band,
+html.low-data .cine-meter__dot,
+html.low-data .cine-stack > span { animation: none !important; }
+html.low-data .cine-bar > span,
+html.low-data .cine-step-rail__fill { transition: none !important; }
+
+/* No-photo plate: feather its edges into the stage; nothing to expand. */
+.cine-gallery img[data-placeholder="true"] {
+  -webkit-mask-image: radial-gradient(ellipse 72% 70% at 50% 48%, #000 58%, transparent 100%);
+  mask-image: radial-gradient(ellipse 72% 70% at 50% 48%, #000 58%, transparent 100%);
+}
+.cine-gallery:has(img[data-placeholder="true"]) .cine-gallery__expand { display: none; }

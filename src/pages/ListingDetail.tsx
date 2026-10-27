@@ -64,7 +64,7 @@ import { estimateListingMonthly, formatMonthlyLkr } from '@/lib/listingFinance';
 import { DealBadge, type DealWhyData } from '@/components/listing/DealBadge';
 import { Button } from '@/components/ui/button';
 import { buttonVariants } from '@/components/ui/button-variants';
-import { Card, cardVariants } from '@/components/ui/card';
+import { cardVariants } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Chip } from '@/components/ui/chip';
 import { cn } from '@/lib/utils';
@@ -72,6 +72,9 @@ import { BeforeYouPayStrip } from '@/components/listing/BeforeYouPayStrip';
 import { ListingStickyBar } from '@/components/listing/ListingStickyBar';
 import { SimilarCarsStrip } from '@/components/listing/SimilarCarsStrip';
 import { AnimatedPrice } from '@/components/listing/AnimatedPrice';
+import { AiValueMeter } from '@/components/listing/AiValueMeter';
+import { silhouetteFor } from '@/lib/vehicleSilhouette';
+import '@/styles/cinematic-pages.css';
 
 // The price-timeline chart pulls in recharts (chart-vendor, ~115 kB gz). It sits
 // below the fold, so it loads on its own chunk once the page has painted.
@@ -407,18 +410,22 @@ export default function ListingDetail() {
     { label: t("common.body", "Body"), value: vehicleTokenLabel("body", listing.body_type, t), icon: CarIcon },
   ].filter((s): s is { label: string; value: string; icon: typeof Calendar } => Boolean(s.value));
 
+  const silhouette = silhouetteFor(listing);
   const heroPlaceholder = seed?.heroSrc && String(seed.listing.id) === String(listing.id) ? seed.heroSrc : null;
   const priceCut = priceHistory && priceHistory.cut_count > 0 ? priceHistory : null;
 
   // ── Blocks (some render in both the mobile flow and the desktop sidebar) ──
   const renderPriceBlock = (placement: 'mobile' | 'desktop') => (
     <div className={placement === 'desktop' ? cn(cardVariants({ padding: "md" }), "shadow-e2") : ''}>
-      <h2 className="text-caption font-semibold text-muted-foreground">{t("listing.askingPrice", "Asking price")}</h2>
-      <p className={`num mt-1 font-display font-semibold leading-[1.05] tracking-tight text-foreground ${placement === 'desktop' ? 'text-large' : 'text-title1'}`}>
+      <h2 className="cine-eyebrow text-muted-foreground">{t("listing.askingPrice", "Asking price")}</h2>
+      <p className="num cine-display mt-1.5 text-[clamp(2.375rem,1.6rem+2.4vw,3.25rem)] leading-[1] text-foreground">
         {hasPrice ? <AnimatedPrice priceLkr={listingPrice} /> : t("listing.unlisted", "Unlisted")}
       </p>
       {deal.kind !== 'none' && (
         <DealBadge badge={deal} tone="soft" size="md" why={deal.kind === 'lease' ? null : dealWhy} className="mt-3 flex-wrap" />
+      )}
+      {dataReady && hasPrice && !lease.isLeaseTakeover && isVerdictOk(verdict) && (
+        <AiValueMeter verdict={verdict} className="mt-4 rounded-card border border-border bg-background/40 p-3.5" />
       )}
       {lease.isLeaseTakeover && lease.monthlyLkr && (
         <p className="mt-2 text-footnote leading-relaxed text-muted-foreground">
@@ -562,10 +569,14 @@ export default function ListingDetail() {
       variants={revealContainer}
       className="relative min-h-screen overflow-hidden bg-background pb-44 lg:pb-0"
     >
-      {/* Header — back + quiet actions, then one clear title */}
-      <motion.section variants={revealItem} className="relative z-10 -mt-[var(--nav-offset)] border-b border-border bg-card/30 pt-[var(--nav-offset)]">
-        <div className="mx-auto max-w-[1320px] px-5 py-6 sm:px-6 sm:py-8">
-          <div className="mb-4 flex items-center justify-between gap-3">
+      {/* Stage — "Night drive": a dark band (both themes) holding the title and
+          the filmstrip gallery. `theme-dark` scopes every token inside it. */}
+      <motion.section
+        variants={revealItem}
+        className="cine-stage theme-dark relative z-10 -mt-[var(--nav-offset)] pt-[var(--nav-offset)] text-foreground"
+      >
+        <div className="mx-auto flex max-w-[1320px] flex-col px-5 pb-6 pt-4 sm:px-6 md:pb-8 md:pt-6">
+          <div className="mb-3 flex items-center justify-between gap-3 md:mb-5">
             <Button type="button" variant="ghost" size="sm" onClick={handleBack} className="group -ml-2 text-muted-foreground">
               <ArrowLeft aria-hidden className="transition-transform duration-short group-hover:-translate-x-0.5" /> {t("common.back", "Back")}
             </Button>
@@ -589,12 +600,13 @@ export default function ListingDetail() {
             </div>
           </div>
 
-          <p className="mb-2 text-caption font-medium tracking-tight text-muted-foreground">
-            {t("listing.listedOnSource", "Listed on {source}", { source: attribution.sourceName })}
-            {attribution.checkedAgo ? ` · ${t("listing.lastChecked", "last checked {ago}", { ago: attribution.checkedAgo })}` : ''}
-          </p>
-          <SnapshotModeNotice className="mb-4 max-w-2xl" />
-
+          {/* Title (below the photos on phones, above them from md) */}
+          <div className="order-2 mt-5 md:order-1 md:mt-0 md:mb-6">
+            <p className="cine-eyebrow mb-3 text-muted-foreground">
+              {t("listing.listedOnSource", "Listed on {source}", { source: attribution.sourceName })}
+              {attribution.checkedAgo ? ` · ${t("listing.lastChecked", "last checked {ago}", { ago: attribution.checkedAgo })}` : ''}
+            </p>
+            <SnapshotModeNotice className="mb-4 max-w-2xl" />
           {listing.is_active === false && (
             <div className="mb-4 flex max-w-2xl items-start gap-2.5 rounded-card border border-deal-caution/25 bg-deal-caution/10 p-3.5">
               <AlertTriangle aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-deal-caution-text" />
@@ -613,12 +625,86 @@ export default function ListingDetail() {
             </div>
           )}
 
-          <h1 className="display-2 max-w-4xl text-foreground">
-            {displayName}{listing.year ? ` · ${listing.year}` : ''}
-          </h1>
-          {listing.title && listing.title !== displayName && (
-            <p className="mt-2 max-w-2xl text-body font-medium leading-relaxed text-muted-foreground">{listing.title}</p>
-          )}
+            <h1 className="cine-display max-w-4xl text-[clamp(2rem,1.2rem+3vw,3.75rem)] text-foreground">
+              {displayName}{listing.year ? <span className="text-muted-foreground"> · {listing.year}</span> : null}
+            </h1>
+            {listing.title && listing.title !== displayName && (
+              <p className="mt-3 max-w-2xl text-body font-medium leading-relaxed text-muted-foreground">{listing.title}</p>
+            )}
+          </div>
+
+          {/* Gallery — filmstrip: 4:3 frames, the next photo peeks in (md+),
+              swipe / arrows / ←→ keys, tap for the full-screen viewer. */}
+          <div
+            data-listing-gallery
+            data-hero-ph={heroPlaceholder ? "" : undefined}
+            data-single={galleryImages.length <= 1 ? "" : undefined}
+            className="cine-gallery order-1 -mx-5 sm:-mx-6 md:order-2 md:mx-0"
+          >
+            <div className="cine-gallery__frame group">
+              {heroPlaceholder && (
+                // The card's photo (already decoded): shows under the hero
+                // until the full-size photo lands, and is what the card → listing
+                // View Transition morphs into when the hero isn't ready yet.
+                <img
+                  src={heroPlaceholder}
+                  alt=""
+                  aria-hidden
+                  data-listing-hero-ph=""
+                  referrerPolicy="no-referrer"
+                  className="cine-gallery__ph"
+                />
+              )}
+              <ListingImageCarousel
+                images={galleryImages}
+                listingId={listing.id}
+                alt={displayName}
+                variant="detail"
+                source={listing.source}
+                silhouette={silhouette}
+                priority
+                className="relative w-full"
+                frameClassName="h-[var(--g-h)]"
+                slideClassName="cine-gallery__slide"
+                trackClassName="cine-gallery__track"
+              />
+              {/* Source credit for hotlinked photos. Fixed bright blue: sits on a dark scrim. */}
+              <span className="cine-gallery__credit pointer-events-none absolute left-3 top-3 z-10 flex items-center gap-1 rounded-full border border-white/10 bg-black/60 px-2.5 py-1 text-caption font-semibold text-[#6CB8FF]">
+                <Database aria-hidden className="h-3 w-3" /> {t("listingImage.credit", "Photo: {source}", { source: attribution.sourceName })}
+              </span>
+              <div className="cine-nophoto">
+                <p className="cine-eyebrow text-white/60">{t("listing.noPhoto.kicker", "No photos on Motormila")}</p>
+                <p className="cine-display text-title3 text-white">{displayName}</p>
+                {listingUrl && (
+                  <a
+                    href={listingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 inline-flex min-h-9 items-center gap-1.5 rounded-full border border-white/20 bg-black/40 px-3.5 text-caption font-semibold text-white no-underline hover:bg-white/10"
+                  >
+                    {t("listing.noPhoto.cta", "See the photos on {source}", { source: attribution.sourceName })}
+                    <ExternalLink aria-hidden className="h-3.5 w-3.5" />
+                  </a>
+                )}
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 px-5 sm:px-6 md:px-0">
+              {listing.district && (
+                <span className="flex items-center gap-1.5 text-caption font-medium text-muted-foreground"><MapPin aria-hidden className="h-3.5 w-3.5 text-primary-bright" /> {listing.district}</span>
+              )}
+              {trackedDays && (
+                <span className="num flex items-center gap-1.5 text-caption font-medium text-muted-foreground"><Clock aria-hidden className="h-3.5 w-3.5 text-primary-bright" /> {t("listing.tracked", "Tracked {days}", { days: `${trackedDays}d` })}</span>
+              )}
+              {listedDateTime && (
+                <span
+                  className="num flex items-center gap-1.5 text-caption font-medium text-muted-foreground"
+                  title={t("listing.listedTitle", "When Motormila first spotted this ad — usually within hours of it going live on the source site.")}
+                >
+                  <Calendar aria-hidden className="h-3.5 w-3.5 text-primary-bright" /> {t("listing.listed", "Listed {date}", { date: listedDateTime })}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       </motion.section>
 
@@ -632,56 +718,6 @@ export default function ListingDetail() {
               elements, ~35 ms at 4× CPU per deferred section). */}
           <div className="flex min-w-0 flex-col gap-6">
 
-            {/* 1. Gallery — the car is the hero; overlays stay dark (they sit on the photo) */}
-            <motion.div variants={revealItem} data-listing-gallery data-hero-ph={heroPlaceholder ? "" : undefined} className={cn(cardVariants({ variant: "media" }), "rounded-sheet")}>
-              <div className="group relative aspect-[16/10] min-h-[220px] overflow-hidden bg-black/40">
-                {heroPlaceholder && (
-                  // The card's photo (already decoded): shows under the hero
-                  // until the full-size photo lands, and is what the card → listing
-                  // View Transition morphs into when the hero isn't ready yet.
-                  <img
-                    src={heroPlaceholder}
-                    alt=""
-                    aria-hidden
-                    data-listing-hero-ph=""
-                    referrerPolicy="no-referrer"
-                    className="absolute inset-0 h-full w-full object-cover"
-                  />
-                )}
-                <ListingImageCarousel
-                  images={galleryImages}
-                  listingId={listing.id}
-                  alt={displayName}
-                  variant="detail"
-                  source={listing.source}
-                  priority
-                  className="relative h-full w-full"
-                  imageClassName="transition-transform duration-long ease-decelerate group-hover:scale-[1.02] motion-reduce:transform-none"
-                />
-                <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 to-transparent" />
-                {/* Source credit for hotlinked photos. Fixed bright blue: sits on a black scrim. */}
-                <span className="pointer-events-none absolute bottom-3 right-3 z-10 flex items-center gap-1 rounded-full border border-border bg-black/60 px-2.5 py-1 text-caption font-semibold text-[#6CB8FF]">
-                  <Database aria-hidden className="h-3 w-3" /> {t("listingImage.credit", "Photo: {source}", { source: attribution.sourceName })}
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border bg-card px-4 py-3">
-                {listing.district && (
-                  <span className="flex items-center gap-1.5 text-caption font-medium text-muted-foreground"><MapPin aria-hidden className="h-3.5 w-3.5 text-primary-bright" /> {listing.district}</span>
-                )}
-                {trackedDays && (
-                  <span className="num flex items-center gap-1.5 text-caption font-medium text-muted-foreground"><Clock aria-hidden className="h-3.5 w-3.5 text-primary-bright" /> {t("listing.tracked", "Tracked {days}", { days: `${trackedDays}d` })}</span>
-                )}
-                {listedDateTime && (
-                  <span
-                    className="num flex items-center gap-1.5 text-caption font-medium text-muted-foreground"
-                    title={t("listing.listedTitle", "When Motormila first spotted this ad — usually within hours of it going live on the source site.")}
-                  >
-                    <Calendar aria-hidden className="h-3.5 w-3.5 text-primary-bright" /> {t("listing.listed", "Listed {date}", { date: listedDateTime })}
-                  </span>
-                )}
-              </div>
-            </motion.div>
-
             {/* 2. Price + badge (mobile flow; desktop shows it in the sidebar) */}
             {isMobileFlow && (
             <motion.div variants={revealItem} className="space-y-3 lg:hidden">
@@ -694,16 +730,16 @@ export default function ListingDetail() {
             {rest && keySpecs.length > 0 && (
               <DeferredSection minHeight={180}>
               <motion.section {...onScroll} aria-labelledby="key-specs-title" className="space-y-3">
-                <h2 id="key-specs-title" className="text-caption font-semibold text-muted-foreground">{t("listing.keySpecs", "Key specs")}</h2>
-                <dl className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                <h2 id="key-specs-title" className="cine-eyebrow text-muted-foreground">{t("listing.keySpecs", "Key specs")}</h2>
+                <dl className="cine-specs">
                   {keySpecs.map((s) => (
-                    <Card key={s.label} padding="none" className="flex items-center gap-3 px-3.5 py-3">
-                      <s.icon aria-hidden className="h-4 w-4 shrink-0 text-primary" />
-                      <div className="min-w-0">
-                        <dt className="text-caption font-medium text-muted-foreground">{s.label}</dt>
-                        <dd className="num truncate text-footnote font-semibold leading-tight text-foreground">{s.value}</dd>
-                      </div>
-                    </Card>
+                    <div key={s.label} className="min-w-0">
+                      <dt className="flex items-center gap-1.5 text-caption font-medium text-muted-foreground">
+                        <s.icon aria-hidden className="h-3.5 w-3.5 shrink-0 text-primary" />
+                        {s.label}
+                      </dt>
+                      <dd className="num mt-1.5 truncate text-callout font-semibold leading-tight text-foreground">{s.value}</dd>
+                    </div>
                   ))}
                 </dl>
                 <MileageTrustChip mileageKm={listing.mileage_km} year={listing.year} />

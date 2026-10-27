@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { formatSourceName } from "@/lib/sourceAttribution";
 import { imageHostBlocked, isRemoteImage, marketplaceSrcSet, noteImageResult } from "@/lib/listingImage";
+import type { Silhouette } from "@/lib/vehicleSilhouette";
 
 interface VehicleThumbnailProps {
   src?: string | null;
@@ -18,6 +19,13 @@ interface VehicleThumbnailProps {
   fadeIn?: boolean;
   /** Motion hooks: "card" = card photo (view-transition source), "hero" = detail hero (target). */
   marker?: "card" | "hero";
+  /**
+   * Final state for a listing with no usable photo: a moody vehicle-type
+   * silhouette plate (lib/vehicleSilhouette) instead of the branded SVG. The
+   * caller overlays the vehicle name / source as real (translated) text,
+   * shown via `:has(img[data-placeholder])`.
+   */
+  silhouette?: Silhouette;
 }
 
 /**
@@ -89,8 +97,12 @@ export const VehicleThumbnail = memo(function VehicleThumbnail({
   sizes = "(max-width: 768px) 100vw, 33vw",
   fadeIn = false,
   marker,
+  silhouette,
 }: VehicleThumbnailProps) {
-  const fallbackSrc = useMemo(() => createFallbackThumbnailDataUri(alt, source), [alt, source]);
+  const fallbackSrc = useMemo(
+    () => (silhouette ? silhouette.webp : createFallbackThumbnailDataUri(alt, source)),
+    [alt, source, silhouette],
+  );
   // The thumbnail proxy is retired (410) - photos are only hotlinked with
   // source credit, so there is no proxy candidate any more.
   const proxyUrl: string | null = null;
@@ -133,7 +145,7 @@ export const VehicleThumbnail = memo(function VehicleThumbnail({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-check per source only
   }, [imageSrc]);
 
-  return (
+  const img = (
     <img
       ref={imgRef}
       src={imageSrc}
@@ -141,8 +153,8 @@ export const VehicleThumbnail = memo(function VehicleThumbnail({
       width={480}
       height={300}
       className={className}
-      srcSet={srcSet}
-      sizes={srcSet ? sizes : undefined}
+      srcSet={isPlaceholder && silhouette ? `${silhouette.webpSm} 480w, ${silhouette.webp} 960w` : srcSet}
+      sizes={srcSet || (isPlaceholder && silhouette) ? sizes : undefined}
       referrerPolicy={remote ? "no-referrer" : undefined}
       loading={priority || seen ? "eager" : "lazy"}
       decoding="async"
@@ -167,6 +179,15 @@ export const VehicleThumbnail = memo(function VehicleThumbnail({
       }}
     />
   );
+  if (isPlaceholder && silhouette) {
+    return (
+      <picture style={{ display: "contents" }}>
+        <source type="image/avif" srcSet={`${silhouette.avifSm} 480w, ${silhouette.avif} 960w`} sizes={sizes} />
+        {img}
+      </picture>
+    );
+  }
+  return img;
 });
 
 VehicleThumbnail.displayName = "VehicleThumbnail";
