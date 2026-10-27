@@ -33,6 +33,8 @@ interface ListingImageCarouselProps {
   trackClassName?: string;
   /** Classes for the photo viewport (default full height of the region). */
   frameClassName?: string;
+  /** Report the active detail photo's proportions to its surrounding frame. */
+  onPhotoAspectRatio?: (ratio: number | null) => void;
 }
 
 /** Listing grid: 1 column < 768px, 2 columns to 1279px, then 3 columns in a ≤1560px frame. */
@@ -72,6 +74,7 @@ export function ListingImageCarousel({
   slideClassName,
   trackClassName,
   frameClassName,
+  onPhotoAspectRatio,
 }: ListingImageCarouselProps) {
   const { t } = useAppPreferences();
   const count = images.length;
@@ -126,6 +129,17 @@ export function ListingImageCarousel({
   });
   const [lightboxOrigin, setLightboxOrigin] = useState<{ x: number; y: number } | null>(null);
   const [index, setIndex] = useState(initialSlide);
+  const regionRef = useRef<HTMLDivElement>(null);
+  const reportPhotoAspect = useCallback(() => {
+    if (!onPhotoAspectRatio) return;
+    const img = regionRef.current?.querySelector<HTMLImageElement>(`[data-photo-index="${index}"] .cine-gallery__img`);
+    if (img?.complete && img.naturalWidth && img.naturalHeight && img.dataset.placeholder !== "true") {
+      onPhotoAspectRatio(img.naturalWidth / img.naturalHeight);
+    } else {
+      onPhotoAspectRatio(null);
+    }
+  }, [index, onPhotoAspectRatio]);
+  useEffect(() => { reportPhotoAspect(); }, [reportPhotoAspect, images]);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxRequested, setLightboxRequested] = useState(false);
   const sourceName = formatSourceName(source);
@@ -264,10 +278,12 @@ export function ListingImageCarousel({
 
   return (
     <div
+      ref={regionRef}
       role="region"
       aria-roledescription="carousel"
       aria-label={t("listingImage.carousel", "Listing photos")}
       className={className}
+      onLoadCapture={reportPhotoAspect}
       onPointerEnter={multi ? () => { prime(index); wake(); } : undefined}
       onFocus={multi ? () => { prime(index); wake(); } : undefined}
     >
@@ -287,6 +303,7 @@ export function ListingImageCarousel({
             {images.map((src, i) => (
               <div
                 key={`${src}-${i}`}
+                data-photo-index={i}
                 className={slideClassName ?? "h-full w-full min-w-0 shrink-0 grow-0 basis-full"}
                 aria-hidden={multi && i !== index}
               >
@@ -312,15 +329,6 @@ export function ListingImageCarousel({
                       fadeIn
                       className={`${slideClassName ? "cine-gallery__img " : ""}h-full w-full object-cover${imageClassName ? ` ${imageClassName}` : ""}`}
                     />
-                    {slideClassName && (
-                      // Stage fill (md+): a heavily blurred, darkened copy of this
-                      // same photo (the 80px thumb, already loaded for the strip).
-                      // aria-hidden keeps it out of the hero-morph image lookup; it
-                      // follows the photo so a sibling rule hides it while the hero loads.
-                      <span aria-hidden="true" className="cine-gallery__bg">
-                        <VehicleThumbnail src={src} listingId={listingId} alt="" source={source} sizes="80px" className="h-full w-full object-cover" />
-                      </span>
-                    )}
                   </button>
                 ) : (
                   <VehicleThumbnail

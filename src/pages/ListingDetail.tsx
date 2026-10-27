@@ -1,4 +1,4 @@
-import { Suspense, useState, useEffect, useRef } from 'react';
+import { Suspense, useState, useEffect, useRef, type CSSProperties } from 'react';
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
 import { DeferredSection } from '@/components/DeferredSection';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
@@ -131,6 +131,7 @@ export default function ListingDetail() {
   /** Cross-site linked listings; null = history service unavailable. */
   const [relatedListings, setRelatedListings] = useState<TrustRelatedListing[] | null>(null);
   const [loading, setLoading] = useState(!seed && !kept);
+  const [photoAspectRatio, setPhotoAspectRatio] = useState<number | null>(null);
   const { toggle: toggleCompare, isPinned: isPinnedForCompare } = useCompareTray();
   const [watchlisted, setWatchlisted] = useState(false);
   // Everything below the price waits for the detail data, then mounts one
@@ -641,7 +642,7 @@ export default function ListingDetail() {
             data-single={galleryImages.length <= 1 ? "" : undefined}
             className="cine-gallery order-1 -mx-5 sm:-mx-6 md:order-2 md:mx-0"
           >
-            <div className="cine-gallery__frame group">
+            <div className="cine-gallery__frame group" style={photoAspectRatio ? { '--photo-ratio': photoAspectRatio } as CSSProperties : undefined}>
               {heroPlaceholder && (
                 // The card's photo (already decoded): shows under the hero
                 // until the full-size photo lands, and is what the card → listing
@@ -664,7 +665,8 @@ export default function ListingDetail() {
                 silhouette={silhouette}
                 priority
                 className="relative w-full"
-                frameClassName="h-[var(--g-h)]"
+                frameClassName={photoAspectRatio ? 'aspect-[var(--photo-ratio)]' : 'h-[var(--g-h)]'}
+                onPhotoAspectRatio={setPhotoAspectRatio}
                 slideClassName="cine-gallery__slide"
                 trackClassName="cine-gallery__track"
               />

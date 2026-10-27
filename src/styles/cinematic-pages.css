@@ -101,16 +101,24 @@
 @media (min-width: 768px) {
   .cine-gallery { --g-h: clamp(340px, 56svh, 600px); }
 }
-.cine-gallery__frame { position: relative; }
+.cine-gallery__frame {
+  position: relative;
+  width: min(100%, calc(var(--g-h) * var(--photo-ratio, 100)));
+  margin-inline: 0 auto;
+}
+@media (max-width: 767px) {
+  .cine-gallery__frame {
+    width: min(calc(100% - 2.5rem), calc(var(--g-h) * var(--photo-ratio, 100)));
+    margin-left: 1.25rem;
+  }
+}
+@media (min-width: 640px) and (max-width: 767px) {
+  .cine-gallery__frame { width: min(calc(100% - 3rem), calc(var(--g-h) * var(--photo-ratio, 100))); margin-left: 1.5rem; }
+}
 .cine-gallery__frame [role="tablist"] { margin-top: 0.75rem; padding-inline: 1.25rem; }
 @media (min-width: 640px) { .cine-gallery__frame [role="tablist"] { padding-inline: 1.5rem; } }
 @media (min-width: 768px) { .cine-gallery__frame [role="tablist"] { padding-inline: 0.25rem; } }
-/* One photo at a time: every slide fills the whole frame, so the active
-   photo always sits in the same box and nothing of its neighbours shows at
-   rest (the slide gap only appears mid-swipe). Phones: the frame is 4:3, the
-   photo covers it. md+: the frame is wider than most photos, so the photo is
-   contained over a heavily blurred, darkened copy of itself (never another
-   photo). Overlays (credit, counter, expand) pin to this frame's corners. */
+/* Each slide fills the active photo-sized frame; overlays follow its edges. */
 .cine-gallery__slide {
   position: relative;
   height: 100%;
@@ -118,28 +126,12 @@
   flex: 0 0 100%;
   overflow: hidden;
 }
-.cine-gallery__bg { display: none; }
 @media (min-width: 768px) {
   .cine-gallery__slide {
     margin-right: 0.75rem;
     border-radius: var(--radius-card);
   }
   .cine-gallery__slide:last-child { margin-right: 0; }
-  .cine-gallery__bg {
-    display: block;
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    overflow: hidden;
-    background: #07090d;
-  }
-  /* Until the full photo lands the card photo underneath shows through. */
-  .cine-gallery__img[data-pending="true"] + .cine-gallery__bg { visibility: hidden; }
-  .cine-gallery__bg img {
-    transform: scale(1.18);
-    filter: blur(28px) brightness(0.42) saturate(1.15);
-  }
-  .cine-gallery__bg img[data-placeholder="true"] { display: none; }
   .cine-gallery .cine-gallery__img { object-fit: contain; }
   .cine-gallery .cine-gallery__img[data-placeholder="true"] { object-fit: cover; }
 }
@@ -151,6 +143,7 @@
   height: var(--g-h);
   object-fit: cover;
 }
+.cine-gallery__frame[style] .cine-gallery__ph { height: auto; aspect-ratio: var(--photo-ratio); }
 @media (min-width: 768px) {
   .cine-gallery__ph {
     object-fit: contain;
@@ -161,8 +154,8 @@
 
 /* No photo: the silhouette plate carries a real caption (name + source). */
 .cine-nophoto { display: none; }
-.cine-gallery:has(img[data-placeholder="true"]:not(.cine-gallery__bg *)) .cine-nophoto { display: flex; }
-.cine-gallery:has(img[data-placeholder="true"]:not(.cine-gallery__bg *)) .cine-gallery__credit { display: none; }
+.cine-gallery:has(img[data-placeholder="true"]) .cine-nophoto { display: flex; }
+.cine-gallery:has(img[data-placeholder="true"]) .cine-gallery__credit { display: none; }
 .cine-nophoto {
   position: absolute;
   top: auto;
