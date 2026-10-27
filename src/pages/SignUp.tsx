@@ -1,12 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { AnimatePresence, m } from "motion/react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, Check, Eye, EyeOff, Mail, ShieldCheck } from "lucide-react";
-import { AtmosphericImage } from "@/components/AtmosphericImage";
-import { BrandLogo } from "@/components/BrandLogo";
+import { AuthShell } from "@/components/auth/AuthShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -17,8 +16,7 @@ import { useAuth } from "@/lib/authContext";
 import { authErrorText } from "@/lib/authErrorText";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { API_BASE, resolveFetchCredentials } from "@/services/api";
-import { fadeIn, revealContainer, scaleIn } from "@/lib/motion";
-import { visuals } from "@/lib/visualAssets";
+import { fadeIn, scaleIn } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 type FormValues = { name: string; password: string; confirm: string };
@@ -254,198 +252,161 @@ export default function SignUp() {
   );
 
   return (
-    <m.div
-      initial="hidden"
-      animate="show"
-      variants={revealContainer}
-      className="relative grid min-h-screen bg-background text-foreground lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]"
+    <AuthShell
+      logoTo="/sign-in"
+      logoLabel="Motormila"
+      title={{ lead: t("auth.visual.signupLead", "Your seat at"), accent: t("auth.visual.signupAccent", "the market.") }}
+      bullets={bullets.map((text) => ({ icon: <Check className="h-4 w-4" aria-hidden />, text }))}
     >
-      {/* Same split as Sign in: photo panel on desktop, form follows the theme. */}
-      <div aria-hidden className="pointer-events-none relative order-2 hidden p-3 lg:block">
-        <div className="relative h-full overflow-hidden rounded-sheet">
-          <AtmosphericImage
-            src={visuals.darkGarageSilhouette.src}
-            srcSm={visuals.darkGarageSilhouette.srcSm}
-            className="h-full w-full object-cover object-[62%_center]"
-            priority
-            sizes="55vw"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/20" />
-          <div className="absolute inset-x-8 bottom-8 max-w-md">
-            <p className="font-display text-title2 font-semibold text-white">{t("signup.heroTitle", "Activate your Motormila seat.")}</p>
-            <ul className="mt-4 space-y-2">
-              {bullets.map((line) => (
-                <li key={line} className="flex items-start gap-2.5 text-footnote text-white/85">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                  {line}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </div>
+      <p className="cine-overline cine-in text-caption font-semibold text-primary" style={{ "--i": 1, "--cine-t0": "0.25s" } as CSSProperties}>
+        <ShieldCheck aria-hidden className="h-3.5 w-3.5" />
+        {selfServeEnabled && !token
+          ? t("signup.freeTrial", `${selfServeTrialDays}-day free trial`)
+          : t("signup.inviteOnly", "Invite only")}
+      </p>
+      <h1 className="cine-auth-heading cine-in mt-4 text-foreground" style={{ "--i": 2, "--cine-t0": "0.25s" } as CSSProperties}>{t("signup.createAccount", "Create your account")}</h1>
+      <p className="cine-in mt-3 text-body text-label-2" style={{ "--i": 2, "--cine-t0": "0.3s" } as CSSProperties}>
+        {selfServeEnabled && !token
+          ? t("signup.selfServeSubtitle", `Start your ${selfServeTrialDays}-day Pro trial — no invite needed.`)
+          : t("signup.subtitle", "Motormila is closed to the public. Complete signup with the invite your admin sent you.")}
+      </p>
 
-      <div className="relative z-10 order-1 flex min-h-screen items-center justify-center px-5 py-12 sm:px-8">
-        <m.div variants={scaleIn} className="w-full max-w-[25rem]">
-          <Link
-            to="/sign-in"
-            className="mb-10 flex w-fit rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="Motormila"
-          >
-            <BrandLogo size="nav" showTagline={false} />
-          </Link>
-
-          <Badge variant="info" className="mb-4">
-            <ShieldCheck aria-hidden />
-            {selfServeEnabled && !token
-              ? t("signup.freeTrial", `${selfServeTrialDays}-day free trial`)
-              : t("signup.inviteOnly", "Invite only")}
-          </Badge>
-          <h1 className="font-display text-title1 font-semibold text-foreground">{t("signup.createAccount", "Create your account")}</h1>
-          <p className="mt-2 text-body text-label-2">
-            {selfServeEnabled && !token
-              ? t("signup.selfServeSubtitle", `Start your ${selfServeTrialDays}-day Pro trial — no invite needed.`)
-              : t("signup.subtitle", "Motormila is closed to the public. Complete signup with the invite your admin sent you.")}
+      {(inviteLoading || selfServeChecking) && (
+        <div className="mt-7 space-y-3" role="status" aria-label={token ? t("signup.verifying", "Verifying invite…") : t("signup.checkingSignup", "Checking signup options…")}>
+          <Skeleton className="h-12 w-full rounded-control" />
+          <Skeleton className="h-12 w-full rounded-control" />
+          <p className="text-footnote text-label-2">
+            {token ? t("signup.verifying", "Verifying invite…") : t("signup.checkingSignup", "Checking signup options…")}
           </p>
+        </div>
+      )}
 
-          {(inviteLoading || selfServeChecking) && (
-            <div className="mt-7 space-y-3" role="status" aria-label={token ? t("signup.verifying", "Verifying invite…") : t("signup.checkingSignup", "Checking signup options…")}>
-              <Skeleton className="h-12 w-full rounded-control" />
-              <Skeleton className="h-12 w-full rounded-control" />
-              <p className="text-footnote text-label-2">
-                {token ? t("signup.verifying", "Verifying invite…") : t("signup.checkingSignup", "Checking signup options…")}
-              </p>
-            </div>
+      {inviteError && (
+        // No token at all (someone just opened /sign-up) is not an error: neutral, not red.
+        <div
+          role={token ? "alert" : "status"}
+          className={cn(
+            "content-in mt-7 rounded-card border p-4 text-footnote font-medium",
+            token ? "border-deal-high/30 bg-deal-high/10 text-deal-high-text" : "border-border bg-surface-2 text-foreground",
           )}
+        >
+          {inviteError}
+          <p className="mt-3 font-normal text-label-2">
+            {t("signup.alreadyRegistered", "Already registered?")}{" "}
+            <Link to="/sign-in" className="font-semibold text-primary underline-offset-4 hover:underline">
+              {t("common.signIn", "Sign in")}
+            </Link>
+          </p>
+        </div>
+      )}
 
-          {inviteError && (
-            // No token at all (someone just opened /sign-up) is not an error: neutral, not red.
-            <div
-              role={token ? "alert" : "status"}
-              className={cn(
-                "content-in mt-7 rounded-card border p-4 text-footnote font-medium",
-                token ? "border-deal-high/30 bg-deal-high/10 text-deal-high-text" : "border-border bg-surface-2 text-foreground",
-              )}
-            >
-              {inviteError}
-              <p className="mt-3 font-normal text-label-2">
-                {t("signup.alreadyRegistered", "Already registered?")}{" "}
-                <Link to="/sign-in" className="font-semibold text-primary underline-offset-4 hover:underline">
-                  {t("common.signIn", "Sign in")}
-                </Link>
-              </p>
+      {selfServeEnabled && !token && !inviteError && !selfServeChecking && (
+        <form onSubmit={handleSubmit(onSelfServeSubmit)} className="content-in mt-7 space-y-4" noValidate>
+          <div className="space-y-2">
+            <Label htmlFor="self-email">{t("signup.email", "Email")}</Label>
+            <Input
+              id="self-email"
+              type="email"
+              autoComplete="email"
+              value={selfServeEmail}
+              onChange={(event) => setSelfServeEmail(event.target.value)}
+              aria-invalid={selfServeEmailError ? true : undefined}
+              className="h-12"
+            />
+            <FieldError message={selfServeEmailError} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="self-name">{t("signup.fullName", "Full name")}</Label>
+            <Input id="self-name" autoComplete="name" {...register("name")} aria-invalid={errors.name ? true : undefined} className="h-12" />
+            <FieldError message={errors.name?.message} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="self-password">{t("signup.password", "Password")}</Label>
+            <div className="relative">
+              <Input
+                id="self-password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                {...register("password")}
+                aria-invalid={errors.password ? true : undefined}
+                className="h-12 pr-12"
+              />
+              <RevealToggle shown={showPassword} onToggle={() => setShowPassword((v) => !v)} labels={pwLabels} />
             </div>
-          )}
+            <FieldError message={errors.password?.message} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="self-confirm">{t("signup.confirmPassword", "Confirm password")}</Label>
+            <Input id="self-confirm" type="password" autoComplete="new-password" {...register("confirm")} aria-invalid={errors.confirm ? true : undefined} className="h-12" />
+            <FieldError message={errors.confirm?.message} />
+          </div>
+          {serverAlert}
+          <Button type="submit" size="lg" className="cine-sheen w-full" loading={loading}>
+            {t("signup.startTrial", `Start ${selfServeTrialDays}-day trial`)}
+            <ArrowRight aria-hidden />
+          </Button>
+          <p className="text-center text-footnote text-label-2">
+            {t("signup.alreadyRegistered", "Already registered?")}{" "}
+            <Link to="/sign-in" className="font-semibold text-primary underline-offset-4 hover:underline">
+              {t("common.signIn", "Sign in")}
+            </Link>
+          </p>
+        </form>
+      )}
 
-          {selfServeEnabled && !token && !inviteError && !selfServeChecking && (
-            <form onSubmit={handleSubmit(onSelfServeSubmit)} className="content-in mt-7 space-y-4" noValidate>
-              <div className="space-y-2">
-                <Label htmlFor="self-email">{t("signup.email", "Email")}</Label>
+      {invite && !inviteError && (
+        <div className="content-in">
+          <Card padding="none" className="mt-7 overflow-hidden">
+            <div className="flex items-center gap-3 border-b border-separator px-4 py-3.5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
+                <Mail className="h-4 w-4" aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-caption text-label-2">{t("signup.invitedAs", "Invited as")}</p>
+                <p className="truncate text-body font-semibold text-foreground">{invite.email}</p>
+              </div>
+              <Badge variant="info">{invite.plan}</Badge>
+            </div>
+            <div className="px-4 py-3.5">
+              <p className="text-footnote font-semibold text-foreground">{planMeta.title}</p>
+              <p className="mt-1 text-footnote text-label-2">{planMeta.detail}</p>
+            </div>
+          </Card>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4" noValidate>
+            <div className="space-y-2">
+              <Label htmlFor="name">{t("signup.fullName", "Full name")}</Label>
+              <Input id="name" autoComplete="name" {...register("name")} aria-invalid={errors.name ? true : undefined} className="h-12" />
+              <FieldError message={errors.name?.message} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">{t("signup.password", "Password")}</Label>
+              <div className="relative">
                 <Input
-                  id="self-email"
-                  type="email"
-                  autoComplete="email"
-                  value={selfServeEmail}
-                  onChange={(event) => setSelfServeEmail(event.target.value)}
-                  aria-invalid={selfServeEmailError ? true : undefined}
-                  className="h-12"
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  {...register("password")}
+                  aria-invalid={errors.password ? true : undefined}
+                  className="h-12 pr-12"
                 />
-                <FieldError message={selfServeEmailError} />
+                <RevealToggle shown={showPassword} onToggle={() => setShowPassword((v) => !v)} labels={pwLabels} />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="self-name">{t("signup.fullName", "Full name")}</Label>
-                <Input id="self-name" autoComplete="name" {...register("name")} aria-invalid={errors.name ? true : undefined} className="h-12" />
-                <FieldError message={errors.name?.message} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="self-password">{t("signup.password", "Password")}</Label>
-                <div className="relative">
-                  <Input
-                    id="self-password"
-                    type={showPassword ? "text" : "password"}
-                    autoComplete="new-password"
-                    {...register("password")}
-                    aria-invalid={errors.password ? true : undefined}
-                    className="h-12 pr-12"
-                  />
-                  <RevealToggle shown={showPassword} onToggle={() => setShowPassword((v) => !v)} labels={pwLabels} />
-                </div>
-                <FieldError message={errors.password?.message} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="self-confirm">{t("signup.confirmPassword", "Confirm password")}</Label>
-                <Input id="self-confirm" type="password" autoComplete="new-password" {...register("confirm")} aria-invalid={errors.confirm ? true : undefined} className="h-12" />
-                <FieldError message={errors.confirm?.message} />
-              </div>
-              {serverAlert}
-              <Button type="submit" size="lg" className="w-full" loading={loading}>
-                {t("signup.startTrial", `Start ${selfServeTrialDays}-day trial`)}
-                <ArrowRight aria-hidden />
-              </Button>
-              <p className="text-center text-footnote text-label-2">
-                {t("signup.alreadyRegistered", "Already registered?")}{" "}
-                <Link to="/sign-in" className="font-semibold text-primary underline-offset-4 hover:underline">
-                  {t("common.signIn", "Sign in")}
-                </Link>
-              </p>
-            </form>
-          )}
-
-          {invite && !inviteError && (
-            <div className="content-in">
-              <Card padding="none" className="mt-7 overflow-hidden">
-                <div className="flex items-center gap-3 border-b border-separator px-4 py-3.5">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
-                    <Mail className="h-4 w-4" aria-hidden />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-caption text-label-2">{t("signup.invitedAs", "Invited as")}</p>
-                    <p className="truncate text-body font-semibold text-foreground">{invite.email}</p>
-                  </div>
-                  <Badge variant="info">{invite.plan}</Badge>
-                </div>
-                <div className="px-4 py-3.5">
-                  <p className="text-footnote font-semibold text-foreground">{planMeta.title}</p>
-                  <p className="mt-1 text-footnote text-label-2">{planMeta.detail}</p>
-                </div>
-              </Card>
-
-              <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4" noValidate>
-                <div className="space-y-2">
-                  <Label htmlFor="name">{t("signup.fullName", "Full name")}</Label>
-                  <Input id="name" autoComplete="name" {...register("name")} aria-invalid={errors.name ? true : undefined} className="h-12" />
-                  <FieldError message={errors.name?.message} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">{t("signup.password", "Password")}</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      autoComplete="new-password"
-                      {...register("password")}
-                      aria-invalid={errors.password ? true : undefined}
-                      className="h-12 pr-12"
-                    />
-                    <RevealToggle shown={showPassword} onToggle={() => setShowPassword((v) => !v)} labels={pwLabels} />
-                  </div>
-                  <FieldError message={errors.password?.message} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirm">{t("signup.confirmPassword", "Confirm password")}</Label>
-                  <Input id="confirm" type="password" autoComplete="new-password" {...register("confirm")} aria-invalid={errors.confirm ? true : undefined} className="h-12" />
-                  <FieldError message={errors.confirm?.message} />
-                </div>
-                {serverAlert}
-                <Button type="submit" size="lg" className="w-full" loading={loading}>
-                  {t("signup.activate", "Activate account")}
-                  <ArrowRight aria-hidden />
-                </Button>
-              </form>
+              <FieldError message={errors.password?.message} />
             </div>
-          )}
-        </m.div>
-      </div>
-    </m.div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm">{t("signup.confirmPassword", "Confirm password")}</Label>
+              <Input id="confirm" type="password" autoComplete="new-password" {...register("confirm")} aria-invalid={errors.confirm ? true : undefined} className="h-12" />
+              <FieldError message={errors.confirm?.message} />
+            </div>
+            {serverAlert}
+            <Button type="submit" size="lg" className="cine-sheen w-full" loading={loading}>
+              {t("signup.activate", "Activate account")}
+              <ArrowRight aria-hidden />
+            </Button>
+          </form>
+        </div>
+      )}
+    </AuthShell>
   );
 }

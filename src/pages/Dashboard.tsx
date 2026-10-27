@@ -1,5 +1,5 @@
 import { scrollBehavior, duration, ease, spring, press, useReducedMotionOrLowData } from "@/lib/motion";
-import { forwardRef, memo, startTransition, useDeferredValue, useImperativeHandle, useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
+import { Fragment, forwardRef, memo, type CSSProperties, startTransition, useDeferredValue, useImperativeHandle, useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { useDeferredMount } from "@/hooks/useDeferredMount";
 import { useOffscreenPause } from "@/hooks/useOffscreenPause";
@@ -23,7 +23,8 @@ import { SnapshotModeNotice } from "@/components/SnapshotModeNotice";
 import { AtmosphericImage } from "@/components/AtmosphericImage";
 import { HeroVariantPicker } from "@/components/HeroVariantPicker";
 import { useHeroVariantLab } from "@/hooks/useHeroVariantLab";
-import type { HeroAlign } from "@/lib/heroVariants";
+import { usePointerParallax } from "@/hooks/usePointerParallax";
+import "@/styles/cinematic.css";
 import { RevealSection } from "@/components/RevealSection";
 import { SourceCredits } from "@/components/SourceCredits";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -48,6 +49,7 @@ import { TrendingDown,
   List,
   Search,
   SlidersHorizontal,
+  Sparkles,
 } from "lucide-react";
 import type { StatsOverview } from "@/types/car";
 import {
@@ -83,61 +85,6 @@ import { SearchPagination } from "@/components/search/SearchPagination";
 import { NoResultsState, type AlertStatus } from "@/components/search/NoResultsState";
 import { Reveal } from "@/components/motion/Reveal";
 import { HeroFlipWords } from "@/components/motion/HeroFlipWords";
-
-const heroContainerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.05,
-      delayChildren: 0.05
-    }
-  }
-} as const;
-
-const heroItemVariants = {
-  hidden: { opacity: 0, y: 15 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: "spring" as const,
-      stiffness: 220,
-      damping: 24
-    }
-  }
-} as const;
-
-/** Hero headline: words fade + rise in sequence, once on mount. */
-const heroHeadlineVariants = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.06, delayChildren: 0.04 } },
-} as const;
-const heroWordVariants = {
-  hidden: { opacity: 0, y: "0.4em" },
-  show: { opacity: 1, y: 0, transition: { duration: duration.long, ease: ease.decelerate } },
-} as const;
-const heroWordVariantsStill = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { duration: duration.medium } },
-} as const;
-
-/** Render a phrase as inline-block words so each can animate on its own. */
-function HeroWords({ text, still }: { text: string; still: boolean }) {
-  const words = text.split(/\s+/).filter(Boolean);
-  return (
-    <>
-      {words.map((word, i) => (
-        <span key={`${word}-${i}`}>
-          <m.span className="inline-block" variants={still ? heroWordVariantsStill : heroWordVariants}>
-            {word}
-          </m.span>
-          {i < words.length - 1 ? " " : null}
-        </span>
-      ))}
-    </>
-  );
-}
 
 // First-load entrance: capped stagger (30ms/item, the first ~10 rows) so a
 // long list never makes the last row wait.
@@ -221,30 +168,6 @@ const HOME_CATEGORIES = [
   { value: "lorries", labelKey: "shell.home.cat.lorries", fallback: "Lorries" },
 ] as const;
 
-
-function heroCopyAlignClass(align: HeroAlign, hideSideSignals: boolean): string {
-  switch (align) {
-    case "left":
-      return cn(
-        "mr-auto max-w-xl text-left lg:max-w-2xl",
-        !hideSideSignals && "xl:ml-[min(22vw,292px)] xl:max-w-[36rem]",
-      );
-    case "right":
-      return cn(
-        "ml-auto max-w-xl text-left lg:max-w-2xl",
-        !hideSideSignals && "xl:mr-[min(22vw,292px)] xl:max-w-[36rem]",
-      );
-    case "center":
-      return cn(
-        "mx-auto flex w-full max-w-3xl flex-col items-center text-center",
-        !hideSideSignals && "xl:max-w-3xl",
-      );
-    default: {
-      const _exhaustive: never = align;
-      return _exhaustive;
-    }
-  }
-}
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
@@ -672,35 +595,14 @@ export default function Dashboard() {
   const isPriceUnavailableMode = filters.price_availability === "unavailable";
   const listingFreshnessAt = liveMarketSnapshot?.latest_listing_at ?? stats?.last_updated ?? null;
   const { variant: heroVariant, setVariantId: setHeroVariantId, showPicker: showHeroLab } = useHeroVariantLab();
-  // The hero copy always sits on the photo, so it is always white over a dark
-  // scrim, in light and dark themes alike (black display type on a bright
-  // aerial photo failed contrast in light mode). Only popovers follow the theme.
-  const heroFilmTone: "cinematic" | "light" = heroVariant.tone === "light" ? "light" : "cinematic";
-  const heroCentered = heroVariant.align === "center";
-  const heroAlignClass = heroCopyAlignClass(heroVariant.align, heroVariant.hideSideSignals);
-  const heroCopyTone =
-    heroFilmTone === "cinematic"
-      ? "text-white [text-shadow:0_18px_48px_rgba(0,0,0,0.45)]"
-      : "text-foreground [text-shadow:0_1px_18px_hsl(var(--background)/0.55)]";
-  const heroMutedTone =
-    heroFilmTone === "cinematic"
-      ? "text-white/90 [text-shadow:0_2px_18px_rgba(0,0,0,0.85),0_8px_32px_rgba(0,0,0,0.55)]"
-      : "text-foreground/80 [text-shadow:0_1px_14px_hsl(var(--background)/0.45)]";
-  const heroSearchShellClass =
-    heroFilmTone === "cinematic"
-      ? "border-white/20 bg-black/35 shadow-soft-xl focus-within:border-primary/55 focus-within:shadow-gold-glow"
-      : "border-border/80 bg-card shadow-soft-lg focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20";
-  const heroInputClass =
-    heroFilmTone === "cinematic"
-      ? "h-14 min-w-0 flex-1 bg-transparent text-body font-semibold text-white placeholder:text-white/45 outline-none [&::-webkit-search-cancel-button]:hidden"
-      : "h-14 min-w-0 flex-1 bg-transparent text-body font-semibold text-foreground placeholder:text-muted-foreground outline-none [&::-webkit-search-cancel-button]:hidden";
-  // The suggestions popover is a bg-card surface, so its rows follow the theme.
+  // The hero is a dark film stage in both themes (white type on the photo);
+  // only the suggestions popover follows the theme.
+  const heroStatsLoading = marketPulseListings <= 0 && statsQuery.isPending && !liveMarketSnapshot;
+  usePointerParallax(heroSectionRef, !motionStill);
+  // Suggestions popover rows follow the theme (bg-popover surface).
   const heroPopularBtnClass =
     "w-full rounded-2xl px-3 py-2.5 text-left text-footnote font-medium text-foreground transition-colors hover:bg-surface";
-  const heroKickerClass =
-    heroFilmTone === "cinematic"
-      ? "border-white/20 bg-black/35 text-white/90"
-      : "border-border bg-card text-foreground";
+  const heroTitleWords = t("hero.title", "Sri Lanka's entire vehicle market,").split(/\s+/).filter(Boolean);
 
   // ═════════════════════════════════════════════════════════════════
   // RENDER
@@ -717,123 +619,117 @@ export default function Dashboard() {
         <HeroVariantPicker activeId={heroVariant.id} onSelect={setHeroVariantId} />
       ) : null}
 
-      {/* ── HERO — cinematic showroom ─────────────────────────────── */}
+      {/* ── HERO — "Night drive" cinematic stage ───────────────────────
+          Layers (back → front): photo plate (pointer + scroll parallax,
+          slow settle) · light bloom · scrim · one-shot light sweep · grain ·
+          exposure lift · letterbox curtain. All transform/opacity. */}
       <section
         ref={heroSectionRef}
         id="overview"
-        className={cn(
-          "hero-cinematic relative -mt-[var(--nav-offset)] overflow-hidden border-b border-border pt-[var(--nav-offset)]",
-          heroFilmTone === "cinematic" ? "bg-[#070605]" : "bg-surface",
-          heroCentered && "hero-cinematic--centered",
-        )}
+        className="cine-hero -mt-[var(--nav-offset)] pt-[var(--nav-offset)]"
+        style={{ "--cine-pos": heroVariant.objectPosition } as CSSProperties}
       >
-        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-          <AtmosphericImage
-            src={heroVariant.image.src}
-            srcSm={heroVariant.image.srcSm}
-            className={`hero-cinematic__media h-full w-full object-cover ${heroVariant.imageOpacity}`}
-            style={{ objectPosition: heroVariant.objectPosition }}
-            priority
-            sizes="100vw"
-          />
-          {heroVariant.scrims.map((scrim) => (
-            <div key={scrim} className={`absolute inset-0 ${scrim}`} />
-          ))}
-          <div className="hero-cinematic__vignette" />
-          <div className="hero-cinematic__grain" />
-          <div className="hero-cinematic__letterbox" />
+        <div aria-hidden className="cine-hero__stage">
+          <div className="cine-depth" data-depth="-14">
+            <div className="cine-drift">
+              <div className="cine-settle">
+                <AtmosphericImage
+                  key={heroVariant.id}
+                  src={heroVariant.image.src}
+                  srcSm={heroVariant.image.srcSm}
+                  className="cine-hero__img"
+                  priority
+                  sizes="100vw"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="cine-depth" data-depth="-26">
+            <div className="cine-hero__bloom" />
+          </div>
+          <div className="cine-hero__scrim" />
+          <div className="cine-sweep" />
+          <div className="cine-grain" />
+          <div className="cine-exposure" />
+          <div className="cine-letterbox cine-letterbox--top" />
+          <div className="cine-letterbox cine-letterbox--bottom" />
         </div>
 
-        <motion.div
-          key={heroVariant.id}
-          initial="hidden"
-          animate="show"
-          variants={heroContainerVariants}
-          className={cn(
-            "relative z-10 mx-auto flex w-full max-w-[1560px] flex-1 flex-col px-5 sm:px-6",
-            heroCentered
-              ? "min-h-[min(calc(70svh-var(--nav-offset)),calc(720px-var(--nav-offset)))] items-center justify-center py-10 sm:py-16"
-              : "justify-end pb-10 pt-12 sm:pb-16 sm:pt-20 lg:pb-20 lg:pt-24",
-          )}
-        >
+        {/* AI Value HUD — pinned in the sky over the car (xl+). Illustrates the
+            fair-price band every ad gets; it shows no listing's numbers. */}
+        <div aria-hidden className="cine-hud right-[5%] top-[calc(var(--nav-offset)+11%)] hidden xl:block" data-depth="10">
+          <div className="cine-hud__card cine-in" style={{ "--i": 0, "--cine-t0": "1.35s" } as CSSProperties}>
+            <div className="cine-hud__body">
+              <p className="flex items-center gap-2 text-caption font-semibold text-white">
+                <Sparkles className="h-3.5 w-3.5 text-[hsl(213_100%_72%)]" aria-hidden />
+                {t("shell.home.hud.title", "AI Value")}
+              </p>
+              <p className="mt-1 text-footnote text-white/70">{t("shell.home.hud.body", "Fair-price range on every ad")}</p>
+              <div className="cine-hud__band mt-4" style={{ "--hud-x": "88px" } as CSSProperties}>
+                <span className="cine-hud__marker" />
+              </div>
+              <div className="mt-2.5 flex justify-between text-caption text-white/60">
+                <span>{t("shell.home.hud.great", "Great price")}</span>
+                <span>{t("shell.home.hud.fair", "Fair")}</span>
+                <span>{t("shell.home.hud.high", "High")}</span>
+              </div>
+            </div>
+          </div>
+          <div className="cine-hud__lead" />
+          <div className="cine-hud__ping" />
+        </div>
 
-          <div className={`relative ${heroAlignClass}`}>
-            <motion.p variants={heroItemVariants} className={cn("hero-pill", heroCentered && "flex justify-center")}>
-              <span className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-caption font-medium tracking-tight ${heroKickerClass}`}>
-                <span aria-hidden className="relative h-1.5 w-1.5 rounded-full bg-primary" />
-                {t("shell.home.kicker", "Every vehicle ad in Sri Lanka, one search")}
-              </span>
-            </motion.p>
+        <div className="cine-hero__content">
+          <div className="cine-lift max-w-[44rem] lg:max-w-[min(52vw,50rem)]">
+            <p className="cine-kicker cine-in text-footnote font-medium" style={{ "--i": 0, "--cine-t0": "0.25s" } as CSSProperties}>
+              <span aria-hidden className="cine-kicker__no whitespace-nowrap">Nº 01</span>
+              <span aria-hidden className="cine-kicker__rule hidden sm:block" />
+              <span>{t("shell.home.kicker", "Every vehicle ad in Sri Lanka, one search")}</span>
+            </p>
 
-            <motion.h1
-              variants={heroHeadlineVariants}
-              className={cn(
-                "display-hero mt-6",
-                heroCentered ? "display-hero--lockup" : "max-w-3xl",
-                heroCopyTone,
-              )}
-            >
-              <span className={heroCentered ? "display-hero__lead" : undefined}>
-                <HeroWords text={t("hero.title", "Sri Lanka's entire vehicle market,")} still={motionStill} />
+            <h1 className="cine-title mt-5 sm:mt-6">
+              <span className="block">
+                {heroTitleWords.map((word, i) => (
+                  <Fragment key={`${word}-${i}`}>
+                    <span className="cine-word">
+                      <span className="cine-word__in" style={{ "--i": i } as CSSProperties}>{word}</span>
+                    </span>
+                    {i < heroTitleWords.length - 1 ? " " : null}
+                  </Fragment>
+                ))}
               </span>
-              <span className={cn("italic text-primary", heroCentered ? "display-hero__accent" : undefined)}>
-                {heroCentered ? null : " "}
+              {/* Accent enters without a mask so its headlight glow is never clipped. */}
+              <span className="cine-title__accent cine-accent-in" style={{ "--i": heroTitleWords.length } as CSSProperties}>
                 {/* Rotating accent word — fixed-width box, pauses offscreen/hidden tab,
                     static "priced." under reduced motion or low-data mode. */}
-                <m.span className="inline-block" variants={motionStill ? heroWordVariantsStill : heroWordVariants}>
-                  <HeroFlipWords
-                    align={heroCentered ? "center" : "start"}
-                    words={[
-                      t("hero.accentWord2", "priced."),
-                      t("hero.accentWord3", "tracked."),
-                      t("hero.accentWord4", "compared."),
-                      t("hero.titleAccent", "decoded."),
-                    ]}
-                  />
-                </m.span>
+                <HeroFlipWords
+                  align="start"
+                  words={[
+                    t("hero.accentWord2", "priced."),
+                    t("hero.accentWord3", "tracked."),
+                    t("hero.accentWord4", "compared."),
+                    t("hero.titleAccent", "decoded."),
+                  ]}
+                />
               </span>
-            </motion.h1>
+            </h1>
 
-            <motion.p
-              variants={heroItemVariants}
-              className={cn(
-                "text-body-lg mt-5 text-pretty",
-                heroCentered ? "mx-auto max-w-xl text-balance" : "max-w-lg",
-                heroMutedTone,
+            <p className="cine-body cine-in mt-4 max-w-[34rem] text-pretty text-body sm:mt-6 sm:text-body-lg" style={{ "--i": 1, "--cine-t0": "0.75s" } as CSSProperties}>
+              {t(
+                "shell.home.bodyNoCount",
+                "Vehicle ads from Sri Lanka's marketplaces in one search, with price history and a fair-price range for each.",
               )}
-            >
-              {/* Never invent market size: when the feed has no numbers yet the
-                  hero drops the count instead of printing a marketing figure. */}
-              {marketPulseListings > 0
-                ? t(
-                    "shell.home.bodyDual",
-                    "{live} live vehicle ads · 360,000+ historical records tracked across {sources} Sri Lankan sites, with price history and a fair-price range for each.",
-                    {
-                      live: marketPulseListings.toLocaleString(),
-                      sources: marketPulseSources || 12,
-                    },
-                  )
-                : t(
-                    "shell.home.bodyNoCount",
-                    "Vehicle ads from Sri Lanka's marketplaces in one search, with price history and a fair-price range for each.",
-                  )}
-            </motion.p>
+            </p>
 
-            <motion.div
-              variants={heroItemVariants}
-              className={cn("mt-9 w-full max-w-2xl", heroCentered ? "mx-auto" : "text-left")}
-            >
+            <div className="cine-in mt-7 w-full max-w-2xl sm:mt-9" style={{ "--i": 2, "--cine-t0": "0.75s" } as CSSProperties}>
                 <div className="relative">
                   <m.div
                     animate={{ scale: heroFocused && !motionStill ? 1.015 : 1 }}
                     transition={spring.smooth}
-                    className={cn(
-                      "flex items-center gap-2 rounded-full border p-1.5 transition-[border-color,box-shadow] duration-medium",
-                      heroSearchShellClass,
-                      heroFocused && "hero-search--focused",
-                    )}
+                    className={cn("cine-search", heroFocused && "hero-search--focused")}
                   >
-                    <Search aria-hidden className={`ml-3.5 h-5 w-5 shrink-0 ${heroFilmTone === "cinematic" ? "text-white/55" : "text-muted-foreground"}`} />
+                    <div className="cine-search__inner">
+                    <Search aria-hidden className="ml-3.5 h-5 w-5 shrink-0 text-white/55" />
                     <label htmlFor="hero-search" className="sr-only">{t("common.search", "Search")} vehicles</label>
                     <input
                       id="hero-search"
@@ -892,11 +788,12 @@ export default function Dashboard() {
                       aria-activedescendant={heroActiveIdx >= 0 ? `hero-suggestion-${heroActiveIdx}` : undefined}
                       type="search"
                       enterKeyHint="search"
-                      className={heroInputClass}
+                      className="h-14 min-w-0 flex-1 bg-transparent text-body font-semibold text-white outline-none placeholder:text-white/45 [&::-webkit-search-cancel-button]:hidden"
                     />
-                    <Button type="button" onClick={runHeroSearch} size="md" className="mr-0.5 h-11 px-6 text-footnote">
+                    <Button type="button" onClick={runHeroSearch} size="md" className="cine-sheen mr-0.5 h-11 px-6 text-footnote">
                       {t("common.search", "Search")}
                     </Button>
+                    </div>
                   </m.div>
 
                   {showHeroPopular ? (
@@ -956,15 +853,7 @@ export default function Dashboard() {
                 </div>
 
                 {heroSearchMessage && (
-                  <p
-                    className={cn(
-                      "mt-2 text-caption font-medium",
-                      // Over the cinematic photo the light-theme token is a dark
-                      // navy — use the bright brand blue for small text there.
-                      heroFilmTone === "cinematic" ? "text-[#6CB8FF]" : "text-primary-bright",
-                      heroCentered && "text-center",
-                    )}
-                  >
+                  <p className="mt-2 text-caption font-medium text-[hsl(213_100%_72%)]">
                     {heroSearchMessage}
                   </p>
                 )}
@@ -972,7 +861,7 @@ export default function Dashboard() {
                 {/* Category quick links — bikes and three-wheelers sit right next to cars */}
                 <nav
                   aria-label={t("shell.home.categories", "Browse by type")}
-                  className={cn("mt-4 flex flex-wrap gap-2", heroCentered && "justify-center")}
+                  className="mt-4 flex flex-wrap gap-2"
                 >
                   {HOME_CATEGORIES.map((cat) => {
                     const active = (filters.vehicle_category || "cars") === cat.value;
@@ -985,27 +874,17 @@ export default function Dashboard() {
                         {...(motionStill ? {} : press)}
                         className={cn(
                           "tap-44 relative isolate inline-flex min-h-10 items-center rounded-full border px-4 text-footnote font-semibold transition-colors",
-                          heroFilmTone === "cinematic"
-                            ? active
-                              ? "border-transparent text-white"
-                              : "border-white/20 bg-black/30 text-white/90 hover:bg-black/45"
-                            : active
-                              ? "border-transparent text-primary-bright"
-                              : "border-border bg-card/80 text-foreground hover:border-primary/30",
+                          active ? "border-transparent text-[hsl(var(--cine-ink))]" : "cine-chip",
                         )}
                       >
                         {active ? (
-                          /* Selected pill slides between chips (layoutId needs motion.*). */
+                          /* Selected pill slides between chips (layoutId needs motion.*).
+                             White in both themes: the hero stage is dark in light mode too. */
                           <motion.span
                             aria-hidden
                             layoutId="home-category-pill"
                             transition={motionStill ? { duration: 0 } : spring.snappy}
-                            className={cn(
-                              "absolute inset-0 -z-10 rounded-full border",
-                              // White, not theme tokens: the cinematic hero is dark in both themes
-                              // (bg-foreground/20 went near-black and vanished in light mode).
-                              heroFilmTone === "cinematic" ? "border-white/25 bg-white/20" : "border-primary/40 bg-primary/10",
-                            )}
+                            className="absolute inset-0 -z-10 rounded-full bg-white shadow-[0_0_24px_-4px_rgba(255,255,255,0.45)]"
                           />
                         ) : null}
                         {t(cat.labelKey, cat.fallback)}
@@ -1013,9 +892,41 @@ export default function Dashboard() {
                     );
                   })}
                 </nav>
-            </motion.div>
+            </div>
           </div>
-        </motion.div>
+
+          {/* Credits strip — the live market, in numbers. Never a made-up
+              figure: the live count shows a skeleton while loading and drops
+              out if the feed has no number. */}
+          <dl className="cine-strip cine-in mt-10 grid grid-cols-3 gap-x-4 gap-y-4 py-5 sm:mt-12 sm:grid-cols-4 sm:py-6 lg:mt-14" style={{ "--i": 4, "--cine-t0": "0.8s" } as CSSProperties}>
+            {marketPulseListings > 0 || heroStatsLoading ? (
+              <div className="min-w-0">
+                <dt className="cine-stat__label text-caption font-medium">{t("shell.home.stat.live", "Live ads")}</dt>
+                <dd className="cine-stat__value num mt-1.5 font-display text-title3 font-semibold sm:text-title2">
+                  {marketPulseListings > 0 ? (
+                    <AnimatedNumber value={marketPulseListings} />
+                  ) : (
+                    <Skeleton shape="text" className="cine-skel h-6 w-20" />
+                  )}
+                </dd>
+              </div>
+            ) : null}
+            <div className="min-w-0">
+              <dt className="cine-stat__label text-caption font-medium">{t("shell.home.stat.sources", "Sources")}</dt>
+              <dd className="cine-stat__value num mt-1.5 font-display text-title3 font-semibold sm:text-title2">
+                {marketPulseSources > 0 ? <AnimatedNumber value={marketPulseSources} /> : "12"}
+              </dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="cine-stat__label text-caption font-medium">{t("shell.home.stat.history", "Price records")}</dt>
+              <dd className="cine-stat__value num mt-1.5 font-display text-title3 font-semibold sm:text-title2">360,000+</dd>
+            </div>
+            <div className="hidden min-w-0 sm:block">
+              <dt className="cine-stat__label text-caption font-medium">{t("shell.home.hud.title", "AI Value")}</dt>
+              <dd className="mt-1.5 text-footnote text-white/80">{t("shell.home.hud.body", "Fair-price range on every ad")}</dd>
+            </div>
+          </dl>
+        </div>
       </section>
 
       <section id="market" className="scroll-mt-20">

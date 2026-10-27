@@ -145,15 +145,17 @@ beforeEach(() => {
 });
 
 describe("Dashboard runtime safety", () => {
-  it("centers the home hero headline lockup", () => {
-    renderDashboard(["/?hero=expressway-dusk"]);
+  it("renders the cinematic hero headline, accent word and search", () => {
+    renderDashboard();
 
     const heading = screen.getByRole("heading", {
+      level: 1,
       name: /sri lanka's entire vehicle market/i,
     });
-    expect(heading).toHaveClass("display-hero--lockup");
-    expect(heading.querySelector(".display-hero__lead")).not.toBeNull();
-    expect(heading.querySelector(".display-hero__accent")).not.toBeNull();
+    expect(heading).toHaveClass("cine-title");
+    expect(heading.querySelectorAll(".cine-word").length).toBeGreaterThan(2);
+    expect(heading.querySelector(".cine-title__accent")).not.toBeNull();
+    expect(document.getElementById("hero-search")).toHaveAttribute("role", "combobox");
   });
 
   it("renders the market pulse section without throwing", async () => {

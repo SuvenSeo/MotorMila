@@ -5,10 +5,10 @@ import {
 } from "@/lib/heroVariants";
 
 describe("home hero layout", () => {
-  it("ships the production hero as a centered copy lockup", () => {
+  it("ships the production hero as the night-drive editorial (left) layout", () => {
     const variant = getHeroVariant(DEFAULT_HERO_VARIANT_ID);
 
-    expect(variant.id).toBe("coastal-aerial");
-    expect(variant.align).toBe("center");
+    expect(variant.id).toBe("night-drive");
+    expect(variant.align).toBe("left");
   });
 });

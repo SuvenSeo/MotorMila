@@ -15,16 +15,16 @@ import path from "path";
  *   (home → Dashboard, /listing/:id → ListingDetail), and
  * - on "/", a high-priority preload of the hero AVIF with the SAME
  *   srcset/sizes AtmosphericImage renders (so the browser picks the same file).
- * The hero file is the default variant (DEFAULT_HERO_VARIANT_ID "coastal-aerial"
- * in src/lib/heroVariants.ts → assets/page_home_hero_coastal*.avif).
+ * The hero file is the default variant (DEFAULT_HERO_VARIANT_ID "night-drive"
+ * in src/lib/heroVariants.ts → assets/page_home_hero_night*.avif).
  */
 function routeEarlyHints(): Plugin {
   const ROUTES: Array<{ test: string; page: string }> = [
     { test: 'p==="/"', page: "src/pages/Dashboard.tsx" },
     { test: 'p.indexOf("/listing/")===0', page: "src/pages/ListingDetail.tsx" },
   ];
-  const HERO_SM = "page_home_hero_coastal-sm.avif";
-  const HERO_LG = "page_home_hero_coastal.avif";
+  const HERO_SM = "page_home_hero_night-sm.avif";
+  const HERO_LG = "page_home_hero_night.avif";
 
   function chunkFor(bundle: OutputBundle, page: string): OutputChunk | undefined {
     const chunks = Object.values(bundle).filter((f): f is OutputChunk => f.type === "chunk");

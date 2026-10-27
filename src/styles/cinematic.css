@@ -1,0 +1,595 @@
+/* ============================================================================
+   Cinematic stage — home hero + auth shell ("Night drive").
+   Every animation here is transform / opacity (plus a discrete `visibility`
+   at the end of one-shot layers so they stop compositing). No infinite loops
+   on large layers. Scroll parallax is CSS scroll-driven (compositor, zero
+   React or JS per scroll frame) and only where supported. Pointer parallax
+   writes transforms straight onto [data-depth] wrappers (hooks/
+   usePointerParallax.ts). Reduced motion / low-data: everything is static.
+   ========================================================================== */
+
+:root {
+  --cine-ink: 222 40% 3%;               /* #04060a — stage black, both themes */
+  --cine-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --cine-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --cine-band: clamp(260px, 44svh, 540px); /* photo band height below lg */
+}
+
+/* ── Shared one-shot layers ──────────────────────────────────────────────── */
+
+.cine-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+/* Black "exposure" that lifts off the plate on arrival. The photo underneath
+   is painted at full opacity from the first frame, so LCP is not delayed. */
+.cine-exposure {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: hsl(var(--cine-ink));
+  opacity: 0;
+  visibility: hidden;
+  animation: cine-expose 1.5s var(--cine-ease) both;
+}
+@keyframes cine-expose {
+  0% { opacity: 0.92; visibility: visible; }
+  99% { opacity: 0; visibility: visible; }
+  100% { opacity: 0; visibility: hidden; }
+}
+
+/* Auth panel: the strip light "strikes" like a tube switching on. */
+.cine-exposure--strike { animation: cine-strike 1.6s linear both; }
+@keyframes cine-strike {
+  0% { opacity: 0.96; visibility: visible; }
+  18% { opacity: 0.96; }
+  22% { opacity: 0.5; }
+  27% { opacity: 0.9; }
+  33% { opacity: 0.35; }
+  38% { opacity: 0.75; }
+  100% { opacity: 0; visibility: hidden; }
+}
+
+/* Anamorphic letterbox bars that open like a curtain. */
+.cine-letterbox {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 11%;
+  pointer-events: none;
+  background: hsl(var(--cine-ink));
+  transform: scaleY(0);
+  visibility: hidden;
+  animation: cine-letterbox 1.25s var(--cine-ease-in-out) 0.12s both;
+}
+.cine-letterbox--top { top: 0; transform-origin: top; }
+.cine-letterbox--bottom { bottom: 0; transform-origin: bottom; }
+@keyframes cine-letterbox {
+  0% { transform: scaleY(1); visibility: visible; }
+  99% { transform: scaleY(0); visibility: visible; }
+  100% { transform: scaleY(0); visibility: hidden; }
+}
+
+/* One diagonal light sweep across the whole stage. */
+.cine-sweep {
+  position: absolute;
+  inset: -10% -40%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background: linear-gradient(
+    104deg,
+    transparent 38%,
+    rgba(255, 214, 160, 0.07) 45%,
+    rgba(255, 255, 255, 0.16) 50%,
+    rgba(150, 196, 255, 0.08) 55%,
+    transparent 62%
+  );
+  transform: translate3d(-55%, 0, 0);
+  visibility: hidden;
+  animation: cine-sweep 2.1s var(--cine-ease-in-out) 0.95s both;
+}
+@keyframes cine-sweep {
+  0% { transform: translate3d(-55%, 0, 0); opacity: 1; visibility: visible; }
+  85% { opacity: 1; }
+  99% { transform: translate3d(55%, 0, 0); opacity: 0; visibility: visible; }
+  100% { transform: translate3d(55%, 0, 0); opacity: 0; visibility: hidden; }
+}
+
+/* The photo eases in from a slow push, then holds still. */
+.cine-settle {
+  position: absolute;
+  inset: 0;
+  transform-origin: 66% 46%;
+  animation: cine-settle 2.8s var(--cine-ease) both;
+}
+@keyframes cine-settle {
+  from { transform: scale(1.09) translate3d(-0.8%, -0.4%, 0); }
+  to { transform: scale(1.0001) translate3d(0, 0, 0); }
+}
+
+/* Pointer-parallax wrappers: a hair of overscan so edges never show. */
+.cine-depth {
+  position: absolute;
+  inset: -2.5%;
+  will-change: transform;
+}
+
+/* Staggered rise-in for UI (index via --i). */
+.cine-in {
+  animation: cine-in 0.9s var(--cine-ease) both;
+  animation-delay: calc(var(--cine-t0, 0.45s) + var(--i, 0) * 80ms);
+}
+@keyframes cine-in {
+  from { opacity: 0; transform: translate3d(0, 18px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+/* Headline words rise out of a mask. */
+.cine-word {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  /* Room for descenders / Sinhala & Tamil vowel signs inside the mask. */
+  padding: 0.1em 0.06em 0.16em;
+  margin: -0.1em -0.06em -0.16em;
+}
+.cine-word__in {
+  display: inline-block;
+  animation: cine-word 1.15s var(--cine-ease) both;
+  animation-delay: calc(var(--cine-t0, 0.35s) + var(--i, 0) * 75ms);
+}
+@keyframes cine-word {
+  from { transform: translate3d(0, 112%, 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+
+/* ── Home hero ───────────────────────────────────────────────────────────── */
+
+.cine-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: hsl(var(--cine-ink));
+  color: #fff;
+  min-height: min(100svh, 980px);
+}
+.hero-banners:has(> :only-child) ~ .cine-hero { padding-top: calc(var(--nav-offset) + 64px); }
+.hero-banners:has(> :nth-child(2)) ~ .cine-hero { padding-top: calc(var(--nav-offset) + 124px); }
+
+.cine-hero__stage {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: var(--cine-band);
+  overflow: hidden;
+  pointer-events: none;
+}
+.cine-hero__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 82% 50%;
+}
+/* Light pools that sit on the headlights and the Lotus Tower glow. */
+.cine-hero__bloom {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 26% 18% at 74% 58%, rgba(120, 175, 255, 0.22), transparent 70%),
+    radial-gradient(ellipse 30% 26% at 90% 36%, rgba(255, 170, 96, 0.14), transparent 72%);
+  mix-blend-mode: screen;
+}
+.cine-hero__scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(4, 6, 10, 0.55) 0%, transparent 22%, transparent 48%, hsl(var(--cine-ink)) 100%);
+}
+
+.cine-hero__content {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1560px;
+  margin-inline: auto;
+  padding: calc(var(--cine-band) - var(--nav-offset) - 64px) 1.25rem 0;
+}
+
+.cine-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: rgba(255, 255, 255, 0.82);
+}
+.cine-kicker__rule {
+  width: 2.25rem;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.15));
+}
+.cine-kicker__no {
+  font-family: var(--font-display);
+  color: hsl(213 100% 72%);
+  letter-spacing: 0.02em;
+}
+
+.cine-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2.75rem, 1.2rem + 4.6vw, 5.5rem);
+  line-height: 0.96;
+  letter-spacing: -0.035em;
+  word-spacing: var(--display-word-spacing);
+  color: #fff;
+  text-wrap: balance;
+}
+/* Brushed-chrome fill on each word (the gradient lives on the moving element,
+   so the clip travels with it). */
+.cine-title .cine-word__in {
+  background: linear-gradient(180deg, #ffffff 0%, #ffffff 46%, #c9d3e3 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.cine-title__accent {
+  display: block;
+  font-style: italic;
+  color: hsl(213 100% 66%);
+  text-shadow: 0 0 34px rgba(64, 146, 255, 0.55), 0 0 2px rgba(150, 200, 255, 0.6);
+}
+.cine-accent-in {
+  animation: cine-accent 1.3s var(--cine-ease) both;
+  animation-delay: calc(var(--cine-t0, 0.35s) + var(--i, 0) * 75ms + 80ms);
+}
+@keyframes cine-accent {
+  from { opacity: 0; transform: translate3d(0, 0.35em, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+:root:lang(si) .cine-title,
+:root:lang(ta) .cine-title {
+  font-size: clamp(2rem, 0.9rem + 4.2vw, 4.25rem);
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+:root:lang(ta) .cine-title { font-size: clamp(1.625rem, 0.6rem + 3.8vw, 3.6rem); }
+
+.cine-body { color: rgba(255, 255, 255, 0.78); }
+
+/* Search: dark glass with a brushed-metal hairline border (no backdrop blur). */
+.cine-search {
+  position: relative;
+  border-radius: 999px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.08) 38%, rgba(255, 255, 255, 0.05) 62%, rgba(110, 170, 255, 0.55));
+  box-shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(0, 0, 0, 0.2);
+  transition: box-shadow var(--dur-medium) var(--ease-decelerate);
+}
+.cine-search__inner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.375rem;
+  background: linear-gradient(180deg, rgba(16, 20, 28, 0.86), rgba(7, 9, 14, 0.9));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.cine-search:focus-within {
+  box-shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.85), 0 0 0 4px rgba(10, 122, 255, 0.28), 0 0 48px -6px rgba(10, 122, 255, 0.55);
+}
+
+.cine-chip {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(8, 10, 14, 0.55);
+  color: rgba(255, 255, 255, 0.9);
+}
+.cine-chip:hover { background: rgba(255, 255, 255, 0.1); }
+
+/* Credits-style stat strip along the bottom of the hero. */
+.cine-strip {
+  position: relative;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.cine-strip::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: 38%;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(110, 170, 255, 0.9), transparent);
+}
+.cine-stat__label { color: rgba(255, 255, 255, 0.6); letter-spacing: 0.08em; text-transform: uppercase; }
+:root:lang(si) .cine-stat__label,
+:root:lang(ta) .cine-stat__label { letter-spacing: 0; text-transform: none; }
+.cine-stat__value { color: #fff; }
+
+/* AI Value HUD pinned in the sky over the car (xl+ only). */
+.cine-hud {
+  position: absolute;
+  z-index: 5;
+  width: 17.5rem;
+  pointer-events: none;
+}
+.cine-hud__card {
+  border-radius: 1.25rem;
+  padding: 1px;
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.06) 45%, rgba(110, 170, 255, 0.45));
+  box-shadow: 0 30px 80px -24px rgba(0, 0, 0, 0.85);
+}
+.cine-hud__body {
+  border-radius: calc(1.25rem - 1px);
+  padding: 1rem 1.125rem 1.125rem;
+  background: linear-gradient(180deg, rgba(14, 18, 26, 0.82), rgba(6, 8, 12, 0.88));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.cine-hud__band {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, hsl(var(--deal-good)) 0%, hsl(var(--deal-good)) 30%, hsl(45 95% 55%) 50%, hsl(var(--deal-high)) 78%, hsl(var(--deal-high)) 100%);
+}
+.cine-hud__marker {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(4, 6, 10, 0.85), 0 0 16px rgba(255, 255, 255, 0.75);
+  transform: translate3d(var(--hud-x, 0px), 0, 0);
+  animation: cine-hud-marker 1.4s var(--cine-ease) 2.05s both;
+}
+@keyframes cine-hud-marker {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(var(--hud-x, 0px), 0, 0); }
+}
+.cine-hud__lead {
+  margin-left: 2.25rem;
+  width: 1px;
+  height: 5.5rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0));
+  transform-origin: top;
+  animation: cine-draw 0.8s var(--cine-ease) 1.75s both;
+}
+@keyframes cine-draw {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+.cine-hud__ping {
+  margin-left: calc(2.25rem - 5px);
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 14px rgba(140, 190, 255, 0.9);
+  animation: cine-pop 0.6s var(--cine-ease) 2.3s both;
+}
+@keyframes cine-pop {
+  from { opacity: 0; transform: scale(0.2); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (min-width: 640px) {
+  .cine-hero__content { padding-inline: 1.5rem; }
+}
+
+/* Desktop: the photo fills the whole frame; copy sits left over a scrim. */
+@media (min-width: 1024px) {
+  .cine-hero { min-height: clamp(640px, 88svh, 880px); }
+  .cine-hero__stage { inset: 0; height: auto; }
+  .cine-hero__img { object-position: var(--cine-pos, 70% 50%); }
+  .cine-hero__scrim {
+    background:
+      linear-gradient(90deg, rgba(4, 6, 10, 0.9) 0%, rgba(4, 6, 10, 0.72) 26%, rgba(4, 6, 10, 0.18) 52%, transparent 70%),
+      linear-gradient(180deg, rgba(4, 6, 10, 0.6) 0%, transparent 20%, transparent 62%, hsl(var(--cine-ink)) 100%);
+  }
+  .cine-hero__content {
+    justify-content: flex-end;
+    padding-top: clamp(3rem, 9vh, 6rem);
+  }
+}
+
+/* ── Scroll-driven parallax (compositor; no JS per frame) ─────────────────── */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .cine-hero { view-timeline-name: --cine-hero; }
+    .cine-drift {
+      position: absolute;
+      inset: 0;
+      animation: cine-drift linear both;
+      animation-timeline: --cine-hero;
+      animation-range: exit 0% exit 100%;
+    }
+    @keyframes cine-drift {
+      to { transform: translate3d(0, 24%, 0) scale(1.05); }
+    }
+    .cine-lift {
+      animation: cine-lift linear both;
+      animation-timeline: --cine-hero;
+      animation-range: exit 0% exit 75%;
+    }
+    @keyframes cine-lift {
+      to { transform: translate3d(0, -14%, 0); opacity: 0.15; }
+    }
+  }
+}
+.cine-drift { position: absolute; inset: 0; }
+
+/* ── Auth shell ──────────────────────────────────────────────────────────── */
+
+.cine-auth__visual {
+  position: relative;
+  height: clamp(232px, 34svh, 340px);
+}
+.cine-auth__frame {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  isolation: isolate;
+  background: hsl(var(--cine-ink));
+  color: #fff;
+}
+.cine-auth__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 40% 58%;
+}
+.cine-auth__scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(4, 6, 10, 0.55) 0%, transparent 34%, transparent 55%, rgba(4, 6, 10, 0.92) 100%);
+}
+.cine-auth__glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background:
+    radial-gradient(ellipse 30% 20% at 48% 56%, rgba(90, 160, 255, 0.28), transparent 70%),
+    radial-gradient(ellipse 60% 10% at 60% 24%, rgba(255, 196, 120, 0.16), transparent 70%);
+}
+.cine-auth__title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2.25rem, 1rem + 2.6vw, 3.75rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  word-spacing: var(--display-word-spacing);
+  text-wrap: balance;
+}
+.cine-auth__title em {
+  font-style: italic;
+  color: hsl(213 100% 70%);
+  text-shadow: 0 0 30px rgba(64, 146, 255, 0.5);
+}
+:root:lang(si) .cine-auth__title,
+:root:lang(ta) .cine-auth__title {
+  font-size: clamp(1.75rem, 0.9rem + 2vw, 2.75rem);
+  line-height: 1.22;
+  letter-spacing: 0;
+}
+
+.cine-auth__panel {
+  position: relative;
+  z-index: 10;
+  margin-top: -1.75rem;
+  border-radius: 1.75rem 1.75rem 0 0;
+  background: hsl(var(--background));
+}
+/* A faint brand-blue light falls on the form side from the visual. */
+.cine-auth__panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(ellipse 80% 40% at 50% 0%, hsl(var(--primary) / 0.1), transparent 70%);
+}
+.cine-auth-heading {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2.25rem, 1.6rem + 1.6vw, 3rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.cine-overline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+:root:lang(si) .cine-overline,
+:root:lang(ta) .cine-overline { letter-spacing: 0; text-transform: none; }
+.cine-overline::before {
+  content: "";
+  width: 1.75rem;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.6;
+}
+
+/* Primary button sheen on hover (pointer devices only). */
+.cine-sheen { position: relative; overflow: hidden; isolation: isolate; }
+.cine-sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.35) 50%, transparent 65%);
+  transform: translate3d(-120%, 0, 0);
+}
+@media (hover: hover) and (pointer: fine) {
+  .cine-sheen:hover::after { transition: transform 0.9s var(--cine-ease); transform: translate3d(120%, 0, 0); }
+}
+
+@media (min-width: 1024px) {
+  .cine-auth__visual { height: auto; min-height: 100svh; padding: 0.75rem; position: sticky; top: 0; }
+  .cine-auth__frame { border-radius: var(--radius-sheet, 1.75rem); }
+  .cine-auth__img { object-position: 46% 55%; }
+  .cine-auth__scrim {
+    background:
+      linear-gradient(180deg, rgba(4, 6, 10, 0.35) 0%, transparent 30%, transparent 46%, rgba(4, 6, 10, 0.94) 100%),
+      linear-gradient(90deg, rgba(4, 6, 10, 0.35), transparent 40%);
+  }
+  .cine-auth__panel { margin-top: 0; border-radius: 0; background: transparent; }
+  .cine-auth__panel::before {
+    border-radius: 0;
+    background: radial-gradient(ellipse 70% 50% at 100% 30%, hsl(var(--primary) / 0.09), transparent 70%);
+  }
+}
+
+/* ── Reduced motion / low data: a still frame ────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .cine-exposure,
+  .cine-letterbox,
+  .cine-sweep { display: none; }
+  .cine-settle,
+  .cine-in,
+  .cine-word__in,
+  .cine-accent-in,
+  .cine-hud__marker,
+  .cine-hud__lead,
+  .cine-hud__ping { animation: none !important; }
+  .cine-depth { will-change: auto; }
+}
+html.low-data .cine-exposure,
+html.low-data .cine-letterbox,
+html.low-data .cine-sweep { display: none; }
+html.low-data .cine-settle,
+html.low-data .cine-in,
+html.low-data .cine-word__in,
+html.low-data .cine-accent-in,
+html.low-data .cine-hud__marker,
+html.low-data .cine-hud__lead,
+html.low-data .cine-hud__ping,
+html.low-data .cine-drift,
+html.low-data .cine-lift { animation: none !important; }
+
+/* Logo over a dark film plate: always the light-lettering wordmark. */
+.cine-on-dark .brand-wordmark-lockup > img:first-child { display: none !important; }
+.cine-on-dark .brand-wordmark-lockup > img:last-child { display: block !important; }
+
+.cine-hero { border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.cine-skel { background: rgba(255, 255, 255, 0.1); }
+.cine-auth__icon {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  color: hsl(213 100% 74%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
