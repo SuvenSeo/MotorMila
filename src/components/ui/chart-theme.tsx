@@ -162,6 +162,31 @@ function useHasSize(ref: React.RefObject<HTMLElement | null>) {
   return sized;
 }
 
+/** True once the element comes within ~1.5 screens of the viewport (always true when not deferring). */
+function useNearViewport(ref: React.RefObject<HTMLElement | null>, enabled: boolean) {
+  const [near, setNear] = React.useState(!enabled);
+  React.useEffect(() => {
+    if (near) return;
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === "undefined") {
+      setNear(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          io.disconnect();
+          setNear(true);
+        }
+      },
+      { rootMargin: "100% 0px 50% 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [ref, near]);
+  return near;
+}
+
 export { usePrefersReducedMotionOrLowData as useChartCalm };
 
 type TooltipRow = { label: React.ReactNode; value: React.ReactNode; color?: string };
@@ -229,6 +254,12 @@ type ChartFrameProps = {
   label?: string;
   className?: string;
   children?: React.ReactNode;
+  /**
+   * Mount the plot only once it is within `margin` of the viewport. Recharts'
+   * first render is one ~300 ms task at 4x CPU; below the fold (Trends on a
+   * phone) it no longer lands in the page's load. The box keeps its height.
+   */
+  deferUntilNear?: boolean;
 };
 
 /**
@@ -248,6 +279,7 @@ export function ChartFrame({
   label,
   className,
   children,
+  deferUntilNear = false,
 }: ChartFrameProps) {
   if (state === "loading") {
     return <Skeleton shape="chart" className={cn(heightClass, className)} />;
@@ -267,7 +299,7 @@ export function ChartFrame({
     );
   }
   return (
-    <SizedPlot label={label} className={cn(heightClass, className)}>
+    <SizedPlot label={label} className={cn(heightClass, className)} deferUntilNear={deferUntilNear}>
       {children}
     </SizedPlot>
   );
@@ -278,9 +310,11 @@ export function ChartFrame({
  * measures a real size. Children mount once it has one, then cross-fade in
  * (opacity only, on an inner layer that already has the final size).
  */
-function SizedPlot({ label, className, children }: { label?: string; className?: string; children?: React.ReactNode }) {
+function SizedPlot({ label, className, children, deferUntilNear = false }: { label?: string; className?: string; children?: React.ReactNode; deferUntilNear?: boolean }) {
   const ref = React.useRef<HTMLDivElement>(null);
-  const sized = useHasSize(ref);
+  const hasSize = useHasSize(ref);
+  const near = useNearViewport(ref, deferUntilNear);
+  const sized = hasSize && near;
   return (
     <div ref={ref} role={label ? "img" : undefined} aria-label={label} className={cn("relative w-full min-w-0", className)}>
       {sized ? <div className="content-in absolute inset-0">{children}</div> : null}

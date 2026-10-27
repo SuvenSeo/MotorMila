@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { memo, startTransition, useEffect, useMemo, useState, type ReactNode } from "react";
 import { m } from "motion/react";
 import { getMakes, getModels, getPriceTrendSeries, getHybridBands, formatPrice } from "@/services/api";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -8,7 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
-import { PageHeader } from "@/components/ui/page-header";
+import { CineHeader } from "@/components/CineHeader";
+import { visuals } from "@/lib/visualAssets";
+import { formatPriceLkrMillions } from "@/lib/formatting";
+import "@/styles/cinematic-pages.css";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { SRI_LANKA_DISTRICTS } from "@/data/districts";
 import { PriceHistoryChart } from "@/components/PriceHistoryChart";
@@ -21,7 +24,7 @@ import { PageCanvas } from "@/components/PageCanvas";
 import { FreePlanBanner } from "@/components/FreePlanBanner";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { ProFeatureLock } from "@/components/ProFeatureLock";
-import { revealItem, staggerDelay, tween } from "@/lib/motion";
+import { staggerDelay, tween } from "@/lib/motion";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { useAuth } from "@/lib/authContext";
 import {
@@ -112,15 +115,17 @@ export default function Trends() {
       effectiveCondition !== "all" ? effectiveCondition : undefined,
       effectiveDistrict !== "all" ? effectiveDistrict : undefined,
     )
-      .then((s) => { if (!c) { setTrendData(s.points); setCoverageNote(s.coverage_note); } })
+      // The series lands as a transition: the chart + KPI re-render is
+      // time-sliced instead of one long task on the data's arrival.
+      .then((s) => { if (!c) startTransition(() => { setTrendData(s.points); setCoverageNote(s.coverage_note); setLoading(false); }); })
       .catch(() => {
         if (!c) {
           setTrendData([]);
           setCoverageNote(t("trends.tempUnavailable", "Trend data temporarily unavailable."));
           setError(t("trends.loadError", "Unable to load trend data."));
+          setLoading(false);
         }
-      })
-      .finally(() => { if (!c) setLoading(false); });
+      });
     return () => { c = true; };
   }, [selectedMake, selectedModel, effectiveCondition, effectiveDistrict, t]);
 
@@ -129,7 +134,7 @@ export default function Trends() {
     setHybridLoading(true);
     setHybridError(null);
     getHybridBands()
-      .then((data) => { if (!c) setHybridBands(data); })
+      .then((data) => { if (!c) startTransition(() => setHybridBands(data)); })
       .catch(() => { if (!c) setHybridError(t("trends.hybridError", "Hybrid band data temporarily unavailable.")); })
       .finally(() => { if (!c) setHybridLoading(false); });
     return () => { c = true; };
@@ -157,25 +162,48 @@ export default function Trends() {
     { id: "district", label: district === "all" ? t("trends.allLk", "All Sri Lanka") : district },
   ];
 
+  const resetNarrow = () => { setDistrict("all"); setCondition("all"); };
+  const chartCoverage =
+    language !== "en" && trendData.length > 1 && coverageNote && coverageNote.startsWith("Monthly medians")
+      ? t("trends.coverageNote", coverageNote, { from: trendData[0].month, to: trendData[trendData.length - 1].month })
+      : coverageNote;
+
   return (
     <PageCanvas ambient="none">
-      <FreePlanBanner />
-      <PageHeader
+      <CineHeader
         eyebrow={t("trends.eyebrow", "Trend studio")}
-        eyebrowIcon={BarChart3}
-        title={t("trends.title", "Price trends.")}
-        description={t("trends.description", "Track median price movement for any vehicle lane across Sri Lanka.")}
-        stats={[
-          { label: t("trends.stat.coverage", "Coverage"), value: t("trends.allLk", "All Sri Lanka"), hint: t("trends.stat.coverageHint", "District-level price lanes") },
-          { label: t("trends.stat.hybrid", "Hybrid lens"), value: t("trends.stat.hybridValue", "Tax bands"), hint: t("trends.stat.hybridHint", "Excise cliff insight") },
-          { label: t("trends.stat.history", "History"), value: t("trends.stat.historyValue", "Monthly"), hint: t("trends.stat.historyHint", "Median price over time") },
-        ]}
-      />
+        lead={t("trends.cine.lead", "Where prices")}
+        accent={t("trends.cine.accent", "are heading.")}
+        body={t("trends.description", "Track median price movement for any vehicle lane across Sri Lanka.")}
+        image={visuals.priceIntelligenceBg}
+        imagePosition="60% 50%"
+      >
+        <TrendHeadline
+          lane={selectedMake && selectedModel ? `${selectedMake} ${selectedModel}` : null}
+          points={visibleTrendData}
+          loading={loading || (!selectedModel && makes.length === 0)}
+        />
+        <dl className="cine-trend-stats mt-6 grid max-w-3xl grid-cols-3 gap-4">
+          {[
+            { label: t("trends.stat.coverage", "Coverage"), value: t("trends.allLk", "All Sri Lanka"), hint: t("trends.stat.coverageHint", "District-level price lanes") },
+            { label: t("trends.stat.hybrid", "Hybrid lens"), value: t("trends.stat.hybridValue", "Tax bands"), hint: t("trends.stat.hybridHint", "Excise cliff insight") },
+            { label: t("trends.stat.history", "History"), value: t("trends.stat.historyValue", "Monthly"), hint: t("trends.stat.historyHint", "Median price over time") },
+          ].map((stat) => (
+            <div key={stat.label} className="min-w-0 border-t border-foreground/15 pt-3">
+              <dt className="text-caption text-white/55">{stat.label}</dt>
+              <dd className="mt-1 text-callout font-semibold text-white">{stat.value}</dd>
+              <dd className="mt-0.5 hidden text-caption text-white/55 sm:block">{stat.hint}</dd>
+            </div>
+          ))}
+        </dl>
+      </CineHeader>
 
-      <PageBody className="space-y-6 pt-0 lg:pt-0">
-        {/* Controls */}
-        <m.div variants={revealItem}>
-          <Card padding="md">
+      <PageBody className="space-y-12 pt-8 lg:pt-12">
+        <FreePlanBanner />
+
+        {/* 01 — Lane */}
+        <TrendSection index="01" title={t("trends.section.lane", "Choose a lane")} body={t("trends.section.laneBody", "Make and model set the lane; condition and district narrow it.")}>
+          <Card padding="md" className="cine-trend-filters">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-1.5">
                 <label htmlFor="t-make" className={fieldLabelClass}>{t("common.make", "Make")}</label>
@@ -249,7 +277,7 @@ export default function Trends() {
                   type="button"
                   variant="tertiary"
                   size="sm"
-                  onClick={() => { setDistrict("all"); setCondition("all"); }}
+                  onClick={resetNarrow}
                   className="ml-auto"
                 >
                   <RotateCcw aria-hidden /> {t("trends.resetFilters", "Reset filters")}
@@ -257,38 +285,42 @@ export default function Trends() {
               )}
             </div>
           </Card>
-        </m.div>
+        </TrendSection>
 
-        {/* KPI strip — token sparklines from the real series */}
-        <m.div variants={revealItem}>
-          <TrendKpis points={visibleTrendData} loading={loading && visibleTrendData.length === 0} />
-        </m.div>
-
-        <m.div variants={revealItem}>
-          <PriceHistoryChart title={chartTitle} points={visibleTrendData} isLoading={loading} coverageNote={language !== "en" && trendData.length > 1 && coverageNote && coverageNote.startsWith("Monthly medians") ? t("trends.coverageNote", coverageNote, { from: trendData[0].month, to: trendData[trendData.length - 1].month }) : coverageNote} emptyMessage={emptyMessage} emptyActionLabel={hasNarrow ? t("trends.broadenFilters", "Broaden filters") : undefined} onEmptyAction={hasNarrow ? () => { setDistrict("all"); setCondition("all"); } : undefined} />
-          {!fullAccess ? (
-            <UpgradePrompt
-              className="mt-4"
-              title={freePlanText(t, "trendsTitle")}
-              body={freePlanText(t, "trendsBody")}
-              variant="strip"
+        {/* 02 — Price history: KPI strip (token sparklines from the real series) + the hero chart */}
+        <TrendSection index="02" title={t("trends.section.history", "Price history")}>
+          <div className="space-y-4">
+            <TrendKpis points={visibleTrendData} loading={loading && visibleTrendData.length === 0} />
+            <PriceHistoryChart
+              variant="cinematic"
+              title={chartTitle}
+              points={visibleTrendData}
+              isLoading={loading}
+              coverageNote={chartCoverage}
+              emptyMessage={emptyMessage}
+              emptyActionLabel={hasNarrow ? t("trends.broadenFilters", "Broaden filters") : undefined}
+              onEmptyAction={hasNarrow ? resetNarrow : undefined}
             />
-          ) : null}
-        </m.div>
+            {!fullAccess ? (
+              <UpgradePrompt
+                title={freePlanText(t, "trendsTitle")}
+                body={freePlanText(t, "trendsBody")}
+                variant="strip"
+              />
+            ) : null}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-separator pt-3">
+              <p className="text-footnote text-label-2">
+                {selectedMake && selectedModel
+                  ? t("trends.medianNote", "Median advertised prices grouped by month from the public Sri Lanka snapshot.")
+                  : t("trends.chooseLane", "Choose a make and model to render the trajectory.")}
+              </p>
+              <Badge variant="info">{t("common.publicData", "Public data")}</Badge>
+            </div>
+          </div>
+        </TrendSection>
 
-        <m.div variants={revealItem}>
-          <Card padding="sm" className="flex flex-wrap items-center justify-between gap-3 shadow-none">
-            <p className="text-footnote text-label-2">
-              {selectedMake && selectedModel
-                ? t("trends.medianNote", "Median advertised prices grouped by month from the public Sri Lanka snapshot.")
-                : t("trends.chooseLane", "Choose a make and model to render the trajectory.")}
-            </p>
-            <Badge variant="info">{t("common.publicData", "Public data")}</Badge>
-          </Card>
-        </m.div>
-
-        {/* ── HYBRID TAX ARBITRAGE (Pro depth) ─────────────────── */}
-        <m.div variants={revealItem}>
+        {/* 03 — HYBRID TAX ARBITRAGE (Pro depth) */}
+        <TrendSection index="03" title={t("trends.section.hybrid", "Hybrid tax bands")}>
           {fullAccess ? (
             <HybridTaxArbitrageSection
               data={hybridBands}
@@ -304,17 +336,91 @@ export default function Trends() {
               </ProFeatureLock>
             </Card>
           )}
-        </m.div>
+        </TrendSection>
 
-        {/* Bottom of the page: mounts near the viewport or once idle, so its
+        {/* 04 — Bottom of the page: mounts near the viewport or once idle, so its
             render (and fetch) is not part of the first-load long tasks. */}
-        <DeferredSection lazy minHeight={420}>
-          <ImportEraPublicSection />
-        </DeferredSection>
+        <TrendSection index="04" title={t("trends.section.eras", "Import eras")}>
+          <DeferredSection lazy minHeight={420}>
+            <ImportEraPublicSection />
+          </DeferredSection>
+        </TrendSection>
       </PageBody>
     </PageCanvas>
   );
 }
+
+// ─── Page furniture ───────────────────────────────────────────────────────────
+
+/** A numbered editorial section: hairline rule, index, title, optional lede. */
+function TrendSection({ index, title, body, children }: { index: string; title: string; body?: string; children: ReactNode }) {
+  return (
+    <section className="cine-trend-section">
+      <div className="mb-4 flex items-baseline gap-3 border-t border-separator pt-4">
+        <span className="font-display text-footnote font-semibold tabular-nums text-primary">{index}</span>
+        <h2 className="font-display text-title3 font-semibold text-foreground">{title}</h2>
+      </div>
+      {body ? <p className="-mt-2 mb-4 max-w-2xl text-footnote text-label-2">{body}</p> : null}
+      {children}
+    </section>
+  );
+}
+
+/**
+ * The header's hero insight: one sentence on the selected lane's real
+ * movement across the visible window, with its latest median. Nothing is
+ * shown that the series doesn't hold.
+ */
+const TrendHeadline = memo(function TrendHeadline({ lane, points, loading }: { lane: string | null; points: PriceTrendPoint[]; loading: boolean }) {
+  const { t } = useAppPreferences();
+  const facts = useMemo(() => {
+    const clean = points
+      .filter((p) => Number.isFinite(Number(p.median_price)) && Number(p.median_price) > 0)
+      .sort((a, b) => String(a.month).localeCompare(String(b.month)));
+    if (clean.length < 2) return null;
+    const first = clean[0];
+    const last = clean[clean.length - 1];
+    const pct = ((Number(last.median_price) - Number(first.median_price)) / Number(first.median_price)) * 100;
+    const ads = clean.reduce((a, p) => a + (Number(p.sample_count) || 0), 0);
+    const [y, mo] = String(first.month).split("-").map(Number);
+    const since = Number.isFinite(y) && mo >= 1 && mo <= 12 ? new Date(y, mo - 1, 1).toLocaleDateString("en-GB", { month: "short", year: "numeric" }) : first.month;
+    return { pct, median: Number(last.median_price), ads, since };
+  }, [points]);
+
+  let sentence: string;
+  if (!lane) sentence = t("trends.cine.none", "Pick a make and model to see how its asking prices have moved.");
+  else if (loading && !facts) sentence = t("trends.cine.loading", "Reading the market…");
+  else if (!facts) sentence = t("trends.cine.none", "Pick a make and model to see how its asking prices have moved.");
+  else {
+    const pctText = `${Math.abs(facts.pct).toFixed(1)}%`;
+    sentence = Math.abs(facts.pct) < 1
+      ? t("trends.cine.flat", "{lane} asking prices have held steady since {month}.", { lane, month: facts.since })
+      : facts.pct > 0
+        ? t("trends.cine.up", "{lane} asking prices are up {pct} since {month}.", { lane, pct: pctText, month: facts.since })
+        : t("trends.cine.down", "{lane} asking prices are down {pct} since {month}.", { lane, pct: pctText, month: facts.since });
+  }
+  const tone = !facts || Math.abs(facts.pct) < 1 ? "flat" : facts.pct > 0 ? "up" : "down";
+
+  return (
+    <div className="cine-trend-headline max-w-3xl" aria-live="polite">
+      <p className="cine-eyebrow text-white/60">{t("trends.cine.kicker", "Headline movement")}</p>
+      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-6">
+        {facts ? (
+          <p className="shrink-0">
+            <span className="cine-display block text-[clamp(2rem,1.5rem+2vw,3rem)] leading-none tabular-nums text-white">{formatPriceLkrMillions(facts.median)}</span>
+            <span className="mt-1.5 block text-caption text-white/55">
+              {t("trends.cine.basis", "Median asking price · {n} ads tracked", { n: facts.ads.toLocaleString("en-US") })}
+            </span>
+          </p>
+        ) : null}
+        <p className="text-body leading-snug text-white/85 sm:pb-1" data-tone={tone}>
+          {facts ? <span aria-hidden className="cine-trend-chip" data-tone={tone}>{tone === "up" ? "▲" : tone === "down" ? "▼" : "■"}</span> : null}
+          {sentence}
+        </p>
+      </div>
+    </div>
+  );
+});
 
 // ─── Hybrid Tax Arbitrage Section ─────────────────────────────────────────────
 
@@ -324,7 +430,7 @@ interface HybridTaxArbitrageSectionProps {
   error: string | null;
 }
 
-function HybridTaxArbitrageSection({ data, loading, error }: HybridTaxArbitrageSectionProps) {
+const HybridTaxArbitrageSection = memo(function HybridTaxArbitrageSection({ data, loading, error }: HybridTaxArbitrageSectionProps) {
   const { t } = useAppPreferences();
   const cliffInsight = getHybridExciseCliffInsight();
 
@@ -469,4 +575,4 @@ function HybridTaxArbitrageSection({ data, loading, error }: HybridTaxArbitrageS
       </div>
     </Card>
   );
-}
+});

@@ -539,3 +539,45 @@ html.low-data .cine-step-rail__fill { transition: none !important; }
     radial-gradient(ellipse 45% 70% at 88% 10%, hsl(213 100% 55% / 0.2), transparent 70%),
     radial-gradient(ellipse 35% 60% at 70% 120%, hsl(32 95% 55% / 0.12), transparent 70%);
 }
+
+/* ── Trends: hero insight, numbered sections, cinematic chart ────────────── */
+.cine-trend-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  margin-right: 0.5rem;
+  border-radius: 999px;
+  font-size: 0.625rem;
+  vertical-align: 0.15em;
+  background: hsl(0 0% 100% / 0.1);
+  color: hsl(0 0% 100% / 0.8);
+}
+.cine-trend-chip[data-tone="up"] { background: hsl(var(--deal-caution) / 0.18); color: hsl(var(--deal-caution)); }
+.cine-trend-chip[data-tone="down"] { background: hsl(var(--deal-good) / 0.18); color: hsl(var(--deal-good)); }
+/* The lane filters sit flush on the page: hairline, no lift. */
+.cine-trend-filters { box-shadow: none; }
+/* Chart card: the plot reads as a clean instrument. */
+.cine-chart .recharts-cartesian-axis-tick-value { fill: hsl(0 0% 100% / 0.5); font-size: 11px; }
+.cine-chart .recharts-tooltip-cursor { stroke: hsl(0 0% 100% / 0.22); stroke-dasharray: 2 4; }
+/* One-shot draw-in: a curtain in the card's ink slides off the plot, left to
+   right (transform only, composited); its leading edge is feathered. */
+.cine-chart__curtain-wrap {
+  position: absolute;
+  inset: -4px -2px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+}
+.cine-chart__curtain {
+  position: absolute;
+  inset: 0 0 0 -48px;
+  background: linear-gradient(90deg, transparent 0, hsl(var(--cine-ink)) 48px);
+  transform: translate3d(0, 0, 0);
+  animation: cine-curtain 0.9s var(--cine-ease) 0.12s both;
+  will-change: transform;
+}
+@keyframes cine-curtain { to { transform: translate3d(calc(100% + 48px), 0, 0); } }
+@media (prefers-reduced-motion: reduce) { .cine-chart__curtain-wrap { display: none; } }
+html.low-data .cine-chart__curtain-wrap { display: none; }
