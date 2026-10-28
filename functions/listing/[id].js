@@ -23,7 +23,7 @@ export async function onRequest(context) {
   const ua = request.headers.get("user-agent") || "";
 
   if (BOT_UA.test(ua)) {
-    return listingOgResponse({ id, apiBaseUrl: apiBase(env), siteOrigin: url.origin });
+    return listingOgResponse({ id, apiBaseUrl: apiBase(env, url.origin), siteOrigin: url.origin });
   }
 
   // Humans: serve the SPA shell; client-side routing takes over.

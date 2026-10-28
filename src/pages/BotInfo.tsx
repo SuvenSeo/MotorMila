@@ -4,7 +4,7 @@ import { Bot } from "lucide-react";
 import { LegalPageShell, LegalSection, PRIVACY_EMAIL } from "@/components/money/LegalPageShell";
 import { useAppPreferences } from "@/lib/appPreferences";
 
-const UA = "MotorMilaBot/1.0 (+https://motormila.vercel.app/bot)";
+const UA = "MotorMilaBot/1.0 (+https://motormila.pages.dev/bot)";
 
 /** Renders a translated string: **bold** runs become <strong>, {token} becomes nodes[token]. */
 function rich(template: string, nodes: Record<string, ReactNode> = {}): ReactNode {

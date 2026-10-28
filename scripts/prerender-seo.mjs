@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = path.resolve(process.argv[2] || path.join(ROOT, "dist"));
-const ORIGIN = (process.env.SITE_ORIGIN || "https://motormila.vercel.app").replace(/\/+$/, "");
+const ORIGIN = (process.env.SITE_ORIGIN || "https://motormila.pages.dev").replace(/\/+$/, "");
 const SITE = "Motormila";
 const MAX_MODEL_PAGES = Number(process.env.PRERENDER_MAX_MODELS || 1500);
 const DEFAULT_DESC =

@@ -1,37 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://motormila.vercel.app/</loc>
+    <loc>https://motormila.pages.dev/</loc>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://motormila.vercel.app/trends</loc>
+    <loc>https://motormila.pages.dev/trends</loc>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://motormila.vercel.app/estimate</loc>
+    <loc>https://motormila.pages.dev/estimate</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://motormila.vercel.app/how-we-price</loc>
+    <loc>https://motormila.pages.dev/how-we-price</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://motormila.vercel.app/calculator</loc>
+    <loc>https://motormila.pages.dev/calculator</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://motormila.vercel.app/best-picks</loc>
+    <loc>https://motormila.pages.dev/best-picks</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://motormila.vercel.app/ev-hub</loc>
+    <loc>https://motormila.pages.dev/ev-hub</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -40,97 +40,97 @@
   <!-- e.g. /cars/toyota/prius, /cars/honda/fit, /cars/suzuki/alto -->
   <!-- These are dynamically rendered; add high-volume make-model combos here for crawling -->
   <url>
-    <loc>https://motormila.vercel.app/cars/toyota/prius</loc>
+    <loc>https://motormila.pages.dev/cars/toyota/prius</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://motormila.vercel.app/cars/honda/fit</loc>
+    <loc>https://motormila.pages.dev/cars/honda/fit</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://motormila.vercel.app/cars/toyota/aqua</loc>
+    <loc>https://motormila.pages.dev/cars/toyota/aqua</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://motormila.vercel.app/cars/suzuki/alto</loc>
+    <loc>https://motormila.pages.dev/cars/suzuki/alto</loc>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://motormila.vercel.app/cars/honda/vezel</loc>
+    <loc>https://motormila.pages.dev/cars/honda/vezel</loc>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://motormila.vercel.app/bot</loc>
+    <loc>https://motormila.pages.dev/bot</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://motormila.vercel.app/official-pulse</loc>
+    <loc>https://motormila.pages.dev/official-pulse</loc>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://motormila.vercel.app/compare</loc>
+    <loc>https://motormila.pages.dev/compare</loc>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://motormila.vercel.app/permits</loc>
+    <loc>https://motormila.pages.dev/permits</loc>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://motormila.vercel.app/afford</loc>
+    <loc>https://motormila.pages.dev/afford</loc>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://motormila.vercel.app/sell</loc>
+    <loc>https://motormila.pages.dev/sell</loc>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://motormila.vercel.app/ev-chargers</loc>
+    <loc>https://motormila.pages.dev/ev-chargers</loc>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://motormila.vercel.app/pricing</loc>
+    <loc>https://motormila.pages.dev/pricing</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://motormila.vercel.app/docs</loc>
+    <loc>https://motormila.pages.dev/docs</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://motormila.vercel.app/mobile-app</loc>
+    <loc>https://motormila.pages.dev/mobile-app</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://motormila.vercel.app/safe-transfer</loc>
+    <loc>https://motormila.pages.dev/safe-transfer</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://motormila.vercel.app/finance</loc>
+    <loc>https://motormila.pages.dev/finance</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://motormila.vercel.app/inspection</loc>
+    <loc>https://motormila.pages.dev/inspection</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://motormila.vercel.app/insurance</loc>
+    <loc>https://motormila.pages.dev/insurance</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>

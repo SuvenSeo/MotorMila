@@ -75,7 +75,7 @@ const flag = (name) => args.find((a) => a.startsWith(`--${name}`));
 const SNAPSHOT_DIR = path.resolve(positional[0] || path.join(ROOT, "public", "snapshots", "latest"));
 const PUBLIC_DIR = path.resolve((flag("public-dir=") || "").split("=")[1] || path.join(ROOT, "public"));
 const WRITE_SITEMAPS = !flag("no-sitemaps");
-const SITE_ORIGIN = (process.env.SITE_ORIGIN || "https://motormila.vercel.app").replace(/\/+$/, "");
+const SITE_ORIGIN = (process.env.SITE_ORIGIN || "https://motormila.pages.dev").replace(/\/+$/, "");
 
 export const INDEX_VERSION = 1;
 export const SHARD_SIZE = 250;

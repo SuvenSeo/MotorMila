@@ -35,44 +35,44 @@
 - Fair values are estimated from comparable live asking prices in
   Sri Lanka, with a confidence level based on how many similar
   listings exist. Fewer comparable listings means lower confidence.
-- Full method, including limits: https://motormila.vercel.app/how-we-price
-- Market trends by make, model and district: https://motormila.vercel.app/trends
-- Valuation tool: https://motormila.vercel.app/estimate
-- How Motormila works, data sources and deal scores: https://motormila.vercel.app/docs
+- Full method, including limits: https://motormila.pages.dev/how-we-price
+- Market trends by make, model and district: https://motormila.pages.dev/trends
+- Valuation tool: https://motormila.pages.dev/estimate
+- How Motormila works, data sources and deal scores: https://motormila.pages.dev/docs
 
 ## Key pages
 
-- Homepage: https://motormila.vercel.app/
-- Price trends: https://motormila.vercel.app/trends
-- Valuation: https://motormila.vercel.app/estimate
-- Best deals (priced below similar ads): https://motormila.vercel.app/best-picks
-- Import & cost calculator (duty, taxes, total cost): https://motormila.vercel.app/calculator
-- Compare vehicles side by side: https://motormila.vercel.app/compare
-- EV prices and charging: https://motormila.vercel.app/ev-hub
-- Vehicle import permits: https://motormila.vercel.app/permits
-- What can I afford (budget search): https://motormila.vercel.app/afford
-- Safe ownership transfer checklist: https://motormila.vercel.app/safe-transfer
-- Official market signals (DMT, Customs, import parity): https://motormila.vercel.app/official-pulse
-- Android app: https://motormila.vercel.app/mobile-app
-- About MotormilaBot (crawler policy): https://motormila.vercel.app/bot
+- Homepage: https://motormila.pages.dev/
+- Price trends: https://motormila.pages.dev/trends
+- Valuation: https://motormila.pages.dev/estimate
+- Best deals (priced below similar ads): https://motormila.pages.dev/best-picks
+- Import & cost calculator (duty, taxes, total cost): https://motormila.pages.dev/calculator
+- Compare vehicles side by side: https://motormila.pages.dev/compare
+- EV prices and charging: https://motormila.pages.dev/ev-hub
+- Vehicle import permits: https://motormila.pages.dev/permits
+- What can I afford (budget search): https://motormila.pages.dev/afford
+- Safe ownership transfer checklist: https://motormila.pages.dev/safe-transfer
+- Official market signals (DMT, Customs, import parity): https://motormila.pages.dev/official-pulse
+- Android app: https://motormila.pages.dev/mobile-app
+- About MotormilaBot (crawler policy): https://motormila.pages.dev/bot
 
 ## Most-searched vehicle price hubs
 
-- Toyota Prius price in Sri Lanka: https://motormila.vercel.app/cars/toyota/prius
-- Toyota Aqua price in Sri Lanka: https://motormila.vercel.app/cars/toyota/aqua
-- Honda Fit price in Sri Lanka: https://motormila.vercel.app/cars/honda/fit
-- Honda Vezel price in Sri Lanka: https://motormila.vercel.app/cars/honda/vezel
-- Suzuki Alto price in Sri Lanka: https://motormila.vercel.app/cars/suzuki/alto
-- Suzuki Wagon R price in Sri Lanka: https://motormila.vercel.app/cars/suzuki/wagon-r
-- Browse all makes: https://motormila.vercel.app/cars/toyota (replace "toyota" with any make, for example honda, suzuki, nissan, mitsubishi, bajaj)
-- Browse by district: https://motormila.vercel.app/locations/colombo (replace "colombo" with any district)
+- Toyota Prius price in Sri Lanka: https://motormila.pages.dev/cars/toyota/prius
+- Toyota Aqua price in Sri Lanka: https://motormila.pages.dev/cars/toyota/aqua
+- Honda Fit price in Sri Lanka: https://motormila.pages.dev/cars/honda/fit
+- Honda Vezel price in Sri Lanka: https://motormila.pages.dev/cars/honda/vezel
+- Suzuki Alto price in Sri Lanka: https://motormila.pages.dev/cars/suzuki/alto
+- Suzuki Wagon R price in Sri Lanka: https://motormila.pages.dev/cars/suzuki/wagon-r
+- Browse all makes: https://motormila.pages.dev/cars/toyota (replace "toyota" with any make, for example honda, suzuki, nissan, mitsubishi, bajaj)
+- Browse by district: https://motormila.pages.dev/locations/colombo (replace "colombo" with any district)
 
 ## Sitemaps
 
-- https://motormila.vercel.app/sitemap-index.xml
-- https://motormila.vercel.app/sitemap.xml (core pages)
-- https://motormila.vercel.app/sitemap-hubs.xml (make and model hubs)
-- Listing pages are in https://motormila.vercel.app/sitemap-listings-0.xml and following files.
+- https://motormila.pages.dev/sitemap-index.xml
+- https://motormila.pages.dev/sitemap.xml (core pages)
+- https://motormila.pages.dev/sitemap-hubs.xml (make and model hubs)
+- Listing pages are in https://motormila.pages.dev/sitemap-listings-0.xml and following files.
 
 ## Optional
 

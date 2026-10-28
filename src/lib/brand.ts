@@ -32,7 +32,7 @@ export const BRAND = {
   /** Empty unless VITE_CONTACT_PHONE is set; callers hide the link when empty. */
   contactPhone: CONTACT_PHONE,
   contactPhoneHref: CONTACT_PHONE ? `tel:${CONTACT_PHONE.replace(/\s+/g, "")}` : "",
-  origin: "https://motormila.vercel.app",
+  origin: "https://motormila.pages.dev",
   vision:
     "Make Sri Lanka’s vehicle market transparent — so every dealer, broker, importer, and serious buyer can see the real price by district, duty, and deal quality.",
   mission:

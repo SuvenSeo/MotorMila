@@ -5,11 +5,23 @@ const DEFAULT_BACKEND = "https://seo292-vehicle-platform-backend.hf.space/api/v1
 const PAGE_SIZE = 5000;
 const FETCH_TIMEOUT_MS = 9000;
 
-function apiBase(env) {
+function apiBase(env, origin) {
   const configured = String(env?.VITE_API_URL || "").trim().replace(/\/+$/, "");
   if (!configured) return DEFAULT_BACKEND;
-  if (configured.endsWith("/api") || configured.endsWith("/api/v1")) return configured;
-  return `${configured}/api/v1`;
+  if (/^https?:\/\//i.test(configured)) {
+    if (configured.endsWith("/api") || configured.endsWith("/api/v1")) return configured;
+    return `${configured}/api/v1`;
+  }
+  // Relative values like "/api/v1" are build-time Vite settings, not a
+  // server-side base: in a Pages Function, fetch() cannot use a relative
+  // URL, so resolve it against the request origin (the Pages /api/v1 proxy)
+  // and fall back to the HF backend when no origin is known.
+  if (origin) {
+    const base = configured.startsWith("/") ? configured : `/${configured}`;
+    const withApi = base.endsWith("/api") || base.endsWith("/api/v1") ? base : `${base}/api/v1`;
+    return `${String(origin).replace(/\/+$/, "")}${withApi}`;
+  }
+  return DEFAULT_BACKEND;
 }
 
 async function fetchJson(base, path) {
@@ -97,7 +109,7 @@ export async function onRequest(context) {
   const { request, env } = context;
   const url = new URL(request.url);
   const siteOrigin = url.origin;
-  const base = apiBase(env);
+  const base = apiBase(env, siteOrigin);
   const rawPage = String(url.searchParams.get("page") || "").trim();
   const page = rawPage ? Number.parseInt(rawPage, 10) : 0;
 

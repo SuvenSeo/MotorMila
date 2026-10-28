@@ -90,5 +90,5 @@ Disallow: /snapshots/
 # Sitemaps are generated at build time from the public snapshot (no DB needed):
 # sitemap-index.xml -> sitemap.xml (core pages), sitemap-hubs.xml (make, model,
 # district hubs), sitemap-listings-N.xml (listing pages).
-Sitemap: https://motormila.vercel.app/sitemap-index.xml
-Sitemap: https://motormila.vercel.app/sitemap.xml
+Sitemap: https://motormila.pages.dev/sitemap-index.xml
+Sitemap: https://motormila.pages.dev/sitemap.xml
