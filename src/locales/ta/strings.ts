@@ -814,4 +814,12 @@ export const stringsTa: Record<string, string> = {
   "ev.cine.plotLabel": "{district} சுற்றி {radius} கி.மீ.க்குள் உள்ள நிலையங்கள்",
   "transfer.cine.lead": "உரிமையைப்",
   "transfer.cine.accent": "பாதுகாப்பாக மாற்றுங்கள்.",
+  "proPreview.cine.lead": "Pro பணியிட",
+  "proPreview.cine.accent": "முன்னோட்டம்.",
+  "proPreview.cine.priceKicker": "திட்டமிட்ட Pro விலை",
+  "proPreview.cine.priceCaption": "அல்லது ஆண்டுக்கு {yearly}, இரண்டு மாதங்கள் இலவசம். பீட்டா காலத்தில் இலவசம்; தொடங்கும் முன் மின்னஞ்சல் அனுப்புவோம்.",
+  "proPreview.cine.laneBody": "Pro ஒவ்வொரு வரிசையையும் காட்டும் விதத்தில், ஒரு தயாரிப்பு-மாடல் வரிசை.",
+  "proPreview.cine.lockedTitle": "Pro வரும் வரை பூட்டப்பட்டவை",
+  "proPreview.cine.lockedBody": "Pro அறிமுகமாகும்போது திறக்கும் மூன்று ஆழமான பார்வைகள்.",
+  "proDash.cine.glanceTitle": "சந்தை ஒரே பார்வையில்",
 };
