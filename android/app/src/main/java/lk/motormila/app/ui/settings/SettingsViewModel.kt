@@ -59,6 +59,8 @@ sealed interface SettingsUiEvent {
     data object ConsumeLoggedOut : SettingsUiEvent
     data object DismissError : SettingsUiEvent
     data class ReduceTransparencyChanged(val enabled: Boolean) : SettingsUiEvent
+    /** Settings → Notifications → Price drops (MotormilaApp re-registers the device). */
+    data class PriceDropPushChanged(val enabled: Boolean) : SettingsUiEvent
 }
 
 @HiltViewModel
@@ -90,6 +92,9 @@ class SettingsViewModel @Inject constructor(
     val reduceTransparency: StateFlow<Boolean> = settingsStore.observe()
         .map { it.reduceTransparency }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+    val priceDropPush: StateFlow<Boolean> = settingsStore.observe()
+        .map { it.priceDropPushEnabled }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
     val biometricEnabled: StateFlow<Boolean> = settingsStore.observe()
         .map { it.biometricEnabled }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
@@ -121,6 +126,7 @@ class SettingsViewModel @Inject constructor(
             is SettingsUiEvent.DistrictChanged -> launch { settingsStore.setDistrict(event.district) }
             is SettingsUiEvent.SortChanged -> launch { settingsStore.setSort(event.sort) }
             is SettingsUiEvent.ReduceTransparencyChanged -> launch { settingsStore.setReduceTransparency(event.enabled) }
+            is SettingsUiEvent.PriceDropPushChanged -> launch { settingsStore.setPriceDropPushEnabled(event.enabled) }
             is SettingsUiEvent.BiometricChanged -> launch { settingsStore.setBiometricEnabled(event.enabled) }
             is SettingsUiEvent.BaseUrlChanged -> launch {
                 settingsStore.setBaseUrlOverride(event.url.ifBlank { null })

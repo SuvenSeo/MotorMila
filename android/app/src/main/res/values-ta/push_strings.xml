@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_notifications">அறிவிப்புகள்</string>
+    <string name="settings_price_drop_push">விலைக் குறைப்புகள்</string>
+    <string name="settings_price_drop_push_sub">கண்காணிக்கும் வாகனம் அல்லது எச்சரிக்கைக்குப் பொருந்தும் வாகனத்தின் விலை குறைந்தால் அறிவிக்கவும்</string>
+    <string name="settings_price_drop_push_note">நாளொன்றுக்குச் சில மட்டுமே, 21:00 முதல் 07:00 வரை எதுவும் இல்லை.</string>
+</resources>

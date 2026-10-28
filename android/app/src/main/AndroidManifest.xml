@@ -171,6 +171,23 @@
             </intent-filter>
         </service>
 
+        <!-- FCM: backend price-drop pushes (data-only; the app renders them on the
+             price_drops channel with a motormila://listing/{id} tap target).
+             Inert when the build has no Firebase client config (FirebaseBootstrap). -->
+        <service
+            android:name="lk.motormila.app.fcm.MotormilaMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="price_drops" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+
         <!-- Deal-of-the-day widget (Swarm E additive; Agent A: no existing entries touched). -->
         <receiver
             android:name="lk.motormila.app.ui.widget.DealWidgetProvider"

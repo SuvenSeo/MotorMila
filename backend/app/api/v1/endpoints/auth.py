@@ -40,7 +40,7 @@ from typing import Optional
 from urllib.parse import urlparse
 
 import bcrypt
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -52,6 +52,7 @@ from app.core.owners import (
     OWNER_SUBSCRIPTION_STATUS,
     is_owner_email,
 )
+from app.services import invite_email as _auth_mail
 from app.services.rate_limit import LoginThrottle, RateLimiter, _client_key
 from db.models import PlatformUser, UserInvite
 from db.schema_patches import heal_platform_users_schema
@@ -71,6 +72,9 @@ ACTIVE_PRO_SUBSCRIPTION_STATUSES = {"active", "trialing"}
 # Self-serve trial (TRACK E, additive): SELF_SIGNUP=true lets /auth/self-signup
 # create plan=pro + subscription_status=trialing accounts without an invite.
 SELF_SIGNUP_TRIAL_DAYS_DEFAULT = 7
+EMAIL_VERIFICATION_TTL = timedelta(hours=24)
+PASSWORD_RESET_TTL = timedelta(hours=1)
+EMAIL_UNVERIFIED_CODE = "email_unverified"
 SELF_SIGNUP_TRIAL_PLAN = "pro"
 
 
@@ -162,6 +166,62 @@ _delete_account_limiter = RateLimiter(
 )
 
 
+# Email-action endpoints (verification resend / forgot password): coarse per-IP
+# caps answer 429; per-address caps silently skip the send (still 200) so the
+# response never depends on whether the address has an account.
+_email_action_ip_limiter = RateLimiter(
+    max_requests=10,
+    window_seconds=900,
+    message="Too many requests. Try again in a few minutes.",
+    tier="auth-email-ip",
+    key_func=_client_key,
+)
+_token_redeem_limiter = RateLimiter(
+    max_requests=20,
+    window_seconds=900,
+    message="Too many attempts. Try again in a few minutes.",
+    tier="auth-token-redeem",
+    key_func=_client_key,
+)
+
+
+def _email_bucket_key(request: Request) -> str:
+    state = getattr(request, "state", None)
+    return str(getattr(state, "auth_email_bucket", "") or "anon")
+
+
+_resend_verification_email_limiter = RateLimiter(
+    max_requests=3,
+    window_seconds=900,
+    tier="auth-verify-resend-addr",
+    key_func=_email_bucket_key,
+)
+_forgot_password_email_limiter = RateLimiter(
+    max_requests=3,
+    window_seconds=900,
+    tier="auth-forgot-addr",
+    key_func=_email_bucket_key,
+)
+
+
+def _email_quota_ok(request: Request, email: str, limiter: RateLimiter) -> bool:
+    """Per-address send quota. Returns False instead of raising (no 429 oracle)."""
+    state = getattr(request, "state", None)
+    if state is None:
+        return True
+    saved_headers = getattr(state, "ratelimit_headers", None)
+    state.auth_email_bucket = hashlib.sha256(email.encode("utf-8")).hexdigest()[:32]
+    try:
+        limiter(request)
+        return True
+    except HTTPException:
+        return False
+    finally:
+        # Do not expose the per-address bucket in RateLimit-* response headers.
+        if saved_headers is not None:
+            state.ratelimit_headers = saved_headers
+
+
 class LoginRequest(BaseModel):
     email: str = Field(..., min_length=3, max_length=255)
     password: str = Field(..., min_length=1, max_length=200)
@@ -179,6 +239,35 @@ class SelfSignupRequest(BaseModel):
     email: str = Field(..., min_length=3, max_length=255)
     name: str = Field(..., min_length=1, max_length=120)
     password: str = Field(..., min_length=8, max_length=200)
+
+
+class EmailTokenRequest(BaseModel):
+    token: str = Field(..., min_length=16, max_length=256)
+
+
+class EmailOnlyRequest(BaseModel):
+    email: str = Field(..., min_length=3, max_length=255)
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(..., min_length=16, max_length=256)
+    password: str = Field(..., min_length=8, max_length=200)
+
+
+def _hash_email_token(token: str) -> str:
+    """SHA-256 hex digest — the only form in which email tokens are stored."""
+    return hashlib.sha256(token.strip().encode("utf-8")).hexdigest()
+
+
+def _new_email_token() -> tuple[str, str]:
+    token = secrets.token_urlsafe(32)
+    return token, _hash_email_token(token)
+
+
+def _as_aware(value: Optional[datetime]) -> Optional[datetime]:
+    if value is None:
+        return None
+    return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
 
 
 def _token_secret() -> str:
@@ -393,7 +482,19 @@ def _platform_user_to_record(user: PlatformUser) -> dict:
         "source": "db",
         "id": user.id,
         "trial_ends_at": getattr(user, "trial_ends_at", None),
+        # NULL (column just added) counts as verified, like the column default.
+        "email_verified": getattr(user, "email_verified", True) is not False,
     }
+
+
+def _email_unverified_error() -> HTTPException:
+    return HTTPException(
+        status_code=403,
+        detail={
+            "code": EMAIL_UNVERIFIED_CODE,
+            "message": "Verify your email address before signing in. Check your inbox or request a new link.",
+        },
+    )
 
 
 def bump_token_version(db: Session, *, email: Optional[str] = None, user_id: Optional[int] = None) -> int:
@@ -476,6 +577,8 @@ def resolve_live_session(payload: dict, db: Optional[Session] = None) -> dict:
     # Env-only accounts have no token_version until synced; treat missing as 0.
     if record.get("source") == "db" and token_tv != record_tv:
         raise HTTPException(status_code=401, detail="Session has been revoked.")
+    if record.get("email_verified") is False:
+        raise _email_unverified_error()
 
     return {
         "email": email,
@@ -499,7 +602,7 @@ def resolve_user_record(email: str, db: Optional[Session] = None) -> Optional[di
     db_unavailable = False
     if db is not None:
         try:
-            row = db.query(PlatformUser).filter(PlatformUser.email == normalized).first()
+            row = _select_platform_user(db, normalized)
             if row is not None:
                 if is_owner_email(row.email):
                     # Owner allowlist: heal the row (role/plan/status/active)
@@ -527,6 +630,31 @@ def resolve_user_record(email: str, db: Optional[Session] = None) -> Optional[di
         # signing the user out.
         raise DatabaseUnavailable("account store unavailable")
     return env_record
+
+
+def _select_platform_user(db: Session, email: str) -> Optional[PlatformUser]:
+    """SELECT a platform user, healing missing additive columns once on failure.
+
+    A dedicated account store (AUTH_DATABASE_URL) only gets create_all at
+    startup, so newly added columns may be missing there until the runtime
+    heal runs; without this, every DB-backed login would fall through.
+    """
+    try:
+        return db.query(PlatformUser).filter(PlatformUser.email == email).first()
+    except Exception as exc:
+        if find_db_unavailable(exc) is not None:
+            raise
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        try:
+            applied = heal_platform_users_schema(db)
+        except Exception:
+            applied = []
+        if not applied:
+            raise
+        return db.query(PlatformUser).filter(PlatformUser.email == email).first()
 
 
 def _accounts_store_degraded() -> bool:
@@ -585,6 +713,7 @@ def sync_env_user_to_db(record: dict, db: Session) -> Optional[PlatformUser]:
         existing.subscription_status = record["subscription_status"]
         existing.role = record.get("role") or existing.role or "user"
         existing.is_active = True
+        existing.email_verified = True
         db.commit()
         db.refresh(existing)
         return _heal_owner_row(existing, db)
@@ -596,6 +725,7 @@ def sync_env_user_to_db(record: dict, db: Session) -> Optional[PlatformUser]:
         subscription_status=record["subscription_status"],
         role=record.get("role") or "user",
         is_active=True,
+        email_verified=True,
         invited_by_email="system:AUTH_USERS",
     )
     db.add(user)
@@ -742,7 +872,12 @@ def login(
 
     if db_ok or env_ok:
         _login_rate_limiter.record_success(email)
-        return _issue_login_response(env_record if (env_ok and not db_ok) else record, response, db)
+        chosen = env_record if (env_ok and not db_ok) else record
+        # Only revealed after the correct password, so this is no enumeration
+        # oracle. Unverified self-signups get no session (and no Pro trial).
+        if chosen.get("email_verified") is False:
+            raise _email_unverified_error()
+        return _issue_login_response(chosen, response, db)
 
     _login_rate_limiter.record_failure(client_ip, email)
     raise HTTPException(status_code=401, detail="Invalid email or password.")
@@ -795,6 +930,8 @@ def signup(
         subscription_status=subscription_status,
         role=role,
         is_active=True,
+        # The invite token was delivered to this mailbox, which proves ownership.
+        email_verified=True,
         invited_by_email=invite.invited_by_email,
         last_login_at=datetime.now(timezone.utc),
     )
@@ -1030,13 +1167,16 @@ def self_signup_status() -> dict:
 def self_signup(
     payload: SelfSignupRequest,
     request: Request,
-    response: Response,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
-    """Self-serve trial signup (no invite). Creates plan=pro + trialing for N days.
+    """Self-serve trial signup (no invite). Creates plan=pro + trialing, unverified.
 
     Gated by SELF_SIGNUP=true (default off — invite path unchanged). Rate-limited
-    like invite signup. Trial expiry is stored on platform_users.trial_ends_at;
+    like invite signup. The account starts with email_verified=false and NO
+    session: a single-use verification link (24h) is emailed, and login answers
+    403 ``email_unverified`` until it is redeemed. The trial clock
+    (platform_users.trial_ends_at) restarts when the email is verified;
     expired trials are rejected by the Pro gate.
     """
     _signup_rate_limiter(request)
@@ -1057,9 +1197,9 @@ def self_signup(
     email = payload.email.strip().lower()
     if "@" not in email or "." not in email.split("@")[-1]:
         raise HTTPException(status_code=400, detail="Enter a valid email address.")
-    # Owner accounts are healed to enterprise admin on every resolution, and
-    # self-signup does not verify mailbox ownership — so an unregistered owner
-    # address must never be claimable here (invite or AUTH_USERS only).
+    # Owner accounts are healed to enterprise admin on every resolution, so an
+    # unregistered owner address must never be claimable here (invite or
+    # AUTH_USERS only) — not even pending email verification.
     if is_owner_email(email):
         raise HTTPException(status_code=403, detail="Owner email cannot be self-registered.")
 
@@ -1070,6 +1210,7 @@ def self_signup(
     trial_days = self_signup_trial_days()
     now = datetime.now(timezone.utc)
     name = payload.name.strip() or email.split("@")[0]
+    token, token_hash = _new_email_token()
 
     user = PlatformUser(
         email=email,
@@ -1079,24 +1220,177 @@ def self_signup(
         subscription_status="trialing",
         role="user",
         is_active=True,
+        email_verified=False,
+        email_verification_token_hash=token_hash,
+        email_verification_expires_at=now + EMAIL_VERIFICATION_TTL,
         invited_by_email="self-signup",
-        last_login_at=now,
     )
-    # trial_ends_at column may predate the running DB — set defensively.
-    try:
-        user.trial_ends_at = now + timedelta(days=trial_days)  # type: ignore[attr-defined]
-    except Exception:
-        pass
+    user.trial_ends_at = now + timedelta(days=trial_days)
     db.add(user)
     try:
         db.commit()
     except Exception as exc:
         db.rollback()
         raise HTTPException(status_code=503, detail="Self-serve signup is unavailable on this deployment.") from exc
-    db.refresh(user)
 
-    record = _platform_user_to_record(user)
-    return _issue_login_response(record, response, db)
+    background_tasks.add_task(_auth_mail.try_send_verification_email, to_email=email, token=token, name=name)
+    return {"ok": True, "verificationRequired": True, "email": email}
+
+
+_GENERIC_EMAIL_ACTION_RESPONSE = {
+    "ok": True,
+    "message": "If an account matches that address, we've sent an email with next steps.",
+}
+
+
+def _invalid_token_error(code: str, message: str) -> HTTPException:
+    return HTTPException(status_code=400, detail={"code": code, "message": message})
+
+
+@router.post("/verify-email", response_model=dict)
+def verify_email(
+    payload: EmailTokenRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Redeem a single-use email-verification token (24h expiry)."""
+    _token_redeem_limiter(request)
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database is required for email verification.")
+    _ensure_account_writes_allowed()
+
+    token_hash = _hash_email_token(payload.token)
+    user = (
+        db.query(PlatformUser)
+        .filter(PlatformUser.email_verification_token_hash == token_hash)
+        .first()
+    )
+    if user is None:
+        raise _invalid_token_error(
+            "invalid_token", "This verification link is invalid or has already been used."
+        )
+    now = datetime.now(timezone.utc)
+    expires_at = _as_aware(user.email_verification_expires_at)
+    if expires_at is None or expires_at < now:
+        raise _invalid_token_error(
+            "token_expired", "This verification link has expired. Request a new one."
+        )
+
+    user.email_verified = True
+    user.email_verification_token_hash = None
+    user.email_verification_expires_at = None
+    # The self-serve trial starts when the mailbox is proven, not at signup.
+    if str(user.subscription_status or "") == "trialing" and user.invited_by_email == "self-signup":
+        user.trial_ends_at = _trial_ends_at(now=now)
+    db.commit()
+    return {"ok": True, "email": user.email}
+
+
+@router.post("/resend-verification", response_model=dict)
+def resend_verification(
+    payload: EmailOnlyRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """Re-send the verification link. Always 200 with the same body (no enumeration)."""
+    _email_action_ip_limiter(request)
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database is required for email verification.")
+    _ensure_account_writes_allowed()
+
+    email = payload.email.strip().lower()
+    if not _email_quota_ok(request, email, _resend_verification_email_limiter):
+        return dict(_GENERIC_EMAIL_ACTION_RESPONSE)
+
+    user = _select_platform_user(db, email)
+    if user is not None and user.is_active and getattr(user, "email_verified", True) is False:
+        token, token_hash = _new_email_token()
+        # Issuing a new link invalidates the previous one (only one hash stored).
+        user.email_verification_token_hash = token_hash
+        user.email_verification_expires_at = datetime.now(timezone.utc) + EMAIL_VERIFICATION_TTL
+        db.commit()
+        background_tasks.add_task(
+            _auth_mail.try_send_verification_email, to_email=user.email, token=token, name=user.name
+        )
+    return dict(_GENERIC_EMAIL_ACTION_RESPONSE)
+
+
+@router.post("/forgot-password", response_model=dict)
+def forgot_password(
+    payload: EmailOnlyRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """Email a single-use password-reset link (1h). Always 200 (no enumeration)."""
+    _email_action_ip_limiter(request)
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database is required for password reset.")
+    _ensure_account_writes_allowed()
+
+    email = payload.email.strip().lower()
+    if not _email_quota_ok(request, email, _forgot_password_email_limiter):
+        return dict(_GENERIC_EMAIL_ACTION_RESPONSE)
+
+    user = _select_platform_user(db, email)
+    if user is None:
+        # AUTH_USERS bootstrap accounts may not have a DB row yet.
+        env_record = _configured_users().get(email)
+        if env_record is not None:
+            try:
+                user = sync_env_user_to_db(env_record, db)
+            except Exception:
+                db.rollback()
+                user = None
+    if user is not None and (user.is_active or is_owner_email(user.email)):
+        token, token_hash = _new_email_token()
+        user.password_reset_token_hash = token_hash
+        user.password_reset_expires_at = datetime.now(timezone.utc) + PASSWORD_RESET_TTL
+        db.commit()
+        background_tasks.add_task(_auth_mail.try_send_password_reset_email, to_email=user.email, token=token)
+    return dict(_GENERIC_EMAIL_ACTION_RESPONSE)
+
+
+@router.post("/reset-password", response_model=dict)
+def reset_password(
+    payload: ResetPasswordRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Redeem a reset token: set a new bcrypt hash and revoke every session."""
+    _token_redeem_limiter(request)
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database is required for password reset.")
+    _ensure_account_writes_allowed()
+
+    token_hash = _hash_email_token(payload.token)
+    user = (
+        db.query(PlatformUser)
+        .filter(PlatformUser.password_reset_token_hash == token_hash)
+        .first()
+    )
+    if user is None:
+        raise _invalid_token_error("invalid_token", "This reset link is invalid or has already been used.")
+    expires_at = _as_aware(user.password_reset_expires_at)
+    if expires_at is None or expires_at < datetime.now(timezone.utc):
+        raise _invalid_token_error("token_expired", "This reset link has expired. Request a new one.")
+    if not user.is_active and not is_owner_email(user.email):
+        raise _invalid_token_error("invalid_token", "This reset link is invalid or has already been used.")
+
+    user.password_hash = _hash_password(payload.password)
+    user.password_reset_token_hash = None
+    user.password_reset_expires_at = None
+    # Following the emailed link proves mailbox ownership.
+    if getattr(user, "email_verified", True) is False:
+        user.email_verified = True
+        user.email_verification_token_hash = None
+        user.email_verification_expires_at = None
+    # Invalidate every outstanding JWT (stolen sessions die with the old password).
+    user.token_version = int(getattr(user, "token_version", 0) or 0) + 1
+    db.commit()
+    _login_rate_limiter.record_success(user.email)
+    return {"ok": True, "email": user.email}
 
 
 def pro_access_enforced() -> bool:

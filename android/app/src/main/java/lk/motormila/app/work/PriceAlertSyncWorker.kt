@@ -49,6 +49,7 @@ class PriceAlertSyncWorker(
         fun db(): MotormilaDatabase
         fun notifications(): NotificationHelper
         fun sessionStore(): lk.motormila.app.data.local.datastore.SessionStore
+        fun pushRegistrar(): lk.motormila.app.fcm.PushTokenRegistrar
     }
 
     private val entryPoint: AlertWorkerEntryPoint by lazy {
@@ -96,6 +97,9 @@ class PriceAlertSyncWorker(
             runCatching { cancel(applicationContext) }
             return Result.success()
         }
+        // Twice-daily FCM registration refresh (keeps the server row fresh and
+        // the watched-listing ids current). No-op without Firebase config.
+        runCatching { entryPoint.pushRegistrar().sync(force = true) }
         val api = entryPoint.api()
         val db = entryPoint.db()
         val notifications = entryPoint.notifications()

@@ -16,6 +16,7 @@ import os
 import sys
 import threading
 import time
+from collections import OrderedDict
 from collections.abc import Callable
 from typing import Any
 
@@ -69,19 +70,43 @@ def _get_redis():
 # Client key derivation (shared by both backends)
 # ---------------------------------------------------------------------------
 
+_TRUTHY = {"1", "true", "yes", "on"}
+_FALSY = {"0", "false", "no", "off"}
+
+
+def _trust_proxy_headers() -> bool:
+    """Whether X-Forwarded-For may be used to identify the client.
+
+    Explicit ``TRUST_PROXY_HEADERS`` wins. Otherwise XFF is trusted only on a
+    Hugging Face Space (``SPACE_ID`` set), whose front proxy always appends the
+    real peer address. Anywhere else the header is fully client-controlled,
+    so trusting it would let callers mint a fresh bucket per request.
+    """
+    raw = os.getenv("TRUST_PROXY_HEADERS", "").strip().lower()
+    if raw in _TRUTHY:
+        return True
+    if raw in _FALSY:
+        return False
+    return bool(os.getenv("SPACE_ID", "").strip())
+
+
 def _client_key(request: Request) -> str:
     """Derive a per-client key from IP only.
 
     User-Agent is deliberately NOT part of the key: rotating UA strings used
     to multiply every limit (e.g. unlimited login brute-force buckets).
-    Uses the RIGHTMOST X-Forwarded-For hop (appended by the nearest trusted
-    proxy) — leftmost entries are client-supplied and could be forged.
+    When proxy headers are trusted (see ``_trust_proxy_headers``) uses the
+    RIGHTMOST X-Forwarded-For hop (appended by the nearest trusted proxy) —
+    leftmost entries are client-supplied and could be forged. Otherwise the
+    socket peer address is used and XFF is ignored entirely.
     """
-    forwarded_for = str(request.headers.get("x-forwarded-for") or "")
-    last_hop = forwarded_for.rsplit(",", 1)[-1].strip()
     client_host = getattr(getattr(request, "client", None), "host", None)
-    ip = last_hop or str(client_host or "unknown")
-    return ip
+    if _trust_proxy_headers():
+        forwarded_for = str(request.headers.get("x-forwarded-for") or "")
+        last_hop = forwarded_for.rsplit(",", 1)[-1].strip()
+        if last_hop:
+            return last_hop
+    return str(client_host or "unknown")
 
 
 def _session_identity(request: Request) -> str | None:
@@ -130,14 +155,14 @@ local window    = tonumber(ARGV[2])
 local now       = tonumber(ARGV[3])
 
 -- Evict entries outside the window
-redis.call('ZREMRANGEBYSCORE', key, 0, now - window)
+redis.call('ZREMRANGEBYSCORE', key, '-inf', now - window)
 
 local count = redis.call('ZCARD', key)
 
 if count < limit then
     -- Allow: record this request with a unique score (timestamp + random tiebreaker)
     redis.call('ZADD', key, now, tostring(now) .. '.' .. tostring(math.random(100000)))
-    redis.call('EXPIRE', key, window)
+    redis.call('EXPIRE', key, math.ceil(window) + 1)
     return {count + 1, limit, 0}
 else
     -- Block: find oldest entry to compute retry-after
@@ -156,8 +181,10 @@ end
 class _RedisRateLimiter:
     """Sliding-window rate limiter backed by Redis sorted sets.
 
-    Key structure: rl:{tier}:{identifier}:{window_bucket}
-    Uses Lua script for atomic check-and-increment.
+    Key structure: rl:{tier}:{identifier} — one sorted set of request
+    timestamps per client, trimmed to the trailing ``window`` seconds on each
+    call (a true sliding log, not fixed buckets). Uses a Lua script for
+    atomic check-and-increment.
     """
 
     def __init__(self, redis_client) -> None:
@@ -178,8 +205,9 @@ class _RedisRateLimiter:
         now: float | None = None,
     ) -> dict[str, Any]:
         now = time.time() if now is None else now
-        bucket = int(now // window)
-        redis_key = f"rl:{key}:{bucket}"
+        # No time bucket in the key: a per-bucket key reset the count at every
+        # window boundary (fixed window, 2x burst across the edge).
+        redis_key = f"rl:{key}"
 
         sha = self._ensure_script()
         result = self._redis.evalsha(
@@ -205,14 +233,31 @@ class _RedisRateLimiter:
 # In-memory sliding-window limiter (fallback)
 # ---------------------------------------------------------------------------
 
+_DEFAULT_MAX_TRACKED_KEYS = 20_000
+
+
 class _InMemoryRateLimiter:
     """Per-process sliding-window rate limiter.
 
     Does NOT share state across workers or survive restarts.
+
+    Thread-safe (sync dependencies run in the threadpool) and bounded: at
+    most ``max_keys`` client keys are tracked (``RATE_LIMIT_MAX_KEYS``,
+    default 20000). Keys are kept in least-recently-used order; when the cap
+    is exceeded the oldest keys are evicted, so rotating identifiers cannot
+    grow memory without bound.
     """
 
-    def __init__(self) -> None:
-        self._buckets: dict[str, list[float]] = {}
+    def __init__(self, max_keys: int | None = None) -> None:
+        self._lock = threading.Lock()
+        self._buckets: OrderedDict[str, list[float]] = OrderedDict()
+        self._max_keys = max_keys
+
+    @property
+    def max_keys(self) -> int:
+        if self._max_keys is not None:
+            return max(1, self._max_keys)
+        return _env_int("RATE_LIMIT_MAX_KEYS", _DEFAULT_MAX_TRACKED_KEYS)
 
     def check(
         self,
@@ -225,27 +270,30 @@ class _InMemoryRateLimiter:
         now = time.time() if now is None else now
         cutoff = now - window
 
-        hits = [t for t in self._buckets.get(key, []) if t >= cutoff]
+        with self._lock:
+            hits = [t for t in self._buckets.get(key, []) if t >= cutoff]
 
-        if len(hits) >= limit:
-            oldest = hits[0] if hits else now
-            retry_after = int(oldest + window - now) + 1
-            return {
-                "allowed": False,
-                "limit": limit,
-                "remaining": 0,
-                "reset": int(oldest + window),
-                "retry_after": retry_after,
-            }
+            if len(hits) >= limit:
+                self._buckets[key] = hits
+                self._buckets.move_to_end(key)
+                oldest = hits[0] if hits else now
+                retry_after = int(oldest + window - now) + 1
+                return {
+                    "allowed": False,
+                    "limit": limit,
+                    "remaining": 0,
+                    "reset": int(oldest + window),
+                    "retry_after": retry_after,
+                }
 
-        hits.append(now)
-        self._buckets[key] = hits
+            hits.append(now)
+            self._buckets[key] = hits
+            self._buckets.move_to_end(key)
 
-        # Periodic stale-key cleanup
-        if len(self._buckets) > 500:
-            stale = [k for k, v in self._buckets.items() if not any(t >= cutoff for t in v)]
-            for k in stale[:200]:
-                self._buckets.pop(k, None)
+            # Hard cap: evict least-recently-used keys (front of the dict).
+            max_keys = self.max_keys
+            while len(self._buckets) > max_keys:
+                self._buckets.popitem(last=False)
 
         return {
             "allowed": True,
@@ -254,6 +302,10 @@ class _InMemoryRateLimiter:
             "reset": int(now) + window,
             "retry_after": 0,
         }
+
+    def clear(self) -> None:
+        with self._lock:
+            self._buckets.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -367,7 +419,7 @@ class RateLimiter:
         """Clear all rate-limit state (for test teardown only)."""
         backend = _get_backend()
         if isinstance(backend, _InMemoryRateLimiter):
-            backend._buckets.clear()
+            backend.clear()
 
 
 # ---------------------------------------------------------------------------

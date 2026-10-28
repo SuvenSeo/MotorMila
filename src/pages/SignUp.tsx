@@ -6,6 +6,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, Check, Eye, EyeOff, Mail, ShieldCheck } from "lucide-react";
 import { AuthShell } from "@/components/auth/AuthShell";
+import { ResendVerification } from "@/components/auth/ResendVerification";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -77,6 +78,8 @@ export default function SignUp() {
   const [selfServeChecking, setSelfServeChecking] = useState(!token);
   const [selfServeEmail, setSelfServeEmail] = useState("");
   const [selfServeEmailError, setSelfServeEmailError] = useState("");
+  // Self-signup succeeded: the account exists but must verify its email first.
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState("");
 
   const schema = z
     .object({
@@ -193,6 +196,10 @@ export default function SignUp() {
     const result = await selfSignup({ email, name: values.name, password: values.password });
     setLoading(false);
     if (result.success) {
+      if (result.verificationRequired) {
+        setPendingVerificationEmail(result.email || email);
+        return;
+      }
       navigate("/", { replace: true });
       return;
     }
@@ -300,7 +307,36 @@ export default function SignUp() {
         </div>
       )}
 
-      {selfServeEnabled && !token && !inviteError && !selfServeChecking && (
+      {pendingVerificationEmail && (
+        <div className="content-in mt-7 space-y-4" role="status">
+          <Card padding="none" className="overflow-hidden">
+            <div className="flex items-center gap-3 border-b border-separator px-4 py-3.5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
+                <Mail className="h-4 w-4" aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-body font-semibold text-foreground">{t("auth.verify.checkInboxTitle", "Check your inbox")}</p>
+                <p className="truncate text-caption text-label-2">{pendingVerificationEmail}</p>
+              </div>
+            </div>
+            <p className="px-4 py-3.5 text-footnote text-label-2">
+              {t(
+                "auth.verify.checkInboxBody",
+                "We sent a verification link to this address. Open it within 24 hours to activate your account and start your trial, then sign in.",
+              )}
+            </p>
+          </Card>
+          <ResendVerification email={pendingVerificationEmail} />
+          <p className="text-center text-footnote text-label-2">
+            {t("signup.alreadyRegistered", "Already registered?")}{" "}
+            <Link to="/sign-in" className="font-semibold text-primary underline-offset-4 hover:underline">
+              {t("common.signIn", "Sign in")}
+            </Link>
+          </p>
+        </div>
+      )}
+
+      {selfServeEnabled && !token && !inviteError && !selfServeChecking && !pendingVerificationEmail && (
         <form onSubmit={handleSubmit(onSelfServeSubmit)} className="content-in mt-7 space-y-4" noValidate>
           <div className="space-y-2">
             <Label htmlFor="self-email">{t("signup.email", "Email")}</Label>

@@ -1,4 +1,5 @@
-"""Optional invite email delivery via Resend (or SMTP fallback).
+"""Optional transactional email (invites, email verification, password reset)
+delivered via Resend (or SMTP fallback).
 
 Configured when RESEND_API_KEY (preferred) or SMTP_* env vars are set.
 Fails open: invite creation still succeeds if email cannot be sent.
@@ -65,6 +66,89 @@ def try_send_invite_email(*, to_email: str, plan: str, token: str, invited_by: O
 
     log.info("invite_email_skipped", reason="no_email_provider_configured", to=to_email)
     return False
+
+
+def verify_email_url(token: str) -> str:
+    return f"{_public_app_origin()}/verify-email?token={token}"
+
+
+def reset_password_url(token: str) -> str:
+    return f"{_public_app_origin()}/reset-password?token={token}"
+
+
+def _deliver(*, kind: str, to_email: str, subject: str, text: str, html: str, link: str) -> bool:
+    """Send via Resend, then SMTP; otherwise log and return False (never raises).
+
+    With no provider configured the message is skipped. Set
+    AUTH_EMAIL_DEV_LOG_LINKS=true (local development only) to log the action
+    link so verification / reset flows can be exercised without email.
+    """
+    try:
+        resend_key = os.getenv("RESEND_API_KEY", "").strip()
+        if resend_key:
+            return _send_resend(api_key=resend_key, to_email=to_email, subject=subject, text=text, html=html)
+        if os.getenv("SMTP_HOST", "").strip():
+            return _send_smtp(to_email=to_email, subject=subject, text=text)
+    except Exception as exc:  # noqa: BLE001 — email must never break the auth flow
+        log.warning(f"{kind}_email_failed", error=str(exc), to=to_email)
+        return False
+    if os.getenv("AUTH_EMAIL_DEV_LOG_LINKS", "").strip().lower() in {"1", "true", "yes", "on"}:
+        log.warning(f"{kind}_email_dev_link", to=to_email, link=link)
+    else:
+        log.info(f"{kind}_email_skipped", reason="no_email_provider_configured", to=to_email)
+    return False
+
+
+def try_send_verification_email(*, to_email: str, token: str, name: Optional[str] = None) -> bool:
+    """Best-effort email-verification message for self-serve signups."""
+    url = verify_email_url(token)
+    greeting = f"Hi {name},\n\n" if name else ""
+    text = (
+        f"{greeting}Confirm your email address to activate your Motormila account:\n{url}\n\n"
+        "This link expires in 24 hours and can be used once.\n"
+        "If you didn't create a Motormila account, you can ignore this email."
+    )
+    html = (
+        "<p>Confirm your email address to activate your <strong>Motormila</strong> account.</p>"
+        f'<p><a href="{url}">Verify my email</a></p>'
+        "<p style='color:#666;font-size:12px'>This link expires in 24 hours and can be used once. "
+        "If you didn't create a Motormila account, ignore this email.</p>"
+        f"<p style='color:#666;font-size:12px'>Or open: {url}</p>"
+    )
+    return _deliver(
+        kind="verification",
+        to_email=to_email,
+        subject="Verify your Motormila email",
+        text=text,
+        html=html,
+        link=url,
+    )
+
+
+def try_send_password_reset_email(*, to_email: str, token: str) -> bool:
+    """Best-effort password-reset message."""
+    url = reset_password_url(token)
+    text = (
+        "Someone (hopefully you) asked to reset your Motormila password.\n\n"
+        f"Choose a new password:\n{url}\n\n"
+        "This link expires in 1 hour and can be used once. Resetting signs you out everywhere.\n"
+        "If you didn't ask for this, ignore this email — your password stays unchanged."
+    )
+    html = (
+        "<p>Someone (hopefully you) asked to reset your <strong>Motormila</strong> password.</p>"
+        f'<p><a href="{url}">Choose a new password</a></p>'
+        "<p style='color:#666;font-size:12px'>This link expires in 1 hour and can be used once. "
+        "If you didn't ask for this, ignore this email — your password stays unchanged.</p>"
+        f"<p style='color:#666;font-size:12px'>Or open: {url}</p>"
+    )
+    return _deliver(
+        kind="password_reset",
+        to_email=to_email,
+        subject="Reset your Motormila password",
+        text=text,
+        html=html,
+        link=url,
+    )
 
 
 def try_send_waitlist_confirmation(*, to_email: str) -> bool:

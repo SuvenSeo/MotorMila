@@ -11,6 +11,7 @@ import ipaddress
 import logging
 import json
 import math
+import os
 import re
 import socket
 import time
@@ -31,6 +32,7 @@ from app.utils.vehicle_category import category_sql_filter, resolve_browse_categ
 from app.utils.thumbnail_urls import upgrade_thumbnail_url
 from app.utils.districts import normalize_district_name
 from app.utils import listing_cache
+from app.utils import memory_cache
 from app.api.v1.endpoints.auth import (
     PRO_PLANS,
     get_current_auth_payload,
@@ -916,6 +918,12 @@ def _with_card_verdicts(db: Session, rows: list) -> List[CarListingRead]:
     return reads
 
 
+# Upper bounds on browse pagination: page <= 1000 and an absolute OFFSET cap
+# (page * size) of 20k rows. Beyond that, narrow the filters instead.
+MAX_LISTINGS_PAGE = 1000
+MAX_LISTINGS_OFFSET = 20_000
+
+
 @router.get("", response_model=ListingsResponse)
 def search_listings(
     request: Request,
@@ -945,7 +953,7 @@ def search_listings(
     price_availability: str = Query("priced", pattern="^(priced|unavailable)$"),
     sort: str = Query("newest", pattern="^(best_match|newest|oldest|deal_score|price_asc|price_desc|mileage_asc)$"),
     include_archive: bool = Query(False, description="Include delisted/sold historical listings"),
-    page: int = Query(1, ge=1),
+    page: int = Query(1, ge=1, le=MAX_LISTINGS_PAGE),
     size: int = Query(10, ge=1, le=100),
     authorization: Optional[str] = Header(default=None),
     db: Session = Depends(get_db),
@@ -960,6 +968,13 @@ def search_listings(
     if not isinstance(size, int) or size < 1:
         size = 10
     size = min(size, 100)
+    if (page - 1) * size > MAX_LISTINGS_OFFSET:
+        # Deep OFFSET makes Postgres walk and discard every skipped row; nobody
+        # pages this far by hand, so refuse instead of paying the scan.
+        raise HTTPException(
+            status_code=400,
+            detail="Page is too deep; narrow your filters or change the sort.",
+        )
 
     plan, role = _request_live_access(request, authorization, db)
     free_browse = _is_free_browse_plan(plan, role)
@@ -1376,24 +1391,55 @@ def get_sitemap_listing_count(db: Session = Depends(get_db)):
     )
     return {"total": int(total or 0), "page_size": 5000}
 
+# /makes and /models feed public comboboxes on every page load. Both used to
+# GROUP BY make over every live listing per request (/models also scanned all
+# distinct makes just to resolve spellings). The raw per-spelling make counts
+# are now read once per TTL and shared by both endpoints; /models results are
+# cached per canonical make (bounded: only makes present in the index).
+# memory_cache is process-local, lock-protected and cleared per test.
+_CATALOG_MAKES_KEY = "listings:catalog:make_counts"
+_CATALOG_MODELS_PREFIX = "listings:catalog:models:"
+
+
+def _catalog_ttl_seconds() -> int:
+    try:
+        return max(0, int(os.getenv("LISTINGS_CATALOG_CACHE_TTL_SECONDS", "600")))
+    except ValueError:
+        return 600
+
+
+def _catalog_make_counts(db: Session) -> List[tuple]:
+    """``[(stored_make_spelling, live_count), ...]`` cached for the catalog TTL."""
+    ttl = _catalog_ttl_seconds()
+    if ttl > 0:
+        hit = memory_cache.get_cached(_CATALOG_MAKES_KEY, ttl)
+        if hit is not memory_cache.MISSING:
+            return hit
+    rows = [
+        (r.make, int(r.count or 0))
+        for r in (
+            db.query(CarListing.make, func.count(CarListing.id).label("count"))
+            .filter(live_listing_filter(), CarListing.make.isnot(None))
+            .group_by(CarListing.make)
+            .all()
+        )
+    ]
+    if ttl > 0:
+        memory_cache.set_cached(_CATALOG_MAKES_KEY, rows, ttl)
+    return rows
+
+
 @router.get("/makes")
 def get_makes(db: Session = Depends(get_db)):
-    results = (
-        db.query(CarListing.make, func.count(CarListing.id).label("count"))
-        .filter(live_listing_filter(), CarListing.make.isnot(None))
-        .group_by(CarListing.make)
-        .order_by(desc("count"))
-        .all()
-    )
     # Fold duplicate/typo spellings ("Bmw"/"BMW", "Mitshubishi") into one
     # brand and drop junk rows ("Test", "2018", "Other brand") so the public
     # make combobox never offers a scraped typo as a car brand.
     merged: Dict[str, int] = {}
-    for r in results:
-        canonical = canonicalize_make(r.make)
+    for make, count in _catalog_make_counts(db):
+        canonical = canonicalize_make(make)
         if not canonical:
             continue
-        merged[canonical] = merged.get(canonical, 0) + int(r.count or 0)
+        merged[canonical] = merged.get(canonical, 0) + count
     return [
         {"make": make, "count": count}
         for make, count in sorted(merged.items(), key=lambda kv: (-kv[1], kv[0]))
@@ -1401,7 +1447,7 @@ def get_makes(db: Session = Depends(get_db)):
 
 
 @router.get("/models")
-def get_models(make: str, db: Session = Depends(get_db)):
+def get_models(make: str = Query(..., max_length=100), db: Session = Depends(get_db)):
     canonical_make = canonicalize_make(make)
     if not canonical_make:
         return []
@@ -1410,17 +1456,18 @@ def get_models(make: str, db: Session = Depends(get_db)):
     # the caller typed — otherwise "Toyota" and "toyota" return different model
     # lists and the valuation dropdown silently loses models.
     variants = [
-        r.make
-        for r in (
-            db.query(CarListing.make)
-            .filter(live_listing_filter(), CarListing.make.isnot(None))
-            .distinct()
-            .all()
-        )
-        if canonicalize_make(r.make) == canonical_make
+        stored for stored, _count in _catalog_make_counts(db)
+        if canonicalize_make(stored) == canonical_make
     ]
     if not variants:
         return []
+
+    ttl = _catalog_ttl_seconds()
+    models_key = _CATALOG_MODELS_PREFIX + canonical_make
+    if ttl > 0:
+        hit = memory_cache.get_cached(models_key, ttl)
+        if hit is not memory_cache.MISSING:
+            return hit
 
     results = (
         db.query(CarListing.model, func.count(CarListing.id).label("count"))
@@ -1444,10 +1491,13 @@ def get_models(make: str, db: Session = Depends(get_db)):
             if int(r.count or 0) > bucket["count"]:
                 bucket["model"] = model
             bucket["count"] += int(r.count or 0)
-    return [
+    payload = [
         {"model": bucket["model"], "count": bucket["count"]}
         for bucket in sorted(merged.values(), key=lambda b: (-b["count"], b["model"]))
     ]
+    if ttl > 0:
+        memory_cache.set_cached(models_key, payload, ttl)
+    return payload
 
 
 @router.get("/nhtsa-models")

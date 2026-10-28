@@ -43,6 +43,8 @@ __all__ = [
     "subscribe_push",
     "unsubscribe_push",
     "list_deliveries",
+    "register_device",
+    "unregister_device",
     "record_alert_match_notification",
     "router",
 ]
@@ -287,6 +289,129 @@ def list_deliveries(
         ]
     except Exception:
         return []
+
+
+DEVICE_PLATFORMS = ("android", "ios")
+MAX_WATCHED_IDS_PER_DEVICE = 500
+MAX_DEVICES_PER_ACCOUNT = 10
+
+
+class DeviceRegisterIn(BaseModel):
+    token: str
+    platform: str = "android"
+    app_version: Optional[str] = None
+    price_drops_enabled: bool = True
+    # Device-local watchlist (Android Room); lets the server push drops on
+    # watched listings. None = leave the stored list unchanged.
+    watched_listing_ids: Optional[List[int]] = None
+
+
+class DeviceUnregisterIn(BaseModel):
+    token: str
+
+
+def _require_account_identity(
+    request: Optional[Request],
+    authorization: Optional[str],
+    db: Session,
+) -> str:
+    """Native push is account-scoped: a signed-in session is mandatory."""
+    token = _extract_token(_optional_str(authorization), request)
+    payload = verify_token(token) if token else None
+    if payload is None:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    live = resolve_live_session(payload, db)
+    return _account_alert_token(live["email"])
+
+
+def _clean_device_token(raw: str) -> str:
+    token = (raw or "").strip()
+    if not token or len(token) > 512 or any(ch.isspace() for ch in token):
+        raise HTTPException(status_code=400, detail="Invalid device token")
+    return token
+
+
+@router.post("/devices", response_model=dict)
+def register_device(
+    payload: DeviceRegisterIn,
+    request: Request,
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(default=None),
+):
+    """Upsert this device's FCM token for the signed-in account.
+
+    The token is globally unique: registering it again (same or another
+    account after a re-login) re-binds the row instead of duplicating it.
+    """
+    from app.utils.notify_fcm import fcm_configured
+    from db.models import DevicePushToken
+    from app.utils.time import utc_now
+
+    owner = _require_account_identity(request, authorization, db)
+    token = _clean_device_token(payload.token)
+    platform = (payload.platform or "android").strip().lower()
+    if platform not in DEVICE_PLATFORMS:
+        raise HTTPException(status_code=400, detail="Unsupported platform")
+    watched = None
+    if payload.watched_listing_ids is not None:
+        watched = sorted({int(i) for i in payload.watched_listing_ids if int(i) > 0})[
+            :MAX_WATCHED_IDS_PER_DEVICE
+        ]
+
+    row = db.query(DevicePushToken).filter(DevicePushToken.token == token).first()
+    if row is None:
+        row = DevicePushToken(user_token=owner, token=token, platform=platform)
+        db.add(row)
+    elif row.user_token != owner:
+        # Token moved to a new account: never carry the old account's watchlist.
+        row.user_token = owner
+        row.watched_listing_ids = None
+    row.platform = platform
+    row.app_version = (payload.app_version or "").strip()[:32] or None
+    row.price_drops_enabled = bool(payload.price_drops_enabled)
+    if watched is not None:
+        row.watched_listing_ids = watched
+    row.updated_at = utc_now()
+    db.flush()
+
+    # Bound devices per account (oldest registrations go first).
+    extra = (
+        db.query(DevicePushToken)
+        .filter(DevicePushToken.user_token == owner)
+        .order_by(DevicePushToken.updated_at.desc(), DevicePushToken.id.desc())
+        .offset(MAX_DEVICES_PER_ACCOUNT)
+        .all()
+    )
+    for stale in extra:
+        db.delete(stale)
+    db.commit()
+    return {
+        "registered": True,
+        "price_drops_enabled": row.price_drops_enabled,
+        "watched_count": len(row.watched_listing_ids or []),
+        "push_configured": fcm_configured(),
+    }
+
+
+@router.delete("/devices", response_model=dict)
+def unregister_device(
+    payload: DeviceUnregisterIn,
+    request: Request,
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(default=None),
+):
+    """Remove this device's token (logout). Only the owning account may delete it."""
+    from db.models import DevicePushToken
+
+    owner = _require_account_identity(request, authorization, db)
+    token = _clean_device_token(payload.token)
+    deleted = (
+        db.query(DevicePushToken)
+        .filter(DevicePushToken.token == token, DevicePushToken.user_token == owner)
+        .delete(synchronize_session=False)
+    )
+    db.commit()
+    return {"registered": False, "deleted": int(deleted or 0)}
 
 
 @router.post("/read-all", response_model=dict)

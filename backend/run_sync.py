@@ -877,6 +877,21 @@ async def main(profile_override: str | None = None):
         else:
             log.info("alert_match_pass_skipped", reason="run_alert_match_disabled")
 
+        # Native (FCM) price-drop pushes for watched listings / matching
+        # alerts. No-op with a log line when FCM is not configured or no
+        # device is registered; dedupe makes repeat passes safe.
+        if _resolve_bool_env("RUN_PRICE_DROP_PUSH", True):
+            db = SessionLocal()
+            try:
+                from app.utils.price_drop_push import run_price_drop_push_pass
+
+                run_price_drop_push_pass(db)
+            except Exception as exc:
+                db.rollback()
+                log.error("price_drop_push_pass_failed", error=str(exc))
+            finally:
+                _close_db_session(db, context="price_drop_push_pass")
+
         duration = (datetime.now() - start_time).total_seconds()
         log.info("sync_completed", profile=profile, duration_seconds=round(duration, 2))
     except Exception as exc:

@@ -455,6 +455,18 @@ interface MotormilaApiService {
     @POST("notifications/read-all")
     suspend fun markAllNotificationsRead(): MarkAllReadDto
 
+    /** Upsert this device's FCM token for the signed-in account. */
+    @POST("notifications/devices")
+    suspend fun registerPushDevice(
+        @Body body: lk.motormila.app.data.remote.dto.DeviceRegisterRequestDto,
+    ): lk.motormila.app.data.remote.dto.DeviceRegisterResponseDto
+
+    /** Logout: unbind this device's FCM token (must run while the bearer is still valid). */
+    @HTTP(method = "DELETE", path = "notifications/devices", hasBody = true)
+    suspend fun unregisterPushDevice(
+        @Body body: lk.motormila.app.data.remote.dto.DeviceUnregisterRequestDto,
+    ): Response<Unit>
+
     // --------------------------------------------------------------- feedback
     @POST("feedback")
     suspend fun feedback(@Body body: FeedbackRequestDto): FeedbackResponseDto

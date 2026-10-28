@@ -144,12 +144,15 @@ const SOURCE_LABELS: Record<string, string> = {
 export class APIError extends Error {
   status: number;
   detail: string;
+  /** Machine-readable reason when the API answers `{"detail": {"code", "message"}}`. */
+  code?: string;
 
-  constructor(status: number, detail: string) {
+  constructor(status: number, detail: string, code?: string) {
     super(`API error ${status}: ${detail || "Request failed"}`);
     this.name = "APIError";
     this.status = status;
     this.detail = detail;
+    this.code = code;
   }
 }
 
@@ -332,12 +335,16 @@ function normalizeConditionFilter(condition?: string): string | undefined {
 async function parseApiError(response: Response): Promise<APIError> {
   const raw = await response.text().catch(() => "");
   let detail = raw || response.statusText || "Request failed";
+  let code: string | undefined;
 
   if (raw) {
     try {
       const parsed = JSON.parse(raw);
       if (typeof parsed?.detail === "string") {
         detail = parsed.detail;
+      } else if (parsed?.detail && typeof parsed.detail === "object" && !Array.isArray(parsed.detail)) {
+        if (typeof parsed.detail.message === "string") detail = parsed.detail.message;
+        if (typeof parsed.detail.code === "string") code = parsed.detail.code;
       } else if (Array.isArray(parsed?.detail)) {
         detail = parsed.detail
           .map((item: JsonRecord) => (typeof item?.msg === "string" ? item.msg : JSON.stringify(item)))
@@ -348,7 +355,7 @@ async function parseApiError(response: Response): Promise<APIError> {
     }
   }
 
-  return new APIError(response.status, detail);
+  return new APIError(response.status, detail, code);
 }
 
 function toNumberOrNull(value: unknown): number | null {
@@ -1854,6 +1861,43 @@ export const getListingPriceSample = async (
   }
   return { prices: [], total: 0 };
 };
+
+// ---------------------------------------------------------------------------
+// Account email flows — verification + password reset (no session required)
+// ---------------------------------------------------------------------------
+
+/** Single-attempt POST: token redemption must not be replayed by a retry loop. */
+async function postAuthAction<T>(path: string, body: Record<string, unknown>): Promise<T> {
+  const controller = new AbortController();
+  const timeoutMs = API_BASE.includes("hf.space") ? HF_COLD_START_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(new URL(`${API_BASE}${path}`, window.location.origin).toString(), {
+      method: "POST",
+      credentials: resolveFetchCredentials(),
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    if (!response.ok) throw await parseApiError(response);
+    return (await response.json().catch(() => ({}))) as T;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export type AuthActionResponse = { ok: boolean; email?: string; message?: string };
+
+export const verifyEmail = (token: string) => postAuthAction<AuthActionResponse>("/auth/verify-email", { token });
+
+export const resendVerificationEmail = (email: string) =>
+  postAuthAction<AuthActionResponse>("/auth/resend-verification", { email });
+
+export const requestPasswordReset = (email: string) =>
+  postAuthAction<AuthActionResponse>("/auth/forgot-password", { email });
+
+export const resetPassword = (token: string, password: string) =>
+  postAuthAction<AuthActionResponse>("/auth/reset-password", { token, password });
 
 export const sendFeedback = async (payload: FeedbackInput): Promise<FeedbackReceipt> => {
   const data = await postJSON<JsonRecord>("/feedback", {

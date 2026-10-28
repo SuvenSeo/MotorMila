@@ -306,19 +306,26 @@ def verify_play_purchase(
     }
 
 
+async def _raw_body(request: Request) -> bytes:
+    """Read the request body on the event loop so the route itself can be sync."""
+    return await request.body()
+
+
 @router.post("/rtdn")
-async def play_rtdn(
-    request: Request,
+def play_rtdn(
     secret: str = Query(default=""),
+    raw_body: bytes = Depends(_raw_body),
     db: Session = Depends(get_db),
 ) -> dict:
+    # Plain ``def``: fetch_subscription does blocking httpx calls and the DB
+    # work is sync SQLAlchemy, so FastAPI must run this in the threadpool.
     expected = os.getenv("PLAY_RTDN_SECRET", "").strip()
     if not expected or not hmac.compare_digest(secret, expected):
         raise HTTPException(status_code=403, detail="Forbidden.")
     if _service_account() is None:
         raise HTTPException(status_code=503, detail="Play billing verification is not configured.")
     try:
-        envelope = await request.json()
+        envelope = json.loads(raw_body)
         data = json.loads(base64.b64decode(envelope["message"]["data"]).decode("utf-8"))
     except Exception as exc:
         raise HTTPException(status_code=400, detail="Invalid Pub/Sub message.") from exc

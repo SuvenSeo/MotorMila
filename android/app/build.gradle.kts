@@ -56,6 +56,26 @@ android {
         // QA hooks (crawl theme/lang extras, destructive DB fallback): debug +
         // preview only, never release.
         buildConfigField("boolean", "QA_HOOKS", "false")
+        // Firebase Cloud Messaging client config (public identifiers, not
+        // secrets) from env / -P props. All four set -> FirebaseBootstrap
+        // initialises FCM at startup; any blank -> push stays off and the
+        // app builds/runs exactly as before. No google-services.json needed.
+        //   MOTORMILA_FIREBASE_APP_ID      e.g. 1:1234567890:android:abc123
+        //   MOTORMILA_FIREBASE_API_KEY     Android API key of the Firebase project
+        //   MOTORMILA_FIREBASE_PROJECT_ID  e.g. motormila-prod
+        //   MOTORMILA_FIREBASE_SENDER_ID   project number, e.g. 1234567890
+        mapOf(
+            "APP_ID" to "motormilaFirebaseAppId",
+            "API_KEY" to "motormilaFirebaseApiKey",
+            "PROJECT_ID" to "motormilaFirebaseProjectId",
+            "SENDER_ID" to "motormilaFirebaseSenderId",
+        ).forEach { (key, gradleProp) ->
+            val value = providers.environmentVariable("MOTORMILA_FIREBASE_$key")
+                .orElse(providers.gradleProperty(gradleProp))
+                .getOrElse("")
+                .replace("\"", "")
+            buildConfigField("String", "FIREBASE_$key", "\"$value\"")
+        }
     }
 
     // Two distribution channels (see docs/overhaul/android.md):
@@ -392,6 +412,10 @@ dependencies {
 
     // Billing
     implementation(libs.play.billing.ktx)
+
+    // Push (FCM). Initialised manually in FirebaseBootstrap; inert when the
+    // MOTORMILA_FIREBASE_* build values are absent.
+    implementation(libs.firebase.messaging)
 
     // Coroutines
     implementation(libs.coroutines.core)

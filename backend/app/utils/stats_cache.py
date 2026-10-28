@@ -76,6 +76,8 @@ _MIN_PRICE_LKR = 100_000
 _TRENDS_CACHE_PREFIX = "trends:"
 _INSIGHTS_CACHE_KEY = "insights"
 _PRICE_INDEX_CACHE_KEY = "price_index"
+_DISTRICT_INSIGHT_CACHE_PREFIX = "district_insight:"
+DISTRICT_INSIGHT_TTL_SECONDS = 3600  # 1 h — per-district quick insight
 
 CACHE_TTLS: dict[str, int] = {
     "summary": SUMMARY_TTL_SECONDS,
@@ -94,6 +96,8 @@ def ttl_for_key(key: str) -> int:
     """Return the TTL seconds for *key* (trends keys share one TTL)."""
     if key.startswith(_TRENDS_CACHE_PREFIX):
         return TRENDS_TTL_SECONDS
+    if key.startswith(_DISTRICT_INSIGHT_CACHE_PREFIX):
+        return DISTRICT_INSIGHT_TTL_SECONDS
     return CACHE_TTLS.get(key, CACHE_TTL_SECONDS)
 
 
@@ -464,6 +468,46 @@ def store_price_index_cache(db: Session, result: dict) -> None:
         _upsert(db, _PRICE_INDEX_CACHE_KEY, result)
     except Exception as exc:
         log.warning("stats_cache_store_price_index_error", error=str(exc))
+        try:
+            db.rollback()
+        except Exception:
+            pass
+
+
+def district_insight_cache_key(canonical_district: str) -> str:
+    """Cache key for ``/stats/district-insight`` (canonical district names only,
+    so the key space is bounded by the ~25 known districts)."""
+    return _DISTRICT_INSIGHT_CACHE_PREFIX + canonical_district.strip().lower().replace(" ", "-")
+
+
+def get_cached_district_insight(
+    db: Session,
+    canonical_district: str,
+    *,
+    allow_stale: bool = True,
+) -> Optional[dict]:
+    try:
+        entry = _get_entry(db, district_insight_cache_key(canonical_district))
+    except Exception as exc:
+        log.warning("stats_cache_district_insight_read_error", error=str(exc))
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return None
+    if entry is None:
+        return None
+    if not allow_stale and not _is_fresh(entry):
+        return None
+    payload = entry.payload
+    return payload if isinstance(payload, dict) else None
+
+
+def store_district_insight_cache(db: Session, canonical_district: str, result: dict) -> None:
+    try:
+        _upsert(db, district_insight_cache_key(canonical_district), result)
+    except Exception as exc:
+        log.warning("stats_cache_store_district_insight_error", error=str(exc))
         try:
             db.rollback()
         except Exception:

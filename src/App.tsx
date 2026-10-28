@@ -50,6 +50,9 @@ const BestPicks = lazyWithRetry(() => import("./pages/BestPicks"));
 const SellYourCar = lazyWithRetry(() => import("./pages/SellYourCar"));
 const SignIn = lazyWithRetry(() => import("./pages/SignIn"));
 const SignUp = lazyWithRetry(() => import("./pages/SignUp"));
+const VerifyEmail = lazyWithRetry(() => import("./pages/VerifyEmail"));
+const ForgotPassword = lazyWithRetry(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazyWithRetry(() => import("./pages/ResetPassword"));
 const ProDashboard = lazyWithRetry(() => import("./pages/ProDashboard"));
 const ProPreview = lazyWithRetry(() => import("./pages/ProPreview"));
 const AdminConsole = lazyWithRetry(() => import("./pages/AdminConsole"));
@@ -335,6 +338,21 @@ const App = () => {
                 <Route path="/sign-up" element={
                   <Suspense fallback={<MinimalLoader />}>
                     <SignUp />
+                  </Suspense>
+                } />
+                <Route path="/verify-email" element={
+                  <Suspense fallback={<MinimalLoader />}>
+                    <VerifyEmail />
+                  </Suspense>
+                } />
+                <Route path="/forgot-password" element={
+                  <Suspense fallback={<MinimalLoader />}>
+                    <ForgotPassword />
+                  </Suspense>
+                } />
+                <Route path="/reset-password" element={
+                  <Suspense fallback={<MinimalLoader />}>
+                    <ResetPassword />
                   </Suspense>
                 } />
                 {import.meta.env.DEV ? (

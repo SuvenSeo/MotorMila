@@ -13,7 +13,6 @@ import {
   clearAdminSession,
   shouldAutoUnlockAdminConsole,
   readAdminSession,
-  verifyLocalAdminCredential,
   writeAdminSession,
   type AdminSession,
 } from "@/lib/adminAuth";
@@ -24,9 +23,10 @@ import { fadeIn, scaleIn } from "@/lib/motion";
 /**
  * `/motormila/admin` — the only way in to the operations console.
  *
- * Nothing on the public site links here. The console needs an admin username
- * and password (see `src/lib/adminAuth.ts`), and when backend auth is enabled
- * every panel below runs on the admin's own server-issued session.
+ * Nothing on the public site links here. The console requires backend auth:
+ * an admin signs in against the API (see `src/lib/adminAuth.ts`) and every
+ * panel below runs on that server-issued session. There is no client-side
+ * credential fallback — builds without backend auth cannot open it.
  */
 export default function AdminConsole() {
   const { t } = useAppPreferences();
@@ -37,7 +37,6 @@ export default function AdminConsole() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [attempting, setAttempting] = useState(false);
-  const [lockSeconds, setLockSeconds] = useState(0);
   // "Lock console" must stick for this visit even when the session is an admin.
   const [manuallyLocked, setManuallyLocked] = useState(false);
 
@@ -54,9 +53,7 @@ export default function AdminConsole() {
 
   // A console session alone is not enough when the API owns identity: the
   // signed-in account must still be an admin (the backend enforces this too).
-  const passwordUnlocked = Boolean(
-    session && (BACKEND_AUTH_ENABLED ? isAuthenticated && isAdmin : true),
-  );
+  const passwordUnlocked = Boolean(session && BACKEND_AUTH_ENABLED && isAuthenticated && isAdmin);
   const unlocked = autoUnlocked || passwordUnlocked;
   const consoleUser = session?.username || user?.email || "";
 
@@ -68,20 +65,16 @@ export default function AdminConsole() {
     }
   }, [authReady, isAdmin, isAuthenticated, session]);
 
-  useEffect(() => {
-    if (lockSeconds <= 0) return;
-    const timer = window.setInterval(() => {
-      setLockSeconds((current) => (current <= 1 ? 0 : current - 1));
-    }, 1000);
-    return () => window.clearInterval(timer);
-  }, [lockSeconds]);
-
   const minutesLeft = useMemo(() => adminSessionMinutesLeft(session), [session]);
 
   const handleSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
-      if (attempting || lockSeconds > 0) return;
+      if (attempting) return;
+      if (!BACKEND_AUTH_ENABLED) {
+        setError(t("adminLogin.backendRequired", "The admin console requires backend sign-in, which is not enabled in this build."));
+        return;
+      }
 
       const trimmedUser = username.trim();
       if (!trimmedUser || !password) {
@@ -93,47 +86,26 @@ export default function AdminConsole() {
       setError("");
 
       try {
-        if (BACKEND_AUTH_ENABLED) {
-          const result = await login(trimmedUser, password);
-          if (!result.success) {
-            setError(result.error || t("adminLogin.invalid", "Invalid username or password."));
-            return;
-          }
-          const stored = readStoredAuthUser();
-          if (stored?.role !== "admin") {
-            // Never leave a non-admin session behind after a failed gate.
-            logout();
-            setError(t("adminLogin.notAdmin", "That account is not a Motormila administrator."));
-            return;
-          }
-          setSession(writeAdminSession(stored.email));
-          setManuallyLocked(false);
-          setPassword("");
+        const result = await login(trimmedUser, password);
+        if (!result.success) {
+          setError(result.error || t("adminLogin.invalid", "Invalid username or password."));
           return;
         }
-
-        const local = verifyLocalAdminCredential(trimmedUser, password);
-        if (local.ok) {
-          setManuallyLocked(false);
-          setSession(writeAdminSession(trimmedUser));
-          setPassword("");
+        const stored = readStoredAuthUser();
+        if (stored?.role !== "admin") {
+          // Never leave a non-admin session behind after a failed gate.
+          logout();
+          setError(t("adminLogin.notAdmin", "That account is not a Motormila administrator."));
           return;
         }
-        if (local.lockedForSeconds) {
-          setLockSeconds(local.lockedForSeconds);
-          setError(
-            t("adminLogin.lockout", "Too many attempts. Try again in {seconds}s.", {
-              seconds: local.lockedForSeconds,
-            }),
-          );
-          return;
-        }
-        setError(t("adminLogin.invalid", "Invalid username or password."));
+        setSession(writeAdminSession(stored.email));
+        setManuallyLocked(false);
+        setPassword("");
       } finally {
         setAttempting(false);
       }
     },
-    [attempting, lockSeconds, login, logout, password, t, username],
+    [attempting, login, logout, password, t, username],
   );
 
   const lockConsole = useCallback(() => {
@@ -258,7 +230,7 @@ export default function AdminConsole() {
                 )}
               </AnimatePresence>
 
-              <Button type="submit" size="lg" className="w-full" loading={attempting} disabled={lockSeconds > 0}>
+              <Button type="submit" size="lg" className="w-full" loading={attempting} disabled={!BACKEND_AUTH_ENABLED}>
                 <KeyRound aria-hidden />
                 {t("adminLogin.submit", "Unlock console")}
               </Button>
@@ -273,8 +245,8 @@ export default function AdminConsole() {
                       "Sessions are issued by the Motormila API, expire on their own, and are throttled after repeated failed attempts.",
                     )
                   : t(
-                      "adminLogin.previewNote",
-                      "This build runs without the admin API, so credentials are checked locally. Enable backend auth in production.",
+                      "adminLogin.backendRequired",
+                      "The admin console requires backend sign-in, which is not enabled in this build.",
                     )}
               </p>
             </div>

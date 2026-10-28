@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Feedback
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Mail
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Policy
 import androidx.compose.material3.AlertDialog
@@ -46,6 +47,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import lk.motormila.app.BuildConfig
 import lk.motormila.app.R
 import lk.motormila.app.core.SupportContact
+import lk.motormila.app.core.notifications.rememberNotificationPermissionRequester
 import lk.motormila.app.data.remote.WEB_DELETE_ACCOUNT_URL
 import lk.motormila.app.ui.common.InsetGroup
 import lk.motormila.app.ui.common.InsetRow
@@ -83,6 +85,10 @@ fun SettingsScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val theme by viewModel.theme.collectAsStateWithLifecycle()
     val reduceTransparency by viewModel.reduceTransparency.collectAsStateWithLifecycle()
+    val priceDropPush by viewModel.priceDropPush.collectAsStateWithLifecycle()
+    // Android 13+: turning price-drop pushes on is the moment to ask for
+    // POST_NOTIFICATIONS (no-op when already granted / below 13).
+    val requestNotifications = rememberNotificationPermissionRequester()
     val language by viewModel.language.collectAsStateWithLifecycle()
     val baseUrl by viewModel.baseUrl.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -205,6 +211,26 @@ fun SettingsScreen(
                             trailing = {
                                 if (language == code) Icon(Icons.Filled.Check, contentDescription = stringResource(R.string.scr_selected), tint = c.brandText)
                             },
+                        )
+                    }
+                }
+            }
+            if (state.signedIn) {
+                item(key = "notifications") {
+                    InsetGroup(
+                        header = stringResource(R.string.settings_notifications),
+                        footer = stringResource(R.string.settings_price_drop_push_note),
+                    ) {
+                        InsetSwitchRow(
+                            title = stringResource(R.string.settings_price_drop_push),
+                            subtitle = stringResource(R.string.settings_price_drop_push_sub),
+                            checked = priceDropPush,
+                            onCheckedChange = { enabled ->
+                                viewModel.onEvent(SettingsUiEvent.PriceDropPushChanged(enabled))
+                                if (enabled) requestNotifications()
+                            },
+                            icon = Icons.Filled.NotificationsActive,
+                            showDivider = false,
                         )
                     }
                 }

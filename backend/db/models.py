@@ -456,6 +456,14 @@ class PlatformUser(Base):
     last_login_at = Column(DateTime(timezone=True), nullable=True)
     # Self-serve trial expiry (SELF_SIGNUP trialing). Null = no trial / legacy rows.
     trial_ends_at = Column(DateTime(timezone=True), nullable=True)
+    # Mailbox ownership. Defaults TRUE so pre-existing rows, invite signups and
+    # AUTH_USERS bootstrap accounts stay verified; only self-signup writes FALSE.
+    email_verified = Column(Boolean, nullable=False, default=True, server_default="true")
+    # Single-use email tokens: only the SHA-256 hex digest is stored.
+    email_verification_token_hash = Column(String(64), nullable=True)
+    email_verification_expires_at = Column(DateTime(timezone=True), nullable=True)
+    password_reset_token_hash = Column(String(64), nullable=True)
+    password_reset_expires_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
@@ -503,6 +511,33 @@ class PushSubscription(Base):
 
     __table_args__ = (
         Index("idx_push_subscriptions_user_token", "user_token"),
+    )
+
+
+class DevicePushToken(Base):
+    """Native (FCM) push token for one signed-in account on one device.
+
+    Upserted by POST /notifications/devices (token is globally unique: a
+    re-login on the same device re-binds it to the new account). Pruned when
+    FCM reports the token UNREGISTERED / invalid. ``watched_listing_ids`` is a
+    JSON list of the device's local watchlist so price drops on watched
+    listings can be pushed even though the watchlist itself is device-local.
+    """
+
+    __tablename__ = "device_push_tokens"
+
+    id = Column(Integer, primary_key=True)
+    user_token = Column(String(320), nullable=False)
+    token = Column(String(512), nullable=False, unique=True)
+    platform = Column(String(16), nullable=False, default="android")
+    app_version = Column(String(32), nullable=True)
+    price_drops_enabled = Column(Boolean, nullable=False, default=True, server_default="true")
+    watched_listing_ids = Column(JSON, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    __table_args__ = (
+        Index("idx_device_push_tokens_user_token", "user_token"),
     )
 
 

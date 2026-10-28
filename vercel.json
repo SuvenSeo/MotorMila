@@ -176,7 +176,7 @@
       ]
     },
     {
-      "source": "/(sign-in|sign-up|profile|alerts|settings|dealer|pro|pro-preview|admin|hero-lab|motormila/admin|checkout/return)",
+      "source": "/(sign-in|sign-up|verify-email|forgot-password|reset-password|profile|alerts|settings|dealer|pro|pro-preview|admin|hero-lab|motormila/admin|checkout/return)",
       "headers": [
         {
           "key": "X-Robots-Tag",

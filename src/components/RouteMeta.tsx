@@ -319,6 +319,18 @@ export function RouteMeta() {
         title: t("seo.signUpTitle", "Create Account — {site}", siteVars),
         description: defaultDescription,
       },
+      "/verify-email": {
+        title: t("seo.verifyEmailTitle", "Verify Email — {site}", siteVars),
+        description: defaultDescription,
+      },
+      "/forgot-password": {
+        title: t("seo.forgotPasswordTitle", "Forgot Password — {site}", siteVars),
+        description: defaultDescription,
+      },
+      "/reset-password": {
+        title: t("seo.resetPasswordTitle", "Reset Password — {site}", siteVars),
+        description: defaultDescription,
+      },
       "/profile": {
         title: t("seo.profileTitle", "Profile — {site}", siteVars),
         description: defaultDescription,

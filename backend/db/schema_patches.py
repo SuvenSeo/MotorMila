@@ -51,6 +51,11 @@ _TABLE_COLUMN_PATCHES = (
     ("platform_users", "invited_by_email", "VARCHAR(255)", "VARCHAR(255)"),
     ("platform_users", "last_login_at", "TIMESTAMPTZ", "DATETIME"),
     ("platform_users", "trial_ends_at", "TIMESTAMPTZ", "DATETIME"),
+    ("platform_users", "email_verified", "BOOLEAN NOT NULL DEFAULT TRUE", "BOOLEAN NOT NULL DEFAULT 1"),
+    ("platform_users", "email_verification_token_hash", "VARCHAR(64)", "VARCHAR(64)"),
+    ("platform_users", "email_verification_expires_at", "TIMESTAMPTZ", "DATETIME"),
+    ("platform_users", "password_reset_token_hash", "VARCHAR(64)", "VARCHAR(64)"),
+    ("platform_users", "password_reset_expires_at", "TIMESTAMPTZ", "DATETIME"),
     ("platform_users", "created_at", "TIMESTAMPTZ NOT NULL DEFAULT NOW()", "DATETIME DEFAULT CURRENT_TIMESTAMP"),
     ("platform_users", "updated_at", "TIMESTAMPTZ NOT NULL DEFAULT NOW()", "DATETIME DEFAULT CURRENT_TIMESTAMP"),
     ("user_invites", "role", "VARCHAR(20) NOT NULL DEFAULT 'user'", "VARCHAR(20) NOT NULL DEFAULT 'user'"),
@@ -291,6 +296,14 @@ def _ensure_auth_tables(engine: Engine, *, dialect: str, bounded_ddl) -> None:
         "invited_by_email": ("VARCHAR(255)", "VARCHAR(255)"),
         "last_login_at": ("TIMESTAMPTZ", "DATETIME"),
         "trial_ends_at": ("TIMESTAMPTZ", "DATETIME"),
+        "email_verified": (
+            "BOOLEAN NOT NULL DEFAULT TRUE",
+            "BOOLEAN NOT NULL DEFAULT 1",
+        ),
+        "email_verification_token_hash": ("VARCHAR(64)", "VARCHAR(64)"),
+        "email_verification_expires_at": ("TIMESTAMPTZ", "DATETIME"),
+        "password_reset_token_hash": ("VARCHAR(64)", "VARCHAR(64)"),
+        "password_reset_expires_at": ("TIMESTAMPTZ", "DATETIME"),
         "created_at": (
             "TIMESTAMPTZ DEFAULT NOW()",
             "DATETIME DEFAULT CURRENT_TIMESTAMP",
@@ -393,11 +406,23 @@ def heal_platform_users_schema(db) -> list[str]:
     Used when startup patches were skipped or silently failed (e.g. SKIP_DB_INIT,
     inspector cache, or DDL permissions flaking on the pooler).
     """
-    bind = db.get_bind()
+    from db.models import PlatformUser
+
+    # Resolve the engine that actually holds platform_users: with a dedicated
+    # account store (AUTH_DATABASE_URL) that is NOT the session's default bind.
+    try:
+        bind = db.get_bind(mapper=PlatformUser)
+    except Exception:
+        bind = None
     if bind is None:
         return []
+    bind = getattr(bind, "engine", bind)
     dialect = bind.dialect.name
     applied: list[str] = []
+
+    def _execute(sql: str):
+        return db.execute(text(sql), bind_arguments={"mapper": PlatformUser})
+
     patches = (
         ("token_version", "INTEGER NOT NULL DEFAULT 0", "INTEGER NOT NULL DEFAULT 0"),
         ("subscription_status", "VARCHAR(20) NOT NULL DEFAULT 'none'", "VARCHAR(20) NOT NULL DEFAULT 'none'"),
@@ -406,6 +431,11 @@ def heal_platform_users_schema(db) -> list[str]:
         ("invited_by_email", "VARCHAR(255)", "VARCHAR(255)"),
         ("last_login_at", "TIMESTAMPTZ", "DATETIME"),
         ("trial_ends_at", "TIMESTAMPTZ", "DATETIME"),
+        ("email_verified", "BOOLEAN NOT NULL DEFAULT TRUE", "BOOLEAN NOT NULL DEFAULT 1"),
+        ("email_verification_token_hash", "VARCHAR(64)", "VARCHAR(64)"),
+        ("email_verification_expires_at", "TIMESTAMPTZ", "DATETIME"),
+        ("password_reset_token_hash", "VARCHAR(64)", "VARCHAR(64)"),
+        ("password_reset_expires_at", "TIMESTAMPTZ", "DATETIME"),
         ("created_at", "TIMESTAMPTZ DEFAULT NOW()", "DATETIME DEFAULT CURRENT_TIMESTAMP"),
         ("updated_at", "TIMESTAMPTZ DEFAULT NOW()", "DATETIME DEFAULT CURRENT_TIMESTAMP"),
     )
@@ -413,20 +443,20 @@ def heal_platform_users_schema(db) -> list[str]:
         col_type = pg_type if dialect == "postgresql" else sqlite_type
         try:
             if dialect == "postgresql":
-                if _pg_column_exists(db, "platform_users", column_name):
+                if _pg_column_exists(
+                    db.connection(bind_arguments={"mapper": PlatformUser}),
+                    "platform_users",
+                    column_name,
+                ):
                     continue
-                db.execute(
-                    text(
-                        f"ALTER TABLE platform_users "
-                        f"ADD COLUMN IF NOT EXISTS {column_name} {col_type}"
-                    )
+                _execute(
+                    f"ALTER TABLE platform_users "
+                    f"ADD COLUMN IF NOT EXISTS {column_name} {col_type}"
                 )
             else:
                 if _column_exists(bind, "platform_users", column_name):
                     continue
-                db.execute(
-                    text(f"ALTER TABLE platform_users ADD COLUMN {column_name} {col_type}")
-                )
+                _execute(f"ALTER TABLE platform_users ADD COLUMN {column_name} {col_type}")
             applied.append(column_name)
         except Exception as exc:
             try:

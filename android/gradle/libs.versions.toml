@@ -28,6 +28,9 @@ coil = "3.1.0"
 camerax = "1.4.0"
 mlkit-text = "19.0.0"
 billing = "8.0.0"
+# FCM only (no google-services plugin): FirebaseApp is initialised manually
+# from BuildConfig values, so builds without Firebase config still work.
+firebase-messaging = "24.1.2"
 junit = "4.13.2"
 turbine = "1.2.1"
 mockk = "1.13.12"
@@ -83,6 +86,7 @@ camerax-camera2 = { group = "androidx.camera", name = "camera-camera2", version.
 camerax-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
 camerax-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
     mlkit-text-recognition = { group = "com.google.android.gms", name = "play-services-mlkit-text-recognition", version.ref = "mlkit-text" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging", version.ref = "firebase-messaging" }
 play-billing-ktx = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "billing" }
 coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }

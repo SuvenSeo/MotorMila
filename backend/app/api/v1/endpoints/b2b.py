@@ -12,6 +12,7 @@ limited per key. Keys are issued out-of-band, one per institution.
 
 from __future__ import annotations
 
+import hashlib
 import os
 import secrets
 from datetime import datetime, timedelta
@@ -33,9 +34,26 @@ log = structlog.get_logger()
 MIN_REASONABLE_PRICE_LKR = 100_000
 
 
+def _configured_keys() -> set[str]:
+    raw = os.getenv("B2B_API_KEYS", "").strip()
+    return {k.strip() for k in raw.split(",") if k.strip()}
+
+
+def _is_valid_key(api_key: str | None, keys: set[str] | None = None) -> bool:
+    keys = _configured_keys() if keys is None else keys
+    return bool(api_key) and any(secrets.compare_digest(api_key, configured_key) for configured_key in keys)
+
+
 def _b2b_rate_limit_key(request: Request) -> str:
+    """Per-institution bucket for a VALID key, per-IP for everything else.
+
+    The key is validated before it is used as a bucket id: keying on any
+    client-supplied value let callers rotate fake keys for fresh buckets.
+    """
     api_key = str(request.headers.get("x-api-key") or "").strip()
-    return api_key or _client_key(request)
+    if api_key and _is_valid_key(api_key):
+        return "key:" + hashlib.sha256(api_key.encode()).hexdigest()[:24]
+    return "ip:" + _client_key(request)
 
 
 _b2b_rate_limiter = RateLimiter(max_requests=120, window_seconds=60, key_func=_b2b_rate_limit_key)
@@ -43,17 +61,11 @@ _b2b_rate_limiter = RateLimiter(max_requests=120, window_seconds=60, key_func=_b
 router = APIRouter(dependencies=[Depends(_b2b_rate_limiter)])
 
 
-def _configured_keys() -> set[str]:
-    raw = os.getenv("B2B_API_KEYS", "").strip()
-    return {k.strip() for k in raw.split(",") if k.strip()}
-
-
 def require_b2b_key(x_api_key: str | None = Header(default=None, alias="X-API-Key")) -> str:
     keys = _configured_keys()
     if not keys:
         raise HTTPException(status_code=503, detail="B2B API is not configured on this deployment.")
-    is_valid_key = bool(x_api_key) and any(secrets.compare_digest(x_api_key, configured_key) for configured_key in keys)
-    if not is_valid_key:
+    if not _is_valid_key(x_api_key, keys):
         raise HTTPException(status_code=401, detail="Invalid or missing API key.")
     return x_api_key
 

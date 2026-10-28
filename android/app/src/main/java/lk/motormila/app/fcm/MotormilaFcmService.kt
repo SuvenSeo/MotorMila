@@ -10,6 +10,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import lk.motormila.app.core.notifications.NotificationHelper
 import lk.motormila.app.data.local.datastore.SettingsStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 const val LISTING_DEEP_LINK_PREFIX = "motormila://listing/"
 const val WATCHLIST_DEEP_LINK = "motormila://watchlist"
@@ -54,50 +58,64 @@ fun listingTapPendingIntent(
 }.getOrNull()
 
 /**
- * Push receiver (Firebase-free stub).
+ * Push handling behind the Firebase entry point [MotormilaMessagingService].
  *
- * The Firebase Messaging dependency is not on the classpath and no FCM
- * service is declared in the manifest, so this class deliberately does NOT
- * extend FirebaseMessagingService. When a push backend lands:
- * 1. add `com.google.firebase:firebase-messaging` + google-services plugin,
- * 2. re-introduce the Firebase subclass and forward its callbacks into
- *    [onNewToken] / [onMessageReceived] below,
- * 3. register the token via POST /devices (backend TODO) — [onNewToken]
- *    already persists it to [SettingsStore] for that call.
+ * - [onNewTokenAsync]: persist the rotated token and (re-)register it with
+ *   the backend via [PushTokenRegistrar] (POST /notifications/devices).
+ * - [onDataMessage]: backend data-only messages (type=price_drop, listing_id,
+ *   deep_link, title, body) become a local notification on the price_drops
+ *   channel whose tap opens motormila://listing/{id} inside this app.
+ * - [subscribePostLogin] / [unsubscribeAll]: login/logout hooks.
+ *
  * Every body is wrapped in runCatching so push handling can never crash the app.
- *
- * POST_NOTIFICATIONS (API 33+): [NotificationHelper.hasPermission] gates posts;
- * request it from MainActivity via ActivityResultContracts.RequestPermission
- * before subscribing (see subscribePostLogin call sites).
+ * POST_NOTIFICATIONS (API 33+): [NotificationHelper.hasPermission] gates
+ * posts; the runtime request happens after alert creation and from
+ * Settings → Notifications (NotificationPermission.kt).
  */
 @Singleton
 class MotormilaFcmService @Inject constructor(
     @ApplicationContext private val context: Context,
     private val settings: SettingsStore,
     private val notifications: NotificationHelper,
+    private val registrar: PushTokenRegistrar,
 ) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     companion object {
         const val TOPIC_PRICE_DROPS = "motormila_price_drops"
         const val TOPIC_MARKET_NEWS = "motormila_market_news"
 
         private const val TAG = "MotormilaFcm"
-
-        /** No-op until a push backend exists; runs after login. */
-        fun subscribePostLogin() = runCatching {
-            Log.d(TAG, "subscribe (no-op): $TOPIC_PRICE_DROPS, $TOPIC_MARKET_NEWS")
-        }
-
-        /** No-op until a push backend exists; runs on logout. */
-        fun unsubscribeAll() = runCatching {
-            Log.d(TAG, "unsubscribe (no-op): $TOPIC_PRICE_DROPS, $TOPIC_MARKET_NEWS")
-        }
     }
 
-    /** Persist the device token for the (future) backend registration call. */
+    /** After login / app start while signed in: register this device's token. */
+    fun subscribePostLogin() {
+        scope.launch { runCatching { registrar.sync() } }
+    }
+
+    /** Logout: unbind the token server-side and rotate it locally. */
+    suspend fun unsubscribeAll() {
+        runCatching { registrar.unregister() }
+    }
+
+    /** Persist the device token and register it with the backend. */
     suspend fun onNewToken(token: String) {
         runCatching {
             settings.setFcmToken(token)
+            registrar.sync(newToken = token)
+        }
+    }
+
+    fun onNewTokenAsync(token: String) {
+        scope.launch { onNewToken(token) }
+    }
+
+    /** A data-only FCM message from the backend. */
+    fun onDataMessage(data: Map<String, String>) {
+        runCatching {
+            val push = parseIncomingPush(data) ?: return
+            Log.d(TAG, "push received: ${push.kind} listing=${push.listingId}")
+            onMessageReceived(push.title, push.body, push.kind, push.notificationId, push.listingId)
         }
     }
 

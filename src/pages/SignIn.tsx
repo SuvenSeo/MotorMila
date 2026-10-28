@@ -1,20 +1,17 @@
 import { useState, type CSSProperties } from "react";
 import { AuthShell } from "@/components/auth/AuthShell";
-import { sendFeedback } from "@/services/api";
-import { toast } from "sonner";
+import { ResendVerification } from "@/components/auth/ResendVerification";
 import { AnimatePresence, m } from "motion/react";
 import { Navigate, useNavigate, useLocation, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, ArrowRight, Lock, KeyRound } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Eye, EyeOff, ArrowRight, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DEMO_ACCOUNT_SUMMARY, DEMO_AUTH_ENABLED, useAuth } from "@/lib/authContext";
+import { useAuth } from "@/lib/authContext";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { fadeIn, scaleIn } from "@/lib/motion";
 import { sanitizeSignInRedirect } from "@/lib/signIn";
@@ -30,10 +27,8 @@ export default function SignIn() {
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showReset, setShowReset] = useState(false);
-  const [resetEmail, setResetEmail] = useState("");
-  const [resetSending, setResetSending] = useState(false);
-  const [resetDone, setResetDone] = useState(false);
+  // Set when the API answers 403 email_unverified: offer to resend the link.
+  const [unverifiedEmail, setUnverifiedEmail] = useState("");
   const from = sanitizeSignInRedirect(
     (location.state as { from?: { pathname: string } } | null)?.from?.pathname,
   );
@@ -43,15 +38,20 @@ export default function SignIn() {
     password: z.string().min(1, t("signin.required", "Required")),
   });
 
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormValues>({ resolver: zodResolver(schema) });
+  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   const onSubmit = async (values: FormValues) => {
     setLoading(true);
     setServerError("");
+    setUnverifiedEmail("");
     const result = await login(values.email, values.password);
     setLoading(false);
-    if (result.success) navigate(from, { replace: true });
-    else setServerError(authErrorText(result, t("signin.failed", "Login failed"), t));
+    if (result.success) {
+      navigate(from, { replace: true });
+      return;
+    }
+    if (result.code === "email_unverified") setUnverifiedEmail(values.email.trim().toLowerCase());
+    setServerError(authErrorText(result, t("signin.failed", "Login failed"), t));
   };
 
   if (isAuthenticated) return <Navigate to={from} replace />;
@@ -79,32 +79,6 @@ export default function SignIn() {
         </Card>
       )}
 
-      {DEMO_AUTH_ENABLED && (
-        <Card padding="sm" className="cine-in mt-8 space-y-2 bg-surface-2 shadow-none" style={{ "--i": 3, "--cine-t0": "0.25s" } as CSSProperties}>
-          <p className="text-footnote font-semibold text-primary">{t("signin.reviewAccounts", "Review accounts")}</p>
-          {DEMO_ACCOUNT_SUMMARY.map((acc) => (
-            <button
-              key={acc.email}
-              type="button"
-              onClick={() => {
-                setValue("email", acc.email);
-                setServerError("");
-              }}
-              className="press flex w-full items-center justify-between gap-3 rounded-control border border-border bg-surface-1 px-3 py-2.5 text-left transition-colors duration-short ease-standard hover:bg-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <span className="min-w-0">
-                <span className="block truncate text-footnote font-semibold text-foreground">{acc.name}</span>
-                <span className="block truncate text-caption text-label-2">{acc.email}</span>
-              </span>
-              <Badge variant={acc.subscriptionStatus === "active" ? "info" : "neutral"}>{acc.plan}</Badge>
-            </button>
-          ))}
-          <p className="text-caption text-label-2">
-            {t("signin.reviewHint", "Selecting an account fills the email — enter its password to sign in.")}
-          </p>
-        </Card>
-      )}
-
       <form onSubmit={handleSubmit(onSubmit)} className="cine-in mt-8 space-y-4" style={{ "--i": 4, "--cine-t0": "0.25s" } as CSSProperties} noValidate>
         <div className="space-y-2">
           <Label htmlFor="email">{t("signin.email", "Email")}</Label>
@@ -128,16 +102,12 @@ export default function SignIn() {
         <div className="space-y-2">
           <div className="flex items-baseline justify-between gap-3">
             <Label htmlFor="password">{t("signin.password", "Password")}</Label>
-            <button
-              type="button"
-              onClick={() => {
-                setShowReset(true);
-                setResetDone(false);
-              }}
+            <Link
+              to="/forgot-password"
               className="rounded-control text-footnote font-medium text-primary transition-colors duration-short hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {t("signin.forgotPassword", "Forgot password?")}
-            </button>
+            </Link>
           </div>
           <div className="relative">
             <Input
@@ -187,6 +157,7 @@ export default function SignIn() {
             </m.p>
           )}
         </AnimatePresence>
+        {unverifiedEmail && <ResendVerification email={unverifiedEmail} />}
         <Button type="submit" size="lg" className="w-full" loading={loading}>
           {t("signin.submit", "Sign in")}
           <ArrowRight aria-hidden />
@@ -207,74 +178,6 @@ export default function SignIn() {
           </Link>
         </p>
       </div>
-
-        {/* Password reset — routed to support until a self-serve endpoint exists */}
-      <Dialog open={showReset} onOpenChange={setShowReset}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <KeyRound aria-hidden className="h-4 w-4 text-primary" />
-              {t("signin.resetTitle", "Reset your password")}
-            </DialogTitle>
-            <DialogDescription className="text-body text-label-2">
-              {resetDone
-                ? t(
-                    "signin.resetDone",
-                    "Request received — we'll email you a reset link once support verifies the account. Check your inbox within a day.",
-                  )
-                : t("signin.resetBody", "Enter your account email and we'll have support send you a password reset link.")}
-            </DialogDescription>
-          </DialogHeader>
-          {resetDone ? (
-            <Button type="button" variant="secondary" className="w-full" onClick={() => setShowReset(false)}>
-              {t("common.close", "Close")}
-            </Button>
-          ) : (
-            <form
-              className="space-y-3"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                const address = resetEmail.trim();
-                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) {
-                  toast.error(t("signin.resetInvalid", "Enter a valid email address."));
-                  return;
-                }
-                setResetSending(true);
-                try {
-                  await sendFeedback({
-                    category: "general",
-                    route: "/sign-in",
-                    message: `Password reset requested for ${address}`,
-                    email: address,
-                  });
-                  setResetDone(true);
-                } catch {
-                  toast.error(t("signin.resetFailed", "Couldn't send the request — try again."));
-                } finally {
-                  setResetSending(false);
-                }
-              }}
-            >
-              <Input
-                type="email"
-                value={resetEmail}
-                onChange={(e) => setResetEmail(e.target.value)}
-                placeholder={t("signin.emailPlaceholder", "you@example.com")}
-                aria-label={t("signin.emailPlaceholder", "you@example.com")}
-                className="h-12"
-              />
-              <div className="flex gap-2">
-                <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowReset(false)}>
-                  {t("common.cancel", "Cancel")}
-                </Button>
-                <Button type="submit" className="flex-1" loading={resetSending}>
-                  {t("signin.resetSubmit", "Request reset")}
-                </Button>
-              </div>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
     </AuthShell>
   );
 }

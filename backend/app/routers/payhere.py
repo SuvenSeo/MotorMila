@@ -337,13 +337,20 @@ def _revoke(db: Session, order: PayherePayment, *, downgrade: bool) -> str:
     return "revoked" if downgrade else "canceled"
 
 
+async def _raw_body(request: Request) -> bytes:
+    """Read the request body on the event loop so the route itself can be sync."""
+    return await request.body()
+
+
 @router.post("/notify")
-async def payhere_notify(request: Request, db: Session = Depends(get_db)) -> dict:
+def payhere_notify(raw_body: bytes = Depends(_raw_body), db: Session = Depends(get_db)) -> dict:
+    # Plain ``def``: all the work below is sync SQLAlchemy, so FastAPI runs it
+    # in the threadpool instead of blocking the event loop.
     secret = _merchant_secret()
     if not secret or not merchant_id():
         raise HTTPException(status_code=503, detail="PayHere is not configured.")
 
-    raw = (await request.body()).decode("utf-8", errors="replace")
+    raw = raw_body.decode("utf-8", errors="replace")
     form = {key: values[0] for key, values in parse_qs(raw, keep_blank_values=True).items()}
 
     merchant = form.get("merchant_id", "")

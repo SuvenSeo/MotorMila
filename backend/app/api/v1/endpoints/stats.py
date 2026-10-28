@@ -28,12 +28,14 @@ from app.utils.stats_cache import (
     build_trends_cache_key,
     compute_district_velocity,
     get_cache_age_seconds,
+    get_cached_district_insight,
     get_cached_district_prices,
     get_cached_district_velocity,
     get_cached_insights,
     get_cached_price_index,
     get_cached_summary,
     get_cached_trends,
+    store_district_insight_cache,
     store_district_prices_cache,
     store_district_velocity_cache,
     store_insights_cache,
@@ -1565,16 +1567,57 @@ def get_source_quality(db: Session = Depends(get_db)):
 
 @router.get("/district-insight", response_model=DistrictQuickInsightResponse)
 def get_district_quick_insight(
-    district: str = Query(..., min_length=2),
+    district: str = Query(..., min_length=2, max_length=50),
     db: Session = Depends(get_db),
 ):
-    normalized = normalize_district_name(district) or " ".join(district.strip().split()).title()
-    district_slug = normalized.lower().replace(" ", "-")
+    # Public + uncached it ran six aggregate queries with a leading-wildcard
+    # URL scan for ANY string. Now: only canonical districts are queried (an
+    # unknown name gets an empty payload without touching the DB, which also
+    # bounds the cache key space), and results are cached per district in
+    # market_stats_cache (1 h TTL, stale served if a recompute fails).
+    canonical = normalize_district_name(district)
+    if canonical is None or canonical == "Sri Lanka":
+        return {
+            "district": " ".join(district.strip().split()).title()[:50],
+            "listing_count": 0,
+            "avg_price_lkr": None,
+            "median_price_lkr": None,
+            "change_pct_30d": None,
+            "top_models": [],
+        }
+
+    cached = get_cached_district_insight(db, canonical, allow_stale=False)
+    if cached is not None:
+        return cached
+    try:
+        result = _compute_district_quick_insight(db, canonical)
+    except Exception:
+        stale = get_cached_district_insight(db, canonical, allow_stale=True)
+        if stale is not None:
+            return stale
+        raise
+    store_district_insight_cache(db, canonical, result)
+    return result
+
+
+def _escape_like(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def _compute_district_quick_insight(db: Session, normalized: str) -> dict:
+    district_slug = _escape_like(normalized.lower().replace(" ", "-"))
     district_clause = and_(
         live_listing_filter(),
         or_(
-            func.lower(CarListing.district) == normalized.lower(),
-            func.lower(CarListing.url).ilike(f"%-for-sale-{district_slug}%"),
+            # Exact (indexable) match on the district column instead of
+            # lower(district), which defeats idx_car_listings_district.
+            CarListing.district.in_({normalized, normalized.lower(), normalized.upper()}),
+            # URL-slug fallback only for rows with no usable district, so the
+            # unanchored pattern never has to scan rows that carry one.
+            and_(
+                or_(CarListing.district.is_(None), CarListing.district.in_(["", "Sri Lanka"])),
+                CarListing.url.ilike(f"%-for-sale-{district_slug}%", escape="\\"),
+            ),
         ),
     )
     now = utc_now()

@@ -8,6 +8,10 @@ export function authErrorText(result: Pick<AuthResult, "error" | "code">, fallba
     unavailable: t("auth.error.unavailable", "Sign-in is temporarily unavailable. Please try again in a few minutes."),
     network: t("auth.error.network", "We couldn't reach Motormila. Check your connection and try again."),
     rate_limited: t("auth.error.rateLimited", "Too many attempts. Wait a few minutes and try again."),
+    email_unverified: t(
+      "auth.error.emailUnverified",
+      "Verify your email address before signing in. Check your inbox or request a new link.",
+    ),
   };
   if (result.code) return byCode[result.code];
   return result.error || fallback;

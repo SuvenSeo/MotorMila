@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_notifications">දැනුම්දීම්</string>
+    <string name="settings_price_drop_push">මිල අඩුවීම්</string>
+    <string name="settings_price_drop_push_sub">ඔබ සලකුණු කළ වාහනයක හෝ ඇඟවීමකට ගැළපෙන වාහනයක මිල අඩු වූ විට දැනුම් දෙන්න</string>
+    <string name="settings_price_drop_push_note">දිනකට කිහිපයක් පමණි, 21:00 සිට 07:00 දක්වා කිසිවක් නැත.</string>
+</resources>

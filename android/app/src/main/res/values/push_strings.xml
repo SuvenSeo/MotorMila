@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Native price-drop push (Settings → Notifications). -->
+<resources>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_price_drop_push">Price drops</string>
+    <string name="settings_price_drop_push_sub">Push when a watched car or an alert match gets cheaper</string>
+    <string name="settings_price_drop_push_note">At most a few per day, never between 21:00 and 07:00.</string>
+</resources>

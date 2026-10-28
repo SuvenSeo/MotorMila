@@ -256,8 +256,8 @@ def test_env_owner_record_is_elevated(env, monkeypatch):
 
 
 def test_owner_email_cannot_be_self_registered(env, monkeypatch):
-    """Self-signup does not verify mailbox ownership; an unregistered owner
-    address must not be claimable (it would be healed to enterprise admin)."""
+    """An unregistered owner address must not be claimable via self-signup,
+    not even pending email verification (it would be healed to enterprise admin)."""
     client, SessionLocal = env
     monkeypatch.setenv("SELF_SIGNUP", "true")
 

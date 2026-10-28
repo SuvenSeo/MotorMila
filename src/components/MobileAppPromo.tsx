@@ -19,6 +19,9 @@ const SUPPRESSED_PREFIXES = [
   "/safe-transfer",
   "/sign-in",
   "/sign-up",
+  "/verify-email",
+  "/forgot-password",
+  "/reset-password",
 ];
 
 function readSeen(): boolean {

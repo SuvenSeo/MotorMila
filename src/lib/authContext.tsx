@@ -18,8 +18,15 @@ export interface AuthUser {
  * `auth.error.<code>`) instead of raw backend text such as
  * "Database temporarily unavailable" while the API is degraded.
  */
-export type AuthErrorCode = "invalid" | "unavailable" | "network" | "rate_limited";
-export type AuthResult = { success: boolean; error?: string; code?: AuthErrorCode };
+export type AuthErrorCode = "invalid" | "unavailable" | "network" | "rate_limited" | "email_unverified";
+export type AuthResult = {
+  success: boolean;
+  error?: string;
+  code?: AuthErrorCode;
+  /** Self-signup succeeded but the mailbox must be verified before sign-in. */
+  verificationRequired?: boolean;
+  email?: string;
+};
 
 export class AuthError extends Error {
   code?: AuthErrorCode;
@@ -35,6 +42,7 @@ const AUTH_MESSAGES: Record<AuthErrorCode, string> = {
   unavailable: "Sign-in is temporarily unavailable. Please try again in a few minutes.",
   network: "We couldn't reach Motormila. Check your connection and try again.",
   rate_limited: "Too many attempts. Wait a few minutes and try again.",
+  email_unverified: "Verify your email address before signing in. Check your inbox or request a new link.",
 };
 
 /** POST JSON to an auth endpoint; network failures become AuthError("network"). */
@@ -85,7 +93,6 @@ interface AuthContextType {
 }
 
 const STORAGE_KEY = "motormila.auth_user";
-const DEMO_USERS_ENV = "VITE_DEMO_USERS";
 /**
  * When true the API is the source of truth for identity (login, session
  * restore, Pro gates). When false the app runs in preview mode and the Pro
@@ -101,12 +108,11 @@ export const BACKEND_AUTH_ENABLED = import.meta.env.VITE_ENABLE_BACKEND_AUTH ===
 export const PRO_EXPORTS_ENFORCED: boolean =
   import.meta.env.VITE_PRO_ACCESS_ENFORCED === "true" || import.meta.env.PROD === true;
 
-type DemoAccountRecord = AuthUser & { password: string };
 type LoginResponse = { user?: Partial<AuthUser> & { trialEndsAt?: string | null; trialDaysLeft?: number | null }; token?: string };
 
-// No accounts are ever baked into the shipped bundle. Demo/review accounts
-// exist only when a build explicitly opts in via VITE_ENABLE_DEMO_AUTH=true
-// and provides them through VITE_DEMO_USERS.
+// No credentials of any kind live in the client bundle: identity always comes
+// from the API (VITE_ENABLE_BACKEND_AUTH=true). Builds without backend auth run
+// in preview mode and cannot sign anyone in.
 function normalizePlan(value: unknown): AuthUser["plan"] {
   const plan = String(value || "").trim().toLowerCase();
   if (plan === "free" || plan === "pro" || plan === "enterprise" || plan === "dealer") {
@@ -115,62 +121,7 @@ function normalizePlan(value: unknown): AuthUser["plan"] {
   return "free";
 }
 
-function parseDemoUsers(): Record<string, DemoAccountRecord> {
-  const users: Record<string, DemoAccountRecord> = {};
-
-  if (import.meta.env.VITE_ENABLE_DEMO_AUTH !== "true") return users;
-
-  const raw = String(import.meta.env[DEMO_USERS_ENV] || "").trim();
-  if (!raw) return users;
-
-  try {
-    const parsed = JSON.parse(raw) as DemoAccountRecord[];
-    if (!Array.isArray(parsed)) return users;
-
-    return parsed.reduce<Record<string, DemoAccountRecord>>((acc, item) => {
-      const email = String(item?.email || "").trim().toLowerCase();
-      const password = String(item?.password || "");
-      const plan = normalizePlan(item?.plan);
-      // Demo JSON must set an explicit allowed plan; skip junk rows.
-      if (!email || !password || !item?.name) return acc;
-      if (!["free", "pro", "enterprise", "dealer"].includes(String(item?.plan || "").toLowerCase())) {
-        return acc;
-      }
-
-      acc[email] = {
-        email,
-        password,
-        name: String(item.name),
-        plan,
-        role: item?.role === "admin" ? "admin" : "user",
-        subscriptionStatus:
-          item.subscriptionStatus === "active" || item.subscriptionStatus === "trialing" || item.subscriptionStatus === "past_due"
-            ? item.subscriptionStatus
-            : plan === "free"
-              ? "none"
-              : "active",
-        avatarInitials: String(item.avatarInitials || email.slice(0, 2)).slice(0, 3).toUpperCase(),
-      };
-      return acc;
-    }, users);
-  } catch {
-    return users;
-  }
-}
-
-const DEMO_USERS = parseDemoUsers();
-export const DEMO_AUTH_ENABLED = Object.keys(DEMO_USERS).length > 0;
 const PREVIEW_AUTH_ENABLED = !BACKEND_AUTH_ENABLED;
-// Passwords are intentionally NOT exported: the sign-in page may list which
-// review accounts exist, but secrets never leave this module.
-export const DEMO_ACCOUNT_SUMMARY = Object.values(DEMO_USERS).map(({ email, name, plan, subscriptionStatus, role, avatarInitials }) => ({
-  email,
-  name,
-  plan,
-  subscriptionStatus,
-  role,
-  avatarInitials,
-}));
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -241,6 +192,14 @@ async function loginWithBackend(email: string, password: string): Promise<AuthUs
   if (!response.ok) {
     if (response.status === 401) throw new AuthError(AUTH_MESSAGES.invalid, "invalid");
     if (response.status === 429) throw new AuthError(AUTH_MESSAGES.rate_limited, "rate_limited");
+    if (response.status === 403) {
+      const body = (await response.json().catch(() => ({}))) as { detail?: unknown };
+      const detail = body.detail as { code?: unknown; message?: unknown } | string | undefined;
+      if (detail && typeof detail === "object" && detail.code === "email_unverified") {
+        throw new AuthError(AUTH_MESSAGES.email_unverified, "email_unverified");
+      }
+      throw new AuthError(typeof detail === "string" ? detail : AUTH_MESSAGES.invalid, "invalid");
+    }
     throw new AuthError(AUTH_MESSAGES.unavailable, "unavailable");
   }
 
@@ -250,11 +209,15 @@ async function loginWithBackend(email: string, password: string): Promise<AuthUs
   return normalizeServerUser(data.user, email);
 }
 
+/**
+ * Self-serve signup creates an unverified account and returns NO session: the
+ * user must open the emailed verification link, then sign in.
+ */
 async function selfSignupWithBackend(input: {
   email: string;
   name: string;
   password: string;
-}): Promise<AuthUser | null> {
+}): Promise<{ email: string }> {
   if (!BACKEND_AUTH_ENABLED) {
     throw new Error("Backend auth is required for self-serve signup.");
   }
@@ -263,9 +226,8 @@ async function selfSignupWithBackend(input: {
 
   if (!response.ok) throw await authFailure(response, "Self-serve signup failed.");
 
-  const data = (await response.json().catch(() => ({}))) as LoginResponse;
-  storeAuthToken(data.token || null);
-  return normalizeServerUser(data.user, data.user?.email || input.email);
+  const data = (await response.json().catch(() => ({}))) as { email?: string };
+  return { email: String(data.email || input.email).trim().toLowerCase() };
 }
 
 async function signupWithBackend(input: {
@@ -290,7 +252,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(loadUser);
   const [authReady, setAuthReady] = useState(!BACKEND_AUTH_ENABLED);
   // Plan/status from localStorage alone is forgeable. When backend auth is on,
-  // Pro routes also require a bearer token issued by /auth/login.
+  // Pro routes also require a bearer token issued by /auth/login. Without
+  // backend auth, a localStorage plan grants Pro only in the dev server —
+  // production bundles have no code path that trusts it.
   const planAllowsPro = Boolean(
     user &&
       (user.plan === "pro" || user.plan === "enterprise" || user.plan === "dealer") &&
@@ -298,7 +262,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
   const hasProAccess = BACKEND_AUTH_ENABLED
     ? planAllowsPro && Boolean(getStoredAuthToken())
-    : planAllowsPro;
+    : import.meta.env.DEV === true && planAllowsPro;
   const isAdmin = Boolean(user?.role === "admin");
 
   useEffect(() => {
@@ -376,19 +340,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return toAuthResult(error, "Authentication failed.");
     }
 
-    const record = DEMO_USERS[normalizedEmail];
-    if (!record || record.password !== password) {
-      if (DEMO_AUTH_ENABLED) return { success: false, error: AUTH_MESSAGES.invalid, code: "invalid" as const };
-      return { success: false, error: "Pro sign-in is not configured for this build." };
-    }
-
-    const demoUser = normalizeServerUser(record, normalizedEmail);
-    if (!demoUser) return { success: false, error: "Demo account is misconfigured." };
-
-    setUser(demoUser);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(demoUser));
-    setAuthReady(true);
-    return { success: true };
+    return { success: false, error: "Sign-in is not configured for this build." };
   }, []);
 
   const signup = useCallback(async (input: { token: string; name: string; password: string }) => {
@@ -406,12 +358,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const selfSignup = useCallback(async (input: { email: string; name: string; password: string }) => {
     try {
-      const serverUser = await selfSignupWithBackend(input);
-      if (!serverUser) return { success: false, error: "Sign-up failed." };
-      setUser(serverUser);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(serverUser));
-      setAuthReady(true);
-      return { success: true };
+      const { email } = await selfSignupWithBackend(input);
+      return { success: true, verificationRequired: true, email };
     } catch (error) {
       return toAuthResult(error, "Sign-up failed.");
     }

@@ -1,0 +1,2 @@
+# Playwright output + seeded SQLite DB (see playwright.config.ts / seed.py)
+.output/

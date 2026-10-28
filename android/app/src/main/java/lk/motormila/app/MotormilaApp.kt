@@ -16,6 +16,9 @@ import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -24,6 +27,9 @@ import java.util.concurrent.TimeUnit
 import lk.motormila.app.core.locale.LocaleHelper
 import lk.motormila.app.data.auth.SessionGuard
 import lk.motormila.app.data.local.datastore.SettingsStore
+import lk.motormila.app.data.local.db.MotormilaDatabase
+import lk.motormila.app.fcm.FirebaseBootstrap
+import lk.motormila.app.fcm.PushTokenRegistrar
 import lk.motormila.app.domain.repository.AuthRepository
 import lk.motormila.app.ui.widget.enqueueDealWidgetRefresh
 import lk.motormila.app.work.PriceAlertSyncWorker
@@ -48,6 +54,12 @@ class MotormilaApp : Application(), SingletonImageLoader.Factory, Configuration.
     @Inject
     lateinit var sessionGuard: SessionGuard
 
+    @Inject
+    lateinit var pushRegistrar: PushTokenRegistrar
+
+    @Inject
+    lateinit var database: MotormilaDatabase
+
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override val workManagerConfiguration: Configuration
@@ -56,6 +68,9 @@ class MotormilaApp : Application(), SingletonImageLoader.Factory, Configuration.
     override fun onCreate() {
         super.onCreate()
         createNotificationChannels()
+        // FCM (no google-services plugin): inert unless this build carries
+        // the MOTORMILA_FIREBASE_* client config.
+        FirebaseBootstrap.ensureInitialized(this)
         // Restore the persisted session immediately (the interceptor also
         // restores lazily on its first request, so no request can ever leave
         // without the bearer even if this hasn't finished yet).
@@ -73,6 +88,25 @@ class MotormilaApp : Application(), SingletonImageLoader.Factory, Configuration.
                     .collect { signedIn ->
                         if (signedIn) runCatching { PriceAlertSyncWorker.enqueue(this@MotormilaApp) }
                         else runCatching { PriceAlertSyncWorker.cancel(this@MotormilaApp) }
+                    }
+            }
+        }
+        // Native push: (re-)register the FCM token while signed in, and again
+        // whenever the watchlist or the Settings price-drop toggle changes
+        // (the server pushes drops for watched listings). Logout unregisters
+        // in AuthRepositoryImpl.
+        appScope.launch {
+            runCatching {
+                combine(
+                    authRepository.session().map { it?.token },
+                    database.watchlistDao().observeAll().map { rows -> rows.map { it.listingId }.sorted() },
+                    settingsStore.observe().map { it.priceDropPushEnabled },
+                ) { token, watched, enabled -> Triple(token, watched, enabled) }
+                    .distinctUntilChanged()
+                    .collectLatest { (token, _, _) ->
+                        if (token == null) return@collectLatest
+                        delay(PUSH_SYNC_DEBOUNCE_MS) // coalesce rapid watchlist taps
+                        pushRegistrar.sync()
                     }
             }
         }
@@ -150,5 +184,6 @@ class MotormilaApp : Application(), SingletonImageLoader.Factory, Configuration.
         const val CHANNEL_PRICE_DROPS = "price_drops"
         const val CHANNEL_MARKET_NEWS = "market_news"
         const val CHANNEL_SYNC = "sync"
+        private const val PUSH_SYNC_DEBOUNCE_MS = 2_000L
     }
 }

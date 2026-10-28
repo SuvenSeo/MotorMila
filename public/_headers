@@ -34,6 +34,12 @@
   X-Robots-Tag: noindex, nofollow
 /sign-up
   X-Robots-Tag: noindex, nofollow
+/verify-email
+  X-Robots-Tag: noindex, nofollow
+/forgot-password
+  X-Robots-Tag: noindex, nofollow
+/reset-password
+  X-Robots-Tag: noindex, nofollow
 /profile
   X-Robots-Tag: noindex, nofollow
 /alerts

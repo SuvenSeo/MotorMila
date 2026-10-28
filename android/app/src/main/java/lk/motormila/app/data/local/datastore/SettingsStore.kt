@@ -31,6 +31,9 @@ class SettingsStore @Inject constructor(
         val BASE_URL = stringPreferencesKey("baseUrlOverride")
         val DEALER_TOKEN = stringPreferencesKey("dealerClaimToken")
         val FCM_TOKEN = stringPreferencesKey("fcmToken")
+        /** Last FCM token successfully registered with the backend (unregister on logout). */
+        val FCM_REGISTERED_TOKEN = stringPreferencesKey("fcmRegisteredToken")
+        val PRICE_DROP_PUSH = booleanPreferencesKey("priceDropPushEnabled")
         val REDUCE_TRANSPARENCY = booleanPreferencesKey("reduceTransparency")
     }
 
@@ -45,6 +48,9 @@ class SettingsStore @Inject constructor(
         val baseUrlOverride: String? = null,
         val dealerClaimToken: String? = null,
         val fcmToken: String? = null,
+        val fcmRegisteredToken: String? = null,
+        /** Settings → Notifications → Price drops (server-side opt-in, default on). */
+        val priceDropPushEnabled: Boolean = true,
         /** Opaque chrome instead of liquid glass (accessibility). */
         val reduceTransparency: Boolean = false,
     )
@@ -60,6 +66,8 @@ class SettingsStore @Inject constructor(
             baseUrlOverride = prefs[Keys.BASE_URL],
             dealerClaimToken = prefs[Keys.DEALER_TOKEN],
             fcmToken = prefs[Keys.FCM_TOKEN],
+            fcmRegisteredToken = prefs[Keys.FCM_REGISTERED_TOKEN],
+            priceDropPushEnabled = prefs[Keys.PRICE_DROP_PUSH] != false,
             reduceTransparency = prefs[Keys.REDUCE_TRANSPARENCY] == true,
         )
     }
@@ -80,6 +88,10 @@ class SettingsStore @Inject constructor(
     suspend fun setBaseUrlOverride(value: String?) = editNullable(Keys.BASE_URL, value)
     suspend fun setDealerClaimToken(value: String?) = editNullable(Keys.DEALER_TOKEN, value)
     suspend fun setFcmToken(value: String?) = editNullable(Keys.FCM_TOKEN, value)
+    suspend fun setFcmRegisteredToken(value: String?) = editNullable(Keys.FCM_REGISTERED_TOKEN, value)
+    suspend fun setPriceDropPushEnabled(value: Boolean) {
+        dataStore.edit { it[Keys.PRICE_DROP_PUSH] = value }
+    }
 
     private suspend fun edit(key: Preferences.Key<String>, value: String) {
         dataStore.edit { it[key] = value }

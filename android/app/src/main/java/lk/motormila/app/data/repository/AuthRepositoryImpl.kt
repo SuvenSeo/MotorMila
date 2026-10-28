@@ -34,6 +34,7 @@ class AuthRepositoryImpl @Inject constructor(
     private val authInterceptor: AuthInterceptor,
     private val database: lk.motormila.app.data.local.db.MotormilaDatabase,
     @IoDispatcher private val io: CoroutineDispatcher,
+    private val pushRegistrar: lk.motormila.app.fcm.PushTokenRegistrar,
 ) : AuthRepository {
 
     override fun session(): Flow<UserSession?> = sessionStore.observe()
@@ -112,6 +113,8 @@ class AuthRepositoryImpl @Inject constructor(
         }
 
     override suspend fun logout(): Unit = withContext(io) {
+        // Unbind this device's push token while the bearer is still valid.
+        runCatching { pushRegistrar.unregister() }
         runCatching { api.logout() }
         sessionStore.clear()
         authInterceptor.updateToken(null)
@@ -127,6 +130,8 @@ class AuthRepositoryImpl @Inject constructor(
         if (cleared) {
             authInterceptor.updateToken(null)
             runCatching { PriceAlertSyncWorker.cancel(context) }
+            // Bearer is dead: rotate the FCM token so the server row prunes itself.
+            runCatching { pushRegistrar.unregister() }
         }
         cleared
     }
@@ -141,6 +146,7 @@ class AuthRepositoryImpl @Inject constructor(
         sessionStore.clear()
         authInterceptor.updateToken(null)
         runCatching { PriceAlertSyncWorker.cancel(context) }
+        runCatching { pushRegistrar.unregister() }
         // Local caches tied to the account (alerts, watchlist) go too.
         runCatching { database.clearAllTables() }
         Unit

@@ -1,7 +1,7 @@
 import os
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import NullPool
+from sqlalchemy.pool import NullPool, QueuePool
 from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv(".env.local", usecwd=True), override=False)
@@ -78,8 +78,8 @@ def _make_engine(url: str):
     # Do NOT pass libpq `options=-c statement_timeout=...` here: Supabase
     # transaction poolers (pgbouncer) reject/break startup options and can
     # crash the API process on every connection. Statement timeout is set
-    # per-session in get_db() after connect instead.
-    # NullPool kept: Space workers should not hold idle pooled conns.
+    # per-session in get_db() after connect instead (see
+    # _apply_statement_timeout for why that stays per-session with pooling).
     # connect_timeout is short (DB_CONNECT_TIMEOUT_SECONDS, default 3s) and a
     # circuit breaker fails subsequent connects instantly while the database
     # is known to be down (see app/core/db_guard.py), so a dead Neon no longer
@@ -88,14 +88,45 @@ def _make_engine(url: str):
 
     engine = create_engine(
         url,
-        poolclass=NullPool,
-        pool_pre_ping=True,
         connect_args={
             "connect_timeout": connect_timeout_seconds(),
         },
+        **_postgres_pool_kwargs(),
     )
     install_breaker(engine)
     return engine
+
+
+def _env_int(name: str, default: int, minimum: int = 0) -> int:
+    raw = os.getenv(name, "").strip()
+    try:
+        return max(minimum, int(raw)) if raw else default
+    except ValueError:
+        return default
+
+
+def _postgres_pool_kwargs() -> dict:
+    """Connection-pool settings for remote Postgres engines.
+
+    Default: a small QueuePool so each request reuses a warm connection
+    instead of paying TCP + TLS + auth to Neon every time (NullPool did).
+    pool_pre_ping drops connections Neon closed on scale-to-zero, and
+    pool_recycle (default 300 s) retires them before Neon's idle cutoff.
+
+    Env: DB_POOL_SIZE (5), DB_MAX_OVERFLOW (5), DB_POOL_RECYCLE_SECONDS (300),
+    DB_POOL_TIMEOUT_SECONDS (10). DB_NULLPOOL=true restores the old
+    connection-per-checkout behaviour (no idle connections held).
+    """
+    if os.getenv("DB_NULLPOOL", "").strip().lower() in {"1", "true", "yes", "on"}:
+        return {"poolclass": NullPool, "pool_pre_ping": True}
+    return {
+        "poolclass": QueuePool,
+        "pool_size": _env_int("DB_POOL_SIZE", 5, minimum=1),
+        "max_overflow": _env_int("DB_MAX_OVERFLOW", 5, minimum=0),
+        "pool_recycle": _env_int("DB_POOL_RECYCLE_SECONDS", 300, minimum=30),
+        "pool_timeout": _env_int("DB_POOL_TIMEOUT_SECONDS", 10, minimum=1),
+        "pool_pre_ping": True,
+    }
 
 hot_engine  = _make_engine(HOT_URL)
 cold_engine = _make_engine(COLD_URL)
@@ -193,7 +224,15 @@ def reattach_engines(url: str) -> None:
 
 
 def _apply_statement_timeout(db) -> None:
-    """Best-effort per-session statement timeout (pooler-safe)."""
+    """Best-effort per-session statement timeout (pooler-safe).
+
+    Deliberately per session rather than a pool ``connect`` event: behind a
+    pgbouncer/Neon *transaction* pooler a SET issued at connect time lands on
+    whichever server connection served that one transaction, so later
+    transactions would run without it. Issued here it runs inside the
+    session's own transaction, so it covers that request's queries whether
+    or not the SQLAlchemy engine pools connections.
+    """
     bind = db.get_bind()
     if bind is None or bind.dialect.name == "sqlite":
         return

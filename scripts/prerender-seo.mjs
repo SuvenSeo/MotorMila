@@ -79,6 +79,9 @@ const STATIC_ROUTES = {
   // Utility routes: real shells so the raw HTML already says noindex.
   "/sign-in": [`Sign In — ${SITE}`, DEFAULT_DESC, false],
   "/sign-up": [`Create Account — ${SITE}`, DEFAULT_DESC, false],
+  "/verify-email": [`Verify Email — ${SITE}`, DEFAULT_DESC, false],
+  "/forgot-password": [`Forgot Password — ${SITE}`, DEFAULT_DESC, false],
+  "/reset-password": [`Reset Password — ${SITE}`, DEFAULT_DESC, false],
   "/profile": [`Profile — ${SITE}`, DEFAULT_DESC, false],
   "/alerts": [`Alerts — ${SITE}`, DEFAULT_DESC, false],
   "/settings": [`Settings — ${SITE}`, DEFAULT_DESC, false],
