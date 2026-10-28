@@ -141,7 +141,7 @@ describe("ProDashboard", () => {
     installLocalStorage();
     localStorage.setItem(
       "motormila.auth_user",
-      JSON.stringify({ email: "pro@motormila.lk", name: "Pro User", plan: "pro", avatarInitials: "PU" }),
+      JSON.stringify({ email: "pro@example.com", name: "Pro User", plan: "pro", avatarInitials: "PU" }),
     );
     vi.mocked(getProMarketSnapshot).mockResolvedValue(snapshot as ProMarketSnapshot);
     vi.mocked(getProVehicleLanes).mockResolvedValue([lane] as ProVehicleLane[]);

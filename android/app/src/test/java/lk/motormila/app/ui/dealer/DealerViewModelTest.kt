@@ -57,7 +57,7 @@ class DealerViewModelTest {
                 DealerClaimForm(
                     displayName = "Island Motors",
                     phone = "0771234567",
-                    email = "yard@motormila.lk",
+                    email = "yard@example.com",
                     pattern = "Axio *",
                     url = "https://ikman.lk/ad/1",
                 ),
@@ -68,7 +68,7 @@ class DealerViewModelTest {
         coVerify {
             repository.claim(
                 dealerName = "Island Motors",
-                contactEmail = "yard@motormila.lk",
+                contactEmail = "yard@example.com",
                 contactPhone = "0771234567",
                 sellerNamePattern = "Axio *",
                 claimedUrl = "https://ikman.lk/ad/1",

@@ -2,5 +2,5 @@
 <resources>
     <string name="share_listing_chooser">பட்டியலைப் பகிர்</string>
     <string name="share_card_brand">MOTORMILA</string>
-    <string name="share_card_footer">motormila.lk</string>
+    <string name="share_card_footer">motormila.vercel.app</string>
 </resources>

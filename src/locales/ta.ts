@@ -933,7 +933,7 @@ export const ta = {
   "seo.estimateTitle": "மதிப்பீடு — {site}",
   "seo.evHubDesc": "இலங்கைக்கான மின் வாகன விலை, வரம்பு, பேட்டரி ஆரோக்கியம் மற்றும் சார்ஜிங் நுண்ணறிவு.",
   "seo.evHubTitle": "EV மையம் — {site}",
-  "seo.homeTitle": "{site} — {tagline}",
+  "seo.homeTitle": "{site} — Sri Lanka Vehicle Prices, Fair Values & Deal Alerts",
   "seo.hubDesc": "இலங்கையில் குறிப்பிட்ட வாகனத்திற்கான விலைகள், மாவட்ட பிரிவு மற்றும் நேரடி பட்டியல்கள்.",
   "seo.listingDetailTitle": "வாகன விவரம் — {site}",
   "seo.makeHubTitle": "இலங்கையில் பயன்படுத்திய {make} விலைகள் | {site}",

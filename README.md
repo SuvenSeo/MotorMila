@@ -21,13 +21,17 @@ From fragmented listings to a clearer picture of prices, trends, and opportuniti
 
 <br />
 
-<a href="https://motormila.vercel.app"><strong>EXPLORE THE PLATFORM</strong></a>
+<a href="https://motormila.vercel.app"><strong>▶&nbsp; EXPLORE THE PLATFORM</strong></a>
 &nbsp;&nbsp;·&nbsp;&nbsp;
-<a href="#the-experience"><strong>DISCOVER THE EXPERIENCE</strong></a>
+<a href="#the-trailer"><strong>THE TRAILER</strong></a>
+&nbsp;&nbsp;·&nbsp;&nbsp;
+<a href="#the-experience"><strong>THE EXPERIENCE</strong></a>
 &nbsp;&nbsp;·&nbsp;&nbsp;
 <a href="#built-for-the-real-market"><strong>HOW IT WORKS</strong></a>
 &nbsp;&nbsp;·&nbsp;&nbsp;
 <a href="#run-it-locally"><strong>BUILD WITH US</strong></a>
+&nbsp;&nbsp;·&nbsp;&nbsp;
+<a href="#contact"><strong>CONTACT</strong></a>
 
 <br /><br />
 
@@ -49,7 +53,11 @@ From fragmented listings to a clearer picture of prices, trends, and opportuniti
 
 ---
 
-## The question behind every purchase.
+## The trailer
+
+A sixty-second read, in three scenes. The rest of this page is the full film.
+
+### Scene 1 — The question
 
 > ### “Is this vehicle actually worth the asking price?”
 
@@ -57,9 +65,15 @@ A listing tells you what someone wants. It doesn't tell you what comparable vehi
 
 **MotorMila is built to close that information gap.**
 
+### Scene 2 — The machine
+
 It brings together vehicle advertisements from Sri Lankan marketplaces, normalizes the messy details, identifies potential duplicates, and turns the resulting data into research tools for buyers, sellers, and automotive professionals.
 
 **Not another place to scroll through cars. A way to understand the market behind them.**
+
+### Scene 3 — The decision
+
+Compare. Check the history. See the district, the trend, and the outliers. Then verify the vehicle itself — because a price, however well researched, is never a substitute for looking at the car.
 
 <br />
 
@@ -133,7 +147,7 @@ Product access and data availability may vary by feature, plan, and the freshnes
 
 </div>
 
-MotorMila's collection architecture is designed around **13+ marketplace integrations** with independent source handling, scheduled scraping, and analysis workflows. Configured sources include ikman, Riyasewana, Auto Lanka, HitAd, AutoDirect, SaleMe, RiyaHub, Cartivate, and others.
+MotorMila's collection architecture is designed around multiple marketplace integrations with independent source handling, scheduled scraping, and analysis workflows. Configured sources include ikman, Riyasewana, Auto Lanka, HitAd, AutoDirect, SaleMe, RiyaHub, Cartivate, and others.
 
 Sources differ in coverage, reliability, and anti-bot protections. A configured integration is not a guarantee that a source is currently returning fresh data.
 
@@ -161,7 +175,7 @@ flowchart TD
 | **Efficient delivery** | Serve public market aggregates using exported snapshots where possible |
 | **Honest interpretation** | Distinguish advertised asking prices from confirmed sale prices |
 
-The scheduled collection workflow is configured for **three runs daily** at 07:40, 15:40, and 23:40 Sri Lanka time, with additional maintenance, monitoring, and recovery workflows. Actual freshness depends on successful execution and source availability.
+Collection runs on a scheduled workflow (see [.github/workflows/](.github/workflows/)). Actual freshness depends on successful execution and source availability.
 
 <br />
 
@@ -365,6 +379,26 @@ MotorMila analyzes information from vehicle advertisements and related sources. 
 
 Use the insights as **decision support**. Verify the vehicle, seller, documents, condition, and current listing details independently before committing to a purchase.
 
+MotorMila is not affiliated with ikman, Riyasewana, patpat, or any marketplace whose listings it analyzes. Marketplace names appear only to identify where a listing originated.
+
+<br />
+
+## Contact
+
+| | |
+|:--|:--|
+| **Live platform** | [motormila.vercel.app](https://motormila.vercel.app) — also served at [motormila.pages.dev](https://motormila.pages.dev) |
+| **Email** | [hello@ardenostudio.com](mailto:hello@ardenostudio.com) |
+| **Feedback** | [GitHub issues](https://github.com/SuvenSeo/MotorMila/issues) |
+
+Motormila has no motormila.lk domain, no public phone number, and no social or store listings claimed in this repository. If you see one, it is not an official Motormila channel — contact the email above to verify.
+
+### Rights
+
+Copyright © 2026 Ardeno Studio. All rights reserved. No licence is granted by this repository: do not copy, reuse, redistribute, or present this code, brand assets, or data as your own without written permission. See [LICENSE](LICENSE) and [NOTICE](NOTICE). For licensing enquiries, contact [hello@ardenostudio.com](mailto:hello@ardenostudio.com).
+
+Third-party libraries and tools in this repository remain under their own licences, which are preserved in their respective packages.
+
 <br />
 
 ---
@@ -388,6 +422,8 @@ Use the insights as **decision support**. Verify the vehicle, seller, documents,
 <a href="https://github.com/SuvenSeo/MotorMila/issues">ISSUES & FEEDBACK</a>
 &nbsp;&nbsp;·&nbsp;&nbsp;
 <a href="MOTORMILA-BRAND.md">THE BRAND</a>
+&nbsp;&nbsp;·&nbsp;&nbsp;
+<a href="mailto:hello@ardenostudio.com">CONTACT</a>
 
 <br /><br />
 

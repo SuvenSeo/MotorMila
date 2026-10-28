@@ -1,7 +1,9 @@
 // Public contact details come from build env so no personal address/number is
-// hard-coded in the bundle. OPS: set VITE_CONTACT_EMAIL (role inbox, e.g.
-// hello@<domain>) and optionally VITE_CONTACT_PHONE in Vercel/Cloudflare.
-const CONTACT_EMAIL = String(import.meta.env.VITE_CONTACT_EMAIL || "hello@motormila.lk").trim();
+// hard-coded in the bundle. OPS: set VITE_CONTACT_EMAIL to override; the
+// default is Ardeno Studio's hello@ardenostudio.com. Do not use motormila.lk
+// as a contact domain — it is not owned by Motormila or Ardeno Studio.
+// Optionally set VITE_CONTACT_PHONE in Vercel/Cloudflare.
+const CONTACT_EMAIL = String(import.meta.env.VITE_CONTACT_EMAIL || "hello@ardenostudio.com").trim();
 const CONTACT_PHONE = String(import.meta.env.VITE_CONTACT_PHONE || "").trim();
 
 export const BRAND = {

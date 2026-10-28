@@ -190,7 +190,7 @@ class AlertsViewModelTest {
     )
 
     private fun proSession(): UserSession = UserSession(
-        email = "pro@motormila.lk",
+        email = "pro@example.com",
         name = "Pro",
         plan = "pro",
         role = "user",
@@ -199,5 +199,5 @@ class AlertsViewModelTest {
         expiresAt = null,
     )
 
-    private fun freeSession(): UserSession = proSession().copy(plan = "free", email = "free@motormila.lk")
+    private fun freeSession(): UserSession = proSession().copy(plan = "free", email = "free@example.com")
 }

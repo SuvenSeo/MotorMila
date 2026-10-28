@@ -933,7 +933,7 @@ export const si = {
   "seo.estimateTitle": "තක්සේරුව — {site}",
   "seo.evHubDesc": "ශ්‍රී ලංකාව සඳහා විද්‍යුත් වාහන මිලකරණය, පරාසය, බැටරි සෞඛ්‍යය සහ චාර්ජ් බුද්ධිය.",
   "seo.evHubTitle": "EV මධ්‍යස්ථානය — {site}",
-  "seo.homeTitle": "{site} — {tagline}",
+  "seo.homeTitle": "{site} — Sri Lanka Vehicle Prices, Fair Values & Deal Alerts",
   "seo.hubDesc": "ශ්‍රී ලංකාවේ විශේෂිත වාහනයක් සඳහා මිල, දිස්ත්‍රික්ක විග්‍රහය සහ සජීවී ලැයිස්තු.",
   "seo.listingDetailTitle": "වාහන විස්තර — {site}",
   "seo.makeHubTitle": "ශ්‍රී ලංකාවේ භාවිත {make} මිල | {site}",

@@ -50,7 +50,7 @@ from db.models import CarListing, MarketAlert, MarketAlertMatch, live_listing_fi
 # ---------------------------------------------------------------------------
 
 SENDGRID_SEND_URL = "https://api.sendgrid.com/v3/mail/send"
-DIGEST_FROM_EMAIL = os.getenv("DIGEST_FROM_EMAIL", "noreply@motormila.lk")
+DIGEST_FROM_EMAIL = os.getenv("DIGEST_FROM_EMAIL", "hello@ardenostudio.com")
 DIGEST_FROM_NAME = os.getenv("DIGEST_FROM_NAME", "Motormila")
 DIGEST_SUBJECT = os.getenv("DIGEST_SUBJECT", "Motormila Pro — Weekly Market Digest")
 

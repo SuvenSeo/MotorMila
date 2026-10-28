@@ -49,12 +49,12 @@ const compactKey = (v) =>
 
 /** Static routes: path -> [title, description, indexable]. Keep in sync with RouteMeta. */
 const STATIC_ROUTES = {
-  "/trends": [`Market Trends — ${SITE}`, "Sri Lankan vehicle price trends over time, by make, model, and district.", true],
-  "/estimate": [`Valuation — ${SITE}`, "Estimate a fair market price for any Sri Lankan vehicle from live listing data.", true],
-  "/calculator": [`Import & Cost Calculator — ${SITE}`, "Break down import duty, taxes, and total cost of ownership for vehicles in Sri Lanka.", true],
-  "/ev-hub": [`EV Hub — ${SITE}`, "Electric vehicle pricing, range, battery health, and charging intelligence for Sri Lanka.", true],
-  "/ev-chargers": [`EV Chargers — ${SITE}`, "Map of electric vehicle charging stations across Sri Lanka.", true],
-  "/best-picks": [`Best Picks — ${SITE}`, "The best-value vehicles on the Sri Lankan market right now, ranked by fair-value signals.", true],
+  "/trends": [`Sri Lanka Vehicle Price Trends — By Make, Model & District | ${SITE}`, "Sri Lanka vehicle price trends over time, by make, model, and district — live asking prices in LKR, not guesses.", true],
+  "/estimate": [`Vehicle Valuation Sri Lanka — What Is My Car Worth? | ${SITE}`, "Estimate a fair market price for any Sri Lankan vehicle from live listing data, before you buy or sell.", true],
+  "/calculator": [`Sri Lanka Vehicle Import & Cost Calculator — Duty, Taxes & Total Cost | ${SITE}`, "Break down import duty, taxes, and total cost of ownership for vehicles in Sri Lanka.", true],
+  "/ev-hub": [`EV Prices Sri Lanka — Electric Vehicle Pricing, Range & Charging | ${SITE}`, "Electric vehicle pricing, range, battery health, and charging intelligence for Sri Lanka.", true],
+  "/ev-chargers": [`EV Chargers Sri Lanka — Charging Station Map | ${SITE}`, "Map of electric vehicle charging stations across Sri Lanka.", true],
+  "/best-picks": [`Best Vehicle Deals Sri Lanka — Priced Below Market Value | ${SITE}`, "The best-value vehicles on the Sri Lankan market right now, ranked by fair-value signals.", true],
   "/sell": [`Sell Your Vehicle — ${SITE}`, "List your vehicle and see what similar cars are selling for in Sri Lanka before you set a price.", true],
   "/official-pulse": [`Official Pulse — ${SITE}`, "Government, customs and import-parity signals for the Sri Lankan vehicle market.", true],
   "/docs": [`Docs — ${SITE}`, "How Motormila works: data sources, valuation method and API notes.", true],
@@ -63,8 +63,8 @@ const STATIC_ROUTES = {
   // company is registered and a lawyer reviews the wording. Flip back to true after.
   "/privacy": [`Privacy Policy — ${SITE}`, "How Motormila collects, uses and protects personal data.", false],
   "/terms": [`Terms of Service — ${SITE}`, "The terms that govern use of Motormila.", false],
-  "/how-we-price": [`How We Price — ${SITE}`, "How MotorMila estimates fair market value from Sri Lankan asking prices: comparable listings, confidence, and the limits of the data.", true],
-  "/compare": [`Compare Vehicles — ${SITE}`, "Side-by-side Sri Lankan vehicle comparison: price, mileage, district and fair-value verdict.", true],
+  "/how-we-price": [`How We Price — Fair Vehicle Values in Sri Lanka Explained | ${SITE}`, "How MotorMila estimates fair market value from Sri Lankan asking prices: comparable listings, confidence, and the limits of the data.", true],
+  "/compare": [`Compare Vehicles Sri Lanka — Side-by-Side Price & Fair-Value Verdict | ${SITE}`, "Side-by-side Sri Lankan vehicle comparison: price, mileage, district and fair-value verdict.", true],
   "/permits": [`Vehicle Permits — ${SITE}`, "Sri Lankan vehicle import permit types and current market prices.", true],
   "/mobile-app": [`Android App — ${SITE}`, "Download the MotorMila Android app: Sri Lankan vehicle prices, deal alerts and valuations on your phone.", true],
   "/bot": [`MotorMilaBot — ${SITE}`, "About the MotorMilaBot web crawler: what it collects, how politely it crawls, and how to contact us or opt out.", true],
@@ -147,6 +147,88 @@ function findIdxDir() {
   return null;
 }
 
+const HOME_TITLE = `${SITE} — Sri Lanka Vehicle Prices, Fair Values & Deal Alerts`;
+const HOME_DESC =
+  "Motormila tracks Sri Lanka vehicle prices across the major marketplaces — live listings, fair-value estimates, price trends and deal alerts, so you can check a fair price before buying or selling a car, van, bike or three-wheeler.";
+// Honest, affiliation-free answers: Motormila is NOT ikman, riyasewana or
+// patpat, and is not affiliated with them. It tracks prices across them.
+// These Q&As target the queries buyers actually type before they trust a
+// marketplace price ("is this ikman price fair?"), not the marketplaces'
+// own brand queries, which Motormila cannot and should not try to outrank.
+const HOME_FAQS = [
+  {
+    q: "What is Motormila?",
+    a: "Motormila is Sri Lanka vehicle price intelligence. It tracks live vehicle listings across Sri Lanka's major marketplaces, with price trends, fair-value estimates and deal alerts, so buyers and sellers can agree on a fair price faster.",
+  },
+  {
+    q: "Is Motormila the same as ikman or riyasewana?",
+    a: "No. Motormila is not ikman, riyasewana or patpat, and is not affiliated with them. Those are marketplaces where sellers post ads. Motormila tracks prices across marketplaces, so you can check whether a price you saw on any of them is fair before you buy or sell.",
+  },
+  {
+    q: "How do I check if a price on ikman or riyasewana is fair?",
+    a: "Search the make and model on Motormila, compare its median asking price and price range with similar listings, then use the valuation tool for a fair-value estimate. A price far above the median for the same year and mileage deserves a second look.",
+  },
+  {
+    q: "What does Motormila's fair value mean?",
+    a: "A fair value is an estimate from comparable live asking prices in Sri Lanka, with a confidence level based on how many similar listings exist. Asking prices are not final sale prices, so a fair value is a guide for negotiation, not a guaranteed sale price.",
+  },
+  {
+    q: "Which vehicles and districts does Motormila cover?",
+    a: "Cars, vans, bikes, three-wheelers and lorries across Sri Lanka, by make, model and district — including Toyota, Honda, Suzuki, Nissan and the most-searched models such as Prius, Aqua, Fit, Vezel and Alto.",
+  },
+];
+
+function homeShell(template, routes) {
+  const topModels = (routes?.models || []).slice(0, 12);
+  const topMakes = (routes?.makes || []).slice(0, 12);
+  const districts = (routes?.districts || []).slice(0, 12);
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        name: SITE,
+        url: `${ORIGIN}/`,
+        logo: `${ORIGIN}/logo.png`,
+        slogan: "The fair mila for every motor.",
+        description: HOME_DESC,
+        areaServed: { "@type": "Country", name: "Sri Lanka" },
+        knowsAbout: ["Sri Lanka vehicle prices", "Sri Lanka used car prices", "vehicle fair value", "vehicle price trends", "vehicle deal alerts"],
+      },
+      {
+        "@type": "WebSite",
+        name: SITE,
+        url: `${ORIGIN}/`,
+        description: HOME_DESC,
+        inLanguage: "en",
+        publisher: { "@type": "Organization", name: SITE, url: `${ORIGIN}/` },
+        potentialAction: {
+          "@type": "SearchAction",
+          target: { "@type": "EntryPoint", urlTemplate: `${ORIGIN}/?q={search_term_string}` },
+          "query-input": "required name=search_term_string",
+        },
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: HOME_FAQS.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+      },
+      crumbs([{ name: "Home", path: "/" }]),
+    ],
+  };
+  const body =
+    `<h1>Sri Lanka vehicle prices, checked before you buy or sell</h1><p>${esc(HOME_DESC)}</p>` +
+    `<h2>Not a marketplace — a price check across marketplaces</h2><p>Motormila is not ikman, riyasewana or patpat, and is not affiliated with them. It tracks live listings across Sri Lanka's major marketplaces, so the price you saw on any of them can be checked against the whole market: median price, price range, trends and a fair-value estimate.</p>` +
+    `<h2>Check a fair price in three steps</h2><ol><li>Find the make and model below, or search it.</li><li>Compare its median asking price in LKR with similar listings.</li><li>Use the <a href="/estimate">valuation tool</a> before you negotiate, and <a href="/how-we-price">read how fair values are calculated</a> — including their limits.</li></ol>` +
+    `<p><a href="/trends">Price trends</a> · <a href="/best-picks">Best deals</a> · <a href="/calculator">Import &amp; cost calculator</a> · <a href="/compare">Compare vehicles</a> · <a href="/docs">How Motormila works</a></p>` +
+    (topModels.length
+      ? `<h2>Most-searched vehicle prices in Sri Lanka</h2><ul>${topModels.map((m) => `<li><a href="${esc(m.path)}">${esc(`${m.make} ${m.model}`)} price in Sri Lanka</a>${m.count ? ` (${m.count} listings${lkr(m.median_price_lkr) ? `, median ${lkr(m.median_price_lkr)}` : ""})` : ""}</li>`).join("")}</ul>`
+      : `<h2>Most-searched vehicle prices in Sri Lanka</h2><ul><li><a href="/cars/toyota/prius">Toyota Prius price in Sri Lanka</a></li><li><a href="/cars/toyota/aqua">Toyota Aqua price in Sri Lanka</a></li><li><a href="/cars/honda/fit">Honda Fit price in Sri Lanka</a></li><li><a href="/cars/honda/vezel">Honda Vezel price in Sri Lanka</a></li><li><a href="/cars/suzuki/alto">Suzuki Alto price in Sri Lanka</a></li><li><a href="/cars/suzuki/wagon-r">Suzuki Wagon R price in Sri Lanka</a></li></ul>`) +
+    (topMakes.length ? `<h2>Browse by make</h2><ul>${topMakes.map((m) => `<li><a href="${esc(m.path)}">${esc(m.make)} prices in Sri Lanka</a></li>`).join("")}</ul>` : "") +
+    (districts.length ? `<h2>Browse by district</h2><ul>${districts.map((d) => `<li><a href="${esc(d.path)}">Vehicles in ${esc(d.district)}, Sri Lanka</a></li>`).join("")}</ul>` : "") +
+    `<h2>Questions buyers ask before trusting a marketplace price</h2>${HOME_FAQS.map((f) => `<h3>${esc(f.q)}</h3><p>${esc(f.a)}</p>`).join("")}`;
+  return renderShell(template, { path: "/", title: HOME_TITLE, description: HOME_DESC, jsonLd, body });
+}
+
 export async function prerender() {
   const templatePath = path.join(DIST, "index.html");
   if (!existsSync(templatePath)) {
@@ -183,6 +265,10 @@ export async function prerender() {
   const idx = findIdxDir();
   if (!idx) {
     console.warn("[prerender] no snapshot idx/routes.json; hub pages not prerendered");
+    // Homepage still gets its shell (fallback model links), so brand search
+    // and AI crawlers always see a real homepage, not an empty SPA shell.
+    await fs.writeFile(path.join(DIST, "index.html"), homeShell(template, null));
+    count += 1;
     console.log(`[prerender] wrote ${count} static route shells + 404.html`);
     return;
   }
@@ -267,8 +353,13 @@ export async function prerender() {
     count += 1;
   }
 
-  // dist/index.html is left as-is: it is also the SPA fallback for /listing/*
-  // etc., so it must not carry a canonical (RouteMeta sets one client-side).
+  // Homepage shell: dist/index.html doubles as the SPA fallback for
+  // /listing/* etc., so its canonical/FAQ describe the homepage, not the
+  // fallback URL — RouteMeta sets the per-route canonical client-side, and
+  // React replaces this body on mount. That tradeoff already existed for
+  // the generic shell; this version at least gives crawlers a real homepage.
+  await fs.writeFile(path.join(DIST, "index.html"), homeShell(template, routes));
+  count += 1;
   console.log(`[prerender] wrote ${count} route shells + 404.html`);
 }
 

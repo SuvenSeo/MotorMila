@@ -29,7 +29,7 @@ Set env secrets:
 
 - `VAPID_PUBLIC_KEY` = public key above
 - `VAPID_PRIVATE_KEY` = private key above (server only, never ship to frontend)
-- `VAPID_SUBJECT` = `mailto:alerts@motormila.lk`
+- `VAPID_SUBJECT` = `mailto:hello@ardenostudio.com`
 
 Check: `GET /api/v1/notifications/preferences` returns
 `push_configured: true` + `vapid_public_key`.

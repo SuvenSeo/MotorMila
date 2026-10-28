@@ -131,7 +131,7 @@ def _send_smtp(*, to_email: str, subject: str, text: str) -> bool:
     port = int(os.getenv("SMTP_PORT", "587") or 587)
     username = os.getenv("SMTP_USERNAME", "").strip()
     password = os.getenv("SMTP_PASSWORD", "").strip()
-    from_addr = os.getenv("SMTP_FROM", "").strip() or username or "noreply@motormila.local"
+    from_addr = os.getenv("SMTP_FROM", "").strip() or username or "hello@ardenostudio.com"
     message = EmailMessage()
     message["Subject"] = subject
     message["From"] = from_addr

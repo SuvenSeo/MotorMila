@@ -15,8 +15,10 @@ import { cn } from "@/lib/utils";
  * rather than showing a bracketed placeholder.
  */
 export const LEGAL_EFFECTIVE_DATE = String(import.meta.env.VITE_LEGAL_EFFECTIVE_DATE ?? "").trim();
-/** Privacy / data-protection contact. Replace with a real mailbox (e.g. privacy@motormila.lk). */
-export const PRIVACY_EMAIL = "privacy@motormila.lk";
+/** Privacy / data-protection contact: Ardeno Studio's hello@ardenostudio.com.
+ * Motormila has no privacy@motormila.lk mailbox, and motormila.lk is not owned
+ * by Motormila or Ardeno Studio, so it must not be used here. */
+export const PRIVACY_EMAIL = "hello@ardenostudio.com";
 export const CONTROLLER_NAME = "MotorMila (operated by [COMPANY NAME] (Pvt) Ltd, PV [REG. NO.])";
 
 export const LEGAL_LINKS = [

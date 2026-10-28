@@ -156,7 +156,7 @@ export const shellEn: Record<string, string> = {
   "shell.pricing.val.more": "More, incl. WhatsApp",
   "shell.copy.signinSubtitle": "Sign in to see your saved vehicles and price-drop alerts.",
   "shell.copy.emailPlaceholder": "you@example.com",
-  "shell.copy.seoDefault": "Search every vehicle ad in Sri Lanka in one place, with price history, fair-price ranges and an import tax calculator.",
+  "shell.copy.seoDefault": "Motormila tracks Sri Lanka vehicle prices across the major marketplaces — live listings, fair-value estimates, price trends and deal alerts, so you can check a fair price before buying or selling a car, van, bike or three-wheeler.",
   "shell.copy.signInPortalBody": "Your account keeps your saved vehicles and price-drop alerts. Browsing never needs an account.",
   "shell.copy.signupFree": "Search every listing, price ranges and the import tax calculator. Free during beta.",
   "shell.copy.signupPro": "Coming soon: deal scores on every listing, full price history and exports.",

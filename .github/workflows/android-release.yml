@@ -197,7 +197,7 @@ jobs:
           done
           cat android/latest-release.json
           git config user.name "motormila-release-bot"
-          git config user.email "noreply@motormila.lk"
+          git config user.email "hello@ardenostudio.com"
           git add android/latest-release.json public/app/latest-release.json
           if git diff --cached --quiet; then
             echo "Manifest unchanged; nothing to commit"

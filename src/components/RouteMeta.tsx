@@ -550,17 +550,43 @@ export function RouteMeta() {
     if (jsonLd) {
       setJsonLd(jsonLd);
     } else if (pathname === "/") {
+      // SEO/AI-search identity: Organization + WebSite in one graph, so
+      // rendered crawlers and AI answers can name Motormila, its scope and
+      // its slogan without guessing. No contact details are claimed here:
+      // no verified public phone/address exists in the bundle yet.
       setJsonLd({
         "@context": "https://schema.org",
-        "@type": "WebSite",
-        name: SITE,
-        url: ORIGIN,
-        description: defaultDescription,
-        potentialAction: {
-          "@type": "SearchAction",
-          target: { "@type": "EntryPoint", urlTemplate: `${ORIGIN}/?q={search_term_string}` },
-          "query-input": "required name=search_term_string",
-        },
+        "@graph": [
+          {
+            "@type": "Organization",
+            name: SITE,
+            url: ORIGIN,
+            logo: `${ORIGIN}/logo.png`,
+            slogan: "The fair mila for every motor.",
+            description: defaultDescription,
+            areaServed: { "@type": "Country", name: "Sri Lanka" },
+            knowsAbout: [
+              "Sri Lanka vehicle prices",
+              "Sri Lanka used car prices",
+              "vehicle fair value",
+              "vehicle price trends",
+              "vehicle deal alerts",
+            ],
+          },
+          {
+            "@type": "WebSite",
+            name: SITE,
+            url: ORIGIN,
+            description: defaultDescription,
+            inLanguage: "en",
+            publisher: { "@type": "Organization", name: SITE, url: ORIGIN },
+            potentialAction: {
+              "@type": "SearchAction",
+              target: { "@type": "EntryPoint", urlTemplate: `${ORIGIN}/?q={search_term_string}` },
+              "query-input": "required name=search_term_string",
+            },
+          },
+        ],
       });
     } else if (pathname === "/price-index") {
       // Dataset stub for the Market Price Index (MPI): describes the index

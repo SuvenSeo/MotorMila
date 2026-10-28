@@ -1,0 +1,80 @@
+PROPRIETARY LICENSE — ALL RIGHTS RESERVED
+
+Copyright © 2026 Ardeno Studio. All rights reserved.
+
+This repository, including all source code, documentation, configuration,
+brand assets, designs, and data files in it (collectively, the "Work"), is
+the proprietary property of Ardeno Studio ("Ardeno", "we", "us").
+
+1. NO LICENCE GRANTED
+   No licence, right, or permission is granted by this file, by the
+   repository's public visibility on GitHub, or by any other means, to
+   use, copy, modify, merge, publish, distribute, sublicense, sell, or
+   otherwise deal in the Work, in whole or in part, except as expressly
+   granted in a separate written agreement signed by Ardeno Studio.
+
+   Public visibility on GitHub allows viewing and, under GitHub's Terms
+   of Service, forking on GitHub. That platform permission is NOT a
+   licence to use the Work outside GitHub, to run it, to build on it,
+   to distribute it, or to present it — or any part of it, including
+   screenshots, excerpts, and derived designs — as your own work or
+   product.
+
+2. PROHIBITED USES
+   Without Ardeno's prior written permission, you must not:
+   (a) copy, reproduce, or redistribute the Work or any part of it;
+   (b) create derivative works based on the Work;
+   (c) use the Work, or any part of it, in any product, service,
+       website, application, or publication, commercial or otherwise;
+   (d) remove, alter, or obscure any copyright, trademark, or licence
+       notice in the Work;
+   (e) use the "Motormila" name, logo, wordmark, or any other Ardeno
+       Studio or Motormila trademark, trade dress, or branding, except
+       to identify Motormila itself (for example, a link to
+       https://motormila.vercel.app) without implying endorsement.
+
+3. THIRD-PARTY COMPONENTS
+   The Work may include third-party libraries, tools, and other
+   components that remain under their own licences, which are
+   preserved in their respective packages. This licence applies only
+   to Ardeno Studio's original work and does not purport to re-licence
+   third-party components, nor does any third-party licence grant
+   rights in Ardeno's original work.
+
+4. DATA
+   Listing data, prices, and market statistics shown by Motormila are
+   derived from third-party marketplace advertisements and other
+   sources. Nothing in this licence assigns ownership of any
+   third-party content to Ardeno, and nothing in it grants a right to
+   scrape, copy, or reuse Motormila's compiled data, snapshots, or
+   API output. See NOTICE for the data and affiliation position.
+
+5. CONTRIBUTIONS
+   Ardeno does not accept unsolicited contributions to this
+   repository. Do not submit pull requests unless Ardeno has first
+   agreed in writing. Any contribution that is submitted is subject
+   to CONTRIBUTING.md, and is not licensed or assigned to Ardeno
+   unless a separate written agreement says so.
+
+6. NO WARRANTY
+   THE WORK IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+   OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND
+   NON-INFRINGEMENT. IN NO EVENT SHALL ARDENO STUDIO BE LIABLE FOR
+   ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+   CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN
+   CONNECTION WITH THE WORK OR THE USE OR OTHER DEALINGS IN THE WORK.
+
+7. ENFORCEMENT
+   Unauthorised use may be reported to the hosting platform
+   (including under GitHub's DMCA process) and pursued under
+   applicable copyright and trademark law. Earlier commit history
+   is retained as evidence of authorship.
+
+8. PERMISSION REQUESTS
+   For licensing, partnership, or other permission enquiries, contact:
+   hello@ardenostudio.com
+
+   Permission, if granted, will be in writing and will state its
+   exact scope. Silence, public visibility, and prior informal
+   discussion are not permission.

@@ -1,0 +1,44 @@
+NOTICE — Motormila / Ardeno Studio
+
+Copyright © 2026 Ardeno Studio. All rights reserved.
+
+WHAT THIS REPOSITORY IS
+  Motormila is Sri Lanka vehicle market intelligence software built
+  by Ardeno Studio. This repository is public so that Ardeno's work
+  can be reviewed, so that GitHub Actions can run unlimited on a
+  public repository, and so that the live product can be linked to
+  from here. Public visibility is NOT open source, and it is NOT
+  permission to copy, reuse, or build on this work. See LICENSE.
+
+WHAT IS PROTECTED
+  - All original source code, documentation, configuration, and
+    tooling in this repository.
+  - The "Motormila" name, logo, wordmark, and visual brand identity,
+    and the "Ardeno Studio" name and identity.
+  - Compiled market data, snapshots, and API output produced by
+    Motormila, to the extent Ardeno holds rights in that compilation.
+
+WHAT IS NOT CLAIMED
+  - Third-party libraries and tools, which remain under their own
+    licences (preserved in their respective packages).
+  - Marketplace listings themselves: ikman, Riyasewana, patpat, and
+    other marketplaces own their own content. Motormila is not
+    affiliated with, endorsed by, or sponsored by any of them, and
+    marketplace names in this repository appear only to identify
+    where a listing originated.
+  - Public contact details are Ardeno Studio's:
+    hello@ardenostudio.com. Motormila has no motormila.lk domain,
+    no public phone number, and no social or store listings claimed
+    in this repository. Anything claiming otherwise is not official.
+
+IF YOU SEE A COPY
+  If you find this work copied, redistributed, or presented as
+  someone else's product, please tell Ardeno Studio at
+  hello@ardenostudio.com with a link to the copy. Ardeno may file
+  a takedown with the hosting platform, including GitHub's DMCA
+  process, and pursue other remedies available under law.
+
+PERMISSION
+  Licensing, partnership, and all other permission enquiries:
+  hello@ardenostudio.com — permission, if granted, is in writing
+  and states its exact scope.

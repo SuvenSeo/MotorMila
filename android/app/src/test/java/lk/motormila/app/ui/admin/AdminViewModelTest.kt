@@ -119,12 +119,12 @@ class AdminViewModelTest {
     fun sendInvite_usesRoleAndEnterprisePlan() {
         sessionFlow.value = session()
         val vm = viewModel()
-        vm.onEvent(AdminUiEvent.InviteEmailChanged("new@motormila.lk"))
+        vm.onEvent(AdminUiEvent.InviteEmailChanged("new@example.com"))
         vm.onEvent(AdminUiEvent.InvitePlanChanged("enterprise"))
         vm.onEvent(AdminUiEvent.InviteRoleChanged("admin"))
         vm.onEvent(AdminUiEvent.SendInvite)
 
-        coVerify { admin.createInvite("new@motormila.lk", "enterprise", "admin") }
+        coVerify { admin.createInvite("new@example.com", "enterprise", "admin") }
         assertEquals("/sign-up?token=tok-1", vm.state.value.lastInviteSignupPath)
         assertEquals(
             "https://motormila.pages.dev/sign-up?token=tok-1",
@@ -145,9 +145,9 @@ class AdminViewModelTest {
 
     @Test
     fun setUserActive_ignoresSelf() {
-        sessionFlow.value = session(email = "owner@motormila.lk")
+        sessionFlow.value = session(email = "owner@example.com")
         coEvery { admin.users(any(), any(), any()) } returns listOf(
-            user(email = "owner@motormila.lk", isActive = true),
+            user(email = "owner@example.com", isActive = true),
         )
         val vm = viewModel()
         vm.onEvent(AdminUiEvent.TabChanged(AdminDesk.Users.ordinal))
@@ -222,11 +222,11 @@ class AdminViewModelTest {
         coEvery { admin.users(any(), any(), any()) } returns listOf(user())
         coEvery { admin.invites(any(), any()) } returns listOf(
             invite(id = 1, status = "pending"),
-            invite(id = 2, status = "accepted", email = "old@motormila.lk"),
+            invite(id = 2, status = "accepted", email = "old@example.com"),
         )
         coEvery { admin.createInvite(any(), any(), any()) } returns invite(
             id = 9,
-            email = "new@motormila.lk",
+            email = "new@example.com",
             plan = "enterprise",
             role = "admin",
             token = "tok-1",
@@ -269,7 +269,7 @@ class AdminViewModelTest {
     }
 
     private fun session(
-        email: String = "admin@motormila.lk",
+        email: String = "admin@example.com",
         role: String = "admin",
     ): UserSession = UserSession(
         email = email,
@@ -283,7 +283,7 @@ class AdminViewModelTest {
 
     private fun user(
         id: Int = 11,
-        email: String = "ada@motormila.lk",
+        email: String = "ada@example.com",
         plan: String = "free",
         isActive: Boolean = true,
     ) = AdminUserRow(
@@ -299,7 +299,7 @@ class AdminViewModelTest {
 
     private fun invite(
         id: Int,
-        email: String = "pending@motormila.lk",
+        email: String = "pending@example.com",
         plan: String = "pro",
         role: String = "user",
         status: String = "pending",
@@ -321,7 +321,7 @@ class AdminViewModelTest {
         category = "bug",
         route = "/search",
         message = "Broken filter",
-        email = "user@motormila.lk",
+        email = "user@example.com",
         status = status,
         createdAt = null,
     )
@@ -330,7 +330,7 @@ class AdminViewModelTest {
         id = 8,
         displayName = "Colombo Motors",
         contactPhone = "077",
-        contactEmail = "yard@motormila.lk",
+        contactEmail = "yard@example.com",
         sellerNamePattern = "Colombo*",
         claimedUrl = null,
         status = status,

@@ -13,8 +13,10 @@ private val SupportedHosts = listOf(
     "ikman.lk", "riyasewana.com", "patpat.lk",
     // Own FMV share cards: text share + https://motormila.pages.dev/listing/{id}
     // (DOMAIN_CONTRACT) and in-app motormila://listing/{id} deep links.
-    // motormila.vercel.app + motormila.lk kept for back-compat with old shares.
-    "motormila.pages.dev", "motormila.vercel.app", "motormila.lk",
+    // New shares use motormila.pages.dev / motormila.vercel.app only.
+    // motormila.lk was removed: that domain is not owned by Motormila or
+    // Ardeno Studio, so it must not be presented as a Motormila address.
+    "motormila.pages.dev", "motormila.vercel.app",
 )
 private val IdInUrl = Regex("""(\d{5,})""")
 // Web URLs are /listing/{id} (singular) — the old /listings/ regex never matched.
