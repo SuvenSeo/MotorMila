@@ -131,7 +131,7 @@ export default function ListingDetail() {
   /** Cross-site linked listings; null = history service unavailable. */
   const [relatedListings, setRelatedListings] = useState<TrustRelatedListing[] | null>(null);
   const [loading, setLoading] = useState(!seed && !kept);
-  const [photoAspectRatio, setPhotoAspectRatio] = useState<number | null>(null);
+  const [photoAspectRatio, setPhotoAspectRatio] = useState<number | null>(() => seed?.aspectRatio ?? null);
   const { toggle: toggleCompare, isPinned: isPinnedForCompare } = useCompareTray();
   const [watchlisted, setWatchlisted] = useState(false);
   // Everything below the price waits for the detail data, then mounts one

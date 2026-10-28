@@ -252,7 +252,9 @@ export const ListingCard = memo(function ListingCard({
           const to = `/listing/${listing.id}`;
           markScrollAnchor(listing.id);
           const photo = visibleCardImage(cardRef.current);
-          seedListing(listing, photo && photo.complete && photo.naturalWidth > 0 ? photo.currentSrc || photo.src : null);
+          const aspect = photo && photo.naturalWidth > 0 && photo.naturalHeight > 0 ? photo.naturalWidth / photo.naturalHeight : null;
+          seedListing(listing, photo && photo.complete && photo.naturalWidth > 0 ? photo.currentSrc || photo.src : null, aspect);
+          if (cardRef.current) cardRef.current.style.transform = "none";
           if (navigateWithHeroTransition(() => navigate(to), photo)) e.preventDefault();
         }}
         className="absolute inset-0 z-10 rounded-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"

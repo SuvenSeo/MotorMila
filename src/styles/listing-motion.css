@@ -16,16 +16,25 @@
 /* No space before the pseudo: `html[x] ::view-transition-…` is a descendant
    (universal) selector that never matches the root's pseudos and made every
    toggle of the attribute restyle the whole page (3× per card → listing). */
-html[data-listing-vt]::view-transition-old(root),
+html[data-listing-vt]::view-transition-old(root) {
+  animation: vt-route-out var(--dur-short) var(--ease-accelerate) both;
+}
 html[data-listing-vt]::view-transition-new(root) {
-  animation-duration: var(--dur-short);
-  animation-timing-function: var(--ease-standard);
+  animation: vt-route-in var(--dur-medium) var(--ease-decelerate) both;
+}
+@media (min-width: 768px) {
+  ::view-transition-new(listing-hero) {
+    border-radius: var(--radius-card);
+  }
 }
 /* With the card's photo under the detail hero, the hero shows nothing (not the
  * muted pending tile) until its full-size file has loaded. */
 [data-hero-ph] img[data-listing-hero][data-pending="true"] {
   background-color: transparent;
   animation: none;
+}
+html[data-listing-vt="hero"] [data-hero-ph] .cine-gallery .cine-gallery__slide img[data-listing-hero] {
+  opacity: 0 !important;
 }
 /* While the hero morph is captured, show the new route at rest (the route
  * cross-fade would otherwise snapshot it at opacity 0) and drop the old one.

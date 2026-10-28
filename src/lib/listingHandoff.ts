@@ -20,7 +20,7 @@ import type { CarListing, PriceHistoryInfo } from "@/types/car";
 
 export type ListingBundle = [CarListing | null, CarListing[], PriceHistoryInfo | null, ListingFmvDetail | null];
 
-type Seed = { listing: CarListing; heroSrc: string | null; at: number };
+type Seed = { listing: CarListing; heroSrc: string | null; aspectRatio: number | null; at: number };
 
 const SEED_TTL_MS = 30_000;
 const BUNDLE_TTL_MS = 15_000;
@@ -84,9 +84,9 @@ export function takeListingBundle(id: string): Promise<ListingBundle> {
 }
 
 /** Remember the card's listing + the photo it is showing, for the detail page. */
-export function seedListing(listing: CarListing, heroSrc: string | null): void {
+export function seedListing(listing: CarListing, heroSrc: string | null, aspectRatio?: number | null): void {
   if (listing.id == null) return;
-  seeds.set(String(listing.id), { listing, heroSrc, at: Date.now() });
+  seeds.set(String(listing.id), { listing, heroSrc, aspectRatio: aspectRatio ?? null, at: Date.now() });
 }
 
 export function peekListingSeed(id: string | undefined): Seed | null {

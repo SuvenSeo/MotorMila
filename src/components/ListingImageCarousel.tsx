@@ -91,7 +91,6 @@ export function ListingImageCarousel({
   // every card (~200 ms of forced layout at 4× CPU on the home grid); until
   // then slide 0 renders statically and arrows/dots queue their target.
   const [initialSlide] = useState(() => {
-    if (isDetail || listingId == null) return 0;
     const saved = CARD_SLIDES.get(listingId) ?? 0;
     return saved > 0 && saved < count ? saved : 0;
   });
@@ -324,7 +323,7 @@ export function ListingImageCarousel({
                       source={source}
                       priority={priority && i === 0}
                       sizes="(max-width: 767px) 100vw, 800px"
-                      marker={i === 0 ? "hero" : undefined}
+                      marker={i === initialSlide ? "hero" : undefined}
                       silhouette={silhouette}
                       fadeIn
                       className={`${slideClassName ? "cine-gallery__img " : ""}h-full w-full object-cover${imageClassName ? ` ${imageClassName}` : ""}`}
