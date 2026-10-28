@@ -395,7 +395,7 @@ Motormila has no motormila.lk domain, no public phone number, and no social or s
 
 ### Rights
 
-All rights reserved. No licence is granted by this repository: do not copy, reuse, redistribute, or present this code, brand assets, or data as your own without written permission. For licensing enquiries, contact [hello@ardenostudio.com](mailto:hello@ardenostudio.com).
+Copyright © 2026 Ardeno Studio. All rights reserved. No licence is granted by this repository: do not copy, reuse, redistribute, or present this code, brand assets, or data as your own without written permission. See [LICENSE](LICENSE) and [NOTICE](NOTICE). For licensing enquiries, contact [hello@ardenostudio.com](mailto:hello@ardenostudio.com).
 
 Third-party libraries and tools in this repository remain under their own licences, which are preserved in their respective packages.
 
