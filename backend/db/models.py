@@ -269,6 +269,33 @@ class ScrapeRun(Base):
     listings_new = Column(Integer, default=0)
     error_message = Column(Text)
 
+class AdminAuditLog(Base):
+    """Admin console action log (CeyFi-style Logs page, Motormila data).
+
+    One row per privileged admin action (invite, revoke, user change,
+    feedback triage, dealer verify, listing approve/reject, permit save,
+    cache clear). Only the actor, action, target and a short admin-written
+    detail are stored — never passwords, tokens or free-form user input
+    beyond a truncated moderation reason. The table is created by the
+    existing Base.metadata.create_all pass; old deployments simply start
+    with an empty log, which the UI renders as an empty state.
+    """
+
+    __tablename__ = 'admin_audit_log'
+
+    id = Column(Integer, primary_key=True)
+    actor_email = Column(String(255), nullable=False)
+    action = Column(String(40), nullable=False)
+    target_type = Column(String(40), nullable=False)
+    target_id = Column(String(80), nullable=True)
+    detail = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    __table_args__ = (
+        Index('idx_admin_audit_log_created', 'created_at'),
+    )
+
+
 class UserFeedback(Base):
     __tablename__ = 'user_feedback'
 

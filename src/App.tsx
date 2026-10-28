@@ -56,6 +56,8 @@ const ResetPassword = lazyWithRetry(() => import("./pages/ResetPassword"));
 const ProDashboard = lazyWithRetry(() => import("./pages/ProDashboard"));
 const ProPreview = lazyWithRetry(() => import("./pages/ProPreview"));
 const AdminConsole = lazyWithRetry(() => import("./pages/AdminConsole"));
+const AdminSection = lazyWithRetry(() => import("./pages/admin/AdminSection").then((m) => ({ default: m.AdminSection })));
+const AdminIndex = lazyWithRetry(() => import("./pages/admin/AdminSection").then((m) => ({ default: m.AdminIndex })));
 const MobileApp = lazyWithRetry(() => import("./pages/MobileApp"));
 const MakeModelHub = lazyWithRetry(() => import("./pages/MakeModelHub"));
 const MakeHub = lazyWithRetry(() => import("./pages/MakeHub"));
@@ -371,7 +373,27 @@ const App = () => {
                   <Suspense fallback={<MinimalLoader />}>
                     <AdminConsole />
                   </Suspense>
-                } />
+                }>
+                  <Route index element={
+                    <Suspense fallback={<MinimalLoader />}>
+                      <AdminIndex />
+                    </Suspense>
+                  } />
+                  <Route path="analytics" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="analytics" /></Suspense>} />
+                  <Route path="users" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="users" /></Suspense>} />
+                  <Route path="leads" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="leads" /></Suspense>} />
+                  <Route path="feedback" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="feedback" /></Suspense>} />
+                  <Route path="logs" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="logs" /></Suspense>} />
+                  <Route path="health" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="health" /></Suspense>} />
+                  <Route path="data-requests" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="data-requests" /></Suspense>} />
+                  <Route path="invites" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="invites" /></Suspense>} />
+                  <Route path="pipeline" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="pipeline" /></Suspense>} />
+                  <Route path="dealers" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="dealers" /></Suspense>} />
+                  <Route path="permits" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="permits" /></Suspense>} />
+                  <Route path="moderation" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="moderation" /></Suspense>} />
+                  <Route path="system" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="system" /></Suspense>} />
+                  <Route path="*" element={<Navigate to="/motormila/admin" replace />} />
+                </Route>
                 {/** Legacy path kept as a bare redirect so old bookmarks still land. */}
                 <Route path="/admin" element={<Navigate to="/motormila/admin" replace />} />
                 <Route path="/pro" element={
