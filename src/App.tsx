@@ -281,6 +281,8 @@ const App = () => {
                   <Route path="/docs" element={<Docs />} />
                   <Route path="/bot" element={<BotInfo />} />
                   <Route path="/pricing" element={<Pricing />} />
+                  {/* Pro preview lives in the site shell (navbar + footer); /pro keeps its own workspace chrome. */}
+                  <Route path="/pro-preview" element={<ProPreview />} />
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="/terms" element={<TermsOfService />} />
                   <Route path="/cookies" element={<CookieNotice />} />
@@ -354,11 +356,6 @@ const App = () => {
                 } />
                 {/** Legacy path kept as a bare redirect so old bookmarks still land. */}
                 <Route path="/admin" element={<Navigate to="/motormila/admin" replace />} />
-                <Route path="/pro-preview" element={
-                  <Suspense fallback={<MinimalLoader />}>
-                    <ProPreview />
-                  </Suspense>
-                } />
                 <Route path="/pro" element={
                   <Suspense fallback={<MinimalLoader />}>
                     <RequireAuth><ProtectedRoute><ProDashboard /></ProtectedRoute></RequireAuth>
