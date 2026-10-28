@@ -8,8 +8,16 @@ import { useEffect, useState } from "react";
 import { rootProjectionNode } from "motion/react";
 import type { Transition, Variants } from "motion/react";
 import "@/styles/listing-motion.css";
+import {
+  HERO_VT_NAME,
+  cancelActiveTransition,
+  clearHeroNames,
+  runOwnedCommit,
+  settleHeroOverlays,
+  trackTransition,
+} from "@/lib/viewTransition";
 
-export const HERO_VT_NAME = "listing-hero";
+export { HERO_VT_NAME };
 const VT_ATTR = "data-listing-vt";
 
 function matches(query: string): boolean {
@@ -46,7 +54,7 @@ export function useCanHover(): boolean {
 }
 
 type DocWithVT = Document & {
-  startViewTransition?: (cb: () => void | Promise<void>) => { finished: Promise<void> };
+  startViewTransition?: (cb: () => void | Promise<void>) => { finished: Promise<void>; skipTransition?: () => void };
 };
 
 export function supportsViewTransition(): boolean {
@@ -80,27 +88,65 @@ function waitForHero(timeoutMs: number): Promise<HTMLImageElement | null> {
   });
 }
 
+/** A card → listing open is in flight (from the tap until its morph lands). */
+let openInFlight = false;
+export function listingOpenInFlight(): boolean {
+  return openInFlight;
+}
+
 /**
  * Card → detail continuity. Wraps the route change in a View Transition and
- * morphs the card photo into the detail hero. Falls back to a fast root fade
- * when the hero photo isn't decoded within ~180ms, and to a plain navigation
+ * morphs the card photo into the detail hero (one shared element, transform +
+ * size of a snapshot only; listing-motion.css). Falls back to a fast root fade
+ * when the hero photo isn't decoded within ~150ms, and to a plain navigation
  * when the API is missing, motion is reduced, or low-data mode is on.
  * Returns false when it did nothing (caller should navigate normally).
+ *
+ * Robust to fast input: a second tap while an open is in flight is swallowed
+ * (returns true so the caller cancels the click), and a running Back morph is
+ * finished on the spot before this one starts (lib/viewTransition).
  */
 export function navigateWithHeroTransition(navigate: () => void, cardImage: HTMLImageElement | null): boolean {
+  if (openInFlight) return true;
   if (!supportsViewTransition() || reducedOrLowData()) return false;
   const doc = document as DocWithVT;
   const html = document.documentElement;
-  if (cardImage) cardImage.style.setProperty("view-transition-name", HERO_VT_NAME);
+  cancelActiveTransition();
+  clearHeroNames();
+  if (cardImage) {
+    cardImage.style.setProperty("view-transition-name", HERO_VT_NAME);
+    // Desktop hover zoom (scale 1.03) would be captured into the first frame.
+    cardImage.style.setProperty("transition", "none");
+    cardImage.style.setProperty("transform", "none");
+  }
   let hero: HTMLImageElement | null = null;
   let stage: Element | null = null;
   let projectionRoot: { blockUpdate: () => void; unblockUpdate: () => void } | null = null;
+  let cancelled = false;
+  let cleaned = false;
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    cancelled = true;
+    openInFlight = false;
+    projectionRoot?.unblockUpdate();
+    projectionRoot = null;
+    html.removeAttribute(VT_ATTR);
+    html.removeAttribute("data-listing-dir");
+    stage?.removeAttribute("data-vt-hero-stage");
+    hero?.style.removeProperty("view-transition-name");
+    if (cardImage) {
+      cardImage.style.removeProperty("view-transition-name");
+      cardImage.style.removeProperty("transition");
+      cardImage.style.removeProperty("transform");
+    }
+  };
+  openInFlight = true;
   try {
     const vt = doc.startViewTransition!(async () => {
       if (cardImage) cardImage.style.removeProperty("view-transition-name");
-      // Tells RouteTransition to swap pages instantly: the View Transition is
-      // the animation, and a framer cross-fade (mode="wait") would hold the old
-      // page on screen past the hero wait and double-animate.
+      // Tells RouteTransition / the detail page to swap in at rest: the View
+      // Transition is the animation (no framer fade or reveal on top of it).
       html.setAttribute(VT_ATTR, "pending");
       // Hold Motion's layout projection while the page swaps: every `layoutId`
       // element that unmounts with the outgoing page (tab / segment pills)
@@ -109,29 +155,27 @@ export function navigateWithHeroTransition(navigate: () => void, cardImage: HTML
       // layout-animates across this transition (the active nav tab stays Buy).
       projectionRoot = rootProjectionNode.current ?? null;
       projectionRoot?.blockUpdate();
-      flushSync(navigate);
-      hero = cardImage ? await waitForHero(180) : null;
+      runOwnedCommit(() => flushSync(navigate));
+      if (cancelled) return;
+      const found = cardImage ? await waitForHero(150) : null;
+      if (cancelled) return;
+      hero = found;
       if (hero) {
         hero.style.setProperty("view-transition-name", HERO_VT_NAME);
         stage = hero.closest(".route-stage");
         stage?.setAttribute("data-vt-hero-stage", "");
+        html.setAttribute("data-listing-dir", "open");
         html.setAttribute(VT_ATTR, "hero");
       } else {
         html.setAttribute(VT_ATTR, "fade");
       }
     });
-    const cleanup = () => {
-      projectionRoot?.unblockUpdate();
-      projectionRoot = null;
-      html.removeAttribute(VT_ATTR);
-      stage?.removeAttribute("data-vt-hero-stage");
-      hero?.style.removeProperty("view-transition-name");
-      cardImage?.style.removeProperty("view-transition-name");
-    };
-    vt.finished.then(cleanup, cleanup);
+    trackTransition(vt, cleanup, () => {
+      if (hero) settleHeroOverlays(null);
+    });
     return true;
   } catch {
-    cardImage?.style.removeProperty("view-transition-name");
+    cleanup();
     return false;
   }
 }
