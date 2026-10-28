@@ -1,0 +1,230 @@
+/* ============================================================================
+   Site footer — the closing frame of the "Night drive" language.
+   A dark ink band in both themes (tokens flipped with .theme-dark), lit by two
+   static light pools and a still film grain. No images beyond the logo SVG,
+   no motion beyond hover colour/arrow nudges; nothing loops, sweeps or shines.
+   ========================================================================== */
+
+.cine-footer {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: hsl(222 40% 3%);
+  color: hsl(0 0% 100%);
+  border-top: 1px solid hsl(0 0% 100% / 0.08);
+}
+/* Aliases resolve where they are declared (:root), so a nested .theme-dark
+   re-points them or light-mode values leak in (buttons, muted text). */
+.cine-footer.theme-dark {
+  --surface-1: var(--card);
+  --surface-2: var(--secondary);
+  --surface-3: var(--muted);
+  --label-1: var(--foreground);
+  --label-2: var(--muted-foreground);
+  --label-3: var(--muted-foreground);
+  --separator: var(--border);
+}
+
+/* Two still pools of light: brand blue from the top right, a warm sodium
+   lamp low on the left. */
+.cine-footer__light {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 55% 60% at 92% 0%, hsl(213 100% 55% / 0.18), transparent 70%),
+    radial-gradient(ellipse 40% 45% at 0% 100%, hsl(32 95% 55% / 0.09), transparent 72%);
+}
+.cine-footer__grain {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+html.low-data .cine-footer__grain { display: none; }
+
+/* Logo on ink: always the light-lettering wordmark (the exact brand SVG). */
+.cine-footer .brand-wordmark-lockup > img:first-child { display: none !important; }
+.cine-footer .brand-wordmark-lockup > img:last-child { display: block !important; }
+
+.cine-footer__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: hsl(0 0% 100% / 0.62);
+}
+.cine-footer__eyebrow::before {
+  content: "";
+  width: 2.25rem;
+  height: 1px;
+  background: hsl(0 0% 100% / 0.5);
+}
+
+/* The closing statement: the biggest type on the band. */
+.cine-footer__title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2.375rem, 1.1rem + 4.4vw, 5.25rem);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  word-spacing: var(--display-word-spacing);
+  color: hsl(0 0% 100%);
+  text-wrap: balance;
+  max-width: 16ch;
+}
+@media (min-width: 1024px) { .cine-footer__title { max-width: none; } }
+.cine-footer__title em {
+  display: block;
+  font-style: italic;
+  color: hsl(213 100% 68%);
+}
+:root:lang(si) .cine-footer__eyebrow,
+:root:lang(ta) .cine-footer__eyebrow,
+:root:lang(si) .cine-footer__col-title,
+:root:lang(ta) .cine-footer__col-title { letter-spacing: 0; text-transform: none; }
+:root:lang(si) .cine-footer__title,
+:root:lang(ta) .cine-footer__title {
+  font-size: clamp(1.875rem, 0.9rem + 3.4vw, 3.75rem);
+  line-height: 1.22;
+  letter-spacing: 0;
+  max-width: 22ch;
+}
+:root:lang(ta) .cine-footer__title { font-size: clamp(1.625rem, 0.7rem + 3vw, 3.25rem); }
+
+/* Hairline rule with a short brand-blue lead (static). */
+.cine-footer__rule {
+  position: relative;
+  height: 1px;
+  background: hsl(0 0% 100% / 0.1);
+}
+.cine-footer__rule::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: min(38%, 22rem);
+  background: linear-gradient(90deg, hsl(213 100% 64% / 0.9), transparent);
+}
+
+/* Link columns: index + title over a hairline, quiet links that brighten. */
+.cine-footer__col-title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.625rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid hsl(0 0% 100% / 0.1);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: hsl(0 0% 100% / 0.9);
+}
+.cine-footer__col-no {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: hsl(213 100% 70%);
+}
+.cine-footer__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 1.75rem;
+  border-radius: 0.25rem;
+  font-size: var(--text-footnote, 0.8125rem);
+  line-height: 1.35;
+  color: hsl(0 0% 100% / 0.64);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+.cine-footer__link:hover { color: hsl(0 0% 100%); }
+.cine-footer__link:focus-visible { outline: 2px solid hsl(213 100% 62%); outline-offset: 2px; }
+.cine-footer__link svg { flex: none; opacity: 0.6; transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease; }
+.cine-footer__link:hover svg { opacity: 1; transform: translate3d(2px, -2px, 0); }
+
+/* App card: one row, an arrow that nudges on hover. */
+.cine-footer__app {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.875rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid hsl(0 0% 100% / 0.12);
+  background: hsl(0 0% 100% / 0.03);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+.cine-footer__app:hover { border-color: hsl(0 0% 100% / 0.22); background: hsl(0 0% 100% / 0.06); }
+.cine-footer__app:focus-visible { outline: 2px solid hsl(213 100% 62%); outline-offset: 2px; }
+.cine-footer__app-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  background: hsl(213 100% 46% / 0.18);
+  color: hsl(213 100% 72%);
+}
+.cine-footer__app-arrow { flex: none; margin-left: auto; transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+.cine-footer__app:hover .cine-footer__app-arrow { transform: translate3d(3px, 0, 0); }
+
+/* Language / theme: small segmented radio groups. */
+.cine-footer__seg {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 999px;
+  border: 1px solid hsl(0 0% 100% / 0.12);
+  background: hsl(0 0% 100% / 0.03);
+}
+.cine-footer__seg button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  height: 2rem;
+  padding: 0 0.625rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: hsl(0 0% 100% / 0.62);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.cine-footer__seg button:hover { color: hsl(0 0% 100%); }
+.cine-footer__seg button[aria-checked="true"] { background: hsl(0 0% 100% / 0.12); color: hsl(0 0% 100%); }
+.cine-footer__seg button:focus-visible { outline: 2px solid hsl(213 100% 62%); outline-offset: 1px; }
+
+/* Bottom credits row. */
+.cine-footer__quiet {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2rem;
+  padding: 0 0.75rem;
+  border-radius: 999px;
+  border: 1px solid hsl(0 0% 100% / 0.12);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: hsl(0 0% 100% / 0.7);
+  text-decoration: none;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.cine-footer__quiet:hover { background: hsl(0 0% 100% / 0.08); color: hsl(0 0% 100%); }
+.cine-footer__quiet:focus-visible { outline: 2px solid hsl(213 100% 62%); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cine-footer *,
+  .cine-footer *::before { transition: none !important; }
+  .cine-footer__link:hover svg,
+  .cine-footer__app:hover .cine-footer__app-arrow { transform: none; }
+}
+.cine-footer__credits { border-top: 1px solid hsl(0 0% 100% / 0.1); }
