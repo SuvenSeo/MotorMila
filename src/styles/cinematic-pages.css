@@ -473,8 +473,10 @@ html.theme-light .cine-plan:not(.cine-plan--pro) { box-shadow: 0 1px 2px hsl(220
   .cine-pane,
   .cine-meter__band,
   .cine-meter__dot,
-  .cine-stack > span { animation: none !important; }
+  .cine-stack > span,
+  .cine-bar__reveal { animation: none !important; }
   .cine-bar > span,
+  .cine-bar__reveal > span,
   .cine-step-rail__fill { transition: none !important; }
 }
 html.low-data .cine-rise,
@@ -758,3 +760,38 @@ html.low-data .cine-hwp-band__bar { animation: none !important; }
   .cine-hwp-tick--fmv { padding-bottom: 2.5rem; }
   .cine-hwp-tick--fmv::after { height: 3rem; }
 }
+
+/* ── Dealer workspace: jump bar, notification kicker, district cells ─────── */
+.cine-dealer .cine-section h2[id],
+.cine-dealer #benchmark { scroll-margin-top: calc(var(--nav-offset, 64px) + 1.5rem); }
+.dealer-seg { scrollbar-width: none; }
+.dealer-seg::-webkit-scrollbar { display: none; }
+/* Phones: the bar scrolls sideways; a soft edge says there is more. */
+@media (max-width: 639px) {
+  .dealer-seg { mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent); -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent); }
+}
+.dealer-kicker {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+:root:lang(si) .dealer-kicker,
+:root:lang(ta) .dealer-kicker { letter-spacing: 0; text-transform: none; font-size: 0.75rem; }
+/* District demand: hairline cells, one per row on phones, four across wide. */
+.dealer-cells {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  border-top: 1px solid hsl(var(--border));
+  border-left: 1px solid hsl(var(--border));
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+@media (min-width: 640px) { .dealer-cells { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1024px) { .dealer-cells { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.dealer-cells > li {
+  padding: 1rem 1.125rem 1.125rem;
+  border-right: 1px solid hsl(var(--border));
+  border-bottom: 1px solid hsl(var(--border));
+}
+.dealer-cells .cine-bar__reveal > span { background: hsl(213 100% 64%); }

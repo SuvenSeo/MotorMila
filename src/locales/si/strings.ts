@@ -832,4 +832,13 @@ export const stringsSi: Record<string, string> = {
   "howPrice.cine.bandNear": "FMV ට ආසන්න",
   "howPrice.cine.bandAbove": "වෙළඳපොළට ඉහළින්",
   "howPrice.cine.ctaTitle": "සැබෑ වාහනයකින් එය බලන්න.",
+  "dealer.cine.lead": "වෙළෙන්දා කමාන්ඩ්",
+  "dealer.cine.accent": "මධ්‍යස්ථානය.",
+  "dealer.cine.sectionsAria": "වෙළෙන්දා වැඩබිමේ කොටස්",
+  "dealer.cine.glance": "එක බැල්මකින්",
+  "dealer.cine.yard": "ඔබේ යාඩ් එක",
+  "dealer.cine.demand": "ඉල්ලුම {score}",
+  "dealer.cine.urlCount": "URL ගණන: {n}",
+  "dealer.cine.clear": "හිස් කරන්න",
+  "dealer.cine.runBenchmark": "සසඳන්න",
 };
