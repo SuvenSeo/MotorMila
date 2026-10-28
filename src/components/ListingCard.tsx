@@ -39,7 +39,7 @@ import { cardVariants } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { markScrollAnchor } from "@/lib/scrollMemory";
-import { navigateWithHeroTransition, revealDelay, useCanHover, visibleCardImage, withShowDelay } from "@/components/listing/listingMotion";
+import { listingOpenInFlight, navigateWithHeroTransition, revealDelay, useCanHover, visibleCardImage, withShowDelay } from "@/components/listing/listingMotion";
 
 interface ListingCardProps {
   listing: CarListing;
@@ -250,12 +250,21 @@ export const ListingCard = memo(function ListingCard({
           // Card → detail photo continuity (View Transitions, feature-detected).
           if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
           const to = `/listing/${listing.id}`;
+          // A second tap while this open is already under way (double tap, or
+          // tapping again during the morph) must not push the listing twice.
+          if (listingOpenInFlight() || window.location.pathname === to) {
+            e.preventDefault();
+            return;
+          }
           markScrollAnchor(listing.id);
           const photo = visibleCardImage(cardRef.current);
-          const aspect = photo && photo.naturalWidth > 0 && photo.naturalHeight > 0 ? photo.naturalWidth / photo.naturalHeight : null;
-          seedListing(listing, photo && photo.complete && photo.naturalWidth > 0 ? photo.currentSrc || photo.src : null, aspect);
+          const decoded = photo && photo.complete && photo.naturalWidth > 0 ? photo : null;
+          const aspect = decoded && decoded.naturalHeight > 0 ? decoded.naturalWidth / decoded.naturalHeight : null;
+          seedListing(listing, decoded ? decoded.currentSrc || decoded.src : null, aspect);
           if (cardRef.current) cardRef.current.style.transform = "none";
-          if (navigateWithHeroTransition(() => navigate(to), photo)) e.preventDefault();
+          // Only a decoded photo flies: an empty pending tile morphing into the
+          // hero read as a flash. Without one the swap is a quick cross-fade.
+          if (navigateWithHeroTransition(() => navigate(to), decoded)) e.preventDefault();
         }}
         className="absolute inset-0 z-10 rounded-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       />
@@ -273,13 +282,13 @@ export const ListingCard = memo(function ListingCard({
             className="h-full w-full"
           />
           {/* No usable photo: the silhouette plate gets a real caption (CSS :has, no JS). */}
-          <p className="cine-card__nophoto">
+          <p className="cine-card__nophoto vt-overlay">
             <ImageOff aria-hidden className="h-3.5 w-3.5" />
             {t("listingCard.noPhoto", "No photo · see it on {source}", { source: attribution.sourceName })}
           </p>
 
           {conditionLabel && (
-            <div className="absolute left-3 top-3 flex items-center gap-1.5">
+            <div className="vt-overlay absolute left-3 top-3 flex items-center gap-1.5">
               {/* Over the photo: dark chip regardless of theme. */}
               <span className="inline-flex h-6 items-center rounded-full bg-black/60 px-2.5 text-caption font-semibold text-white">
                 {conditionLabel}
@@ -287,7 +296,7 @@ export const ListingCard = memo(function ListingCard({
             </div>
           )}
 
-          <div className="absolute right-3 top-3 flex items-center gap-1.5">
+          <div className="vt-overlay absolute right-3 top-3 flex items-center gap-1.5">
             {onWatchlistToggle && (
               <button
                 type="button"

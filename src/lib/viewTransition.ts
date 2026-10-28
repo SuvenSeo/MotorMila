@@ -11,12 +11,19 @@
  * Back/forward (POP) is a plain instant swap with the scroll position put back
  * (components/ScrollRestoration + lib/scrollMemory), except listing → list:
  * there the detail hero morphs back into the card it came from (the reverse of
- * listingMotion's card → detail morph; a plain fade with reduced motion).
+ * listingMotion's card → detail morph; instant with reduced motion).
  *
  * Skipped (plain instant swap) for: query-only changes (filters), reduced motion,
  * low-data mode, browsers without the API (RouteTransition's framer fade is
  * the fallback there), and while the card→detail hero morph
  * (components/listing/listingMotion.ts) already owns the transition.
+ *
+ * One transition at a time: every View Transition this app starts is
+ * registered here (trackTransition). Starting another one, or a Back/forward
+ * while one runs, first finishes the running one on the spot (skipTransition +
+ * its cleanup, synchronously), so a fast double tap or a Back mid-morph never
+ * leaves a stale `view-transition-name`, a stale html attribute, or two
+ * animations fighting over one page.
  */
 import { createBrowserHistory, type BrowserHistory } from "@remix-run/router";
 
@@ -39,6 +46,8 @@ type DocWithVT = Document & {
 
 export const ROUTE_VT_ATTR = "data-route-vt";
 const LISTING_VT_ATTR = "data-listing-vt";
+/** The one shared-element name: card photo ⇄ listing hero. */
+export const HERO_VT_NAME = "listing-hero";
 /** Longest we hold the old snapshot while a lazy route chunk resolves. */
 const COMMIT_WAIT_MS = 320;
 
@@ -57,6 +66,98 @@ export function viewTransitionInFlight(): boolean {
   if (typeof document === "undefined") return false;
   const html = document.documentElement;
   return html.hasAttribute(ROUTE_VT_ATTR) || html.hasAttribute(LISTING_VT_ATTR);
+}
+
+/* ── One running transition at a time ─────────────────────────────────── */
+
+type ActiveTransition = { vt: ViewTransitionLike; cleanup: () => void };
+let active: ActiveTransition | null = null;
+
+/**
+ * Registers a just-started View Transition. `cleanup` must be idempotent: it
+ * runs once when the transition finishes, or straight away when a newer
+ * navigation cancels it (cancelActiveTransition).
+ */
+export function trackTransition(vt: ViewTransitionLike, cleanup: () => void, onSettled?: () => void): void {
+  const entry: ActiveTransition = { vt, cleanup };
+  active = entry;
+  const done = () => {
+    // Not cancelled by a newer navigation: it ran to its end.
+    const ranOut = active === entry;
+    if (ranOut) active = null;
+    cleanup();
+    if (ranOut) onSettled?.();
+  };
+  vt.finished.then(done, done);
+}
+
+/**
+ * Ends the running transition now (jumps to its end state) and undoes its
+ * names and attributes synchronously. Returns true when one was running.
+ */
+export function cancelActiveTransition(): boolean {
+  const entry = active;
+  if (!entry) return false;
+  active = null;
+  try {
+    entry.vt.skipTransition?.();
+  } catch {
+    /* already finished */
+  }
+  entry.cleanup();
+  return true;
+}
+
+/** True while a registered View Transition is animating. */
+export function transitionActive(): boolean {
+  return active !== null;
+}
+
+/**
+ * The card → listing morph navigates from inside its own View Transition; the
+ * history listener must commit that update as is (no second transition, and
+ * no cancelling the transition that is making it).
+ */
+let ownedCommit = false;
+export function runOwnedCommit(fn: () => void): void {
+  ownedCommit = true;
+  try {
+    fn();
+  } finally {
+    ownedCommit = false;
+  }
+}
+
+/** Drops every leftover `listing-hero` name (only one element may carry it). */
+export function clearHeroNames(): void {
+  if (typeof document === "undefined") return;
+  for (const el of Array.from(document.querySelectorAll<HTMLElement>('[style*="view-transition-name"]'))) {
+    if (el.style.getPropertyValue("view-transition-name") === HERO_VT_NAME) el.style.removeProperty("view-transition-name");
+  }
+}
+
+export const SETTLE_ATTR = "data-listing-settle";
+let settleTimer = 0;
+let settleCard: Element | null = null;
+/**
+ * After a hero morph lands: the photo's overlay controls (credit, arrows,
+ * counter, chips) were hidden under the flying photo; fade them back in
+ * (listing-motion.css) instead of letting them pop.
+ */
+export function settleHeroOverlays(card: Element | null): void {
+  if (typeof document === "undefined") return;
+  const html = document.documentElement;
+  window.clearTimeout(settleTimer);
+  settleCard?.removeAttribute("data-vt-card");
+  settleCard = card;
+  // Same task as the transition's cleanup: no frame shows the overlays early.
+  settleCard?.setAttribute("data-vt-card", "");
+  html.setAttribute(SETTLE_ATTR, "");
+  settleTimer = window.setTimeout(() => {
+    html.removeAttribute(SETTLE_ATTR);
+    settleCard?.removeAttribute("data-vt-card");
+    settleCard = null;
+  }, 260);
 }
 
 let resolveCommit: (() => void) | null = null;
@@ -114,41 +215,53 @@ export function createViewTransitionHistory(): BrowserHistory {
       saveScroll(lastKey);
       lastKey = update.location.key;
       const html = document.documentElement;
+      // The card → listing morph committing its own navigation.
+      if (ownedCommit) {
+        listener(update);
+        return;
+      }
+      // Anything else that navigates while a transition runs (Back mid-morph,
+      // a second tap, a nav tab) ends that transition first, cleanly. A
+      // query-only update (a page syncing its filters into the URL as it
+      // mounts) leaves a running morph alone.
+      const interrupted = pathChanged || update.action === "POP" ? cancelActiveTransition() : false;
       if (update.action === "POP") {
         // Before the returning page renders: its deferred sections mount at
         // once so the saved spot exists on the first restore attempt.
         markRestorePending(pathChanged ? readScroll(update.location.key) : undefined);
         const fromListing = /^\/listing\/([^/]+)\/?$/.exec(prevPath);
+        // A Back that interrupts the opening morph (now jumped to its end, so
+        // the listing is at rest) still flies the photo back to its card.
+        const uaAnimated = uaTransitionPending();
         if (
+          uaAnimated ||
           !pathChanged ||
           !fromListing ||
           !supportsViewTransitions() ||
-          uaTransitionPending() ||
-          html.hasAttribute(LISTING_VT_ATTR) ||
-          html.classList.contains("low-data") ||
+          // Reduced motion / low data: Back is an instant swap.
+          !motionAllowed() ||
           !runListingBackTransition(() => listener(update), decodeURIComponent(fromListing[1]))
         ) {
           listener(update);
         }
         return;
       }
-      if (
-        !pathChanged ||
-        !supportsViewTransitions() ||
-        !motionAllowed() ||
-        html.hasAttribute(LISTING_VT_ATTR)
-      ) {
+      if (interrupted || !pathChanged || !supportsViewTransitions() || !motionAllowed()) {
         listener(update);
         return;
       }
       html.setAttribute(ROUTE_VT_ATTR, "");
       try {
+        let cancelled = false;
         const vt = (document as DocWithVT).startViewTransition!(async () => {
           flushSync(() => listener(update));
+          if (cancelled) return;
           await waitForRouteCommit(COMMIT_WAIT_MS);
         });
-        const done = () => html.removeAttribute(ROUTE_VT_ATTR);
-        vt.finished.then(done, done);
+        trackTransition(vt, () => {
+          cancelled = true;
+          html.removeAttribute(ROUTE_VT_ATTR);
+        });
       } catch {
         html.removeAttribute(ROUTE_VT_ATTR);
         listener(update);
@@ -160,7 +273,6 @@ export function createViewTransitionHistory(): BrowserHistory {
 
 /* ── Listing → list: the reverse hero morph ────────────────────────────── */
 
-const HERO_VT_NAME = "listing-hero";
 /**
  * Longest the old snapshot is held while the list re-renders. Longer than a
  * forward swap: snapshotting before the list commits would animate the detail
@@ -221,7 +333,7 @@ function cardImage(listingId: string): HTMLImageElement | null {
 }
 
 /** Longest the morph waits for the list's mount effects to run out. */
-const QUIET_WAIT_MS = 220;
+const QUIET_WAIT_MS = 140;
 
 /**
  * Resolves once the main thread has been free for two 16ms ticks in a row (or
@@ -265,19 +377,35 @@ function waitForCardImage(listingId: string, ms: number): Promise<HTMLImageEleme
 /**
  * Back from /listing/:id: the hero photo flies back into its card with the
  * opening morph's duration and easing (listing-motion.css), while the rest of
- * the page cross-fades. Reduced motion: the cross-fade only. The list is put
- * back at its saved scroll position inside the update callback, so the new
- * snapshot (and the card's rect) is the restored one.
+ * the page cross-fades. The list is put back at its saved scroll position
+ * inside the update callback, so the new snapshot (and the card's rect) is the
+ * restored one. Only called with motion allowed (reduced motion: instant).
  */
 function runListingBackTransition(commit: () => void, listingId: string): boolean {
   const html = document.documentElement;
-  const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
-  const hero = reduced ? null : detailHeroImage();
+  const hero = detailHeroImage();
   let card: HTMLImageElement | null = null;
+  let cardBox: Element | null = null;
   let stage: Element | null = null;
   let projectionRoot: { blockUpdate: () => void; unblockUpdate: () => void } | null = null;
-  html.setAttribute(LISTING_VT_ATTR, reduced ? "calm" : "pending");
+  let cancelled = false;
+  let cleaned = false;
+  clearHeroNames();
+  html.setAttribute(LISTING_VT_ATTR, "pending");
   hero?.style.setProperty("view-transition-name", HERO_VT_NAME);
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    cancelled = true;
+    projectionRoot?.unblockUpdate();
+    projectionRoot = null;
+    html.removeAttribute(LISTING_VT_ATTR);
+    html.removeAttribute("data-listing-dir");
+    stage?.removeAttribute("data-vt-hero-stage");
+    hero?.style.removeProperty("view-transition-name");
+    card?.style.removeProperty("view-transition-name");
+    cardBox?.removeAttribute("data-vt-card");
+  };
   try {
     const vt = (document as DocWithVT).startViewTransition!(async () => {
       hero?.style.removeProperty("view-transition-name");
@@ -288,32 +416,35 @@ function runListingBackTransition(commit: () => void, listingId: string): boolea
       projectionRoot = rootProjectionNode.current ?? null;
       projectionRoot?.blockUpdate();
       flushSync(commit);
+      if (cancelled) return;
       await waitForRouteCommit(BACK_COMMIT_WAIT_MS);
       await waitForScrollRestore(RESTORE_WAIT_MS);
+      if (cancelled) return;
       await waitForQuiet(QUIET_WAIT_MS);
+      if (cancelled) return;
       card = hero ? await waitForCardImage(listingId, CARD_WAIT_MS) : null;
+      if (cancelled) {
+        card = null;
+        return;
+      }
       if (card) {
         card.style.setProperty("view-transition-name", HERO_VT_NAME);
+        cardBox = card.closest("[data-scroll-anchor]");
+        cardBox?.setAttribute("data-vt-card", "");
         stage = card.closest(".route-stage");
         stage?.setAttribute("data-vt-hero-stage", "");
+        html.setAttribute("data-listing-dir", "back");
         html.setAttribute(LISTING_VT_ATTR, "hero");
-      } else if (!reduced) {
+      } else {
         html.setAttribute(LISTING_VT_ATTR, "fade");
       }
     });
-    const cleanup = () => {
-      projectionRoot?.unblockUpdate();
-      projectionRoot = null;
-      html.removeAttribute(LISTING_VT_ATTR);
-      stage?.removeAttribute("data-vt-hero-stage");
-      hero?.style.removeProperty("view-transition-name");
-      (card as HTMLImageElement | null)?.style.removeProperty("view-transition-name");
-    };
-    vt.finished.then(cleanup, cleanup);
+    trackTransition(vt, cleanup, () => {
+      if (card) settleHeroOverlays(cardBox);
+    });
     return true;
   } catch {
-    html.removeAttribute(LISTING_VT_ATTR);
-    hero?.style.removeProperty("view-transition-name");
+    cleanup();
     return false;
   }
 }

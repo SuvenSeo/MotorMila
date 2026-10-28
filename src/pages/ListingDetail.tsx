@@ -53,6 +53,7 @@ import {
 } from '@/lib/planLimits';
 import type { ImportFuelType } from '@/lib/importTaxModel';
 import { motion } from 'motion/react';
+import { supportsViewTransitions, viewTransitionInFlight } from '@/lib/viewTransition';
 import { fadeIn, fadeUp, revealContainer, revealItem, useReducedMotionOrLowData } from '@/lib/motion';
 import { SaveHeartIcon } from '@/components/listing/SaveHeart';
 import { trackEvent } from '@/lib/analytics';
@@ -103,6 +104,20 @@ export default function ListingDetail() {
   const keyRef = useRef(routerLocation.key);
   keyRef.current = routerLocation.key;
   const motionCalm = useReducedMotionOrLowData();
+  // Entered under a View Transition (card → listing morph, route cross-fade)
+  // or by Back/forward: the page swaps in at rest. The stage reveal (opacity +
+  // 12px rise, ~600ms spring) used to run inside the morph: a second fade on
+  // top of the transition's, the hero sliding under its own flight, and the
+  // live snapshot re-rasterised every frame. Without the API, RouteTransition's
+  // fade + rise already animates an in-app open: one animation, not two.
+  // Reduced motion / low data: the page is simply there.
+  const [enterAtRest] = useState(
+    () =>
+      motionCalm ||
+      navType === 'POP' ||
+      viewTransitionInFlight() ||
+      (!supportsViewTransitions() && routerLocation.key !== 'default'),
+  );
   // Below-the-fold sections reveal once as they scroll in (opacity only when calm).
   const onScroll = {
     initial: 'hidden',
@@ -565,7 +580,7 @@ export default function ListingDetail() {
   // ── Render ─────────────────────────────────────────────────
   return (
     <motion.div
-      initial="hidden"
+      initial={enterAtRest ? false : "hidden"}
       animate="show"
       variants={revealContainer}
       className="relative min-h-screen overflow-hidden bg-background pb-44 lg:pb-0"
@@ -671,7 +686,7 @@ export default function ListingDetail() {
                 trackClassName="cine-gallery__track"
               />
               {/* Source credit for hotlinked photos. Fixed bright blue: sits on a dark scrim. */}
-              <span className="cine-gallery__credit pointer-events-none absolute left-3 top-3 z-10 flex items-center gap-1 rounded-full border border-white/10 bg-black/60 px-2.5 py-1 text-caption font-semibold text-[#6CB8FF]">
+              <span className="cine-gallery__credit vt-overlay pointer-events-none absolute left-3 top-3 z-10 flex items-center gap-1 rounded-full border border-white/10 bg-black/60 px-2.5 py-1 text-caption font-semibold text-[#6CB8FF]">
                 <Database aria-hidden className="h-3 w-3" /> {t("listingImage.credit", "Photo: {source}", { source: attribution.sourceName })}
               </span>
               <div className="cine-nophoto">

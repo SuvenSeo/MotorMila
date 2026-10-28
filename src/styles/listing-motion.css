@@ -1,26 +1,87 @@
 /* Listing-area motion (polish/listing). Transform + opacity only.
  * Falls back to the spec values when the shared CSS vars aren't defined. */
 
-/* ── Card → detail View Transition ─────────────────────────────────────── */
+/* ── Card ⇄ detail View Transition ──────────────────────────────────────
+   One shared element (`listing-hero`: the card photo ⇄ the detail hero),
+   lib/viewTransition.ts + components/listing/listingMotion.ts. ~300ms, the
+   decelerate curve, and the same in both directions. */
+:root {
+  --listing-morph: 300ms;
+}
 ::view-transition-group(listing-hero) {
-  animation-duration: var(--dur-long);
+  animation-duration: var(--listing-morph);
   animation-timing-function: var(--ease-decelerate);
 }
 ::view-transition-old(listing-hero),
 ::view-transition-new(listing-hero) {
-  /* Both are photos of the same car: no double-exposure, keep it crisp. */
+  /* Both snapshots fill the flying box and crop (never stretch) while its
+     aspect goes 16:10 (card) ⇄ the photo's own ratio (detail). */
   height: 100%;
   object-fit: cover;
   overflow: clip;
+  /* No plus-lighter double exposure: one photo sits on top of the other. */
+  mix-blend-mode: normal;
+}
+/* One photo in flight, not two. The detail side shows the whole photo, the
+   card a centred 16:10 crop of it, so covering the detail snapshot into the
+   card's box *is* the card photo: show the detail side for the whole flight.
+   The default cross-fade of two differently cropped snapshots read as a
+   ghosted, doubled car mid-morph.
+   - open: the new (detail) snapshot from the first frame, the card hidden;
+   - back: the old (detail) snapshot flies; the card's own snapshot fades in
+     over the last third, once the box has the card's shape (seamless hand-off
+     even if the card shows another photo). */
+::view-transition-old(listing-hero) {
+  animation: none;
+  opacity: 1;
+}
+html[data-listing-dir="open"]::view-transition-old(listing-hero) {
+  opacity: 0;
+}
+html[data-listing-dir="open"]::view-transition-new(listing-hero) {
+  animation: none;
+  opacity: 1;
+}
+html[data-listing-dir="back"]::view-transition-new(listing-hero) {
+  animation: listing-photo-in calc(var(--listing-morph) * 0.3) linear calc(var(--listing-morph) * 0.7) both;
+}
+@keyframes listing-photo-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 /* No space before the pseudo: `html[x] ::view-transition-…` is a descendant
    (universal) selector that never matches the root's pseudos and made every
-   toggle of the attribute restyle the whole page (3× per card → listing). */
+   toggle of the attribute restyle the whole page (3× per card → listing).
+   The page around the photo cross-fades in place: no rise (the photo lands
+   still, so a rising page slid past it). */
 html[data-listing-vt]::view-transition-old(root) {
   animation: vt-route-out var(--dur-short) var(--ease-accelerate) both;
 }
 html[data-listing-vt]::view-transition-new(root) {
-  animation: vt-route-in var(--dur-medium) var(--ease-decelerate) both;
+  animation: listing-root-in var(--dur-medium) var(--ease-decelerate) both;
+}
+@keyframes listing-root-in {
+  from { opacity: 0; }
+}
+/* The nav bar is hidden on a scrolled list and shown on a listing: let it
+   slide with the morph instead of popping at the end (route swaps keep it
+   pinned with a 0s group; motion.css). Its own 440ms transform transition is
+   held so the new snapshot already has the final position. */
+html[data-listing-vt]::view-transition-group(site-nav) {
+  animation-duration: var(--listing-morph);
+  animation-timing-function: var(--ease-decelerate);
+}
+html[data-listing-vt] .site-nav-header {
+  transition: none;
+}
+/* Its two poses (scrolled capsule / full bar) don't cross-fade into a doubled
+   wordmark: the new pose slides. */
+html[data-listing-vt]::view-transition-old(site-nav) {
+  animation: none;
+  opacity: 0;
+}
+html[data-listing-vt]::view-transition-new(site-nav) {
+  animation: none;
 }
 @media (min-width: 768px) {
   ::view-transition-new(listing-hero) {
@@ -32,9 +93,6 @@ html[data-listing-vt]::view-transition-new(root) {
 [data-hero-ph] img[data-listing-hero][data-pending="true"] {
   background-color: transparent;
   animation: none;
-}
-html[data-listing-vt="hero"] [data-hero-ph] .cine-gallery .cine-gallery__slide img[data-listing-hero] {
-  opacity: 0 !important;
 }
 /* While the hero morph is captured, show the new route at rest (the route
  * cross-fade would otherwise snapshot it at opacity 0) and drop the old one.
@@ -48,6 +106,22 @@ html[data-listing-vt="hero"] .route-stage[data-vt-hero-stage] {
 }
 html[data-listing-vt="hero"] .route-stage:not([data-vt-hero-stage]) {
   display: none !important;
+}
+/* The photo's own controls (credit, arrows, counter, chips, save/compare)
+ * sit above the photo, so the flying photo covers them; they used to pop in
+ * when it landed. Hidden in the captured page, then faded in on landing
+ * (html[data-listing-settle], set for ~260ms by lib/viewTransition). Only the
+ * listing gallery and the card the photo returns to ([data-vt-card]). */
+html[data-listing-vt="hero"] [data-listing-gallery] .vt-overlay,
+html[data-listing-vt="hero"] [data-vt-card] .vt-overlay {
+  opacity: 0;
+}
+html[data-listing-settle] [data-listing-gallery] .vt-overlay,
+html[data-listing-settle] [data-vt-card] .vt-overlay {
+  animation: listing-overlay-in var(--dur-short) var(--ease-decelerate) both;
+}
+@keyframes listing-overlay-in {
+  from { opacity: 0; }
 }
 
 /* ── Photo loading: neutral placeholder → photo cross-fade ───────────────

@@ -134,9 +134,13 @@ export function ListingImageCarousel({
     const img = regionRef.current?.querySelector<HTMLImageElement>(`[data-photo-index="${index}"] .cine-gallery__img`);
     if (img?.complete && img.naturalWidth && img.naturalHeight && img.dataset.placeholder !== "true") {
       onPhotoAspectRatio(img.naturalWidth / img.naturalHeight);
-    } else {
+    } else if (!img || img.dataset.placeholder === "true") {
       onPhotoAspectRatio(null);
     }
+    // Still loading: keep the ratio we have (the card's, handed over with the
+    // tap). Clearing it here dropped the frame to the fixed-height fallback
+    // until the photo landed, so the hero box jumped ~30px right after the
+    // card → listing morph had flown into it. onLoadCapture reports again.
   }, [index, onPhotoAspectRatio]);
   useEffect(() => { reportPhotoAspect(); }, [reportPhotoAspect, images]);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -273,7 +277,7 @@ export function ListingImageCarousel({
     });
 
   const arrowClass =
-    "tap-44 pointer-events-auto absolute top-1/2 z-30 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-black/55 text-white opacity-0 transition-opacity hover:bg-black/80 focus-visible:opacity-100 group-hover:opacity-100 max-sm:opacity-100";
+    "vt-overlay tap-44 pointer-events-auto absolute top-1/2 z-30 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-black/55 text-white opacity-0 transition-opacity hover:bg-black/80 focus-visible:opacity-100 group-hover:opacity-100 max-sm:opacity-100";
 
   return (
     <div
@@ -375,7 +379,7 @@ export function ListingImageCarousel({
             {/* Cards: top-centre (bottom corners carry price / deal / source
                 overlays). Detail: bottom-right corner of the single photo frame. */}
             <span
-              className={`pointer-events-none absolute z-30 flex items-center gap-1 rounded-full border border-border bg-black/60 px-2 py-0.5 text-caption font-semibold tabular-nums text-white ${
+              className={`vt-overlay pointer-events-none absolute z-30 flex items-center gap-1 rounded-full border border-border bg-black/60 px-2 py-0.5 text-caption font-semibold tabular-nums text-white ${
                 isDetail ? "cine-gallery__count bottom-3 right-3" : "left-1/2 top-2.5 -translate-x-1/2"
               }`}
             >
@@ -386,7 +390,7 @@ export function ListingImageCarousel({
         )}
 
         {multi && !isDetail && (
-          <span className="pointer-events-auto absolute bottom-12 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1">
+          <span className="vt-overlay pointer-events-auto absolute bottom-12 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1">
             {/* Sliding indicator: one dot moves by transform (dots are 6px + 4px gap). */}
             {index < 8 && (
               <m.span
@@ -421,7 +425,7 @@ export function ListingImageCarousel({
               stop(e);
               openLightbox(e.currentTarget.parentElement);
             }}
-            className="cine-gallery__expand tap-44 absolute right-2.5 top-2.5 z-30 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-black/55 text-white transition-colors hover:bg-black/80"
+            className="cine-gallery__expand vt-overlay tap-44 absolute right-2.5 top-2.5 z-30 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-black/55 text-white transition-colors hover:bg-black/80"
           >
             <Expand aria-hidden className="h-4 w-4" />
           </button>

@@ -56,24 +56,13 @@ html[data-route-vt]::view-transition-new(root) {
   from { opacity: 0; }
 }
 
-/* ── Reduced motion: opacity at 100ms, no View Transition movement ─────── */
+/* ── Reduced motion: no View Transition movement (route and listing swaps
+   are instant: lib/viewTransition skips the API entirely) ──────────────── */
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*),
   ::view-transition-old(*),
   ::view-transition-new(*) {
     animation: none !important;
-  }
-  /* Back from a listing with reduced motion: no flight, just a quick fade. */
-  html[data-listing-vt="calm"]::view-transition-old(root) {
-    animation: vt-route-out var(--dur-short) linear both !important;
-  }
-  html[data-listing-vt="calm"]::view-transition-new(root) {
-    animation: fade-in var(--dur-short) linear both !important;
-  }
-  /* The held-still bars would otherwise show old and new on top of each other. */
-  html[data-listing-vt="calm"]::view-transition-old(site-nav),
-  html[data-listing-vt="calm"]::view-transition-old(bottom-nav) {
-    display: none !important;
   }
   .press:active:not(:disabled) { transform: none; }
 }
