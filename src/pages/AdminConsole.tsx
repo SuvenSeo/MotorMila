@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, m } from "motion/react";
-import { ArrowLeft, Eye, EyeOff, Fingerprint, KeyRound, Lock, ShieldCheck, Timer } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Eye, EyeOff, Fingerprint, KeyRound, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import AdminDashboard from "@/pages/AdminDashboard";
+import { Outlet } from "react-router-dom";
+import { AdminShell } from "@/components/admin/AdminShell";
 import {
   adminSessionMinutesLeft,
   clearAdminSession,
@@ -30,7 +30,7 @@ import { fadeIn, scaleIn } from "@/lib/motion";
  */
 export default function AdminConsole() {
   const { t } = useAppPreferences();
-  const { login, logout, isAdmin, isAuthenticated, authReady, user } = useAuth();
+  const { login, logout, isAdmin, isAuthenticated, authReady } = useAuth();
   const [session, setSession] = useState<AdminSession | null>(() => readAdminSession());
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -55,7 +55,6 @@ export default function AdminConsole() {
   // signed-in account must still be an admin (the backend enforces this too).
   const passwordUnlocked = Boolean(session && BACKEND_AUTH_ENABLED && isAuthenticated && isAdmin);
   const unlocked = autoUnlocked || passwordUnlocked;
-  const consoleUser = session?.username || user?.email || "";
 
   useEffect(() => {
     if (!BACKEND_AUTH_ENABLED) return;
@@ -117,36 +116,14 @@ export default function AdminConsole() {
   }, []);
 
   // ── Session established: the console itself ──────────────────────
+  // Gate logic above is unchanged. The old console header bar is replaced
+  // by the CeyFi-style AdminShell (sidebar account area still shows the
+  // session time left and the Lock button); the section renders via Outlet.
   if (unlocked) {
     return (
-      <div className="relative min-h-screen bg-background">
-        <div className="border-b border-separator bg-surface-1">
-          <div className="mx-auto flex w-full max-w-[1560px] flex-wrap items-center justify-between gap-3 px-5 py-3 sm:px-6">
-            <div className="flex items-center gap-3">
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-control bg-primary/10 text-primary">
-                <ShieldCheck className="h-4 w-4" aria-hidden />
-              </span>
-              <div>
-                <p className="text-body font-semibold text-foreground">{t("adminLogin.console", "Admin console")}</p>
-                <p className="text-caption text-label-2">{t("adminLogin.signedInAs", "Unlocked as {user}", { user: consoleUser })}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {minutesLeft > 0 && (
-                <Badge variant="neutral" className="h-8 px-3">
-                  <Timer aria-hidden />
-                  {t("adminLogin.sessionChip", "{minutes}m left", { minutes: minutesLeft })}
-                </Badge>
-              )}
-              <Button type="button" variant="secondary" size="sm" onClick={lockConsole}>
-                <Lock aria-hidden />
-                {t("adminLogin.lock", "Lock console")}
-              </Button>
-            </div>
-          </div>
-        </div>
-        <AdminDashboard />
-      </div>
+      <AdminShell minutesLeft={minutesLeft} onLock={lockConsole}>
+        <Outlet />
+      </AdminShell>
     );
   }
 

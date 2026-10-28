@@ -4114,10 +4114,14 @@ export type AdminInvite = {
 
 export type AdminOverview = {
   listings: { total: number; live: number };
-  users: { total: number; free: number; pro: number; admins: number };
+  users: { total: number; free: number; pro: number; admins: number; active7?: number; active30?: number };
   invites: { pending: number };
   feedback: { open: number };
   dealers: { verified: number };
+  moderation?: { pending: number };
+  signupsDaily?: Array<{ day: string; count: number }>;
+  recentUsers?: AdminUser[];
+  recentFeedback?: AdminFeedbackItem[];
   recentScrapes: Array<{
     id: number;
     source: string;
@@ -4134,6 +4138,45 @@ export type AdminOverview = {
 
 export const getAdminOverview = async (): Promise<AdminOverview> => {
   return fetchJSON<AdminOverview>("/admin/overview", undefined, authHeaders());
+};
+
+export type AdminAuditLogItem = {
+  id: number;
+  actorEmail: string;
+  action: string;
+  targetType: string;
+  targetId?: string | null;
+  detail?: string | null;
+  createdAt?: string | null;
+};
+
+export type AdminHealth = {
+  databaseOk: boolean;
+  liveListings: number;
+  lastScrape?: {
+    id: number;
+    source: string;
+    status?: string | null;
+    listingsFound: number;
+    listingsNew: number;
+    startedAt?: string | null;
+    finishedAt?: string | null;
+    errorMessage?: string | null;
+  } | null;
+  failedScrapes24h: number;
+  recentErrors: Array<{ id: number; source: string; startedAt?: string | null; errorMessage?: string | null }>;
+  statsCache: Array<{ key: string; refreshedAt?: string | null }>;
+  version?: string | null;
+  commit?: string | null;
+  generatedAt: string;
+};
+
+export const getAdminAuditLog = async (limit = 100): Promise<{ items: AdminAuditLogItem[]; count: number }> => {
+  return fetchJSON<{ items: AdminAuditLogItem[]; count: number }>("/admin/audit-log", { limit }, authHeaders());
+};
+
+export const getAdminHealth = async (): Promise<AdminHealth> => {
+  return fetchJSON<AdminHealth>("/admin/health", undefined, authHeaders());
 };
 
 export const getAdminUsers = async (
