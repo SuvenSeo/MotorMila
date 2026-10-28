@@ -48,6 +48,7 @@ import {
   type AdminInvite,
   type AdminUser,
 } from "@/services/api";
+import { getPublicCatalogTotal } from "@/services/publicCatalog";
 import { useAuth } from "@/lib/authContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -210,6 +211,14 @@ export default function AdminDashboard() {
     queryFn: getAdminOverview,
     refetchInterval: 60_000,
   });
+  // Public-catalog headline: the merged snapshot is the catalog of record, so
+  // this is the number the homepage shows. Falls back to the backend-DB count
+  // when the snapshot is unreachable.
+  const publicCatalogQuery = useQuery({
+    queryKey: ["admin", "public-catalog-total"],
+    queryFn: getPublicCatalogTotal,
+    refetchInterval: 60_000,
+  });
   const usersQuery = useQuery({
     queryKey: ["admin", "users", userQuery, userPlanFilter],
     queryFn: () =>
@@ -347,6 +356,13 @@ export default function AdminDashboard() {
   });
 
   const overview = overviewQuery.data;
+  // The headline agrees with the public site (merged snapshot); the
+  // backend-DB live count stays visible as the ops-health signal in the hint.
+  const publicCatalogTotal = publicCatalogQuery.data ?? undefined;
+  const liveListingsValue = formatCount(publicCatalogTotal ?? overview?.listings.live);
+  const liveListingsHint = publicCatalogTotal
+    ? `${formatCount(overview?.listings.live)} in backend DB`
+    : `${formatCount(overview?.listings.total)} total scraped`;
   const analytics = analyticsQuery.data;
   const pendingInvites = useMemo(
     () => (invitesQuery.data?.invites || []).filter((invite) => invite.status === "pending"),
@@ -378,6 +394,7 @@ export default function AdminDashboard() {
 
   const refreshAll = () => {
     void overviewQuery.refetch();
+    void publicCatalogQuery.refetch();
     void usersQuery.refetch();
     void invitesQuery.refetch();
     void analyticsQuery.refetch();
@@ -426,7 +443,7 @@ export default function AdminDashboard() {
         </motion.header>
 
         <motion.section variants={revealItem} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {overviewQuery.isLoading ? (
+          {overviewQuery.isLoading || publicCatalogQuery.isLoading ? (
             Array.from({ length: 4 }).map((_, index) => (
               <Skeleton key={index} className="h-[124px] rounded-[20px]" />
             ))
@@ -434,8 +451,8 @@ export default function AdminDashboard() {
             <>
               <MetricTile
                 label="Live listings"
-                value={formatCount(overview?.listings.live)}
-                hint={`${formatCount(overview?.listings.total)} total scraped`}
+                value={liveListingsValue}
+                hint={liveListingsHint}
                 icon={Car}
               />
               <MetricTile
