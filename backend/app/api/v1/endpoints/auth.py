@@ -1057,6 +1057,11 @@ def self_signup(
     email = payload.email.strip().lower()
     if "@" not in email or "." not in email.split("@")[-1]:
         raise HTTPException(status_code=400, detail="Enter a valid email address.")
+    # Owner accounts are healed to enterprise admin on every resolution, and
+    # self-signup does not verify mailbox ownership — so an unregistered owner
+    # address must never be claimable here (invite or AUTH_USERS only).
+    if is_owner_email(email):
+        raise HTTPException(status_code=403, detail="Owner email cannot be self-registered.")
 
     existing = db.query(PlatformUser).filter(PlatformUser.email == email).first()
     if existing is not None:
@@ -1277,8 +1282,9 @@ def require_pro_access(
     PRO_ACCESS_ENFORCED=false explicitly opts out (local dev only).
 
     Accepts Authorization Bearer *or* the HttpOnly ``mm_session`` cookie for
-    safe (GET) methods. Mutating methods require a Bearer token AND an Origin
-    (or Referer) in the CORS allowlist so cookie-only CSRF cannot unlock Pro writes.
+    safe (GET) methods. Mutating methods require a Bearer token so cookie-only
+    CSRF cannot unlock Pro writes; a browser Origin/Referer, when present, must
+    be in the CORS allowlist (native clients send none).
 
     Plan/status are re-read from the live account store so downgrades take effect
     immediately (JWT claims alone are not trusted).
@@ -1296,8 +1302,11 @@ def require_pro_access(
         )
 
     if unsafe:
+        # Native clients (Android) send a Bearer token and no Origin header.
+        # A Bearer token cannot be attached by a foreign page, so a missing
+        # Origin is fine; a present-but-untrusted Origin is still rejected.
         origin = _request_origin(request)
-        if not _is_trusted_origin(origin):
+        if origin and not _is_trusted_origin(origin):
             raise HTTPException(status_code=403, detail="Pro writes require a trusted Origin.")
 
     token = _extract_token(authorization, request)

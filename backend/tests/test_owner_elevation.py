@@ -253,3 +253,26 @@ def test_env_owner_record_is_elevated(env, monkeypatch):
     assert resp.json()["user"]["plan"] == "enterprise"
     row = _row(SessionLocal, OWNER)
     assert row is not None and row.role == "admin" and row.plan == "enterprise"
+
+
+def test_owner_email_cannot_be_self_registered(env, monkeypatch):
+    """Self-signup does not verify mailbox ownership; an unregistered owner
+    address must not be claimable (it would be healed to enterprise admin)."""
+    client, SessionLocal = env
+    monkeypatch.setenv("SELF_SIGNUP", "true")
+
+    resp = client.post(
+        "/api/v1/auth/self-signup",
+        json={"email": " SuvenSeoras@Gmail.com ", "name": "Mallory", "password": "a-long-password-1"},
+    )
+    assert resp.status_code == 403, resp.text
+    assert "Owner email" in resp.json()["detail"]
+    assert _row(SessionLocal, OWNER) is None
+
+    # Non-owner addresses still self-register normally.
+    ok = client.post(
+        "/api/v1/auth/self-signup",
+        json={"email": "trial@example.com", "name": "Trial", "password": "a-long-password-1"},
+    )
+    assert ok.status_code == 200, ok.text
+    assert _row(SessionLocal, "trial@example.com") is not None

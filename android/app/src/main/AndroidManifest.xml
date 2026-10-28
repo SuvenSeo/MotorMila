@@ -98,8 +98,8 @@
                 <data android:scheme="motormila" android:host="notifications" />
                 <data android:scheme="motormila" android:host="sell" />
             </intent-filter>
-            <!-- Verified App Links: requires https://motormila.pages.dev/.well-known/assetlinks.json
-                 listing the Play app-signing + direct-release cert SHA-256 (OPS step). -->
+            <!-- Verified App Links: served from public/.well-known/assetlinks.json, which lists the
+                 direct-release cert SHA-256. Add the Play app-signing cert there before a Play release. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

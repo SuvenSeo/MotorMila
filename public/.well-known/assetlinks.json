@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "lk.motormila.app",
+      "sha256_cert_fingerprints": [
+        "38:44:20:C0:92:2C:B8:4E:E0:E6:86:6A:B0:9B:4E:47:E7:01:2B:F2:1C:69:E8:3F:93:43:04:36:6F:44:52:17"
+      ]
+    }
+  }
+]

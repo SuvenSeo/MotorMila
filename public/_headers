@@ -4,6 +4,10 @@
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
+# Android App Links verification (autoVerify in AndroidManifest.xml).
+/.well-known/assetlinks.json
+  Content-Type: application/json
+  Access-Control-Allow-Origin: *
 /snapshots/*
   Cache-Control: public, max-age=300, stale-while-revalidate=60
   Access-Control-Allow-Origin: *
