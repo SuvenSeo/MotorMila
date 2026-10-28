@@ -837,4 +837,13 @@ export const stringsEn: Record<string, string> = {
   "howPrice.cine.bandNear": "Near FMV",
   "howPrice.cine.bandAbove": "Above market",
   "howPrice.cine.ctaTitle": "See it on a real car.",
+  "dealer.cine.lead": "Dealer command",
+  "dealer.cine.accent": "center.",
+  "dealer.cine.sectionsAria": "Dealer workspace sections",
+  "dealer.cine.glance": "At a glance",
+  "dealer.cine.yard": "Your yard",
+  "dealer.cine.demand": "Demand {score}",
+  "dealer.cine.urlCount": "URLs: {n}",
+  "dealer.cine.clear": "Clear",
+  "dealer.cine.runBenchmark": "Benchmark",
 };

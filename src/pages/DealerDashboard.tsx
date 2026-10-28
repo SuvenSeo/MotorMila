@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, m } from "motion/react";
 import { useQuery } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { BarChart3, Bell, ChevronDown, ShieldCheck, Upload } from "lucide-react";
+import { ArrowRight, BarChart3, Bell, ChevronDown, ShieldCheck, Upload } from "lucide-react";
 import {
   benchmarkDealerUrls,
   claimDealerProfile,
@@ -27,8 +27,11 @@ import {
   hasFullPlatformAccess,
 } from "@/lib/planLimits";
 import type { ProMarketSnapshot } from "@/types/pro";
-import { fadeIn, fadeUp, listItem, listStagger, spring, usePrefersReducedMotionOrLowData } from "@/lib/motion";
+import { fadeIn, spring, usePrefersReducedMotionOrLowData } from "@/lib/motion";
 import { PageCanvas } from "@/components/PageCanvas";
+import { PageBody } from "@/components/PageBody";
+import { CineHeader } from "@/components/CineHeader";
+import { CineFigure, CineSection } from "@/components/CineSection";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,7 +40,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
@@ -56,16 +58,28 @@ import { trackEvent } from "@/lib/analytics";
 
 type WidgetKey = "turnover" | "priceGap" | "districtDemand" | "inventoryBenchmark";
 
+/** Recharts tooltip on the dark chart panels (tokens resolve inside .theme-dark). */
 const TOOLTIP_STYLE = {
   background: "hsl(var(--card))",
   border: "1px solid hsl(var(--border))",
-  borderRadius: "var(--radius-control)",
+  borderRadius: 12,
   fontSize: "12px",
   color: "hsl(var(--foreground))",
-  boxShadow: "var(--shadow-e2)",
 } as const;
 
 const TOOLTIP_LABEL_STYLE = { color: "hsl(var(--muted-foreground))" } as const;
+
+/** One blue for every plot on the dark panels (matches the Pro workspace). */
+const CHART_BLUE = "hsl(213 100% 64%)";
+
+/** Section anchors for the segmented jump bar. */
+const SECTION_IDS = {
+  glance: "dealer-glance",
+  yard: "dealer-yard",
+  analytics: "dealer-analytics",
+  playbook: "dealer-playbook",
+  plans: "dealer-plans",
+} as const;
 
 /** "1,234" that rolls on change; plain text stays for screen readers (and tests). */
 function Num({ value }: { value: number }) {
@@ -79,6 +93,7 @@ function Num({ value }: { value: number }) {
   );
 }
 
+/** A dark instrument panel (both themes) with a collapsible body. */
 function WidgetShell({
   title,
   subtitle,
@@ -88,6 +103,7 @@ function WidgetShell({
   error,
   onRetry,
   emptyMessage,
+  className,
   children,
 }: {
   title: string;
@@ -98,14 +114,15 @@ function WidgetShell({
   error?: string | null;
   onRetry?: () => void;
   emptyMessage?: string;
-  children: React.ReactNode;
+  className?: string;
+  children: ReactNode;
 }) {
   const calm = usePrefersReducedMotionOrLowData();
   return (
-    <Card>
+    <div className={`cine-panel cine-chart theme-dark p-4 text-foreground sm:p-6 ${className ?? ""}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h3 className="text-callout font-semibold text-foreground">{title}</h3>
+          <h3 className="font-display text-callout font-semibold text-foreground">{title}</h3>
           <p className="mt-0.5 text-footnote text-label-2">{subtitle}</p>
         </div>
         <Button
@@ -115,6 +132,7 @@ function WidgetShell({
           onClick={onToggle}
           aria-label={collapsed ? `Expand ${title}` : `Collapse ${title}`}
           aria-expanded={!collapsed}
+          className="shrink-0"
         >
           <m.span animate={{ rotate: collapsed ? 0 : 180 }} transition={calm ? { duration: 0 } : spring.snappy} className="inline-flex">
             <ChevronDown aria-hidden />
@@ -122,9 +140,9 @@ function WidgetShell({
         </Button>
       </div>
       {!collapsed && (
-        <div className="mt-4 border-t border-separator pt-4">
+        <div className="mt-4 border-t border-border pt-4">
           {loading ? (
-            <Skeleton shape="chart" className="h-[13rem]" />
+            <Skeleton shape="chart" className="h-[13rem] bg-foreground/10" />
           ) : error ? (
             <ErrorState body={error} onRetry={onRetry} className="py-8" />
           ) : emptyMessage ? (
@@ -134,7 +152,7 @@ function WidgetShell({
           )}
         </div>
       )}
-    </Card>
+    </div>
   );
 }
 
@@ -143,6 +161,19 @@ function gapTone(pct: number | null): string {
   if (pct <= -5) return "text-deal-good-text";
   if (pct >= 5) return "text-deal-high-text";
   return "text-deal-caution-text";
+}
+
+/** One cell of the at-a-glance strip: label, big figure, quiet detail. */
+function GlanceCell({ label, children, detail, detailTone = "text-label-2", loading }: { label: string; children: ReactNode; detail?: ReactNode; detailTone?: string; loading?: boolean }) {
+  return (
+    <div className="min-w-0 py-4 sm:px-6 sm:first:pl-0">
+      <dt className="text-caption font-medium text-label-2">{label}</dt>
+      <dd className="mt-2">
+        {loading ? <Skeleton className="h-8 w-20" /> : <span className="content-in cine-card__price block text-title1 leading-none text-foreground">{children}</span>}
+      </dd>
+      {detail ? <dd className={`mt-2 text-footnote font-medium ${detailTone}`}>{detail}</dd> : null}
+    </div>
+  );
 }
 
 function ClaimYardCard() {
@@ -204,17 +235,15 @@ function ClaimYardCard() {
   ];
 
   return (
-    <Card>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-footnote font-semibold text-primary">{t("dealer.claimYard", "Claim your yard")}</p>
-          <h2 className="mt-1 text-callout font-semibold text-foreground">{t("dealer.profile", "Dealer profile")}</h2>
-          <p className="mt-1 max-w-xl text-footnote text-label-2">
-            {t("dealer.claimHint", "Claim a seller name so Motormila can match your live inventory and show pricing vs market.")}
-          </p>
-        </div>
+    <div className="grid gap-8 rounded-card border border-border bg-card p-5 sm:p-7 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] lg:gap-12">
+      <div className="min-w-0">
+        <p className="cine-eyebrow text-primary">{t("dealer.claimYard", "Claim your yard")}</p>
+        <h3 className="mt-3 font-display text-title3 font-semibold text-foreground">{t("dealer.profile", "Dealer profile")}</h3>
+        <p className="mt-2 text-footnote leading-relaxed text-label-2 [text-wrap:pretty]">
+          {t("dealer.claimHint", "Claim a seller name so Motormila can match your live inventory and show pricing vs market.")}
+        </p>
         {profile && (
-          <div className="content-in flex flex-wrap items-center gap-2">
+          <div className="content-in mt-4 flex flex-wrap items-center gap-2">
             {profile.status === "verified" && (
               <Badge variant="success">
                 <ShieldCheck aria-hidden />
@@ -230,19 +259,23 @@ function ClaimYardCard() {
           </div>
         )}
       </div>
-      <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {fields.map((f) => (
-          <div key={f.id} className="space-y-2">
-            <Label htmlFor={f.id}>{f.label}</Label>
-            <Input id={f.id} value={f.value} onChange={(e) => f.set(e.target.value)} placeholder={f.placeholder} inputMode={f.inputMode} />
-          </div>
-        ))}
+      <div className="min-w-0">
+        <div className="grid gap-4 sm:grid-cols-2">
+          {fields.map((f) => (
+            <div key={f.id} className="min-w-0 space-y-2">
+              <Label htmlFor={f.id}>{f.label}</Label>
+              <Input id={f.id} value={f.value} onChange={(e) => f.set(e.target.value)} placeholder={f.placeholder} inputMode={f.inputMode} />
+            </div>
+          ))}
+        </div>
+        {error && <p role="alert" className="content-in mt-3 text-footnote font-medium text-deal-high-text">{error}</p>}
+        <div className="mt-5 border-t border-border pt-5">
+          <Button type="button" onClick={() => void handleClaim()} loading={saving}>
+            {profile ? t("dealer.updateClaim", "Update claim") : t("dealer.claimProfile", "Claim profile")}
+          </Button>
+        </div>
       </div>
-      {error && <p role="alert" className="content-in mt-3 text-footnote font-medium text-deal-high-text">{error}</p>}
-      <Button type="button" className="mt-5" onClick={() => void handleClaim()} loading={saving}>
-        {profile ? t("dealer.updateClaim", "Update claim") : t("dealer.claimProfile", "Claim profile")}
-      </Button>
-    </Card>
+    </div>
   );
 }
 
@@ -296,17 +329,17 @@ function InventoryBenchmark() {
         />
         <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
           <span className="text-footnote font-medium tabular-nums text-label-2">
-            {urlCount > 0 ? `${urlCount} URL${urlCount === 1 ? "" : "s"}` : t("dealer.pasteUrls", "Paste URLs above")}
+            {urlCount > 0 ? t("dealer.cine.urlCount", "URLs: {n}", { n: String(urlCount) }) : t("dealer.pasteUrls", "Paste URLs above")}
           </span>
           <div className="flex items-center gap-2">
             {(results !== null || urlsText) && (
               <Button type="button" variant="ghost" size="sm" onClick={handleClear}>
-                Clear
+                {t("dealer.cine.clear", "Clear")}
               </Button>
             )}
             <Button type="button" size="sm" onClick={() => void handleSubmit()} disabled={!urlCount} loading={loading}>
               <Upload aria-hidden />
-              Benchmark
+              {t("dealer.cine.runBenchmark", "Benchmark")}
             </Button>
           </div>
         </div>
@@ -314,9 +347,9 @@ function InventoryBenchmark() {
 
       {loading ? (
         <div className="space-y-2" aria-hidden>
-          <Skeleton shape="row" className="h-10" />
-          <Skeleton shape="row" className="h-12" />
-          <Skeleton shape="row" className="h-12" />
+          <Skeleton shape="row" className="h-10 bg-foreground/10" />
+          <Skeleton shape="row" className="h-12 bg-foreground/10" />
+          <Skeleton shape="row" className="h-12 bg-foreground/10" />
         </div>
       ) : null}
 
@@ -359,10 +392,10 @@ function InventoryBenchmark() {
                       <span className="text-label-3">—</span>
                     )}
                   </TableCell>
-                  <TableCell numeric className="font-medium">
+                  <TableCell numeric className="whitespace-nowrap font-medium">
                     {row.listing_price != null ? formatPrice(row.listing_price) : <span className="text-label-3">—</span>}
                   </TableCell>
-                  <TableCell numeric className="font-medium">
+                  <TableCell numeric className="whitespace-nowrap font-medium">
                     {row.market_median != null ? (
                       <span title={`${row.comparable_count} comparables`}>
                         {formatPrice(row.market_median)}
@@ -372,7 +405,7 @@ function InventoryBenchmark() {
                       <span className="text-label-3">—</span>
                     )}
                   </TableCell>
-                  <TableCell numeric className={`font-semibold ${gapTone(row.price_gap_pct)}`}>
+                  <TableCell numeric className={`whitespace-nowrap font-semibold ${gapTone(row.price_gap_pct)}`}>
                     {row.price_gap_pct != null ? (
                       `${row.price_gap_pct > 0 ? "+" : ""}${row.price_gap_pct.toFixed(1)}%`
                     ) : (
@@ -487,309 +520,366 @@ export default function DealerDashboard() {
     if (hasAuthToken) void proSnapshotQuery.refetch();
   };
 
+  const [heroMetric, ...glanceMetrics] = metrics;
+
+  const commandStack = [
+    { label: t("dealer.turnover", "Inventory Turnover"), meta: turnoverData.length ? t("dealer.meta.models", "{count} models", { count: String(turnoverData.length) }) : null },
+    { label: t("dealer.priceGapScanner", "Price Gap Scanner"), meta: priceGaps.length ? t("dealer.meta.districts", "{count} districts", { count: String(priceGaps.length) }) : null },
+    { label: t("dealer.districtDemand", "District Demand"), meta: districtDemand.length ? t("dealer.meta.zones", "{count} zones", { count: String(districtDemand.length) }) : null },
+    { label: t("dealer.leadNotifications", "Lead Notifications"), meta: notifications.length > 1 ? t("common.live", "Live") : t("dealer.meta.standby", "standby") },
+    { label: t("dealer.benchmark", "Inventory Benchmark"), meta: t("dealer.meta.urlUpload", "URL upload") },
+  ];
+
+  const sections = [
+    { id: SECTION_IDS.glance, label: t("dealer.cine.glance", "At a glance") },
+    { id: SECTION_IDS.yard, label: t("dealer.cine.yard", "Your yard") },
+    { id: SECTION_IDS.analytics, label: t("dealerDash.analytics", "Analytics") },
+    { id: SECTION_IDS.playbook, label: t("dealerDash.playbook", "Playbook") },
+    { id: SECTION_IDS.plans, label: t("dealer.plans", "Dealer plans") },
+  ];
+  const n = (i: number) => String(i + 1).padStart(2, "0");
+
   return (
     <PageCanvas ambient="none">
-      <PageHeader
-        size="compact"
+      <CineHeader
         eyebrow={t("dealer.eyebrow", "Dealer workspace")}
-        eyebrowIcon={BarChart3}
-        title={t("dealer.commandCenter", "Dealer command center")}
-        description={t("dealer.description", "Arbitrage, demand mapping, and lead flow intelligence.")}
-        actions={
-          <>
-            <Button asChild variant="secondary" size="sm">
-              <Link to="/#market">{t("dealer.openPublicInventory", "Open public inventory")}</Link>
-            </Button>
-            <Button asChild variant="secondary" size="sm">
-              <Link to="/pricing">{t("dealer.plans", "Dealer plans")}</Link>
-            </Button>
-            <Button asChild variant="secondary" size="sm">
-              <Link to="/official-pulse">{t("nav.officialPulse", "Official Pulse")}</Link>
-            </Button>
-          </>
-        }
-      />
-
-      <FreePlanBanner />
-
-      <div className="layout-shell pb-20">
-        {!fullAccess ? (
-          <UpgradePrompt className="mb-6" title={freePlanText(t, "dealerTitle")} body={freePlanText(t, "dealerBody")} variant="strip" />
-        ) : null}
-
-        {dashboardError ? (
-          <Card padding="none" className="mb-6">
-            <ErrorState title={t("dealer.unavailable", "Dealer data unavailable")} body={dashboardError} onRetry={retryAll} className="py-10" />
-          </Card>
-        ) : null}
-
-        <m.div variants={fadeUp} className="mb-6">
-          <ClaimYardCard />
-        </m.div>
-
-        <div className="grid gap-6 lg:grid-cols-[17rem_minmax(0,1fr)]">
-          <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
-            <m.div variants={fadeUp}>
-              <Card padding="sm">
-                <h2 className="text-callout font-semibold text-foreground">{t("dealer.commandStack", "Command stack")}</h2>
-                <ul className="mt-3 divide-y divide-separator" aria-label={t("dealer.commandStack", "Command stack")}>
-                  {[
-                    { label: t("dealer.turnover", "Inventory Turnover"), meta: turnoverData.length ? t("dealer.meta.models", "{count} models", { count: String(turnoverData.length) }) : null },
-                    { label: t("dealer.priceGapScanner", "Price Gap Scanner"), meta: priceGaps.length ? t("dealer.meta.districts", "{count} districts", { count: String(priceGaps.length) }) : null },
-                    { label: t("dealer.districtDemand", "District Demand"), meta: districtDemand.length ? t("dealer.meta.zones", "{count} zones", { count: String(districtDemand.length) }) : null },
-                    { label: t("dealer.leadNotifications", "Lead Notifications"), meta: notifications.length > 1 ? t("common.live", "Live") : t("dealer.meta.standby", "standby") },
-                    { label: t("dealer.benchmark", "Inventory Benchmark"), meta: t("dealer.meta.urlUpload", "URL upload") },
-                  ].map((i) => (
-                    <li key={i.label} className="flex items-center justify-between gap-2 py-2.5">
-                      <span className="text-footnote text-foreground">{i.label}</span>
-                      {dashboardLoading && i.meta === null ? (
-                        <Skeleton shape="text" className="h-3 w-14" />
-                      ) : (
-                        <span className="text-footnote font-medium tabular-nums text-label-2">{i.meta ?? "—"}</span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-                <p className="mb-1 mt-4 text-caption font-semibold uppercase tracking-caps text-label-2">{t("dealer.quickTools", "Quick tools")}</p>
-                <ul className="space-y-1">
-                  {DEALER_QUICK_TOOLS.map((tool) => (
-                    <li key={tool.id}>
-                      <Link
-                        to={tool.to}
-                        className="block rounded-control px-2 py-2 no-underline transition-colors duration-short ease-standard hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <span className="block text-footnote font-medium text-foreground">{t(`dealerTools.${tool.id}.title`, tool.title)}</span>
-                        <span className="block text-caption text-label-2">{t(`dealerTools.${tool.id}.description`, tool.description)}</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            </m.div>
-            <m.div variants={fadeUp}>
-              <Card padding="sm">
-                <p className="flex items-center gap-1.5 text-footnote font-semibold text-primary">
-                  <ShieldCheck className="h-4 w-4" aria-hidden />
-                  {t("dealer.trustTier", "Trust tier")}
-                </p>
-                {dashboardLoading ? (
-                  <Skeleton className="mt-3 h-12 w-full" />
-                ) : trustScore != null ? (
-                  <div className="content-in">
-                    <p className="mt-2 flex items-baseline gap-1">
-                      <span className="text-title2 font-semibold text-foreground">
-                        <Num value={trustScore} />
-                      </span>
-                      <span className="text-footnote text-label-2">/100</span>
-                    </p>
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-3">
-                      <m.div
-                        className="h-full origin-left rounded-full bg-primary"
-                        initial={{ scaleX: 0 }}
-                        animate={{ scaleX: trustScore / 100 }}
-                        transition={spring.smooth}
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <p className="mt-2 text-footnote text-label-2">{t("dealerDash.trustScoreNeedsListingVolume", "Trust score needs listing volume data.")}</p>
-                )}
-              </Card>
-            </m.div>
-          </aside>
-
-          <div className="min-w-0 space-y-6">
-            {/* KPI bento: the primary metric spans two columns */}
-            <m.div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" variants={listStagger}>
-              {metrics.map((metric, idx) => {
-                const featured = idx === 0;
-                return (
-                  <m.div key={metric.label} variants={listItem} custom={idx} className={featured ? "sm:col-span-2" : undefined}>
-                    <Card padding={featured ? "md" : "sm"} className="h-full">
-                      <p className="text-footnote font-medium text-label-2">{metric.label}</p>
-                      {dashboardLoading ? (
-                        <Skeleton className={featured ? "mt-3 h-12 w-28" : "mt-3 h-8 w-16"} />
-                      ) : (
-                        <p className={`content-in mt-2 font-semibold text-foreground ${featured ? "font-display text-large" : "text-title2"}`}>
-                          {metric.value != null ? <Num value={metric.value} /> : <span className="text-label-3">—</span>}
-                        </p>
-                      )}
-                      <p className={`mt-1 text-footnote font-medium ${metric.tone}`}>{metric.delta}</p>
-                    </Card>
-                  </m.div>
-                );
-              })}
-            </m.div>
-
-            <Card padding="sm" className="flex items-start gap-3" aria-live="polite">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
-                <Bell className="h-4 w-4" aria-hidden />
-              </span>
-              <div className="min-w-0">
-                <p className="text-footnote font-semibold text-primary">{t("dealerDash.leadNotification", "Lead notification")}</p>
-                <AnimatePresence mode="wait" initial={false}>
-                  <m.p key={activeNotif} variants={fadeIn} initial="hidden" animate="show" exit="exit" className="mt-0.5 text-footnote text-foreground">
-                    {activeNotif}
-                  </m.p>
-                </AnimatePresence>
+        lead={t("dealer.cine.lead", "Dealer command")}
+        accent={t("dealer.cine.accent", "center.")}
+        body={t("dealer.description", "Arbitrage, demand mapping, and lead flow intelligence.")}
+      >
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:items-end lg:gap-10">
+          <div className="min-h-[5.5rem]">
+            {dashboardLoading ? (
+              <div className="space-y-3" aria-hidden>
+                <Skeleton shape="text" className="h-3 w-32 bg-foreground/10" />
+                <Skeleton shape="text" className="h-10 w-28 bg-foreground/10" />
               </div>
+            ) : (
+              <CineFigure
+                label={heroMetric.label}
+                value={heroMetric.value != null ? <Num value={heroMetric.value} /> : <span className="text-white/50">—</span>}
+                caption={heroMetric.delta}
+              />
+            )}
+          </div>
+          <div className="dealer-notif flex items-start gap-3 rounded-card border border-foreground/10 bg-foreground/[0.03] p-4" aria-live="polite">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-foreground/10 text-[hsl(213_100%_72%)]">
+              <Bell className="h-4 w-4" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <p className="dealer-kicker text-white/60">
+                {t("dealerDash.leadNotification", "Lead notification")}
+              </p>
+              <AnimatePresence mode="wait" initial={false}>
+                <m.p key={activeNotif} variants={fadeIn} initial="hidden" animate="show" exit="exit" className="mt-1 text-footnote leading-snug text-white">
+                  {activeNotif}
+                </m.p>
+              </AnimatePresence>
+            </div>
+          </div>
+        </div>
+        <div className="mt-6 flex flex-wrap gap-2 border-t border-foreground/10 pt-5">
+          <Button asChild variant="secondary" size="sm">
+            <Link to="/#market">{t("dealer.openPublicInventory", "Open public inventory")}</Link>
+          </Button>
+          <Button asChild variant="secondary" size="sm">
+            <Link to="/pricing">{t("dealer.plans", "Dealer plans")}</Link>
+          </Button>
+          <Button asChild variant="secondary" size="sm">
+            <Link to="/official-pulse">{t("nav.officialPulse", "Official Pulse")}</Link>
+          </Button>
+        </div>
+      </CineHeader>
+
+      <PageBody className="cine-dealer space-y-14 pb-20 pt-6 lg:space-y-20 lg:pt-8">
+        <div className="space-y-4">
+          <FreePlanBanner />
+          {!fullAccess ? (
+            <UpgradePrompt title={freePlanText(t, "dealerTitle")} body={freePlanText(t, "dealerBody")} variant="strip" />
+          ) : null}
+          {dashboardError ? (
+            <Card padding="none">
+              <ErrorState title={t("dealer.unavailable", "Dealer data unavailable")} body={dashboardError} onRetry={retryAll} className="py-10" />
             </Card>
+          ) : null}
 
-            <section className="pt-4">
-              <p className="text-footnote font-semibold text-primary">{t("dealerDash.playbook", "Playbook")}</p>
-              <h2 className="mt-1 font-display text-title2 font-semibold text-foreground">{t("dealerDash.whatDealersAndBrokersUse", "What dealers and brokers use this for")}</h2>
-              <p className="mt-1 max-w-2xl text-body text-label-2">{t("dealerDash.operatorWorkflowsFromStockPricing", "Operator workflows from stock pricing to import duty, alerts, and weekly yard review.")}</p>
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                {DEALER_PLAYBOOK.map((item) => (
-                  <Card key={item.id} className="flex flex-col">
-                    <p className="text-footnote font-medium text-primary">{t(`dealerPlaybook.for.${item.forWhom}`, item.forWhom)}</p>
-                    <h3 className="mt-1 text-body font-semibold text-foreground">{t(`dealerPlaybook.${item.id}.title`, item.title)}</h3>
-                    <p className="mt-2 text-footnote text-label-2">{t(`dealerPlaybook.${item.id}.problem`, item.problem)}</p>
-                    <p className="mt-2 flex-1 text-footnote text-label-1">{t(`dealerPlaybook.${item.id}.does`, item.whatMotormilaDoes)}</p>
-                    <Button asChild variant="tertiary" size="sm" className="-ml-3 mt-3 self-start">
-                      <Link to={item.whereToGo.to}>{t(`dealerPlaybook.${item.id}.cta`, item.whereToGo.label)} →</Link>
-                    </Button>
-                  </Card>
+          {/* Segmented jump bar: one control for the five sections below. */}
+          <nav aria-label={t("dealer.cine.sectionsAria", "Dealer workspace sections")} className="dealer-seg -mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0">
+            <ol className="inline-flex min-w-max gap-1 rounded-full border border-border bg-surface-2 p-1">
+              {sections.map((s, i) => (
+                <li key={s.id}>
+                  <a
+                    href={`#${s.id}`}
+                    className="flex h-9 items-center gap-2 whitespace-nowrap rounded-full px-3.5 text-footnote font-medium text-label-2 no-underline transition-colors duration-short hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <span aria-hidden className="font-display text-caption font-semibold tabular-nums text-primary">{n(i)}</span>
+                    {s.label}
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        </div>
+
+        <CineSection index={n(0)} id={SECTION_IDS.glance} title={t("dealer.cine.glance", "At a glance")}>
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] lg:gap-12">
+            <dl className="grid self-start divide-y divide-border border-y border-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+              {glanceMetrics.map((metric) => (
+                <GlanceCell key={metric.label} label={metric.label} loading={dashboardLoading} detail={metric.delta} detailTone={metric.tone}>
+                  {metric.value != null ? <Num value={metric.value} /> : <span className="text-label-3">—</span>}
+                </GlanceCell>
+              ))}
+              <GlanceCell
+                label={t("dealer.trustTier", "Trust tier")}
+                loading={dashboardLoading}
+                detail={
+                  trustScore != null ? (
+                    <span className="cine-bar mt-1" aria-hidden>
+                      <span className="cine-bar__reveal">
+                        <span style={{ "--w": trustScore / 100 } as CSSProperties} />
+                      </span>
+                    </span>
+                  ) : (
+                    t("dealerDash.trustScoreNeedsListingVolume", "Trust score needs listing volume data.")
+                  )
+                }
+              >
+                {trustScore != null ? (
+                  <span className="inline-flex items-baseline gap-1">
+                    <Num value={trustScore} />
+                    <span className="font-sans text-footnote font-medium text-label-2">/100</span>
+                  </span>
+                ) : (
+                  <span className="text-label-3">—</span>
+                )}
+              </GlanceCell>
+            </dl>
+
+            <div className="min-w-0">
+              <h3 className="cine-eyebrow text-label-2">{t("dealer.commandStack", "Command stack")}</h3>
+              <ul className="cine-list mt-3 border-y border-border" aria-label={t("dealer.commandStack", "Command stack")}>
+                {commandStack.map((i) => (
+                  <li key={i.label} className="flex items-center justify-between gap-3 py-2.5">
+                    <span className="min-w-0 text-footnote text-foreground">{i.label}</span>
+                    {dashboardLoading && i.meta === null ? (
+                      <Skeleton shape="text" className="h-3 w-14" />
+                    ) : (
+                      <span className="shrink-0 text-footnote font-medium tabular-nums text-label-2">{i.meta ?? "—"}</span>
+                    )}
+                  </li>
                 ))}
-              </div>
-            </section>
+              </ul>
+            </div>
+          </div>
+        </CineSection>
 
-            <section className="pt-4">
-              <p className="text-footnote font-semibold text-primary">{t("dealerDash.analytics", "Analytics")}</p>
-              <h2 className="mt-1 font-display text-title2 font-semibold text-foreground">{t("dealerDash.inventoryBenchmarkAnalytics", "Inventory & benchmark analytics")}</h2>
-              <p className="mb-5 mt-1 max-w-2xl text-body text-label-2">{t("dealerDash.momentumPriceSpreadAndDistrict", "Momentum, price spread, and district demand across your live market feed.")}</p>
+        <CineSection index={n(1)} id={SECTION_IDS.yard} title={t("dealer.cine.yard", "Your yard")}>
+          <ClaimYardCard />
+        </CineSection>
 
-              {fullAccess ? (
-                <div className="space-y-5">
-                  <WidgetShell
-                    title={t("dealer.turnover", "Inventory Turnover")}
-                    subtitle={turnoverData.length ? t("dealerDash.turnoverSub", "Trending model momentum and listing volume") : t("dealerDash.turnoverSubInsights", "Trending model momentum from market insights")}
-                    collapsed={collapsed.turnover}
-                    onToggle={() => toggle("turnover")}
-                    loading={insightsQuery.isPending}
-                    error={insightsQuery.isError ? t("dealerDash.turnoverError", "Unable to load turnover insights.") : null}
-                    onRetry={() => void insightsQuery.refetch()}
-                    emptyMessage={!insightsQuery.isPending && !turnoverData.length ? t("dealerDash.turnoverEmpty", "No trending model data yet.") : undefined}
-                  >
-                    <div className="h-[16.25rem]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={turnoverData}>
-                          <defs>
-                            <linearGradient id="turnoverArea" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                          <XAxis dataKey="week" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickLine={false} axisLine={false} />
-                          <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickLine={false} axisLine={false} />
-                          <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} />
-                          <Area type="monotone" dataKey="sellThrough" name={t("dealerDash.momentumIndex", t("dealerDash.momentumIndex", "Momentum index"))} stroke="hsl(var(--primary))" fill="url(#turnoverArea)" strokeWidth={2} />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </WidgetShell>
-
-                  <WidgetShell
-                    title={t("dealer.priceGaps", "Price Gaps")}
-                    subtitle={t("dealerDash.priceGapSub", t("dealerDash.priceGapSub", "District spread vs national median"))}
-                    collapsed={collapsed.priceGap}
-                    onToggle={() => toggle("priceGap")}
-                    loading={districtsQuery.isPending}
-                    error={districtsQuery.isError ? t("dealerDash.priceGapError", "Unable to load district pricing.") : null}
-                    onRetry={() => void districtsQuery.refetch()}
-                    emptyMessage={!districtsQuery.isPending && !priceGaps.length ? t("dealerDash.priceGapEmpty", "No district price gaps mapped yet.") : undefined}
-                  >
-                    <div className="h-[15rem]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={priceGaps}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                          <XAxis
-                            dataKey="district"
-                            interval={0}
-                            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-                            tickLine={false}
-                            axisLine={false}
-                            // Five district names don't fit side by side on a phone; slant them.
-                            angle={isMobile ? -35 : 0}
-                            textAnchor={isMobile ? "end" : "middle"}
-                            height={isMobile ? 56 : 30}
-                          />
-                          <YAxis width={44} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={(v) => `${v}%`} tickLine={false} axisLine={false} />
-                          <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} formatter={(v: number) => [`${v.toFixed(1)}%`, t("dealerDash.gap", "Gap")]} />
-                          <Bar dataKey="gapPct" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </WidgetShell>
-
-                  <WidgetShell
-                    title={t("dealer.districtDemand", "District Demand")}
-                    subtitle={t("dealerDash.demandSub", t("dealerDash.demandSub", "Supply concentration and average deal floor"))}
-                    collapsed={collapsed.districtDemand}
-                    onToggle={() => toggle("districtDemand")}
-                    loading={districtsQuery.isPending}
-                    error={districtsQuery.isError ? t("dealerDash.demandError", "Unable to load district demand.") : null}
-                    onRetry={() => void districtsQuery.refetch()}
-                    emptyMessage={!districtsQuery.isPending && !districtDemand.length ? t("dealerDash.demandEmpty", "No district demand data yet.") : undefined}
-                  >
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {districtDemand.map((d) => (
-                        <div key={d.district} className="rounded-control bg-surface-2 p-4">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-footnote font-semibold text-foreground">{d.district}</p>
-                            <span className="text-footnote font-semibold tabular-nums text-primary">Demand {d.demandScore}</span>
-                          </div>
-                          <dl className="mt-2 space-y-1 text-footnote">
-                            <div className="flex justify-between gap-2"><dt className="text-label-2">{t("dealerDash.topModel", "Top model")}</dt><dd className="text-foreground">{d.topModel}</dd></div>
-                            <div className="flex justify-between gap-2"><dt className="text-label-2">{t("dealerDash.avgPrice", "Avg price")}</dt><dd className="tabular-nums text-foreground">{d.avgPrice > 0 ? formatPrice(d.avgPrice) : "—"}</dd></div>
-                          </dl>
-                          <div className="mt-2 h-1 overflow-hidden rounded-full bg-surface-3">
-                            <div className="h-full origin-left rounded-full bg-primary" style={{ transform: `scaleX(${Math.max(0, Math.min(100, d.demandScore)) / 100})` }} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </WidgetShell>
-
-                  <div id="benchmark">
-                    <WidgetShell
-                      title={t("dealer.benchmark", "Inventory Benchmark")}
-                      subtitle={t("dealer.benchmarkSubtitle", "Paste listing URLs to benchmark against the current market")}
-                      collapsed={collapsed.inventoryBenchmark}
-                      onToggle={() => toggle("inventoryBenchmark")}
-                    >
-                      <InventoryBenchmark />
-                    </WidgetShell>
+        <CineSection
+          index={n(2)}
+          id={SECTION_IDS.analytics}
+          title={t("dealerDash.inventoryBenchmarkAnalytics", "Inventory & benchmark analytics")}
+          body={t("dealerDash.momentumPriceSpreadAndDistrict", "Momentum, price spread, and district demand across your live market feed.")}
+        >
+          {fullAccess ? (
+            <div className="space-y-5">
+              <div className="grid gap-5 xl:grid-cols-2">
+                <WidgetShell
+                  title={t("dealer.turnover", "Inventory Turnover")}
+                  subtitle={turnoverData.length ? t("dealerDash.turnoverSub", "Trending model momentum and listing volume") : t("dealerDash.turnoverSubInsights", "Trending model momentum from market insights")}
+                  collapsed={collapsed.turnover}
+                  onToggle={() => toggle("turnover")}
+                  loading={insightsQuery.isPending}
+                  error={insightsQuery.isError ? t("dealerDash.turnoverError", "Unable to load turnover insights.") : null}
+                  onRetry={() => void insightsQuery.refetch()}
+                  emptyMessage={!insightsQuery.isPending && !turnoverData.length ? t("dealerDash.turnoverEmpty", "No trending model data yet.") : undefined}
+                >
+                  <div className="h-[15rem]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={turnoverData} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="turnoverArea" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={CHART_BLUE} stopOpacity={0.22} />
+                            <stop offset="100%" stopColor={CHART_BLUE} stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                        <XAxis dataKey="week" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickLine={false} axisLine={false} />
+                        <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickLine={false} axisLine={false} />
+                        <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} />
+                        <Area type="monotone" dataKey="sellThrough" name={t("dealerDash.momentumIndex", "Momentum index")} stroke={CHART_BLUE} fill="url(#turnoverArea)" strokeWidth={2} />
+                      </AreaChart>
+                    </ResponsiveContainer>
                   </div>
-                </div>
-              ) : (
-                <ProFeatureLock label={freePlanText(t, "dealerTitle")} className="min-h-[18rem]">
-                  <Card padding="lg" className="opacity-80">
-                    <p className="text-callout font-semibold text-foreground">{t("dealer.turnover", "Inventory Turnover")}</p>
-                    <p className="mt-2 text-footnote text-label-2">{freePlanText(t, "dealerBody")}</p>
-                  </Card>
-                </ProFeatureLock>
-              )}
-            </section>
+                </WidgetShell>
 
-            <Card>
-              <p className="text-footnote font-semibold text-primary">{t("dealer.plans", "Dealer plans")}</p>
-              <h3 className="mt-1 text-callout font-semibold text-foreground">
+                <WidgetShell
+                  title={t("dealer.priceGaps", "Price Gaps")}
+                  subtitle={t("dealerDash.priceGapSub", "District spread vs national median")}
+                  collapsed={collapsed.priceGap}
+                  onToggle={() => toggle("priceGap")}
+                  loading={districtsQuery.isPending}
+                  error={districtsQuery.isError ? t("dealerDash.priceGapError", "Unable to load district pricing.") : null}
+                  onRetry={() => void districtsQuery.refetch()}
+                  emptyMessage={!districtsQuery.isPending && !priceGaps.length ? t("dealerDash.priceGapEmpty", "No district price gaps mapped yet.") : undefined}
+                >
+                  <div className="h-[15rem]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={priceGaps} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                        <XAxis
+                          dataKey="district"
+                          interval={0}
+                          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                          tickLine={false}
+                          axisLine={false}
+                          // Five district names don't fit side by side on a phone; slant them.
+                          angle={isMobile ? -35 : 0}
+                          textAnchor={isMobile ? "end" : "middle"}
+                          height={isMobile ? 56 : 30}
+                        />
+                        <YAxis width={44} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={(v) => `${v}%`} tickLine={false} axisLine={false} />
+                        <Tooltip cursor={{ fill: "hsl(var(--muted) / 0.4)" }} contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} formatter={(v: number) => [`${v.toFixed(1)}%`, t("dealerDash.gap", "Gap")]} />
+                        <Bar dataKey="gapPct" fill={CHART_BLUE} radius={[6, 6, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </WidgetShell>
+              </div>
+
+              <WidgetShell
+                title={t("dealer.districtDemand", "District Demand")}
+                subtitle={t("dealerDash.demandSub", "Supply concentration and average deal floor")}
+                collapsed={collapsed.districtDemand}
+                onToggle={() => toggle("districtDemand")}
+                loading={districtsQuery.isPending}
+                error={districtsQuery.isError ? t("dealerDash.demandError", "Unable to load district demand.") : null}
+                onRetry={() => void districtsQuery.refetch()}
+                emptyMessage={!districtsQuery.isPending && !districtDemand.length ? t("dealerDash.demandEmpty", "No district demand data yet.") : undefined}
+              >
+                <ul className="dealer-cells">
+                  {districtDemand.map((d, i) => (
+                    <li key={d.district} className="min-w-0">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className="min-w-0 truncate text-footnote font-semibold text-foreground">{d.district}</p>
+                        <span className="shrink-0 whitespace-nowrap text-caption font-semibold tabular-nums text-[hsl(213_100%_72%)]">
+                          {t("dealer.cine.demand", "Demand {score}", { score: String(d.demandScore) })}
+                        </span>
+                      </div>
+                      <dl className="mt-3 space-y-1.5 text-footnote">
+                        <div className="flex justify-between gap-3">
+                          <dt className="shrink-0 text-label-2">{t("dealerDash.topModel", "Top model")}</dt>
+                          <dd className="min-w-0 truncate text-right text-foreground">{d.topModel}</dd>
+                        </div>
+                        <div className="flex justify-between gap-3">
+                          <dt className="shrink-0 text-label-2">{t("dealerDash.avgPrice", "Avg price")}</dt>
+                          <dd className="cine-card__price whitespace-nowrap text-right text-foreground">{d.avgPrice > 0 ? formatPrice(d.avgPrice) : "—"}</dd>
+                        </div>
+                      </dl>
+                      <span className="cine-bar mt-3" aria-hidden>
+                        <span className="cine-bar__reveal" style={{ "--i": i } as CSSProperties}>
+                          <span style={{ "--w": Math.max(0, Math.min(100, d.demandScore)) / 100 } as CSSProperties} />
+                        </span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </WidgetShell>
+
+              <div id="benchmark">
+                <WidgetShell
+                  title={t("dealer.benchmark", "Inventory Benchmark")}
+                  subtitle={t("dealer.benchmarkSubtitle", "Paste listing URLs to benchmark against the current market")}
+                  collapsed={collapsed.inventoryBenchmark}
+                  onToggle={() => toggle("inventoryBenchmark")}
+                >
+                  <InventoryBenchmark />
+                </WidgetShell>
+              </div>
+            </div>
+          ) : (
+            <ProFeatureLock label={freePlanText(t, "dealerTitle")} className="min-h-[18rem]">
+              <Card padding="lg" className="opacity-80">
+                <p className="text-callout font-semibold text-foreground">{t("dealer.turnover", "Inventory Turnover")}</p>
+                <p className="mt-2 text-footnote text-label-2">{freePlanText(t, "dealerBody")}</p>
+              </Card>
+            </ProFeatureLock>
+          )}
+        </CineSection>
+
+        <CineSection
+          index={n(3)}
+          id={SECTION_IDS.playbook}
+          title={t("dealerDash.whatDealersAndBrokersUse", "What dealers and brokers use this for")}
+          body={t("dealerDash.operatorWorkflowsFromStockPricing", "Operator workflows from stock pricing to import duty, alerts, and weekly yard review.")}
+        >
+          <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] lg:gap-14">
+            <ol className="cine-list border-y border-border" aria-label={t("dealerDash.playbook", "Playbook")}>
+              {DEALER_PLAYBOOK.map((item, i) => (
+                <li key={item.id} className="grid grid-cols-[1.75rem_minmax(0,1fr)] gap-x-3 py-5 sm:grid-cols-[2.5rem_minmax(0,1fr)]">
+                  <span aria-hidden className="pt-0.5 font-display text-footnote font-semibold tabular-nums text-primary">{n(i)}</span>
+                  <div className="min-w-0">
+                    <p className="text-caption font-semibold text-label-2">{t(`dealerPlaybook.for.${item.forWhom}`, item.forWhom)}</p>
+                    <h3 className="mt-1 text-body font-semibold text-foreground">{t(`dealerPlaybook.${item.id}.title`, item.title)}</h3>
+                    <div className="mt-2 grid gap-2 md:grid-cols-2 md:gap-6">
+                      <p className="text-footnote leading-relaxed text-label-2">{t(`dealerPlaybook.${item.id}.problem`, item.problem)}</p>
+                      <p className="text-footnote leading-relaxed text-label-1">{t(`dealerPlaybook.${item.id}.does`, item.whatMotormilaDoes)}</p>
+                    </div>
+                    <Link
+                      to={item.whereToGo.to}
+                      className="group mt-3 inline-flex items-center gap-1.5 text-footnote font-semibold text-primary no-underline hover:underline"
+                    >
+                      {t(`dealerPlaybook.${item.id}.cta`, item.whereToGo.label)}
+                      <ArrowRight aria-hidden className="cine-row__arrow h-3.5 w-3.5 !mt-0" />
+                    </Link>
+                  </div>
+                </li>
+              ))}
+            </ol>
+
+            <aside className="min-w-0 lg:sticky lg:top-[calc(var(--nav-offset,64px)+1.5rem)] lg:self-start" aria-labelledby="dealer-quick-tools">
+              <h3 id="dealer-quick-tools" className="cine-eyebrow text-label-2">{t("dealer.quickTools", "Quick tools")}</h3>
+              <ul className="cine-list mt-3 border-y border-border">
+                {DEALER_QUICK_TOOLS.map((tool) => (
+                  <li key={tool.id}>
+                    <Link to={tool.to} className="cine-row group items-center gap-3 py-3">
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-footnote font-medium text-foreground transition-colors duration-short group-hover:text-primary">{t(`dealerTools.${tool.id}.title`, tool.title)}</span>
+                        <span className="mt-0.5 block text-caption text-label-2">{t(`dealerTools.${tool.id}.description`, tool.description)}</span>
+                      </span>
+                      <ArrowRight aria-hidden className="cine-row__arrow h-4 w-4 !mt-0 text-label-2" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </aside>
+          </div>
+        </CineSection>
+
+        <CineSection index={n(4)} id={SECTION_IDS.plans} title={t("dealer.plans", "Dealer plans")}>
+          <div className="cine-panel theme-dark flex flex-col gap-6 p-6 text-foreground sm:p-8 md:flex-row md:items-end md:justify-between">
+            <div className="min-w-0 max-w-2xl">
+              <p className="cine-eyebrow text-white/60">{t("dealer.plans", "Dealer plans")}</p>
+              <h3 className="mt-3 font-display text-title3 font-semibold text-white [text-wrap:balance]">
                 {t("acct.dealer.planTitle", "The full dealer workspace is part of the Dealer plans, from {price}/mo", {
                   price: formatLkr(PLAN_PRICES.dealer_starter.monthly),
                 })}
               </h3>
-              <p className="mt-2 max-w-xl text-footnote text-label-2">
+              <p className="mt-2 max-w-xl text-footnote leading-relaxed text-white/70">
                 {t("dealerDash.keepUsingTheCommandCenter", "Keep using the command center today. Upgrade when you want billed seats, saved yard workflows, and priority market sync.")}
               </p>
-              <Button asChild variant="secondary" className="mt-4">
-                <Link to="/pricing#for-dealers">{t("dealerDash.viewDealerPlans", "View dealer plans")}</Link>
-              </Button>
-            </Card>
+            </div>
+            <Button asChild className="shrink-0 self-start md:self-auto">
+              <Link to="/pricing#for-dealers">
+                {t("dealerDash.viewDealerPlans", "View dealer plans")}
+                <ArrowRight aria-hidden />
+              </Link>
+            </Button>
           </div>
-        </div>
-      </div>
+        </CineSection>
+      </PageBody>
     </PageCanvas>
   );
 }

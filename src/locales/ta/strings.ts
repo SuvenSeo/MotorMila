@@ -832,4 +832,13 @@ export const stringsTa: Record<string, string> = {
   "howPrice.cine.bandNear": "FMV-க்கு அருகில்",
   "howPrice.cine.bandAbove": "சந்தைக்கு மேல்",
   "howPrice.cine.ctaTitle": "உண்மையான வாகனத்தில் இதைப் பாருங்கள்.",
+  "dealer.cine.lead": "டீலர் கட்டளை",
+  "dealer.cine.accent": "மையம்.",
+  "dealer.cine.sectionsAria": "டீலர் பணியிடப் பிரிவுகள்",
+  "dealer.cine.glance": "ஒரே பார்வையில்",
+  "dealer.cine.yard": "உங்கள் முற்றம்",
+  "dealer.cine.demand": "தேவை {score}",
+  "dealer.cine.urlCount": "URL எண்ணிக்கை: {n}",
+  "dealer.cine.clear": "அழி",
+  "dealer.cine.runBenchmark": "ஒப்பிடு",
 };
