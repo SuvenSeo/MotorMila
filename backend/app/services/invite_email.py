@@ -25,7 +25,7 @@ def _public_app_origin() -> str:
     return (
         os.getenv("PUBLIC_APP_ORIGIN", "").strip().rstrip("/")
         or os.getenv("FRONTEND_ORIGIN", "").strip().rstrip("/")
-        or "https://motormila.vercel.app"
+        or "https://motormila.pages.dev"
     )
 
 
