@@ -1,10 +1,92 @@
 User-agent: *
 Allow: /
-# JSON data and internal endpoints are not pages (OG image endpoints stay crawlable).
 Disallow: /api/v1/
 Disallow: /api/internal-
 Disallow: /snapshots/
 
+# Search + AI-answer crawlers: explicitly allowed, so Motormila can appear in
+# Google, Bing and AI answers (ChatGPT, Perplexity, Claude, Copilot, Gemini).
+# Each group repeats the Disallow lines above: in robots.txt a crawler that
+# matches a specific group ignores the generic (*) group, so without the
+# repeats the AI bots would not be bound by those Disallows.
+# Note: allowing GPTBot / Google-Extended also permits those systems to use
+# this public content for training. If that ever becomes a concern, flip
+# those two groups to Disallow — ChatGPT-User / PerplexityBot / ClaudeBot
+# (search/answer retrieval) are separate from training crawls.
+User-agent: GPTBot
+Allow: /
+Disallow: /api/v1/
+Disallow: /api/internal-
+Disallow: /snapshots/
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /api/v1/
+Disallow: /api/internal-
+Disallow: /snapshots/
+
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /api/v1/
+Disallow: /api/internal-
+Disallow: /snapshots/
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /api/v1/
+Disallow: /api/internal-
+Disallow: /snapshots/
+
+User-agent: anthropic-ai
+Allow: /
+Disallow: /api/v1/
+Disallow: /api/internal-
+Disallow: /snapshots/
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /api/v1/
+Disallow: /api/internal-
+Disallow: /snapshots/
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /api/v1/
+Disallow: /api/internal-
+Disallow: /snapshots/
+
+User-agent: Applebot-Extended
+Allow: /
+Disallow: /api/v1/
+Disallow: /api/internal-
+Disallow: /snapshots/
+
+User-agent: Meta-ExternalAgent
+Allow: /
+Disallow: /api/v1/
+Disallow: /api/internal-
+Disallow: /snapshots/
+
+User-agent: Meta-ExternalFetcher
+Allow: /
+Disallow: /api/v1/
+Disallow: /api/internal-
+Disallow: /snapshots/
+
+User-agent: Bytespider
+Allow: /
+Disallow: /api/v1/
+Disallow: /api/internal-
+Disallow: /snapshots/
+
+User-agent: YouBot
+Allow: /
+Disallow: /api/v1/
+Disallow: /api/internal-
+Disallow: /snapshots/
+
+# AI-readable site summary (not a robots directive, just a pointer for
+# humans and tools that look for it): /llms.txt
 # Sitemaps are generated at build time from the public snapshot (no DB needed):
 # sitemap-index.xml -> sitemap.xml (core pages), sitemap-hubs.xml (make, model,
 # district hubs), sitemap-listings-N.xml (listing pages).
