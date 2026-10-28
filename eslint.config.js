@@ -56,7 +56,7 @@ export default tseslint.config(
   },
   {
     files: ["src/**/*.{ts,tsx}"],
-    ignores: ["src/test/**", "src/**/*.test.{ts,tsx}", "src/components/charts/**", "src/lib/proReports.ts", "src/lib/laneExport.ts"],
+    ignores: ["src/test/**", "src/**/*.test.{ts,tsx}", "src/lib/proReports.ts", "src/lib/laneExport.ts"],
     rules: { "no-restricted-syntax": ["warn", ...tokenSyntax] },
   },
   {
