@@ -1,0 +1,15 @@
+name = "motormila-db"
+main = "src/index.ts"
+compatibility_date = "2026-10-28"
+
+# D1 binding. Database motormila-accounts, created 2026-10-28.
+# database_id is stable; do not recreate the database or this changes.
+[[d1_databases]]
+binding = "DB"
+database_name = "motormila-accounts"
+database_id = "75755d8a-d5c6-4eea-8759-69aeba14b515"
+
+# Secrets (set via `wrangler secret put DB_SERVICE_KEY`, never committed):
+# - DB_SERVICE_KEY: shared key the Python backend sends as X-Motormila-Db-Key.
+# Workers Free CPU is 10 ms/invocation: this Worker does no bcrypt, no
+# heavy compute — only parameterized D1 reads/writes. Keep it that way.
