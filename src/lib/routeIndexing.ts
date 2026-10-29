@@ -35,7 +35,7 @@ const KNOWN_ROUTE_PATTERNS: RegExp[] = [
   /^\/locations\/[^/]+\/?$/,
   /^\/official-pulse\/(guide\/)?[^/]+\/?$/,
   /^\/compare\/[^/]+\/?$/,
-  /^\/motormila\/admin\/?$/,
+  /^\/motormila\/admin(\/[^/]+)*\/?$/,
   // Typed-path redirects (App.tsx <Navigate>, 301 in vercel.json / _redirects).
   /^\/(prices|price|tools|calculators|tax-calculator|import-calculator|value|saved|watchlist|sell-my-car|plans|deals|app|login|signin|signup)\/?$/,
 ];

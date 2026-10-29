@@ -58,3 +58,6 @@
   X-Robots-Tag: noindex, nofollow
 /checkout/*
   X-Robots-Tag: noindex, nofollow
+
+/motormila/admin/*
+  X-Robots-Tag: noindex, nofollow

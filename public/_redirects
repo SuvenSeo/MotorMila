@@ -39,3 +39,5 @@
 /locations/:district / 200
 /compare/:slug / 200
 /official-pulse/* / 200
+# Nested admin pages use the SPA; keep the prerendered admin root shell.
+/motormila/admin/* / 200

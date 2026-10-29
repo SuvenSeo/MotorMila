@@ -1,5 +1,6 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { isKnownRoutePath, isNoindexPath } from "@/lib/routeIndexing";
 
@@ -17,6 +18,7 @@ const appSource = readFileSync(path.join(root, "src/App.tsx"), "utf8");
 const vercel = JSON.parse(readFileSync(path.join(root, "vercel.json"), "utf8")) as {
   rewrites: Array<{ source: string; destination: string; has?: unknown }>;
   redirects?: Array<{ source: string; destination: string; permanent?: boolean }>;
+  headers: Array<{ source: string; headers: Array<{ key: string; value: string }> }>;
 };
 const cfRedirects = readFileSync(path.join(root, "public/_redirects"), "utf8")
   .split("\n")
@@ -47,6 +49,7 @@ const pagesFunctions = functionRoutes(path.join(root, "functions"))
 function sourceToRegex(source: string): RegExp {
   const pattern = source
     .replace(/:[a-zA-Z]+\*/g, ".*")
+    .replace(/:[a-zA-Z]+\+/g, ".+")
     .replace(/:[a-zA-Z]+/g, "[^/]+");
   return new RegExp(`^${pattern}/?$`);
 }
@@ -63,9 +66,31 @@ const prerendered = new Set(
   [...prerenderSource.matchAll(/"(\/[^"]*)":\s*\[/g)].map((m) => m[1]),
 );
 
-const routePaths = [...appSource.matchAll(/<Route\s+path="([^"]+)"/g)]
-  .map((m) => m[1])
-  .filter((p) => p !== "*");
+// Resolve relative child routes against their parent instead of treating
+// <Route path="users"> as a top-level URL. Use the TSX tree so pathless
+// layout routes and index routes keep the correct parent scope.
+function collectRoutePaths(source: string): string[] {
+  const paths = new Set<string>();
+  const file = ts.createSourceFile("App.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  function visit(node: ts.Node, parent = "") {
+    const opening = ts.isJsxElement(node) ? node.openingElement
+      : ts.isJsxSelfClosingElement(node) ? node : null;
+    if (opening?.tagName.getText(file) === "Route") {
+      const attr = opening.attributes.properties.find((p) => ts.isJsxAttribute(p) && p.name.getText(file) === "path");
+      const value = attr && ts.isJsxAttribute(attr) && attr.initializer && ts.isStringLiteral(attr.initializer)
+        ? attr.initializer.text : undefined;
+      const resolved = value === undefined ? parent
+        : value.startsWith("/") ? value : `${parent.replace(/\/$/, "")}/${value}`;
+      if (value !== undefined && !value.includes("*")) paths.add(resolved);
+      if (ts.isJsxElement(node)) node.children.forEach((child) => visit(child, resolved));
+      return;
+    }
+    ts.forEachChild(node, (child) => visit(child, parent));
+  }
+  visit(file);
+  return [...paths];
+}
+const routePaths = collectRoutePaths(appSource);
 
 const sample = (p: string) => p.replace(/:year/g, "2018").replace(/:[a-zA-Z]+/g, "sample");
 
@@ -75,6 +100,15 @@ describe("vercel SPA routing", () => {
     if (cfg.cleanUrls) {
       expect(vercel.rewrites.filter((r) => /\.html$/.test(r.destination))).toEqual([]);
     }
+  });
+
+  it("resolves nested routes through pathless layouts", () => {
+    expect(collectRoutePaths(`<Route path="/motormila/admin"><Route element={<Layout />}>
+      <Route index element={<Home />} /><Route path="users" element={<Users />} />
+      <Route path="*" element={<Fallback />} /></Route></Route>`))
+      .toEqual(["/motormila/admin", "/motormila/admin/users"]);
+    expect(routePaths).toContain("/motormila/admin/users");
+    expect(routePaths).not.toContain("users");
   });
 
   it("found the App routes", () => {
@@ -128,8 +162,18 @@ describe("vercel SPA routing", () => {
     expect(isKnownRoutePath("/listings")).toBe(false);
   });
 
+  it("keeps admin deep links noindex at both hosts", () => {
+    for (const routePath of routePaths.filter((p) => p.startsWith("/motormila/admin/"))) {
+      expect(isNoindexPath(routePath)).toBe(true);
+      expect(vercel.headers.some((rule) => sourceToRegex(rule.source).test(routePath)
+        && rule.headers.some((h) => h.key === "X-Robots-Tag" && h.value === "noindex, nofollow"))).toBe(true);
+    }
+    expect(readFileSync(path.join(root, "public/_headers"), "utf8"))
+      .toMatch(/\/motormila\/admin\/\*\n\s+X-Robots-Tag: noindex, nofollow/);
+  });
+
   it("marks utility routes noindex", () => {
-    for (const p of ["/sign-in", "/sign-up", "/profile", "/alerts", "/pro", "/dealer", "/motormila/admin", "/hero-lab"]) {
+    for (const p of ["/sign-in", "/sign-up", "/profile", "/alerts", "/pro", "/dealer", "/motormila/admin", "/motormila/admin/users", "/hero-lab"]) {
       expect(isNoindexPath(p)).toBe(true);
     }
     // INTERIM (merge review 2026-10-19): legal pages stay noindex until the

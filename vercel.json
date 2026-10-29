@@ -103,6 +103,10 @@
   ],
   "rewrites": [
     {
+      "source": "/motormila/admin/:path+",
+      "destination": "/"
+    },
+    {
       "source": "/api/v1/:path*",
       "destination": "https://seo292-vehicle-platform-backend.hf.space/api/v1/:path*"
     },
@@ -158,6 +162,15 @@
     }
   },
   "headers": [
+    {
+      "source": "/motormila/admin/:path+",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
     {
       "source": "/(.*)",
       "headers": [
