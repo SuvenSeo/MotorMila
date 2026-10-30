@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -205,7 +206,11 @@ private fun ShortcutTile(s: Shortcut, modifier: Modifier) {
 /** Horizontal rail of best-priced listings: photo, deal badge on image, price in millions. */
 @Composable
 fun HomeDealRail(deals: List<HotDeal>, onClick: (Int) -> Unit) {
-    LazyRow(
+    // Responsive rail: phone peek width (212dp, unchanged) up to 480dp wide;
+    // wider screens scale the card instead of wasting width on a fixed card.
+    BoxWithConstraints {
+        val cardWidth = if (maxWidth <= 480.dp) 212.dp else (maxWidth * 0.42f).coerceAtMost(320.dp)
+        LazyRow(
         contentPadding = PaddingValues(horizontal = MmSpacing.gutter),
         horizontalArrangement = Arrangement.spacedBy(MmSpacing.cardGap),
     ) {
@@ -223,8 +228,10 @@ fun HomeDealRail(deals: List<HotDeal>, onClick: (Int) -> Unit) {
                 meta = listOfNotNull(d.year?.toString(), d.district).joinToString(" · "),
                 badge = if (pct >= 5) stringResource(R.string.mm_pct_below_typical, pct) else null,
                 tone = tone,
+                width = cardWidth,
                 onClick = { onClick(d.id) },
             )
+        }
         }
     }
 }
@@ -232,7 +239,9 @@ fun HomeDealRail(deals: List<HotDeal>, onClick: (Int) -> Unit) {
 /** Rail of recorded price cuts: new price + "↓ x%" in the good-deal tone. */
 @Composable
 fun HomeDropRail(drops: List<PriceDrop>, onClick: (Int) -> Unit) {
-    LazyRow(
+    BoxWithConstraints {
+        val cardWidth = if (maxWidth <= 480.dp) 212.dp else (maxWidth * 0.42f).coerceAtMost(320.dp)
+        LazyRow(
         contentPadding = PaddingValues(horizontal = MmSpacing.gutter),
         horizontalArrangement = Arrangement.spacedBy(MmSpacing.cardGap),
     ) {
@@ -244,8 +253,10 @@ fun HomeDropRail(drops: List<PriceDrop>, onClick: (Int) -> Unit) {
                 meta = stringResource(R.string.mm_was_price, MmPriceFormat.compact(d.previousPriceLkr)),
                 badge = "↓ ${"%.1f".format(d.dropPct)}%",
                 tone = MmDealTone.GOOD,
+                width = cardWidth,
                 onClick = { onClick(d.listing.id) },
             )
+        }
         }
     }
 }
@@ -259,9 +270,10 @@ private fun RailCard(
     badge: String?,
     tone: MmDealTone,
     onClick: () -> Unit,
+    width: androidx.compose.ui.unit.Dp = 212.dp,
 ) {
     val c = MmColors.current
-    MmCard(modifier = Modifier.width(212.dp), onClick = onClick, contentPadding = PaddingValues(0.dp)) {
+    MmCard(modifier = Modifier.width(width), onClick = onClick, contentPadding = PaddingValues(0.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(4f / 3f)) {
             MmImage(imageUrl, contentDescription = title, modifier = Modifier.matchParentSize())
             if (badge != null) {

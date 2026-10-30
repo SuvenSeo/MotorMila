@@ -383,12 +383,15 @@ private fun NearbyDistrictsRow(
             text = stringResource(R.string.district_hub_nearby),
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
         )
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(vertical = 4.dp),
-        ) {
-            items(nearby, key = { it.district }) { item ->
-                NearbyDistrictChip(item = item, onClick = { onDistrictClick(item.district) })
+        androidx.compose.foundation.layout.BoxWithConstraints {
+            val chipWidth = if (maxWidth <= 480.dp) 168.dp else (maxWidth * 0.30f).coerceAtMost(240.dp)
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 4.dp),
+            ) {
+                items(nearby, key = { it.district }) { item ->
+                    NearbyDistrictChip(item = item, width = chipWidth, onClick = { onDistrictClick(item.district) })
+                }
             }
         }
     }
@@ -398,6 +401,7 @@ private fun NearbyDistrictsRow(
 private fun NearbyDistrictChip(
     item: NearbyDistrict,
     onClick: () -> Unit,
+    width: androidx.compose.ui.unit.Dp = 168.dp,
 ) {
     val price = item.avgPriceLkr?.takeIf { it > 0 }?.let { lk.motormila.app.ui.common.mn(it) }
         ?: stringResource(R.string.district_hub_na)
@@ -406,7 +410,7 @@ private fun NearbyDistrictChip(
         onClick = onClick,
         fillMaxWidth = false,
         modifier = Modifier
-            .width(168.dp)
+            .width(width)
             .semantics { contentDescription = chipCd },
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {

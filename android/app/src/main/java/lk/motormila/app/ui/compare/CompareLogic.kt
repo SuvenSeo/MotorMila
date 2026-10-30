@@ -4,8 +4,8 @@ import lk.motormila.app.domain.model.Listing
 
 /** Pure helpers for the compare matrix (unit-tested). */
 object CompareLogic {
-    /** Same cap as the Search compare tray (MAX_COMPARE_IDS): up to 3 cars side by side. */
-    const val MAX = 3
+    /** Same cap as the Search compare tray (MAX_COMPARE_IDS) and the web (MAX_COMPARE = 4): up to 4 cars side by side. */
+    const val MAX = 4
 
     /**
      * Merge the cars already in the tray with ids arriving from navigation.

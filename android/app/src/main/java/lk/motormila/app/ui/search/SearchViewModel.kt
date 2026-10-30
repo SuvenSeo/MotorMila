@@ -59,7 +59,7 @@ val SRI_LANKA_DISTRICTS: List<String> = listOf(
 )
 
 /** Web parity (Compare.tsx / compareSlug.ts): tray holds at most 3 ids. */
-const val MAX_COMPARE_IDS = 3
+const val MAX_COMPARE_IDS = 4 // Web parity: MAX_COMPARE = 4 (pages/Compare.tsx)
 
 /** Shown when "Create alert from these filters" is used while signed out. */
 const val SIGN_IN_FOR_ALERTS = "Sign in to create price alerts."

@@ -17,12 +17,12 @@ class SettingsStore @Inject constructor(
     @SettingsDataStore private val dataStore: DataStore<Preferences>,
 ) {
     companion object {
-        const val DEFAULT_THEME = "light"
+        const val DEFAULT_THEME = "dark"
         val THEMES = setOf("light", "dark", "system")
     }
 
     private object Keys {
-        val THEME = stringPreferencesKey("theme") // "light" (default) | "dark" | "system"
+        val THEME = stringPreferencesKey("theme") // "dark" (default, web parity) | "light" | "system"
         val LANGUAGE = stringPreferencesKey("language") // "en" | "si" | "ta"
         val SORT = stringPreferencesKey("sort")
         val DISTRICT = stringPreferencesKey("district")
@@ -38,7 +38,7 @@ class SettingsStore @Inject constructor(
     }
 
     data class Settings(
-        /** Light is the default for everyone with no explicit choice (2026-10 apple-polish). */
+        /** Dark is the default for everyone with no explicit choice (night-showroom upgrade, web parity: web DEFAULT_THEME_MODE is dark). An explicitly stored choice always wins. */
         val theme: String = DEFAULT_THEME,
         val language: String = "en",
         val sort: String = "newest",

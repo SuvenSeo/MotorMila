@@ -51,11 +51,13 @@ class MainActivity : AppCompatActivity() {
     lateinit var sessionStore: lk.motormila.app.data.local.datastore.SessionStore
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Light-first: dark icons on the light window until the persisted
-        // theme is read (a dark-theme user flips to light icons on frame 1).
+        // Night-first: light icons on the dark window until the persisted
+        // theme is read (a light-theme user flips to dark icons on frame 1).
+        // The persisted theme lands a few ms later and ThemeCrossfadeHost
+        // applies it instantly (no animation on the first value).
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
         )
         super.onCreate(savedInstanceState)
         // Only consume the launch intent on a fresh start: on recreation
@@ -82,10 +84,12 @@ class MainActivity : AppCompatActivity() {
             runCatching { billing.syncPlayEntitlement() }
         }
         setContent {
-            // Settings → Appearance: Light is the default for everyone with no
-            // explicit choice; "dark" forces dark; "system" follows the device.
-            // null until DataStore answers (a few ms): the first real value is
-            // applied instantly; only later user changes crossfade.
+            // Settings → Appearance: Dark is the default for everyone with no
+            // explicit choice (night-showroom upgrade, web parity); "light"
+            // forces light; "system" follows the device. null until DataStore
+            // answers (a few ms) falls through to dark, matching the default;
+            // the first real value is applied instantly; only later user
+            // changes crossfade.
             val themePref by remember { settingsStore.observe().map<SettingsStore.Settings, String?> { it.theme } }
                 .collectAsState(initial = null)
             val reducePref by remember { settingsStore.observe().map { it.reduceTransparency } }
@@ -97,9 +101,9 @@ class MainActivity : AppCompatActivity() {
                 }
             }.collectAsState(initial = false)
             val dark = when (themePref) {
-                "dark" -> true
+                "light" -> false
                 "system" -> isSystemInDarkTheme()
-                else -> false
+                else -> true
             }
 
             ThemeCrossfadeHost(dark = dark, settled = themePref != null) { shownDark ->

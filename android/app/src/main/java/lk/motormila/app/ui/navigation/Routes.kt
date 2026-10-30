@@ -3,7 +3,7 @@ package lk.motormila.app.ui.navigation
 import android.net.Uri
 import kotlinx.serialization.Serializable
 
-/** Type-safe destinations. Bottom-bar tabs: Home, Search, Watchlist, Insights, Profile. */
+/** Type-safe destinations. Bottom-bar tabs (MotormilaScaffold): Buy, Prices, Tools, Sell, Saved — matching the web's 5 NAV_DESTINATIONS. */
 @Serializable
 data object Splash
 
