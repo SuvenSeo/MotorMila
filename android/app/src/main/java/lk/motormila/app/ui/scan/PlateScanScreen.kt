@@ -39,7 +39,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
@@ -61,6 +60,7 @@ import lk.motormila.app.core.motion.rememberReducedMotion
 import lk.motormila.app.core.ui.PrimaryAction
 import lk.motormila.app.ui.components.MotormilaChoiceChip
 import lk.motormila.app.ui.components.MotormilaSurface
+import lk.motormila.app.ui.theme.MmColors
 import lk.motormila.app.ui.theme.rememberHaptics
 
 /**
@@ -325,10 +325,13 @@ private fun CameraPreview(
 /** Thin OCR overlay strip rendering recognised block boxes. */
 @Composable
 private fun OcrOverlay(boxes: List<FloatRect>, modifier: Modifier = Modifier) {
+    // Token colour (was a hardcoded dark green, low-contrast on the dark
+    // camera preview): deal-good reads on both themes.
+    val boxColor = MmColors.current.dealGood
     Canvas(modifier) {
         boxes.forEach { b ->
             drawRect(
-                color = Color(0xFF2E7D32),
+                color = boxColor,
                 topLeft = Offset(b.l * size.width, 0f),
                 size = Size((b.r - b.l) * size.width, size.height),
                 style = Stroke(width = 3f),

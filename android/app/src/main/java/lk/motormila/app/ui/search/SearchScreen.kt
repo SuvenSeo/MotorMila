@@ -307,8 +307,8 @@ fun SearchScreen(
                     0 -> {
                         // Skeletons match the result layout (grid cards / list rows).
                         LazyVerticalGrid(
-                            columns = GridCells.Fixed(if (gridMode) 2 else 1),
-                            contentPadding = PaddingValues(start = MmSpacing.lg, end = MmSpacing.lg, top = headerH + MmSpacing.sm, bottom = bottomPad),
+                            columns = if (gridMode) GridCells.Adaptive(172.dp) else GridCells.Fixed(1),
+                            contentPadding = PaddingValues(start = MmSpacing.gutter, end = MmSpacing.gutter, top = headerH + MmSpacing.sm, bottom = bottomPad),
                             horizontalArrangement = Arrangement.spacedBy(MmSpacing.cardGap),
                             verticalArrangement = Arrangement.spacedBy(MmSpacing.cardGap),
                             userScrollEnabled = false,
@@ -353,10 +353,10 @@ fun SearchScreen(
                     else -> {
                         LazyVerticalGrid(
                             state = gridState,
-                            columns = GridCells.Fixed(if (gridMode) 2 else 1),
+                            columns = if (gridMode) GridCells.Adaptive(172.dp) else GridCells.Fixed(1),
                             contentPadding = PaddingValues(
-                                start = MmSpacing.lg,
-                                end = MmSpacing.lg,
+                                start = MmSpacing.gutter,
+                                end = MmSpacing.gutter,
                                 top = headerH + MmSpacing.sm,
                                 // Clear the floating glass tab bar (and the compare tray).
                                 bottom = bottomPad,
@@ -482,7 +482,7 @@ fun SearchScreen(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = MmSpacing.gutter, vertical = 8.dp),
             )
             // Free tier has no deal_score — backend forces `newest` (web parity).
             if (!state.isPro) {
@@ -490,7 +490,7 @@ fun SearchScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
+                        .padding(horizontal = MmSpacing.gutter)
                         .semantics { contentDescription = bestDealProCd },
                 ) {
                     Icon(
@@ -570,7 +570,7 @@ fun SearchScreen(
             snackbar,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = MmSpacing.gutter)
                 .padding(bottom = chrome.barTop + 12.dp + if (trayShown) trayHeight else 0.dp),
         )
 
@@ -628,7 +628,7 @@ internal fun CategoryChipRow(
 ) {
     val categoryRowCd = stringResource(R.string.vehicle_category_row_cd)
     LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp),
+        contentPadding = PaddingValues(horizontal = MmSpacing.gutter),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
@@ -809,7 +809,7 @@ internal fun ActiveFilterChipsRow(
         exit = if (MmMotion.reduced) fadeOut(tween(0)) else shrinkVertically(MmMotion.snappy()) + fadeOut(tween(MmMotion.Fast)),
     ) {
         LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp),
+            contentPadding = PaddingValues(horizontal = MmSpacing.gutter),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier

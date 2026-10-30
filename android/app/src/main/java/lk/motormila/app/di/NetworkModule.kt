@@ -109,7 +109,7 @@ object NetworkModule {
         retrofit.create(MotormilaApiService::class.java)
 
     /**
-     * Static snapshot fallback (public Vercel JSON, rebuilt by the
+     * Static snapshot fallback (public Pages JSON, rebuilt by the
      * restore-catalog workflow). Separate client WITHOUT the auth
      * interceptor — these files are public and must load logged-out.
      */

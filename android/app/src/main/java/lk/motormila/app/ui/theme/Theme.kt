@@ -63,8 +63,10 @@ private fun MmColors.toMaterial(): ColorScheme {
 }
 
 /**
- * MotorMila theme (design system v2). Light-first (the app default since
- * apple-polish); [darkTheme] = true gives the full dark scheme. Dynamic colour is deliberately OFF: brand tokens win
+ * MotorMila theme (design system v2). Dark-first (the app default since
+ * the night-showroom upgrade, matching the web where dark is the product
+ * and light is a gallery); [darkTheme] = false gives the full light scheme.
+ * Dynamic colour is deliberately OFF: brand tokens win
  * over wallpaper tints.
  *
  * Provides [MmColors.current], [MmType.current] (body face follows the app

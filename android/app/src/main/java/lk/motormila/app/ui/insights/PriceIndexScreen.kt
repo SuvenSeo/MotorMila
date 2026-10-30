@@ -10,6 +10,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import lk.motormila.app.core.ui.ErrorRetry
 import lk.motormila.app.core.ui.SkeletonList
+import lk.motormila.app.ui.theme.MmSpacing
 
 @Composable
 fun PriceIndexScreen(
@@ -28,7 +29,7 @@ fun PriceIndexScreen(
                 onOpenPro = onOpenPro,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = MmSpacing.gutter),
             )
         }
     }

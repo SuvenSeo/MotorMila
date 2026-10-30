@@ -155,6 +155,7 @@ import lk.motormila.app.ui.theme.MotormilaPrimary
 import lk.motormila.app.ui.theme.MotormilaPrimaryBright
 import lk.motormila.app.ui.theme.MotormilaPrimaryGlow
 import lk.motormila.app.ui.theme.MotormilaRadius
+import lk.motormila.app.ui.theme.MmSpacing
 import lk.motormila.app.ui.theme.MotormilaSecondaryText
 import lk.motormila.app.ui.theme.MotormilaSurface as MotormilaSurfaceColor
 import lk.motormila.app.ui.theme.MotormilaSurfaceHigh
@@ -330,7 +331,7 @@ fun ListingDetailScreen(
                             DealVerdictRow(
                                 verdict = verdict,
                                 onWhy = { showWhy = true },
-                                modifier = Modifier.padding(horizontal = 16.dp),
+                                modifier = Modifier.padding(horizontal = MmSpacing.gutter),
                             )
                         }
                         item {
@@ -356,12 +357,12 @@ fun ListingDetailScreen(
                                 },
                                 onShareWhatsApp = { shareWhatsApp(context, listing, priceVerdict) },
                                 onShare = { shareListing(context, listing, priceVerdict) },
-                                modifier = Modifier.padding(horizontal = 16.dp),
+                                modifier = Modifier.padding(horizontal = MmSpacing.gutter),
                             )
                         }
                         if (state.fmv != null) {
                             item {
-                                MotormilaSurface(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                MotormilaSurface(modifier = Modifier.padding(horizontal = MmSpacing.gutter)) {
                                     // Withheld → a plain "why there is no rating" card, never a gauge.
                                     FmvGauge(
                                         verdict = priceVerdict ?: listing.rowVerdict(),
@@ -377,7 +378,7 @@ fun ListingDetailScreen(
                                     DealLadder(
                                         verdict = priceVerdict,
                                         askingLkr = listing.priceLkr,
-                                        modifier = Modifier.padding(horizontal = 16.dp),
+                                        modifier = Modifier.padding(horizontal = MmSpacing.gutter),
                                     )
                                 }
                             }
@@ -385,13 +386,13 @@ fun ListingDetailScreen(
                         item {
                             BentoSpecsGrid(
                                 listing = listing,
-                                modifier = Modifier.padding(horizontal = 16.dp),
+                                modifier = Modifier.padding(horizontal = MmSpacing.gutter),
                             )
                         }
                         item {
                             LeasePaymentCalculator(
                                 priceLkr = listing.priceLkr ?: 12_500_000.0,
-                                modifier = Modifier.padding(horizontal = 16.dp),
+                                modifier = Modifier.padding(horizontal = MmSpacing.gutter),
                             )
                         }
                         item {
@@ -399,7 +400,7 @@ fun ListingDetailScreen(
                                 priceLkr = listing.priceLkr ?: 10_000_000.0,
                                 engineCc = listing.engineCc ?: 1500.0,
                                 initialFuel = listing.fuelType,
-                                modifier = Modifier.padding(horizontal = 16.dp),
+                                modifier = Modifier.padding(horizontal = MmSpacing.gutter),
                             )
                         }
                         item {
@@ -408,7 +409,7 @@ fun ListingDetailScreen(
                                 report = state.report,
                                 // Typical line only when the verdict stands (never a withheld estimate).
                                 fmvLkr = (priceVerdict as? lk.motormila.app.core.price.PriceVerdict.Ok)?.referenceLkr,
-                                modifier = Modifier.padding(horizontal = 16.dp),
+                                modifier = Modifier.padding(horizontal = MmSpacing.gutter),
                             )
                         }
                         item {
@@ -419,11 +420,11 @@ fun ListingDetailScreen(
                                     val url = listing.externalUrl ?: listing.detailUrl
                                     if (url != null) openUrl(context, url)
                                 },
-                                modifier = Modifier.padding(horizontal = 16.dp),
+                                modifier = Modifier.padding(horizontal = MmSpacing.gutter),
                             )
                         }
                         item {
-                            BeforeYouPayCard(Modifier.padding(horizontal = 16.dp))
+                            BeforeYouPayCard(Modifier.padding(horizontal = MmSpacing.gutter))
                         }
                         item {
                             DeepLinksRow(
@@ -434,7 +435,7 @@ fun ListingDetailScreen(
                                     val q = "${listing.district ?: ""} ${listing.city ?: ""}".trim()
                                     openUrl(context, "https://www.openstreetmap.org/search?query=${q.ifBlank { "Sri Lanka" }}")
                                 },
-                                modifier = Modifier.padding(horizontal = 16.dp),
+                                modifier = Modifier.padding(horizontal = MmSpacing.gutter),
                             )
                         }
                         if (state.similar.isNotEmpty()) {
@@ -443,15 +444,18 @@ fun ListingDetailScreen(
                                     "Similar vehicles",
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.bodyLarge,
-                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    modifier = Modifier.padding(horizontal = MmSpacing.gutter),
                                 )
                                 Spacer(Modifier.height(8.dp))
-                                LazyRow(
-                                    contentPadding = PaddingValues(horizontal = 16.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                ) {
+                                androidx.compose.foundation.layout.BoxWithConstraints {
+                                    val cardWidth = if (maxWidth <= 480.dp) 180.dp else (maxWidth * 0.32f).coerceAtMost(280.dp)
+                                    LazyRow(
+                                        contentPadding = PaddingValues(horizontal = MmSpacing.gutter),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    ) {
                                     items(state.similar, key = { it.id }) { s ->
                                         SimilarMiniCard(
+                                            width = cardWidth,
                                             title = s.displayName,
                                             imageUrl = s.heroImageUrl,
                                             price = s.formattedPrice(),
@@ -463,6 +467,7 @@ fun ListingDetailScreen(
                                             },
                                         )
                                     }
+                                    }
                                 }
                                 MotormilaGhostButton(
                                     label = "Compare with similar",
@@ -471,7 +476,7 @@ fun ListingDetailScreen(
                                         val shownId = state.listing?.id ?: listingId
                                         onCompare((listOf(shownId) + state.similar.map { it.id }.filter { it != shownId }.take(2)))
                                     },
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                    modifier = Modifier.padding(horizontal = MmSpacing.gutter, vertical = 8.dp),
                                 )
                             }
                         }
@@ -479,7 +484,7 @@ fun ListingDetailScreen(
                             Row(
                                 Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp),
+                                    .padding(horizontal = MmSpacing.gutter),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
                                 MotormilaGhostButton(
@@ -667,7 +672,7 @@ internal fun PriceDealSection(
     Column(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = MmSpacing.gutter),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         val titleShared = if (sharedScope != null && animatedScope != null) {
@@ -2175,13 +2180,13 @@ private fun DeepLinksRow(
 }
 
 @Composable
-private fun SimilarMiniCard(title: String, imageUrl: String?, price: String, onClick: () -> Unit) {
+private fun SimilarMiniCard(title: String, imageUrl: String?, price: String, onClick: () -> Unit, width: androidx.compose.ui.unit.Dp = 180.dp) {
     MotormilaSurface(
         onClick = onClick,
         fillMaxWidth = false,
         // Same "Title, Rs X" label as the Search cards so TalkBack (and the QA
         // card finder) reads the rail card as one listing (D6).
-        modifier = Modifier.width(180.dp).semantics { contentDescription = "$title, $price" },
+        modifier = Modifier.width(width).semantics { contentDescription = "$title, $price" },
         contentPadding = PaddingValues(0.dp),
     ) {
         ListingImage(
