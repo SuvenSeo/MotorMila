@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Route, Routes } from "react-router-dom";
 import type { CarListing } from "@/types/car";
@@ -18,6 +18,8 @@ vi.mock("@/services/api", async (importOriginal) => {
   };
 });
 
+import { loadWatchlistIds, saveWatchlistIds } from "@/lib/watchlist";
+import { loadPinned } from "@/lib/compareTray";
 import ListingDetail from "@/pages/ListingDetail";
 import * as api from "@/services/api";
 import { AuthProvider } from "@/lib/authContext";
@@ -68,6 +70,7 @@ function renderDetail() {
 
 describe("ListingDetail layout", () => {
   beforeEach(() => {
+    localStorage.clear();
     window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
     vi.mocked(api.getListingFmv).mockResolvedValue({
       listing_id: 501,
@@ -105,6 +108,20 @@ describe("ListingDetail layout", () => {
 
     // Safety strip links to the transfer guide.
     expect(screen.getAllByRole("link", { name: /safe transfer checklist/i })[0]).toHaveAttribute("href", "/safe-transfer");
+  });
+
+  it("saves a listing, reflects changes from search, and persists comparison selection", async () => {
+    vi.mocked(api.getListing).mockResolvedValue(listing());
+    renderDetail();
+    await screen.findByRole("heading", { level: 1, name: /toyota aqua/i });
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    expect(loadWatchlistIds()).toEqual([501]);
+    expect(screen.getByRole("button", { name: /saved/i })).toHaveAttribute("aria-pressed", "true");
+    act(() => { saveWatchlistIds([]); });
+    expect(screen.getByRole("button", { name: /^save$/i })).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(screen.getByRole("button", { name: /add to compare/i }));
+    expect(loadPinned()).toEqual([expect.objectContaining({ id: 501, make: "Toyota", model: "Aqua" })]);
+    expect(screen.getByRole("button", { name: /pinned/i })).toBeInTheDocument();
   });
 
   describe("on desktop (min-width: 1024px)", () => {

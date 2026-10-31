@@ -470,6 +470,8 @@ function MenuGroup({
               href={item.href}
               onPointerEnter={() => prefetchRoute(item.href)}
               onClick={(e) => {
+                // Modified clicks belong to the browser (new tab/window), not the SPA.
+                if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
                 e.preventDefault();
                 onPick(item.href);
               }}

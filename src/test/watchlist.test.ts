@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { loadWatchlistIds, saveWatchlistIds, toggleWatchlistId } from "@/lib/watchlist";
+import { act, renderHook } from "@testing-library/react";
+import { loadWatchlistIds, saveWatchlistIds, toggleWatchlistId, useWatchlist } from "@/lib/watchlist";
 
 let storage = new Map<string, string>();
 
@@ -27,6 +28,34 @@ afterEach(() => {
 });
 
 describe("watchlist storage", () => {
+  it("keeps search and detail selections synchronized and restores them after remount", () => {
+    const search = renderHook(() => useWatchlist());
+    const detail = renderHook(() => useWatchlist());
+    act(() => { detail.result.current.toggle(12); });
+    expect(search.result.current.ids).toEqual([12]);
+    detail.unmount();
+    const returning = renderHook(() => useWatchlist());
+    expect(returning.result.current.ids).toEqual([12]);
+    act(() => { search.result.current.toggle(12); });
+    expect(returning.result.current.ids).toEqual([]);
+  });
+
+  it("updates open views when another tab changes saved listings", () => {
+    const view = renderHook(() => useWatchlist());
+    act(() => {
+      localStorage.setItem("motormila.watchlist.ids", "[7]");
+      window.dispatchEvent(new StorageEvent("storage", { key: "motormila.watchlist.ids" }));
+    });
+    expect(view.result.current.ids).toEqual([7]);
+  });
+
+  it("does not claim a save succeeded when storage rejects the write", () => {
+    const view = renderHook(() => useWatchlist());
+    vi.spyOn(window.localStorage, "setItem").mockImplementation(() => { throw new Error("storage blocked"); });
+    act(() => { expect(view.result.current.toggle(5)).toMatchObject({ saved: false, error: true }); });
+    expect(view.result.current.ids).toEqual([]);
+  });
+
   it("stores and restores ids", () => {
     saveWatchlistIds([12, 3]);
     expect(loadWatchlistIds()).toEqual([12, 3]);

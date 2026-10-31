@@ -19,7 +19,7 @@ vi.mock("@/components/FilterSidebar", () => ({
 }));
 
 vi.mock("@/components/ListingCard", () => ({
-  ListingCard: () => <div>ListingCard</div>,
+  ListingCard: ({ listing, onCompareToggle, onWatchlistToggle, isWatchlisted }: { listing: { id: number }; onCompareToggle: (listing: unknown) => void; onWatchlistToggle: (listing: unknown) => void; isWatchlisted: boolean }) => <div>ListingCard<button onClick={() => onCompareToggle(listing)}>Compare {listing.id}</button><button aria-pressed={isWatchlisted} onClick={() => onWatchlistToggle(listing)}>Save {listing.id}</button></div>,
 }));
 
 vi.mock("@/components/MarketPredictor", () => ({
@@ -92,6 +92,10 @@ vi.mock("@/services/api", () => ({
   formatPrice: (value: number | null) => (value == null ? "N/A" : `Rs. ${value}`),
 }));
 
+vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
+import { toast } from "sonner";
+import { saveWatchlistIds } from "@/lib/watchlist";
+import { persistPinned } from "@/lib/compareTray";
 import Dashboard from "@/pages/Dashboard";
 import * as api from "@/services/api";
 
@@ -121,6 +125,7 @@ beforeEach(() => {
     matches: /min-width:\s*1024px/.test(query),
   }));
   vi.clearAllMocks();
+  localStorage.clear();
   vi.mocked(api.getStats).mockResolvedValue(null);
   vi.mocked(api.getListings).mockResolvedValue({ listings: [], total: 0 });
   vi.mocked(api.getDistrictPrices).mockResolvedValue([]);
@@ -245,6 +250,36 @@ describe("Dashboard runtime safety", () => {
     await waitFor(() => {
       expect(api.getListings).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }));
     });
+  });
+
+  it("starts a new text search without retaining unrelated make/model filters", async () => {
+    renderDashboard(["/?make=Toyota&model=Aqua&district=Colombo&page=3"]);
+    fireEvent.change(screen.getByRole("combobox", { name: /search vehicles/i }), { target: { value: "family van" } });
+    fireEvent.keyDown(screen.getByRole("combobox", { name: /search vehicles/i }), { key: "Enter" });
+    await waitFor(() => expect(api.getListings).toHaveBeenLastCalledWith(expect.objectContaining({ q: "family van", make: undefined, model: undefined, district: "Colombo", page: 1 })));
+  });
+
+  it("does not submit a suggestion from an earlier query", async () => {
+    vi.mocked(api.getListingSearchSuggestions).mockResolvedValue([{ make: "Toyota", model: "Aqua", count: 10 }] as never);
+    renderDashboard();
+    const input = screen.getByRole("combobox", { name: /search vehicles/i });
+    fireEvent.change(input, { target: { value: "aqua" } });
+    await screen.findByRole("option", { name: /toyota aqua/i });
+    fireEvent.change(input, { target: { value: "family van" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => expect(api.getListings).toHaveBeenLastCalledWith(expect.objectContaining({ q: "family van", make: undefined, model: undefined })));
+  });
+
+  it("explains compare and save limits instead of silently ignoring card actions", async () => {
+    persistPinned([1, 2, 3, 4].map((id) => ({ id, make: "Toyota", model: "Aqua" })));
+    saveWatchlistIds(Array.from({ length: 48 }, (_, i) => i + 1));
+    vi.mocked(api.getListings).mockResolvedValue({ listings: [{ id: 99, make: "Honda", model: "Fit" }] as never, total: 1 });
+    renderDashboard();
+    fireEvent.click(await screen.findByRole("button", { name: "Compare 99" }));
+    expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/compare tray is full/i));
+    fireEvent.click(screen.getByRole("button", { name: "Save 99" }));
+    expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/watchlist is full/i));
+    expect(screen.getByRole("button", { name: "Save 99" })).toHaveAttribute("aria-pressed", "false");
   });
 
   it("reads filters, sort and page from the URL", async () => {

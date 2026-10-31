@@ -38,7 +38,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { TrendingDown,
   BellOff,
   Heart,
@@ -59,7 +59,8 @@ import {
   type ListingSearchSuggestion,
 } from "@/services/api";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { loadWatchlistIds, saveWatchlistIds, toggleWatchlistId } from "@/lib/watchlist";
+import { useWatchlist } from "@/lib/watchlist";
+import { toast } from "sonner";
 import { pickVehicleImageUrl } from "@/lib/listingImage";
 import { isReasonableListingPrice } from "@/lib/formatting";
 import { isJunkMake } from "@/lib/makeNormalization";
@@ -191,7 +192,7 @@ export default function Dashboard() {
   useOffscreenPause(heroSectionRef);
   // Read on first render (localStorage): loading them in an effect re-rendered
   // the whole feed, every card included, right after it mounted.
-  const [watchlistIds, setWatchlistIds] = useState<number[]>(loadWatchlistIds);
+  const { ids: watchlistIds, toggle: toggleSavedListing } = useWatchlist();
   const [heroSearch, setHeroSearch] = useState("");
   const [heroSearchMessage, setHeroSearchMessage] = useState<string | null>(null);
   const [heroActiveIdx, setHeroActiveIdx] = useState(-1);
@@ -300,7 +301,6 @@ export default function Dashboard() {
   // The home feed never lists server alerts, it only mirrors local ones up.
   const serverAlerts = useServerMarketAlerts({ autoLoad: false });
 
-  useEffect(() => { saveWatchlistIds(watchlistIds); }, [watchlistIds]);
 
   useEffect(() => {
     const query = heroSearch.trim();
@@ -419,7 +419,7 @@ export default function Dashboard() {
   const toggleCompare = useCallback((listing: CarListing) => {
     const median = Number(listing.market_median_lkr);
     const images = Array.isArray(listing.images) ? listing.images : [];
-    toggleCompareTray({
+    const result = toggleCompareTray({
       id: Number(listing.id),
       make: listing.make,
       model: listing.model,
@@ -432,15 +432,18 @@ export default function Dashboard() {
       thumbnail_url: listing.thumbnail_url || (images[0] as string) || null,
       detail_url: listing.detail_url || null,
     });
-  }, [toggleCompareTray]);
+    if (result.atCap) toast.error(t("listing.compareFull", "Compare tray is full (max 4) — remove one first"));
+  }, [toggleCompareTray, t]);
 
   const compareIds = useMemo(() => comparePinned.map((p) => p.id), [comparePinned]);
   const compareIdSet = useMemo(() => new Set(compareIds), [compareIds]);
   const watchlistIdSet = useMemo(() => new Set(watchlistIds), [watchlistIds]);
 
   const toggleWatchlist = useCallback((listing: CarListing) => {
-    setWatchlistIds((prev) => toggleWatchlistId(prev, listing.id).ids);
-  }, []);
+    const result = toggleSavedListing(listing.id);
+    if (result.blocked) toast.error(t("listing.watchlistFull", "Watchlist is full — remove one first"));
+    else if (result.error) toast.error(t("listing.watchlistStorageError", "Couldn't save on this device. Check browser storage permissions and try again."));
+  }, [toggleSavedListing, t]);
 
   const scrollToMarket = useCallback(() => {
     // Defer past the filter-change re-render: a smooth scroll started in the
@@ -484,7 +487,7 @@ export default function Dashboard() {
     const normalizedQuery = alias.normalized || query.toLowerCase();
     const makeMatch = makes.find((e) => e.make.toLowerCase().includes(normalizedQuery));
     startTransition(() => {
-      setFilters((prev) => ({ ...prev, q: normalizedQuery, make: makeMatch?.make ?? prev.make, model: makeMatch ? undefined : prev.model, page: 1 }));
+      setFilters((prev) => ({ ...prev, q: normalizedQuery, make: makeMatch?.make, model: undefined, page: 1 }));
     });
     setHeroSuggestionsOpen(false);
     setHeroSearchMessage(makeMatch ? null : t("home.searchingIndexOnly", "Searching vehicle index only."));
@@ -732,7 +735,7 @@ export default function Dashboard() {
                     <input
                       id="hero-search"
                       value={heroSearch}
-                      onChange={(e) => { setHeroSearch(e.target.value); setHeroSearchMessage(null); setHeroActiveIdx(-1); }}
+                      onChange={(e) => { setHeroSearch(e.target.value); setHeroSuggestions([]); setHeroSearchMessage(null); setHeroActiveIdx(-1); }}
                       onFocus={() => { setHeroSuggestionsOpen(true); setHeroFocused(true); }}
                       onBlur={() => { setHeroFocused(false); window.setTimeout(() => { setHeroSuggestionsOpen(false); setHeroActiveIdx(-1); }, 120); }}
                       onKeyDown={(e) => {
@@ -1465,6 +1468,7 @@ export default function Dashboard() {
         <DialogContent className="max-h-[86vh] max-w-2xl overflow-y-auto text-foreground">
           <DialogHeader>
             <DialogTitle className="text-title3 font-semibold">{t("home.savedListingsTitle", "Saved listings")}</DialogTitle>
+            <DialogDescription>{t("home.savedOnDevice", "Saved on this browser only. These listings don't sync to your account or send price alerts.")}</DialogDescription>
           </DialogHeader>
           {savedListingsLoading ? (
             <div className="space-y-1.5" aria-busy="true">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} shape="row" className="h-16" />)}</div>

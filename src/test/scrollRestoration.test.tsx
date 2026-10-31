@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { Link, Route, Routes } from "react-router-dom";
 import { TestRouter } from "./testUtils";
@@ -37,6 +37,30 @@ describe("ScrollRestoration", () => {
 
     expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: "instant" });
     expect(screen.getByTestId("trends-page")).toBeInTheDocument();
+  });
+
+  it("waits for a lazy hash target and stops after scrolling once", () => {
+    vi.useFakeTimers();
+    try {
+      const view = render(
+        <TestRouter initialEntries={["/#late-section"]}>
+          <ScrollRestoration />
+        </TestRouter>,
+      );
+      const target = document.createElement("section");
+      target.id = "late-section";
+      document.body.appendChild(target);
+      try {
+        act(() => { vi.advanceTimersByTime(200); });
+        expect(target.scrollIntoView).toHaveBeenCalledTimes(1);
+        expect(window.scrollTo).not.toHaveBeenCalled();
+      } finally {
+        target.remove();
+        view.unmount();
+      }
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("scrolls to a hash target instead of resetting to top", () => {

@@ -30,7 +30,7 @@ import { listingVin } from '@/lib/dataSanity';
 import { ListingGeoCard } from '@/components/ListingGeoCard';
 import { FmvExplainer } from '@/components/FmvExplainer';
 import { useCompareTray } from '@/lib/compareTray';
-import { loadWatchlistIds, saveWatchlistIds, toggleWatchlistId } from '@/lib/watchlist';
+import { useWatchlist } from '@/lib/watchlist';
 import { DealLadder } from '@/components/DealLadder';
 import { formatListedDateTime } from '@/lib/listing-card-meta';
 import { vehicleTokenLabel } from '@/lib/vehicleTokens';
@@ -67,7 +67,6 @@ import { Button } from '@/components/ui/button';
 import { buttonVariants } from '@/components/ui/button-variants';
 import { cardVariants } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Chip } from '@/components/ui/chip';
 import { cn } from '@/lib/utils';
 import { BeforeYouPayStrip } from '@/components/listing/BeforeYouPayStrip';
 import { ListingStickyBar } from '@/components/listing/ListingStickyBar';
@@ -148,7 +147,8 @@ export default function ListingDetail() {
   const [loading, setLoading] = useState(!seed && !kept);
   const [photoAspectRatio, setPhotoAspectRatio] = useState<number | null>(() => seed?.aspectRatio ?? null);
   const { toggle: toggleCompare, isPinned: isPinnedForCompare } = useCompareTray();
-  const [watchlisted, setWatchlisted] = useState(false);
+  const { ids: watchlistIds, toggle: toggleWatchlist } = useWatchlist();
+  const watchlisted = !!listing && watchlistIds.includes(Number(listing.id));
   // Everything below the price waits for the detail data, then mounts one
   // section per frame (DeferredSection): the card → listing open used to
   // commit the whole below-the-fold as one 100–170 ms long task. The finance
@@ -164,14 +164,15 @@ export default function ListingDetail() {
     if (!listing) return;
     const listingId = Number(listing.id);
     if (!Number.isFinite(listingId) || listingId <= 0) return;
-    const { ids, blocked } = toggleWatchlistId(loadWatchlistIds(), listingId);
+    const { saved: nowSaved, blocked, error } = toggleWatchlist(listingId);
     if (blocked) {
       toast.error(t("listing.watchlistFull", "Watchlist is full — remove one first"));
       return;
     }
-    saveWatchlistIds(ids);
-    const nowSaved = ids.includes(listingId);
-    setWatchlisted(nowSaved);
+    if (error) {
+      toast.error(t("listing.watchlistStorageError", "Couldn't save on this device. Check browser storage permissions and try again."));
+      return;
+    }
     toast.success(nowSaved
       ? t("listing.watchlistAdded", "Saved to your watchlist")
       : t("listing.watchlistRemoved", "Removed from your watchlist"));
@@ -240,7 +241,6 @@ export default function ListingDetail() {
     let cancelled = false;
     const showBundle = ([detail, sim, history, fmv]: ListingBundle) => {
       setListing(detail); setSimilar(sim); setPriceHistory(history); setFmvDetail(fmv); setLoading(false); setDataReady(true);
-      setWatchlisted(detail ? loadWatchlistIds().includes(Number(detail.id)) : false);
       if (detail) document.title = `${detail.title} — Motormila`;
     };
     setSellerProfile(null); setSafetyResearch(null); setListingGeo(null); setRelatedListings(null);
@@ -545,10 +545,6 @@ export default function ListingDetail() {
               updatedAt={fmvDetail?.updated_at}
               locale={language}
             />
-            <Chip onClick={handleComparePin} selected={isPinnedForCompare(Number(listing.id))}>
-              <Scale aria-hidden />
-              {isPinnedForCompare(Number(listing.id)) ? t("listing.pinned", "Pinned ✓") : t("listing.addToCompare", "Add to compare")}
-            </Chip>
           </div>
           <p className="mt-2 text-caption text-muted-foreground">
             {t("deal.whyAsking", "These are asking prices on listing sites, not sale prices.")}
@@ -597,6 +593,16 @@ export default function ListingDetail() {
               <ArrowLeft aria-hidden className="transition-transform duration-short group-hover:-translate-x-0.5" /> {t("common.back", "Back")}
             </Button>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleComparePin}
+                aria-pressed={isPinnedForCompare(Number(listing.id))}
+                aria-label={isPinnedForCompare(Number(listing.id)) ? t("listing.pinned", "Pinned ✓") : t("listing.addToCompare", "Add to compare")}
+                title={t("listing.addToCompare", "Add to compare")}
+                className={actionBtn}
+              >
+                <Scale aria-hidden className="h-4 w-4" />
+              </button>
               <button type="button" onClick={handleWhatsAppShare} className={actionBtn} aria-label={t("listing.shareWhatsApp", "Share on WhatsApp")} title={t("listing.shareWhatsApp", "Share on WhatsApp")}>
                 <MessageCircle aria-hidden className="h-4 w-4" />
               </button>

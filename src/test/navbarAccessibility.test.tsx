@@ -33,6 +33,33 @@ describe("Navbar accessibility active-state", () => {
     }
   });
 
+  it("preserves browser navigation for modified mobile-menu link clicks", async () => {
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <AppPreferencesProvider>
+            <MemoryRouter initialEntries={["/"]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+              <Navbar />
+            </MemoryRouter>
+          </AppPreferencesProvider>
+        </AuthProvider>,
+      );
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /open menu/i }));
+    const panel = document.getElementById("site-menu")!;
+    const link = panel.querySelector<HTMLAnchorElement>('a[href="/trends"]')!;
+    for (const modifier of [{ ctrlKey: true }, { metaKey: true }, { shiftKey: true }, { altKey: true }]) {
+      const event = new MouseEvent("click", { bubbles: true, cancelable: true, ...modifier });
+      act(() => { link.dispatchEvent(event); });
+      expect(event.defaultPrevented).toBe(false);
+      expect(screen.getByRole("button", { name: /close menu/i })).toHaveAttribute("aria-expanded", "true");
+    }
+
+    fireEvent.click(link);
+    expect(screen.getByRole("link", { name: /^prices$/i })).toHaveAttribute("aria-current", "page");
+  });
+
   it("marks the active section link with aria-current on dashboard route", async () => {
     await act(async () => {
       render(

@@ -1,7 +1,7 @@
 import { useAppPreferences } from "@/lib/appPreferences";
 import { LazyMotion, MotionConfig, domAnimation } from "motion/react";
 import { Suspense, useEffect } from "react";
-import { Navigate, Route, Routes, unstable_HistoryRouter as HistoryRouter, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, unstable_HistoryRouter as HistoryRouter } from "react-router-dom";
 import { createViewTransitionHistory } from "@/lib/viewTransition";
 import { ScrollRestoration } from "@/components/ScrollRestoration";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
@@ -163,21 +163,6 @@ function TrialBannerSlot() {  const { user } = useAuth();
   );
 }
 
-/** Scrolls to the URL hash after navigation (e.g. Market -> /#market from another page). */
-function HashScroller() {
-  const { hash } = useLocation();
-  useEffect(() => {
-    if (!hash) return;
-    const id = hash.replace("#", "");
-    // Wait for the lazy route to mount before looking for the anchor.
-    const timer = window.setTimeout(() => {
-      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 150);
-    return () => window.clearTimeout(timer);
-  }, [hash]);
-  return null;
-}
-
 function SkipLink() {
   const { t } = useAppPreferences();
   return <a href="#main-content" className="skip-to-content">{t("shell.skipToContent", "Skip to main content")}</a>;
@@ -191,7 +176,6 @@ function AppShell() {
     // (mobile nav + compare tray). See src/styles/layers.css.
     <div className="min-h-screen app-shell app-shell-dock-pad selection:bg-primary/20 bg-background">
       <SkipLink />
-      <HashScroller />
       <Navbar />
       <CommandPaletteHost />
       {/* Feedback is a dialog opened from the menu / footer — no floating button. */}

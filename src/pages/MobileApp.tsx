@@ -37,18 +37,18 @@ import "@/styles/mobile-app.css";
  * Live sideload release — keep in step with android/app/build.gradle.kts and
  * public/app/latest-release.json (the in-app updater's manifest).
  */
-const APK_VERSION = "1.7.2";
-const APK_VERSION_CODE = 20;
-/** 5,710,093 bytes. */
-const APK_BYTES = 5_710_093;
-const APK_SIZE = "5.4 MB";
+const APK_VERSION = "1.8.0";
+const APK_VERSION_CODE = 21;
+/** 5,800,279 bytes (published APK Content-Length). */
+const APK_BYTES = 5_800_279;
+const APK_SIZE = "5.5 MB";
 // Public R2 download, published by .github/workflows/android-release.yml.
 const APK_URL = `https://pub-f15911ef9a914db9a44e1fd6b47dfe4e.r2.dev/app/motormila-${APK_VERSION}.apk`;
-const APK_SHA256 = "b83ed83726bb591cbb1835fff84de69b3946f2cfbe86b10c78277ed7e4fe6b9a";
+const APK_SHA256 = "6d9d417bf837deb6277d387318e88acc79fdcef6f95d6ed401cfd7258732634f";
 /** SHA-256 of the release signing certificate (APK Signature Scheme v2/v3), same key since 1.7.0. */
 const APK_CERT_SHA256 = "384420c0922cb84ee0e6866ab09b4e47e7012bf21c69e83f934304366f445217";
 /** Release date of APK_VERSION (latest-release.json `published_at`), ISO date. */
-const APK_UPDATED = "2026-10-25";
+const APK_UPDATED = "2026-10-30";
 
 /** App screenshots: 1080×2400 emulator captures of the release app (live data), resized to 600×1333. */
 const SCREEN_W = 600;
