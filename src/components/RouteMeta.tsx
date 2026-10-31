@@ -514,7 +514,19 @@ export function RouteMeta() {
             }
           : pathname.startsWith("/cars/")
           ? {
-              title: t("seo.hubTitle", "Vehicle Market Hub — {site}", siteVars),
+              // Derive the label from the path so {vehicle} never leaks when
+              // the i18n hubTitle template reaches this generic fallback.
+              title: t("seo.hubTitle", "Vehicle Market Hub — {site}", {
+                ...siteVars,
+                vehicle:
+                  pathname
+                    .split("/")
+                    .filter(Boolean)
+                    .slice(1)
+                    .map((segment) => toTitleCase(segment))
+                    .join(" ")
+                    .trim() || "Vehicle",
+              }),
               description: t(
                 "seo.hubDesc",
                 "Prices, district breakdown, and live listings for a specific vehicle in Sri Lanka.",
