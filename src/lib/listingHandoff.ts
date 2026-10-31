@@ -59,7 +59,10 @@ export function peekRecentBundle(id: string | undefined): ListingBundle | null {
 
 function fetchBundle(id: string): Promise<ListingBundle> {
   return Promise.all([
-    getListing(id).catch(() => null),
+    getListing(id).catch((error: unknown) => {
+      if (error && typeof error === "object" && "status" in error && error.status === 404) return null;
+      throw error;
+    }),
     getSimilarListings(id).catch(() => [] as CarListing[]),
     getListingPriceHistory(id).catch(() => null),
     getListingFmv(id).catch(() => null),
@@ -72,7 +75,11 @@ export function prefetchListingBundle(id: string | number | null | undefined): v
   const key = String(id);
   const hit = bundles.get(key);
   if (hit && Date.now() - hit.at < BUNDLE_TTL_MS) return;
-  bundles.set(key, { promise: fetchBundle(key), at: Date.now() });
+  const promise = fetchBundle(key);
+  // A speculative pointerdown may never be consumed; retain rejection for the
+  // detail page while preventing an unhandled rejection on abandoned navigation.
+  void promise.catch(() => {});
+  bundles.set(key, { promise, at: Date.now() });
 }
 
 /** The prefetched bundle for `id` if one is fresh (consumed), else a new fetch. */

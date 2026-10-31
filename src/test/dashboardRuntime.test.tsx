@@ -63,6 +63,7 @@ vi.mock("@/services/api", () => ({
   SNAPSHOT_BASE: "",
   SNAPSHOT_ONLY: false,
   getStats: vi.fn(),
+  getListing: vi.fn(),
   getListings: vi.fn(),
   getDistrictPrices: vi.fn(),
   getMakes: vi.fn(),
@@ -150,6 +151,17 @@ beforeEach(() => {
 });
 
 describe("Dashboard runtime safety", () => {
+  it("offers retry and removal when a saved listing fails without claiming it was removed", async () => {
+    const { saveWatchlistIds } = await import("@/lib/watchlist");
+    saveWatchlistIds([811]);
+    vi.mocked(api.getListing).mockRejectedValue(new Error("offline"));
+    renderDashboard();
+    fireEvent.click(screen.getByRole("button", { name: /1 saved/i }));
+    expect(await screen.findByRole("button", { name: "Remove saved listing #811" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Remove saved listing #811" }));
+    expect(await screen.findByText("Nothing saved yet")).toBeInTheDocument();
+  });
   it("renders the cinematic hero headline, accent word and search", () => {
     renderDashboard();
 

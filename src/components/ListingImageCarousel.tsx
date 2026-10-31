@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState } from "react";
 import { m, motion } from "motion/react";
 import useEmblaCarousel from "embla-carousel-react";
 import { Camera, ChevronLeft, ChevronRight, Expand } from "lucide-react";
@@ -52,10 +52,6 @@ function stop(e: React.SyntheticEvent) {
   e.preventDefault();
 }
 
-function prefersReducedMotion(): boolean {
-  return typeof window !== "undefined" && Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
-}
-
 /**
  * Multi-photo carousel for listings (Embla). Single-photo listings render a
  * plain image with no carousel JS work. Photos are hotlinked from the source
@@ -80,8 +76,8 @@ export function ListingImageCarousel({
   const count = images.length;
   const multi = count > 1;
   const isDetail = variant === "detail";
-  const reduced = useMemo(prefersReducedMotion, []);
   const calm = useReducedMotionOrLowData();
+  const reduced = calm;
   const ringId = useId();
   // Detail hero: Embla starts after the card → listing View Transition. Its
   // init measure (which runs on construction, even inactive) forced a style + layout of the whole incoming page inside the
@@ -228,17 +224,21 @@ export function ListingImageCarousel({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only on a new photo set
   }, [imagesKey, emblaApi]);
 
-  // Keyboard navigation (detail only); ignored while typing or in the lightbox.
   useEffect(() => {
-    if (!isDetail || !multi || lightboxOpen) return;
+    const region = regionRef.current;
+    if (!region || !isDetail || !multi || lightboxOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
-      if (e.key === "ArrowLeft") prev();
-      if (e.key === "ArrowRight") next();
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      const target = e.target as HTMLElement;
+      if (target.closest('input, textarea, select, [contenteditable="true"], [role="slider"]')) return;
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        e.preventDefault();
+        if (e.key === "ArrowLeft") prev();
+        else next();
+      }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    region.addEventListener("keydown", onKey);
+    return () => region.removeEventListener("keydown", onKey);
   }, [isDetail, multi, lightboxOpen, prev, next]);
 
   const openLightbox = (from?: Element | null) => {
@@ -391,13 +391,13 @@ export function ListingImageCarousel({
 
         {multi && !isDetail && (
           <span className="vt-overlay pointer-events-auto absolute bottom-12 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1">
-            {/* Sliding indicator: one dot moves by transform (dots are 6px + 4px gap). */}
+            {/* Each 24px target has a 4px gap; the active dot stays centred. */}
             {index < 8 && (
               <m.span
                 aria-hidden
-                className="pointer-events-none absolute left-0 top-1/2 h-1.5 w-1.5 -mt-[3px] rounded-full bg-foreground shadow-[0_0_0_1.5px_rgba(255,255,255,0.35)]"
+                className="pointer-events-none absolute left-0 top-1/2 z-10 h-1.5 w-1.5 -mt-[3px] rounded-full bg-foreground shadow-[0_0_0_1.5px_rgba(255,255,255,0.35)]"
                 initial={false}
-                animate={{ x: index * 10 }}
+                animate={{ x: index * 28 + 9 }}
                 transition={calm ? { duration: 0 } : spring.snappy}
               />
             )}
@@ -411,7 +411,7 @@ export function ListingImageCarousel({
                   stop(e);
                   goTo(i);
                 }}
-                className="h-1.5 w-1.5 rounded-full bg-foreground/45 transition-opacity hover:bg-foreground/75"
+                className="relative flex h-6 w-6 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white after:h-1.5 after:w-1.5 after:rounded-full after:bg-white after:opacity-60 hover:after:opacity-100"
               />
             ))}
           </span>
@@ -433,13 +433,12 @@ export function ListingImageCarousel({
       </div>
 
       {isDetail && multi && (
-        <div className="mt-2 flex gap-2 overflow-x-auto px-1 pb-1" role="tablist" aria-label={t("listingImage.thumbs", "Photo thumbnails")}>
+        <div className="mt-2 flex gap-2 overflow-x-auto px-1 pb-1" role="group" aria-label={t("listingImage.thumbs", "Photo thumbnails")}>
           {images.map((src, i) => (
             <button
               key={`thumb-${src}-${i}`}
               type="button"
-              role="tab"
-              aria-selected={i === index}
+              aria-pressed={i === index}
               aria-label={label(i)}
               onClick={() => goTo(i)}
               className={`relative h-14 w-20 shrink-0 overflow-hidden rounded-xl transition-opacity ${

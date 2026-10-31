@@ -145,6 +145,8 @@ export default function ListingDetail() {
   /** Cross-site linked listings; null = history service unavailable. */
   const [relatedListings, setRelatedListings] = useState<TrustRelatedListing[] | null>(null);
   const [loading, setLoading] = useState(!seed && !kept);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [photoAspectRatio, setPhotoAspectRatio] = useState<number | null>(() => seed?.aspectRatio ?? null);
   const { toggle: toggleCompare, isPinned: isPinnedForCompare } = useCompareTray();
   const { ids: watchlistIds, toggle: toggleWatchlist } = useWatchlist();
@@ -239,6 +241,7 @@ export default function ListingDetail() {
     // keeps the restored position (ScrollRestoration).
     if (navTypeRef.current !== 'POP') window.scrollTo(0, 0);
     let cancelled = false;
+    setLoadError(false);
     const showBundle = ([detail, sim, history, fmv]: ListingBundle) => {
       setListing(detail); setSimilar(sim); setPriceHistory(history); setFmvDetail(fmv); setLoading(false); setDataReady(true);
       if (detail) document.title = `${detail.title} — Motormila`;
@@ -260,6 +263,10 @@ export default function ListingDetail() {
           showBundle(bundle);
           const detail = bundle[0];
           if (detail) trackEvent("listing_viewed", { listing_id: detail.id, make: detail.make, model: detail.model, source: detail.source });
+        }).catch(() => {
+          if (cancelled) return;
+          setLoading(false);
+          setLoadError(true);
         });
     }
     getListingSafetyResearch(id).then((r) => { if (!cancelled) setSafetyResearch(r); }).catch(() => setSafetyResearch(null));
@@ -268,7 +275,7 @@ export default function ListingDetail() {
       .then((report) => { if (!cancelled) setRelatedListings(Array.isArray(report?.related_listings) ? report.related_listings : []); })
       .catch(() => { if (!cancelled) setRelatedListings(null); });
     return () => { cancelled = true; };
-  }, [id]);
+  }, [id, reloadKey]);
 
   // Enrich the generic route JSON-LD (set by RouteMeta) with real vehicle data
   // once the listing loads — same script element, so there is only ever one.
@@ -325,6 +332,21 @@ export default function ListingDetail() {
           <div className="grid gap-6 lg:grid-cols-[1.7fr_1fr]">
             <div className="skeleton-shimmer h-[320px] rounded-[2rem]" />
             <div className="skeleton-shimmer h-[320px] rounded-[2rem]" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex min-h-[70vh] items-center justify-center px-5">
+        <div className="max-w-sm text-center" role="alert">
+          <h1 className="font-display text-title3 font-semibold">{t("listing.loadFailed", "This listing couldn't load")}</h1>
+          <p className="mt-2 text-body text-muted-foreground">{t("listing.retryBody", "Check your connection and try again. This does not mean the listing was removed.")}</p>
+          <div className="mt-5 flex justify-center gap-3">
+            <Button onClick={() => setReloadKey((key) => key + 1)}>{t("common.retry", "Try again")}</Button>
+            <Button variant="secondary" onClick={() => navigate('/')}>{t("listing.returnInventory", "Return to inventory")}</Button>
           </div>
         </div>
       </div>

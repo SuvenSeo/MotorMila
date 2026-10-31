@@ -95,10 +95,13 @@ export default function Compare() {
     let cancelled = false;
     if (ids.length === 0) {
       setListings([]);
+      setError(null);
+      setLoading(false);
       return;
     }
     setLoading(true);
     setError(null);
+    setListings((rows) => rows.filter((row) => ids.includes(Number(row.id))));
     getListingsBatch(ids)
       .then((rows) => {
         if (cancelled) return;
@@ -400,7 +403,22 @@ export default function Compare() {
           </Card>
         )}
 
-        {!loading && !error && (!hasIds || !enough) && (
+        {!loading && !error && ids.some((id) => !listings.some((row) => Number(row.id) === id)) && (
+          <section className="mb-6 rounded-xl border border-border bg-card p-5" aria-label={t("comparePage.unresolved", "Listings that couldn't load")}>
+            <p role="status" className="text-body text-muted-foreground">{t("comparePage.partialFailure", "Some listings couldn't load. Your selections are kept; try again or remove them below.")}</p>
+            <ul className="my-3 space-y-2">
+              {ids.filter((id) => !listings.some((row) => Number(row.id) === id)).map((id) => (
+                <li key={id} className="flex flex-wrap items-center justify-between gap-2">
+                  <span>{t("comparePage.failedId", "Listing #{id} couldn't load", { id })}</span>
+                  <Button variant="ghost" onClick={() => removeId(id)} aria-label={t("comparePage.removeFailed", "Remove listing #{id}", { id })}>{t("common.remove", "Remove")}</Button>
+                </li>
+              ))}
+            </ul>
+            <Button variant="secondary" onClick={() => setReloadKey((key) => key + 1)}>{t("common.retry", "Try again")}</Button>
+          </section>
+        )}
+
+        {!loading && !error && (!hasIds || (!enough && listings.length > 0)) && (
           <section className="cine-panel theme-dark p-5 text-foreground sm:p-8" aria-labelledby="compare-empty-title">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-xl">

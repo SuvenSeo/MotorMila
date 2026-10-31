@@ -39,6 +39,7 @@ export function Combobox({
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const listId = useId();
 
   const items: ComboboxOption[] = [{ value: ALL_VALUE, label: allLabel }, ...options];
@@ -59,12 +60,23 @@ export function Combobox({
     onChange(item.value === ALL_VALUE ? null : item.value);
     setOpen(false);
     setQuery("");
+    triggerRef.current?.focus();
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
+    if (!open) {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        setOpen(true);
+      }
+      return;
+    }
     if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
       setOpen(false);
       setQuery("");
+      triggerRef.current?.focus();
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
       setActive((a) => Math.min(a + 1, filtered.length - 1));
@@ -87,6 +99,7 @@ export function Combobox({
         {label}
       </label>
       <button
+        ref={triggerRef}
         type="button"
         role="combobox"
         aria-expanded={open}
@@ -116,10 +129,12 @@ export function Combobox({
               onChange={(e) => setQuery(e.target.value)}
               placeholder={`Search ${label.toLowerCase()}…`}
               aria-label={`Search ${label}`}
+              aria-controls={listId}
+              aria-activedescendant={filtered[active] ? `${listId}-option-${active}` : undefined}
               className="h-11 w-full bg-transparent text-body text-foreground outline-none placeholder:text-muted-foreground"
             />
           </div>
-          <ul id={listId} role="listbox" aria-label={label} className="max-h-56 overflow-auto py-1.5">
+          <ul id={listId} role="listbox" aria-label={label} className="max-h-56 overflow-auto overscroll-contain py-1.5">
             {filtered.length === 0 && (
               <li className="px-3.5 py-2.5 text-footnote text-muted-foreground">{t("combobox.noMatches", "No matches.")}</li>
             )}
@@ -130,6 +145,7 @@ export function Combobox({
                   <button
                     type="button"
                     role="option"
+                    id={`${listId}-option-${i}`}
                     aria-selected={selected}
                     onMouseEnter={() => setActive(i)}
                     onClick={() => pick(item)}

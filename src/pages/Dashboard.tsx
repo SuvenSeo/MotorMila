@@ -204,6 +204,7 @@ export default function Dashboard() {
   const [showSavedListings, setShowSavedListings] = useState(false);
   const [savedListings, setSavedListings] = useState<CarListing[]>([]);
   const [savedListingsLoading, setSavedListingsLoading] = useState(false);
+  const [savedReloadKey, setSavedReloadKey] = useState(0);
   const [savedListingsError, setSavedListingsError] = useState<string | null>(null);
   // Kept for the tab session so Back from a listing returns to the same view
   // (a grid ↔ list swap would change the page height under the restored scroll).
@@ -334,12 +335,12 @@ export default function Dashboard() {
         const hydrated = watchlistIds.map((id) => map.get(id)).filter((r): r is CarListing => Boolean(r));
         setSavedListings(hydrated);
         if (!hydrated.length) setSavedListingsError(t("home.savedUnavailable", "Saved listings are currently unavailable."));
-        else if (hydrated.length < watchlistIds.length) setSavedListingsError(t("home.someSavedGone", "Some saved listings are no longer available."));
+        else if (hydrated.length < watchlistIds.length) setSavedListingsError(t("home.someSavedFailed", "Some saved listings couldn't load. Try again; they may still be available."));
       })
       .catch(() => { if (!cancelled) { setSavedListings([]); setSavedListingsError(t("home.loadSavedFailed", "Unable to load saved listings.")); } })
       .finally(() => { if (!cancelled) setSavedListingsLoading(false); });
     return () => { cancelled = true; };
-  }, [showSavedListings, watchlistIds, t]);
+  }, [showSavedListings, watchlistIds, t, savedReloadKey]);
 
   useEffect(() => {
     const latestAt = liveMarketSnapshot?.latest_listing_at || null;
@@ -1500,7 +1501,7 @@ export default function Dashboard() {
               </AnimatePresence>
             </div>
           ) : savedListingsError ? (
-            <ErrorState body={savedListingsError} className="py-8" />
+            <ErrorState body={savedListingsError} className="py-8" onRetry={() => setSavedReloadKey((key) => key + 1)} />
           ) : (
             <EmptyState
               icon={Heart}
@@ -1516,7 +1517,22 @@ export default function Dashboard() {
               }
             />
           )}
-          {savedListingsError && savedListings.length > 0 ? <p role="alert" className="text-footnote text-deal-high-text">{savedListingsError}</p> : null}
+          {!savedListingsLoading && savedListingsError && (
+            <div className="space-y-3">
+              {savedListings.length > 0 && <><p role="status" className="text-footnote text-deal-high-text">{savedListingsError}</p><Button variant="secondary" onClick={() => setSavedReloadKey((key) => key + 1)}>{t("common.retry", "Try again")}</Button></>}
+              <ul className="space-y-2">
+                {watchlistIds.filter((id) => !savedListings.some((listing) => Number(listing.id) === id)).map((id) => (
+                  <li key={id} className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-footnote">{t("home.savedFailedId", "Listing #{id} couldn't load", { id })}</span>
+                    <Button variant="ghost" aria-label={t("home.removeSavedId", "Remove saved listing #{id}", { id })} onClick={() => {
+                      const result = toggleSavedListing(id);
+                      if (result.error) toast.error(t("listing.watchlistStorageError", "Couldn't save on this device. Check browser storage permissions and try again."));
+                    }}>{t("home.remove", "Remove")}</Button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

@@ -18,6 +18,18 @@ describe("listingHandoff recent bundles (Back onto a listing)", () => {
     expect(peekRecentBundle("6")).toBeNull();
   });
 
+  it("preserves temporary failures for retry instead of returning a missing listing", async () => {
+    const api = await import("@/services/api");
+    vi.mocked(api.getListing).mockRejectedValueOnce(new Error("offline"));
+    await expect(takeListingBundle("808")).rejects.toThrow("offline");
+  });
+
+  it("returns a missing listing only for a confirmed 404", async () => {
+    const api = await import("@/services/api");
+    vi.mocked(api.getListing).mockRejectedValueOnce(Object.assign(new Error("missing"), { status: 404 }));
+    expect((await takeListingBundle("809"))[0]).toBeNull();
+  });
+
   it("does not keep a listing that failed to load", async () => {
     const api = await import("@/services/api");
     vi.mocked(api.getListing).mockResolvedValueOnce(null as never);

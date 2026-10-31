@@ -69,6 +69,15 @@ function renderDetail() {
 }
 
 describe("ListingDetail layout", () => {
+  it("offers retry after a temporary detail failure and restores the listing", async () => {
+    vi.mocked(api.getListing).mockRejectedValueOnce(new Error("offline")).mockResolvedValueOnce(listing());
+    renderDetail();
+    expect(await screen.findByText("This listing couldn't load")).toBeInTheDocument();
+    expect(screen.queryByText("Listing not found")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    await waitFor(() => expect(screen.queryByText("This listing couldn't load")).not.toBeInTheDocument());
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Toyota Aqua");
+  });
   beforeEach(() => {
     localStorage.clear();
     window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
