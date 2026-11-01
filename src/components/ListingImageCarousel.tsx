@@ -149,17 +149,21 @@ export function ListingImageCarousel({
   // ~50 full-size photos (≈8 MB) on the home grid.
   const [mounted, setMounted] = useState<ReadonlySet<number>>(() => new Set(isDetail && multi ? [initialSlide, (initialSlide + 1) % count, (initialSlide - 1 + count) % count] : [initialSlide]));
   const prime = useCallback(
-    (center: number) => {
+    (center: number, from?: number) => {
       if (!multi) return;
       setMounted((cur) => {
         const want = [center, (center + 1) % count, (center - 1 + count) % count];
+        // An animated thumbnail jump passes through every intervening slide.
+        if (isDetail && from !== undefined) {
+          for (let i = Math.min(from, center); i <= Math.max(from, center); i++) want.push(i);
+        }
         if (want.every((i) => cur.has(i))) return cur;
         const next = new Set(cur);
         want.forEach((i) => next.add(i));
         return next;
       });
     },
-    [multi, count],
+    [multi, count, isDetail],
   );
   useEffect(() => {
     if (index !== 0) prime(index);
@@ -186,27 +190,33 @@ export function ListingImageCarousel({
 
   const goTo = useCallback(
     (i: number) => {
-      prime(i);
+      prime(i, emblaApi?.selectedScrollSnap() ?? index);
       if (emblaApi) emblaApi.scrollTo(i, reduced);
       else {
         setPendingSlide(i);
         wake();
       }
     },
-    [emblaApi, reduced, wake, prime],
+    [emblaApi, reduced, wake, prime, index],
   );
   const prev = useCallback(() => {
     if (emblaApi) emblaApi.scrollPrev(reduced);
-    else goTo((index - 1 + count) % count);
-  }, [emblaApi, reduced, goTo, index, count]);
+    else {
+      setPendingSlide((pending) => isDetail ? Math.max(0, (pending ?? index) - 1) : ((pending ?? index) - 1 + count) % count);
+      wake();
+    }
+  }, [emblaApi, reduced, isDetail, wake, index, count]);
   const next = useCallback(() => {
     if (emblaApi) emblaApi.scrollNext(reduced);
-    else goTo((index + 1) % count);
-  }, [emblaApi, reduced, goTo, index, count]);
+    else {
+      setPendingSlide((pending) => isDetail ? Math.min(count - 1, (pending ?? index) + 1) : ((pending ?? index) + 1) % count);
+      wake();
+    }
+  }, [emblaApi, reduced, isDetail, wake, index, count]);
   // An arrow/dot tapped before the engine existed plays once it is up.
   useEffect(() => {
     if (!emblaApi || pendingSlide === null) return;
-    prime(pendingSlide);
+    prime(pendingSlide, emblaApi.selectedScrollSnap());
     emblaApi.scrollTo(pendingSlide, reduced);
     setPendingSlide(null);
   }, [emblaApi, pendingSlide, reduced, prime]);

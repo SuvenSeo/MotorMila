@@ -3,6 +3,7 @@
  * tap (default export for React.lazy) so the lightbox JS + CSS never ship in
  * the listing route's initial chunk.
  */
+import { useMemo } from "react";
 import Lightbox from "yet-another-react-lightbox";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import "yet-another-react-lightbox/styles.css";
@@ -33,6 +34,12 @@ export default function ListingLightbox({
   onClose,
   onIndexChange,
 }: ListingLightboxProps) {
+  // YARL resets its swipe state when the slides array changes identity.
+  // Reporting a new selected index must not replace the gallery mid-animation.
+  const slides = useMemo(
+    () => images.map((src, i) => ({ src, alt: `${alt} ${i + 1}/${images.length}` })),
+    [images, alt],
+  );
   const reduced =
     typeof window !== "undefined" &&
     (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ||
@@ -45,7 +52,7 @@ export default function ListingLightbox({
       open={open}
       close={onClose}
       index={index}
-      slides={images.map((src, i) => ({ src, alt: `${alt} ${i + 1}/${images.length}` }))}
+      slides={slides}
       plugins={[Zoom]}
       className={reduced ? undefined : "mm-lightbox-zoom"}
       styles={originStyle ? { root: originStyle } : undefined}
