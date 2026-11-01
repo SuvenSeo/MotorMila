@@ -43,3 +43,7 @@
 /official-pulse/* / 200
 # Nested admin pages use the SPA; keep the prerendered admin root shell.
 /motormila/admin/* / 200
+
+# 1 Nov 2026: ALL Pages Functions removed (Workers daily quota) — /cars/* now serves the SPA shell statically, like /listing/:id and /compare/:slug.
+/cars/:make / 200
+/cars/:make/:model / 200
