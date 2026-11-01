@@ -20,6 +20,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
+import androidx.compose.material3.ripple
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
@@ -34,8 +38,7 @@ import lk.motormila.app.ui.theme.mmPress
 import lk.motormila.app.ui.components.mmWobbleOnSelect
 
 /**
- * Filter / choice chip. 36dp visual height inside a 48dp touch row when used
- * in a FlowRow with vertical spacing. Selected = brand container + brand text;
+ * Filter / choice chip. Self-contained 48dp minimum touch target. Selected = brand container + brand text;
  * colour change is a tween (never a bouncing colour). Toggle haptic on tap.
  */
 @Composable
@@ -57,16 +60,16 @@ fun MmChip(
     val bd by animateColorAsState(if (selected) c.brand.copy(alpha = 0.45f) else c.outline, tween(dur), label = "chip-bd")
     Box(
         modifier = modifier
-            .heightIn(min = 36.dp)
-            .mmWobbleOnSelect(selected)
-            .mmPress(interaction, 0.95f)
+            .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+            .mmPress(interaction, 0.98f)
+            .alpha(if (enabled) 1f else 0.45f)
             .clip(MmShapes.pill)
             .background(bg)
             .border(1.dp, bd, MmShapes.pill)
             .semantics { this.selected = selected }
             .clickable(
                 interactionSource = interaction,
-                indication = null,
+                indication = ripple(color = fg),
                 enabled = enabled,
                 role = Role.Checkbox,
             ) {
@@ -81,7 +84,8 @@ fun MmChip(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (leadingIcon != null) Icon(leadingIcon, null, tint = fg, modifier = Modifier.size(16.dp))
-            Text(label, style = MmType.current.labelS, color = fg, maxLines = 1)
+            Text(label, style = MmType.current.label, color = fg, maxLines = 2,
+                overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
             if (trailingIcon != null) Icon(trailingIcon, null, tint = fg, modifier = Modifier.size(16.dp))
         }
     }

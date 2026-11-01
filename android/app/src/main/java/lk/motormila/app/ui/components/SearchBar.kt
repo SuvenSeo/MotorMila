@@ -22,6 +22,10 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import lk.motormila.app.ui.theme.MmColors
+import lk.motormila.app.ui.theme.MmShapes
+import lk.motormila.app.ui.theme.MmType
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -66,6 +70,8 @@ fun SearchBar(
     modifier: Modifier = Modifier,
     showDropdown: Boolean = true,
 ) {
+    val c = MmColors.current
+    val t = MmType.current
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     // The dropdown belongs to typing: shown only while the field has focus, so
@@ -84,7 +90,21 @@ fun SearchBar(
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { submit(query) }, onDone = { submit(query) }),
-            shape = MotormilaPill,
+            shape = MmShapes.md,
+            textStyle = t.bodyL,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = c.surfaceRaised,
+                unfocusedContainerColor = c.surfaceRaised,
+                focusedBorderColor = c.brandText,
+                unfocusedBorderColor = c.outlineStrong,
+                focusedTextColor = c.textPrimary,
+                unfocusedTextColor = c.textPrimary,
+                focusedPlaceholderColor = c.textSecondary,
+                unfocusedPlaceholderColor = c.textSecondary,
+                focusedLeadingIconColor = c.brandText,
+                unfocusedLeadingIconColor = c.textSecondary,
+                cursorColor = c.brandText,
+            ),
             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
             trailingIcon = {
                 Row {
@@ -143,7 +163,7 @@ fun SearchBar(
                             ) {
                                 Icon(Icons.Filled.History, contentDescription = null, tint = MotormilaSecondaryText)
                                 Spacer(Modifier.width(12.dp))
-                                Text(recent, fontSize = 14.sp)
+                                Text(recent, style = t.bodyM)
                             }
                         }
                     } else {
@@ -172,11 +192,11 @@ fun SearchBar(
                                 )
                                 Spacer(Modifier.width(12.dp))
                                 Column(Modifier.weight(1f)) {
-                                    Text("${s.make} ${s.model} ${s.year ?: ""}".trim(), fontSize = 14.sp)
+                                    Text("${s.make} ${s.model} ${s.year ?: ""}".trim(), style = t.label, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                                     Text(
                                         s.formattedPrice(),
-                                        fontSize = 12.sp,
-                                        color = MotormilaSecondaryText,
+                                        style = t.priceS,
+                                        color = c.textPrimary,
                                     )
                                 }
                             }

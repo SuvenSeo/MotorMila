@@ -24,7 +24,7 @@ fun Modifier.mmPress(
     val reduced = MmMotion.reduced
     val scale by animateFloatAsState(
         targetValue = if (pressed && !reduced) pressedScale else 1f,
-        animationSpec = MmMotion.snappy(),
+        animationSpec = MmMotion.orSnap(reduced, MmMotion.snappy()),
         label = "mm-press",
     )
     graphicsLayer {

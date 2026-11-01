@@ -47,11 +47,11 @@ fun MmEmptyState(
         Box(
             modifier = Modifier
                 .size(72.dp)
-                .clip(MmShapes.pill)
-                .background(c.surfaceRaised),
+                .clip(MmShapes.lg)
+                .background(c.brandContainer),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, null, tint = c.textSecondary, modifier = Modifier.size(30.dp))
+            Icon(icon, null, tint = c.onBrandContainer, modifier = Modifier.size(30.dp))
         }
         Spacer(Modifier.height(MmSpacing.xl))
         Text(
@@ -75,9 +75,10 @@ fun MmEmptyState(
             Spacer(Modifier.height(MmSpacing.xxl))
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(MmSpacing.xs),
+                verticalArrangement = Arrangement.spacedBy(MmSpacing.sm),
+                modifier = Modifier.widthIn(max = 320.dp).fillMaxWidth(),
             ) {
-                primaryAction?.let { (label, action) -> MmButton(text = label, onClick = action) }
+                primaryAction?.let { (label, action) -> MmButton(text = label, onClick = action, modifier = Modifier.fillMaxWidth()) }
                 secondaryAction?.let { (label, action) ->
                     MmButton(text = label, onClick = action, style = MmButtonStyle.Ghost)
                 }

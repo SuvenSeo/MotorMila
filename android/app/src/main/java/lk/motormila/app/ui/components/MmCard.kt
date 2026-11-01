@@ -26,7 +26,7 @@ import lk.motormila.app.ui.theme.mmPress
 enum class MmCardStyle { Filled, Outlined, Elevated }
 
 /**
- * Standard surface card: 20dp corners, hairline border, press-scale 0.97 on
+ * Standard surface card: 24dp corners, hairline border, press-scale 0.97 on
  * the graphics layer when [onClick] is set. Content padding defaults to the
  * card padding token; pass PaddingValues(0.dp) for edge-to-edge imagery.
  */
@@ -52,13 +52,12 @@ fun MmCard(
     Column(
         modifier = modifier
             .then(if (onClick != null) Modifier.mmPress(interaction) else Modifier)
-            // Light mode: depth from a soft, low-opacity shadow (Apple grouped
-            // style), no hard outline. Dark mode keeps a hairline because
-            // shadows vanish on near-black grounds.
+            // Reserve shadow depth for elevated content; ordinary cards use
+            // a quiet surface and hairline so imagery and prices lead.
             .then(
-                if (!c.isDark && style != MmCardStyle.Outlined) {
+                if (!c.isDark && style == MmCardStyle.Elevated) {
                     Modifier.shadow(
-                        elevation = if (style == MmCardStyle.Elevated) 14.dp else 8.dp,
+                        elevation = 6.dp,
                         shape = shape,
                         clip = false,
                         ambientColor = Color.Black.copy(alpha = 0.05f),
@@ -73,8 +72,7 @@ fun MmCard(
             .then(
                 when {
                     style == MmCardStyle.Outlined -> Modifier.border(1.dp, c.outlineStrong, shape)
-                    c.isDark -> Modifier.border(0.5.dp, c.outline, shape)
-                    else -> Modifier
+                    else -> Modifier.border(0.5.dp, c.outline, shape)
                 },
             )
             .then(

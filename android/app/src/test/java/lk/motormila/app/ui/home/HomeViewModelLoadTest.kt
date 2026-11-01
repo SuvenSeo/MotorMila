@@ -249,6 +249,39 @@ class HomeViewModelLoadTest {
     }
 
     @Test
+    fun refresh_whenEveryRequestFails_preservesDataAndShowsOffline() = runEagerTest {
+        val repo = FakeStatsRepository(summaryFn = { StatsSummary(totalListings = 123) })
+        val vm = viewModel(repo)
+        repo.summaryFn = { throw java.io.IOException("offline") }
+        repo.insightsFn = { throw java.io.IOException("offline") }
+        repo.priceDropsFn = { throw java.io.IOException("offline") }
+        repo.districtPricesFn = { throw java.io.IOException("offline") }
+        repo.fuelMixFn = { throw java.io.IOException("offline") }
+
+        vm.refresh()
+
+        assertEquals(123, vm.state.value.summary.totalListings)
+        assertFalse(vm.state.value.isRefreshing)
+        assertTrue(vm.state.value.isOffline)
+        assertTrue(vm.state.value.showCachedBadge)
+        assertNotNull(vm.state.value.error)
+    }
+
+    @Test
+    fun refresh_whenOnlySecondaryRequestFails_keepsHeadlineOnline() = runEagerTest {
+        val repo = FakeStatsRepository(summaryFn = { StatsSummary(totalListings = 123) })
+        val vm = viewModel(repo)
+        repo.districtPricesFn = { throw java.io.IOException("offline") }
+
+        vm.refresh()
+
+        assertEquals(123, vm.state.value.summary.totalListings)
+        assertFalse(vm.state.value.isRefreshing)
+        assertFalse(vm.state.value.isOffline)
+        assertNull(vm.state.value.error)
+    }
+
+    @Test
     fun refresh_reloadsDataAndClearsRefreshing() = runEagerTest {
         var call = 0
         val repo = FakeStatsRepository(

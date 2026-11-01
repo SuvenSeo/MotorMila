@@ -304,10 +304,12 @@ private fun BottomBarTab(
         label = "tab-fill",
     )
     val pop = remember { Animatable(1f) }
-    LaunchedEffect(selected) {
+    LaunchedEffect(selected, reduced) {
         if (selected && !reduced) {
-            pop.snapTo(0.86f)
-            pop.animateTo(1f, spring(dampingRatio = 0.42f, stiffness = 520f))
+            pop.snapTo(0.94f)
+            pop.animateTo(1f, spring(dampingRatio = 0.85f, stiffness = 520f))
+        } else {
+            pop.snapTo(1f)
         }
     }
     // Unselected labels/icons sit on translucent glass over photos: use a
@@ -318,7 +320,7 @@ private fun BottomBarTab(
         modifier = modifier
             .fillMaxHeight()
             .clickable(interactionSource = interaction, indication = null, role = Role.Tab, onClick = onClick)
-            .mmPress(interaction, 0.88f)
+            .mmPress(interaction, 0.96f)
             .semantics(mergeDescendants = true) {
                 contentDescription = item.label
                 this.selected = selected

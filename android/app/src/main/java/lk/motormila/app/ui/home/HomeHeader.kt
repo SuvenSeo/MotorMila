@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.ripple
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -49,7 +51,7 @@ fun HomeTopRow(onAlertsClick: () -> Unit, modifier: Modifier = Modifier) {
     Row(
         modifier
             .fillMaxWidth()
-            .padding(start = MmSpacing.gutter, end = 8.dp, top = 6.dp),
+            .padding(start = MmSpacing.gutter, end = MmSpacing.gutter - 4.dp, top = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Image(
@@ -99,19 +101,19 @@ fun HomeHero(
         Row(
             Modifier
                 .fillMaxWidth()
-                .height(56.dp)
+                .heightIn(min = 60.dp)
                 .mmPress(press)
-                .clip(MmShapes.pill)
+                .clip(MmShapes.md)
                 .background(c.surfaceRaised)
-                .border(1.dp, c.outlineStrong, MmShapes.pill)
-                .clickable(interactionSource = press, indication = null, role = Role.Button, onClick = onSearchClick)
+                .border(1.dp, c.brand.copy(alpha = 0.35f), MmShapes.md)
+                .clickable(interactionSource = press, indication = ripple(), role = Role.Button, onClick = onSearchClick)
                 .semantics { contentDescription = hint }
-                .padding(horizontal = 18.dp),
+                .padding(horizontal = 18.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Icon(Icons.Outlined.Search, null, tint = c.textSecondary, modifier = Modifier.size(22.dp))
-            Text(hint, style = t.bodyL, color = c.textTertiary, maxLines = 1)
+            Icon(Icons.Outlined.Search, null, tint = c.brandText, modifier = Modifier.size(22.dp))
+            Text(hint, style = t.bodyL, color = c.textSecondary, modifier = Modifier.weight(1f))
         }
     }
 }

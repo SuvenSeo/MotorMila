@@ -269,13 +269,14 @@ fun ListingCard(
                 )
             }
         }
-        Column(Modifier.padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 14.dp)) {
+        Column(Modifier.padding(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 16.dp)) {
             Text(
                 text = listing.displayName,
                 style = t.label.copy(fontSize = 15.sp, lineHeight = 20.sp),
                 color = c.textPrimary,
-                // At large text one line held ~6 chars ("Merced…"): allow two.
-                maxLines = if (androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f) 2 else 1,
+                // Keep model names readable even in compact two-column results.
+                minLines = 2,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.then(titleShared),
             )
@@ -290,12 +291,13 @@ fun ListingCard(
                 // "Rs 1.85 Mn" needs ~0.45x (was floored at 0.55 -> "Rs 1.85 …").
                 minScale = 0.3f,
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
             Text(
                 text = metaLine(listing),
                 style = t.caption,
                 color = c.textSecondary,
-                maxLines = 1,
+                minLines = 2,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }

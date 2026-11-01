@@ -193,8 +193,11 @@ class HomeViewModel @Inject constructor(
                     districts = districts ?: _state.value.districts,
                     fuelMix = fuel ?: _state.value.fuelMix,
                     isRefreshing = false,
-                    isOffline = false,
-                    showCachedBadge = false,
+                    // Match initial load: failed headline requests mean cached
+                    // values, not a successful refresh of the market.
+                    isOffline = summary == null && insights == null,
+                    showCachedBadge = summary == null && insights == null,
+                    error = if (summary == null && insights == null) "Couldn't refresh" else null,
                 )
             } catch (e: Exception) {
                 _state.value = _state.value.copy(

@@ -29,7 +29,7 @@ fun Modifier.applePressScale(
     val reduce = ReduceMotion.current
     val scale by animateFloatAsState(
         targetValue = if (pressed && !reduce) pressedScale else 1f,
-        animationSpec = pressSpring(),
+        animationSpec = MmMotion.orSnap(reduce, pressSpring()),
         label = "apple-press",
     )
     graphicsLayer {
