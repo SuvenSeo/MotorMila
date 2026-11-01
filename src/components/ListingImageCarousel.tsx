@@ -140,13 +140,14 @@ export function ListingImageCarousel({
   }, [index, onPhotoAspectRatio]);
   useEffect(() => { reportPhotoAspect(); }, [reportPhotoAspect, images]);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(initialSlide);
   const [lightboxRequested, setLightboxRequested] = useState(false);
   const sourceName = formatSourceName(source);
   // Only mount the photos someone can see or is about to: the current slide,
   // plus its neighbours once the carousel is touched/hovered (cards) or right
   // away (detail). Every card used to download all of its slides up front —
   // ~50 full-size photos (≈8 MB) on the home grid.
-  const [mounted, setMounted] = useState<ReadonlySet<number>>(() => new Set(isDetail && multi ? [0, 1, count - 1] : [initialSlide]));
+  const [mounted, setMounted] = useState<ReadonlySet<number>>(() => new Set(isDetail && multi ? [initialSlide, (initialSlide + 1) % count, (initialSlide - 1 + count) % count] : [initialSlide]));
   const prime = useCallback(
     (center: number) => {
       if (!multi) return;
@@ -185,13 +186,14 @@ export function ListingImageCarousel({
 
   const goTo = useCallback(
     (i: number) => {
+      prime(i);
       if (emblaApi) emblaApi.scrollTo(i, reduced);
       else {
         setPendingSlide(i);
         wake();
       }
     },
-    [emblaApi, reduced, wake],
+    [emblaApi, reduced, wake, prime],
   );
   const prev = useCallback(() => {
     if (emblaApi) emblaApi.scrollPrev(reduced);
@@ -218,6 +220,9 @@ export function ListingImageCarousel({
     if (lastImagesKey.current === imagesKey) return;
     lastImagesKey.current = imagesKey;
     setIndex(0);
+    setPendingSlide(null);
+    setLightboxOpen(false);
+    setLightboxIndex(0);
     setMounted(new Set(isDetail && multi ? [0, 1, count - 1] : [0]));
     emblaApi?.reInit();
     emblaApi?.scrollTo(0, true);
@@ -241,7 +246,8 @@ export function ListingImageCarousel({
     return () => region.removeEventListener("keydown", onKey);
   }, [isDetail, multi, lightboxOpen, prev, next]);
 
-  const openLightbox = (from?: Element | null) => {
+  const openLightbox = (from?: Element | null, photoIndex = index) => {
+    setLightboxIndex(photoIndex);
     const r = from?.getBoundingClientRect();
     setLightboxOrigin(r && r.width > 0 ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null);
     setLightboxRequested(true);
@@ -318,7 +324,9 @@ export function ListingImageCarousel({
                     className="relative isolate block h-full w-full cursor-zoom-in"
                     aria-label={t("listingImage.openPhoto", "Open {label} full screen", { label: label(i) })}
                     tabIndex={i === index ? 0 : -1}
-                    onClick={(e) => openLightbox(e.currentTarget)}
+                    onClick={(e) => {
+                      if (!e.defaultPrevented) openLightbox(e.currentTarget, i);
+                    }}
                   >
                     <VehicleThumbnail
                       src={src}
@@ -464,16 +472,21 @@ export function ListingImageCarousel({
         <Suspense fallback={null}>
           <ListingLightbox
             open={lightboxOpen}
-            index={index}
+            index={lightboxIndex}
             images={images}
             alt={alt}
             sourceName={sourceName}
             origin={lightboxOrigin}
             creditLabel={sourceName ? t("listingImage.credit", "Photo: {source}", { source: sourceName }) : undefined}
-            onClose={() => setLightboxOpen(false)}
-            onIndexChange={(i) => {
-              if (i !== index) goTo(i);
+            onClose={() => {
+              // Synchronize once, without running the page carousel behind the
+              // viewer on every swipe (which could feed a stale index back).
+              prime(lightboxIndex);
+              if (emblaApi) emblaApi.scrollTo(lightboxIndex, true);
+              else setPendingSlide(lightboxIndex);
+              setLightboxOpen(false);
             }}
+            onIndexChange={setLightboxIndex}
           />
         </Suspense>
       )}

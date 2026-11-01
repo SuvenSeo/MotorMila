@@ -101,6 +101,16 @@ describe("navigateWithHeroTransition", () => {
     expect(document.documentElement.hasAttribute("data-listing-vt")).toBe(false);
   });
 
+  it("does not commit an opening that was cancelled before its callback runs", async () => {
+    const navigate = vi.fn();
+    navigateWithHeroTransition(navigate, null);
+    cancelActiveTransition();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(navigate).not.toHaveBeenCalled();
+    expect(document.documentElement.hasAttribute("data-listing-vt")).toBe(false);
+  });
+
   it("does nothing (plain navigation) under reduced motion", () => {
     window.matchMedia = ((query: string) => ({
       matches: query.includes("reduce"),

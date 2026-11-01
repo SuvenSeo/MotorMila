@@ -184,7 +184,7 @@ img[data-fade-in][data-loaded="true"] {
 }
 
 /* ── Lightbox zoom-from-thumbnail ───────────────────────────────────────── */
-.mm-lightbox-zoom .yarl__carousel {
+.mm-lightbox-zoom .yarl__container {
   transform-origin: var(--mm-lb-ox, 50%) var(--mm-lb-oy, 50%);
   animation: mm-lb-zoom var(--dur-medium) var(--ease-decelerate) both;
 }
@@ -208,11 +208,11 @@ img[data-fade-in][data-loaded="true"] {
 @media (prefers-reduced-motion: reduce) {
   .group:hover .listing-card-photo img { transform: none; }
   .save-burst[data-play="true"] { animation: none; }
-  .mm-lightbox-zoom .yarl__carousel { animation: none; }
+  .mm-lightbox-zoom .yarl__container { animation: none; }
   .cmp-tint { transition: none; }
 }
 html.low-data img[data-pending="true"],
 html.low-data img[data-fade-in][data-loaded="true"] { animation: none; }
 html.low-data .save-burst[data-play="true"],
-html.low-data .mm-lightbox-zoom .yarl__carousel { animation: none; }
+html.low-data .mm-lightbox-zoom .yarl__container { animation: none; }
 html.low-data .group:hover .listing-card-photo img { transform: none; }

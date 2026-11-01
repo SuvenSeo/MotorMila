@@ -144,6 +144,9 @@ export function navigateWithHeroTransition(navigate: () => void, cardImage: HTML
   openInFlight = true;
   try {
     const vt = doc.startViewTransition!(async () => {
+      // skipTransition still invokes the update callback. A newer navigation
+      // must not be overwritten by this now-cancelled opening.
+      if (cancelled) return;
       if (cardImage) cardImage.style.removeProperty("view-transition-name");
       // Tells RouteTransition / the detail page to swap in at rest: the View
       // Transition is the animation (no framer fade or reveal on top of it).

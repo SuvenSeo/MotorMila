@@ -254,6 +254,7 @@ export function createViewTransitionHistory(): BrowserHistory {
       try {
         let cancelled = false;
         const vt = (document as DocWithVT).startViewTransition!(async () => {
+          if (cancelled) return;
           flushSync(() => listener(update));
           if (cancelled) return;
           await waitForRouteCommit(COMMIT_WAIT_MS);
@@ -408,6 +409,7 @@ function runListingBackTransition(commit: () => void, listingId: string): boolea
   };
   try {
     const vt = (document as DocWithVT).startViewTransition!(async () => {
+      if (cancelled) return;
       hero?.style.removeProperty("view-transition-name");
       // ScrollRestoration settles this (restored, or nothing to restore).
       beginScrollRestore();
