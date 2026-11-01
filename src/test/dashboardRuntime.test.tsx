@@ -34,6 +34,12 @@ vi.mock("@/components/ComparisonModal", () => ({
   ComparisonModal: () => null,
 }));
 
+// DistrictVelocityMap pulls in react-leaflet/leaflet, which touches `window`
+// at import time and rejects in the node test env after teardown.
+vi.mock("@/components/DistrictVelocityMap", () => ({
+  DistrictVelocityMap: () => null,
+}));
+
 vi.mock("@/components/PipelineStatusBar", () => ({
   PipelineStatusBar: () => <div>PipelineStatusBar</div>,
 }));

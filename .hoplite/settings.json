@@ -1,9 +1,12 @@
 {
   "version": 1,
-  "ports": {"preview": 3000, "additional": {}},
+  "ports": {"preview": 8080, "additional": {}},
   "scripts": {
     "setup": {"enabled": true, "command": "apt-get update -qq && apt-get install -y -qq git-lfs"},
-    "run": {"enabled": true, "command": null},
+    "run": {
+      "enabled": true,
+      "command": "(cd backend && ALLOW_SQLITE_FALLBACK=true PRO_ACCESS_ENFORCED=false APP_ACCESS_ENFORCED=false .venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 > /tmp/motormila-backend.log 2>&1 &) ; npm run dev"
+    },
     "archive": {"enabled": true, "command": null},
     "check": {"enabled": true, "command": null}
   },

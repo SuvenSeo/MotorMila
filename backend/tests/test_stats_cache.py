@@ -712,6 +712,9 @@ def test_trends_endpoint_returns_cached_on_hit(monkeypatch):
 
 
 def test_trends_endpoint_stores_on_miss(monkeypatch):
+    monkeypatch.setattr(
+        stats_module, 'resolve_request_access', lambda *a, **k: ('pro', 'user')
+    )
     db = _session()
     monkeypatch.setattr(stats_module, "resolve_request_access", lambda *a, **k: ("pro", "user"))
     cache_key = build_trends_cache_key(
