@@ -36,3 +36,7 @@ To promote this to production later (separate go-ahead required)
 - Set the same `VITE_API_URL` on the Pages **production** env and trigger a
   proper GitHub-push Pages build (not a direct upload), then verify the
   live bundle actually contains the backend login path before announcing it.
+
+Preview env set 2 Nov 2026 (Pages preview only): VITE_API_URL =
+https://seo292-vehicle-platform-backend.hf.space/api/v1. Production env
+unchanged (VITE_API_URL still /api/v1).
