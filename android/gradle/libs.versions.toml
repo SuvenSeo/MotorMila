@@ -31,6 +31,9 @@ billing = "8.0.0"
 # FCM only (no google-services plugin): FirebaseApp is initialised manually
 # from BuildConfig values, so builds without Firebase config still work.
 firebase-messaging = "24.1.2"
+# Sentry Android SDK (crash reporting, Ardeno Studio org). DSN is supplied
+# at build time only, never committed — see app/build.gradle.kts.
+sentry-android = "8.63.0"
 junit = "4.13.2"
 turbine = "1.2.1"
 mockk = "1.13.12"
@@ -87,6 +90,7 @@ camerax-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", vers
 camerax-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
     mlkit-text-recognition = { group = "com.google.android.gms", name = "play-services-mlkit-text-recognition", version.ref = "mlkit-text" }
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging", version.ref = "firebase-messaging" }
+sentry-android = { group = "io.sentry", name = "sentry-android", version.ref = "sentry-android" }
 play-billing-ktx = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "billing" }
 coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }

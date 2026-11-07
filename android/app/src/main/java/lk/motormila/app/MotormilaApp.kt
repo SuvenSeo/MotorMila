@@ -12,6 +12,7 @@ import coil3.request.crossfade
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
+import io.sentry.android.core.SentryAndroid
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -67,6 +68,18 @@ class MotormilaApp : Application(), SingletonImageLoader.Factory, Configuration.
 
     override fun onCreate() {
         super.onCreate()
+        // Sentry crash reporting (Ardeno Studio org). Inert when no DSN was
+        // supplied at build time (env SENTRY_DSN or -P sentryDsn) — the DSN
+        // is never committed; see BuildConfig.SENTRY_DSN in build.gradle.kts.
+        if (BuildConfig.SENTRY_DSN.isNotBlank()) {
+            SentryAndroid.init(this) { options ->
+                options.dsn = BuildConfig.SENTRY_DSN
+                options.environment = BuildConfig.BUILD_TYPE
+                options.release = "lk.motormila.app@${BuildConfig.VERSION_NAME}"
+                options.tracesSampleRate = 0.1
+                options.profilesSampleRate = 0.0
+            }
+        }
         createNotificationChannels()
         // FCM (no google-services plugin): inert unless this build carries
         // the MOTORMILA_FIREBASE_* client config.
