@@ -37,7 +37,7 @@ import lk.motormila.app.domain.repository.ListingRepository
  * - [paging]: Paging3. Default network-only [ListingPagingSource]; pass
  *   `cached=true` for the Room-backed [ListingRemoteMediator] (15-min TTL).
  * - Detail/similar/history/fmv/seller: fetched fresh, detail upserted to Room.
- * - Search/detail/similar/history fall back to the public Vercel snapshots
+ * - Search/detail/similar/history fall back to the public R2 snapshots
  *   when the live API throws (Neon outage) — see [withSnapshotFallback].
  */
 @Singleton

@@ -31,7 +31,7 @@ ER_API_USD_URL = "https://open.er-api.com/v6/latest/USD"
 # Planning fallback when every live source fails (aligned with calculator default).
 FALLBACK_USD_LKR = 300.0
 
-USER_AGENT = "MotormilaMacroFeed/1.0 (+https://motormila.vercel.app)"
+USER_AGENT = "MotormilaMacroFeed/1.0 (+https://motormila.pages.dev)"
 
 
 @dataclass(frozen=True)
@@ -205,7 +205,7 @@ def fetch_macro_snapshot(*, client: httpx.Client | None = None) -> MacroSnapshot
                 usd_lkr=FALLBACK_USD_LKR,
                 reference_date=None,
                 source="fallback_constant",
-                source_url="https://motormila.vercel.app/calculator",
+                source_url="https://motormila.pages.dev/calculator",
                 fetched_at=_now_iso(),
             )
 

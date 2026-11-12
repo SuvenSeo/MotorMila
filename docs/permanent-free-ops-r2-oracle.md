@@ -7,15 +7,14 @@
 Motormila burned free Neon/Supabase because **public browsing hits live Postgres**.
 The durable $0 path is: **R2 for public reads**, DB only for scrapes/auth/alerts.
 
-> **WARNING — Vercel Git deploys omit gitignored snapshot JSON.**  
-> `public/snapshots/latest/*.json` is gitignored, so every GitHub → Vercel
+> **WARNING — Git deploys omit gitignored snapshot JSON.**  
+> `public/snapshots/latest/*.json` is gitignored, so every GitHub → Pages
 > deploy from `main` ships **without** those files. With
 > `VITE_SNAPSHOT_ONLY=true`, the SPA then serves HTML for snapshot URLs and
-> the site breaks. After every `main` deploy you must either:  
-> **(a)** run `bash scripts/redeploy-prod-with-snapshots.sh` (or
-> `npx vercel deploy --prod`) from a tree that already has the snapshot
-> JSON, or **(b)** host snapshots on R2 and point `VITE_SNAPSHOT_BASE_URL`
-> there. Prefer (b) long-term.
+> the site breaks. After every snapshot refresh you must trigger a Pages
+> rebuild (retry of the latest github:push production deployment —
+> `scripts/trigger-pages-rebuild.py`), which pulls the fresh R2 snapshots
+> at build time.
 
 ## ASAP checklist (do in order)
 
@@ -46,11 +45,16 @@ export ALLOW_SQLITE_FALLBACK=false
 
 Confirm `listing-catalog.json`, `stats-summary.json`, `live-market.json`, etc. exist under the export dir.
 
-If the catalog is too large for a single Vercel static file (100 MB limit),
+If the catalog is too large for a single static file (Cloudflare Pages serves files up to 25 MB),
 `listing-catalog.json` may be a **manifest** with a `parts` array pointing at
 `listing-catalog-part-000.json`, … — the frontend loads and concatenates them.
 
-### 2b. Alternative while DB is still reachable from Vercel (no R2 yet)
+### 2b. SUPERSEDED 2026-11-12 — Alternative while DB was still reachable from Vercel (no R2 yet)
+
+> The export API (`api/internal-snapshot-export.js`) and the scripts below
+> (`apply-snapshot-vercel-env.sh`, `redeploy-prod-with-snapshots.sh`) were
+> deleted in the Cloudflare-only move. This section is kept as history only;
+> snapshots now refresh via R2 + `scripts/trigger-pages-rebuild.py`.
 
 Use the authenticated exporter + pull script (needs `SNAPSHOT_EXPORT_SECRET`
 on Vercel; do not commit the secret):
@@ -86,13 +90,13 @@ GitHub secrets:
 Run `upload_snapshots_r2.py` (or the workflow step that wraps it).  
 Attach a **public** custom domain / r2.dev URL to the bucket.
 
-### 4. Vercel env (required)
+### 4. Cloudflare Pages env (required)
 ```text
 VITE_SNAPSHOT_BASE_URL=https://<public-r2-domain>/latest
 VITE_SNAPSHOT_ONLY=true
 ```
 
-Redeploy the frontend. With `VITE_SNAPSHOT_ONLY=true`, public reads **never** fall back to the HF/Postgres API (empty/error instead of burning egress).
+Push to `main` (Pages rebuilds on push) or retry the latest production deployment. With `VITE_SNAPSHOT_ONLY=true`, public reads **never** fall back to the HF/Postgres API (empty/error instead of burning egress).
 
 ### 5. HF Space (optional egress brakes)
 ```text

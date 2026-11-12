@@ -4,7 +4,7 @@
 Prints:
   - AUTH_TOKEN_SECRET
   - AUTH_USERS JSON for an admin (bcrypt password hash)
-  - Vercel / Hugging Face checklist
+  - Cloudflare Pages / Hugging Face checklist
 
 Usage:
   python scripts/bootstrap_platform_auth.py --email you@example.com --password '...' --name 'Owner'
@@ -56,7 +56,7 @@ def main() -> int:
         print()
         print("Paste into Hugging Face Space secrets (do not rotate AUTH_TOKEN_SECRET).")
         print("Then Restart / Factory rebuild the Space.")
-        print(f"Sign in at https://motormila.vercel.app/sign-in as {email}")
+        print(f"Sign in at https://motormila.pages.dev/sign-in as {email}")
         return 0
 
     secret = secrets.token_urlsafe(48)
@@ -66,18 +66,18 @@ def main() -> int:
     print(f"AUTH_USERS={auth_users}")
     print("APP_ACCESS_ENFORCED=true")
     print("PRO_ACCESS_ENFORCED=true")
-    print("PUBLIC_APP_ORIGIN=https://motormila.vercel.app")
+    print("PUBLIC_APP_ORIGIN=https://motormila.pages.dev")
     print()
-    print("=== Vercel project env (Production) ===")
+    print("=== Cloudflare Pages project env (Production) ===")
     print("VITE_ENABLE_BACKEND_AUTH=true")
     print("VITE_API_URL=/api/v1")
     print()
     print("Optional email invites: set RESEND_API_KEY (+ RESEND_FROM) on HF.")
     print("Optional billing upgrades: set BILLING_WEBHOOK_SECRET on HF.")
     print()
-    print("After saving secrets: restart HF Space, Redeploy Vercel Production.")
-    print(f"Then sign in at https://motormila.vercel.app/sign-in as {email}")
-    print("Admin console: https://motormila.vercel.app/admin")
+    print("After saving secrets: restart HF Space, then push to main (Pages rebuilds on push).")
+    print(f"Then sign in at https://motormila.pages.dev/sign-in as {email}")
+    print("Admin console: https://motormila.pages.dev/motormila/admin")
     return 0
 
 

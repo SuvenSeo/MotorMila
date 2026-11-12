@@ -6,7 +6,7 @@
 #   Riyasewana Deep Backfill ─┴─> Neon
 #        └─> Neon Export ─> neon-export-* release
 #              └─> Manus to Live (auto-triggers on Neon Export completion)
-#                    └─> merges into merged SQLite ─> Vercel = LIVE SITE
+#                    └─> merges into merged SQLite ─> Cloudflare Pages = LIVE SITE
 #
 # Why Neon Export is the handoff: the backfills write to Neon, but
 # manus-to-live.yml owns the public catalog and rebuilds it from the merged
@@ -192,4 +192,4 @@ log "Manus to Live triggers automatically on Neon Export completion"
 echo "  Watch it with: gh run list --workflow=manus-to-live.yml --limit 3"
 echo
 echo "Catch-up dispatched. When Manus to Live finishes, verify the live catalog:"
-echo "  curl -s https://motormila.vercel.app/snapshots/latest/manifest.json | jq '{listing_count, generated_at}'"
+echo "  curl -s https://motormila.pages.dev/snapshots/latest/manifest.json | jq '{listing_count, generated_at}'"

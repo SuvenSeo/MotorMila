@@ -343,7 +343,7 @@ def create_my_listing(
         # CarListingRead requires a url; scraped rows carry the source page,
         # first-party listings point at their own MotorMila detail page
         # (previously None, which 500'd GET /listings/{id}).
-        row.url = f"https://motormila.vercel.app/listing/{row.id}"
+        row.url = f"https://motormila.pages.dev/listing/{row.id}"
         db.commit()
         db.refresh(row)
     return _to_read(row)

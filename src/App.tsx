@@ -287,7 +287,7 @@ const App = () => {
                   <Route path="/how-we-price" element={<HowWePrice />} />
                   {/** Legacy valuation path: header/footer now point at /estimate. */}
                   <Route path="/valuation" element={<Navigate to="/estimate" replace />} />
-                  {/* Common typed paths → the page they mean (also 301s in vercel.json / public/_redirects). */}
+                  {/* Common typed paths → the page they mean (also 301s in public/_redirects). */}
                   <Route path="/prices" element={<Navigate to="/trends" replace />} />
                   <Route path="/price" element={<Navigate to="/trends" replace />} />
                   <Route path="/tools" element={<Navigate to="/calculator" replace />} />

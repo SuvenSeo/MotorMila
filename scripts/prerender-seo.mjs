@@ -8,7 +8,7 @@
  * canonical (self), Open Graph/Twitter tags, robots and JSON-LD, plus a short
  * crawlable summary inside #root (React replaces it on mount).
  *
- *   dist/<route>.html      served for /<route> (vercel.json cleanUrls, CF Pages default)
+ *   dist/<route>.html      served for /<route> (CF Pages default)
  *   dist/404.html          noindex shell, served with a real 404 status for unknown paths
  *
  * Hub routes (makes, make/model, districts) come from the snapshot index
@@ -259,7 +259,7 @@ export async function prerender() {
     }
   }
 
-  // Real 404 shell (vercel.json routes unknown paths here with status 404).
+  // Real 404 shell (Pages falls through to the static 404.html with status 404).
   await fs.writeFile(
     path.join(DIST, "404.html"),
     renderShell(template, { path: "/404", title: `Page not found — ${SITE}`, description: DEFAULT_DESC, indexable: false }),

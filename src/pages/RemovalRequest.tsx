@@ -90,7 +90,7 @@ export default function RemovalRequest() {
           <Input
             id={id("url")}
             type="url"
-            placeholder="https://motormila.vercel.app/listing/12345"
+            placeholder="https://motormila.pages.dev/listing/12345"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             required

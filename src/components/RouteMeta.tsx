@@ -398,7 +398,7 @@ export function RouteMeta() {
 
     let meta: Meta | undefined = routeMeta[pathname];
     let canonicalPath = pathname;
-    let ogImage = `${ORIGIN}/og-card.jpg`;
+    const ogImage = `${ORIGIN}/og-card.jpg`;
     let jsonLd: unknown | undefined;
 
     if (!meta) {
@@ -455,7 +455,10 @@ export function RouteMeta() {
             "Side-by-side Sri Lankan vehicle comparison: price, mileage, district and fair-value verdict.",
           ),
         };
-        ogImage = `${ORIGIN}/api/compare-og?slug=${hub.ids.join("-vs-")}`;
+        // Dynamic compare OG card was a Vercel function (api/compare-og.js),
+        // deleted with api/ in the Cloudflare-only move — no Pages Function
+        // replacement (Functions removed 1 Nov 2026). Compare hubs use the
+        // default og-card.jpg above.
         jsonLd = {
           "@context": "https://schema.org",
           "@graph": [
@@ -479,7 +482,7 @@ export function RouteMeta() {
         };
       } else if (pathname === "/compare") {
         // Legacy query form: canonicalize ?ids= to the slug path (no
-        // navigation here — the page/Vercel 301 owns the redirect).
+        // navigation here — the page redirect owns the redirect).
         const params = new URLSearchParams(search);
         const ids = (params.get("ids") ?? "")
           .split(",")

@@ -2,7 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /api/
 Disallow: /api/v1/
-Disallow: /api/internal-
 Disallow: /snapshots/
 Disallow: /admin
 Disallow: /motormila/admin

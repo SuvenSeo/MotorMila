@@ -28,24 +28,23 @@ Repo → **Settings → Billing** (or org billing) → raise spending limit / fi
 | Secret | Required for | Notes |
 |--------|----------------|-------|
 | `HOT_DATABASE_URL` | Scrape + DB export fallback | Already used by other scrape workflows |
-| `SNAPSHOT_EXPORT_SECRET` | Preferred snapshot refresh | Same value as Vercel env `SNAPSHOT_EXPORT_SECRET` |
-| `VERCEL_TOKEN` | Auto production redeploy | [Vercel → Account → Tokens](https://vercel.com/account/tokens) |
-| `VERCEL_ORG_ID` | Auto redeploy | `team_mE6R9KnF9M1zrHLsjG0bTCvG` |
-| `VERCEL_PROJECT_ID` | Auto redeploy | `prj_6O1DYZrpoq2O2hAxwstHGolvFf9y` |
+| `SNAPSHOT_EXPORT_SECRET` | **RETIRED 2026-11-12** | The export API (`api/internal-snapshot-export.js`) was deleted; snapshots refresh via R2 (direct DB export fallback) |
+| `CLOUDFLARE_API_TOKEN` | Auto production rebuild | Cloudflare → My Profile → API Tokens (Pages:Edit) |
+| `CLOUDFLARE_ACCOUNT_ID` | Auto production rebuild | Cloudflare account id |
 | `R2_*` | Optional R2 upload | Only if you already set up Cloudflare R2 |
 
 `HOT_DATABASE_URL` should already exist (other scrape workflows use it).
 
-Add the three Vercel secrets under  
+Add the two Cloudflare secrets under  
 **Repo → Settings → Secrets and variables → Actions → New repository secret**.
 
-Also add `SNAPSHOT_EXPORT_SECRET` with the **same value** already set on Vercel
-(Project → Settings → Environment Variables). Without it, the workflow falls
-back to a direct DB export (more egress).
+Without them the workflow still exports snapshots and uploads them to R2,
+but the Pages rebuild step is skipped — run
+`scripts/trigger-pages-rebuild.py` locally instead (see below).
 
 ```bash
-# unzip artifact into public/snapshots/latest/
-bash scripts/redeploy-prod-with-snapshots.sh
+# with CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID set:
+python3 scripts/trigger-pages-rebuild.py
 ```
 
 ---
@@ -53,7 +52,7 @@ bash scripts/redeploy-prod-with-snapshots.sh
 ## First run (recommended): ikman only
 
 1. Open  
-   https://github.com/SuvenSeo/Vehicle-Platform/actions/workflows/scrape-export-redeploy.yml  
+   https://github.com/SuvenSeo/MotorMila/actions/workflows/scrape-export-redeploy.yml  
 2. Click **Run workflow** (branch: `main`).
 3. Set inputs:
 
@@ -70,13 +69,13 @@ bash scripts/redeploy-prod-with-snapshots.sh
    - `refresh-snapshots` — rebuild `/snapshots/latest`  
    - `redeploy` — production deploy **with** snapshot JSON  
 
-6. When green, hard-refresh https://motormila.vercel.app  
+6. When green, hard-refresh https://motormila.pages.dev  
    Confirm `/snapshots/latest/stats-summary.json` is JSON (not HTML).
 
 ### What “good” looks like in the logs
 - `ikman_active_before=…` / `ikman_active_after=…` / `ikman_scraped_last_2h=…`
 - Snapshot pull finishes without auth errors
-- Redeploy aliases `https://motormila.vercel.app`
+- Rebuild serves `https://motormila.pages.dev`
 - Verify step prints `content-type=application/json`
 
 ---
@@ -97,10 +96,10 @@ Use when the DB already has fresh rows and you only need to refresh the site:
 
 1. Open the successful run → **Artifacts** → `public-snapshots-latest-<id>`
 2. Download and unpack into `public/snapshots/latest/`
-3. Locally (Vercel CLI logged in):
+3. Locally (with `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` set):
 
 ```bash
-bash scripts/redeploy-prod-with-snapshots.sh
+python3 scripts/trigger-pages-rebuild.py
 ```
 
 ---
@@ -129,6 +128,6 @@ bash scripts/redeploy-prod-with-snapshots.sh
 |---------|--------------|-----|
 | Workflow never starts | Actions spending limit | Fix GitHub billing |
 | Scrape fails on DB connect | Egress exhausted / bad DSN | Wait for quota; check `HOT_DATABASE_URL` |
-| Snapshot refresh 401 | Wrong/missing `SNAPSHOT_EXPORT_SECRET` | Match Vercel env value |
-| Site empty after GitHub merge | Git deploy wiped gitignored JSON | Re-run this workflow with `source=none` or local redeploy script |
-| Catalog too large / deploy fails | Part split missing | Ensure `split-listing-catalog.mjs` / pull script multi-part ran |
+| Snapshot refresh 401 | RETIRED — the export API was deleted 2026-11-12 | Snapshots now refresh via R2 (direct DB export fallback) |
+| Site empty after GitHub merge | Git deploy wiped gitignored JSON | Re-run this workflow with `source=none`, or run `scripts/trigger-pages-rebuild.py` locally |
+| Catalog too large / deploy fails | Part split missing | Ensure `split-listing-catalog.mjs` multi-part ran |

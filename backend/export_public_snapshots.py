@@ -40,8 +40,8 @@ logger = logging.getLogger(__name__)
 MIN_REASONABLE_PRICE_LKR = 100_000
 DEFAULT_OUTPUT_DIR = BASE_DIR / "snapshots" / "latest"
 
-# Vercel caps a single deployed file at 100 MB; keep each catalog part around
-# 20 MB (Cloudflare Pages 25 MiB per-file limit) and reliable client-side chunk streaming.
+# Cloudflare Pages caps a single file at 25 MiB; keep each catalog part around
+# 20 MB for reliable client-side chunk streaming.
 CATALOG_PART_TARGET_BYTES = 20 * 1024 * 1024
 
 
@@ -318,7 +318,7 @@ def build_make_insights(catalog: list[dict[str, Any]]) -> dict[str, dict[str, An
 def write_catalog_parts(output_dir: Path, catalog: list[dict[str, Any]], generated_at: datetime) -> None:
     """Write the listing catalog as a small manifest + paginated part files.
 
-    Vercel rejects a single deployed file over 100 MB, and the full catalog
+    Cloudflare Pages rejects a single file over 25 MiB, and the full catalog
     routinely exceeds that, so items are split into listing-catalog-part-NNN.json
     files (each wrapped as {"items": [...]}) with a manifest pointing at them —
     the multi-part shape the frontend already consumes.
@@ -616,7 +616,7 @@ def build_entity_indexes(output_dir: Path) -> None:
 
     The browser must never download the whole catalogue, so the frontend reads
     idx/listings/<bucket>.json, idx/models/<make>/<model>.json etc. The layout
-    is produced by scripts/build-snapshot-indexes.mjs (shared with the Vercel
+    is produced by scripts/build-snapshot-indexes.mjs (shared with the Pages
     build so keys always match the SPA's canonicalizers). Best effort: a missing
     Node runtime only means the frontend keeps using its legacy fallback.
     """

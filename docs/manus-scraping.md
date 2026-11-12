@@ -98,13 +98,13 @@ Each run:
    `neon-export-*`. Discovery lives in
    `backend/scripts/ops/discover_dump_releases.py`.
 3. runs market analysis + dedup (`run_sync.py`),
-4. exports full public snapshots and deploys them to Vercel via
-   `scripts/deploy-snapshots-to-prod.sh`,
+4. exports full public snapshots, uploads them to R2, then triggers a
+   Cloudflare Pages rebuild via `scripts/trigger-pages-rebuild.py`,
 5. re-publishes the merged DB + marker **only after a successful deploy**,
    so a failed run is retried from the same point.
 
-Requires the repo secrets `VERCEL_TOKEN` / `VERCEL_ORG_ID` /
-`VERCEL_PROJECT_ID` (already used by the other workflows). Optional:
+Requires the repo secrets `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID`
+(already used by the other workflows). Optional:
 `SLACK_WEBHOOK_URL` for failure alerts.
 
 The first run merges all existing `manus-scrape-*` dumps at once. Subsequent

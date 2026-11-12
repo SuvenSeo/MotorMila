@@ -18,7 +18,7 @@ from db.models import ChargePoint
 log = structlog.get_logger()
 
 OCM_POI_URL = "https://api.openchargemap.io/v3/poi/"
-USER_AGENT = "MotorMila/1.0 (+https://motormila.vercel.app)"
+USER_AGENT = "MotorMila/1.0 (+https://motormila.pages.dev)"
 ATTRIBUTION = "Data © Open Charge Map contributors and original data providers."
 COLOMBO = (6.9271, 79.8612)
 

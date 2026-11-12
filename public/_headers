@@ -1,5 +1,4 @@
-# Cloudflare Pages headers — mirrors vercel.json for the future Pages cutover.
-# Vercel ignores this file, so it is safe to ship before migration.
+# Cloudflare Pages headers.
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
@@ -29,7 +28,7 @@
   X-Robots-Tag: noindex, nofollow
 /delete-account
   X-Robots-Tag: noindex, nofollow
-# Utility / account routes: never indexed (mirrors vercel.json; the shells also carry meta robots).
+# Utility / account routes: never indexed (the shells also carry meta robots).
 /sign-in
   X-Robots-Tag: noindex, nofollow
 /sign-up

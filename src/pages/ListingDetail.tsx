@@ -305,7 +305,7 @@ export default function ListingDetail() {
       vehicleTransmission: listing.transmission || undefined,
       bodyType: listing.body_type || undefined,
       image: image || undefined,
-      url: `https://motormila.vercel.app/listing/${listing.id}`,
+      url: `https://motormila.pages.dev/listing/${listing.id}`,
       areaServed: listing.district
         ? { '@type': 'AdministrativeArea', name: `${listing.district}, Sri Lanka` }
         : undefined,

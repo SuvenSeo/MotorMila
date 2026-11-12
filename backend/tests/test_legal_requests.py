@@ -6,7 +6,7 @@ from app.routers.money_models import LegalRequest
 
 def _removal(**over):
     body = {
-        "listing_url": "https://motormila.vercel.app/listing/123",
+        "listing_url": "https://motormila.pages.dev/listing/123",
         "reason": "personal_data",
         "requester_role": "seller",
         "email": "seller@example.com",

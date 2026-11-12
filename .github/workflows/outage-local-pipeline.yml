@@ -318,8 +318,8 @@ jobs:
           PY
 
       # Hand the snapshots to the hosted deploy job (it needs no DB access —
-      # it just uploads the files to Vercel). Keeps the laptop runner free of
-      # Node/npx requirements.
+      # it uploads the files to R2, then triggers a Pages rebuild). Keeps the
+      # laptop runner free of Node/npx requirements.
       - name: Upload snapshots artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -344,17 +344,41 @@ jobs:
           path: snapshots-artifact
 
       # Copy the fresh snapshot set (stats + catalog parts + manifest) into the
-      # deploy dir. The manifest being present makes deploy-snapshots-to-prod.sh
-      # skip fetching the old Neon-era catalog from the live site.
+      # deploy dir. The manifest being present is what the R2 upload publishes.
       - name: Stage snapshots into public dir
         run: |
           mkdir -p public/snapshots/latest
           cp -r snapshots-artifact/. public/snapshots/latest/
 
-      - name: Deploy snapshots to Vercel production
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Upload snapshots to R2
+        id: r2_upload
+        working-directory: backend
         env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          SNAPSHOT_SOURCE_DIR: public/snapshots/latest
-        run: bash scripts/deploy-snapshots-to-prod.sh
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_PREFIX: ${{ secrets.R2_PREFIX }}
+          SNAPSHOT_SOURCE_DIR: ../public/snapshots/latest
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "${R2_ACCOUNT_ID}" ] || [ -z "${R2_ACCESS_KEY_ID}" ] || [ -z "${R2_SECRET_ACCESS_KEY}" ] || [ -z "${R2_BUCKET}" ]; then
+            echo "uploaded=false" >> "$GITHUB_OUTPUT"
+            echo "R2 secrets not fully configured — skipping R2 upload."
+            exit 0
+          fi
+          pip install -q boto3
+          python upload_snapshots_r2.py
+          echo "uploaded=true" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger Cloudflare Pages rebuild (retry latest github:push production deployment)
+        if: steps.r2_upload.outputs.uploaded == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 scripts/trigger-pages-rebuild.py

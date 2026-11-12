@@ -266,8 +266,8 @@ def create_checkout(
     period_label = "1 year" if body.period == "yearly" else "1 month"
     fields: dict[str, str] = {
         "merchant_id": merchant,
-        "return_url": _env("PAYHERE_RETURN_URL", "https://motormila.vercel.app/checkout/return") + f"?order_id={order_id}",
-        "cancel_url": _env("PAYHERE_CANCEL_URL", "https://motormila.vercel.app/pricing?checkout=cancelled"),
+        "return_url": _env("PAYHERE_RETURN_URL", "https://motormila.pages.dev/checkout/return") + f"?order_id={order_id}",
+        "cancel_url": _env("PAYHERE_CANCEL_URL", "https://motormila.pages.dev/pricing?checkout=cancelled"),
         "notify_url": _env("PAYHERE_NOTIFY_URL"),
         "first_name": _clean(body.first_name, _clean(first_guess, "MotorMila")),
         "last_name": _clean(body.last_name, _clean(last_guess, "Customer")),

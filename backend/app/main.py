@@ -384,7 +384,7 @@ _SECURITY_CONTACT = os.getenv("SECURITY_CONTACT", "mailto:suvenseoras@gmail.com"
 SECURITY_TXT = (
     f"Contact: {_SECURITY_CONTACT}\n"
     "Preferred-Languages: en\n"
-    "Policy: https://motormila.vercel.app/security\n"
+    "Policy: https://motormila.pages.dev/security\n"
     "Expires: 2027-10-01T00:00:00.000Z\n"
 )
 

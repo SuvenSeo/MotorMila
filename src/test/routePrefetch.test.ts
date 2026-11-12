@@ -5,7 +5,7 @@ describe("routePrefetch", () => {
   it("normalizes hashes and trailing slashes", () => {
     expect(pathnameOf("/#market")).toBe("/");
     expect(pathnameOf("/trends/")).toBe("/trends");
-    expect(pathnameOf("https://motormila.vercel.app/docs")).toBe("");
+    expect(pathnameOf("https://motormila.pages.dev/docs")).toBe("");
   });
 
   it("maps dynamic listing and hub paths to shared chunk keys", () => {

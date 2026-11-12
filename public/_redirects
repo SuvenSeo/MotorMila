@@ -1,18 +1,19 @@
-# Cloudflare Pages redirects — mirrors vercel.json rewrites for the future cutover.
-# Vercel ignores this file. Set BACKEND_URL to the live API host on cutover.
-# NOTE: the bot user-agent split for /listing/:id OG cards (vercel.json) has no
-# _redirects equivalent — it needs a Pages Function middleware. See migration plan.
-# NOTE: /api/v1/* is proxied by functions/api/v1/[[path]].js (a plain _redirects
-# 200 rule for that path proved unreliable on Pages), so no rule here.
+# Cloudflare Pages redirects.
+# NOTE: the bot user-agent split for /listing/:id OG cards has no _redirects
+# equivalent and no Pages Function replacement (Functions removed 1 Nov 2026
+# after a bot crawl burned the Workers quota): /listing/:id serves the SPA
+# shell statically below, bots and humans alike, no Function runs.
+# NOTE: /api/v1/* has no proxy rule here — the frontend calls the HF API
+# directly (VITE_API_URL). Do not re-add a proxy rule or a Function for it.
 /assets/* /assets/:splat 200
 /snapshots/* /snapshots/:splat 200
-# SPA routes with no prerendered shell (mirrors the vercel.json rewrites).
+# SPA routes with no prerendered shell.
 # Static routes (/calculator, /trends, /cars/:make, /cars/:make/:model, ...) are
 # served from the route shells scripts/prerender-seo.mjs writes, so they need
 # no rule. Do NOT add a catch-all "/* /index.html 200": Pages rejects it as an
 # infinite loop (it strips .html / index) and ignores it, and _redirects rules
 # win over static assets, so any broader rule would shadow the shells. Unknown
-# URLs fall through to the static 404.html with a real 404, as on Vercel.
+# URLs fall through to the static 404.html with a real 404.
 # Retired paths: real 301s (raw HTML used to be the indexable home shell).
 /leasing /finance 301
 /admin /motormila/admin 301

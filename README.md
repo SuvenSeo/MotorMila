@@ -1,6 +1,6 @@
 <div align="center">
 
-<a href="https://motormila.vercel.app">
+<a href="https://motormila.pages.dev">
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="docs/readme/hero-light.png" />
   <img src="docs/readme/hero-dark.png" alt="Motormila — The fair mila for every motor." width="100%" />
@@ -13,8 +13,8 @@
 
 <br />
 
-<a href="https://motormila.vercel.app"><img src="https://img.shields.io/badge/▶_Open_Motormila-0A7AFF?style=for-the-badge" alt="Open Motormila" /></a>
-<a href="https://motormila.vercel.app/how-we-price"><img src="https://img.shields.io/badge/How_pricing_works-09090B?style=for-the-badge" alt="How pricing works" /></a>
+<a href="https://motormila.pages.dev"><img src="https://img.shields.io/badge/▶_Open_Motormila-0A7AFF?style=for-the-badge" alt="Open Motormila" /></a>
+<a href="https://motormila.pages.dev/how-we-price"><img src="https://img.shields.io/badge/How_pricing_works-09090B?style=for-the-badge" alt="How pricing works" /></a>
 <a href="https://github.com/SuvenSeo/MotorMila/issues"><img src="https://img.shields.io/badge/Feedback-09090B?style=for-the-badge" alt="Feedback" /></a>
 
 <br /><br />
@@ -32,16 +32,16 @@
 
 Pick a model and see the market, not just a listing:
 
-[Toyota Prius](https://motormila.vercel.app/cars/toyota/prius) ·
-[Toyota Aqua](https://motormila.vercel.app/cars/toyota/aqua) ·
-[Toyota Corolla](https://motormila.vercel.app/cars/toyota/corolla) ·
-[Toyota Premio](https://motormila.vercel.app/cars/toyota/premio) ·
-[Toyota Axio](https://motormila.vercel.app/cars/toyota/axio) ·
-[Honda Vezel](https://motormila.vercel.app/cars/honda/vezel) ·
-[Honda Fit](https://motormila.vercel.app/cars/honda/fit) ·
-[Suzuki Alto](https://motormila.vercel.app/cars/suzuki/alto)
+[Toyota Prius](https://motormila.pages.dev/cars/toyota/prius) ·
+[Toyota Aqua](https://motormila.pages.dev/cars/toyota/aqua) ·
+[Toyota Corolla](https://motormila.pages.dev/cars/toyota/corolla) ·
+[Toyota Premio](https://motormila.pages.dev/cars/toyota/premio) ·
+[Toyota Axio](https://motormila.pages.dev/cars/toyota/axio) ·
+[Honda Vezel](https://motormila.pages.dev/cars/honda/vezel) ·
+[Honda Fit](https://motormila.pages.dev/cars/honda/fit) ·
+[Suzuki Alto](https://motormila.pages.dev/cars/suzuki/alto)
 
-Or start from the top: [motormila.vercel.app](https://motormila.vercel.app) → search any vehicle → open a hub → check its fair value before you call the seller.
+Or start from the top: [motormila.pages.dev](https://motormila.pages.dev) → search any vehicle → open a hub → check its fair value before you call the seller.
 
 ---
 
@@ -138,7 +138,6 @@ One mark, one palette, one typeface. Full rules:
 <img src="https://img.shields.io/badge/Kotlin-09090B?style=flat-square&logo=kotlin&logoColor=0A7AFF" alt="Kotlin" />
 <img src="https://img.shields.io/badge/Jetpack_Compose-09090B?style=flat-square&logo=android&logoColor=0A7AFF" alt="Jetpack Compose" />
 <img src="https://img.shields.io/badge/GitHub_Actions-09090B?style=flat-square&logo=githubactions&logoColor=0A7AFF" alt="GitHub Actions" />
-<img src="https://img.shields.io/badge/Vercel-09090B?style=flat-square&logo=vercel&logoColor=0A7AFF" alt="Vercel" />
 <img src="https://img.shields.io/badge/Cloudflare-09090B?style=flat-square&logo=cloudflare&logoColor=0A7AFF" alt="Cloudflare" />
 
 ---
@@ -192,13 +191,12 @@ Docs: [Brand system](MOTORMILA-BRAND.md) · [Android data contract](android/DATA
 
 **Less noise. More context. Better decisions.**
 
-[Enter Motormila →](https://motormila.vercel.app)
+[Enter Motormila →](https://motormila.pages.dev)
 
 <br /><br />
 
 <sub>
-Live: [motormila.vercel.app](https://motormila.vercel.app) ·
-[motormila.pages.dev](https://motormila.pages.dev) ·
+Live: [motormila.pages.dev](https://motormila.pages.dev) ·
 Email: [hello@ardenostudio.com](mailto:hello@ardenostudio.com) ·
 Feedback: [GitHub issues](https://github.com/SuvenSeo/MotorMila/issues)
 <br />
