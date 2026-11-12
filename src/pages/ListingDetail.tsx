@@ -704,6 +704,7 @@ export default function ListingDetail() {
                 listingId={listing.id}
                 alt={displayName}
                 variant="detail"
+                morph
                 source={listing.source}
                 silhouette={silhouette}
                 priority
