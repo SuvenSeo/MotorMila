@@ -5,8 +5,6 @@ import "./index.css";
 import "./styles/layers.css";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import { AppPreferencesProvider, preloadSavedLanguage, readSavedLanguage } from "@/lib/appPreferences";
-import { Analytics } from "@vercel/analytics/react";
-import { shouldLoadVercelAnalytics } from "@/lib/vercelAnalytics";
 
 // Error tracking — dynamically imported so the bundle only pays for Sentry
 // when VITE_SENTRY_DSN is configured at build time.
@@ -23,19 +21,12 @@ if (sentryDsn) {
 
 migrateLegacyStorageKeys();
 
-// One gate for Vercel Web Analytics: its script only exists on Vercel, so it is
-// off on *.pages.dev and localhost (VITE_VERCEL_ANALYTICS=on|off overrides).
-const loadVercelAnalytics = shouldLoadVercelAnalytics(
-	typeof window !== "undefined" ? window.location.hostname : "",
-	import.meta.env.VITE_VERCEL_ANALYTICS as string | undefined,
-);
 
 function mount() {
 	createRoot(document.getElementById("root")!).render(
 		<AppPreferencesProvider>
 			<AppErrorBoundary>
 				<App />
-				{loadVercelAnalytics ? <Analytics /> : null}
 			</AppErrorBoundary>
 		</AppPreferencesProvider>
 	);

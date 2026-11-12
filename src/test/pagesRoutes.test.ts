@@ -1,25 +1,18 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { isKnownRoutePath, isNoindexPath } from "@/lib/routeIndexing";
 
-// vercel.json no longer rewrites *every* path to the SPA (that made unknown
-// URLs soft-404s, and the static rewrites shadowed the prerendered SEO
-// shells). Every <Route> in App.tsx must therefore be covered by either:
-//   - an explicit SPA rewrite to "/" (dynamic routes), or
-//   - a prerendered shell from scripts/prerender-seo.mjs STATIC_ROUTES
-//     (served via cleanUrls as dist/<route>.html — it IS the SPA shell,
-//     with per-route SEO meta, and React boots over it).
-// This test fails when a new route is added without updating vercel.json,
-// scripts/prerender-seo.mjs, and RouteMeta.
+// Cloudflare Pages serves the SPA from public/_redirects (200 rules to "/")
+// plus prerendered shells from scripts/prerender-seo.mjs STATIC_ROUTES
+// (served as dist/<route>.html — it IS the SPA shell, with per-route SEO
+// meta, and React boots over it). Every <Route> in App.tsx must therefore
+// be covered by either an explicit _redirects 200 rule or a prerendered
+// shell. This test fails when a new route is added without updating
+// public/_redirects, scripts/prerender-seo.mjs, and RouteMeta.
 const root = path.resolve(__dirname, "../..");
 const appSource = readFileSync(path.join(root, "src/App.tsx"), "utf8");
-const vercel = JSON.parse(readFileSync(path.join(root, "vercel.json"), "utf8")) as {
-  rewrites: Array<{ source: string; destination: string; has?: unknown }>;
-  redirects?: Array<{ source: string; destination: string; permanent?: boolean }>;
-  headers: Array<{ source: string; headers: Array<{ key: string; value: string }> }>;
-};
 const cfRedirects = readFileSync(path.join(root, "public/_redirects"), "utf8")
   .split("\n")
   .map((line) => line.trim())
@@ -30,22 +23,6 @@ const cfRedirects = readFileSync(path.join(root, "public/_redirects"), "utf8")
   });
 const prerenderSource = readFileSync(path.join(root, "scripts/prerender-seo.mjs"), "utf8");
 
-// Cloudflare Pages Functions (functions/listing/[id].js, functions/cars/[make]/...)
-// serve their own HTML shells, so those routes need no _redirects rule.
-function functionRoutes(dir: string, prefix = ""): string[] {
-  const out: string[] = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name.startsWith("_")) continue;
-    const seg = entry.name.replace(/\.js$/, "").replace(/^\[\[?([^\]]+)\]?\]$/, ":$1");
-    if (entry.isDirectory()) out.push(...functionRoutes(path.join(dir, entry.name), `${prefix}/${seg}`));
-    else if (entry.name.endsWith(".js")) out.push(seg === "index" ? prefix || "/" : `${prefix}/${seg}`);
-  }
-  return out;
-}
-const pagesFunctions = functionRoutes(path.join(root, "functions"))
-  .filter((r) => !r.startsWith("/api/"))
-  .map((r) => sourceToRegex(r));
-
 function sourceToRegex(source: string): RegExp {
   const pattern = source
     .replace(/:[a-zA-Z]+\*/g, ".*")
@@ -54,14 +31,12 @@ function sourceToRegex(source: string): RegExp {
   return new RegExp(`^${pattern}/?$`);
 }
 
-// With cleanUrls on, Vercel has no "/index.html" route (it 308s to "/"), so a
-// rewrite to "/index.html" 404s on production. SPA rewrites must target "/".
-const spaRules = vercel.rewrites
-  .filter((r) => r.destination === "/" && !r.has)
-  .map((r) => sourceToRegex(r.source));
+// SPA rules are the _redirects 200 rules that serve "/" (dynamic routes).
+const spaRules = cfRedirects
+  .filter((r) => r.status === 200 && r.to === "/")
+  .map((r) => sourceToRegex(r.from.replace(/\*$/, ":splat*")));
 
-// Static routes with a prerendered SEO shell (STATIC_ROUTES keys), served via
-// Vercel cleanUrls as dist/<route>.html.
+// Static routes with a prerendered SEO shell (STATIC_ROUTES keys).
 const prerendered = new Set(
   [...prerenderSource.matchAll(/"(\/[^"]*)":\s*\[/g)].map((m) => m[1]),
 );
@@ -94,14 +69,7 @@ const routePaths = collectRoutePaths(appSource);
 
 const sample = (p: string) => p.replace(/:year/g, "2018").replace(/:[a-zA-Z]+/g, "sample");
 
-describe("vercel SPA routing", () => {
-  it("never rewrites to /index.html while cleanUrls is on (it 404s on Vercel)", () => {
-    const cfg = vercel as unknown as { cleanUrls?: boolean };
-    if (cfg.cleanUrls) {
-      expect(vercel.rewrites.filter((r) => /\.html$/.test(r.destination))).toEqual([]);
-    }
-  });
-
+describe("Pages SPA routing", () => {
   it("resolves nested routes through pathless layouts", () => {
     expect(collectRoutePaths(`<Route path="/motormila/admin"><Route element={<Layout />}>
       <Route index element={<Home />} /><Route path="users" element={<Users />} />
@@ -120,7 +88,7 @@ describe("vercel SPA routing", () => {
     if (url === "/") return; // static index.html
     const viaRewrite = spaRules.some((re) => re.test(url));
     const viaShell = prerendered.has(url);
-    const viaRedirect = (vercel.redirects ?? []).some((r) => sourceToRegex(r.source).test(url));
+    const viaRedirect = cfRedirects.some((r) => r.status === 301 && sourceToRegex(r.from).test(url));
     expect(viaRewrite || viaShell || viaRedirect).toBe(true);
     expect(isKnownRoutePath(url)).toBe(true);
   });
@@ -130,8 +98,7 @@ describe("vercel SPA routing", () => {
     if (url === "/") return;
     const viaShell = prerendered.has(url);
     const viaRule = cfRedirects.some((r) => sourceToRegex(r.from.replace(/\*$/, ":splat*")).test(url));
-    const viaFunction = pagesFunctions.some((re) => re.test(url));
-    expect(viaShell || viaRule || viaFunction).toBe(true);
+    expect(viaShell || viaRule).toBe(true);
   });
 
   it("301s retired paths instead of serving the indexable home shell", () => {
@@ -142,7 +109,6 @@ describe("vercel SPA routing", () => {
       "/valuation": "/estimate",
     };
     for (const [from, to] of Object.entries(expected)) {
-      expect(vercel.redirects).toContainEqual({ source: from, destination: to, permanent: true });
       expect(cfRedirects).toContainEqual({ from, to, status: 301 });
     }
   });
@@ -165,8 +131,6 @@ describe("vercel SPA routing", () => {
   it("keeps admin deep links noindex at both hosts", () => {
     for (const routePath of routePaths.filter((p) => p.startsWith("/motormila/admin/"))) {
       expect(isNoindexPath(routePath)).toBe(true);
-      expect(vercel.headers.some((rule) => sourceToRegex(rule.source).test(routePath)
-        && rule.headers.some((h) => h.key === "X-Robots-Tag" && h.value === "noindex, nofollow"))).toBe(true);
     }
     expect(readFileSync(path.join(root, "public/_headers"), "utf8"))
       .toMatch(/\/motormila\/admin\/\*\n\s+X-Robots-Tag: noindex, nofollow/);

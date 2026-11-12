@@ -113,7 +113,7 @@ def _session_identity(request: Request) -> str | None:
     """Stable hash of the signed-in account when the request carries a valid token.
 
     Lets per-user buckets follow the account instead of the IP (many users
-    share a carrier NAT / the Vercel proxy egress IP). Imported lazily: the
+    share a carrier NAT). Imported lazily: the
     auth module itself imports this module.
     """
     try:

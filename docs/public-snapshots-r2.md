@@ -25,9 +25,9 @@ The scraper/export workflows need:
 
 The R2 token only needs object read/write access for the snapshot bucket.
 
-## Required Vercel env
+## Required Cloudflare Pages env
 
-Set this on the frontend project:
+Set this in the Cloudflare Pages dashboard (Pages → motormila → Settings → Environment variables):
 
 ```text
 VITE_SNAPSHOT_BASE_URL=https://<public-r2-domain>/latest
@@ -39,8 +39,8 @@ after changing it. With `VITE_SNAPSHOT_ONLY=true`, missing snapshots return
 empty/error instead of falling back to the Postgres-backed API.
 
 Large catalogs may ship as a `listing-catalog.json` manifest with `parts`
-(`listing-catalog-part-*.json`) when hosting on Vercel’s 100 MB static-file
-limit; the frontend concatenates parts automatically.
+(`listing-catalog-part-*.json`) when hosting on Pages (25 MB static-file
+limit); the frontend concatenates parts automatically.
 
 ## Recovering the 80k+ listings
 
@@ -52,7 +52,7 @@ temporarily upgraded/unblocked:
 2. Open the uploaded `public-snapshot-manifest-*` artifact.
 3. Confirm `listing_count` is above `80000`.
 4. Confirm the R2 bucket has the `latest/*.json` files.
-5. Redeploy Vercel with `VITE_SNAPSHOT_BASE_URL` set.
+5. Rebuild Pages (push to `main`, or retry the latest production deployment) with `VITE_SNAPSHOT_BASE_URL` set.
 
 After that, normal public browsing should use R2 snapshots and no longer burn
 database transfer for every visitor.

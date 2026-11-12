@@ -8,7 +8,6 @@ const ITEMS: { name: string; kind: string; purpose: string; lasts: string }[] = 
   { name: "motormila.auth_*", kind: "Local storage (essential)", purpose: "Remembers your signed-in session in the app.", lasts: "Until you sign out" },
   { name: "Theme, language, font", kind: "Local storage (preference)", purpose: "Remembers your display choices.", lasts: "Until you clear it" },
   { name: "Analytics session ID", kind: "Session storage (analytics)", purpose: "Groups page views in one visit, so we can see which features are used. It isn't linked to your name.", lasts: "Until you close the tab" },
-  { name: "Vercel Web Analytics", kind: "No cookie", purpose: "Counts page views without cookies or cross-site tracking.", lasts: "Not stored on your device" },
 ];
 
 export default function CookieNotice() {

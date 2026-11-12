@@ -203,7 +203,7 @@ def test_source_version_parses_http_metadata():
 
     headers = _Headers()
 
-    # Last-Modified is excluded: Vercel's edge flaps it for identical bytes.
+    # Last-Modified is excluded: the CDN edge flaps it for identical bytes.
     assert sqlite_failover._version_from_headers(headers) == ('"abc123"', 42)
 
 

@@ -3,5 +3,5 @@
 # scripts/prerender-seo.mjs. No personal contact details belong here.
 Contact: https://github.com/SuvenSeo/Vehicle-Platform/security/advisories/new
 Preferred-Languages: en
-Canonical: https://motormila.vercel.app/.well-known/security.txt
+Canonical: https://motormila.pages.dev/.well-known/security.txt
 Expires: 2027-07-28T00:00:00.000Z

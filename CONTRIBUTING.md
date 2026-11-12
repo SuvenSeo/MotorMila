@@ -13,7 +13,7 @@ contribution. See `LICENSE` and `NOTICE` before doing anything below.
   outside GitHub.
 - **Do not file issues containing other people's code, credentials, or
   personal data.** Issues are for feedback on the live product at
-  https://motormila.vercel.app, and for reporting copies of this work.
+  https://motormila.pages.dev, and for reporting copies of this work.
 
 ## If Ardeno has agreed in writing that you may contribute
 

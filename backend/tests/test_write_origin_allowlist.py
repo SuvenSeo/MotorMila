@@ -25,7 +25,7 @@ from app.api.v1.endpoints.auth import (
     _trusted_origin_suffixes,
 )
 
-APP_ORIGIN = "https://motormila.vercel.app"
+APP_ORIGIN = "https://motormila.pages.dev"
 
 
 class _Req:
@@ -49,9 +49,9 @@ def test_cors_origins_extends_and_never_shrinks(monkeypatch):
 
 
 def test_cors_origins_adds_custom_deploys(monkeypatch):
-    monkeypatch.setenv("CORS_ORIGINS", "https://motormila-abc123-team.vercel.app")
+    monkeypatch.setenv("CORS_ORIGINS", "https://web-abc123.motormila.pages.dev")
     allowed = _cors_allowed_origins()
-    assert "https://motormila-abc123-team.vercel.app" in allowed
+    assert "https://web-abc123.motormila.pages.dev" in allowed
     assert APP_ORIGIN in allowed
 
 
@@ -75,7 +75,7 @@ def test_request_origin_normalizes_trailing_slash_and_case(monkeypatch):
 
 
 def test_request_origin_falls_back_to_referer():
-    assert _request_origin(_Req({"referer": "https://motormila.vercel.app/alerts?x=1"})) == APP_ORIGIN
+    assert _request_origin(_Req({"referer": "https://motormila.pages.dev/alerts?x=1"})) == APP_ORIGIN
 
 
 def test_request_origin_none_when_absent():
@@ -94,16 +94,16 @@ def test_normalize_origin_rejects_junk():
     assert _normalize_origin(None) is None
 
 
-# --- Vercel preview deployments -------------------------------------------------
-# Previews get a unique hashed hostname per deployment, so exact-match
+# --- Pages branch-preview deployments -------------------------------------------
+# Branch previews get a unique hostname per branch, so exact-match
 # allowlisting can never cover them. Regression: POST /listings/mine from a
 # preview URL 403'd with "Writes require a trusted Origin." while production
 # worked fine.
 
-PREVIEW_ORIGIN = "https://vehicle-platform-rgkfpssr0-suvenseoras-projects.vercel.app"
+PREVIEW_ORIGIN = "https://web-smooth-everything.motormila.pages.dev"
 
 
-def test_preview_origin_trusted_via_team_suffix(monkeypatch):
+def test_preview_origin_trusted_via_pages_suffix(monkeypatch):
     monkeypatch.delenv("CORS_ORIGINS", raising=False)
     monkeypatch.delenv("TRUSTED_ORIGIN_SUFFIXES", raising=False)
     assert _is_trusted_origin(PREVIEW_ORIGIN) is True
@@ -136,7 +136,7 @@ def test_missing_origin_rejected(monkeypatch):
 
 
 def test_suffix_env_extends(monkeypatch):
-    monkeypatch.setenv("TRUSTED_ORIGIN_SUFFIXES", "-suvenseoras-projects.vercel.app, .example.lk")
+    monkeypatch.setenv("TRUSTED_ORIGIN_SUFFIXES", ".example.lk")
     assert ".example.lk" in _trusted_origin_suffixes()
     assert _is_trusted_origin("https://shop.example.lk") is True
     assert _is_trusted_origin(PREVIEW_ORIGIN) is True  # default survives extension
@@ -144,7 +144,7 @@ def test_suffix_env_extends(monkeypatch):
 
 def test_suffix_default_when_env_unset(monkeypatch):
     monkeypatch.delenv("TRUSTED_ORIGIN_SUFFIXES", raising=False)
-    assert _trusted_origin_suffixes() == ("-suvenseoras-projects.vercel.app", ".motormila.pages.dev")
+    assert _trusted_origin_suffixes() == (".motormila.pages.dev",)
 
 
 def test_cf_pages_branch_preview_trusted(monkeypatch):

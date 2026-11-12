@@ -7,9 +7,10 @@ Two related but distinct uses:
 * CSRF / write checks (``is_trusted_write_origin``) - which origins may make
   state-changing requests that ride the ``mm_session`` cookie.
 
-The production web app calls the API same-origin through the Vercel /
-Cloudflare Pages ``/api/v1/*`` rewrite, so cross-origin CORS is only really
-needed for local development. The Android app sends no ``Origin`` header and
+The production web app calls the API cross-origin at the Hugging Face Space
+(VITE_API_URL), so this allowlist is live in production, not just local
+development — there is no Pages ``/api/v1/*`` proxy (Functions removed
+1 Nov 2026). The Android app sends no ``Origin`` header and
 authenticates with a Bearer token, so it needs neither.
 
 Env:
@@ -17,7 +18,7 @@ Env:
                           A literal ``*`` is honoured for CORS only (and turns
                           credentials off); it never widens the write check.
   CORS_ORIGINS_REPLACE    "true" to make CORS_ORIGINS replace the defaults.
-  TRUSTED_ORIGIN_SUFFIXES host suffixes trusted for writes (Vercel previews).
+  TRUSTED_ORIGIN_SUFFIXES host suffixes trusted for writes (Pages branch previews).
 """
 
 from __future__ import annotations
@@ -27,11 +28,7 @@ from typing import Optional
 from urllib.parse import urlparse
 
 DEFAULT_ALLOWED_ORIGINS: tuple[str, ...] = (
-    "https://motormila.vercel.app",
     "https://motormila.pages.dev",
-    # Legacy aliases of the same Vercel project (owner-controlled).
-    "https://vehicle-platform-one.vercel.app",
-    "https://vehicle-platform-one-suvenseoras-projects.vercel.app",
     # Local development (vite dev / preview).
     "http://localhost:8080",
     "http://127.0.0.1:8080",
@@ -92,11 +89,10 @@ def write_allowlist() -> set[str]:
     return allowed
 
 
-# Owner-controlled preview hostnames: Vercel team-scoped previews and
-# Cloudflare Pages branch previews (<branch>.motormila.pages.dev; only this
-# Pages project can mint subdomains under it).
+# Owner-controlled preview hostnames: Cloudflare Pages branch previews
+# (<branch>.motormila.pages.dev; only this Pages project can mint
+# subdomains under it).
 DEFAULT_TRUSTED_SUFFIXES: tuple[str, ...] = (
-    "-suvenseoras-projects.vercel.app",
     ".motormila.pages.dev",
 )
 

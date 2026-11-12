@@ -1,7 +1,8 @@
 # Monitor the two paths Motormila actually serves from.
 #
 #   1. Neon path  — HF Space /health + /pipeline/status (the primary database).
-#   2. Live path  — Vercel site + the public snapshot manifest, which is what
+#   2. Live path  — Cloudflare Pages site (motormila.pages.dev) + the public
+#                   snapshot manifest, which is what
 #                   users and scrapers read. During a Neon outage this is the
 #                   only path that matters.
 #
@@ -82,7 +83,7 @@ jobs:
     steps:
       - name: Check the public site and its snapshot manifest
         env:
-          SITE_URL: https://motormila.vercel.app
+          SITE_URL: https://motormila.pages.dev
           # A full catalog export runs on the Manus merge cadence (3x daily).
           # Allow generous slack so a slow-but-healthy run is not paged on.
           MAX_SNAPSHOT_AGE_HOURS: "12"

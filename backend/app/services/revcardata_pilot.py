@@ -22,7 +22,7 @@ from db.models import CarListing, live_listing_filter
 log = structlog.get_logger()
 
 VEHICLES_URL = "https://api.revcardata.com/api/v1/vehicles"
-USER_AGENT = "MotorMila/1.0 (+https://motormila.vercel.app)"
+USER_AGENT = "MotorMila/1.0 (+https://motormila.pages.dev)"
 MSRP_NOTE = "MSRP is recorded for completeness only and is not used for LKR FMV."
 CORE_FIELDS = ("engine", "fuel", "body", "displacement_cc")
 JDM_MODELS = frozenset(

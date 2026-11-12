@@ -756,8 +756,10 @@ def _cookie_secure() -> bool:
 def _cookie_samesite() -> str:
     """SameSite for mm_session. Default ``lax``.
 
-    The web app talks to the API same-origin through the Vercel / Pages
-    ``/api/v1`` rewrite, so the cookie is first-party and Lax is enough.
+    The web app talks to the API at the Hugging Face Space (VITE_API_URL);
+    there is no Pages ``/api/v1`` proxy, so the cookie is not first-party.
+    Lax remains the default; ``none`` is only for a deliberate cross-site
+    deployment (it also requires Secure).
     ``none`` made the cookie ride every cross-site request (CSRF + credentialed
     CORS reads). Set AUTH_COOKIE_SAMESITE=none only for a deliberate
     cross-site deployment (it also requires Secure).
@@ -1464,16 +1466,14 @@ def _request_origin(request: Request) -> Optional[str]:
 def _trusted_origin_suffixes() -> tuple[str, ...]:
     """Team-controlled domain suffixes trusted for writes, beyond exact matches.
 
-    Vercel preview deployments get a unique hashed hostname per deployment
-    (vehicle-platform-<hash>-suvenseoras-projects.vercel.app), so exact-match
-    allowlisting cannot cover them — every write from a preview 403'd with
-    "Writes require a trusted Origin." Scoping to the team's own Vercel account
-    keeps this tight: only this team can mint hostnames under it (the team slug
-    in the hostname is the deploying team's own slug), and writes still require
-    a valid Bearer token that a third-party page cannot obtain.
+    Pages branch-preview deployments get a unique hostname per branch
+    (<branch>.motormila.pages.dev), so exact-match allowlisting cannot cover
+    them — every write from a preview 403'd with "Writes require a trusted
+    Origin." Scoping to this Pages project's own subdomain keeps this tight:
+    only this project can mint hostnames under it, and writes still require
+    a valid Bearer <redacted> that a third-party page cannot obtain.
     Extend (never shrink) via TRUSTED_ORIGIN_SUFFIXES, comma-separated host
-    suffixes — e.g. "-myteam.vercel.app" for a Vercel team scope,
-    ".example.com" for a domain and its subdomains.
+    suffixes — e.g. ".example.com" for a domain and its subdomains.
     """
     return _origins.trusted_origin_suffixes()
 

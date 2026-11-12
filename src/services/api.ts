@@ -769,7 +769,7 @@ function loadLegacySnapshotCatalog(): Promise<CarListing[] | null> {
     }>("listing-catalog.json").then(async (snapshot) => {
       if (!snapshot) return null;
 
-      // Multi-part catalog (Vercel 100MB file limit).
+      // Multi-part catalog (static-file size limit).
       if (Array.isArray(snapshot.parts) && snapshot.parts.length > 0) {
         const chunks = await Promise.all(
           snapshot.parts.map((part) =>

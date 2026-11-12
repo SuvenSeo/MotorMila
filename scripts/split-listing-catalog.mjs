@@ -3,7 +3,7 @@
  * split-listing-catalog.mjs
  *
  * Splits a monolithic listing-catalog.json ({ items: [...] }) into
- * Vercel-safe parts (<90MB each) under the same directory.
+ * Snapshot parts (<90MB each) under the same directory.
  *
  * Usage:
  *   node scripts/split-listing-catalog.mjs [path/to/listing-catalog.json]

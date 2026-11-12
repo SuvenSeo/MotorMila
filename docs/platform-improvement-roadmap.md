@@ -65,8 +65,8 @@ Last updated: 2026-07-28. Live inventory across **13 sources**.
 
 | Item | Where |
 |------|-------|
-| `PRO_ACCESS_ENFORCED` / `VITE_PRO_ACCESS_ENFORCED` | HF + Vercel |
-| `SENTRY_DSN` / `VITE_SENTRY_DSN` | HF + Vercel |
+| `PRO_ACCESS_ENFORCED` / `VITE_PRO_ACCESS_ENFORCED` | HF + Cloudflare Pages |
+| `SENTRY_DSN` / `VITE_SENTRY_DSN` | HF + Cloudflare Pages |
 | `SLACK_WEBHOOK_URL` | GitHub Actions secret |
 | `TWILIO_ACCOUNT_SID` / `AUTH_TOKEN` / `WHATSAPP_FROM` | HF (WhatsApp alerts) |
 | `DEALER_ADMIN_TOKEN` | HF (verify yards) |

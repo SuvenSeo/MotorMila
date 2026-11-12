@@ -66,7 +66,7 @@ import lk.motormila.app.domain.repository.StatsRepository
 /**
  * Stats: network-first with a 15-min JSON cache (stats_cache) for summary;
  * district prices mirrored into district_stats for offline map rendering.
- * Every read below falls back to the public Vercel snapshots when the live
+ * Every read below falls back to the public R2 snapshots when the live
  * API throws (Neon outage) — see [withSnapshotFallback].
  */
 @Singleton

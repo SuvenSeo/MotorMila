@@ -147,7 +147,7 @@ def upload_via_cf_api(source: Path, prefix: str, bucket: str,
 def ensure_entity_indexes(source: Path) -> None:
     """Build idx/ (per-listing shards, make/model/district indexes) when a
     catalogue export is present but the index is missing or older, e.g. when
-    the snapshots were pulled from the Vercel export function instead of
+    the snapshots were pulled from the retired export API instead of
     export_public_snapshots.py. Best effort; never blocks the upload."""
     import shutil
     import subprocess

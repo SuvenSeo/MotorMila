@@ -12,7 +12,7 @@ import kotlin.math.round
  * Static-snapshot fallback kit (Neon-outage survival).
  *
  * [withSnapshotFallback] is the only suspend helper: live API first, public
- * Vercel snapshot second, original error only when both fail. Everything else
+ * R2 snapshot second, original error only when both fail. Everything else
  * here is pure and JVM-tested ([SnapshotFallbackTest]).
  */
 suspend fun <T> withSnapshotFallback(

@@ -2,7 +2,7 @@
 
 Serves the indexable hub surface for crawlers:
   GET /api/v1/seo/sitemap-index.xml   -> sitemapindex (cars / districts /
-                                         compare + the Vercel listing chunks)
+                                         compare + the static listing chunks)
   GET /api/v1/seo/sitemap-cars.xml
   GET /api/v1/seo/sitemap-districts.xml
   GET /api/v1/seo/sitemap-compare.xml
@@ -26,7 +26,7 @@ from db.session import get_db
 
 router = APIRouter()
 
-SITE_ORIGIN = "https://motormila.vercel.app"
+SITE_ORIGIN = "https://motormila.pages.dev"
 COMPARE_SLUG_PATTERN = re.compile(r"^\d+(?:-vs-\d+){0,3}$")
 MANIFEST_CAP = 500
 
@@ -171,7 +171,6 @@ def get_seo_sitemap_index():
         f"{SITE_ORIGIN}/api/v1/seo/sitemap-cars.xml",
         f"{SITE_ORIGIN}/api/v1/seo/sitemap-districts.xml",
         f"{SITE_ORIGIN}/api/v1/seo/sitemap-compare.xml",
-        f"{SITE_ORIGIN}/api/sitemap-listings",
     ]
     entries = "\n".join(
         f"  <sitemap>\n    <loc>{loc}</loc>\n    <lastmod>{lastmod}</lastmod>\n  </sitemap>"

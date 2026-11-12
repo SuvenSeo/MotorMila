@@ -58,7 +58,7 @@ function CompareLegacyRedirect() {
 
 `Compare` needs optional `initialIds`/`canonicalPath` props — page owner call.
 
-## Snippet 2 — vercel.json (NOT applied; read file first, minimal diff)
+## Snippet 2 — vercel.json (RETIRED 2026-11-12 — DO NOT APPLY: vercel.json and api/compare-og.js were deleted in the Cloudflare-only move; the snippet body below is kept verbatim as history)
 
 Insert BEFORE the SPA catch-all rewrite; keeps existing `/listing/:id`
 crawler rule untouched. Query→slug needs a `redirect` (rewrite cannot
@@ -82,8 +82,8 @@ No SPA rewrite change. No `cleanUrls`/`trailingSlash` change.
 - `/cars/*`, `/locations/*`, `/compare/*` → SPA for humans; sitemap +
   canonical + RouteMeta JSON-LD for crawlers (no prerender yet — full SSG
   is the follow-up).
-- `/listing/:id` → existing `api/listing-og.js` (unchanged).
-- `/compare/:slug` → new `api/compare-og.js` (snippet 2).
+- `/listing/:id` → SPA shell (`api/listing-og.js` deleted with the Cloudflare-only move; no Pages Function replacement).
+- `/compare/:slug` → SPA shell (snippet 2 retired; `api/compare-og.js` deleted).
 
 ## Verify
 
@@ -98,7 +98,7 @@ curl -s localhost:8000/api/v1/seo/sitemap-index.xml | head -12
 ## Follow-ups (not B2-C)
 
 1. Router owner: apply snippet 1; align Compare max-ids (4 vs 3).
-2. Vercel owner: apply snippet 2 after reading `vercel.json`.
+2. Snippet 2 is retired (vercel.json and api/compare-og.js deleted 2026-11-12); no action.
 3. Full SSG/prerender of top-500 manifest entries (manifest + sample only for now).
 4. Remove page-level `setCanonical`/`setJsonLd` in `MakeModelHub.tsx` (id
    `motormila-jsonld` collides with RouteMeta graph — last-write wins today).

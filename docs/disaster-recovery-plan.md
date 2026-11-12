@@ -12,7 +12,7 @@
 |---|---|---|
 | Database (listings, stats) | 24 h (daily backup) | 2 h |
 | Backend API (HF Space) | N/A (stateless) | 30 min |
-| Frontend (Vercel) | N/A (static/serverless) | 15 min |
+| Frontend (Cloudflare Pages) | N/A (static) | 15 min |
 | Scrapers / pipeline | 24 h | 4 h |
 
 ---
@@ -95,17 +95,17 @@ To restore to a point in time: **Dashboard → Settings → Backups → Restore*
 
 ## 4. Pipeline Auth Recovery
 
-The scraper and digest pipelines authenticate via HuggingFace and Vercel tokens stored as GitHub Secrets.
+The scraper and digest pipelines authenticate via HuggingFace and Cloudflare tokens stored as GitHub Secrets.
 
 | Secret | Used by |
 |---|---|
 | `HF_TOKEN` | HF Spaces deployment + keep-alive |
-| `VERCEL_TOKEN` | Vercel deploy hook |
+| `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` | Cloudflare Pages rebuild (retry latest github:push production deployment) |
 | `IKMAN_SESSION_COOKIE` | Ikman scraper |
 
 **If a token is compromised or expired:**
 
-1. Revoke the old token on the provider dashboard (HF → Settings → Tokens; Vercel → Account → Tokens).
+1. Revoke the old token on the provider dashboard (HF → Settings → Tokens; Cloudflare → My Profile → API Tokens).
 2. Generate a new token with the minimum required scope.
 3. Update the corresponding GitHub Secret: **Repo → Settings → Secrets and variables → Actions**.
 4. Trigger the affected workflow manually via `workflow_dispatch` to verify.
@@ -118,7 +118,7 @@ The scraper and digest pipelines authenticate via HuggingFace and Vercel tokens 
 |---|---|
 | `HOT_DATABASE_URL` / `SUPABASE_DB_URL` | On any personnel change or every 6 months |
 | `HF_TOKEN` | Every 6 months |
-| `VERCEL_TOKEN` | Every 6 months |
+| `CLOUDFLARE_API_TOKEN` | Every 6 months |
 | `SLACK_WEBHOOK_URL` | When Slack workspace membership changes |
 | `IKMAN_SESSION_COOKIE` | When scraper auth breaks (session expiry) |
 
@@ -148,12 +148,12 @@ If `DB_INIT_TIMEOUT_SECONDS` (default 60s) is exceeded, the Space aborts startup
 
 ## 7. Frontend Recovery
 
-The frontend is deployed to Vercel. It is fully static + serverless; no database writes occur from the frontend.
+The frontend is deployed to Cloudflare Pages. It is fully static; no database writes occur from the frontend.
 
-**To redeploy:** push to `main` or trigger from the Vercel dashboard.
+**To redeploy:** push to `main`, or retry the latest production deployment from the Cloudflare dashboard (Pages → motormila → Deployments → Retry deployment).
 
-**If the Vercel deployment is broken:**
+**If the Pages deployment is broken:**
 
-1. Identify the last known-good deployment in the Vercel dashboard.
-2. Click **Promote to Production** on that deployment.
+1. Identify the last known-good deployment in the Cloudflare dashboard (Pages → motormila → Deployments).
+2. Click **Retry deployment** on that deployment.
 3. Investigate the failing build's logs before re-enabling auto-deploy.
