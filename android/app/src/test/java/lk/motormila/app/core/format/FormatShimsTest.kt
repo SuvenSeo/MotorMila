@@ -8,8 +8,11 @@ class FormatShimsTest {
 
     @Test
     fun price_formatsMillions() {
-        assertEquals("Rs. 12.45M", formatLkr(12_450_000.0))
-        assertEquals("Rs. 8.95M", formatLkr(8_950_000L))
+        assertEquals("Rs 12.45 Mn", formatLkr(12_450_000.0))
+        assertEquals("Rs 8.95 Mn", formatLkr(8_950_000L))
+        assertEquals("Rs 0.35 Mn", formatLkrCompact(350_000.0))
+        assertEquals("Rs 7,250,000", formatLkrFull(7_250_000.0))
+        assertEquals("Rs 85,400/mo", formatLkrMonthly(85_400.0))
     }
 
     @Test

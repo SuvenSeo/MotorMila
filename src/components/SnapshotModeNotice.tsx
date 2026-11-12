@@ -4,6 +4,7 @@ import { API_BASE, SNAPSHOT_ONLY, fetchSnapshotJSON } from "@/services/api";
 import { relativeAgo, parseFlexibleTime } from "@/lib/parseTime";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { cn } from "@/lib/utils";
+import { useStaleBannerSlot } from "@/lib/staleBannerSlot";
 
 interface SnapshotState {
   /** True when the live API is unreachable/degraded (or the build is snapshot-only). */
@@ -60,7 +61,10 @@ export function SnapshotModeNotice({ className }: { className?: string }) {
     };
   }, []);
 
-  if (!state?.snapshotMode) return null;
+  // Shares the page's single stale-data banner slot; outranks the freshness banner.
+  const ownsBannerSlot = useStaleBannerSlot(Boolean(state?.snapshotMode), 1);
+
+  if (!state?.snapshotMode || !ownsBannerSlot) return null;
   const ago = relativeAgo(state.generatedAt);
   const ts = parseFlexibleTime(state.generatedAt);
   const absolute =
@@ -78,7 +82,7 @@ export function SnapshotModeNotice({ className }: { className?: string }) {
     <div
       role="status"
       className={cn(
-        "flex items-start gap-2.5 rounded-2xl border border-border bg-muted/50 px-3.5 py-2.5 text-[12.5px] text-muted-foreground",
+        "flex items-start gap-2.5 rounded-2xl border border-border bg-muted/50 px-3.5 py-2.5 text-footnote text-muted-foreground",
         className,
       )}
     >

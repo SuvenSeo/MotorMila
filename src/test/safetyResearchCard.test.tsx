@@ -76,7 +76,7 @@ describe("SafetyResearchCard", () => {
     expect(screen.getByText(/not a recall/i)).toBeInTheDocument();
   });
 
-  it("renders a quiet unavailable state instead of an error", () => {
+  it("renders nothing (no US-research dead end) when research is unavailable", () => {
     renderCard({
       ...BASE,
       safety: {
@@ -94,7 +94,41 @@ describe("SafetyResearchCard", () => {
         limitation: "US reliability research is not available for this model.",
       },
     });
-    expect(screen.getByText(/not available/i)).toBeInTheDocument();
+    expect(screen.queryByText(/not available/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/could not load/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Safety & known issues/i)).not.toBeInTheDocument();
+  });
+
+  it("hides US research for a JDM/recon chassis number (not a 17-char VIN)", () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <AppPreferencesProvider>
+          <SafetyResearchCard research={BASE} vin="NHP10-1234567" />
+        </AppPreferencesProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByText(/Safety & known issues/i)).not.toBeInTheDocument();
+  });
+
+  it("hides US research on a listing with no VIN/chassis number at all", () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <AppPreferencesProvider>
+          <SafetyResearchCard research={BASE} vin={null} />
+        </AppPreferencesProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByText(/Safety & known issues/i)).not.toBeInTheDocument();
+  });
+
+  it("shows US research for a US-market 17-char VIN", () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <AppPreferencesProvider>
+          <SafetyResearchCard research={BASE} vin="4T1BF1FK5FU123456" />
+        </AppPreferencesProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByText(/Safety & known issues/i)).toBeInTheDocument();
   });
 });

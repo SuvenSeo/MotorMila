@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Round 5: full Filters sheet (web parity). -->
+<resources>
+    <string name="vehicle_category_heavy">Heavy</string>
+    <string name="vehicle_category_tractors">Tractors</string>
+    <string name="vehicle_category_boats">Boats</string>
+    <string name="vehicle_category_cycles">Cycles</string>
+    <string name="vehicle_category_other">Other</string>
+    <string name="filter_section_vehicle">Vehicle type</string>
+    <string name="filter_section_inventory">Listings</string>
+    <string name="filter_with_price">With price</string>
+    <string name="filter_no_price">No price</string>
+    <string name="filter_include_archive">Include 360K+ price archive</string>
+    <string name="filter_section_make_model">Make &amp; model</string>
+    <string name="filter_model_label">Model</string>
+    <string name="filter_model_search_hint">Search models\u2026</string>
+    <string name="filter_all_models">All models</string>
+    <string name="filter_pick_make_first">Choose a make to pick a model</string>
+    <string name="filter_section_price">Price</string>
+    <string name="filter_section_year">Year</string>
+    <string name="filter_section_mileage">Mileage</string>
+    <string name="filter_section_fuel">Fuel</string>
+    <string name="filter_section_transmission">Transmission</string>
+    <string name="filter_section_condition">Condition</string>
+    <string name="filter_section_body">Body type</string>
+    <string name="filter_section_district">District</string>
+    <string name="filter_section_source">Source site</string>
+    <string name="filter_min">Min</string>
+    <string name="filter_max">Max</string>
+    <string name="filter_any">Any</string>
+    <string name="filter_mn_suffix">Mn</string>
+    <string name="filter_km_suffix">km</string>
+    <string name="filter_up_to">Up to %1$s</string>
+    <string name="filter_reset">Reset</string>
+    <string name="filter_reset_all">Reset all</string>
+    <string name="filter_show_results">Show results</string>
+    <string name="filter_show_n_results">Show %1$s results</string>
+    <string name="filter_show_one_result">Show 1 result</string>
+    <string name="filter_no_matches">No matches</string>
+    <string name="filter_price_needs_priced">Switch to “With price” to filter by budget.</string>
+    <string name="filter_active_n">%1$d active</string>
+    <string name="filter_remove_cd">Remove filter %1$s</string>
+    <string name="filter_show_all_n">Show all %1$d</string>
+    <string name="filter_show_fewer">Show fewer</string>
+    <string name="filter_fuel_petrol">Petrol</string>
+    <string name="filter_fuel_diesel">Diesel</string>
+    <string name="filter_fuel_hybrid">Hybrid</string>
+    <string name="filter_fuel_electric">Electric</string>
+    <string name="filter_trans_automatic">Automatic</string>
+    <string name="filter_trans_manual">Manual</string>
+    <string name="filter_trans_cvt">CVT</string>
+    <string name="filter_cond_new">Brand new</string>
+    <string name="filter_cond_recon">Reconditioned</string>
+    <string name="filter_cond_used">Used</string>
+    <string name="filter_from_year">From year</string>
+    <string name="filter_to_year">To year</string>
+    <string name="filter_count_loading">Counting\u2026</string>
+    <!-- Search sort chips -->
+    <string name="sort_newest">Newest</string>
+    <string name="sort_best_deal">Best deal</string>
+    <string name="sort_price_asc">Price ↑</string>
+    <string name="sort_price_desc">Price ↓</string>
+    <string name="sort_low_km">Low km</string>
+</resources>

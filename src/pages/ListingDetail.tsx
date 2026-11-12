@@ -1,12 +1,16 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Suspense, useState, useEffect, useRef, type CSSProperties } from 'react';
+import { lazyWithRetry } from '@/lib/lazyWithRetry';
+import { DeferredSection } from '@/components/DeferredSection';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useParams, useNavigate, useLocation, useNavigationType, Link } from 'react-router-dom';
 import {
   ArrowLeft, ExternalLink, MapPin, Calendar,
   Share2, Fuel, Gauge, Settings2, MessageCircle,
   Car as CarIcon, ArrowRight, Zap, Sparkles, ShieldCheck, Clock, Database, AlertTriangle, PlugZap, Scale,
-  Heart
+  TrendingDown, Layers
 } from 'lucide-react';
-import { getListing, getListingFmv, getListingGeo, getListingHistoryReport, getListingPriceHistory, getListingSafetyResearch, getSimilarListings, formatPrice } from '@/services/api';
+import { getListingGeo, getListingHistoryReport, getListingSafetyResearch, formatPrice } from '@/services/api';
+import { peekListingSeed, peekRecentBundle, takeListingBundle, type ListingBundle } from '@/lib/listingHandoff';
 import { TrustCheckPanel } from '@/components/TrustCheckPanel';
 import { SnapshotModeNotice } from '@/components/SnapshotModeNotice';
 import { getSourceAttribution } from '@/lib/sourceAttribution';
@@ -14,20 +18,22 @@ import { parseFlexibleTime } from '@/lib/parseTime';
 import type { TrustRelatedListing } from '@/lib/trustSignals';
 import type { EnrichmentEnvelope, ListingFmvDetail, SafetyResearchResponse } from '@/services/api';
 import type { CarListing, PriceHistoryInfo, SellerTrustProfile } from '@/types/car';
-import { summarizeFmv } from '@/lib/fmv';
+import { fmvSummaryFromVerdict } from '@/lib/fmv';
+import { isVerdictOk, priceFloorLkr, resolveListingVerdict, withheldVerdictDetail, withheldVerdictHeadline } from '@/lib/priceVerdict';
 import { plausibleEngineCc } from '@/lib/engineCapacity';
 import { ListingImageCarousel } from '@/components/ListingImageCarousel';
 import { getListingImageList, pickVehicleImageUrl } from '@/lib/listingImage';
 import { toast } from 'sonner';
 import { NhtsaModelsCard } from '@/components/NhtsaModelsCard';
 import { SafetyResearchCard } from '@/components/SafetyResearchCard';
+import { listingVin } from '@/lib/dataSanity';
 import { ListingGeoCard } from '@/components/ListingGeoCard';
-import { FairPriceIndicator } from '@/components/FairPriceIndicator';
 import { FmvExplainer } from '@/components/FmvExplainer';
 import { useCompareTray } from '@/lib/compareTray';
-import { loadWatchlistIds, saveWatchlistIds, toggleWatchlistId } from '@/lib/watchlist';
+import { useWatchlist } from '@/lib/watchlist';
 import { DealLadder } from '@/components/DealLadder';
 import { formatListedDateTime } from '@/lib/listing-card-meta';
+import { vehicleTokenLabel } from '@/lib/vehicleTokens';
 import { LeaseCalculator } from '@/components/LeaseCalculator';
 import { TaxBreakdown } from '@/components/TaxBreakdown';
 import { CashToOwnStrip } from '@/components/CashToOwnStrip';
@@ -36,68 +42,148 @@ import { MileageTrustChip } from '@/components/MileageTrustChip';
 import { SellSpeedChip } from '@/components/SellSpeedChip';
 import { AdvertHealthChip } from '@/components/AdvertHealthChip';
 import { ListingHistoryReport } from '@/components/ListingHistoryReport';
-import { ListingPriceTimeline } from '@/components/ListingPriceTimeline';
 import { UpgradePrompt } from '@/components/UpgradePrompt';
 import { inferFinanceClass } from '@/lib/cashToOwn';
 import { useAppPreferences } from '@/lib/appPreferences';
 import { useAuth } from '@/lib/authContext';
 import {
   FREE_SIMILAR_LIMIT,
-  freePlanCopy,
+  freePlanText,
   hasFullPlatformAccess,
 } from '@/lib/planLimits';
 import type { ImportFuelType } from '@/lib/importTaxModel';
-import { motion } from 'framer-motion';
-import { revealContainer, revealItem, springSnappy } from '@/lib/motion';
-import { AtmosphericImage } from '@/components/AtmosphericImage';
-import { visuals } from '@/lib/visualAssets';
+import { motion } from 'motion/react';
+import { supportsViewTransitions, viewTransitionInFlight } from '@/lib/viewTransition';
+import { fadeIn, fadeUp, revealContainer, revealItem, useReducedMotionOrLowData } from '@/lib/motion';
+import { SaveHeartIcon } from '@/components/listing/SaveHeart';
 import { trackEvent } from '@/lib/analytics';
 import { canonicalizeMake, canonicalizeModel } from '@/lib/makeNormalization';
 import { ListingLeadActions } from '@/components/money/ListingLeadActions';
+import { computeDealBadge, dealBadgeFromVerdict, DEAL_TEXT_CLASSES, formatLkrShort } from '@/lib/dealBadge';
+import { detectListingLeaseTakeover } from '@/lib/leaseTakeover';
+import { estimateListingMonthly, formatMonthlyLkr } from '@/lib/listingFinance';
+import { DealBadge, type DealWhyData } from '@/components/listing/DealBadge';
+import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button-variants';
+import { cardVariants } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import { BeforeYouPayStrip } from '@/components/listing/BeforeYouPayStrip';
+import { ListingStickyBar } from '@/components/listing/ListingStickyBar';
+import { SimilarCarsStrip } from '@/components/listing/SimilarCarsStrip';
+import { AnimatedPrice } from '@/components/listing/AnimatedPrice';
+import { AiValueMeter } from '@/components/listing/AiValueMeter';
+import { silhouetteFor } from '@/lib/vehicleSilhouette';
+import '@/styles/cinematic-pages.css';
 
-function formatToken(value: string | null | undefined): string {
-  if (!value) return 'Unknown';
-  return value.replace(/[_-]/g, ' ').split(' ').filter(Boolean).map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
-}
+// The price-timeline chart pulls in recharts (chart-vendor, ~115 kB gz). It sits
+// below the fold, so it loads on its own chunk once the page has painted.
+const loadPriceTimeline = () => import('@/components/ListingPriceTimeline');
+const ListingPriceTimeline = lazyWithRetry(() => loadPriceTimeline().then((m) => ({ default: m.ListingPriceTimeline })));
 
 export default function ListingDetail() {
+  // Warm the chart chunk once the hero has painted (idle), so it is usually
+  // ready by the time the price history scrolls into view.
+  useEffect(() => {
+    const ric = window.requestIdleCallback;
+    if (typeof ric === "function") {
+      const handle = ric(() => void loadPriceTimeline().catch(() => {}), { timeout: 4000 });
+      return () => window.cancelIdleCallback?.(handle);
+    }
+    const timer = window.setTimeout(() => void loadPriceTimeline().catch(() => {}), 2500);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { t } = useAppPreferences();
+  const routerLocation = useLocation();
+  const navType = useNavigationType();
+  const navTypeRef = useRef(navType);
+  navTypeRef.current = navType;
+  const keyRef = useRef(routerLocation.key);
+  keyRef.current = routerLocation.key;
+  const motionCalm = useReducedMotionOrLowData();
+  // Entered under a View Transition (card → listing morph, route cross-fade)
+  // or by Back/forward: the page swaps in at rest. The stage reveal (opacity +
+  // 12px rise, ~600ms spring) used to run inside the morph: a second fade on
+  // top of the transition's, the hero sliding under its own flight, and the
+  // live snapshot re-rasterised every frame. Without the API, RouteTransition's
+  // fade + rise already animates an in-app open: one animation, not two.
+  // Reduced motion / low data: the page is simply there.
+  const [enterAtRest] = useState(
+    () =>
+      motionCalm ||
+      navType === 'POP' ||
+      viewTransitionInFlight() ||
+      (!supportsViewTransitions() && routerLocation.key !== 'default'),
+  );
+  // Below-the-fold sections reveal once as they scroll in (opacity only when calm).
+  const onScroll = {
+    initial: 'hidden',
+    whileInView: 'show',
+    viewport: { once: true, margin: '0px 0px -8% 0px' },
+    variants: motionCalm ? fadeIn : fadeUp,
+  } as const;
+  const { t, localeTag, language } = useAppPreferences();
   const { hasProAccess, isAdmin } = useAuth();
   const fullAccess = hasFullPlatformAccess({ hasProAccess, isAdmin });
-  const [listing, setListing] = useState<CarListing | null>(null);
-  const [similar, setSimilar] = useState<CarListing[]>([]);
+  // A card tap hands over its listing + decoded photo (lib/listingHandoff):
+  // the header and hero paint at once while the detail data loads.
+  const [seed] = useState(() => peekListingSeed(id));
+  // Back/forward onto a listing this tab just showed: its bundle, painted at once.
+  // (Not on the first entry of a page load, which is also a POP.)
+  const [kept] = useState(() => (navType === 'POP' && routerLocation.key !== 'default' ? peekRecentBundle(id) : null));
+  const [listing, setListing] = useState<CarListing | null>(kept?.[0] ?? seed?.listing ?? null);
+  /** The detail bundle (listing, similar, history, FMV) has arrived. */
+  const [dataReady, setDataReady] = useState(!!kept);
+  const [similar, setSimilar] = useState<CarListing[]>(kept?.[1] ?? []);
   const [sellerProfile, setSellerProfile] = useState<SellerTrustProfile | null>(null);
-  const [priceHistory, setPriceHistory] = useState<PriceHistoryInfo | null>(null);
-  const [fmvDetail, setFmvDetail] = useState<ListingFmvDetail | null>(null);
+  const [priceHistory, setPriceHistory] = useState<PriceHistoryInfo | null>(kept?.[2] ?? null);
+  const [fmvDetail, setFmvDetail] = useState<ListingFmvDetail | null>(kept?.[3] ?? null);
   const [safetyResearch, setSafetyResearch] = useState<SafetyResearchResponse | null>(null);
   const [listingGeo, setListingGeo] = useState<EnrichmentEnvelope | null>(null);
   /** Cross-site linked listings; null = history service unavailable. */
   const [relatedListings, setRelatedListings] = useState<TrustRelatedListing[] | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!seed && !kept);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [photoAspectRatio, setPhotoAspectRatio] = useState<number | null>(() => seed?.aspectRatio ?? null);
   const { toggle: toggleCompare, isPinned: isPinnedForCompare } = useCompareTray();
-  const [watchlisted, setWatchlisted] = useState(false);
+  const { ids: watchlistIds, toggle: toggleWatchlist } = useWatchlist();
+  const watchlisted = !!listing && watchlistIds.includes(Number(listing.id));
+  // Everything below the price waits for the detail data, then mounts one
+  // section per frame (DeferredSection): the card → listing open used to
+  // commit the whole below-the-fold as one 100–170 ms long task. The finance
+  // planner (Radix slider measures on mount) and similar cars (Embla) mount
+  // only near the viewport or once idle.
+  const rest = listing !== null && dataReady;
+  // The price/typical-price blocks exist twice (mobile flow, desktop sidebar)
+  // and CSS hid one: render only the one this layout shows.
+  const isDesktop = useMediaQuery('(min-width: 1024px)', true);
+  const isMobileFlow = !isDesktop || typeof window === 'undefined' || typeof window.matchMedia !== 'function';
 
   const handleWatchlistToggle = () => {
     if (!listing) return;
     const listingId = Number(listing.id);
     if (!Number.isFinite(listingId) || listingId <= 0) return;
-    const { ids, blocked } = toggleWatchlistId(loadWatchlistIds(), listingId);
+    const { saved: nowSaved, blocked, error } = toggleWatchlist(listingId);
     if (blocked) {
       toast.error(t("listing.watchlistFull", "Watchlist is full — remove one first"));
       return;
     }
-    saveWatchlistIds(ids);
-    const nowSaved = ids.includes(listingId);
-    setWatchlisted(nowSaved);
+    if (error) {
+      toast.error(t("listing.watchlistStorageError", "Couldn't save on this device. Check browser storage permissions and try again."));
+      return;
+    }
     toast.success(nowSaved
       ? t("listing.watchlistAdded", "Saved to your watchlist")
       : t("listing.watchlistRemoved", "Removed from your watchlist"));
   };
 
   const handleBack = () => {
-    if (window.history.length > 1) navigate(-1);
+    // location.key is "default" on the first in-app entry (landed from a search engine, a shared
+    // link or a new tab): going back there would leave Motormila, so send the user to the market.
+    if (routerLocation.key !== 'default' && window.history.length > 1) navigate(-1);
     else navigate('/');
   };
   const buildShareText = () => {
@@ -133,52 +219,63 @@ export default function ListingDetail() {
     if (!listing) return;
     const price = Number(listing.price_lkr || 0);
     const priced = Number.isFinite(price) && price >= 100_000 && price <= 500_000_000;
-    const median = Number(listing.market_median_lkr);
+    const pinVerdict = resolveListingVerdict(listing, fmvDetail);
     const result = toggleCompare({
       id: Number(listing.id),
       make: listing.make,
       model: listing.model,
       year: listing.year,
       price_lkr: priced ? price : null,
-      fmv_lkr: fmvDetail?.fmv_lkr ?? (Number.isFinite(median) && median > 0 ? median : null),
+      fmv_lkr: isVerdictOk(pinVerdict) ? pinVerdict.referenceLkr : null,
       mileage_km: Number(listing.mileage_km) || null,
       district: listing.district,
-      deal_score: typeof listing.deal_score === 'number' ? listing.deal_score : null,
+      deal_score: isVerdictOk(pinVerdict) ? Math.round(-pinVerdict.gapPct * 10) / 10 : null,
     });
-    if (result.atCap) toast.error(t("listing.compareFull", "Compare tray is full (max 3) — remove one first"));
+    if (result.atCap) toast.error(t("listing.compareFull", "Compare tray is full (max 4) — remove one first"));
     else if (result.pinned) toast.success(t("listing.compareAdded", "Pinned to compare tray"));
   };
 
   useEffect(() => {
     if (!id) return;
-    window.scrollTo(0, 0); // peer links navigate mid-scroll; open each listing at the top
+    // Peer links navigate mid-scroll: open each listing at the top. Back/forward
+    // keeps the restored position (ScrollRestoration).
+    if (navTypeRef.current !== 'POP') window.scrollTo(0, 0);
     let cancelled = false;
-    setLoading(true); setSellerProfile(null); setPriceHistory(null); setFmvDetail(null); setSafetyResearch(null); setListingGeo(null); setRelatedListings(null);
-    Promise.all([
-      getListing(id).catch(() => null),
-      getSimilarListings(id).catch(() => []),
+    setLoadError(false);
+    const showBundle = ([detail, sim, history, fmv]: ListingBundle) => {
+      setListing(detail); setSimilar(sim); setPriceHistory(history); setFmvDetail(fmv); setLoading(false); setDataReady(true);
+      if (detail) document.title = `${detail.title} — Motormila`;
+    };
+    setSellerProfile(null); setSafetyResearch(null); setListingGeo(null); setRelatedListings(null);
+    // Back/forward onto a listing this tab just showed: paint it as it was (no
+    // skeleton), so the scroll restore finds the similar car the visitor tapped.
+    const back = navTypeRef.current === 'POP' && keyRef.current !== 'default' ? peekRecentBundle(id) : null;
+    if (back) showBundle(back);
+    else {
+      const handed = peekListingSeed(id);
+      if (handed) { setListing(handed.listing); setLoading(false); } else setLoading(true);
+      setDataReady(false); setPriceHistory(null); setFmvDetail(null);
       // seller-profile is retired (410): seller contact happens on the source site.
-      Promise.resolve(null as SellerTrustProfile | null),
-      getListingPriceHistory(id).catch(() => null),
-      getListingFmv(id).catch(() => null),
-    ])
-      .then(([detail, sim, profile, history, fmv]) => {
-        // Ignore a slow response for a listing the user already navigated away from.
-        if (cancelled) return;
-        setListing(detail); setSimilar(sim); setSellerProfile(profile); setPriceHistory(history); setFmvDetail(fmv); setLoading(false);
-        setWatchlisted(detail ? loadWatchlistIds().includes(Number(detail.id)) : false);
-        if (detail) {
-          document.title = `${detail.title} — Motormila`;
-          trackEvent("listing_viewed", { listing_id: detail.id, make: detail.make, model: detail.model, source: detail.source });
-        }
-      });
+      takeListingBundle(id)
+        .then((bundle) => {
+          // Ignore a slow response for a listing the user already navigated away from.
+          if (cancelled) return;
+          showBundle(bundle);
+          const detail = bundle[0];
+          if (detail) trackEvent("listing_viewed", { listing_id: detail.id, make: detail.make, model: detail.model, source: detail.source });
+        }).catch(() => {
+          if (cancelled) return;
+          setLoading(false);
+          setLoadError(true);
+        });
+    }
     getListingSafetyResearch(id).then((r) => { if (!cancelled) setSafetyResearch(r); }).catch(() => setSafetyResearch(null));
     getListingGeo(id).then((g) => { if (!cancelled) setListingGeo(g); }).catch(() => setListingGeo(null));
     getListingHistoryReport(id)
       .then((report) => { if (!cancelled) setRelatedListings(Array.isArray(report?.related_listings) ? report.related_listings : []); })
       .catch(() => { if (!cancelled) setRelatedListings(null); });
     return () => { cancelled = true; };
-  }, [id]);
+  }, [id, reloadKey]);
 
   // Enrich the generic route JSON-LD (set by RouteMeta) with real vehicle data
   // once the listing loads — same script element, so there is only ever one.
@@ -208,7 +305,7 @@ export default function ListingDetail() {
       vehicleTransmission: listing.transmission || undefined,
       bodyType: listing.body_type || undefined,
       image: image || undefined,
-      url: `https://motormila.vercel.app/listing/${listing.id}`,
+      url: `https://motormila.pages.dev/listing/${listing.id}`,
       areaServed: listing.district
         ? { '@type': 'AdministrativeArea', name: `${listing.district}, Sri Lanka` }
         : undefined,
@@ -241,16 +338,31 @@ export default function ListingDetail() {
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="flex min-h-[70vh] items-center justify-center px-5">
+        <div className="max-w-sm text-center" role="alert">
+          <h1 className="font-display text-title3 font-semibold">{t("listing.loadFailed", "This listing couldn't load")}</h1>
+          <p className="mt-2 text-body text-muted-foreground">{t("listing.retryBody", "Check your connection and try again. This does not mean the listing was removed.")}</p>
+          <div className="mt-5 flex justify-center gap-3">
+            <Button onClick={() => setReloadKey((key) => key + 1)}>{t("common.retry", "Try again")}</Button>
+            <Button variant="secondary" onClick={() => navigate('/')}>{t("listing.returnInventory", "Return to inventory")}</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // ── Not found ──────────────────────────────────────────────
   if (!listing) {
     return (
       <div className="flex min-h-[70vh] items-center justify-center px-5">
         <div className="text-center">
           <CarIcon className="mx-auto mb-4 h-8 w-8 text-muted-foreground" />
-          <p className="text-[12px] font-medium text-muted-foreground">{t("listing.unavailable", "Unavailable")}</p>
-          <h1 className="mt-2 font-display text-xl font-semibold text-foreground">{t("listing.notFound", "Listing not found")}</h1>
-          <p className="mt-2 max-w-sm text-[12px] text-muted-foreground">{t("listing.notFoundBody", "The source may have removed it or the ID is no longer in the live index.")}</p>
-          <button type="button" onClick={() => navigate('/')} className="mt-5 rounded-full bg-primary px-5 py-2.5 text-[12px] font-semibold text-primary-foreground shadow-soft transition-all hover:bg-primary/95 hover:shadow-soft-lg active:scale-[0.97]">{t("listing.returnInventory", "Return to inventory")}</button>
+          <p className="text-caption font-medium text-muted-foreground">{t("listing.unavailable", "Unavailable")}</p>
+          <h1 className="mt-2 font-display text-title3 font-semibold text-foreground">{t("listing.notFound", "Listing not found")}</h1>
+          <p className="mt-2 max-w-sm text-caption text-muted-foreground">{t("listing.notFoundBody", "The source may have removed it or the ID is no longer in the live index.")}</p>
+          <Button type="button" className="mt-5" onClick={() => navigate('/')}>{t("listing.returnInventory", "Return to inventory")}</Button>
         </div>
       </div>
     );
@@ -259,18 +371,14 @@ export default function ListingDetail() {
   // ── Derived data ───────────────────────────────────────────
   const attribution = getSourceAttribution(listing);
   const listingUrl = attribution.href;
+  const displayMake = canonicalizeMake(listing.make) || listing.make;
+  const displayModel = canonicalizeModel(listing.model) || listing.model;
+  const displayName = `${displayMake} ${displayModel}`;
   // Full gallery for the carousel (primary photo first).
   const galleryImages = getListingImageList(listing);
-  const specs = [
-    { label: t("common.year", "Year"), value: listing.year ? String(listing.year) : t("common.unknown", "Unknown"), icon: Calendar },
-    { label: t("common.mileage", "Mileage"), value: Number.isFinite(Number(listing.mileage_km)) && Number(listing.mileage_km) >= 0 ? `${Number(listing.mileage_km).toLocaleString()} KM` : t("common.unknown", "Unknown"), icon: Gauge },
-    { label: t("common.transmission", "Transmission"), value: formatToken(listing.transmission), icon: Settings2 },
-    { label: t("common.fuel", "Fuel"), value: formatToken(listing.fuel_type), icon: Fuel },
-    { label: t("common.condition", "Condition"), value: formatToken(listing.condition), icon: Sparkles },
-    { label: t("common.body", "Body"), value: formatToken(listing.body_type), icon: CarIcon },
-  ];
   const listingPrice = Number(listing.price_lkr || 0);
-  const hasPrice = Number.isFinite(listingPrice) && listingPrice >= 100_000 && listingPrice <= 500_000_000;
+  // Same floor as the verdict (bike 50k, three-wheeler 100k, car 300k): a Rs 85,000 bike is a price, not "Unlisted".
+  const hasPrice = Number.isFinite(listingPrice) && listingPrice >= Math.min(100_000, priceFloorLkr(listing.vehicle_category)) && listingPrice <= 500_000_000;
   // Map the listing's fuel label onto the import-tax model's fuel classes.
   const fuelRaw = String(listing.fuel_type || '').toLowerCase();
   const importFuelType: ImportFuelType =
@@ -279,531 +387,621 @@ export default function ListingDetail() {
     : fuelRaw.includes('diesel') ? 'diesel'
     : 'petrol';
 
-  // null = rating suppressed server-side (thin cohort / old vehicle / extreme price / free plan)
-  const hasDealScore = fullAccess && listing.deal_score !== null && listing.deal_score !== undefined;
-  const dealScore = listing.deal_score || 0;
+  const lease = detectListingLeaseTakeover(listing);
+  // THE price verdict for this listing: computed once from the FMV estimate
+  // (+ its comps/confidence) and handed to every panel below — deal badge,
+  // FMV card, deal ladder, Trust Check, price timeline, compare pin, sticky
+  // bar — so no two of them can contradict each other (src/lib/priceVerdict.ts).
+  const verdict = resolveListingVerdict(listing, fmvDetail);
+  const fmvLkr = isVerdictOk(verdict) ? verdict.referenceLkr : null;
+  // null deal_score = rating suppressed server-side (thin cohort / old vehicle / extreme price / free plan)
+  const ratingAllowed = fullAccess && listing.deal_score !== null && listing.deal_score !== undefined;
+  // No deal call until the FMV is in (a seeded first paint has only the card's data).
+  const deal: ReturnType<typeof computeDealBadge> = !dataReady
+    ? { kind: 'none', gapLkr: 0, gapPctBelow: 0 }
+    : dealBadgeFromVerdict(verdict, { isLeaseTakeover: lease.isLeaseTakeover, ratingAllowed });
+  const dealWhy: DealWhyData = {
+    fmvLkr,
+    askingLkr: hasPrice ? listingPrice : null,
+    compsCount: fmvDetail ? fmvDetail.sample_size : null,
+    confidence: fmvDetail?.confidence ?? null,
+    method: fmvDetail?.method ?? null,
+  };
+  const fmvSummary = hasPrice && !lease.isLeaseTakeover ? fmvSummaryFromVerdict(listingPrice, verdict, t) : null;
+  const fmvKind = fmvSummary?.verify_first ? 'verify' : fmvSummary?.band === 'below' ? 'below' : fmvSummary?.band === 'above' ? 'above' : 'fair';
+  const monthly = hasPrice
+    ? estimateListingMonthly({
+        priceLkr: listingPrice,
+        condition: listing.condition,
+        fuelType: listing.fuel_type,
+        year: listing.year,
+        isLeaseTakeover: lease.isLeaseTakeover,
+      })
+    : null;
+
   const visibleSimilar = fullAccess ? similar : similar.slice(0, FREE_SIMILAR_LIMIT);
-  const fmvSummary =
-    hasPrice && Number.isFinite(Number(listing.market_median_lkr)) && Number(listing.market_median_lkr) > 0
-      ? summarizeFmv(listingPrice, Number(listing.market_median_lkr))
-      : null;
-  const dealTone = dealScore >= 5
-    ? 'text-emerald-600 dark:text-emerald-400'
-    : dealScore <= -6
-      ? 'text-rose-600 dark:text-rose-400'
-      : 'text-primary-bright';
-  const dealDelta = dealScore ? `${Math.abs(dealScore)}% ${dealScore > 0 ? 'below' : 'above'} median` : 'at median';
-  const sellerName = sellerProfile?.seller_name || listing.seller_name || `${listing.source} seller`;
+  const sellerName = sellerProfile?.seller_name || listing.seller_name || null;
   const sellerType = sellerProfile?.seller_type || (listing.is_dealer ? 'dealer' : 'unknown');
   const sellerHeadline = sellerType === 'dealer' ? t("listing.dealer", "Dealer") : sellerType === 'private' ? t("listing.privateSeller", "Private Seller") : t("listing.sourceSeller", "Source Seller");
-  const trustBadges = (sellerProfile?.verified_badges || []).slice(0, 2);
-  const ratingValue = sellerProfile?.rating;
-  const reviewCount = sellerProfile?.review_count;
-  const ratingStars = ratingValue ? Math.round(Math.max(1, Math.min(5, ratingValue))) : 0;
-  const trustMeta = [sellerProfile?.member_since ? `Since ${sellerProfile.member_since}` : null, sellerProfile?.listing_count != null ? `${sellerProfile.listing_count} listings` : null].filter(Boolean).join(' · ') || 'No extended seller history available.';
   const trackedDays = (() => { const ts = parseFlexibleTime(listing.first_seen_at); return ts !== null ? Math.max(1, Math.round((Date.now() - ts) / 86_400_000)) : null; })();
-  const trackedLabel = trackedDays ? `${trackedDays}d` : 'N/A';
   const listedDateTime = formatListedDateTime(listing.first_seen_at);
   const peerAges = visibleSimilar.map((s) => { const ts = parseFlexibleTime(s.first_seen_at); return ts !== null ? Math.max(1, Math.round((Date.now() - ts) / 86_400_000)) : null; }).filter((v): v is number => v !== null);
   const avgPeerDays = peerAges.length ? Math.round(peerAges.reduce((a, b) => a + b, 0) / peerAges.length) : null;
 
+  // Cross-source matches from the history service (confirmed/likely only).
+  const otherSources = new Set(
+    (relatedListings ?? [])
+      .filter((r) => !r.confidence || r.confidence === 'confirmed' || r.confidence === 'likely')
+      .map((r) => String(r.source || '').toLowerCase())
+      .filter((s) => s && s !== String(listing.source || '').toLowerCase()),
+  );
+  const seenOnSites = otherSources.size > 0 ? otherSources.size + 1 : null;
+
+  const engineCc = plausibleEngineCc(listing.engine_cc, listing.year);
+  const keySpecs = [
+    { label: t("common.year", "Year"), value: listing.year ? String(listing.year) : null, icon: Calendar },
+    { label: t("common.mileage", "Mileage"), value: Number.isFinite(Number(listing.mileage_km)) && Number(listing.mileage_km) > 0 ? `${Number(listing.mileage_km).toLocaleString()} km` : null, icon: Gauge },
+    { label: t("common.fuel", "Fuel"), value: vehicleTokenLabel("fuel", listing.fuel_type, t), icon: Fuel },
+    { label: t("common.transmission", "Transmission"), value: vehicleTokenLabel("transmission", listing.transmission, t), icon: Settings2 },
+    { label: t("listing.engine", "Engine"), value: engineCc ? `${Math.round(engineCc).toLocaleString()} cc` : null, icon: Zap },
+    { label: t("common.condition", "Condition"), value: vehicleTokenLabel("condition", listing.condition, t), icon: Sparkles },
+    { label: t("common.body", "Body"), value: vehicleTokenLabel("body", listing.body_type, t), icon: CarIcon },
+  ].filter((s): s is { label: string; value: string; icon: typeof Calendar } => Boolean(s.value));
+
+  const silhouette = silhouetteFor(listing);
+  const heroPlaceholder = seed?.heroSrc && String(seed.listing.id) === String(listing.id) ? seed.heroSrc : null;
+  const priceCut = priceHistory && priceHistory.cut_count > 0 ? priceHistory : null;
+
+  // ── Blocks (some render in both the mobile flow and the desktop sidebar) ──
+  const renderPriceBlock = (placement: 'mobile' | 'desktop') => (
+    <div className={placement === 'desktop' ? cn(cardVariants({ padding: "md" }), "shadow-e2") : ''}>
+      <h2 className="cine-eyebrow text-muted-foreground">{t("listing.askingPrice", "Asking price")}</h2>
+      <p className="num cine-display mt-1.5 text-[clamp(2.375rem,1.6rem+2.4vw,3.25rem)] leading-[1] text-foreground">
+        {hasPrice ? <AnimatedPrice priceLkr={listingPrice} /> : t("listing.unlisted", "Unlisted")}
+      </p>
+      {deal.kind !== 'none' && (
+        <DealBadge badge={deal} tone="soft" size="md" why={deal.kind === 'lease' ? null : dealWhy} className="mt-3 flex-wrap" />
+      )}
+      {dataReady && hasPrice && !lease.isLeaseTakeover && isVerdictOk(verdict) && (
+        <AiValueMeter verdict={verdict} className="mt-4 rounded-card border border-border bg-background/40 p-3.5" />
+      )}
+      {lease.isLeaseTakeover && lease.monthlyLkr && (
+        <p className="mt-2 text-footnote leading-relaxed text-muted-foreground">
+          {lease.monthsRemaining
+            ? t("listing.leaseTerms", "The ad also mentions {months} instalments of {monthly} still to pay.", {
+                months: lease.monthsRemaining,
+                monthly: formatMonthlyLkr(lease.monthlyLkr),
+              })
+            : t("listing.leaseMonthly", "The ad also mentions instalments of {monthly} a month still to pay.", {
+                monthly: formatMonthlyLkr(lease.monthlyLkr),
+              })}
+        </p>
+      )}
+      {monthly && (
+        <p className="mt-2 text-footnote text-muted-foreground num">
+          {t("listing.monthlyLine", "{amount} est. /mo", { amount: formatMonthlyLkr(monthly.monthlyLkr) })}
+          <span className="text-muted-foreground/80">
+            {' · '}
+            {t("listing.monthlyBasis", "{ltv}% loan (CBSL cap), {rate}% over {years} yrs", {
+              ltv: monthly.ltvPct,
+              rate: monthly.ratePct,
+              years: monthly.termYears,
+            })}
+          </span>
+        </p>
+      )}
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        {priceCut && (
+          <Badge
+            className="gap-1"
+            title={t("listing.priceCutTitle", "Downward price moves since Motormila first saw this ad")}
+          >
+            <TrendingDown aria-hidden className="h-3 w-3 text-primary" />
+            {t("listing.priceCut", "Price cut {n}×", { n: priceCut.cut_count })}
+            {priceCut.change_pct !== null && priceCut.change_pct < 0 && <span className="num">({priceCut.change_pct}%)</span>}
+          </Badge>
+        )}
+        {seenOnSites && (
+          <Badge className="num gap-1">
+            <Layers aria-hidden className="h-3 w-3" /> {t("listingCard.onSites", "On {n} sites", { n: seenOnSites })}
+          </Badge>
+        )}
+        <SellSpeedChip listing={listing} />
+        <AdvertHealthChip listing={listing} />
+        <HybridCliffBadge fuelType={listing.fuel_type} engineCc={engineCc} />
+      </div>
+
+      {placement === 'desktop' && (
+        <div className="mt-5 space-y-3 border-t border-border pt-4">
+          {listingUrl ? (
+            <a
+              href={listingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackEvent("contact_on_source_clicked", { listing_id: listing.id, source: listing.source, placement: "sidebar" })}
+              className={cn(buttonVariants({ size: "lg" }), "w-full no-underline")}
+            >
+              {t("listing.viewOnSource", "View on {source}", { source: attribution.sourceName })}
+              <ExternalLink aria-hidden className="h-4 w-4" />
+            </a>
+          ) : (
+            <p className="text-caption text-muted-foreground">{t("listing.noSourceLink", "The original ad link isn't available for this listing.")}</p>
+          )}
+          <p className="text-caption leading-relaxed text-muted-foreground">
+            {t("listing.contactNote", "Opens the original ad. Motormila doesn't share seller phone numbers.")}
+          </p>
+          <BeforeYouPayStrip idSuffix="desktop" />
+        </div>
+      )}
+    </div>
+  );
+
+  const renderFmvCard = () => (
+    <section aria-labelledby="fmv-card-title" className={cardVariants({ padding: "md" })}>
+      <h2 id="fmv-card-title" className="text-caption font-semibold text-muted-foreground">{t("listing.typicalPrice", "Typical asking price")}</h2>
+      {lease.isLeaseTakeover ? (
+        <p className="mt-2 text-footnote leading-relaxed text-muted-foreground">
+          {t("listing.leaseNoFmv", "This is a lease takeover, so the price shown isn't the full price. We don't compare it with typical prices or give it a deal rating.")}
+        </p>
+      ) : fmvSummary ? (
+        <>
+          <p className="num mt-1 text-title2 font-extrabold tracking-tight text-foreground">{formatLkrShort(fmvSummary.fmv_lkr)}</p>
+          <p className={`mt-0.5 text-footnote font-bold ${DEAL_TEXT_CLASSES[fmvKind]}`}>{fmvSummary.label}</p>
+          {fmvDetail && fmvDetail.method !== "insufficient_data" && (
+            <p className="mt-1 text-caption text-muted-foreground">
+              {fmvDetail.sample_size > 0 ? t("listing.compsLine", "{n} comparable listings", { n: fmvDetail.sample_size }) : ""}
+              {fmvDetail.confidence !== "none" ? ` · ${t("listing.confidenceLine", "{level} confidence", { level: fmvDetail.confidence })}` : ""}
+            </p>
+          )}
+          {hasPrice && (
+            <div className="mt-3">
+              <DealLadder askingPrice={listingPrice} marketMedianLkr={fmvSummary.fmv_lkr} verdict={verdict} />
+            </div>
+          )}
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/70 pt-3">
+            <FmvExplainer
+              compsCount={fmvDetail?.sample_size ?? 0}
+              confidence={fmvDetail?.confidence ?? "none"}
+              method={fmvDetail?.method}
+              fmvLkr={fmvSummary.fmv_lkr}
+              updatedAt={fmvDetail?.updated_at}
+              locale={language}
+            />
+          </div>
+          <p className="mt-2 text-caption text-muted-foreground">
+            {t("deal.whyAsking", "These are asking prices on listing sites, not sale prices.")}
+          </p>
+        </>
+      ) : verdict.status === "withheld" && (verdict.group !== "insufficient_data" || verdict.reason === "generic_model") ? (
+        <>
+          <p className="mt-1 text-footnote font-bold text-foreground">{withheldVerdictHeadline(verdict, t)}</p>
+          <p className="mt-1 text-caption leading-relaxed text-muted-foreground">{withheldVerdictDetail(verdict, t)}</p>
+        </>
+      ) : (
+        <p className="mt-2 text-caption text-muted-foreground">
+          {t("listing.noFmv", "Not enough comparable listings for a confident typical price on this vehicle.")}
+        </p>
+      )}
+    </section>
+  );
+
+  // Pro upsell sits *below* the FMV card, never between price and valuation.
+  // Only when this listing actually has a rating to unlock: "Deal scores are a
+  // Pro signal" under a withheld verdict promises a score that doesn't exist.
+  const renderProUpsell = () =>
+    !fullAccess && !lease.isLeaseTakeover && dataReady && isVerdictOk(verdict) ? (
+      <UpgradePrompt title={freePlanText(t, "scoresTitle")} body={freePlanText(t, "scoresBody")} variant="strip" />
+    ) : null;
+
+  const actionBtn = cn(buttonVariants({ variant: "secondary", size: "icon" }), "text-muted-foreground hover:text-foreground [&_svg]:size-4");
+
   // ── Render ─────────────────────────────────────────────────
   return (
     <motion.div
-      initial="hidden"
+      initial={enterAtRest ? false : "hidden"}
       animate="show"
       variants={revealContainer}
-      className="min-h-screen relative overflow-hidden bg-background"
+      className="relative min-h-screen overflow-hidden bg-background pb-44 lg:pb-0"
     >
-      {/* Decorative Blur Orbs — token-based, adapt to both themes */}
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        <AtmosphericImage
-          src={visuals.pageListingDetail.src}
-          srcSm={visuals.pageListingDetail.srcSm}
-          className="h-[28rem] w-full object-cover object-[center_30%] opacity-[0.18]"
-          sizes="100vw"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background to-background" />
-      </div>
-      <div aria-hidden className="pointer-events-none absolute top-[-10%] left-[-10%] h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px]" />
-      <div aria-hidden className="pointer-events-none absolute bottom-[20%] right-[-10%] h-[600px] w-[600px] rounded-full bg-primary/5 blur-[150px]" />
+      {/* Stage — "Night drive": a dark band (both themes) holding the title and
+          the filmstrip gallery. `theme-dark` scopes every token inside it. */}
+      <motion.section
+        variants={revealItem}
+        className="cine-stage theme-dark relative z-10 -mt-[var(--nav-offset)] pt-[var(--nav-offset)] text-foreground"
+      >
+        <div className="mx-auto flex max-w-[1320px] flex-col px-5 pb-6 pt-4 sm:px-6 md:pb-8 md:pt-6">
+          <div className="mb-3 flex items-center justify-between gap-3 md:mb-5">
+            <Button type="button" variant="ghost" size="sm" onClick={handleBack} className="group -ml-2 text-muted-foreground">
+              <ArrowLeft aria-hidden className="transition-transform duration-short group-hover:-translate-x-0.5" /> {t("common.back", "Back")}
+            </Button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleComparePin}
+                aria-pressed={isPinnedForCompare(Number(listing.id))}
+                aria-label={isPinnedForCompare(Number(listing.id)) ? t("listing.pinned", "Pinned ✓") : t("listing.addToCompare", "Add to compare")}
+                title={t("listing.addToCompare", "Add to compare")}
+                className={actionBtn}
+              >
+                <Scale aria-hidden className="h-4 w-4" />
+              </button>
+              <button type="button" onClick={handleWhatsAppShare} className={actionBtn} aria-label={t("listing.shareWhatsApp", "Share on WhatsApp")} title={t("listing.shareWhatsApp", "Share on WhatsApp")}>
+                <MessageCircle aria-hidden className="h-4 w-4" />
+              </button>
+              <button type="button" onClick={handleShare} className={actionBtn} aria-label={t("listing.share", "Share")} title={t("listing.share", "Share")}>
+                <Share2 aria-hidden className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={handleWatchlistToggle}
+                aria-pressed={watchlisted}
+                aria-label={watchlisted ? t("listing.saved", "Saved ✓") : t("listing.save", "Save")}
+                title={watchlisted ? t("listing.saved", "Saved ✓") : t("listing.save", "Save")}
+                className={`${actionBtn} ${watchlisted ? "!border-deal-high/30 !bg-deal-high/10 !text-deal-high-text dark:!text-deal-high-text" : ""}`}
+              >
+                <SaveHeartIcon saved={watchlisted} className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
 
-      {/* Header — the editorial hero: eyebrow, towering title, ask + verdict */}
-      <motion.section variants={revealItem} className="relative z-10 -mt-[var(--nav-offset)] border-b border-border bg-card/30 pt-[var(--nav-offset)] backdrop-blur-md">
-        <div className="mx-auto max-w-[1320px] px-5 py-8 sm:px-6 sm:py-10">
-          <button type="button" onClick={handleBack} className="group mb-5 inline-flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground">
-            <ArrowLeft aria-hidden className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" /> {t("common.back", "Back")}
-          </button>
-
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            <span className="section-eyebrow text-[10px] tracking-[0.18em]">{t("listing.inspection", "Inspection")}</span>
-            <span aria-hidden className="text-muted-foreground/40 text-xs">•</span>
-            <span className="text-[12px] font-medium tracking-tight text-muted-foreground">
+          {/* Title (below the photos on phones, above them from md) */}
+          <div className="order-2 mt-5 md:order-1 md:mt-0 md:mb-6">
+            <p className="cine-eyebrow mb-3 text-muted-foreground">
               {t("listing.listedOnSource", "Listed on {source}", { source: attribution.sourceName })}
               {attribution.checkedAgo ? ` · ${t("listing.lastChecked", "last checked {ago}", { ago: attribution.checkedAgo })}` : ''}
-            </span>
-          </div>
-          <SnapshotModeNotice className="mb-4 max-w-2xl" />
-
+            </p>
+            <SnapshotModeNotice className="mb-4 max-w-2xl" />
           {listing.is_active === false && (
-            <div className="mb-5 flex items-start gap-2.5 rounded-3xl border border-amber-500/25 bg-amber-400/[0.06] p-3.5 max-w-2xl">
-              <AlertTriangle aria-hidden className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="mb-4 flex max-w-2xl items-start gap-2.5 rounded-card border border-deal-caution/25 bg-deal-caution/10 p-3.5">
+              <AlertTriangle aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-deal-caution-text" />
               <div>
-                <p className="text-xs font-bold text-amber-700 dark:text-amber-300">{t("listing.possiblySold", "Possibly sold or delisted")}</p>
-                <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground font-medium">
-                  This ad has not been seen at {listing.source}
-                  {parseFlexibleTime(listing.last_seen_at) !== null ? ` since ${new Date(parseFlexibleTime(listing.last_seen_at)!).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Colombo' })}` : ' recently'}.
-                  Pricing below is kept for market reference and may be historical.
+                <p className="text-caption font-bold text-deal-caution-text">{t("listing.possiblySold", "Possibly sold or delisted")}</p>
+                <p className="mt-0.5 text-caption font-medium leading-relaxed text-muted-foreground">
+                  {parseFlexibleTime(listing.last_seen_at) !== null
+                    ? t("listing.notSeenSince", "This ad has not been seen at {source} since {date}.", {
+                        source: listing.source,
+                        date: new Date(parseFlexibleTime(listing.last_seen_at)!).toLocaleDateString(localeTag, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Colombo' }),
+                      })
+                    : t("listing.notSeenRecently", "This ad has not been seen at {source} recently.", { source: listing.source })}{' '}
+                  {t("listing.historicalPricing", "Pricing below is kept for market reference and may be historical.")}
                 </p>
               </div>
             </div>
           )}
 
-          <h1 className="display-1 max-w-4xl text-foreground">
-            {canonicalizeMake(listing.make) || listing.make} {canonicalizeModel(listing.model) || listing.model}{listing.year ? ` · ${listing.year}` : ''}
-          </h1>
-
-          {/* Mobile: the sticky price sidebar stacks ~4 screens down — surface ask + verdict here */}
-          <div className="mt-4 flex flex-wrap items-center gap-3 lg:hidden">
-            <p className="num text-3xl font-extrabold tracking-tight text-foreground">
-              {hasPrice ? formatPrice(listingPrice) : t("listing.unlisted", "Unlisted")}
-            </p>
-            {hasDealScore && (
-              <span className="flex items-center gap-2">
-                <FairPriceIndicator score={dealScore} condition={listing.condition} size="sm" />
-                <span className={`num text-[11px] font-bold ${dealTone}`}>{dealDelta}</span>
-              </span>
+            <h1 className="cine-display max-w-4xl text-[clamp(2rem,1.2rem+3vw,3.75rem)] text-foreground">
+              {displayName}{listing.year ? <span className="text-muted-foreground"> · {listing.year}</span> : null}
+            </h1>
+            {listing.title && listing.title !== displayName && (
+              <p className="mt-3 max-w-2xl text-body font-medium leading-relaxed text-muted-foreground">{listing.title}</p>
             )}
           </div>
 
-          {listing.title && listing.title !== `${canonicalizeMake(listing.make) || listing.make} ${canonicalizeModel(listing.model) || listing.model}` && (
-            <p className="mt-3 max-w-2xl text-[14px] text-muted-foreground leading-relaxed font-medium">{listing.title}</p>
-          )}
-
-          <div className="mt-6 flex flex-wrap items-center gap-2.5">
-            {listingUrl && (
-              <a href={listingUrl} target="_blank" rel="noopener noreferrer" className="flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-[12px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/95 hover:shadow-soft-lg active:scale-[0.97]">
-                {t("listing.viewOnSource", "View on {source}", { source: attribution.sourceName })} <ExternalLink aria-hidden className="h-3 w-3" />
-              </a>
-            )}
-            <button type="button" onClick={handleWhatsAppShare} className="flex h-9 items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3.5 text-[12px] font-semibold text-emerald-700 dark:text-emerald-400 transition-all hover:bg-emerald-500/15 active:scale-[0.97]">
-              <MessageCircle aria-hidden className="h-3 w-3" /> {t("listing.shareWhatsApp", "Share on WhatsApp")}
-            </button>
-            <button type="button" onClick={handleShare} className="flex h-9 items-center gap-1.5 rounded-full border border-border bg-card px-3.5 text-[12px] font-semibold text-muted-foreground transition-all hover:text-foreground hover:bg-surface active:scale-[0.97]">
-              <Share2 aria-hidden className="h-3 w-3" /> {t("listing.share", "Share")}
-            </button>
-            <button
-              type="button"
-              onClick={handleWatchlistToggle}
-              aria-pressed={watchlisted}
-              className={`flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[12px] font-semibold transition-all active:scale-[0.97] ${watchlisted ? "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/15" : "border-border bg-card text-muted-foreground hover:text-foreground hover:bg-surface"}`}
-            >
-              <Heart aria-hidden className={`h-3 w-3 ${watchlisted ? "fill-current" : ""}`} /> {watchlisted ? t("listing.saved", "Saved ✓") : t("listing.save", "Save")}
-            </button>
-            {importFuelType === 'electric' && (
-              <Link
-                to="/ev-hub"
-                className="flex h-9 items-center gap-1.5 rounded-full border border-border bg-card px-3.5 text-[12px] font-semibold text-muted-foreground no-underline transition-all hover:text-foreground hover:bg-surface active:scale-[0.97]"
-              >
-                <PlugZap aria-hidden className="h-3 w-3" /> {t("listing.chargersNearby", "Charging stations")}
-              </Link>
-            )}
+          {/* Gallery — filmstrip: 4:3 frames, the next photo peeks in (md+),
+              swipe / arrows / ←→ keys, tap for the full-screen viewer. */}
+          <div
+            data-listing-gallery
+            data-hero-ph={heroPlaceholder ? "" : undefined}
+            data-single={galleryImages.length <= 1 ? "" : undefined}
+            className="cine-gallery order-1 -mx-5 sm:-mx-6 md:order-2 md:mx-0"
+          >
+            <div className="cine-gallery__frame group" style={photoAspectRatio ? { '--photo-ratio': photoAspectRatio } as CSSProperties : undefined}>
+              {heroPlaceholder && (
+                // The card's photo (already decoded): shows under the hero
+                // until the full-size photo lands, and is what the card → listing
+                // View Transition morphs into when the hero isn't ready yet.
+                <img
+                  src={heroPlaceholder}
+                  alt=""
+                  aria-hidden
+                  data-listing-hero-ph=""
+                  referrerPolicy="no-referrer"
+                  className="cine-gallery__ph"
+                />
+              )}
+              <ListingImageCarousel
+                images={galleryImages}
+                listingId={listing.id}
+                alt={displayName}
+                variant="detail"
+                source={listing.source}
+                silhouette={silhouette}
+                priority
+                className="relative w-full"
+                frameClassName={photoAspectRatio ? 'aspect-[var(--photo-ratio)]' : 'h-[var(--g-h)]'}
+                onPhotoAspectRatio={setPhotoAspectRatio}
+                slideClassName="cine-gallery__slide"
+                trackClassName="cine-gallery__track"
+              />
+              {/* Source credit for hotlinked photos. Fixed bright blue: sits on a dark scrim. */}
+              <span className="cine-gallery__credit vt-overlay pointer-events-none absolute left-3 top-3 z-10 flex items-center gap-1 rounded-full border border-white/10 bg-black/60 px-2.5 py-1 text-caption font-semibold text-[#6CB8FF]">
+                <Database aria-hidden className="h-3 w-3" /> {t("listingImage.credit", "Photo: {source}", { source: attribution.sourceName })}
+              </span>
+              <div className="cine-nophoto">
+                <p className="cine-eyebrow text-white/60">{t("listing.noPhoto.kicker", "No photos on Motormila")}</p>
+                <p className="cine-display text-title3 text-white">{displayName}</p>
+                {listingUrl && (
+                  <a
+                    href={listingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 inline-flex min-h-9 items-center gap-1.5 rounded-full border border-white/20 bg-black/40 px-3.5 text-caption font-semibold text-white no-underline hover:bg-white/10"
+                  >
+                    {t("listing.noPhoto.cta", "See the photos on {source}", { source: attribution.sourceName })}
+                    <ExternalLink aria-hidden className="h-3.5 w-3.5" />
+                  </a>
+                )}
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 px-5 sm:px-6 md:px-0">
+              {listing.district && (
+                <span className="flex items-center gap-1.5 text-caption font-medium text-muted-foreground"><MapPin aria-hidden className="h-3.5 w-3.5 text-primary-bright" /> {listing.district}</span>
+              )}
+              {trackedDays && (
+                <span className="num flex items-center gap-1.5 text-caption font-medium text-muted-foreground"><Clock aria-hidden className="h-3.5 w-3.5 text-primary-bright" /> {t("listing.tracked", "Tracked {days}", { days: `${trackedDays}d` })}</span>
+              )}
+              {listedDateTime && (
+                <span
+                  className="num flex items-center gap-1.5 text-caption font-medium text-muted-foreground"
+                  title={t("listing.listedTitle", "When Motormila first spotted this ad — usually within hours of it going live on the source site.")}
+                >
+                  <Calendar aria-hidden className="h-3.5 w-3.5 text-primary-bright" /> {t("listing.listed", "Listed {date}", { date: listedDateTime })}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </motion.section>
 
       {/* Content */}
-      <div className="mx-auto max-w-[1320px] px-5 py-8 sm:px-6 lg:py-12 relative z-10">
+      <div className="relative z-10 mx-auto max-w-[1320px] px-5 py-6 sm:px-6 lg:py-10">
         <div className="grid gap-6 lg:grid-cols-[1.75fr_1fr] lg:items-start lg:gap-8">
 
           {/* ── MAIN ──────────────────────────────────────────── */}
-          <div className="space-y-6">
+          {/* flex gap, not space-y: Tailwind's `space-y > :not([hidden]) ~ :not([hidden])`
+              makes Chrome restyle the whole column on every child insert (~550
+              elements, ~35 ms at 4× CPU per deferred section). */}
+          <div className="flex min-w-0 flex-col gap-6">
 
-            {/* Image — the car is the hero; overlays stay dark (they sit on the photo) */}
-            <motion.div variants={revealItem} className="overflow-hidden rounded-[2rem] border border-border bg-card shadow-soft">
-              <div className="relative aspect-[16/10] min-h-[220px] overflow-hidden bg-black/40 group">
-                {galleryImages.length > 0 ? (
-                  <ListingImageCarousel
-                    images={galleryImages}
-                    listingId={listing.id}
-                    alt={`${canonicalizeMake(listing.make) || listing.make} ${canonicalizeModel(listing.model) || listing.model}`}
-                    variant="detail"
-                    className="h-full w-full"
-                    imageClassName="transition-transform duration-700 ease-out group-hover:scale-[1.02]"
+            {/* 2. Price + badge (mobile flow; desktop shows it in the sidebar) */}
+            {isMobileFlow && (
+            <motion.div variants={revealItem} className="space-y-3 lg:hidden">
+              {renderPriceBlock('mobile')}
+              <BeforeYouPayStrip collapsible idSuffix="mobile" />
+            </motion.div>
+            )}
+
+            {/* 3. Key specs — only what we actually know */}
+            {rest && keySpecs.length > 0 && (
+              <DeferredSection minHeight={180}>
+              <motion.section {...onScroll} aria-labelledby="key-specs-title" className="space-y-3">
+                <h2 id="key-specs-title" className="cine-eyebrow text-muted-foreground">{t("listing.keySpecs", "Key specs")}</h2>
+                <dl className="cine-specs">
+                  {keySpecs.map((s) => (
+                    <div key={s.label} className="min-w-0">
+                      <dt className="flex items-center gap-1.5 text-caption font-medium text-muted-foreground">
+                        <s.icon aria-hidden className="h-3.5 w-3.5 shrink-0 text-primary" />
+                        {s.label}
+                      </dt>
+                      <dd className="num mt-1.5 truncate text-callout font-semibold leading-tight text-foreground">{s.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <MileageTrustChip mileageKm={listing.mileage_km} year={listing.year} />
+              </motion.section>
+              </DeferredSection>
+            )}
+
+            {/* 4. FMV / why (mobile flow) + Pro upsell below it */}
+            {rest && isMobileFlow && (
+            <DeferredSection minHeight={280}>
+            <motion.div {...onScroll} className="space-y-3 lg:hidden">
+              {renderFmvCard()}
+              {renderProUpsell()}
+            </motion.div>
+            </DeferredSection>
+            )}
+
+            {/* 5. Price history */}
+            {rest && priceHistory && priceHistory.points.length > 0 && (
+              <DeferredSection minHeight={224}>
+              <motion.div {...onScroll}>
+                <Suspense fallback={<div className="h-56 rounded-2xl border border-border bg-card skeleton-shimmer" />}>
+                  <ListingPriceTimeline
+                    history={priceHistory}
+                    marketMedianLkr={fmvLkr}
+                    listingTitle={displayName}
                   />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center"><CarIcon aria-hidden className="h-12 w-12 text-white/50" /></div>
-                )}
-                <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                </Suspense>
+              </motion.div>
+              </DeferredSection>
+            )}
 
-                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between z-10">
-                  <span className="rounded-full border border-white/10 bg-black/60 px-2.5 py-1 text-[10px] font-semibold text-white backdrop-blur-md">{listing.make} {listing.model} · {listing.year || 'N/A'}</span>
-                  {/* Fixed bright blue: this badge sits on a black photo scrim, where the
-                      light-theme `--primary-bright` token is unreadable. */}
-                  <span className="flex items-center gap-1 rounded-full border border-white/10 bg-black/60 px-2.5 py-1 text-[10px] font-semibold text-[#6CB8FF] backdrop-blur-md"><Database aria-hidden className="h-3 w-3" /> {attribution.sourceName}</span>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-4 border-t border-border px-4 py-3 bg-card">
-                <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground"><MapPin aria-hidden className="h-3.5 w-3.5 text-primary-bright" /> {listing.district || t("common.unknown", "Unknown")}, Sri Lanka</span>
-                <span aria-hidden className="text-muted-foreground/30 text-xs">•</span>
-                <span className="num flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground"><Clock aria-hidden className="h-3.5 w-3.5 text-primary-bright" /> {t("listing.tracked", "Tracked {days}", { days: trackedLabel })}</span>
-                {listedDateTime && (
-                  <>
-                    <span aria-hidden className="text-muted-foreground/30 text-xs">•</span>
-                    <span
-                      className="num flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground"
-                      title={t("listing.listedTitle", "When Motormila first spotted this ad — usually within hours of it going live on the source site.")}
-                    >
-                      <Calendar aria-hidden className="h-3.5 w-3.5 text-primary-bright" /> {t("listing.listed", "Listed {date}", { date: listedDateTime })}
-                    </span>
-                  </>
-                )}
-              </div>
-            </motion.div>
-
-            {/* Specs Bento Grid */}
-            <motion.div variants={revealItem} className="space-y-3">
-              <h2 className="text-[12px] font-semibold text-muted-foreground">{t("listing.specifications", "Specifications")}</h2>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {specs.map((s) => (
-                  <motion.div
-                    key={s.label}
-                    whileHover={{ scale: 1.02, y: -3 }}
-                    transition={springSnappy}
-                    className="rounded-[1.6rem] border border-border bg-card p-4 transition-colors hover:border-primary/30 relative overflow-hidden group shadow-soft"
-                  >
-                    <div aria-hidden className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <s.icon aria-hidden className="mb-2 h-4 w-4 text-primary" />
-                    <p className="text-[10px] font-medium text-muted-foreground">{s.label}</p>
-                    <p className="mt-1 text-[14px] font-bold text-foreground num leading-tight">{s.value}</p>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-
-            {priceHistory && priceHistory.points.length > 0 && (
-              <motion.div variants={revealItem}>
-                <ListingPriceTimeline
-                  history={priceHistory}
-                  marketMedianLkr={listing.market_median_lkr}
-                  listingTitle={`${canonicalizeMake(listing.make) || listing.make} ${canonicalizeModel(listing.model) || listing.model}`}
+            {rest ? (
+              <>
+              {/* 6. Trust Check */}
+              <DeferredSection minHeight={420}>
+              <motion.div {...onScroll} className="cv-section">
+                <TrustCheckPanel
+                  listing={listing}
+                  verdict={dataReady ? verdict : null}
+                  pricePoints={priceHistory?.points ?? null}
+                  related={relatedListings}
                 />
               </motion.div>
-            )}
+              {listing.id != null && <ListingHistoryReport listingId={listing.id} />}
+              </DeferredSection>
 
-            <motion.div variants={revealItem}>
-              <TrustCheckPanel
-                listing={listing}
-                pricePoints={priceHistory?.points ?? null}
-                related={relatedListings}
-              />
-            </motion.div>
-
-            {listing.id != null && <ListingHistoryReport listingId={listing.id} />}
-
-            <motion.div variants={revealItem}>
-              <ListingLeadActions
-                listingId={listing.id ?? undefined}
-                vehicle={[listing.year, canonicalizeMake(listing.make) || listing.make, canonicalizeModel(listing.model) || listing.model].filter(Boolean).join(' ')}
-                priceLkr={hasPrice ? listingPrice : undefined}
-                district={listing.district ?? undefined}
-              />
-            </motion.div>
-
-            {/* Description */}
-            <motion.div variants={revealItem} className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
-              <h2 className="mb-3.5 text-[12px] font-semibold text-muted-foreground">{t("listing.description", "Description")}</h2>
-              <p className="whitespace-pre-wrap text-[13px] leading-[1.8] text-muted-foreground font-medium">
-                {listing.description || t("listing.noDescription", "The seller didn't add a description. Open the original ad for full details.")}
-              </p>
-            </motion.div>
-
-            {hasPrice && (() => {
-              // brand_new already covers API-normalized "unregistered"/new imports
-              const isUnregistered =
-                listing.condition === 'brand_new' ||
-                (typeof listing.year === 'number' && listing.year >= 2025);
-
-              return (
-                <motion.div variants={revealItem} className="space-y-4">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <h2 className="text-[12px] font-semibold text-muted-foreground">{t("listing.ownershipPlanning", "Ownership planning")}</h2>
-                    <Link to="/afford" className="text-[12px] font-semibold text-primary no-underline hover:underline">
-                      {t("listing.whatCanIAfford", "What else fits my budget?")}
-                    </Link>
-                  </div>
-
-                  <CashToOwnStrip
-                    priceLkr={listingPrice}
-                    financeClass={inferFinanceClass({
-                      condition: listing.condition,
-                      fuelType: listing.fuel_type,
-                      year: listing.year,
-                    })}
-                  />
-                <div className="grid gap-4 md:grid-cols-2 items-start">
-                  <LeaseCalculator
-                    price={listingPrice}
-                    financeClass={inferFinanceClass({
-                      condition: listing.condition,
-                      fuelType: listing.fuel_type,
-                      year: listing.year,
-                    })}
-                  />
-                  {isUnregistered ? (
-                    <TaxBreakdown
-                      price={listingPrice}
-                      engineCapacity={plausibleEngineCc(listing.engine_cc, listing.year)}
-                      initialFuelType={importFuelType}
-                    />
-                  ) : (
-                    <div className="page-panel flex flex-col justify-between gap-3 rounded-[1.75rem] p-6">
-                      <div>
-                        <h2 className="field-label text-foreground">{t("listing.importDutyTax", "Import duty and tax")}</h2>
-                        <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                          This vehicle is already registered in Sri Lanka, so import duty doesn't
-                          apply to buying it. Curious what importing the same spec fresh would cost
-                          under today's gazette?
-                        </p>
-                      </div>
-                      <Link
-                        to={`/calculator?tab=landed-cost&fuel=${importFuelType}${typeof listing.engine_cc === 'number' ? `&cc=${listing.engine_cc}` : ''}`}
-                        className="inline-flex w-fit items-center gap-1.5 rounded-2xl border border-primary/20 bg-primary/10 px-3 py-2 text-[12px] font-semibold text-primary-bright no-underline transition-all hover:bg-primary/15"
-                      >
-                        Model a fresh import <ArrowRight aria-hidden className="h-3 w-3" />
+              {/* 7. Finance planner */}
+              {hasPrice && (lease.isLeaseTakeover ? (
+                <DeferredSection minHeight={140}>
+                <motion.section {...onScroll} className={cn(cardVariants({ padding: "md" }), "cv-section")}>
+                  <h2 className="text-caption font-semibold text-muted-foreground">{t("listing.ownershipPlanning", "Ownership planning")}</h2>
+                  <p className="mt-2 text-footnote leading-relaxed text-muted-foreground">
+                    {t("listing.leaseNoFinance", "Finance estimates are hidden: the price on a lease takeover isn't the full price. Ask the seller for the settlement letter from the finance company first.")}
+                  </p>
+                </motion.section>
+                </DeferredSection>
+              ) : (() => {
+                // brand_new already covers API-normalized "unregistered"/new imports
+                const isUnregistered =
+                  listing.condition === 'brand_new' ||
+                  (typeof listing.year === 'number' && listing.year >= 2025);
+                const financeClass = inferFinanceClass({
+                  condition: listing.condition,
+                  fuelType: listing.fuel_type,
+                  year: listing.year,
+                });
+                return (
+                  <DeferredSection lazy minHeight={520}>
+                  <motion.div {...onScroll} className="cv-section space-y-4">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <h2 className="text-caption font-semibold text-muted-foreground">{t("listing.ownershipPlanning", "Ownership planning")}</h2>
+                      <Link to="/afford" className="text-caption font-semibold text-primary no-underline hover:underline">
+                        {t("listing.whatCanIAfford", "What else fits my budget?")}
                       </Link>
                     </div>
-                  )}
-                </div>
+                    <CashToOwnStrip priceLkr={listingPrice} financeClass={financeClass} />
+                    <div className="grid items-start gap-4 md:grid-cols-2">
+                      <LeaseCalculator price={listingPrice} financeClass={financeClass} />
+                      {isUnregistered ? (
+                        <TaxBreakdown
+                          price={listingPrice}
+                          engineCapacity={engineCc}
+                          initialFuelType={importFuelType}
+                        />
+                      ) : (
+                        <div className={cn(cardVariants({ padding: "md" }), "flex flex-col gap-4")}>
+                          <div>
+                            <h2 className="text-footnote font-semibold text-primary">{t("listing.importDutyTax", "Import duty and tax")}</h2>
+                            <p className="mt-2 text-footnote leading-relaxed text-label-2">
+                              {t(
+                                "listing.importDutyRegistered",
+                                "This vehicle is already registered in Sri Lanka, so import duty doesn't apply to buying it. Curious what importing the same spec fresh would cost under today's gazette?",
+                              )}
+                            </p>
+                          </div>
+                          <Link
+                            to={`/calculator?tab=landed-cost&fuel=${importFuelType}${typeof listing.engine_cc === 'number' ? `&cc=${listing.engine_cc}` : ''}`}
+                            className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "w-fit no-underline")}
+                          >
+                            {t("listing.modelFreshImport", "Model a fresh import")} <ArrowRight aria-hidden />
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                  </DeferredSection>
+                );
+              })())}
+
+              {/* 8. Details */}
+              <DeferredSection minHeight={150}>
+              <motion.div {...onScroll} className={cn(cardVariants({ padding: "md" }), "cv-section")}>
+                <h2 className="mb-3 text-caption font-semibold text-muted-foreground">{t("listing.description", "Description")}</h2>
+                <p className="whitespace-pre-wrap text-footnote font-medium leading-[1.8] text-muted-foreground">
+                  {listing.description || t("listing.noDescription", "The seller didn't add a description. Open the original ad for full details.")}
+                </p>
               </motion.div>
-            )
-          })()}
+              </DeferredSection>
+
+              {/* Seller — info only; the one contact CTA lives in the price card / sticky bar */}
+              <DeferredSection minHeight={150}>
+              <motion.section {...onScroll} aria-labelledby="seller-title" className={cn(cardVariants({ padding: "md" }), "cv-section")}>
+                <div className="mb-3 flex items-center gap-2">
+                  <ShieldCheck aria-hidden className="h-4 w-4 text-primary" />
+                  <h2 id="seller-title" className="text-caption font-semibold text-muted-foreground">{t("listing.sellerInfo", "Seller information")}</h2>
+                </div>
+                <p className="text-body font-bold leading-tight text-foreground">{sellerHeadline}</p>
+                {sellerName && <p className="mt-1 truncate text-caption font-medium text-muted-foreground">{sellerName}</p>}
+                <p className="mt-2 text-caption leading-relaxed text-muted-foreground">
+                  {t("listing.sellerContactNote", "Contact the seller through {source}. Motormila doesn't share seller phone numbers.", { source: attribution.sourceName })}
+                </p>
+              </motion.section>
+              </DeferredSection>
+
+              <DeferredSection minHeight={150}>
+              <motion.div {...onScroll} className="cv-section">
+                <ListingLeadActions
+                  listingId={listing.id ?? undefined}
+                  vehicle={[listing.year, displayMake, displayModel].filter(Boolean).join(' ')}
+                  priceLkr={hasPrice ? listingPrice : undefined}
+                  district={listing.district ?? undefined}
+                />
+              </motion.div>
+              </DeferredSection>
+
+              <DeferredSection minHeight={300}>
+              <div className="grid gap-5 md:grid-cols-2">
+                {listing.make && (
+                  <motion.div {...onScroll} className="cv-section">
+                    <SafetyResearchCard research={safetyResearch} vin={listingVin(listing)} />
+                  </motion.div>
+                )}
+                <motion.div {...onScroll} className="cv-section">
+                  <ListingGeoCard geo={listingGeo} />
+                </motion.div>
+              </div>
+              </DeferredSection>
+              {listing.make && (
+                <DeferredSection minHeight={200}>
+                <motion.div {...onScroll} className="cv-section">
+                  <NhtsaModelsCard make={listing.make} model={listing.model ?? undefined} compact vin={listingVin(listing)} />
+                </motion.div>
+                </DeferredSection>
+              )}
+              {trackedDays && (
+                <p className="text-caption leading-relaxed text-muted-foreground">
+                  {trackedDays === 1
+                    ? t("listing.insightLineOne", "Tracked for 1 day.")
+                    : t("listing.insightLine", "Tracked for {days} days.", { days: trackedDays })}
+                  {avgPeerDays ? ` ${t("listing.insightPeers", "Similar ads average {days} days.", { days: avgPeerDays })}` : ''}
+                </p>
+              )}
+
+              {/* 9. Similar */}
+              <DeferredSection lazy minHeight={300}>
+                <motion.div {...onScroll} className="cv-section">
+                  <SimilarCarsStrip
+                    listings={visibleSimilar}
+                    fullAccess={fullAccess}
+                    title={t("listing.similarTitle", "Similar vehicles")}
+                  />
+                </motion.div>
+              </DeferredSection>
+              </>
+            ) : (
+              <div aria-hidden className="min-h-[1200px]" />
+            )}
           </div>
 
-          {/* ── SIDEBAR ───────────────────────────────────────── */}
-          <aside className="space-y-5 lg:sticky lg:top-20">
-
-            {/* Price — the money hero: the number towers, verdict reads in signal colour */}
-            <motion.div
-              variants={revealItem}
-              className="rounded-[1.75rem] border border-border bg-card p-5 relative overflow-hidden shadow-soft-lg"
-              style={{ backgroundImage: 'radial-gradient(circle at 100% 0%, hsl(var(--primary) / 0.06) 0%, transparent 60%)' }}
-            >
-              <div aria-hidden className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary to-transparent" />
-              <h2 className="text-[12px] font-semibold text-muted-foreground">{t("listing.askingPrice", "Asking price")}</h2>
-              <p className="num mt-2 text-[2.5rem] font-extrabold leading-[1.05] tracking-tight text-foreground">{hasPrice ? formatPrice(listingPrice) : t("listing.unlisted", "Unlisted")}</p>
-
-              <div className="mt-4 flex flex-wrap items-center gap-1.5">
-                <HybridCliffBadge fuelType={listing.fuel_type} engineCc={plausibleEngineCc(listing.engine_cc, listing.year)} />
-                <MileageTrustChip mileageKm={listing.mileage_km} year={listing.year} />
-                <SellSpeedChip listing={listing} />
-                <AdvertHealthChip listing={listing} />
-                {priceHistory && priceHistory.cut_count > 0 && (
-                  <span
-                    className="inline-flex items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300"
-                    title={`Tracked since first sighting: ${priceHistory.cut_count} downward price ${priceHistory.cut_count === 1 ? 'move' : 'moves'}${priceHistory.change_pct !== null ? `, ${priceHistory.change_pct}% overall` : ''}`}
-                  >
-                    <Clock aria-hidden className="h-3 w-3" />
-                    Price cut {priceHistory.cut_count}×
-                    {priceHistory.change_pct !== null && priceHistory.change_pct < 0 && (
-                      <span className="num">({priceHistory.change_pct}%)</span>
-                    )}
-                  </span>
-                )}
-              </div>
-
-              {hasDealScore ? (
-                <div className="mt-5 flex items-center gap-3">
-                  <FairPriceIndicator score={dealScore} condition={listing.condition} size="lg" className="num font-extrabold" />
-                  <span className={`num text-[11px] font-bold ${dealTone}`}>{dealDelta}</span>
-                </div>
-              ) : !fullAccess ? (
-                <div className="mt-5">
-                  <UpgradePrompt
-                    title={freePlanCopy.scoresTitle}
-                    body={freePlanCopy.scoresBody}
-                    variant="strip"
-                  />
-                </div>
-              ) : (
-                <p className="mt-5 text-[11px] font-semibold text-muted-foreground">
-                  No price rating — not enough comparable listings for a confident call on this vehicle.
-                </p>
-              )}
-
-              {fmvSummary && (
-                <div className="mt-3 rounded-3xl border border-border bg-surface px-3.5 py-3">
-                  <p className="text-[12px] font-semibold text-muted-foreground">
-                    {t("listing.fmv", "Fair market value")}
-                  </p>
-                  <p
-                    className={`mt-1 text-[13px] font-bold ${
-                      fmvSummary.band === "below"
-                        ? "text-emerald-700 dark:text-emerald-400"
-                        : fmvSummary.band === "above"
-                          ? "text-rose-700 dark:text-rose-400"
-                          : "text-foreground"
-                    }`}
-                  >
-                    {fmvSummary.label}
-                  </p>
-                  <p className="mt-0.5 text-[11px] font-medium text-muted-foreground num">
-                    FMV {formatPrice(fmvSummary.fmv_lkr)}
-                  </p>
-                  {fmvDetail && fmvDetail.method !== "insufficient_data" && (
-                    <p className="mt-1 text-[10px] text-muted-foreground">
-                      {fmvDetail.sample_size > 0 ? `${fmvDetail.sample_size} comps · ` : ""}
-                      {fmvDetail.method === "ols_comps" ? "OLS model" : fmvDetail.method === "adjusted_median" ? "Adj. median" : "Cohort median"}
-                      {fmvDetail.confidence !== "none" ? ` · ${fmvDetail.confidence} confidence` : ""}
-                    </p>
-                  )}
-                  <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-border/70 pt-2.5">
-                    <FmvExplainer
-                      compsCount={fmvDetail?.sample_size ?? 0}
-                      confidence={fmvDetail?.confidence ?? "none"}
-                      method={fmvDetail?.method}
-                      fmvLkr={fmvSummary.fmv_lkr}
-                      updatedAt={fmvDetail?.updated_at}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleComparePin}
-                      aria-pressed={isPinnedForCompare(Number(listing.id))}
-                      className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[12px] font-semibold text-primary-bright transition-all hover:bg-primary/15 active:scale-[0.97]"
-                    >
-                      <Scale aria-hidden className="h-3 w-3" />
-                      {isPinnedForCompare(Number(listing.id)) ? t("listing.pinned", "Pinned ✓") : t("listing.addToCompare", "Add to compare")}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {hasPrice &&
-                Number.isFinite(Number(listing.market_median_lkr)) &&
-                Number(listing.market_median_lkr) > 0 && (
-                  <div className="mt-2">
-                    <DealLadder askingPrice={listingPrice} marketMedianLkr={Number(listing.market_median_lkr)} />
-                  </div>
-                )}
-            </motion.div>
-
-            {/* Seller */}
-            <motion.div variants={revealItem} className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
-              <div className="mb-3.5 flex items-center gap-2 border-b border-border pb-2.5">
-                <ShieldCheck aria-hidden className="h-4 w-4 text-primary" />
-                <h2 className="text-[12px] font-semibold text-muted-foreground">{t("listing.sellerInfo", "Seller information")}</h2>
-              </div>
-
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[14px] font-bold text-foreground leading-tight">{sellerHeadline}</p>
-                  <p className="mt-1 truncate text-[12px] text-muted-foreground font-medium">{sellerName}</p>
-                </div>
-                <span className="shrink-0 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium text-primary-bright">{trustBadges[0] || 'Source'}</span>
-              </div>
-
-              <p className="mt-3 text-[11px] text-muted-foreground font-medium">{trustMeta}</p>
-
-              {/* Contact happens on the source marketplace: Motormila doesn't
-                  republish seller phone numbers (privacy + source terms). */}
-              <div className="mt-4 space-y-2">
-                {listingUrl ? (
-                  <a
-                    href={listingUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => trackEvent("contact_on_source_clicked", { listing_id: listing.id, source: listing.source })}
-                    className="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-2xl bg-primary px-4 text-[13px] font-bold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.97]"
-                  >
-                    {t("listing.contactOnSource", "Contact seller on {source}", { source: attribution.sourceName })}
-                    <ExternalLink aria-hidden className="h-3.5 w-3.5" />
-                  </a>
-                ) : (
-                  <p className="text-[12px] text-muted-foreground">{t("listing.noSourceLink", "The original ad link isn't available for this listing.")}</p>
-                )}
-                <p className="text-[11.5px] leading-relaxed text-muted-foreground">
-                  {t("listing.contactNote", "Opens the original ad. Motormila doesn't share seller phone numbers.")}
-                </p>
-              </div>
-
-              {ratingValue ? (
-                <div className="mt-4 flex items-center justify-between border-t border-border pt-3.5">
-                  <div aria-hidden className="flex gap-0.5 text-primary">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <svg key={s} xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill={s <= ratingStars ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.5" className={s > ratingStars ? 'text-muted-foreground/30' : ''}>
-                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                      </svg>
-                    ))}
-                  </div>
-                  <span className="num text-[12px] font-bold text-foreground">{ratingValue.toFixed(1)}{reviewCount != null && <span className="text-muted-foreground font-medium"> ({reviewCount})</span>}</span>
-                </div>
-              ) : <p className="mt-4 border-t border-border pt-3 text-[11px] text-muted-foreground italic">{t("listing.noSellerRating", "No public seller rating synced.")}</p>}
-
-            </motion.div>
-
-            {/* Peers */}
-            <motion.div variants={revealItem} className="rounded-[1.75rem] border border-border bg-card p-5 shadow-soft">
-              <div className="mb-3.5 flex items-center justify-between border-b border-border pb-2.5">
-                <h2 className="text-[12px] font-semibold text-muted-foreground">{t("listing.marketPeers", "Market peers")}</h2>
-                <ArrowRight aria-hidden className="h-3.5 w-3.5 text-primary" />
-              </div>
-
-              {visibleSimilar.length > 0 ? (
-                <div className="space-y-2">
-                  {visibleSimilar.map((s) => (
-                    <Link
-                      key={s.id}
-                      to={`/listing/${s.id}`}
-                      className="group flex items-center justify-between rounded-2xl border border-border bg-surface px-3.5 py-2.5 no-underline transition-all hover:bg-card hover:border-primary/30 hover:translate-y-[-1px]"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-semibold text-muted-foreground group-hover:text-foreground transition-colors">{s.make} {s.model} · {s.year}</p>
-                        <p className="num mt-1 text-[13px] font-bold text-foreground group-hover:text-primary transition-colors">{formatPrice(s.price_lkr)}</p>
-                      </div>
-                      {fullAccess && typeof s.deal_score === 'number' && s.deal_score > 0 && (
-                        <span className="num text-[10px] font-bold text-emerald-700 dark:text-emerald-400 border border-emerald-500/25 bg-emerald-500/10 rounded px-1.5 py-0.5">{s.deal_score}%</span>
-                      )}
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <div className="py-6 text-center"><CarIcon aria-hidden className="mx-auto mb-2 h-5 w-5 text-muted-foreground/40" /><p className="text-[11px] text-muted-foreground">{t("listing.noPeers", "No active peers tracked.")}</p></div>
-              )}
-            </motion.div>
-
-            {listing.make && (
-              <motion.div variants={revealItem}>
-                <SafetyResearchCard research={safetyResearch} />
-              </motion.div>
+          {/* ── SIDEBAR (desktop) ─────────────────────────────── */}
+          {isDesktop && (
+          <aside className="hidden flex-col gap-5 lg:sticky lg:top-20 lg:flex">
+            <motion.div variants={revealItem}>{renderPriceBlock('desktop')}</motion.div>
+            {rest && <DeferredSection first minHeight={280}><motion.div variants={revealItem}>{renderFmvCard()}</motion.div></DeferredSection>}
+            {rest && renderProUpsell() && <DeferredSection first><motion.div variants={revealItem}>{renderProUpsell()}</motion.div></DeferredSection>}
+            {importFuelType === 'electric' && (
+              <Link
+                to="/ev-hub"
+                className={cn(buttonVariants({ variant: "secondary", size: "md" }), "w-full no-underline")}
+              >
+                <PlugZap aria-hidden className="h-3.5 w-3.5" /> {t("listing.chargersNearby", "Charging stations")}
+              </Link>
             )}
-
-            <motion.div variants={revealItem}>
-              <ListingGeoCard geo={listingGeo} />
-            </motion.div>
-
-            {/* NHTSA catalog disclosure */}
-            {listing.make && (
-              <motion.div variants={revealItem}>
-                <NhtsaModelsCard make={listing.make} model={listing.model ?? undefined} compact />
-              </motion.div>
-            )}
-
-            {/* Insight */}
-            <motion.div variants={revealItem} className="rounded-2xl border border-border bg-card p-5 shadow-soft relative overflow-hidden">
-              <div aria-hidden className="absolute top-0 left-0 h-full w-[2px] bg-primary" />
-              <div className="flex items-center gap-2 mb-2">
-                <Zap aria-hidden className="h-4 w-4 text-primary" />
-                <h2 className="text-[12px] font-bold text-foreground">{t("listing.insight", "Motormila Insight")}</h2>
-              </div>
-              <p className="text-[11px] leading-relaxed text-muted-foreground font-medium">
-                Tracked for <span className="num font-bold text-foreground">{trackedLabel}</span>.
-                {avgPeerDays && ` Peers average ${avgPeerDays}d.`}
-                {visibleSimilar.length > 0 && ` ${visibleSimilar.length} comparable listings active.`}
-              </p>
-            </motion.div>
           </aside>
+          )}
         </div>
       </div>
+
+      <ListingStickyBar
+        priceLkr={hasPrice ? listingPrice : null}
+        badge={deal}
+        href={listingUrl}
+        sourceName={attribution.sourceName}
+        listingId={listing.id}
+        source={listing.source}
+      />
     </motion.div>
   );
 }

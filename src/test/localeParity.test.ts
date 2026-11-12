@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DICTIONARIES, interpolate, LOCALE_TAGS } from "@/locales";
+import { DICTIONARIES, interpolate, LOCALE_TAGS } from "@/locales/all";
 
 describe("locale dictionaries", () => {
   it("keeps en/si/ta key sets in parity", () => {

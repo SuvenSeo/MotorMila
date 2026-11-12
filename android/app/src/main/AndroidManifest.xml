@@ -98,12 +98,16 @@
                 <data android:scheme="motormila" android:host="notifications" />
                 <data android:scheme="motormila" android:host="sell" />
             </intent-filter>
-            <!-- Verified App Links: requires https://motormila.pages.dev/.well-known/assetlinks.json
-                 listing the Play app-signing + direct-release cert SHA-256 (OPS step). -->
+            <!-- Verified App Links: served from public/.well-known/assetlinks.json, which lists the
+                 direct-release cert SHA-256. Add the Play app-signing cert there before a Play release. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <!-- Shared web searches: the web keeps filters on the root URL ("/?make=Toyota&fuel_type=hybrid")
+                     or /search?…; resolveMotormilaDeepLink maps them to Search with the same filters. -->
+                <data android:scheme="https" android:host="motormila.pages.dev" android:path="/" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/search" />
                 <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/listing" />
                 <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/cars" />
                 <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/locations" />
@@ -130,6 +134,9 @@
                 <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/ev-hub" />
                 <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/notifications" />
                 <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/sell" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/valuation" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/profile" />
+                <data android:scheme="https" android:host="motormila.pages.dev" android:pathPrefix="/delete-account" />
             </intent-filter>
             <meta-data
                 android:name="android.app.shortcuts"
@@ -163,6 +170,23 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
+
+        <!-- FCM: backend price-drop pushes (data-only; the app renders them on the
+             price_drops channel with a motormila://listing/{id} tap target).
+             Inert when the build has no Firebase client config (FirebaseBootstrap). -->
+        <service
+            android:name="lk.motormila.app.fcm.MotormilaMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="price_drops" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
 
         <!-- Deal-of-the-day widget (Swarm E additive; Agent A: no existing entries touched). -->
         <receiver

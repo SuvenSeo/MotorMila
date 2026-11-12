@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { AnimatePresence, m } from "motion/react";
 import { useQuery } from "@tanstack/react-query";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { AlertTriangle, BarChart3, Bell, ChevronDown, ChevronUp, RefreshCw, ShieldCheck, Upload } from "lucide-react";
+import { ArrowRight, BarChart3, Bell, ChevronDown, ShieldCheck, Upload } from "lucide-react";
 import {
   benchmarkDealerUrls,
   claimDealerProfile,
@@ -22,18 +23,30 @@ import { getStoredAuthToken } from "@/lib/authToken";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { useAuth } from "@/lib/authContext";
 import {
-  freePlanCopy,
+  freePlanText,
   hasFullPlatformAccess,
 } from "@/lib/planLimits";
 import type { ProMarketSnapshot } from "@/types/pro";
-import { revealItem, springSoft } from "@/lib/motion";
-import { PageBody } from "@/components/PageBody";
+import { fadeIn, spring, usePrefersReducedMotionOrLowData } from "@/lib/motion";
 import { PageCanvas } from "@/components/PageCanvas";
-import { PageHero } from "@/components/PageHero";
+import { PageBody } from "@/components/PageBody";
+import { CineHeader } from "@/components/CineHeader";
+import { CineFigure, CineSection } from "@/components/CineSection";
+import { AnimatedNumber } from "@/components/ui/animated-number";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { PLAN_PRICES, formatLkr } from "@/lib/pricingContent";
 import { FreePlanBanner } from "@/components/FreePlanBanner";
 import { ProFeatureLock } from "@/components/ProFeatureLock";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
-import { SectionHeader } from "@/components/SectionHeader";
 import {
   buildDealerNotifications,
   buildDistrictDemandRows,
@@ -41,22 +54,46 @@ import {
   buildTurnoverSeries,
 } from "@/lib/dealerDashboardData";
 import { DEALER_PLAYBOOK, DEALER_QUICK_TOOLS } from "@/lib/dealerPlaybook";
-import { visuals } from "@/lib/visualAssets";
 import { trackEvent } from "@/lib/analytics";
 
 type WidgetKey = "turnover" | "priceGap" | "districtDemand" | "inventoryBenchmark";
 
+/** Recharts tooltip on the dark chart panels (tokens resolve inside .theme-dark). */
 const TOOLTIP_STYLE = {
   background: "hsl(var(--card))",
   border: "1px solid hsl(var(--border))",
-  borderRadius: "10px",
-  fontSize: "11px",
+  borderRadius: 12,
+  fontSize: "12px",
   color: "hsl(var(--foreground))",
-  boxShadow: "var(--shadow-md)",
 } as const;
 
 const TOOLTIP_LABEL_STYLE = { color: "hsl(var(--muted-foreground))" } as const;
 
+/** One blue for every plot on the dark panels (matches the Pro workspace). */
+const CHART_BLUE = "hsl(213 100% 64%)";
+
+/** Section anchors for the segmented jump bar. */
+const SECTION_IDS = {
+  glance: "dealer-glance",
+  yard: "dealer-yard",
+  analytics: "dealer-analytics",
+  playbook: "dealer-playbook",
+  plans: "dealer-plans",
+} as const;
+
+/** "1,234" that rolls on change; plain text stays for screen readers (and tests). */
+function Num({ value }: { value: number }) {
+  return (
+    <>
+      <span className="sr-only">{value.toLocaleString()}</span>
+      <span aria-hidden>
+        <AnimatedNumber value={value} />
+      </span>
+    </>
+  );
+}
+
+/** A dark instrument panel (both themes) with a collapsible body. */
 function WidgetShell({
   title,
   subtitle,
@@ -66,6 +103,7 @@ function WidgetShell({
   error,
   onRetry,
   emptyMessage,
+  className,
   children,
 }: {
   title: string;
@@ -76,52 +114,66 @@ function WidgetShell({
   error?: string | null;
   onRetry?: () => void;
   emptyMessage?: string;
-  children: React.ReactNode;
+  className?: string;
+  children: ReactNode;
 }) {
+  const calm = usePrefersReducedMotionOrLowData();
   return (
-    <section className="rounded-2xl border border-border bg-card p-6 shadow-soft">
+    <div className={`cine-panel cine-chart theme-dark p-4 text-foreground sm:p-6 ${className ?? ""}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-[12px] font-semibold text-muted-foreground/80">Dealer Intelligence</p>
-          <h3 className="mt-1 font-display text-[15px] font-bold tracking-tight text-foreground">{title}</h3>
-          <p className="mt-0.5 text-[11px] text-muted-foreground font-medium">{subtitle}</p>
+          <h3 className="font-display text-callout font-semibold text-foreground">{title}</h3>
+          <p className="mt-0.5 text-footnote text-label-2">{subtitle}</p>
         </div>
-        <button type="button" onClick={onToggle} className="flex h-7 w-7 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground active:scale-[0.95]" aria-label={collapsed ? `Expand ${title}` : `Collapse ${title}`} aria-expanded={!collapsed}>
-          {collapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
-        </button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          onClick={onToggle}
+          aria-label={collapsed ? `Expand ${title}` : `Collapse ${title}`}
+          aria-expanded={!collapsed}
+          className="shrink-0"
+        >
+          <m.span animate={{ rotate: collapsed ? 0 : 180 }} transition={calm ? { duration: 0 } : spring.snappy} className="inline-flex">
+            <ChevronDown aria-hidden />
+          </m.span>
+        </Button>
       </div>
       {!collapsed && (
         <div className="mt-4 border-t border-border pt-4">
           {loading ? (
-            <div className="flex min-h-[180px] items-center justify-center">
-              <div aria-hidden className="h-7 w-7 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
-            </div>
+            <Skeleton shape="chart" className="h-[13rem] bg-foreground/10" />
           ) : error ? (
-            <div className="flex min-h-[180px] flex-col items-center justify-center gap-3 text-center">
-              <AlertTriangle className="h-4 w-4 text-rose-500 dark:text-rose-400" />
-              <p className="text-[11px] text-muted-foreground">{error}</p>
-              {onRetry ? (
-                <button type="button" onClick={onRetry} className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[10px] font-semibold text-foreground transition-all hover:border-primary/40 hover:bg-surface active:scale-[0.97]">
-                  <RefreshCw className="h-3 w-3" /> Retry
-                </button>
-              ) : null}
-            </div>
+            <ErrorState body={error} onRetry={onRetry} className="py-8" />
           ) : emptyMessage ? (
-            <p className="py-8 text-center text-[11px] text-muted-foreground">{emptyMessage}</p>
+            <EmptyState icon={BarChart3} title={emptyMessage} className="py-8" />
           ) : (
-            children
+            <div className="content-in">{children}</div>
           )}
         </div>
       )}
-    </section>
+    </div>
   );
 }
 
 function gapTone(pct: number | null): string {
-  if (pct === null) return "text-muted-foreground";
-  if (pct <= -5) return "text-emerald-600 dark:text-emerald-400";
-  if (pct >= 5) return "text-rose-600 dark:text-rose-400";
-  return "text-amber-600 dark:text-amber-400";
+  if (pct === null) return "text-label-2";
+  if (pct <= -5) return "text-deal-good-text";
+  if (pct >= 5) return "text-deal-high-text";
+  return "text-deal-caution-text";
+}
+
+/** One cell of the at-a-glance strip: label, big figure, quiet detail. */
+function GlanceCell({ label, children, detail, detailTone = "text-label-2", loading }: { label: string; children: ReactNode; detail?: ReactNode; detailTone?: string; loading?: boolean }) {
+  return (
+    <div className="min-w-0 py-4 sm:px-6 sm:first:pl-0">
+      <dt className="text-caption font-medium text-label-2">{label}</dt>
+      <dd className="mt-2">
+        {loading ? <Skeleton className="h-8 w-20" /> : <span className="content-in cine-card__price block text-title1 leading-none text-foreground">{children}</span>}
+      </dd>
+      {detail ? <dd className={`mt-2 text-footnote font-medium ${detailTone}`}>{detail}</dd> : null}
+    </div>
+  );
 }
 
 function ClaimYardCard() {
@@ -175,94 +227,55 @@ function ClaimYardCard() {
     }
   };
 
+  const fields = [
+    { id: "dealer-name", label: t("dealerDash.yardName", "Yard / brand name"), value: displayName, set: setDisplayName, placeholder: "Colombo Auto Hub" },
+    { id: "dealer-pattern", label: t("dealerDash.sellerName", "Seller name on ads"), value: pattern, set: setPattern, placeholder: "Auto Hub LK" },
+    { id: "dealer-url", label: t("dealerDash.yardUrl", "Listing / yard URL"), value: claimedUrl, set: setClaimedUrl, placeholder: "https://ikman.lk/en/shops/...", inputMode: "url" as const },
+    { id: "dealer-phone", label: t("dealerDash.phone", "WhatsApp / phone"), value: phone, set: setPhone, placeholder: "0771234567", inputMode: "tel" as const },
+  ];
+
   return (
-    <section className="rounded-2xl border border-border bg-card p-5 shadow-soft">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-[12px] font-semibold text-primary">{t("dealer.claimYard", "Claim your yard")}</p>
-          <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">{t("dealer.profile", "Dealer profile")}</h2>
-          <p className="mt-1 max-w-xl text-[12px] text-muted-foreground">
-            {t("dealer.claimHint", "Claim a seller name so Motormila can match your live inventory and show pricing vs market.")}
-          </p>
-        </div>
+    <div className="grid gap-8 rounded-card border border-border bg-card p-5 sm:p-7 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] lg:gap-12">
+      <div className="min-w-0">
+        <p className="cine-eyebrow text-primary">{t("dealer.claimYard", "Claim your yard")}</p>
+        <h3 className="mt-3 font-display text-title3 font-semibold text-foreground">{t("dealer.profile", "Dealer profile")}</h3>
+        <p className="mt-2 text-footnote leading-relaxed text-label-2 [text-wrap:pretty]">
+          {t("dealer.claimHint", "Claim a seller name so Motormila can match your live inventory and show pricing vs market.")}
+        </p>
         {profile && (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="content-in mt-4 flex flex-wrap items-center gap-2">
             {profile.status === "verified" && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[12px] font-semibold text-emerald-700 dark:text-emerald-400">
-                <ShieldCheck className="h-3 w-3" aria-hidden />
+              <Badge variant="success">
+                <ShieldCheck aria-hidden />
                 {t("dealer.verified", "Verified dealer")}
-              </span>
+              </Badge>
             )}
-            <span className="rounded-full border border-border bg-surface px-3 py-1 text-[12px] font-semibold text-muted-foreground">
+            <Badge variant="neutral">
               {profile.status} · {profile.matched_listings} matched
               {profile.subscription_status && profile.subscription_status !== "none"
                 ? ` · ${profile.plan || "dealer"}/${profile.subscription_status}`
                 : ""}
-            </span>
+            </Badge>
           </div>
         )}
       </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div>
-          <label htmlFor="dealer-name" className="mb-1 block text-[11px] font-semibold text-muted-foreground">
-            Yard / brand name
-          </label>
-          <input
-            id="dealer-name"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            className="h-9 w-full rounded-2xl border border-border bg-surface px-3 text-sm text-foreground"
-            placeholder="Colombo Auto Hub"
-          />
+      <div className="min-w-0">
+        <div className="grid gap-4 sm:grid-cols-2">
+          {fields.map((f) => (
+            <div key={f.id} className="min-w-0 space-y-2">
+              <Label htmlFor={f.id}>{f.label}</Label>
+              <Input id={f.id} value={f.value} onChange={(e) => f.set(e.target.value)} placeholder={f.placeholder} inputMode={f.inputMode} />
+            </div>
+          ))}
         </div>
-        <div>
-          <label htmlFor="dealer-pattern" className="mb-1 block text-[11px] font-semibold text-muted-foreground">
-            Seller name on ads
-          </label>
-          <input
-            id="dealer-pattern"
-            value={pattern}
-            onChange={(e) => setPattern(e.target.value)}
-            className="h-9 w-full rounded-2xl border border-border bg-surface px-3 text-sm text-foreground"
-            placeholder="Auto Hub LK"
-          />
-        </div>
-        <div>
-          <label htmlFor="dealer-url" className="mb-1 block text-[11px] font-semibold text-muted-foreground">
-            Listing / yard URL
-          </label>
-          <input
-            id="dealer-url"
-            value={claimedUrl}
-            onChange={(e) => setClaimedUrl(e.target.value)}
-            className="h-9 w-full rounded-2xl border border-border bg-surface px-3 text-sm text-foreground"
-            placeholder="https://ikman.lk/en/shops/..."
-            inputMode="url"
-          />
-        </div>
-        <div>
-          <label htmlFor="dealer-phone" className="mb-1 block text-[11px] font-semibold text-muted-foreground">
-            WhatsApp / phone
-          </label>
-          <input
-            id="dealer-phone"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="h-9 w-full rounded-2xl border border-border bg-surface px-3 text-sm text-foreground"
-            placeholder="0771234567"
-          />
+        {error && <p role="alert" className="content-in mt-3 text-footnote font-medium text-deal-high-text">{error}</p>}
+        <div className="mt-5 border-t border-border pt-5">
+          <Button type="button" onClick={() => void handleClaim()} loading={saving}>
+            {profile ? t("dealer.updateClaim", "Update claim") : t("dealer.claimProfile", "Claim profile")}
+          </Button>
         </div>
       </div>
-      {error && <p className="mt-2 text-[11px] text-destructive">{error}</p>}
-      <button
-        type="button"
-        onClick={() => void handleClaim()}
-        disabled={saving}
-        className="mt-4 inline-flex h-9 items-center rounded-full bg-primary px-4 text-[11px] font-bold text-white disabled:opacity-40"
-      >
-        {saving ? t("common.saving", "Saving…") : profile ? t("dealer.updateClaim", "Update claim") : t("dealer.claimProfile", "Claim profile")}
-      </button>
-    </section>
+    </div>
   );
 }
 
@@ -284,7 +297,7 @@ function InventoryBenchmark() {
       const data = await benchmarkDealerUrls(urls);
       setResults(data);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Request failed");
+      setSubmitError(err instanceof Error ? err.message : t("dealerDash.requestFailed", "Request failed"));
     } finally {
       setLoading(false);
     }
@@ -301,126 +314,113 @@ function InventoryBenchmark() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-border bg-surface p-4">
-        <label className="block text-[12px] font-semibold text-muted-foreground/80 mb-2 font-semibold">
-          Listing URLs <span className="normal-case font-normal">(one per line, max 50)</span>
-        </label>
-        <textarea
+      <div className="space-y-2">
+        <Label htmlFor="benchmark-urls">
+          {t("dealerDash.listingUrls", "Listing URLs")} <span className="font-normal text-label-2">{t("dealerDash.onePerLineMax50", "(one per line, max 50)")}</span>
+        </Label>
+        <Textarea
+          id="benchmark-urls"
           ref={textareaRef}
           value={urlsText}
           onChange={(e) => setUrlsText(e.target.value)}
           placeholder={"https://ikman.lk/en/ad/toyota-vitz-2018-for-sale-...\nhttps://riyasewana.com/listing/..."}
           rows={5}
-          className="w-full resize-none rounded-xl border border-border bg-card px-3 py-2.5 text-[12px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/40"
+          className="resize-none font-code text-footnote"
         />
-        <div className="mt-3 flex items-center justify-between gap-3">
-          <span className="text-[10px] text-muted-foreground font-bold num">{urlCount > 0 ? `${urlCount} URL${urlCount === 1 ? "" : "s"}` : t("dealer.pasteUrls", "Paste URLs above")}</span>
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+          <span className="text-footnote font-medium tabular-nums text-label-2">
+            {urlCount > 0 ? t("dealer.cine.urlCount", "URLs: {n}", { n: String(urlCount) }) : t("dealer.pasteUrls", "Paste URLs above")}
+          </span>
           <div className="flex items-center gap-2">
             {(results !== null || urlsText) && (
-              <button
-                type="button"
-                onClick={handleClear}
-                className="inline-flex h-8 items-center rounded-full border border-border bg-surface px-3 text-[10px] font-bold text-muted-foreground transition-all hover:text-foreground hover:bg-card active:scale-[0.97]"
-              >
-                Clear
-              </button>
+              <Button type="button" variant="ghost" size="sm" onClick={handleClear}>
+                {t("dealer.cine.clear", "Clear")}
+              </Button>
             )}
-            <button
-              type="button"
-              onClick={() => void handleSubmit()}
-              disabled={loading || !urlCount}
-              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-primary px-4 text-[10px] font-bold text-white shadow-soft transition-all hover:bg-primary/95 active:scale-[0.97] disabled:opacity-40"
-            >
-              {loading ? (
-                <span className="flex items-center gap-1.5">
-                  <span aria-hidden className="h-3 w-3 animate-spin rounded-full border border-current/30 border-t-current" />
-                  Benchmarking…
-                </span>
-              ) : (
-                <>
-                  <Upload className="h-3 w-3" />
-                  Benchmark
-                </>
-              )}
-            </button>
+            <Button type="button" size="sm" onClick={() => void handleSubmit()} disabled={!urlCount} loading={loading}>
+              <Upload aria-hidden />
+              {t("dealer.cine.runBenchmark", "Benchmark")}
+            </Button>
           </div>
         </div>
       </div>
 
+      {loading ? (
+        <div className="space-y-2" aria-hidden>
+          <Skeleton shape="row" className="h-10 bg-foreground/10" />
+          <Skeleton shape="row" className="h-12 bg-foreground/10" />
+          <Skeleton shape="row" className="h-12 bg-foreground/10" />
+        </div>
+      ) : null}
+
       {submitError && (
-        <div className="flex items-start gap-2 rounded-xl border border-rose-500/20 bg-rose-500/5 px-3 py-2.5">
-          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-500 dark:text-rose-400" />
-          <p className="text-[11px] text-rose-700 dark:text-rose-300 font-medium">{submitError}</p>
+        <div role="alert" className="content-in rounded-control border border-deal-high/30 bg-deal-high/10 px-3 py-2.5 text-footnote font-medium text-deal-high-text">
+          {submitError}
         </div>
       )}
 
       {results !== null && results.length > 0 && (
-        <div className="overflow-x-auto rounded-xl border border-border bg-surface">
-          <table className="w-full min-w-[600px] text-[11px]">
-            <thead>
-              <tr className="border-b border-border bg-card">
-                <th className="px-3 py-2.5 text-left font-bold text-muted-foreground/80">URL</th>
-                <th className="px-3 py-2.5 text-left font-bold text-muted-foreground/80">Vehicle</th>
-                <th className="px-3 py-2.5 text-right font-bold text-muted-foreground/80">Listing price</th>
-                <th className="px-3 py-2.5 text-right font-bold text-muted-foreground/80">Market median</th>
-                <th className="px-3 py-2.5 text-right font-bold text-muted-foreground/80">Gap</th>
-              </tr>
-            </thead>
-            <tbody>
+        <TableContainer className="content-in">
+          <Table className="min-w-[37.5rem]">
+            <TableHeader>
+              <TableRow>
+                <TableHead>URL</TableHead>
+                <TableHead>{t("dealerDash.vehicle", "Vehicle")}</TableHead>
+                <TableHead numeric>{t("dealerDash.listingPrice", "Listing price")}</TableHead>
+                <TableHead numeric>{t("dealerDash.marketMedian", "Market median")}</TableHead>
+                <TableHead numeric>{t("dealerDash.gap", "Gap")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {results.map((row, idx) => (
-                <tr key={row.url + String(idx)} className="border-b border-border last:border-0 transition-colors hover:bg-card">
-                  <td className="max-w-[180px] px-3 py-2.5">
-                    <a
-                      href={row.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block truncate text-primary hover:underline font-medium"
-                      title={row.url}
-                    >
-                      {row.url.replace(/^https?:\/\//, "").slice(0, 45)}{row.url.length > 50 ? "…" : ""}
+                <TableRow key={row.url + String(idx)}>
+                  <TableCell className="max-w-[11.25rem]">
+                    <a href={row.url} target="_blank" rel="noopener noreferrer" className="block truncate font-medium text-primary hover:underline" title={row.url}>
+                      {row.url.replace(/^https?:\/\//, "").slice(0, 45)}
+                      {row.url.length > 50 ? "…" : ""}
                     </a>
-                    {row.error && (
-                      <span className="mt-0.5 block text-[9px] text-rose-600 dark:text-rose-400">{row.error}</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2.5 text-foreground font-medium">
+                    {row.error && <span className="mt-0.5 block text-caption text-deal-high-text">{row.error}</span>}
+                  </TableCell>
+                  <TableCell className="font-medium">
                     {row.make ? (
                       <span>
-                        {row.make}{row.model ? ` ${row.model}` : ""}{row.year ? ` (${row.year})` : ""}
+                        {row.make}
+                        {row.model ? ` ${row.model}` : ""}
+                        {row.year ? ` (${row.year})` : ""}
                       </span>
                     ) : (
-                      <span className="text-muted-foreground">—</span>
+                      <span className="text-label-3">—</span>
                     )}
-                  </td>
-                  <td className="px-3 py-2.5 text-right num text-foreground font-medium">
-                    {row.listing_price != null ? formatPrice(row.listing_price) : <span className="text-muted-foreground">—</span>}
-                  </td>
-                  <td className="px-3 py-2.5 text-right num text-foreground font-medium">
+                  </TableCell>
+                  <TableCell numeric className="whitespace-nowrap font-medium">
+                    {row.listing_price != null ? formatPrice(row.listing_price) : <span className="text-label-3">—</span>}
+                  </TableCell>
+                  <TableCell numeric className="whitespace-nowrap font-medium">
                     {row.market_median != null ? (
                       <span title={`${row.comparable_count} comparables`}>
                         {formatPrice(row.market_median)}
-                        <span className="ml-1 text-[9px] text-muted-foreground">({row.comparable_count})</span>
+                        <span className="ml-1 text-caption text-label-2">({row.comparable_count})</span>
                       </span>
                     ) : (
-                      <span className="text-muted-foreground">—</span>
+                      <span className="text-label-3">—</span>
                     )}
-                  </td>
-                  <td className={`px-3 py-2.5 text-right num font-bold ${gapTone(row.price_gap_pct)}`}>
+                  </TableCell>
+                  <TableCell numeric className={`whitespace-nowrap font-semibold ${gapTone(row.price_gap_pct)}`}>
                     {row.price_gap_pct != null ? (
                       `${row.price_gap_pct > 0 ? "+" : ""}${row.price_gap_pct.toFixed(1)}%`
                     ) : (
-                      <span className="font-normal text-muted-foreground">—</span>
+                      <span className="font-normal text-label-3">—</span>
                     )}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
 
       {results !== null && results.length === 0 && (
-        <p className="py-6 text-center text-[11px] text-muted-foreground">{t("dealer.noResults", "No results returned.")}</p>
+        <EmptyState icon={Upload} title={t("dealer.noResults", "No results returned.")} className="py-8" />
       )}
     </div>
   );
@@ -451,8 +451,9 @@ export default function DealerDashboard() {
 
   const turnoverData = useMemo(() => buildTurnoverSeries(insights), [insights]);
   const priceGaps = useMemo(() => buildDistrictPriceGaps(districts), [districts]);
+  const isMobile = useIsMobile();
   const districtDemand = useMemo(() => buildDistrictDemandRows(districts), [districts]);
-  const notifications = useMemo(() => buildDealerNotifications(insights, stats), [insights, stats]);
+  const notifications = useMemo(() => buildDealerNotifications(insights, stats, t), [insights, stats, t]);
 
   const metrics = useMemo(() => {
     const liveLeads = insights?.new_listings_24h ?? stats?.listings_this_week ?? proSnapshot?.new_listings_7d ?? null;
@@ -464,25 +465,25 @@ export default function DealerDashboard() {
 
     return [
       {
-        label: "Live leads",
-        value: liveLeads != null ? liveLeads.toLocaleString() : "—",
-        delta: stats?.listings_this_week ? `${stats.listings_this_week.toLocaleString()} this week` : "Syncing market feed",
-        tone: liveLeads != null ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground",
+        label: t("dealerDash.liveLeads", "Live leads"),
+        value: liveLeads,
+        delta: stats?.listings_this_week ? t("dealerDash.thisWeek", "{n} this week", { n: stats.listings_this_week.toLocaleString() }) : t("dealerDash.syncingFeed", "Syncing market feed"),
+        tone: liveLeads != null ? "text-deal-good-text" : "text-label-2",
       },
       {
-        label: "Arbitrage alerts",
-        value: arbitrageAlerts != null ? arbitrageAlerts.toLocaleString() : "—",
-        delta: topGapDistrict ? `Highest gap in ${topGapDistrict}` : "Scanning district spreads",
-        tone: "text-muted-foreground",
+        label: t("dealerDash.arbitrageAlerts", "Arbitrage alerts"),
+        value: arbitrageAlerts,
+        delta: topGapDistrict ? t("dealerDash.highestGap", "Highest gap in {district}", { district: topGapDistrict }) : t("dealerDash.scanningSpreads", "Scanning district spreads"),
+        tone: "text-label-2",
       },
       {
-        label: "Finance ready",
-        value: financeReady != null ? financeReady.toLocaleString() : "—",
-        delta: financeReady != null ? "High deal-score listings" : "Awaiting deal signals",
-        tone: "text-muted-foreground",
+        label: t("dealerDash.financeReady", "Finance ready"),
+        value: financeReady,
+        delta: financeReady != null ? t("dealerDash.highDealScore", "High deal-score listings") : t("dealerDash.awaitingSignals", "Awaiting deal signals"),
+        tone: "text-label-2",
       },
     ];
-  }, [insights, stats, proSnapshot, priceGaps]);
+  }, [insights, stats, proSnapshot, priceGaps, t]);
 
   const trustScore = useMemo(() => {
     if (!stats?.total_listings) return null;
@@ -509,7 +510,7 @@ export default function DealerDashboard() {
   const activeNotif =
     notifications[notifIdx] ??
     notifications[0] ??
-    "Market intelligence syncs from live listing data when available.";
+    t("dealerDash.notifFallback", "Market intelligence syncs from live listing data when available.");
   const toggle = (k: WidgetKey) => setCollapsed((p) => ({ ...p, [k]: !p[k] }));
 
   const retryAll = () => {
@@ -519,204 +520,196 @@ export default function DealerDashboard() {
     if (hasAuthToken) void proSnapshotQuery.refetch();
   };
 
+  const [heroMetric, ...glanceMetrics] = metrics;
+
+  const commandStack = [
+    { label: t("dealer.turnover", "Inventory Turnover"), meta: turnoverData.length ? t("dealer.meta.models", "{count} models", { count: String(turnoverData.length) }) : null },
+    { label: t("dealer.priceGapScanner", "Price Gap Scanner"), meta: priceGaps.length ? t("dealer.meta.districts", "{count} districts", { count: String(priceGaps.length) }) : null },
+    { label: t("dealer.districtDemand", "District Demand"), meta: districtDemand.length ? t("dealer.meta.zones", "{count} zones", { count: String(districtDemand.length) }) : null },
+    { label: t("dealer.leadNotifications", "Lead Notifications"), meta: notifications.length > 1 ? t("common.live", "Live") : t("dealer.meta.standby", "standby") },
+    { label: t("dealer.benchmark", "Inventory Benchmark"), meta: t("dealer.meta.urlUpload", "URL upload") },
+  ];
+
+  const sections = [
+    { id: SECTION_IDS.glance, label: t("dealer.cine.glance", "At a glance") },
+    { id: SECTION_IDS.yard, label: t("dealer.cine.yard", "Your yard") },
+    { id: SECTION_IDS.analytics, label: t("dealerDash.analytics", "Analytics") },
+    { id: SECTION_IDS.playbook, label: t("dealerDash.playbook", "Playbook") },
+    { id: SECTION_IDS.plans, label: t("dealer.plans", "Dealer plans") },
+  ];
+  const n = (i: number) => String(i + 1).padStart(2, "0");
+
   return (
-    <PageCanvas>
-      <PageHero
-        theme="dealer"
+    <PageCanvas ambient="none">
+      <CineHeader
         eyebrow={t("dealer.eyebrow", "Dealer workspace")}
-        watermarkIcon={BarChart3}
-        title={<>{t("dealer.commandCenter", "Dealer command center")}<span className="text-sheen">.</span></>}
-        description={t("dealer.description", "Arbitrage, demand mapping, and lead flow intelligence.")}
-        media={visuals.pageAdminBg}
-        mediaPosition="center"
-        mediaTone="brand"
-        highlights={[
-          { label: t("common.inventory", "Inventory"), value: t("common.live", "Live"), hint: "Public market browse" },
-          { label: "Pulse", value: "Gov", hint: "Official import signals" },
-          { label: t("dealer.plans", "Dealer plans"), value: t("common.pro", "Pro"), hint: "Dealer workspace tiers" },
-        ]}
-        actions={
-          <>
-            <Link to="/#market" className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-[12px] font-semibold text-muted-foreground no-underline shadow-soft transition-all hover:border-primary/40 hover:text-foreground hover:bg-surface active:scale-[0.98]">{t("dealer.openPublicInventory", "Open public inventory")}</Link>
-            <Link to="/pricing" className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-[12px] font-semibold text-muted-foreground no-underline shadow-soft transition-all hover:border-primary/40 hover:text-foreground hover:bg-surface active:scale-[0.98]">Dealer plans</Link>
-            <Link to="/official-pulse" className="inline-flex h-10 items-center rounded-full border border-border bg-card px-5 text-[12px] font-semibold text-muted-foreground no-underline shadow-soft transition-all hover:border-primary/40 hover:text-foreground hover:bg-surface active:scale-[0.98]">Official pulse</Link>
-          </>
-        }
-      />
-
-      <FreePlanBanner />
-
-      <PageBody className="py-10 lg:py-14">
-        {!fullAccess ? (
-          <UpgradePrompt
-            className="mb-6"
-            title={freePlanCopy.dealerTitle}
-            body={freePlanCopy.dealerBody}
-            variant="strip"
-          />
-        ) : null}
-
-        {dashboardError ? (
-          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-500 dark:text-rose-400" />
+        lead={t("dealer.cine.lead", "Dealer command")}
+        accent={t("dealer.cine.accent", "center.")}
+        body={t("dealer.description", "Arbitrage, demand mapping, and lead flow intelligence.")}
+      >
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:items-end lg:gap-10">
+          <div className="min-h-[5.5rem]">
+            {dashboardLoading ? (
+              <div className="space-y-3" aria-hidden>
+                <Skeleton shape="text" className="h-3 w-32 bg-foreground/10" />
+                <Skeleton shape="text" className="h-10 w-28 bg-foreground/10" />
+              </div>
+            ) : (
+              <CineFigure
+                label={heroMetric.label}
+                value={heroMetric.value != null ? <Num value={heroMetric.value} /> : <span className="text-white/50">—</span>}
+                caption={heroMetric.delta}
+              />
+            )}
+          </div>
+          <div className="dealer-notif flex items-start gap-3 rounded-card border border-foreground/10 bg-foreground/[0.03] p-4" aria-live="polite">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-foreground/10 text-[hsl(213_100%_72%)]">
+              <Bell className="h-4 w-4" aria-hidden />
+            </span>
             <div className="min-w-0">
-              <p className="text-[12px] font-bold text-foreground">{t("dealer.unavailable", "Dealer data unavailable")}</p>
-              <p className="mt-1 text-[11px] text-muted-foreground font-medium">{dashboardError}</p>
-              <button type="button" onClick={retryAll} className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[10px] font-bold text-foreground transition-all hover:border-primary/40 hover:bg-card active:scale-[0.97]">
-                <RefreshCw className="h-3 w-3" /> Retry
-              </button>
+              <p className="dealer-kicker text-white/60">
+                {t("dealerDash.leadNotification", "Lead notification")}
+              </p>
+              <AnimatePresence mode="wait" initial={false}>
+                <m.p key={activeNotif} variants={fadeIn} initial="hidden" animate="show" exit="exit" className="mt-1 text-footnote leading-snug text-white">
+                  {activeNotif}
+                </m.p>
+              </AnimatePresence>
             </div>
           </div>
-        ) : null}
+        </div>
+        <div className="mt-6 flex flex-wrap gap-2 border-t border-foreground/10 pt-5">
+          <Button asChild variant="secondary" size="sm">
+            <Link to="/#market">{t("dealer.openPublicInventory", "Open public inventory")}</Link>
+          </Button>
+          <Button asChild variant="secondary" size="sm">
+            <Link to="/pricing">{t("dealer.plans", "Dealer plans")}</Link>
+          </Button>
+          <Button asChild variant="secondary" size="sm">
+            <Link to="/official-pulse">{t("nav.officialPulse", "Official Pulse")}</Link>
+          </Button>
+        </div>
+      </CineHeader>
 
-        <div className="mb-6">
-          <ClaimYardCard />
+      <PageBody className="cine-dealer space-y-14 pb-20 pt-6 lg:space-y-20 lg:pt-8">
+        <div className="space-y-4">
+          <FreePlanBanner />
+          {!fullAccess ? (
+            <UpgradePrompt title={freePlanText(t, "dealerTitle")} body={freePlanText(t, "dealerBody")} variant="strip" />
+          ) : null}
+          {dashboardError ? (
+            <Card padding="none">
+              <ErrorState title={t("dealer.unavailable", "Dealer data unavailable")} body={dashboardError} onRetry={retryAll} className="py-10" />
+            </Card>
+          ) : null}
+
+          {/* Segmented jump bar: one control for the five sections below. */}
+          <nav aria-label={t("dealer.cine.sectionsAria", "Dealer workspace sections")} className="dealer-seg -mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0">
+            <ol className="inline-flex min-w-max gap-1 rounded-full border border-border bg-surface-2 p-1">
+              {sections.map((s, i) => (
+                <li key={s.id}>
+                  <a
+                    href={`#${s.id}`}
+                    className="flex h-9 items-center gap-2 whitespace-nowrap rounded-full px-3.5 text-footnote font-medium text-label-2 no-underline transition-colors duration-short hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <span aria-hidden className="font-display text-caption font-semibold tabular-nums text-primary">{n(i)}</span>
+                    {s.label}
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </nav>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[268px_1fr]">
-          <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
-            <motion.div variants={revealItem} className="rounded-2xl border border-border bg-card p-5 shadow-soft">
-              <p className="text-[12px] font-semibold text-primary-bright">Motormila</p>
-              <h2 className="mt-2 font-display text-lg font-bold tracking-tight text-foreground">Command stack</h2>
-              <nav className="mt-4 space-y-1" aria-label={t("dealer.commandStack", "Command stack")}>
-                {[
-                  { label: t("dealer.turnover", "Inventory Turnover"), meta: turnoverData.length ? `${turnoverData.length} models` : "—" },
-                  { label: t("dealer.priceGapScanner", "Price Gap Scanner"), meta: priceGaps.length ? `${priceGaps.length} districts` : "—" },
-                  { label: t("dealer.districtDemand", "District Demand"), meta: districtDemand.length ? `${districtDemand.length} zones` : "—" },
-                  { label: t("dealer.leadNotifications", "Lead Notifications"), meta: notifications.length > 1 ? t("common.live", "Live").toLowerCase() : "standby" },
-                  { label: t("dealer.benchmark", "Inventory Benchmark"), meta: "URL upload" },
-                ].map((i) => (
-                  <div key={i.label} className="flex items-center justify-between rounded-2xl border border-border bg-surface px-3 py-2 transition-all hover:border-primary/40 hover:bg-card">
-                    <span className="text-[11px] text-foreground font-medium">{i.label}</span>
-                    <span className="text-[9px] font-bold text-primary-bright num">{i.meta}</span>
-                  </div>
-                ))}
-                <div className="pt-3">
-                  <p className="mb-2 px-1 text-[11px] font-medium text-muted-foreground/80">{t("dealer.quickTools", "Quick tools")}</p>
-                  {DEALER_QUICK_TOOLS.map((tool) => (
-                    <Link
-                      key={tool.id}
-                      to={tool.to}
-                      className="mb-1 flex items-center justify-between rounded-2xl border border-border bg-surface px-3 py-2 no-underline transition-all hover:border-primary/40 hover:bg-card last:mb-0"
-                    >
-                      <span className="min-w-0">
-                        <span className="block text-[11px] text-foreground font-medium">{tool.title}</span>
-                        <span className="block text-[9px] text-muted-foreground font-medium">{tool.description}</span>
+        <CineSection index={n(0)} id={SECTION_IDS.glance} title={t("dealer.cine.glance", "At a glance")}>
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] lg:gap-12">
+            <dl className="grid self-start divide-y divide-border border-y border-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+              {glanceMetrics.map((metric) => (
+                <GlanceCell key={metric.label} label={metric.label} loading={dashboardLoading} detail={metric.delta} detailTone={metric.tone}>
+                  {metric.value != null ? <Num value={metric.value} /> : <span className="text-label-3">—</span>}
+                </GlanceCell>
+              ))}
+              <GlanceCell
+                label={t("dealer.trustTier", "Trust tier")}
+                loading={dashboardLoading}
+                detail={
+                  trustScore != null ? (
+                    <span className="cine-bar mt-1" aria-hidden>
+                      <span className="cine-bar__reveal">
+                        <span style={{ "--w": trustScore / 100 } as CSSProperties} />
                       </span>
-                    </Link>
-                  ))}
-                </div>
-              </nav>
-            </motion.div>
-            <motion.div variants={revealItem} className="rounded-2xl border border-border bg-card p-4 shadow-soft">
-              <div className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-primary-bright" /><p className="text-[10px] font-bold text-primary-bright">{t("dealer.trustTier", "Trust tier")}</p></div>
-              {dashboardLoading ? (
-                <div className="mt-3 h-8 animate-pulse rounded-full bg-surface" />
-              ) : (
-                <>
-                  <p className="mt-2 flex items-baseline gap-1">
-                    <span className="num text-2xl font-bold text-foreground">{trustScore ?? "—"}</span>
-                    {trustScore != null ? <span className="text-[11px] text-muted-foreground font-bold">/100</span> : null}
-                  </p>
-                  {trustScore != null ? (
-                    <div className="mt-2 h-1 overflow-hidden rounded-full bg-surface"><div className="h-full rounded-full bg-primary" style={{ width: `${trustScore}%` }} /></div>
+                    </span>
                   ) : (
-                    <p className="mt-2 text-[10px] text-muted-foreground font-medium">Trust score needs listing volume data.</p>
-                  )}
-                </>
-              )}
-            </motion.div>
-          </aside>
+                    t("dealerDash.trustScoreNeedsListingVolume", "Trust score needs listing volume data.")
+                  )
+                }
+              >
+                {trustScore != null ? (
+                  <span className="inline-flex items-baseline gap-1">
+                    <Num value={trustScore} />
+                    <span className="font-sans text-footnote font-medium text-label-2">/100</span>
+                  </span>
+                ) : (
+                  <span className="text-label-3">—</span>
+                )}
+              </GlanceCell>
+            </dl>
 
-          <main className="space-y-6">
-            {/* Featured KPI bento: primary metric towers over the pair */}
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {metrics.map((m, idx) => {
-                const featured = idx === 0;
-                return (
-                  <motion.div
-                    key={m.label}
-                    variants={revealItem}
-                    whileHover={featured ? { y: -2 } : undefined}
-                    transition={springSoft}
-                    className={`group rounded-2xl border border-border bg-card shadow-soft transition-all hover:border-primary/30 ${featured ? "sm:col-span-2 p-6" : "p-5"}`}
-                  >
-                    <p className="text-[12px] font-semibold text-muted-foreground/80">{m.label}</p>
-                    {dashboardLoading ? (
-                      <div className={`mt-3 animate-pulse rounded-full bg-surface ${featured ? "h-12 w-28" : "h-8 w-16"}`} />
+            <div className="min-w-0">
+              <h3 className="cine-eyebrow text-label-2">{t("dealer.commandStack", "Command stack")}</h3>
+              <ul className="cine-list mt-3 border-y border-border" aria-label={t("dealer.commandStack", "Command stack")}>
+                {commandStack.map((i) => (
+                  <li key={i.label} className="flex items-center justify-between gap-3 py-2.5">
+                    <span className="min-w-0 text-footnote text-foreground">{i.label}</span>
+                    {dashboardLoading && i.meta === null ? (
+                      <Skeleton shape="text" className="h-3 w-14" />
                     ) : (
-                      <p className={`num mt-2 font-bold text-foreground ${featured ? "text-4xl sm:text-5xl" : "text-2xl"}`}>{m.value}</p>
+                      <span className="shrink-0 text-footnote font-medium tabular-nums text-label-2">{i.meta ?? "—"}</span>
                     )}
-                    <p className={`mt-1 text-[11px] font-semibold ${m.tone}`}>{m.delta}</p>
-                  </motion.div>
-                );
-              })}
-            </div>
-
-            <motion.div variants={revealItem} key={activeNotif} className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 shadow-soft">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary-bright"><Bell className="h-3.5 w-3.5" /></div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold text-primary-bright">Lead notification</p>
-                <p className="mt-1 text-[12px] text-foreground font-medium leading-relaxed">{activeNotif}</p>
-              </div>
-            </motion.div>
-
-            <div className="pt-4">
-              <SectionHeader
-                eyebrow="Playbook"
-                title="What dealers and brokers use this for"
-                description="Operator workflows from stock pricing to import duty, alerts, and weekly yard review."
-              />
-              <div className="grid gap-3 sm:grid-cols-2">
-                {DEALER_PLAYBOOK.map((item) => (
-                  <motion.div
-                    key={item.id}
-                    variants={revealItem}
-                    className="rounded-2xl border border-border bg-card p-5 shadow-soft transition-all hover:border-primary/30"
-                  >
-                    <p className="text-[11px] font-medium text-primary-bright">{item.forWhom}</p>
-                    <h3 className="mt-1.5 font-display text-[14px] font-bold tracking-tight text-foreground">{item.title}</h3>
-                    <p className="mt-2 text-[11px] text-muted-foreground font-medium leading-relaxed">{item.problem}</p>
-                    <p className="mt-2 text-[11px] text-foreground font-medium leading-relaxed">{item.whatMotormilaDoes}</p>
-                    <Link
-                      to={item.whereToGo.to}
-                      className="mt-4 inline-flex text-[12px] font-semibold text-primary-bright no-underline transition-colors hover:text-primary"
-                    >
-                      {item.whereToGo.label} →
-                    </Link>
-                  </motion.div>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
+          </div>
+        </CineSection>
 
-            <div className="pt-4">
-              <SectionHeader
-                eyebrow="Analytics"
-                title="Inventory & benchmark analytics"
-                description="Momentum, price spread, and district demand across your live market feed."
-              />
+        <CineSection index={n(1)} id={SECTION_IDS.yard} title={t("dealer.cine.yard", "Your yard")}>
+          <ClaimYardCard />
+        </CineSection>
 
-              {fullAccess ? (
-              <div className="space-y-5">
+        <CineSection
+          index={n(2)}
+          id={SECTION_IDS.analytics}
+          title={t("dealerDash.inventoryBenchmarkAnalytics", "Inventory & benchmark analytics")}
+          body={t("dealerDash.momentumPriceSpreadAndDistrict", "Momentum, price spread, and district demand across your live market feed.")}
+        >
+          {fullAccess ? (
+            <div className="space-y-5">
+              <div className="grid gap-5 xl:grid-cols-2">
                 <WidgetShell
                   title={t("dealer.turnover", "Inventory Turnover")}
-                  subtitle={turnoverData.length ? "Trending model momentum and listing volume" : "Trending model momentum from market insights"}
+                  subtitle={turnoverData.length ? t("dealerDash.turnoverSub", "Trending model momentum and listing volume") : t("dealerDash.turnoverSubInsights", "Trending model momentum from market insights")}
                   collapsed={collapsed.turnover}
                   onToggle={() => toggle("turnover")}
                   loading={insightsQuery.isPending}
-                  error={insightsQuery.isError ? "Unable to load turnover insights." : null}
+                  error={insightsQuery.isError ? t("dealerDash.turnoverError", "Unable to load turnover insights.") : null}
                   onRetry={() => void insightsQuery.refetch()}
-                  emptyMessage={!insightsQuery.isPending && !turnoverData.length ? "No trending model data yet." : undefined}
+                  emptyMessage={!insightsQuery.isPending && !turnoverData.length ? t("dealerDash.turnoverEmpty", "No trending model data yet.") : undefined}
                 >
-                  <div className="h-[260px]">
+                  <div className="h-[15rem]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={turnoverData}>
-                        <defs><linearGradient id="turnoverArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.3} /><stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} /></linearGradient></defs>
+                      <AreaChart data={turnoverData} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="turnoverArea" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={CHART_BLUE} stopOpacity={0.22} />
+                            <stop offset="100%" stopColor={CHART_BLUE} stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                        <XAxis dataKey="week" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} tickLine={false} axisLine={false} />
-                        <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} tickLine={false} axisLine={false} />
+                        <XAxis dataKey="week" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickLine={false} axisLine={false} />
+                        <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickLine={false} axisLine={false} />
                         <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} />
-                        <Area type="monotone" dataKey="sellThrough" name="Momentum index" stroke="hsl(var(--primary))" fill="url(#turnoverArea)" strokeWidth={2} />
+                        <Area type="monotone" dataKey="sellThrough" name={t("dealerDash.momentumIndex", "Momentum index")} stroke={CHART_BLUE} fill="url(#turnoverArea)" strokeWidth={2} />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
@@ -724,95 +717,168 @@ export default function DealerDashboard() {
 
                 <WidgetShell
                   title={t("dealer.priceGaps", "Price Gaps")}
-                  subtitle="District spread vs national median"
+                  subtitle={t("dealerDash.priceGapSub", "District spread vs national median")}
                   collapsed={collapsed.priceGap}
                   onToggle={() => toggle("priceGap")}
                   loading={districtsQuery.isPending}
-                  error={districtsQuery.isError ? "Unable to load district pricing." : null}
+                  error={districtsQuery.isError ? t("dealerDash.priceGapError", "Unable to load district pricing.") : null}
                   onRetry={() => void districtsQuery.refetch()}
-                  emptyMessage={!districtsQuery.isPending && !priceGaps.length ? "No district price gaps mapped yet." : undefined}
+                  emptyMessage={!districtsQuery.isPending && !priceGaps.length ? t("dealerDash.priceGapEmpty", "No district price gaps mapped yet.") : undefined}
                 >
-                  <div className="h-[240px]">
+                  <div className="h-[15rem]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={priceGaps}>
+                      <BarChart data={priceGaps} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                        <XAxis dataKey="district" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} tickLine={false} axisLine={false} />
-                        <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} tickFormatter={(v) => `${v}%`} tickLine={false} axisLine={false} />
-                        <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} formatter={(v: number) => [`${v.toFixed(1)}%`, "Gap"]} />
-                        <Bar dataKey="gapPct" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                        <XAxis
+                          dataKey="district"
+                          interval={0}
+                          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                          tickLine={false}
+                          axisLine={false}
+                          // Five district names don't fit side by side on a phone; slant them.
+                          angle={isMobile ? -35 : 0}
+                          textAnchor={isMobile ? "end" : "middle"}
+                          height={isMobile ? 56 : 30}
+                        />
+                        <YAxis width={44} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={(v) => `${v}%`} tickLine={false} axisLine={false} />
+                        <Tooltip cursor={{ fill: "hsl(var(--muted) / 0.4)" }} contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} formatter={(v: number) => [`${v.toFixed(1)}%`, t("dealerDash.gap", "Gap")]} />
+                        <Bar dataKey="gapPct" fill={CHART_BLUE} radius={[6, 6, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </WidgetShell>
-
-                <WidgetShell
-                  title={t("dealer.districtDemand", "District Demand")}
-                  subtitle="Supply concentration and average deal floor"
-                  collapsed={collapsed.districtDemand}
-                  onToggle={() => toggle("districtDemand")}
-                  loading={districtsQuery.isPending}
-                  error={districtsQuery.isError ? "Unable to load district demand." : null}
-                  onRetry={() => void districtsQuery.refetch()}
-                  emptyMessage={!districtsQuery.isPending && !districtDemand.length ? "No district demand data yet." : undefined}
-                >
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {districtDemand.map((d) => (
-                      <div key={d.district} className="rounded-xl border border-border bg-surface p-4 transition-all hover:border-primary/40 hover:bg-card hover:shadow-soft">
-                        <div className="flex items-center justify-between">
-                          <p className="text-[12px] font-bold text-foreground">{d.district}</p>
-                          <span className="text-[10px] font-bold text-primary-bright num">Demand {d.demandScore}</span>
-                        </div>
-                        <div className="mt-2 space-y-1">
-                          <div className="flex justify-between text-[10px] font-medium"><span className="text-muted-foreground">Top model</span><span className="text-foreground">{d.topModel}</span></div>
-                          <div className="flex justify-between text-[10px] font-medium"><span className="text-muted-foreground">Avg price</span><span className="text-foreground num">{d.avgPrice > 0 ? formatPrice(d.avgPrice) : "—"}</span></div>
-                        </div>
-                        <div className="mt-2 h-1 overflow-hidden rounded-full bg-card"><div className="h-full rounded-full bg-primary" style={{ width: `${d.demandScore}%` }} /></div>
-                      </div>
-                    ))}
-                  </div>
-                </WidgetShell>
-
-                <div id="benchmark">
-                  <WidgetShell
-                    title={t("dealer.benchmark", "Inventory Benchmark")}
-                    subtitle="Paste listing URLs to benchmark against the current market"
-                    collapsed={collapsed.inventoryBenchmark}
-                    onToggle={() => toggle("inventoryBenchmark")}
-                  >
-                    <InventoryBenchmark />
-                  </WidgetShell>
-                </div>
               </div>
-              ) : (
-                <ProFeatureLock label={freePlanCopy.dealerTitle} className="min-h-[18rem]">
-                  <div className="rounded-2xl border border-border bg-card p-8 opacity-80">
-                    <p className="font-display text-lg font-bold text-foreground">{t("dealer.turnover", "Inventory Turnover")}</p>
-                    <p className="mt-2 text-sm text-muted-foreground">{freePlanCopy.dealerBody}</p>
-                  </div>
-                </ProFeatureLock>
-              )}
-            </div>
 
-            <motion.div
-              variants={revealItem}
-              className="rounded-2xl border border-border bg-card p-6 shadow-soft"
-            >
-              <p className="text-[12px] font-semibold text-primary-bright">Dealer plan</p>
-              <h3 className="mt-2 font-display text-[15px] font-bold tracking-tight text-foreground">
-                Full dealer workspace is part of Dealer plan — LKR 1,999/mo
-              </h3>
-              <p className="mt-2 max-w-xl text-[12px] text-muted-foreground font-medium leading-relaxed">
-                Keep using the command center today. Upgrade when you want billed seats, saved yard workflows, and priority market sync.
-              </p>
-              <Link
-                to="/pricing"
-                className="mt-4 inline-flex h-10 items-center rounded-full border border-border bg-surface px-5 text-[12px] font-semibold text-foreground no-underline shadow-soft transition-all hover:border-primary/40 hover:bg-card active:scale-[0.98]"
+              <WidgetShell
+                title={t("dealer.districtDemand", "District Demand")}
+                subtitle={t("dealerDash.demandSub", "Supply concentration and average deal floor")}
+                collapsed={collapsed.districtDemand}
+                onToggle={() => toggle("districtDemand")}
+                loading={districtsQuery.isPending}
+                error={districtsQuery.isError ? t("dealerDash.demandError", "Unable to load district demand.") : null}
+                onRetry={() => void districtsQuery.refetch()}
+                emptyMessage={!districtsQuery.isPending && !districtDemand.length ? t("dealerDash.demandEmpty", "No district demand data yet.") : undefined}
               >
-                View dealer plans
+                <ul className="dealer-cells">
+                  {districtDemand.map((d, i) => (
+                    <li key={d.district} className="min-w-0">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className="min-w-0 truncate text-footnote font-semibold text-foreground">{d.district}</p>
+                        <span className="shrink-0 whitespace-nowrap text-caption font-semibold tabular-nums text-[hsl(213_100%_72%)]">
+                          {t("dealer.cine.demand", "Demand {score}", { score: String(d.demandScore) })}
+                        </span>
+                      </div>
+                      <dl className="mt-3 space-y-1.5 text-footnote">
+                        <div className="flex justify-between gap-3">
+                          <dt className="shrink-0 text-label-2">{t("dealerDash.topModel", "Top model")}</dt>
+                          <dd className="min-w-0 truncate text-right text-foreground">{d.topModel}</dd>
+                        </div>
+                        <div className="flex justify-between gap-3">
+                          <dt className="shrink-0 text-label-2">{t("dealerDash.avgPrice", "Avg price")}</dt>
+                          <dd className="cine-card__price whitespace-nowrap text-right text-foreground">{d.avgPrice > 0 ? formatPrice(d.avgPrice) : "—"}</dd>
+                        </div>
+                      </dl>
+                      <span className="cine-bar mt-3" aria-hidden>
+                        <span className="cine-bar__reveal" style={{ "--i": i } as CSSProperties}>
+                          <span style={{ "--w": Math.max(0, Math.min(100, d.demandScore)) / 100 } as CSSProperties} />
+                        </span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </WidgetShell>
+
+              <div id="benchmark">
+                <WidgetShell
+                  title={t("dealer.benchmark", "Inventory Benchmark")}
+                  subtitle={t("dealer.benchmarkSubtitle", "Paste listing URLs to benchmark against the current market")}
+                  collapsed={collapsed.inventoryBenchmark}
+                  onToggle={() => toggle("inventoryBenchmark")}
+                >
+                  <InventoryBenchmark />
+                </WidgetShell>
+              </div>
+            </div>
+          ) : (
+            <ProFeatureLock label={freePlanText(t, "dealerTitle")} className="min-h-[18rem]">
+              <Card padding="lg" className="opacity-80">
+                <p className="text-callout font-semibold text-foreground">{t("dealer.turnover", "Inventory Turnover")}</p>
+                <p className="mt-2 text-footnote text-label-2">{freePlanText(t, "dealerBody")}</p>
+              </Card>
+            </ProFeatureLock>
+          )}
+        </CineSection>
+
+        <CineSection
+          index={n(3)}
+          id={SECTION_IDS.playbook}
+          title={t("dealerDash.whatDealersAndBrokersUse", "What dealers and brokers use this for")}
+          body={t("dealerDash.operatorWorkflowsFromStockPricing", "Operator workflows from stock pricing to import duty, alerts, and weekly yard review.")}
+        >
+          <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] lg:gap-14">
+            <ol className="cine-list border-y border-border" aria-label={t("dealerDash.playbook", "Playbook")}>
+              {DEALER_PLAYBOOK.map((item, i) => (
+                <li key={item.id} className="grid grid-cols-[1.75rem_minmax(0,1fr)] gap-x-3 py-5 sm:grid-cols-[2.5rem_minmax(0,1fr)]">
+                  <span aria-hidden className="pt-0.5 font-display text-footnote font-semibold tabular-nums text-primary">{n(i)}</span>
+                  <div className="min-w-0">
+                    <p className="text-caption font-semibold text-label-2">{t(`dealerPlaybook.for.${item.forWhom}`, item.forWhom)}</p>
+                    <h3 className="mt-1 text-body font-semibold text-foreground">{t(`dealerPlaybook.${item.id}.title`, item.title)}</h3>
+                    <div className="mt-2 grid gap-2 md:grid-cols-2 md:gap-6">
+                      <p className="text-footnote leading-relaxed text-label-2">{t(`dealerPlaybook.${item.id}.problem`, item.problem)}</p>
+                      <p className="text-footnote leading-relaxed text-label-1">{t(`dealerPlaybook.${item.id}.does`, item.whatMotormilaDoes)}</p>
+                    </div>
+                    <Link
+                      to={item.whereToGo.to}
+                      className="group mt-3 inline-flex items-center gap-1.5 text-footnote font-semibold text-primary no-underline hover:underline"
+                    >
+                      {t(`dealerPlaybook.${item.id}.cta`, item.whereToGo.label)}
+                      <ArrowRight aria-hidden className="cine-row__arrow h-3.5 w-3.5 !mt-0" />
+                    </Link>
+                  </div>
+                </li>
+              ))}
+            </ol>
+
+            <aside className="min-w-0 lg:sticky lg:top-[calc(var(--nav-offset,64px)+1.5rem)] lg:self-start" aria-labelledby="dealer-quick-tools">
+              <h3 id="dealer-quick-tools" className="cine-eyebrow text-label-2">{t("dealer.quickTools", "Quick tools")}</h3>
+              <ul className="cine-list mt-3 border-y border-border">
+                {DEALER_QUICK_TOOLS.map((tool) => (
+                  <li key={tool.id}>
+                    <Link to={tool.to} className="cine-row group items-center gap-3 py-3">
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-footnote font-medium text-foreground transition-colors duration-short group-hover:text-primary">{t(`dealerTools.${tool.id}.title`, tool.title)}</span>
+                        <span className="mt-0.5 block text-caption text-label-2">{t(`dealerTools.${tool.id}.description`, tool.description)}</span>
+                      </span>
+                      <ArrowRight aria-hidden className="cine-row__arrow h-4 w-4 !mt-0 text-label-2" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </aside>
+          </div>
+        </CineSection>
+
+        <CineSection index={n(4)} id={SECTION_IDS.plans} title={t("dealer.plans", "Dealer plans")}>
+          <div className="cine-panel theme-dark flex flex-col gap-6 p-6 text-foreground sm:p-8 md:flex-row md:items-end md:justify-between">
+            <div className="min-w-0 max-w-2xl">
+              <p className="cine-eyebrow text-white/60">{t("dealer.plans", "Dealer plans")}</p>
+              <h3 className="mt-3 font-display text-title3 font-semibold text-white [text-wrap:balance]">
+                {t("acct.dealer.planTitle", "The full dealer workspace is part of the Dealer plans, from {price}/mo", {
+                  price: formatLkr(PLAN_PRICES.dealer_starter.monthly),
+                })}
+              </h3>
+              <p className="mt-2 max-w-xl text-footnote leading-relaxed text-white/70">
+                {t("dealerDash.keepUsingTheCommandCenter", "Keep using the command center today. Upgrade when you want billed seats, saved yard workflows, and priority market sync.")}
+              </p>
+            </div>
+            <Button asChild className="shrink-0 self-start md:self-auto">
+              <Link to="/pricing#for-dealers">
+                {t("dealerDash.viewDealerPlans", "View dealer plans")}
+                <ArrowRight aria-hidden />
               </Link>
-            </motion.div>
-          </main>
-        </div>
+            </Button>
+          </div>
+        </CineSection>
       </PageBody>
     </PageCanvas>
   );

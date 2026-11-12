@@ -18,8 +18,6 @@ import lk.motormila.app.domain.repository.AuthRepository
 import lk.motormila.app.domain.repository.WatchlistRepository
 
 /** UI-local profile row (no ProfileRepository/UserProfile exists in domain). */
-data class UiBadge(val label: String, val earned: Boolean)
-
 data class UiProfile(
     val displayName: String,
     val email: String,
@@ -32,9 +30,6 @@ data class UiProfile(
     val expiresAt: String?,
     val watchlistCount: Int,
     val alertCount: Int,
-    val dealHunterScore: Int,
-    val streakDays: Int,
-    val badges: List<UiBadge>,
     val loggedIn: Boolean,
 )
 
@@ -75,28 +70,18 @@ class ProfileViewModel @Inject constructor(
                 val isAdmin = session?.isAdmin == true
                 val watchCount = watched.size
                 val alertCount = alerts.size
-                // Deterministic local gamification until a profile endpoint lands.
-                val score = ((watchCount * 12 + alertCount * 18).coerceAtMost(100))
                 UiProfile(
                     displayName = session?.name?.ifBlank { null }
-                        ?: session?.email?.substringBefore("@") ?: "Guest",
-                    email = session?.email ?: "Not signed in",
+                        ?: session?.email?.substringBefore("@").orEmpty(),
+                    email = session?.email.orEmpty(),
                     planName = planName,
                     isPro = isPro,
                     role = session?.role?.ifBlank { null } ?: "user",
                     isAdmin = isAdmin,
-                    sessionState = if (loggedIn) "Signed in" else "Guest",
+                    sessionState = if (loggedIn) "signed_in" else "guest",
                     expiresAt = session?.expiresAt,
                     watchlistCount = watchCount,
                     alertCount = alertCount,
-                    dealHunterScore = score,
-                    streakDays = if (watchCount > 0) (watchCount % 30) + 1 else 0,
-                    badges = listOf(
-                        UiBadge("First watch", watchCount >= 1),
-                        UiBadge("Alert setter", alertCount >= 1),
-                        UiBadge("Pro member", isPro),
-                        UiBadge("Deal hunter", score >= 50),
-                    ),
                     loggedIn = loggedIn,
                 )
             }.catch { e ->

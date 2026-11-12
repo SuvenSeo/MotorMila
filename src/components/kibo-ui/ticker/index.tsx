@@ -103,7 +103,7 @@ export const TickerIcon = memo(
             {...props}
           />
         ) : (
-          <span className="text-[11px] font-bold text-muted-foreground">
+          <span className="text-caption font-bold text-muted-foreground">
             {(symbol || "?").slice(0, 2).toUpperCase()}
           </span>
         )}
@@ -170,8 +170,8 @@ export const TickerPriceChange = memo(
         className={cn(
           "flex items-center gap-0.5",
           isPositiveChange
-            ? "text-green-600 dark:text-green-500"
-            : "text-red-600 dark:text-red-500",
+            ? "text-deal-good-text"
+            : "text-deal-high-text",
           className,
         )}
         {...props}

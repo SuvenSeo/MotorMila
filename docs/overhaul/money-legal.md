@@ -37,7 +37,7 @@ Scope: payments (PayHere), lead capture, legal pages, business drafts. Based on 
 - `backend/app/routers/legal_requests.py` stores requests in `legal_requests` with a reference (`MM-R…` / `MM-D…`) and `due_at`. It emails ops if `LEGAL_NOTIFY_EMAIL` is set. Admin: `GET/PATCH /api/v1/legal/admin/requests`.
 - The Privacy Policy names every listing source (`src/lib/listingSources.ts`) and covers legal bases, retention, rights, the DPA complaint route, cookies and analytics. The Terms add the aggregator / no-affiliation disclaimer, link-back, no guarantees, and lead / partner fees. The "no scraping without a B2B licence" clause is replaced with a polite-bot policy.
 - Footer: Privacy, Terms of Use, Cookie notice, Remove a listing, Delete my account, plus Leasing quotes and Book an inspection.
-- Placeholders are in `src/components/money/LegalPageShell.tsx`: `LEGAL_EFFECTIVE_DATE`, `PRIVACY_EMAIL` (privacy@motormila.lk), `CONTROLLER_NAME`.
+- Placeholders are in `src/components/money/LegalPageShell.tsx`: `LEGAL_EFFECTIVE_DATE`, `PRIVACY_EMAIL` (hello@ardenostudio.com), `CONTROLLER_NAME`.
 
 **Promises the pages make that other branches must make true before publishing:**
 - No seller phone numbers or names on MotorMila (data-legal: remove `seller-profile` phone extraction).
@@ -68,7 +68,7 @@ PayHere sandbox end-to-end: create a sandbox merchant at sandbox.payhere.lk, add
 2. Set on the HF Space (backend) env: `PAYHERE_MERCHANT_ID`, `PAYHERE_MERCHANT_SECRET` (secret), `PAYHERE_NOTIFY_URL=https://<hf-space-host>/api/v1/payhere/notify`, `PAYHERE_RETURN_URL=https://motormila.vercel.app/checkout/return`, `PAYHERE_CANCEL_URL=https://motormila.vercel.app/pricing?checkout=cancelled`, `PAYHERE_SANDBOX=true` until tested, then `false`. Leave `PAYHERE_PRO_CHECKOUT_ENABLED` unset (Pro is free in beta). Set `PAYHERE_RECURRING_ENABLED=true` only on Plus/Premium.
 3. Remove `STRIPE_CHECKOUT_URL` from the HF env if it's set (now ignored).
 4. Leads: set `LEADS_IP_SALT` (random string). Add `LEADS_PARTNERS_JSON` after a partner signs. Set `LEADS_DELIVERY_ENABLED=true` only once a signed referral / data-sharing agreement exists.
-5. Legal: set `LEGAL_NOTIFY_EMAIL` (where removal and deletion requests go). Create the **privacy@motormila.lk** mailbox, or change `PRIVACY_EMAIL`.
+5. Legal: set `LEGAL_NOTIFY_EMAIL` (where removal and deletion requests go). Set `LEGAL_NOTIFY_EMAIL` to hello@ardenostudio.com (or another real mailbox you control); `PRIVACY_EMAIL` in code is now hello@ardenostudio.com.
 6. Before publishing the legal pages: fill in the effective date, company name and PV number in `LegalPageShell.tsx`, and have a lawyer review them.
 7. Check removal requests daily (admin API) and act within 72h. Process account deletions within 14 days.
 8. Incorporate (see `docs/business/pvt-ltd-eroc-checklist.md`), then move the PayHere merchant account into the company.

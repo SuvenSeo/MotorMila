@@ -19,7 +19,6 @@ import lk.motormila.app.domain.model.SelfSignupStatus
 import lk.motormila.app.domain.model.UserSession
 import lk.motormila.app.domain.repository.AuthRepository
 import lk.motormila.app.work.PriceAlertSyncWorker
-import lk.motormila.app.work.SnapshotRefreshWorker
 
 /**
  * Auth: login/signup/me/logout against the POST and GET auth endpoints, session persisted in
@@ -35,6 +34,7 @@ class AuthRepositoryImpl @Inject constructor(
     private val authInterceptor: AuthInterceptor,
     private val database: lk.motormila.app.data.local.db.MotormilaDatabase,
     @IoDispatcher private val io: CoroutineDispatcher,
+    private val pushRegistrar: lk.motormila.app.fcm.PushTokenRegistrar,
 ) : AuthRepository {
 
     override fun session(): Flow<UserSession?> = sessionStore.observe()
@@ -113,20 +113,27 @@ class AuthRepositoryImpl @Inject constructor(
         }
 
     override suspend fun logout(): Unit = withContext(io) {
+        // Unbind this device's push token while the bearer is still valid.
+        runCatching { pushRegistrar.unregister() }
         runCatching { api.logout() }
         sessionStore.clear()
         authInterceptor.updateToken(null)
         // Stop background workers — otherwise they keep hitting /alerts/match
         // with a cleared token after logout.
+        // (SnapshotRefreshWorker keeps running: public market data for guests too.)
         runCatching { PriceAlertSyncWorker.cancel(context) }
-        runCatching { SnapshotRefreshWorker.cancel(context) }
         Unit
     }
 
-    override suspend fun clearRejectedSession(): Unit = withContext(io) {
-        sessionStore.clear()
-        runCatching { PriceAlertSyncWorker.cancel(context) }
-        Unit
+    override suspend fun clearRejectedSession(rejectedToken: String?): Boolean = withContext(io) {
+        val cleared = sessionStore.clearIfRejected(rejectedToken)
+        if (cleared) {
+            authInterceptor.updateToken(null)
+            runCatching { PriceAlertSyncWorker.cancel(context) }
+            // Bearer is dead: rotate the FCM token so the server row prunes itself.
+            runCatching { pushRegistrar.unregister() }
+        }
+        cleared
     }
 
     override suspend fun deleteAccount(password: String?): Unit = withContext(io) {
@@ -139,6 +146,7 @@ class AuthRepositoryImpl @Inject constructor(
         sessionStore.clear()
         authInterceptor.updateToken(null)
         runCatching { PriceAlertSyncWorker.cancel(context) }
+        runCatching { pushRegistrar.unregister() }
         // Local caches tied to the account (alerts, watchlist) go too.
         runCatching { database.clearAllTables() }
         Unit

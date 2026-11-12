@@ -1,7 +1,9 @@
 import { useEffect, useId, useState, type ReactNode } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { tween } from "@/lib/motion";
+import { AnimatePresence, motion } from "motion/react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAppPreferences } from "@/lib/appPreferences";
 
 type MorphingDialogProps = {
   /** Unique namespace for the shared-layout morph. Auto-generated when omitted. */
@@ -16,7 +18,14 @@ type MorphingDialogProps = {
   triggerClassName?: string;
   /** Extra classes for the dialog panel. */
   panelClassName?: string;
+  /** Corner radius of the trigger in px (default: a 24px-tall pill), so the morph interpolates real radii. */
+  triggerRadius?: number;
 };
+
+/** One critically damped spring for the morph both ways (~300ms, no overshoot). */
+const MORPH = { type: "spring", visualDuration: 0.3, bounce: 0 } as const;
+/** Panel corner radius (rounded-3xl) as a motion value, so it isn't stretched mid-morph. */
+const PANEL_RADIUS = 24;
 
 /**
  * Motion-Primitives-style morphing dialog. The trigger element physically
@@ -24,6 +33,10 @@ type MorphingDialogProps = {
  * the full content crossfades in. Escape / backdrop click closes; body
  * scroll locks while open. Honors prefers-reduced-motion via framer-motion's
  * global reduced-motion handling.
+ *
+ * Shared-layout morphs scale the box, so everything inside it is counter-scaled
+ * (`layout="position"`) and the radius is a motion value: the trigger label and
+ * the dialog text used to stretch and squash while the box grew and shrank.
  */
 export function MorphingDialog({
   id,
@@ -32,7 +45,9 @@ export function MorphingDialog({
   ariaLabel,
   triggerClassName,
   panelClassName,
+  triggerRadius = 12,
 }: MorphingDialogProps) {
+  const { t } = useAppPreferences();
   const autoId = useId();
   const namespace = (id ?? autoId).replace(/[^a-zA-Z0-9-_]/g, "");
   const frameId = `morph-${namespace}`;
@@ -50,7 +65,7 @@ export function MorphingDialog({
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
-  }, [open ]);
+  }, [open]);
 
   return (
     <>
@@ -58,12 +73,14 @@ export function MorphingDialog({
         type="button"
         layoutId={frameId}
         onClick={() => setOpen(true)}
-        transition={{ type: "spring", stiffness: 320, damping: 30 }}
-        style={{ visibility: open ? "hidden" : "visible" }}
+        transition={MORPH}
+        style={{ visibility: open ? "hidden" : "visible", borderRadius: triggerRadius }}
         className={cn("relative", triggerClassName)}
         aria-haspopup="dialog"
       >
-        {trigger}
+        <motion.span layout="position" transition={MORPH} className="inline-flex items-center gap-[inherit]">
+          {trigger}
+        </motion.span>
       </motion.button>
 
       <AnimatePresence>
@@ -72,8 +89,8 @@ export function MorphingDialog({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            className="fixed inset-0 z-[70] flex items-end justify-center bg-background/70 p-4 backdrop-blur-sm sm:items-center"
+            transition={tween.short}
+            className="fixed inset-0 z-[70] flex items-end justify-center bg-background p-4 sm:items-center"
             onClick={() => setOpen(false)}
             aria-hidden={false}
           >
@@ -83,7 +100,8 @@ export function MorphingDialog({
               aria-modal="true"
               aria-label={ariaLabel}
               onClick={(e) => e.stopPropagation()}
-              transition={{ type: "spring", stiffness: 300, damping: 32 }}
+              transition={MORPH}
+              style={{ borderRadius: PANEL_RADIUS }}
               className={cn(
                 "relative max-h-[85vh] w-full max-w-md overflow-y-auto rounded-3xl border border-border bg-card p-6 shadow-soft-lg",
                 panelClassName,
@@ -91,19 +109,21 @@ export function MorphingDialog({
             >
               <motion.button
                 type="button"
+                layout="position"
                 onClick={() => setOpen(false)}
-                aria-label="Close dialog"
+                aria-label={t("morphingDialog.close", "Close dialog")}
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.15 }}
+                transition={{ delay: 0.15, layout: MORPH }}
                 className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-surface text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
               >
                 <X className="h-4 w-4" aria-hidden />
               </motion.button>
               <motion.div
+                layout="position"
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.12, duration: 0.22 }}
+                transition={{ ...tween.short, delay: 0.12, layout: MORPH }}
               >
                 {children}
               </motion.div>

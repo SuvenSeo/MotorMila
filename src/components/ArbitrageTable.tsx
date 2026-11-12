@@ -1,3 +1,4 @@
+import { useAppPreferences } from "@/lib/appPreferences";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowDown, ArrowUp, ArrowUpDown, Lock } from "lucide-react";
@@ -34,18 +35,19 @@ function SortIcon({ active, dir }: { active: boolean; dir: 1 | -1 }) {
 }
 
 function GapCells({ row }: { row: EnrichedGap }) {
+  const { t } = useAppPreferences();
   const { gap, transportLkr, grossLkr, netLkr } = row;
   return (
     <>
-      <td className="px-4 py-3 font-semibold text-emerald-600 dark:text-emerald-400">{gap.buy_district}</td>
+      <td className="px-4 py-3 font-semibold text-deal-good-text">{gap.buy_district}</td>
       <td className="px-4 py-3 font-semibold text-primary">{gap.sell_district}</td>
       <td className="px-4 py-3 text-foreground num">{formatPriceLkrMillions(gap.buy_median_lkr)}</td>
       <td className="px-4 py-3 text-foreground num">{formatPriceLkrMillions(gap.sell_median_lkr)}</td>
       <td className="px-4 py-3 font-bold text-primary num">+{gap.gap_pct.toFixed(1)}%</td>
-      <td className="px-4 py-3 text-muted-foreground num" title="Fuel + driver + transfer estimate">
+      <td className="px-4 py-3 text-muted-foreground num" title={t("arbitrage.transportHint", "Fuel + driver + transfer estimate")}>
         {formatPriceLkrMillions(transportLkr)}
       </td>
-      <td className={cn("px-4 py-3 font-bold num", netLkr >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500")}>
+      <td className={cn("px-4 py-3 font-bold num", netLkr >= 0 ? "text-deal-good-text" : "text-deal-high-text")}>
         {netLkr >= 0 ? "+" : "−"}{formatPriceLkrMillions(Math.abs(netLkr))}
       </td>
       <td className="hidden px-4 py-3 text-muted-foreground num lg:table-cell">
@@ -60,6 +62,7 @@ function GapCells({ row }: { row: EnrichedGap }) {
  * Props-driven: gaps + transport estimator in, ranked net opportunities out.
  */
 export function ArbitrageTable({ gaps, transport, visibleLimit, trialCtaTo = "/pricing" }: ArbitrageTableProps) {
+  const { t } = useAppPreferences();
   const [sortKey, setSortKey] = useState<ArbitrageSortKey>("net");
   const [sortDir, setSortDir] = useState<1 | -1>(-1);
 
@@ -95,19 +98,19 @@ export function ArbitrageTable({ gaps, transport, visibleLimit, trialCtaTo = "/p
   if (!rows.length) return null;
 
   const headers: Array<{ key: ArbitrageSortKey | null; label: string; hint?: string }> = [
-    { key: null, label: "Buy in" },
-    { key: null, label: "Sell in" },
-    { key: null, label: "Buy median" },
-    { key: null, label: "Sell median" },
-    { key: "gap_pct", label: "Gap %" },
-    { key: null, label: "Transport", hint: "Fuel + driver + transfer estimate" },
-    { key: "net", label: "Net" },
-    { key: "gross", label: "Gross" },
+    { key: null, label: t("arbitrage.buyIn", "Buy in") },
+    { key: null, label: t("arbitrage.sellIn", "Sell in") },
+    { key: null, label: t("arbitrage.buyMedian", "Buy median") },
+    { key: null, label: t("arbitrage.sellMedian", "Sell median") },
+    { key: "gap_pct", label: t("arbitrage.gapPct", "Gap %") },
+    { key: null, label: t("arbitrage.transport", "Transport"), hint: t("arbitrage.transportHint", "Fuel + driver + transfer estimate") },
+    { key: "net", label: t("arbitrage.net", "Net") },
+    { key: "gross", label: t("arbitrage.gross", "Gross") },
   ];
 
   return (
-    <div className="overflow-auto rounded-xl border border-border" aria-label="Arbitrage gaps table">
-      <table className="w-full min-w-[760px] text-sm">
+    <div className="overflow-auto rounded-xl border border-border" aria-label={t("arbitrage.aria", "Arbitrage gaps table")}>
+      <table className="w-full min-w-[760px] text-footnote">
         <thead className="sticky top-0 z-10 bg-surface">
           <tr>
             {headers.map((header) => (
@@ -116,7 +119,7 @@ export function ArbitrageTable({ gaps, transport, visibleLimit, trialCtaTo = "/p
                   <button
                     type="button"
                     onClick={() => toggleSort(header.key as ArbitrageSortKey)}
-                    aria-label={`Sort by ${header.label}`}
+                    aria-label={t("arbitrage.sortBy", "Sort by {column}", { column: header.label })}
                     className="inline-flex items-center gap-1 tracking-tight transition-colors hover:text-foreground"
                   >
                     {header.label}
@@ -152,10 +155,12 @@ export function ArbitrageTable({ gaps, transport, visibleLimit, trialCtaTo = "/p
       {lockedCount > 0 && (
         <Link
           to={trialCtaTo}
-          className="flex items-center justify-center gap-2 border-t border-border bg-primary/5 px-4 py-3 text-xs font-bold text-primary-bright no-underline transition-colors hover:bg-primary/10"
+          className="flex items-center justify-center gap-2 border-t border-border bg-primary/5 px-4 py-3 text-caption font-bold text-primary-bright no-underline transition-colors hover:bg-primary/10"
         >
           <Lock className="h-3.5 w-3.5" aria-hidden="true" />
-          {lockedCount} more gap{lockedCount === 1 ? "" : "s"} locked — start a 7-day free trial to unlock net rankings
+          {lockedCount === 1
+            ? t("arbitrage.lockedOne", "1 more gap locked — start a 7-day free trial to unlock net rankings")
+            : t("arbitrage.locked", "{n} more gaps locked — start a 7-day free trial to unlock net rankings", { n: lockedCount })}
         </Link>
       )}
     </div>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Round 4 (liquid glass) strings. -->
+<resources>
+    <string name="settings_reduce_transparency">Reduce transparency</string>
+    <string name="settings_reduce_transparency_sub">Solid bars and sheets instead of frosted glass</string>
+    <string name="scr_cmp_no_data">No data for %1$s on these cars</string>
+    <string name="glass_free_plan_note">Free plan · Pro unlocks the Best deal (deal-score) sort</string>
+    <string name="glass_tab_bar_expand">Show tabs</string>
+    <string name="glass_save">Save</string>
+    <string name="glass_unsave">Remove from saved</string>
+    <string name="glass_share">Share listing</string>
+    <string name="glass_back_to_top">Back to top</string>
+</resources>

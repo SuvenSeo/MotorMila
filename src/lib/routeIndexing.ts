@@ -2,6 +2,9 @@
 const NOINDEX_PREFIXES = [
   "/sign-in",
   "/sign-up",
+  "/verify-email",
+  "/forgot-password",
+  "/reset-password",
   "/profile",
   "/alerts",
   "/settings",
@@ -22,17 +25,19 @@ const NOINDEX_PREFIXES = [
   "/removal",
 ];
 
-/** Mirrors the <Route> table in App.tsx (and the SPA allowlist in vercel.json). */
+/** Mirrors the <Route> table in App.tsx (and the SPA allowlist in public/_redirects). */
 const KNOWN_ROUTE_PATTERNS: RegExp[] = [
   /^\/$/,
-  /^\/(trends|estimate|calculator|ev-hub|ev-chargers|best-picks|sell|price-index|docs|pricing|privacy|terms|compare|valuation|permits|mobile-app|dealer|settings|alerts|profile|sign-in|sign-up|hero-lab|admin|pro|pro-preview|official-pulse|afford|safe-transfer|finance|leasing|inspection|insurance|cookies|removal|delete-account|bot)\/?$/,
+  /^\/(trends|estimate|calculator|ev-hub|ev-chargers|best-picks|sell|price-index|docs|pricing|privacy|terms|compare|valuation|permits|mobile-app|dealer|settings|alerts|profile|sign-in|sign-up|verify-email|forgot-password|reset-password|hero-lab|admin|pro|pro-preview|official-pulse|afford|safe-transfer|finance|leasing|inspection|insurance|cookies|removal|delete-account|how-we-price|bot)\/?$/,
   /^\/checkout\/return\/?$/,
   /^\/listing\/[^/]+\/?$/,
   /^\/cars\/[^/]+(\/[^/]+(\/\d{4})?)?\/?$/,
   /^\/locations\/[^/]+\/?$/,
   /^\/official-pulse\/(guide\/)?[^/]+\/?$/,
   /^\/compare\/[^/]+\/?$/,
-  /^\/motormila\/admin\/?$/,
+  /^\/motormila\/admin(\/[^/]+)*\/?$/,
+  // Typed-path redirects (App.tsx <Navigate>, 301 in public/_redirects).
+  /^\/(prices|price|tools|calculators|tax-calculator|import-calculator|value|saved|watchlist|sell-my-car|plans|deals|app|login|signin|signup)\/?$/,
 ];
 
 export function isNoindexPath(pathname: string): boolean {

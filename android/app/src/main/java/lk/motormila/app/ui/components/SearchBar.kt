@@ -25,6 +25,15 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,11 +66,24 @@ fun SearchBar(
     modifier: Modifier = Modifier,
     showDropdown: Boolean = true,
 ) {
-    Column(modifier = modifier.semantics { contentDescription = "Vehicle search" }) {
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    // The dropdown belongs to typing: shown only while the field has focus, so
+    // results opened from a deep link / Home (or after submitting) stay visible.
+    var focused by remember { mutableStateOf(false) }
+    val submit: (String) -> Unit = { q ->
+        onSearch(q)
+        keyboard?.hide()
+        focusManager.clearFocus()
+    }
+    val vehicleSearchCd = stringResource(R.string.mm_vehicle_search_cd)
+    Column(modifier = modifier.semantics { contentDescription = vehicleSearchCd }) {
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChange,
             singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { submit(query) }, onDone = { submit(query) }),
             shape = MotormilaPill,
             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
             trailingIcon = {
@@ -79,15 +101,23 @@ fun SearchBar(
                             onClick = onVoiceClick,
                             modifier = Modifier.size(48.dp),
                         ) {
-                            Icon(Icons.Filled.Mic, contentDescription = "Voice search")
+                            Icon(Icons.Filled.Mic, contentDescription = stringResource(R.string.mm_voice_search_cd))
                         }
                     }
                 }
             },
-            placeholder = { Text(stringResource(R.string.ui_components_search_make_model_e_g)) },
-            modifier = Modifier.fillMaxWidth(),
+            placeholder = {
+                Text(
+                    stringResource(R.string.ui_components_search_make_model_e_g),
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                )
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { focused = it.isFocused },
         )
-        if (showDropdown && (suggestions.isNotEmpty() || (query.isBlank() && recentSearches.isNotEmpty()))) {
+        if (showDropdown && focused && (suggestions.isNotEmpty() || (query.isBlank() && recentSearches.isNotEmpty()))) {
             MotormilaGlass(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -106,7 +136,7 @@ fun SearchBar(
                                     .clickable(
                                         interactionSource = recentPress,
                                         indication = null,
-                                        onClick = { onRecentClick(recent) },
+                                        onClick = { onRecentClick(recent); keyboard?.hide(); focusManager.clearFocus() },
                                     )
                                     .padding(horizontal = 16.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -127,7 +157,7 @@ fun SearchBar(
                                     .clickable(
                                         interactionSource = suggestPress,
                                         indication = null,
-                                        onClick = { onSuggestionClick(s) },
+                                        onClick = { keyboard?.hide(); focusManager.clearFocus(); onSuggestionClick(s) },
                                     )
                                     .padding(horizontal = 12.dp, vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,

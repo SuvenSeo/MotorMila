@@ -168,3 +168,24 @@ def test_require_pro_access_allows_bearer_write_from_trusted_origin(monkeypatch)
     token = _configure_account(monkeypatch, "pro")
     req = _UnsafeRequest(origin="http://localhost:5173")
     assert require_pro_access(request=req, authorization=f"Bearer {token}") is None
+
+
+def test_require_pro_access_allows_native_bearer_write_without_origin(monkeypatch):
+    """Android sends a Bearer token and no Origin/Referer; that is not CSRF-able."""
+    monkeypatch.setenv("PRO_ACCESS_ENFORCED", "true")
+    monkeypatch.setenv("CORS_ORIGINS", "http://localhost:5173")
+    token = _configure_account(monkeypatch, "pro")
+    req = _UnsafeRequest(origin=None)
+    assert require_pro_access(request=req, authorization=f"Bearer {token}") is None
+
+
+def test_require_pro_access_rejects_cookie_only_write_without_origin(monkeypatch):
+    monkeypatch.setenv("PRO_ACCESS_ENFORCED", "true")
+    token = _configure_account(monkeypatch, "pro")
+    req = _UnsafeRequest(origin=None)
+    req.cookies = {"mm_session": token}
+
+    with pytest.raises(HTTPException) as exc_info:
+        require_pro_access(request=req, authorization=None)
+    assert exc_info.value.status_code == 403
+    assert "Bearer" in str(exc_info.value.detail)

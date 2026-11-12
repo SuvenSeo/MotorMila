@@ -1,4 +1,10 @@
-/** Fair Market Value helpers — cohort median vs asking price. */
+/**
+ * Typical-price summary for the FMV card and listing cards — a view of the one
+ * price verdict (src/lib/priceVerdict.ts). The label IS the shared verdict
+ * headline ("Priced 12% below typical", "Near typical price"), so the card can
+ * never word the same verdict differently from the deal badge or Trust Check.
+ */
+import { priceVerdict, verdictHeadline, verdictShortLabel, type PriceContext, type PriceVerdict } from "@/lib/priceVerdict";
 
 export type FmvBand = "below" | "fair" | "above";
 
@@ -8,26 +14,41 @@ export interface FmvSummary {
   delta_lkr: number;
   delta_pct: number;
   band: FmvBand;
+  /** Whole percent from the verdict. */
+  pct: number;
+  verify_first: boolean;
+  /** The shared verdict headline ("Priced 12% below typical") — the FMV card. */
   label: string;
+  /** Compact form for the listing-card bar ("12% below typical"). */
+  shortLabel: string;
 }
 
-export function summarizeFmv(asking: number, fmv: number): FmvSummary | null {
-  if (!Number.isFinite(asking) || !Number.isFinite(fmv) || asking <= 0 || fmv <= 0) {
-    return null;
-  }
-  const delta_lkr = asking - fmv;
-  const delta_pct = (delta_lkr / fmv) * 100;
-  let band: FmvBand = "fair";
-  if (delta_pct <= -5) band = "below";
-  else if (delta_pct >= 8) band = "above";
+type Translate = (key: string, fallback?: string, vars?: Record<string, string | number>) => string;
 
-  const absPct = Math.abs(delta_pct);
-  const label =
-    band === "below"
-      ? `Priced ${absPct.toFixed(0)}% below FMV`
-      : band === "above"
-        ? `Overpriced ${absPct.toFixed(0)}% vs FMV`
-        : "Near fair market value";
+const plain: Translate = (_key, fallback = "", vars) => fallback.replace(/\{(\w+)\}/g, (_m, k) => String(vars?.[k] ?? ""));
 
-  return { fmv_lkr: fmv, asking_lkr: asking, delta_lkr, delta_pct, band, label };
+/** Summary for an OK verdict; null when the verdict is withheld. */
+export function fmvSummaryFromVerdict(asking: number, v: PriceVerdict, t?: Translate): FmvSummary | null {
+  if (v.status !== "ok") return null;
+  const label = verdictHeadline(v, t ?? plain);
+  const shortLabel = verdictShortLabel(v, t ?? plain);
+  return {
+    fmv_lkr: v.referenceLkr,
+    asking_lkr: asking,
+    delta_lkr: asking - v.referenceLkr,
+    delta_pct: v.gapPct,
+    band: v.band,
+    pct: v.pct,
+    verify_first: v.verifyFirst,
+    label,
+    shortLabel,
+  };
+}
+
+/**
+ * `t` (from useAppPreferences) localises the label; without it the label is English.
+ * Returns null whenever the one verdict is withheld (implausible gap, bad price…).
+ */
+export function summarizeFmv(asking: number, fmv: number, t?: Translate, ctx: PriceContext = {}): FmvSummary | null {
+  return fmvSummaryFromVerdict(asking, priceVerdict({ asking, reference: fmv, ...ctx }), t);
 }

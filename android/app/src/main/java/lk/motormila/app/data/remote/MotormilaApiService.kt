@@ -5,8 +5,6 @@ import lk.motormila.app.data.remote.dto.AnalyticsEventRequestDto
 import lk.motormila.app.data.remote.dto.AnalyticsEventResponseDto
 import lk.motormila.app.data.remote.dto.ArbitrageGapDto
 import lk.motormila.app.data.remote.dto.BenchmarkUrlsRequestDto
-import lk.motormila.app.data.remote.dto.ChatRequestDto
-import lk.motormila.app.data.remote.dto.ChatResponseDto
 import lk.motormila.app.data.remote.dto.ChargingStationsDto
 import lk.motormila.app.data.remote.dto.CheckoutIntentRequestDto
 import lk.motormila.app.data.remote.dto.CheckoutIntentResponseDto
@@ -119,6 +117,7 @@ import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.HTTP
 import retrofit2.http.PATCH
+import retrofit2.http.PUT
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -194,6 +193,7 @@ interface MotormilaApiService {
         @Query("sort") sort: String? = null,
         @Query("page") page: Int = 1,
         @Query("size") size: Int = 20,
+        @Query("include_archive") includeArchive: Boolean? = null,
     ): PagedListingsDto
 
     @GET("listings/{id}")
@@ -223,8 +223,12 @@ interface MotormilaApiService {
     @GET("listings/{id}/geo")
     suspend fun getListingGeo(@Path("id") id: Int): GeoDto
 
+    /** `vehicle_category` is ignored by backends older than launch-polish (then the client ranks cars first). */
     @GET("listings/price-drops")
-    suspend fun getPriceDrops(@Query("days") days: Int = 7): PriceDropsDto
+    suspend fun getPriceDrops(
+        @Query("days") days: Int = 7,
+        @Query("vehicle_category") vehicleCategory: String? = null,
+    ): PriceDropsDto
 
     @GET("listings/sources")
     suspend fun getSources(): List<SourceRowDto>
@@ -427,6 +431,10 @@ interface MotormilaApiService {
     @DELETE("alerts/{id}")
     suspend fun deleteAlert(@Path("id") id: Int)
 
+    /** In-place edit (same id). Older backends answer 405 — see AlertsRepositoryImpl.update. */
+    @PUT("alerts/{id}")
+    suspend fun updateAlert(@Path("id") id: Int, @Body body: CreateAlertRequestDto): AlertDto
+
     /** Matches ALL of the caller's alerts server-side; filter client-side by id. */
     @POST("alerts/match")
     suspend fun matchAlerts(): MatchResponseDto
@@ -447,9 +455,17 @@ interface MotormilaApiService {
     @POST("notifications/read-all")
     suspend fun markAllNotificationsRead(): MarkAllReadDto
 
-    // ------------------------------------------------------------------- chat
-    @POST("chat")
-    suspend fun chat(@Body body: ChatRequestDto): ChatResponseDto
+    /** Upsert this device's FCM token for the signed-in account. */
+    @POST("notifications/devices")
+    suspend fun registerPushDevice(
+        @Body body: lk.motormila.app.data.remote.dto.DeviceRegisterRequestDto,
+    ): lk.motormila.app.data.remote.dto.DeviceRegisterResponseDto
+
+    /** Logout: unbind this device's FCM token (must run while the bearer is still valid). */
+    @HTTP(method = "DELETE", path = "notifications/devices", hasBody = true)
+    suspend fun unregisterPushDevice(
+        @Body body: lk.motormila.app.data.remote.dto.DeviceUnregisterRequestDto,
+    ): Response<Unit>
 
     // --------------------------------------------------------------- feedback
     @POST("feedback")

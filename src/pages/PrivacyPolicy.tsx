@@ -67,7 +67,7 @@ export default function PrivacyPolicy() {
       <LegalSection title="5. Data collected automatically">
         <ul>
           <li><strong>Security logs:</strong> IP address, browser type and request times, to keep the service secure and stop abuse. On lead forms we store a one-way hash of your IP, not the IP itself.</li>
-          <li><strong>Usage analytics:</strong> pages viewed and product events (for example "compare opened"), linked to a random ID that lasts only for your browser session. We also use Vercel Web Analytics, which doesn't use cookies. See the <Link to="/cookies">cookie notice</Link>.</li>
+          <li><strong>Usage analytics:</strong> pages viewed and product events (for example "compare opened"), linked to a random ID that lasts only for your browser session. See the <Link to="/cookies">cookie notice</Link>.</li>
           <li><strong>Error reports:</strong> if the app crashes, a technical report goes to our error tracker without your name or email.</li>
         </ul>
       </LegalSection>
@@ -75,7 +75,7 @@ export default function PrivacyPolicy() {
       <LegalSection title="6. Who we share data with">
         <ul>
           <li><strong>Partners you choose:</strong> the leasing company, inspection company or licensed insurance broker named on a request form, and only for that request.</li>
-          <li><strong>Service providers</strong> who process data for us under contract: Vercel (website hosting), Hugging Face (API hosting), Neon (database), Cloudflare (storage and network), PayHere (payments), our email provider (account and alert emails), and Telegram and WhatsApp if you turn on those alerts.</li>
+          <li><strong>Service providers</strong> who process data for us under contract: Cloudflare Pages (website hosting), Hugging Face (API hosting), Neon (database), Cloudflare (storage and network), PayHere (payments), our email provider (account and alert emails), and Telegram and WhatsApp if you turn on those alerts.</li>
           <li><strong>Authorities</strong>, when Sri Lankan law requires it.</li>
         </ul>
         <p>

@@ -38,6 +38,10 @@ fun DealRing(
     band: DealBand,
     modifier: Modifier = Modifier,
     size: Dp = 36.dp,
+    /** Ring text, e.g. "−12%" / "+6%" vs typical (the verdict's percent). Default: the raw score. */
+    label: String? = null,
+    /** Spoken description (the verdict headline). Default: "Deal score …". */
+    description: String? = null,
 ) {
     val reducedMotion = rememberReducedMotion()
     val haptics = rememberHaptics()
@@ -69,7 +73,8 @@ fun DealRing(
         modifier = modifier
             .size(size)
             .semantics {
-                contentDescription = if (score == null) "Deal score locked" else "Deal score %.1f".format(score)
+                contentDescription = description
+                    ?: if (score == null) "Deal score locked" else "Deal score %.1f".format(score)
             },
         contentAlignment = Alignment.Center,
     ) {
@@ -92,8 +97,13 @@ fun DealRing(
             }
         }
         Text(
-            text = if (score == null) "–" else "%.0f".format(score),
-            fontSize = 11.sp,
+            text = label ?: if (score == null) "–" else "%.0f".format(score),
+            // A percent label ("−12%") is fixed-size so it stays inside the 36dp ring at
+            // 200 % font scale; the same figure is spoken via [description] and shown
+            // full-size in the badge next to it.
+            fontSize = if (label != null) with(androidx.compose.ui.platform.LocalDensity.current) { 10.dp.toSp() } else 11.sp,
+            maxLines = 1,
+            softWrap = false,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
         )

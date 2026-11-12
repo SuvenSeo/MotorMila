@@ -4,7 +4,7 @@
  * Legacy share links use `/compare?ids=12,45`. The canonical form is the
  * slug path `/compare/12-vs-45` (numeric ascending, max 3 ids). crawlers
  * only ever see the slug path via canonical + sitemap; the query form
- * 301s to it (see docs/seo-runbook.md + vercel.json snippet there).
+ * 301s to it (see docs/seo-runbook.md).
  *
  * Slug grammar shared with scripts/generate-routes.ts and
  * backend/app/api/v1/endpoints/seo.py — keep the three in sync.

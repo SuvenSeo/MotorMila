@@ -1,5 +1,6 @@
 package lk.motormila.app.ui.components
 
+import lk.motormila.app.ui.theme.mmTappable
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
@@ -272,6 +273,7 @@ fun ErrorState(
         message.contains("503", ignoreCase = true) ||
         message.contains("reach", ignoreCase = true) ||
         message.contains("Taking too long", ignoreCase = true) ||
+        message.contains("timed out", ignoreCase = true) ||
         message.contains("Couldn't refresh", ignoreCase = true)
 
     val heading = when {
@@ -343,13 +345,15 @@ fun OfflineBanner(
     text: String? = null,
 ) {
     if (!visible) return
+    lk.motormila.app.ui.theme.CappedFontScale(max = 1.3f) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .clip(MotormilaRadius.pill)
+            // Rounded rect, not a stadium: a 2-line banner in a pill looked like a blob.
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp))
             .background(MaterialTheme.colorScheme.secondaryContainer)
-            .then(if (onRetry != null) Modifier.clickable { onRetry() } else Modifier)
+            .then(if (onRetry != null) Modifier.mmTappable(role = androidx.compose.ui.semantics.Role.Button, pressedScale = 1f) { onRetry() } else Modifier)
             .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp)
             .semantics { contentDescription = "Offline, showing cached data. Tap to retry." },
         verticalAlignment = Alignment.CenterVertically,
@@ -361,6 +365,8 @@ fun OfflineBanner(
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSecondaryContainer,
+            maxLines = 2,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
         if (onRetry != null) {
@@ -388,22 +394,13 @@ fun OfflineBanner(
         }
     }
 }
+}
 
 /** Pulsing live dot; static dot when reduced motion. */
 @Composable
 fun LivePulse(modifier: Modifier = Modifier) {
-    val reduced = rememberReducedMotion()
-    val color = MaterialTheme.colorScheme.primary
-    if (reduced) {
-        Box(modifier.size(8.dp).background(color, CircleShape))
-        return
-    }
-    val transition = rememberInfiniteTransition(label = "live-pulse")
-    val alpha by transition.animateFloat(1f, 0.35f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "pulse")
-    Box(
-        modifier
-            .size(8.dp)
-            .background(color.copy(alpha = alpha), CircleShape)
-            .semantics { contentDescription = "Live" },
-    )
+    // Static dot: motion rules allow no infinite animation except skeletons
+    // (low-end devices / battery). The colour alone says "live".
+    val color = MaterialTheme.colorScheme.tertiary
+    Box(modifier.size(8.dp).background(color, CircleShape))
 }

@@ -1,5 +1,6 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
+from app.utils.price_verdict import plausible_deal_score, plausible_deal_score_sql
 from app.utils.districts import count_canonical_districts
 from app.utils.sql_median import median_price_expr, median_price_for_query, python_median
 from app.utils.time import utc_now
@@ -141,7 +142,7 @@ def _listing_sample(row: CarListing) -> ProListingSample:
         price_lkr=_num(row.price_lkr),
         district=str(row.district) if row.district else None,
         source=str(row.source or "unknown"),
-        deal_score=_num(row.deal_score),
+        deal_score=plausible_deal_score(row),
         thumbnail_url=str(row.thumbnail_url) if row.thumbnail_url else None,
         detail_url=str(row.url) if row.url else None,
         external_url=str(row.url) if row.url else None,
@@ -490,7 +491,7 @@ def get_pro_market_snapshot(db: Session = Depends(get_db)):
         new_listings_7d=int(priced.filter(CarListing.first_seen_at >= seven_days_ago).count()),
         districts_covered=count_canonical_districts(priced),
         source_count=int(source_count),
-        hot_deal_count=int(priced.filter(CarListing.deal_score >= 8).count()),
+        hot_deal_count=int(priced.filter(CarListing.deal_score >= 8, plausible_deal_score_sql(CarListing.deal_score)).count()),
         last_updated=priced.with_entities(func.max(func.coalesce(CarListing.last_seen_at, CarListing.scraped_at, CarListing.first_seen_at))).scalar(),
         source_coverage=_breakdown(db, CarListing.source, total=total),
         top_opportunities=_samples(db, limit=8),

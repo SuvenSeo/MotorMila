@@ -1,5 +1,8 @@
 package lk.motormila.app.ui.district
 
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -59,7 +62,6 @@ import lk.motormila.app.domain.model.HubTopModel
 import lk.motormila.app.domain.model.Listing
 import lk.motormila.app.ui.components.BrandLogo
 import lk.motormila.app.ui.components.BrandLogoSize
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.components.EmptyState
@@ -103,13 +105,15 @@ fun DistrictHubScreen(
         }
     }
 
-    MotormilaPage(
+    lk.motormila.app.ui.common.MmScreen(
         title = state.displayName.ifBlank { stringResource(R.string.district_hub_title) },
         onBack = {
             if (!reducedMotion) haptics.tick()
             onBack()
         },
         snackbarHostState = snacks,
+        // The hero already shows the title: compact glass bar only (audit B10).
+        largeTitle = false,
     ) {
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
@@ -292,8 +296,8 @@ private fun DistrictHero(displayName: String) {
 private fun DistrictStatsGrid(insight: DistrictInsight?) {
     val na = stringResource(R.string.district_hub_na)
     val countText = insight?.listingCount?.let { LkrFormat.count(it) } ?: na
-    val avgText = insight?.avgPriceLkr?.takeIf { it > 0 }?.let { LkrFormat.price(it) } ?: na
-    val medianText = insight?.medianPriceLkr?.takeIf { it > 0 }?.let { LkrFormat.price(it) } ?: na
+    val avgText = insight?.avgPriceLkr?.takeIf { it > 0 }?.let { lk.motormila.app.ui.common.mn(it) } ?: na
+    val medianText = insight?.medianPriceLkr?.takeIf { it > 0 }?.let { lk.motormila.app.ui.common.mn(it) } ?: na
     val countCd = stringResource(R.string.district_hub_cd_stat_count, countText)
     val avgCd = stringResource(R.string.district_hub_cd_stat_avg, avgText)
     val medianCd = stringResource(R.string.district_hub_cd_stat_median, medianText)
@@ -323,7 +327,7 @@ private fun DistrictStatsGrid(insight: DistrictInsight?) {
                 text = stringResource(R.string.district_hub_change_30d, changeText),
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontWeight = FontWeight.Bold,
-                    color = if (change < 0) MotormilaGood else MotormilaPrimaryBright,
+                    color = lk.motormila.app.ui.common.trendColor(lk.motormila.app.ui.common.trendOf(change)),
                 ),
             )
         }
@@ -354,7 +358,7 @@ private fun DistrictMetricCard(
             text = value,
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Monospace,
+                fontFeatureSettings = "tnum",
                 color = valueColor,
             ),
         )
@@ -379,12 +383,15 @@ private fun NearbyDistrictsRow(
             text = stringResource(R.string.district_hub_nearby),
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
         )
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(vertical = 4.dp),
-        ) {
-            items(nearby, key = { it.district }) { item ->
-                NearbyDistrictChip(item = item, onClick = { onDistrictClick(item.district) })
+        androidx.compose.foundation.layout.BoxWithConstraints {
+            val chipWidth = if (maxWidth <= 480.dp) 168.dp else (maxWidth * 0.30f).coerceAtMost(240.dp)
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 4.dp),
+            ) {
+                items(nearby, key = { it.district }) { item ->
+                    NearbyDistrictChip(item = item, width = chipWidth, onClick = { onDistrictClick(item.district) })
+                }
             }
         }
     }
@@ -394,15 +401,16 @@ private fun NearbyDistrictsRow(
 private fun NearbyDistrictChip(
     item: NearbyDistrict,
     onClick: () -> Unit,
+    width: androidx.compose.ui.unit.Dp = 168.dp,
 ) {
-    val price = item.avgPriceLkr?.takeIf { it > 0 }?.let { LkrFormat.price(it) }
+    val price = item.avgPriceLkr?.takeIf { it > 0 }?.let { lk.motormila.app.ui.common.mn(it) }
         ?: stringResource(R.string.district_hub_na)
     val chipCd = stringResource(R.string.district_hub_cd_nearby, item.district)
     MotormilaSurface(
         onClick = onClick,
         fillMaxWidth = false,
         modifier = Modifier
-            .width(168.dp)
+            .width(width)
             .semantics { contentDescription = chipCd },
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -421,7 +429,7 @@ private fun NearbyDistrictChip(
             price,
             style = MaterialTheme.typography.bodyMedium.copy(
                 fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Monospace,
+                fontFeatureSettings = "tnum",
             ),
         )
         val new7d = item.new7dCount
@@ -465,7 +473,7 @@ private fun TopModelCard(
     entry: HubTopModel,
     onClick: () -> Unit,
 ) {
-    val price = entry.avgPriceLkr.takeIf { it > 0 }?.let { LkrFormat.price(it) }
+    val price = entry.avgPriceLkr.takeIf { it > 0 }?.let { lk.motormila.app.ui.common.mn(it) }
         ?: stringResource(R.string.district_hub_price_na)
     val modelCd = stringResource(
         R.string.district_hub_cd_model,
@@ -491,7 +499,7 @@ private fun TopModelCard(
             text = price,
             style = MaterialTheme.typography.titleMedium.copy(
                 fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Monospace,
+                fontFeatureSettings = "tnum",
             ),
         )
     }
@@ -558,7 +566,7 @@ private fun VelocityRow(
 ) {
     val fraction by animateFloatAsState(
         targetValue = point.listingCount.toFloat() / max,
-        animationSpec = tween(if (reducedMotion) 1 else 700, easing = AppleEasing),
+        animationSpec = if (reducedMotion) snap() else spring(dampingRatio = 0.9f, stiffness = Spring.StiffnessLow, visibilityThreshold = 0.001f),
         label = "velocity-bar",
     )
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {

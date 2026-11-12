@@ -53,3 +53,33 @@ export const LEAD_COPY: Record<LeadKind, { title: string; blurb: string; partner
     cta: "Request insurance quote",
   },
 };
+
+type Translate = (key: string, fallback?: string) => string;
+
+/** LEAD_COPY in the reader's language. The consent text above stays English: the backend stores it verbatim. */
+export function leadCopy(kind: LeadKind, t: Translate): { title: string; blurb: string; partnerLabel: string; cta: string } {
+  const c = LEAD_COPY[kind];
+  switch (kind) {
+    case "finance":
+      return {
+        title: t("tools.lead.copy.finance.title", c.title),
+        blurb: t("tools.lead.copy.finance.blurb", c.blurb),
+        partnerLabel: t("tools.lead.copy.finance.partner", c.partnerLabel),
+        cta: t("tools.lead.copy.finance.cta", c.cta),
+      };
+    case "inspection":
+      return {
+        title: t("tools.lead.copy.inspection.title", c.title),
+        blurb: t("tools.lead.copy.inspection.blurb", c.blurb),
+        partnerLabel: t("tools.lead.copy.inspection.partner", c.partnerLabel),
+        cta: t("tools.lead.copy.inspection.cta", c.cta),
+      };
+    case "insurance":
+      return {
+        title: t("tools.lead.copy.insurance.title", c.title),
+        blurb: t("tools.lead.copy.insurance.blurb", c.blurb),
+        partnerLabel: t("tools.lead.copy.insurance.partner", c.partnerLabel),
+        cta: t("tools.lead.copy.insurance.cta", c.cta),
+      };
+  }
+}

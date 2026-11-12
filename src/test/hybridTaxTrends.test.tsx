@@ -235,8 +235,7 @@ describe("Trends page — hybrid tax arbitrage section (UI)", () => {
     await waitFor(() => {
       const bars = screen.getAllByRole("img", { name: /median price bar/i });
       const widths = bars.map((el) => {
-        const style = (el as HTMLElement).style.width;
-        return parseFloat(style);
+        return parseFloat((el as HTMLElement).dataset.pct ?? "0");
       });
       // lowest-price band should have a smaller bar than the highest-price band
       expect(widths[0]).toBeLessThan(widths[2]);

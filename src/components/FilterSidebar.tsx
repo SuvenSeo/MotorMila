@@ -1,30 +1,43 @@
-import { memo, startTransition, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { memo, startTransition, useId, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { FilterState, Condition, BodyType, Transmission, FuelType, SortOption, VehicleCategory } from "@/types/car";
-import { getListingSources, getMakes, getModels, formatPrice, type ListingSourceStat } from "@/services/api";
+import { getListingSources, getMakes, getModels, type ListingSourceStat } from "@/services/api";
 import { SRI_LANKA_DISTRICTS } from "@/data/districts";
 import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { X } from "lucide-react";
+import { AnimatePresence, m } from "motion/react";
+import { duration, ease, spring, useReducedMotionOrLowData } from "@/lib/motion";
+import { Chip } from "@/components/ui/chip";
+import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { deleteSavedSearch, listSavedSearches, saveSavedSearch } from "@/utils/savedSearches";
+import { formatLkrRange } from "@/lib/price";
+import { cn } from "@/lib/utils";
+import { resolveSearchAlias } from "@/lib/searchAliases";
+import { EMPTY_FILTERS } from "@/lib/searchUrlState";
+import { PriceRangeFilter } from "@/components/search/PriceRangeFilter";
+import { SavedSearchesPanel } from "@/components/search/SavedSearchesPanel";
 
 interface FilterSidebarProps {
   filters: FilterState;
   onFiltersChange: (filters: FilterState) => void;
 }
 
+export interface FilterPanelProps extends FilterSidebarProps {
+  /** Drawer variant: 44px touch targets, no sticky inner header. */
+  touch?: boolean;
+}
+
 const ALL_OPTION = "__all";
 const MIN_YEAR = 1990;
 const MAX_YEAR = Math.max(2026, new Date().getFullYear());
-const MIN_PRICE = 500_000;
-const MAX_PRICE = 100_000_000;
-const PRICE_STEP = 500_000;
 const MAX_MILEAGE = 300_000;
 const MILEAGE_STEP = 10_000;
 
-const QUICK_MAKES = ["Toyota", "Suzuki", "Honda", "Nissan"];
 
 const VEHICLE_CATEGORY_VALUES: Array<{ value: VehicleCategory; key: string; fallback: string }> = [
   { value: "cars", key: "vehicle.cars", fallback: "Cars" },
@@ -57,21 +70,6 @@ const CAR_BODY_VALUES: Array<{ value: BodyType | undefined; key: string; fallbac
   { value: "convertible", key: "body.cabrio", fallback: "Cabrio" },
 ];
 
-const PRICE_PRESET_VALUES: Array<{ key: string; fallback: string; min: number; max: number }> = [
-  { key: "filter.presetUnder3m", fallback: "Under 3M", min: MIN_PRICE, max: 3_000_000 },
-  { key: "filter.preset3to6", fallback: "3M–6M", min: 3_000_000, max: 6_000_000 },
-  { key: "filter.preset6to10", fallback: "6M–10M", min: 6_000_000, max: 10_000_000 },
-  { key: "filter.preset10plus", fallback: "10M+", min: 10_000_000, max: MAX_PRICE },
-];
-
-const ALL_SORT_VALUES: { value: SortOption; key: string; fallback: string }[] = [
-  { value: "newest", key: "filter.sortNewest", fallback: "Newest" },
-  { value: "deal_score", key: "filter.sortBestDeal", fallback: "Best deal" },
-  { value: "price_asc", key: "filter.sortPriceAsc", fallback: "Price ↑" },
-  { value: "price_desc", key: "filter.sortPriceDesc", fallback: "Price ↓" },
-  { value: "mileage_asc", key: "filter.sortLowMileage", fallback: "Low mileage" },
-];
-
 const UNAVAILABLE_PRICE_SORTS = new Set<SortOption>(["deal_score", "price_asc", "price_desc"]);
 
 function clamp(value: number, min: number, max: number) {
@@ -92,47 +90,36 @@ function formatMileage(value?: number, anyLabel = "Any") {
 
 function FilterGroup({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <section className="border-t border-border pt-3 first:border-0 first:pt-0">
-      <p className="tech-label mb-2 text-muted-foreground">{label}</p>
+    <section className="border-t border-separator pt-4 first:border-0 first:pt-0">
+      <p className="mb-2.5 text-footnote font-semibold text-foreground">{label}</p>
       {children}
     </section>
   );
 }
 
+/** One filter option: the kit Chip (selected = filled). Touch drawer: 44px rows. */
 function PillButton({
   active,
   onClick,
   children,
+  touch,
 }: {
   active: boolean;
   onClick: () => void;
   children: ReactNode;
+  touch?: boolean;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-full border px-3 py-1 text-caption font-medium transition-all duration-150 active:scale-[0.97] ${
-        active
-          ? "border-primary/40 bg-primary/15 text-primary shadow-sm"
-          : "border-transparent bg-surface/70 text-muted-foreground hover:border-primary/40 hover:text-foreground hover:bg-surface"
-      }`}
-    >
+    <Chip selected={active} onClick={onClick} className={touch ? "h-11 px-4" : undefined}>
       {children}
-    </button>
+    </Chip>
   );
 }
 
-function selectTriggerClass() {
-  return "h-9 rounded-full border-transparent bg-surface/70 px-3.5 text-sm text-foreground transition-all duration-150 hover:border-primary/40 focus:ring-2 focus:ring-primary/20";
-}
-
-function selectContentClass() {
-  return "max-h-64 rounded-2xl border-transparent bg-popover/95 text-foreground backdrop-blur-2xl shadow-soft-xl";
-}
-
-function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
+export function FilterPanel({ filters, onFiltersChange, touch = false }: FilterPanelProps) {
   const { t } = useAppPreferences();
+  const motionStill = useReducedMotionOrLowData();
+  const archiveSwitchId = useId();
   const [makes, setMakes] = useState<{ make: string; count: number }[]>([]);
   const [modelsList, setModelsList] = useState<{ model: string; count: number }[]>([]);
   const [sourceOptions, setSourceOptions] = useState<ListingSourceStat[]>([]);
@@ -143,20 +130,8 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
     filters.year_min ?? MIN_YEAR,
     filters.year_max ?? MAX_YEAR,
   ]);
-  const [priceRange, setPriceRange] = useState<[number, number]>([
-    filters.price_min ?? MIN_PRICE,
-    filters.price_max ?? MAX_PRICE,
-  ]);
   const [mileageValue, setMileageValue] = useState<number>(filters.mileage_max ?? MAX_MILEAGE);
   const [mileageInput, setMileageInput] = useState<string>(filters.mileage_max ? String(filters.mileage_max) : "");
-  const [priceMinInput, setPriceMinInput] = useState<string>(filters.price_min ? String(filters.price_min) : "");
-  const [priceMaxInput, setPriceMaxInput] = useState<string>(filters.price_max ? String(filters.price_max) : "");
-  // Saved-searches entry point (B2-A): localStorage util only, no backend.
-  const [savedTick, setSavedTick] = useState(0);
-  const savedSearches = useMemo(() => {
-    void savedTick;
-    return listSavedSearches();
-  }, [savedTick]);
 
   useEffect(() => {
     getMakes().then(setMakes).catch(() => setMakes([]));
@@ -189,12 +164,6 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
   }, [filters.year_min, filters.year_max]);
 
   useEffect(() => {
-    setPriceRange([filters.price_min ?? MIN_PRICE, filters.price_max ?? MAX_PRICE]);
-    setPriceMinInput(filters.price_min ? String(filters.price_min) : "");
-    setPriceMaxInput(filters.price_max ? String(filters.price_max) : "");
-  }, [filters.price_min, filters.price_max]);
-
-  useEffect(() => {
     setMileageValue(filters.mileage_max ?? MAX_MILEAGE);
     setMileageInput(filters.mileage_max ? String(filters.mileage_max) : "");
   }, [filters.mileage_max]);
@@ -213,10 +182,6 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
   );
   const carBodyOptions = useMemo(
     () => CAR_BODY_VALUES.map((option) => ({ ...option, label: t(option.key, option.fallback) })),
-    [t],
-  );
-  const pricePresets = useMemo(
-    () => PRICE_PRESET_VALUES.map((preset) => ({ ...preset, label: t(preset.key, preset.fallback) })),
     [t],
   );
   const fuelOptions = useMemo(
@@ -250,18 +215,6 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
       ],
     [t],
   );
-  const allSortOptions = useMemo(
-    () => ALL_SORT_VALUES.map((option) => ({ value: option.value, label: t(option.key, option.fallback) })),
-    [t],
-  );
-  const sortOptions = useMemo(
-    () =>
-      priceAvailability === "unavailable"
-        ? allSortOptions.filter((option) => !UNAVAILABLE_PRICE_SORTS.has(option.value))
-        : allSortOptions,
-    [allSortOptions, priceAvailability],
-  );
-
   const update = useCallback(
     (patch: Partial<FilterState>) => {
       startTransition(() => {
@@ -284,7 +237,7 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
 
   const clear = useCallback(() => {
     startTransition(() => {
-      onFiltersChange({ sort: "newest", page: 1, vehicle_category: "cars" });
+      onFiltersChange({ ...EMPTY_FILTERS });
     });
   }, [onFiltersChange]);
 
@@ -298,7 +251,7 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
         price_availability: shouldUseUnavailable ? "unavailable" : undefined,
         price_min: shouldUseUnavailable ? undefined : filters.price_min,
         price_max: shouldUseUnavailable ? undefined : filters.price_max,
-        sort: shouldUseUnavailable && UNAVAILABLE_PRICE_SORTS.has(filters.sort) ? "newest" : filters.sort,
+        sort: shouldUseUnavailable && UNAVAILABLE_PRICE_SORTS.has(filters.sort) ? "best_match" : filters.sort,
       });
     },
     [filters.price_max, filters.price_min, filters.sort, update],
@@ -307,29 +260,20 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
   const commitKeyword = useCallback(
     (nextKeyword = keywordInput) => {
       const normalized = nextKeyword.trim().split(/\s+/).join(" ");
-      update({ q: normalized || undefined });
+      if (!normalized) {
+        update({ q: undefined });
+        return;
+      }
+      // Singlish / misspelling tolerance: "akwa 2015" → Toyota Aqua + "2015".
+      const alias = resolveSearchAlias(normalized);
+      if (alias.make && !filters.make) {
+        update({ make: alias.make, model: alias.model, q: alias.rest || undefined });
+        setKeywordInput(alias.rest);
+        return;
+      }
+      update({ q: alias.normalized || normalized });
     },
-    [keywordInput, update],
-  );
-
-  const commitPriceInputs = useCallback(
-    (nextMinInput = priceMinInput, nextMaxInput = priceMaxInput) => {
-      const parsedMin = parseOptionalInteger(nextMinInput);
-      const parsedMax = parseOptionalInteger(nextMaxInput);
-
-      const normalizedMin = parsedMin == null ? MIN_PRICE : clamp(parsedMin, MIN_PRICE, MAX_PRICE);
-      const normalizedMax = parsedMax == null ? MAX_PRICE : clamp(parsedMax, MIN_PRICE, MAX_PRICE);
-
-      const min = Math.min(normalizedMin, normalizedMax);
-      const max = Math.max(normalizedMin, normalizedMax);
-
-      setPriceRange([min, max]);
-      update({
-        price_min: parsedMin == null && min === MIN_PRICE ? undefined : min,
-        price_max: parsedMax == null && max === MAX_PRICE ? undefined : max,
-      });
-    },
-    [priceMaxInput, priceMinInput, update],
+    [filters.make, keywordInput, update],
   );
 
   const commitMileageInput = useCallback(
@@ -377,6 +321,13 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
     if (priceAvailability === "unavailable") {
       chips.push({ key: "inv", label: t("filter.noPrice", "No price"), onRemove: () => setInventoryMode("priced") });
     }
+    if (filters.include_archive) {
+      chips.push({
+        key: "archive",
+        label: t("filter.archiveChip", "360K+ Archive"),
+        onRemove: () => update({ include_archive: false }),
+      });
+    }
     if (filters.year_min || filters.year_max) {
       chips.push({
         key: "year",
@@ -387,7 +338,7 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
     if (filters.price_min || filters.price_max) {
       chips.push({
         key: "price",
-        label: `${formatPrice(filters.price_min ?? MIN_PRICE)}–${formatPrice(filters.price_max ?? MAX_PRICE)}`,
+        label: formatLkrRange(filters.price_min, filters.price_max),
         onRemove: () => update({ price_min: undefined, price_max: undefined }),
       });
     }
@@ -402,113 +353,94 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
     return chips;
   }, [activeCategory, filters, priceAvailability, setInventoryMode, setVehicleCategory, t, update, vehicleCategoryOptions]);
 
-  const sliderClass =
-    "py-1 [&>span:first-child]:h-2 [&>span:first-child]:bg-secondary [&>span:first-child>span]:bg-gradient-to-r [&>span:first-child>span]:from-primary [&>span:first-child>span]:to-primary";
+  const selectTriggerClass = touch ? "h-11" : undefined;
+  const fieldClass = touch ? "h-11" : undefined;
 
   return (
-    <div className="space-y-3 px-3 py-3 text-sm">
-      <div className="sticky top-0 z-10 space-y-3 rounded-[1.75rem] border border-transparent bg-card/85 px-3.5 py-3 shadow-soft backdrop-blur-xl">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-semibold tracking-tight text-foreground">{t("filter.title", "Filters")}</p>
-          {activeChips.length > 0 ? (
-            <button
-              type="button"
-              onClick={clear}
-              className="text-caption font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {t("common.clearAll", "Clear all")}
-            </button>
-          ) : null}
-        </div>
+    <div className={cn("space-y-4 text-footnote", touch ? "px-5 py-4" : "p-4")}>
+      <div
+        className={cn(
+          "space-y-3",
+          // Desktop rail: the header + active chips stay pinned while the groups scroll.
+          !touch && "sticky top-0 z-10 -mx-4 -mt-4 bg-surface-1 px-4 pb-1 pt-4",
+        )}
+      >
+        {/* In the drawer the sheet header already shows "Filters" + "Clear all".
+            Not rendered (rather than display:none) there: a hidden child still
+            got space-y margin and left a gap above "With price". */}
+        {touch ? null : (
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-callout font-semibold text-foreground">{t("filter.title", "Filters")}</h2>
+            {activeChips.length > 0 ? (
+              <Button type="button" variant="tertiary" size="sm" className="h-7 px-2.5" onClick={clear}>
+                {t("common.clearAll", "Clear all")}
+              </Button>
+            ) : null}
+          </div>
+        )}
 
         {activeChips.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
-            {activeChips.map((chip) => (
-              <button
-                key={chip.key}
-                type="button"
-                onClick={chip.onRemove}
-                className="inline-flex max-w-full items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-caption font-medium text-primary-bright"
-              >
-                <span className="truncate">{chip.label}</span>
-                <X className="h-3 w-3 shrink-0 opacity-70" />
-              </button>
-            ))}
+            <AnimatePresence initial={false} mode="popLayout">
+              {activeChips.map((chip) => (
+                <m.span
+                  key={chip.key}
+                  layout={!motionStill}
+                  initial={motionStill ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: motionStill ? 1 : 0.9, transition: { duration: duration.short, ease: ease.accelerate } }}
+                  transition={motionStill ? { duration: duration.micro } : spring.snappy}
+                  className="inline-flex max-w-full"
+                >
+                  <Chip
+                    selected
+                    onClick={chip.onRemove}
+                    aria-label={t("search.removeFilterAria", "Remove filter {label}", { label: chip.label })}
+                    className={cn("max-w-full gap-1 pl-3 pr-2", chip.key !== "q" && "capitalize", touch && "h-11")}
+                  >
+                    <span className="truncate">{chip.label}</span>
+                    <X className="shrink-0 opacity-70" aria-hidden />
+                  </Chip>
+                </m.span>
+              ))}
+            </AnimatePresence>
           </div>
         ) : null}
 
-        <div className="flex gap-1 rounded-full border border-transparent bg-surface/80 p-1">
-          <button
-            type="button"
-            onClick={() => setInventoryMode("priced")}
-            className={`flex-1 rounded-full px-2.5 py-1 text-caption font-medium transition-all ${
-              priceAvailability === "priced" ? "bg-primary/15 text-primary-bright shadow-xs" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {t("filter.withPrice", "With price")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setInventoryMode("unavailable")}
-            className={`flex-1 rounded-full px-2.5 py-1 text-caption font-medium transition-all ${
-              priceAvailability === "unavailable" ? "bg-primary/15 text-primary-bright shadow-xs" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {t("filter.noPrice", "No price")}
-          </button>
-        </div>
-      </div>
+        <SegmentedControl
+          value={priceAvailability}
+          onValueChange={(v) => setInventoryMode(v)}
+          aria-label={t("filter.priceModeAria", "Listings with or without a price")}
+          size={touch ? "touch" : "md"}
+          options={[
+            { value: "priced", label: t("filter.withPrice", "With price") },
+            { value: "unavailable", label: t("filter.noPrice", "No price") },
+          ]}
+        />
 
-      <FilterGroup label={t("filter.savedSearches", "Saved searches")}>
-        <div className="space-y-1.5">
-          <button
-            type="button"
-            onClick={() => {
-              const label = [filters.make, filters.model, filters.district].filter(Boolean).join(" · ") || t("filter.currentSearch", "Current search");
-              saveSavedSearch(String(label), filters);
-              setSavedTick((n) => n + 1);
-            }}
-            className="w-full rounded-full border border-transparent bg-surface/70 px-3 py-1.5 text-caption font-medium text-foreground transition-all hover:border-primary/40 hover:bg-surface"
-          >
-            {t("filter.saveCurrentSearch", "Save current search")}
-          </button>
-          {savedSearches.length === 0 ? (
-            <p className="text-caption text-muted-foreground">{t("filter.noSavedSearches", "No saved searches yet.")}</p>
-          ) : (
-            <ul className="space-y-1">
-              {savedSearches.slice(0, 5).map((saved) => (
-                <li key={saved.id} className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => onFiltersChange({ ...saved.filters, page: 1 } as FilterState)}
-                    className="min-w-0 flex-1 truncate rounded-full border border-transparent px-2 py-1 text-left text-caption text-primary-bright hover:border-primary/25 hover:bg-primary/5"
-                    title={saved.name}
-                  >
-                    {saved.name}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      deleteSavedSearch(saved.id);
-                      setSavedTick((n) => n + 1);
-                    }}
-                    aria-label={`Delete ${saved.name}`}
-                    className="rounded-full p-1 text-muted-foreground transition-all hover:bg-surface hover:text-foreground active:scale-[0.97]"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </FilterGroup>
+        <label htmlFor={archiveSwitchId} className={cn("flex cursor-pointer items-center justify-between gap-3", touch ? "min-h-11" : "min-h-8")}>
+          <span className="min-w-0">
+            <span className="block text-footnote font-medium text-foreground">
+              {t("filter.includeArchive", "Include 360K+ price archive")}
+            </span>
+            <span className="block text-caption text-label-2">
+              {t("filter.includeArchiveHint", "Adds older ads for price history")}
+            </span>
+          </span>
+          <Switch
+            id={archiveSwitchId}
+            checked={Boolean(filters.include_archive)}
+            onCheckedChange={(next) => update({ include_archive: next })}
+          />
+        </label>
+      </div>
 
       <FilterGroup label={t("filter.vehicle", "Vehicle")}>
         <div className="flex flex-wrap gap-1.5">
           {vehicleCategoryOptions.map((option) => (
             <PillButton
               key={option.value}
+              touch={touch}
               active={activeCategory === option.value}
               onClick={() => setVehicleCategory(option.value)}
             >
@@ -531,20 +463,14 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
           }}
           placeholder={t("filter.searchPlaceholder", "Make, model, year…")}
           aria-label={t("filter.searchAria", "Search listings")}
-          className="h-9 rounded-full border-transparent bg-surface/70 text-sm text-foreground"
+          className={fieldClass}
         />
       </FilterGroup>
 
       <FilterGroup label={t("common.make", "Make")}>
-        <div className="mb-2 flex flex-wrap gap-1.5">
-          {QUICK_MAKES.map((make) => (
-            <PillButton key={make} active={filters.make === make} onClick={() => update({ make, model: undefined })}>
-              {make}
-            </PillButton>
-          ))}
-        </div>
         <Combobox
           label={t("common.make", "Make")}
+          hideLabel
           options={makes.map((make) => ({ value: make.make, label: `${make.make} (${make.count})` }))}
           value={filters.make || null}
           onChange={(value) => update({ make: value || undefined, model: undefined })}
@@ -562,14 +488,14 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
                 onChange={(event) => setModelSearchQuery(event.target.value)}
                 placeholder={t("filter.findModel", "Find model…")}
                 aria-label={t("common.model", "Model")}
-                className="h-9 rounded-full border-transparent bg-surface/70 text-sm text-foreground"
+                className={fieldClass}
               />
             ) : null}
             <Select value={filters.model || ALL_OPTION} onValueChange={(value) => update({ model: value === ALL_OPTION ? undefined : value })}>
-              <SelectTrigger aria-label={t("filter.byModelAria", "Filter by model")} className={selectTriggerClass()}>
+              <SelectTrigger aria-label={t("filter.byModelAria", "Filter by model")} className={selectTriggerClass}>
                 <SelectValue placeholder={t("common.allModels", "All models")} />
               </SelectTrigger>
-              <SelectContent className={selectContentClass()}>
+              <SelectContent className="max-h-64">
                 <SelectItem value={ALL_OPTION}>{t("common.allModels", "All models")}</SelectItem>
                 {filteredModels.map((model) => (
                   <SelectItem key={model.model} value={model.model}>
@@ -584,92 +510,18 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
 
       <FilterGroup label={t("filter.price", "Price")}>
         {priceAvailability === "unavailable" ? (
-          <p className="text-caption text-muted-foreground">{t("filter.priceUnavailableHint", "Switch to \"With price\" to filter by budget.")}</p>
+          <p className="text-footnote text-label-2">{t("filter.priceUnavailableHint", "Switch to \"With price\" to filter by budget.")}</p>
         ) : (
-          <div className="space-y-2.5">
-            <p className="num text-caption font-medium text-foreground">
-              {formatPrice(priceRange[0])} – {formatPrice(priceRange[1])}
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {pricePresets.map((preset) => {
-                const active = priceRange[0] === preset.min && priceRange[1] === preset.max;
-                return (
-                  <PillButton
-                    key={preset.label}
-                    active={active}
-                    onClick={() => {
-                      setPriceRange([preset.min, preset.max]);
-                      setPriceMinInput(String(preset.min));
-                      setPriceMaxInput(String(preset.max));
-                      update({
-                        price_min: preset.min === MIN_PRICE ? undefined : preset.min,
-                        price_max: preset.max === MAX_PRICE ? undefined : preset.max,
-                      });
-                    }}
-                  >
-                    {preset.label}
-                  </PillButton>
-                );
-              })}
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Input
-                value={priceMinInput}
-                onChange={(event) => setPriceMinInput(event.target.value.replace(/[^\d]/g, ""))}
-                onBlur={() => commitPriceInputs()}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    commitPriceInputs();
-                  }
-                }}
-                inputMode="numeric"
-                placeholder={t("filter.minLkr", "Min LKR")}
-                aria-label={t("filter.minPriceAria", "Minimum price")}
-                className="h-9 rounded-full border-transparent bg-surface/70 text-sm text-foreground"
-              />
-              <Input
-                value={priceMaxInput}
-                onChange={(event) => setPriceMaxInput(event.target.value.replace(/[^\d]/g, ""))}
-                onBlur={() => commitPriceInputs()}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    commitPriceInputs();
-                  }
-                }}
-                inputMode="numeric"
-                placeholder={t("filter.maxLkr", "Max LKR")}
-                aria-label={t("filter.maxPriceAria", "Maximum price")}
-                className="h-9 rounded-full border-transparent bg-surface/70 text-sm text-foreground"
-              />
-            </div>
-            <Slider
-              thumbLabels={[t("filter.minPriceSlider", "Minimum price slider"), t("filter.maxPriceSlider", "Maximum price slider")]}
-              min={MIN_PRICE}
-              max={MAX_PRICE}
-              step={PRICE_STEP}
-              value={priceRange}
-              onValueChange={(value) => {
-                const nextRange: [number, number] = [value[0] ?? MIN_PRICE, value[1] ?? MAX_PRICE];
-                setPriceRange(nextRange);
-                setPriceMinInput(String(nextRange[0]));
-                setPriceMaxInput(String(nextRange[1]));
-              }}
-              onValueCommit={(value) =>
-                update({
-                  price_min: value[0] === MIN_PRICE ? undefined : value[0],
-                  price_max: value[1] === MAX_PRICE ? undefined : value[1],
-                })
-              }
-              className={sliderClass}
-            />
-          </div>
+          <PriceRangeFilter
+            filters={filters}
+            touch={touch}
+            onCommit={(price_min, price_max) => update({ price_min, price_max })}
+          />
         )}
       </FilterGroup>
 
       <FilterGroup label={t("common.year", "Year")}>
-        <p className="num mb-2 text-caption font-medium text-foreground">
+        <p className="num mb-1 text-footnote font-medium text-foreground">
           {yearRange[0]} – {yearRange[1]}
         </p>
         <Slider
@@ -685,8 +537,7 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
               year_max: value[1] === MAX_YEAR ? undefined : value[1],
             })
           }
-          className={sliderClass}
-        />
+                  />
       </FilterGroup>
 
       <FilterGroup label={t("common.fuel", "Fuel")}>
@@ -694,6 +545,7 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
           {fuelOptions.map((option) => (
             <PillButton
               key={option.value ?? "all"}
+              touch={touch}
               active={filters.fuel_type === option.value || (!filters.fuel_type && !option.value)}
               onClick={() => update({ fuel_type: option.value })}
             >
@@ -708,6 +560,7 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
           {transmissionOptions.map((option) => (
             <PillButton
               key={option.value ?? "all"}
+              touch={touch}
               active={filters.transmission === option.value || (!filters.transmission && !option.value)}
               onClick={() => update({ transmission: option.value })}
             >
@@ -722,6 +575,7 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
           {conditionOptions.map((option) => (
             <PillButton
               key={option.label}
+              touch={touch}
               active={filters.condition === option.value}
               onClick={() => update({ condition: option.value })}
             >
@@ -737,6 +591,7 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
             {carBodyOptions.map((option) => (
               <PillButton
                 key={option.label}
+                touch={touch}
                 active={filters.body_type === option.value || (!filters.body_type && !option.value)}
                 onClick={() => update({ body_type: option.value })}
               >
@@ -763,9 +618,9 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
               inputMode="numeric"
               placeholder={t("filter.maxKm", "Max km")}
               aria-label={t("filter.maxMileageAria", "Maximum mileage")}
-              className="h-9 flex-1 rounded-full border-transparent bg-surface/70 text-sm text-foreground"
+              className={cn("num flex-1", fieldClass)}
             />
-            <span className="num shrink-0 text-caption font-medium text-muted-foreground">{formatMileage(mileageValue === MAX_MILEAGE ? undefined : mileageValue, t("filter.anyMileage", "Any"))}</span>
+            <span className="num shrink-0 text-footnote font-medium text-label-2">{formatMileage(mileageValue === MAX_MILEAGE ? undefined : mileageValue, t("filter.anyMileage", "Any"))}</span>
           </div>
           <Slider
             thumbLabel={t("filter.maxMileageSlider", "Maximum mileage slider")}
@@ -779,17 +634,16 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
               setMileageInput(String(nextMileage));
             }}
             onValueCommit={(value) => update({ mileage_max: value[0] === MAX_MILEAGE ? undefined : value[0] })}
-            className={sliderClass}
-          />
+                      />
         </div>
       </FilterGroup>
 
       <FilterGroup label={t("common.district", "District")}>
         <Select value={filters.district || ALL_OPTION} onValueChange={(value) => update({ district: value === ALL_OPTION ? undefined : value })}>
-          <SelectTrigger aria-label={t("filter.byDistrictAria", "Filter by district")} className={selectTriggerClass()}>
+          <SelectTrigger aria-label={t("filter.byDistrictAria", "Filter by district")} className={selectTriggerClass}>
             <SelectValue placeholder={t("common.allDistricts", "All districts")} />
           </SelectTrigger>
-          <SelectContent className={selectContentClass()}>
+          <SelectContent className="max-h-64">
             <SelectItem value={ALL_OPTION}>{t("common.allDistricts", "All districts")}</SelectItem>
             {SRI_LANKA_DISTRICTS.map((district) => (
               <SelectItem key={district} value={district}>
@@ -802,10 +656,10 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
 
       <FilterGroup label={t("common.source", "Source")}>
         <Select value={filters.source || ALL_OPTION} onValueChange={(value) => update({ source: value === ALL_OPTION ? undefined : value })}>
-          <SelectTrigger aria-label={t("filter.bySourceAria", "Filter by source")} className={selectTriggerClass()}>
+          <SelectTrigger aria-label={t("filter.bySourceAria", "Filter by source")} className={selectTriggerClass}>
             <SelectValue placeholder={t("common.allSources", "All sources")} />
           </SelectTrigger>
-          <SelectContent className={selectContentClass()}>
+          <SelectContent className="max-h-64">
             <SelectItem value={ALL_OPTION}>{t("common.allSources", "All sources")}</SelectItem>
             {sourceOptions.map((source) => (
               <SelectItem key={source.source} value={source.source}>
@@ -816,19 +670,8 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
         </Select>
       </FilterGroup>
 
-      <FilterGroup label={t("filter.sort", "Sort")}>
-        <Select value={filters.sort} onValueChange={(value) => update({ sort: value as SortOption })}>
-          <SelectTrigger aria-label={t("filter.sortAria", "Sort listings")} className={selectTriggerClass()}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className={selectContentClass()}>
-            {sortOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <FilterGroup label={t("filter.savedSearches", "Saved searches")}>
+        <SavedSearchesPanel filters={filters} onOpen={(next) => onFiltersChange(next)} touch={touch} />
       </FilterGroup>
     </div>
   );
@@ -836,8 +679,10 @@ function FilterContent({ filters, onFiltersChange }: FilterSidebarProps) {
 
 export const FilterSidebar = memo(function FilterSidebar({ filters, onFiltersChange }: FilterSidebarProps) {
   return (
-    <aside className="surface surface--glass filter-command-rail hidden w-full max-h-[calc(100vh-7.5rem)] overflow-y-auto rounded-[2rem] border border-transparent shadow-soft lg:block">
-      <FilterContent filters={filters} onFiltersChange={onFiltersChange} />
+    <aside className="hidden w-full lg:block">
+      <Card padding="none" className="max-h-[calc(100vh-7.5rem)] overflow-y-auto overscroll-contain">
+        <FilterPanel filters={filters} onFiltersChange={onFiltersChange} />
+      </Card>
     </aside>
   );
 });

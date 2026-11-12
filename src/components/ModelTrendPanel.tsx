@@ -1,85 +1,162 @@
-import AreaChart from "@tremor/react/dist/components/chart-elements/AreaChart/AreaChart.js";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { TrendingDown, TrendingUp } from "lucide-react";
+import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis, ResponsiveContainer } from "recharts";
+import { Minus, TrendingDown, TrendingUp } from "lucide-react";
 import { getPriceTrends, formatPrice } from "@/services/api";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { cn } from "@/lib/utils";
+import { formatChangePct, formatMnShort, paddedDomain } from "@/lib/dataSanity";
+import { TrendToneLegend } from "@/components/data/TrendToneLegend";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  ChartFrame,
+  ChartTooltipCard,
+  chartAxis,
+  chartColor,
+  chartGrid,
+  chartTooltip,
+  toneBadge,
+  toneColor,
+  toneFor,
+  useChartCalm,
+  useChartDraw,
+} from "@/components/ui/chart-theme";
+
+/** "2026-03" → "Mar 26" — short enough that 12 ticks never overprint. */
+export function shortMonth(key: string): string {
+  const [y, m] = String(key || "").split("-").map(Number);
+  if (!y || !m || m < 1 || m > 12) return key;
+  return new Date(y, m - 1, 1).toLocaleDateString("en-GB", { month: "short", year: "2-digit" });
+}
 
 /**
- * Per-model 12-month price trend — Tremor AreaChart (deep import: no barrel,
- * so recharts stays out of the main chunk). Wired to the real trend API.
- * Wrapped in `.apex` to re-tokenize Tremor's emerald to Deal Green.
+ * Per-model 12-month price trend on the shared chart theme, wired to the real
+ * trend API. Y-axis is a padded domain (never forced to zero) labelled in
+ * millions; colour follows the buyer-neutral tone (down green, up amber,
+ * stable slate). Loading → chart skeleton; <2 points → empty state; error →
+ * retry, all in the same footprint.
  */
-export function ModelTrendPanel({ make, model }: { make: string; model: string }) {
+export function ModelTrendPanel({
+  make,
+  model,
+  displayMake,
+  displayModel,
+}: {
+  make: string;
+  model: string;
+  /** Human casing for copy (route params can be lowercase slugs). */
+  displayMake?: string;
+  displayModel?: string;
+}) {
+  const names = { make: displayMake ?? make, model: displayModel ?? model };
   const { t } = useAppPreferences();
-  const { data, isLoading } = useQuery({
+  const calm = useChartCalm();
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["model-trend-panel", make, model],
     queryFn: () => getPriceTrends(make, model),
     enabled: Boolean(make && model),
     staleTime: QUERY_STALE.hub,
   });
 
-  const points = (data ?? []).filter((p) => Number(p.median_price) > 0);
-  if (!isLoading && points.length < 2) return null;
+  const points = useMemo(() => (data ?? []).filter((p) => Number(p.median_price) > 0), [data]);
+  const chartData = useMemo(
+    () => points.map((p) => ({ month: p.month, label: shortMonth(p.month), median: Number(p.median_price) })),
+    [points],
+  );
+  const domain = useMemo(() => paddedDomain(chartData.map((d) => d.median)), [chartData]);
+  const ready = !isLoading && !isError && chartData.length >= 2;
+  const draw = useChartDraw(ready);
 
-  const chartData = points.map((p) => ({
-    month: p.month,
-    [t("modelTrend.medianPrice", "Median price")]: Number(p.median_price),
-  }));
   const first = Number(points[0]?.median_price ?? 0);
   const last = Number(points[points.length - 1]?.median_price ?? 0);
-  const dropPct = first > 0 ? ((first - last) / first) * 100 : 0;
-  const softened = dropPct > 0;
+  const changePct = points.length >= 2 && first > 0 ? ((last - first) / first) * 100 : null;
+  const tone = toneFor(changePct);
+  const stroke = toneColor(tone);
+  const Icon = tone === "down" ? TrendingDown : tone === "up" ? TrendingUp : Minus;
+  const state = isLoading ? "loading" : isError ? "error" : chartData.length < 2 ? "empty" : "ready";
 
   return (
-    <div className="apex rounded-2xl border border-border bg-card p-6 shadow-soft">
+    <Card padding="md" className="min-w-0">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-[12px] font-semibold text-muted-foreground">
-            {t("modelTrend.eyebrow", "Price history")}
-          </p>
-          <h3 className="mt-1 font-display text-xl font-semibold text-foreground">
-            {t("modelTrend.title", "{make} {model} — 12-month trend", { make, model })}
+        <div className="min-w-0">
+          <p className="text-footnote font-semibold text-primary">{t("modelTrend.eyebrow", "Price history")}</p>
+          <h3 className="mt-1 font-display text-title3 font-semibold text-foreground">
+            {t("modelTrend.title", "{make} {model} — 12-month trend", { ...names })}
           </h3>
-          <p className="mt-1 text-[13px] text-muted-foreground">
-            {t("modelTrend.sub", "Median asking price · trailing 12 months")}
-          </p>
+          <p className="mt-1 text-footnote text-label-2">{t("modelTrend.sub", "Median asking price · trailing 12 months")}</p>
         </div>
-        {!isLoading && (
-          <span
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold",
-              softened ? "bg-deal-green/10 text-deal-green" : "bg-primary/10 text-primary",
-            )}
-          >
-            {softened ? (
-              <TrendingDown className="h-4 w-4" aria-hidden />
-            ) : (
-              <TrendingUp className="h-4 w-4" aria-hidden />
-            )}
-            {softened ? "−" : "+"}
-            {Math.abs(dropPct).toFixed(1)}% {t("modelTrend.thisYear", "this year")}
-          </span>
+        {state === "ready" && changePct !== null && (
+          <Badge variant={toneBadge(tone)} className="tabular-nums">
+            <Icon aria-hidden />
+            {tone === "stable" ? t("trendTone.stableShort", "Stable") : formatChangePct(changePct)}{" "}
+            {t("modelTrend.thisYear", "this year")}
+          </Badge>
         )}
       </div>
-      {isLoading ? (
-        <div className="mt-6 h-72 animate-pulse rounded-xl bg-surface" aria-hidden />
-      ) : (
-        <AreaChart
-          className="mt-6 h-72"
-          data={chartData}
-          index="month"
-          categories={[t("modelTrend.medianPrice", "Median price")]}
-          colors={["blue"]}
-          valueFormatter={(v: number) => formatPrice(v)}
-          showLegend={false}
-          showGridLines={false}
-          showAnimation={true}
-          curveType="monotone"
-          yAxisWidth={72}
-        />
-      )}
-    </div>
+      <ChartFrame
+        state={state}
+        className="mt-5"
+        heightClass="h-64 sm:h-72"
+        emptyTitle={t("modelTrend.emptyTitle", "Not enough months yet")}
+        emptyBody={t("modelTrend.emptyBody", "The trend line appears once two months of {make} {model} ads are in.", { ...names })}
+        errorTitle={t("modelTrend.errorTitle", "The trend didn't load")}
+        onRetry={() => void refetch()}
+        label={t("modelTrend.aria", "{make} {model} median asking price, {n} months, latest {price}", {
+          ...names,
+          n: chartData.length,
+          price: formatPrice(last),
+        })}
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={chartData} margin={{ top: 14, right: 8, bottom: 0, left: 0 }}>
+            <defs>
+              <linearGradient id="modelTrendFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={stroke} stopOpacity={0.22} />
+                <stop offset="100%" stopColor={stroke} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid {...chartGrid} />
+            <XAxis {...chartAxis} dataKey="label" minTickGap={28} interval="preserveStartEnd" />
+            <YAxis
+              {...chartAxis}
+              domain={domain ?? ["auto", "auto"]}
+              tickFormatter={(v: number) => formatMnShort(v)}
+              tickCount={4}
+              width={68}
+            />
+            <Tooltip
+              {...chartTooltip(calm)}
+              content={(p) => (
+                <ChartTooltipCard
+                  {...p}
+                  rows={(payload) => [
+                    {
+                      label: t("modelTrend.medianPrice", "Median price"),
+                      value: formatPrice(Number(payload?.[0]?.value)),
+                      color: stroke,
+                    },
+                  ]}
+                />
+              )}
+            />
+            <Area
+              dataKey="median"
+              type="monotone"
+              stroke={stroke}
+              strokeWidth={2.5}
+              fill="url(#modelTrendFill)"
+              dot={false}
+              activeDot={{ r: 4, strokeWidth: 2, fill: stroke, stroke: chartColor.surface }}
+              {...draw}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </ChartFrame>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <TrendToneLegend />
+        <span className="text-caption text-label-2">{t("chart.mnNote", "Mn = million rupees (Rs 1,000,000)")}</span>
+      </div>
+    </Card>
   );
 }

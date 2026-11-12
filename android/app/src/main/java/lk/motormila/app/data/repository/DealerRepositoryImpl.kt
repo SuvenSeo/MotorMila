@@ -89,7 +89,7 @@ class DealerRepositoryImpl @Inject constructor(
      * (Admin → Dealers uses POST /admin/dealers/{id}/verify).
      */
     @Deprecated("Admin-only endpoint; dealer UI never calls it.")
-    suspend fun verifyDealer(claimToken: String, code: String? = null): DealerClaim = withContext(io) {
-        api.verifyDealer(DealerVerifyRequestDto(claimToken, code)).toDomain()
+    suspend fun verifyDealer(claimToken: String, adminToken: String): DealerClaim = withContext(io) {
+        api.verifyDealer(DealerVerifyRequestDto(claimToken = claimToken, adminToken = adminToken)).toDomain()
     }
 }

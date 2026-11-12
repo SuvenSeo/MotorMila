@@ -1,0 +1,91 @@
+/* ============================================================================
+   Floating layers & bottom dock (ui/shell)
+
+   One z-index scale for everything that floats, and one bottom area that the
+   mobile nav, the compare tray and the app promo all share.
+   Tailwind exposes the same scale as `z-base`, `z-sticky`, `z-floating`,
+   `z-bottom-nav`, `z-header`, `z-overlay`, `z-modal`, `z-toast`, `z-skip`,
+   `z-devtools` (see tailwind.config.ts → theme.extend.zIndex).
+
+   Order, low → high:
+     base       in-flow content that needs to sit above section backgrounds
+     sticky     in-page sticky bars (filters, table headers)
+     floating   compare tray, app promo strip
+     bottom-nav mobile bottom navigation
+     header     site header (+ its menus)
+     overlay    full-screen overlays + their backdrops
+     modal      blocking dialogs (shadcn dialogs/sheets use z-50 = header,
+                and portal after the header so they still paint on top)
+     toast      sonner toasts
+     skip       skip-to-content link
+     devtools   dev-only tooling (font studio, hero lab)
+   ========================================================================== */
+
+:root {
+  --z-base: 1;
+  --z-sticky: 20;
+  --z-floating: 40;
+  --z-bottom-nav: 45;
+  --z-header: 50;
+  --z-overlay: 60;
+  --z-modal: 70;
+  --z-toast: 80;
+  --z-skip: 90;
+  --z-devtools: 100;
+
+  /* Height the bottom nav reserves on mobile: 12px gap + 64px bar + safe area. */
+  --dock-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  /* Extra stack height claimed by a transient strip (app promo) above the nav.
+     Stays 0 here: lib/dock.ts writes it on the consumers only (a change on
+     :root restyles the whole page). */
+  --dock-extra: 0px;
+  --dock-gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --dock-bottom: 0px;
+    --dock-gap: 1.5rem;
+  }
+}
+
+/* Anything floating above the dock (compare tray). */
+.dock-float {
+  position: fixed;
+  bottom: calc(var(--dock-bottom) + var(--dock-extra) + var(--dock-gap));
+  z-index: var(--z-floating);
+  transition: bottom var(--dur-short) var(--ease-standard), opacity var(--dur-short) var(--ease-standard), transform var(--dur-short) var(--ease-standard);
+}
+
+/* Transient strip sitting directly on top of the nav (mobile) / corner (desktop). */
+.dock-strip {
+  position: fixed;
+  bottom: calc(var(--dock-bottom) + var(--dock-gap));
+  z-index: var(--z-floating);
+}
+
+/* Page content never ends under the dock: room for nav + the compare tray. */
+.app-shell-dock-pad {
+  /* + the [data-dock-spacer] height while the app promo strip is up. */
+  padding-bottom: calc(var(--dock-bottom) + 4.5rem);
+}
+@media (min-width: 768px) {
+  .app-shell-dock-pad { padding-bottom: 0; }
+}
+
+/* Keyboard open on a phone: floating controls must never sit over a field. */
+html[data-typing="true"] .dock-hide-when-typing {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.9);
+}
+@media (min-width: 768px) {
+  html[data-typing="true"] .dock-hide-when-typing {
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dock-float { transition: none; }
+}

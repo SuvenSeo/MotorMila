@@ -62,7 +62,7 @@ data class EvHubUiState(
 
     val paybackYears: Int?
         get() {
-            val median = ev?.medianLkr ?: return null
+            val median = ev?.avgPriceLkr ?: return null
             val aqua = ev?.aquaMedianLkr ?: return null
             val premium = median - aqua
             val saving = annualFuelSavingLkr

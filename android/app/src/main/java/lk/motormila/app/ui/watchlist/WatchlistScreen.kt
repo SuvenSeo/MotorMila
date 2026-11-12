@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import lk.motormila.app.ui.common.mmScreenSafe
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -56,7 +57,6 @@ import lk.motormila.app.core.ui.SkeletonList
 import lk.motormila.app.core.ui.SteeringWheelGraphic
 import lk.motormila.app.domain.model.WatchItem
 import lk.motormila.app.ui.components.MotormilaIconAction
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.components.cascadeDelay
 import lk.motormila.app.ui.theme.MotormilaGoodContainer
@@ -82,9 +82,11 @@ fun WatchlistScreen(
         }
     }
 
-    MotormilaPage(
+    lk.motormila.app.ui.common.MmScreen(
         title = if (state.items.isEmpty()) "Watchlist" else "Watchlist (${state.items.size})",
+        showBack = false,
         snackbarHostState = snacks,
+        edgeToEdge = true,
         actions = {
             MotormilaIconAction(
                 icon = Icons.Filled.Refresh,
@@ -100,30 +102,33 @@ fun WatchlistScreen(
             }
         },
     ) {
-        PullToRefreshBox(
+        lk.motormila.app.ui.components.MmPullToRefresh(
             isRefreshing = state.isRefreshing,
             onRefresh = { viewModel.onEvent(WatchlistUiEvent.Refresh) },
+            indicatorTop = lk.motormila.app.ui.common.LocalMmScreenInsets.current.top,
             modifier = Modifier.fillMaxSize(),
         ) {
             when {
-                state.isLoading -> SkeletonList()
+                state.isLoading -> Box(Modifier.mmScreenSafe()) { SkeletonList() }
                 state.error != null && state.items.isEmpty() ->
-                    ErrorRetry(state.error ?: "Error", onRetry = { viewModel.onEvent(WatchlistUiEvent.Refresh) })
+                    Box(Modifier.mmScreenSafe()) { ErrorRetry(state.error ?: "Error", onRetry = { viewModel.onEvent(WatchlistUiEvent.Refresh) }) }
 
-                state.items.isEmpty() -> EmptyState(
+                state.items.isEmpty() -> Box(Modifier.mmScreenSafe()) { EmptyState(
                     title = "Nothing watched yet",
                     body = "Tap the steering wheel — save a listing and we'll flag every price drop against fair value.",
                     ctaLabel = "Browse listings",
                     onCta = onBrowse,
                     graphic = { SteeringWheelGraphic() },
-                )
+                ) }
 
                 else -> LazyColumn(
                     modifier = Modifier.fillMaxSize(),
+                    contentPadding = lk.motormila.app.ui.common.mmScreenPadding(top = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     itemsIndexed(state.items, key = { _, it -> it.id }) { index, item ->
-                        Box(Modifier.motormilaReveal(delayMillis = cascadeDelay(index))) {
+                        // Removing a saved car closes the gap on a spring instead of jumping.
+                        Box(Modifier.animateItem(fadeInSpec = null, placementSpec = lk.motormila.app.ui.theme.MmMotion.itemPlacement, fadeOutSpec = androidx.compose.animation.core.spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow)).motormilaReveal(delayMillis = cascadeDelay(index))) {
                             WatchRow(
                                 item = item,
                                 flash = item.id in state.droppedIds,
@@ -213,7 +218,7 @@ private fun WatchRow(
             MotormilaSurface(
                 modifier = Modifier
                     .padding(horizontal = 16.dp)
-                    .semantics { contentDescription = "Watched ${item.title} at ${formatLkr(item.priceLkr)}" },
+                    .semantics { contentDescription = "Watched ${item.title} at ${lk.motormila.app.ui.common.mn(item.priceLkr)}" },
                 onClick = onOpen,
                 highlighted = flash,
             ) {
@@ -231,7 +236,7 @@ private fun WatchRow(
                     Column(Modifier.weight(1f)) {
                         Text(item.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                         Text(
-                            "${formatLkr(item.priceLkr)} · ${item.district}",
+                            "${lk.motormila.app.ui.common.mn(item.priceLkr)} · ${item.district}",
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         // Price-drop badge vs the add-price baseline (WatchItem.dropPct).
@@ -242,7 +247,7 @@ private fun WatchRow(
                                     text = "▼ ${LkrFormat.deltaPct(item.dropPct())}",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF69F0AE),
+                                    color = lk.motormila.app.ui.theme.MotormilaGoodText,
                                     modifier = Modifier
                                         .clip(MotormilaRadius.pill)
                                         .background(MotormilaGoodContainer)
@@ -264,7 +269,7 @@ private fun WatchRow(
                             )
                         } else if (item.fmvLkr != null) {
                             Text(
-                                "FMV ${formatLkr(item.fmvLkr)}",
+                                "FMV ${lk.motormila.app.ui.common.mn(item.fmvLkr)}",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

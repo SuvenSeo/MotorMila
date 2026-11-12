@@ -1,11 +1,11 @@
-# Scrape → refresh public snapshots → optional Vercel redeploy
+# Scrape → refresh public snapshots → optional Cloudflare Pages rebuild
 #
 # Manual + weekly full-catalog refresh (no cron). This is the FULL catalog
 # export (one big read — budgeted weekly per docs/neon-egress-budget.md);
 # daily runs use --skip-catalog stats-only exports instead.
 #   1) scraping one source (default: ikman)
 #   2) rebuilding /snapshots for the public SPA
-#   3) redeploying production WITH gitignored snapshot JSON (if VERCEL_TOKEN set)
+#   3) uploading snapshots to R2, then triggering a Pages rebuild (retry of the latest github:push production deployment)
 #
 # Walkthrough: docs/scrape-export-redeploy-walkthrough.md
 
@@ -42,7 +42,7 @@ on:
         type: boolean
         default: true
       redeploy:
-        description: "Redeploy motormila.vercel.app with refreshed snapshots (needs VERCEL_TOKEN)"
+        description: "Rebuild motormila.pages.dev with refreshed snapshots (uploads to R2, then retries the latest github:push production deployment; needs CLOUDFLARE_API_TOKEN)"
         type: boolean
         default: true
 
@@ -104,8 +104,6 @@ jobs:
           ALLOW_SQLITE_FALLBACK: "false"
           SCRAPE_PROFILE: "all"
           SCRAPE_ENABLED_SOURCES: ${{ inputs.source }}
-          SOURCES_ENABLED: ${{ vars.SOURCES_ENABLED }}
-          BOT_CONTACT: ${{ vars.BOT_CONTACT }}
           RUN_SCRAPERS: "true"
           RUN_MARKET_ANALYSIS: "false"
           RUN_MARKET_SIGNALS: "false"
@@ -117,7 +115,7 @@ jobs:
           SCRAPE_SOURCE_TIMEOUT_SECONDS: "5400"
           SCRAPE_SOURCE_TIMEOUT_SECONDS_IKMAN: "5400"
           SCRAPE_SOURCE_TIMEOUT_SECONDS_RIYASEWANA: "5400"
-          # api.ikman.lk is no longer used; ikman runs only if SOURCES_ENABLED opts it in.
+          IKMAN_SCRAPE_MODE: "api"
         run: python run_sync.py
 
       - name: Count after
@@ -153,10 +151,6 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: "20"
-
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
@@ -172,7 +166,7 @@ jobs:
         run: |
           set -e
           mkdir -p public/snapshots/latest
-          base='https://motormila.vercel.app/snapshots/latest'
+          base='https://pub-f15911ef9a914db9a44e1fd6b47dfe4e.r2.dev/snapshots/latest'
           curl -fsSL "$base/listing-catalog.json" -o public/snapshots/latest/listing-catalog.json
           # If manifest has parts, pull them too.
           python3 - <<'PY'
@@ -180,7 +174,7 @@ jobs:
           root = pathlib.Path("public/snapshots/latest")
           manifest = json.loads((root / "listing-catalog.json").read_text())
           parts = manifest.get("parts") or []
-          base = "https://motormila.vercel.app/snapshots/latest"
+          base = "https://pub-f15911ef9a914db9a44e1fd6b47dfe4e.r2.dev/snapshots/latest"
           for name in parts:
               url = f"{base}/{name}"
               dest = root / name
@@ -189,21 +183,7 @@ jobs:
           print("catalog seed ok")
           PY
 
-      - name: Refresh via Vercel snapshot export API
-        id: vercel_export
-        continue-on-error: true
-        env:
-          SNAPSHOT_EXPORT_SECRET: ${{ secrets.SNAPSHOT_EXPORT_SECRET }}
-          SKIP_LISTINGS: ${{ inputs.refresh_catalog == false && '1' || '0' }}
-        run: |
-          if [ -z "${SNAPSHOT_EXPORT_SECRET}" ]; then
-            echo "SNAPSHOT_EXPORT_SECRET not set — will try DB export fallback."
-            exit 1
-          fi
-          node scripts/pull-vercel-snapshots.mjs
-
-      - name: Fallback — export from HOT_DATABASE_URL
-        if: steps.vercel_export.outcome != 'success'
+      - name: Export from HOT_DATABASE_URL
         working-directory: backend
         env:
           COLD_DATABASE_URL: ${{ secrets.HOT_DATABASE_URL }}
@@ -229,7 +209,6 @@ jobs:
           if-no-files-found: error
 
       - name: Optional R2 upload
-        continue-on-error: true
         working-directory: backend
         env:
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
@@ -254,44 +233,20 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: public-snapshots-latest-${{ github.run_id }}
-          path: public/snapshots/latest
-
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: "20"
-
-      - name: Redeploy production with snapshots
+      - name: Trigger Cloudflare Pages rebuild (retry latest github:push production deployment)
         env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: |
-          if [ -z "${VERCEL_TOKEN}" ]; then
-            echo "::warning::VERCEL_TOKEN not set. Snapshots are in the workflow artifact;"
-            echo "download it and run: bash scripts/redeploy-prod-with-snapshots.sh"
-            echo "See docs/scrape-export-redeploy-walkthrough.md"
-            exit 0
-          fi
-          bash scripts/redeploy-prod-with-snapshots.sh
-
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 scripts/trigger-pages-rebuild.py
       - name: Verify production snapshots
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          if [ -z "${VERCEL_TOKEN}" ]; then
-            echo "Skip verify — no VERCEL_TOKEN (manual redeploy path)."
-            exit 0
-          fi
           sleep 8
-          ctype=$(curl -sI 'https://motormila.vercel.app/snapshots/latest/stats-summary.json' \
+          ctype=$(curl -sI 'https://motormila.pages.dev/snapshots/latest/stats-summary.json' \
             | tr -d '\r' | awk -F': ' 'tolower($1)=="content-type"{print $2}')
           echo "content-type=$ctype"
           echo "$ctype" | grep -qi 'application/json' || {
             echo "ERROR: stats-summary.json is not JSON after deploy"
             exit 1
           }
-          curl -s 'https://motormila.vercel.app/snapshots/latest/stats-summary.json' | head -c 240
+          curl -s 'https://motormila.pages.dev/snapshots/latest/stats-summary.json' | head -c 240
           echo

@@ -2,9 +2,19 @@
  * Client for the money/legal endpoints (PayHere, leads, legal requests).
  * Kept separate from services/api.ts so the overhaul branches merge cleanly.
  */
-import { API_BASE } from "@/services/api";
+import { API_BASE, resolveFetchCredentials } from "@/services/api";
 import { authHeaders } from "@/lib/authToken";
 import type { LeadKind } from "@/lib/leadConsent";
+
+/** Error with the HTTP status, so friendlyApiError() can turn 5xx/429 into translated copy. */
+export class MoneyApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "MoneyApiError";
+    this.status = status;
+  }
+}
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -15,7 +25,9 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       ...authHeaders(),
       ...(init.headers as Record<string, string> | undefined),
     },
-    credentials: "include",
+    // Cookies only work same-origin: a cross-origin "include" call to the HF API is
+    // blocked by CORS (no Allow-Credentials), which broke /pricing, leads and removal.
+    credentials: resolveFetchCredentials(API_BASE),
   });
   if (!res.ok) {
     let detail = "Something went wrong. Please try again.";
@@ -27,7 +39,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       /* non-JSON error */
     }
     if (res.status === 429) detail = "Too many requests from this connection. Please wait a few minutes.";
-    throw new Error(detail);
+    throw new MoneyApiError(detail, res.status);
   }
   return (await res.json()) as T;
 }

@@ -21,15 +21,15 @@ function clamp(value: number, min: number, max: number) {
 
 function pickSentimentBand(score: number): SentimentBand {
   if (score >= 72) {
-    return { label: "Strong Buy", toneClass: "text-emerald-600 dark:text-emerald-400", dotClass: "bg-emerald-600 dark:bg-emerald-400", icon: ArrowUpRight, text: "Recent median movement and limited fresh supply suggest higher near-term asking pressure." };
+    return { label: "Strong Buy", toneClass: "text-deal-good-text", dotClass: "bg-deal-good", icon: ArrowUpRight, text: "Recent median movement and limited fresh supply suggest higher near-term asking pressure." };
   }
   if (score >= 56) {
-    return { label: "Buy", toneClass: "text-emerald-600 dark:text-emerald-400", dotClass: "bg-emerald-600 dark:bg-emerald-400", icon: ArrowUpRight, text: "Momentum is positive, but sample depth is still important before making an offer." };
+    return { label: "Buy", toneClass: "text-deal-good-text", dotClass: "bg-deal-good", icon: ArrowUpRight, text: "Momentum is positive, but sample depth is still important before making an offer." };
   }
   if (score >= 40) {
     return { label: "Wait 3 Months", toneClass: "text-primary", dotClass: "bg-primary", icon: ArrowRight, text: "The signal is mixed, so compare fresh listings before moving quickly." };
   }
-  return { label: "Sell", toneClass: "text-rose-600 dark:text-rose-400", dotClass: "bg-rose-600 dark:bg-rose-400", icon: ArrowDownRight, text: "Asking prices look soft versus the current listing flow." };
+  return { label: "Sell", toneClass: "text-deal-high-text", dotClass: "bg-deal-high", icon: ArrowDownRight, text: "Asking prices look soft versus the current listing flow." };
 }
 
 export const MarketPredictor = memo(function MarketPredictor({ trendData, listingsToday = 0 }: MarketPredictorProps) {
@@ -59,22 +59,22 @@ export const MarketPredictor = memo(function MarketPredictor({ trendData, listin
   );
 
   return (
-    <section className="asset-surface rounded-xl p-5 md:p-6 transition-shadow duration-300 hover:shadow-soft-lg">
+    <section className="asset-surface rounded-xl p-5 md:p-6 transition-shadow duration-medium hover:shadow-soft-lg">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="tech-label font-bold text-muted-foreground">Market pulse</p>
-          <h3 className="text-2xl font-bold tracking-tight text-foreground">Buy timing signal</h3>
+          <h3 className="text-title2 font-bold tracking-tight text-foreground">Buy timing signal</h3>
         </div>
-        <div className={`inline-flex items-center gap-2 rounded-2xl border border-border bg-surface px-3 py-1.5 text-xs font-semibold tracking-tight ${band.toneClass}`}>
+        <div className={`inline-flex items-center gap-2 rounded-2xl border border-border bg-surface px-3 py-1.5 text-caption font-semibold tracking-tight ${band.toneClass}`}>
           <span className={`h-2 w-2 rounded-full ${band.dotClass}`} />
           <ToneIcon className="h-3.5 w-3.5" />
           Sentiment: {band.label}
         </div>
       </div>
 
-      <p className={`mt-3 text-sm ${band.toneClass}`}>{band.text}</p>
+      <p className={`mt-3 text-footnote ${band.toneClass}`}>{band.text}</p>
 
-      <ul className="mt-4 space-y-2 text-sm text-foreground">
+      <ul className="mt-4 space-y-2 text-footnote text-foreground">
         {predictiveInsights.map((insight) => (
           <li key={insight} className="flex gap-2">
             <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />

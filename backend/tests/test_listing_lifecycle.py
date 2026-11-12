@@ -11,7 +11,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from app.utils.listing_lifecycle import mark_inactive_listings
 from app.utils.listing_upsert import upsert_listing
-from db.models import Base, CarListing, ScrapeRun
+from db.models import Base, CarListing
 
 
 _NOW = datetime(2026, 7, 16, 10, 0)  # naive UTC, matches utc_now() convention
@@ -74,88 +74,35 @@ def test_aware_now_is_normalised():
     assert result["deactivated_total"] == 1
 
 
-def _run(db, source: str, status: str, days_ago: float = 0.5):
-    db.add(
-        ScrapeRun(
-            source=source,
-            started_at=_NOW - timedelta(days=days_ago),
-            finished_at=_NOW - timedelta(days=days_ago),
-            status=status,
-        )
-    )
-
-
-def test_failed_latest_scrape_protects_recently_stale_rows():
-    """A source whose latest scrape FAILED keeps rows between stale_days and the hard ceiling."""
+def test_broken_source_is_not_swept():
+    """If a source has no fresh sightings at all, its scraper is likely broken
+    — none of its listings should be deactivated."""
     db = _session()
-    _run(db, "riyasewana", "SUCCESS", days_ago=3)
-    _run(db, "riyasewana", "FAILED", days_ago=1)
     db.add(_listing("riyasewana", "a", last_seen_days_ago=10))
-    db.add(_listing("riyasewana", "ancient", last_seen_days_ago=20))
-    db.commit()
-
-    result = mark_inactive_listings(db, stale_days=7, hard_max_days=14, now=_NOW)
-
-    assert "riyasewana" in result["skipped_stale_sources"]
-    assert result["deactivated_total"] == 1
-    assert db.query(CarListing).filter_by(source_id="a").one().is_active is True
-    assert db.query(CarListing).filter_by(source_id="ancient").one().is_active is False
-
-
-def test_successful_latest_scrape_sweeps_normally():
-    db = _session()
-    _run(db, "riyasewana", "FAILED", days_ago=3)
-    _run(db, "riyasewana", "SUCCESS", days_ago=1)
-    db.add(_listing("riyasewana", "a", last_seen_days_ago=10))
+    db.add(_listing("riyasewana", "b", last_seen_days_ago=12))
     db.commit()
 
     result = mark_inactive_listings(db, stale_days=7, now=_NOW)
 
-    assert result["deactivated_total"] == 1
+    assert result["deactivated_total"] == 0
+    assert "riyasewana" in result["skipped_stale_sources"]
+    assert all(l.is_active for l in db.query(CarListing).all())
 
 
-def test_no_fraction_cap_for_deep_sources():
-    """Most of a source being stale no longer blocks the sweep (ghost-listing bug)."""
+def test_fraction_guard_blocks_mass_deactivation():
+    """When most of a source's inventory looks stale (e.g. crawl horizon is
+    shallower than the source), the sweep must be skipped, not executed."""
     db = _session()
     _seed_fresh(db, "ikman", 2)
     for i in range(8):
-        db.add(_listing("ikman", f"deep{i}", last_seen_days_ago=40))
+        db.add(_listing("ikman", f"deep{i}", last_seen_days_ago=10))
     db.commit()
 
-    result = mark_inactive_listings(db, stale_days=30, now=_NOW)
-
-    assert result["deactivated_total"] == 8
-    assert result["fraction_guarded_sources"] == []
-    assert db.query(CarListing).filter(CarListing.is_active == True).count() == 2  # noqa: E712
-
-
-def test_source_with_no_runs_and_all_stale_is_expired():
-    """A source that never re-sights anything (e.g. patpat) must not stay live forever."""
-    db = _session()
-    for i in range(5):
-        db.add(_listing("patpat", f"p{i}", last_seen_days_ago=45))
-    db.commit()
-
-    result = mark_inactive_listings(db, stale_days=30, now=_NOW)
-
-    assert result["deactivated_by_source"] == {"patpat": 5}
-
-
-def test_first_party_listings_are_never_swept():
-    db = _session()
-    db.add(_listing("motormila_user", "mine", last_seen_days_ago=90))
-    db.commit()
-
-    result = mark_inactive_listings(db, stale_days=30, now=_NOW)
+    result = mark_inactive_listings(db, stale_days=7, now=_NOW)
 
     assert result["deactivated_total"] == 0
-    assert db.query(CarListing).filter_by(source_id="mine").one().is_active is True
-
-
-def test_default_stale_days_is_30():
-    from app.utils import listing_lifecycle
-
-    assert listing_lifecycle.DEFAULT_STALE_DAYS == 30
+    assert "ikman" in result["fraction_guarded_sources"]
+    assert db.query(CarListing).filter(CarListing.is_active == True).count() == 10  # noqa: E712
 
 
 def test_resight_reactivates_listing():

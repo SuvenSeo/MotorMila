@@ -58,7 +58,6 @@ import lk.motormila.app.ui.components.BrandLogoSize
 import lk.motormila.app.ui.components.MotormilaChoiceChip
 import lk.motormila.app.ui.components.MotormilaEyebrow
 import lk.motormila.app.ui.components.MotormilaMetricTile
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.components.EmptyState
@@ -101,13 +100,15 @@ fun EvHubScreen(
         }
     }
 
-    MotormilaPage(
+    lk.motormila.app.ui.common.MmScreen(
         title = stringResource(R.string.hub_ev_title),
         onBack = {
             if (!reducedMotion) haptics.tick()
             onBack()
         },
         snackbarHostState = snacks,
+        // The hero already shows the title: compact glass bar only (audit B10).
+        largeTitle = false,
     ) {
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
@@ -179,7 +180,7 @@ private fun EvHubBody(
             EvStatsGrid(
                 count = ev?.count ?: 0,
                 sharePct = ev?.sharePct ?: 0.0,
-                medianLkr = ev?.medianLkr,
+                avgPriceLkr = ev?.avgPriceLkr,
             )
         }
         if (state.fuelMix.isNotEmpty()) {
@@ -252,10 +253,10 @@ private fun EvHero() {
 }
 
 @Composable
-private fun EvStatsGrid(count: Int, sharePct: Double, medianLkr: Double?) {
+private fun EvStatsGrid(count: Int, sharePct: Double, avgPriceLkr: Double?) {
     val countCd = stringResource(R.string.hub_ev_cd_stat_count, count)
     val shareCd = stringResource(R.string.hub_ev_cd_stat_share, sharePct)
-    val medianText = medianLkr?.let { LkrFormat.price(it) } ?: stringResource(R.string.hub_na)
+    val medianText = avgPriceLkr?.let { lk.motormila.app.ui.common.mn(it) } ?: stringResource(R.string.hub_na)
     val medianCd = stringResource(R.string.hub_ev_cd_stat_median, medianText)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         MotormilaMetricTile(
@@ -281,6 +282,12 @@ private fun EvStatsGrid(count: Int, sharePct: Double, medianLkr: Double?) {
     }
 }
 
+internal fun fuelShareLabel(pct: Double?): String = when {
+    pct == null -> "—"
+    pct > 0.0 && pct < 1.0 -> "<1%"
+    else -> "${kotlin.math.round(pct).toInt()}%"
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FuelMixSection(mix: List<FuelMixBucket>) {
@@ -294,10 +301,12 @@ private fun FuelMixSection(mix: List<FuelMixBucket>) {
             ),
         )
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            mix.forEach { bucket ->
+            // A share, not a change: no "+" sign ("+95 %" read like a delta, B14);
+            // largest share first.
+            mix.sortedByDescending { it.pct }.forEach { bucket ->
                 MotormilaMetricTile(
                     label = bucket.fuelType,
-                    value = formatPct(bucket.pct, 0),
+                    value = fuelShareLabel(bucket.pct),
                 )
             }
         }
@@ -356,7 +365,7 @@ private fun TopModelsSection(
 
 @Composable
 private fun TcoCard(state: EvHubUiState) {
-    val saving = LkrFormat.price(state.annualFuelSavingLkr)
+    val saving = lk.motormila.app.ui.common.mn(state.annualFuelSavingLkr)
     MotormilaSurface(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Icon(Icons.Filled.TrendingDown, contentDescription = null, tint = MotormilaPrimary)
@@ -599,7 +608,7 @@ private fun ChargerRow(station: ChargingStation) {
             Text(
                 distance,
                 style = MaterialTheme.typography.labelMedium.copy(
-                    fontFamily = FontFamily.Monospace,
+                    fontFeatureSettings = "tnum",
                     color = MotormilaPrimaryBright,
                 ),
             )

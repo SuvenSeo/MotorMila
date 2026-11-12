@@ -3,9 +3,10 @@ import { Database, ShieldCheck } from "lucide-react";
 import { getSourceQuality } from "@/services/api";
 import type { SourceQualityRow, SourceQualityResponse } from "@/types/car";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAppPreferences } from "@/lib/appPreferences";
 
 type MetricConfig = {
-  label: string;
+  label: readonly [string, string];
   value: string;
   colorClass: string;
   barWidth: number;
@@ -16,15 +17,15 @@ function pct(value: number): string {
 }
 
 function metricColor(good: boolean, ok: boolean): string {
-  if (good) return "text-emerald-600 dark:text-emerald-400";
-  if (ok) return "text-amber-600 dark:text-amber-400";
-  return "text-rose-600 dark:text-rose-400";
+  if (good) return "text-deal-good-text";
+  if (ok) return "text-deal-caution-text";
+  return "text-deal-high-text";
 }
 
 function barColor(good: boolean, ok: boolean): string {
-  if (good) return "bg-emerald-500 dark:bg-emerald-400";
-  if (ok) return "bg-amber-500 dark:bg-amber-400";
-  return "bg-rose-500 dark:bg-rose-400";
+  if (good) return "bg-deal-good";
+  if (ok) return "bg-deal-caution";
+  return "bg-deal-high";
 }
 
 function buildMetrics(row: SourceQualityRow): MetricConfig[] {
@@ -39,25 +40,25 @@ function buildMetrics(row: SourceQualityRow): MetricConfig[] {
 
   return [
     {
-      label: "Price fill rate",
+      label: ["sourceQuality.priceFill", "Price fill rate"],
       value: pct(row.price_fill_rate),
       colorClass: metricColor(fillGood, fillOk),
       barWidth: Math.min(100, row.price_fill_rate * 100),
     },
     {
-      label: "Fresh 24h",
+      label: ["sourceQuality.fresh24h", "Fresh 24h"],
       value: pct(row.fresh_24h_pct),
       colorClass: metricColor(freshGood, freshOk),
       barWidth: Math.min(100, row.fresh_24h_pct * 100),
     },
     {
-      label: "Outlier rate",
+      label: ["sourceQuality.outliers", "Outlier rate"],
       value: pct(row.outlier_rate),
       colorClass: metricColor(outlierGood, outlierOk),
       barWidth: Math.min(100, row.outlier_rate * 400),
     },
     {
-      label: "Duplicate rate",
+      label: ["sourceQuality.duplicates", "Duplicate rate"],
       value: pct(row.duplicate_rate),
       colorClass: metricColor(dupGood, dupOk),
       barWidth: Math.min(100, row.duplicate_rate * 400),
@@ -66,14 +67,15 @@ function buildMetrics(row: SourceQualityRow): MetricConfig[] {
 }
 
 function SourceCard({ row }: { row: SourceQualityRow }) {
+  const { t } = useAppPreferences();
   const metrics = buildMetrics(row);
   return (
-    <div className="asset-surface rounded-xl p-5 transition-all duration-300 ease-apple hover:border-primary/30 hover:shadow-soft-lg">
+    <div className="asset-surface rounded-xl p-5 transition-ui duration-medium ease-decelerate hover:border-primary/30 hover:shadow-soft-lg">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-lg font-bold text-foreground">{row.source}</p>
+          <p className="text-callout font-bold text-foreground">{row.source}</p>
           <p className="mt-1 tech-label text-muted-foreground">
-            {row.listing_count.toLocaleString()} listings
+            {t("sourceQuality.listings", "{n} listings", { n: row.listing_count.toLocaleString() })}
           </p>
         </div>
         <ShieldCheck className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
@@ -84,14 +86,14 @@ function SourceCard({ row }: { row: SourceQualityRow }) {
           const good = metric.colorClass.includes("emerald");
           const ok = metric.colorClass.includes("amber");
           return (
-            <div key={metric.label}>
+            <div key={metric.label[0]}>
               <div className="flex items-center justify-between gap-3">
-                <p className="text-xs text-muted-foreground">{metric.label}</p>
-                <p className={`text-xs font-bold num ${metric.colorClass}`}>{metric.value}</p>
+                <p className="text-caption text-muted-foreground">{t(metric.label[0], metric.label[1])}</p>
+                <p className={`text-caption font-bold num ${metric.colorClass}`}>{metric.value}</p>
               </div>
               <div className="mt-1 h-1 overflow-hidden rounded-full bg-foreground/[0.06]">
                 <div
-                  className={`h-full rounded-full transition-all duration-500 ease-apple ${barColor(good, ok)}`}
+                  className={`h-full rounded-full transition-ui duration-long ease-decelerate ${barColor(good, ok)}`}
                   style={{ width: `${metric.barWidth}%` }}
                 />
               </div>
@@ -104,6 +106,7 @@ function SourceCard({ row }: { row: SourceQualityRow }) {
 }
 
 export function SourceQualityScorecard() {
+  const { t } = useAppPreferences();
   const [data, setData] = useState<SourceQualityResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -126,7 +129,7 @@ export function SourceQualityScorecard() {
 
   if (loading) {
     return (
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3" aria-busy="true" aria-label="Loading source quality">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3" aria-busy="true" aria-label={t("sourceQuality.loading", "Loading source quality")}>
         {Array.from({ length: 3 }).map((_, index) => (
           <Skeleton key={index} className="h-52 rounded-xl bg-foreground/[0.03]" />
         ))}
@@ -138,7 +141,7 @@ export function SourceQualityScorecard() {
     return (
       <div className="console-empty">
         <Database className="mx-auto mb-3 h-7 w-7 text-muted-foreground" aria-hidden="true" />
-        <p className="text-sm text-muted-foreground">No source quality data available yet.</p>
+        <p className="text-footnote text-muted-foreground">{t("sourceQuality.empty", "No source quality data available yet.")}</p>
       </div>
     );
   }

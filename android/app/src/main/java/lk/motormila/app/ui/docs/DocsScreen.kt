@@ -20,7 +20,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import lk.motormila.app.ui.components.MotormilaEyebrow
 import lk.motormila.app.ui.components.MotormilaSurface
-import lk.motormila.app.ui.components.MotormilaTopBar
 import lk.motormila.app.ui.theme.MotormilaOnSurface
 import lk.motormila.app.ui.theme.MotormilaPrimaryBright
 import lk.motormila.app.ui.theme.MotormilaSecondaryText
@@ -33,8 +32,8 @@ fun DocsScreen(
 ) {
     var openId by remember { mutableStateOf(initialSectionId ?: DocsCatalog.sections.first().id) }
 
+    lk.motormila.app.ui.common.MmScreen(title = "Docs", onBack = onBack) {
     Column(Modifier.fillMaxSize()) {
-        MotormilaTopBar(title = "Docs", onBack = onBack)
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -99,5 +98,6 @@ fun DocsScreen(
             }
             item { Spacer(Modifier.height(24.dp)) }
         }
+    }
     }
 }

@@ -19,17 +19,17 @@ export function HybridCliffBadge({
 
   const tone =
     badge.kind === "tax_safe"
-      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+      ? "border-deal-good/30 bg-deal-good/10 text-deal-good-text"
       : badge.kind === "at_cliff"
-        ? "border-amber-500/30 bg-amber-500/10 text-amber-200"
-        : "border-rose-500/30 bg-rose-500/10 text-rose-300";
+        ? "border-deal-caution/30 bg-deal-caution/10 text-deal-caution-text"
+        : "border-deal-high/30 bg-deal-high/10 text-deal-high-text";
 
   return (
     <span
       title={badge.detail}
       className={cn(
         "inline-flex items-center rounded-full border font-semibold tracking-tight",
-        compact ? "px-1.5 py-0.5 text-[9px]" : "px-2 py-1 text-[10px]",
+        compact ? "px-1.5 py-0.5 text-caption" : "px-2 py-1 text-caption",
         tone,
         className,
       )}

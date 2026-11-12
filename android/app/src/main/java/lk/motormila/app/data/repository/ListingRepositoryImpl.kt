@@ -37,7 +37,7 @@ import lk.motormila.app.domain.repository.ListingRepository
  * - [paging]: Paging3. Default network-only [ListingPagingSource]; pass
  *   `cached=true` for the Room-backed [ListingRemoteMediator] (15-min TTL).
  * - Detail/similar/history/fmv/seller: fetched fresh, detail upserted to Room.
- * - Search/detail/similar/history fall back to the public Vercel snapshots
+ * - Search/detail/similar/history fall back to the public R2 snapshots
  *   when the live API throws (Neon outage) — see [withSnapshotFallback].
  */
 @Singleton
@@ -103,6 +103,8 @@ class ListingRepositoryImpl @Inject constructor(
                     bodyType = query.bodyType,
                     district = query.district,
                     vehicleCategory = query.vehicleCategory,
+                    priceAvailability = query.priceAvailability,
+                    includeArchive = query.includeArchive.takeIf { it },
                     sort = query.sort,
                     page = page,
                     size = size,
@@ -113,6 +115,33 @@ class ListingRepositoryImpl @Inject constructor(
                 filterSnapshotListings(rows, query).map { it.toDomain() }
             },
         )
+    }
+
+    override suspend fun count(query: ListingQuery): Int? = withContext(io) {
+        runCatching {
+            api.searchListings(
+                q = query.keyword?.ifBlank { null },
+                source = query.source,
+                make = query.make,
+                model = query.model,
+                yearMin = query.yearMin,
+                yearMax = query.yearMax,
+                priceMin = query.priceMin,
+                priceMax = query.priceMax,
+                mileageMax = query.mileageMax,
+                fuelType = query.fuelType,
+                transmission = query.transmission,
+                condition = query.condition,
+                bodyType = query.bodyType,
+                district = query.district,
+                vehicleCategory = query.vehicleCategory,
+                priceAvailability = query.priceAvailability,
+                includeArchive = query.includeArchive.takeIf { it },
+                sort = query.sort,
+                page = 1,
+                size = 1,
+            ).total
+        }.getOrNull()
     }
 
     override suspend fun getDetail(id: Int): Listing = withContext(io) {
@@ -163,16 +192,26 @@ class ListingRepositoryImpl @Inject constructor(
         api.getSellerProfile(id).toDomain()
     }
 
+    // Filter dropdowns: live, then the public snapshot lists, then empty.
     override suspend fun sources(): List<String> = withContext(io) {
-        runCatching { api.getSources().map { it.source } }.getOrElse { emptyList() }
+        runCatching {
+            withSnapshotFallback({ api.getSources() }, { snapshots.listingSources() }).map { it.source }
+        }.getOrElse { emptyList() }.filter { it.isNotBlank() }
     }
 
     override suspend fun makes(): List<String> = withContext(io) {
-        runCatching { api.getMakes().map { it.make } }.getOrElse { emptyList() }
+        runCatching {
+            withSnapshotFallback({ api.getMakes() }, { snapshots.listingMakes() }).map { it.make }
+        }.getOrElse { emptyList() }.filter { it.isNotBlank() }
     }
 
     override suspend fun models(make: String): List<String> = withContext(io) {
-        runCatching { api.getModels(make).map { it.model } }.getOrElse { emptyList() }
+        runCatching {
+            withSnapshotFallback(
+                { api.getModels(make) },
+                { modelsForMake(snapshots.listingModels(), make) },
+            ).map { it.model }
+        }.getOrElse { emptyList() }.filter { it.isNotBlank() }
     }
 
     override suspend fun suggestions(query: String, limit: Int): List<Listing> = withContext(io) {

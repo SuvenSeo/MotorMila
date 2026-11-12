@@ -1,9 +1,12 @@
-# Cloudflare Pages headers — mirrors vercel.json for the future Pages cutover.
-# Vercel ignores this file, so it is safe to ship before migration.
+# Cloudflare Pages headers.
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
+# Android App Links verification (autoVerify in AndroidManifest.xml).
+/.well-known/assetlinks.json
+  Content-Type: application/json
+  Access-Control-Allow-Origin: *
 /snapshots/*
   Cache-Control: public, max-age=300, stale-while-revalidate=60
   Access-Control-Allow-Origin: *
@@ -24,4 +27,36 @@
 /removal
   X-Robots-Tag: noindex, nofollow
 /delete-account
+  X-Robots-Tag: noindex, nofollow
+# Utility / account routes: never indexed (the shells also carry meta robots).
+/sign-in
+  X-Robots-Tag: noindex, nofollow
+/sign-up
+  X-Robots-Tag: noindex, nofollow
+/verify-email
+  X-Robots-Tag: noindex, nofollow
+/forgot-password
+  X-Robots-Tag: noindex, nofollow
+/reset-password
+  X-Robots-Tag: noindex, nofollow
+/profile
+  X-Robots-Tag: noindex, nofollow
+/alerts
+  X-Robots-Tag: noindex, nofollow
+/settings
+  X-Robots-Tag: noindex, nofollow
+/dealer
+  X-Robots-Tag: noindex, nofollow
+/pro
+  X-Robots-Tag: noindex, nofollow
+/pro-preview
+  X-Robots-Tag: noindex, nofollow
+/hero-lab
+  X-Robots-Tag: noindex, nofollow
+/motormila/admin
+  X-Robots-Tag: noindex, nofollow
+/checkout/*
+  X-Robots-Tag: noindex, nofollow
+
+/motormila/admin/*
   X-Robots-Tag: noindex, nofollow

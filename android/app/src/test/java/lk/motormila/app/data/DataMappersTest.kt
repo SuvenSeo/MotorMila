@@ -48,7 +48,8 @@ class DataMappersTest {
     fun listing_scoredDealBands() {
         assertEquals(DealBand.GREAT, ListingDto(dealScore = 8.5).toDomain().dealBand())
         assertEquals(DealBand.FAIR, ListingDto(dealScore = 2.0).toDomain().dealBand())
-        assertEquals(DealBand.HIGH, ListingDto(dealScore = -3.0).toDomain().dealBand())
+        assertEquals(DealBand.FAIR, ListingDto(dealScore = -3.0).toDomain().dealBand())
+        assertEquals(DealBand.HIGH, ListingDto(dealScore = -8.0).toDomain().dealBand())
     }
 
     @Test

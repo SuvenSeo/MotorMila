@@ -17,11 +17,16 @@ import lk.motormila.app.domain.model.UserSession
 import lk.motormila.app.domain.repository.AlertsRepository
 import lk.motormila.app.domain.repository.AuthRepository
 import lk.motormila.app.domain.repository.ListingRepository
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import retrofit2.HttpException
+import retrofit2.Response
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AlertsViewModelTest {
@@ -102,6 +107,33 @@ class AlertsViewModelTest {
     }
 
     @Test
+    fun create_signedOutShowsSignInPromptAndSkipsApi() {
+        every { auth.session() } returns flowOf(null)
+        val vm = viewModel()
+        assertFalse(vm.state.value.signedIn)
+        vm.onEvent(AlertsUiEvent.FormChanged(AlertForm(make = "Toyota", maxPrice = "8m")))
+        vm.onEvent(AlertsUiEvent.Create)
+
+        coVerify(exactly = 0) { repository.create(any()) }
+        assertTrue(vm.state.value.signInRequired)
+        assertFalse(vm.state.value.creating)
+    }
+
+    @Test
+    fun create_unauthorizedResponseShowsSignInPrompt() {
+        coEvery { repository.create(any()) } throws HttpException(
+            Response.error<Any>(401, "{}".toResponseBody(null)),
+        )
+        val vm = viewModel()
+        vm.onEvent(AlertsUiEvent.FormChanged(AlertForm(make = "Toyota", maxPrice = "8m")))
+        vm.onEvent(AlertsUiEvent.Create)
+
+        assertTrue(vm.state.value.signInRequired)
+        assertFalse(vm.state.value.creating)
+        assertNull(vm.state.value.justCreatedId)
+    }
+
+    @Test
     fun toggleAlertChannel_proPatchesSortedChannels() {
         val existing = sampleAlert(notifyChannels = "push,email")
         every { repository.observeAlerts() } returns flowOf(listOf(existing))
@@ -158,7 +190,7 @@ class AlertsViewModelTest {
     )
 
     private fun proSession(): UserSession = UserSession(
-        email = "pro@motormila.lk",
+        email = "pro@example.com",
         name = "Pro",
         plan = "pro",
         role = "user",
@@ -167,5 +199,5 @@ class AlertsViewModelTest {
         expiresAt = null,
     )
 
-    private fun freeSession(): UserSession = proSession().copy(plan = "free", email = "free@motormila.lk")
+    private fun freeSession(): UserSession = proSession().copy(plan = "free", email = "free@example.com")
 }

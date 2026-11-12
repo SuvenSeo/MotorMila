@@ -163,15 +163,16 @@ def test_health_reports_failover_diagnostics(client, monkeypatch):
 
 # ── CORS ────────────────────────────────────────────────────────────────────
 
-def test_cors_allowlisted_origin_gets_credentials(client):
+def test_cors_removed_vercel_origin_gets_no_cors_headers(client):
     response = client.get("/health", headers={"Origin": "https://motormila.vercel.app"})
-    assert response.headers.get("access-control-allow-origin") == "https://motormila.vercel.app"
-    assert response.headers.get("access-control-allow-credentials") == "true"
+    assert "access-control-allow-origin" not in response.headers
+    assert "access-control-allow-credentials" not in response.headers
 
 
 def test_cors_pages_mirror_allowed(client):
     response = client.get("/health", headers={"Origin": "https://motormila.pages.dev"})
     assert response.headers.get("access-control-allow-origin") == "https://motormila.pages.dev"
+    assert response.headers.get("access-control-allow-credentials") == "true"
 
 
 def test_cors_foreign_origin_gets_no_cors_headers(client):
@@ -210,13 +211,13 @@ def test_cookie_write_without_origin_or_referer_blocked(client):
 
 def test_cookie_write_from_trusted_origin_allowed(client):
     client.cookies.set("mm_session", "abc.def")
-    response = client.post("/__test/write", headers={"Origin": "https://motormila.vercel.app"})
+    response = client.post("/__test/write", headers={"Origin": "https://motormila.pages.dev"})
     assert response.status_code == 200
 
 
 def test_cookie_write_trusted_referer_allowed(client):
     client.cookies.set("mm_session", "abc.def")
-    response = client.post("/__test/write", headers={"Referer": "https://motormila.vercel.app/admin"})
+    response = client.post("/__test/write", headers={"Referer": "https://motormila.pages.dev/admin"})
     assert response.status_code == 200
 
 

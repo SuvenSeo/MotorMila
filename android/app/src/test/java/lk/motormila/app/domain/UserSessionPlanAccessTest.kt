@@ -13,7 +13,7 @@ import org.junit.Test
 class UserSessionPlanAccessTest {
 
     private fun session(plan: String, role: String = "user") = UserSession(
-        email = "owner@motormila.lk",
+        email = "owner@example.com",
         name = "Owner",
         plan = plan,
         role = role,

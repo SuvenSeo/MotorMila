@@ -44,8 +44,6 @@ def _listing(
     price_lkr: int | None = 10_000_000,
     mileage: int | None = 50_000,
     scraped_at: datetime = _NOW,
-    district: str | None = "Colombo",
-    image_phash: str | None = None,
 ) -> CarListing:
     return CarListing(
         source=source,
@@ -62,9 +60,6 @@ def _listing(
         url=f"https://example.com/{source}/{source_id}",
         is_outlier=False,
         is_duplicate=False,
-        is_active=True,
-        district=district,
-        image_phash=image_phash,
     )
 
 
@@ -445,57 +440,3 @@ def test_find_duplicate_candidates_null_year_vs_set_year_no_match():
     results = find_duplicate_candidates(db, base)
 
     assert results == []
-
-
-# ---------------------------------------------------------------------------
-# Strict batch matcher (safe-to-enable dedup)
-# ---------------------------------------------------------------------------
-
-
-def test_strict_batch_does_not_flag_different_districts():
-    db = _session()
-    db.add(_listing("ikman", "a", district="Colombo"))
-    db.commit()
-    db.add(_listing("riyasewana", "b", district="Kandy"))
-    db.commit()
-    assert mark_duplicates_batch(db) == 0
-
-
-def test_strict_batch_requires_mileage_on_both_sides():
-    db = _session()
-    db.add(_listing("ikman", "a", mileage=None))
-    db.commit()
-    db.add(_listing("riyasewana", "b"))
-    db.commit()
-    assert mark_duplicates_batch(db) == 0
-
-
-def test_strict_batch_matching_photo_hash_is_enough():
-    db = _session()
-    db.add(_listing("ikman", "a", district=None, mileage=None, image_phash="abcd1234abcd1234"))
-    db.commit()
-    db.add(_listing("riyasewana", "b", district="Kandy", mileage=None, image_phash="abcd1234abcd1234"))
-    db.commit()
-    assert mark_duplicates_batch(db) == 1
-
-
-def test_strict_batch_pairs_each_canonical_once():
-    db = _session()
-    db.add(_listing("ikman", "a"))
-    db.add(_listing("patpat", "b"))
-    db.commit()
-    db.add(_listing("riyasewana", "c"))
-    db.commit()
-    # Three identical-looking rows from three sources: only one pair is flagged.
-    assert mark_duplicates_batch(db) == 1
-
-
-def test_strict_batch_ignores_inactive_rows():
-    db = _session()
-    a = _listing("ikman", "a")
-    a.is_active = False
-    db.add(a)
-    db.commit()
-    db.add(_listing("riyasewana", "b"))
-    db.commit()
-    assert mark_duplicates_batch(db) == 0

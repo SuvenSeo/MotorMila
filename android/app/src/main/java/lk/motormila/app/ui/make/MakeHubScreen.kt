@@ -47,7 +47,6 @@ import lk.motormila.app.domain.model.HubTopModel
 import lk.motormila.app.domain.model.Listing
 import lk.motormila.app.ui.components.BrandLogo
 import lk.motormila.app.ui.components.BrandLogoSize
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.components.EmptyState
 import lk.motormila.app.ui.components.ErrorState
@@ -87,13 +86,15 @@ fun MakeHubScreen(
         }
     }
 
-    MotormilaPage(
+    lk.motormila.app.ui.common.MmScreen(
         title = state.displayMake.ifBlank { stringResource(R.string.make_hub_eyebrow) },
         onBack = {
             if (!reducedMotion) haptics.tick()
             onBack()
         },
         snackbarHostState = snacks,
+        // The hero already shows the title: compact glass bar only (audit B10).
+        largeTitle = false,
     ) {
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
@@ -228,7 +229,7 @@ private fun MakeHubModelRow(
     onClick: (String, String) -> Unit,
 ) {
     val make = entry.make.ifBlank { fallbackMake }
-    val price = LkrFormat.price(entry.avgPriceLkr)
+    val price = lk.motormila.app.ui.common.mn(entry.avgPriceLkr)
     val rowCd = stringResource(R.string.make_hub_cd_model, make, entry.model)
     MotormilaSurface(
         onClick = { onClick(make, entry.model) },
@@ -250,7 +251,7 @@ private fun MakeHubModelRow(
                     price,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace,
+                        fontFeatureSettings = "tnum",
                     ),
                 )
             }

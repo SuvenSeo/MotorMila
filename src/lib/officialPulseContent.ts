@@ -1,3 +1,5 @@
+import { englishT, type TranslateFn } from "@/lib/translate";
+
 export type PulseSourceGuide = {
   key: string; // dmt_registrations | dmt_transfers | customs_tenders | import_parity
   source: string; // dmt | customs | import_parity | import_reference
@@ -47,14 +49,37 @@ const METRIC_LABELS: Record<string, string> = {
   import_parity: "Import parity",
   revenue_licence: "Revenue licence",
   revenue_license: "Revenue licence",
+  reference_page_available: "Reference page available",
+  vehicle_tender_count: "Vehicle tenders",
+  document_count: "Documents published",
+  usd_lkr_spot: "USD/LKR spot rate",
 };
 
+/** Human labels for raw signal_type keys ("tender_sales"). */
+const TYPE_LABELS: Record<string, string> = {
+  landed_cost: "Landed cost",
+  tender_sales: "Tender sales",
+  transfers: "Transfers",
+  registrations: "Registrations",
+  exchange_rate: "Exchange rate",
+  import_parity: "Import parity",
+};
+
+/** Translated label for a signal_type; unknown keys fall back to spaced text. */
+export function labelPulseType(raw: string | null | undefined, t: TranslateFn = englishT): string {
+  const key = String(raw ?? "").trim().toLowerCase();
+  if (!key) return t("common.unknown", "Unknown");
+  const known = TYPE_LABELS[key];
+  return known ? t(`pulse.type.${key}`, known) : key.replace(/_/g, " ");
+}
+
 /** Turn a raw metric/category key ("import_cost") into a human title. */
-export function labelPulseMetric(raw: string | null | undefined): string {
+export function labelPulseMetric(raw: string | null | undefined, t: TranslateFn = englishT): string {
   const value = String(raw ?? "").trim();
-  if (!value) return "Market signal";
-  const known = METRIC_LABELS[value.toLowerCase()];
-  if (known) return known;
+  if (!value) return t("pulse.marketSignal", "Market signal");
+  const metricKey = value.toLowerCase().replace(/revenue_license/, "revenue_licence");
+  const known = METRIC_LABELS[metricKey];
+  if (known) return t(`pulse.metric.${metricKey}`, known);
   // Only prettify machine-looking keys (snake_case or plain lowercase).
   // Human-written labels ("Passenger cars") pass through untouched.
   if (value === value.toLowerCase()) {
@@ -202,6 +227,29 @@ export const PULSE_SOURCE_GUIDES: PulseSourceGuide[] = [
   },
 ];
 
+type Translate = (key: string, fallback?: string, vars?: Record<string, string | number>) => string;
+
+/**
+ * The guide in the reader's language: every field looks up
+ * `pulseGuide.<key>.<field>` (locales/data.ts) and falls back to the English
+ * copy above, so a missing translation never blanks a guide.
+ */
+export function localizePulseGuide(guide: PulseSourceGuide, t: Translate): PulseSourceGuide;
+export function localizePulseGuide(guide: PulseSourceGuide | null, t: Translate): PulseSourceGuide | null;
+export function localizePulseGuide(guide: PulseSourceGuide | null, t: Translate): PulseSourceGuide | null {
+  if (!guide) return null;
+  const k = `pulseGuide.${guide.key}`;
+  return {
+    ...guide,
+    title: t(`${k}.title`, guide.title),
+    shortLabel: t(`${k}.short`, guide.shortLabel),
+    summary: t(`${k}.summary`, guide.summary),
+    whyItMatters: guide.whyItMatters.map((line, i) => t(`${k}.why.${i}`, line)),
+    howWeReadIt: guide.howWeReadIt.map((line, i) => t(`${k}.how.${i}`, line)),
+    dealerTip: t(`${k}.tip`, guide.dealerTip),
+  };
+}
+
 function normalizeSourceKey(source: string): string {
   const key = source.trim().toLowerCase();
   if (key === "import_reference") return "import_parity";
@@ -261,8 +309,9 @@ export function formatPulseValue(
   return `${formatted} ${unit}`;
 }
 
-export function labelPulseSource(source: string): string {
+export function labelPulseSource(source: string, t: TranslateFn = englishT): string {
   const key = source.trim().toLowerCase();
-  if (!key) return "Unknown";
-  return SOURCE_LABELS[key] || source.replace(/_/g, " ");
+  if (!key) return t("common.unknown", "Unknown");
+  const known = SOURCE_LABELS[key];
+  return known ? t(`pulse.source.${key}`, known) : source.replace(/_/g, " ");
 }

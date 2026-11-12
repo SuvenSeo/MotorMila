@@ -1,29 +1,45 @@
-import { memo } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { m } from "motion/react";
 import { CarListing } from "@/types/car";
 import { formatPrice } from "@/services/api";
-import { Gauge, MapPin, ArrowRight, Heart, Check, Plus, TrendingDown } from "lucide-react";
-import { Link } from "react-router-dom";
+import { MapPin, TrendingDown, Clock, Layers, ImageOff } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { ListingImageCarousel } from "@/components/ListingImageCarousel";
 import { PriceUnavailableBadge } from "@/components/PriceUnavailableBadge";
 import { isReasonableListingPrice } from "@/lib/formatting";
 import { getListingImageList } from "@/lib/listingImage";
-import {
-  getListingDaysOnMarketLabel,
-  getListingDealLabel,
-} from "@/lib/listing-card-meta";
+import { getListingDaysOnMarketLabel } from "@/lib/listing-card-meta";
 import { HybridCliffBadge } from "@/components/HybridCliffBadge";
 import { plausibleEngineCc } from "@/lib/engineCapacity";
 import { MileageTrustChip } from "@/components/MileageTrustChip";
-import { summarizeFmv } from "@/lib/fmv";
+import { computeMileageTrust } from "@/lib/mileageTrust";
+import { vehicleTokenLabel } from "@/lib/vehicleTokens";
+import { fmvSummaryFromVerdict } from "@/lib/fmv";
+import { listingRowVerdict } from "@/lib/priceVerdict";
+import { MAX_UNCONFIRMED_DROP_PCT } from "@/lib/dataSanity";
 import { useAuth } from "@/lib/authContext";
 import { hasFullPlatformAccess } from "@/lib/planLimits";
-import { prefetchRoute } from "@/lib/routePrefetch";
+import { prefetchRoute, warmDisplayBoldFont } from "@/lib/routePrefetch";
+import { prefetchListingBundle, seedListing } from "@/lib/listingHandoff";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { canonicalizeMake, canonicalizeModel } from "@/lib/makeNormalization";
 import { usePriceSparklines } from "@/hooks/usePriceSparklines";
 import { isMeaningfulDrop, summarizePricePoints, toPricePoints } from "@/lib/priceHistory";
 import { PriceSparkline } from "@/components/PriceSparkline";
 import { getSourceAttribution } from "@/lib/sourceAttribution";
+import { silhouetteFor } from "@/lib/vehicleSilhouette";
+import "@/styles/cinematic-pages.css";
+import { computeDealBadge, DEAL_BAR_CLASSES, DEAL_TEXT_CLASSES } from "@/lib/dealBadge";
+import { isLeaseTakeoverListing } from "@/lib/leaseTakeover";
+import { estimateListingMonthly, formatMonthlyLkr } from "@/lib/listingFinance";
+import { DealBadge } from "@/components/listing/DealBadge";
+import { CompareGlyph, SaveHeartIcon } from "@/components/listing/SaveHeart";
+import { fadeIn, fadeUp, hoverLift, press, useReducedMotionOrLowData } from "@/lib/motion";
+import { cardVariants } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { markScrollAnchor } from "@/lib/scrollMemory";
+import { listingOpenInFlight, navigateWithHeroTransition, revealDelay, useCanHover, visibleCardImage, withShowDelay } from "@/components/listing/listingMotion";
 
 interface ListingCardProps {
   listing: CarListing;
@@ -32,44 +48,41 @@ interface ListingCardProps {
   onWatchlistToggle?: (listing: CarListing) => void;
   isWatchlisted?: boolean;
   priority?: boolean;
+  /**
+   * Number of marketplaces this same vehicle was matched on (cross-source
+   * duplicate detection). Only pass a real, detected count — the chip is
+   * hidden when absent or below 2.
+   */
+  seenOnSites?: number | null;
+  /** Position in its grid: the first 8 cards stagger in (40ms apart), the rest appear together. */
+  revealIndex?: number;
 }
 
-function getDealBadgeClasses(label: ReturnType<typeof getListingDealLabel>): string {
-  // Near-opaque fills: these render over arbitrary photos, so translucent
-  // tints cannot guarantee the 4.5:1 the 10px text needs (WCAG 1.4.3).
-  if (label === "Good Deal") return "bg-zinc-950/85 border-emerald-500/40 text-emerald-300";
-  if (label === "Overpriced") return "bg-zinc-950/85 border-rose-500/40 text-rose-300";
-  return "bg-zinc-950/85 border-white/8 text-zinc-200";
-}
-
-function formatToken(value: string | undefined): string {
-  if (!value) return "Unknown";
-  return value
-    .replace(/_/g, " ")
-    .split(" ")
-    .filter(Boolean)
-    .map((part) => part[0].toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function formatMileage(value: number | null | undefined): string {
-  if (!Number.isFinite(value)) return "Mileage N/A";
-  if ((value as number) >= 1000) {
-    const compact = ((value as number) / 1000).toFixed((value as number) >= 100000 ? 0 : 1).replace(/\.0$/, "");
+function formatMileage(value: number | null | undefined): string | null {
+  // Missing mileage must not read as "0 km" (Number(null) === 0).
+  if (value === null || value === undefined || String(value).trim() === "") return null;
+  const km = Number(value);
+  if (!Number.isFinite(km) || km < 0) return null;
+  if (km >= 1000) {
+    const compact = (km / 1000).toFixed(km >= 100000 ? 0 : 1).replace(/\.0$/, "");
     return `${compact}k km`;
   }
-  return `${value} km`;
+  return `${km} km`;
 }
 
-function formatEngineCc(value: number | null | undefined): string {
+function formatEngineCc(value: number | null | undefined): string | null {
+  if (!(Number.isFinite(value) && Number(value) > 0)) return null;
   const cc = plausibleEngineCc(value, undefined);
-  if (cc === undefined) return "CC N/A";
+  if (cc === undefined) return null;
   return `${Math.round(cc).toLocaleString()} cc`;
 }
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
+
+/** Listing ids whose card already played its reveal this session. */
+const REVEALED_LISTINGS = new Set<number | string>();
 
 export const ListingCard = memo(function ListingCard({
   listing,
@@ -78,28 +91,77 @@ export const ListingCard = memo(function ListingCard({
   onWatchlistToggle,
   isWatchlisted,
   priority = false,
+  seenOnSites,
+  revealIndex,
 }: ListingCardProps) {
   const { t } = useAppPreferences();
   const { hasProAccess, isAdmin } = useAuth();
   const fullAccess = hasFullPlatformAccess({ hasProAccess, isAdmin });
-  // null deal_score = rating suppressed server-side (thin cohort, old vehicle,
-  // extreme price) — show no badge rather than a fake-neutral one.
-  const hasDealScore = fullAccess && listing.deal_score !== null && listing.deal_score !== undefined;
-  const dealScore = Number(listing.deal_score ?? 0);
+  const navigate = useNavigate();
+  const cardRef = useRef<HTMLElement>(null);
+  const controlsRef = useRef<HTMLDivElement>(null);
+  // Motion's whileTap listens with a *native* pointerdown on the <article>, so a
+  // React stopPropagation can't keep the card from pressing when the heart /
+  // compare / gallery buttons are tapped. Stop it natively one level below.
+  useEffect(() => {
+    const el = controlsRef.current;
+    if (!el) return;
+    const stop = (e: PointerEvent) => {
+      if ((e.target as Element | null)?.closest?.("button, [role='button'], input, select")) e.stopPropagation();
+    };
+    el.addEventListener("pointerdown", stop);
+    return () => el.removeEventListener("pointerdown", stop);
+  }, []);
+  const calm = useReducedMotionOrLowData();
+  const canHover = useCanHover();
+  // Reveal once per session: a card the visitor already saw (back from a
+  // listing, a re-sort, page 2 → page 1) is simply there, no second stagger.
+  const [alreadyRevealed] = useState(() => listing.id != null && REVEALED_LISTINGS.has(listing.id));
+  // Scroll-in reveal (once). Reduced motion / low data: opacity only.
+  const revealVariants = useMemo(
+    () => withShowDelay(calm ? fadeIn : fadeUp, calm ? 0 : revealDelay(revealIndex)),
+    [calm, revealIndex],
+  );
   // Full photo set (primary first); single-image listings behave exactly as before.
   const galleryImages = getListingImageList(listing);
-  const dealLabel = getListingDealLabel(dealScore);
-  const daysOnMarketLabel = getListingDaysOnMarketLabel(listing.first_seen_at || listing.scraped_at);
+  const daysOnMarketLabel = getListingDaysOnMarketLabel(listing.first_seen_at || listing.scraped_at, t);
   const priceValue = Number(listing.price_lkr || 0);
   const hasKnownPrice = isReasonableListingPrice(priceValue);
-  const marketDeltaPct =
-    hasKnownPrice && Number.isFinite(listing.market_median_lkr) && Number(listing.market_median_lkr) > 0
-      ? (((priceValue - Number(listing.market_median_lkr)) / Number(listing.market_median_lkr)) * 100)
-      : null;
-  const fmv = hasKnownPrice
-    ? summarizeFmv(priceValue, Number(listing.market_median_lkr || 0))
-    : null;
+  const median = Number(listing.market_median_lkr);
+  const hasMedian = Number.isFinite(median) && median > 0;
+  const isLease = useMemo(
+    () => isLeaseTakeoverListing(listing),
+    [listing],
+  );
+
+  // null deal_score = rating suppressed server-side (thin cohort, old vehicle,
+  // extreme price) or plan-gated — only safety labels (verify/lease) show then.
+  // One verdict (src/lib/priceVerdict.ts) for the badge AND the market bar, so
+  // they can't disagree with each other or with this listing's detail page.
+  const verdict = listingRowVerdict({ ...listing, price_lkr: hasKnownPrice ? priceValue : null, market_median_lkr: hasMedian ? median : null });
+  const deal = computeDealBadge({
+    askingLkr: hasKnownPrice ? priceValue : null,
+    fmvLkr: hasMedian ? median : null,
+    isLeaseTakeover: isLease,
+    ratingAllowed: fullAccess && listing.deal_score !== null && listing.deal_score !== undefined,
+    verdict,
+  });
+  const fmv = hasKnownPrice && !isLease ? fmvSummaryFromVerdict(priceValue, verdict, t) : null;
+  const marketDeltaPct = fmv ? fmv.delta_pct : null;
   const marketPosition = marketDeltaPct === null ? 50 : clamp(50 - marketDeltaPct, 8, 92);
+  // FMV tone follows the deal badge so a "verify" outlier is never painted green.
+  const fmvKind = fmv?.verify_first ? "verify" : fmv?.band === "below" ? "below" : fmv?.band === "above" ? "above" : "fair";
+
+  const monthly = hasKnownPrice
+    ? estimateListingMonthly({
+        priceLkr: priceValue,
+        condition: listing.condition,
+        fuelType: listing.fuel_type,
+        year: listing.year,
+        isLeaseTakeover: isLease,
+      })
+    : null;
+
   const displayMake = canonicalizeMake(listing.make) || listing.make;
   const displayModel = canonicalizeModel(listing.model) || listing.model;
   const listingTitle = `${displayMake} ${displayModel} ${listing.variant || ""}`.trim();
@@ -110,33 +172,105 @@ export const ListingCard = memo(function ListingCard({
   const priceSummary = summarizePricePoints(pricePoints);
   const snapshotDropPct = Number(listing.price_drop_pct);
   const showDropBadge =
-    isMeaningfulDrop(priceSummary) || (Number.isFinite(snapshotDropPct) && snapshotDropPct >= 1 && snapshotDropPct < 80);
+    isMeaningfulDrop(priceSummary) || (Number.isFinite(snapshotDropPct) && snapshotDropPct >= 1 && snapshotDropPct < MAX_UNCONFIRMED_DROP_PCT);
   const dropPctLabel = priceSummary && priceSummary.totalChangePct < 0
     ? Math.abs(priceSummary.totalChangePct).toFixed(0)
     : Number.isFinite(snapshotDropPct) && snapshotDropPct > 0
       ? snapshotDropPct.toFixed(0)
       : null;
   const attribution = getSourceAttribution(listing);
+  const sites = Number(seenOnSites);
+  const showSites = Number.isFinite(sites) && sites >= 2;
+
+  const conditionLabel = vehicleTokenLabel("condition", listing.condition, t);
+  const specPills = [
+    { key: "tx", text: vehicleTokenLabel("transmission", listing.transmission, t), icon: true },
+    { key: "km", text: formatMileage(listing.mileage_km), icon: false },
+    { key: "fuel", text: vehicleTokenLabel("fuel", listing.fuel_type, t), icon: false },
+    { key: "cc", text: formatEngineCc(listing.engine_cc), icon: false },
+  ].filter((p): p is { key: string; text: string; icon: boolean } => Boolean(p.text));
+  const silhouette = useMemo(
+    () => silhouetteFor({ vehicle_category: listing.vehicle_category, body_type: listing.body_type, title: listing.title }),
+    [listing.vehicle_category, listing.body_type, listing.title],
+  );
+  const mileageKnown = computeMileageTrust({ mileageKm: listing.mileage_km, year: listing.year }).risk !== "unknown";
 
   return (
-    <article
+    <m.article
+      ref={cardRef}
       role="article"
+      // Back from the listing scrolls this card back to where it was (lib/scrollMemory).
+      data-scroll-anchor={listing.id ?? undefined}
+      initial={alreadyRevealed ? false : "hidden"}
+      whileInView="show"
+      viewport={{ once: true, amount: 0.15 }}
+      variants={revealVariants}
+      onViewportEnter={() => {
+        if (listing.id != null) REVEALED_LISTINGS.add(listing.id);
+      }}
+      {...(calm ? {} : press)}
+      {...(canHover && !calm ? hoverLift : {})}
+      // Motion's whileTap adds tabindex="0"; the title link and buttons inside are the tab stops.
+      tabIndex={-1}
       aria-label={t("listingCard.aria", "{title} listing card", { title: listingTitle || "Vehicle" })}
-      className="liquid-panel vehicle-card group relative isolate h-full overflow-hidden rounded-3xl border border-transparent shadow-soft transition-all duration-500 ease-apple hover:-translate-y-2 hover:border-primary/35 hover:shadow-soft-xl active:scale-[0.985] active:shadow-soft"
+      className={cn(
+        cardVariants({ variant: "media", padding: "none" }),
+        // Off-screen cards skip style/layout/paint while scrolling (sized from
+        // their last render; 440px until then).
+        "[content-visibility:auto] [contain-intrinsic-size:auto_440px]",
+        "group isolate h-full transition-[border-color,box-shadow] duration-medium ease-decelerate hover:border-primary/30 hover:shadow-e2 motion-reduce:transition-none",
+      )}
       onPointerEnter={() => {
         // Only warm the route chunk. Data prefetch on hover used to pull the
         // whole snapshot catalogue (tens of MB) the first time a card was hovered.
         prefetchRoute(`/listing/${listing.id}`);
       }}
+      onPointerDown={(e) => {
+        // A press is a near-certain open: start the chunk and the detail data
+        // ahead of the click (~100 ms on touch). Primary button only. Started
+        // after the press has painted (rAF → task) so the four fetches and the
+        // chunk preload stay out of the tap's INP; a click that lands first
+        // just fetches from the detail page (and this then does nothing).
+        if (e.button !== 0) return;
+        const id = listing.id;
+        window.requestAnimationFrame(() => {
+          window.setTimeout(() => {
+            if (window.location.pathname === `/listing/${id}`) return;
+            prefetchRoute(`/listing/${id}`);
+            prefetchListingBundle(id);
+            warmDisplayBoldFont();
+          }, 0);
+        });
+      }}
     >
       <Link
         to={`/listing/${listing.id}`}
         aria-label={t("listingCard.openAria", "Open {title}", { title: listingTitle || "vehicle listing" })}
-        className="absolute inset-0 z-10 rounded-3xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        onClick={(e) => {
+          // Card → detail photo continuity (View Transitions, feature-detected).
+          if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+          const to = `/listing/${listing.id}`;
+          // A second tap while this open is already under way (double tap, or
+          // tapping again during the morph) must not push the listing twice.
+          if (listingOpenInFlight() || window.location.pathname === to) {
+            e.preventDefault();
+            return;
+          }
+          markScrollAnchor(listing.id);
+          const photo = visibleCardImage(cardRef.current);
+          const decoded = photo && photo.complete && photo.naturalWidth > 0 ? photo : null;
+          const aspect = decoded && decoded.naturalHeight > 0 ? decoded.naturalWidth / decoded.naturalHeight : null;
+          seedListing(listing, decoded ? decoded.currentSrc || decoded.src : null, aspect);
+          if (cardRef.current) cardRef.current.style.transform = "none";
+          // Only a decoded photo flies: an empty pending tile morphing into the
+          // hero read as a flash. Without one the swap is a quick cross-fade.
+          if (navigateWithHeroTransition(() => navigate(to), decoded)) e.preventDefault();
+        }}
+        className="absolute inset-0 z-10 rounded-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       />
 
-      <div className="pointer-events-none relative z-20 flex h-full flex-col">
-        <div className="relative aspect-[16/10] overflow-hidden bg-muted">
+      <div ref={controlsRef} className="pointer-events-none relative z-20 flex h-full flex-col">
+        <div className="listing-card-photo relative aspect-[16/10] overflow-hidden bg-surface-2">
           <ListingImageCarousel
             images={galleryImages}
             listingId={listing.id}
@@ -144,200 +278,194 @@ export const ListingCard = memo(function ListingCard({
             variant="card"
             source={listing.source}
             priority={priority}
+            silhouette={silhouette}
             className="h-full w-full"
-            imageClassName="transition-transform duration-700 ease-out group-hover:scale-[1.06] motion-reduce:transform-none"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/82 via-black/25 to-transparent" />
+          {/* No usable photo: the silhouette plate gets a real caption (CSS :has, no JS). */}
+          <p className="cine-card__nophoto vt-overlay">
+            <ImageOff aria-hidden className="h-3.5 w-3.5" />
+            {t("listingCard.noPhoto", "No photo · see it on {source}", { source: attribution.sourceName })}
+          </p>
 
-          <div className="absolute left-3 top-3 flex items-center gap-1.5">
-            <span className="rounded-full border border-white/10 bg-black/70 px-2.5 py-0.5 text-[11px] font-semibold tracking-tight text-white backdrop-blur-md">
-              {formatToken(listing.condition)}
-            </span>
-            {showDropBadge && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-deal-green/40 bg-zinc-950/85 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-300 backdrop-blur-md">
-                <TrendingDown className="h-3 w-3" aria-hidden />
-                {dropPctLabel
-                  ? t("listingCard.priceDroppedPct", "Price dropped {pct}%", { pct: dropPctLabel })
-                  : t("listingCard.priceDropped", "Price dropped")}
+          {conditionLabel && (
+            <div className="vt-overlay absolute left-3 top-3 flex items-center gap-1.5">
+              {/* Over the photo: dark chip regardless of theme. */}
+              <span className="inline-flex h-6 items-center rounded-full bg-black/60 px-2.5 text-caption font-semibold text-white">
+                {conditionLabel}
               </span>
-            )}
-          </div>
+            </div>
+          )}
 
-          <div className="absolute right-3 top-3 flex items-center gap-1.5">
+          <div className="vt-overlay absolute right-3 top-3 flex items-center gap-1.5">
             {onWatchlistToggle && (
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onWatchlistToggle(listing); }}
-                className={`pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur-md transition-all ${
+                className={`tap-44 pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border transition-[background-color,border-color,color,transform] duration-short ease-standard active:scale-90 active:duration-micro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 ${
                   isWatchlisted
                     ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-black/60 text-white/90 border-white/8 hover:text-white hover:bg-black/75"
+                    : "border-transparent bg-black/55 text-white hover:bg-black/70"
                 }`}
                 aria-label={isWatchlisted ? t("listingCard.removeWatchlist", "Remove from watchlist") : t("listingCard.addWatchlist", "Add to watchlist")}
               >
-                <Heart className={`w-3.5 h-3.5 ${isWatchlisted ? "fill-current" : ""}`} />
+                <SaveHeartIcon saved={Boolean(isWatchlisted)} className="h-4 w-4" />
               </button>
             )}
             {onCompareToggle && (
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onCompareToggle(listing); }}
-                className={`pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur-md transition-all ${
+                className={`tap-44 pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border transition-[background-color,border-color,color,transform] duration-short ease-standard active:scale-90 active:duration-micro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 ${
                   isComparing
                     ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-black/60 text-white/90 border-white/8 hover:text-white hover:bg-black/75"
+                    : "border-transparent bg-black/55 text-white hover:bg-black/70"
                 }`}
                 aria-label={isComparing ? t("listingCard.removeCompare", "Remove from comparison") : t("listingCard.addCompare", "Add to comparison")}
               >
-                {isComparing ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                <CompareGlyph active={Boolean(isComparing)} className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
 
-          <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-3">
-            {hasKnownPrice ? (
-              <p className="font-display text-[1.35rem] font-semibold leading-none tracking-tight text-white num">
-                {formatPrice(priceValue)}
-              </p>
-            ) : (
-              <PriceUnavailableBadge
-                label={t("listingCard.priceUnavailable", "Price unavailable")}
-                className="bg-black/75 border-primary/40 text-primary-bright px-2 py-0.5 text-[11px] tracking-[0.08em]"
-              />
-            )}
-            {hasDealScore && (
-              <span className={`rounded-full border px-2 py-0.5 text-[12px] font-semibold num ${getDealBadgeClasses(dealLabel)}`}>
-                {t("listingCard.deal", "{score} deal", { score: `${dealScore >= 0 ? "+" : ""}${dealScore.toFixed(0)}` })}
-              </span>
-            )}
-          </div>
         </div>
 
-        <div className="flex flex-1 flex-col gap-4 p-5">
-          <div className="flex items-start justify-between gap-3">
-            <h3 className="font-display text-[1.05rem] font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary truncate">
-              {listingTitle}
-            </h3>
-            <span className="shrink-0 text-[13px] font-semibold text-muted-foreground num">{listing.year || t("common.na", "N/A")}</span>
+        <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
+          <div className="min-w-0">
+            <div className="flex items-baseline justify-between gap-3">
+              <h3 className="truncate text-callout font-semibold text-foreground transition-colors duration-short group-hover:text-primary">
+                {listingTitle}
+              </h3>
+              {listing.year ? (
+                <span className="num shrink-0 text-footnote font-semibold text-label-2">{listing.year}</span>
+              ) : null}
+            </div>
+            {specPills.length > 0 && (
+              <p className="cine-card__specs mt-1 text-caption text-label-2">
+                {specPills.map((p) => (
+                  <span key={p.key} className={cn((p.key === "km" || p.key === "cc") && "num")}>
+                    {p.text}
+                  </span>
+                ))}
+              </p>
+            )}
           </div>
 
-          <div className="flex flex-wrap gap-1.5">
-            <span className="spec-pill">
-              <Gauge className="h-3 w-3 text-muted-foreground/70" />
-              {formatToken(listing.transmission)}
-            </span>
-            <span className="spec-pill num">
-              {Number.isFinite(listing.mileage_km) ? formatMileage(listing.mileage_km) : t("listingCard.mileageNa", "Mileage N/A")}
-            </span>
-            <span className="spec-pill">{formatToken(listing.fuel_type)}</span>
-            <span className="spec-pill num">
-              {(Number.isFinite(listing.engine_cc) && Number(listing.engine_cc) > 0)
-                ? formatEngineCc(listing.engine_cc)
-                : t("listingCard.ccNa", "CC N/A")}
-            </span>
+          <div className="flex items-end justify-between gap-3">
+            {hasKnownPrice ? (
+              <p className="cine-card__price num text-title2 leading-none text-foreground">{formatPrice(priceValue)}</p>
+            ) : (
+              <PriceUnavailableBadge label={t("listingCard.priceUnavailable", "Price unavailable")} className="px-2.5 py-0.5 text-caption" />
+            )}
+            {monthly && (
+              <p
+                className="num shrink-0 text-right text-caption font-medium leading-tight text-label-2"
+                title={t("listingCard.monthlyTitle", "Estimate: {ltv}% loan (CBSL cap), {rate}% a year over {years} years. Banks set the final terms.", {
+                  ltv: monthly.ltvPct,
+                  rate: monthly.ratePct,
+                  years: monthly.termYears,
+                })}
+              >
+                {t("listingCard.monthly", "{amount} est. /mo", { amount: formatMonthlyLkr(monthly.monthlyLkr) })}
+              </p>
+            )}
           </div>
+
+          {deal.kind !== "none" && <DealBadge badge={deal} tone="soft" className="self-start" />}
+
+          {(listing.is_active === false || showDropBadge || daysOnMarketLabel || showSites) && (
+            <div className="flex flex-wrap gap-1.5">
+              {listing.is_active === false && (
+                <Badge variant="warning">{t("listingCard.archived", "Archived / Past ad")}</Badge>
+              )}
+              {showDropBadge && (
+                <Badge variant="info">
+                  <TrendingDown aria-hidden />
+                  {dropPctLabel
+                    ? t("listingCard.priceDroppedPct", "Price dropped {pct}%", { pct: dropPctLabel })
+                    : t("listingCard.priceDropped", "Price dropped")}
+                </Badge>
+              )}
+              {daysOnMarketLabel && (
+                <Badge variant="neutral" className="num font-medium">
+                  <Clock aria-hidden />
+                  {daysOnMarketLabel}
+                </Badge>
+              )}
+              {showSites && (
+                <Badge variant="neutral" className="num font-medium">
+                  <Layers aria-hidden />
+                  {t("listingCard.onSites", "On {n} sites", { n: sites })}
+                </Badge>
+              )}
+            </div>
+          )}
+
           <HybridCliffBadge
             fuelType={listing.fuel_type}
             engineCc={plausibleEngineCc(listing.engine_cc, listing.year)}
             compact
             className="self-start"
           />
-          <MileageTrustChip
-            mileageKm={listing.mileage_km}
-            year={listing.year}
-            className="self-start !px-2 !py-0.5 !text-[11px]"
-          />
+          {mileageKnown && (
+            <MileageTrustChip
+              mileageKm={listing.mileage_km}
+              year={listing.year}
+              className="self-start !px-2 !py-0.5 !text-caption"
+            />
+          )}
 
           <div className="mt-auto">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <p className="text-[12px] font-medium text-muted-foreground">
-                {t("listingCard.fmv", "Fair market value")}
-              </p>
-              <div className="flex items-center gap-1.5">
-                {marketDeltaPct !== null && (
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[11px] font-semibold num ${
-                      marketDeltaPct <= 0
-                        ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                        : "bg-rose-500/10 text-rose-700 dark:text-rose-300"
-                    }`}
-                  >
-                    {t("listingCard.vsMarket", "{pct}% vs market", {
-                      pct: `${marketDeltaPct <= 0 ? "−" : "+"}${Math.abs(marketDeltaPct).toFixed(0)}`,
-                    })}
-                  </span>
-                )}
-                <p className={`text-[11px] font-semibold num ${
-                  fmv == null
-                    ? "text-muted-foreground"
-                    : fmv.band === "below"
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : fmv.band === "above"
-                        ? "text-rose-600 dark:text-rose-400"
-                        : "text-foreground"
-                }`}>
-                  {fmv == null ? t("listingCard.pending", "Pending") : fmv.label}
-                </p>
-              </div>
-            </div>
-            {(fmv != null || pricePoints.length >= 2) && (
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <p className="text-[11px] font-medium text-muted-foreground num">
-                  {fmv != null ? `FMV ${formatPrice(fmv.fmv_lkr)}` : ""}
-                </p>
-                {pricePoints.length >= 2 && (
-                  <span className="flex items-center gap-1.5">
-                    <span className="text-[11px] text-muted-foreground">
-                      {t("listingCard.priceMoves", "{n} price changes", { n: pricePoints.length - 1 })}
-                    </span>
-                    <PriceSparkline
-                      points={pricePoints}
-                      width={56}
-                      height={18}
-                      label={t("listingCard.sparkAria", "Asking price went from {from} to {to}", {
-                        from: formatPrice(pricePoints[0].price),
-                        to: formatPrice(pricePoints[pricePoints.length - 1].price),
-                      })}
-                    />
-                  </span>
-                )}
+            {fmv != null && (
+              <>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="num text-caption font-medium text-label-2">
+                    {t("listingCard.typical", "Typical {price}", { price: formatPrice(fmv.fmv_lkr) })}
+                  </p>
+                  <p className={`text-caption font-semibold num ${DEAL_TEXT_CLASSES[fmvKind]}`}>{fmv.shortLabel}</p>
+                </div>
+                <div className="relative mb-2 h-1.5 overflow-hidden rounded-full bg-foreground/10">
+                  <div
+                    className={`absolute inset-y-0 left-0 rounded-full transition-ui duration-long motion-reduce:transition-none ${DEAL_BAR_CLASSES[fmvKind]}`}
+                    style={{ width: `${marketPosition}%` }}
+                  />
+                </div>
+              </>
+            )}
+            {pricePoints.length >= 2 && (
+              <div className="flex items-center justify-end gap-1.5">
+                <span className="text-caption text-label-2">
+                  {t("listingCard.priceMoves", "{n} price changes", { n: pricePoints.length - 1 })}
+                </span>
+                <PriceSparkline
+                  points={pricePoints}
+                  width={56}
+                  height={18}
+                  label={t("listingCard.sparkAria", "Asking price went from {from} to {to}", {
+                    from: formatPrice(pricePoints[0].price),
+                    to: formatPrice(pricePoints[pricePoints.length - 1].price),
+                  })}
+                />
               </div>
             )}
-            <div className="relative h-1.5 overflow-hidden rounded-full bg-foreground/[0.08]">
-              <div
-                className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${
-                  fmv == null
-                    ? "bg-muted-foreground/50"
-                    : fmv.band === "below"
-                      ? "bg-emerald-500"
-                      : fmv.band === "above"
-                        ? "bg-rose-500"
-                        : "bg-primary"
-                }`}
-                style={{ width: `${marketPosition}%` }}
-              />
-            </div>
           </div>
 
-          <div className="flex items-center justify-between pt-3.5 border-t border-white/5">
+          <div className="flex items-center justify-between gap-3 border-t border-separator pt-3">
             <div className="min-w-0">
-              <p className="flex items-center gap-1.5 text-[12px] font-medium text-foreground/80 truncate">
-                <MapPin className="h-3 w-3 shrink-0 text-muted-foreground/70" />
-                {listing.district || t("listingCard.districtNa", "District N/A")}
-              </p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground truncate">
+              {listing.district && (
+                <p className="flex items-center gap-1.5 truncate text-footnote font-medium text-foreground">
+                  <MapPin className="h-3.5 w-3.5 shrink-0 text-label-2" aria-hidden />
+                  {listing.district}
+                </p>
+              )}
+              <p className="mt-0.5 truncate text-caption text-label-2">
                 {t("listingCard.listedOn", "Listed on {source}", { source: attribution.sourceName })}
-                {daysOnMarketLabel ? ` · ${daysOnMarketLabel}` : ""}
                 {attribution.checkedAgo ? ` · ${t("listingCard.checked", "checked {ago}", { ago: attribution.checkedAgo })}` : ""}
               </p>
-            </div>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border transition-all group-hover:border-primary/30 group-hover:bg-primary/10">
-              <ArrowRight className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-300 group-hover:translate-x-1 group-hover:text-primary" />
             </div>
           </div>
         </div>
       </div>
-    </article>
+    </m.article>
   );
 });
 

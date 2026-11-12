@@ -5,6 +5,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -58,7 +59,6 @@ import lk.motormila.app.domain.model.Alert
 import lk.motormila.app.domain.model.AlertMatch
 import lk.motormila.app.ui.components.MotormilaChoiceChip
 import lk.motormila.app.ui.components.MotormilaGhostButton
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.components.OfflineBanner
@@ -75,6 +75,7 @@ import lk.motormila.app.ui.theme.rememberHaptics
 fun AlertsScreen(
     onOpenDetail: (id: Int) -> Unit,
     onUpgrade: () -> Unit,
+    onSignIn: () -> Unit = {},
     viewModel: AlertsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -111,7 +112,7 @@ fun AlertsScreen(
     }
     // Consume the confetti burst after it plays.
 
-    MotormilaPage(
+    lk.motormila.app.ui.common.MmScreen(
         title = if (state.unreadCount > 0) "Price alerts (${state.unreadCount})" else "Price alerts",
         snackbarHostState = snacks,
     ) {
@@ -131,6 +132,9 @@ fun AlertsScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     item { OfflineBanner(visible = state.offline) }
+                    if (!state.signedIn || state.signInRequired) {
+                        item { SignInRequiredCard(emphasised = state.signInRequired, onSignIn = onSignIn) }
+                    }
                     item { CreateForm(state, viewModel, onUpgrade) }
                     if (state.justCreatedId != null) {
                         item { ConfettiLite(modifier = Modifier.fillMaxWidth().height(64.dp)) }
@@ -166,6 +170,7 @@ fun AlertsScreen(
                         }
                     } else {
                         items(state.alerts, key = { it.id }) { alert ->
+                          Box(Modifier.animateItem(fadeInSpec = null, placementSpec = lk.motormila.app.ui.theme.MmMotion.itemPlacement, fadeOutSpec = androidx.compose.animation.core.spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow))) {
                             AlertRow(
                                 alert = alert,
                                 active = alert.active,
@@ -185,6 +190,7 @@ fun AlertsScreen(
                                     viewModel.onEvent(AlertsUiEvent.ToggleAlertDelivery(alert.id))
                                 },
                             )
+                          }
                         }
                     }
                 }
@@ -227,6 +233,8 @@ private fun CreateForm(state: AlertsUiState, viewModel: AlertsViewModel, onUpgra
                 modifier = Modifier.weight(1f).heightIn(min = 48.dp),
             )
         }
+        // Pro-only channels: hidden (not teased) while Pro isn't on sale.
+        if (!proLocked) {
         OutlinedTextField(
             value = f.whatsappPhone,
             onValueChange = { viewModel.onEvent(AlertsUiEvent.FormChanged(f.copy(whatsappPhone = it))) },
@@ -243,6 +251,7 @@ private fun CreateForm(state: AlertsUiState, viewModel: AlertsViewModel, onUpgra
             supportingText = { Text(stringResource(R.string.ui_alerts_chat_id_or_username_pro)) },
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
         )
+        }
         Text(
             "Notify via",
             style = MaterialTheme.typography.labelMedium,
@@ -253,9 +262,9 @@ private fun CreateForm(state: AlertsUiState, viewModel: AlertsViewModel, onUpgra
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             ChannelChoiceChip(
-                label = "In-app",
+                label = stringResource(R.string.scr_alerts_inapp),
                 selected = f.inapp,
-                locked = proLocked,
+                locked = false,
                 onUpgrade = onUpgrade,
                 onToggle = { viewModel.onEvent(AlertsUiEvent.FormChanged(f.copy(inapp = !f.inapp))) },
             )
@@ -264,14 +273,14 @@ private fun CreateForm(state: AlertsUiState, viewModel: AlertsViewModel, onUpgra
                 selected = f.email,
                 onClick = { viewModel.onEvent(AlertsUiEvent.FormChanged(f.copy(email = !f.email))) },
             )
-            ChannelChoiceChip(
+            if (!proLocked) ChannelChoiceChip(
                 label = "WhatsApp",
                 selected = f.whatsapp,
                 locked = proLocked,
                 onUpgrade = onUpgrade,
                 onToggle = { viewModel.onEvent(AlertsUiEvent.FormChanged(f.copy(whatsapp = !f.whatsapp))) },
             )
-            ChannelChoiceChip(
+            if (!proLocked) ChannelChoiceChip(
                 label = "Telegram",
                 selected = f.telegram,
                 locked = proLocked,
@@ -284,6 +293,7 @@ private fun CreateForm(state: AlertsUiState, viewModel: AlertsViewModel, onUpgra
                 onClick = { viewModel.onEvent(AlertsUiEvent.FormChanged(f.copy(push = !f.push))) },
             )
         }
+        if (!proLocked) {
         Text(
             "Delivery",
             style = MaterialTheme.typography.labelMedium,
@@ -325,7 +335,8 @@ private fun CreateForm(state: AlertsUiState, viewModel: AlertsViewModel, onUpgra
                 modifier = Modifier.semantics { contentDescription = "Quiet hours" },
             )
         }
-        Text(
+        }
+        if (!proLocked) Text(
             "Email, WhatsApp, Telegram and push queue for the 07:00 digest. In-app always delivers.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -335,12 +346,12 @@ private fun CreateForm(state: AlertsUiState, viewModel: AlertsViewModel, onUpgra
                 Icon(Icons.Filled.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.size(8.dp))
                 Text(
-                    "Free plan: 1 alert used. Upgrade for unlimited.",
+                    stringResource(R.string.scr_alerts_cap),
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.weight(1f),
                 )
                 MotormilaGhostButton(
-                    label = "Go Pro",
+                    label = stringResource(R.string.scr_alerts_cap_cta),
                     fillMaxWidth = false,
                     onClick = onUpgrade,
                 )
@@ -406,7 +417,7 @@ private fun AlertRow(
     val channels = parseNotifyChannels(alert.notifyChannels)
     MotormilaSurface(
         modifier = Modifier.semantics {
-            contentDescription = "Alert ${alert.title} under ${formatLkr(alert.maxPriceLkr)}"
+            contentDescription = "Alert ${alert.title} under ${lk.motormila.app.ui.common.mn(alert.maxPriceLkr)}"
         },
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -416,7 +427,7 @@ private fun AlertRow(
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(
-                    "${alert.district ?: "Any district"} · triggers ≤ ${formatLkr(alert.maxPriceLkr)} · ${alert.notifyChannels ?: "push"}",
+                    "${alert.district ?: "Any district"} · triggers ≤ ${lk.motormila.app.ui.common.mn(alert.maxPriceLkr)} · ${alert.notifyChannels ?: "push"}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -503,7 +514,7 @@ private fun AlertRow(
                         )
                         Text(
                             buildString {
-                                append(m.priceLkr?.let { formatLkr(it) } ?: "Price on request")
+                                append(m.priceLkr?.let { lk.motormila.app.ui.common.mn(it) } ?: "Price on request")
                                 append(" · ${m.district ?: "—"}")
                                 m.dealScore?.let { append(" ★ %.1f".format(it)) }
                                 if (underPct != null && underPct >= 0) {
@@ -564,5 +575,23 @@ private fun ConfettiLite(modifier: Modifier = Modifier) {
                 ),
             )
         }
+    }
+}
+
+/** Shown when signed out: alert creation needs an account, so say so on screen instead of failing silently. */
+@Composable
+private fun SignInRequiredCard(emphasised: Boolean, onSignIn: () -> Unit) {
+    MotormilaSurface(highlighted = emphasised) {
+        Text(
+            if (emphasised) "Sign in to create this alert" else "Sign in to create price alerts",
+            style = MaterialTheme.typography.titleSmall,
+        )
+        Text(
+            "Price alerts are saved to your MotorMila account so we can notify you when a match lands.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
+        )
+        MotormilaPrimaryButton(label = "Sign in", onClick = onSignIn)
     }
 }

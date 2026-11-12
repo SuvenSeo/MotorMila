@@ -1,15 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Crown, BarChart3, Download, FileText, Lock, MapPin, Sparkles } from "lucide-react";
-import { PageBody } from "@/components/PageBody";
+import { ArrowRight, Check, Download, Lock, Sparkles } from "lucide-react";
 import { PageCanvas } from "@/components/PageCanvas";
-import { PageHero } from "@/components/PageHero";
-import { revealItem } from "@/lib/motion";
+import { PageBody } from "@/components/PageBody";
+import { CineHeader } from "@/components/CineHeader";
+import { CineFigure, CineSection } from "@/components/CineSection";
+import { AnimatedNumber } from "@/components/ui/animated-number";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { visuals } from "@/lib/visualAssets";
 import { formatPriceLkrMillions } from "@/lib/formatting";
+import { PLAN_PRICES, formatLkr } from "@/lib/pricingContent";
+import { visuals } from "@/lib/visualAssets";
 import { getProVehicleLanes } from "@/services/api";
+import { getStoredAuthToken } from "@/lib/authToken";
 
 export type ProPreviewSampleLane = {
   name: string;
@@ -59,34 +64,41 @@ export const PRO_PREVIEW_GAPS_DEFAULT: ProPreviewGap[] = [
   },
 ];
 
-const REPORTS = ["Executive PDF", "Editable Word brief", "CSV data pack"];
-
-function LockedOverlay({ label }: { label?: string }) {
+/** The lock tag on a gated card: says what it takes, never hides the content. */
+function LockTag({ label }: { label?: string }) {
   const { t } = useAppPreferences();
   return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[inherit] bg-background/70 backdrop-blur-[3px]">
-      <div className="rounded-xl border border-primary/25 bg-primary/10 px-4 py-3 text-center shadow-soft">
-        <Lock aria-hidden className="mx-auto mb-1.5 h-4 w-4 text-primary" />
-        <p className="text-[12px] font-semibold text-primary-bright">
-          {label ?? t("pro.unlockWithPro", "Unlock with Pro")}
-        </p>
-      </div>
-    </div>
+    <span className="inline-flex items-center gap-1.5 text-caption font-semibold text-primary">
+      <Lock aria-hidden className="h-3.5 w-3.5" />
+      {label ?? t("pro.unlockWithPro", "Unlock with Pro")}
+    </span>
   );
 }
 
-export default function ProPreview({ sampleLane, gaps, trialCtaTo = "/pricing" }: ProPreviewProps) {
+export default function ProPreview({ sampleLane, gaps, trialCtaTo = "/pricing#get-started" }: ProPreviewProps) {
   const { t } = useAppPreferences();
-  // Data-only feed (B2-D): one REAL lane when the API has data, otherwise the
-  // mock fallback below stays labelled as a live sample. B1-E structure intact.
+  // Data-only feed (B2-D): one REAL lane when the API has data. Until it
+  // answers we show a skeleton; if it can't, the default lane is labelled as
+  // an example (never as live data).
   const [liveLane, setLiveLane] = useState<ProPreviewSampleLane | null>(null);
+  const [laneState, setLaneState] = useState<"loading" | "live" | "example">(sampleLane ? "live" : "loading");
 
   useEffect(() => {
     if (sampleLane) return;
+    // Pro lanes need a session: signed-out visitors (most preview traffic) get the
+    // labelled example straight away instead of a guaranteed 401.
+    if (!getStoredAuthToken()) {
+      setLaneState("example");
+      return;
+    }
     let cancelled = false;
     getProVehicleLanes({ limit: 1 })
       .then((lanes) => {
-        if (cancelled || lanes.length === 0) return;
+        if (cancelled) return;
+        if (lanes.length === 0) {
+          setLaneState("example");
+          return;
+        }
         const lane = lanes[0];
         setLiveLane({
           name: `${lane.make} ${lane.model}`.trim(),
@@ -95,9 +107,10 @@ export default function ProPreview({ sampleLane, gaps, trialCtaTo = "/pricing" }
           district: lane.top_district || "Sri Lanka",
           visibleCount: Math.max(1, Math.min(lane.listing_count, 12)),
         });
+        setLaneState("live");
       })
       .catch(() => {
-        // API empty/unreachable — mock fallback keeps the live-sample label.
+        if (!cancelled) setLaneState("example");
       });
     return () => {
       cancelled = true;
@@ -105,143 +118,208 @@ export default function ProPreview({ sampleLane, gaps, trialCtaTo = "/pricing" }
   }, [sampleLane]);
 
   const lane = { ...PRO_PREVIEW_SAMPLE_LANE_DEFAULT, ...liveLane, ...sampleLane };
-  const gapCards = gaps ?? PRO_PREVIEW_GAPS_DEFAULT;
+  // Default cards are translated; caller-supplied gaps render as given.
+  const gapCards =
+    gaps ??
+    PRO_PREVIEW_GAPS_DEFAULT.map((gap, i) => {
+      const keys = [
+        ["acct.proPreview.gapDistricts.title", "acct.proPreview.gapDistricts.body", "acct.proPreview.gapDistricts.meta"],
+        ["acct.proPreview.gapHistory.title", "acct.proPreview.gapHistory.body", "acct.proPreview.gapHistory.meta"],
+        ["acct.proPreview.gapExports.title", "acct.proPreview.gapExports.body", "acct.proPreview.gapExports.meta"],
+      ][i];
+      return keys ? { title: t(keys[0], gap.title), body: t(keys[1], gap.body), meta: t(keys[2], gap.meta) } : gap;
+    });
+  // What Pro unlocks: this page's three, plus the two Pro plan features on
+  // /pricing that they don't already cover (same copy, same keys).
+  const unlocks = [
+    t("acct.proPreview.unlock1", "Pro dashboard with deal scores"),
+    t("acct.proPreview.unlock2", "District detail and full price history"),
+    t("acct.proPreview.unlock3", "Exports: PDF, Word, CSV, JSON"),
+    t("pricing.tier.pro.f.allTaxCustomsUpdates", "All tax & customs updates"),
+    t("pricing.tier.pro.f.moreAlertsIncludingWhatsapp", "More alerts, including WhatsApp"),
+  ];
+  const reports = [
+    t("acct.proPreview.report1", "Executive PDF"),
+    t("acct.proPreview.report2", "Editable Word brief"),
+    t("acct.proPreview.report3", "CSV data pack"),
+  ];
+  const monthly = PLAN_PRICES.pro.monthly;
+  const yearly = PLAN_PRICES.pro.yearly;
 
   return (
-    <PageCanvas>
-      <PageHero
-        theme="default"
+    <PageCanvas ambient="none">
+      <CineHeader
         eyebrow={t("pro.previewEyebrow", "Pro Preview")}
-        eyebrowIcon={Crown}
-        watermarkIcon={BarChart3}
-        title={<>{t("pro.previewTitle", "Try Pro free for 7 days")}<span className="text-sheen">.</span></>}
-        description={t(
+        lead={t("proPreview.cine.lead", "Pro workspace")}
+        accent={t("proPreview.cine.accent", "preview.")}
+        body={t(
           "pro.previewBody",
-          "One live sample lane below — the other 3 Pro depths unlock with a 7-day free trial. No invite needed.",
+          "See the depth of lane drill-downs, district profiles, and export packs before you sign in.",
         )}
-        media={visuals.pageProPremium}
-        mediaPosition="center 35%"
-        mediaTone="brand"
-        highlights={[
-          { label: t("pro.sampleLane", "Sample"), value: "1 lane", hint: t("pro.sampleLaneHint", "Live sample, free to view") },
-          { label: t("pro.lockedGaps", "Locked"), value: "3 gaps", hint: t("pro.lockedGapsHint", "Unlock with trial") },
-          { label: t("pro.trial", "Trial"), value: "7 days", hint: t("pro.trialHint", "Pro access, then manual pay") },
-        ]}
-        actions={
-          <>
-            <Link
-              to={trialCtaTo}
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-[13px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              <Sparkles aria-hidden className="h-4 w-4" /> {t("pro.startTrial", "Join the waitlist")}
-            </Link>
-            <Link
-              to="/pricing"
-              className="inline-flex h-11 items-center rounded-full border border-border bg-card px-6 text-[13px] font-semibold text-foreground no-underline transition-all hover:border-primary/40 hover:bg-surface active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              {t("pro.seePricing", "See pricing")}
-            </Link>
-          </>
-        }
-      />
-
-      <PageBody>
-        <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-          <div className="space-y-6">
-            {/* Sample lane — the single unlocked preview item */}
-            <motion.div variants={revealItem} className="premium-surface relative p-6 sm:p-7">
-              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-                <p className="section-eyebrow">Sample lane</p>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-300">
-                  <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  Live sample
+        image={visuals.darkGarageSilhouette}
+        imagePosition="80% 70%"
+      >
+        <CineFigure
+          label={t("proPreview.cine.priceKicker", "Planned Pro price")}
+          value={
+            <>
+              <span className="sr-only">{formatLkr(monthly)} {t("pricing.tier.free.priceNote", "/mo")}</span>
+              <span aria-hidden>
+                {formatLkr(monthly)}
+                <span className="ml-1.5 align-baseline font-sans text-body font-medium tracking-normal text-white/60">
+                  {t("pricing.tier.free.priceNote", "/mo")}
                 </span>
-              </div>
-              <div className="overflow-hidden rounded-xl border border-border">
-                <table className="w-full text-[12px]">
-                  <thead>
-                    <tr className="bg-surface">
-                      {["Vehicle", "Listings", "Median", "Top area"].map((h) => (
-                        <th key={h} className="px-4 py-3 text-left text-[12px] font-semibold text-muted-foreground">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-t border-border">
-                      <td className="px-4 py-3 font-bold text-foreground">{lane.name}</td>
-                      <td className="num px-4 py-3 font-medium text-muted-foreground">{lane.listings}</td>
-                      <td className="num px-4 py-3 font-bold text-primary">{lane.median}</td>
-                      <td className="px-4 py-3 font-medium text-muted-foreground">{lane.district}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
-                Showing {lane.visibleCount} of {lane.listings} live {lane.name} listings in {lane.district} — the full lane,
-                district splits, and history unlock with your trial.
-              </p>
-            </motion.div>
+              </span>
+            </>
+          }
+          caption={t("proPreview.cine.priceCaption", "Or {yearly} a year, two months free. Free during beta, and we'll email you before it starts.", {
+            yearly: formatLkr(yearly),
+          })}
+        />
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <Button asChild size="lg">
+            <Link to={trialCtaTo}>
+              <Sparkles aria-hidden /> {t("shell.pro.notify", "Notify me")}
+            </Link>
+          </Button>
+          <Button asChild size="lg" variant="secondary">
+            <Link to="/pricing">{t("pro.seePricing", "See pricing")}</Link>
+          </Button>
+        </div>
+      </CineHeader>
 
-            {/* 3 locked gaps — props-driven placeholders */}
-            <div className="grid gap-4 sm:grid-cols-3">
-              {gapCards.slice(0, 3).map((gap) => (
-                <motion.div key={gap.title} variants={revealItem} className="data-card relative min-h-[190px] p-5">
-                  <LockedOverlay />
-                  <p className="text-[11px] font-medium text-primary-bright">{gap.meta}</p>
-                  <h3 className="mt-2 text-[13px] font-bold text-foreground">{gap.title}</h3>
-                  <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">{gap.body}</p>
-                </motion.div>
+      <PageBody className="space-y-14 pb-20 pt-8 lg:space-y-20 lg:pt-12">
+        {/* 01 — the one unlocked item: a sample lane as Pro shows it */}
+        <CineSection
+          index="01"
+          id="pro-preview-lane"
+          title={t("acct.proPreview.sampleLane", "Sample lane")}
+          body={t("proPreview.cine.laneBody", "One make-and-model lane, the way Pro shows every lane.")}
+        >
+          <div className="cine-panel theme-dark p-6 text-foreground sm:p-8">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-callout font-semibold text-white">{laneState === "loading" ? "\u00a0" : lane.name}</p>
+              {laneState === "live" ? (
+                <Badge variant="success" className="content-in">
+                  <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-deal-good" />
+                  {t("acct.proPreview.liveSample", "Live sample")}
+                </Badge>
+              ) : laneState === "example" ? (
+                <Badge variant="neutral" className="content-in">{t("acct.proPreview.example", "Example")}</Badge>
+              ) : null}
+            </div>
+            {laneState === "loading" ? (
+              <div className="mt-6 space-y-3" aria-busy="true">
+                <Skeleton shape="text" className="h-10 w-48 bg-foreground/10" />
+                <Skeleton shape="text" className="h-4 w-4/5 bg-foreground/10" />
+              </div>
+            ) : (
+              <div className="content-in">
+                <dl className="mt-6 grid grid-cols-2 gap-5 border-t border-foreground/10 pt-5 sm:grid-cols-3 sm:gap-6">
+                  <div className="col-span-2 sm:col-span-1">
+                    <dt className="text-caption text-white/55">{t("acct.proPreview.colMedian", "Median")}</dt>
+                    <dd className="cine-card__price mt-1.5 text-[clamp(1.75rem,1.4rem+1.2vw,2.5rem)] leading-none text-white">{lane.median}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-caption text-white/55">{t("acct.proPreview.colListings", "Listings")}</dt>
+                    <dd className="cine-card__price mt-1.5 text-title2 leading-none text-white">
+                      <AnimatedNumber value={lane.listings} />
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-caption text-white/55">{t("acct.proPreview.colArea", "Top area")}</dt>
+                    <dd className="mt-1.5 text-title3 font-semibold leading-tight text-white">{lane.district}</dd>
+                  </div>
+                </dl>
+                <p className="mt-6 max-w-2xl text-footnote leading-relaxed text-white/70">
+                  {t(
+                    "acct.proPreview.showing",
+                    "Showing {visible} of {total} {name} listings in {district}. The full lane, district splits and history unlock with Pro.",
+                    { visible: String(lane.visibleCount), total: String(lane.listings), name: lane.name, district: lane.district },
+                  )}
+                </p>
+              </div>
+            )}
+          </div>
+        </CineSection>
+
+        {/* 02 — the three views that stay locked until Pro */}
+        <CineSection
+          index="02"
+          id="pro-preview-locked"
+          title={t("proPreview.cine.lockedTitle", "Locked until Pro")}
+          body={t("proPreview.cine.lockedBody", "Three deeper views that open when Pro launches.")}
+        >
+          <ul className="grid gap-3 md:grid-cols-3">
+            {gapCards.slice(0, 3).map((gap, i) => (
+              <li
+                key={gap.title}
+                className="cine-rise flex h-full list-none flex-col justify-between gap-6 rounded-card border border-border bg-card p-5"
+                style={{ "--i": i } as CSSProperties}
+              >
+                <div>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-caption font-semibold tabular-nums text-primary">{String(i + 1).padStart(2, "0")}</span>
+                    <span className="text-right text-caption font-semibold text-label-2">{gap.meta}</span>
+                  </div>
+                  <h3 className="mt-3 text-callout font-semibold text-foreground">{gap.title}</h3>
+                  <p className="mt-1.5 text-footnote leading-relaxed text-label-2">{gap.body}</p>
+                </div>
+                <LockTag />
+              </li>
+            ))}
+          </ul>
+        </CineSection>
+
+        {/* 03 — everything Pro unlocks + the report formats */}
+        <CineSection index="03" id="pro-preview-unlocks" title={t("acct.proPreview.unlocksTitle", "What Pro unlocks")}>
+          <div className="grid gap-10 lg:grid-cols-[1.25fr_0.75fr] lg:gap-16">
+            <ul className="cine-list border-y border-border">
+              {unlocks.map((item) => (
+                <li key={item} className="flex items-start gap-3 py-3.5 text-body text-label-1">
+                  <Check aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  {item}
+                </li>
               ))}
+            </ul>
+            <div>
+              <h3 className="cine-eyebrow text-label-2">{t("acct.proPreview.reportFormats", "Report formats")}</h3>
+              <ul className="cine-list mt-3 border-y border-border">
+                {reports.map((r) => (
+                  <li key={r} className="flex h-12 items-center justify-between text-body text-label-1">
+                    <span>{r}</span>
+                    <Download aria-hidden className="h-4 w-4 text-label-3" />
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
+        </CineSection>
 
-          <aside className="space-y-6">
-            <motion.div variants={revealItem} className="data-card p-6">
-              <Sparkles aria-hidden className="mb-3 h-5 w-5 text-primary" />
-              <h2 className="font-display text-[15px] font-bold text-foreground">What your trial unlocks</h2>
-              <div className="mt-4 space-y-2">
-                {["Full Pro terminal (/pro) for 7 days", "District profiles + trend history", "Export packs: PDF, Word, CSV, JSON"].map((i) => (
-                  <div key={i} className="flex items-start gap-2.5 rounded-xl border border-border bg-surface p-3">
-                    <span aria-hidden className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                    <p className="text-[11px] font-semibold text-muted-foreground">{i}</p>
-                  </div>
-                ))}
-              </div>
-              <Link
-                to={trialCtaTo}
-                className="mt-5 flex h-11 items-center justify-center gap-2 rounded-full bg-primary text-[13px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98]"
-              >
-                <Sparkles aria-hidden className="h-4 w-4" /> Join the waitlist
+        {/* Close: one clear next step */}
+        <div className="cine-panel theme-dark flex flex-col gap-6 p-6 text-foreground sm:p-8 md:flex-row md:items-end md:justify-between">
+          <div className="max-w-xl">
+            <h2 className="cine-display text-[clamp(1.5rem,1.2rem+1vw,2.25rem)] text-white">
+              {t("shell.pricing.ctaTitle", "Get an email when Pro launches.")}
+            </h2>
+            <p className="mt-3 text-footnote text-white/70">
+              {t("shell.pro.previewNote", "Pro is coming soon. MotorMila is free during beta.")}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button asChild size="lg">
+              <Link to={trialCtaTo}>
+                <Sparkles aria-hidden /> {t("shell.pro.notify", "Notify me")}
               </Link>
-              <p className="mt-2.5 text-center text-[11px] text-muted-foreground">
-                Annual saves 2 months · Manual pay activates within 2 hours
-              </p>
-            </motion.div>
-
-            <motion.div variants={revealItem} className="data-card p-6">
-              <div className="mb-3 flex items-center gap-2">
-                <FileText aria-hidden className="h-4 w-4 text-primary" />
-                <h2 className="text-[15px] font-bold text-foreground">Report formats</h2>
-              </div>
-              <div className="space-y-2">
-                {REPORTS.map((r) => (
-                  <div key={r} className="flex h-9 items-center justify-between rounded-xl border border-border bg-surface px-3 text-[11px] font-semibold text-muted-foreground transition-colors hover:text-foreground">
-                    <span>{r}</span>
-                    <Download aria-hidden className="h-3 w-3 text-primary" />
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-
-            <motion.div variants={revealItem}>
-              <Link
-                to={trialCtaTo}
-                className="flex h-11 items-center justify-center gap-2 rounded-full bg-primary text-[13px] font-semibold text-primary-foreground no-underline shadow-soft transition-all hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              >
-                <MapPin aria-hidden className="h-4 w-4" /> Unlock Pro workspace
-              </Link>
-            </motion.div>
-          </aside>
+            </Button>
+            <Link
+              to="/pricing"
+              className="group inline-flex items-center gap-1.5 text-footnote font-semibold text-white/80 no-underline hover:text-white"
+            >
+              {t("pro.seePricing", "See pricing")}
+              <ArrowRight aria-hidden className="cine-row__arrow h-3.5 w-3.5" />
+            </Link>
+          </div>
         </div>
       </PageBody>
     </PageCanvas>

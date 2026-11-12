@@ -56,10 +56,10 @@ class ShareUrlParserTest {
     }
 
     @Test
-    fun motormilaLkListing_goesToCompare() {
-        val t = parseSharedUrl("https://motormila.lk/listings/88")
-        assertTrue(t is ShareTarget.Compare)
-        assertEquals(listOf(88), (t as ShareTarget.Compare).ids)
+    fun motormilaLkListing_isUnsupported() {
+        // motormila.lk is not owned by Motormila or Ardeno Studio, so it is
+        // no longer a supported share host (see ShareUrlParser).
+        assertTrue(parseSharedUrl("https://motormila.lk/listings/88") is ShareTarget.Unsupported)
     }
 
     @Test

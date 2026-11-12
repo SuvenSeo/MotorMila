@@ -7,7 +7,7 @@ AUTH_USERS entry with role=admin).
 from __future__ import annotations
 
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -29,6 +29,7 @@ from app.services.geo_service import sample_geocode
 from app.services.revcardata_pilot import run_pilot
 from app.services.providers.health import provider_health
 from db.models import (
+    AdminAuditLog,
     CarListing,
     DealerProfile,
     MarketAlert,
@@ -112,6 +113,56 @@ def _user_row_response(user: PlatformUser) -> dict:
     }
 
 
+def _log_admin_action(
+    db: Session,
+    admin: dict,
+    action: str,
+    target_type: str,
+    target_id: object | None,
+    detail: str | None = None,
+) -> None:
+    """Append one audit row. Best-effort: a logging failure must never
+    break the admin action itself, so callers wrap this in try/except or
+    call it after the action's own commit (the pattern used below)."""
+    try:
+        db.add(
+            AdminAuditLog(
+                actor_email=str(admin.get("email") or "admin"),
+                action=action,
+                target_type=target_type,
+                target_id=str(target_id) if target_id is not None else None,
+                detail=(detail or "")[:500] or None,
+            )
+        )
+        db.commit()
+    except Exception:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+
+
+def _audit_row(row: AdminAuditLog) -> dict:
+    return {
+        "id": row.id,
+        "actorEmail": row.actor_email,
+        "action": row.action,
+        "targetType": row.target_type,
+        "targetId": row.target_id,
+        "detail": row.detail,
+        "createdAt": row.created_at.isoformat() if row.created_at else None,
+    }
+
+
+def _as_utc(value) -> datetime | None:
+    """Normalise a DB datetime for comparison (SQLite rows may be naive)."""
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
+
+
 @router.get("/overview", response_model=dict)
 def admin_overview(
     admin: dict = Depends(require_admin_access),
@@ -180,6 +231,34 @@ def admin_overview(
         .all()
     )
 
+    # CeyFi-style overview figures, computed in Python so the counts are
+    # identical on Postgres and on the SQLite fallback (whose stored
+    # datetimes may be naive). User counts are small, so a full scan here
+    # is cheaper than a timezone-mismatch bug in SQL.
+    now = datetime.now(timezone.utc)
+    last_logins = [row[0] for row in db.query(PlatformUser.last_login_at).all()]
+    active7 = sum(
+        1 for value in last_logins if (_as_utc(value) or now) >= now - timedelta(days=7) and _as_utc(value) is not None
+    )
+    active30 = sum(
+        1 for value in last_logins if (_as_utc(value) or now) >= now - timedelta(days=30) and _as_utc(value) is not None
+    )
+    signups_daily: dict[str, int] = {}
+    for value in [row[0] for row in db.query(PlatformUser.created_at).all()]:
+        created = _as_utc(value)
+        if created is None or created < now - timedelta(days=90):
+            continue
+        day = created.date().isoformat()
+        signups_daily[day] = signups_daily.get(day, 0) + 1
+    moderation_pending = (
+        db.query(func.count(CarListing.id))
+        .filter(CarListing.source == "motormila_user", CarListing.user_listing_status == "pending")
+        .scalar()
+        or 0
+    )
+    recent_users = db.query(PlatformUser).order_by(PlatformUser.created_at.desc()).limit(5).all()
+    recent_feedback = db.query(UserFeedback).order_by(UserFeedback.created_at.desc()).limit(5).all()
+
     return {
         "listings": {
             "total": int(total_listings),
@@ -190,13 +269,22 @@ def admin_overview(
             "free": int(users_free),
             "pro": int(users_pro),
             "admins": int(users_admin),
+            "active7": int(active7),
+            "active30": int(active30),
         },
         "invites": {"pending": int(invites_pending)},
         "feedback": {"open": int(feedback_open)},
         "dealers": {"verified": int(dealers_verified)},
+        "moderation": {"pending": int(moderation_pending)},
+        "signupsDaily": [
+            {"day": day, "count": signups_daily[day]}
+            for day in sorted(signups_daily)
+        ],
+        "recentUsers": [_user_row_response(row) for row in recent_users],
+        "recentFeedback": [_feedback_row(row) for row in recent_feedback],
         "recentScrapes": scrape_payload,
         "topMakes": [{"make": make, "count": int(count)} for make, count in top_makes],
-        "generatedAt": datetime.now(timezone.utc).isoformat(),
+        "generatedAt": now.isoformat(),
     }
 
 
@@ -314,6 +402,7 @@ def update_user(
 
     db.commit()
     db.refresh(user)
+    _log_admin_action(db, admin, "user_updated", "user", user.id, f"plan={user.plan} role={user.role} active={bool(user.is_active)}")
     return _user_row_response(user)
 
 
@@ -368,6 +457,7 @@ def create_invite(
         pending.invited_by_email = admin["email"]
         db.commit()
         db.refresh(pending)
+        _log_admin_action(db, admin, "invite_refreshed", "invite", pending.id, f"{email} plan={plan} role={role}")
         sent = _dispatch_invite_email(pending, invited_by=admin["email"])
         return _invite_response(pending, email_sent=sent)
 
@@ -383,6 +473,7 @@ def create_invite(
     db.add(invite)
     db.commit()
     db.refresh(invite)
+    _log_admin_action(db, admin, "invite_created", "invite", invite.id, f"{email} plan={plan} role={role}")
     sent = _dispatch_invite_email(invite, invited_by=admin["email"])
     return _invite_response(invite, email_sent=sent)
 
@@ -393,7 +484,6 @@ def revoke_invite(
     admin: dict = Depends(require_admin_access),
     db: Session = Depends(get_db),
 ):
-    del admin
     invite = db.query(UserInvite).filter(UserInvite.id == invite_id).first()
     if invite is None:
         raise HTTPException(status_code=404, detail="Invite not found.")
@@ -401,6 +491,7 @@ def revoke_invite(
         raise HTTPException(status_code=400, detail="Accepted invites cannot be revoked.")
     invite.status = "revoked"
     db.commit()
+    _log_admin_action(db, admin, "invite_revoked", "invite", invite_id, invite.email)
     return {"ok": True, "id": invite_id, "status": "revoked"}
 
 
@@ -609,7 +700,6 @@ def update_feedback(
     admin: dict = Depends(require_admin_access),
     db: Session = Depends(get_db),
 ):
-    del admin
     row = db.query(UserFeedback).filter(UserFeedback.id == feedback_id).first()
     if row is None:
         raise HTTPException(status_code=404, detail="Feedback not found.")
@@ -619,6 +709,7 @@ def update_feedback(
     row.status = status
     db.commit()
     db.refresh(row)
+    _log_admin_action(db, admin, "feedback_updated", "feedback", feedback_id, f"status={status}")
     return _feedback_row(row)
 
 
@@ -643,7 +734,6 @@ def verify_dealer(
     admin: dict = Depends(require_admin_access),
     db: Session = Depends(get_db),
 ):
-    del admin
     row = db.query(DealerProfile).filter(DealerProfile.id == dealer_id).first()
     if row is None:
         raise HTTPException(status_code=404, detail="Dealer not found.")
@@ -651,6 +741,7 @@ def verify_dealer(
     row.verified_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(row)
+    _log_admin_action(db, admin, "dealer_verified", "dealer", dealer_id, row.display_name)
     return _dealer_row(row)
 
 
@@ -716,7 +807,6 @@ def approve_user_listing(
     db: Session = Depends(get_db),
 ):
     """Publish a pending user listing into the live market."""
-    del admin
     row = _user_listing_or_404(db, listing_id)
     if row.user_listing_status == "removed":
         raise HTTPException(status_code=409, detail="Listing was removed by its owner.")
@@ -725,6 +815,7 @@ def approve_user_listing(
     row.last_seen_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(row)
+    _log_admin_action(db, admin, "listing_approved", "listing", listing_id, row.title)
     return _moderation_row(row)
 
 
@@ -736,12 +827,12 @@ def reject_user_listing(
     db: Session = Depends(get_db),
 ):
     """Reject (or unpublish) a user listing; it goes back to the owner as draft."""
-    del admin
     row = _user_listing_or_404(db, listing_id)
     row.user_listing_status = "draft"
     row.is_active = False
     db.commit()
     db.refresh(row)
+    _log_admin_action(db, admin, "listing_rejected", "listing", listing_id, (payload.reason if payload else None))
     result = _moderation_row(row)
     result["reason"] = payload.reason if payload else None
     return result
@@ -867,7 +958,6 @@ def upsert_permit_admin(
     admin: dict = Depends(require_admin_access),
     db: Session = Depends(get_db),
 ):
-    del admin
     permit = (
         db.query(VehiclePermit).filter(VehiclePermit.permit_name == payload.permit_name).first()
     )
@@ -883,6 +973,7 @@ def upsert_permit_admin(
         db.add(permit)
     db.commit()
     db.refresh(permit)
+    _log_admin_action(db, admin, "permit_saved", "permit", permit.id, f"{permit.permit_name} {permit.market_price_lkr}")
     return {
         "id": permit.id,
         "permitName": permit.permit_name,
@@ -905,6 +996,7 @@ def clear_stats_cache(
         query = query.filter(MarketStatsCache.cache_key == key.strip())
     deleted = query.delete(synchronize_session=False)
     db.commit()
+    _log_admin_action(db, admin, "cache_cleared", "cache", key, f"deleted={int(deleted)}")
     return {"ok": True, "deleted": int(deleted), "clearedBy": cleared_by}
 
 
@@ -947,4 +1039,96 @@ def admin_system(
         "statsCacheKeys": cache_keys,
         "providers": provider_health(db),
         "generatedAt": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@router.get("/audit-log", response_model=dict)
+def list_audit_log(
+    admin: dict = Depends(require_admin_access),
+    db: Session = Depends(get_db),
+    limit: int = Query(default=100, ge=1, le=500),
+):
+    """Most recent admin console actions, newest first."""
+    del admin
+    rows = (
+        db.query(AdminAuditLog)
+        .order_by(AdminAuditLog.created_at.desc(), AdminAuditLog.id.desc())
+        .limit(limit)
+        .all()
+    )
+    return {"items": [_audit_row(row) for row in rows], "count": len(rows)}
+
+
+@router.get("/health", response_model=dict)
+def admin_health(
+    admin: dict = Depends(require_admin_access),
+    db: Session = Depends(get_db),
+):
+    """Live platform health for the admin Health page.
+
+    Status page only — no controls here (those stay on System). The
+    deployed version/commit are intentionally null: the app bundle does
+    not carry a commit id, so the UI renders "—" instead of inventing one.
+    """
+    del admin
+    now = datetime.now(timezone.utc)
+    db_ok = True
+    try:
+        db.execute(text("SELECT 1"))
+    except Exception:
+        db_ok = False
+    live_listings = (
+        db.query(func.count(CarListing.id)).filter(live_listing_filter()).scalar() or 0
+    )
+    recent_runs = (
+        db.query(ScrapeRun).order_by(ScrapeRun.started_at.desc()).limit(200).all()
+    )
+    last_run = recent_runs[0] if recent_runs else None
+    failed_24h = sum(
+        1
+        for run in recent_runs
+        if run.status == "FAILED"
+        and _as_utc(run.started_at) is not None
+        and _as_utc(run.started_at) >= now - timedelta(hours=24)
+    )
+    recent_errors = [
+        {
+            "id": run.id,
+            "source": run.source,
+            "startedAt": run.started_at.isoformat() if run.started_at else None,
+            "errorMessage": (run.error_message or "")[:240] or None,
+        }
+        for run in recent_runs
+        if run.status == "FAILED"
+    ][:10]
+    cache_rows = db.query(MarketStatsCache).all()
+    return {
+        "databaseOk": bool(db_ok),
+        "liveListings": int(live_listings),
+        "lastScrape": (
+            {
+                "id": last_run.id,
+                "source": last_run.source,
+                "status": last_run.status,
+                "listingsFound": last_run.listings_found or 0,
+                "listingsNew": last_run.listings_new or 0,
+                "startedAt": last_run.started_at.isoformat() if last_run.started_at else None,
+                "finishedAt": last_run.finished_at.isoformat() if last_run.finished_at else None,
+                "errorMessage": (last_run.error_message or "")[:240] or None,
+            }
+            if last_run
+            else None
+        ),
+        "failedScrapes24h": int(failed_24h),
+        "recentErrors": recent_errors,
+        "statsCache": [
+            {
+                "key": row.cache_key,
+                "refreshedAt": row.refreshed_at.isoformat() if row.refreshed_at else None,
+            }
+            for row in cache_rows
+        ],
+        "version": None,
+        "commit": None,
+        "generatedAt": now.isoformat(),
     }

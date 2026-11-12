@@ -1,10 +1,16 @@
 import { useEffect, useId, useState } from "react";
-import { Check, Loader2, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
-import { LEAD_CONSENT, LEAD_COPY, type LeadKind } from "@/lib/leadConsent";
+import { LEAD_CONSENT, leadCopy, type LeadKind } from "@/lib/leadConsent";
 import { getLeadPartners, submitLead, type LeadPartner, type LeadReceipt } from "@/lib/moneyApi";
 import { trackEvent } from "@/lib/analytics";
-import { HONEYPOT_STYLE, INPUT_CLASS, LABEL_CLASS, PRIMARY_BUTTON_CLASS, TEXTAREA_CLASS } from "./formStyles";
+import { HONEYPOT_STYLE } from "./formStyles";
+import { useAppPreferences } from "@/lib/appPreferences";
+import { friendlyApiError } from "@/lib/apiErrorText";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { AdornedInput, CheckRow, Field, Notice } from "@/components/tools/ToolKit";
 
 type ListingContext = { id?: number; vehicle?: string; priceLkr?: number; district?: string };
 
@@ -31,7 +37,8 @@ export function LeadRequestForm({
   compact?: boolean;
 }) {
   const uid = useId();
-  const copy = LEAD_COPY[kind];
+  const { t } = useAppPreferences();
+  const copy = leadCopy(kind, t);
   const consent = LEAD_CONSENT[kind];
   const [partners, setPartners] = useState<LeadPartner[] | null>(null);
   const [name, setName] = useState("");
@@ -61,27 +68,27 @@ export function LeadRequestForm({
 
   if (receipt) {
     return (
-      <div role="status" className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-5">
-        <p className="flex items-center gap-2 text-[14px] font-semibold text-emerald-700 dark:text-emerald-400">
-          <Check aria-hidden className="h-4 w-4" /> Request sent · ref {receipt.reference}
-        </p>
-        <p className="mt-2 text-[13px] leading-relaxed text-foreground/80">{receipt.message}</p>
-      </div>
+      <Notice tone="success" role="status" title={t("tools.lead.sent", "Request sent · ref {ref}", { ref: receipt.reference })}>
+        <p className="text-label-2">{receipt.message}</p>
+      </Notice>
     );
   }
 
   const partnerNames = (partners ?? []).map((p) => (p.licence ? `${p.name} (${p.licence})` : p.name));
+  const optional = t("tools.optional", "optional");
+  const id = (name: string) => `${uid}-${name}`;
 
   return (
     <form
-      className="relative space-y-4"
+      className="relative space-y-5"
       noValidate
       onSubmit={async (e) => {
         e.preventDefault();
         setError(null);
-        if (name.trim().length < 2) return setError("Please enter your name.");
-        if (!/^(\+?94|0)?\d{9}$/.test(phone.replace(/[\s\-()]/g, ""))) return setError("Please enter a valid Sri Lankan phone number, e.g. 077 123 4567.");
-        if (!agreed) return setError("Please tick the consent box so we can pass your request on.");
+        if (name.trim().length < 2) return setError(t("tools.lead.errName", "Please enter your name."));
+        if (!/^(\+?94|0)?\d{9}$/.test(phone.replace(/[\s\-()]/g, "")))
+          return setError(t("tools.lead.errPhone", "Please enter a valid Sri Lankan phone number, e.g. 077 123 4567."));
+        if (!agreed) return setError(t("tools.lead.errConsent", "Please tick the consent box so we can pass your request on."));
         setSending(true);
         try {
           const result = await submitLead({
@@ -104,96 +111,91 @@ export function LeadRequestForm({
           trackEvent("lead_submitted", { kind, listing: listing?.id ?? null });
           setReceipt(result);
         } catch (err) {
-          setError(err instanceof Error ? err.message : "Couldn't send your request. Please try again.");
+          setError(friendlyApiError(err, t("tools.lead.errSend", "Couldn't send your request. Please try again."), t));
         } finally {
           setSending(false);
         }
       }}
     >
-      {!compact && <p className="text-[13px] leading-relaxed text-muted-foreground">{copy.blurb}</p>}
 
-      <div style={HONEYPOT_STYLE} aria-hidden="true">
-        <label htmlFor={`${uid}-website`}>Website</label>
-        <input id={`${uid}-website`} tabIndex={-1} autoComplete="off" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <label className={LABEL_CLASS} htmlFor={`${uid}-name`}>Your name</label>
-          <input id={`${uid}-name`} className={INPUT_CLASS} autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} required />
-        </div>
-        <div>
-          <label className={LABEL_CLASS} htmlFor={`${uid}-phone`}>Phone</label>
-          <input id={`${uid}-phone`} className={INPUT_CLASS} type="tel" inputMode="tel" autoComplete="tel" placeholder="077 123 4567" value={phone} onChange={(e) => setPhone(e.target.value)} required />
-        </div>
-        <div>
-          <label className={LABEL_CLASS} htmlFor={`${uid}-email`}>Email <span className="font-normal text-muted-foreground">(optional)</span></label>
-          <input id={`${uid}-email`} className={INPUT_CLASS} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-        </div>
-        <div>
-          <label className={LABEL_CLASS} htmlFor={`${uid}-district`}>District <span className="font-normal text-muted-foreground">(optional)</span></label>
-          <input id={`${uid}-district`} className={INPUT_CLASS} placeholder="Colombo" value={district} onChange={(e) => setDistrict(e.target.value)} />
-        </div>
-        <div className="sm:col-span-2">
-          <label className={LABEL_CLASS} htmlFor={`${uid}-vehicle`}>Vehicle</label>
-          <input id={`${uid}-vehicle`} className={INPUT_CLASS} placeholder="e.g. Toyota Aqua 2015" value={vehicle} onChange={(e) => setVehicle(e.target.value)} />
-        </div>
-        <div>
-          <label className={LABEL_CLASS} htmlFor={`${uid}-budget`}>{kind === "finance" ? "Vehicle price / budget (LKR)" : "Vehicle value (LKR)"}</label>
-          <input id={`${uid}-budget`} className={INPUT_CLASS} inputMode="numeric" placeholder="6,500,000" value={budget} onChange={(e) => setBudget(e.target.value)} />
-        </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label={t("tools.lead.name", "Your name")} htmlFor={id("name")}>
+          <Input id={id("name")} autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} required />
+        </Field>
+        <Field label={t("tools.lead.phone", "Phone")} htmlFor={id("phone")}>
+          <Input id={id("phone")} type="tel" inputMode="tel" autoComplete="tel" placeholder="077 123 4567" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+        </Field>
+        <Field label={t("tools.lead.email", "Email")} htmlFor={id("email")} optional optionalLabel={optional}>
+          <Input id={id("email")} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        </Field>
+        <Field label={t("tools.lead.district", "District")} htmlFor={id("district")} optional optionalLabel={optional}>
+          <Input id={id("district")} placeholder="Colombo" value={district} onChange={(e) => setDistrict(e.target.value)} />
+        </Field>
+        <Field label={t("tools.lead.vehicle", "Vehicle")} htmlFor={id("vehicle")} className="sm:col-span-2">
+          <Input id={id("vehicle")} placeholder={t("tools.lead.vehiclePh", "e.g. Toyota Aqua 2015")} value={vehicle} onChange={(e) => setVehicle(e.target.value)} />
+        </Field>
+        <Field
+          label={kind === "finance" ? t("tools.lead.budget", "Vehicle price / budget (LKR)") : t("tools.lead.value", "Vehicle value (LKR)")}
+          htmlFor={id("budget")}
+        >
+          <AdornedInput id={id("budget")} prefix="Rs" inputMode="numeric" placeholder="6,500,000" value={budget} onChange={(e) => setBudget(e.target.value)} />
+        </Field>
         {kind === "finance" && (
-          <div>
-            <label className={LABEL_CLASS} htmlFor={`${uid}-down`}>Down payment (LKR) <span className="font-normal text-muted-foreground">(optional)</span></label>
-            <input id={`${uid}-down`} className={INPUT_CLASS} inputMode="numeric" placeholder="2,000,000" value={downPayment} onChange={(e) => setDownPayment(e.target.value)} />
-          </div>
+          <Field label={t("tools.lead.down", "Down payment (LKR)")} htmlFor={id("down")} optional optionalLabel={optional}>
+            <AdornedInput id={id("down")} prefix="Rs" inputMode="numeric" placeholder="2,000,000" value={downPayment} onChange={(e) => setDownPayment(e.target.value)} />
+          </Field>
         )}
         {kind === "inspection" && (
-          <div>
-            <label className={LABEL_CLASS} htmlFor={`${uid}-date`}>Preferred date</label>
-            <input id={`${uid}-date`} className={INPUT_CLASS} type="date" value={preferredDate} onChange={(e) => setPreferredDate(e.target.value)} />
-          </div>
+          <Field label={t("tools.lead.date", "Preferred date")} htmlFor={id("date")}>
+            <Input id={id("date")} type="date" value={preferredDate} onChange={(e) => setPreferredDate(e.target.value)} />
+          </Field>
         )}
         {!compact && (
-          <div className="sm:col-span-2">
-            <label className={LABEL_CLASS} htmlFor={`${uid}-notes`}>Anything else? <span className="font-normal text-muted-foreground">(optional)</span></label>
-            <textarea id={`${uid}-notes`} className={TEXTAREA_CLASS} maxLength={1000} value={notes} onChange={(e) => setNotes(e.target.value)} />
-          </div>
+          <Field label={t("tools.lead.notes", "Anything else?")} htmlFor={id("notes")} optional optionalLabel={optional} className="sm:col-span-2">
+            <Textarea id={id("notes")} maxLength={1000} value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </Field>
         )}
       </div>
 
-      <div className="rounded-xl border border-border bg-surface p-3.5">
-        <p className="mb-2 flex items-center gap-1.5 text-[12px] font-semibold text-foreground">
-          <ShieldCheck aria-hidden className="h-3.5 w-3.5 text-primary" />
-          {copy.partnerLabel}:{" "}
-          <span className="font-normal text-foreground/80">
-            {partners === null ? "loading…" : partnerNames.length ? partnerNames.join(", ") : "we'll match you with a partner and tell you who before they call"}
+      <div className="rounded-card border border-border bg-surface-2 p-4">
+        <p className="flex items-start gap-2 text-footnote font-semibold text-foreground">
+          <ShieldCheck aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <span>
+            {copy.partnerLabel}:{" "}
+            <span className="font-normal text-label-2">
+              {partners === null
+                ? t("tools.lead.partnersLoading", "loading…")
+                : partnerNames.length
+                  ? partnerNames.join(", ")
+                  : t("tools.lead.partnersNone", "we'll match you with a partner and tell you who before they call")}
+            </span>
           </span>
         </p>
-        <label className="flex cursor-pointer items-start gap-2.5 text-[12px] leading-relaxed text-foreground/85" htmlFor={`${uid}-consent`}>
-          <input
-            id={`${uid}-consent`}
-            type="checkbox"
-            className="mt-0.5 h-4 w-4 shrink-0 accent-[hsl(var(--primary))]"
-            checked={agreed}
-            onChange={(e) => setAgreed(e.target.checked)}
-          />
-          <span>
-            {consent.text} See our <Link to="/privacy" className="underline underline-offset-2">Privacy Policy</Link>.
-          </span>
-        </label>
+        <div className="-mx-2 mt-2">
+          <CheckRow id={id("consent")} checked={agreed} onCheckedChange={setAgreed}>
+            <span className="text-footnote text-label-1">
+              {consent.text}{" "}
+              <Link to="/privacy" className="font-semibold text-primary underline-offset-2 hover:underline">
+                {t("tools.lead.privacy", "Privacy Policy")}
+              </Link>
+            </span>
+          </CheckRow>
+        </div>
       </div>
 
       {error && (
-        <p role="alert" className="text-[12px] font-semibold text-destructive">
+        <p role="alert" className="text-footnote font-medium text-deal-high-text">
           {error}
         </p>
       )}
 
-      <button type="submit" className={PRIMARY_BUTTON_CLASS} disabled={sending}>
-        {sending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : null}
+      <Button type="submit" size="lg" loading={sending} className="w-full sm:w-auto">
         {copy.cta}
-      </button>
+      </Button>
+      <div style={HONEYPOT_STYLE} aria-hidden="true">
+        <label htmlFor={id("website")}>Website</label>
+        <input id={id("website")} tabIndex={-1} autoComplete="off" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
+      </div>
     </form>
   );
 }

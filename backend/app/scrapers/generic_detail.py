@@ -8,8 +8,6 @@ from urllib.parse import urljoin, urlparse
 
 import httpx
 import structlog
-
-from app.scrapers.polite import BOT_USER_AGENT
 from bs4 import BeautifulSoup
 from sqlalchemy.orm import Session
 
@@ -21,7 +19,11 @@ from app.utils.listing_upsert import buffered_upsert_listing, flush_upsert_buffe
 log = structlog.get_logger()
 
 DEFAULT_HEADERS = {
-    "User-Agent": BOT_USER_AGENT,
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    ),
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
 

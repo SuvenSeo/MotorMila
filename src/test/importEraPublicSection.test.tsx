@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ImportEraPublicSection } from "@/components/ImportEraPublicSection";
+import { ImportEraPublicSection, importEraPremiumPct } from "@/components/ImportEraPublicSection";
 
 vi.mock("@/services/api", () => ({
   getImportEraSplit: vi.fn(),
@@ -48,5 +48,18 @@ describe("ImportEraPublicSection", () => {
     expect(screen.getByText(/Pre-freeze vs post-freeze/i)).toBeInTheDocument();
     expect(screen.getByText(/Open Pro lanes/i)).toBeInTheDocument();
     expect(screen.getByText(/\+37\.5%/)).toBeInTheDocument();
+  });
+});
+
+describe("importEraPremiumPct", () => {
+  it("returns the premium for like-for-like cohorts", () => {
+    expect(importEraPremiumPct(8_000_000, 11_000_000)).toBe(37.5);
+    expect(importEraPremiumPct(7_650_000, 13_650_000)).toBe(78.4);
+  });
+  it("hides mixed-type cohorts (bikes before, cars after) and missing medians", () => {
+    expect(importEraPremiumPct(545_000, 13_350_000)).toBeNull();
+    expect(importEraPremiumPct(10_000_000, 4_000_000)).toBeNull();
+    expect(importEraPremiumPct(null, 5_000_000)).toBeNull();
+    expect(importEraPremiumPct(0, 5_000_000)).toBeNull();
   });
 });

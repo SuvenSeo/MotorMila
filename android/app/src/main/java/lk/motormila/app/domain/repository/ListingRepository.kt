@@ -34,6 +34,10 @@ data class ListingQuery(
     val vehicleCategory: String? = null,
     /** "newest" | "deal_score" | "price_asc" | "price_desc" | "mileage_asc". */
     val sort: String = "newest",
+    /** Web parity: null = priced inventory (backend default), "unavailable" = "No price" listings. */
+    val priceAvailability: String? = null,
+    /** Web parity: include delisted/sold rows (the 360K+ price archive). */
+    val includeArchive: Boolean = false,
 ) {
     val isEmpty: Boolean
         get() = keyword.isNullOrBlank() && source.isNullOrBlank() && make.isNullOrBlank() &&
@@ -41,7 +45,8 @@ data class ListingQuery(
             priceMin == null && priceMax == null && mileageMax == null &&
             fuelType.isNullOrBlank() && transmission.isNullOrBlank() &&
             condition.isNullOrBlank() && bodyType.isNullOrBlank() &&
-            district.isNullOrBlank() && vehicleCategory.isNullOrBlank()
+            district.isNullOrBlank() && vehicleCategory.isNullOrBlank() &&
+            priceAvailability.isNullOrBlank() && !includeArchive
 }
 
 /** Sort options for the search sort row. */
@@ -83,6 +88,9 @@ interface ListingRepository {
     suspend fun sources(): List<String>
 
     suspend fun makes(): List<String>
+
+    /** Total matches for [query] (backend `total`), for the live "Show N results" count; null when unknown. */
+    suspend fun count(query: ListingQuery): Int? = null
 
     suspend fun models(make: String): List<String>
 

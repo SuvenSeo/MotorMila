@@ -3,7 +3,7 @@ package lk.motormila.app.ui.navigation
 import android.net.Uri
 import kotlinx.serialization.Serializable
 
-/** Type-safe destinations. Bottom-bar tabs: Home, Search, Watchlist, Insights, Profile. */
+/** Type-safe destinations. Bottom-bar tabs (MotormilaScaffold): Buy, Prices, Tools, Sell, Saved — matching the web's 5 NAV_DESTINATIONS. */
 @Serializable
 data object Splash
 
@@ -25,6 +25,8 @@ data class Search(
     val sort: String? = null,
     val voice: Boolean = false,
     val plate: String? = null,
+    /** Extra web-format filters (year/price/mileage/fuel/…), see SearchArgs.WEB_FILTER_KEYS. */
+    val filters: String? = null,
 )
 
 @Serializable
@@ -37,13 +39,17 @@ data object Insights
 data object Profile
 
 @Serializable
-data class ListingDetail(val id: Int)
+data class ListingDetail(
+    val id: Int,
+    /** Opened from a listing card: Detail is a container transform of that card (see NavMotion). */
+    val fromCard: Boolean = false,
+)
 
 @Serializable
 data class Compare(val ids: List<Int>)
 
 @Serializable
-data class Valuation(val make: String? = null, val model: String? = null)
+data class Valuation(val make: String? = null, val model: String? = null, val year: Int? = null)
 
 @Serializable
 data class Alerts(val listingId: Int = 0)
@@ -120,6 +126,10 @@ data object PriceIndex
 @Serializable
 data object Sell
 
+/** Tools tab (design v2): index of utilities — valuation, scan, calculators, permits, account. */
+@Serializable
+data object Tools
+
 /** Routes that show the bottom NavigationBar. */
 val BOTTOM_BAR_ROUTES: Set<String> = setOf(
     Home::class.qualifiedName!!,
@@ -127,6 +137,8 @@ val BOTTOM_BAR_ROUTES: Set<String> = setOf(
     Watchlist::class.qualifiedName!!,
     Insights::class.qualifiedName!!,
     Profile::class.qualifiedName!!,
+    Tools::class.qualifiedName!!,
+    Sell::class.qualifiedName!!,
 )
 
 /** Returns true if the given destination route (qualified class name) shows the bottom bar. */
@@ -184,7 +196,21 @@ internal fun resolveParsedDeepLink(parsed: ParsedDeepLink): Any? {
     val host = parsed.host
     val segments = parsed.pathSegments
     if (scheme == "https" && host == HTTPS_APP_HOST) {
+        // A shared web search ("/?make=Toyota&year_min=2015…" or /search?…)
+        // opens Search with the same filters.
+        if ((segments.isEmpty() || segments == listOf("search")) && parsed.query.keys.any { it in WEB_SEARCH_KEYS }) {
+            return Search(
+                q = parsed.queryOrNull("q"),
+                district = parsed.queryOrNull("district"),
+                make = parsed.queryOrNull("make"),
+                model = parsed.queryOrNull("model"),
+                sort = parsed.queryOrNull("sort"),
+                filters = encodeWebFilters(parsed.query),
+            )
+        }
         if (segments.isEmpty()) return Home
+        // Bare /search (no filters) opens Search.
+        if (segments == listOf("search")) return Search()
         if (segments.size >= 2 && segments[0] == "listing") {
             return segments[1].toIntOrNull()?.let { ListingDetail(it) }
         }
@@ -193,8 +219,9 @@ internal fun resolveParsedDeepLink(parsed: ParsedDeepLink): Any? {
             val model = segments.getOrNull(2)?.takeIf { it.isNotBlank() }
             return if (model == null) MakeHub(make) else MakeModelHub(make, model)
         }
-        if (segments.size >= 2 && segments[0] == "locations") {
-            return DistrictHub(segments[1])
+        if (segments.firstOrNull() == "locations") {
+            // Bare /locations → the districts list (Insights), same as Home's "See all districts".
+            return segments.getOrNull(1)?.takeIf { it.isNotBlank() }?.let { DistrictHub(it) } ?: Insights
         }
         if (segments.firstOrNull() == "official-pulse") {
             if (segments.size == 1) return OfficialPulse
@@ -219,10 +246,14 @@ internal fun resolveParsedDeepLink(parsed: ParsedDeepLink): Any? {
             "trends" -> Insights
             "ev-chargers" -> EvChargers
             "ev-hub" -> EvHub
-            "estimate" -> Valuation(
+            "estimate", "valuation" -> Valuation(
                 make = parsed.queryOrNull("make"),
                 model = parsed.queryOrNull("model"),
             )
+            "profile" -> Profile
+            // Web /delete-account (Play's account-deletion URL) → Settings,
+            // where "Delete account" calls DELETE /api/v1/auth/me.
+            "delete-account" -> Settings
             "best-picks" -> BestPicks
             "dealer" -> Dealer
             "settings" -> Settings
@@ -245,6 +276,7 @@ internal fun resolveParsedDeepLink(parsed: ParsedDeepLink): Any? {
             sort = parsed.queryOrNull("sort"),
             voice = parsed.flagQuery("voice"),
             plate = parsed.queryOrNull("plate"),
+            filters = encodeWebFilters(parsed.query),
         )
         "watchlist" -> Watchlist
         "picks" -> BestPicks
@@ -274,7 +306,8 @@ internal fun resolveParsedDeepLink(parsed: ParsedDeepLink): Any? {
             val model = segments.getOrNull(1)?.takeIf { it.isNotBlank() }
             if (model == null) MakeHub(make) else MakeModelHub(make, model)
         }
-        "locations" -> segments.firstOrNull()?.takeIf { it.isNotBlank() }?.let { DistrictHub(it) }
+        // Bare motormila://locations (declared in the manifest) → districts list (Insights).
+        "locations" -> segments.firstOrNull()?.takeIf { it.isNotBlank() }?.let { DistrictHub(it) } ?: Insights
         "estimate" -> Valuation(
             make = parsed.queryOrNull("make"),
             model = parsed.queryOrNull("model"),

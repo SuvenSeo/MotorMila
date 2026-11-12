@@ -6,6 +6,9 @@ import lk.motormila.app.data.remote.dto.FuelMixDto
 import lk.motormila.app.data.remote.dto.HybridBandsDto
 import lk.motormila.app.data.remote.dto.InsightsDto
 import lk.motormila.app.data.remote.dto.LiveMarketDto
+import lk.motormila.app.data.remote.dto.MakeRowDto
+import lk.motormila.app.data.remote.dto.ModelRowDto
+import lk.motormila.app.data.remote.dto.SourceRowDto
 import lk.motormila.app.data.remote.dto.PermitsSnapshotDto
 import lk.motormila.app.data.remote.dto.PriceDropsDto
 import lk.motormila.app.data.remote.dto.PriceIndexDto
@@ -60,4 +63,16 @@ interface SnapshotApiService {
 
     @GET("price-sparklines.json")
     suspend fun priceSparklines(): PriceSparklinesDto
+
+    /** Same shape as GET /listings/makes: [{make,count}]. */
+    @GET("listing-makes.json")
+    suspend fun listingMakes(): List<MakeRowDto>
+
+    /** make -> [{model,count}] (GET /listings/models?make= per key). */
+    @GET("listing-models.json")
+    suspend fun listingModels(): Map<String, List<ModelRowDto>>
+
+    /** Same shape as GET /listings/sources: [{source,label,count}]. */
+    @GET("listing-sources.json")
+    suspend fun listingSources(): List<SourceRowDto>
 }

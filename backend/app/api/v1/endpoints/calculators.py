@@ -20,6 +20,8 @@ from db.session import get_db
 from db.models import VehiclePermit
 import secrets
 import os
+import threading
+import time
 
 # 120/min: the calculator UI recalculates as users adjust inputs (debounced
 # client-side), so an active session legitimately produces bursts.
@@ -81,6 +83,9 @@ class PermitCreate(BaseModel):
 
 class PermitRead(PermitCreate):
     id: int
+    # True when the permit table is still empty and the row is the research
+    # baseline (mid-point of published ranges), not a live market price.
+    baseline: bool = False
 
 # Excise band configurations
 EXCISE_PETROL = [
@@ -259,9 +264,38 @@ async def calculate_tco(payload: TCORequest):
         notes=source_notes
     )
 
+def _baseline_permits() -> list[dict]:
+    """Research baseline permit prices, highest first (read-only, never written)."""
+    try:
+        from app.scrapers.permitsale import _DEFAULT_PERMITS as defaults
+    except Exception:  # noqa: BLE001 - optional baseline
+        return []
+    ordered = sorted(defaults, key=lambda row: row[2], reverse=True)
+    return [
+        {
+            "id": index,
+            "permit_name": name,
+            "permit_type": permit_type,
+            "market_price_lkr": float(price),
+            "baseline": True,
+        }
+        for index, (name, permit_type, price) in enumerate(ordered, start=1)
+    ]
+
+
 @router.get("/permits", response_model=List[PermitRead])
 def get_permits(db: Session = Depends(get_db)):
-    return db.query(VehiclePermit).order_by(VehiclePermit.market_price_lkr.desc()).all()
+    """Permit market prices.
+
+    The vehicle_permits table is admin/seeder populated and is empty in the
+    public SQLite failover dump (and on a fresh database), which left the
+    Permit market page blank. Fall back to the research baseline, flagged
+    ``baseline: true``, instead of an empty list.
+    """
+    rows = db.query(VehiclePermit).order_by(VehiclePermit.market_price_lkr.desc()).all()
+    if rows:
+        return rows
+    return _baseline_permits()
 
 @router.post("/permits", response_model=PermitRead, dependencies=[Depends(require_admin_key)])
 def create_or_update_permit(payload: PermitCreate, db: Session = Depends(get_db)):
@@ -334,11 +368,86 @@ class OwnershipBundleRequest(BaseModel):
     include_transfer: bool = False
 
 
-@router.get("/macro", response_model=MacroFxResponse)
-async def get_macro_context():
-    """Live USD/LKR (+ optional CCPI) for the landed-cost calculator."""
+# /macro does up to three outbound HTTP calls (8 s timeouts each). Cache the
+# snapshot in-process so a calculator page view is not an outbound fetch, and
+# keep serving the last good snapshot when upstream fails (stale-on-error).
+_MACRO_FALLBACK_SOURCE = "fallback_constant"
+_MACRO_RETRY_AFTER_ERROR_SECONDS = 300
+_macro_cache_lock = threading.Lock()
+_macro_refresh_lock = threading.Lock()
+_macro_cache: dict = {"snapshot": None, "expires_at": 0.0}
+
+
+def _macro_cache_ttl_seconds() -> int:
     try:
-        snapshot = fetch_macro_snapshot()
+        return max(60, int(os.getenv("MACRO_CACHE_TTL_SECONDS", "1800")))
+    except ValueError:
+        return 1800
+
+
+def _reset_macro_cache() -> None:
+    with _macro_cache_lock:
+        _macro_cache["snapshot"] = None
+        _macro_cache["expires_at"] = 0.0
+
+
+def _store_macro(snapshot, expires_at: float) -> None:
+    with _macro_cache_lock:
+        _macro_cache["snapshot"] = snapshot
+        _macro_cache["expires_at"] = expires_at
+
+
+def get_cached_macro_snapshot(*, now: float | None = None):
+    """Return a macro snapshot, refreshing at most once per TTL.
+
+    Only one thread refreshes at a time; concurrent callers with a stale
+    snapshot get the stale copy instead of queueing behind the fetch. On a
+    failed refresh (exception or the hard-coded fallback FX) the last good
+    snapshot is served and the next retry is deferred for a few minutes.
+    """
+    now = time.time() if now is None else now
+    with _macro_cache_lock:
+        cached = _macro_cache["snapshot"]
+        expires_at = _macro_cache["expires_at"]
+    if cached is not None and now < expires_at:
+        return cached
+
+    if not _macro_refresh_lock.acquire(blocking=cached is None):
+        return cached
+    try:
+        with _macro_cache_lock:
+            if _macro_cache["snapshot"] is not None and now < _macro_cache["expires_at"]:
+                return _macro_cache["snapshot"]
+        retry_at = now + _MACRO_RETRY_AFTER_ERROR_SECONDS
+        try:
+            snapshot = fetch_macro_snapshot()
+        except Exception:
+            if cached is not None:
+                logger.warning("macro_refresh_failed_serving_stale", exc_info=True)
+                _store_macro(cached, retry_at)
+                return cached
+            raise
+        if snapshot.fx.source == _MACRO_FALLBACK_SOURCE:
+            if cached is not None and cached.fx.source != _MACRO_FALLBACK_SOURCE:
+                _store_macro(cached, retry_at)
+                return cached
+            _store_macro(snapshot, retry_at)
+            return snapshot
+        _store_macro(snapshot, now + _macro_cache_ttl_seconds())
+        return snapshot
+    finally:
+        _macro_refresh_lock.release()
+
+
+@router.get("/macro", response_model=MacroFxResponse)
+def get_macro_context():
+    """Live USD/LKR (+ optional CCPI) for the landed-cost calculator.
+
+    Plain ``def`` so FastAPI runs it in the threadpool: a cache miss does
+    blocking outbound HTTP and must not stall the event loop.
+    """
+    try:
+        snapshot = get_cached_macro_snapshot()
     except Exception as exc:
         logger.warning("macro_endpoint_failed: %s", exc)
         raise HTTPException(status_code=503, detail="Macro feeds temporarily unavailable.") from exc

@@ -23,7 +23,17 @@ export interface UseServerMarketAlertsResult {
   updateChannels?: (id: number, data: AlertChannelsUpdateInput) => Promise<ServerMarketAlert>;
 }
 
-export function useServerMarketAlerts(): UseServerMarketAlertsResult {
+export interface UseServerMarketAlertsOptions {
+  /**
+   * Load the alert list on mount (default true). Surfaces that only create or
+   * delete alerts (the home feed) pass false so an anonymous visit does not
+   * fire a GET /alerts the API answers with 401 "Authentication required.".
+   */
+  autoLoad?: boolean;
+}
+
+export function useServerMarketAlerts(options: UseServerMarketAlertsOptions = {}): UseServerMarketAlertsResult {
+  const autoLoad = options.autoLoad ?? true;
   const [alerts, setAlerts] = useState<ServerMarketAlert[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,13 +54,14 @@ export function useServerMarketAlerts(): UseServerMarketAlertsResult {
   }, [token]);
 
   useEffect(() => {
+    if (!autoLoad) return;
     refresh();
-  }, [refresh]);
+  }, [autoLoad, refresh]);
 
   const create = useCallback(
     async (data: AlertCreateInput) => {
       const created = await createAlert(token, data);
-      await refresh();
+      if (autoLoad) await refresh();
       trackEvent("alert_created", {
         make: data.make,
         model: data.model,
@@ -58,7 +69,7 @@ export function useServerMarketAlerts(): UseServerMarketAlertsResult {
       });
       return created;
     },
-    [token, refresh],
+    [autoLoad, token, refresh],
   );
 
   const remove = useCallback(

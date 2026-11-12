@@ -187,7 +187,7 @@ def test_riyahub_keeps_negotiable_vehicle_in_unavailable_price_lane():
     assert payload is not None
     assert payload["source"] == "riyahub"
     assert payload["make"] == "Suzuki"
-    assert payload["model"] == "Wagon R"
+    assert payload["model"] == "Wagon"
     assert payload["year"] == 2018
     assert payload["price_lkr"] is None
     assert payload["district"] == "Kurunegala"

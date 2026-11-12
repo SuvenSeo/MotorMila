@@ -36,13 +36,13 @@ export function SignInPortalModal({ open, onOpenChange }: SignInPortalModalProps
           <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-primary/35 bg-primary/12 text-primary">
             <ShieldCheck className="h-5 w-5" aria-hidden />
           </div>
-          <DialogTitle className="font-display text-2xl tracking-tight">
+          <DialogTitle className="font-display text-title2 tracking-tight">
             {t("signInPortal.title", "Sign in to Motormila")}
           </DialogTitle>
           <DialogDescription className="leading-relaxed text-muted-foreground">
             {t(
-              "signInPortal.body",
-              "Your Motormila account unlocks saved searches, price-drop alerts and the Pro terminal. Browsing the live market never needs an account.",
+              "shell.copy.signInPortalBody",
+              "Your account keeps your saved vehicles and price-drop alerts. Browsing never needs an account.",
             )}
           </DialogDescription>
         </DialogHeader>
@@ -76,7 +76,7 @@ export function SignInPortalModal({ open, onOpenChange }: SignInPortalModalProps
           </Button>
         </div>
 
-        <p className="mt-1 text-center text-[12px] text-muted-foreground">
+        <p className="mt-1 text-center text-caption text-muted-foreground">
           {t("signInPortal.hint", "Administrators sign in at the console URL directly.")}
         </p>
       </DialogContent>

@@ -1,595 +1,664 @@
-import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
-  Apple,
+  ArrowRight,
+  BadgeCheck,
   BellRing,
-  Calculator,
-  Camera,
   Check,
-  CheckCircle2,
   Copy,
   Download,
+  FileDown,
   Gauge,
-  MapPin,
+  Layers,
+  Plus,
+  RefreshCw,
   ScanLine,
+  Search,
   ShieldCheck,
   Smartphone,
-  Sparkles,
-  Star,
+  TriangleAlert,
   WifiOff,
 } from "lucide-react";
+import { BrandLogo } from "@/components/BrandLogo";
 import { PrefetchLink } from "@/components/PrefetchLink";
-import { Input } from "@/components/ui/input";
-import { RevealSection } from "@/components/RevealSection";
-import { sendFeedback } from "@/services/api";
+import { Button } from "@/components/ui/button";
+import { trackEvent } from "@/lib/analytics";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { revealContainer, revealItem, springSoft } from "@/lib/motion";
+import { MOBILE_APP_QR_PATH, MOBILE_APP_QR_SIZE } from "@/lib/mobileAppQr";
+import { cn } from "@/lib/utils";
+import screenHome from "../../assets/mobile-app/screen-home.webp";
+import screenDetail from "../../assets/mobile-app/screen-detail.webp";
+import screenSearch from "../../assets/mobile-app/screen-search.webp";
+import screenCompare from "../../assets/mobile-app/screen-compare.webp";
+import screenAlerts from "../../assets/mobile-app/screen-alerts.webp";
+import "@/styles/locale-labels.css";
+import "@/styles/mobile-app.css";
 
-const WAITLIST_KEY = "motormila.mobile_waitlist";
-
-/** Live sideload release — keep in step with android/app/build.gradle.kts + public/app/latest-release.json. */
-const APK_VERSION = "1.6.1";
-const APK_SIZE = "16.9 MB";
-// Public R2 download: the source repo is private, so the APK ships from the
-// public motormila-snapshots bucket (published by .github/workflows/android-release.yml).
+/**
+ * Live sideload release — keep in step with android/app/build.gradle.kts and
+ * public/app/latest-release.json (the in-app updater's manifest).
+ */
+const APK_VERSION = "1.8.0";
+const APK_VERSION_CODE = 21;
+/** 5,800,279 bytes (published APK Content-Length). */
+const APK_BYTES = 5_800_279;
+const APK_SIZE = "5.5 MB";
+// Public R2 download, published by .github/workflows/android-release.yml.
 const APK_URL = `https://pub-f15911ef9a914db9a44e1fd6b47dfe4e.r2.dev/app/motormila-${APK_VERSION}.apk`;
-const APK_SHA256 = "7e180043cdeb15176f4d1080301a2449fd7d818bba9774c0fcfae498e4de95fc";
+const APK_SHA256 = "6d9d417bf837deb6277d387318e88acc79fdcef6f95d6ed401cfd7258732634f";
+/** SHA-256 of the release signing certificate (APK Signature Scheme v2/v3), same key since 1.7.0. */
+const APK_CERT_SHA256 = "384420c0922cb84ee0e6866ab09b4e47e7012bf21c69e83f934304366f445217";
+/** Release date of APK_VERSION (latest-release.json `published_at`), ISO date. */
+const APK_UPDATED = "2026-10-30";
 
-type Feature = {
-  icon: React.ComponentType<{ className?: string }>;
-  titleKey: string;
-  title: string;
-  bodyKey: string;
-  body: string;
-};
+/** App screenshots: 1080×2400 emulator captures of the release app (live data), resized to 600×1333. */
+const SCREEN_W = 600;
+const SCREEN_H = 1333;
 
-const FEATURES: Feature[] = [
-  {
-    icon: Gauge,
-    titleKey: "mobile.feature.live.title",
-    title: "The whole live market",
-    bodyKey: "mobile.feature.live.body",
-    body: "Every scraped listing from Sri Lanka's big marketplaces — filter by make, district, fuel, year and price in two taps.",
-  },
-  {
-    icon: Star,
-    titleKey: "mobile.feature.score.title",
-    title: "Deal scores on every car",
-    bodyKey: "mobile.feature.score.body",
-    body: "Each listing is graded against its district median, so you know it's a good price before you call the seller.",
-  },
-  {
-    icon: ScanLine,
-    titleKey: "mobile.feature.scan.title",
-    title: "Scan a number plate",
-    bodyKey: "mobile.feature.scan.body",
-    body: "Point the camera at a plate and Motormila reads it on-device, then pulls the market record for that vehicle.",
-  },
-  {
-    icon: BellRing,
-    titleKey: "mobile.feature.alerts.title",
-    title: "Price-drop alerts",
-    bodyKey: "mobile.feature.alerts.body",
-    body: "Save a car or a search and get a push notification the moment a seller cuts the price or a new match lands.",
-  },
-  {
-    icon: WifiOff,
-    titleKey: "mobile.feature.offline.title",
-    title: "Works without signal",
-    bodyKey: "mobile.feature.offline.body",
-    body: "Your watchlist, alerts and the last market snapshot are cached on the device — useful at a yard with bad coverage.",
-  },
-  {
-    icon: Calculator,
-    titleKey: "mobile.feature.import.title",
-    title: "Import & running costs",
-    bodyKey: "mobile.feature.import.body",
-    body: "Landed cost with CID, excise, VAT and SSCL, plus a full cost-to-own breakdown before you commit.",
-  },
-  {
-    icon: MapPin,
-    titleKey: "mobile.feature.map.title",
-    title: "District & EV hubs",
-    bodyKey: "mobile.feature.map.body",
-    body: "See where prices are moving, which districts have the deepest inventory, and where the nearest chargers are.",
-  },
-  {
-    icon: ShieldCheck,
-    titleKey: "mobile.feature.trust.title",
-    title: "Seller & safety checks",
-    bodyKey: "mobile.feature.trust.body",
-    body: "Source quality scores, seller profiles and safety research sit next to every listing, not buried in a menu.",
-  },
-];
+type Placement = "hero" | "trust" | "cta";
 
-const ROADMAP = [
-  {
-    key: "now",
-    labelKey: "mobile.roadmap.now",
-    label: "In progress",
-    titleKey: "mobile.roadmap.now.title",
-    title: "Internal build hardening",
-    bodyKey: "mobile.roadmap.now.body",
-    body: "Signed release build, offline cache migrations and alert delivery are being stabilised on Android 8 and above.",
-  },
-  {
-    key: "next",
-    labelKey: "mobile.roadmap.next",
-    label: "Next",
-    titleKey: "mobile.roadmap.next.title",
-    title: "Closed beta",
-    bodyKey: "mobile.roadmap.next.body",
-    body: "A limited group of buyers and dealers gets the APK first and shapes the release before it goes wide.",
-  },
-  {
-    key: "release",
-    labelKey: "mobile.roadmap.release",
-    label: "Release",
-    titleKey: "mobile.roadmap.release.title",
-    title: "Public APK download",
-    bodyKey: "mobile.roadmap.release.body",
-    body: "The APK opens up here on Motormila with a published checksum, so anyone can verify what they installed.",
-  },
-  {
-    key: "later",
-    labelKey: "mobile.roadmap.later",
-    label: "Later",
-    titleKey: "mobile.roadmap.later.title",
-    title: "Play Store & iPhone",
-    bodyKey: "mobile.roadmap.later.body",
-    body: "Store listings follow once the APK release settles, with an iOS build after that. The web app keeps working either way.",
-  },
-] as const;
+function onDownload(placement: Placement) {
+  trackEvent("app_download_click", { placement, version: APK_VERSION });
+}
 
-const FAQ = [
-  {
-    key: "cost",
-    qKey: "mobile.faq.cost.q",
-    q: "Will the app be free?",
-    aKey: "mobile.faq.cost.a",
-    a: "Yes. Browsing, search, watchlists and price alerts stay free. Pro tools — lane intelligence, exports and deep history — carry over from your existing Motormila plan.",
-  },
-  {
-    key: "access",
-    qKey: "mobile.faq.access.q",
-    q: "How do I get it when it lands?",
-    aKey: "mobile.faq.access.a",
-    a: "Join the launch list above. Closed beta invites go out first, then the public APK download opens on this page.",
-  },
-  {
-    key: "install",
-    qKey: "mobile.faq.install.q",
-    q: "Is sideloading the APK safe?",
-    aKey: "mobile.faq.install.a",
-    a: "The APK will be signed by Motormila and shipped with a SHA-256 checksum you can verify. We will never ask you to install it from a third-party mirror.",
-  },
-  {
-    key: "ios",
-    qKey: "mobile.faq.ios.q",
-    q: "What about iPhone?",
-    aKey: "mobile.faq.ios.a",
-    a: "Android ships first because it covers the widest set of devices in Sri Lanka. iOS follows after the Android release is stable.",
-  },
-  {
-    key: "web",
-    qKey: "mobile.faq.web.q",
-    q: "Does the app replace the website?",
-    aKey: "mobile.faq.web.a",
-    a: "No. Motormila on the web stays the full terminal — the app is the fast, offline-friendly companion for when you're out looking at cars.",
-  },
-] as const;
+/* ── Building blocks ─────────────────────────────────────────────────── */
 
-export default function MobileApp() {
-  const { t } = useAppPreferences();
-  const [email, setEmail] = useState("");
-  const [joined, setJoined] = useState(false);
-  const [error, setError] = useState("");
+function Phone({ src, alt, eager = false, className }: { src: string; alt: string; eager?: boolean; className?: string }) {
+  return (
+    <div className={cn("ma-phone", className)}>
+      <div className="ma-phone__screen">
+        <img src={src} alt={alt} width={SCREEN_W} height={SCREEN_H} loading={eager ? "eager" : "lazy"} decoding="async" />
+      </div>
+    </div>
+  );
+}
+
+function QrCode({ label }: { label: string }) {
+  const margin = 2;
+  const box = MOBILE_APP_QR_SIZE + margin * 2;
+  return (
+    <div className="ma-qr h-28 w-28 shrink-0">
+      <svg viewBox={`${-margin} ${-margin} ${box} ${box}`} role="img" aria-label={label} shapeRendering="crispEdges">
+        <path d={MOBILE_APP_QR_PATH} fill="currentColor" />
+      </svg>
+    </div>
+  );
+}
+
+function Eyebrow({ children }: { children: ReactNode }) {
+  return <p className="text-footnote font-semibold text-primary">{children}</p>;
+}
+
+const delay = (n: number) => ({ "--ma-d": n }) as CSSProperties;
+
+function useCopy(value: string) {
   const [copied, setCopied] = useState(false);
-
-  const copyChecksum = async () => {
+  const timer = useRef<number>();
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+  const copy = async () => {
     try {
-      await navigator.clipboard.writeText(APK_SHA256);
+      await navigator.clipboard.writeText(value);
     } catch {
       const area = document.createElement("textarea");
-      area.value = APK_SHA256;
+      area.value = value;
       document.body.appendChild(area);
       area.select();
       document.execCommand("copy");
       document.body.removeChild(area);
     }
     setCopied(true);
-    window.setTimeout(() => setCopied(false), 2000);
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setCopied(false), 2000);
   };
+  return { copied, copy };
+}
 
+/**
+ * Scroll reveal for every [data-reveal] inside the page, plus an "in view"
+ * flag on the hero so its float animation only runs while it's on screen.
+ * One observer each, compositor-only CSS (src/styles/mobile-app.css).
+ */
+function useReveal(root: React.RefObject<HTMLElement>, hero: React.RefObject<HTMLElement>) {
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(WAITLIST_KEY);
-      if (stored) {
-        setEmail(stored);
-        setJoined(true);
-      }
-    } catch {
-      // Storage unavailable — the form still works for this session.
-    }
-  }, []);
+    const page = root.current;
+    if (!page || typeof IntersectionObserver === "undefined") return;
+    page.classList.add("ma-armed");
+    const reveal = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          (entry.target as HTMLElement).dataset.shown = "true";
+          reveal.unobserve(entry.target);
+        }
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -6% 0px" },
+    );
+    page.querySelectorAll("[data-reveal]").forEach((el) => reveal.observe(el));
 
-  const features = useMemo(
-    () => FEATURES.map((feature) => ({ ...feature, label: t(feature.titleKey, feature.title), detail: t(feature.bodyKey, feature.body) })),
-    [t],
-  );
-
-  const handleJoin = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const value = email.trim().toLowerCase();
-    if (!value || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-      setError(t("mobile.notifyInvalid", "Enter a valid email address."));
-      return;
-    }
-    setError("");
-    try {
-      localStorage.setItem(WAITLIST_KEY, value);
-    } catch {
-      // Ignore storage failures — confirmation still shown.
-    }
-    setJoined(true);
-    // Fire-and-forget: the signup also lands in the operator inbox so the
-    // waitlist is reachable even when this browser's storage is cleared.
-    void sendFeedback({
-      category: "idea",
-      route: "/mobile-app",
-      message: "Motormila mobile launch list signup",
-      email: value,
-    }).catch(() => {
-      // Offline or API unavailable — the local list is the fallback.
+    const heroEl = hero.current;
+    const float = new IntersectionObserver(([entry]) => {
+      if (heroEl) heroEl.dataset.inview = entry.isIntersecting ? "true" : "false";
     });
-  };
+    if (heroEl) float.observe(heroEl);
+    return () => {
+      reveal.disconnect();
+      float.disconnect();
+    };
+  }, [root, hero]);
+}
+
+/* ── Page ────────────────────────────────────────────────────────────── */
+
+export default function MobileApp() {
+  const { t, language } = useAppPreferences();
+  const pageRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLElement>(null);
+  useReveal(pageRef, heroRef);
+  const apkHash = useCopy(APK_SHA256);
+
+  const locale = language === "si" ? "si-LK" : language === "ta" ? "ta-LK" : "en-LK";
+  const updated = new Intl.DateTimeFormat(locale, { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Colombo" }).format(
+    new Date(`${APK_UPDATED}T12:00:00+05:30`),
+  );
+  const bytes = new Intl.NumberFormat("en-LK").format(APK_BYTES);
+
+  const features = [
+    {
+      key: "verdict",
+      icon: Gauge,
+      title: t("mapp.feature.verdict.title", "A verdict on every price."),
+      body: t(
+        "mapp.feature.verdict.body",
+        "Each car is checked against what similar cars are asking, so you see “above typical” or “below typical”, the typical price, and the deal ladder before you call the seller.",
+      ),
+      screen: screenDetail,
+      alt: t("mapp.screen.detail", "Motormila app: a listing with its price verdict and typical-price gauge"),
+    },
+    {
+      key: "search",
+      icon: Search,
+      title: t("mapp.feature.search.title", "The whole market, one search."),
+      body: t("mapp.feature.search.body", "Listings from Sri Lanka's big marketplaces in one feed. Filter by make, model, district, fuel, year and price."),
+      screen: screenSearch,
+      alt: t("mapp.screen.search", "Motormila app: search results for Toyota Aqua"),
+    },
+    {
+      key: "compare",
+      icon: Layers,
+      title: t("mapp.feature.compare.title", "Compare side by side."),
+      body: t("mapp.feature.compare.body", "Put up to three cars next to each other. The better value in each row is highlighted."),
+      screen: screenCompare,
+      alt: t("mapp.screen.compare", "Motormila app: three cars compared side by side"),
+    },
+    {
+      key: "alerts",
+      icon: BellRing,
+      title: t("mapp.feature.alerts.title", "Alerts that come to you."),
+      body: t("mapp.feature.alerts.body", "Save cars to your watchlist and see price drops at a glance. Set a price alert and get a push notification when a match lands."),
+      screen: screenAlerts,
+      alt: t("mapp.screen.alerts", "Motormila app: creating a price alert"),
+    },
+  ];
+
+  const minorFeatures = [
+    {
+      key: "scan",
+      icon: ScanLine,
+      title: t("mapp.feature.scan.title", "Scan a number plate."),
+      body: t("mapp.feature.scan.body", "Point the camera at a plate. It's read on your phone, then Motormila finds that vehicle's listings."),
+    },
+    {
+      key: "offline",
+      icon: WifiOff,
+      title: t("mapp.feature.offline.title", "Works on a weak signal."),
+      body: t("mapp.feature.offline.body", "The last market data and your watchlist are cached, and the import-duty and lease calculators work offline."),
+    },
+  ];
+
+  const steps = [
+    {
+      key: "download",
+      icon: FileDown,
+      title: t("mapp.step.download.title", "Download the APK"),
+      body: t("mapp.step.download.body", "Tap Download on your Android phone. On a computer, scan the QR code to open this page on your phone."),
+    },
+    {
+      key: "allow",
+      icon: Smartphone,
+      title: t("mapp.step.allow.title", "Allow the install"),
+      body: t(
+        "mapp.step.allow.body",
+        "Open the downloaded file. If Android asks, turn on “Allow from this source” for your browser. You only need to do this once.",
+      ),
+    },
+    {
+      key: "protect",
+      icon: ShieldCheck,
+      title: t("mapp.step.protect.title", "If Play Protect asks"),
+      body: t(
+        "mapp.step.protect.body",
+        "Google Play Protect may warn you because the app isn't from the Play Store yet. Tap “More details”, then “Install anyway”, or let it scan the app first.",
+      ),
+    },
+    {
+      key: "open",
+      icon: Check,
+      title: t("mapp.step.open.title", "Open Motormila"),
+      body: t("mapp.step.open.body", "That's it. From now on the app updates itself."),
+    },
+  ];
+
+  const faq = [
+    {
+      key: "free",
+      q: t("mapp.faq.free.q", "Is the app free?"),
+      a: t(
+        "mapp.faq.free.a",
+        "Yes. Browsing, search, the watchlist and price alerts are free. Pro tools carry over from your Motormila plan when you sign in.",
+      ),
+    },
+    {
+      key: "play",
+      q: t("mapp.faq.play.q", "Why isn't it on Google Play?"),
+      a: t(
+        "mapp.faq.play.a",
+        "The Android app is in preview, so it's offered here as a direct download. Store listings come after the stable release.",
+      ),
+    },
+    {
+      key: "safe",
+      q: t("mapp.faq.safe.q", "Is installing an APK safe?"),
+      a: t(
+        "mapp.faq.safe.a",
+        "Only install it from this page. The APK is signed by Motormila, and its SHA-256 checksum is published above so you can check the file you downloaded. We never ask you to install it from a mirror or a chat link.",
+      ),
+    },
+    {
+      key: "updates",
+      q: t("mapp.faq.updates.q", "How do updates work?"),
+      a: t(
+        "mapp.faq.updates.a",
+        "When the app opens it checks for a new version. Tap “Update now” and it downloads the update, checks its SHA-256, then Android asks you to confirm. Your data stays.",
+      ),
+    },
+    {
+      key: "ios",
+      q: t("mapp.faq.ios.q", "Is there an iPhone app?"),
+      a: t(
+        "mapp.faq.ios.a",
+        "Not yet. Android comes first because it covers the most phones in Sri Lanka. Until then, use the Motormila website in your iPhone's browser.",
+      ),
+    },
+  ];
+
+  const facts: Array<{ key: string; node: ReactNode }> = [
+    { key: "free", node: t("mapp.fact.free", "Free") },
+    { key: "size", node: APK_SIZE },
+    { key: "android", node: t("mapp.fact.android", "Android 8.0 and up") },
+    {
+      key: "languages",
+      // Language names stay in their own script (the locale-label font subset covers exactly these words).
+      node: (
+        <>
+          English ·{" "}
+          <span lang="si" className="locale-script-label">
+            සිංහල
+          </span>{" "}
+          ·{" "}
+          <span lang="ta" className="locale-script-label">
+            தமிழ்
+          </span>
+        </>
+      ),
+    },
+  ];
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#05070c] text-white">
-      {/* ── Hero ─────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden px-5 pb-20 pt-16 sm:px-8 sm:pt-20 lg:pt-24">
-        <div aria-hidden className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_65%_50%_at_50%_-10%,rgba(10,122,255,0.24),transparent_62%)]" />
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:52px_52px] [mask-image:radial-gradient(ellipse_75%_60%_at_50%_20%,black,transparent_78%)]" />
-        </div>
-
-        <motion.div
-          initial="hidden"
-          animate="show"
-          variants={revealContainer}
-          className="relative z-10 mx-auto grid w-full max-w-[1180px] items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]"
-        >
-          <div>
-            <motion.div variants={revealItem} className="flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#3D94FF]/35 bg-[#0A7AFF]/12 px-3.5 py-1.5 text-[11.5px] font-bold uppercase tracking-[0.14em] text-[#6CB8FF]">
-                <Smartphone className="h-3.5 w-3.5" aria-hidden />
-                {t("mobile.eyebrow", "Motormila Mobile")}
+    <div ref={pageRef} className="ma-page relative min-h-screen overflow-x-clip bg-background text-foreground">
+      {/* ── Hero ──────────────────────────────────────────────────────── */}
+      <section ref={heroRef} data-inview="false" className="relative">
+        <div aria-hidden className="ma-hero-glow" data-low-data="hide" />
+        <div className="layout-shell relative grid items-center gap-12 pb-16 pt-10 sm:pt-14 lg:grid-cols-[1.08fr_0.92fr] lg:gap-10 lg:pb-24 lg:pt-20">
+          <div className="min-w-0">
+            <div className="ma-enter flex items-center gap-3" style={delay(0)}>
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-[0.9rem] border border-border bg-card shadow-e1">
+                <BrandLogo showWordmark={false} size="compact" className="h-7 w-7" />
               </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1.5 text-[11.5px] font-semibold text-emerald-200">
-                <span aria-hidden className="relative inline-flex h-1.5 w-1.5">
-                  <span className="absolute inset-0 animate-ping rounded-full bg-emerald-300/70" />
-                  <span className="relative h-1.5 w-1.5 rounded-full bg-emerald-300" />
-                </span>
-                {t("mobile.availableNow", "v{version} · Available now", { version: APK_VERSION })}
-              </span>
-            </motion.div>
-
-            <motion.h1
-              variants={revealItem}
-              className="mt-7 font-display text-[2.6rem] font-semibold leading-[1.05] tracking-tight text-white sm:text-[3.4rem] lg:text-[3.9rem]"
-            >
-              {t("mobile.title", "The entire market,")}
-              <br />
-              <span className="italic text-[#3D94FF]">{t("mobile.titleAccent", "in your pocket.")}</span>
-            </motion.h1>
-
-            <motion.p variants={revealItem} className="mt-5 max-w-lg text-[15px] leading-relaxed text-white/65">
-              {t(
-                "mobile.subtitle",
-                "The Motormila Android app is in its final build: live listings, deal scores, price-drop alerts and plate scanning — working even when the signal drops.",
-              )}
-            </motion.p>
-
-            <motion.div variants={revealItem} className="mt-8 flex max-w-md flex-wrap items-center gap-3">
-              <motion.a
-                href={APK_URL}
-                whileTap={{ scale: 0.97 }}
-                transition={springSoft}
-                className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-[#0A7AFF] px-7 text-[13.5px] font-semibold text-white no-underline shadow-[0_14px_44px_-18px_rgba(10,122,255,0.9)] transition-colors hover:bg-[#3D94FF]"
-              >
-                <Download className="h-4 w-4" aria-hidden />
-                {t("mobile.downloadCta", "Download for Android · {size}", { size: APK_SIZE })}
-              </motion.a>
-              <span className="text-[11.5px] text-white/40">
-                {t("mobile.downloadMeta", "v{version} · Android 8.0+ · free", { version: APK_VERSION })}
-              </span>
-            </motion.div>
-
-            <motion.div variants={revealItem} className="mt-8 max-w-md">
-              {joined ? (
-                <div className="flex items-start gap-3 rounded-2xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-3.5">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden />
-                  <div>
-                    <p className="text-[13px] font-semibold text-emerald-100">
-                      {t("mobile.notifyDoneTitle", "You're on the launch list")}
-                    </p>
-                    <p className="mt-0.5 text-[12px] leading-relaxed text-emerald-100/75">
-                      {t(
-                        "mobile.notifyDoneBody",
-                        "We'll email {email} the moment the APK drops — beta invites go out first.",
-                        { email },
-                      )}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <form onSubmit={handleJoin} className="space-y-3">
-                  <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-white/45">
-                    {t("mobile.notifyTitle", "Get the launch ping")}
-                  </p>
-                  <div className="flex flex-col gap-2.5 sm:flex-row">
-                    <Input
-                      type="email"
-                      value={email}
-                      onChange={(event) => setEmail(event.target.value)}
-                      placeholder={t("mobile.notifyPlaceholder", "you@email.lk")}
-                      aria-label={t("mobile.notifyEmail", "Email address")}
-                      className="h-12 flex-1 rounded-full border-white/15 bg-black/40 text-sm text-white placeholder:text-white/35 focus:border-[#3D94FF]/60 focus:ring-1 focus:ring-[#3D94FF]/35"
-                    />
-                    <motion.button
-                      type="submit"
-                      whileTap={{ scale: 0.98 }}
-                      transition={springSoft}
-                      className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-[#0A7AFF] px-6 text-[12.5px] font-semibold text-white shadow-[0_14px_44px_-18px_rgba(10,122,255,0.9)] transition-colors hover:bg-[#3D94FF]"
-                    >
-                      <BellRing className="h-3.5 w-3.5" aria-hidden />
-                      {t("mobile.notifyCta", "Notify me")}
-                    </motion.button>
-                  </div>
-                  {error && <p className="text-[12px] font-medium text-rose-300">{error}</p>}
-                  <p className="text-[11.5px] text-white/40">
-                    {t("mobile.notifyFinePrint", "One email at launch. No marketing lists, unsubscribe any time.")}
-                  </p>
-                </form>
-              )}
-            </motion.div>
-
-            <motion.div variants={revealItem} className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-3 text-[12px] text-white/50">
-              <span className="inline-flex items-center gap-2">
-                <CheckCircle2 className="h-3.5 w-3.5 text-[#3D94FF]" aria-hidden />
-                {t("mobile.platformAndroid", "Android 8.0+ · APK")}
-              </span>
-              <span className="inline-flex items-center gap-2">
-                <CheckCircle2 className="h-3.5 w-3.5 text-[#3D94FF]" aria-hidden />
-                {t("mobile.signedBuild", "Signed build · SHA-256 published")}
-              </span>
-              <span className="inline-flex items-center gap-2">
-                <Apple className="h-3.5 w-3.5 text-[#3D94FF]" aria-hidden />
-                {t("mobile.platformIos", "iPhone build after Android")}
-              </span>
-            </motion.div>
-          </div>
-
-          {/* Phone mock */}
-          <motion.div variants={revealItem} className="relative mx-auto w-full max-w-[330px]">
-            <div aria-hidden className="absolute -inset-10 rounded-full bg-[radial-gradient(circle,rgba(10,122,255,0.24),transparent_68%)] blur-[80px]" />
-            <div className="relative rounded-[2.6rem] border border-white/15 bg-[#0a0f19] p-3 shadow-[0_40px_120px_-40px_rgba(0,0,0,0.95)]">
-              <div className="relative overflow-hidden rounded-[2.1rem] border border-white/10 bg-[#070b13]">
-                <div className="flex items-center justify-between px-5 pt-4 text-[10px] font-medium text-white/45">
-                  <span>9:41</span>
-                  <span className="h-4 w-16 rounded-full bg-black/70" />
-                  <span>{t("mobile.mockSignal", "LTE")}</span>
-                </div>
-                <div className="px-5 pb-6 pt-5">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#3D94FF]">
-                    {t("mobile.mockEyebrow", "Live market")}
-                  </p>
-                  <p className="mt-1.5 font-display text-[1.35rem] font-semibold leading-tight text-white">
-                    Toyota Aqua S
-                  </p>
-                  <p className="mt-1 text-[11px] text-white/50">2017 · Colombo · Petrol hybrid</p>
-                  <div className="mt-4 flex items-end justify-between rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3">
-                    <div>
-                      <p className="text-[10px] uppercase tracking-[0.12em] text-white/40">
-                        {t("mobile.mockAsk", "Asking")}
-                      </p>
-                      <p className="mt-1 text-[17px] font-semibold text-white">Rs 8,450,000</p>
-                    </div>
-                    <span className="rounded-full border border-emerald-400/30 bg-emerald-400/12 px-2.5 py-1 text-[10.5px] font-bold text-emerald-300">
-                      {t("mobile.mockScore", "9.1 deal")}
-                    </span>
-                  </div>
-                  <div className="mt-3 space-y-2">
-                    {[
-                      t("mobile.mockRow1", "Rs 420,000 below district median"),
-                      t("mobile.mockRow2", "Cut 3.5% · 4 days ago"),
-                      t("mobile.mockRow3", "Saved to watchlist"),
-                    ].map((row) => (
-                      <div key={row} className="flex items-center gap-2.5 rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-2">
-                        <Sparkles className="h-3 w-3 shrink-0 text-[#3D94FF]" aria-hidden />
-                        <span className="text-[11.5px] text-white/60">{row}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-4 flex items-center gap-2 rounded-full border border-amber-400/25 bg-amber-400/10 px-3.5 py-2.5">
-                    <Camera className="h-3.5 w-3.5 shrink-0 text-amber-200" aria-hidden />
-                    <span className="text-[11px] font-medium text-amber-100">
-                      {t("mobile.mockScan", "Scan a plate to pull the record")}
-                    </span>
-                  </div>
-                </div>
+              <div className="min-w-0">
+                <p className="text-body font-semibold text-foreground">{t("mapp.eyebrow", "Motormila for Android")}</p>
+                <p className="text-footnote text-label-2">{t("mapp.previewTag", "Preview · version {version}", { version: APK_VERSION })}</p>
               </div>
             </div>
-            <p className="mt-5 text-center text-[11.5px] text-white/40">
+
+            <h1 className="ma-enter mt-7 font-display text-large font-semibold text-foreground [text-wrap:balance] sm:text-hero" style={delay(1)}>
+              {t("mapp.title", "Know the fair price")} <span className="text-primary">{t("mapp.titleAccent", "before you call.")}</span>
+            </h1>
+
+            <p className="ma-enter mt-5 max-w-xl text-callout text-label-2 [text-wrap:pretty]" style={delay(2)}>
               {t(
-                "mobile.mockCaptionIllustrative",
-                "Illustrative preview of the release candidate UI.",
+                "mapp.subtitle",
+                "Every car for sale in Sri Lanka, checked against what similar cars ask. Search the whole market, compare, and get price alerts, right from your phone.",
               )}
             </p>
-          </motion.div>
-        </motion.div>
+
+            <div className="ma-enter mt-8 flex flex-wrap items-center gap-x-5 gap-y-3" style={delay(3)}>
+              <Button asChild size="lg" className="h-14 max-w-full gap-3 px-6">
+                <a href={APK_URL} onClick={() => onDownload("hero")}>
+                  <Download aria-hidden />
+                  <span className="flex flex-col items-start leading-tight">
+                    <span>{t("mapp.download", "Download APK")}</span>
+                    <span className="text-caption font-medium opacity-85">
+                      {t("mapp.downloadMeta", "v{version} · {size}", { version: APK_VERSION, size: APK_SIZE })}
+                    </span>
+                  </span>
+                </a>
+              </Button>
+              <a
+                href="#install"
+                className="group inline-flex min-h-11 items-center gap-1.5 rounded-full text-body font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {t("mapp.howToInstall", "How to install")}
+                <ArrowRight className="h-4 w-4 transition-transform duration-short ease-standard group-hover:translate-x-0.5" aria-hidden />
+              </a>
+            </div>
+
+            <ul className="ma-enter mt-6 flex flex-wrap gap-x-5 gap-y-2 text-footnote text-label-2" style={delay(4)}>
+              <li className="inline-flex items-center gap-1.5">
+                <BadgeCheck className="h-4 w-4 text-primary" aria-hidden />
+                {t("mapp.trust.signed", "Signed by Motormila")}
+              </li>
+              <li className="inline-flex items-center gap-1.5">
+                <ShieldCheck className="h-4 w-4 text-primary" aria-hidden />
+                {t("mapp.trust.sha", "SHA-256 published")}
+              </li>
+              <li className="inline-flex items-center gap-1.5">
+                <RefreshCw className="h-4 w-4 text-primary" aria-hidden />
+                {t("mapp.trust.ota", "Updates itself")}
+              </li>
+            </ul>
+
+            {/* Desktop only: hand-off to the phone. */}
+            <div className="ma-enter mt-10 hidden max-w-md items-center gap-5 rounded-[1.5rem] border border-border bg-card/80 p-4 pr-6 shadow-e1 lg:flex" style={delay(5)}>
+              <QrCode label={t("mapp.qrAlt", "QR code that opens this page on your phone")} />
+              <div className="min-w-0">
+                <p className="text-body font-semibold text-foreground">{t("mapp.qrTitle", "On a computer?")}</p>
+                <p className="mt-1 text-footnote text-label-2">
+                  {t("mapp.qrBody", "Scan with your Android phone's camera to open this page there, then tap Download.")}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="ma-enter min-w-0" style={delay(2)}>
+            <div className="ma-hero-phones">
+              <div className="ma-hero-phones__back" aria-hidden>
+                <Phone src={screenDetail} alt="" eager />
+              </div>
+              <div className="ma-hero-phones__front">
+                <Phone src={screenHome} alt={t("mapp.screen.home", "Motormila app home screen: Find a fair price")} eager />
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
-      {/* ── Features ─────────────────────────────────────────────── */}
-      <RevealSection className="relative border-t border-white/[0.08] px-5 py-20 sm:px-8">
-        <div className="mx-auto w-full max-w-[1180px]">
-          <div className="max-w-2xl">
-            <p className="text-[11.5px] font-bold uppercase tracking-[0.16em] text-[#3D94FF]">
-              {t("mobile.featuresEyebrow", "What ships in the first release")}
-            </p>
-            <h2 className="mt-4 font-display text-[2rem] font-semibold leading-tight tracking-tight text-white sm:text-[2.5rem]">
-              {t("mobile.featuresTitle", "Built for how Sri Lanka actually buys cars.")}
+      {/* ── Quick facts ───────────────────────────────────────────────── */}
+      <div className="border-y border-separator">
+        <ul className="layout-shell flex flex-wrap items-center justify-center gap-x-8 gap-y-2 py-5 text-footnote font-medium text-label-2 sm:justify-between">
+          {facts.map((fact) => (
+            <li key={fact.key} className="inline-flex items-center gap-2">
+              <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-primary/70" />
+              <span>{fact.node}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* ── Features ──────────────────────────────────────────────────── */}
+      <section aria-labelledby="ma-features" className="py-20 lg:py-28">
+        <div className="layout-shell">
+          <div data-reveal className="mx-auto max-w-2xl text-center">
+            <Eyebrow>{t("mapp.featuresEyebrow", "What's inside")}</Eyebrow>
+            <h2 id="ma-features" className="mt-2 font-display text-title1 font-semibold text-foreground [text-wrap:balance] sm:text-large">
+              {t("mapp.featuresTitle", "Everything you need when you're out looking at cars.")}
             </h2>
           </div>
-          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {features.map((feature) => {
+
+          <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {features.map((feature, index) => {
               const Icon = feature.icon;
+              const wide = index === 0;
               return (
-                <div
-                  key={feature.titleKey}
-                  className="group rounded-3xl border border-white/[0.09] bg-white/[0.035] p-5 transition-colors duration-300 hover:border-[#3D94FF]/35 hover:bg-white/[0.055]"
+                <article
+                  key={feature.key}
+                  data-reveal
+                  style={delay(index % 3)}
+                  className={cn(
+                    "ma-feature surface--glass flex min-h-0 flex-col overflow-hidden border",
+                    wide && "md:col-span-2 lg:flex-row",
+                  )}
                 >
-                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-[#3D94FF]/25 bg-[#0A7AFF]/12">
-                    <Icon className="h-4 w-4 text-[#3D94FF]" />
-                  </span>
-                  <p className="mt-4 text-[14px] font-semibold text-white">{feature.label}</p>
-                  <p className="mt-2 text-[12.5px] leading-relaxed text-white/55">{feature.detail}</p>
-                </div>
+                  <div className={cn("p-6 sm:p-7", wide && "lg:flex lg:w-1/2 lg:flex-col lg:justify-center lg:p-10")}>
+                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-control bg-primary/10 text-primary">
+                      <Icon className="h-5 w-5" aria-hidden />
+                    </span>
+                    <h3 className={cn("mt-4 font-display font-semibold text-foreground [text-wrap:balance]", wide ? "text-title2 lg:text-title1" : "text-title3")}>
+                      {feature.title}
+                    </h3>
+                    <p className="mt-2 text-body text-label-2 [text-wrap:pretty]">{feature.body}</p>
+                  </div>
+                  <div className={cn("ma-peek", wide && "ma-peek--tall lg:w-1/2")}>
+                    <Phone src={feature.screen} alt={feature.alt} />
+                  </div>
+                </article>
               );
             })}
-          </div>
-        </div>
-      </RevealSection>
 
-      {/* ── Roadmap ──────────────────────────────────────────────── */}
-      <RevealSection className="relative border-t border-white/[0.08] px-5 py-20 sm:px-8">
-        <div className="mx-auto w-full max-w-[1180px]">
-          <p className="text-[11.5px] font-bold uppercase tracking-[0.16em] text-[#3D94FF]">
-            {t("mobile.roadmapEyebrow", "Release roadmap")}
-          </p>
-          <h2 className="mt-4 font-display text-[2rem] font-semibold leading-tight tracking-tight text-white sm:text-[2.5rem]">
-            {t("mobile.roadmapTitle", "Phased, verified, then public.")}
-          </h2>
-
-          <ol className="mt-12 grid gap-4 lg:grid-cols-4">
-            {ROADMAP.map((step, index) => (
-              <li key={step.key} className="relative rounded-3xl border border-white/[0.09] bg-white/[0.035] p-5">
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-black/30 px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.12em] text-white/55">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#3D94FF]" />
-                  {t(step.labelKey, step.label)}
-                </span>
-                <p className="mt-4 font-display text-[16px] font-semibold text-white">
-                  {t(step.titleKey, step.title)}
-                </p>
-                <p className="mt-2 text-[12.5px] leading-relaxed text-white/55">{t(step.bodyKey, step.body)}</p>
-                <span aria-hidden className="absolute right-5 top-5 font-display text-[13px] font-semibold text-white/15">
-                  0{index + 1}
-                </span>
-              </li>
-            ))}
-          </ol>
-
-          <div className="mt-8 rounded-3xl border border-emerald-400/20 bg-emerald-400/[0.06] px-5 py-5">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-emerald-400/25 bg-emerald-400/12">
-                <Download className="h-4 w-4 text-emerald-300" aria-hidden />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-[14px] font-semibold text-white">
-                  {t("mobile.downloadTitle", "Motormila v{version} for Android", { version: APK_VERSION })}
-                </p>
-                <p className="mt-0.5 text-[12px] text-white/55">
-                  {t("mobile.downloadSub", "{size} · Android 8.0+ · installs over older builds, watchlist kept", { size: APK_SIZE })}
-                </p>
-              </div>
-              <motion.a
-                href={APK_URL}
-                whileTap={{ scale: 0.97 }}
-                transition={springSoft}
-                className="inline-flex h-11 items-center rounded-full bg-[#0A7AFF] px-5 text-[12.5px] font-semibold text-white no-underline transition-colors hover:bg-[#3D94FF]"
-              >
-                {t("mobile.downloadNow", "Download APK")}
-              </motion.a>
+            <div className="grid gap-4">
+              {minorFeatures.map((feature, index) => {
+                const Icon = feature.icon;
+                return (
+                  <article key={feature.key} data-reveal style={delay(index + 1)} className="surface--glass flex flex-col border p-6 sm:p-7">
+                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-control bg-primary/10 text-primary">
+                      <Icon className="h-5 w-5" aria-hidden />
+                    </span>
+                    <h3 className="mt-4 font-display text-title3 font-semibold text-foreground">{feature.title}</h3>
+                    <p className="mt-2 text-body text-label-2 [text-wrap:pretty]">{feature.body}</p>
+                  </article>
+                );
+              })}
             </div>
-            <button
-              type="button"
-              onClick={copyChecksum}
-              className="mt-4 flex w-full items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-3.5 py-2.5 text-left transition-colors hover:border-[#3D94FF]/40"
-              aria-label={t("mobile.copyChecksum", "Copy SHA-256 checksum")}
-            >
-              <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-[#3D94FF]" aria-hidden />
-              <code className="min-w-0 flex-1 truncate font-mono text-[11px] text-white/60">{APK_SHA256}</code>
-              {copied ? (
-                <Check className="h-3.5 w-3.5 shrink-0 text-emerald-300" aria-hidden />
-              ) : (
-                <Copy className="h-3.5 w-3.5 shrink-0 text-white/40" aria-hidden />
-              )}
-            </button>
-            <p className="mt-3 text-[12px] leading-relaxed text-white/55">
-              {t(
-                "mobile.downloadVerify",
-                "On your phone: open the file, allow “Install unknown apps” once, then open. Verify the SHA-256 above matches if you want proof of origin — we never ask you to install from a third-party mirror.",
-              )}
-            </p>
           </div>
         </div>
-      </RevealSection>
+      </section>
 
-      {/* ── FAQ ──────────────────────────────────────────────────── */}
-      <RevealSection className="relative border-t border-white/[0.08] px-5 py-20 sm:px-8">
-        <div className="mx-auto grid w-full max-w-[1180px] gap-10 lg:grid-cols-[0.85fr_1.15fr]">
-          <div>
-            <p className="text-[11.5px] font-bold uppercase tracking-[0.16em] text-[#3D94FF]">
-              {t("mobile.faqEyebrow", "Questions")}
-            </p>
-            <h2 className="mt-4 font-display text-[2rem] font-semibold leading-tight tracking-tight text-white sm:text-[2.4rem]">
-              {t("mobile.faqTitle", "Before you ask.")}
+      {/* ── Install + trust ───────────────────────────────────────────── */}
+      <section id="install" aria-labelledby="ma-install" className="scroll-mt-24 border-t border-separator bg-surface-1/40 py-20 lg:py-28">
+        <div className="layout-shell grid gap-12 lg:grid-cols-[1fr_1fr] lg:gap-16">
+          <div className="min-w-0">
+            <div data-reveal>
+              <Eyebrow>{t("mapp.installEyebrow", "Install")}</Eyebrow>
+              <h2 id="ma-install" className="mt-2 font-display text-title1 font-semibold text-foreground [text-wrap:balance] sm:text-large">
+                {t("mapp.installTitle", "Installed in under a minute.")}
+              </h2>
+              <p className="mt-3 max-w-lg text-body text-label-2">
+                {t("mapp.installBody", "Motormila isn't on the Play Store yet, so Android asks for one extra tap. Here's the whole thing.")}
+              </p>
+            </div>
+
+            <ol className="mt-10 space-y-3">
+              {steps.map((step, index) => {
+                const Icon = step.icon;
+                return (
+                  <li key={step.key} data-reveal style={delay(index)} className="flex gap-4 rounded-[1.25rem] border border-border bg-card p-4 sm:p-5">
+                    <span className="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Icon className="h-5 w-5" aria-hidden />
+                      <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-caption font-semibold tabular-nums text-primary-foreground">
+                        {index + 1}
+                      </span>
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-body font-semibold text-foreground">{step.title}</p>
+                      <p className="mt-1 text-footnote text-label-2 [text-wrap:pretty]">{step.body}</p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+
+            <div data-reveal className="mt-4 flex gap-3 rounded-[1.25rem] border border-deal-caution/40 bg-deal-caution/10 p-4 sm:p-5">
+              <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-deal-caution-text" aria-hidden />
+              <div className="min-w-0">
+                <p className="text-body font-semibold text-foreground">{t("mapp.oldKey.title", "Have version 1.6.5 or older?")}</p>
+                <p className="mt-1 text-footnote text-label-1 [text-wrap:pretty]">
+                  {t(
+                    "mapp.oldKey.body",
+                    "Uninstall it first, then install this one. Those builds were signed with an older key, so Android can't update them in place. It's a one-time step: every version from 1.7.0 on updates normally.",
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="min-w-0 lg:pt-16">
+            <div data-reveal className="surface--glass border p-6 sm:p-8 lg:sticky lg:top-28">
+              <div className="flex items-start gap-4">
+                <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-[1rem] border border-border bg-background">
+                  <BrandLogo showWordmark={false} size="compact" className="h-8 w-8" />
+                </span>
+                <div className="min-w-0">
+                  <p className="font-display text-title3 font-semibold text-foreground">
+                    {t("mapp.trust.title", "Motormila {version}", { version: APK_VERSION })}
+                  </p>
+                  <p className="mt-0.5 text-footnote text-label-2">{t("mapp.trust.subtitle", "Android preview · direct download")}</p>
+                </div>
+              </div>
+
+              <dl className="mt-6 divide-y divide-separator border-y border-separator text-footnote">
+                {[
+                  [t("mapp.trust.version", "Version"), t("mapp.trust.versionValue", "{version} (build {code})", { version: APK_VERSION, code: APK_VERSION_CODE })],
+                  [t("mapp.trust.size", "Size"), t("mapp.trust.sizeValue", "{size} ({bytes} bytes)", { size: APK_SIZE, bytes })],
+                  [t("mapp.trust.updated", "Updated"), updated],
+                  [t("mapp.trust.requires", "Requires"), t("mapp.fact.android", "Android 8.0 and up")],
+                ].map(([label, value]) => (
+                  <div key={label} className="flex items-baseline justify-between gap-4 py-3">
+                    <dt className="text-label-2">{label}</dt>
+                    <dd className="text-right font-medium tabular-nums text-foreground">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+
+              <div className="mt-6">
+                <p className="text-footnote font-semibold text-foreground">{t("mapp.trust.shaLabel", "APK SHA-256")}</p>
+                <button
+                  type="button"
+                  onClick={apkHash.copy}
+                  className="press mt-2 flex w-full items-start gap-3 rounded-control border border-border bg-background px-3.5 py-3 text-left transition-colors duration-short ease-standard hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={t("mapp.copySha", "Copy the APK's SHA-256 checksum")}
+                >
+                  <code className="min-w-0 flex-1 break-all font-code text-caption text-label-1">{APK_SHA256}</code>
+                  {apkHash.copied ? (
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-deal-good-text" aria-hidden />
+                  ) : (
+                    <Copy className="mt-0.5 h-4 w-4 shrink-0 text-label-2" aria-hidden />
+                  )}
+                </button>
+                <p className="mt-1.5 min-h-4 text-caption text-label-2" aria-live="polite">
+                  {apkHash.copied ? t("mapp.copied", "Copied") : t("mapp.trust.shaHint", "Compare it with the file on your device before installing, if you want proof of origin.")}
+                </p>
+              </div>
+
+              <div className="mt-5">
+                <p className="text-footnote font-semibold text-foreground">{t("mapp.trust.certLabel", "Signing certificate (SHA-256)")}</p>
+                <code className="mt-2 block break-all rounded-control border border-border bg-background px-3.5 py-3 font-code text-caption text-label-1">
+                  {APK_CERT_SHA256}
+                </code>
+                <p className="mt-1.5 text-caption text-label-2 [text-wrap:pretty]">
+                  {t(
+                    "mapp.trust.certBody",
+                    "Every release from 1.7.0 is signed with this certificate. Android refuses an update signed by anyone else.",
+                  )}
+                </p>
+              </div>
+
+              <div className="mt-5 flex gap-3 rounded-control bg-primary/10 px-4 py-3">
+                <RefreshCw className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+                <p className="text-footnote text-label-1 [text-wrap:pretty]">
+                  {t(
+                    "mapp.trust.otaBody",
+                    "Automatic updates: the app checks for new versions when it opens, verifies each download's SHA-256, and asks before installing.",
+                  )}
+                </p>
+              </div>
+
+              <Button asChild size="lg" className="mt-6 w-full">
+                <a href={APK_URL} onClick={() => onDownload("trust")}>
+                  <Download aria-hidden />
+                  {t("mapp.downloadWithSize", "Download APK · {size}", { size: APK_SIZE })}
+                </a>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FAQ ───────────────────────────────────────────────────────── */}
+      <section aria-labelledby="ma-faq" className="border-t border-separator py-20 lg:py-28">
+        <div className="layout-shell grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
+          <div data-reveal>
+            <Eyebrow>{t("mapp.faqEyebrow", "Questions")}</Eyebrow>
+            <h2 id="ma-faq" className="mt-2 font-display text-title1 font-semibold text-foreground sm:text-large">
+              {t("mapp.faqTitle", "Good to know.")}
             </h2>
-            <p className="mt-4 max-w-sm text-[13px] leading-relaxed text-white/55">
-              {t(
-                "mobile.faqBody",
-                "Anything missing? Tell us inside the app's feedback panel once you're in the beta — or from the website footer today.",
-              )}
+            <p className="mt-3 max-w-sm text-body text-label-2">
+              {t("mapp.faqBody", "Something else? Send us a note from the app's Feedback screen or the website footer.")}
             </p>
           </div>
-          <div className="divide-y divide-white/[0.08] overflow-hidden rounded-3xl border border-white/[0.09] bg-white/[0.03]">
-            {FAQ.map((item) => (
-              <div key={item.key} className="px-5 py-5">
-                <p className="text-[13.5px] font-semibold text-white">{t(item.qKey, item.q)}</p>
-                <p className="mt-2 text-[12.5px] leading-relaxed text-white/55">{t(item.aKey, item.a)}</p>
-              </div>
+          <div data-reveal className="surface--glass divide-y divide-separator border">
+            {faq.map((item) => (
+              <details key={item.key} className="ma-faq group">
+                <summary className="flex items-center justify-between gap-4 px-5 py-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-7">
+                  <span className="text-body font-semibold text-foreground">{item.q}</span>
+                  <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-2 text-label-2">
+                    <Plus className="ma-faq__icon h-4 w-4" aria-hidden />
+                  </span>
+                </summary>
+                <div className="ma-faq__body px-5 pb-5 sm:px-7">
+                  <p className="max-w-prose text-body text-label-2 [text-wrap:pretty]">{item.a}</p>
+                </div>
+              </details>
             ))}
           </div>
         </div>
-      </RevealSection>
+      </section>
 
-      {/* ── Footer CTA ───────────────────────────────────────────── */}
-      <section className="relative border-t border-white/[0.08] px-5 py-16 sm:px-8">
-        <div className="mx-auto flex w-full max-w-[1180px] flex-col items-start justify-between gap-6 rounded-[2.5rem] border border-white/[0.1] bg-[radial-gradient(ellipse_at_top_left,rgba(10,122,255,0.16),transparent_60%)] px-6 py-10 sm:flex-row sm:items-center sm:px-10">
-          <div>
-            <p className="font-display text-[1.5rem] font-semibold tracking-tight text-white">
-              {t("mobile.ctaTitle", "The APK has landed.")}
+      {/* ── Final CTA ─────────────────────────────────────────────────── */}
+      <section className="layout-shell pb-24">
+        <div data-reveal className="premium-surface relative overflow-hidden px-6 py-14 text-center sm:px-10 sm:py-20">
+          <div aria-hidden className="ma-hero-glow opacity-80" data-low-data="hide" />
+          <div className="relative">
+            <span className="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-[1.1rem] border border-border bg-card shadow-e1">
+              <BrandLogo showWordmark={false} size="default" className="h-9 w-9" />
+            </span>
+            <h2 className="mx-auto mt-6 max-w-2xl font-display text-title1 font-semibold text-foreground [text-wrap:balance] sm:text-large">
+              {t("mapp.ctaTitle", "Take the whole market with you.")}
+            </h2>
+            <p className="mx-auto mt-3 max-w-lg text-body text-label-2">
+              {t("mapp.ctaBody", "Free for Android 8.0 and up. Version {version}, {size}.", { version: APK_VERSION, size: APK_SIZE })}
             </p>
-            <p className="mt-2 max-w-md text-[13px] leading-relaxed text-white/60">
-              {t("mobile.ctaBody", "Motormila v{version} for Android is live — market, deal scores, alerts and plate scanning in your pocket.", { version: APK_VERSION })}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <motion.a
-              href={APK_URL}
-              whileTap={{ scale: 0.97 }}
-              transition={springSoft}
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-[#0A7AFF] px-5 text-[12.5px] font-semibold text-white no-underline transition-colors hover:bg-[#3D94FF]"
-            >
-              <Download className="h-4 w-4" aria-hidden />
-              {t("mobile.ctaDownload", "Download APK · {size}", { size: APK_SIZE })}
-            </motion.a>
-            <PrefetchLink
-              to="/"
-              className="inline-flex h-11 items-center rounded-full border border-white/15 px-5 text-[12.5px] font-semibold text-white/80 no-underline transition-colors hover:border-[#3D94FF]/45 hover:text-white"
-            >
-              {t("mobile.ctaMarket", "Open the market")}
-            </PrefetchLink>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+              <Button asChild size="lg">
+                <a href={APK_URL} onClick={() => onDownload("cta")}>
+                  <Download aria-hidden />
+                  {t("mapp.download", "Download APK")}
+                </a>
+              </Button>
+              <Button asChild size="lg" variant="secondary">
+                <PrefetchLink to="/">
+                  {t("mapp.ctaWeb", "Browse on the web")}
+                  <ArrowRight aria-hidden />
+                </PrefetchLink>
+              </Button>
+            </div>
           </div>
         </div>
       </section>

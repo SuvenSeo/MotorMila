@@ -149,3 +149,69 @@ export function getListingImageList(listing: ListingImageListSource): string[] {
   push(listing.thumbnail_url);
   return ordered;
 }
+
+/* ── Responsive variants for marketplace photos (no image CDN of our own) ──
+ * ikman's image host serves any size from the same path
+ * (`…/<uuid>/<w>/<h>/cropped.jpg`), so cards ask for 320–620px instead of the
+ * 1080px original (≈160 kB → ≈40 kB). Other hosts have a single size: no srcset. */
+const IKMAN_SIZED_RE = /^(https:\/\/i\.ikman-st\.com\/.+?\/)(\d{2,4})\/(\d{2,4})\/(cropped|fitted)\.(jpg|jpeg|webp)$/i;
+const IKMAN_WIDTHS = [320, 480, 620, 1080] as const;
+
+/** `srcset` for a marketplace photo when its host can resize, else undefined. */
+export function marketplaceSrcSet(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
+  const m = IKMAN_SIZED_RE.exec(url);
+  if (!m) return undefined;
+  const [, base, w, h, mode, ext] = m;
+  const ratio = Number(h) / Number(w);
+  if (!Number.isFinite(ratio) || ratio <= 0) return undefined;
+  return IKMAN_WIDTHS.map((width) => `${base}${width}/${Math.round(width * ratio)}/${mode}.${ext} ${width}w`).join(", ");
+}
+
+/* ── Hot-link circuit breaker ───────────────────────────────────────────────
+ * Some boards (riyasewana, saleme) refuse hot-linked photos from some
+ * networks. Each card then fires a doomed request and shimmers until it 403s.
+ * After a few failures from a host with no success this session, later cards
+ * go straight to the branded placeholder. A single success keeps the host on
+ * for good (Sri Lankan residential visitors usually get the photos). */
+const HOST_FAIL_LIMIT = 4;
+const hostFailures = new Map<string, number>();
+const hostLoaded = new Set<string>();
+
+function imageHost(url: string): string | null {
+  if (!/^https?:\/\//i.test(url)) return null;
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return null;
+  }
+}
+
+export function noteImageResult(url: string, ok: boolean): void {
+  const host = imageHost(url);
+  if (!host) return;
+  if (ok) {
+    hostLoaded.add(host);
+    hostFailures.delete(host);
+  } else if (!hostLoaded.has(host)) {
+    hostFailures.set(host, (hostFailures.get(host) ?? 0) + 1);
+  }
+}
+
+/** True when this session has seen the host refuse photos repeatedly (and never serve one). */
+export function imageHostBlocked(url: string): boolean {
+  const host = imageHost(url);
+  if (!host || hostLoaded.has(host)) return false;
+  return (hostFailures.get(host) ?? 0) >= HOST_FAIL_LIMIT;
+}
+
+/** Third-party photo (hot-linked): sent without a Referer, as most boards' hot-link rules allow. */
+export function isRemoteImage(url: string | null | undefined): boolean {
+  return Boolean(url && /^https?:\/\//i.test(url));
+}
+
+/** Test hook. */
+export function resetImageHostState(): void {
+  hostFailures.clear();
+  hostLoaded.clear();
+}

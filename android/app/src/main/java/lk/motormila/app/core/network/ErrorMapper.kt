@@ -21,6 +21,8 @@ object ErrorMapper {
         is HttpException -> mapHttp(t)
         is UnknownHostException -> AppError.Network("No internet connection.")
         is SocketTimeoutException -> AppError.Network("Request timed out. Please retry.")
+        // OkHttp callTimeout (15 s) surfaces as a bare InterruptedIOException("timeout").
+        is java.io.InterruptedIOException -> AppError.Network("Request timed out. Please retry.")
         is IOException -> AppError.Network()
         else -> AppError.Unknown(t.message?.take(180) ?: "Something went wrong.")
     }

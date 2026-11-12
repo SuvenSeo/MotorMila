@@ -143,3 +143,39 @@ def test_rate_limit_isolated_per_api_key(monkeypatch):
         b2b._b2b_rate_limiter.max_requests = original_max_requests
         b2b._b2b_rate_limiter.window_seconds = original_window_seconds
         app.dependency_overrides.clear()
+
+
+def test_rotating_invalid_keys_share_one_ip_bucket(monkeypatch):
+    """Fake keys must not mint fresh limiter buckets: invalid keys are keyed by IP."""
+    monkeypatch.setenv("B2B_API_KEYS", "k1")
+    client, _ = _client_with_data([_car("a", price=9_000_000)])
+    original_max_requests = b2b._b2b_rate_limiter.max_requests
+    b2b._b2b_rate_limiter.max_requests = 2
+
+    try:
+        endpoint = "/api/v1/b2b/collateral-value?make=Toyota&model=Premio"
+        assert client.get(endpoint, headers={"X-API-Key": "fake-1"}).status_code == 401
+        assert client.get(endpoint, headers={"X-API-Key": "fake-2"}).status_code == 401
+        assert client.get(endpoint, headers={"X-API-Key": "fake-3"}).status_code == 429
+        assert client.get(endpoint).status_code == 429
+        # A valid key still has its own bucket.
+        assert client.get(endpoint, headers={"X-API-Key": "k1"}).status_code == 200
+    finally:
+        b2b._b2b_rate_limiter.max_requests = original_max_requests
+        app.dependency_overrides.clear()
+
+
+def test_rate_limit_key_hashes_valid_key_and_uses_ip_for_invalid(monkeypatch):
+    monkeypatch.setenv("B2B_API_KEYS", "secret-key-1")
+    monkeypatch.delenv("TRUST_PROXY_HEADERS", raising=False)
+    monkeypatch.delenv("SPACE_ID", raising=False)
+
+    class _Req:
+        def __init__(self, key):
+            self.headers = {"x-api-key": key} if key else {}
+            self.client = type("C", (), {"host": "198.51.100.3"})()
+
+    valid = b2b._b2b_rate_limit_key(_Req("secret-key-1"))
+    assert valid.startswith("key:") and "secret-key-1" not in valid
+    assert b2b._b2b_rate_limit_key(_Req("bogus")) == "ip:198.51.100.3"
+    assert b2b._b2b_rate_limit_key(_Req(None)) == "ip:198.51.100.3"

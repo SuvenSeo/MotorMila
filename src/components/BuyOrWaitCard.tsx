@@ -5,15 +5,32 @@ import { QUERY_STALE } from "@/lib/queryPolicy";
 import { computePriceOutlook } from "@/lib/priceOutlook";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/ui/error-state";
 
 /**
  * Buy-now-or-wait outlook for a make/model, from the same trend series the
  * ModelTrendPanel charts (shared React Query key, so no extra request).
  * Always labelled indicative: it describes the recent trend, not the future.
  */
-export function BuyOrWaitCard({ make, model, className }: { make: string; model: string; className?: string }) {
+export function BuyOrWaitCard({
+  make,
+  model,
+  className,
+  displayMake,
+  displayModel,
+}: {
+  make: string;
+  model: string;
+  className?: string;
+  /** Human casing for copy (route params can be lowercase slugs). */
+  displayMake?: string;
+  displayModel?: string;
+}) {
+  const names = { make: displayMake ?? make, model: displayModel ?? model };
   const { t } = useAppPreferences();
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["model-trend-panel", make, model],
     queryFn: () => getPriceTrends(make, model),
     enabled: Boolean(make && model),
@@ -21,35 +38,56 @@ export function BuyOrWaitCard({ make, model, className }: { make: string; model:
   });
 
   if (isLoading) {
-    return <div className={cn("skeleton-shimmer h-40 rounded-2xl", className)} aria-hidden />;
+    return (
+      <Card padding="md" className={className} aria-busy="true">
+        <div className="flex items-start gap-3" aria-hidden>
+          <Skeleton shape="circle" className="h-10 w-10 shrink-0" />
+          <div className="flex-1 space-y-2">
+            <Skeleton shape="text" className="h-3 w-1/2" />
+            <Skeleton shape="text" className="h-5 w-3/4" />
+          </div>
+        </div>
+        <div className="mt-4 space-y-2" aria-hidden>
+          <Skeleton shape="text" />
+          <Skeleton shape="text" className="w-5/6" />
+          <Skeleton shape="text" className="w-2/3" />
+        </div>
+      </Card>
+    );
   }
-  if (isError) return null;
+  if (isError) {
+    return (
+      <Card padding="none" className={className}>
+        <ErrorState className="py-8" title={t("outlook.errorTitle", "The outlook didn't load")} onRetry={() => void refetch()} />
+      </Card>
+    );
+  }
 
   const outlook = computePriceOutlook(data ?? []);
   const Icon =
     outlook.stance === "easing" ? TrendingDown : outlook.stance === "firming" ? TrendingUp : outlook.stance === "steady" ? Minus : Hourglass;
   const tone =
     outlook.stance === "easing"
-      ? "bg-deal-green/10 text-emerald-700 dark:text-emerald-300"
+      ? "bg-deal-good/10 text-deal-good-text"
       : outlook.stance === "firming"
-        ? "bg-rose-500/10 text-rose-700 dark:text-rose-300"
-        : "bg-muted text-foreground";
+        ? "bg-deal-high/10 text-deal-high-text"
+        : "bg-surface-2 text-foreground";
 
   return (
-    <section aria-labelledby="buy-or-wait-title" className={cn("rounded-2xl border border-border bg-card p-6 shadow-soft", className)}>
+    <Card padding="md" role="region" aria-labelledby="buy-or-wait-title" className={cn("content-in", className)}>
       <div className="flex items-start gap-3">
-        <span className={cn("inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl", tone)}>
+        <span className={cn("inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full", tone)}>
           <Icon className="h-5 w-5" aria-hidden />
         </span>
         <div className="min-w-0">
-          <p className="text-[12px] font-semibold text-muted-foreground">
+          <p className="text-footnote font-semibold text-primary">
             {t("outlook.eyebrow", "Buy now or wait? · Indicative")}
           </p>
-          <h3 id="buy-or-wait-title" className="mt-0.5 font-display text-lg font-semibold text-foreground">
-            {outlook.headline}
+          <h3 id="buy-or-wait-title" className="mt-1 font-display text-title3 font-semibold text-foreground">
+            {t(`outlook.${outlook.stance}.headline`, outlook.headline)}
           </h3>
           {outlook.monthlyChangePct !== null && (
-            <p className="num mt-0.5 text-[13px] text-muted-foreground">
+            <p className="mt-1 text-footnote tabular-nums text-label-2">
               {t("outlook.change", "{sign}{pct}% a month on average over {n} months · {samples} ads", {
                 sign: outlook.monthlyChangePct > 0 ? "+" : outlook.monthlyChangePct < 0 ? "−" : "",
                 pct: Math.abs(outlook.monthlyChangePct).toFixed(1),
@@ -60,14 +98,14 @@ export function BuyOrWaitCard({ make, model, className }: { make: string; model:
           )}
         </div>
       </div>
-      <p className="mt-3 text-[14px] leading-relaxed text-foreground">{outlook.advice}</p>
-      <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">
+      <p className="mt-4 text-body text-foreground">{t(`outlook.${outlook.stance}.advice`, outlook.advice)}</p>
+      <p className="mt-3 text-caption text-label-2">
         {t(
           "outlook.disclaimer",
           "Based on median asking prices of {make} {model} ads, not sale prices. Confidence: {confidence}. Duty, surcharge or loan-cap changes can move prices quickly. This isn't financial advice.",
-          { make, model, confidence: outlook.confidence },
+          { ...names, confidence: t(`outlook.conf.${outlook.confidence}`, outlook.confidence) },
         )}
       </p>
-    </section>
+    </Card>
   );
 }

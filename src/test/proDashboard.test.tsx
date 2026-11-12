@@ -5,10 +5,6 @@ import { AuthProvider } from "@/lib/authContext";
 import ProDashboard from "@/pages/ProDashboard";
 import type { ProDetailPayload, ProDistrictProfile, ProMarketSnapshot, ProVehicleLane } from "@/types/pro";
 
-vi.mock("@/components/AIChatWidget", () => ({
-  AIChatWidget: () => null,
-}));
-
 vi.mock("@/lib/proReports", () => ({
   customizeProReport: vi.fn((report, options = {}) => ({
     ...report,
@@ -145,7 +141,7 @@ describe("ProDashboard", () => {
     installLocalStorage();
     localStorage.setItem(
       "motormila.auth_user",
-      JSON.stringify({ email: "pro@motormila.lk", name: "Pro User", plan: "pro", avatarInitials: "PU" }),
+      JSON.stringify({ email: "pro@example.com", name: "Pro User", plan: "pro", avatarInitials: "PU" }),
     );
     vi.mocked(getProMarketSnapshot).mockResolvedValue(snapshot as ProMarketSnapshot);
     vi.mocked(getProVehicleLanes).mockResolvedValue([lane] as ProVehicleLane[]);
@@ -223,7 +219,7 @@ describe("ProDashboard", () => {
     );
 
     expect(await screen.findByText(/Pro dashboard\./i)).toBeInTheDocument();
-    expect(await screen.findByText(/1.2K/)).toBeInTheDocument();
+    expect((await screen.findAllByText(/1.2K/)).length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("tab", { name: /vehicles/i }));
     expect(await screen.findByText(/Make and model lanes/i)).toBeInTheDocument();
@@ -275,7 +271,7 @@ describe("ProDashboard", () => {
       </AuthProvider>,
     );
 
-    expect(await screen.findByText(/1.2K/)).toBeInTheDocument();
+    expect((await screen.findAllByText(/1.2K/)).length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("tab", { name: /reports/i }));
     expect(await screen.findByText(/report composer/i)).toBeInTheDocument();

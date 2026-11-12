@@ -71,7 +71,7 @@ Index sizes above are from a 17.5k-listing sample; with the full catalogue the m
    - `public/robots.txt` references `sitemap-index.xml` and drops the DB-backed `/api/v1/seo/sitemap-index.xml`.
    - `src/test/vercelRoutes.test.ts` fails if a new `<Route>` is not covered by the vercel allowlist or RouteMeta.
 7. **Personal contact details removed**:
-   - `src/lib/brand.ts` reads `VITE_CONTACT_EMAIL` (default placeholder `hello@motormila.lk`) and `VITE_CONTACT_PHONE` (default empty; `Pricing.tsx` hides the phone link when it is empty).
+   - `src/lib/brand.ts` reads `VITE_CONTACT_EMAIL` (default `hello@ardenostudio.com`) and `VITE_CONTACT_PHONE` (default empty; `Pricing.tsx` hides the phone link when it is empty).
    - The `pricingContent.ts` FAQ uses `BRAND.contactEmail`.
    - `public/.well-known/security.txt` now points to GitHub private advisories. Set `SECURITY_CONTACT_EMAIL` at build time to prepend a role mailbox.
 8. **Tests**:
@@ -109,7 +109,7 @@ After deploy, check:
 
 ## OPS STEPS FOR SUVEN
 
-1. **Vercel env**: set `VITE_CONTACT_EMAIL` to a role inbox (for example `hello@<your domain>`). The default `hello@motormila.lk` is only a placeholder; make sure it exists or change it. Optionally set `VITE_CONTACT_PHONE` (a business number, not a personal one) and `SECURITY_CONTACT_EMAIL` (for example `security@<domain>`). Mirror these in Cloudflare Pages if you still use it.
+1. **Vercel env**: set `VITE_CONTACT_EMAIL` to a role inbox (for example `hello@<your domain>`). The default is `hello@ardenostudio.com` (Ardeno Studio's contact). motormila.lk is not owned — do not use it as a contact domain. Optionally set `VITE_CONTACT_PHONE` (a business number, not a personal one) and `SECURITY_CONTACT_EMAIL` (for example `security@<domain>`). Mirror these in Cloudflare Pages if you still use it.
 2. **Vercel Node version**: use Node 22.x (≥22.18) so the index builder imports the TS canonicalizers natively. It falls back to esbuild if not.
 3. **First deploy**: the Vercel build creates `idx/` from the R2 catalogue automatically. If `VITE_SNAPSHOT_BASE_URL` points at R2, the R2 copy of `idx/` appears after the next full export/upload; until then each idx file falls back to the same-origin copy.
 4. **Search Console**: submit `https://motormila.vercel.app/sitemap-index.xml`.

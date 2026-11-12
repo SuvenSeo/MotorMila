@@ -37,25 +37,54 @@ val allowUnsignedRelease: Boolean =
 
 android {
     namespace = "lk.motormila.app"
-    // Play requires targetSdk 36 for updates from 1 Nov 2026 (extension
-    // deadline). compileSdk stays at 35 because Paparazzi 1.3.5's
-    // Renderer.configureBuildProperties() crashes on API 36's
-    // android.os.Build (new nested class VERSION_CODES_FULL ->
-    // NoSuchElementException), breaking all screenshot tests. Revisit when
-    // Paparazzi is upgraded to 2.x (needs Gradle/AGP/Kotlin bump too).
-    compileSdk = 35
+    // Play requires targetSdk 36 for updates from 1 Nov 2026. compileSdk 36
+    // needs Paparazzi 2.x (1.3.5 crashed in Renderer.configureBuildProperties
+    // on API 36's android.os.Build.VERSION_CODES_FULL) and AGP 8.10+.
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "lk.motormila.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 17
-        versionName = "1.6.5"
+        versionCode = 21
+        versionName = "1.8.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
+        // QA hooks (crawl theme/lang extras, destructive DB fallback): debug +
+        // preview only, never release.
+        buildConfigField("boolean", "QA_HOOKS", "false")
+        // Firebase Cloud Messaging client config (public identifiers, not
+        // secrets) from env / -P props. All four set -> FirebaseBootstrap
+        // initialises FCM at startup; any blank -> push stays off and the
+        // app builds/runs exactly as before. No google-services.json needed.
+        //   MOTORMILA_FIREBASE_APP_ID      e.g. 1:1234567890:android:abc123
+        //   MOTORMILA_FIREBASE_API_KEY     Android API key of the Firebase project
+        //   MOTORMILA_FIREBASE_PROJECT_ID  e.g. motormila-prod
+        //   MOTORMILA_FIREBASE_SENDER_ID   project number, e.g. 1234567890
+        mapOf(
+            "APP_ID" to "motormilaFirebaseAppId",
+            "API_KEY" to "motormilaFirebaseApiKey",
+            "PROJECT_ID" to "motormilaFirebaseProjectId",
+            "SENDER_ID" to "motormilaFirebaseSenderId",
+        ).forEach { (key, gradleProp) ->
+            val value = providers.environmentVariable("MOTORMILA_FIREBASE_$key")
+                .orElse(providers.gradleProperty(gradleProp))
+                .getOrElse("")
+                .replace("\"", "")
+            buildConfigField("String", "FIREBASE_$key", "\"$value\"")
+        }
+        // Sentry crash reporting (Ardeno Studio org). The DSN is a client
+        // key and is NEVER committed: supply it at build time via env
+        // SENTRY_DSN or -P sentryDsn (or local.properties). Blank -> Sentry
+        // stays off and the app builds/runs exactly as before.
+        val sentryDsn = providers.environmentVariable("SENTRY_DSN")
+            .orElse(providers.gradleProperty("sentryDsn"))
+            .getOrElse("")
+            .replace("\"", "")
+        buildConfigField("String", "SENTRY_DSN", "\"$sentryDsn\"")
     }
 
     // Two distribution channels (see docs/overhaul/android.md):
@@ -108,6 +137,18 @@ android {
     //   PLAY_UPLOAD_KEYSTORE_FILE, PLAY_UPLOAD_KEYSTORE_PASSWORD,
     //   PLAY_UPLOAD_KEY_ALIAS, PLAY_UPLOAD_KEY_PASSWORD
     signingConfigs {
+        // Preview/debug ONLY (lk.motormila.app.debug). A committed, well-known
+        // key (passwords "android") so every CI preview APK is signed
+        // identically and installs as an in-place update over the previous
+        // preview. NEVER used for release: release signing comes only from
+        // env/secrets below. Fingerprint (SHA-256):
+        // BD:50:03:0F:71:FB:18:07:04:79:D6:8F:F8:D2:FA:BE:86:BB:B2:8F:C6:54:1E:D8:DF:C0:14:2E:09:28:14:9F
+        getByName("debug") {
+            storeFile = file("preview-debug.keystore")
+            storePassword = "android"
+            keyAlias = "motormila-preview"
+            keyPassword = "android"
+        }
         directSigning?.let { cfg ->
             create("directRelease") {
                 storeFile = file(cfg.storeFile)
@@ -146,6 +187,16 @@ android {
                 "\"$debugBaseUrl\"",
             )
             isDebuggable = true
+            buildConfigField("boolean", "QA_HOOKS", "true")
+            signingConfig = signingConfigs.getByName("debug")
+            // Preview self-updater channel: the debug app reads its update
+            // manifest from the preview pre-release instead of production
+            // (a release APK can never update the .debug package anyway).
+            buildConfigField(
+                "String",
+                "PREVIEW_UPDATE_MANIFEST_URL",
+                "\"https://github.com/SuvenSeo/Vehicle-Platform/releases/download/preview-android-1.7.0/preview-latest.json\"",
+            )
         }
         release {
             buildConfigField(
@@ -153,6 +204,7 @@ android {
                 "BASE_URL",
                 "\"https://seo292-vehicle-platform-backend.hf.space/api/v1\"",
             )
+            buildConfigField("String", "PREVIEW_UPDATE_MANIFEST_URL", "\"\"")
             // Per-flavor signing (env only) is wired below the android block.
             signingConfig = null
             isMinifyEnabled = true
@@ -160,6 +212,42 @@ android {
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
+            )
+        }
+    }
+
+    // Preview sideload channel (GitHub pre-release preview-android-1.7.0).
+    // Same package as the old debug preview (lk.motormila.app.debug) and the
+    // same committed preview key, so it installs in place over every earlier
+    // preview, but NOT debuggable: R8-minified + resource-shrunk like release
+    // (debuggable Compose runs uncompiled and stutters). Obfuscation is off
+    // (proguard-preview.pro) so the generated Baseline Profile keeps source
+    // names and preview crash traces stay readable. Profileable from shell
+    // (src/preview/AndroidManifest.xml) for macrobenchmark / baseline profile.
+    // Release signing, the release build type and android-release.yml are
+    // untouched.
+    buildTypes {
+        create("preview") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".debug"
+            // Production ships defaultConfig versionName ("1.8.0"); the
+            // preview sideload channel keeps its "-preview" label.
+            versionNameSuffix = "-preview"
+            isDebuggable = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+                "proguard-preview.pro",
+            )
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+            buildConfigField("boolean", "QA_HOOKS", "true")
+            buildConfigField(
+                "String",
+                "PREVIEW_UPDATE_MANIFEST_URL",
+                "\"https://github.com/SuvenSeo/Vehicle-Platform/releases/download/preview-android-1.7.0/preview-latest.json\"",
             )
         }
     }
@@ -191,6 +279,24 @@ android {
     tasks.withType<Test> {
         testLogging {
             showStandardStreams = true
+        }
+    }
+}
+
+// Preview builds: CI passes MOTORMILA_PREVIEW_VERSION_CODE (minutes since the
+// Unix epoch, monotonic across workflows) so each preview APK has a higher
+// versionCode than the last and installs/self-updates in place. Debug only;
+// release versionCodes stay the defaultConfig value.
+val previewVersionCode: Int? = envOrNull("MOTORMILA_PREVIEW_VERSION_CODE")?.toIntOrNull()
+androidComponents {
+    onVariants(selector().withBuildType("debug")) { variant ->
+        previewVersionCode?.let { code ->
+            variant.outputs.forEach { it.versionCode.set(code) }
+        }
+    }
+    onVariants(selector().withBuildType("preview")) { variant ->
+        previewVersionCode?.let { code ->
+            variant.outputs.forEach { it.versionCode.set(code) }
         }
     }
 }
@@ -247,6 +353,7 @@ gradle.taskGraph.whenReady {
 dependencies {
     // Compose BOM — versions for all compose artifacts
     implementation(platform(libs.compose.bom))
+    implementation(libs.compose.animation.graphics) // brand v2 splash AVD
     androidTestImplementation(platform(libs.compose.bom))
 
     // Compose UI
@@ -294,7 +401,12 @@ dependencies {
     implementation(libs.paging.runtime)
     implementation(libs.paging.compose)
 
+    // Startup: compiles src/main/baseline-prof.txt on install (sideload too).
+    implementation(libs.androidx.profileinstaller)
+
     // Images
+    // Backdrop blur (liquid-glass chrome); RenderEffect on API 31+, tinted scrim below.
+    implementation(libs.haze)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
 
@@ -310,6 +422,14 @@ dependencies {
     // Billing
     implementation(libs.play.billing.ktx)
 
+    // Push (FCM). Initialised manually in FirebaseBootstrap; inert when the
+    // MOTORMILA_FIREBASE_* build values are absent.
+    implementation(libs.firebase.messaging)
+
+    // Crash reporting (Sentry, Ardeno Studio org). Initialised manually in
+    // MotormilaApp; inert when the SENTRY_DSN build value is absent.
+    implementation(libs.sentry.android)
+
     // Coroutines
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
@@ -322,4 +442,10 @@ dependencies {
     testImplementation(libs.room.testing)
     // Screenshot (Paparazzi) + functional (Robolectric) tests — JVM only, no emulator.
     testImplementation(libs.paparazzi)
+}
+
+// Preview builds skip lint-vital (it runs for every non-debuggable variant and
+// only duplicates the release lint gate); release variants are unaffected.
+tasks.configureEach {
+    if (name.startsWith("lintVital") && name.contains("Preview")) enabled = false
 }

@@ -1,9 +1,50 @@
-# Cloudflare Pages redirects — mirrors vercel.json rewrites for the future cutover.
-# Vercel ignores this file. Set BACKEND_URL to the live API host on cutover.
-# NOTE: the bot user-agent split for /listing/:id OG cards (vercel.json) has no
-# _redirects equivalent — it needs a Pages Function middleware. See migration plan.
-# NOTE: /api/v1/* is proxied by functions/api/v1/[[path]].js (a plain _redirects
-# 200 rule for that path proved unreliable on Pages), so no rule here.
+# Cloudflare Pages redirects.
+# NOTE: the bot user-agent split for /listing/:id OG cards has no _redirects
+# equivalent and no Pages Function replacement (Functions removed 1 Nov 2026
+# after a bot crawl burned the Workers quota): /listing/:id serves the SPA
+# shell statically below, bots and humans alike, no Function runs.
+# NOTE: /api/v1/* has no proxy rule here — the frontend calls the HF API
+# directly (VITE_API_URL). Do not re-add a proxy rule or a Function for it.
 /assets/* /assets/:splat 200
 /snapshots/* /snapshots/:splat 200
-/* /index.html 200
+# SPA routes with no prerendered shell.
+# Static routes (/calculator, /trends, /cars/:make, /cars/:make/:model, ...) are
+# served from the route shells scripts/prerender-seo.mjs writes, so they need
+# no rule. Do NOT add a catch-all "/* /index.html 200": Pages rejects it as an
+# infinite loop (it strips .html / index) and ignores it, and _redirects rules
+# win over static assets, so any broader rule would shadow the shells. Unknown
+# URLs fall through to the static 404.html with a real 404.
+# Retired paths: real 301s (raw HTML used to be the indexable home shell).
+/leasing /finance 301
+/admin /motormila/admin 301
+/price-index /trends 301
+/valuation /estimate 301
+# Common typed paths (nav labels, old habits): real 301s to the page they mean.
+/prices /trends 301
+/price /trends 301
+/tools /calculator 301
+/calculators /calculator 301
+/tax-calculator /calculator 301
+/import-calculator /calculator 301
+/value /estimate 301
+/saved /alerts 301
+/watchlist /alerts 301
+/sell-my-car /sell 301
+/plans /pricing 301
+/deals /best-picks 301
+/app /mobile-app 301
+/login /sign-in 301
+/signin /sign-in 301
+/signup /sign-up 301
+/cars/:make/:model/:year / 200
+/locations/:district / 200
+/compare/:slug / 200
+# /listing/:id was a Pages Function (bot OG split) until 31 Oct 2026 — removed because a bot crawl of 107k listing URLs burned the 100k/day Workers quota. Serve the SPA shell statically instead; bots and humans both get index.html, no Function runs.
+/listing/:id / 200
+/official-pulse/* / 200
+# Nested admin pages use the SPA; keep the prerendered admin root shell.
+/motormila/admin/* / 200
+
+# 1 Nov 2026: ALL Pages Functions removed (Workers daily quota) — /cars/* now serves the SPA shell statically, like /listing/:id and /compare/:slug.
+/cars/:make / 200
+/cars/:make/:model / 200

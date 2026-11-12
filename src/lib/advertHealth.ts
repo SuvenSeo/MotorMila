@@ -2,6 +2,7 @@
  * Advert merchandising health (0–100): completeness of listing fields that
  * help buyers trust and convert. Seven equal checklist items.
  */
+import { englishT, type TranslateFn } from "@/lib/translate";
 
 export interface AdvertHealthListingLike {
   thumbnail_url?: string | null;
@@ -107,14 +108,14 @@ function bandFromScore(score: number): AdvertHealthBand {
   return "weak";
 }
 
-function labelForBand(band: AdvertHealthBand): string {
+function labelForBand(band: AdvertHealthBand, t: TranslateFn): string {
   switch (band) {
     case "strong":
-      return "Ad health strong";
+      return t("adHealth.strong", "Ad health strong");
     case "fair":
-      return "Ad health fair";
+      return t("adHealth.fair", "Ad health fair");
     case "weak":
-      return "Ad health weak";
+      return t("adHealth.weak", "Ad health weak");
     default: {
       const _exhaustive: never = band;
       return _exhaustive;
@@ -125,10 +126,10 @@ function labelForBand(band: AdvertHealthBand): string {
 /**
  * Score merchandising completeness of a listing-like object (0–100).
  */
-export function computeAdvertHealth(listing: AdvertHealthListingLike): AdvertHealthResult {
+export function computeAdvertHealth(listing: AdvertHealthListingLike, t: TranslateFn = englishT): AdvertHealthResult {
   const checks: AdvertHealthCheck[] = CHECK_META.map(({ key, label }) => ({
     key,
-    label,
+    label: t(`adHealth.check.${key}`, label),
     passed: evaluateCheck(key, listing),
   }));
 
@@ -136,12 +137,12 @@ export function computeAdvertHealth(listing: AdvertHealthListingLike): AdvertHea
   const passedCount = checks.filter((c) => c.passed).length;
   const score = Math.round((passedCount / totalCount) * 100);
   const band = bandFromScore(score);
-  const label = labelForBand(band);
+  const label = labelForBand(band, t);
   const missing = checks.filter((c) => !c.passed).map((c) => c.label);
   const detail =
     missing.length === 0
-      ? "All merchandising fields present"
-      : `Missing: ${missing.join(", ")}`;
+      ? t("adHealth.complete", "All merchandising fields present")
+      : t("adHealth.missing", "Missing: {fields}", { fields: missing.join(", ") });
 
   return {
     score,

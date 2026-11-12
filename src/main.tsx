@@ -2,9 +2,9 @@ import { migrateLegacyStorageKeys } from "./lib/storageMigration";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import "./styles/layers.css";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
-import { AppPreferencesProvider } from "@/lib/appPreferences";
-import { Analytics } from "@vercel/analytics/react";
+import { AppPreferencesProvider, preloadSavedLanguage, readSavedLanguage } from "@/lib/appPreferences";
 
 // Error tracking — dynamically imported so the bundle only pays for Sentry
 // when VITE_SENTRY_DSN is configured at build time.
@@ -21,11 +21,19 @@ if (sentryDsn) {
 
 migrateLegacyStorageKeys();
 
-createRoot(document.getElementById("root")!).render(
-	<AppPreferencesProvider>
-		<AppErrorBoundary>
-			<App />
-			<Analytics />
-		</AppErrorBoundary>
-	</AppPreferencesProvider>
-);
+
+function mount() {
+	createRoot(document.getElementById("root")!).render(
+		<AppPreferencesProvider>
+			<AppErrorBoundary>
+				<App />
+			</AppErrorBoundary>
+		</AppPreferencesProvider>
+	);
+}
+
+// Sinhala/Tamil dictionaries are lazy chunks: for a saved si/ta session wait
+// for that chunk so the first render is already in the right language.
+// English (the default) mounts synchronously, exactly as before.
+if (readSavedLanguage() === "en") mount();
+else void preloadSavedLanguage().then(mount);

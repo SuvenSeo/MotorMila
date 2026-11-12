@@ -1,72 +1,107 @@
 package lk.motormila.app.ui.splash
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.graphics.ExperimentalAnimationGraphicsApi
+import androidx.compose.animation.graphics.res.animatedVectorResource
+import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
+import androidx.compose.animation.graphics.vector.AnimatedImageVector
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
-import lk.motormila.app.core.motion.rememberReducedMotion
-import lk.motormila.app.ui.components.BrandLogo
-import lk.motormila.app.ui.components.BrandLogoSize
-import lk.motormila.app.ui.theme.AppleEasing
-import lk.motormila.app.ui.theme.MotormilaSecondaryText
+import lk.motormila.app.R
+import lk.motormila.app.ui.components.MOTORMILA_WORDMARK_ASPECT
+import lk.motormila.app.ui.components.motormilaWordmarkRes
+import lk.motormila.app.ui.theme.MmColors
+import lk.motormila.app.ui.theme.MmMotion
 
+/** Total length of the brand v2 opening animation (SPLASH_ANIMATION_SPEC.md). */
+private const val SplashAnimMs = 900L
+
+/** Reduced motion: static wordmark, linear 0 -> 1 alpha over 200ms. */
+private const val SplashReducedMs = 200
+
+/**
+ * Brand v2 opening: the existing M draws up from the baseline (left stem,
+ * V + shaft, right stem, staggered), the arrow springs out of the shaft with
+ * one overshoot, then "otormila" cascades in letter by letter. One
+ * AnimatedVectorDrawable per theme, 900ms total. Reduced motion shows the
+ * static wordmark with a 200ms fade. Session restore runs in parallel
+ * (SplashGate), so this is rarely the critical path.
+ */
+@OptIn(ExperimentalAnimationGraphicsApi::class)
 @Composable
 fun SplashScreen(
     onDone: () -> Unit,
+    /** false = draw the settled lockup at once (screenshot tests). */
+    animate: Boolean = true,
 ) {
-    val reduced = rememberReducedMotion()
-    val mark = remember { Animatable(if (reduced) 1f else 0.86f) }
-    val copy = remember { Animatable(if (reduced) 1f else 0f) }
+    val reduced = MmMotion.reduced
+    val colors = MmColors.current
+    // Screenshot tests / previews: draw the settled lockup.
+    val static = !animate || LocalInspectionMode.current
+    val logoModifier = Modifier.width(220.dp).aspectRatio(MOTORMILA_WORDMARK_ASPECT)
 
-    LaunchedEffect(Unit) {
-        if (!reduced) {
-            mark.animateTo(1f, tween(720, easing = AppleEasing))
-            copy.animateTo(1f, tween(420, easing = AppleEasing))
-            delay(380)
-        } else {
-            delay(180)
-        }
-        onDone()
-    }
-
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier
-                .scale(mark.value)
-                .alpha(0.4f + mark.value * 0.6f)
-                .padding(horizontal = 32.dp),
-        ) {
-            BrandLogo(
-                size = BrandLogoSize.LARGE,
-                showWordmark = true,
-                showTagline = true,
-                showLiveIndicator = true,
-            )
-            Spacer(Modifier.height(18.dp))
-            Text(
-                text = "The fair mila for every motor.",
-                color = MotormilaSecondaryText,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.alpha(copy.value),
-            )
+    Box(Modifier.fillMaxSize().background(colors.background), contentAlignment = Alignment.Center) {
+        when {
+            static -> {
+                Image(
+                    painter = painterResource(motormilaWordmarkRes(colors.isDark)),
+                    contentDescription = "MotorMila",
+                    contentScale = ContentScale.Fit,
+                    modifier = logoModifier,
+                )
+                LaunchedEffect(Unit) { onDone() }
+            }
+            reduced -> {
+                val fade = remember { Animatable(0f) }
+                LaunchedEffect(Unit) {
+                    fade.animateTo(1f, tween(SplashReducedMs, easing = LinearEasing))
+                    onDone()
+                }
+                Image(
+                    painter = painterResource(motormilaWordmarkRes(colors.isDark)),
+                    contentDescription = "MotorMila",
+                    contentScale = ContentScale.Fit,
+                    modifier = logoModifier.graphicsLayer { alpha = fade.value },
+                )
+            }
+            else -> {
+                val avd = AnimatedImageVector.animatedVectorResource(
+                    if (colors.isDark) R.drawable.avd_motormila_splash_on_dark
+                    else R.drawable.avd_motormila_splash_on_light,
+                )
+                var atEnd by remember { mutableStateOf(false) }
+                LaunchedEffect(Unit) {
+                    atEnd = true
+                    delay(SplashAnimMs)
+                    onDone()
+                }
+                Image(
+                    painter = rememberAnimatedVectorPainter(avd, atEnd),
+                    contentDescription = "MotorMila",
+                    contentScale = ContentScale.Fit,
+                    modifier = logoModifier,
+                )
+            }
         }
     }
 }

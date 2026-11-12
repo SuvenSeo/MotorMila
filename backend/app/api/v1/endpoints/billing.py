@@ -26,7 +26,7 @@ import time
 from collections import OrderedDict
 from typing import Literal, Optional
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -127,9 +127,14 @@ def _forget_in_memory(event_id: str) -> None:
         _SEEN_EVENTS.pop(event_id, None)
 
 
+async def _raw_body(request: Request) -> bytes:
+    """Read the request body on the event loop so the route itself can be sync."""
+    return await request.body()
+
+
 @router.post("/webhook")
-async def billing_webhook(
-    request: Request,
+def billing_webhook(
+    raw: bytes = Depends(_raw_body),
     x_motormila_signature: Optional[str] = Header(default=None, alias="X-Motormila-Signature"),
     x_motormila_timestamp: Optional[str] = Header(default=None, alias="X-Motormila-Timestamp"),
     stripe_signature: Optional[str] = Header(default=None, alias="Stripe-Signature"),
@@ -141,8 +146,9 @@ async def billing_webhook(
     (``sha256=<hex>`` also accepted). Stripe-Signature is ignored unless you
     terminate Stripe → Motormila in your own adapter; keep using our header.
     """
+    # Plain ``def`` (body read by the async dependency): the DB work below is
+    # sync SQLAlchemy and must run in the threadpool, not on the event loop.
     del stripe_signature  # reserved for a future native Stripe verifier
-    raw = await request.body()
     _verify_signature(raw, x_motormila_signature, x_motormila_timestamp)
 
     try:

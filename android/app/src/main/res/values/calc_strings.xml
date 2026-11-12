@@ -102,7 +102,7 @@
     <string name="calc_permits_empty">No permit quotes yet. Refresh once the API has seeded rows.</string>
 
     <string name="calc_depreciation_title">Retention curve</string>
-    <string name="calc_depreciation_hint">Indicative written-down value: 12% / 9% / 8% over three years. Not a bank residual.</string>
+    <string name="calc_depreciation_hint" formatted="false">Indicative written-down value: 12% / 9% / 8% over three years. Not a bank residual.</string>
     <string name="calc_calculate_depreciation">Project retention</string>
 
     <string name="calc_cd_back">Back</string>

@@ -4,6 +4,13 @@ import { X } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { useAppPreferences } from "@/lib/appPreferences";
+import { OverlayMark } from "@/components/ui/overlay-mark";
+
+function SrCloseLabel() {
+  const { t } = useAppPreferences();
+  return <span className="sr-only">{t("common.close", "Close")}</span>;
+}
 
 const Sheet = SheetPrimitive.Root;
 
@@ -19,7 +26,7 @@ const SheetOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SheetPrimitive.Overlay
     className={cn(
-      "fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "mm-fade fixed inset-0 z-50 bg-black/45",
       className,
     )}
     {...props}
@@ -29,16 +36,16 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName;
 
 const sheetVariants = cva(
-  "fixed z-50 gap-4 border-white/40 bg-background/80 p-6 shadow-soft-xl backdrop-blur-2xl transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500 dark:border-white/12",
+  "fixed z-50 gap-4 border-border bg-[var(--glass-sheet-fill)] p-6 shadow-e3 backdrop-blur-xl",
   {
     variants: {
       side: {
-        top: "inset-x-3 top-3 rounded-[32px] border data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
+        top: "mm-sheet mm-sheet--top inset-x-3 top-3 rounded-sheet border",
         bottom:
-          "inset-x-3 bottom-3 rounded-[32px] border data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
-        left: "inset-y-3 left-3 h-[calc(100%-1.5rem)] w-3/4 rounded-[32px] border data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm",
+          "mm-sheet mm-sheet--bottom inset-x-3 bottom-3 rounded-sheet border",
+        left: "mm-sheet mm-sheet--left inset-y-3 left-3 h-[calc(100%-1.5rem)] w-3/4 rounded-sheet border sm:max-w-sm",
         right:
-          "inset-y-3 right-3 h-[calc(100%-1.5rem)] w-3/4 rounded-[32px] border data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm",
+          "mm-sheet mm-sheet--right inset-y-3 right-3 h-[calc(100%-1.5rem)] w-3/4 rounded-sheet border sm:max-w-sm",
       },
     },
     defaultVariants: {
@@ -56,10 +63,11 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
     <SheetPortal>
       <SheetOverlay />
       <SheetPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} {...props}>
+        <OverlayMark />
         {children}
-        <SheetPrimitive.Close className="absolute right-4 top-4 rounded-full p-1 opacity-70 ring-offset-background transition-all hover:bg-surface hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
+        <SheetPrimitive.Close className="tap-44 absolute right-4 top-4 rounded-full p-1 opacity-70 ring-offset-background transition-ui hover:bg-surface hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
           <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
+          <SrCloseLabel />
         </SheetPrimitive.Close>
       </SheetPrimitive.Content>
     </SheetPortal>
@@ -81,7 +89,7 @@ const SheetTitle = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Title>,
   React.ComponentPropsWithoutRef<typeof SheetPrimitive.Title>
 >(({ className, ...props }, ref) => (
-  <SheetPrimitive.Title ref={ref} className={cn("text-lg font-semibold text-foreground", className)} {...props} />
+  <SheetPrimitive.Title ref={ref} className={cn("text-callout font-semibold text-foreground", className)} {...props} />
 ));
 SheetTitle.displayName = SheetPrimitive.Title.displayName;
 
@@ -89,7 +97,7 @@ const SheetDescription = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Description>,
   React.ComponentPropsWithoutRef<typeof SheetPrimitive.Description>
 >(({ className, ...props }, ref) => (
-  <SheetPrimitive.Description ref={ref} className={cn("text-sm text-muted-foreground", className)} {...props} />
+  <SheetPrimitive.Description ref={ref} className={cn("text-footnote text-muted-foreground", className)} {...props} />
 ));
 SheetDescription.displayName = SheetPrimitive.Description.displayName;
 

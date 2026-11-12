@@ -59,7 +59,7 @@ describe("Pro access gate", () => {
 
   it("blocks signed-in free users from the Pro dashboard", () => {
     installLocalStorage({
-      email: "free@motormila.lk",
+      email: "free@example.com",
       name: "Free User",
       plan: "free",
       subscriptionStatus: "none",
@@ -75,7 +75,7 @@ describe("Pro access gate", () => {
 
   it("allows active Pro subscribers into the dashboard", () => {
     installLocalStorage({
-      email: "owner@motormila.lk",
+      email: "owner@example.com",
       name: "Motormila Owner",
       plan: "enterprise",
       subscriptionStatus: "active",
@@ -142,7 +142,7 @@ describe("Pro access gate", () => {
 
     installLocalStorage(
       {
-        email: "owner@motormila.lk",
+        email: "owner@example.com",
         name: "Motormila Owner",
         plan: "enterprise",
         subscriptionStatus: "active",

@@ -3,7 +3,7 @@
 **Draft template for the PDPA No. 9 of 2022 (as amended by Act No. 22 of 2025).** Part I and Part III duties start **1 January 2027**. Not legal advice. Have a Sri Lankan data-protection lawyer review it.
 
 Controller: [COMPANY NAME] (Pvt) Ltd, trading as MotorMila · Reg. no. [PV…] · Address [ADDRESS]
-DPO / privacy contact: [NAME], privacy@motormila.lk · Last reviewed: [DATE]
+DPO / privacy contact: [NAME], hello@ardenostudio.com · Last reviewed: [DATE]
 
 ## Part A: Record of Processing Activities (s.12)
 
@@ -38,5 +38,5 @@ DPO / privacy contact: [NAME], privacy@motormila.lk · Last reviewed: [DATE]
 | Stale / wrong ad shown as live (misleading) | Med | Med | Freshness timestamps; hide inactive ads | Low |
 | Overseas hosting | High (certain) | Low–Med | Provider DPAs; s.26 check | Low |
 
-5. **Data-subject rights:** removal form (72h), deletion page (14 days), privacy@ mailbox; reply within 21 working days.
+5. **Data-subject rights:** removal form (72h), deletion page (14 days), hello@ardenostudio.com mailbox; reply within 21 working days.
 6. **Sign-off:** DPO [NAME] · Date [DATE] · Next review [DATE + 12 months, or on any new processing].

@@ -6,7 +6,6 @@ from urllib.parse import urlparse
 
 from app.utils.districts import resolve_canonical_district
 from app.utils.make_canonical import canonicalize_make, canonicalize_model
-from app.utils.pii import clean_listing_title
 from app.utils.pricing import MIN_REASONABLE_PRICE_LKR
 from app.utils.thumbnail_urls import normalize_image_list
 from app.utils.time import utc_now
@@ -215,113 +214,44 @@ class CarCleaner:
 
         return self.clean_price(str(raw_price))
         
-    _TITLE_COMMON_WORDS = frozenset(
-        {
-            "for", "sale", "new", "brand", "mint", "condition", "car", "cars", "used",
-            "lkr", "rs", "the", "and", "with", "registered", "unregistered", "recondition",
-            "reconditioned", "fresh", "very", "good", "full", "option", "options", "urgent",
-            "sell", "selling", "vehicle", "jeep", "van", "cab", "auto", "manual",
-            "automatic", "petrol", "diesel", "hybrid", "electric",
-        }
-    )
-
-    @staticmethod
-    def _format_model_token(token: str) -> str:
-        """"x-trail" -> "X-Trail", "cr-v" -> "CR-V", "x5" -> "X5", "vitz" -> "Vitz"."""
-        parts = [p for p in token.split("-") if p]
-        out = []
-        for part in parts:
-            if len(part) <= 2 or any(ch.isdigit() for ch in part):
-                out.append(part.upper())
-            else:
-                out.append(part.capitalize())
-        return "-".join(out)
-
     def clean_title(self, title: str) -> Dict[str, Optional[str]]:
-        """Parse a listing title into make, model and year.
-
-        Model extraction keeps hyphenated / multi-word models intact
-        ("NISSAN X-TRAIL" -> "X-Trail", "Toyota Land Cruiser Prado" ->
-        "Land Cruiser Prado", "Suzuki Wagon R" -> "Wagon R") by matching
-        token windows after the make against the known model aliases first.
-        """
-        from app.utils.make_canonical import MODEL_ALIASES, compact_key
-
-        title = str(title or "")
+        """Parses title to extract make, model, and year."""
         title_low = title.lower()
-
-        result: Dict[str, Optional[Any]] = {"make": None, "model": None, "year": None}
-
+        
+        result = {
+            "make": None,
+            "model": None,
+            "year": None
+        }
+        
+        # 1. Extract Year (4 digits starting with 19 or 20)
         year_match = re.search(r"\b(19|20)\d{2}\b", title)
         if year_match:
             result["year"] = int(year_match.group(0))
-
-        make_hit: Optional[tuple[int, int]] = None
+            
+        # 2. Extract Make
         for make_key, synonyms in self.makes_map.items():
-            for syn in synonyms:
-                m = re.search(r"(?<![a-z0-9])" + re.escape(syn) + r"(?![a-z0-9])", title_low)
-                if m:
-                    make_hit = (m.start(), m.end())
-                    result["make"] = make_key.capitalize()
-                    break
-            if result["make"]:
+            if any(syn in title_low for syn in synonyms):
+                result["make"] = make_key.capitalize()
                 break
-        if not result["make"]:
-            # Legacy behaviour: substring match ("toyotaaxio").
-            for make_key, synonyms in self.makes_map.items():
-                if any(syn in title_low for syn in synonyms):
-                    result["make"] = make_key.capitalize()
-                    break
-
-        if not result["make"]:
-            return result
-
-        after = title_low[make_hit[1]:] if make_hit else title_low
-        # Drop a trailing second make spelling ("mercedes benz c200").
-        tokens = [t.strip("-_.,/|:()[]'\"") for t in re.split(r"[\s,/|:()\[\]]+", after)]
-        tokens = [t for t in tokens if t]
-        make_synonyms = set(self.makes_map.get(result["make"].lower(), [])) | {result["make"].lower()}
-        while tokens and (tokens[0] in make_synonyms or tokens[0] in {"benz", "-"}):
-            tokens.pop(0)
-
-        def usable(tok: str) -> bool:
-            if tok in self._TITLE_COMMON_WORDS:
-                return False
-            if re.fullmatch(r"(19|20)\d{2}", tok):
-                return False
-            if re.fullmatch(r"\d{4,}", tok):
-                return False
-            return bool(re.search(r"[a-z]", tok)) or len(tok) <= 3
-
-        # 1) Known (possibly multi-word / hyphenated) models, longest first.
-        for start in range(min(len(tokens), 4)):
-            if not usable(tokens[start]) and compact_key(tokens[start]) not in MODEL_ALIASES:
-                continue
-            for width in (3, 2, 1):
-                window = tokens[start:start + width]
-                if len(window) < width:
-                    continue
-                alias = MODEL_ALIASES.get(compact_key("".join(window)))
-                if alias:
-                    result["model"] = alias
-                    return result
-            break
-
-        # 2) First usable token, keeping hyphenated names whole. A single
-        # class letter followed by a number ("Mercedes-Benz C 180") keeps the
-        # class letter.
-        for idx, tok in enumerate(tokens):
-            if len(tok) == 1 and tok.isalpha():
-                nxt = tokens[idx + 1] if idx + 1 < len(tokens) else ""
-                if re.fullmatch(r"\d{2,3}", nxt):
-                    result["model"] = tok.upper()
-                    break
-                continue
-            if not usable(tok):
-                continue
-            result["model"] = self._format_model_token(tok)
-            break
-
+                
+        # 3. Very basic model extraction 
+        # (In a production app, we would use a lookup table of models per make)
+        if result["make"]:
+            # Remove year and make from title to find model
+            clean_text = title_low
+            if result["year"]:
+                clean_text = clean_text.replace(str(result["year"]), "")
+            clean_text = clean_text.replace(result["make"].lower(), "")
+            
+            # Simple heuristic: first word after make/year that isn't a common word
+            words = [w for w in re.split(r"\W+", clean_text) if len(w) > 2]
+            common_words = {"for", "sale", "new", "mint", "condition", "car", "used", "lkr"}
+            model_words = [w for w in words if w not in common_words]
+            
+            if model_words:
+                result["model"] = model_words[0].capitalize()
+                
         return result
 
     def clean_price(self, raw_price: str) -> Optional[int]:
@@ -355,13 +285,8 @@ class CarCleaner:
                         return value
 
             # Parse SL "lakh"/"crore" notation (Rs 55 lakhs → 5,500,000; 1.2 crore → 12,000,000).
-            # A bare "L" suffix ("45L", "Rs 45 L") is lakhs only for a whole number of
-            # 2+ digits or when a currency marker precedes it, so "1.5L" (engine) never
-            # becomes a price.
             for pattern, multiplier in (
-                (r"(?:(?:rs\.?|lkr)\s*[:\-]?\s*)?([0-9]+(?:\.[0-9]+)?)\s*(?:lakhs?|lacs?|laks?)\b", 100_000),
-                (r"(?:rs\.?|lkr)\s*[:\-]?\s*([0-9]+(?:\.[0-9]+)?)\s*l\b", 100_000),
-                (r"(?<![0-9.,])([0-9]{2,4})\s*l\b", 100_000),
+                (r"(?:(?:rs\.?|lkr)\s*[:\-]?\s*)?([0-9]+(?:\.[0-9]+)?)\s*(?:lakhs?|lacs?)\b", 100_000),
                 (r"(?:(?:rs\.?|lkr)\s*[:\-]?\s*)?([0-9]+(?:\.[0-9]+)?)\s*(?:crores?|cr)\b", 10_000_000),
             ):
                 for match in re.finditer(pattern, text, flags=re.IGNORECASE):
@@ -377,7 +302,7 @@ class CarCleaner:
 
             # Prefer explicit currency markers first.
             for match in re.finditer(
-                r"(?:rs\.?|lkr)\s*[:\-]?\s*([0-9]{1,2}(?:,[0-9]{2})+,[0-9]{3}(?:\.[0-9]+)?(?![0-9])|[0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]+)?|[0-9]{5,12}(?:\.[0-9]+)?)",
+                r"(?:rs\.?|lkr)\s*[:\-]?\s*([0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]+)?|[0-9]{5,12}(?:\.[0-9]+)?)",
                 text,
                 flags=re.IGNORECASE,
             ):
@@ -391,7 +316,7 @@ class CarCleaner:
 
             # Allow strict plain numeric prices (e.g. JSON-LD "price": "12500000").
             plain = re.fullmatch(
-                r"\s*([0-9]{1,2}(?:,[0-9]{2})+,[0-9]{3}(?:\.[0-9]+)?(?![0-9])|[0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]+)?|[0-9]{5,12}(?:\.[0-9]+)?)\s*",
+                r"\s*([0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]+)?|[0-9]{5,12}(?:\.[0-9]+)?)\s*",
                 text,
             )
             if plain:
@@ -642,20 +567,6 @@ class CarCleaner:
         if not source:
             return None
         normalized["source"] = source
-
-        # PDPA: scraped listings never keep seller phone numbers / emails, and
-        # titles that carry the whole ad body are capped. First-party
-        # (motormila_user) listings manage their own contact fields.
-        if source != "motormila_user":
-            if normalized.get("title") is not None:
-                normalized["title"] = clean_listing_title(normalized.get("title"))
-            for contact_key in ("contact_name", "contact_phone", "seller_name", "seller_phone"):
-                normalized.pop(contact_key, None)
-        # Attribution: the source URL must always be kept.
-        if not str(normalized.get("url") or "").strip():
-            raw_sid = str(normalized.get("source_id") or "")
-            if raw_sid.startswith(("http://", "https://")):
-                normalized["url"] = raw_sid
 
         source_id = self.make_source_id(normalized.get("source_id") or normalized.get("url"))
         if not source_id:

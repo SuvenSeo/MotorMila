@@ -26,7 +26,7 @@ from db.models import CarListing, ListingGeoEnrichment, live_listing_filter
 log = structlog.get_logger()
 
 GEOCODE_URL = "https://api.geoapify.com/v1/geocode/search"
-USER_AGENT = "MotorMila/1.0 (+https://motormila.vercel.app)"
+USER_AGENT = "MotorMila/1.0 (+https://motormila.pages.dev)"
 MARKET_SCOPE = "Sri Lanka (geocoded ad location)"
 LICENSE_NOTE = "Geoapify geocoding. Derived from listing location text, not vehicle telemetry."
 LIMITATION = (

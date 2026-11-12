@@ -226,7 +226,7 @@ app.add_middleware(
     allow_credentials=allow_credentials,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-Alert-Token", "X-Requested-With"],
-    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining"],
+    expose_headers=["RateLimit-Limit", "RateLimit-Remaining", "RateLimit-Reset", "Retry-After"],
 )
 
 app.add_middleware(GZipMiddleware, minimum_size=500)
@@ -359,6 +359,11 @@ async def health_check():
         "failover_error": fo.get("last_error"),
         "failover_last_attempt_at": fo.get("last_attempt_at"),
         "failover_source": (fo.get("source") or "").rsplit("/", 1)[-1] or None,
+        # Why the primary is (or is not) being used: "quota_exceeded" means
+        # the Neon Free monthly transfer allowance is spent (resets at the
+        # start of the next billing month; the monitor fails back by itself).
+        "primary_status": fo.get("primary_status"),
+        "primary_checked_at": fo.get("primary_checked_at"),
         # Breaker state only - the error text can name the DB host.
         "circuit": circuit.get("state"),
         "version": "1.0.0",
@@ -379,7 +384,7 @@ _SECURITY_CONTACT = os.getenv("SECURITY_CONTACT", "mailto:suvenseoras@gmail.com"
 SECURITY_TXT = (
     f"Contact: {_SECURITY_CONTACT}\n"
     "Preferred-Languages: en\n"
-    "Policy: https://motormila.vercel.app/security\n"
+    "Policy: https://motormila.pages.dev/security\n"
     "Expires: 2027-10-01T00:00:00.000Z\n"
 )
 

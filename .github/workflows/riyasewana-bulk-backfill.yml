@@ -1,7 +1,7 @@
 # Riyasewana Deep Backfill (Neon-first)
 #
 # One-shot / scheduled deep crawl of riyasewana.com using the scraper's fast
-# plain-HTTP mode (honest MotorMilaBot UA, robots.txt + 2-5s per-host delay).
+# plain-HTTP mode (curl_cffi Chrome impersonation; no Playwright browser).
 # Riyasewana's full catalog runs to ~2,000+ pages across categories (cars ~534,
 # motorcycles ~700, suvs ~171, vans ~151, three-wheels ~161, lorries ~123 ...),
 # vs the 60 pages/day the daily pipeline touches.  This is the tool to run to
@@ -14,7 +14,7 @@
 # run can reach, instead of re-reading the same head of the catalogue.
 #
 # DB WRITES ONLY (ingress is free on Neon). Optional snapshot refresh afterwards
-# keeps the public Vercel/R2 catalog in sync — run it with refresh_catalog=true.
+# keeps the public Cloudflare Pages/R2 catalog in sync — run it with refresh_catalog=true.
 #
 # Run: Actions → "Riyasewana Deep Backfill" → Run workflow
 #   max_pages: 800 covers every category to its last page in one pass
@@ -102,8 +102,6 @@ jobs:
           ALLOW_SQLITE_FALLBACK: "false"
           SCRAPE_PROFILE: "all"
           SCRAPE_ENABLED_SOURCES: "riyasewana"
-          SOURCES_ENABLED: ${{ vars.SOURCES_ENABLED }}
-          BOT_CONTACT: ${{ vars.BOT_CONTACT }}
           RUN_SCRAPERS: "true"
           RUN_MARKET_ANALYSIS: "false"
           RUN_MARKET_SIGNALS: "false"
@@ -113,11 +111,14 @@ jobs:
           SCRAPE_MAX_PAGES_RIYASEWANA: ${{ github.event.inputs.max_pages || '800' }}
           SCRAPE_SOURCE_TIMEOUT_SECONDS: "10800"
           SCRAPE_SOURCE_TIMEOUT_SECONDS_RIYASEWANA: "10800"
-          # Plain-HTTP crawl with the honest bot UA; a block ends the run (no evasion).
+          # Fast plain-HTTP crawl (curl_cffi Chrome impersonation) — no browser.
           RIYASEWANA_SCRAPE_MODE: "http"
           # Full budget for every category so the whole catalog is covered.
           RIYASEWANA_FLAT_BUDGET: "true"
           RIYASEWANA_START_PAGE: ${{ github.event.inputs.start_page || '1' }}
+          # Optional residential proxy. Without it this run depends on drawing a
+          # GitHub runner IP that riyasewana's Cloudflare does not block.
+          SCRAPE_PROXY_URL: ${{ secrets.SCRAPE_PROXY_URL }}
         run: python run_sync.py
 
       - name: Count riyasewana listings after
@@ -157,10 +158,6 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: "20"
-
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
@@ -171,20 +168,7 @@ jobs:
         working-directory: backend
         run: pip install -r requirements.txt
 
-      - name: Refresh via Vercel snapshot export API (preferred — one big read)
-        id: vercel_export
-        continue-on-error: true
-        env:
-          SNAPSHOT_EXPORT_SECRET: ${{ secrets.SNAPSHOT_EXPORT_SECRET }}
-        run: |
-          if [ -z "${SNAPSHOT_EXPORT_SECRET}" ]; then
-            echo "SNAPSHOT_EXPORT_SECRET not set — will try DB export fallback."
-            exit 1
-          fi
-          node scripts/pull-vercel-snapshots.mjs
-
-      - name: Fallback — export from HOT_DATABASE_URL
-        if: steps.vercel_export.outcome != 'success'
+      - name: Export from HOT_DATABASE_URL
         working-directory: backend
         env:
           COLD_DATABASE_URL: ${{ secrets.HOT_DATABASE_URL }}
@@ -210,7 +194,6 @@ jobs:
           if-no-files-found: error
 
       - name: Optional R2 upload
-        continue-on-error: true
         working-directory: backend
         env:
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
@@ -227,10 +210,8 @@ jobs:
           pip install -q boto3
           python upload_snapshots_r2.py
 
-      - name: Deploy snapshots to Vercel production
+      - name: Trigger Cloudflare Pages rebuild (retry latest github:push production deployment)
         env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          SNAPSHOT_SOURCE_DIR: public/snapshots/latest
-        run: bash scripts/deploy-snapshots-to-prod.sh
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 scripts/trigger-pages-rebuild.py

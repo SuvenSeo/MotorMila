@@ -1,11 +1,11 @@
 import type { ComponentProps, ReactNode } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export type StatefulButtonState = "idle" | "loading" | "success";
 
-export type StatefulButtonProps = Omit<ComponentProps<typeof Button>, "children"> & {
+export type StatefulButtonProps = Omit<ComponentProps<typeof Button>, "children" | "loading"> & {
   state: StatefulButtonState;
   /** Content for each state. */
   idle: ReactNode;

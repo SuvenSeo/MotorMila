@@ -29,6 +29,7 @@ data class SettingsUiState(
     val sendingFeedback: Boolean = false,
     val feedbackSent: Boolean = false,
     val clearingCache: Boolean = false,
+    val cacheCleared: Boolean = false,
     val loggingOut: Boolean = false,
     val loggedOut: Boolean = false,
     val offline: Boolean = false,
@@ -53,9 +54,13 @@ sealed interface SettingsUiEvent {
     data object ConfirmDeleteAccount : SettingsUiEvent
     data object SendFeedback : SettingsUiEvent
     data object ClearCache : SettingsUiEvent
+    data object ConsumeCacheCleared : SettingsUiEvent
     data object Logout : SettingsUiEvent
     data object ConsumeLoggedOut : SettingsUiEvent
     data object DismissError : SettingsUiEvent
+    data class ReduceTransparencyChanged(val enabled: Boolean) : SettingsUiEvent
+    /** Settings → Notifications → Price drops (MotormilaApp re-registers the device). */
+    data class PriceDropPushChanged(val enabled: Boolean) : SettingsUiEvent
 }
 
 @HiltViewModel
@@ -72,7 +77,7 @@ class SettingsViewModel @Inject constructor(
 
     val theme: StateFlow<String> = settingsStore.observe()
         .map { it.theme }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "system")
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsStore.DEFAULT_THEME)
 
     val language: StateFlow<String> = settingsStore.observe()
         .map { LocaleHelper.normalize(it.language) }
@@ -84,6 +89,12 @@ class SettingsViewModel @Inject constructor(
     val defaultSort: StateFlow<String> = settingsStore.observe()
         .map { it.sort }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "newest")
+    val reduceTransparency: StateFlow<Boolean> = settingsStore.observe()
+        .map { it.reduceTransparency }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+    val priceDropPush: StateFlow<Boolean> = settingsStore.observe()
+        .map { it.priceDropPushEnabled }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
     val biometricEnabled: StateFlow<Boolean> = settingsStore.observe()
         .map { it.biometricEnabled }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
@@ -114,6 +125,8 @@ class SettingsViewModel @Inject constructor(
             }
             is SettingsUiEvent.DistrictChanged -> launch { settingsStore.setDistrict(event.district) }
             is SettingsUiEvent.SortChanged -> launch { settingsStore.setSort(event.sort) }
+            is SettingsUiEvent.ReduceTransparencyChanged -> launch { settingsStore.setReduceTransparency(event.enabled) }
+            is SettingsUiEvent.PriceDropPushChanged -> launch { settingsStore.setPriceDropPushEnabled(event.enabled) }
             is SettingsUiEvent.BiometricChanged -> launch { settingsStore.setBiometricEnabled(event.enabled) }
             is SettingsUiEvent.BaseUrlChanged -> launch {
                 settingsStore.setBaseUrlOverride(event.url.ifBlank { null })
@@ -122,6 +135,7 @@ class SettingsViewModel @Inject constructor(
                 _state.update { it.copy(feedbackDraft = event.text, feedbackSent = false) }
             SettingsUiEvent.SendFeedback -> sendFeedback()
             SettingsUiEvent.ClearCache -> clearCache()
+            SettingsUiEvent.ConsumeCacheCleared -> _state.update { it.copy(cacheCleared = false) }
             SettingsUiEvent.Logout -> logout()
             SettingsUiEvent.OpenDeleteAccount ->
                 _state.update { it.copy(deleteDialogOpen = true, deletePassword = "") }
@@ -170,12 +184,16 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    /** Clears Coil's memory + disk image caches (real eviction, not a placebo). */
     private fun clearCache() {
-        // SettingsStore has no cache-clear API; image/stats caches are Room/Coil-owned.
-        // Acknowledge the tap so the UI settles (wired to Coil/Room eviction in v2).
         viewModelScope.launch {
             _state.update { it.copy(clearingCache = true) }
-            _state.update { it.copy(clearingCache = false) }
+            runCatching {
+                val loader = coil3.SingletonImageLoader.get(context)
+                loader.memoryCache?.clear()
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { loader.diskCache?.clear() }
+            }
+            _state.update { it.copy(clearingCache = false, cacheCleared = true) }
         }
     }
 

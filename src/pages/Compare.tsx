@@ -1,268 +1,599 @@
-import { useEffect, useState, useCallback } from "react";
-import { useSearchParams, Link } from "react-router-dom";
-import { ArrowLeft, Link2, Scale, Search, X } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { ArrowLeft, ArrowUpRight, Info, Link2, Plus, Search, X } from "lucide-react";
+import { CineHeader } from "@/components/CineHeader";
+import { visuals } from "@/lib/visualAssets";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/ui/error-state";
+import { Switch } from "@/components/ui/switch";
+import { AnimatedNumber } from "@/components/ui/animated-number";
+import { TableContainer, Table, TableHeader, TableBody } from "@/components/ui/table";
 import { toast } from "sonner";
-import { getListingsBatch } from "@/services/api";
-import { CarListing } from "@/types/car";
-import { ComparisonModal } from "@/components/ComparisonModal";
-import { DealScoreBadge } from "@/components/DealScoreBadge";
-import { FmvExplainer } from "@/components/FmvExplainer";
-import { buildCompareLink, loadPinned, useCompareTray } from "@/lib/compareTray";
+import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import { getListingFmv, getListingsBatch } from "@/services/api";
+import { withheldVerdictHeadline } from "@/lib/priceVerdict";
+import type { CarListing } from "@/types/car";
 import { PageCanvas } from "@/components/PageCanvas";
+import { formatLkrFull } from "@/lib/price";
+import { useAppPreferences } from "@/lib/appPreferences";
+import { buildCompareLink } from "@/lib/compareTray";
+import { canonicalComparePath, fromCompareSlug } from "@/lib/compareSlug";
+import { formatSourceName } from "@/lib/sourceAttribution";
+import { howWePriceHref } from "@/lib/howWePrice";
+import { useLowData } from "@/hooks/useLowData";
+import { cn } from "@/lib/utils";
+import { BRAND } from "@/lib/brand";
+import { useCompare } from "@/components/compare/CompareContext";
+import { AnimatePresence, motion } from "motion/react";
+import { duration, ease, spring, useReducedMotionOrLowData } from "@/lib/motion";
+import "@/styles/listing-motion.css";
+import { SellSpeedBadge } from "@/components/SellSpeedBadge";
+import {
+  COMPARE_ROWS,
+  bestIndexes,
+  compareVerdict,
+  fmvFor,
+  monthlyEstimate,
+  rowDiffers,
+  vsFmvPct,
+  askingPrice,
+  type CompareFmv,
+  type CompareRowDef,
+} from "@/components/compare/compareRows";
 
-const MAX_COMPARE_IDS = 3;
+const MAX_COMPARE = 4;
+
+function lkr(n: number | null | undefined): string {
+  return formatLkrFull(n, "—");
+}
+
+function token(value: string | null | undefined): string {
+  if (!value) return "—";
+  return value
+    .replace(/_/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+type RowModel = { def: CompareRowDef; values: Array<number | string | null>; differs: boolean; best: Set<number> };
 
 export default function Compare() {
+  const { t } = useAppPreferences();
+  const { lowData } = useLowData();
+  const compare = useCompare();
   const [searchParams, setSearchParams] = useSearchParams();
   const [listings, setListings] = useState<CarListing[]>([]);
+  const [fmvById, setFmvById] = useState<Record<number, CompareFmv>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const { toggle: toggleCompare, isPinned } = useCompareTray();
+  const [highlight, setHighlight] = useState(true);
+  const [onlyDiff, setOnlyDiff] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const motionCalm = useReducedMotionOrLowData();
 
+  // Canonical slug path (/compare/12-vs-45) wins; legacy ?ids=12,45 still works.
+  const { slug } = useParams<{ slug?: string }>();
+  const navigate = useNavigate();
   const rawIds = searchParams.get("ids") ?? "";
-  const urlIds = rawIds
-    .split(",")
-    .map((s) => parseInt(s.trim(), 10))
-    .filter((n) => Number.isFinite(n) && n > 0)
-    .slice(0, MAX_COMPARE_IDS);
-  // Fall back to the persisted tray so a direct visit to /compare (navbar,
-  // bookmark, refresh) keeps the user's pinned selection instead of showing
-  // an empty "no vehicles selected" state.
-  const ids = urlIds.length > 0 ? urlIds : loadPinned().map((p) => p.id).slice(0, MAX_COMPARE_IDS);
+  const urlIds = useMemo(() => {
+    if (slug) return fromCompareSlug(slug).slice(0, MAX_COMPARE);
+    return [...new Set(rawIds.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => Number.isFinite(n) && n > 0))].slice(0, MAX_COMPARE);
+  }, [rawIds, slug]);
+  // Direct visit to /compare (nav, bookmark): fall back to the tray selection.
+  const trayKey = compare.items.map((p) => p.id).join(",");
+  const ids = useMemo(
+    () => (urlIds.length > 0 ? urlIds : trayKey ? trayKey.split(",").map(Number).slice(0, MAX_COMPARE) : []),
+    [urlIds, trayKey],
+  );
+  const idsKey = ids.join(",");
 
-  const fetchListings = useCallback(async () => {
+  useEffect(() => {
+    let cancelled = false;
     if (ids.length === 0) {
       setListings([]);
+      setError(null);
+      setLoading(false);
       return;
     }
     setLoading(true);
     setError(null);
-    try {
-      const result = await getListingsBatch(ids);
-      setListings(result);
-      if (result.length >= 2) setModalOpen(true);
-    } catch {
-      setError("Failed to load listings. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, [rawIds]); // eslint-disable-line react-hooks/exhaustive-deps
+    setListings((rows) => rows.filter((row) => ids.includes(Number(row.id))));
+    getListingsBatch(ids)
+      .then((rows) => {
+        if (cancelled) return;
+        // Keep the user's order.
+        const byId = new Map(rows.map((r) => [Number(r.id), r]));
+        setListings(ids.map((id) => byId.get(id)).filter((r): r is CarListing => Boolean(r)));
+      })
+      .catch(() => !cancelled && setError(t("comparePage.error", "Couldn't load these listings. Check your connection and try again.")))
+      .finally(() => !cancelled && setLoading(false));
+    // FMV per listing (live first, snapshot fallback inside getListingFmv).
+    ids.forEach((id) => {
+      getListingFmv(id)
+        .then((d) => {
+          if (cancelled) return;
+          setFmvById((prev) => ({
+            ...prev,
+            [id]: { fmv: d.fmv_lkr, confidence: d.confidence ?? null, comps: d.sample_count ?? null, method: d.method ?? null, verdict: d.verdict ?? null },
+          }));
+        })
+        .catch(() => {
+          /* FMV unavailable: rows fall back to the listing's market median */
+        });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [idsKey, reloadKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Page title names the cars (not listing ids), in the reader's language.
+  const titleNames = listings
+    .map((l) => [l.year, l.make, l.model].filter(Boolean).join(" ").trim())
+    .filter(Boolean)
+    .join(t("comparePage.vs", " vs "));
   useEffect(() => {
-    fetchListings();
-  }, [fetchListings]);
+    if (listings.length < 2 || !titleNames) return;
+    const title = t("seo.compareNamedTitle", "{names} compared — {site}", { names: titleNames, site: BRAND.siteName });
+    // Run after RouteMeta's route-level title on the same commit.
+    const id = window.setTimeout(() => {
+      document.title = title;
+      document.querySelector('meta[property="og:title"]')?.setAttribute("content", title);
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [titleNames, listings.length, t]);
 
-  const hasIds = ids.length > 0;
-  const hasEnough = listings.length >= 2;
-
-  const handleRemove = (id: number) => {
+  const removeId = (id: number) => {
+    compare.remove(id);
     const remaining = ids.filter((n) => n !== id);
-    setSearchParams(remaining.length ? { ids: remaining.join(",") } : {});
+    if (slug) {
+      navigate(remaining.length >= 2 ? canonicalComparePath(remaining) : remaining.length ? `/compare?ids=${remaining.join(",")}` : "/compare", { replace: true });
+      return;
+    }
+    setSearchParams(remaining.length ? { ids: remaining.join(",") } : {}, { replace: true });
   };
 
-  const handleCopyShareLink = async () => {
+  const copyLink = async () => {
     const url = `${window.location.origin}${buildCompareLink(ids)}`;
     try {
       if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(url);
       else throw new Error("no clipboard");
-      toast.success("Compare link copied");
+      toast.success(t("comparePage.linkCopied", "Compare link copied"));
     } catch {
-      window.prompt("Copy compare link:", url);
+      window.prompt(t("comparePage.copyPrompt", "Copy compare link:"), url);
     }
   };
 
-  const handleTilePin = (listing: CarListing) => {
-    const median = Number(listing.market_median_lkr);
-    const result = toggleCompare({
-      id: Number(listing.id),
-      make: listing.make,
-      model: listing.model,
-      year: listing.year,
-      price_lkr: Number(listing.price_lkr) || null,
-      fmv_lkr: Number.isFinite(median) && median > 0 ? median : null,
-      mileage_km: Number(listing.mileage_km) || null,
-      district: listing.district,
-      deal_score: typeof listing.deal_score === "number" ? listing.deal_score : null,
-    });
-    if (result.atCap) toast.error("Compare tray is full (max 3) — remove one first");
-    else if (result.pinned) toast.success("Pinned to compare tray");
+  const rowLabel = (key: CompareRowDef["key"]): string => {
+    const labels: Record<CompareRowDef["key"], string> = {
+      price: t("comparePage.row.price", "Asking price"),
+      fmv: t("comparePage.row.fmv", "FMV (typical asking)"),
+      vsFmv: t("comparePage.row.vsFmv", "Price vs FMV"),
+      monthly: t("comparePage.row.monthly", "Monthly est."),
+      year: t("comparePage.row.year", "Year"),
+      mileage: t("comparePage.row.mileage", "Mileage"),
+      condition: t("comparePage.row.condition", "Condition"),
+      fuel: t("comparePage.row.fuel", "Fuel"),
+      transmission: t("comparePage.row.transmission", "Gearbox"),
+      engine: t("comparePage.row.engine", "Engine"),
+      body: t("comparePage.row.body", "Body"),
+      district: t("comparePage.row.district", "District"),
+      seller: t("comparePage.row.seller", "Seller"),
+      source: t("comparePage.row.source", "Listed on"),
+      listed: t("comparePage.row.listed", "On market"),
+    };
+    return labels[key];
   };
 
-  return (
-    <PageCanvas>
-      <div className="mx-auto max-w-5xl px-4 py-8 md:px-6">
-        {/* Header */}
-        <div className="mb-6 flex items-start gap-4">
-          <Link
-            to="/"
-            className="mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground no-underline transition-colors hover:bg-accent hover:text-foreground"
-            aria-label="Back to Dashboard"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-          </Link>
-          <div>
-            <div className="mb-1 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[12px] font-medium text-primary-bright">
-              <Scale className="h-3 w-3" />
-              Compare
-            </div>
-            <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-              Vehicle Comparison
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Side-by-side specs, pricing, and deal scores for up to {MAX_COMPARE_IDS} vehicles.
-            </p>
-          </div>
-        </div>
+  const renderCell = (key: CompareRowDef["key"], l: CarListing): ReactNode => {
+    const fmv = fmvById[Number(l.id)];
+    switch (key) {
+      case "price":
+        return askingPrice(l) !== null ? lkr(askingPrice(l)) : t("comparePage.priceOnRequest", "Price not listed");
+      case "fmv": {
+        const v = fmvFor(l, fmv);
+        if (v === null) return "—";
+        return (
+          <span>
+            {lkr(v)}
+            {fmv?.confidence && fmv.confidence !== "none" ? (
+              <span className="block text-caption font-normal text-label-2">
+                {t(`comparePage.conf.${fmv.confidence}`, `${token(fmv.confidence)} confidence`)}
+              </span>
+            ) : null}
+          </span>
+        );
+      }
+      case "vsFmv": {
+        const pct = vsFmvPct(l, fmv);
+        if (pct === null) {
+          const v = compareVerdict(l, fmv);
+          return v.status === "withheld" ? <span className="text-label-2">{withheldVerdictHeadline(v, t)}</span> : "—";
+        }
+        const gap = Math.abs((askingPrice(l) ?? 0) - (fmvFor(l, fmv) ?? 0));
+        const v = compareVerdict(l, fmv);
+        const tone = v.status === "ok" && v.verifyFirst ? "text-deal-caution-text" : pct <= -5 ? "text-deal-good-text" : pct >= 8 ? "text-deal-high-text" : "text-foreground";
+        const label =
+          Math.abs(pct) < 0.5
+            ? t("comparePage.atFmv", "At FMV")
+            : pct < 0
+              ? t("comparePage.below", "{amount} below", { amount: lkr(gap) })
+              : t("comparePage.above", "{amount} above", { amount: lkr(gap) });
+        return (
+          <span className={tone}>
+            {label}
+            <span className="block text-caption font-normal text-label-2">
+              {pct > 0 ? "+" : ""}
+              {pct.toFixed(1)}%
+            </span>
+          </span>
+        );
+      }
+      case "monthly": {
+        const m = monthlyEstimate(l);
+        if (!m) return "—";
+        return (
+          <span>
+            {lkr(m.monthlyLkr)}
+            <span className="block text-caption font-normal text-label-2">
+              {t("comparePage.monthlyDown", "after {down} down", { down: lkr(m.downLkr) })}
+            </span>
+          </span>
+        );
+      }
+      case "year":
+        return l.year ?? "—";
+      case "mileage":
+        return l.mileage_km != null ? `${Number(l.mileage_km).toLocaleString("en-LK")} km` : "—";
+      case "condition":
+        return token(l.condition);
+      case "fuel":
+        return token(l.fuel_type);
+      case "transmission":
+        return token(l.transmission);
+      case "engine":
+        return l.engine_cc ? `${Number(l.engine_cc).toLocaleString()} cc` : "—";
+      case "body":
+        return token(l.body_type);
+      case "district":
+        return l.district || "—";
+      case "seller":
+        return l.is_dealer === true ? t("comparePage.dealer", "Dealer") : l.is_dealer === false ? t("comparePage.private", "Private") : "—";
+      case "source":
+        return formatSourceName(l.source) || "—";
+      case "listed": {
+        const v = COMPARE_ROWS.find((r) => r.key === "listed")!.raw(l, fmv);
+        return typeof v === "number" ? t("comparePage.days", "{n} days", { n: v }) : "—";
+      }
+      default:
+        return "—";
+    }
+  };
 
-        {/* Loading state */}
-        {loading && (
-          <div className="flex h-48 items-center justify-center">
-            <div className="relative h-10 w-10">
-              <div className="absolute inset-0 rounded-full border-2 border-foreground/[0.08]" />
-              <div className="absolute inset-0 rounded-full border-t-2 border-primary animate-spin" />
-            </div>
-          </div>
-        )}
+  const rows: RowModel[] = useMemo(() => {
+    return COMPARE_ROWS.map((def) => {
+      const values = listings.map((l) => def.raw(l, fmvById[Number(l.id)]));
+      return { def, values, differs: rowDiffers(values), best: bestIndexes(values, def.better) };
+    });
+  }, [listings, fmvById]);
 
-        {/* Error state */}
-        {!loading && error && (
-          <div className="rounded-2xl border border-destructive/20 bg-destructive/5 px-5 py-4 text-sm text-destructive">
-            {error}
-          </div>
-        )}
+  const visibleRows = useMemo(() => (onlyDiff ? rows.filter((r) => r.differs || r.def.group === "money") : rows), [rows, onlyDiff]);
 
-        {/* Empty state — no ids in URL */}
-        {!loading && !error && !hasIds && (
-          <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-border/80 bg-card/85 py-16 text-center shadow-soft backdrop-blur-xl">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary-bright">
-              <Scale className="h-7 w-7" />
-            </div>
-            <h2 className="mb-2 font-display text-xl font-semibold text-foreground">
-              No vehicles selected
-            </h2>
-            <p className="mb-6 max-w-sm text-sm text-muted-foreground">
-              Select vehicles from the Dashboard by clicking the compare toggle on each listing card, then open the full compare view.
-            </p>
-            <Link
-              to="/"
-              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border/80 bg-card/85 px-5 py-3 text-[13px] font-semibold text-foreground no-underline transition-all hover:bg-surface active:scale-[0.97]"
-            >
-              <Search className="h-3.5 w-3.5" />
-              Browse listings
-            </Link>
-          </div>
-        )}
-
-        {/* Partial — ids provided but couldn't load enough */}
-        {!loading && !error && hasIds && !hasEnough && listings.length > 0 && (
-          <div className="rounded-3xl border border-border/80 bg-card/85 px-6 py-6 backdrop-blur-xl">
-            <p className="text-sm font-semibold text-foreground">Only {listings.length} listing loaded.</p>
-            <p className="mt-1 text-[13px] text-muted-foreground">
-              Need at least 2 vehicles to compare. Some IDs may be invalid or inactive.
-            </p>
-            <Link
-              to="/"
-              className="mt-4 inline-flex items-center gap-2 rounded-full border border-border/80 bg-card/85 px-5 py-2.5 text-[13px] font-semibold text-foreground no-underline transition-all hover:bg-surface active:scale-[0.97]"
-            >
-              <Search className="h-3.5 w-3.5" />
-              Select more vehicles
-            </Link>
-          </div>
-        )}
-
-        {/* Ready state — show ComparisonModal inline */}
-        {!loading && !error && hasEnough && (
-          <>
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <p className="text-[13px] text-muted-foreground">
-                Comparing <span className="font-semibold text-foreground">{listings.length}</span> vehicles
-              </p>
-              <div className="flex items-center gap-2">
-                <button
+  const columnHelper = createColumnHelper<RowModel>();
+  const columns = useMemo(
+    () => [
+      columnHelper.display({
+        id: "spec",
+        header: () => <span className="sr-only">{t("comparePage.specCol", "Spec")}</span>,
+        cell: (ctx) => (
+          <span className="flex items-center gap-1.5">
+            {highlight && ctx.row.original.differs ? <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" /> : null}
+            {rowLabel(ctx.row.original.def.key)}
+            {highlight && ctx.row.original.differs ? <span className="sr-only">{t("comparePage.differsSr", "(differs)")}</span> : null}
+          </span>
+        ),
+      }),
+      ...listings.map((l, index) =>
+        columnHelper.display({
+          id: `l-${l.id}`,
+          header: () => (
+            <div className="content-in flex min-w-0 flex-col gap-2.5 normal-case tracking-normal">
+              {!lowData && l.thumbnail_url ? (
+                <img src={l.thumbnail_url} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" width={480} height={360} className="aspect-[4/3] w-full rounded-control bg-surface-2 object-cover" />
+              ) : null}
+              <div className="flex items-start justify-between gap-1">
+                <Link to={`/listing/${l.id}`} className="min-w-0 text-body font-semibold leading-snug text-foreground no-underline transition-colors duration-short hover:text-primary">
+                  {l.year} {l.make} {l.model}
+                  {l.variant ? <span className="block text-footnote font-normal text-label-2">{l.variant}</span> : null}
+                </Link>
+                <Button
                   type="button"
-                  onClick={handleCopyShareLink}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border/80 bg-card/85 px-4 text-[12px] font-semibold text-foreground transition-all hover:bg-surface active:scale-[0.97]"
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => removeId(Number(l.id))}
+                  aria-label={t("compareTray.removeAria", "Remove {name} from compare", { name: [l.make, l.model].filter(Boolean).join(" ") })}
+                  className="-mr-1 -mt-1 text-label-2"
                 >
-                  <Link2 className="h-3.5 w-3.5" />
-                  Share ?ids= link
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(true)}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-4 text-[12px] font-semibold text-primary-bright transition-all hover:bg-primary/15 active:scale-[0.97]"
-                >
-                  <Scale className="h-3.5 w-3.5" />
-                  Open full compare
-                </button>
+                  <X aria-hidden />
+                </Button>
               </div>
+              <SellSpeedBadge make={l.make} model={l.model} className="self-start" />
             </div>
+          ),
+          cell: (ctx) => {
+            const r = ctx.row.original;
+            const isBest = highlight && r.best.has(index);
+            return (
+              <span className={cn("block", isBest && "font-semibold text-deal-good-text")}>
+                {renderCell(r.def.key, l)}
+                {isBest ? <span className="sr-only"> {t("comparePage.bestSr", "(best)")}</span> : null}
+              </span>
+            );
+          },
+        }),
+      ),
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [listings, fmvById, highlight, lowData, t],
+  );
 
-            {/* Vehicle summary tiles — price vs FMV/km/year/district + explainer + tray pin */}
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {listings.map((listing) => {
-                const median = Number(listing.market_median_lkr);
-                const fmv = Number.isFinite(median) && median > 0 ? median : null;
-                const pinned = isPinned(Number(listing.id));
+  const table = useReactTable({ data: visibleRows, columns, getCoreRowModel: getCoreRowModel() });
+
+  const hasIds = ids.length > 0;
+  const [rowsBefore, rowsAfter] = t("comparePage.rowsShown", "{n} rows", { n: "\u0000" }).split("\u0000");
+  const enough = listings.length >= 2;
+
+  const switchRow = "inline-flex min-h-11 cursor-pointer select-none items-center gap-2.5 text-footnote font-medium text-foreground sm:min-h-9";
+
+  return (
+    <PageCanvas ambient="none">
+      <CineHeader
+        eyebrow={
+          <Link to="/" className="inline-flex items-center gap-1 text-white/80 no-underline transition-opacity duration-short hover:opacity-80">
+            <ArrowLeft className="h-4 w-4" aria-hidden />
+            {t("comparePage.back", "Back to listings")}
+          </Link>
+        }
+        lead={t("comparePage.cine.lead", "Compare cars")}
+        accent={t("comparePage.cine.accent", "side by side.")}
+        body={t("comparePage.subtitle", "Side by side, up to {max} cars. Prices are asking prices from the original ads.", { max: MAX_COMPARE })}
+        image={visuals.pageCompareHero}
+        imagePosition="58% 60%"
+      >
+        {!error && enough ? (
+          <div className="flex flex-wrap gap-2">
+            {listings.length < MAX_COMPARE ? (
+              <Button asChild variant="secondary">
+                <Link to="/" className="no-underline">
+                  <Plus aria-hidden />
+                  {t("comparePage.addMore", "Add a car")}
+                </Link>
+              </Button>
+            ) : null}
+            <Button type="button" variant="secondary" onClick={copyLink}>
+              <Link2 aria-hidden />
+              {t("comparePage.share", "Share")}
+            </Button>
+          </div>
+        ) : null}
+      </CineHeader>
+
+      <div className="layout-shell pb-16 pt-8 lg:pt-12">
+        {loading && listings.length === 0 && (
+          <div className="space-y-3" aria-busy="true" aria-label={t("comparePage.loading", "Loading cars to compare")}>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {Array.from({ length: Math.max(2, ids.length) }).map((_, i) => (
+                <Skeleton key={i} shape="card" />
+              ))}
+            </div>
+            <Skeleton shape="chart" className="h-96" />
+          </div>
+        )}
+
+        {!loading && error && (
+          <Card padding="none">
+            <ErrorState
+              title={t("comparePage.errorTitle", "These cars didn't load")}
+              body={error}
+              onRetry={() => setReloadKey((k) => k + 1)}
+            />
+          </Card>
+        )}
+
+        {!loading && !error && ids.some((id) => !listings.some((row) => Number(row.id) === id)) && (
+          <section className="mb-6 rounded-xl border border-border bg-card p-5" aria-label={t("comparePage.unresolved", "Listings that couldn't load")}>
+            <p role="status" className="text-body text-muted-foreground">{t("comparePage.partialFailure", "Some listings couldn't load. Your selections are kept; try again or remove them below.")}</p>
+            <ul className="my-3 space-y-2">
+              {ids.filter((id) => !listings.some((row) => Number(row.id) === id)).map((id) => (
+                <li key={id} className="flex flex-wrap items-center justify-between gap-2">
+                  <span>{t("comparePage.failedId", "Listing #{id} couldn't load", { id })}</span>
+                  <Button variant="ghost" onClick={() => removeId(id)} aria-label={t("comparePage.removeFailed", "Remove listing #{id}", { id })}>{t("common.remove", "Remove")}</Button>
+                </li>
+              ))}
+            </ul>
+            <Button variant="secondary" onClick={() => setReloadKey((key) => key + 1)}>{t("common.retry", "Try again")}</Button>
+          </section>
+        )}
+
+        {!loading && !error && (!hasIds || (!enough && listings.length > 0)) && (
+          <section className="cine-panel theme-dark p-5 text-foreground sm:p-8" aria-labelledby="compare-empty-title">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-xl">
+                <p className="cine-eyebrow text-white/60">
+                  {t("comparePage.cine.slotsKicker", "{n} of {max} slots filled", { n: listings.length, max: MAX_COMPARE })}
+                </p>
+                <h2 id="compare-empty-title" className="cine-display mt-3 text-[clamp(1.75rem,1.4rem+1.5vw,2.5rem)] text-white">
+                  {listings.length === 1 ? t("comparePage.needOneMore", "Add one more car to compare") : t("comparePage.emptyTitle", "No cars selected yet")}
+                </h2>
+                <p className="mt-3 text-body text-white/70">
+                  {t("comparePage.emptyBody", "Tap “Compare” on any listing to add it here. You can pick up to {max}.", { max: MAX_COMPARE })}
+                </p>
+              </div>
+              <Button asChild size="lg" className="self-start lg:self-auto">
+                <Link to="/" className="no-underline">
+                  {listings.length === 1 ? <Plus aria-hidden /> : <Search aria-hidden />}
+                  {listings.length === 1 ? t("comparePage.addMore", "Add a car") : t("comparePage.browse", "Browse listings")}
+                </Link>
+              </Button>
+            </div>
+            <ol className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+              {Array.from({ length: MAX_COMPARE }).map((_, i) => {
+                const l = listings[i];
+                const num = String(i + 1).padStart(2, "0");
                 return (
-                  <div
-                    key={listing.id}
-                    className="rounded-3xl border border-border/80 bg-card/85 p-5 shadow-soft backdrop-blur-xl transition-all hover:border-primary/30 hover:shadow-soft-lg"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <Link
-                        to={`/listing/${listing.id}`}
-                        className="font-display text-[15px] font-semibold text-foreground no-underline hover:text-primary-bright"
-                      >
-                        {listing.make} {listing.model}
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => handleRemove(Number(listing.id))}
-                        aria-label={`Remove ${listing.make} ${listing.model} from compare`}
-                        className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-surface hover:text-foreground"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                    <p className="mt-0.5 text-[12px] text-muted-foreground">
-                      {listing.year ?? "—"}
-                      {listing.variant ? ` · ${listing.variant}` : ""}
-                      {listing.district ? ` · ${listing.district}` : ""}
-                    </p>
-                    {listing.price_lkr ? (
-                      <p className="mt-2 text-[13px] font-semibold tabular-nums text-primary-bright">
-                        LKR {Number(listing.price_lkr).toLocaleString()}
-                      </p>
-                    ) : null}
-                    <p className="mt-0.5 text-[11px] tabular-nums text-muted-foreground">
-                      FMV {fmv ? `LKR ${fmv.toLocaleString()}` : "—"}
-                      {listing.mileage_km != null ? ` · ${Number(listing.mileage_km).toLocaleString()} km` : ""}
-                    </p>
-                    <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-border/70 pt-2.5">
-                      <DealScoreBadge
-                        score={listing.deal_score}
-                        priceLkr={Number(listing.price_lkr) || null}
-                        fmvLkr={fmv}
-                      />
-                      <FmvExplainer compsCount={0} confidence="low" method="cohort_median" fmvLkr={fmv} />
-                      <button
-                        type="button"
-                        onClick={() => handleTilePin(listing)}
-                        aria-pressed={pinned}
-                        className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[12px] font-semibold text-primary-bright transition-all hover:bg-primary/15 active:scale-[0.97]"
-                      >
-                        <Scale className="h-3 w-3" aria-hidden />
-                        {pinned ? "Pinned ✓" : "Pin"}
-                      </button>
-                    </div>
-                  </div>
+                  <li key={l ? `l-${l.id}` : `slot-${i}`} className="cine-slot" data-filled={l ? "true" : "false"}>
+                    {l ? (
+                      <>
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="cine-slot__num" aria-hidden>{num}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => removeId(Number(l.id))}
+                            aria-label={t("compareTray.removeAria", "Remove {name} from compare", { name: [l.make, l.model].filter(Boolean).join(" ") })}
+                            className="-mr-1 -mt-1 text-white/70"
+                          >
+                            <X aria-hidden />
+                          </Button>
+                        </div>
+                        {!lowData && l.thumbnail_url ? (
+                          <img src={l.thumbnail_url} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" width={480} height={360} className="aspect-[16/10] w-full rounded-control bg-foreground/5 object-cover" />
+                        ) : null}
+                        <Link to={`/listing/${l.id}`} className="min-w-0 text-footnote font-semibold leading-snug text-white no-underline hover:text-[hsl(213_100%_75%)]">
+                          {l.year} {l.make} {l.model}
+                        </Link>
+                      </>
+                    ) : (
+                      <>
+                        <span className="cine-slot__num" aria-hidden>{num}</span>
+                        <span className="text-caption text-white/55">{t("comparePage.cine.openSlot", "Open slot")}</span>
+                      </>
+                    )}
+                  </li>
                 );
               })}
+            </ol>
+          </section>
+        )}
+
+        {!error && enough && (
+          <div className="content-in">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
+                <label className={switchRow}>
+                  <Switch checked={highlight} onCheckedChange={setHighlight} size="sm" />
+                  {t("comparePage.highlight", "Highlight differences")}
+                </label>
+                <label className={switchRow}>
+                  <Switch checked={onlyDiff} onCheckedChange={setOnlyDiff} size="sm" />
+                  {t("comparePage.onlyDiff", "Hide identical rows")}
+                </label>
+              </div>
+              <p className="num text-footnote text-label-2" aria-live="polite">
+                <span className="sr-only">{t("comparePage.rowsShown", "{n} rows", { n: visibleRows.length })}</span>
+                <span aria-hidden>
+                  {rowsBefore}
+                  <AnimatedNumber value={visibleRows.length} />
+                  {rowsAfter}
+                </span>
+              </p>
             </div>
 
-            <ComparisonModal listings={listings} open={modalOpen} onClose={() => setModalOpen(false)} />
-          </>
+            <TableContainer className="shadow-e1">
+              <Table className="border-separate border-spacing-0 text-left">
+                <caption className="sr-only">{t("comparePage.caption", "Specification comparison")}</caption>
+                <TableHeader className="static bg-surface-1 [&_tr]:border-0">
+                  {table.getHeaderGroups().map((hg) => (
+                    <tr key={hg.id}>
+                      {hg.headers.map((header, i) => (
+                        <th
+                          key={header.id}
+                          scope="col"
+                          className={cn(
+                            "border-b border-separator bg-surface-1 p-3 text-left align-top font-normal sm:p-4",
+                            i === 0
+                              ? "sticky left-0 z-[1] w-28 min-w-28 sm:w-40 sm:min-w-40"
+                              : "min-w-40 sm:min-w-48",
+                          )}
+                        >
+                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                        </th>
+                      ))}
+                    </tr>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {/* "Hide identical rows" fades rows out/in; the rest glide into place (layout). */}
+                  <AnimatePresence initial={false}>
+                  {table.getRowModel().rows.map((row) => {
+                    const r = row.original;
+                    const dim = highlight && !r.differs;
+                    const tint = highlight && r.differs;
+                    return (
+                      <motion.tr
+                        key={r.def.key}
+                        layout={motionCalm ? false : "position"}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1, transition: { duration: motionCalm ? 0 : duration.medium, ease: ease.standard } }}
+                        exit={{ opacity: 0, transition: { duration: motionCalm ? 0 : duration.short, ease: ease.accelerate } }}
+                        transition={motionCalm ? { duration: 0 } : spring.snappy}
+                        className={cn("transition-colors duration-short", dim && "text-label-2")}
+                      >
+                        {row.getVisibleCells().map((cell, i) =>
+                          i === 0 ? (
+                            <th
+                              key={cell.id}
+                              scope="row"
+                              className={cn(
+                                "sticky left-0 z-[1] border-b border-separator bg-surface-1 p-3 text-left text-footnote font-semibold transition-colors duration-short sm:px-4",
+                                tint ? "text-foreground" : "text-label-2",
+                              )}
+                            >
+                              {/* Highlight tint fades (opacity) instead of snapping. */}
+                              <span aria-hidden className="cmp-tint bg-primary/[0.07]" data-on={tint ? "true" : "false"} />
+                              <span className="relative">{flexRender(cell.column.columnDef.cell, cell.getContext())}</span>
+                            </th>
+                          ) : (
+                            <td key={cell.id} className={cn("num relative border-b border-separator p-3 align-top text-body sm:px-4", tint ? "text-foreground" : "")}>
+                              <span aria-hidden className="cmp-tint bg-primary/[0.04]" data-on={tint ? "true" : "false"} />
+                              <span className="relative block">{flexRender(cell.column.columnDef.cell, cell.getContext())}</span>
+                            </td>
+                          ),
+                        )}
+                      </motion.tr>
+                    );
+                  })}
+                  </AnimatePresence>
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            <div className="mt-4 space-y-1.5 text-footnote text-label-2">
+              <p className="flex items-start gap-1.5">
+                <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                <span>
+                  {t(
+                    "comparePage.fmvNote",
+                    "FMV is what similar cars are typically asking, not a sale price or valuation.",
+                  )}{" "}
+                  <a href={howWePriceHref("fmv")} className="font-semibold text-primary">
+                    {t("comparePage.howLink", "How we score prices")}
+                    <ArrowUpRight className="ml-0.5 inline h-3.5 w-3.5" aria-hidden />
+                  </a>
+                </span>
+              </p>
+              <p className="pl-5">
+                {t(
+                  "comparePage.monthlyNote",
+                  "Monthly est. = a bank loan at the CBSL maximum loan-to-value for the car's class (40–60%), 15% a year over 5 years. A planning figure only — lenders set the final terms.",
+                )}
+              </p>
+            </div>
+          </div>
         )}
       </div>
     </PageCanvas>

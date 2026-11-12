@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Round 5: full Filters sheet (web parity). -->
+<resources>
+    <string name="vehicle_category_heavy">கனரக</string>
+    <string name="vehicle_category_tractors">டிராக்டர்கள்</string>
+    <string name="vehicle_category_boats">படகுகள்</string>
+    <string name="vehicle_category_cycles">சைக்கிள்கள்</string>
+    <string name="vehicle_category_other">மற்றவை</string>
+    <string name="filter_section_vehicle">வாகன வகை</string>
+    <string name="filter_section_inventory">விளம்பரங்கள்</string>
+    <string name="filter_with_price">விலையுடன்</string>
+    <string name="filter_no_price">விலை இல்லை</string>
+    <string name="filter_include_archive">360K+ விலை காப்பகத்தைச் சேர்</string>
+    <string name="filter_section_make_model">தயாரிப்பு &amp; மாடல்</string>
+    <string name="filter_model_label">மாடல்</string>
+    <string name="filter_model_search_hint">மாடல்களைத் தேடு\u2026</string>
+    <string name="filter_all_models">அனைத்து மாடல்களும்</string>
+    <string name="filter_pick_make_first">மாடலைத் தேர்வுசெய்ய முதலில் தயாரிப்பைத் தேர்வுசெய்யவும்</string>
+    <string name="filter_section_price">விலை</string>
+    <string name="filter_section_year">ஆண்டு</string>
+    <string name="filter_section_mileage">ஓடிய தூரம்</string>
+    <string name="filter_section_fuel">எரிபொருள்</string>
+    <string name="filter_section_transmission">கியர் அமைப்பு</string>
+    <string name="filter_section_condition">நிலை</string>
+    <string name="filter_section_body">உடல் வகை</string>
+    <string name="filter_section_district">மாவட்டம்</string>
+    <string name="filter_section_source">மூல இணையதளம்</string>
+    <string name="filter_min">குறைந்தது</string>
+    <string name="filter_max">அதிகபட்சம்</string>
+    <string name="filter_any">ஏதேனும்</string>
+    <string name="filter_mn_suffix">மி.</string>
+    <string name="filter_km_suffix">கி.மீ.</string>
+    <string name="filter_up_to">%1$s வரை</string>
+    <string name="filter_reset">மீட்டமை</string>
+    <string name="filter_reset_all">அனைத்தையும் மீட்டமை</string>
+    <string name="filter_show_results">முடிவுகளைக் காட்டு</string>
+    <string name="filter_show_n_results">%1$s முடிவுகளைக் காட்டு</string>
+    <string name="filter_show_one_result">1 முடிவைக் காட்டு</string>
+    <string name="filter_no_matches">பொருத்தங்கள் இல்லை</string>
+    <string name="filter_price_needs_priced">பட்ஜெட்டால் வடிகட்ட “விலையுடன்” என்பதைத் தேர்வுசெய்யவும்.</string>
+    <string name="filter_active_n">%1$d செயலில்</string>
+    <string name="filter_remove_cd">%1$s வடிப்பானை அகற்று</string>
+    <string name="filter_show_all_n">அனைத்தையும் (%1$d) காட்டு</string>
+    <string name="filter_show_fewer">குறைவாகக் காட்டு</string>
+    <string name="filter_fuel_petrol">பெட்ரோல்</string>
+    <string name="filter_fuel_diesel">டீசல்</string>
+    <string name="filter_fuel_hybrid">ஹைப்ரிட்</string>
+    <string name="filter_fuel_electric">மின்சாரம்</string>
+    <string name="filter_trans_automatic">தானியங்கி</string>
+    <string name="filter_trans_manual">மேனுவல்</string>
+    <string name="filter_trans_cvt">CVT</string>
+    <string name="filter_cond_new">புதியது</string>
+    <string name="filter_cond_recon">ரீகண்டிஷன்</string>
+    <string name="filter_cond_used">பயன்படுத்தியது</string>
+    <string name="filter_from_year">ஆண்டிலிருந்து</string>
+    <string name="filter_to_year">ஆண்டு வரை</string>
+    <string name="filter_count_loading">எண்ணுகிறது\u2026</string>
+    <!-- Search sort chips -->
+    <string name="sort_newest">புதியவை</string>
+    <string name="sort_best_deal">சிறந்த டீல்</string>
+    <string name="sort_price_asc">விலை ↑</string>
+    <string name="sort_price_desc">விலை ↓</string>
+    <string name="sort_low_km">குறைந்த கி.மீ</string>
+</resources>

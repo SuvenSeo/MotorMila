@@ -17,7 +17,8 @@ export interface PinnedListing {
 }
 
 export const COMPARE_TRAY_KEY = "motormila:compare-tray:v1";
-export const MAX_PINNED = 3;
+/** Up to 4 listings side by side (ui/features compare tray + TanStack compare table). */
+export const MAX_PINNED = 4;
 export const CHANGE_EVENT = "motormila:compare-tray:change";
 
 export function buildCompareLink(ids: number[]): string {

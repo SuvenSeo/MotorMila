@@ -30,11 +30,13 @@ def _isolate_stats_memory_cache() -> None:
     without per-test clearing, a payload from one test's database would leak
     into the next test's assertions.
     """
-    from app.utils import memory_cache
+    from app.utils import listing_cache, memory_cache
 
     memory_cache.clear()
+    listing_cache.clear()
     yield
     memory_cache.clear()
+    listing_cache.clear()
 
 
 @pytest.fixture(autouse=True)
@@ -46,20 +48,3 @@ def _open_app_access_for_unit_tests(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     monkeypatch.setenv("APP_ACCESS_ENFORCED", "false")
 
-
-
-@pytest.fixture(autouse=True)
-def _polite_crawler_test_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Unit tests never fetch real robots.txt files or sleep between requests.
-
-    Production keeps robots enforcement on and the 2-5 s per-host delay;
-    tests that exercise those paths opt back in explicitly.
-    """
-    monkeypatch.setenv("SCRAPE_ROBOTS_ENFORCED", "0")
-    monkeypatch.setenv("SCRAPE_HOST_DELAY_MIN", "0")
-    monkeypatch.setenv("SCRAPE_HOST_DELAY_MAX", "0")
-    monkeypatch.setenv("SOURCES_ENABLED", "all")
-    from app.scrapers import polite
-
-    polite.ROBOTS.clear()
-    polite.THROTTLE.reset()

@@ -6,7 +6,10 @@ import {
   computeSellerFairAsk,
   type SellerFairAskResult,
 } from "@/lib/sellerFairAsk";
-import { cn } from "@/lib/utils";
+import { useAppPreferences } from "@/lib/appPreferences";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { AnimatedLkr, Stat } from "@/components/tools/ToolKit";
 
 export interface SellerFairAskCardProps {
   marketMedian: number;
@@ -17,6 +20,7 @@ export interface SellerFairAskCardProps {
   className?: string;
 }
 
+/** Private-seller pricing pack on /estimate: suggested ask, walkaway, dealer band. */
 export function SellerFairAskCard({
   marketMedian,
   districtMedian,
@@ -25,6 +29,7 @@ export function SellerFairAskCard({
   year,
   className,
 }: SellerFairAskCardProps) {
+  const { t } = useAppPreferences();
   const pack: SellerFairAskResult | null = computeSellerFairAsk({
     marketMedian,
     districtMedian,
@@ -55,67 +60,27 @@ export function SellerFairAskCard({
   };
 
   return (
-    <section
-      className={cn("rounded-2xl border border-border bg-surface p-4", className)}
-      aria-label="Private seller fair ask"
-    >
-      <p className="text-[12px] font-medium text-muted-foreground">
-        Instant Offer · Fair ask
-      </p>
-      <p className="mt-1 text-[11px] text-muted-foreground">
+    <Card padding="sm" className={className} aria-label={t("tools.fairAsk.aria", "Private seller fair ask")}>
+      <p className="text-footnote font-semibold text-foreground">{t("tools.fairAsk.title", "Instant offer · fair ask")}</p>
+      <p className="mt-0.5 text-caption text-label-2">
         {pack.usedDistrictMedian
-          ? "Targets use your district median."
-          : "Targets use the market median."}
+          ? t("tools.fairAsk.district", "Targets use your district median.")
+          : t("tools.fairAsk.market", "Targets use the market median.")}
       </p>
 
-      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <Metric label="Suggested ask" value={formatPrice(pack.suggestedAsk)} emphasize />
-        <Metric label="Walkaway" value={formatPrice(pack.walkaway)} />
-        <Metric
-          label="Dealer band"
+      <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
+        <Stat label={t("tools.fairAsk.ask", "Suggested ask")} value={<AnimatedLkr value={pack.suggestedAsk} />} emphasis />
+        <Stat label={t("tools.fairAsk.walkaway", "Walkaway")} value={<AnimatedLkr value={pack.walkaway} />} />
+        <Stat
+          label={t("tools.fairAsk.dealer", "Dealer band")}
           value={`${formatPrice(pack.dealerOfferBand.low)} – ${formatPrice(pack.dealerOfferBand.high)}`}
         />
       </div>
 
-      <button
-        type="button"
-        onClick={handleCopyWhatsApp}
-        className="mt-4 flex h-9 w-full items-center justify-center gap-1.5 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-3 text-[12px] font-semibold text-emerald-600 transition-colors hover:bg-emerald-500/15 dark:text-emerald-400"
-      >
-        {copied ? (
-          <>
-            <Check className="h-3 w-3" /> Copied
-          </>
-        ) : (
-          <>
-            <Copy className="h-3 w-3" /> Copy WhatsApp text
-          </>
-        )}
-      </button>
-    </section>
-  );
-}
-
-function Metric({
-  label,
-  value,
-  emphasize = false,
-}: {
-  label: string;
-  value: string;
-  emphasize?: boolean;
-}) {
-  return (
-    <div className="rounded-full border border-border bg-card/40 p-3">
-      <p className="text-[12px] font-medium text-muted-foreground">{label}</p>
-      <p
-        className={cn(
-          "num mt-1 text-[13px] font-bold",
-          emphasize ? "text-primary" : "text-foreground",
-        )}
-      >
-        {value}
-      </p>
-    </div>
+      <Button type="button" variant="secondary" size="sm" className="mt-4 w-full" onClick={handleCopyWhatsApp}>
+        {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
+        {copied ? t("tools.fairAsk.copied", "Copied") : t("tools.fairAsk.copy", "Copy WhatsApp text")}
+      </Button>
+    </Card>
   );
 }

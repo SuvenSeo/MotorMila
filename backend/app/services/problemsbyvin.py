@@ -20,7 +20,7 @@ from db.models import VehicleReliabilitySnapshot
 log = structlog.get_logger()
 
 DATA_BASE = "https://problemsbyvin.com/data"
-USER_AGENT = "MotorMila/1.0 (+https://motormila.vercel.app)"
+USER_AGENT = "MotorMila/1.0 (+https://motormila.pages.dev)"
 MARKET_SCOPE = "US NHTSA-derived (ProblemsByVin)"
 LICENSE_NOTE = "CC BY 4.0. Attribution: ProblemsByVin (https://problemsbyvin.com)."
 LIMITATION = (

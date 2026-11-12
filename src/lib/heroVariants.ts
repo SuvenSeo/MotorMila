@@ -4,6 +4,7 @@ export type HeroAlign = "center" | "left" | "right";
 export type HeroTone = "light" | "dark" | "golden";
 
 export type HeroVariantId =
+  | "night-drive"
   | "current"
   | "colombo-night"
   | "expressway-dusk"
@@ -32,6 +33,19 @@ export type HeroVariant = {
  * Do not commit a final pick until the user chooses.
  */
 export const HERO_VARIANTS: HeroVariant[] = [
+  {
+    id: "night-drive",
+    label: "0 · Night drive",
+    blurb: "Blue-hour coast road, Lotus Tower on the horizon — editorial left copy, car on the right.",
+    image: visuals.pageHomeHeroNight,
+    // Desktop crop; below lg the photo is a top band cropped by CSS (.mm-hero).
+    objectPosition: "70% 50%",
+    imageOpacity: "opacity-100",
+    align: "left",
+    tone: "dark",
+    hideSideSignals: true,
+    scrims: [],
+  },
   {
     id: "current",
     label: "1 · Current traffic",
@@ -136,16 +150,18 @@ export const HERO_VARIANTS: HeroVariant[] = [
     align: "center",
     tone: "dark",
     hideSideSignals: false,
+    // Theme-independent dark scrim: white copy stays AA on the bright aerial
+    // in both themes. A centre pool sits behind the headline and search.
     scrims: [
-      "bg-gradient-to-b from-background/62 via-background/26 to-background/92",
-      "bg-[radial-gradient(ellipse_72%_58%_at_50%_42%,transparent_32%,hsl(var(--background)/0.5)_100%)]",
+      "bg-gradient-to-b from-black/55 via-black/30 to-black/75",
+      "bg-[radial-gradient(ellipse_60%_52%_at_50%_48%,rgba(0,0,0,0.38)_0%,transparent_72%)]",
     ],
   },
 ];
 
-export const DEFAULT_HERO_VARIANT_ID: HeroVariantId = "coastal-aerial";
+export const DEFAULT_HERO_VARIANT_ID: HeroVariantId = "night-drive";
 
-const STORAGE_KEY = "motormila.hero_variant.v3";
+const STORAGE_KEY = "motormila.hero_variant.v4";
 
 export function isHeroVariantId(value: string | null | undefined): value is HeroVariantId {
   return Boolean(value && HERO_VARIANTS.some((v) => v.id === value));

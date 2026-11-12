@@ -19,7 +19,7 @@ vi.mock("@/components/FilterSidebar", () => ({
 }));
 
 vi.mock("@/components/ListingCard", () => ({
-  ListingCard: () => <div>ListingCard</div>,
+  ListingCard: ({ listing, onCompareToggle, onWatchlistToggle, isWatchlisted }: { listing: { id: number }; onCompareToggle: (listing: unknown) => void; onWatchlistToggle: (listing: unknown) => void; isWatchlisted: boolean }) => <div>ListingCard<button onClick={() => onCompareToggle(listing)}>Compare {listing.id}</button><button aria-pressed={isWatchlisted} onClick={() => onWatchlistToggle(listing)}>Save {listing.id}</button></div>,
 }));
 
 vi.mock("@/components/MarketPredictor", () => ({
@@ -63,6 +63,7 @@ vi.mock("@/services/api", () => ({
   SNAPSHOT_BASE: "",
   SNAPSHOT_ONLY: false,
   getStats: vi.fn(),
+  getListing: vi.fn(),
   getListings: vi.fn(),
   getDistrictPrices: vi.fn(),
   getMakes: vi.fn(),
@@ -92,6 +93,10 @@ vi.mock("@/services/api", () => ({
   formatPrice: (value: number | null) => (value == null ? "N/A" : `Rs. ${value}`),
 }));
 
+vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
+import { toast } from "sonner";
+import { saveWatchlistIds } from "@/lib/watchlist";
+import { persistPinned } from "@/lib/compareTray";
 import Dashboard from "@/pages/Dashboard";
 import * as api from "@/services/api";
 
@@ -113,7 +118,15 @@ function renderDashboard(initialEntries: string[] = ["/"]) {
 }
 
 beforeEach(() => {
+  // Desktop viewport: the filter sidebar renders only at >= 1024px (below that
+  // it lives in the filter sheet).
+  const setupMatchMedia = window.matchMedia;
+  vi.spyOn(window, "matchMedia").mockImplementation((query: string) => ({
+    ...setupMatchMedia(query),
+    matches: /min-width:\s*1024px/.test(query),
+  }));
   vi.clearAllMocks();
+  localStorage.clear();
   vi.mocked(api.getStats).mockResolvedValue(null);
   vi.mocked(api.getListings).mockResolvedValue({ listings: [], total: 0 });
   vi.mocked(api.getDistrictPrices).mockResolvedValue([]);
@@ -138,27 +151,41 @@ beforeEach(() => {
 });
 
 describe("Dashboard runtime safety", () => {
-  it("centers the home hero headline lockup", () => {
-    renderDashboard(["/?hero=expressway-dusk"]);
+  it("offers retry and removal when a saved listing fails without claiming it was removed", async () => {
+    const { saveWatchlistIds } = await import("@/lib/watchlist");
+    saveWatchlistIds([811]);
+    vi.mocked(api.getListing).mockRejectedValue(new Error("offline"));
+    renderDashboard();
+    fireEvent.click(screen.getByRole("button", { name: /1 saved/i }));
+    expect(await screen.findByRole("button", { name: "Remove saved listing #811" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Remove saved listing #811" }));
+    expect(await screen.findByText("Nothing saved yet")).toBeInTheDocument();
+  });
+  it("renders the cinematic hero headline, accent word and search", () => {
+    renderDashboard();
 
     const heading = screen.getByRole("heading", {
+      level: 1,
       name: /sri lanka's entire vehicle market/i,
     });
-    expect(heading).toHaveClass("display-hero--lockup");
-    expect(heading.querySelector(".display-hero__lead")).not.toBeNull();
-    expect(heading.querySelector(".display-hero__accent")).not.toBeNull();
+    expect(heading).toHaveClass("cine-title");
+    expect(heading.querySelectorAll(".cine-word").length).toBeGreaterThan(2);
+    expect(heading.querySelector(".cine-title__accent")).not.toBeNull();
+    expect(document.getElementById("hero-search")).toHaveAttribute("role", "combobox");
   });
 
-  it("renders the market pulse section without throwing", () => {
+  it("renders the market pulse section without throwing", async () => {
     renderDashboard();
 
-    expect(screen.getByRole("heading", { name: /what.s moving right now/i })).toBeInTheDocument();
+    // Below-the-fold sections mount a frame after the first paint.
+    expect(await screen.findByRole("heading", { name: /what.s moving right now/i }, { timeout: 4000 })).toBeInTheDocument();
   });
 
-  it("renders the trending models section", () => {
+  it("renders the trending models section", async () => {
     renderDashboard();
 
-    expect(screen.getByText(/trending models/i)).toBeInTheDocument();
+    expect(await screen.findByText(/trending models/i)).toBeInTheDocument();
   });
 
   it("hides spotlight deal card when dashboard insights only provide zero-priced deals", async () => {
@@ -183,7 +210,7 @@ describe("Dashboard runtime safety", () => {
 
     renderDashboard();
 
-    await screen.findByRole("heading", { name: /what.s moving right now/i });
+    await screen.findByRole("heading", { name: /what.s moving right now/i }, { timeout: 4000 });
     expect(screen.queryByText(/Toyota\s+Vitz/i)).not.toBeInTheDocument();
   });
 
@@ -205,15 +232,113 @@ describe("Dashboard runtime safety", () => {
     expect(
       await screen.findByText(/couldn't load listings/i),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/no results/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/no listings match/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/widen your filters/i)).not.toBeInTheDocument();
 
     vi.mocked(api.getListings).mockResolvedValue({ listings: [], total: 0 });
     fireEvent.click(screen.getByRole("button", { name: /^retry$/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/no results/i)).toBeInTheDocument();
+      expect(screen.getByText(/no listings match/i)).toBeInTheDocument();
     });
     expect(screen.queryByText(/couldn't load listings/i)).not.toBeInTheDocument();
+  });
+
+  it("defaults to Best match sort and lets signed-out visitors page past 12 results", async () => {
+    const page = Array.from({ length: 12 }, (_, i) => ({ id: i + 1, make: "Toyota", model: "Aqua", price_lkr: 7_000_000 }));
+    vi.mocked(api.getListings).mockResolvedValue({ listings: page as never, total: 40 });
+
+    renderDashboard();
+
+    await waitFor(() => {
+      expect(api.getListings).toHaveBeenCalledWith(expect.objectContaining({ sort: "best_match", page: 1 }));
+    });
+    const next = await screen.findByRole("button", { name: /next page/i });
+    expect(next).not.toBeDisabled();
+    expect(screen.getByText(/1–12 of 40/)).toBeInTheDocument();
+    expect(screen.queryByText(/free browse limit/i)).not.toBeInTheDocument();
+
+    fireEvent.click(next);
+    await waitFor(() => {
+      expect(api.getListings).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }));
+    });
+  });
+
+  it("starts a new text search without retaining unrelated make/model filters", async () => {
+    renderDashboard(["/?make=Toyota&model=Aqua&district=Colombo&page=3"]);
+    fireEvent.change(screen.getByRole("combobox", { name: /search vehicles/i }), { target: { value: "family van" } });
+    fireEvent.keyDown(screen.getByRole("combobox", { name: /search vehicles/i }), { key: "Enter" });
+    await waitFor(() => expect(api.getListings).toHaveBeenLastCalledWith(expect.objectContaining({ q: "family van", make: undefined, model: undefined, district: "Colombo", page: 1 })));
+  });
+
+  it("does not submit a suggestion from an earlier query", async () => {
+    vi.mocked(api.getListingSearchSuggestions).mockResolvedValue([{ make: "Toyota", model: "Aqua", count: 10 }] as never);
+    renderDashboard();
+    const input = screen.getByRole("combobox", { name: /search vehicles/i });
+    fireEvent.change(input, { target: { value: "aqua" } });
+    await screen.findByRole("option", { name: /toyota aqua/i });
+    fireEvent.change(input, { target: { value: "family van" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => expect(api.getListings).toHaveBeenLastCalledWith(expect.objectContaining({ q: "family van", make: undefined, model: undefined })));
+  });
+
+  it("explains compare and save limits instead of silently ignoring card actions", async () => {
+    persistPinned([1, 2, 3, 4].map((id) => ({ id, make: "Toyota", model: "Aqua" })));
+    saveWatchlistIds(Array.from({ length: 48 }, (_, i) => i + 1));
+    vi.mocked(api.getListings).mockResolvedValue({ listings: [{ id: 99, make: "Honda", model: "Fit" }] as never, total: 1 });
+    renderDashboard();
+    fireEvent.click(await screen.findByRole("button", { name: "Compare 99" }));
+    expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/compare tray is full/i));
+    fireEvent.click(screen.getByRole("button", { name: "Save 99" }));
+    expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/watchlist is full/i));
+    expect(screen.getByRole("button", { name: "Save 99" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("reads filters, sort and page from the URL", async () => {
+    renderDashboard(["/?make=Toyota&model=Aqua&sort=price_asc&page=3&price_max=8500000"]);
+    await waitFor(() => {
+      expect(api.getListings).toHaveBeenCalledWith(
+        expect.objectContaining({ make: "Toyota", model: "Aqua", sort: "price_asc", page: 3, price_max: 8_500_000 }),
+      );
+    });
+  });
+
+  it("offers ways out of an empty result instead of a dead end", async () => {
+    renderDashboard(["/?district=Badulla&price_max=3000000"]);
+    expect(await screen.findByText(/no listings match/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /alert me when one is listed/i })).toBeInTheDocument();
+    expect(screen.getByText(/try a nearby district/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /remove filter badulla/i })).toBeInTheDocument();
+  });
+});
+
+describe("Home page order and honesty (ui/shell)", () => {
+  it("puts the listings grid right after the hero and the Pro block well below it", async () => {
+    renderDashboard();
+    await screen.findByText("FilterSidebar");
+    const market = document.getElementById("market");
+    const hero = document.getElementById("overview");
+    expect(hero && market).toBeTruthy();
+    // Listings section directly follows the hero.
+    expect(hero!.nextElementSibling).toBe(market);
+    // The Pro overview line (free users) sits after the listings, never blurred.
+    const proLine = await screen.findByText(/full market overview/i);
+    expect(market!.compareDocumentPosition(proLine) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByText(/join the waitlist/i)).not.toBeInTheDocument();
+    expect(document.querySelector(".blur-\\[7px\\]")).toBeNull();
+  });
+
+  it("gives bikes and three-wheelers quick links next to cars", async () => {
+    renderDashboard();
+    const nav = await screen.findByRole("navigation", { name: /browse by type/i });
+    const labels = Array.from(nav.querySelectorAll("button")).map((b) => b.textContent);
+    expect(labels.slice(0, 3)).toEqual(["Cars", "Bikes", "Three-wheelers"]);
+  });
+
+  it("drops inflated trust claims", async () => {
+    renderDashboard();
+    await screen.findByText("FilterSidebar");
+    expect(screen.queryByText(/seller trust on every listing/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/verified signals/i)).not.toBeInTheDocument();
   });
 });

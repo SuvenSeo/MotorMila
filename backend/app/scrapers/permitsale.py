@@ -15,8 +15,6 @@ from datetime import datetime, timezone
 from typing import Any
 
 import httpx
-
-from app.scrapers.polite import PoliteTransport, bot_user_agent
 import structlog
 from sqlalchemy.orm import Session
 
@@ -99,12 +97,7 @@ def _scrape_permitsale(timeout: float = 20.0) -> list[dict[str, Any]]:
     """
     results: list[dict[str, Any]] = []
     try:
-        with httpx.Client(
-            timeout=timeout,
-            follow_redirects=True,
-            headers={"User-Agent": bot_user_agent()},
-            transport=PoliteTransport(),
-        ) as client:
+        with httpx.Client(timeout=timeout, follow_redirects=True) as client:
             response = client.get(PERMITSALE_URL)
             response.raise_for_status()
             html = response.text

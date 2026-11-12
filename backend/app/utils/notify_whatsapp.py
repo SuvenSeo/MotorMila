@@ -94,7 +94,7 @@ def build_alert_match_message(
     district: Optional[str],
     max_price: Optional[float],
     match_count: int,
-    site_origin: str = "https://motormila.vercel.app",
+    site_origin: str = "https://motormila.pages.dev",
 ) -> str:
     label_parts = [p for p in [make, model] if p]
     label = " ".join(label_parts) if label_parts else "your saved search"

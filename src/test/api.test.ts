@@ -8,47 +8,12 @@ describe("api module", () => {
     vi.resetModules();
   });
 
-  it("exports sendChatMessage", async () => {
-    const api: typeof import("@/services/api") = await import("@/services/api");
-
-    expect(typeof api.sendChatMessage).toBe("function");
-  });
-
-  it("formats prices in millions", async () => {
+  it("formats prices in Mn", async () => {
     const { formatPrice } = await import("@/services/api");
 
     expect(formatPrice(null)).toBe("N/A");
-    expect(formatPrice(925000)).toBe("Rs. 0.93M");
-    expect(formatPrice(2500000)).toBe("Rs. 2.50M");
-  });
-
-  it("posts chat payloads to the backend api", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ response: "ok" }),
-    });
-
-    vi.stubGlobal("fetch", fetchMock);
-
-    const api: typeof import("@/services/api") = await import("@/services/api");
-    const result = await api.sendChatMessage("hello", [
-      { role: "user", content: "previous message" },
-    ]);
-
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0]?.[0]).toContain("/api/v1/chat");
-    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-    });
-    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body)).toEqual({
-      message: "hello",
-      history: [{ role: "user", content: "previous message" }],
-    });
-    expect(result).toEqual({ response: "ok", listings: [], web_sources: [] });
+    expect(formatPrice(925000)).toBe("Rs 0.93 Mn");
+    expect(formatPrice(2500000)).toBe("Rs 2.5 Mn");
   });
 
   it("omits cookies for cross-origin HF API bases (HF preflight lacks Allow-Credentials)", async () => {
@@ -187,6 +152,39 @@ describe("api module", () => {
     expect(detail.transmission).toBeUndefined();
     expect(detail.fuel_type).toBeUndefined();
     expect(detail.body_type).toBeUndefined();
+  });
+
+  it("drops the card rating when the backend withholds the detail verdict (price_withheld_reason)", async () => {
+    const row = (id: number, extra: Record<string, unknown>) => ({
+      id,
+      source: "ikman",
+      source_id: `ik-${id}`,
+      url: `https://ikman.lk/en/ad/example-${id}`,
+      title: "Perodua Viva 2011",
+      make: "Perodua",
+      model: "Viva",
+      year: 2011,
+      vehicle_category: "wagons",
+      price_lkr: 4190000,
+      deal_score: 5.8,
+      market_median_lkr: 4450000,
+      scraped_at: "2026-10-20T00:00:00Z",
+      first_seen_at: "2026-10-20T00:00:00Z",
+      ...extra,
+    });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ items: [row(1, { price_withheld_reason: "thin_comps" }), row(2, {})], total: 2 }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const api: typeof import("@/services/api") = await import("@/services/api");
+    const { listings } = await api.getListings({ sort: "newest", page: 1 });
+    const withheld = listings.find((l) => l.id === 1)!;
+    const rated = listings.find((l) => l.id === 2)!;
+    expect(withheld.deal_score ?? null).toBeNull();
+    expect(withheld.market_median_lkr).toBeUndefined();
+    expect(rated.market_median_lkr).toBe(4450000);
   });
 
   it("sends source filter when requesting listings", async () => {

@@ -4,6 +4,7 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import coil3.ImageLoader
+import okio.Path.Companion.toPath
 import coil3.SingletonImageLoader
 import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
@@ -11,19 +12,25 @@ import coil3.request.crossfade
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
+import io.sentry.android.core.SentryAndroid
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 import lk.motormila.app.core.locale.LocaleHelper
-import lk.motormila.app.core.network.AuthEvent
-import lk.motormila.app.core.network.AuthEventBus
+import lk.motormila.app.data.auth.SessionGuard
 import lk.motormila.app.data.local.datastore.SettingsStore
+import lk.motormila.app.data.local.db.MotormilaDatabase
+import lk.motormila.app.fcm.FirebaseBootstrap
+import lk.motormila.app.fcm.PushTokenRegistrar
 import lk.motormila.app.domain.repository.AuthRepository
 import lk.motormila.app.ui.widget.enqueueDealWidgetRefresh
 import lk.motormila.app.work.PriceAlertSyncWorker
@@ -46,7 +53,13 @@ class MotormilaApp : Application(), SingletonImageLoader.Factory, Configuration.
     lateinit var authRepository: AuthRepository
 
     @Inject
-    lateinit var authEventBus: AuthEventBus
+    lateinit var sessionGuard: SessionGuard
+
+    @Inject
+    lateinit var pushRegistrar: PushTokenRegistrar
+
+    @Inject
+    lateinit var database: MotormilaDatabase
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -55,20 +68,30 @@ class MotormilaApp : Application(), SingletonImageLoader.Factory, Configuration.
 
     override fun onCreate() {
         super.onCreate()
+        // Sentry crash reporting (Ardeno Studio org). Inert when no DSN was
+        // supplied at build time (env SENTRY_DSN or -P sentryDsn) — the DSN
+        // is never committed; see BuildConfig.SENTRY_DSN in build.gradle.kts.
+        if (BuildConfig.SENTRY_DSN.isNotBlank()) {
+            SentryAndroid.init(this) { options ->
+                options.dsn = BuildConfig.SENTRY_DSN
+                options.environment = BuildConfig.BUILD_TYPE
+                options.release = "lk.motormila.app@${BuildConfig.VERSION_NAME}"
+                options.tracesSampleRate = 0.1
+                options.profilesSampleRate = 0.0
+            }
+        }
         createNotificationChannels()
+        // FCM (no google-services plugin): inert unless this build carries
+        // the MOTORMILA_FIREBASE_* client config.
+        FirebaseBootstrap.ensureInitialized(this)
         // Restore the persisted session immediately (the interceptor also
         // restores lazily on its first request, so no request can ever leave
         // without the bearer even if this hasn't finished yet).
         appScope.launch { runCatching { authRepository.restore() } }
-        // A rejected bearer (HTTP 401) clears the persisted session; the nav
-        // graph separately routes to Login.
-        appScope.launch {
-            authEventBus.events.collect { event ->
-                if (event is AuthEvent.Unauthorized) {
-                    runCatching { authRepository.clearRejectedSession() }
-                }
-            }
-        }
+        // A rejected bearer (HTTP 401) is a real logout: SessionGuard clears
+        // the persisted session + token, then posts SessionEnded so the nav
+        // graph routes to Login.
+        sessionGuard.start(appScope)
         // Alert matching only runs while signed in.
         appScope.launch {
             runCatching {
@@ -78,6 +101,25 @@ class MotormilaApp : Application(), SingletonImageLoader.Factory, Configuration.
                     .collect { signedIn ->
                         if (signedIn) runCatching { PriceAlertSyncWorker.enqueue(this@MotormilaApp) }
                         else runCatching { PriceAlertSyncWorker.cancel(this@MotormilaApp) }
+                    }
+            }
+        }
+        // Native push: (re-)register the FCM token while signed in, and again
+        // whenever the watchlist or the Settings price-drop toggle changes
+        // (the server pushes drops for watched listings). Logout unregisters
+        // in AuthRepositoryImpl.
+        appScope.launch {
+            runCatching {
+                combine(
+                    authRepository.session().map { it?.token },
+                    database.watchlistDao().observeAll().map { rows -> rows.map { it.listingId }.sorted() },
+                    settingsStore.observe().map { it.priceDropPushEnabled },
+                ) { token, watched, enabled -> Triple(token, watched, enabled) }
+                    .distinctUntilChanged()
+                    .collectLatest { (token, _, _) ->
+                        if (token == null) return@collectLatest
+                        delay(PUSH_SYNC_DEBOUNCE_MS) // coalesce rapid watchlist taps
+                        pushRegistrar.sync()
                     }
             }
         }
@@ -110,10 +152,20 @@ class MotormilaApp : Application(), SingletonImageLoader.Factory, Configuration.
         ImageLoader.Builder(context)
             .components {
                 add(OkHttpNetworkFetcherFactory(callFactory = { imageClient }))
+                // Settings → Low-data mode: cache-only images (android/screens).
+                add(lk.motormila.app.ui.common.LowDataImageInterceptor(this@MotormilaApp))
             }
             .memoryCache {
                 MemoryCache.Builder()
                     .maxSizePercent(context, 0.28)
+                    .build()
+            }
+            // Explicit, bounded disk cache so listing photos survive restarts
+            // without growing unbounded on low-storage phones.
+            .diskCache {
+                coil3.disk.DiskCache.Builder()
+                    .directory(context.cacheDir.resolve("image_cache").absolutePath.toPath())
+                    .maxSizeBytes(150L * 1024 * 1024)
                     .build()
             }
             .crossfade(160)
@@ -145,5 +197,6 @@ class MotormilaApp : Application(), SingletonImageLoader.Factory, Configuration.
         const val CHANNEL_PRICE_DROPS = "price_drops"
         const val CHANNEL_MARKET_NEWS = "market_news"
         const val CHANNEL_SYNC = "sync"
+        private const val PUSH_SYNC_DEBOUNCE_MS = 2_000L
     }
 }

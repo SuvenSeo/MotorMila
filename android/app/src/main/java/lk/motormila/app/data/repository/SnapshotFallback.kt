@@ -12,7 +12,7 @@ import kotlin.math.round
  * Static-snapshot fallback kit (Neon-outage survival).
  *
  * [withSnapshotFallback] is the only suspend helper: live API first, public
- * Vercel snapshot second, original error only when both fail. Everything else
+ * R2 snapshot second, original error only when both fail. Everything else
  * here is pure and JVM-tested ([SnapshotFallbackTest]).
  */
 suspend fun <T> withSnapshotFallback(
@@ -72,6 +72,28 @@ fun filterSnapshotListings(rows: List<ListingDto>, query: ListingQuery): List<Li
         ) {
             return@filter false
         }
+        if (!query.transmission.isNullOrBlank() &&
+            !(row.transmission?.equals(query.transmission, ignoreCase = true) == true)
+        ) {
+            return@filter false
+        }
+        if (!query.condition.isNullOrBlank() &&
+            !(row.condition?.replace(' ', '_')?.equals(query.condition, ignoreCase = true) == true)
+        ) {
+            return@filter false
+        }
+        if (!query.bodyType.isNullOrBlank() &&
+            !(row.bodyType?.equals(query.bodyType, ignoreCase = true) == true)
+        ) {
+            return@filter false
+        }
+        if (!query.vehicleCategory.isNullOrBlank() && row.vehicleCategory != null &&
+            !row.vehicleCategory.equals(query.vehicleCategory, ignoreCase = true)
+        ) {
+            return@filter false
+        }
+        if (query.priceAvailability == "unavailable" && (row.priceLkr ?: 0.0) > 0.0) return@filter false
+        if (query.priceAvailability == "available" && (row.priceLkr ?: 0.0) <= 0.0) return@filter false
         if (query.yearMin != null && (row.year ?: 0) < query.yearMin) return@filter false
         if (query.yearMax != null && (row.year ?: Int.MAX_VALUE) > query.yearMax) return@filter false
         if (query.priceMin != null && (row.priceLkr ?: 0.0) < query.priceMin) return@filter false
@@ -146,4 +168,13 @@ fun priceHistoryFromSparklines(dto: PriceSparklinesDto, listingId: Int): PriceHi
         lastChangeAt = lastChange,
         trackedPoints = prices.size,
     )
+}
+
+/** Case-insensitive make lookup in the snapshot's make -> models map. */
+fun modelsForMake(
+    byMake: Map<String, List<lk.motormila.app.data.remote.dto.ModelRowDto>>,
+    make: String,
+): List<lk.motormila.app.data.remote.dto.ModelRowDto> {
+    val key = make.trim()
+    return byMake[key] ?: byMake.entries.firstOrNull { it.key.equals(key, ignoreCase = true) }?.value.orEmpty()
 }

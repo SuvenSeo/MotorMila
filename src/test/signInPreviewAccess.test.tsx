@@ -70,7 +70,7 @@ describe("SignIn preview access", () => {
     expect(localStorage.getItem("motormila.auth_user")).toBeNull();
   });
 
-  it("supports env-provisioned review accounts without exposing passwords in the summary", async () => {
+  it("ignores legacy VITE_DEMO_USERS: no client-side credentials can sign anyone in", async () => {
     vi.stubEnv("VITE_ENABLE_DEMO_AUTH", "true");
     vi.stubEnv(
       "VITE_DEMO_USERS",
@@ -81,43 +81,55 @@ describe("SignIn preview access", () => {
           name: "Env Reviewer",
           plan: "enterprise",
           subscriptionStatus: "active",
-          avatarInitials: "ER",
         },
       ]),
     );
     vi.resetModules();
 
-    const { AuthProvider: FreshAuthProvider, DEMO_ACCOUNT_SUMMARY } = await import("@/lib/authContext");
+    const authModule = await import("@/lib/authContext");
     const { AppPreferencesProvider: FreshPrefs } = await import("@/lib/appPreferences");
     const FreshSignIn = (await import("@/pages/SignIn")).default;
-
-    expect(DEMO_ACCOUNT_SUMMARY).toHaveLength(1);
-    expect(Object.keys(DEMO_ACCOUNT_SUMMARY[0])).not.toContain("password");
+    expect(Object.keys(authModule)).not.toContain("DEMO_ACCOUNT_SUMMARY");
 
     render(
       <FreshPrefs>
-        <FreshAuthProvider>
+        <authModule.AuthProvider>
           <MemoryRouter initialEntries={["/sign-in"]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Routes>
               <Route path="/sign-in" element={<FreshSignIn />} />
               <Route path="/pro" element={<div>Full Pro Workspace</div>} />
             </Routes>
           </MemoryRouter>
-        </FreshAuthProvider>
+        </authModule.AuthProvider>
       </FreshPrefs>,
     );
 
-    expect(screen.getByText(/review accounts/i)).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: /Env Reviewer/i }));
+    expect(screen.queryByText(/review accounts/i)).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: "reviewer@example.com" } });
     fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: "review-only-secret" } });
     fireEvent.click(screen.getByRole("button", { name: /^sign in/i }));
 
-    expect(await screen.findByText(/full pro workspace/i)).toBeInTheDocument();
-    expect(localStorage.getItem("motormila.auth_user")).toContain("reviewer@example.com");
+    expect(await screen.findByRole("alert")).toHaveTextContent(/not configured/i);
+    expect(screen.queryByText(/full pro workspace/i)).not.toBeInTheDocument();
+    expect(localStorage.getItem("motormila.auth_user")).toBeNull();
 
     vi.unstubAllEnvs();
     vi.resetModules();
+  });
+
+  it("links to the self-serve password reset page", () => {
+    render(
+      <AppPreferencesProvider>
+        <AuthProvider>
+          <MemoryRouter initialEntries={["/sign-in"]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <Routes>
+              <Route path="/sign-in" element={<SignIn />} />
+            </Routes>
+          </MemoryRouter>
+        </AuthProvider>
+      </AppPreferencesProvider>,
+    );
+    expect(screen.getByRole("link", { name: /forgot password/i })).toHaveAttribute("href", "/forgot-password");
   });
 
   it("sanitizes open-redirect candidates to a same-origin relative path", () => {
@@ -129,20 +141,23 @@ describe("SignIn preview access", () => {
     expect(sanitizeSignInRedirect(undefined)).toBe("/pro");
   });
 
-  it("ignores forged absolute from state and lands on /pro after demo login", async () => {
-    vi.stubEnv("VITE_ENABLE_DEMO_AUTH", "true");
-    vi.stubEnv(
-      "VITE_DEMO_USERS",
-      JSON.stringify([
-        {
-          email: "reviewer@example.com",
-          password: "review-only-secret",
-          name: "Env Reviewer",
-          plan: "enterprise",
-          subscriptionStatus: "active",
-          avatarInitials: "ER",
-        },
-      ]),
+  it("ignores forged absolute from state and lands on /pro after backend login", async () => {
+    vi.stubEnv("VITE_ENABLE_BACKEND_AUTH", "true");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/auth/login")) {
+          return new Response(
+            JSON.stringify({
+              token: "tok",
+              user: { email: "reviewer@example.com", name: "Env Reviewer", plan: "enterprise", subscriptionStatus: "active" },
+            }),
+            { status: 200 },
+          );
+        }
+        return new Response(JSON.stringify({ detail: "Invalid or expired token." }), { status: 401 });
+      }),
     );
     vi.resetModules();
 
@@ -174,6 +189,59 @@ describe("SignIn preview access", () => {
     expect(await screen.findByText(/safe pro landing/i)).toBeInTheDocument();
     expect(screen.queryByText(/unexpected redirect/i)).not.toBeInTheDocument();
 
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("offers to resend the verification email when the account is unverified", async () => {
+    vi.stubEnv("VITE_ENABLE_BACKEND_AUTH", "true");
+    const fetchMock = vi.fn<typeof fetch>(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/auth/login")) {
+        return new Response(
+          JSON.stringify({ detail: { code: "email_unverified", message: "Verify your email address before signing in." } }),
+          { status: 403 },
+        );
+      }
+      if (url.includes("/auth/resend-verification")) {
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ detail: "Invalid or expired token." }), { status: 401 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.resetModules();
+
+    const { AuthProvider: FreshAuthProvider } = await import("@/lib/authContext");
+    const { AppPreferencesProvider: FreshPrefs } = await import("@/lib/appPreferences");
+    const FreshSignIn = (await import("@/pages/SignIn")).default;
+
+    render(
+      <FreshPrefs>
+        <FreshAuthProvider>
+          <MemoryRouter initialEntries={["/sign-in"]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <Routes>
+              <Route path="/sign-in" element={<FreshSignIn />} />
+            </Routes>
+          </MemoryRouter>
+        </FreshAuthProvider>
+      </FreshPrefs>,
+    );
+
+    fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: "Trial@Example.com" } });
+    fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: "a-long-password-1" } });
+    fireEvent.click(screen.getByRole("button", { name: /^sign in/i }));
+
+    expect(await screen.findByText(/verify your email address before signing in/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /resend verification email/i }));
+    expect(await screen.findByText(/new link sent/i)).toBeInTheDocument();
+
+    const resendCall = fetchMock.mock.calls.find(([url]) => String(url).includes("/auth/resend-verification"));
+    expect(resendCall).toBeDefined();
+    expect(JSON.parse(String((resendCall![1] as RequestInit).body))).toEqual({ email: "trial@example.com" });
+    expect(localStorage.getItem("motormila.auth_user")).toBeNull();
+
+    vi.unstubAllGlobals();
     vi.unstubAllEnvs();
     vi.resetModules();
   });

@@ -1,8 +1,12 @@
 package lk.motormila.app.data.repository
 
+import lk.motormila.app.domain.model.VehicleCategoryRules
+import lk.motormila.app.domain.model.carsOnlyOrFirst
+
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -62,7 +66,7 @@ import lk.motormila.app.domain.repository.StatsRepository
 /**
  * Stats: network-first with a 15-min JSON cache (stats_cache) for summary;
  * district prices mirrored into district_stats for offline map rendering.
- * Every read below falls back to the public Vercel snapshots when the live
+ * Every read below falls back to the public R2 snapshots when the live
  * API throws (Neon outage) — see [withSnapshotFallback].
  */
 @Singleton
@@ -75,6 +79,7 @@ class StatsRepositoryImpl @Inject constructor(
 
     companion object {
         const val TTL_MS = 15 * 60 * 1000L
+        const val DISTRICT_ENRICH_BUDGET_MS = 6_000L
         const val SUMMARY_KEY = "stats_summary"
     }
 
@@ -137,9 +142,24 @@ class StatsRepositoryImpl @Inject constructor(
         )
         // Union with district-insight top-models (best-effort, capped to the top
         // 6 districts by count to avoid a request storm; failures keep base rows).
+        // Best-effort and time-boxed. Sequential calls (~4-5 s each on the HF
+        // backend) used to take ~27 s and blew Home's 20 s load budget, so Home
+        // showed "Offline — 0 cars listed" on every launch (QA 2026-10-21).
+        // Running them in parallel saturated the single-worker backend instead
+        // (every call timed out and starved other screens), so stay sequential
+        // and stop at a total budget; districts not reached keep base rows.
         val top = dtos.sortedByDescending { it.count }.take(6)
-        val insights = top.associate { dto ->
-            dto.district to runCatching { api.districtInsight(dto.district) }.getOrNull()
+        val insights = HashMap<String, lk.motormila.app.data.remote.dto.DistrictInsightDto?>()
+        withTimeoutOrNull(DISTRICT_ENRICH_BUDGET_MS) {
+            for (dto in top) {
+                insights[dto.district] = try {
+                    api.districtInsight(dto.district)
+                } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    null
+                }
+            }
         }
         dtos.map { dto ->
             val base = dto.toDomain()
@@ -170,7 +190,12 @@ class StatsRepositoryImpl @Inject constructor(
 
     override suspend fun priceDrops(days: Int, limit: Int): List<PriceDrop> = withContext(io) {
         withSnapshotFallback(
-            live = { api.getPriceDrops(days).items.take(limit).map { it.toDomain() } },
+            // Cars first (launch rule): ask the backend for car drops; older
+            // backends ignore the param and callers rank client-side.
+            live = {
+                api.getPriceDrops(days, lk.motormila.app.domain.model.VehicleCategory.DEFAULT.apiValue)
+                    .items.take(limit).map { it.toDomain() }
+            },
             snapshot = { snapshots.priceDrops().items.take(limit).map { it.toDomain() } },
         )
     }
@@ -197,11 +222,18 @@ class StatsRepositoryImpl @Inject constructor(
     override fun liveListings(limit: Int): Flow<List<Listing>> = flow {
         while (true) {
             val items = runCatching {
-                api.searchListings(sort = "newest", page = 1, size = limit.coerceIn(1, 50))
-                    .items.map { it.toDomain() }
+                // Cars first: the live strip is a first-impression surface.
+                api.searchListings(
+                    sort = "newest",
+                    vehicleCategory = lk.motormila.app.domain.model.VehicleCategory.DEFAULT.apiValue,
+                    page = 1,
+                    size = limit.coerceIn(1, 50),
+                ).items.map { it.toDomain() }
             }.getOrElse {
                 runCatching {
-                    snapshots.liveMarket().latestListings.take(limit.coerceIn(1, 50)).map { it.toDomain() }
+                    snapshots.liveMarket().latestListings.map { it.toDomain() }
+                        .carsOnlyOrFirst { VehicleCategoryRules.isCarLike(it) }
+                        .take(limit.coerceIn(1, 50))
                 }.getOrNull().orEmpty()
             }
             emit(items)

@@ -2,7 +2,22 @@
 
 package lk.motormila.app.ui.components
 
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.animateContentSize
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInRoot
+import lk.motormila.app.ui.theme.glassEdges
+import lk.motormila.app.ui.theme.mmPress
 import androidx.compose.animation.BoundsTransform
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.ui.res.stringResource
+import lk.motormila.app.ui.theme.MmColors
+import lk.motormila.app.ui.theme.MmHaptics
+import lk.motormila.app.ui.theme.MmMotion
+import lk.motormila.app.ui.theme.MmType
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -18,6 +33,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.automirrored.filled.CompareArrows
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -67,10 +86,11 @@ import lk.motormila.app.ui.theme.MotormilaSurfaceHigh
 import lk.motormila.app.ui.theme.fluidSpring
 
 /**
- * 28dp card, 16:10 Coil image, source badge, 48dp heart with burst scale,
- * mono price + delta chip, [DealBadge]/[DealRing], meta line.
- * Press scale 0.97. Hero image uses shared-element transitions when the
- * navigation graph provides [LocalSharedTransitionScope].
+ * Listing card (design v2): 4:3 photo with a deal verdict pill (same rules
+ * as web: asking vs typical asking, lease takeovers get no verdict, very
+ * cheap → amber "verify") and a glass save button; below, title, compact
+ * price in MILLIONS ("Rs 8.5 Mn") and one quiet meta line. Press-scale 0.97,
+ * save haptic, hero image shared-element → detail gallery.
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -82,16 +102,18 @@ fun ListingCard(
     modifier: Modifier = Modifier,
     showDeal: Boolean = true,
     sharedElementModifier: Modifier = Modifier,
+    compareSelected: Boolean? = null,
+    compareEnabled: Boolean = true,
+    onCompareToggle: (() -> Unit)? = null,
+    /** Called with the photo's bounds (in root) when the car is ADDED to compare — drives the fly-to-tray motion. */
+    onCompareFly: ((androidx.compose.ui.geometry.Rect) -> Unit)? = null,
 ) {
-    val reducedMotion = rememberReducedMotion()
-    val haptics = LocalHapticFeedback.current
-    val watchScale by animateFloatAsState(
-        targetValue = if (isWatched) 1.15f else 1f,
-        animationSpec = fluidSpring(),
-        label = "heart-burst",
-    )
-    val band = listing.dealBand()
-    val delta = listing.deltaVsMedianPct()
+    val c = MmColors.current
+    // Photo bounds for the fly-to-tray motion; a plain holder (no recomposition).
+    val photoBounds = remember { arrayOf(androidx.compose.ui.geometry.Rect.Zero) }
+    val t = MmType.current
+    val haptics = MmHaptics.current
+    val reduced = MmMotion.reduced
     val sharedScope = LocalSharedTransitionScope.current
     val animatedScope = LocalNavAnimatedVisibilityScope.current
     val heroShared = if (sharedScope != null && animatedScope != null) {
@@ -99,29 +121,28 @@ fun ListingCard(
             Modifier.sharedElement(
                 rememberSharedContentState(key = listingHeroKey(listing.id)),
                 animatedScope,
+                boundsTransform = motormilaSharedBoundsTransform(),
             )
         }
     } else {
         sharedElementModifier
     }
-    // Spec §3: price text morphs card → detail (sharedBounds — text changes
-    // size, never sharedElement on text), and the whole card container morphs
-    // into the detail price section.
     val priceShared = if (sharedScope != null && animatedScope != null) {
         with(sharedScope) {
             Modifier.sharedBounds(
                 rememberSharedContentState(key = listingPriceKey(listing.id)),
                 animatedScope,
                 boundsTransform = motormilaSharedBoundsTransform(),
+                resizeMode = PriceMorphResize,
             )
         }
     } else {
         Modifier
     }
-    val cardShared = if (sharedScope != null && animatedScope != null) {
+    val titleShared = if (sharedScope != null && animatedScope != null) {
         with(sharedScope) {
             Modifier.sharedBounds(
-                rememberSharedContentState(key = listingCardKey(listing.id)),
+                rememberSharedContentState(key = listingTitleKey(listing.id)),
                 animatedScope,
                 boundsTransform = motormilaSharedBoundsTransform(),
             )
@@ -129,118 +150,240 @@ fun ListingCard(
     } else {
         Modifier
     }
+    // Container transform (card -> whole Detail page). Detail carries the
+    // matching sharedBounds on its root only when opened from a card.
+    val cardShared = if (sharedScope != null && animatedScope != null) {
+        with(sharedScope) {
+            Modifier.sharedBounds(
+                rememberSharedContentState(key = listingCardKey(listing.id)),
+                animatedScope,
+                // Fade-through: the card's own content is scaled with the
+                // container (ScaleToBounds), so at full-page bounds it read ~2x
+                // (giant Compare pill / spec line). It leaves fast on open and
+                // only comes back once the page has mostly shrunk into it.
+                enter = androidx.compose.animation.fadeIn(
+                    androidx.compose.animation.core.tween(200, delayMillis = 140, easing = lk.motormila.app.ui.theme.MmMotion.Standard),
+                ),
+                exit = androidx.compose.animation.fadeOut(
+                    androidx.compose.animation.core.tween(90, easing = lk.motormila.app.ui.theme.MmMotion.Exit),
+                ),
+                boundsTransform = motormilaSharedBoundsTransform(),
+                clipInOverlayDuringTransition = OverlayClip(lk.motormila.app.ui.theme.MmShapes.lg),
+            )
+        }
+    } else {
+        Modifier
+    }
+    // The one price verdict from the row (same rules as the detail screen).
+    val verdict = remember(listing.id, listing.priceLkr, listing.marketMedianLkr, listing.title, listing.model) {
+        MmDealVerdict.from(
+            listing.rowVerdict(),
+            isLeaseTakeover = MmLeaseTakeover.detect(listing.title, listing.model),
+        )
+    }
+    val isPro = LocalIsPro.current
+    val priceText = MmPriceFormat.compact(listing.priceLkr, stringResource(R.string.mm_price_on_request))
 
-    MotormilaGlass(
-        onClick = onClick,
+    MmCard(
+        onClick = {
+            // Hand the row to Detail so its first frame is real content.
+            lk.motormila.app.ui.navigation.ListingPreviewCache.put(listing)
+            onClick()
+        },
+        contentPadding = PaddingValues(0.dp),
         modifier = modifier
             .fillMaxWidth()
             .then(cardShared)
-            .semantics { contentDescription = "${listing.displayName}, ${listing.formattedPrice()}" },
+            // Selected for compare: a brand ring on the whole card, so the state
+            // reads at a glance in the grid (iOS selection style).
+            .then(
+                if (compareSelected == true) Modifier.border(2.dp, c.brand, lk.motormila.app.ui.theme.MmShapes.lg) else Modifier,
+            )
+            .semantics(mergeDescendants = false) { contentDescription = "${listing.displayName}, $priceText" },
     ) {
-        Column {
-            Box {
-                ListingImage(
-                    model = listing.heroImageUrl,
-                    contentDescription = "Photo of ${listing.displayName}",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(16f / 10f)
-                        .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                        .then(heroShared),
-                )
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .background(
-                            Brush.verticalGradient(
-                                0f to Color.Transparent,
-                                0.55f to Color.Transparent,
-                                1f to Color(0xCC09090B),
-                            ),
-                        ),
-                )
-                if (!listing.source.isNullOrBlank()) {
-                    Text(
-                        text = listing.source.uppercase(),
-                        fontSize = 9.5.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White,
+        Box {
+            MmImage(
+                url = listing.heroImageUrl,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(4f / 3f)
+                    .then(
+                        if (onCompareFly != null) {
+                            Modifier.onGloballyPositioned { photoBounds[0] = it.boundsInRoot() }
+                        } else {
+                            Modifier
+                        },
+                    )
+                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                    .then(heroShared),
+            )
+            if (showDeal) {
+                val label = verdict.label()
+                if (label != null) {
+                    MmDealBadge(
+                        label = if (verdict.kind == MmDealVerdict.Kind.LEASE) stringResource(R.string.mm_lease_short) else label,
+                        tone = verdict.tone,
+                        onImage = true,
+                        // End inset keeps the pill clear of the 48dp save button
+                        // (Cal Sans Text sets ~15% wider than the old face).
                         modifier = Modifier
                             .align(Alignment.TopStart)
-                            .padding(8.dp)
-                            .clip(MotormilaRadius.pill)
-                            .background(Color(0xCC09090B))
-                            .border(1.dp, Color(0x44FFFFFF), MotormilaRadius.pill)
-                            .padding(horizontal = 7.dp, vertical = 3.dp),
+                            .padding(start = 10.dp, top = 10.dp, end = 52.dp),
                     )
-                }
-                IconButton(
-                    onClick = {
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onWatchToggle()
-                    },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .size(48.dp)
-                        .semantics {
-                            contentDescription = if (isWatched) "Remove from watchlist" else "Add to watchlist"
-                        },
-                ) {
-                    Icon(
-                        imageVector = if (isWatched) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                        contentDescription = null,
-                        tint = if (isWatched) MotormilaBad else Color.White,
-                        modifier = Modifier.graphicsLayer {
-                            val s = if (reducedMotion) 1f else watchScale
-                            scaleX = s
-                            scaleY = s
-                        },
+                } else if (!isPro && listing.dealBand() == DealBand.LOCKED && listing.priceLkr != null) {
+                    // Pro lock only for non-Pro users (free rows carry no score);
+                    // a Pro user's unrated ad simply has no badge.
+                    MmDealBadge(
+                        band = DealBand.LOCKED,
+                        onImage = true,
+                        // End inset keeps the pill clear of the 48dp save button
+                        // (Cal Sans Text sets ~15% wider than the old face).
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(start = 10.dp, top = 10.dp, end = 52.dp),
                     )
                 }
             }
-            Column(Modifier.padding(12.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = listing.displayName,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp,
-                        color = MotormilaOnSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
+            SaveButton(
+                saved = isWatched,
+                reduced = reduced,
+                onToggle = {
+                    if (isWatched) haptics.unsave() else haptics.save()
+                    onWatchToggle()
+                },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(4.dp),
+            )
+            if (compareSelected != null && onCompareToggle != null) {
+                CompareToggle(
+                    selected = compareSelected,
+                    enabled = compareEnabled || compareSelected,
+                    listingName = listing.displayName,
+                    onToggle = {
+                        if (!compareSelected) onCompareFly?.invoke(photoBounds[0])
+                        onCompareToggle()
+                    },
+                    modifier = Modifier.align(Alignment.BottomEnd),
+                )
+            }
+        }
+        Column(Modifier.padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 14.dp)) {
+            Text(
+                text = listing.displayName,
+                style = t.label.copy(fontSize = 15.sp, lineHeight = 20.sp),
+                color = c.textPrimary,
+                // At large text one line held ~6 chars ("Merced…"): allow two.
+                maxLines = if (androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f) 2 else 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.then(titleShared),
+            )
+            Spacer(Modifier.height(4.dp))
+            // Shrinks to fit instead of dropping "Mn" at large font scales.
+            MmFitText(
+                text = priceText,
+                style = t.priceM,
+                color = c.textPrimary,
+                modifier = Modifier.then(priceShared),
+                // A price never ellipsizes: at 200 % on a 360 dp two-column grid
+                // "Rs 1.85 Mn" needs ~0.45x (was floored at 0.55 -> "Rs 1.85 …").
+                minScale = 0.3f,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = metaLine(listing),
+                style = t.caption,
+                color = c.textSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/**
+ * Compare toggle that lives on the card photo's bottom-end corner (was a
+ * detached chip row floating between cards). Scrim pill like the save button;
+ * brand-filled with a check once the car is in the compare tray. 48dp touch
+ * target, label capped at 1.15x so it never wraps on the photo.
+ */
+@Composable
+private fun CompareToggle(
+    selected: Boolean,
+    enabled: Boolean,
+    listingName: String,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val c = MmColors.current
+    val label = stringResource(if (selected) R.string.compare_added else R.string.compare_add)
+    val cd = stringResource(if (selected) R.string.compare_remove_cd else R.string.compare_add_cd, listingName)
+    Box(
+        modifier
+            .heightIn(min = 48.dp)
+            .clip(RoundedCornerShape(percent = 50))
+            .clickable(
+                enabled = enabled,
+                role = androidx.compose.ui.semantics.Role.Checkbox,
+                onClickLabel = cd,
+                onClick = onToggle,
+            )
+            .padding(horizontal = 8.dp, vertical = 8.dp)
+            .semantics { contentDescription = cd },
+        contentAlignment = Alignment.Center,
+    ) {
+        lk.motormila.app.ui.theme.CappedFontScale(max = 1.15f) {
+            // Morphing glass pill: dark photo-glass "⇄ Compare" ↔ brand "✓ Added".
+            // Width springs between the two labels, the icon rotates in, and the
+            // pill wobbles when it turns on (signature compare-toggle motion).
+            val reduced = MmMotion.reduced
+            val fill by androidx.compose.animation.animateColorAsState(
+                if (selected) c.brand else lk.motormila.app.ui.theme.PhotoGlassTint,
+                if (reduced) androidx.compose.animation.core.snap() else androidx.compose.animation.core.tween(MmMotion.Fast),
+                label = "compare-fill",
+            )
+            Row(
+                Modifier
+                    .mmWobbleOnSelect(selected)
+                    .graphicsLayer { alpha = if (enabled) 1f else 0.5f }
+                    .clip(RoundedCornerShape(percent = 50))
+                    .background(fill)
+                    .glassEdges(RoundedCornerShape(percent = 50), c, sheen = !selected)
+                    .animateContentSize(if (reduced) androidx.compose.animation.core.snap() else androidx.compose.animation.core.spring(dampingRatio = 0.7f, stiffness = 500f))
+                    .padding(start = 8.dp, end = 10.dp, top = 5.dp, bottom = 5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                androidx.compose.animation.AnimatedContent(
+                    targetState = selected,
+                    transitionSpec = {
+                        if (reduced) {
+                            androidx.compose.animation.EnterTransition.None togetherWith androidx.compose.animation.ExitTransition.None
+                        } else {
+                            (androidx.compose.animation.scaleIn(androidx.compose.animation.core.spring(dampingRatio = 0.5f, stiffness = 600f), initialScale = 0.4f) +
+                                androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(120))) togetherWith
+                                (androidx.compose.animation.scaleOut(androidx.compose.animation.core.tween(120), targetScale = 0.4f) +
+                                    androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(90)))
+                        }
+                    },
+                    label = "compare-icon",
+                ) { on ->
+                    Icon(
+                        imageVector = if (on) Icons.Filled.Check else Icons.AutoMirrored.Filled.CompareArrows,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(14.dp),
                     )
-                    if (showDeal && band == DealBand.LOCKED) {
-                        DealBadge(band = band, score = null)
-                    } else if (showDeal) {
-                        DealRing(score = listing.dealScore, band = band)
-                    }
                 }
-                Spacer(Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = listing.formattedPrice(),
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = MotormilaOnSurface,
-                        modifier = Modifier.then(priceShared),
-                    )
-                    if (delta != null && band != DealBand.LOCKED) {
-                        Spacer(Modifier.size(8.dp))
-                        DeltaChip(deltaPct = delta)
-                    }
-                }
-                if (showDeal && band != DealBand.LOCKED) {
-                    Spacer(Modifier.height(6.dp))
-                    DealBadge(band = band, score = listing.dealScore)
-                }
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.width(4.dp))
                 Text(
-                    text = metaLine(listing),
+                    text = label,
+                    color = Color.White,
                     fontSize = 12.sp,
-                    color = MotormilaSecondaryText,
+                    lineHeight = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    softWrap = false,
                 )
             }
         }
@@ -248,10 +391,46 @@ fun ListingCard(
 }
 
 @Composable
+private fun SaveButton(
+    saved: Boolean,
+    reduced: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val c = MmColors.current
+    val label = stringResource(if (saved) R.string.glass_unsave else R.string.glass_save)
+    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    Box(
+        modifier
+            .size(48.dp)
+            .then(Modifier.mmPress(interaction, 0.86f))
+            .clip(RoundedCornerShape(percent = 50))
+            .clickable(
+                interactionSource = interaction,
+                indication = null,
+                role = androidx.compose.ui.semantics.Role.Button,
+                onClickLabel = label,
+                onClick = onToggle,
+            )
+            .semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            Modifier
+                .size(34.dp)
+                .clip(RoundedCornerShape(percent = 50))
+                .background(lk.motormila.app.ui.theme.PhotoGlassTint)
+                .glassEdges(RoundedCornerShape(percent = 50), c),
+        )
+        MmSaveBurstIcon(saved = saved, burstColor = c.brand)
+    }
+}
+
+@Composable
 private fun DeltaChip(deltaPct: Double) {
     val down = deltaPct < 0
     val container = if (down) MotormilaGoodContainer else Color(0x2EEF4444)
-    val content = if (down) Color(0xFF69F0AE) else Color(0xFFFCA5A5)
+    val content = if (down) lk.motormila.app.ui.theme.MotormilaGoodText else lk.motormila.app.ui.theme.MotormilaBadText
     val border = if (down) MotormilaGoodSoft else Color(0x55EF4444)
     Text(
         text = "${if (down) "▼" else "▲"} ${LkrFormat.deltaPct(deltaPct)}",
@@ -277,8 +456,24 @@ private fun metaLine(l: Listing): String {
     return parts.joinToString(" · ").ifBlank { "Details on listing page" }
 }
 
+/**
+ * Price card <-> Detail morph: scale by HEIGHT (= font size ratio), anchored at
+ * the start, so "Rs 1.4 Mn" grows into "Rs 1,400,000" at the right size while
+ * the two strings cross-fade. FillWidth (the default) blew the short card
+ * string up to the long Detail string's width.
+ */
+@OptIn(ExperimentalSharedTransitionApi::class)
+val PriceMorphResize: androidx.compose.animation.SharedTransitionScope.ResizeMode =
+    androidx.compose.animation.SharedTransitionScope.ResizeMode.ScaleToBounds(
+        ContentScale.FillHeight,
+        Alignment.CenterStart,
+    )
+
 /** Shared-transition key for the listing price text (card ↔ detail). Text morphs, so this is a [sharedBounds] key. */
 fun listingPriceKey(listingId: Int): String = "listing-price-$listingId"
+
+/** Shared-transition key for the listing title (card ↔ detail). */
+fun listingTitleKey(listingId: Int): String = "listing-title-$listingId"
 
 /** Shared-transition key for the listing card container (card ↔ detail price section). */
 fun listingCardKey(listingId: Int): String = "listing-card-$listingId"
@@ -292,9 +487,7 @@ fun listingCardKey(listingId: Int): String = "listing-card-$listingId"
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 fun motormilaSharedBoundsTransform(): BoundsTransform =
-    BoundsTransform { _, _ ->
-        spring(dampingRatio = 0.9f, stiffness = 700f)
-    }
+    BoundsTransform { _, _ -> MmMotion.containerSpring() }
 
 /**
  * Listing photo with P0 image polish: a shimmer-tone placeholder while
@@ -352,11 +545,11 @@ private fun ListingImageErrorTile(modifier: Modifier = Modifier) {
         modifier = modifier.background(Color(0xFF09090B)),
         contentAlignment = Alignment.Center,
     ) {
-        // motormila_logo is blue-on-Ink artwork — no tint, it already matches.
+        // Brand v2 mark (blue gradient vector) on Ink — no tint.
         Image(
-            painter = painterResource(id = R.drawable.motormila_logo),
+            painter = painterResource(id = R.drawable.motormila_mark),
             contentDescription = null,
-            modifier = Modifier.size(48.dp),
+            modifier = Modifier.size(width = 40.dp, height = 32.6.dp),
         )
     }
 }

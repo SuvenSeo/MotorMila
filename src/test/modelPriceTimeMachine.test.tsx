@@ -73,8 +73,8 @@ describe("ModelPriceTimeMachine", () => {
     );
 
     expect(screen.getByText(/Price Time Machine/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Calendar history/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /By manufacture year/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Calendar history/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /By manufacture year/i })).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByText(/Archive months: 1/i)).toBeInTheDocument();

@@ -19,9 +19,11 @@
 #      skipped by `wc -l` / `while read`),
 #   3. runs market analysis + dedup,
 #   4. publishes the merged DB + marker,
-#   5. exports the public snapshots from the merged SQLite DB and deploys
-#      them to Vercel — this is now the PERMANENT zero-egress catalog path:
+#   5. exports the public snapshots from the merged SQLite DB and uploads
+#      them to R2 — this is now the PERMANENT zero-egress catalog path:
 #      the live site's listings refresh from SQLite and never read Neon.
+#      A Cloudflare Pages rebuild (retry of the latest github:push
+#      production deployment) then pulls the fresh R2 snapshots at build time.
 name: Manus to Live (hosted merge and deploy)
 
 on:
@@ -170,18 +172,6 @@ jobs:
           print("merged DB history:", con.execute("SELECT COUNT(*) FROM vehicle_price_history").fetchone()[0])
           PY
 
-      - name: Reset duplicate flags before the strict dedup pass
-        # Clears is_duplicate/duplicate_of left by the old loose matcher; the
-        # next step re-flags only strict matches (same photo hash, or same
-        # district + mileage within 2% + price within 2%). Same run condition
-        # as the export step so a forced publish-full-catalog redeploy heals.
-        if: steps.discover.outputs.count != '0' || github.event.inputs.publish-full-catalog == 'true'
-        env:
-          COLD_DATABASE_URL: sqlite:///motormila.db
-          MOTORMILA_LOCAL_DB: motormila.db
-          ALLOW_SQLITE_FALLBACK: "true"
-        run: python scripts/ops/repair_duplicate_flags.py --apply
-
       - name: Run market analysis + dedup
         if: steps.discover.outputs.count != '0'
         env:
@@ -190,13 +180,17 @@ jobs:
           RUN_MARKET_ANALYSIS: "true"
           RUN_MARKET_SIGNALS: "true"
           RUN_DEAL_SCORE_REFRESH: "true"
-          # Dedup re-enabled with the strict matcher (app/utils/deduplication.py):
-          # a pair needs the same photo hash, or same district + mileage and
-          # price within 2%. The loose matcher that flagged >50% of the
-          # catalog (Sept 2026) is gone. Flags are reset in the previous step,
-          # so this is a full in-memory pass over the local SQLite DB.
-          RUN_DEDUP: "true"
-          DEDUP_FULL_PASS: "true"
+          # Dedup marking DISABLED (2026-09-17): the make/model/year/price±3%
+          # matcher was flagging >50% of the catalog as cross-source duplicates
+          # (incl. distinct cars in different districts), collapsing public
+          # live counts 207k → 106k. Keep off until the matcher requires
+          # district + seller/photo evidence. The repair step below clears any
+          # residual flags before every export so the catalog stays whole.
+          RUN_DEDUP: "false"
+          # Incremental (48h window) dedup — a full sweep re-reads 240k rows
+          # and adds ~40 min to every merge. Full passes run on-demand via
+          # heavy-maintenance.yml against SQLite (zero egress cost).
+          DEDUP_FULL_PASS: "false"
           RUN_STATS_CACHE_REFRESH: "true"
           RUN_LISTING_LIFECYCLE: "true"
           RUN_OUTLIER_DETECTION: "true"
@@ -207,20 +201,24 @@ jobs:
           RUN_IMAGE_PHASH: "false"
         run: python run_sync.py
 
-      - name: Export and deploy SQLite snapshots (zero-egress catalog refresh)
+      - name: Repair duplicate flags (keep catalog whole)
+        # Clears is_duplicate/duplicate_of set by earlier dedup passes so the
+        # export counts every row. Same run condition as the export step so a
+        # forced publish-full-catalog redeploy also heals.
+        if: steps.discover.outputs.count != '0' || github.event.inputs.publish-full-catalog == 'true'
+        env:
+          COLD_DATABASE_URL: sqlite:///motormila.db
+          MOTORMILA_LOCAL_DB: motormila.db
+          ALLOW_SQLITE_FALLBACK: "true"
+        run: python scripts/ops/repair_duplicate_flags.py --apply
+
+      - name: Export SQLite snapshots (zero-egress catalog refresh)
         # Permanent path: whenever new dump data was merged, refresh the live
         # catalog from the merged SQLite DB (zero Neon reads) and deploy.
         # Manual runs with publish-full-catalog=true force a deploy even when
         # no new dumps landed (e.g. redeploying after a bad snapshot push).
         if: steps.discover.outputs.count != '0' || github.event.inputs.publish-full-catalog == 'true'
         working-directory: ${{ github.workspace }}
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          SNAPSHOT_SOURCE_DIR: public/snapshots/latest
         run: |
           set -euo pipefail
           echo "Full catalog export from merged SQLite (zero Neon egress)"
@@ -254,18 +252,6 @@ jobs:
           gzip -f -c backend/motormila.db > public/snapshots/latest/merged-motormila.db.gz
           cp public/snapshots/latest/merged-motormila.db.gz public/snapshots/latest/merged-autolens.db.gz  # legacy name
           ls -lh public/snapshots/latest/merged-motormila.db.gz
-          # Sideload APK + release manifest for /app/* (private repo: the
-          # release asset can only be fetched with a token, and the binary is
-          # gitignored, so it must ride the CLI deploy).
-          bash scripts/fetch-apk-for-deploy.sh
-          bash scripts/deploy-snapshots-to-prod.sh
-          # Cloudflare Pages — permanent Vercel alternative (motormila.pages.dev).
-          # Skipped if the Cloudflare secrets are not configured.
-          if [[ -n "${CLOUDFLARE_API_TOKEN:-}" && -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]]; then
-            bash scripts/deploy-snapshots-to-cloudflare.sh
-          else
-            echo "NOTICE: CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID not set — skipping Cloudflare deploy" >&2
-          fi
 
       # Keep the R2 snapshot bucket fresh: the Cloudflare Pages build pulls
       # public/snapshots/latest from R2 at build time (scripts/sync-snapshots-from-r2.mjs)
@@ -291,8 +277,15 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: python backend/upload_snapshots_r2.py
 
+      - name: Trigger Cloudflare Pages rebuild (retry latest github:push production deployment)
+        if: steps.discover.outputs.count != '0' || github.event.inputs.publish-full-catalog == 'true'
+        working-directory: ${{ github.workspace }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 scripts/trigger-pages-rebuild.py
       # Always advance the merge marker after a successful merge so a skipped
-      # Vercel deploy (Neon is healthy) does not re-merge the same dumps.
+      # A skipped deploy does not re-merge the same dumps.
       # Also persists the repaired DB on forced publish-full-catalog runs so
       # the healed flags survive (the export alone would not save them back).
       - name: Publish merged DB back to release

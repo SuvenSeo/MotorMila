@@ -231,19 +231,13 @@ describe("frontend↔backend route contract", () => {
     expect(matchesBackendRoute(firstPathname(fetchMock))).toBe(true);
   });
 
-  it("pro + chat + feedback + calculator helpers hit OpenAPI routes", async () => {
+  it("pro + feedback + calculator helpers hit OpenAPI routes", async () => {
     const api = await import("@/services/api");
 
     let fetchMock = stubFetch([]);
     await api.getProArbitrageGaps("Toyota", "Vitz", 5);
     expect(firstPathname(fetchMock)).toBe("/api/v1/pro/arbitrage-gaps");
     expect(matchesBackendRoute(firstPathname(fetchMock))).toBe(true);
-
-    fetchMock = stubFetch({ response: "ok" });
-    await api.sendChatMessage("hello", []);
-    expect(firstPathname(fetchMock)).toBe("/api/v1/chat");
-    expect(matchesBackendRoute(firstPathname(fetchMock))).toBe(true);
-    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ method: "POST" });
 
     fetchMock = stubFetch({ id: 1, category: "bug", status: "new", created_at: "2026-05-21T10:00:00Z" });
     await api.sendFeedback({ category: "bug", message: "contract probe" });
@@ -284,7 +278,6 @@ describe("frontend↔backend route contract", () => {
       "/api/v1/listings/price-drops",
       "/api/v1/listings/42/price-history",
       "/api/v1/pro/arbitrage-gaps",
-      "/api/v1/chat",
       "/api/v1/feedback",
       "/api/v1/calculators/landed-cost",
     ];

@@ -67,11 +67,34 @@ describe("predictFmvOffline", () => {
   });
 
   it("falls back to the stored cohort median with no comps", () => {
-    const subject = mk({ id: 9999, make: "Unobtanium", model: "Zzz", market_median_lkr: 5000000 });
+    const subject = mk({ id: 9999, make: "Unobtanium", model: "Zzz", price_lkr: 5_100_000, market_median_lkr: 5000000 });
     const res = predictFmvOffline([subject], subject);
     expect(res.method).toBe("cohort_median");
-    expect(res.fmv_lkr).toBe(5000000);
+    // Uncorroborated: kept as the raw estimate, never shown as the FMV.
+    expect(res.estimate_lkr).toBe(5000000);
+    expect(res.fmv_lkr).toBeNull();
     expect(res.confidence).toBe("low");
+    expect(res.verdict?.status).toBe("withheld");
+  });
+
+  it("uses the corroborated stored median as the FMV (card and detail share one number)", () => {
+    const catalog = compCatalog();
+    const subject = mk({ id: 9998, price_lkr: 8_000_000, market_median_lkr: 8_500_000 });
+    const res = predictFmvOffline([...catalog, subject], subject);
+    expect(res.method).toBe("cohort_median");
+    expect(res.corroborated_by_comps).toBe(true);
+    expect(res.fmv_lkr).toBe(8_500_000);
+    expect(res.band).toBe("below");
+  });
+
+  it("keeps comps in the same vehicle category and nearest years", () => {
+    const bikes = Array.from({ length: 10 }, (_, i) => mk({ make: "Honda", model: "Hunk", vehicle_category: "motorbikes", year: 2018, price_lkr: 700_000 + i * 10_000, mileage_km: null }));
+    const cars = Array.from({ length: 10 }, () => mk({ make: "Honda", model: "Hunk", vehicle_category: "cars", year: 2018, price_lkr: 7_000_000, mileage_km: null }));
+    const subject = mk({ id: 9997, make: "Honda", model: "Hunk", vehicle_category: "motorbikes", year: 2018, price_lkr: 735_000, mileage_km: null, market_median_lkr: undefined });
+    const res = predictFmvOffline([...bikes, ...cars, subject], subject);
+    expect(res.sample_size).toBe(10);
+    expect(res.fmv_lkr as number).toBeGreaterThan(600_000);
+    expect(res.fmv_lkr as number).toBeLessThan(900_000);
   });
 
   it("reports insufficient_data with no comps and no stored median", () => {

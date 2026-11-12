@@ -23,7 +23,7 @@ import { mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const SITE_ORIGIN = "https://motormila.vercel.app";
+const SITE_ORIGIN = "https://motormila.pages.dev";
 const API_BASE =
   process.env.SEO_API_BASE?.replace(/\/+$/, "") ||
   "https://seo292-vehicle-platform-backend.hf.space/api/v1";

@@ -27,6 +27,7 @@ import {
   calculateOwnershipBundle as apiCalculateOwnershipBundle,
   checkImportEligibility as apiCheckImportEligibility,
 } from "@/services/api";
+import { getStoredAuthToken } from "@/lib/authToken";
 
 /** Bump when the backend schedules change and this file is re-synced. */
 export const OFFLINE_ENGINE_VERSION = "2026-09-21";
@@ -470,6 +471,11 @@ export interface OfflineFlag {
 }
 
 async function tryApi<T>(fn: () => Promise<T>): Promise<T | null> {
+  // The calculator endpoints are POSTs, and the API refuses every write that
+  // lacks an Authorization Bearer token (403). Signed-out visitors would only
+  // collect a console error and a wasted round trip before the on-device
+  // fallback, so go straight to it.
+  if (!getStoredAuthToken()) return null;
   try {
     return await fn();
   } catch {

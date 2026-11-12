@@ -195,7 +195,20 @@ describe("Alerts page", () => {
     await renderAlertsReady();
 
     expect(screen.getByRole("alert")).toBeInTheDocument();
-    expect(screen.getByText("Network error")).toBeInTheDocument();
+    expect(screen.getByText(/couldn't reach Motormila/i)).toBeInTheDocument();
+  });
+
+  it("never shows raw API error text", async () => {
+    mockUseServerAlerts.mockReturnValue({
+      ...BASE_HOOK_RESULT,
+      error: "API error 401: Authentication required.",
+      alerts: [],
+    });
+
+    await renderAlertsReady();
+
+    expect(screen.queryByText(/API error 401/)).not.toBeInTheDocument();
+    expect(screen.getByText(/session has expired/i)).toBeInTheDocument();
   });
 
   it("opens the create alert form when 'New alert' is clicked", async () => {

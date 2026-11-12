@@ -129,8 +129,6 @@ jobs:
           ALLOW_SQLITE_FALLBACK: "false"
           SCRAPE_PROFILE: "all"
           SCRAPE_ENABLED_SOURCES: ${{ matrix.source }}
-          SOURCES_ENABLED: ${{ vars.SOURCES_ENABLED }}
-          BOT_CONTACT: ${{ vars.BOT_CONTACT }}
           RUN_SCRAPERS: "true"
           RUN_MARKET_ANALYSIS: "false"
           RUN_MARKET_SIGNALS: "false"
@@ -312,20 +310,12 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: python upload_snapshots_r2.py
 
-      - name: Set up Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: "20"
-
-      - name: Deploy snapshots to Vercel production
-        working-directory: .
+      - name: Trigger Cloudflare Pages rebuild (retry latest github:push production deployment)
+        working-directory: ${{ github.workspace }}
         env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          SNAPSHOT_SOURCE_DIR: backend/snapshots/latest
-        run: bash scripts/deploy-snapshots-to-prod.sh
-
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 scripts/trigger-pages-rebuild.py
       - name: Upload manifest artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

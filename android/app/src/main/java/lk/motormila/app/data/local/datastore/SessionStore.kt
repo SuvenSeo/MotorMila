@@ -62,9 +62,29 @@ class SessionStore @Inject constructor(
      * Synchronously forget the in-memory token after a 401 so no further
      * request can resurrect it while the async [clear] is still running.
      */
-    fun invalidateCachedToken() {
+    fun invalidateCachedToken(rejectedToken: String? = null) {
+        // A late 401 for an old token must not drop a newer session's token.
+        if (rejectedToken != null && cachedToken != null && cachedToken != rejectedToken) return
         cachedToken = null
         hydrated = true
+    }
+
+    /**
+     * Clear the persisted session after the server rejected [rejectedToken]
+     * (HTTP 401). Returns true when a session was cleared. A null
+     * [rejectedToken] clears unconditionally; a token that no longer matches
+     * the stored one (user re-logged in meanwhile) is ignored.
+     */
+    suspend fun clearIfRejected(rejectedToken: String?): Boolean {
+        val stored = dataStore.data.first()[Keys.JWT]
+        if (rejectedToken != null && stored != null && stored != rejectedToken) return false
+        if (stored == null && rejectedToken != null) {
+            // Nothing persisted (already signed out); just make sure memory agrees.
+            invalidateCachedToken(rejectedToken)
+            return false
+        }
+        clear()
+        return true
     }
 
     fun observe(): Flow<UserSession?> = dataStore.data.map { prefs ->

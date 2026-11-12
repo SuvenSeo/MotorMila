@@ -1,5 +1,6 @@
 package lk.motormila.app.ui.bestpicks
 
+import lk.motormila.app.ui.home.carsFirst
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
@@ -164,7 +165,7 @@ class BestPicksViewModel @Inject constructor(
 
     private suspend fun loadDrops(markIdle: Boolean = false) {
         val limit = if (_state.value.unlocked) PRO_PRICE_DROPS_LIMIT else FREE_PRICE_DROPS_LIMIT
-        runCatching { getPriceDrops(days = 7, limit = limit) }
+        runCatching { getPriceDrops(days = 7, limit = limit).carsFirst() }
             .onSuccess { drops ->
                 val picks = drops.map { it.listing }
                     .distinctBy { it.id }

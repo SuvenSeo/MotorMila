@@ -12,13 +12,13 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 
 /** Translucent fill so content can peek through chrome (nav, sheets, trays). */
-val MotormilaGlassFill = Color(0x990F0F12)
+val MotormilaGlassFill: Color get() = if (LegacyPalette.isDark) Color(0x990F0F12) else Color(0xB8FFFFFF)
 
 /** Denser glass for FABs, cards, and floating trays. */
-val MotormilaGlassFillStrong = Color(0xCC0F0F12)
+val MotormilaGlassFillStrong: Color get() = if (LegacyPalette.isDark) Color(0xCC0F0F12) else Color(0xEBFFFFFF)
 
 /** Top-edge specular highlight (iOS liquid-glass sheen). */
-val MotormilaGlassHighlight = Color(0x28FFFFFF)
+val MotormilaGlassHighlight: Color get() = if (LegacyPalette.isDark) Color(0x28FFFFFF) else Color(0x0A000000)
 
 /** Pill used by buttons, chips, search field, and badges. */
 val MotormilaPill = MotormilaRadius.pill

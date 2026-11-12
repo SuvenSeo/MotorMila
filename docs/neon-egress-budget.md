@@ -16,7 +16,7 @@
 > write-up: §7 below.
 >
 > **Permanent path:** the live catalog is the `merged-db` GitHub SQLite
-> release (~240k listings). Public browsing reads Vercel/R2 snapshots
+> release (~240k listings). Public browsing reads R2 snapshots
 > exported from that file. Hugging Face fails over to the same file when
 > Neon is unreachable. Manus scrapes keep writing SQLite dumps 3×/day.
 > Neon-backed GitHub scrapes (`daily-scrape.yml`, midday, residential)
@@ -51,7 +51,7 @@ public site, Neon only as a write archive while transfer budget remains.
 | Layer | Where | Egress impact |
 |-------|-------|---------------|
 | **Public browsing** (SPA) | Reads R2 / same-origin JSON snapshots (`VITE_SNAPSHOT_ONLY=true`) | **Zero DB reads** |
-| **Public catalog refresh** | `manus-to-live.yml` exports the **merged SQLite DB** → R2/Vercel | **Zero Neon reads** |
+| **Public catalog refresh** | `manus-to-live.yml` exports the **merged SQLite DB** → R2 | **Zero Neon reads** |
 | **Scrapers** | GitHub Actions `run_sync.py` → writes to Neon | Writes = **ingress, free** |
 | **Daily maintenance** | SQL-side only (lifecycle, stats cache) | Negligible |
 | **Heavy passes (dedup, outliers, aggregates, deal scores)** | Weekly, **egress-gated** (`heavy-maintenance.yml`) | ~60-80 MB per gated run |
@@ -94,7 +94,8 @@ over mid-month. Three structural changes removed the cliff:
 
 1. **The live catalog never reads Neon.** Manus scrapes → `manus-scrape-*`
    releases → `manus-to-live.yml` merges them into the durable SQLite
-   `merged-db` release → exports snapshots from SQLite → deploys to Vercel.
+   `merged-db` release → exports snapshots from SQLite → uploads them to R2,
+   then triggers a Cloudflare Pages rebuild.
    Neon is a write-only archive for listings; the merged SQLite DB (241k
    listings, ~70 MB gz) holds MORE than Neon and doubles as the backup.
 2. **Python-side full-table passes run weekly behind an egress gate.** Dedup,
@@ -113,13 +114,13 @@ over mid-month. Three structural changes removed the cliff:
 | `HOT_DATABASE_URL` | Neon **pooled** DSN (see §3) |
 | `NEON_API_KEY`, `NEON_PROJECT_ID` | Optional — enables the live egress API check |
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | Snapshot CDN upload |
-| `SNAPSHOT_EXPORT_SECRET` | Same value as Vercel env `SNAPSHOT_EXPORT_SECRET` |
-| `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | Auto redeploy |
+| `SNAPSHOT_EXPORT_SECRET` | **RETIRED 2026-11-12** — the export API (`api/internal-snapshot-export.js`) was deleted with the Cloudflare-only move; snapshots refresh via R2 |
+| `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | Pages rebuild (retry latest github:push production deployment) |
 | `SLACK_WEBHOOK_URL` | Egress watchdog + failure alerts |
 
 Delete `SUPABASE_DB_URL` once the switch is verified.
 
-### Vercel env (frontend)
+### Cloudflare Pages env (frontend)
 
 ```text
 VITE_SNAPSHOT_BASE_URL=https://<public-r2-domain>/latest
@@ -128,7 +129,8 @@ VITE_SNAPSHOT_ONLY=true
 
 With `VITE_SNAPSHOT_ONLY=true`, the SPA **never** falls back to the live API
 for public reads — missing snapshots render empty instead of hitting Postgres.
-`scripts/apply-snapshot-vercel-env.sh` applies this idempotently.
+Set these in the Cloudflare Pages dashboard (Pages → motormila → Settings →
+Environment variables); a push to `main` rebuilds with them baked in.
 
 ### HF Space env (backend)
 
@@ -195,7 +197,7 @@ is an optional archive; public reads and scrapes must not require it.
 
 ## 8. The permanent-fix checklist (what actually moved the needle)
 
-1. ✅ Public browsing reads R2 / Vercel snapshots — zero DB reads when the
+1. ✅ Public browsing reads R2 snapshots — zero DB reads when the
    catalog JSON is present (`manus-to-live.yml` + `restore-catalog-after-main.yml`).
 2. ✅ Catalog refresh merges SQLite dumps — zero Neon reads (`manus-to-live.yml`).
 3. ✅ Heavy passes weekly + egress-gated at 50% (`heavy-maintenance.yml`).
@@ -208,7 +210,7 @@ is an optional archive; public reads and scrapes must not require it.
 7. ✅ Watchdog (`neon-egress-watch.yml`) warns at 70% and gates at 50%.
 8. ✅ Hugging Face API fails over to `merged-db` SQLite when Neon is unreachable
    (`db/sqlite_failover.py`) so `/listings` does not 500 for a month.
-9. ✅ Git → Vercel deploys restore the gitignored listing catalog from SQLite
+9. ✅ Pages rebuilds restore the gitignored listing catalog from SQLite
    (`restore-catalog-after-main.yml`) so a UI push cannot wipe the public grid.
 10. ✅ Neon-backed scrapes skip when connections are blocked (`probe_neon.py`
     in `daily-scrape.yml`, `midday-top-sources-scrape.yml`,
@@ -219,7 +221,7 @@ is an optional archive; public reads and scrapes must not require it.
 12. ⬜ Optional: `CREATE EXTENSION IF NOT EXISTS pg_stat_statements;` once,
     so the top-consumer report works from day one.
 13. ⬜ Optional: point `VITE_SNAPSHOT_BASE_URL` at a public R2 domain and set
-    `VITE_SNAPSHOT_ONLY=true` so even a missed Vercel snapshot deploy cannot
+    `VITE_SNAPSHOT_ONLY=true` so even a missed Pages snapshot rebuild cannot
     fall through to Postgres.
 
 ---
@@ -277,7 +279,7 @@ postgresql://<user>:<password>@<endpoint>-pooler.<region>.aws.neon.tech/neondb?s
 
 1. Run Actions → **Ikman Deep Backfill** with `max_pages=20` (small first).
 2. Confirm the job's "Count ikman listings before/after" increments.
-3. Hard-refresh https://motormila.vercel.app — listings/stats must come from
+3. Hard-refresh https://motormila.pages.dev — listings/stats must come from
    R2 (`/snapshots/latest/*`), never `/api/v1`.
 
 ### b) Catch up on the inactive days (the big one)

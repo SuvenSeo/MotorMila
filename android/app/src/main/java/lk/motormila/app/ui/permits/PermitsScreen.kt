@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.permits
 
+import lk.motormila.app.ui.theme.tabular
+import androidx.compose.material3.LocalTextStyle
 import lk.motormila.app.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
@@ -32,7 +34,6 @@ import lk.motormila.app.domain.model.Permit
 import lk.motormila.app.ui.components.MotormilaEyebrow
 import lk.motormila.app.ui.components.MotormilaGhostButton
 import lk.motormila.app.ui.components.MotormilaMetricTile
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.theme.MotormilaOnSurface
 import lk.motormila.app.ui.theme.MotormilaPrimaryBright
@@ -47,7 +48,7 @@ fun PermitsScreen(
     viewModel: PermitsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    MotormilaPage(title = "Permit market", onBack = onBack) {
+    lk.motormila.app.ui.common.MmScreen(title = "Permit market", onBack = onBack) {
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
             onRefresh = { viewModel.onEvent(PermitsUiEvent.Refresh) },
@@ -166,8 +167,8 @@ private fun PermitRowCard(permit: Permit, delayMillis: Int) {
                 )
             }
             Text(
-                LkrFormat.full(permit.marketPriceLkr),
-                fontFamily = FontFamily.Monospace,
+                lk.motormila.app.ui.common.mn(permit.marketPriceLkr),
+                style = LocalTextStyle.current.tabular(),
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
                 color = MotormilaPrimaryBright,

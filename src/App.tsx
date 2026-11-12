@@ -1,34 +1,34 @@
-import { MotionConfig } from "framer-motion";
-import { Suspense, useState, useEffect } from "react";
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { useAppPreferences } from "@/lib/appPreferences";
+import { LazyMotion, MotionConfig, domAnimation } from "motion/react";
+import { Suspense, useEffect } from "react";
+import { Navigate, Route, Routes, unstable_HistoryRouter as HistoryRouter } from "react-router-dom";
+import { createViewTransitionHistory } from "@/lib/viewTransition";
 import { ScrollRestoration } from "@/components/ScrollRestoration";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { RouteFallback } from "@/components/RouteFallback";
 import { RouteTransition } from "@/components/RouteTransition";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
-import { prefetchAppShellRoutes } from "@/lib/routePrefetch";
+import { prefetchAppShellRoutes, registerRouteLoaders } from "@/lib/routePrefetch";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Navbar } from "@/components/Navbar";
-import { CommandPalette } from "@/components/CommandPalette";
+import { CommandPaletteHost } from "@/components/CommandPaletteHost";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { AppFooter } from "@/components/AppFooter";
 import { ScrollProgressBar } from "@/components/ScrollProgressBar";
 import { RouteMeta } from "@/components/RouteMeta";
-import { SettingsFloatingIcon } from "@/components/SettingsFloatingIcon";
 import { MobileAppPromo } from "@/components/MobileAppPromo";
 import { AuthProvider, useAuth } from "@/lib/authContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { RequireAuth } from "@/components/RequireAuth";
 import { QUERY_STALE } from "@/lib/queryPolicy";
+import { useDockTypingFlag } from "@/lib/dock";
 
-const AIChatWidget = lazyWithRetry(() => import("@/components/AIChatWidget").then((m) => ({ default: m.AIChatWidget })));
 const FeedbackWidget = lazyWithRetry(() =>
   import("@/components/FeedbackWidget").then((m) => ({ default: m.FeedbackWidget }))
 );
-import { CompareTray } from "@/components/CompareTray";
-import { FontStudioBar } from "@/components/FontStudioBar";
+import { CompareTray, CompareProvider } from "@/components/compare/CompareTray";
 // Trial banner lives in Pricing to avoid a new chunk; lazy keeps it out of first paint.
 const TrialCountdownBanner = lazyWithRetry(() =>
   import("./pages/Pricing").then((m) => ({ default: m.TrialCountdownBanner }))
@@ -50,9 +50,14 @@ const BestPicks = lazyWithRetry(() => import("./pages/BestPicks"));
 const SellYourCar = lazyWithRetry(() => import("./pages/SellYourCar"));
 const SignIn = lazyWithRetry(() => import("./pages/SignIn"));
 const SignUp = lazyWithRetry(() => import("./pages/SignUp"));
+const VerifyEmail = lazyWithRetry(() => import("./pages/VerifyEmail"));
+const ForgotPassword = lazyWithRetry(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazyWithRetry(() => import("./pages/ResetPassword"));
 const ProDashboard = lazyWithRetry(() => import("./pages/ProDashboard"));
 const ProPreview = lazyWithRetry(() => import("./pages/ProPreview"));
 const AdminConsole = lazyWithRetry(() => import("./pages/AdminConsole"));
+const AdminSection = lazyWithRetry(() => import("./pages/admin/AdminSection").then((m) => ({ default: m.AdminSection })));
+const AdminIndex = lazyWithRetry(() => import("./pages/admin/AdminSection").then((m) => ({ default: m.AdminIndex })));
 const MobileApp = lazyWithRetry(() => import("./pages/MobileApp"));
 const MakeModelHub = lazyWithRetry(() => import("./pages/MakeModelHub"));
 const MakeHub = lazyWithRetry(() => import("./pages/MakeHub"));
@@ -78,7 +83,43 @@ const RemovalRequest = lazyWithRetry(() => import("./pages/RemovalRequest"));
 const AccountDeletion = lazyWithRetry(() => import("./pages/AccountDeletion"));
 const CookieNotice = lazyWithRetry(() => import("./pages/CookieNotice"));
 const CheckoutReturn = lazyWithRetry(() => import("./pages/CheckoutReturn"));
+// ui/features: methodology explainer
+const HowWePrice = lazyWithRetry(() => import("./pages/HowWePrice"));
 const BotInfo = lazyWithRetry(() => import("./pages/BotInfo"));
+
+// Hover / focus / idle prefetch targets (lib/routePrefetch.ts imports no pages,
+// so the map lives here beside the lazy routes; same specifiers → same chunks).
+registerRouteLoaders({
+  "/": () => import("./pages/Dashboard"),
+  "/trends": () => import("./pages/Trends"),
+  "/price-index": () => import("./pages/Trends"), // redirects to /trends
+  "/estimate": () => import("./pages/Estimate"),
+  "/calculator": () => import("./pages/Calculator"),
+  "/ev-hub": () => import("./pages/EVHub"),
+  "/ev-chargers": () => import("./pages/EVChargers"),
+  "/best-picks": () => import("./pages/BestPicks"),
+  "/official-pulse": () => import("./pages/OfficialPulse"),
+  "/docs": () => import("./pages/Docs"),
+  "/pricing": () => import("./pages/Pricing"),
+  "/compare": () => import("./pages/Compare"),
+  "/permits": () => import("./pages/Permits"),
+  "/alerts": () => import("./pages/Alerts"),
+  "/settings": () => import("./pages/Settings"),
+  "/dealer": () => import("./pages/DealerDashboard"),
+  "/mobile-app": () => import("./pages/MobileApp"),
+  "/pro": () => import("./pages/ProDashboard"),
+  "/pro-preview": () => import("./pages/ProPreview"),
+  "/sign-in": () => import("./pages/SignIn"),
+  "/sign-up": () => import("./pages/SignUp"),
+  "/privacy": () => import("./pages/PrivacyPolicy"),
+  "/terms": () => import("./pages/TermsOfService"),
+  "listing-detail": () => import("./pages/ListingDetail"),
+  "pulse-guide": () => import("./pages/OfficialPulseGuide"),
+  "pulse-detail": () => import("./pages/OfficialPulseDetail"),
+  "district-hub": () => import("./pages/DistrictHub"),
+  "make-hub": () => import("./pages/MakeHub"),
+  "make-model-hub": () => import("./pages/MakeModelHub"),
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -93,23 +134,26 @@ const queryClient = new QueryClient({
   },
 });
 
+/** Browser history whose route swaps run through a View Transition. */
+const appHistory = createViewTransitionHistory();
+
 const MinimalLoader = () => <RouteFallback />;
 
 /**
- * Internal hero A/B lab. It is a design tool, not a product surface, so it
- * stays reachable in dev (or with `?heroLab=1`) and redirects home otherwise.
+ * Internal hero A/B lab. It is a design tool, not a product surface: dev
+ * builds only. Production has no route for it (falls through to 404) and no
+ * `?heroLab=1` escape hatch.
  */
 function HeroLabGate() {
-  const { search } = useLocation();
-  const enabled = import.meta.env.DEV || new URLSearchParams(search).get("heroLab") === "1";
-  return enabled ? <HeroLab /> : <Navigate to="/" replace />;
+  return import.meta.env.DEV ? <HeroLab /> : <Navigate to="/" replace />;
 }
 
 function TrialBannerSlot() {  const { user } = useAuth();
   // Defer the Pricing chunk until the banner can actually render: anonymous
   // and paid users always render null, so skip the dynamic import entirely.
   if (!user) return null;
-  if (user.subscriptionStatus !== "trialing" && user.plan !== "free") return null;
+  // Only an actual trial gets a site-wide line; free users aren't nagged on every page.
+  if (user.subscriptionStatus !== "trialing") return null;
   return (
     <div className="mx-auto w-full max-w-[1560px] px-5 pt-3 sm:px-6">
       <Suspense fallback={null}>
@@ -119,38 +163,26 @@ function TrialBannerSlot() {  const { user } = useAuth();
   );
 }
 
-/** Scrolls to the URL hash after navigation (e.g. Market -> /#market from another page). */
-function HashScroller() {
-  const { hash } = useLocation();
-  useEffect(() => {
-    if (!hash) return;
-    const id = hash.replace("#", "");
-    // Wait for the lazy route to mount before looking for the anchor.
-    const timer = window.setTimeout(() => {
-      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 150);
-    return () => window.clearTimeout(timer);
-  }, [hash]);
-  return null;
+function SkipLink() {
+  const { t } = useAppPreferences();
+  return <a href="#main-content" className="skip-to-content">{t("shell.skipToContent", "Skip to main content")}</a>;
 }
 
-function AppShell({ chatMounted }: { chatMounted: boolean }) {
+function AppShell() {
+  // Floating buttons step aside while a text field is focused (mobile keyboard).
+  useDockTypingFlag();
   return (
-    <div className="min-h-screen app-shell selection:bg-primary/20 bg-background">
-      <a href="#main-content" className="skip-to-content">Skip to main content</a>
-      <HashScroller />
+    // app-shell-dock-pad: content and footer always clear the bottom dock
+    // (mobile nav + compare tray). See src/styles/layers.css.
+    <div className="min-h-screen app-shell app-shell-dock-pad selection:bg-primary/20 bg-background">
+      <SkipLink />
       <Navbar />
-      <CommandPalette />
-      <SettingsFloatingIcon />
+      <CommandPaletteHost />
+      {/* Feedback is a dialog opened from the menu / footer — no floating button. */}
       <Suspense fallback={null}>
         <FeedbackWidget />
       </Suspense>
-      {chatMounted && (
-        <Suspense fallback={null}>
-          <AIChatWidget />
-        </Suspense>
-      )}
-      <main id="main-content" className="relative z-[1] pt-[var(--nav-offset)] pb-36 md:pb-0">
+      <main id="main-content" className="relative z-base pt-[var(--nav-offset)]">
           <TrialBannerSlot />
         <RouteErrorBoundary>
           <Suspense fallback={<RouteFallback />}>
@@ -159,35 +191,33 @@ function AppShell({ chatMounted }: { chatMounted: boolean }) {
         </RouteErrorBoundary>
       </main>
       <AppFooter />
-      <CompareTray />
+      {/* Bottom dock — one area, stacked: app promo strip → compare tray → bottom nav. */}
       <MobileAppPromo />
+      <CompareTray />
       <MobileBottomNav />
-      <FontStudioBar />
+      {/* Height = the promo strip's claim (lib/dock.ts setDockExtra), phones only. */}
+      <div data-dock-spacer aria-hidden className="md:hidden" />
     </div>
   );
 }
 
 // Public browse shell: no session required.
-function PublicLayout({ chatMounted }: { chatMounted: boolean }) {
-  return <AppShell chatMounted={chatMounted} />;
+function PublicLayout() {
+  return <AppShell />;
 }
 
 // Gated shell: sign-in required (invite-only signup unchanged).
-function ProtectedLayout({ chatMounted }: { chatMounted: boolean }) {
+function ProtectedLayout() {
   return (
     <RequireAuth>
-      <AppShell chatMounted={chatMounted} />
+      <AppShell />
     </RequireAuth>
   );
 }
 
 const App = () => {
-  // Chat mounts after a short idle delay so its chunk never competes with
-  // first paint; nothing else is gated behind an artificial loader.
-  const [chatMounted, setChatMounted] = useState(false);
-
+  // Route chunks prefetch on idle; nothing is gated behind an artificial loader.
   useEffect(() => {
-    const chatId = window.setTimeout(() => setChatMounted(true), 2000);
     let idleHandle: number | undefined;
     let timeoutHandle: number | undefined;
     if (typeof window.requestIdleCallback === "function") {
@@ -196,7 +226,6 @@ const App = () => {
       timeoutHandle = window.setTimeout(() => prefetchAppShellRoutes(), 1200);
     }
     return () => {
-      window.clearTimeout(chatId);
       if (idleHandle !== undefined) window.cancelIdleCallback?.(idleHandle);
       if (timeoutHandle !== undefined) window.clearTimeout(timeoutHandle);
     };
@@ -206,14 +235,19 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <TooltipProvider>
+          {/* `m` components load only the domAnimation feature set; reduced
+              motion follows the OS setting app-wide. */}
+          <LazyMotion features={domAnimation}>
           <MotionConfig reducedMotion="user">
             <ScrollProgressBar />
-            <Sonner />
-            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            {/* Toasts sit under the header, clear of the bottom dock (nav, compare). */}
+            <Sonner position="top-center" offset={76} mobileOffset={{ top: 72 }} />
+            <HistoryRouter history={appHistory} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <ScrollRestoration />
               <RouteMeta />
+              <CompareProvider>
               <Routes>
-                <Route element={<PublicLayout chatMounted={chatMounted} />}>
+                <Route element={<PublicLayout />}>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/trends" element={<Trends />} />
                   <Route path="/estimate" element={<Estimate />} />
@@ -236,6 +270,8 @@ const App = () => {
                   <Route path="/docs" element={<Docs />} />
                   <Route path="/bot" element={<BotInfo />} />
                   <Route path="/pricing" element={<Pricing />} />
+                  {/* Pro preview lives in the site shell (navbar + footer); /pro keeps its own workspace chrome. */}
+                  <Route path="/pro-preview" element={<ProPreview />} />
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="/terms" element={<TermsOfService />} />
                   <Route path="/cookies" element={<CookieNotice />} />
@@ -247,15 +283,34 @@ const App = () => {
                   <Route path="/insurance" element={<LeadRequest kind="insurance" />} />
                   <Route path="/checkout/return" element={<CheckoutReturn />} />
                   <Route path="/compare" element={<Compare />} />
+                  <Route path="/compare/:slug" element={<Compare />} />
+                  <Route path="/how-we-price" element={<HowWePrice />} />
                   {/** Legacy valuation path: header/footer now point at /estimate. */}
                   <Route path="/valuation" element={<Navigate to="/estimate" replace />} />
+                  {/* Common typed paths → the page they mean (also 301s in public/_redirects). */}
+                  <Route path="/prices" element={<Navigate to="/trends" replace />} />
+                  <Route path="/price" element={<Navigate to="/trends" replace />} />
+                  <Route path="/tools" element={<Navigate to="/calculator" replace />} />
+                  <Route path="/calculators" element={<Navigate to="/calculator" replace />} />
+                  <Route path="/tax-calculator" element={<Navigate to="/calculator" replace />} />
+                  <Route path="/import-calculator" element={<Navigate to="/calculator" replace />} />
+                  <Route path="/value" element={<Navigate to="/estimate" replace />} />
+                  <Route path="/saved" element={<Navigate to="/alerts" replace />} />
+                  <Route path="/watchlist" element={<Navigate to="/alerts" replace />} />
+                  <Route path="/sell-my-car" element={<Navigate to="/sell" replace />} />
+                  <Route path="/plans" element={<Navigate to="/pricing" replace />} />
+                  <Route path="/deals" element={<Navigate to="/best-picks" replace />} />
+                  <Route path="/app" element={<Navigate to="/mobile-app" replace />} />
+                  <Route path="/login" element={<Navigate to="/sign-in" replace />} />
+                  <Route path="/signin" element={<Navigate to="/sign-in" replace />} />
+                  <Route path="/signup" element={<Navigate to="/sign-up" replace />} />
                   <Route path="/permits" element={<Permits />} />
                   <Route path="/mobile-app" element={<MobileApp />} />
                   <Route path="/afford" element={<Afford />} />
                   <Route path="/safe-transfer" element={<SafeTransfer />} />
                   <Route path="*" element={<NotFound />} />
                 </Route>
-                <Route element={<ProtectedLayout chatMounted={chatMounted} />}>
+                <Route element={<ProtectedLayout />}>
                   <Route path="/dealer" element={<DealerDashboard />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/alerts" element={<Alerts />} />
@@ -271,11 +326,28 @@ const App = () => {
                     <SignUp />
                   </Suspense>
                 } />
-                <Route path="/hero-lab" element={
+                <Route path="/verify-email" element={
                   <Suspense fallback={<MinimalLoader />}>
-                    <HeroLabGate />
+                    <VerifyEmail />
                   </Suspense>
                 } />
+                <Route path="/forgot-password" element={
+                  <Suspense fallback={<MinimalLoader />}>
+                    <ForgotPassword />
+                  </Suspense>
+                } />
+                <Route path="/reset-password" element={
+                  <Suspense fallback={<MinimalLoader />}>
+                    <ResetPassword />
+                  </Suspense>
+                } />
+                {import.meta.env.DEV ? (
+                  <Route path="/hero-lab" element={
+                    <Suspense fallback={<MinimalLoader />}>
+                      <HeroLabGate />
+                    </Suspense>
+                  } />
+                ) : null}
                 {/**
                  * Admin console: unlisted, credential-gated, and deliberately
                  * outside the marketing shell — no navbar, no footer, no links
@@ -285,22 +357,39 @@ const App = () => {
                   <Suspense fallback={<MinimalLoader />}>
                     <AdminConsole />
                   </Suspense>
-                } />
+                }>
+                  <Route index element={
+                    <Suspense fallback={<MinimalLoader />}>
+                      <AdminIndex />
+                    </Suspense>
+                  } />
+                  <Route path="analytics" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="analytics" /></Suspense>} />
+                  <Route path="users" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="users" /></Suspense>} />
+                  <Route path="leads" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="leads" /></Suspense>} />
+                  <Route path="feedback" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="feedback" /></Suspense>} />
+                  <Route path="logs" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="logs" /></Suspense>} />
+                  <Route path="health" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="health" /></Suspense>} />
+                  <Route path="data-requests" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="data-requests" /></Suspense>} />
+                  <Route path="invites" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="invites" /></Suspense>} />
+                  <Route path="pipeline" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="pipeline" /></Suspense>} />
+                  <Route path="dealers" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="dealers" /></Suspense>} />
+                  <Route path="permits" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="permits" /></Suspense>} />
+                  <Route path="moderation" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="moderation" /></Suspense>} />
+                  <Route path="system" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="system" /></Suspense>} />
+                  <Route path="*" element={<Navigate to="/motormila/admin" replace />} />
+                </Route>
                 {/** Legacy path kept as a bare redirect so old bookmarks still land. */}
                 <Route path="/admin" element={<Navigate to="/motormila/admin" replace />} />
-                <Route path="/pro-preview" element={
-                  <Suspense fallback={<MinimalLoader />}>
-                    <ProPreview />
-                  </Suspense>
-                } />
                 <Route path="/pro" element={
                   <Suspense fallback={<MinimalLoader />}>
                     <RequireAuth><ProtectedRoute><ProDashboard /></ProtectedRoute></RequireAuth>
                   </Suspense>
                 } />
               </Routes>
-            </BrowserRouter>
+              </CompareProvider>
+            </HistoryRouter>
           </MotionConfig>
+          </LazyMotion>
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>

@@ -17,7 +17,7 @@ from app.services.providers.identity import canonical_vehicle_key
 log = structlog.get_logger()
 
 NHTSA_BASE = "https://api.nhtsa.gov"
-USER_AGENT = "MotorMila/1.0 (+https://motormila.vercel.app)"
+USER_AGENT = "MotorMila/1.0 (+https://motormila.pages.dev)"
 MARKET_SCOPE = "US federal (NHTSA)"
 LICENSE_NOTE = "Public US government data. Not a Sri Lankan vehicle history check."
 LIMITATION = (

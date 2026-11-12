@@ -1,0 +1,214 @@
+/* ============================================================================
+   /mobile-app — Android download page (web/mobile-app-redesign)
+
+   Motion rules (src/lib/motion.ts): transform + opacity only, the house
+   cubic-bezier(0.32, 0.72, 0, 1), nothing runs offscreen, and everything is
+   static under prefers-reduced-motion (low-data mode is handled globally by
+   src/styles/low-data.css).
+   ========================================================================== */
+
+.ma-page {
+  --ma-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --ma-bezel: #0d0d0f;
+}
+
+/* ── Ambient hero light (static, no animation) ──────────────────────────── */
+.ma-hero-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 55% at 78% 38%, hsl(var(--primary) / 0.16), transparent 70%),
+    radial-gradient(40% 40% at 12% 8%, hsl(var(--primary) / 0.07), transparent 70%);
+}
+
+/* ── Phone frame ────────────────────────────────────────────────────────── */
+.ma-phone {
+  position: relative;
+  border-radius: 2.75rem;
+  padding: 0.55rem;
+  background: var(--ma-bezel);
+  box-shadow:
+    0 0 0 1px hsl(var(--foreground) / 0.1),
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.08),
+    0 30px 60px -20px rgba(0, 0, 0, 0.35),
+    0 12px 24px -12px rgba(0, 0, 0, 0.25);
+}
+
+.ma-phone__screen {
+  position: relative;
+  overflow: hidden;
+  border-radius: 2.25rem;
+  aspect-ratio: 600 / 1333;
+  background: #f4f4f6;
+}
+
+.ma-phone__screen img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+
+/* Punch-hole camera, drawn over the screenshot's status bar gap. */
+.ma-phone__screen::after {
+  content: "";
+  position: absolute;
+  top: 0.55rem;
+  left: 50%;
+  width: 0.6rem;
+  height: 0.6rem;
+  margin-left: -0.3rem;
+  border-radius: 9999px;
+  background: var(--ma-bezel);
+}
+
+/* Hero pair: the back phone sits behind and to the right. */
+.ma-hero-phones {
+  position: relative;
+  margin-inline: auto;
+  width: min(100%, 25rem);
+  padding-right: 22%;
+}
+
+.ma-hero-phones__back {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 64%;
+  transform: translate3d(0, -46%, 0) rotate(4deg);
+}
+
+.ma-hero-phones__front {
+  position: relative;
+  width: 100%;
+  max-width: 19rem;
+}
+
+@media (min-width: 1024px) {
+  .ma-hero-phones { width: min(100%, 29rem); }
+  .ma-hero-phones__front { max-width: 22rem; }
+}
+
+/* Gentle float. Runs only while the hero is on screen. */
+@keyframes ma-float {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -8px, 0); }
+}
+
+@keyframes ma-float-back {
+  0%, 100% { transform: translate3d(0, -46%, 0) rotate(4deg); }
+  50% { transform: translate3d(0, calc(-46% + 6px), 0) rotate(4deg); }
+}
+
+.ma-hero-phones__front .ma-phone { animation: ma-float 7s var(--ma-ease) infinite; }
+.ma-hero-phones__back { animation: ma-float-back 7s var(--ma-ease) infinite; }
+
+.ma-hero-phones__front .ma-phone,
+.ma-hero-phones__back {
+  animation-play-state: paused;
+}
+
+[data-inview="true"] .ma-hero-phones__front .ma-phone,
+[data-inview="true"] .ma-hero-phones__back {
+  animation-play-state: running;
+}
+
+/* ── Hero intro (one time, on load) ─────────────────────────────────────── */
+@keyframes ma-enter {
+  from { opacity: 0; transform: translate3d(0, 18px, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+.ma-enter {
+  animation: ma-enter 700ms var(--ma-ease) both;
+  animation-delay: calc(var(--ma-d, 0) * 70ms);
+}
+
+/* ── Scroll reveal ──────────────────────────────────────────────────────────
+   Hidden only once JS has armed the page (.ma-armed), so prerendered HTML and
+   no-JS visitors always see the content. */
+.ma-armed [data-reveal] {
+  opacity: 0;
+  transform: translate3d(0, 28px, 0);
+  transition:
+    opacity 700ms var(--ma-ease),
+    transform 700ms var(--ma-ease);
+  transition-delay: calc(var(--ma-d, 0) * 60ms);
+}
+
+.ma-armed [data-reveal][data-shown="true"] {
+  opacity: 1;
+  transform: none;
+}
+
+/* ── Feature cards: a phone rising out of the card's bottom edge ────────── */
+.ma-peek {
+  position: relative;
+  height: 17rem;
+  overflow: hidden;
+  margin-top: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.ma-peek .ma-phone {
+  width: 15.5rem;
+  flex: none;
+  align-self: flex-start;
+  margin-top: 1.75rem;
+  transition: transform 600ms var(--ma-ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ma-feature:hover .ma-peek .ma-phone { transform: translate3d(0, -10px, 0); }
+}
+
+@media (min-width: 1024px) {
+  .ma-peek--tall { height: 100%; min-height: 22rem; }
+}
+
+/* ── QR tile: always dark-on-white so every phone camera reads it ───────── */
+.ma-qr {
+  background: #ffffff;
+  border-radius: 0.875rem;
+  padding: 0.5rem;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.ma-qr svg { display: block; width: 100%; height: 100%; color: #000000; }
+
+/* ── FAQ (native <details>) ─────────────────────────────────────────────── */
+.ma-faq summary { list-style: none; cursor: pointer; }
+.ma-faq summary::-webkit-details-marker { display: none; }
+.ma-faq summary .ma-faq__icon { transition: transform 300ms var(--ma-ease); }
+.ma-faq[open] summary .ma-faq__icon { transform: rotate(45deg); }
+
+@keyframes ma-faq-in {
+  from { opacity: 0; transform: translate3d(0, -4px, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+.ma-faq[open] .ma-faq__body { animation: ma-faq-in 360ms var(--ma-ease) both; }
+
+/* ── Reduced motion: no intro, no reveal, no float ──────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .ma-enter,
+  .ma-faq[open] .ma-faq__body,
+  .ma-hero-phones__front .ma-phone,
+  .ma-hero-phones__back {
+    animation: none;
+  }
+
+  .ma-hero-phones__back { transform: translate3d(0, -46%, 0) rotate(4deg); }
+
+  .ma-armed [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .ma-peek .ma-phone,
+  .ma-faq summary .ma-faq__icon { transition: none; }
+}

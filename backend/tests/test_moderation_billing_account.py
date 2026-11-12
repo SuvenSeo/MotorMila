@@ -23,7 +23,7 @@ from db.models import Base, BillingWebhookEvent, CarListing, MarketAlert, Platfo
 from db.session import get_db  # noqa: E402
 
 _HASH = auth._hash_password("correct-horse")
-ORIGIN = {"Origin": "https://motormila.vercel.app"}
+ORIGIN = {"Origin": "https://motormila.pages.dev"}
 
 
 @pytest.fixture()

@@ -48,8 +48,28 @@ import pageHomeHeroDusk from "../../assets/page_home_hero_dusk.webp";
 import pageHomeHeroDuskSm from "../../assets/page_home_hero_dusk-sm.webp";
 import pageHomeHeroCoastal from "../../assets/page_home_hero_coastal.webp";
 import pageHomeHeroCoastalSm from "../../assets/page_home_hero_coastal-sm.webp";
+import pageHomeHeroNight from "../../assets/page_home_hero_night.webp";
+import pageHomeHeroNightSm from "../../assets/page_home_hero_night-sm.webp";
+import authShowroom from "../../assets/auth_showroom.webp";
+import page404Night from "../../assets/page_404_night.webp";
+import page404NightSm from "../../assets/page_404_night-sm.webp";
+import authShowroomSm from "../../assets/auth_showroom-sm.webp";
 import alt2PageFeaturesBg from "../../assets/alt2_page_features_bg.webp";
 import alt2PageFeaturesBgSm from "../../assets/alt2_page_features_bg-sm.webp";
+
+// ── AVIF companions for the LCP hero photos (scripts/build-hero-avif.mjs) ──
+import pageHomeHeroAvif from "../../assets/page_home_hero.avif";
+import pageHomeHeroAvifSm from "../../assets/page_home_hero-sm.avif";
+import pageHomeHeroDuskAvif from "../../assets/page_home_hero_dusk.avif";
+import pageHomeHeroDuskAvifSm from "../../assets/page_home_hero_dusk-sm.avif";
+import pageHomeHeroCoastalAvif from "../../assets/page_home_hero_coastal.avif";
+import pageHomeHeroCoastalAvifSm from "../../assets/page_home_hero_coastal-sm.avif";
+import pageHomeHeroNightAvif from "../../assets/page_home_hero_night.avif";
+import pageHomeHeroNightAvifSm from "../../assets/page_home_hero_night-sm.avif";
+import authShowroomAvif from "../../assets/auth_showroom.avif";
+import page404NightAvif from "../../assets/page_404_night.avif";
+import page404NightAvifSm from "../../assets/page_404_night-sm.avif";
+import authShowroomAvifSm from "../../assets/auth_showroom-sm.avif";
 
 export type VisualAsset = {
   src: string;
@@ -85,6 +105,33 @@ export const visuals = {
   pageHomeHeroDusk: pair(pageHomeHeroDusk, pageHomeHeroDuskSm),
   pageHomeHeroCoastal: pair(pageHomeHeroCoastal, pageHomeHeroCoastalSm),
   alt2PageFeaturesBg: pair(alt2PageFeaturesBg, alt2PageFeaturesBgSm),
+  /** Home hero: blue-hour coastal road, Lotus Tower on the horizon (generated, no badges). */
+  pageHomeHeroNight: pair(pageHomeHeroNight, pageHomeHeroNightSm),
+  /** Auth visual panel: dark rain showroom, gold strip light (generated, no badges). */
+  authShowroom: pair(authShowroom, authShowroomSm),
+  /** 404: a coastal road at night forking into the dark (generated, no text/plates). */
+  page404Night: pair(page404Night, page404NightSm),
 } as const;
 
 export type VisualKey = keyof typeof visuals;
+
+export type HeroImageMeta = {
+  avif: string;
+  avifSm: string;
+  /** Intrinsic size of the 1920w file — lets the browser reserve space (no CLS). */
+  width: number;
+  height: number;
+};
+
+/**
+ * Keyed by the WebP `src` URL, so <AtmosphericImage src={…}> picks up AVIF +
+ * intrinsic dimensions with no call-site changes.
+ */
+export const HERO_AVIF: Record<string, HeroImageMeta> = {
+  [pageHomeHero]: { avif: pageHomeHeroAvif, avifSm: pageHomeHeroAvifSm, width: 1920, height: 823 },
+  [pageHomeHeroDusk]: { avif: pageHomeHeroDuskAvif, avifSm: pageHomeHeroDuskAvifSm, width: 1920, height: 823 },
+  [pageHomeHeroCoastal]: { avif: pageHomeHeroCoastalAvif, avifSm: pageHomeHeroCoastalAvifSm, width: 1920, height: 823 },
+  [pageHomeHeroNight]: { avif: pageHomeHeroNightAvif, avifSm: pageHomeHeroNightAvifSm, width: 1920, height: 815 },
+  [authShowroom]: { avif: authShowroomAvif, avifSm: authShowroomAvifSm, width: 1152, height: 1430 },
+  [page404Night]: { avif: page404NightAvif, avifSm: page404NightAvifSm, width: 1920, height: 1072 },
+};

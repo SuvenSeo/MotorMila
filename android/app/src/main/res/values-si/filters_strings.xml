@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Round 5: full Filters sheet (web parity). -->
+<resources>
+    <string name="vehicle_category_heavy">බර වාහන</string>
+    <string name="vehicle_category_tractors">ට්‍රැක්ටර්</string>
+    <string name="vehicle_category_boats">බෝට්ටු</string>
+    <string name="vehicle_category_cycles">බයිසිකල්</string>
+    <string name="vehicle_category_other">වෙනත්</string>
+    <string name="filter_section_vehicle">වාහන වර්ගය</string>
+    <string name="filter_section_inventory">දැන්වීම්</string>
+    <string name="filter_with_price">මිල සහිත</string>
+    <string name="filter_no_price">මිල නැති</string>
+    <string name="filter_include_archive">360K+ මිල සංරක්ෂිතය ඇතුළත් කරන්න</string>
+    <string name="filter_section_make_model">නිෂ්පාදකයා සහ මාදිලිය</string>
+    <string name="filter_model_label">මාදිලිය</string>
+    <string name="filter_model_search_hint">මාදිලි සොයන්න\u2026</string>
+    <string name="filter_all_models">සියලු මාදිලි</string>
+    <string name="filter_pick_make_first">මාදිලියක් තෝරීමට පළමුව නිෂ්පාදකයා තෝරන්න</string>
+    <string name="filter_section_price">මිල</string>
+    <string name="filter_section_year">වර්ෂය</string>
+    <string name="filter_section_mileage">ධාවන දුර</string>
+    <string name="filter_section_fuel">ඉන්ධන</string>
+    <string name="filter_section_transmission">ගියර් පද්ධතිය</string>
+    <string name="filter_section_condition">තත්ත්වය</string>
+    <string name="filter_section_body">බඳ වර්ගය</string>
+    <string name="filter_section_district">දිස්ත්‍රික්කය</string>
+    <string name="filter_section_source">මූලාශ්‍ර වෙබ් අඩවිය</string>
+    <string name="filter_min">අවම</string>
+    <string name="filter_max">උපරිම</string>
+    <string name="filter_any">ඕනෑම</string>
+    <string name="filter_mn_suffix">මි.</string>
+    <string name="filter_km_suffix">කි.මී.</string>
+    <string name="filter_up_to">%1$s දක්වා</string>
+    <string name="filter_reset">යළි සකසන්න</string>
+    <string name="filter_reset_all">සියල්ල යළි සකසන්න</string>
+    <string name="filter_show_results">ප්‍රතිඵල පෙන්වන්න</string>
+    <string name="filter_show_n_results">ප්‍රතිඵල %1$s පෙන්වන්න</string>
+    <string name="filter_show_one_result">ප්‍රතිඵලය පෙන්වන්න</string>
+    <string name="filter_no_matches">ගැළපීම් නැත</string>
+    <string name="filter_price_needs_priced">අයවැයෙන් පෙරීමට “මිල සහිත” තෝරන්න.</string>
+    <string name="filter_active_n">%1$d ක් සක්‍රියයි</string>
+    <string name="filter_remove_cd">%1$s පෙරහන ඉවත් කරන්න</string>
+    <string name="filter_show_all_n">සියල්ල (%1$d) පෙන්වන්න</string>
+    <string name="filter_show_fewer">අඩුවෙන් පෙන්වන්න</string>
+    <string name="filter_fuel_petrol">පෙට්‍රල්</string>
+    <string name="filter_fuel_diesel">ඩීසල්</string>
+    <string name="filter_fuel_hybrid">හයිබ්‍රිඩ්</string>
+    <string name="filter_fuel_electric">විදුලි</string>
+    <string name="filter_trans_automatic">ස්වයංක්‍රීය</string>
+    <string name="filter_trans_manual">මැනුවල්</string>
+    <string name="filter_trans_cvt">CVT</string>
+    <string name="filter_cond_new">අලුත්</string>
+    <string name="filter_cond_recon">රිකන්ඩිෂන්</string>
+    <string name="filter_cond_used">පාවිච්චි කළ</string>
+    <string name="filter_from_year">වර්ෂයෙන්</string>
+    <string name="filter_to_year">වර්ෂය දක්වා</string>
+    <string name="filter_count_loading">ගණන් කරමින්\u2026</string>
+    <!-- Search sort chips -->
+    <string name="sort_newest">අලුත්ම</string>
+    <string name="sort_best_deal">හොඳම ගනුදෙනුව</string>
+    <string name="sort_price_asc">මිල ↑</string>
+    <string name="sort_price_desc">මිල ↓</string>
+    <string name="sort_low_km">අඩු කි.මී.</string>
+</resources>

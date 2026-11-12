@@ -159,8 +159,8 @@ export function RouteMeta() {
   useEffect(() => {
     const siteVars = { site: SITE };
     const defaultDescription = t(
-      "seo.defaultDescription",
-      "Track Sri Lankan vehicle prices, trends, deal signals, and valuation tools in one market intelligence cockpit.",
+      "shell.copy.seoDefault",
+      "Search every vehicle ad in Sri Lanka in one place, with price history, fair-price ranges and an import tax calculator.",
     );
 
     const routeMeta: Record<string, Meta> = {
@@ -180,6 +180,13 @@ export function RouteMeta() {
         description: t(
           "seo.estimateDesc",
           "Estimate a fair market price for any Sri Lankan vehicle from live listing data.",
+        ),
+      },
+      "/how-we-price": {
+        title: t("seo.howWePriceTitle", "How we score prices — {site}", siteVars),
+        description: t(
+          "seo.howWePriceDesc",
+          "How MotorMila estimates fair market value from comparable Sri Lankan listings, what confidence levels and deal badges mean, and the limits of asking-price data.",
         ),
       },
       "/calculator": {
@@ -312,6 +319,18 @@ export function RouteMeta() {
         title: t("seo.signUpTitle", "Create Account — {site}", siteVars),
         description: defaultDescription,
       },
+      "/verify-email": {
+        title: t("seo.verifyEmailTitle", "Verify Email — {site}", siteVars),
+        description: defaultDescription,
+      },
+      "/forgot-password": {
+        title: t("seo.forgotPasswordTitle", "Forgot Password — {site}", siteVars),
+        description: defaultDescription,
+      },
+      "/reset-password": {
+        title: t("seo.resetPasswordTitle", "Reset Password — {site}", siteVars),
+        description: defaultDescription,
+      },
       "/profile": {
         title: t("seo.profileTitle", "Profile — {site}", siteVars),
         description: defaultDescription,
@@ -339,11 +358,47 @@ export function RouteMeta() {
         title: t("seo.termsTitle", "Terms of Service — {site}", siteVars),
         description: t("seo.termsDesc", "The terms that govern use of Motormila."),
       },
+      "/cookies": {
+        title: t("seo.cookiesTitle", "Cookie Notice — {site}", siteVars),
+        description: t("seo.cookiesDesc", "How MotorMila uses cookies and browser storage."),
+      },
+      "/removal": {
+        title: t("seo.removalTitle", "Request Data Removal — {site}", siteVars),
+        description: t("seo.removalDesc", "Ask MotorMila to remove your listing data or photos."),
+      },
+      "/delete-account": {
+        title: t("seo.deleteAccountTitle", "Delete Your Account — {site}", siteVars),
+        description: t("seo.deleteAccountDesc", "Delete your MotorMila account and associated data."),
+      },
+      "/finance": {
+        title: t("seo.financeTitle", "Vehicle Finance — {site}", siteVars),
+        description: t("seo.financeDesc", "Request lease and finance quotes for your vehicle purchase in Sri Lanka."),
+      },
+      "/inspection": {
+        title: t("seo.inspectionTitle", "Vehicle Inspection — {site}", siteVars),
+        description: t("seo.inspectionDesc", "Book a pre-purchase vehicle inspection in Sri Lanka."),
+      },
+      "/insurance": {
+        title: t("seo.insuranceTitle", "Vehicle Insurance — {site}", siteVars),
+        description: t("seo.insuranceDesc", "Request motor insurance quotes in Sri Lanka."),
+      },
+      "/safe-transfer": {
+        title: t("seo.safeTransferTitle", "Safe Vehicle Transfer Kit — {site}", siteVars),
+        description: t("seo.safeTransferDesc", "Transfer vehicle ownership safely in Sri Lanka: checklist, sale agreement, transfer costs and the 14-day rule."),
+      },
+      "/afford": {
+        title: t("seo.affordTitle", "What Can I Afford — {site}", siteVars),
+        description: t("seo.affordDesc", "Find Sri Lankan vehicles that fit your down payment and monthly budget, with local lease rates and CBSL loan limits."),
+      },
+      "/checkout/return": {
+        title: t("seo.checkoutTitle", "Checkout — {site}", siteVars),
+        description: defaultDescription,
+      },
     };
 
     let meta: Meta | undefined = routeMeta[pathname];
     let canonicalPath = pathname;
-    let ogImage = `${ORIGIN}/og-card.jpg`;
+    const ogImage = `${ORIGIN}/og-card.jpg`;
     let jsonLd: unknown | undefined;
 
     if (!meta) {
@@ -390,14 +445,20 @@ export function RouteMeta() {
           ],
         );
       } else if (hub.kind === "compare") {
+        // Listing ids mean nothing to a reader; the Compare page swaps in the
+        // vehicle names once the listings load (see Compare.tsx).
         const label = hub.ids.length >= 2 ? hub.ids.join(" vs ") : "vehicles";
         meta = {
-          title: `Compare ${label} — Side-by-Side Prices & Specs | ${SITE}`,
-          description:
-            `Side-by-side comparison of listings ${label}: price (LKR), mileage, ` +
-            `district, fuel and fair-value verdict on ${SITE}.`,
+          title: t("seo.compareSlugTitle", "Compare vehicles — Side-by-Side Prices & Specs | {site}", siteVars),
+          description: t(
+            "seo.compareDesc",
+            "Side-by-side Sri Lankan vehicle comparison: price, mileage, district and fair-value verdict.",
+          ),
         };
-        ogImage = `${ORIGIN}/api/compare-og?slug=${hub.ids.join("-vs-")}`;
+        // Dynamic compare OG card was a Vercel function (api/compare-og.js),
+        // deleted with api/ in the Cloudflare-only move — no Pages Function
+        // replacement (Functions removed 1 Nov 2026). Compare hubs use the
+        // default og-card.jpg above.
         jsonLd = {
           "@context": "https://schema.org",
           "@graph": [
@@ -421,7 +482,7 @@ export function RouteMeta() {
         };
       } else if (pathname === "/compare") {
         // Legacy query form: canonicalize ?ids= to the slug path (no
-        // navigation here — the page/Vercel 301 owns the redirect).
+        // navigation here — the page redirect owns the redirect).
         const params = new URLSearchParams(search);
         const ids = (params.get("ids") ?? "")
           .split(",")
@@ -504,17 +565,43 @@ export function RouteMeta() {
     if (jsonLd) {
       setJsonLd(jsonLd);
     } else if (pathname === "/") {
+      // SEO/AI-search identity: Organization + WebSite in one graph, so
+      // rendered crawlers and AI answers can name Motormila, its scope and
+      // its slogan without guessing. No contact details are claimed here:
+      // no verified public phone/address exists in the bundle yet.
       setJsonLd({
         "@context": "https://schema.org",
-        "@type": "WebSite",
-        name: SITE,
-        url: ORIGIN,
-        description: defaultDescription,
-        potentialAction: {
-          "@type": "SearchAction",
-          target: { "@type": "EntryPoint", urlTemplate: `${ORIGIN}/?q={search_term_string}` },
-          "query-input": "required name=search_term_string",
-        },
+        "@graph": [
+          {
+            "@type": "Organization",
+            name: SITE,
+            url: ORIGIN,
+            logo: `${ORIGIN}/logo.png`,
+            slogan: "The fair mila for every motor.",
+            description: defaultDescription,
+            areaServed: { "@type": "Country", name: "Sri Lanka" },
+            knowsAbout: [
+              "Sri Lanka vehicle prices",
+              "Sri Lanka used car prices",
+              "vehicle fair value",
+              "vehicle price trends",
+              "vehicle deal alerts",
+            ],
+          },
+          {
+            "@type": "WebSite",
+            name: SITE,
+            url: ORIGIN,
+            description: defaultDescription,
+            inLanguage: "en",
+            publisher: { "@type": "Organization", name: SITE, url: ORIGIN },
+            potentialAction: {
+              "@type": "SearchAction",
+              target: { "@type": "EntryPoint", urlTemplate: `${ORIGIN}/?q={search_term_string}` },
+              "query-input": "required name=search_term_string",
+            },
+          },
+        ],
       });
     } else if (pathname === "/price-index") {
       // Dataset stub for the Market Price Index (MPI): describes the index

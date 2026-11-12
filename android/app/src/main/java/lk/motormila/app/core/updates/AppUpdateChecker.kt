@@ -185,9 +185,14 @@ class AppUpdateChecker @Inject constructor(
     }
 
     /** Static CDN manifest first (carries sha256, up when the API is down), then the API. */
-    private suspend fun fetchLatestRelease(): LatestRelease? =
-        fetchManifest(STATIC_RELEASE_MANIFEST_URL, bare = true)
+    private suspend fun fetchLatestRelease(): LatestRelease? {
+        // Debug/preview builds (lk.motormila.app.debug) follow the preview
+        // pre-release manifest only: production APKs are a different package.
+        val preview = BuildConfig.PREVIEW_UPDATE_MANIFEST_URL.trim()
+        if (preview.isNotEmpty()) return fetchManifest(preview, bare = true)
+        return fetchManifest(STATIC_RELEASE_MANIFEST_URL, bare = true)
             ?: fetchManifest(buildReleaseUrl(), bare = false)
+    }
 
     private val bareClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
@@ -241,6 +246,26 @@ class AppUpdateChecker @Inject constructor(
         internal fun normalizeSha256(raw: String?): String? {
             val v = raw?.trim()?.lowercase()?.removePrefix("sha256:") ?: return null
             return v.takeIf { it.length == 64 && it.all { c -> c in '0'..'9' || c in 'a'..'f' } }
+        }
+    }
+}
+
+/**
+ * Play flavor: open this app's Google Play listing (updates are Play's job).
+ * Falls back to the web listing when the Play Store app is missing.
+ */
+fun openPlayStoreListing(context: Context) {
+    val pkg = context.packageName.removeSuffix(".debug")
+    val market = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$pkg"))
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    try {
+        context.startActivity(market)
+    } catch (_: ActivityNotFoundException) {
+        runCatching {
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$pkg"))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
         }
     }
 }

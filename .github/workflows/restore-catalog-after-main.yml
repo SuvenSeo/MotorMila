@@ -1,12 +1,13 @@
-# Restore the public listing catalog after every Git → Vercel production deploy.
+# Restore the public listing catalog after every push to main.
 #
-# GitHub's Vercel integration deploys the git tree only. listing-catalog*.json
+# The Cloudflare Pages build deploys the git tree only. listing-catalog*.json
 # is gitignored (too large), so a main push wipes the catalog and the SPA
 # falls through to the live API. When Neon Free has exhausted transfer quota,
 # that API is down until the 1st of the month.
 #
 # This job rebuilds the catalog from the durable merged SQLite release
-# (zero Neon reads) and CLI-deploys it onto production so browsing never
+# (zero Neon reads), uploads it to R2, then triggers a Pages rebuild (retry
+# of the latest github:push production deployment) so browsing never
 # depends on Neon again.
 name: Restore production catalog snapshots
 
@@ -28,27 +29,12 @@ permissions:
 
 jobs:
   restore:
-    name: Export SQLite catalog and deploy snapshots
+    name: Export SQLite catalog, upload to R2, rebuild Pages
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      # `secrets` is not an allowed context in an `if:` expression — GitHub
-      # rejects the whole workflow file for it, which is why this workflow
-      # failed instantly on every push to main. Presence is exposed as a step
-      # output instead, keeping the token scoped to the steps that need it.
-      - name: Detect Vercel credentials
-        id: vercel
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: |
-          set -euo pipefail
-          if [ -n "${VERCEL_TOKEN:-}" ]; then
-            echo "configured=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-          fi
 
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
@@ -99,7 +85,7 @@ jobs:
       - name: Publish failover DB into snapshots
         run: |
           set -euo pipefail
-          # The merged DB is gitignored, so the git-triggered Vercel deploy
+          # The merged DB is gitignored, so the git-triggered Pages build
           # wipes it from production. Rebuild it here from the durable
           # merged-db release asset (restored above) instead of trusting the
           # live site to still serve it: once the live copy is gone, the
@@ -113,49 +99,8 @@ jobs:
           # The R2 upload step below reads backend/snapshots/latest, not
           # public/ — copy the dumps there too so the public R2 bucket the
           # HF backend downloads failover from stays fresh (2026-10-16: the
-          # gz no longer rides the Vercel deploy, past its 100MB/file limit).
+          # gz no longer rides the site deploy (Pages rejects files >25 MiB);
           cp public/snapshots/latest/merged-*.db.gz backend/snapshots/latest/
-
-      - name: Wait for the GitHub → Vercel production deploy
-        if: steps.vercel.outputs.configured == 'true'
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          GITHUB_SHA: ${{ github.sha }}
-        run: |
-          python - <<'PY'
-          import json, os, time, urllib.parse, urllib.request
-
-          token = os.environ["VERCEL_TOKEN"]
-          org = os.environ.get("VERCEL_ORG_ID", "").strip()
-          project = os.environ["VERCEL_PROJECT_ID"]
-          sha = os.environ["GITHUB_SHA"]
-          query = {"projectId": project, "limit": "20"}
-          if org:
-              query["teamId"] = org
-          url = "https://api.vercel.com/v6/deployments?" + urllib.parse.urlencode(query)
-          req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
-          deadline = time.time() + 480
-          while time.time() < deadline:
-              with urllib.request.urlopen(req, timeout=20) as response:
-                  payload = json.load(response)
-              for deployment in payload.get("deployments") or []:
-                  meta = deployment.get("meta") or {}
-                  commit = str(meta.get("githubCommitSha") or "")
-                  if commit != sha:
-                      continue
-                  state = str(deployment.get("readyState") or deployment.get("state") or "")
-                  target = deployment.get("target")
-                  print(f"git deploy {state} target={target}")
-                  if state == "READY":
-                      raise SystemExit(0)
-                  if state in {"ERROR", "CANCELED"}:
-                      print("git deploy failed; restoring snapshots onto current tree anyway")
-                      raise SystemExit(0)
-              time.sleep(15)
-          print("timed out waiting for git deploy; restoring snapshots anyway")
-          PY
 
       - name: Upload restored snapshots
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -164,31 +109,8 @@ jobs:
           path: public/snapshots/latest
           retention-days: 7
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        if: steps.vercel.outputs.configured == 'true'
-        with:
-          node-version: "20"
-
-      - name: Fetch sideload APK for the deploy (private release asset)
-        if: steps.vercel.outputs.configured == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: bash scripts/fetch-apk-for-deploy.sh
-
-      - name: Deploy snapshots to Vercel production
-        if: steps.vercel.outputs.configured == 'true'
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          SNAPSHOT_SOURCE_DIR: public/snapshots/latest
-        run: bash scripts/deploy-snapshots-to-prod.sh
-
-      - name: Skip Vercel deploy when token is unset
-        if: steps.vercel.outputs.configured != 'true'
-        run: echo "VERCEL_TOKEN not set; catalog exported as a workflow artifact only."
-
       - name: Upload snapshots to R2 when configured
+        id: r2_upload
         working-directory: backend
         env:
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
@@ -199,7 +121,15 @@ jobs:
           SNAPSHOT_SOURCE_DIR: snapshots/latest
         run: |
           if [ -z "${R2_ACCOUNT_ID}" ] || [ -z "${R2_ACCESS_KEY_ID}" ] || [ -z "${R2_SECRET_ACCESS_KEY}" ] || [ -z "${R2_BUCKET}" ]; then
-            echo "R2 secrets not set; skipping CDN upload (Vercel snapshots still deployed)."
+            echo "uploaded=false" >> "$GITHUB_OUTPUT"
+            echo "R2 secrets not set; skipping CDN upload (no Pages rebuild will be triggered)."
             exit 0
           fi
           python upload_snapshots_r2.py
+          echo "uploaded=true" >> "$GITHUB_OUTPUT"
+      - name: Trigger Cloudflare Pages rebuild (retry latest github:push production deployment)
+        if: steps.r2_upload.outputs.uploaded == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 scripts/trigger-pages-rebuild.py

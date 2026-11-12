@@ -24,8 +24,8 @@ function Node({
         {icon}
       </div>
       <div className="text-center">
-        <p className="text-sm font-semibold text-foreground">{title}</p>
-        <p className="mt-0.5 max-w-[180px] text-xs leading-relaxed text-muted-foreground">{sub}</p>
+        <p className="text-footnote font-semibold text-foreground">{title}</p>
+        <p className="mt-0.5 max-w-[180px] text-caption leading-relaxed text-muted-foreground">{sub}</p>
       </div>
     </div>
   );
@@ -71,7 +71,7 @@ export function HowItWorksBand() {
                   {SOURCES.map((s) => (
                     <span
                       key={s}
-                      className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${SOURCE_COLORS[s]}`}
+                      className={`rounded-md px-2 py-0.5 text-caption font-bold ${SOURCE_COLORS[s]}`}
                     >
                       {s}
                     </span>
@@ -115,10 +115,10 @@ export function HowItWorksBand() {
               key={s.n}
               className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4 shadow-soft"
             >
-              <span className={`font-display text-2xl font-semibold ${s.c}`}>{s.n}</span>
+              <span className={`font-display text-title2 font-semibold ${s.c}`}>{s.n}</span>
               <div>
-                <p className="text-sm font-semibold text-foreground">{s.t}</p>
-                <p className="text-xs text-muted-foreground">{s.d}</p>
+                <p className="text-footnote font-semibold text-foreground">{s.t}</p>
+                <p className="text-caption text-muted-foreground">{s.d}</p>
               </div>
             </li>
           ))}

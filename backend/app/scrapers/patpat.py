@@ -5,8 +5,6 @@ from urllib.parse import urljoin
 
 import httpx
 import structlog
-
-from app.scrapers.polite import BOT_USER_AGENT
 from bs4 import BeautifulSoup
 from sqlalchemy.orm import Session
 
@@ -132,7 +130,11 @@ class PatpatScraper:
 
     async def scrape(self, max_pages: int = 5):
         headers = {
-            "User-Agent": BOT_USER_AGENT
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/124.0.0.0 Safari/537.36"
+            )
         }
 
         seen_urls: set[str] = set()

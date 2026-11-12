@@ -56,8 +56,8 @@ jobs:
             exit 0
           fi
           yes | "$SDKMANAGER" --licenses >/dev/null || true
-          # Paparazzi 1.3.x renders against API 35 (compileSdk is 36).
-          "$SDKMANAGER" "platforms;android-35" >/dev/null || true
+          # compileSdk/targetSdk 36 (Paparazzi 2.x renders against compileSdk).
+          "$SDKMANAGER" "platforms;android-36" >/dev/null || true
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -113,7 +113,9 @@ jobs:
         working-directory: .
         run: |
           set -euo pipefail
-          if git ls-files | grep -Ei '\.(jks|keystore|p12)$'; then
+          # Only exception: the well-known debug/preview key (passwords "android"),
+          # used solely by the debug build type of lk.motormila.app.debug.
+          if git ls-files | grep -Ei '\.(jks|keystore|p12)$' | grep -vx 'android/app/preview-debug.keystore'; then
             echo "ERROR: a keystore is committed. Signing keys come from GitHub secrets only."; exit 1
           fi
 

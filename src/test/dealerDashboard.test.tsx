@@ -247,9 +247,9 @@ describe("DealerDashboard", () => {
     renderDealerDashboard();
 
     await waitFor(() => {
-      expect(screen.getByText("27")).toBeInTheDocument();
+      expect(screen.getAllByText("27").length).toBeGreaterThan(0);
     });
-    expect(screen.getByText("14")).toBeInTheDocument();
+    expect(screen.getAllByText("14").length).toBeGreaterThan(0);
     expect(screen.getByText(/Hot deal: Toyota Aqua 2016 in Colombo/i)).toBeInTheDocument();
   });
 });

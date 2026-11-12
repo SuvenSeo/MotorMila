@@ -47,6 +47,9 @@ import { formatPriceLkrMillions } from "@/lib/formatting";
 import { authHeaders } from "@/lib/authToken";
 import { districtCoords, normalizeDistrictName } from "@/data/districts";
 import { QUERY_STALE } from "@/lib/queryPolicy";
+import type { ListingFmvDetail } from "@/types/fmv";
+import { cleanDistrict, computedDropPct, isPlausiblePriceDrop } from "@/lib/dataSanity";
+import { hasPlausibleStoredSignal, isGenericModel, VERIFY_BELOW_PCT } from "@/lib/priceVerdict";
 
 const DEFAULT_PRODUCTION_API = "https://seo292-vehicle-platform-backend.hf.space/api/v1";
 const HF_COLD_START_TIMEOUT_MS = 60_000;
@@ -93,7 +96,7 @@ const MIN_REASONABLE_PRICE_LKR = 100_000;
  * Cookie credentials only work when the API is same-origin.
  * Cross-origin calls to Hugging Face Spaces fail in the browser because HF's
  * edge answers CORS preflight without Access-Control-Allow-Credentials, so
- * `credentials: "include"` makes POSTs (calculator, chat, login) throw
+ * `credentials: "include"` makes POSTs (calculator, login) throw
  * TypeError "Failed to fetch". Bearer auth still works with "omit".
  */
 export function resolveFetchCredentials(apiBase: string = API_BASE): RequestCredentials {
@@ -141,12 +144,15 @@ const SOURCE_LABELS: Record<string, string> = {
 export class APIError extends Error {
   status: number;
   detail: string;
+  /** Machine-readable reason when the API answers `{"detail": {"code", "message"}}`. */
+  code?: string;
 
-  constructor(status: number, detail: string) {
+  constructor(status: number, detail: string, code?: string) {
     super(`API error ${status}: ${detail || "Request failed"}`);
     this.name = "APIError";
     this.status = status;
     this.detail = detail;
+    this.code = code;
   }
 }
 
@@ -156,38 +162,6 @@ function refuseLiveApiFallback(context: string): never {
     `Snapshot-only mode: ${context} is unavailable from CDN. ` +
       "Check VITE_SNAPSHOT_BASE_URL / R2 objects, or unset VITE_SNAPSHOT_ONLY.",
   );
-}
-
-export interface ChatMessage {
-  role: "user" | "assistant";
-  content: string;
-}
-
-export interface ChatRequestOptions {
-  model?: string;
-  pageContext?: {
-    route: string;
-    page: string;
-    summary: string;
-  };
-}
-
-export interface ChatListingResult {
-  id: number;
-  title: string;
-  price_lkr: number | null;
-  district?: string | null;
-  deal_score?: number | null;
-  source?: string | null;
-  detail_url?: string | null;
-  external_url?: string | null;
-}
-
-export interface ChatWebSource {
-  title: string;
-  url: string;
-  snippet: string;
-  source: string;
 }
 
 export interface CustomVehicleComparable {
@@ -361,12 +335,16 @@ function normalizeConditionFilter(condition?: string): string | undefined {
 async function parseApiError(response: Response): Promise<APIError> {
   const raw = await response.text().catch(() => "");
   let detail = raw || response.statusText || "Request failed";
+  let code: string | undefined;
 
   if (raw) {
     try {
       const parsed = JSON.parse(raw);
       if (typeof parsed?.detail === "string") {
         detail = parsed.detail;
+      } else if (parsed?.detail && typeof parsed.detail === "object" && !Array.isArray(parsed.detail)) {
+        if (typeof parsed.detail.message === "string") detail = parsed.detail.message;
+        if (typeof parsed.detail.code === "string") code = parsed.detail.code;
       } else if (Array.isArray(parsed?.detail)) {
         detail = parsed.detail
           .map((item: JsonRecord) => (typeof item?.msg === "string" ? item.msg : JSON.stringify(item)))
@@ -377,7 +355,7 @@ async function parseApiError(response: Response): Promise<APIError> {
     }
   }
 
-  return new APIError(response.status, detail);
+  return new APIError(response.status, detail, code);
 }
 
 function toNumberOrNull(value: unknown): number | null {
@@ -559,6 +537,32 @@ function matchesBodyTypeFilter(listing: CarListing, bodyType: string): boolean {
   return false;
 }
 
+/**
+ * Data-boundary guard: a stored deal score / median whose comparison the one
+ * price verdict withholds (mixed-category cohort, placeholder/lease/parts
+ * price, > ±60 % gap…) is dropped here, so no card, list, tier, sort, chart or
+ * Trust Check can show "90% below similar cars" off it.
+ */
+function plausibleStoredSignal(raw: JsonRecord, model: string): { deal_score: number | null; market_median_lkr: number | undefined } {
+  // The backend withholds this listing's detail verdict (thin or disagreeing
+  // comparables): the card must not rate it either (backend _with_card_verdicts).
+  if (typeof raw?.price_withheld_reason === "string" && raw.price_withheld_reason) {
+    return { deal_score: null, market_median_lkr: undefined };
+  }
+  const deal_score = toNumberOrNull(raw?.deal_score);
+  const market_median_lkr = toNumberOrNull(raw?.market_median_lkr) ?? undefined;
+  const ok = hasPlausibleStoredSignal({
+    price_lkr: toNumberOrNull(raw?.price_lkr),
+    market_median_lkr: market_median_lkr ?? null,
+    deal_score,
+    vehicle_category: typeof raw?.vehicle_category === "string" ? raw.vehicle_category : null,
+    model: model || (typeof raw?.model === "string" ? raw.model : null),
+    title: typeof raw?.title === "string" ? raw.title : null,
+    description: typeof raw?.description === "string" ? raw.description : null,
+  });
+  return ok ? { deal_score, market_median_lkr } : { deal_score: null, market_median_lkr: undefined };
+}
+
 function normalizeListing(raw: JsonRecord): CarListing {
   const sourceUrls = [raw?.url, raw?.detail_url, raw?.external_url];
   const images = Array.isArray(raw?.images)
@@ -591,14 +595,15 @@ function normalizeListing(raw: JsonRecord): CarListing {
     mileage_km: toNumberOrNull(raw?.mileage_km ?? raw?.mileage),
     engine_cc: toNumberOrNull(raw?.engine_cc ?? raw?.engine_capacity) ?? undefined,
     price_lkr: toNumberOrNull(raw?.price_lkr),
-    deal_score: toNumberOrNull(raw?.deal_score),
-    market_median_lkr: toNumberOrNull(raw?.market_median_lkr) ?? undefined,
+    ...plausibleStoredSignal(raw, model),
     condition,
     transmission,
     fuel_type: fuelType,
     body_type: bodyType,
     thumbnail_url: thumbnailUrl,
     images,
+    // "Sri Lanka" / "Island-wide" is the country, not a district — unknown.
+    district: cleanDistrict(raw?.district) ?? undefined,
     // Snapshot payloads predate the lifecycle flag — default to active so
     // only an explicit backend false renders the possibly-sold state.
     is_active: raw?.is_active === undefined ? true : Boolean(raw.is_active),
@@ -764,7 +769,7 @@ function loadLegacySnapshotCatalog(): Promise<CarListing[] | null> {
     }>("listing-catalog.json").then(async (snapshot) => {
       if (!snapshot) return null;
 
-      // Multi-part catalog (Vercel 100MB file limit).
+      // Multi-part catalog (static-file size limit).
       if (Array.isArray(snapshot.parts) && snapshot.parts.length > 0) {
         const chunks = await Promise.all(
           snapshot.parts.map((part) =>
@@ -1170,6 +1175,18 @@ function normalizeDashboardInsights(data: Record<string, unknown>): DashboardIns
         if (isJunkMake(item.make)) {
           return acc;
         }
+        // A headline "hot deal" must survive the one price verdict: no generic
+        // "Other" model, no > ±60 % score, no verify-first bait discount.
+        const score = toNumberOrNull(item.deal_score);
+        const model = typeof item.model === "string" ? item.model : null;
+        if (
+          score === null ||
+          isGenericModel(model) ||
+          !hasPlausibleStoredSignal({ price_lkr: price, deal_score: score, model }) ||
+          score >= VERIFY_BELOW_PCT
+        ) {
+          return acc;
+        }
 
         acc.push({
           id,
@@ -1236,6 +1253,7 @@ function matchesSnapshotFilters(listing: CarListing, filters: FilterState): bool
     const wantedModel = canonicalizeModel(filters.model);
     if (wantedModel && canonicalizeModel(listing.model) !== wantedModel) return false;
   }
+  if (!filters.include_archive && listing.is_active === false) return false;
   if (filters.district && String(listing.district || "").toLowerCase() !== String(filters.district).toLowerCase()) return false;
   if (filters.fresh_24h && listingTimestamp(listing) < Date.now() - 24 * 60 * 60 * 1000) return false;
   if (filters.year_min && Number(listing.year || 0) < filters.year_min) return false;
@@ -1273,8 +1291,21 @@ function matchesSnapshotFilters(listing: CarListing, filters: FilterState): bool
   return true;
 }
 
+/** Best match: real price (2) + a photo (1). Priceless / photoless rows sink. */
+function bestMatchRank(listing: CarListing): number {
+  const price = toNumberOrNull(listing.price_lkr);
+  const hasPrice = price !== null && price >= 100_000;
+  const hasPhoto = Boolean(listing.thumbnail_url || (Array.isArray(listing.images) && listing.images.length));
+  return (hasPrice ? 2 : 0) + (hasPhoto ? 1 : 0);
+}
+
 function sortSnapshotListings(listings: CarListing[], sort: FilterState["sort"]): CarListing[] {
   return [...listings].sort((a, b) => {
+    if (sort === "best_match") {
+      return bestMatchRank(b) - bestMatchRank(a)
+        || listingTimestamp(b) - listingTimestamp(a)
+        || Number(b.id || 0) - Number(a.id || 0);
+    }
     if (sort === "deal_score") {
       return (toNumberOrNull(b.deal_score) ?? -Infinity) - (toNumberOrNull(a.deal_score) ?? -Infinity)
         || listingTimestamp(b) - listingTimestamp(a)
@@ -1291,6 +1322,10 @@ function sortSnapshotListings(listings: CarListing[], sort: FilterState["sort"])
     if (sort === "mileage_asc") {
       return (toNumberOrNull(a.mileage_km) ?? Infinity) - (toNumberOrNull(b.mileage_km) ?? Infinity)
         || listingTimestamp(b) - listingTimestamp(a);
+    }
+    if (sort === "oldest") {
+      return listingTimestamp(a) - listingTimestamp(b)
+        || Number(a.id || 0) - Number(b.id || 0);
     }
     return listingTimestamp(b) - listingTimestamp(a) || Number(b.id || 0) - Number(a.id || 0);
   });
@@ -1683,6 +1718,51 @@ export const getLiveMarketStreamUrl = (): string => {
   return new URL(`${API_BASE}/stats/live/stream`, window.location.origin).toString();
 };
 
+/**
+ * "best_match" is a frontend-first sort: older/live backends validate `sort`
+ * against newest|deal_score|price_* and answer 422. When that happens we ask
+ * for `newest` instead (best match's own tie-break) and apply the best-match
+ * ranking to the page client-side. Remembered for the session so later pages
+ * skip the failing request.
+ */
+let backendRejectsBestMatch = false;
+
+function isClientError(error: unknown): boolean {
+  return error instanceof APIError && error.status >= 400 && error.status < 500;
+}
+
+async function fetchListingsPage(
+  params: QueryParams,
+): Promise<{ data: JsonRecord; clientRanked: boolean }> {
+  const wantsBestMatch = params.sort === "best_match";
+  if (wantsBestMatch && backendRejectsBestMatch) {
+    const data = await fetchJSON<JsonRecord>("/listings", { ...params, sort: "newest" });
+    return { data, clientRanked: true };
+  }
+  try {
+    const data = await fetchJSON<JsonRecord>("/listings", params);
+    return { data, clientRanked: false };
+  } catch (error) {
+    if (!wantsBestMatch || !isClientError(error)) throw error;
+    backendRejectsBestMatch = true;
+    const data = await fetchJSON<JsonRecord>("/listings", { ...params, sort: "newest" });
+    return { data, clientRanked: true };
+  }
+}
+
+/** Stable best-match order for one page of newest-first rows. */
+export function rankBestMatchPage(listings: CarListing[]): CarListing[] {
+  return listings
+    .map((listing, index) => ({ listing, index }))
+    .sort((a, b) => bestMatchRank(b.listing) - bestMatchRank(a.listing) || a.index - b.index)
+    .map((row) => row.listing);
+}
+
+/** Test hook: forget the remembered 4xx. */
+export function __resetBestMatchSupportForTests() {
+  backendRejectsBestMatch = false;
+}
+
 export const getListings = async (filters: FilterState): Promise<{ listings: CarListing[]; total: number }> => {
   const effectiveFilters: FilterState = {
     ...filters,
@@ -1692,12 +1772,13 @@ export const getListings = async (filters: FilterState): Promise<{ listings: Car
   // fallback for offline / SNAPSHOT_ONLY — not the primary catalog.
   if (!SNAPSHOT_ONLY) {
     try {
-      const data = await fetchJSON<JsonRecord>("/listings", {
+      const { data, clientRanked } = await fetchListingsPage({
         ...effectiveFilters,
         size: LISTINGS_PAGE_SIZE,
       });
       const items = Array.isArray(data.items) ? data.items : [];
       let listings = dedupeListings(items.map((item) => normalizeListing(asJsonRecord(item))));
+      if (clientRanked) listings = rankBestMatchPage(listings);
       // The backend may not support fresh_24h; apply it client-side to ensure
       // the "New in 24h" filter actually filters. We use the same matcher as
       // the snapshot path for consistency.
@@ -1733,6 +1814,90 @@ export const getListings = async (filters: FilterState): Promise<{ listings: Car
   // Live failed and no snapshot — surface the error rather than a silent empty list.
   throw new APIError(503, "Listings are temporarily unavailable.");
 };
+
+/**
+ * Price sample for the filter histogram: up to `size` newest priced listings
+ * matching every filter except price. Returns whole-rupee prices plus the
+ * total match count. Empty on failure — the histogram simply hides.
+ */
+export const getListingPriceSample = async (
+  filters: FilterState,
+  size = 100,
+): Promise<{ prices: number[]; total: number }> => {
+  const sampleFilters: FilterState = {
+    ...filters,
+    price_min: undefined,
+    price_max: undefined,
+    price_availability: undefined,
+    sort: "newest",
+    page: 1,
+    vehicle_category: filters.vehicle_category || "cars",
+  };
+  const toPrices = (rows: CarListing[]) =>
+    rows
+      .map((row) => toNumberOrNull(row.price_lkr))
+      .filter((price): price is number => price !== null && price >= 100_000)
+      .map((price) => Math.round(price));
+  try {
+    if (!SNAPSHOT_ONLY) {
+      const data = await fetchJSON<JsonRecord>("/listings", { ...sampleFilters, size: Math.min(100, Math.max(1, size)) });
+      const items = Array.isArray(data.items) ? data.items : [];
+      return {
+        prices: toPrices(items.map((item) => normalizeListing(asJsonRecord(item)))),
+        total: Number(data.total) || 0,
+      };
+    }
+  } catch {
+    // fall through to the snapshot sample
+  }
+  try {
+    const scoped = await getScopedSnapshotIndex(sampleFilters);
+    if (scoped) {
+      const result = filterScopedSnapshot(scoped, sampleFilters, size);
+      return { prices: toPrices(result.listings), total: result.total };
+    }
+  } catch {
+    // no snapshot either
+  }
+  return { prices: [], total: 0 };
+};
+
+// ---------------------------------------------------------------------------
+// Account email flows — verification + password reset (no session required)
+// ---------------------------------------------------------------------------
+
+/** Single-attempt POST: token redemption must not be replayed by a retry loop. */
+async function postAuthAction<T>(path: string, body: Record<string, unknown>): Promise<T> {
+  const controller = new AbortController();
+  const timeoutMs = API_BASE.includes("hf.space") ? HF_COLD_START_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(new URL(`${API_BASE}${path}`, window.location.origin).toString(), {
+      method: "POST",
+      credentials: resolveFetchCredentials(),
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    if (!response.ok) throw await parseApiError(response);
+    return (await response.json().catch(() => ({}))) as T;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export type AuthActionResponse = { ok: boolean; email?: string; message?: string };
+
+export const verifyEmail = (token: string) => postAuthAction<AuthActionResponse>("/auth/verify-email", { token });
+
+export const resendVerificationEmail = (email: string) =>
+  postAuthAction<AuthActionResponse>("/auth/resend-verification", { email });
+
+export const requestPasswordReset = (email: string) =>
+  postAuthAction<AuthActionResponse>("/auth/forgot-password", { email });
+
+export const resetPassword = (token: string, password: string) =>
+  postAuthAction<AuthActionResponse>("/auth/reset-password", { token, password });
 
 export const sendFeedback = async (payload: FeedbackInput): Promise<FeedbackReceipt> => {
   const data = await postJSON<JsonRecord>("/feedback", {
@@ -1804,15 +1969,23 @@ function normalizePriceDropItems(data: JsonRecord, limit = 12): PriceDropItem[] 
   return data.items
     .map((row: unknown) => {
       const record = asJsonRecord(row);
+      const previous = toNumberOrNull(record?.previous_price_lkr) ?? 0;
+      const next = toNumberOrNull(record?.new_price_lkr) ?? 0;
       return {
         listing: normalizeListing(asJsonRecord(record?.listing)),
-        previous_price_lkr: toNumberOrNull(record?.previous_price_lkr) ?? 0,
-        new_price_lkr: toNumberOrNull(record?.new_price_lkr) ?? 0,
-        drop_pct: toNumberOrNull(record?.drop_pct) ?? 0,
+        previous_price_lkr: previous,
+        new_price_lkr: next,
+        // Recompute from the two prices so the badge always matches them.
+        drop_pct: computedDropPct(previous, next) || (toNumberOrNull(record?.drop_pct) ?? 0),
         dropped_at: String(record?.dropped_at || ""),
+        confirmations: toNumberOrNull(record?.confirmations ?? record?.points_at_new_price),
       };
     })
-    .filter((item) => item.listing.id && item.drop_pct > 0)
+    // Sanity guard: unit mismatches (lakhs vs millions), lease takeovers and
+    // unconfirmed >50% "cuts" are parse bugs, not market moves.
+    // confirmations are kept on the item so a later re-check (BestPicks) can
+    // still honour a confirmed large drop.
+    .filter((item) => item.listing.id && item.drop_pct > 0 && isPlausiblePriceDrop(item))
     .slice(0, limit);
 }
 
@@ -1821,7 +1994,8 @@ export const getPriceDrops = async (days = 7, limit = 12): Promise<PriceDropItem
   if (snapshot) return normalizePriceDropItems(snapshot, limit);
   if (SNAPSHOT_ONLY) return [];
 
-  const data = await fetchJSON<JsonRecord>(`/listings/price-drops?days=${days}&limit=${limit}`);
+  // Over-fetch: the sanity guard drops implausible rows, keep the board full.
+  const data = await fetchJSON<JsonRecord>(`/listings/price-drops?days=${days}&limit=${Math.min(60, limit * 3)}`);
   return normalizePriceDropItems(data, limit);
 };
 
@@ -1829,31 +2003,8 @@ export const getListingHistoryReport = async (id: string | number): Promise<Hist
   return fetchJSON<HistoryReport>(`/listings/${id}/history-report`);
 };
 
-export interface FmvMethodBreakdown {
-  base_median_lkr: number | null;
-  km_adjustment_lkr: number | null;
-  district_adjustment_lkr: number | null;
-  final_fmv_lkr: number | null;
-}
+export type { FmvMethodBreakdown, ListingFmvDetail } from "@/types/fmv";
 
-export interface ListingFmvDetail {
-  listing_id: number | null;
-  asking_lkr: number | null;
-  fmv_lkr: number | null;
-  deal_score: number | null;
-  delta_pct: number | null;
-  band: "below" | "fair" | "above" | null;
-  label: string | null;
-  method: string;
-  sample_count: number;
-  sample_size: number;
-  confidence: "high" | "medium" | "low" | "none";
-  comps_median_lkr: number | null;
-  km_adjustment_lkr?: number | null;
-  district_adjustment_lkr?: number | null;
-  method_breakdown?: FmvMethodBreakdown | null;
-  updated_at: string;
-}
 
 export const getListingFmv = async (id: string | number): Promise<ListingFmvDetail> => {
   try {
@@ -1872,6 +2023,15 @@ export const getListingFmv = async (id: string | number): Promise<ListingFmvDeta
       confidence: (data?.confidence as ListingFmvDetail["confidence"]) ?? "none",
       comps_median_lkr: toNumberOrNull(data?.comps_median_lkr),
       updated_at: String(data?.updated_at ?? ""),
+      estimate_lkr: toNumberOrNull(data?.estimate_lkr),
+      verdict:
+        data?.verdict && typeof data.verdict === "object"
+          ? {
+              status: String((data.verdict as JsonRecord).status ?? ""),
+              reason: (data.verdict as JsonRecord).reason ? String((data.verdict as JsonRecord).reason) : null,
+            }
+          : null,
+      corroborated_by_comps: data?.corroborated_by_comps === true,
     };
   } catch {
     const { predictFmvOffline } = await import("@/lib/offlineValuation");
@@ -2156,6 +2316,7 @@ async function deriveFuelMixFromCatalog(): Promise<FuelMixData | null> {
   };
 }
 
+
 async function deriveEvInsightFromCatalog(): Promise<EvInsightData | null> {
   let catalog: CarListing[] | null;
   let catalogSize: number;
@@ -2179,12 +2340,16 @@ async function deriveEvInsightFromCatalog(): Promise<EvInsightData | null> {
     return p !== null && p >= MIN_REASONABLE_PRICE_LKR ? p : null;
   };
   const evRows = catalog.filter((row) => offlineFuelCategory(row.fuel_type) === "electric");
-  const evPrices = evRows.map(priced).filter((p): p is number => p !== null);
+  // Price and model stats compare against a hybrid car (the Aqua), so they use
+  // electric cars only: e-scooters and electric three-wheelers made up two thirds
+  // of EV rows and dragged the "median EV price" to Rs 0.65 Mn.
+  const evCarRows = evRows.filter((row) => !NON_CAR_CATEGORIES.has(String(row.vehicle_category || "").toLowerCase()));
+  const evPrices = evCarRows.map(priced).filter((p): p is number => p !== null);
   const byModel = new Map<string, { make: string; model: string; prices: number[]; count: number }>();
-  for (const row of evRows) {
+  for (const row of evCarRows) {
     const make = String(row.make || "").trim();
     const model = String(row.model || "").trim();
-    if (!make || !model) continue;
+    if (!make || !model || model.toLowerCase() === "other") continue;
     const key = `${make}|||${model}`;
     const entry = byModel.get(key) || { make, model, prices: [], count: 0 };
     entry.count += 1;
@@ -2856,15 +3021,16 @@ export const getListingsForExport = async (
     return { listings: [], total: 0 };
   }
 
-  const data = await fetchJSON<JsonRecord>("/listings", {
+  const { data, clientRanked } = await fetchListingsPage({
     ...filters,
     page: 1,
     size,
   });
 
   const items = Array.isArray(data.items) ? data.items : [];
+  const rows = items.map((item) => normalizeListing(asJsonRecord(item)));
   return {
-    listings: items.map((item) => normalizeListing(asJsonRecord(item))),
+    listings: clientRanked ? rankBestMatchPage(rows) : rows,
     total: Number(data.total || 0),
   };
 };
@@ -3035,7 +3201,7 @@ export const getMakeModelInsight = async (make: string, model: string): Promise<
 
     const districtMap = new Map<string, { count: number; total: number; priced: number }>();
     for (const l of rows) {
-      const d = String(l.district || "").trim();
+      const d = cleanDistrict(l.district);
       if (!d) continue;
       const entry = districtMap.get(d) ?? { count: 0, total: 0, priced: 0 };
       entry.count += 1;
@@ -3086,10 +3252,10 @@ export const getMakeModelInsight = async (make: string, model: string): Promise<
     median_price_lkr: toNumberOrNull(data.median_price_lkr),
     top_districts: Array.isArray(data.top_districts)
       ? (data.top_districts as JsonRecord[]).map((row) => ({
-          district: String(row.district || ""),
+          district: cleanDistrict(row.district) ?? "",
           count: Number(row.count || 0),
           avg_price_lkr: toNumberOrNull(row.avg_price_lkr),
-        }))
+        })).filter((row) => row.district)
       : [],
   };
 };
@@ -3178,10 +3344,10 @@ export const getMakeInsight = async (make: string): Promise<MakeInsight> => {
         all_models: Array.isArray(data.all_models) ? (data.all_models as JsonRecord[]).map(mapModelRow) : undefined,
         top_districts: Array.isArray(data.top_districts)
           ? (data.top_districts as JsonRecord[]).map((row) => ({
-              district: String(row.district || ""),
+              district: cleanDistrict(row.district) ?? "",
               count: Number(row.count || 0),
               avg_price_lkr: toNumberOrNull(row.avg_price_lkr),
-            }))
+            })).filter((row) => row.district)
           : [],
       };
     }
@@ -3206,10 +3372,10 @@ export const getMakeInsight = async (make: string): Promise<MakeInsight> => {
       : undefined,
     top_districts: Array.isArray(data.top_districts)
       ? (data.top_districts as JsonRecord[]).map((row) => ({
-          district: String(row.district || ""),
+          district: cleanDistrict(row.district) ?? "",
           count: Number(row.count || 0),
           avg_price_lkr: toNumberOrNull(row.avg_price_lkr),
-        }))
+        })).filter((row) => row.district)
       : [],
   };
 };
@@ -3610,67 +3776,6 @@ export const getDealerProfile = async (claimToken: string): Promise<DealerClaimP
   return fetchJSON<DealerClaimProfile>("/dealer/me", { claim_token: claimToken });
 };
 
-export const sendChatMessage = async (
-  message: string,
-  history: ChatMessage[],
-  options?: ChatRequestOptions,
-) => {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-  const model = String(options?.model || "").trim();
-  const pageContext = options?.pageContext;
-
-  const response = await fetch(new URL(`${API_BASE}/chat`, window.location.origin).toString(), {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      message,
-      history,
-      ...(model ? { model } : {}),
-      ...(pageContext ? { page_context: pageContext } : {}),
-    }),
-    signal: controller.signal,
-  }).finally(() => clearTimeout(timeout));
-
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => "");
-    throw new Error(`API error ${response.status}: ${errorText || response.statusText}`);
-  }
-
-  const data = await response.json().catch(() => ({}));
-  return {
-    response: String(data?.response || data?.message || "No response available"),
-    listings: Array.isArray(data?.listings)
-      ? data.listings
-          .map((row: JsonRecord) => ({
-            id: Number(row?.id),
-            title: String(row?.title || "Listing"),
-            price_lkr: toNumberOrNull(row?.price_lkr),
-            district: row?.district ? String(row.district) : null,
-            deal_score: toNumberOrNull(row?.deal_score),
-            source: row?.source ? String(row.source) : null,
-            detail_url: row?.detail_url ? String(row.detail_url) : null,
-            external_url: row?.external_url ? String(row.external_url) : null,
-          }))
-          .filter((row: ChatListingResult) => Number.isFinite(row.id) && row.id > 0)
-      : [],
-    web_sources: Array.isArray(data?.web_sources)
-      ? data.web_sources
-          .map((row: JsonRecord) => ({
-            title: String(row?.title || ""),
-            url: String(row?.url || ""),
-            snippet: String(row?.snippet || ""),
-            source: String(row?.source || ""),
-          }))
-          .filter((row: ChatWebSource) => Boolean(row.url))
-      : [],
-  };
-};
-
 export const getSourceQuality = async (): Promise<SourceQualityResponse> => {
   const data = await fetchJSON<Record<string, unknown>>("/stats/source-quality");
   const sources = Array.isArray(data.sources)
@@ -4009,10 +4114,14 @@ export type AdminInvite = {
 
 export type AdminOverview = {
   listings: { total: number; live: number };
-  users: { total: number; free: number; pro: number; admins: number };
+  users: { total: number; free: number; pro: number; admins: number; active7?: number; active30?: number };
   invites: { pending: number };
   feedback: { open: number };
   dealers: { verified: number };
+  moderation?: { pending: number };
+  signupsDaily?: Array<{ day: string; count: number }>;
+  recentUsers?: AdminUser[];
+  recentFeedback?: AdminFeedbackItem[];
   recentScrapes: Array<{
     id: number;
     source: string;
@@ -4029,6 +4138,45 @@ export type AdminOverview = {
 
 export const getAdminOverview = async (): Promise<AdminOverview> => {
   return fetchJSON<AdminOverview>("/admin/overview", undefined, authHeaders());
+};
+
+export type AdminAuditLogItem = {
+  id: number;
+  actorEmail: string;
+  action: string;
+  targetType: string;
+  targetId?: string | null;
+  detail?: string | null;
+  createdAt?: string | null;
+};
+
+export type AdminHealth = {
+  databaseOk: boolean;
+  liveListings: number;
+  lastScrape?: {
+    id: number;
+    source: string;
+    status?: string | null;
+    listingsFound: number;
+    listingsNew: number;
+    startedAt?: string | null;
+    finishedAt?: string | null;
+    errorMessage?: string | null;
+  } | null;
+  failedScrapes24h: number;
+  recentErrors: Array<{ id: number; source: string; startedAt?: string | null; errorMessage?: string | null }>;
+  statsCache: Array<{ key: string; refreshedAt?: string | null }>;
+  version?: string | null;
+  commit?: string | null;
+  generatedAt: string;
+};
+
+export const getAdminAuditLog = async (limit = 100): Promise<{ items: AdminAuditLogItem[]; count: number }> => {
+  return fetchJSON<{ items: AdminAuditLogItem[]; count: number }>("/admin/audit-log", { limit }, authHeaders());
+};
+
+export const getAdminHealth = async (): Promise<AdminHealth> => {
+  return fetchJSON<AdminHealth>("/admin/health", undefined, authHeaders());
 };
 
 export const getAdminUsers = async (
@@ -4396,6 +4544,72 @@ export const createMyListing = async (input: MyListingInput): Promise<MyListing>
   return toMyListing(data);
 };
 
+/** Seller photo uploads (presigned R2 PUT). `enabled: false` hides the uploader. */
+export type UploadsConfig = {
+  enabled: boolean;
+  maxBytes: number;
+  maxFiles: number;
+  contentTypes: string[];
+};
+
+export type UploadTicket = {
+  uploadUrl: string;
+  publicUrl: string;
+  key: string;
+  headers: Record<string, string>;
+  expiresIn: number;
+};
+
+const UPLOADS_OFF: UploadsConfig = { enabled: false, maxBytes: 0, maxFiles: 12, contentTypes: [] };
+
+/**
+ * Probe whether the backend can issue upload URLs. Any failure (older backend
+ * without the route → 404, uploads unconfigured, network) reads as "off" so the
+ * Sell page falls back to adding photos by link.
+ */
+export const getUploadsConfig = async (): Promise<UploadsConfig> => {
+  try {
+    const url = new URL(`${API_BASE}/listings/mine/uploads/config`, window.location.origin).toString();
+    const response = await fetch(url, {
+      credentials: resolveFetchCredentials(),
+      headers: { Accept: "application/json", ...authHeaders() },
+    });
+    if (!response.ok) return UPLOADS_OFF;
+    const data = (await response.json()) as JsonRecord;
+    return {
+      enabled: data.enabled === true,
+      maxBytes: Number(data.max_bytes) || 0,
+      maxFiles: Number(data.max_files) || 12,
+      contentTypes: Array.isArray(data.content_types) ? data.content_types.map(String) : [],
+    };
+  } catch {
+    return UPLOADS_OFF;
+  }
+};
+
+export const requestUploadTicket = async (input: {
+  contentType: string;
+  size: number;
+  existingCount: number;
+}): Promise<UploadTicket> => {
+  const url = new URL(`${API_BASE}/listings/mine/uploads`, window.location.origin).toString();
+  const response = await fetch(url, {
+    method: "POST",
+    credentials: resolveFetchCredentials(),
+    headers: { "Content-Type": "application/json", Accept: "application/json", ...authHeaders() },
+    body: JSON.stringify({ content_type: input.contentType, size: input.size, existing_count: input.existingCount }),
+  });
+  if (!response.ok) throw await parseApiError(response);
+  const data = (await response.json()) as JsonRecord;
+  return {
+    uploadUrl: String(data.upload_url),
+    publicUrl: String(data.public_url),
+    key: String(data.key),
+    headers: (data.headers as Record<string, string>) || {},
+    expiresIn: Number(data.expires_in) || 0,
+  };
+};
+
 export const getMyListings = async (): Promise<MyListing[]> => {
   const items = await fetchJSON<JsonRecord[]>("/listings/mine", undefined, authHeaders());
   return Array.isArray(items) ? items.map(toMyListing) : [];
@@ -4450,4 +4664,39 @@ export const deleteMyListing = async (id: number): Promise<void> => {
     },
   });
   if (!response.ok) throw await parseApiError(response);
+};
+
+// ---------------------------------------------------------------------------
+// ui/features: snapshot comps for a make/model (estimate fallback, sell-speed)
+// ---------------------------------------------------------------------------
+
+/**
+ * Every snapshot row for one make/model (compact comps: id, price, year,
+ * mileage, district, condition, first_seen_at, fuel). Reads the per-model
+ * idx/ file when published, else filters the legacy full catalogue.
+ * Never calls the live API; returns [] when no snapshot covers the model.
+ * Pass `{ allowFullCatalog: false }` for non-essential UI (badges) so it
+ * never triggers the full-catalogue download.
+ */
+export const getSnapshotModelComps = async (
+  make: string,
+  model: string,
+  opts: { allowFullCatalog?: boolean } = {},
+): Promise<CarListing[]> => {
+  if (!make || !model) return [];
+  try {
+    if (await hasSnapshotIndex()) {
+      const idx = await getSnapshotModelIndex(make, model);
+      return (idx?.comps || []) as CarListing[];
+    }
+    // The legacy catalogue is tens of MB: only badges/extras opt out of it.
+    if (opts.allowFullCatalog === false) return [];
+    const catalog = await getSnapshotListingCatalog();
+    if (!catalog) return [];
+    const mk = makeIndexKey(make);
+    const mo = modelIndexKey(model);
+    return catalog.filter((row) => makeIndexKey(row.make) === mk && modelIndexKey(row.model) === mo);
+  } catch {
+    return [];
+  }
 };

@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
@@ -89,5 +90,40 @@ fun openNotificationSettings(context: Context) {
                 .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
+    }
+}
+
+/** Pure gate: the runtime prompt exists only on Android 13+ and only when not yet granted. */
+internal fun shouldRequestNotificationPermission(sdkInt: Int, granted: Boolean): Boolean =
+    sdkInt >= Build.VERSION_CODES.TIRAMISU && !granted
+
+/**
+ * Imperative variant of [NotificationPermissionPrompt] for one-shot events
+ * (e.g. a ViewModel "alert created" effect):
+ *
+ * ```
+ * val requestNotifications = rememberNotificationPermissionRequester()
+ * LaunchedEffect(Unit) { viewModel.alertCreated.collect { requestNotifications() } }
+ * ```
+ *
+ * No-op below Android 13 or when already granted; launches the system
+ * dialog directly (no rationale; show your own copy first if wanted).
+ * [onResult] receives the final granted state.
+ */
+@Composable
+fun rememberNotificationPermissionRequester(onResult: (Boolean) -> Unit = {}): () -> Unit {
+    val context = LocalContext.current
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        onResult(granted)
+    }
+    return remember(context, launcher) {
+        {
+            val granted = canPostNotifications(context)
+            if (shouldRequestNotificationPermission(Build.VERSION.SDK_INT, granted)) {
+                launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                onResult(granted)
+            }
+        }
     }
 }

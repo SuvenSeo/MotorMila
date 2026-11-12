@@ -48,16 +48,7 @@ def compute_phash(url: str, timeout: float = _FETCH_TIMEOUT_SECONDS) -> str | No
     if not url or not url.strip():
         return None
     try:
-        # Same honest-crawler rules as the scrapers: bot UA, robots.txt and the
-        # per-host delay. Image bytes are hashed in memory and never stored.
-        from app.scrapers.polite import PoliteTransport, bot_user_agent
-
-        with httpx.Client(
-            timeout=timeout,
-            follow_redirects=True,
-            headers={"User-Agent": bot_user_agent()},
-            transport=PoliteTransport(),
-        ) as client:
+        with httpx.Client(timeout=timeout, follow_redirects=True) as client:
             resp = client.get(url)
             resp.raise_for_status()
             if len(resp.content) > _MAX_IMAGE_BYTES:

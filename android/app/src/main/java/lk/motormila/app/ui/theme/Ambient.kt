@@ -10,44 +10,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import lk.motormila.app.ui.theme.MotormilaPrimaryGlow
 
 /**
- * Quiet atmospheric field used behind every screen. Two soft electric-blue
- * blooms + a faint vertical falloff so chrome can recede and data can sit
- * on a photographic-dark canvas. Cheap: a single gradient canvas, no blur.
+ * Quiet atmospheric field behind screens (dark only): a single, very faint
+ * blue bloom at the top so the Ink ground has depth without competing with
+ * content. Static; one gradient; no blur.
  */
 @Composable
 fun MotormilaAmbient(modifier: Modifier = Modifier) {
+    val colors = MmColors.current
+    if (!colors.isDark) return
     Canvas(modifier = modifier.fillMaxSize()) {
         val w = size.width
-        val h = size.height
-        drawRect(MotormilaBg)
+        drawRect(colors.background)
         drawRect(
             brush = Brush.radialGradient(
-                colors = listOf(MotormilaPrimaryGlow, Color(0x140A7AFF), Color.Transparent),
-                center = Offset(w * 0.86f, h * -0.02f),
-                radius = w * 0.92f,
-            ),
-        )
-        drawRect(
-            brush = Brush.radialGradient(
-                colors = listOf(Color(0x1A38BDF8), Color.Transparent),
-                center = Offset(w * -0.05f, h * 0.78f),
-                radius = w * 0.85f,
-            ),
-        )
-        drawRect(
-            brush = Brush.verticalGradient(
-                colors = listOf(Color.Transparent, Color(0x6609090B)),
-                startY = h * 0.55f,
-                endY = h,
+                colors = listOf(Color(0x1F0A7AFF), Color(0x0A0A7AFF), Color.Transparent),
+                center = Offset(w * 0.5f, -w * 0.35f),
+                radius = w * 1.1f,
             ),
         )
     }
 }
 
-/** Full-bleed page canvas: ambient field + content. */
+/** Full-bleed page canvas: ground + ambient field + content. */
 @Composable
 fun MotormilaCanvas(
     modifier: Modifier = Modifier,
@@ -56,7 +42,7 @@ fun MotormilaCanvas(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MotormilaBg),
+            .background(MmColors.current.background),
     ) {
         MotormilaAmbient()
         content()

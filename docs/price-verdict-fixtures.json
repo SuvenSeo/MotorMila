@@ -1,0 +1,506 @@
+{
+ "_doc": "Shared fixtures for the one price verdict. Asserted by backend/tests/test_price_verdict.py, src/lib/priceVerdict.test.ts and android PriceVerdictTest. Change all three implementations together.",
+ "cases": [
+  {
+   "name": "fair: exactly typical",
+   "input": {
+    "asking": 5000000,
+    "reference": 5000000,
+    "model": "Aqua",
+    "category": "cars"
+   },
+   "expect": {
+    "status": "ok",
+    "band": "fair",
+    "pct": 0,
+    "verify_first": false
+   }
+  },
+  {
+   "name": "fair: 4.9% below",
+   "input": {
+    "asking": 4755000,
+    "reference": 5000000,
+    "model": "Aqua",
+    "category": "cars"
+   },
+   "expect": {
+    "status": "ok",
+    "band": "fair",
+    "pct": 4,
+    "verify_first": false
+   }
+  },
+  {
+   "name": "below: 5% boundary",
+   "input": {
+    "asking": 4750000,
+    "reference": 5000000,
+    "model": "Aqua",
+    "category": "cars"
+   },
+   "expect": {
+    "status": "ok",
+    "band": "below",
+    "pct": 5,
+    "verify_first": false
+   }
+  },
+  {
+   "name": "below: 20%",
+   "input": {
+    "asking": 4000000,
+    "reference": 5000000,
+    "comps": 40,
+    "confidence": "high",
+    "model": "Aqua",
+    "category": "cars"
+   },
+   "expect": {
+    "status": "ok",
+    "band": "below",
+    "pct": 20,
+    "verify_first": false
+   }
+  },
+  {
+   "name": "below: 5.1%",
+   "input": {
+    "asking": 9490000,
+    "reference": 10000000,
+    "model": "Vezel",
+    "category": "suvs"
+   },
+   "expect": {
+    "status": "ok",
+    "band": "below",
+    "pct": 5,
+    "verify_first": false
+   }
+  },
+  {
+   "name": "fair: 7.9% above",
+   "input": {
+    "asking": 5395000,
+    "reference": 5000000,
+    "model": "Aqua",
+    "category": "cars"
+   },
+   "expect": {
+    "status": "ok",
+    "band": "fair",
+    "pct": 7,
+    "verify_first": false
+   }
+  },
+  {
+   "name": "above: 8% boundary",
+   "input": {
+    "asking": 5400000,
+    "reference": 5000000,
+    "model": "Aqua",
+    "category": "cars"
+   },
+   "expect": {
+    "status": "ok",
+    "band": "above",
+    "pct": 8,
+    "verify_first": false
+   }
+  },
+  {
+   "name": "above: 60% edge still shown",
+   "input": {
+    "asking": 8000000,
+    "reference": 5000000,
+    "model": "Aqua",
+    "category": "cars"
+   },
+   "expect": {
+    "status": "ok",
+    "band": "above",
+    "pct": 60,
+    "verify_first": false
+   }
+  },
+  {
+   "name": "verify: 35% below",
+   "input": {
+    "asking": 3250000,
+    "reference": 5000000,
+    "model": "Aqua",
+    "category": "cars"
+   },
+   "expect": {
+    "status": "ok",
+    "band": "below",
+    "pct": 35,
+    "verify_first": true
+   }
+  },
+  {
+   "name": "verify: 59% below",
+   "input": {
+    "asking": 2050000,
+    "reference": 5000000,
+    "model": "Aqua",
+    "category": "cars"
+   },
+   "expect": {
+    "status": "ok",
+    "band": "below",
+    "pct": 59,
+    "verify_first": true
+   }
+  },
+  {
+   "name": "withheld: 680073 bike vs car cohort",
+   "input": {
+    "asking": 735000,
+    "reference": 7201142.86,
+    "model": "Hunk",
+    "category": "motorbikes",
+    "title": "Hero-Honda Hunk Motorbike"
+   },
+   "expect": {
+    "status": "withheld",
+    "reason": "unit_mismatch"
+   }
+  },
+  {
+   "name": "withheld: 61% above",
+   "input": {
+    "asking": 8050000,
+    "reference": 5000000,
+    "model": "Aqua",
+    "category": "cars"
+   },
+   "expect": {
+    "status": "withheld",
+    "reason": "implausible_gap"
+   }
+  },
+  {
+   "name": "withheld: unit slip x10",
+   "input": {
+    "asking": 650000,
+    "reference": 6500000,
+    "model": "Aqua",
+    "category": "cars"
+   },
+   "expect": {
+    "status": "withheld",
+    "reason": "unit_mismatch"
+   }
+  },
+  {
+   "name": "withheld: generic Other model",
+   "input": {
+    "asking": 5000000,
+    "reference": 5100000,
+    "model": "Other",
+    "category": "cars"
+   },
+   "expect": {
+    "status": "withheld",
+    "reason": "generic_model"
+   }
+  },
+  {
+   "name": "withheld: thin comps",
+   "input": {
+    "asking": 5000000,
+    "reference": 5100000,
+    "comps": 4,
+    "confidence": "high",
+    "model": "Aqua",
+    "category": "cars"
+   },
+   "expect": {
+    "status": "withheld",
+    "reason": "thin_comps"
+   }
+  },
+  {
+   "name": "withheld: low confidence",
+   "input": {
+    "asking": 5000000,
+    "reference": 5100000,
+    "comps": 12,
+    "confidence": "low",
+    "model": "Aqua",
+    "category": "cars"
+   },
+   "expect": {
+    "status": "withheld",
+    "reason": "low_confidence"
+   }
+  },
+  {
+   "name": "withheld: no reference",
+   "input": {
+    "asking": 5000000,
+    "reference": null,
+    "model": "Aqua",
+    "category": "cars"
+   },
+   "expect": {
+    "status": "withheld",
+    "reason": "no_reference"
+   }
+  },
+  {
+   "name": "withheld: zero reference",
+   "input": {
+    "asking": 5000000,
+    "reference": 0,
+    "model": "Aqua",
+    "category": "cars"
+   },
+   "expect": {
+    "status": "withheld",
+    "reason": "no_reference"
+   }
+  },
+  {
+   "name": "withheld: no price",
+   "input": {
+    "asking": null,
+    "reference": 5000000,
+    "model": "Aqua",
+    "category": "cars"
+   },
+   "expect": {
+    "status": "withheld",
+    "reason": "no_price"
+   }
+  },
+  {
+   "name": "withheld: Rs 1",
+   "input": {
+    "asking": 1,
+    "reference": 5000000,
+    "model": "Aqua",
+    "category": "cars"
+   },
+   "expect": {
+    "status": "withheld",
+    "reason": "below_price_floor"
+   }
+  },
+  {
+   "name": "withheld: placeholder 123456",
+   "input": {
+    "asking": 123456,
+    "reference": 150000,
+    "model": "Dio",
+    "category": "motorbikes"
+   },
+   "expect": {
+    "status": "withheld",
+    "reason": "placeholder_price"
+   }
+  },
+  {
+   "name": "withheld: placeholder 1111111",
+   "input": {
+    "asking": 1111111,
+    "reference": 1200000,
+    "model": "RE",
+    "category": "three-wheelers"
+   },
+   "expect": {
+    "status": "withheld",
+    "reason": "placeholder_price"
+   }
+  },
+  {
+   "name": "ok: lucky number 7777777",
+   "input": {
+    "asking": 7777777,
+    "reference": 7500000,
+    "model": "Aqua",
+    "category": "cars"
+   },
+   "expect": {
+    "status": "ok",
+    "band": "fair",
+    "pct": 4,
+    "verify_first": false
+   }
+  },
+  {
+   "name": "withheld: car below floor",
+   "input": {
+    "asking": 250000,
+    "reference": 300000,
+    "model": "Alto",
+    "category": "cars"
+   },
+   "expect": {
+    "status": "withheld",
+    "reason": "below_price_floor"
+   }
+  },
+  {
+   "name": "ok: cheap bike above floor",
+   "input": {
+    "asking": 120000,
+    "reference": 125000,
+    "model": "CD 70",
+    "category": "motorbikes"
+   },
+   "expect": {
+    "status": "ok",
+    "band": "fair",
+    "pct": 4,
+    "verify_first": false
+   }
+  },
+  {
+   "name": "withheld: for rent",
+   "input": {
+    "asking": 5000000,
+    "reference": 5200000,
+    "model": "Prius",
+    "category": "cars",
+    "title": "Toyota Prius (Hybrid) for Rent"
+   },
+   "expect": {
+    "status": "withheld",
+    "reason": "lease_or_rent"
+   }
+  },
+  {
+   "name": "withheld: down payment",
+   "input": {
+    "asking": 2975000,
+    "reference": 3500000,
+    "model": "Presea",
+    "category": "cars",
+    "title": "Nissan Presea R11 Down Payment 4 50-  Car"
+   },
+   "expect": {
+    "status": "withheld",
+    "reason": "lease_or_rent"
+   }
+  },
+  {
+   "name": "withheld: lease takeover",
+   "input": {
+    "asking": 2175000,
+    "reference": 9000000,
+    "model": "Vezel",
+    "category": "suvs",
+    "title": "Honda Vezel lease takeover"
+   },
+   "expect": {
+    "status": "withheld",
+    "reason": "lease_or_rent"
+   }
+  },
+  {
+   "name": "ok: leasing available is ordinary",
+   "input": {
+    "asking": 5000000,
+    "reference": 5200000,
+    "model": "Vitz",
+    "category": "cars",
+    "title": "Toyota Vitz 2018 leasing available"
+   },
+   "expect": {
+    "status": "ok",
+    "band": "fair",
+    "pct": 4,
+    "verify_first": false
+   }
+  },
+  {
+   "name": "withheld: parts",
+   "input": {
+    "asking": 900000,
+    "reference": 5000000,
+    "model": "Axio",
+    "category": "cars",
+    "title": "Toyota Axio for parts"
+   },
+   "expect": {
+    "status": "withheld",
+    "reason": "parts_or_damaged"
+   }
+  },
+  {
+   "name": "withheld: accidented",
+   "input": {
+    "asking": 3000000,
+    "reference": 5000000,
+    "model": "Fit",
+    "category": "cars",
+    "title": "Accidented Honda Fit GP5"
+   },
+   "expect": {
+    "status": "withheld",
+    "reason": "parts_or_damaged"
+   }
+  },
+  {
+   "name": "ok: accident free",
+   "input": {
+    "asking": 4900000,
+    "reference": 5000000,
+    "model": "Fit",
+    "category": "cars",
+    "title": "Honda Fit GP5 accident free"
+   },
+   "expect": {
+    "status": "ok",
+    "band": "fair",
+    "pct": 2,
+    "verify_first": false
+   }
+  },
+  {
+   "name": "withheld: estimates point opposite ways",
+   "input": {
+    "asking": 9000000,
+    "reference": 10000000,
+    "secondary": 8000000,
+    "model": "Aqua",
+    "category": "cars"
+   },
+   "expect": {
+    "status": "withheld",
+    "reason": "estimates_disagree"
+   }
+  },
+  {
+   "name": "ok: estimates agree in direction",
+   "input": {
+    "asking": 9000000,
+    "reference": 10000000,
+    "secondary": 9800000,
+    "model": "Aqua",
+    "category": "cars"
+   },
+   "expect": {
+    "status": "ok",
+    "band": "below",
+    "pct": 10,
+    "verify_first": false
+   }
+  },
+  {
+   "name": "withheld: above ceiling",
+   "input": {
+    "asking": 900000000,
+    "reference": 850000000,
+    "model": "G-Class",
+    "category": "suvs"
+   },
+   "expect": {
+    "status": "withheld",
+    "reason": "above_price_ceiling"
+   }
+  }
+ ]
+}

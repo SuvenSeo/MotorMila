@@ -1,5 +1,7 @@
 package lk.motormila.app.ui.admin
 
+import lk.motormila.app.ui.theme.tabular
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -43,7 +45,6 @@ import lk.motormila.app.ui.components.MotormilaChoiceChip
 import lk.motormila.app.ui.components.MotormilaEyebrow
 import lk.motormila.app.ui.components.MotormilaGhostButton
 import lk.motormila.app.ui.components.MotormilaMetricTile
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.theme.MotormilaGoodText
@@ -75,7 +76,7 @@ fun AdminScreen(
         viewModel.onEvent(AdminUiEvent.DismissNotice)
     }
 
-    MotormilaPage(title = "Admin", onBack = onBack, snackbarHostState = snacks) {
+    lk.motormila.app.ui.common.MmScreen(title = "Admin", onBack = onBack, snackbarHostState = snacks) {
         when {
             !state.isAdmin && !state.isLoading -> {
                 Column(
@@ -151,7 +152,7 @@ private fun OverviewPane(state: AdminUiState) {
                 MotormilaSurface {
                     Row(Modifier.fillMaxWidth()) {
                         Text(row.make, modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold, color = MotormilaOnSurface)
-                        Text(LkrFormat.count(row.count), fontFamily = FontFamily.Monospace, color = MotormilaPrimaryBright)
+                        Text(LkrFormat.count(row.count), style = LocalTextStyle.current.tabular(),  color = MotormilaPrimaryBright)
                     }
                 }
             }
@@ -363,7 +364,7 @@ private fun InvitesPane(
                 if (signupUrl != null) {
                     Spacer(Modifier.height(10.dp))
                     Text("Share this sign-up link.", fontSize = 12.sp, color = MotormilaGoodText)
-                    Text(signupUrl, fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = MotormilaPrimaryBright)
+                    Text(signupUrl, style = LocalTextStyle.current.tabular(),  fontSize = 11.sp, color = MotormilaPrimaryBright)
                     Spacer(Modifier.height(8.dp))
                     MotormilaGhostButton(
                         label = "Copy sign-up URL",
@@ -509,8 +510,8 @@ private fun AnalyticsPane(state: AdminUiState) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         MotormilaMetricTile(
                             label = "AVG ASK",
-                            value = LkrFormat.price(analytics.listings.avgPriceLkr),
-                            note = "${LkrFormat.price(analytics.listings.minPriceLkr)} – ${LkrFormat.price(analytics.listings.maxPriceLkr)}",
+                            value = lk.motormila.app.ui.common.mn(analytics.listings.avgPriceLkr),
+                            note = "${lk.motormila.app.ui.common.mn(analytics.listings.minPriceLkr)} – ${lk.motormila.app.ui.common.mn(analytics.listings.maxPriceLkr)}",
                             modifier = Modifier.weight(1f),
                         )
                         MotormilaMetricTile(
@@ -557,7 +558,7 @@ private fun NamedCountList(title: String, rows: List<AdminNamedCount>) {
                     Text(row.label, modifier = Modifier.weight(1f), color = MotormilaOnSurface)
                     Text(
                         LkrFormat.count(row.count),
-                        fontFamily = FontFamily.Monospace,
+                        style = LocalTextStyle.current.tabular(),
                         color = MotormilaPrimaryBright,
                     )
                 }
@@ -726,8 +727,8 @@ private fun PermitsPane(state: AdminUiState, viewModel: AdminViewModel) {
                 Text(permit.permitName, fontWeight = FontWeight.SemiBold, color = MotormilaOnSurface)
                 Text(permit.permitType, fontSize = 12.sp, color = MotormilaSecondaryText)
                 Text(
-                    LkrFormat.full(permit.marketPriceLkr),
-                    fontFamily = FontFamily.Monospace,
+                    lk.motormila.app.ui.common.mn(permit.marketPriceLkr),
+                    style = LocalTextStyle.current.tabular(),
                     color = MotormilaPrimaryBright,
                 )
             }

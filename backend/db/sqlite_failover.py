@@ -1,7 +1,7 @@
 """Fail the live API over to the public merged SQLite dump when Neon is down.
 
 Neon Free blocks every connection once the monthly transfer quota is exhausted.
-Public browsing is supposed to use Vercel snapshots, but a Git deploy omits
+Public browsing is supposed to use R2 snapshots, but a Git deploy omits
 the gitignored listing catalog, so the SPA falls through to `/listings` and
 renders a hard error. This module downloads the public merged SQLite dump
 (the same file manus-to-live publishes) and rebinds SQLAlchemy onto it so the
@@ -71,8 +71,6 @@ FAILOVER_DB_URLS = (
     "https://pub-f15911ef9a914db9a44e1fd6b47dfe4e.r2.dev/snapshots/latest/merged-motormila.db.gz",
     "https://pub-f15911ef9a914db9a44e1fd6b47dfe4e.r2.dev/snapshots/latest/merged-autolens.db.gz",
 )
-# Backwards-compatible alias: the canonical (first) URL.
-VERCEL_MERGED_DB_URL = FAILOVER_DB_URLS[0]
 FAILOVER_DB_URL = FAILOVER_DB_URLS[0]
 DEFAULT_FAILOVER_PATH = "/tmp/motormila-failover.db"
 PERSISTENT_FAILOVER_PATH = "/data/motormila-failover.db"
@@ -81,7 +79,7 @@ PERSISTENT_FAILOVER_PATH = "/data/motormila-failover.db"
 SLIM_FAILOVER_DB_URL = (
     "https://pub-f15911ef9a914db9a44e1fd6b47dfe4e.r2.dev/snapshots/latest/merged-motormila-slim.db.gz"
 )
-DEFAULT_USER_AGENT = "MotorMila-Failover/1.1 (+https://motormila.vercel.app)"
+DEFAULT_USER_AGENT = "MotorMila-Failover/1.1 (+https://motormila.pages.dev)"
 # Raw-to-gz size ratio observed on the merged dump (108 MB -> 455 MB). Used to
 # estimate whether a second copy fits on disk before a refresh.
 _EXPANSION_RATIO_ESTIMATE = 5
@@ -95,7 +93,47 @@ _status: dict = {
     "source": None,
     "path": None,
     "bytes": None,
+    # Last observation of the primary (Neon) database, credential-free:
+    # "ok" | "quota_exceeded" | "unreachable" | "auth_failed" | "error".
+    "primary_status": None,
+    "primary_checked_at": None,
 }
+
+
+def classify_primary_error(exc: BaseException | str | None) -> str:
+    """Map a Neon connect failure to a short, secret-free reason code.
+
+    Neon Free answers "Your account or project has exceeded the quota" (or
+    "...data transfer quota") once the monthly transfer allowance is used up;
+    that needs a plan decision or the monthly reset, not a code fix, so
+    /health reports it distinctly from a plain network failure.
+    """
+    if exc is None:
+        return "ok"
+    message = str(exc).lower()
+    if "quota" in message or "exceeded" in message or "endpoint is disabled" in message:
+        return "quota_exceeded"
+    if "password authentication failed" in message or "authentication failed" in message:
+        return "auth_failed"
+    if any(
+        marker in message
+        for marker in (
+            "could not connect",
+            "timeout",
+            "timed out",
+            "could not translate host",
+            "connection refused",
+            "network is unreachable",
+            "name or service not known",
+            "server closed the connection",
+        )
+    ):
+        return "unreachable"
+    return "error"
+
+
+def _record_primary(exc: BaseException | None) -> None:
+    _record_status(primary_status=classify_primary_error(exc), primary_checked_at=time.time())
 
 
 def _record_status(**fields) -> None:
@@ -174,7 +212,7 @@ _consecutive_failures = 0
 _active_source_url: str | None = None
 _active_source_version: tuple[str | None, int | None] | None = None
 
-# Refresh throttle. Vercel's edge serves identical bytes with a flapping
+# Refresh throttle. The CDN edge serves identical bytes with a flapping
 # Last-Modified on consecutive HEADs, which used to make every monitor tick
 # see a "new version" and re-download the dump in a loop. The version is now
 # (etag, content_length) only; on top of that a successful refresh is never
@@ -226,8 +264,10 @@ def neon_reachable(timeout_seconds: float = 3.0) -> bool:
         # Bypass the circuit breaker: this probe must observe the real DB.
         with bypass_breaker(), db_session.hot_engine.connect() as conn:
             conn.execute(text("SELECT 1"))
+        _record_primary(None)
         return True
     except Exception as exc:  # noqa: BLE001 — any connect failure means fail over
+        _record_primary(exc)
         logger.warning("neon_probe_failed", error=str(exc), timeout_seconds=timeout_seconds)
         return False
 
@@ -246,8 +286,10 @@ def _probe_url(url: str, timeout_seconds: float = 3.0) -> bool:
     try:
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
+        _record_primary(None)
         return True
     except Exception as exc:  # noqa: BLE001 — any connect failure means still down
+        _record_primary(exc)
         logger.warning("neon_reprobe_failed", error=str(exc))
         return False
     finally:
@@ -257,7 +299,7 @@ def _probe_url(url: str, timeout_seconds: float = 3.0) -> bool:
 def _is_sqlite_file(path: Path) -> bool:
     """True when *path* starts with the SQLite 3 magic header.
 
-    A size-only check lets a >1KB HTML error page (Vercel 404/500) pass and
+    A size-only check lets a >1KB HTML error page (CDN 404/500) pass and
     poison the failover DB until the next source-version change.
     """
     try:
@@ -390,7 +432,7 @@ def _source_version(url: str) -> tuple[str | None, int | None] | None:
 
 
 def _version_from_headers(headers) -> tuple[str | None, int | None] | None:
-    # Last-Modified is deliberately NOT part of the version: Vercel's edge
+    # Last-Modified is deliberately NOT part of the version: the CDN edge
     # serves identical bytes with a different Last-Modified on consecutive
     # HEAD requests, which made every monitor tick re-download the dump.
     etag = (headers.get("ETag") or headers.get("Etag") or "").strip() or None

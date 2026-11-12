@@ -9,18 +9,18 @@ import {
 
 describe("dealLadder thresholds", () => {
   it("maps Good Deal / Fair / Overpriced like FairPriceIndicator", () => {
-    expect(bandFromDealScore(8)).toBe("good_deal");
+    expect(bandFromDealScore(5)).toBe("good_deal");
     expect(bandFromDealScore(12)).toBe("good_deal");
-    expect(bandFromDealScore(7.9)).toBe("fair");
+    expect(bandFromDealScore(4.9)).toBe("fair");
     expect(bandFromDealScore(0)).toBe("fair");
-    expect(bandFromDealScore(-4.9)).toBe("fair");
-    expect(bandFromDealScore(-5)).toBe("overpriced");
+    expect(bandFromDealScore(-7.9)).toBe("fair");
+    expect(bandFromDealScore(-8)).toBe("overpriced");
     expect(bandFromDealScore(-20)).toBe("overpriced");
   });
 
-  it("uses 0.92 / 1.05 multipliers for score ± thresholds", () => {
-    expect(GOOD_DEAL_MULTIPLIER).toBeCloseTo(0.92);
-    expect(OVERPRICED_MULTIPLIER).toBeCloseTo(1.05);
+  it("uses 0.95 / 1.08 multipliers (the verdict bands) for score ± thresholds", () => {
+    expect(GOOD_DEAL_MULTIPLIER).toBeCloseTo(0.95);
+    expect(OVERPRICED_MULTIPLIER).toBeCloseTo(1.08);
   });
 
   it("mirrors deal_scores.py percentage-below-median formula", () => {
@@ -40,18 +40,18 @@ describe("computeDealLadder", () => {
     expect(computeDealLadder({ askingPrice: NaN, marketMedianLkr: median })).toBeNull();
   });
 
-  it("prices Great/Good Deal target at median × 0.92", () => {
+  it("prices Good Deal target at median × 0.95", () => {
     const ladder = computeDealLadder({ askingPrice: 9_800_000, marketMedianLkr: median });
     expect(ladder).not.toBeNull();
-    expect(ladder!.goodDealPrice).toBe(9_200_000);
-    expect(ladder!.overpricedThreshold).toBe(10_500_000);
+    expect(ladder!.goodDealPrice).toBe(9_500_000);
+    expect(ladder!.overpricedThreshold).toBe(10_800_000);
   });
 
-  it("classifies asking above median × 1.05 as overpriced and cuts to Good Deal", () => {
+  it("classifies asking above median × 1.08 as overpriced and cuts to Good Deal", () => {
     const ladder = computeDealLadder({ askingPrice: 11_000_000, marketMedianLkr: median });
     expect(ladder!.band).toBe("overpriced");
     expect(ladder!.bandLabel).toBe("Overpriced");
-    expect(ladder!.cutToGoodDeal).toBe(1_800_000);
+    expect(ladder!.cutToGoodDeal).toBe(1_500_000);
     expect(ladder!.cutToFair).toBeGreaterThan(0);
     expect(ladder!.headline).toContain("Good Deal");
   });
@@ -59,7 +59,7 @@ describe("computeDealLadder", () => {
   it("classifies mid-band prices as Fair with cut to Good Deal", () => {
     const ladder = computeDealLadder({ askingPrice: 10_000_000, marketMedianLkr: median });
     expect(ladder!.band).toBe("fair");
-    expect(ladder!.cutToGoodDeal).toBe(800_000);
+    expect(ladder!.cutToGoodDeal).toBe(500_000);
     expect(ladder!.cutToFair).toBe(0);
     expect(ladder!.headline).toMatch(/Cut .* to hit Good Deal/);
   });
@@ -69,6 +69,13 @@ describe("computeDealLadder", () => {
     expect(ladder!.band).toBe("good_deal");
     expect(ladder!.cutToGoodDeal).toBe(0);
     expect(ladder!.headline).toBe("Already a Good Deal");
+  });
+
+  it("follows the page verdict and renders nothing when it is withheld", () => {
+    const withheld = { status: "withheld", reason: "implausible_gap", group: "inconsistent_data", referenceLkr: median } as const;
+    expect(computeDealLadder({ askingPrice: 735_000, marketMedianLkr: 7_201_142, verdict: withheld })).toBeNull();
+    const ok = { status: "ok", band: "above", gapPct: 8, pct: 8, verifyFirst: false, referenceLkr: median, gapLkr: 800_000 } as const;
+    expect(computeDealLadder({ askingPrice: 10_800_000, marketMedianLkr: median, verdict: ok })!.band).toBe("overpriced");
   });
 
   it("marks the active rung on the ladder", () => {

@@ -22,7 +22,6 @@ import lk.motormila.app.R
 import lk.motormila.app.ui.components.EmptyState
 import lk.motormila.app.core.ui.PrimaryAction
 import lk.motormila.app.domain.repository.ListingQuery
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaSurface
 
 /**
@@ -36,7 +35,7 @@ fun ShareImportScreen(
     sharedUrl: String?,
     onSearch: (ListingQuery) -> Unit,
     onCompare: (ids: List<Int>) -> Unit,
-    onValuation: (make: String, model: String) -> Unit,
+    onValuation: (make: String, model: String, year: Int?) -> Unit,
     onBrowse: () -> Unit,
 ) {
     val target = remember(sharedUrl) { parseSharedUrl(sharedUrl) }
@@ -47,12 +46,12 @@ fun ShareImportScreen(
         when (target) {
             is ShareTarget.Search -> onSearch(target.query)
             is ShareTarget.Compare -> onCompare(target.ids)
-            is ShareTarget.Valuation -> onValuation(target.make, target.model)
+            is ShareTarget.Valuation -> onValuation(target.make, target.model, target.year)
             is ShareTarget.Unsupported -> Unit // stay: error state below
         }
     }
 
-    MotormilaPage(title = stringResource(R.string.share_title)) {
+    lk.motormila.app.ui.common.MmScreen(title = stringResource(R.string.share_title)) {
         Column(
             Modifier.fillMaxSize().padding(24.dp),
             verticalArrangement = Arrangement.Center,
@@ -82,7 +81,7 @@ fun ShareImportScreen(
                         is ShareTarget.Search -> PrimaryAction(stringResource(R.string.share_open_search), onClick = { onSearch(target.query) })
                         is ShareTarget.Compare -> PrimaryAction(stringResource(R.string.share_open_compare), onClick = { onCompare(target.ids) })
                         is ShareTarget.Valuation -> PrimaryAction(stringResource(R.string.share_open_valuation), onClick = {
-                            onValuation(target.make, target.model)
+                            onValuation(target.make, target.model, target.year)
                         })
                         else -> Unit
                     }

@@ -5,13 +5,10 @@ from urllib.parse import urljoin
 
 import httpx
 import structlog
-
-from app.scrapers.polite import BOT_USER_AGENT
 from bs4 import BeautifulSoup
 from sqlalchemy.orm import Session
 
 from app.scrapers.cleaner import CarCleaner
-from app.scrapers.net import httpx_client_kwargs
 from app.scrapers.page_budget import should_stop_at_page_hint, start_page_from_env
 from app.utils.listing_upsert import buffered_upsert_listing, flush_upsert_buffer
 from app.utils.time import utc_now
@@ -19,7 +16,11 @@ from app.utils.time import utc_now
 log = structlog.get_logger()
 
 DEFAULT_HEADERS = {
-    "User-Agent": BOT_USER_AGENT,
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    ),
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
 }
@@ -150,7 +151,7 @@ class CartivateScraper:
         consecutive_page_errors = 0
         max_page_hint: int | None = None
 
-        async with httpx.AsyncClient(follow_redirects=True, **httpx_client_kwargs(DEFAULT_HEADERS)) as client:
+        async with httpx.AsyncClient(headers=DEFAULT_HEADERS, follow_redirects=True) as client:
             while True:
                 if stop_at_page is not None and page_num >= stop_at_page:
                     break

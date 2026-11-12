@@ -1,14 +1,17 @@
 from fastapi import APIRouter, Depends, Header, Query, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session, load_only
-from sqlalchemy import String, cast, func, desc, and_, or_
+from sqlalchemy import String, case, cast, func, desc, asc, and_, or_, literal
 from typing import Optional, List, Dict, Any, Annotated
 from statistics import median
 from datetime import datetime, timedelta, timezone
+from app.utils.price_verdict import plausible_deal_score, plausible_deal_score_sql
 from app.utils.time import utc_now
 import ipaddress
+import logging
 import json
 import math
+import os
 import re
 import socket
 import time
@@ -17,16 +20,19 @@ from urllib.parse import urljoin, urlparse
 import httpx
 from bs4 import BeautifulSoup
 from db.session import get_db
-from db.models import CarListing, ScrapeRun, VehiclePriceHistory, live_listing_filter
+from db.models import CarListing, ScrapeRun, VehiclePriceHistory, live_listing_filter, LIVE_LISTING_STATUSES
 from app.services.nhtsa_specs import fetch_models_for_make as _nhtsa_fetch_models
 from app.services.safety_research import combined_research
 from app.services.geo_service import enrich_listing
 from app.utils.history_report import build_history_report
-from app.utils.fmv import predict_listing_fmv
+from app.utils.fmv import batch_price_verdicts, predict_listing_fmv
 from app.utils.price_history import summarize_price_history
 from app.utils.make_canonical import canonicalize_make, canonicalize_model, compact_key
 from app.utils.vehicle_category import category_sql_filter, resolve_browse_category
 from app.utils.thumbnail_urls import upgrade_thumbnail_url
+from app.utils.districts import normalize_district_name
+from app.utils import listing_cache
+from app.utils import memory_cache
 from app.api.v1.endpoints.auth import (
     PRO_PLANS,
     get_current_auth_payload,
@@ -34,8 +40,6 @@ from app.api.v1.endpoints.auth import (
     verify_token,
 )
 from app.utils.plan_limits import (
-    FREE_LISTINGS_MAX_PAGE,
-    FREE_LISTINGS_MAX_SIZE,
     FREE_PRICE_DROPS_LIMIT,
     FREE_SIMILAR_LIMIT,
     is_free_browse_plan,
@@ -383,14 +387,18 @@ _BODY_TYPE_ALIASES: dict[str, frozenset[str]] = {
     "van": frozenset({"van", "minivan"}),
     "mpv": frozenset({"mpv"}),
     "crossover": frozenset({"crossover", "cuv"}),
-    "wagon": frozenset({"wagon", "estate"}),
-    "coupe": frozenset({"coupe"}),
+    "wagon": frozenset({"wagon", "estate", "stationwagon"}),
+    "coupe": frozenset({"coupe", "coupé", "coupé/sports", "coupe/sports", "sports", "sportscar"}),
     "convertible": frozenset({"convertible", "cabriolet"}),
     "jeep": frozenset({"jeep", "4x4", "fourwheel", "fourwheeldrive"}),
     "mini": frozenset({"mini", "micro", "keicar", "citycar", "compact"}),
     "luxury": frozenset({"luxury", "premium"}),
     "motorcycle": frozenset({"motorcycle", "motorbike", "scooter", "bike"}),
 }
+
+# Body values that carry no information: rows with these fall back to the
+# title/category/make heuristics, exactly like rows with no body_type at all.
+_UNKNOWN_BODY_TOKENS = ("", "other", "others", "unknown", "na", "n/a", "none", "null")
 
 _LUXURY_MAKES = frozenset(
     {
@@ -426,39 +434,50 @@ def _canonical_body_type(value: Optional[str]) -> Optional[str]:
 
 
 def _body_type_clause(body_type: Optional[str]):
+    """Filter on body type.
+
+    A listing whose body_type is known matches only when that body type is
+    the requested one (after alias normalisation): a tagged SUV is never
+    returned for "jeep", and a Mercedes van is never returned for "luxury".
+    The title / category / make heuristics only classify rows whose
+    body_type is missing, which is most scraped rows. This mirrors the web
+    client filter (normalised listing body first) and the body_type values
+    the web and Android filter sheets send (sedan, suv, hatchback, crossover,
+    mpv, van, pickup, wagon, coupe, convertible, jeep, mini, luxury).
+    """
     canonical = _canonical_body_type(body_type)
     if not canonical:
         return None
 
     aliases = sorted(_BODY_TYPE_ALIASES.get(canonical, frozenset({canonical})) | {canonical})
-    body_match = _compact_expr(CarListing.body_type).in_(aliases)
+    body_expr = _compact_expr(CarListing.body_type)
+    body_match = body_expr.in_(aliases)
+    body_unknown = or_(CarListing.body_type.is_(None), body_expr.in_(_UNKNOWN_BODY_TOKENS))
 
+    fallback = None
     if canonical == "luxury":
-        return or_(
-            body_match,
+        fallback = or_(
             _compact_expr(CarListing.make).in_(sorted(_LUXURY_MAKES)),
             CarListing.title.ilike("%luxury%"),
             CarListing.title.ilike("%premium%"),
         )
-
-    if canonical == "jeep":
-        return or_(
-            body_match,
+    elif canonical == "jeep":
+        fallback = or_(
             func.lower(func.coalesce(CarListing.vehicle_category, "")).in_(["jeeps", "jeep"]),
             CarListing.title.ilike("% jeep %"),
             CarListing.title.ilike("jeep %"),
             CarListing.title.ilike("% jeep"),
         )
-
-    if canonical == "mini":
-        return or_(
-            body_match,
-            func.lower(func.coalesce(CarListing.make, "")).in_(["mini", "micro"]),
+    elif canonical == "mini":
+        fallback = or_(
+            func.lower(func.coalesce(CarListing.make, "")) == "mini",
             CarListing.title.ilike("%mini cooper%"),
             CarListing.title.ilike("% city car%"),
         )
 
-    return body_match
+    if fallback is None:
+        return body_match
+    return or_(body_match, and_(body_unknown, fallback))
 
 
 def _is_missing_value(value: Optional[str]) -> bool:
@@ -816,6 +835,46 @@ def _transmission_clause(value: str):
     return or_(expr == key, expr.like(f"%{key}%"))
 
 
+_DISTRICT_SPELLINGS: dict[str, tuple[str, ...]] = {
+    # Spellings the sources actually use for the same district.
+    "anuradhapura": ("Anuradapura",),
+    "monaragala": ("Moneragala",),
+    "mullaitivu": ("Mullativu",),
+    "kalutara": ("Kaluthara",),
+    "nuwara eliya": ("Nuwara-Eliya", "NuwaraEliya"),
+}
+
+
+def _district_variants(value: Optional[str]) -> list[str]:
+    """Exact spellings that count as the requested district.
+
+    Normalised (trim, collapse spaces, hyphen/underscore = space) and
+    case-insensitive via explicit case variants, so the filter stays an
+    indexable ``district IN (...)`` instead of a ``LIKE '%galle%'`` scan that
+    also matched Kegalle and Tangalle.
+    """
+    if not isinstance(value, str):
+        return []
+    normalized = " ".join(value.strip().replace("-", " ").replace("_", " ").split())
+    if not normalized:
+        return []
+    canonical = normalize_district_name(normalized) or normalized.title()
+    base = {normalized, canonical, *_DISTRICT_SPELLINGS.get(canonical.lower(), ())}
+    forms: set[str] = set()
+    for item in base:
+        for spaced in {item, item.replace("-", " ")}:
+            for joined in {spaced, spaced.replace(" ", "-")}:
+                forms.update({joined, joined.lower(), joined.upper(), joined.title()})
+    return sorted(forms)
+
+
+def _district_clause(value: Optional[str]):
+    variants = _district_variants(value)
+    if not variants:
+        return None
+    return CarListing.district.in_(variants)
+
+
 def _search_filter_tokens(value: str) -> List[str]:
     normalized = " ".join(str(value or "").strip().split()).lower()
     if not normalized:
@@ -828,6 +887,41 @@ def _optional_text_param(value: object) -> Optional[str]:
         return None
     normalized = " ".join(value.strip().split())
     return normalized or None
+
+
+def _with_card_verdicts(db: Session, rows: list) -> List[CarListingRead]:
+    """Serialise listing cards so a card never rates what its detail page withholds.
+
+    The detail page's verdict (predict_listing_fmv) also needs live comparables:
+    with fewer than 5, or when they disagree with the stored cohort median, it
+    is withheld. The listing row alone can't show that, so the cards' rating
+    (deal_score + market_median_lkr) is dropped for those rows, and
+    ``price_withheld_reason`` says why (``thin_comps``, ``estimates_disagree``,
+    ``generic_model``...). One batched comps query per page
+    (app/utils/fmv.py batch_price_verdicts). Old clients just see an unscored row.
+    """
+    reads = [CarListingRead.model_validate(row) for row in rows]
+    scored = {read.id for read in reads if read.market_median_lkr is not None}
+    if not scored:
+        return reads
+    try:
+        verdicts = batch_price_verdicts(db, [row for row in rows if int(row.id) in scored])
+    except Exception:  # never fail a list page over a rating
+        logging.getLogger(__name__).warning("card verdict batch failed", exc_info=True)
+        return reads
+    for read in reads:
+        verdict = verdicts.get(read.id)
+        if verdict and verdict.get("status") == "withheld":
+            read.price_withheld_reason = verdict.get("reason")
+            read.deal_score = None
+            read.market_median_lkr = None
+    return reads
+
+
+# Upper bounds on browse pagination: page <= 1000 and an absolute OFFSET cap
+# (page * size) of 20k rows. Beyond that, narrow the filters instead.
+MAX_LISTINGS_PAGE = 1000
+MAX_LISTINGS_OFFSET = 20_000
 
 
 @router.get("", response_model=ListingsResponse)
@@ -857,8 +951,9 @@ def search_listings(
         max_length=40,
     ),
     price_availability: str = Query("priced", pattern="^(priced|unavailable)$"),
-    sort: str = Query("newest", pattern="^(newest|deal_score|price_asc|price_desc|mileage_asc)$"),
-    page: int = Query(1, ge=1),
+    sort: str = Query("newest", pattern="^(best_match|newest|oldest|deal_score|price_asc|price_desc|mileage_asc)$"),
+    include_archive: bool = Query(False, description="Include delisted/sold historical listings"),
+    page: int = Query(1, ge=1, le=MAX_LISTINGS_PAGE),
     size: int = Query(10, ge=1, le=100),
     authorization: Optional[str] = Header(default=None),
     db: Session = Depends(get_db),
@@ -866,22 +961,62 @@ def search_listings(
     keyword_text = _optional_text_param(keyword)
     if price_availability not in {"priced", "unavailable"}:
         price_availability = "priced"
-    if sort not in {"newest", "deal_score", "price_asc", "price_desc", "mileage_asc"}:
+    if sort not in {"best_match", "newest", "oldest", "deal_score", "price_asc", "price_desc", "mileage_asc"}:
         sort = "newest"
     if not isinstance(page, int) or page < 1:
         page = 1
     if not isinstance(size, int) or size < 1:
         size = 10
     size = min(size, 100)
+    if (page - 1) * size > MAX_LISTINGS_OFFSET:
+        # Deep OFFSET makes Postgres walk and discard every skipped row; nobody
+        # pages this far by hand, so refuse instead of paying the scan.
+        raise HTTPException(
+            status_code=400,
+            detail="Page is too deep; narrow your filters or change the sort.",
+        )
 
     plan, role = _request_live_access(request, authorization, db)
     free_browse = _is_free_browse_plan(plan, role)
     if free_browse:
-        # Free teaser: first page only, capped page size, no deal-score sort.
-        page = min(page, FREE_LISTINGS_MAX_PAGE)
-        size = min(size, FREE_LISTINGS_MAX_SIZE)
+        # Guests / free plan get normal pagination (UI refresh, Oct 2026) —
+        # the browse feed is the product's front door, not a Pro teaser.
+        # Deal scores stay Pro: no deal-score sort, scores stripped below.
         if sort == "deal_score":
-            sort = "newest"
+            sort = "best_match"
+
+    # Cache keys. Every anonymous caller sees the same payload for the same
+    # query, so whole anonymous responses are cached briefly; counts are cached
+    # per filter set for everyone (page/size/sort never change a count, except
+    # deal_score which also filters out unscored rows).
+    filter_key = repr(
+        (
+            keyword_text,
+            source,
+            make,
+            model,
+            year_min,
+            year_max,
+            price_min,
+            price_max,
+            mileage_max,
+            fuel_type,
+            transmission,
+            condition,
+            body_type,
+            district,
+            vehicle_category if isinstance(vehicle_category, str) else None,
+            price_availability,
+            bool(include_archive),
+            sort == "deal_score",
+        )
+    )
+    anonymous = plan is None
+    response_key = f"resp:{filter_key}:{sort}:{page}:{size}" if anonymous else None
+    if response_key is not None:
+        cached_response = listing_cache.get(response_key)
+        if cached_response is not listing_cache.MISSING:
+            return cached_response
 
     q = (
         db.query(CarListing)
@@ -912,9 +1047,20 @@ def search_listings(
                 CarListing.deal_score,
                 CarListing.market_median_lkr,
                 CarListing.is_outlier,
+                # Serialised by CarListingRead: without these, every row of
+                # the page lazy-loaded them in two extra queries (2N+2 round
+                # trips per page; costly against a remote Postgres).
+                CarListing.is_active,
+                CarListing.images,
             )
         )
-        .filter(live_listing_filter())
+        .filter(
+            and_(
+                CarListing.is_outlier == False,  # noqa: E712
+                CarListing.is_duplicate == False,  # noqa: E712
+                CarListing.user_listing_status.in_(LIVE_LISTING_STATUSES),
+            ) if include_archive else live_listing_filter()
+        )
     )
 
     browse_category = None
@@ -986,35 +1132,50 @@ def search_listings(
         if body_clause is not None:
             q = q.filter(body_clause)
     if district:
-        normalized_district = " ".join(district.strip().lower().replace("-", " ").split())
-        district_slug = normalized_district.replace(" ", "-")
-        district_expr = func.lower(func.replace(CarListing.district, "-", " "))
-        raw_location_expr = func.lower(func.replace(CarListing.raw_location, "-", " "))
-        q = q.filter(
-            or_(
-                district_expr.ilike(f"%{normalized_district}%"),
-                raw_location_expr.ilike(f"%{normalized_district}%"),
-                func.lower(CarListing.url).ilike(f"%-for-sale-{district_slug}%"),
-            )
-        )
+        district_filter = _district_clause(district)
+        if district_filter is not None:
+            q = q.filter(district_filter)
 
     # Sorting
     if price_availability == "unavailable" and sort in {"deal_score", "price_asc", "price_desc"}:
-        sort = "newest"
+        sort = "best_match"
 
-    if sort == "newest":
+    if sort == "best_match":
+        # Neutral "best match": rows with a real price and a photo first,
+        # then recency. Priceless / photoless rows (e.g. Hitad) sink.
+        # Nothing here is paid placement.
+        has_photo = case(
+            (and_(CarListing.thumbnail_url.isnot(None), CarListing.thumbnail_url != ""), 1),
+            else_=0,
+        )
+        has_price = case((CarListing.price_lkr >= MIN_REASONABLE_PRICE_LKR, 1), else_=0)
+        q = q.order_by(desc(has_price), desc(has_photo), desc(CarListing.first_seen_at))
+    elif sort == "newest":
         q = q.order_by(desc(CarListing.first_seen_at))
+    elif sort == "oldest":
+        q = q.order_by(asc(CarListing.first_seen_at))
     elif sort == "deal_score":
-        q = q.filter(CarListing.deal_score.isnot(None)).order_by(desc(CarListing.deal_score))
+        # Implausible stored scores (|gap| > 60 %) are served unscored, so they
+        # must not top the "best deal" sort either.
+        q = q.filter(
+            CarListing.deal_score.isnot(None), plausible_deal_score_sql(CarListing.deal_score)
+        ).order_by(desc(CarListing.deal_score))
     elif sort == "price_asc":
-        q = q.order_by(CarListing.price_lkr.asc())
+        q = q.order_by(CarListing.price_lkr.asc().nulls_last())
     elif sort == "price_desc":
-        q = q.order_by(CarListing.price_lkr.desc())
+        q = q.order_by(CarListing.price_lkr.desc().nulls_last())
     elif sort == "mileage_asc":
-        q = q.order_by(CarListing.mileage.asc())
+        # Rows without a km reading go last ("Low km" must open on real
+        # readings). SQLite sorts NULL first for ASC; Postgres last. Explicit
+        # NULLS LAST makes both agree.
+        q = q.order_by(CarListing.mileage.asc().nulls_last())
 
-    count_q = q._clone()
-    total = count_q.order_by(None).with_entities(func.count(CarListing.id)).scalar() or 0
+    count_key = f"count:{filter_key}"
+    total = listing_cache.get(count_key)
+    if total is listing_cache.MISSING:
+        count_q = q._clone()
+        total = count_q.order_by(None).with_entities(func.count(CarListing.id)).scalar() or 0
+        listing_cache.put(count_key, total)
     items = q.offset((page - 1) * size).limit(size).all()
 
     if free_browse:
@@ -1023,13 +1184,16 @@ def search_listings(
             item.deal_score = None
             item.market_median_lkr = None
 
-    return ListingsResponse(
-        items=items,
+    result = ListingsResponse(
+        items=items if free_browse else _with_card_verdicts(db, items),
         total=total,
         page=page,
         size=size,
         pages=math.ceil(total / size) if total > 0 else 0,
     )
+    if response_key is not None:
+        listing_cache.put(response_key, result)
+    return result
 
 
 @router.get("/price-drops", response_model=PriceDropsResponse)
@@ -1037,6 +1201,11 @@ def get_price_drops(
     request: Request,
     days: int = Query(7, ge=1, le=30),
     limit: int = Query(20, ge=1, le=50),
+    vehicle_category: Optional[str] = Query(
+        None,
+        description="Optional browse category filter (cars, motorbikes, ...). Omit for all vehicles.",
+        max_length=40,
+    ),
     authorization: Optional[str] = Header(default=None),
     db: Session = Depends(get_db),
 ):
@@ -1092,7 +1261,16 @@ def get_price_drops(
         )
         .join(drops, drops.c.vehicle_id == CarListing.id)
         .filter(live_listing_filter(), CarListing.is_duplicate == False)  # noqa: E712
-        .order_by(desc((drops.c.prev_price - drops.c.new_price) / drops.c.prev_price))
+    )
+    category_clause = (
+        category_sql_filter(CarListing, vehicle_category)
+        if isinstance(vehicle_category, str)
+        else None
+    )
+    if category_clause is not None:
+        rows = rows.filter(category_clause)
+    rows = (
+        rows.order_by(desc((drops.c.prev_price - drops.c.new_price) / drops.c.prev_price))
         .limit(limit)
         .all()
     )
@@ -1213,24 +1391,55 @@ def get_sitemap_listing_count(db: Session = Depends(get_db)):
     )
     return {"total": int(total or 0), "page_size": 5000}
 
+# /makes and /models feed public comboboxes on every page load. Both used to
+# GROUP BY make over every live listing per request (/models also scanned all
+# distinct makes just to resolve spellings). The raw per-spelling make counts
+# are now read once per TTL and shared by both endpoints; /models results are
+# cached per canonical make (bounded: only makes present in the index).
+# memory_cache is process-local, lock-protected and cleared per test.
+_CATALOG_MAKES_KEY = "listings:catalog:make_counts"
+_CATALOG_MODELS_PREFIX = "listings:catalog:models:"
+
+
+def _catalog_ttl_seconds() -> int:
+    try:
+        return max(0, int(os.getenv("LISTINGS_CATALOG_CACHE_TTL_SECONDS", "600")))
+    except ValueError:
+        return 600
+
+
+def _catalog_make_counts(db: Session) -> List[tuple]:
+    """``[(stored_make_spelling, live_count), ...]`` cached for the catalog TTL."""
+    ttl = _catalog_ttl_seconds()
+    if ttl > 0:
+        hit = memory_cache.get_cached(_CATALOG_MAKES_KEY, ttl)
+        if hit is not memory_cache.MISSING:
+            return hit
+    rows = [
+        (r.make, int(r.count or 0))
+        for r in (
+            db.query(CarListing.make, func.count(CarListing.id).label("count"))
+            .filter(live_listing_filter(), CarListing.make.isnot(None))
+            .group_by(CarListing.make)
+            .all()
+        )
+    ]
+    if ttl > 0:
+        memory_cache.set_cached(_CATALOG_MAKES_KEY, rows, ttl)
+    return rows
+
+
 @router.get("/makes")
 def get_makes(db: Session = Depends(get_db)):
-    results = (
-        db.query(CarListing.make, func.count(CarListing.id).label("count"))
-        .filter(live_listing_filter(), CarListing.make.isnot(None))
-        .group_by(CarListing.make)
-        .order_by(desc("count"))
-        .all()
-    )
     # Fold duplicate/typo spellings ("Bmw"/"BMW", "Mitshubishi") into one
     # brand and drop junk rows ("Test", "2018", "Other brand") so the public
     # make combobox never offers a scraped typo as a car brand.
     merged: Dict[str, int] = {}
-    for r in results:
-        canonical = canonicalize_make(r.make)
+    for make, count in _catalog_make_counts(db):
+        canonical = canonicalize_make(make)
         if not canonical:
             continue
-        merged[canonical] = merged.get(canonical, 0) + int(r.count or 0)
+        merged[canonical] = merged.get(canonical, 0) + count
     return [
         {"make": make, "count": count}
         for make, count in sorted(merged.items(), key=lambda kv: (-kv[1], kv[0]))
@@ -1238,7 +1447,7 @@ def get_makes(db: Session = Depends(get_db)):
 
 
 @router.get("/models")
-def get_models(make: str, db: Session = Depends(get_db)):
+def get_models(make: str = Query(..., max_length=100), db: Session = Depends(get_db)):
     canonical_make = canonicalize_make(make)
     if not canonical_make:
         return []
@@ -1247,17 +1456,18 @@ def get_models(make: str, db: Session = Depends(get_db)):
     # the caller typed — otherwise "Toyota" and "toyota" return different model
     # lists and the valuation dropdown silently loses models.
     variants = [
-        r.make
-        for r in (
-            db.query(CarListing.make)
-            .filter(live_listing_filter(), CarListing.make.isnot(None))
-            .distinct()
-            .all()
-        )
-        if canonicalize_make(r.make) == canonical_make
+        stored for stored, _count in _catalog_make_counts(db)
+        if canonicalize_make(stored) == canonical_make
     ]
     if not variants:
         return []
+
+    ttl = _catalog_ttl_seconds()
+    models_key = _CATALOG_MODELS_PREFIX + canonical_make
+    if ttl > 0:
+        hit = memory_cache.get_cached(models_key, ttl)
+        if hit is not memory_cache.MISSING:
+            return hit
 
     results = (
         db.query(CarListing.model, func.count(CarListing.id).label("count"))
@@ -1281,10 +1491,13 @@ def get_models(make: str, db: Session = Depends(get_db)):
             if int(r.count or 0) > bucket["count"]:
                 bucket["model"] = model
             bucket["count"] += int(r.count or 0)
-    return [
+    payload = [
         {"model": bucket["model"], "count": bucket["count"]}
         for bucket in sorted(merged.values(), key=lambda b: (-b["count"], b["model"]))
     ]
+    if ttl > 0:
+        memory_cache.set_cached(models_key, payload, ttl)
+    return payload
 
 
 @router.get("/nhtsa-models")
@@ -1572,15 +1785,9 @@ def _vehicle_filter_query(
         if body_clause is not None:
             q = q.filter(body_clause)
     if payload.district and not ignore_district:
-        normalized_district = " ".join(payload.district.strip().lower().replace("-", " ").split())
-        district_slug = normalized_district.replace(" ", "-")
-        district_expr = func.lower(func.replace(CarListing.district, "-", " "))
-        q = q.filter(
-            or_(
-                district_expr.ilike(f"%{normalized_district}%"),
-                func.lower(CarListing.url).ilike(f"%-for-sale-{district_slug}%"),
-            )
-        )
+        district_filter = _district_clause(payload.district)
+        if district_filter is not None:
+            q = q.filter(district_filter)
 
     return q
 
@@ -1665,7 +1872,7 @@ def estimate_custom_vehicle(payload: CustomVehicleEstimateRequest, db: Session =
             title=row.title or f"{row.make} {row.model} ({row.year})",
             price_lkr=float(row.price_lkr) if row.price_lkr is not None else None,
             district=row.district,
-            deal_score=float(row.deal_score) if row.deal_score is not None else None,
+            deal_score=plausible_deal_score(row),
             detail_url=f"/listing/{row.id}",
             external_url=row.url,
         )
@@ -1838,6 +2045,10 @@ def get_similar_listings(
         CarListing.make == listing.make,
         live_listing_filter(),
     ]
+    # Same kind of vehicle only: a Rs 735k motorbike's "similar" list must not
+    # be cars that happen to share a make and a price band.
+    if listing.vehicle_category:
+        filters.append(CarListing.vehicle_category == listing.vehicle_category)
 
     base_price = float(listing.price_lkr) if listing.price_lkr is not None else 0.0
     if base_price > 0:
@@ -1849,9 +2060,13 @@ def get_similar_listings(
     free_browse = _is_free_browse_plan(plan, role)
     limit = FREE_SIMILAR_LIMIT if free_browse else 6
 
+    # Same model first, then nearest model year (deterministic, not arbitrary).
+    same_model = case((CarListing.model == listing.model, 0), else_=1)
+    year_gap = func.abs(func.coalesce(CarListing.year, 0) - int(listing.year)) if listing.year else literal(0)
     similar = (
         db.query(CarListing)
         .filter(*filters)
+        .order_by(same_model, year_gap, desc(CarListing.last_seen_at))
         .limit(limit)
         .all()
     )
@@ -1860,5 +2075,6 @@ def get_similar_listings(
         for row in similar:
             row.deal_score = None
             row.market_median_lkr = None
+        return similar
 
-    return similar
+    return _with_card_verdicts(db, similar)

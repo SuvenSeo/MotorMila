@@ -421,3 +421,80 @@ def test_match_alerts_get_delegates_to_the_post_handler():
 
     assert len(response.results) == 1
     assert response.results[0].matching_count == 1
+
+
+# ---------------------------------------------------------------------------
+# PUT /alerts/{id} — in-place edit (no delete-then-create)
+# ---------------------------------------------------------------------------
+
+def test_update_alert_edits_in_place_keeping_id():
+    db = _session()
+    token = "tok-update-001"
+    created = alerts_module.create_alert(
+        request=_DummyRequest(),
+        payload=MarketAlertCreate(make="Toyota", model="Axio", max_price=5_000_000, district="Colombo"),
+        x_alert_token=token,
+        db=db,
+    )
+    updated = alerts_module.update_alert(
+        request=_DummyRequest(),
+        alert_id=created.id,
+        payload=MarketAlertCreate(make="Honda", max_price=7_000_000),
+        x_alert_token=token,
+        db=db,
+    )
+    assert updated.id == created.id
+    rows = db.query(MarketAlert).all()
+    assert len(rows) == 1
+    assert rows[0].make == "Honda"
+    assert rows[0].model is None  # full replacement clears dropped criteria
+    assert rows[0].district is None
+    assert float(rows[0].max_price) == 7_000_000
+    assert rows[0].active is True
+
+
+def test_update_alert_404_for_other_owner_and_inactive():
+    db = _session()
+    created = alerts_module.create_alert(
+        request=_DummyRequest(), payload=MarketAlertCreate(make="Kia"), x_alert_token="tok-own", db=db
+    )
+    with pytest.raises(HTTPException) as exc:
+        alerts_module.update_alert(
+            request=_DummyRequest(), alert_id=created.id,
+            payload=MarketAlertCreate(make="Audi"), x_alert_token="tok-other", db=db,
+        )
+    assert exc.value.status_code == 404
+    alerts_module.delete_alert(request=_DummyRequest(), alert_id=created.id, x_alert_token="tok-own", db=db)
+    with pytest.raises(HTTPException) as exc:
+        alerts_module.update_alert(
+            request=_DummyRequest(), alert_id=created.id,
+            payload=MarketAlertCreate(make="Audi"), x_alert_token="tok-own", db=db,
+        )
+    assert exc.value.status_code == 404
+
+
+def test_update_alert_rejects_pro_channels_for_anonymous_token():
+    db = _session()
+    created = alerts_module.create_alert(
+        request=_DummyRequest(), payload=MarketAlertCreate(make="Kia"), x_alert_token="tok-anon", db=db
+    )
+    with pytest.raises(HTTPException) as exc:
+        alerts_module.update_alert(
+            request=_DummyRequest(), alert_id=created.id,
+            payload=MarketAlertCreate(make="Kia", notify_email="a@b.lk"), x_alert_token="tok-anon", db=db,
+        )
+    assert exc.value.status_code == 403
+
+
+def test_update_alert_does_not_count_against_plan_cap():
+    db = _session()
+    token = "tok-cap"
+    ids = []
+    for i in range(alerts_module.FREE_ALERTS_LIMIT):
+        ids.append(alerts_module.create_alert(
+            request=_DummyRequest(), payload=MarketAlertCreate(make=f"M{i}"), x_alert_token=token, db=db
+        ).id)
+    updated = alerts_module.update_alert(
+        request=_DummyRequest(), alert_id=ids[0], payload=MarketAlertCreate(make="Edited"), x_alert_token=token, db=db,
+    )
+    assert updated.make == "Edited"

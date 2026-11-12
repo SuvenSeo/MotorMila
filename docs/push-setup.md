@@ -29,14 +29,14 @@ Set env secrets:
 
 - `VAPID_PUBLIC_KEY` = public key above
 - `VAPID_PRIVATE_KEY` = private key above (server only, never ship to frontend)
-- `VAPID_SUBJECT` = `mailto:alerts@motormila.lk`
+- `VAPID_SUBJECT` = `mailto:hello@ardenostudio.com`
 
 Check: `GET /api/v1/notifications/preferences` returns
 `push_configured: true` + `vapid_public_key`.
 
-## 3. Frontend (Vercel)
+## 3. Frontend (Cloudflare Pages)
 
-Set: `VITE_VAPID_PUBLIC_KEY` = same public key. Redeploy.
+Set: `VITE_VAPID_PUBLIC_KEY` = same public key in the Pages dashboard env vars, then push to `main` (Pages rebuilds on push).
 Subscribe from `/alerts` (Enable push button calls `usePush().subscribe()`,
 registers `/sw-push.js`, posts endpoint to `/notifications/push/subscribe`).
 

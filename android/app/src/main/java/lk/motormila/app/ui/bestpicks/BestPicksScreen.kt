@@ -56,7 +56,6 @@ import lk.motormila.app.ui.components.EmptyState
 import lk.motormila.app.ui.components.ErrorState
 import lk.motormila.app.ui.components.MotormilaChoiceChip
 import lk.motormila.app.ui.components.MotormilaEyebrow
-import lk.motormila.app.ui.components.MotormilaPage
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.components.ListingCard
@@ -107,7 +106,7 @@ fun BestPicksScreen(
         }
     }
 
-    MotormilaPage(
+    lk.motormila.app.ui.common.MmScreen(
         title = stringResource(R.string.hub_picks_title),
         onBack = {
             if (!reducedMotion) haptics.tick()
@@ -199,7 +198,8 @@ fun BestPicksScreen(
                     } else if (state.unlocked) {
                         items(
                             count = pagingItems.itemCount,
-                            key = { index -> pagingItems[index]?.id ?: -index },
+                            key = { index -> pagingItems.peek(index)?.id ?: -index - 1 },
+                            contentType = { "pick" },
                         ) { index ->
                             val listing = pagingItems[index]
                             if (listing != null) {
@@ -409,24 +409,24 @@ private fun CutRow(drop: PriceDrop, onClick: () -> Unit) {
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontWeight = FontWeight.Bold,
                     color = MotormilaGood,
-                    fontFamily = FontFamily.Monospace,
+                    fontFeatureSettings = "tnum",
                 ),
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                LkrFormat.price(drop.previousPriceLkr),
+                lk.motormila.app.ui.common.mn(drop.previousPriceLkr),
                 style = MaterialTheme.typography.labelSmall.copy(
                     color = MotormilaSecondaryText,
                     textDecoration = TextDecoration.LineThrough,
-                    fontFamily = FontFamily.Monospace,
+                    fontFeatureSettings = "tnum",
                 ),
             )
             Text(
-                LkrFormat.price(drop.newPriceLkr),
+                lk.motormila.app.ui.common.mn(drop.newPriceLkr),
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace,
+                    fontFeatureSettings = "tnum",
                 ),
             )
         }

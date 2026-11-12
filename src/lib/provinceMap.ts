@@ -15,6 +15,12 @@ export const SL_PROVINCES = [
 
 export type SLProvince = (typeof SL_PROVINCES)[number];
 
+/** Locale key for a province name, e.g. "North Western" -> "province.northWestern". */
+export function provinceKey(province: string): string {
+  const words = province.trim().toLowerCase().split(/\s+/);
+  return `province.${words[0]}${words.slice(1).map((w) => w[0].toUpperCase() + w.slice(1)).join("")}`;
+}
+
 /** District → province map covering all 25 administrative districts. */
 export const DISTRICT_TO_PROVINCE: Record<string, SLProvince> = {
   Colombo: "Western",
