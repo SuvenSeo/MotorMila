@@ -4,6 +4,7 @@ import useEmblaCarousel from "embla-carousel-react";
 import { Camera, ChevronLeft, ChevronRight, Expand } from "lucide-react";
 import { VehicleThumbnail } from "@/components/VehicleThumbnail";
 import MorphSlider from "@/components/MorphSlider";
+import { getGalleryImageProxyUrl } from "@/lib/galleryProxy";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { formatSourceName } from "@/lib/sourceAttribution";
 import { spring, useReducedMotionOrLowData } from "@/lib/motion";
@@ -142,7 +143,14 @@ export function ListingImageCarousel({
   const morphMode = isDetail && multi && morph && !morphFailed;
   const [morphJump, setMorphJump] = useState(initialSlide);
   const morphItems = useMemo(
-    () => images.map((src, i) => ({ image: src, caption: `Photo ${i + 1} of ${count}` })),
+    () =>
+      images.map((src, i) => ({
+        // WebGL textures need CORS the marketplaces don't send: route the
+        // photo through the same-origin /img proxy. Any proxy refusal fails
+        // the texture and the gallery falls back to the filmstrip.
+        image: getGalleryImageProxyUrl(src) ?? src,
+        caption: `Photo ${i + 1} of ${count}`,
+      })),
     [images, count],
   );
   const morphGoTo = useCallback(

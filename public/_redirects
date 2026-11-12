@@ -48,3 +48,10 @@
 # 1 Nov 2026: ALL Pages Functions removed (Workers daily quota) — /cars/* now serves the SPA shell statically, like /listing/:id and /compare/:slug.
 /cars/:make / 200
 /cars/:make/:model / 200
+# EXCEPTION 12 Nov 2026 (Suven's word): ONE Function is back — the gallery
+# image proxy at /img (functions/img.ts). It exists so the MorphSlider WebGL
+# textures load (marketplaces send no CORS); it is NOT a general proxy — it
+# allowlists marketplace image hosts only, 403s bots, and caches at the edge
+# for 24h. If the Workers meter ever climbs toward the 100k/day cap, delete
+# functions/img.ts and the gallery degrades to the filmstrip automatically.
+# The /api/v1 no-proxy rule above still stands.
