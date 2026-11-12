@@ -1,8 +1,9 @@
-import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { m, motion } from "motion/react";
 import useEmblaCarousel from "embla-carousel-react";
 import { Camera, ChevronLeft, ChevronRight, Expand } from "lucide-react";
 import { VehicleThumbnail } from "@/components/VehicleThumbnail";
+import MorphSlider from "@/components/MorphSlider";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { formatSourceName } from "@/lib/sourceAttribution";
 import { spring, useReducedMotionOrLowData } from "@/lib/motion";
@@ -35,6 +36,14 @@ interface ListingImageCarouselProps {
   frameClassName?: string;
   /** Report the active detail photo's proportions to its surrounding frame. */
   onPhotoAspectRatio?: (ratio: number | null) => void;
+  /**
+   * Detail hero: GPU melt morph between photos (React Bits MorphSlider,
+   * ogl + gsap) instead of the Embla filmstrip. Cards, single-photo
+   * listings and the lightbox/thumbs/counter chrome are unaffected. If any
+   * photo fails to load as a WebGL texture (source CDNs send no CORS
+   * headers) the gallery falls back to the Embla filmstrip.
+   */
+  morph?: boolean;
 }
 
 /** Listing grid: 1 column < 768px, 2 columns to 1279px, then 3 columns in a ≤1560px frame. */
@@ -71,6 +80,7 @@ export function ListingImageCarousel({
   trackClassName,
   frameClassName,
   onPhotoAspectRatio,
+  morph = false,
 }: ListingImageCarouselProps) {
   const { t } = useAppPreferences();
   const count = images.length;
@@ -124,9 +134,28 @@ export function ListingImageCarousel({
   });
   const [lightboxOrigin, setLightboxOrigin] = useState<{ x: number; y: number } | null>(null);
   const [index, setIndex] = useState(initialSlide);
+  // Morph mode (detail hero only): the melt slider owns the frame; the
+  // Embla track, its arrows and its keyboard handling stay out of the way.
+  // drift is 0 so a photo sits unaltered at rest — the melt only warps
+  // mid-transition (source-fidelity rule).
+  const [morphFailed, setMorphFailed] = useState(false);
+  const morphMode = isDetail && multi && morph && !morphFailed;
+  const [morphJump, setMorphJump] = useState(initialSlide);
+  const morphItems = useMemo(
+    () => images.map((src, i) => ({ image: src, caption: `Photo ${i + 1} of ${count}` })),
+    [images, count],
+  );
+  const morphGoTo = useCallback(
+    (i: number) => {
+      const next = ((i % count) + count) % count;
+      setMorphJump(next);
+      setIndex(next);
+    },
+    [count],
+  );
   const regionRef = useRef<HTMLDivElement>(null);
   const reportPhotoAspect = useCallback(() => {
-    if (!onPhotoAspectRatio) return;
+    if (!onPhotoAspectRatio || morphMode) return;
     const img = regionRef.current?.querySelector<HTMLImageElement>(`[data-photo-index="${index}"] .cine-gallery__img`);
     if (img?.complete && img.naturalWidth && img.naturalHeight && img.dataset.placeholder !== "true") {
       onPhotoAspectRatio(img.naturalWidth / img.naturalHeight);
@@ -137,8 +166,25 @@ export function ListingImageCarousel({
     // tap). Clearing it here dropped the frame to the fixed-height fallback
     // until the photo landed, so the hero box jumped ~30px right after the
     // card → listing morph had flown into it. onLoadCapture reports again.
-  }, [index, onPhotoAspectRatio]);
+  }, [index, onPhotoAspectRatio, morphMode]);
   useEffect(() => { reportPhotoAspect(); }, [reportPhotoAspect, images]);
+  // Morph mode has no <img> in the DOM for reportPhotoAspect to measure, so
+  // report the active photo's proportions from a plain preload instead
+  // (reading naturalWidth/Height needs no CORS — the pixels never touch a canvas).
+  useEffect(() => {
+    if (!morphMode || !onPhotoAspectRatio) return;
+    let cancelled = false;
+    const img = new Image();
+    img.onload = () => {
+      if (!cancelled && img.naturalWidth && img.naturalHeight) {
+        onPhotoAspectRatio(img.naturalWidth / img.naturalHeight);
+      }
+    };
+    img.src = images[index] ?? "";
+    return () => {
+      cancelled = true;
+    };
+  }, [morphMode, index, images, onPhotoAspectRatio]);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(initialSlide);
   const [lightboxRequested, setLightboxRequested] = useState(false);
@@ -233,6 +279,8 @@ export function ListingImageCarousel({
     setPendingSlide(null);
     setLightboxOpen(false);
     setLightboxIndex(0);
+    setMorphJump(0);
+    setMorphFailed(false);
     setMounted(new Set(isDetail && multi ? [0, 1, count - 1] : [0]));
     emblaApi?.reInit();
     emblaApi?.scrollTo(0, true);
@@ -241,7 +289,7 @@ export function ListingImageCarousel({
 
   useEffect(() => {
     const region = regionRef.current;
-    if (!region || !isDetail || !multi || lightboxOpen) return;
+    if (!region || !isDetail || !multi || lightboxOpen || morphMode) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
       const target = e.target as HTMLElement;
@@ -254,7 +302,7 @@ export function ListingImageCarousel({
     };
     region.addEventListener("keydown", onKey);
     return () => region.removeEventListener("keydown", onKey);
-  }, [isDetail, multi, lightboxOpen, prev, next]);
+  }, [isDetail, multi, lightboxOpen, morphMode, prev, next]);
 
   const openLightbox = (from?: Element | null, photoIndex = index) => {
     setLightboxIndex(photoIndex);
@@ -307,6 +355,30 @@ export function ListingImageCarousel({
       onFocus={multi ? () => { prime(index); wake(); } : undefined}
     >
       <div className={`relative w-full overflow-hidden ${frameClassName ?? "h-full"}`}>
+        {/* Morph mode: the melt slider owns the frame (gated on carouselLive
+            so it never paints over the card → listing View Transition — the
+            card's photo placeholder shows through until then). Otherwise the
+            Embla filmstrip, as before. */}
+        {morphMode && carouselLive ? (
+          <MorphSlider
+            key={`${imagesKey}-${morphJump}`}
+            items={morphItems}
+            startIndex={morphJump}
+            transition="melt"
+            intensity={0.55}
+            aberration={0.35}
+            drift={0}
+            radius={0}
+            autoplay={false}
+            showCaptions={false}
+            showIndicators={false}
+            onIndexChange={setIndex}
+            onTextureError={() => setMorphFailed(true)}
+            className="h-full w-full"
+          />
+        ) : null}
+        {!morphMode && (
+        <>
         {/* Embla attaches only when it has work to do: it builds its engine (and
             measures every slide, forcing a style + layout of the page) on
             construction even with `active: false`, so single-photo listings and
@@ -369,9 +441,14 @@ export function ListingImageCarousel({
             ))}
           </div>
         </div>
+        </>
+        )}
 
         {multi && (
           <>
+            {/* MorphSlider ships its own arrows; the Embla ones would double up. */}
+            {!morphMode && (
+              <>
             <button
               type="button"
               aria-label={t("listingImage.prev", "Previous photo")}
@@ -394,6 +471,8 @@ export function ListingImageCarousel({
             >
               <ChevronRight aria-hidden className="h-4 w-4" />
             </button>
+              </>
+            )}
             {/* Cards: top-centre (bottom corners carry price / deal / source
                 overlays). Detail: bottom-right corner of the single photo frame. */}
             <span
@@ -458,7 +537,7 @@ export function ListingImageCarousel({
               type="button"
               aria-pressed={i === index}
               aria-label={label(i)}
-              onClick={() => goTo(i)}
+              onClick={() => (morphMode ? morphGoTo(i) : goTo(i))}
               className={`relative h-14 w-20 shrink-0 overflow-hidden rounded-xl transition-opacity ${
                 i === index ? "" : "opacity-60 hover:opacity-100"
               }`}
@@ -491,9 +570,13 @@ export function ListingImageCarousel({
             onClose={() => {
               // Synchronize once, without running the page carousel behind the
               // viewer on every swipe (which could feed a stale index back).
-              prime(lightboxIndex);
-              if (emblaApi) emblaApi.scrollTo(lightboxIndex, true);
-              else setPendingSlide(lightboxIndex);
+              // Morph mode has no Embla engine: jump the melt slider instead.
+              if (morphMode) morphGoTo(lightboxIndex);
+              else {
+                prime(lightboxIndex);
+                if (emblaApi) emblaApi.scrollTo(lightboxIndex, true);
+                else setPendingSlide(lightboxIndex);
+              }
               setLightboxOpen(false);
             }}
             onIndexChange={setLightboxIndex}
