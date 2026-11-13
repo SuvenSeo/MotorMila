@@ -24,10 +24,13 @@ from pathlib import Path
 
 
 # Cloudflare's API intermittently returns 5xx on R2 object PUTs (seen 500/502
-# on 2026-10-18/20) — retry those, fail fast on 4xx (auth/permission problems
-# never heal with retries).
-TRANSIENT_STATUSES = {500, 502, 503, 504}
-MAX_ATTEMPTS = 4
+# on 2026-10-18/20) — retry those. HTTP 429 is retryable too: the API rate
+# limit (shared token, thousands of snapshot files going up one by one)
+# tripped on 2026-11-13 and a single 429 killed the whole run — the old code
+# treated every 4xx as fatal. Fail fast on other 4xx (auth/permission
+# problems never heal with retries).
+TRANSIENT_STATUSES = {429, 500, 502, 503, 504}
+MAX_ATTEMPTS = 5
 
 
 def required_env(name: str) -> str | None:
@@ -42,9 +45,11 @@ def content_type_for(path: Path) -> str:
 
 
 def iter_files(source: Path):
-    for path in source.rglob("*"):
-        if path.is_file():
-            yield path
+    paths = [path for path in source.rglob("*") if path.is_file()]
+    # manifest.json advertises the catalog — upload it last so a partial
+    # upload never publishes a new manifest over old parts.
+    paths.sort(key=lambda p: (p.name == "manifest.json", p.as_posix()))
+    yield from paths
 
 
 def upload_via_boto3(source: Path, prefix: str, bucket: str,
@@ -121,7 +126,12 @@ def upload_via_cf_api(source: Path, prefix: str, bucket: str,
                 break
             except urllib.error.HTTPError as exc:
                 if exc.code in TRANSIENT_STATUSES and attempt < MAX_ATTEMPTS:
-                    wait = 2 ** attempt
+                    retry_after = exc.headers.get("Retry-After") if exc.headers else None
+                    try:
+                        wait = int(retry_after) if retry_after else 2 ** attempt
+                    except ValueError:
+                        wait = 2 ** attempt
+                    wait = min(wait, 120)
                     print(
                         f"R2 upload transient HTTP {exc.code} for {key} "
                         f"(attempt {attempt}/{MAX_ATTEMPTS}), retrying in {wait}s"
@@ -221,3 +231,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

@@ -93,17 +93,41 @@ def wait_for_success(deployment_id: str) -> dict:
         time.sleep(POLL_INTERVAL_SECONDS)
 
 
+# GitHub-hosted runners get HTTP 403 from Cloudflare when fetching the live
+# site with Python's default urllib User-Agent (datacenter IP + bot UA —
+# verified 2026-11-13: default UA 403s, browser UA 200s on the same URL).
+# The retried deployment itself succeeds, but the check then fails the whole
+# workflow and skips the merged-DB publish. Send a browser UA and retry
+# before calling it a failure.
+LIVE_CHECK_ATTEMPTS = 3
+LIVE_CHECK_RETRY_SECONDS = 15
+LIVE_CHECK_USER_AGENT = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+)
+
+
 def check_live(path: str) -> None:
     url = f"{SITE_URL}{path}"
-    try:
-        with urllib.request.urlopen(url, timeout=30) as resp:
-            resp.read(1024)
-            status = resp.status
-    except urllib.error.HTTPError as exc:
-        status = exc.code
-    print(f"live check {url}: HTTP {status}")
-    if status != 200:
-        raise SystemExit(f"live check failed: {url} returned HTTP {status}")
+    status: int | None = None
+    for attempt in range(1, LIVE_CHECK_ATTEMPTS + 1):
+        req = urllib.request.Request(url, headers={"User-Agent": LIVE_CHECK_USER_AGENT})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                resp.read(1024)
+                status = resp.status
+        except urllib.error.HTTPError as exc:
+            status = exc.code
+        except urllib.error.URLError as exc:
+            status = None
+            print(f"live check {url}: {exc} (attempt {attempt}/{LIVE_CHECK_ATTEMPTS})")
+        if status is not None:
+            print(f"live check {url}: HTTP {status} (attempt {attempt}/{LIVE_CHECK_ATTEMPTS})")
+        if status == 200:
+            return
+        if attempt < LIVE_CHECK_ATTEMPTS:
+            time.sleep(LIVE_CHECK_RETRY_SECONDS)
+    raise SystemExit(f"live check failed: {url} returned HTTP {status}")
 
 
 def main() -> int:
@@ -122,3 +146,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
