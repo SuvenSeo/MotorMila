@@ -394,4 +394,109 @@ describe("snapshot-only mode", () => {
     expect(result).toEqual({ listings: [], total: 0 });
     expect(fetchMock.mock.calls.every((call) => !String(call[0]).includes("/api/v1/"))).toBe(true);
   });
+
+  it("filters charging stations by Haversine radius from snapshot in snapshot-only mode", async () => {
+    vi.stubEnv("VITE_SNAPSHOT_BASE_URL", "https://cdn.example/latest");
+    vi.stubEnv("VITE_SNAPSHOT_ONLY", "true");
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/charging-stations.json")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            count: 2,
+            radius_km: 250,
+            attribution: "Data © Open Charge Map contributors and OpenStreetMap contributors.",
+            stations: [
+              {
+                ocm_id: -1001,
+                name: "Colombo Hub",
+                operator: "ChargeNET",
+                lat: 6.917,
+                lng: 79.855,
+                address: "Colombo 03",
+                connectors: [{ type: "Type 2", power_kw: 22 }],
+                distance_km: 1.5,
+              },
+              {
+                ocm_id: -1002,
+                name: "Kandy Hub",
+                operator: "BYD LK",
+                lat: 7.2906,
+                lng: 80.6337,
+                address: "Kandy",
+                connectors: [{ type: "CCS", power_kw: 50 }],
+                distance_km: 95,
+              },
+            ],
+          }),
+        };
+      }
+      return { ok: false, status: 404, json: async () => ({}) };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const api = await import("@/services/api");
+    const colombo = await api.getChargingStations({ lat: 6.9271, lng: 79.8612, radius_km: 25 });
+    expect(colombo.count).toBe(1);
+    expect(colombo.stations.map((s) => s.name)).toEqual(["Colombo Hub"]);
+    expect(fetchMock.mock.calls.every((call) => !String(call[0]).includes("/api/v1/"))).toBe(true);
+
+    const kandy = await api.getChargingStations({ lat: 7.2906, lng: 80.6337, radius_km: 25 });
+    expect(kandy.count).toBe(1);
+    expect(kandy.stations.map((s) => s.name)).toEqual(["Kandy Hub"]);
+  });
+
+  it("falls back to charging-stations.json when live API returns 0 stations", async () => {
+    vi.stubEnv("VITE_SNAPSHOT_BASE_URL", "https://cdn.example/latest");
+    vi.stubEnv("VITE_SNAPSHOT_ONLY", "false");
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/v1/ev/charging-stations")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            count: 0,
+            radius_km: 25,
+            attribution: "Open Charge Map",
+            stations: [],
+          }),
+        };
+      }
+      if (url.endsWith("/charging-stations.json")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            count: 1,
+            radius_km: 250,
+            attribution: "Data © Open Charge Map contributors and OpenStreetMap contributors.",
+            stations: [
+              {
+                ocm_id: -1001,
+                name: "Colombo City Centre",
+                operator: "Dialog",
+                lat: 6.917,
+                lng: 79.855,
+                address: "Colombo",
+                connectors: [{ type: "Type 2", power_kw: 22 }],
+                distance_km: 1.2,
+              },
+            ],
+          }),
+        };
+      }
+      return { ok: false, status: 404, json: async () => ({}) };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const api = await import("@/services/api");
+    const result = await api.getChargingStations({ lat: 6.9271, lng: 79.8612, radius_km: 25 });
+    expect(result.count).toBe(1);
+    expect(result.stations[0]?.name).toBe("Colombo City Centre");
+  });
 });

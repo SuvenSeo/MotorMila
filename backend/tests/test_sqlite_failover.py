@@ -76,17 +76,27 @@ def test_maybe_activate_skips_when_neon_is_up(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def _reset_failover_state():
-    sqlite_failover._activated = False
-    sqlite_failover._primary_url = None
-    sqlite_failover._active_source_url = None
-    sqlite_failover._active_source_version = None
-    sqlite_failover._next_refresh_allowed_at = 0.0
+    def _clear():
+        sqlite_failover._activated = False
+        sqlite_failover._primary_url = None
+        sqlite_failover._active_source_url = None
+        sqlite_failover._active_source_version = None
+        sqlite_failover._next_refresh_allowed_at = 0.0
+        sqlite_failover._record_status(
+            attempts=0,
+            last_error=None,
+            last_attempt_at=None,
+            last_success_at=None,
+            source=None,
+            path=None,
+            bytes=None,
+            primary_status=None,
+            primary_checked_at=None,
+        )
+
+    _clear()
     yield
-    sqlite_failover._activated = False
-    sqlite_failover._primary_url = None
-    sqlite_failover._active_source_url = None
-    sqlite_failover._active_source_version = None
-    sqlite_failover._next_refresh_allowed_at = 0.0
+    _clear()
 
 
 def test_tick_fails_back_to_neon_after_recovery(monkeypatch):
@@ -327,3 +337,50 @@ def test_refresh_throttles_repeated_attempts(tmp_path, monkeypatch):
     sqlite_failover._active_source_version = ("older", 50)
     assert sqlite_failover._refresh_active_failover_locked() is False
     assert len(calls) == 1
+
+
+def test_refresh_updates_failover_status_telemetry_on_success_and_error(tmp_path, monkeypatch):
+    sqlite_failover._activated = True
+    sqlite_failover._active_source_url = "https://example.test/merged.db.gz"
+    sqlite_failover._active_source_version = ("old", 100)
+    sqlite_failover._record_status(attempts=1, last_attempt_at=1000.0, last_error="stale error")
+    monkeypatch.setenv("SQLITE_FAILOVER_FORCE", "true")
+    live = tmp_path / "merged.db"
+    live.write_bytes(b"old-db" * 300)
+    monkeypatch.setenv("SQLITE_FAILOVER_PATH", str(live))
+    monkeypatch.setattr(
+        sqlite_failover,
+        "_candidate_sources",
+        lambda: ["https://example.test/merged.db.gz"],
+    )
+    monkeypatch.setattr(sqlite_failover, "_source_version", lambda url: ("new", 200))
+
+    def fake_download_fail(dest, url):
+        dest.write_bytes(b"partial")
+        raise OSError("timeout")
+
+    monkeypatch.setattr(sqlite_failover, "download_merged_sqlite", fake_download_fail)
+    assert sqlite_failover._refresh_active_failover_locked() is False
+    err_snap = sqlite_failover.failover_status()
+    assert err_snap["attempts"] == 2
+    assert err_snap["last_attempt_at"] > 1000.0
+    assert "merged.db.gz: timeout" in (err_snap["last_error"] or "")
+    assert not (tmp_path / "merged.db.refresh").exists()
+
+    sqlite_failover._next_refresh_allowed_at = 0.0
+
+    def fake_download_ok(dest, url):
+        dest.write_bytes(b"fresh-db" * 400)
+        return dest
+
+    monkeypatch.setattr(sqlite_failover, "download_merged_sqlite", fake_download_ok)
+    monkeypatch.setattr(sqlite_failover, "activate_sqlite_file", lambda path: None)
+    monkeypatch.setattr(sqlite_failover, "_ensure_failover_schema", lambda: None)
+
+    assert sqlite_failover._refresh_active_failover_locked() is True
+    ok_snap = sqlite_failover.failover_status()
+    assert ok_snap["attempts"] == 3
+    assert ok_snap["last_error"] is None
+    assert ok_snap["last_success_at"] is not None
+    assert ok_snap["source"] == "https://example.test/merged.db.gz"
+    assert ok_snap["bytes"] == len(b"fresh-db" * 400)

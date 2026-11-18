@@ -212,6 +212,24 @@ jobs:
           ALLOW_SQLITE_FALLBACK: "true"
         run: python scripts/ops/repair_duplicate_flags.py --apply
 
+      - name: Backfill unknown fuel types (fail-open)
+        if: steps.discover.outputs.count != '0' || github.event.inputs.publish-full-catalog == 'true'
+        run: |
+          python scripts/ops/backfill_fuel_types.py --db-path motormila.db || \
+            echo "::warning::fuel type backfill failed; continuing export"
+
+      - name: Refresh EV charging stations cache (fail-open)
+        if: steps.discover.outputs.count != '0' || github.event.inputs.publish-full-catalog == 'true'
+        env:
+          COLD_DATABASE_URL: sqlite:///motormila.db
+          MOTORMILA_LOCAL_DB: motormila.db
+          ALLOW_SQLITE_FALLBACK: "true"
+          OPENCHARGEMAP_API_KEY: ${{ secrets.OPENCHARGEMAP_API_KEY }}
+          ENRICHMENT_OPEN_CHARGE_MAP: "true"
+        run: |
+          python scripts/ingest_openchargemap.py || \
+            echo "::warning::EV charger cache refresh failed; continuing export"
+
       - name: Export SQLite snapshots (zero-egress catalog refresh)
         # Permanent path: whenever new dump data was merged, refresh the live
         # catalog from the merged SQLite DB (zero Neon reads) and deploy.

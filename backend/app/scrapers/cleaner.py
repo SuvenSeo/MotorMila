@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional
 from urllib.parse import urlparse
 
 from app.utils.districts import resolve_canonical_district
+from app.utils.fuel_inference import infer_deterministic_fuel_type
 from app.utils.make_canonical import canonicalize_make, canonicalize_model
 from app.utils.pricing import MIN_REASONABLE_PRICE_LKR
 from app.utils.thumbnail_urls import normalize_image_list
@@ -623,6 +624,17 @@ class CarCleaner:
             if inferred:
                 canonical = self.canonicalize_technical_field(key, inferred) or inferred
                 normalized[key] = self._truncate_text(canonical, max_len) or None
+
+        if not normalized.get("fuel_type"):
+            det_fuel = infer_deterministic_fuel_type(
+                make=normalized.get("make"),
+                model=normalized.get("model"),
+                title=normalized.get("title"),
+                vehicle_category=normalized.get("vehicle_category"),
+            )
+            if det_fuel:
+                canonical_fuel = self.canonicalize_technical_field("fuel_type", det_fuel) or det_fuel
+                normalized["fuel_type"] = self._truncate_text(canonical_fuel, 20) or None
 
         for key in self._AUXILIARY_TEXT_FIELDS:
             normalized.pop(key, None)

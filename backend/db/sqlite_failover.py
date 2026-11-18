@@ -550,6 +550,10 @@ def _refresh_active_failover_locked() -> bool:
             )
             return False
         try:
+            _record_status(
+                attempts=int(_status.get("attempts") or 0) + 1,
+                last_attempt_at=time.time(),
+            )
             download_merged_sqlite(next_dest, url)
             # Close idle pooled connections and drop the previous generation's
             # WAL sidecars BEFORE the new file takes over the path; otherwise
@@ -564,10 +568,23 @@ def _refresh_active_failover_locked() -> bool:
             _ensure_failover_schema()
             _active_source_url = url
             _active_source_version = version
-            logger.info("sqlite_failover_refreshed", url=url, bytes=dest.stat().st_size)
+            dest_bytes = dest.stat().st_size
+            _record_status(
+                last_error=None,
+                last_success_at=time.time(),
+                source=url,
+                path=str(dest),
+                bytes=dest_bytes,
+            )
+            logger.info("sqlite_failover_refreshed", url=url, bytes=dest_bytes)
             return True
         except Exception as exc:  # noqa: BLE001 - try the next mirror
             _next_refresh_allowed_at = time.time() + _REFRESH_BACKOFF_SECONDS
+            _record_status(last_error=f"{url.rsplit('/', 1)[-1]}: {str(exc)[:240]}")
+            try:
+                next_dest.unlink(missing_ok=True)
+            except OSError:
+                pass
             logger.warning("sqlite_failover_refresh_failed", url=url, error=str(exc))
     return False
 

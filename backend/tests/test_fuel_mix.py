@@ -86,6 +86,22 @@ class TestGetFuelMix:
         assert by_type["hybrid"]["count"] == 2
         assert by_type["hybrid"]["pct"] == 100.0
 
+    def test_pluginhybrid_without_underscore_grouped_into_hybrid(self):
+        db = _session()
+        db.add_all([
+            _listing("h1", "hybrid", engine_capacity=1500),
+            _listing("ph1", "pluginhybrid", engine_capacity=1800),
+        ])
+        db.commit()
+
+        mix = stats.get_fuel_mix(db=db)
+        by_type = {b["fuel_type"]: b for b in mix["buckets"]}
+        assert by_type["hybrid"]["count"] == 2
+        assert by_type["other"]["count"] == 0
+
+        bands = stats.get_hybrid_bands(db=db)
+        assert bands["total_hybrids"] == 2
+
     def test_unknown_fuel_type_classified_as_other(self):
         db = _session()
         db.add_all([

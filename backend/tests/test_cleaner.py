@@ -294,3 +294,44 @@ def test_normalize_listing_payload_infers_district_from_url_when_generic():
     assert normalized is not None
     assert normalized["district"] == "Kandy"
 
+
+@pytest.mark.parametrize(
+    ("make", "model", "title", "vehicle_category", "expected_fuel"),
+    [
+        ("Nissan", "Leaf", "Nissan Leaf AZEO 2016", "cars", "electric"),
+        ("BYD", "Atto 3", "BYD Atto 3 Extended Range 2024", "suvs", "electric"),
+        ("Toyota", "Aqua", "Toyota Aqua S Grade 2017", "cars", "hybrid"),
+        ("Toyota", "Prius", "Toyota Prius PHV 2018", "cars", "pluginhybrid"),
+        ("Honda", "Dio", "Honda Dio 2019", "motorbikes", "petrol"),
+        ("Yadea", "G5", "Yadea G5 2024", "motorbikes", "electric"),
+        ("Bajaj", "RE", "Bajaj RE 205 Three Wheel 2018", "three-wheelers", "petrol"),
+        ("Mitsubishi", "Canter", "Mitsubishi Canter Lorry 2015", "lorries", "diesel"),
+        ("Toyota", "Vitz", "Toyota Vitz Safety Edition 2018", "cars", None),
+        ("Honda", "Grace", "Honda Grace EX 2016", "cars", None),
+        ("Daihatsu", "Cast", "Daihatsu Cast Activa 2017", "cars", None),
+        ("Nissan", "Pulsar", "Nissan Pulsar Hatchback 1998", "cars", None),
+    ],
+)
+def test_normalize_listing_payload_infers_unambiguous_fuel_only(
+    make: str,
+    model: str,
+    title: str,
+    vehicle_category: str,
+    expected_fuel: str | None,
+):
+    cleaner = CarCleaner()
+    payload = _base_payload(source="riyahub", source_id=f"fuel-{make}-{model}")
+    payload.update(
+        {
+            "make": make,
+            "model": model,
+            "title": title,
+            "vehicle_category": vehicle_category,
+            "fuel_type": None,
+        }
+    )
+
+    normalized = cleaner.normalize_listing_payload(payload)
+
+    assert normalized is not None
+    assert normalized.get("fuel_type") == expected_fuel

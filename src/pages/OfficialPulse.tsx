@@ -24,6 +24,7 @@ import { useAuth } from "@/lib/authContext";
 import { FreePlanBanner } from "@/components/FreePlanBanner";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { FREE_PULSE_LIMIT, freePlanText, hasFullPlatformAccess } from "@/lib/planLimits";
+import { safeExternalUrl } from "@/lib/safeExternalUrl";
 
 type SourceFilter = "all" | string;
 
@@ -215,12 +216,32 @@ export default function OfficialPulse() {
             )}
           >
             <ul className="cine-list border-y border-border">
-              {newsItems.map((item, index) => (
-                <m.li key={item.id || `${item.title}-${index}`} variants={listItem} custom={index} initial="hidden" animate="show" className="cine-row list-none flex-col gap-1 sm:flex-row sm:gap-4">
-                  <span className="shrink-0 text-caption font-semibold uppercase tracking-caps text-primary sm:w-36">Helakuru Esana</span>
-                  <p className="min-w-0 flex-1 text-footnote font-semibold text-foreground">{item.title}</p>
-                </m.li>
-              ))}
+              {newsItems.map((item, index) => {
+                const sourceLabel =
+                  item.source === "economynext"
+                    ? "EconomyNext"
+                    : item.source === "ada_derana"
+                      ? "Ada Derana"
+                      : "Helakuru Esana";
+                const newsHref = safeExternalUrl(item.url);
+                return (
+                  <m.li key={item.id || `${item.title}-${index}`} variants={listItem} custom={index} initial="hidden" animate="show" className="cine-row list-none flex-col gap-1 sm:flex-row sm:gap-4">
+                    <span className="shrink-0 text-caption font-semibold uppercase tracking-caps text-primary sm:w-36">{sourceLabel}</span>
+                    {newsHref ? (
+                      <a
+                        href={newsHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="min-w-0 flex-1 text-footnote font-semibold text-foreground hover:text-primary"
+                      >
+                        {item.title}
+                      </a>
+                    ) : (
+                      <p className="min-w-0 flex-1 text-footnote font-semibold text-foreground">{item.title}</p>
+                    )}
+                  </m.li>
+                );
+              })}
             </ul>
           </CineSection>
         ) : null}
