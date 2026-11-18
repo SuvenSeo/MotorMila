@@ -24,6 +24,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { RequireAuth } from "@/components/RequireAuth";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { useDockTypingFlag } from "@/lib/dock";
+import { isHeroPreviewEnabled } from "@/lib/heroVariants";
 
 const FeedbackWidget = lazyWithRetry(() =>
   import("@/components/FeedbackWidget").then((m) => ({ default: m.FeedbackWidget }))
@@ -139,13 +140,8 @@ const appHistory = createViewTransitionHistory();
 
 const MinimalLoader = () => <RouteFallback />;
 
-/**
- * Internal hero A/B lab. It is a design tool, not a product surface: dev
- * builds only. Production has no route for it (falls through to 404) and no
- * `?heroLab=1` escape hatch.
- */
 function HeroLabGate() {
-  return import.meta.env.DEV ? <HeroLab /> : <Navigate to="/" replace />;
+  return isHeroPreviewEnabled() ? <HeroLab /> : <Navigate to="/" replace />;
 }
 
 function TrialBannerSlot() {  const { user } = useAuth();
@@ -341,13 +337,11 @@ const App = () => {
                     <ResetPassword />
                   </Suspense>
                 } />
-                {import.meta.env.DEV ? (
-                  <Route path="/hero-lab" element={
-                    <Suspense fallback={<MinimalLoader />}>
-                      <HeroLabGate />
-                    </Suspense>
-                  } />
-                ) : null}
+                <Route path="/hero-lab" element={
+                  <Suspense fallback={<MinimalLoader />}>
+                    <HeroLabGate />
+                  </Suspense>
+                } />
                 {/**
                  * Admin console: unlisted, credential-gated, and deliberately
                  * outside the marketing shell — no navbar, no footer, no links

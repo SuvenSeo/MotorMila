@@ -341,4 +341,32 @@ describe("Home page order and honesty (ui/shell)", () => {
     expect(screen.queryByText(/seller trust on every listing/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/verified signals/i)).not.toBeInTheDocument();
   });
+
+  it("renders preview redesign hero variants safely with combobox search and #market order", async () => {
+    renderDashboard(["/?hero=evidence"]);
+    await screen.findByText("FilterSidebar");
+    const hero = document.getElementById("overview");
+    const market = document.getElementById("market");
+    expect(hero).toHaveAttribute("data-hero-variant", "evidence");
+    expect(hero!.nextElementSibling).toBe(market);
+    expect(document.getElementById("hero-search")).toHaveAttribute("role", "combobox");
+
+    fireEvent.click(screen.getByRole("button", { name: /Filter Aqua/i }));
+    await waitFor(() => {
+      expect(api.getListings).toHaveBeenLastCalledWith(expect.objectContaining({ make: "Toyota", model: "Aqua" }));
+    });
+  });
+
+  it("renders interactive telemetry map and plaster gallery hero variants", async () => {
+    renderDashboard(["/?hero=telemetry-map"]);
+    await screen.findByText("FilterSidebar");
+    expect(document.getElementById("overview")).toHaveAttribute("data-hero-variant", "telemetry-map");
+
+    fireEvent.click(screen.getByRole("button", { name: /Select Kandy district/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Browse Kandy stock/i }));
+    await waitFor(() => {
+      expect(api.getListings).toHaveBeenLastCalledWith(expect.objectContaining({ district: "Kandy" }));
+    });
+  });
 });
+

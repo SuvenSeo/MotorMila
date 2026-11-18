@@ -26,6 +26,8 @@ import { HeroVariantPicker } from "@/components/HeroVariantPicker";
 import { useHeroVariantLab } from "@/hooks/useHeroVariantLab";
 import { usePointerParallax } from "@/hooks/usePointerParallax";
 import "@/styles/cinematic.css";
+import "@/styles/hero-redesign.css";
+import { RedesignedHero } from "@/components/hero/RedesignedHero";
 import { RevealSection } from "@/components/RevealSection";
 import { SourceCredits } from "@/components/SourceCredits";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -180,7 +182,7 @@ export default function Dashboard() {
   // Guests and free users get normal pagination (no 12-result cap).
   const listingFilters = filters;
   const [noResultsAlertStatus, setNoResultsAlertStatus] = useState<AlertStatus>("idle");
-  const { t } = useAppPreferences();
+  const { t, resolvedTheme } = useAppPreferences();
   const queryClient = useQueryClient();
   const liveMarketSnapshot = useLiveMarketSnapshot();
   // Persisted compare tray (localStorage) so selections survive navigation.
@@ -515,6 +517,13 @@ export default function Dashboard() {
     scrollToMarket();
   }, [scrollToMarket, setFilters]);
 
+  const filterDistrict = useCallback((district: string) => {
+    startTransition(() => {
+      setFilters((prev) => ({ ...prev, district, page: 1 }));
+    });
+    scrollToMarket();
+  }, [scrollToMarket, setFilters]);
+
   const totalPages = Math.max(0, Math.ceil(total / LISTINGS_PAGE_SIZE));
   const goToPage = useCallback((page: number) => {
     setFilters((prev) => ({ ...prev, page: Math.max(1, page) }));
@@ -622,13 +631,54 @@ export default function Dashboard() {
         <HeroVariantPicker activeId={heroVariant.id} onSelect={setHeroVariantId} />
       ) : null}
 
-      {/* ── HERO — "Night drive" cinematic stage ───────────────────────
+      {heroVariant.id !== "night-drive" ? (
+        <RedesignedHero
+          heroVariant={heroVariant}
+          resolvedTheme={resolvedTheme}
+          stats={stats}
+          liveCount={marketPulseListings}
+          sourceCount={marketPulseSources}
+          heroStatsLoading={heroStatsLoading}
+          trendingModels={trendingModels}
+          hotDeals={hotDeals}
+          velocityPoints={velocityPoints}
+          searchProps={{
+            heroSearch,
+            setHeroSearch,
+            heroSuggestions,
+            setHeroSuggestions,
+            heroSuggestionsOpen,
+            setHeroSuggestionsOpen,
+            heroFocused,
+            setHeroFocused,
+            heroSuggestionsLoading,
+            heroActiveIdx,
+            setHeroActiveIdx,
+            heroSearchMessage,
+            setHeroSearchMessage,
+            filters,
+            motionStill,
+            popularScans: HERO_POPULAR_SCANS,
+            categories: HOME_CATEGORIES,
+            applyHeroSuggestion,
+            runHeroSearch,
+            focusModel,
+            browseCategory,
+            t,
+          }}
+          onFilterDistrict={filterDistrict}
+          t={t}
+        />
+      ) : (
+      /* ── HERO — "Night drive" cinematic stage ───────────────────────
           Layers (back → front): photo plate (pointer + scroll parallax,
           slow settle) · light bloom · scrim · grain ·
-          exposure lift · letterbox curtain. All transform/opacity. */}
+          exposure lift · letterbox curtain. All transform/opacity. */
       <section
         ref={heroSectionRef}
         id="overview"
+        data-hero-variant="night-drive"
+        data-hero-tone="dark"
         className="cine-hero -mt-[var(--nav-offset)] pt-[var(--nav-offset)]"
         style={{ "--cine-pos": heroVariant.objectPosition } as CSSProperties}
       >
@@ -636,14 +686,16 @@ export default function Dashboard() {
           <div className="cine-depth" data-depth="-14">
             <div className="cine-drift">
               <div className="cine-settle">
-                <AtmosphericImage
-                  key={heroVariant.id}
-                  src={heroVariant.image.src}
-                  srcSm={heroVariant.image.srcSm}
-                  className="cine-hero__img"
-                  priority
-                  sizes="100vw"
-                />
+                {heroVariant.image ? (
+                  <AtmosphericImage
+                    key={heroVariant.id}
+                    src={heroVariant.image.src}
+                    srcSm={heroVariant.image.srcSm}
+                    className="cine-hero__img"
+                    priority
+                    sizes="100vw"
+                  />
+                ) : null}
               </div>
             </div>
           </div>
@@ -930,6 +982,7 @@ export default function Dashboard() {
           </dl>
         </div>
       </section>
+      )}
 
       <section id="market" className="scroll-mt-20">
         <div className="mx-auto max-w-[1560px] px-5 py-8 sm:px-6 lg:py-10">

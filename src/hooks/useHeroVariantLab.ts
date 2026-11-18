@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   DEFAULT_HERO_VARIANT_ID,
+  PREVIEW_DEFAULT_HERO_VARIANT_ID,
   getHeroVariant,
+  isHeroPreviewEnabled,
   isHeroVariantId,
   readStoredHeroVariantId,
   storeHeroVariantId,
@@ -11,8 +13,10 @@ import {
 } from "@/lib/heroVariants";
 
 /**
- * Local-only hero A/B lab. Enabled in Vite DEV only (never in production).
- * Persists pick in localStorage; also accepts `?hero=<id>`.
+ * Hero preview lab hook.
+ * Enabled in Vite DEV and on Cloudflare Pages preview subdomains
+ * (`*.motormila.pages.dev`). Disabled on production (`motormila.pages.dev`).
+ * Accepts `?hero=<id>` and persists the active preview pick in localStorage.
  */
 export function useHeroVariantLab(): {
   variant: HeroVariant;
@@ -20,22 +24,27 @@ export function useHeroVariantLab(): {
   showPicker: boolean;
 } {
   const [params, setParams] = useSearchParams();
-  const showPicker = import.meta.env.DEV;
+  const showPicker = isHeroPreviewEnabled();
 
-  // Production always renders the shipped hero: no `?hero=` or stored pick.
   const paramId = showPicker ? params.get("hero") : null;
+  const fallbackId: HeroVariantId =
+    !import.meta.env.DEV && showPicker
+      ? PREVIEW_DEFAULT_HERO_VARIANT_ID
+      : DEFAULT_HERO_VARIANT_ID;
+
   const initial = showPicker
-    ? (isHeroVariantId(paramId) ? paramId : null) ?? readStoredHeroVariantId() ?? DEFAULT_HERO_VARIANT_ID
+    ? (isHeroVariantId(paramId) ? paramId : null) ?? readStoredHeroVariantId() ?? fallbackId
     : DEFAULT_HERO_VARIANT_ID;
 
   const [variantId, setVariantIdState] = useState<HeroVariantId>(initial);
 
   useEffect(() => {
+    if (!showPicker) return;
     if (isHeroVariantId(paramId) && paramId !== variantId) {
       setVariantIdState(paramId);
       storeHeroVariantId(paramId);
     }
-  }, [paramId, variantId]);
+  }, [paramId, showPicker, variantId]);
 
   const setVariantId = (id: HeroVariantId) => {
     setVariantIdState(id);

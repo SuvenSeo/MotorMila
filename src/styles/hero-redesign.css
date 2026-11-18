@@ -1,0 +1,189 @@
+/* ============================================================================
+   Redesigned Home Hero Surfaces (01–05 previews)
+   Keeps colour formulas, gradients, and surface overrides out of JSX so cards,
+   search controls, and typography inherit pure semantic tokens cleanly.
+   ========================================================================== */
+
+.mm-hero-stage {
+  position: relative;
+  z-index: 10;
+  isolation: isolate;
+  overflow-x: clip;
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.mm-hero-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2.35rem, 1.2rem + 3.6vw, 4.35rem);
+  line-height: 0.99;
+  letter-spacing: -0.025em;
+  word-spacing: var(--display-word-spacing);
+  text-wrap: balance;
+}
+
+.mm-hero-title--compact {
+  font-size: clamp(2.15rem, 1.15rem + 3vw, 3.65rem);
+  line-height: 1.02;
+}
+
+:root:lang(si) .mm-hero-title,
+:root:lang(ta) .mm-hero-title {
+  font-size: clamp(1.9rem, 0.9rem + 3vw, 3.35rem);
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+/* ── Atmospheric light backdrop gradients (zero bitmap downloads) ──────── */
+.mm-hero-aura-evidence {
+  background:
+    radial-gradient(ellipse 58% 50% at 78% 28%, hsl(var(--primary) / 0.12), transparent 68%),
+    radial-gradient(ellipse 46% 42% at 14% 88%, hsl(var(--deal-good) / 0.08), transparent 64%);
+}
+
+.mm-hero-aura-map {
+  background:
+    radial-gradient(circle at 74% 48%, hsl(var(--primary) / 0.13), transparent 56%);
+}
+
+/* ── Option 03: Studio Concrete Bay (always dark stage) ───────────────── */
+.mm-hero-studio {
+  --background: 24 16% 4.2%;
+  --foreground: 0 0% 98%;
+  --surface-1: 24 14% 7.2%;
+  --surface-2: 24 12% 11%;
+  --muted-foreground: 30 8% 72%;
+  --label-1: 0 0% 98%;
+  --label-2: 30 8% 74%;
+  --label-3: 30 8% 58%;
+  --primary-text: 213 100% 68%;
+  --border: 0 0% 100% / 0.12;
+  background: #09090b;
+  color: #fafafa;
+  border-bottom-color: rgb(255 255 255 / 0.1);
+}
+
+.mm-hero-studio__scrim {
+  background:
+    linear-gradient(90deg, #09090b 0%, rgba(9, 9, 11, 0.88) 38%, rgba(9, 9, 11, 0.42) 64%, rgba(9, 9, 11, 0.12) 100%),
+    linear-gradient(180deg, rgba(9, 9, 11, 0.56) 0%, transparent 28%, rgba(9, 9, 11, 0.4) 72%, #09090b 100%);
+}
+
+/* ── Option 04: Warm Plaster Gallery (always sunlit cream gallery) ─────── */
+.mm-hero-plaster {
+  --background: 36 28% 95.8%;
+  --foreground: 24 16% 9%;
+  --card: 40 40% 99%;
+  --surface: 36 20% 92%;
+  --surface-1: 40 40% 99%;
+  --surface-2: 36 22% 91%;
+  --muted-foreground: 24 10% 34%;
+  --label-1: 24 16% 9%;
+  --label-2: 24 10% 34%;
+  --label-3: 24 8% 45%;
+  --primary-text: 213 100% 41%;
+  --deal-good-text: 145 63% 26%;
+  --border: 24 16% 12% / 0.12;
+  background: #f6f3ee;
+  color: #171412;
+  border-bottom-color: rgb(23 20 18 / 0.1);
+}
+
+.mm-hero-plaster__scrim {
+  background:
+    linear-gradient(90deg, #f6f3ee 0%, rgba(246, 243, 238, 0.92) 40%, rgba(246, 243, 238, 0.48) 66%, rgba(246, 243, 238, 0.08) 100%),
+    linear-gradient(180deg, rgba(246, 243, 238, 0.54) 0%, transparent 28%, rgba(246, 243, 238, 0.35) 75%, #f6f3ee 100%);
+}
+
+@media (max-width: 1023.98px) {
+  .mm-hero-studio__scrim {
+    background:
+      linear-gradient(180deg, rgba(9, 9, 11, 0.62) 0%, rgba(9, 9, 11, 0.35) 36%, rgba(9, 9, 11, 0.92) 72%, #09090b 100%);
+  }
+  .mm-hero-plaster__scrim {
+    background:
+      linear-gradient(180deg, rgba(246, 243, 238, 0.68) 0%, rgba(246, 243, 238, 0.38) 38%, rgba(246, 243, 238, 0.94) 72%, #f6f3ee 100%);
+  }
+}
+
+/* ── Hero Search Pill ──────────────────────────────────────────────────── */
+.mm-hero-search {
+  border-radius: 9999px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--surface-1));
+  box-shadow: var(--shadow-e2);
+  transition: border-color var(--dur-short) var(--ease-standard), box-shadow var(--dur-short) var(--ease-standard);
+}
+
+.mm-hero-search--dark {
+  border-color: rgb(255 255 255 / 0.18);
+  background: rgb(14 16 22 / 0.88);
+  box-shadow: 0 22px 54px -18px rgb(0 0 0 / 0.82), inset 0 1px 0 rgb(255 255 255 / 0.09);
+}
+
+.mm-hero-search--dark:focus-within {
+  border-color: hsl(213 100% 58% / 0.72);
+  box-shadow: 0 22px 54px -18px rgb(0 0 0 / 0.86), 0 0 0 4px rgb(10 122 255 / 0.24);
+}
+
+.mm-hero-search--light {
+  border-color: rgb(23 20 18 / 0.14);
+  background: rgb(255 255 255 / 0.96);
+  box-shadow: 0 16px 40px -14px rgb(24 16 8 / 0.14);
+}
+
+.mm-hero-search--light:focus-within {
+  border-color: hsl(var(--primary));
+  box-shadow: 0 16px 40px -14px rgb(24 16 8 / 0.16), 0 0 0 4px hsl(var(--primary) / 0.15);
+}
+
+/* ── Live data ticker ribbon (Option 01) ───────────────────────────────── */
+.mm-hero-ticker-wrap {
+  overflow: hidden;
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--surface-1) / 0.55);
+}
+
+.mm-hero-ticker {
+  display: flex;
+  width: max-content;
+  gap: 2.25rem;
+  animation: mm-hero-ticker-scroll 38s linear infinite;
+}
+
+.mm-hero-ticker:hover {
+  animation-play-state: paused;
+}
+
+@keyframes mm-hero-ticker-scroll {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mm-hero-ticker {
+    animation: none;
+  }
+}
+
+html.low-data .mm-hero-ticker {
+  animation: none;
+}
+
+/* ── Sri Lanka SVG District Choropleth (Option 02) ──────────────────────── */
+.mm-sl-district {
+  cursor: pointer;
+  transition: fill 150ms var(--ease-standard), stroke 150ms var(--ease-standard), opacity 150ms var(--ease-standard);
+}
+
+.mm-sl-district:hover {
+  filter: brightness(1.18);
+}
+
+.mm-sl-district:focus-visible {
+  outline: none;
+  stroke: hsl(var(--primary));
+  stroke-width: 2;
+}

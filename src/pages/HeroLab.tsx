@@ -1,24 +1,25 @@
-import { BRAND } from "@/lib/brand";
+import { useMemo, useState } from "react";
+import { ArrowRight, BarChart3, Map, Moon, Sun } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
 import { AtmosphericImage } from "@/components/AtmosphericImage";
+import { BrandLogo } from "@/components/BrandLogo";
+import { useAppPreferences } from "@/lib/appPreferences";
 import {
   HERO_VARIANTS,
+  PREVIEW_DEFAULT_HERO_VARIANT_ID,
   getHeroVariant,
   isHeroVariantId,
   storeHeroVariantId,
   type HeroVariantId,
 } from "@/lib/heroVariants";
-import { useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
-/**
- * Dev / local comparison surface for home-hero image + blend options.
- * Outside RequireAuth so you can pick without signing in.
- */
 export default function HeroLab() {
   const [params, setParams] = useSearchParams();
+  const { resolvedTheme, setThemeMode } = useAppPreferences();
   const paramId = params.get("hero");
   const [activeId, setActiveId] = useState<HeroVariantId>(
-    isHeroVariantId(paramId) ? paramId : "expressway-dusk",
+    isHeroVariantId(paramId) ? paramId : PREVIEW_DEFAULT_HERO_VARIANT_ID,
   );
   const variant = useMemo(() => getHeroVariant(activeId), [activeId]);
 
@@ -30,152 +31,176 @@ export default function HeroLab() {
     setParams(next, { replace: true });
   };
 
-  const centered = variant.align === "center";
-  const alignClass =
-    variant.align === "left"
-      ? "mr-auto max-w-xl text-left lg:max-w-2xl"
-      : variant.align === "right"
-        ? "ml-auto max-w-xl text-left lg:max-w-2xl"
-        : "mx-auto flex w-full max-w-3xl flex-col items-center text-center";
-  const copyTone = variant.tone === "dark" ? "text-white" : "text-foreground";
-  const mutedTone =
-    variant.tone === "dark" ? "text-white/75" : "text-foreground/80";
-  const copyPanel =
-    variant.tone === "dark"
-      ? ""
-      : "rounded-2xl bg-background p-5 sm:bg-background/40 sm:p-6";
-
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-40 border-b border-border bg-card px-4 py-3">
+      <header className="sticky top-0 z-40 border-b border-border bg-card/95 px-4 py-3.5 sm:px-6">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-caption font-semibold text-muted-foreground">
-              Local hero lab
-            </p>
-            <p className="text-footnote font-semibold">
-              Pick a version · then tell me the ID to ship
-            </p>
+          <div className="flex items-center gap-4">
+            <Link to={`/?hero=${activeId}`} className="no-underline">
+              <BrandLogo size="compact" showTagline={false} />
+            </Link>
+            <div>
+              <p className="text-caption font-semibold uppercase tracking-caps text-primary">
+                MotorMila Hero Gallery
+              </p>
+              <p className="text-footnote text-label-2">
+                Compare all 5 redesigned directions + current baseline on live pages
+              </p>
+            </div>
           </div>
-          <Link
-            to={`/?hero=${activeId}`}
-            className="rounded-2xl border border-border bg-background px-3 py-2 text-caption font-bold hover:border-primary/40"
-          >
-            Open on home (needs sign-in)
-          </Link>
-        </div>
-        <div className="mx-auto mt-3 flex max-w-6xl gap-2 overflow-x-auto pb-1">
-          {HERO_VARIANTS.map((v) => (
+
+          <div className="flex items-center gap-2">
             <button
-              key={v.id}
               type="button"
-              onClick={() => select(v.id)}
-              className={`shrink-0 rounded-xl border px-3 py-2 text-left transition-colors ${
-                v.id === activeId
-                  ? "border-primary/50 bg-primary/10"
-                  : "border-border bg-background hover:bg-surface"
-              }`}
+              onClick={() => setThemeMode(resolvedTheme === "dark" ? "light" : "dark")}
+              className="inline-flex items-center gap-1.5 rounded-control border border-border bg-surface-1 px-3 py-2 text-caption font-semibold text-foreground transition-colors hover:border-primary/40"
             >
-              <span className="block text-caption font-bold">{v.label}</span>
-              <span className="mt-0.5 block max-w-[180px] text-caption leading-snug text-muted-foreground">
-                {v.blurb}
-              </span>
+              {resolvedTheme === "dark" ? (
+                <Sun className="h-3.5 w-3.5 text-primary" aria-hidden />
+              ) : (
+                <Moon className="h-3.5 w-3.5 text-primary" aria-hidden />
+              )}
+              <span>{resolvedTheme === "dark" ? "Dark theme" : "Light theme"}</span>
             </button>
-          ))}
+
+            <Link
+              to={`/?hero=${activeId}`}
+              className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-caption font-semibold text-primary-foreground no-underline transition-colors hover:bg-primary/90"
+            >
+              Open live site with {variant.code} <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+            </Link>
+          </div>
         </div>
       </header>
 
-      <section
-        className={`relative min-h-[78vh] overflow-hidden border-b border-border ${
-          variant.tone === "dark" ? "bg-background" : "bg-surface"
-        }`}
-      >
-        <div aria-hidden className="pointer-events-none absolute inset-0">
-          <AtmosphericImage
-            src={variant.image.src}
-            srcSm={variant.image.srcSm}
-            className={`h-full w-full object-cover ${variant.imageOpacity}`}
-            style={{ objectPosition: variant.objectPosition }}
-            priority
-            sizes="100vw"
-          />
-          {variant.scrims.map((scrim) => (
-            <div key={scrim} className={`absolute inset-0 ${scrim}`} />
-          ))}
-        </div>
-
-        <div className="relative z-10 mx-auto flex min-h-[78vh] max-w-[1560px] items-center px-5 py-16 sm:px-6">
-          <div className={`w-full ${alignClass} ${copyPanel}`}>
-            <p className={`font-display text-title1 font-semibold tracking-tight sm:text-large ${copyTone}`}>
-              {BRAND.name}
-            </p>
-            <p
-              className={`mt-4 inline-flex rounded-full border px-3.5 py-1.5 text-caption font-semibold tracking-tight ${
-                variant.tone === "dark"
-                  ? "border-border bg-foreground/10 text-white/80"
-                  : "border-border/80 bg-card text-foreground/85"
-              }`}
-            >
-              Vehicle Intelligence · Sri Lanka
-            </p>
-            <h1 className={`display-hero mt-6 ${centered ? "display-hero--lockup" : ""} ${copyTone}`}>
-              <span className={centered ? "display-hero__lead" : undefined}>
-                Sri Lanka&apos;s entire vehicle market,
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        <div className="rounded-card border border-border bg-surface-1 p-5 sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-2xl">
+              <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-0.5 text-caption font-semibold text-primary">
+                {variant.tag}
               </span>
-              <span className={`text-sheen ${centered ? "display-hero__accent" : ""}`}>
-                {centered ? "" : " "}decoded.
-              </span>
-            </h1>
-            <p className={`text-body-lg mt-6 max-w-xl ${centered ? "mx-auto" : ""} ${mutedTone}`}>
-              <span className={`font-bold num ${copyTone}`}>120,000+</span> live listings —
-              real-time pricing, deal scores, and market intelligence.
-            </p>
-            <div
-              className={`mt-8 flex w-full max-w-xl items-center gap-2 rounded-xl border px-3 py-2 ${
-                centered ? "mx-auto" : ""
-              } ${
-                variant.tone === "dark"
-                  ? "border-border bg-foreground/10 text-white"
-                  : "border-border bg-card"
-              }`}
-            >
-              <span className="text-footnote opacity-60">Search vehicles…</span>
-              <span className="ml-auto rounded-2xl bg-primary px-4 py-2 text-caption font-medium text-white">
-                Search
-              </span>
+              <h1 className="mt-2 font-display text-title1 font-semibold text-foreground">
+                {variant.label}
+              </h1>
+              <p className="mt-2 text-body text-label-2">{variant.rationale}</p>
             </div>
-            <p className={`mt-6 text-caption font-medium ${mutedTone}`}>
-              Active: <span className="font-bold">{variant.id}</span> — {variant.blurb}
-            </p>
+            <Link
+              to={`/?hero=${variant.id}`}
+              className="inline-flex items-center gap-1.5 rounded-control border border-primary/40 bg-primary/10 px-4 py-2.5 text-footnote font-semibold text-primary no-underline transition-colors hover:bg-primary/20"
+            >
+              Preview live (`?hero={variant.id}`) <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
           </div>
         </div>
-      </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-10">
-        <h2 className="text-callout font-bold">All candidates at a glance</h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {HERO_VARIANTS.map((v) => (
-            <button
-              key={v.id}
-              type="button"
-              onClick={() => select(v.id)}
-              className={`overflow-hidden rounded-2xl border text-left transition-shadow hover:shadow-soft-lg ${
-                v.id === activeId ? "border-primary ring-2 ring-primary/30" : "border-border"
-              }`}
-            >
-              <AtmosphericImage
-                src={v.image.srcSm}
-                className="h-36 w-full object-cover"
-                sizes="400px"
-              />
-              <div className="p-3">
-                <p className="text-footnote font-bold">{v.label}</p>
-                <p className="mt-1 text-caption text-muted-foreground">{v.blurb}</p>
+        <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {HERO_VARIANTS.map((v) => {
+            const selected = v.id === activeId;
+            return (
+              <div
+                key={v.id}
+                className={cn(
+                  "flex flex-col overflow-hidden rounded-card border bg-surface-1 transition-ui",
+                  selected ? "border-primary ring-2 ring-primary/25 shadow-e2" : "border-border shadow-e1",
+                )}
+              >
+                <div className="relative aspect-[16/9] w-full overflow-hidden bg-surface-2">
+                  {v.image ? (
+                    <AtmosphericImage
+                      src={v.image.srcSm}
+                      alt={v.label}
+                      className="h-full w-full object-cover"
+                      sizes="420px"
+                    />
+                  ) : v.id === "evidence" ? (
+                    <div className="flex h-full flex-col justify-between bg-surface-2 p-4">
+                      <div className="flex items-center justify-between text-caption text-label-2">
+                        <span className="inline-flex items-center gap-1.5 font-semibold text-primary">
+                          <BarChart3 className="h-3.5 w-3.5" aria-hidden /> Fair-Price Histogram
+                        </span>
+                        <span className="rounded-full bg-deal-good/15 px-2 py-0.5 font-semibold text-deal-good-text">
+                          Zero AI Image
+                        </span>
+                      </div>
+                      <div className="flex h-16 items-end gap-1.5">
+                        {[24, 48, 80, 100, 74, 45, 22].map((h, i) => (
+                          <div
+                            key={i}
+                            className={cn(
+                              "flex-1 rounded-t-control",
+                              i <= 2 ? "bg-deal-good" : i === 3 ? "bg-primary" : "bg-foreground/20",
+                            )}
+                            style={{ height: `${h}%` }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex h-full flex-col justify-between bg-surface-2 p-4">
+                      <div className="flex items-center justify-between text-caption text-label-2">
+                        <span className="inline-flex items-center gap-1.5 font-semibold text-primary">
+                          <Map className="h-3.5 w-3.5" aria-hidden /> 25-District Choropleth
+                        </span>
+                        <span className="rounded-full bg-primary/15 px-2 py-0.5 font-semibold text-primary">
+                          Real GeoJSON
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-caption">
+                        <div className="rounded-control border border-border bg-surface-1 p-2">
+                          <span className="block text-label-3">Colombo</span>
+                          <span className="num font-semibold text-foreground">Rs 9.6M</span>
+                        </div>
+                        <div className="rounded-control border border-border bg-surface-1 p-2">
+                          <span className="block text-label-3">Gampaha</span>
+                          <span className="num font-semibold text-foreground">Rs 6.2M</span>
+                        </div>
+                        <div className="rounded-control border border-border bg-surface-1 p-2">
+                          <span className="block text-label-3">Kandy</span>
+                          <span className="num font-semibold text-foreground">Rs 4.7M</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <span className="absolute left-3 top-3 rounded-full border border-border bg-background/85 px-2.5 py-0.5 text-caption font-semibold text-foreground">
+                    {v.code} · {v.tag}
+                  </span>
+                </div>
+
+                <div className="flex flex-1 flex-col justify-between p-4">
+                  <div>
+                    <h2 className="font-display text-callout font-semibold text-foreground">
+                      {v.label}
+                    </h2>
+                    <p className="mt-1 text-caption leading-relaxed text-label-2">{v.blurb}</p>
+                  </div>
+
+                  <div className="mt-4 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => select(v.id)}
+                      className={cn(
+                        "flex-1 rounded-control border px-3 py-2 text-caption font-semibold transition-colors",
+                        selected
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border bg-surface-2 text-foreground hover:border-primary/40",
+                      )}
+                    >
+                      {selected ? "Selected" : "Inspect notes"}
+                    </button>
+                    <Link
+                      to={`/?hero=${v.id}`}
+                      className="inline-flex items-center gap-1 rounded-control bg-primary px-3 py-2 text-caption font-semibold text-primary-foreground no-underline transition-colors hover:bg-primary/90"
+                    >
+                      Live preview <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                    </Link>
+                  </div>
+                </div>
               </div>
-            </button>
-          ))}
+            );
+          })}
         </div>
-      </section>
+      </main>
     </div>
   );
 }

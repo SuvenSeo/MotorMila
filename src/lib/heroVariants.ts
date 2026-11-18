@@ -1,174 +1,170 @@
 import { visuals, type VisualAsset } from "@/lib/visualAssets";
 
 export type HeroAlign = "center" | "left" | "right";
-export type HeroTone = "light" | "dark" | "golden";
+export type HeroTone = "light" | "dark" | "auto";
+export type HeroSurfaceKind = "data-evidence" | "data-map" | "photo-stage" | "split-photo" | "legacy-night";
 
 export type HeroVariantId =
-  | "night-drive"
-  | "current"
-  | "colombo-night"
-  | "expressway-dusk"
-  | "orange-sunset"
-  | "ultrawide-day"
-  | "blueprint"
-  | "coastal-aerial";
+  | "evidence"
+  | "telemetry-map"
+  | "studio-bay"
+  | "plaster-gallery"
+  | "colombo-split"
+  | "night-drive";
 
 export type HeroVariant = {
   id: HeroVariantId;
+  code: string;
+  tag: string;
   label: string;
   blurb: string;
-  image: VisualAsset;
+  rationale: string;
+  surfaceKind: HeroSurfaceKind;
+  image: VisualAsset | null;
   objectPosition: string;
   imageOpacity: string;
   align: HeroAlign;
   tone: HeroTone;
-  /** Hide floating side chips for cleaner first viewport */
   hideSideSignals: boolean;
-  /** Stacked absolute gradient layers over the photo */
-  scrims: string[];
 };
 
 /**
- * Local hero lab options — switch via floating picker or `?hero=<id>`.
- * Do not commit a final pick until the user chooses.
+ * Redesigned home hero candidates (01–05) + 00 baseline (`night-drive`).
+ * Switchable in local dev or on Cloudflare Pages preview subdomains via
+ * the floating Hero Preview bar or `?hero=<id>`.
  */
 export const HERO_VARIANTS: HeroVariant[] = [
   {
+    id: "evidence",
+    code: "01",
+    tag: "Zero AI Image",
+    label: "01 · Evidence Terminal",
+    blurb: "Live pricing distribution, median ask & comparable targets right in the hero.",
+    rationale: "Replaces synthetic car renders with verifiable valuation proof — FCP stays instant and every number traces to real inventory.",
+    surfaceKind: "data-evidence",
+    image: null,
+    objectPosition: "center center",
+    imageOpacity: "opacity-100",
+    align: "left",
+    tone: "auto",
+    hideSideSignals: true,
+  },
+  {
+    id: "telemetry-map",
+    code: "02",
+    tag: "Real GeoJSON Map",
+    label: "02 · Sri Lanka Telemetry",
+    blurb: "Interactive 25-district GeoJSON price & supply choropleth replacing fake skylines.",
+    rationale: "Reveals Sri Lanka's real regional market spread (Colombo vs. Kandy vs. Kurunegala) and filters inventory directly on click.",
+    surfaceKind: "data-map",
+    image: null,
+    objectPosition: "center center",
+    imageOpacity: "opacity-100",
+    align: "left",
+    tone: "auto",
+    hideSideSignals: true,
+  },
+  {
+    id: "studio-bay",
+    code: "03",
+    tag: "Studio Plate",
+    label: "03 · Studio Concrete Bay",
+    blurb: "Polestar / Leica restraint — dry matte concrete bay, overhead softbox, zero wet neon.",
+    rationale: "Keeps full-bleed automotive photography while stripping every synthetic night-road reflection cue.",
+    surfaceKind: "photo-stage",
+    image: visuals.pageHomeHeroStudio,
+    objectPosition: "78% 54%",
+    imageOpacity: "opacity-95",
+    align: "left",
+    tone: "dark",
+    hideSideSignals: true,
+  },
+  {
+    id: "plaster-gallery",
+    code: "04",
+    tag: "Daylight Gallery",
+    label: "04 · Warm Plaster Gallery",
+    blurb: "Sunlit tropical plaster gallery in natural daylight — everyday hybrid & ink type.",
+    rationale: "Honors 'Light is a gallery' from index.css with warm daylight transparency instead of forced night chrome.",
+    surfaceKind: "photo-stage",
+    image: visuals.pageHomeHeroPlaster,
+    objectPosition: "80% 58%",
+    imageOpacity: "opacity-100",
+    align: "left",
+    tone: "light",
+    hideSideSignals: true,
+  },
+  {
+    id: "colombo-split",
+    code: "05",
+    tag: "35mm Documentary",
+    label: "05 · Colombo Street Split",
+    blurb: "Clean search left + framed 24px street-level Toyota Aqua documentary card right.",
+    rationale: "Framed split keeps typography sharp on solid surface while showcasing local everyday vehicles with zero scrim mud.",
+    surfaceKind: "split-photo",
+    image: visuals.pageHomeHeroColombo,
+    objectPosition: "center 56%",
+    imageOpacity: "opacity-100",
+    align: "left",
+    tone: "auto",
+    hideSideSignals: true,
+  },
+  {
     id: "night-drive",
-    label: "0 · Night drive",
-    blurb: "Blue-hour coast road, Lotus Tower on the horizon — editorial left copy, car on the right.",
+    code: "00",
+    tag: "Current Live",
+    label: "00 · Night drive (current)",
+    blurb: "Existing live hero — wet coastal road + Lotus Tower + floating AI Value HUD.",
+    rationale: "Kept inside this preview switcher so you can compare every new option directly against production.",
+    surfaceKind: "legacy-night",
     image: visuals.pageHomeHeroNight,
-    // Desktop crop; below lg the photo is a top band cropped by CSS (.mm-hero).
     objectPosition: "70% 50%",
     imageOpacity: "opacity-100",
     align: "left",
     tone: "dark",
     hideSideSignals: true,
-    scrims: [],
-  },
-  {
-    id: "current",
-    label: "1 · Current traffic",
-    blurb: "Soft market expressway wash (what’s live today).",
-    image: visuals.pageSearchHero,
-    objectPosition: "center 35%",
-    imageOpacity: "opacity-[0.34]",
-    align: "center",
-    tone: "light",
-    hideSideSignals: false,
-    scrims: [
-      "bg-gradient-to-b from-surface/90 via-surface/78 to-background",
-      "bg-gradient-to-r from-surface/85 via-transparent to-surface/55",
-    ],
-  },
-  {
-    id: "colombo-night",
-    label: "2 · Colombo night",
-    blurb: "Lotus Tower + tuk-tuk market — left copy, cinematic dusk.",
-    image: visuals.pageHomeHero,
-    objectPosition: "center 42%",
-    imageOpacity: "opacity-[0.78]",
-    align: "left",
-    tone: "dark",
-    hideSideSignals: false,
-    scrims: [
-      "bg-gradient-to-r from-background via-background/85 to-background/20 sm:to-transparent",
-      "bg-gradient-to-b from-background/55 via-transparent to-background",
-    ],
-  },
-  {
-    id: "expressway-dusk",
-    label: "3 · Expressway dusk",
-    blurb: "Lotus Tower + light-trail expressway — centered lockup, SUV on the right.",
-    image: visuals.pageHomeHeroDusk,
-    // Keep the SUV in the right third so the centered type sits over the darker road
-    objectPosition: "62% 42%",
-    imageOpacity: "opacity-[0.88]",
-    align: "center",
-    tone: "dark",
-    hideSideSignals: false,
-    scrims: [
-      "bg-gradient-to-b from-background/55 via-background/22 to-background/88",
-      "bg-gradient-to-t from-background/70 via-transparent to-background/35",
-    ],
-  },
-  {
-    id: "orange-sunset",
-    label: "4 · Orange sunset",
-    blurb: "Luxury Colombo waterfront — left headline, car on the right.",
-    image: visuals.alt2HeroOrangeSunset,
-    objectPosition: "center 40%",
-    imageOpacity: "opacity-[0.9]",
-    align: "left",
-    tone: "golden",
-    hideSideSignals: false,
-    scrims: [
-      "bg-gradient-to-r from-background/94 via-background/72 to-background/10 sm:to-transparent",
-      "bg-gradient-to-b from-background/35 via-transparent to-background/80",
-    ],
-  },
-  {
-    id: "ultrawide-day",
-    label: "5 · Ultrawide day",
-    blurb: "Bright bay panorama + red supercar — airy left space.",
-    image: visuals.alt2HeroUltrawidePanorama,
-    // Bias right so the car stays visible; slightly left of 68% on narrow crops
-    objectPosition: "62% 42%",
-    imageOpacity: "opacity-[0.86]",
-    align: "left",
-    tone: "light",
-    hideSideSignals: false,
-    scrims: [
-      // Lighter left wash — photo stays dominant; type uses text-shadow for contrast
-      "bg-gradient-to-r from-background/82 via-background/45 to-transparent",
-      "bg-gradient-to-b from-background/25 via-transparent to-background/90",
-    ],
-  },
-  {
-    id: "blueprint",
-    label: "6 · Blueprint intel",
-    blurb: "CAD wireframe SUV — tech/data mood for intelligence brand.",
-    image: visuals.alt2PageFeaturesBg,
-    objectPosition: "left center",
-    imageOpacity: "opacity-[0.92]",
-    align: "right",
-    tone: "dark",
-    hideSideSignals: false,
-    scrims: [
-      "bg-gradient-to-l from-background/30 via-background/75 to-background/95",
-      "bg-gradient-to-b from-background/50 via-transparent to-background",
-    ],
-  },
-  {
-    id: "coastal-aerial",
-    label: "7 · Coastal aerial",
-    blurb: "Real drone shot — Galle Road coastline, centered lockup.",
-    image: visuals.pageHomeHeroCoastal,
-    // Aerial coastline is bright — keep copy over the darker road band
-    objectPosition: "center 45%",
-    imageOpacity: "opacity-[0.92]",
-    align: "center",
-    tone: "dark",
-    hideSideSignals: false,
-    // Theme-independent dark scrim: white copy stays AA on the bright aerial
-    // in both themes. A centre pool sits behind the headline and search.
-    scrims: [
-      "bg-gradient-to-b from-black/55 via-black/30 to-black/75",
-      "bg-[radial-gradient(ellipse_60%_52%_at_50%_48%,rgba(0,0,0,0.38)_0%,transparent_72%)]",
-    ],
   },
 ];
 
+/** Default used by local tests, E2E, and non-preview environments. */
 export const DEFAULT_HERO_VARIANT_ID: HeroVariantId = "night-drive";
 
-const STORAGE_KEY = "motormila.hero_variant.v4";
+/** Default highlighted when landing on an un-parameterized Cloudflare preview deployment. */
+export const PREVIEW_DEFAULT_HERO_VARIANT_ID: HeroVariantId = "evidence";
+
+const PRODUCTION_HOSTS = new Set(["motormila.pages.dev", "motormila.com", "www.motormila.com"]);
+const STORAGE_KEY = "motormila.hero_variant.v5";
+
+export function isHeroPreviewHost(hostname: string | null | undefined): boolean {
+  if (!hostname) return false;
+  const host = hostname.trim().toLowerCase();
+  if (!host || PRODUCTION_HOSTS.has(host)) return false;
+  if (host === "localhost" || host === "127.0.0.1") return true;
+  return host.endsWith(".motormila.pages.dev");
+}
+
+/**
+ * Hero switching & `/hero-lab` are active in Vite DEV and on non-production
+ * Cloudflare Pages preview subdomains (e.g. `preview-hero-redesigns.motormila.pages.dev`).
+ * Never active on live production hosts.
+ */
+export function isHeroPreviewEnabled(): boolean {
+  if (import.meta.env.DEV) return true;
+  if (typeof window === "undefined") return false;
+  return isHeroPreviewHost(window.location.hostname);
+}
 
 export function isHeroVariantId(value: string | null | undefined): value is HeroVariantId {
   return Boolean(value && HERO_VARIANTS.some((v) => v.id === value));
 }
 
 export function getHeroVariant(id: HeroVariantId): HeroVariant {
-  return HERO_VARIANTS.find((v) => v.id === id) ?? HERO_VARIANTS[0];
+  return HERO_VARIANTS.find((v) => v.id === id) ?? HERO_VARIANTS[HERO_VARIANTS.length - 1];
+}
+
+export function resolveHeroTone(variant: HeroVariant, resolvedTheme: "dark" | "light"): "dark" | "light" {
+  if (variant.tone === "dark" || variant.tone === "light") return variant.tone;
+  return resolvedTheme;
 }
 
 export function readStoredHeroVariantId(): HeroVariantId | null {
