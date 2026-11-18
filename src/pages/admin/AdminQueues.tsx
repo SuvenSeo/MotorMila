@@ -136,7 +136,7 @@ export function ModerationQueuePanel() {
                   disabled={approve.isPending || it.status === "published" || it.status === "removed"}
                   onClick={() => approve.mutate(it.id)}
                   size="sm"
-                  className="bg-deal-good text-deal-good-foreground hover:bg-deal-good/90">
+                >
                   <Check aria-hidden /> Approve
                 </Button>
                 <Button
@@ -148,8 +148,7 @@ export function ModerationQueuePanel() {
                     reject.mutate({ id: it.id, reason });
                   }}
                   size="sm"
-                  variant="secondary"
-                  className="text-deal-high-text"
+                  variant="destructive"
                 >
                   <X aria-hidden /> Reject
                 </Button>
@@ -287,7 +286,7 @@ export function RemovalRequestsPanel() {
                           resolve.mutate({ id: r.id, next: "actioned", note });
                         }}
                         size="sm"
-                  className="bg-deal-good text-deal-good-foreground hover:bg-deal-good/90">
+                      >
                         <Check aria-hidden /> Approve
                       </Button>
                       <Button
@@ -299,8 +298,7 @@ export function RemovalRequestsPanel() {
                           resolve.mutate({ id: r.id, next: "rejected", note });
                         }}
                         size="sm"
-                        variant="secondary"
-                        className="text-deal-high-text"
+                        variant="destructive"
                       >
                         <X aria-hidden /> Reject
                       </Button>

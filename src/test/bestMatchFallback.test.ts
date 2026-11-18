@@ -53,13 +53,13 @@ describe("best_match sort fallback", () => {
   });
 
   it("passes best_match through when the backend accepts it", async () => {
-    const fetchMock = vi.fn((_url: string) => Promise.resolve(page));
+    const fetchMock = vi.fn(() => Promise.resolve(page));
     vi.stubGlobal("fetch", fetchMock);
     const api: typeof import("@/services/api") = await import("@/services/api");
 
     const result = await api.getListings({ sort: "best_match", page: 1 });
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(String(fetchMock.mock.calls[0][0])).toContain("sort=best_match");
+    expect(String((fetchMock.mock.calls[0] as unknown[])[0])).toContain("sort=best_match");
     // server order kept as-is
     expect(result.listings.map((l) => l.id)).toEqual([1, 2, 3]);
   });

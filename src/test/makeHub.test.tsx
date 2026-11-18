@@ -65,11 +65,11 @@ describe("MakeHub", () => {
     });
     expect(screen.getByRole("link", { name: /Aqua/i })).toHaveAttribute(
       "href",
-      "/cars/toyota/Aqua",
+      "/cars/toyota/aqua",
     );
     expect(screen.getByRole("link", { name: /Colombo/i })).toHaveAttribute(
       "href",
-      "/locations/Colombo",
+      "/locations/colombo",
     );
   });
 });

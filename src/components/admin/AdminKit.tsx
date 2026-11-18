@@ -170,12 +170,19 @@ export function AdminKpiCard({
   className,
 }: {
   label: string;
-  value: number | null | undefined;
+  value: string | number | null | undefined;
   icon?: LucideIcon;
   footer?: ReactNode;
   to?: string;
   className?: string;
 }) {
+  const formatted =
+    value === null || value === undefined || value === ""
+      ? "—"
+      : typeof value === "number"
+        ? value.toLocaleString("en-GB")
+        : value;
+  const isString = typeof value === "string" && value !== "";
   const body = (
     <>
       <div className="flex items-center justify-between gap-2">
@@ -186,8 +193,13 @@ export function AdminKpiCard({
           </span>
         ) : null}
       </div>
-      <p className="mt-2.5 font-display text-[2rem] leading-none tracking-[-0.02em] text-foreground tabular-nums sm:mt-3 sm:text-[2.5rem]">
-        {value === null || value === undefined ? "—" : value.toLocaleString("en-GB")}
+      <p
+        className={cn(
+          "mt-2.5 font-display leading-none tracking-[-0.02em] text-foreground tabular-nums sm:mt-3",
+          isString ? "text-title2 sm:text-title1" : "text-[2rem] sm:text-[2.5rem]",
+        )}
+      >
+        {formatted}
       </p>
       <div className="mt-3 min-h-5">{footer}</div>
     </>
@@ -199,6 +211,26 @@ export function AdminKpiCard({
     </Link>
   ) : (
     <div className={classes}>{body}</div>
+  );
+}
+
+export function AdminStatBars({ rows }: { rows: Array<{ label: string; count: number }> }) {
+  const max = Math.max(1, ...rows.map((row) => row.count));
+  if (rows.length === 0) return <p className="text-footnote text-label-2">No data yet.</p>;
+  return (
+    <ul className="space-y-2.5">
+      {rows.map((row) => (
+        <li key={row.label}>
+          <div className="mb-1 flex items-center justify-between gap-2 text-caption">
+            <span className="truncate font-medium text-foreground">{row.label}</span>
+            <span className="text-label-2 tabular-nums">{row.count.toLocaleString()}</span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
+            <div className="h-full rounded-full" style={{ width: `${(row.count / max) * 100}%`, background: ADMIN_BLUE }} />
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
 

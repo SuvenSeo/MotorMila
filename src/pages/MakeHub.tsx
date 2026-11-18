@@ -20,6 +20,7 @@ import { StatTile, CountValue, LkrValue } from "@/components/ui/stat-tile";
 import { HubLinkTile, HubTileGrid, HubTileSkeleton } from "@/components/data/HubParts";
 import { cn } from "@/lib/utils";
 import { BRAND } from "@/lib/brand";
+import { slugifyHubSegment } from "@/lib/makeNormalization";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { useAppPreferences } from "@/lib/appPreferences";
 
@@ -54,6 +55,7 @@ export default function MakeHub() {
 
   const insight = insightQuery.data;
   const canonicalMake = insight?.make ?? makeDisplay;
+  const makeSlug = slugifyHubSegment(canonicalMake || makeParam);
   const title = `Used ${canonicalMake} Prices in Sri Lanka | ${SITE}`;
   const description = insight
     ? `${insight.total} used ${canonicalMake} listings in Sri Lanka. Average ${formatPrice(insight.avg_price_lkr)}, median ${formatPrice(insight.median_price_lkr)}. Browse models and districts on Motormila.`
@@ -88,13 +90,13 @@ export default function MakeHub() {
       }
       link.setAttribute("href", href);
     };
-    const pathname = `/cars/${encodeURIComponent(makeParam)}`;
+    const pathname = `/cars/${encodeURIComponent(makeSlug)}`;
     setMeta("description", description);
     setProperty("og:title", title);
     setProperty("og:description", description);
     setProperty("og:url", `${ORIGIN}${pathname}`);
     setCanonical(`${ORIGIN}${pathname}`);
-  }, [title, description, makeParam]);
+  }, [title, description, makeSlug]);
 
   const isPending = insightQuery.isPending;
   const isError = insightQuery.isError && !insight;
@@ -123,7 +125,8 @@ export default function MakeHub() {
     return allModels.filter((entry) => entry.model.toLowerCase().includes(q));
   }, [allModels, modelFilter]);
   const popularModels = insight?.top_models ?? [];
-  const modelHref = (model: string) => `/cars/${encodeURIComponent(makeParam)}/${encodeURIComponent(model)}`;
+  const modelHref = (model: string) =>
+    `/cars/${encodeURIComponent(makeSlug)}/${encodeURIComponent(slugifyHubSegment(model))}`;
   const nothingYet =
     !isPending && !isError && popularModels.length === 0 && allModels.length === 0 && !(insight?.top_districts?.length);
 
@@ -245,7 +248,7 @@ export default function MakeHub() {
                 <HubLinkTile
                   key={entry.district}
                   index={i}
-                  to={`/locations/${encodeURIComponent(entry.district)}`}
+                  to={`/locations/${encodeURIComponent(slugifyHubSegment(entry.district))}`}
                   icon={<MapPin className="h-4 w-4 shrink-0 text-primary" aria-hidden />}
                   title={entry.district}
                   value={entry.avg_price_lkr != null ? formatPrice(entry.avg_price_lkr) : t("common.priceNa", "Price N/A")}
@@ -281,7 +284,7 @@ export default function MakeHub() {
         )}
 
         <Button asChild size="lg" className="w-full sm:w-auto">
-          <Link to={`/?make=${encodeURIComponent(makeParam)}#market`}>
+          <Link to={`/?make=${encodeURIComponent(canonicalMake)}#market`}>
             {t("makeHub.browseAll", "Browse all {make} listings", { make: canonicalMake })} <ArrowRight aria-hidden />
           </Link>
         </Button>

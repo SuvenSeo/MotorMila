@@ -58,7 +58,13 @@ function setJsonLd(data: unknown) {
 
 /** "toyota" / "land-cruiser" -> "Toyota" / "Land Cruiser". */
 function toTitleCase(str: string): string {
-  return decodeURIComponent(str)
+  let decoded = str;
+  try {
+    decoded = decodeURIComponent(str);
+  } catch {
+    decoded = str;
+  }
+  return decoded
     .split(/[-_\s]+/)
     .filter(Boolean)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
@@ -516,13 +522,26 @@ export function RouteMeta() {
               description: defaultDescription,
             }
           : pathname.startsWith("/cars/")
-          ? {
-              title: t("seo.hubTitle", "Vehicle Market Hub — {site}", siteVars),
-              description: t(
-                "seo.hubDesc",
-                "Prices, district breakdown, and live listings for a specific vehicle in Sri Lanka.",
-              ),
-            }
+          ? (() => {
+              const vehicle =
+                pathname
+                  .slice("/cars/".length)
+                  .split("/")
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .map(toTitleCase)
+                  .join(" ") || "Vehicle";
+              return {
+                title: t("seo.hubTitle", "{vehicle} — Prices & Listings in Sri Lanka | {site}", {
+                  vehicle,
+                  ...siteVars,
+                }),
+                description: t(
+                  "seo.hubDesc",
+                  "Prices, district breakdown, and live listings for a specific vehicle in Sri Lanka.",
+                ),
+              };
+            })()
           : pathname.startsWith("/official-pulse/guide/")
           ? {
               title: t("seo.pulseGuideTitle", "Pulse Guide — {site}", siteVars),

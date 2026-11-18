@@ -212,6 +212,7 @@ export async function onRequestGet(context: ImageProxyContext): Promise<Response
   return fetchImage(target.url);
 }
 
-export async function onRequest(context: ImageProxyContext): Promise<Response> {
+export async function onRequest(context?: ImageProxyContext): Promise<Response> {
+  void context;
   return json({ error: "method_not_allowed" }, 405);
 }

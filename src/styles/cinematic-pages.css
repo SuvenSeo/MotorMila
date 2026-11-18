@@ -333,6 +333,7 @@
 }
 [data-state="current"] > .cine-step-dot { background: hsl(var(--primary)); border-color: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
 [data-state="done"] > .cine-step-dot { background: hsl(var(--primary) / 0.14); border-color: hsl(var(--primary) / 0.5); color: hsl(var(--primary)); }
+[data-state="incomplete"] > .cine-step-dot { background: hsl(var(--deal-caution) / 0.16); border-color: hsl(var(--deal-caution) / 0.65); color: hsl(var(--deal-caution-text)); }
 .cine-step-rail { position: relative; height: 2px; border-radius: 2px; background: hsl(var(--border)); overflow: hidden; }
 .cine-step-rail__fill {
   position: absolute;

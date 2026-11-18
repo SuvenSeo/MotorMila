@@ -84,9 +84,9 @@ function activityLabel(job: PipelineJobStatus): string {
 }
 
 function statusColor(status: "ok" | "running" | "delayed") {
-  if (status === "ok") return "#d89b35";
-  if (status === "running") return "#f59e0b";
-  return "#ef4444";
+  if (status === "ok") return "hsl(var(--deal-good))";
+  if (status === "running") return "hsl(var(--deal-caution))";
+  return "hsl(var(--deal-high))";
 }
 
 function statusIcon(status: "ok" | "running" | "delayed") {
@@ -141,9 +141,9 @@ export const PipelineStatusBar = memo(function PipelineStatusBar({
         </div>
 
         <div className="flex items-center gap-2 tech-label">
-          <span className="rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-primary-bright num">{healthyJobs} healthy</span>
-          <span className="rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-primary-bright num">{runningJobs} running</span>
-          <span className="rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-primary-bright num">{delayedJobs} delayed</span>
+          <span className="rounded-full border border-deal-good/30 bg-deal-good/10 px-2.5 py-1 text-deal-good-text num">{healthyJobs} healthy</span>
+          <span className="rounded-full border border-deal-caution/40 bg-deal-caution/10 px-2.5 py-1 text-deal-caution-text num">{runningJobs} running</span>
+          <span className="rounded-full border border-deal-high/30 bg-deal-high/10 px-2.5 py-1 text-deal-high-text num">{delayedJobs} delayed</span>
         </div>
       </div>
 
@@ -183,7 +183,7 @@ export const PipelineStatusBar = memo(function PipelineStatusBar({
                       : "never synced"}
                   </span>
                   {stale ? (
-                    <span className="rounded border border-primary/25 bg-primary/10 px-1.5 py-0.5 text-caption font-medium text-primary-bright">
+                    <span className="rounded border border-deal-caution/40 bg-deal-caution/10 px-1.5 py-0.5 text-caption font-medium text-deal-caution-text">
                       stale
                     </span>
                   ) : null}
@@ -241,7 +241,7 @@ export const PipelineStatusBar = memo(function PipelineStatusBar({
                   )}
 
                   {job.last_error && (
-                    <p className="ui-caption text-primary/90 leading-relaxed line-clamp-2" title={job.last_error}>
+                    <p className="ui-caption text-deal-high-text leading-relaxed line-clamp-2" title={job.last_error}>
                       {job.last_error}
                     </p>
                   )}

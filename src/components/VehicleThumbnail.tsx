@@ -1,6 +1,9 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { formatSourceName } from "@/lib/sourceAttribution";
+import { BRAND } from "@/lib/brand";
+import { useAppPreferences } from "@/lib/appPreferences";
 import { imageHostBlocked, isRemoteImage, marketplaceSrcSet, noteImageResult } from "@/lib/listingImage";
+import { formatSourceName } from "@/lib/sourceAttribution";
+import { cn } from "@/lib/utils";
 import type { Silhouette } from "@/lib/vehicleSilhouette";
 
 interface VehicleThumbnailProps {
@@ -10,7 +13,7 @@ interface VehicleThumbnailProps {
   /** Source marketplace (e.g. "riyasewana"); shown on the placeholder so a missing photo still says where the ad lives. */
   source?: string | null;
   className?: string;
-  /** Kept for API compatibility; the branded SVG placeholder is used for every empty state. */
+  /** Extra classes applied when rendering the fallback placeholder image. */
   placeholderClassName?: string;
   /** First-screen images should load eagerly to protect LCP. */
   priority?: boolean;
@@ -54,11 +57,10 @@ function escapeSvgText(value: string): string {
  * from 1:1 squares up to 2:1 banners. Text widths are pinned with textLength
  * because a data-URI SVG can't use the page's web fonts (system fallback).
  */
-function createFallbackThumbnailDataUri(label: string, source?: string | null): string {
+function createFallbackThumbnailDataUri(label: string, sourceLine: string): string {
   const rawLabel = String(label || "Vehicle").trim().slice(0, 40) || "Vehicle";
   const safeLabel = escapeSvgText(rawLabel);
-  const sourceName = formatSourceName(source);
-  const sourceLine = escapeSvgText(sourceName ? `Photos on ${sourceName}` : "Photo unavailable");
+  const safeSourceLine = escapeSvgText(sourceLine);
   // Layout keeps everything in the top ~60% of the 16:10 frame: card/detail
   // overlays (price, deal badge, source credit) sit along the bottom edge and
   // used to clip a bottom-anchored wordmark down to "RMILA".
@@ -71,37 +73,42 @@ function createFallbackThumbnailDataUri(label: string, source?: string | null): 
   const labelFit = rawLabel.length * labelSize * 0.58 > 520 ? ' textLength="560" lengthAdjust="spacingAndGlyphs"' : "";
   const svg = `
 <svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600">
-  <rect width="960" height="600" fill="#09090B"/>
-  <g stroke="#ffffff" stroke-opacity="0.05">
+  <rect width="960" height="600" fill="${BRAND.colors.black}"/>
+  <g stroke="white" stroke-opacity="0.05">
     <path d="M0 150h960M0 300h960M0 450h960M240 0v600M480 0v600M720 0v600"/>
   </g>
-  <g transform="translate(276 107) scale(1.2)" fill="none" stroke="#0A7AFF" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round">
+  <g transform="translate(276 107) scale(1.2)" fill="none" stroke="${BRAND.colors.blue}" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round">
     <path d="M30,76 L30,34 L54,58 L78,34 L78,62"/>
     <path d="M78,62 L97,43"/>
     <path d="M97,43 L87.5,43 M97,43 L97,52.5"/>
   </g>
-  <text x="402" y="198" textLength="246" lengthAdjust="spacingAndGlyphs" fill="#FFFFFF" font-family="Cal Sans,Arial,sans-serif" font-weight="700" font-size="62">otormila</text>
-  <text x="480" y="282" fill="#FFFFFF" fill-opacity="0.86" font-family="Cal Sans,Arial,sans-serif" font-weight="700" font-size="${labelSize}" text-anchor="middle"${labelFit}>${safeLabel}</text>
-  <text x="480" y="326" fill="#FFFFFF" fill-opacity="0.55" font-family="Cal Sans Text,Arial,sans-serif" font-size="24" text-anchor="middle">${sourceLine}</text>
+  <text x="402" y="198" textLength="246" lengthAdjust="spacingAndGlyphs" fill="white" font-family="Cal Sans,Arial,sans-serif" font-weight="700" font-size="62">otormila</text>
+  <text x="480" y="282" fill="white" fill-opacity="0.86" font-family="Cal Sans,Arial,sans-serif" font-weight="700" font-size="${labelSize}" text-anchor="middle"${labelFit}>${safeLabel}</text>
+  <text x="480" y="326" fill="white" fill-opacity="0.55" font-family="Cal Sans Text,Arial,sans-serif" font-size="24" text-anchor="middle">${safeSourceLine}</text>
 </svg>`;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
 export const VehicleThumbnail = memo(function VehicleThumbnail({
   src,
-  listingId,
   alt,
   source,
   className,
+  placeholderClassName,
   priority = false,
   sizes = "(max-width: 768px) 100vw, 33vw",
   fadeIn = false,
   marker,
   silhouette,
 }: VehicleThumbnailProps) {
+  const { t } = useAppPreferences();
+  const sourceName = formatSourceName(source);
+  const sourceLine = sourceName
+    ? t("thumbnail.photosOnSource", "Photos on {source}", { source: sourceName })
+    : t("thumbnail.photoUnavailable", "Photo unavailable");
   const fallbackSrc = useMemo(
-    () => (silhouette ? silhouette.webp : createFallbackThumbnailDataUri(alt, source)),
-    [alt, source, silhouette],
+    () => (silhouette ? silhouette.webp : createFallbackThumbnailDataUri(alt, sourceLine)),
+    [alt, sourceLine, silhouette],
   );
   // The thumbnail proxy is retired (410) - photos are only hotlinked with
   // source credit, so there is no proxy candidate any more.
@@ -152,7 +159,7 @@ export const VehicleThumbnail = memo(function VehicleThumbnail({
       alt={alt}
       width={480}
       height={300}
-      className={className}
+      className={cn(className, isPlaceholder && placeholderClassName)}
       srcSet={isPlaceholder && silhouette ? `${silhouette.webpSm} 480w, ${silhouette.webp} 960w` : srcSet}
       sizes={srcSet || (isPlaceholder && silhouette) ? sizes : undefined}
       referrerPolicy={remote ? "no-referrer" : undefined}

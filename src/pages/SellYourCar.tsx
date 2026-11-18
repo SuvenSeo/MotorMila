@@ -213,6 +213,51 @@ export default function SellYourCar() {
     if (i === 3 && !form.contactPhone.trim()) return t("sell.step.needPhone", "Add a phone number so buyers can reach you.");
     return null;
   };
+  const stepIncomplete = (i: number): boolean => Boolean(stepProblem(i)) || (i === 2 && (photosBusy || photosFailed));
+  const publishBlockers = useMemo(() => {
+    const blockers: Array<{ key: string; message: string; actionLabel: string; step?: number; to?: string }> = [];
+    if (!isAuthenticated) {
+      blockers.push({
+        key: "auth",
+        message: t("sell.blocker.signIn", "Sign in to your account to publish."),
+        actionLabel: t("sell.signInCta", "Sign in"),
+        to: "/sign-in",
+      });
+    }
+    if (!(form.make.trim() && form.model.trim())) {
+      blockers.push({
+        key: "vehicle",
+        message: t("sell.blocker.vehicle", "Choose a make and enter the model."),
+        actionLabel: t("sell.step.edit", "Edit"),
+        step: 0,
+      });
+    }
+    if (photosBusy) {
+      blockers.push({
+        key: "photos-busy",
+        message: t("sell.blocker.photosBusy", "Wait for photo uploads to finish."),
+        actionLabel: t("sell.step.edit", "Edit"),
+        step: 2,
+      });
+    } else if (photosFailed) {
+      blockers.push({
+        key: "photos-failed",
+        message: t("sell.blocker.photosFailed", "Retry or remove failed photo uploads."),
+        actionLabel: t("sell.step.edit", "Edit"),
+        step: 2,
+      });
+    }
+    if (!form.contactPhone.trim()) {
+      blockers.push({
+        key: "phone",
+        message: t("sell.blocker.phone", "Add a contact phone number."),
+        actionLabel: t("sell.step.edit", "Edit"),
+        step: 3,
+      });
+    }
+    return blockers;
+  }, [isAuthenticated, form.make, form.model, form.contactPhone, photosBusy, photosFailed, t]);
+
   const goTo = (i: number) => {
     setStepError(null);
     setStep(Math.max(0, Math.min(last, i)));
@@ -326,25 +371,47 @@ export default function SellYourCar() {
   const stepBar = (
     <nav aria-label={t("sell.step.nav", "Listing steps")} className="mb-5">
       <ol className="flex items-center gap-1.5 sm:gap-2">
-        {STEPS.map((s, i) => (
-          <li key={s.key} className={cn("flex min-w-0 items-center gap-1.5 sm:gap-2", i < last && "flex-1")}>
-            <button
-              type="button"
-              onClick={() => goTo(i)}
-              aria-current={i === step ? "step" : undefined}
-              data-state={i === step ? "current" : i < step ? "done" : "todo"}
-              className="flex min-h-11 shrink-0 items-center gap-2 rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <span className="cine-step-dot num">{i < step ? <Check className="h-3.5 w-3.5" aria-hidden /> : i + 1}</span>
-              <span className={cn("hidden whitespace-nowrap text-footnote font-semibold lg:inline", i === step ? "text-foreground" : "text-label-2")}>{s.label}</span>
-            </button>
-            {i < last && (
-              <span aria-hidden className="cine-step-rail min-w-3 flex-1">
-                <span className="cine-step-rail__fill" style={{ "--p": i < step ? 1 : 0 } as CSSProperties} />
-              </span>
-            )}
-          </li>
-        ))}
+        {STEPS.map((s, i) => {
+          const incomplete = stepIncomplete(i);
+          const needsAttention = i !== step && (i < step || step === last) && incomplete;
+          const isDone = i < step && !incomplete;
+          const state = i === step ? "current" : needsAttention ? "incomplete" : isDone ? "done" : "todo";
+          return (
+            <li key={s.key} className={cn("flex min-w-0 items-center gap-1.5 sm:gap-2", i < last && "flex-1")}>
+              <button
+                type="button"
+                onClick={() => goTo(i)}
+                aria-current={i === step ? "step" : undefined}
+                aria-label={needsAttention ? `${s.label} (${t("sell.step.incomplete", "incomplete")})` : undefined}
+                data-state={state}
+                className="flex min-h-11 shrink-0 items-center gap-2 rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <span className="cine-step-dot num relative">
+                  {isDone ? <Check className="h-3.5 w-3.5" aria-hidden /> : i + 1}
+                  {needsAttention && (
+                    <span
+                      aria-hidden
+                      className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-deal-caution ring-2 ring-background"
+                    />
+                  )}
+                </span>
+                <span
+                  className={cn(
+                    "hidden whitespace-nowrap text-footnote font-semibold lg:inline",
+                    i === step ? "text-foreground" : needsAttention ? "text-deal-caution-text" : "text-label-2",
+                  )}
+                >
+                  {s.label}
+                </span>
+              </button>
+              {i < last && (
+                <span aria-hidden className="cine-step-rail min-w-3 flex-1">
+                  <span className="cine-step-rail__fill" style={{ "--p": isDone ? 1 : 0 } as CSSProperties} />
+                </span>
+              )}
+            </li>
+          );
+        })}
       </ol>
       <p className="mt-2 text-caption font-medium text-label-2 lg:hidden">
         {t("sell.step.of", "Step {n} of {total}", { n: step + 1, total: STEPS.length })} · <span className="text-foreground">{STEPS[step].label}</span>
@@ -540,6 +607,26 @@ export default function SellYourCar() {
           </dl>
         </section>
       </div>
+
+      {step === last && publishBlockers.length > 0 && !successFlash && (
+        <Notice tone="info" title={t("sell.reviewBlockersTitle", "Complete these before publishing:")}>
+          <ul className="mt-2 space-y-1.5">
+            {publishBlockers.map((b) => (
+              <li key={b.key} className="flex flex-wrap items-center justify-between gap-2 text-footnote">
+                <span>{b.message}</span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => (b.to ? navigate(b.to) : b.step !== undefined ? goTo(b.step) : undefined)}
+                >
+                  {b.actionLabel}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </Notice>
+      )}
 
       {(error || stepError) && (
         <Notice tone="danger" role="alert">

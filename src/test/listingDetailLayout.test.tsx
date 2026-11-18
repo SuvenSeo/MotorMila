@@ -112,7 +112,6 @@ describe("ListingDetail layout", () => {
     const priceHeadings = screen.getAllByText("Asking price");
     // Key specs mount just after the hero (DeferredSection), so wait for them.
     const specs = await screen.findByRole("heading", { name: /key specs/i });
-    // eslint-disable-next-line no-bitwise
     expect(priceHeadings[0].compareDocumentPosition(specs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     // Safety strip links to the transfer guide.

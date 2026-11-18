@@ -469,3 +469,18 @@ export function modelContainsForeignMake(model: unknown, ownMake: unknown): bool
 export function hasUsableMakeModel(make: unknown, model: unknown): boolean {
   return Boolean(canonicalizeMake(make)) && Boolean(canonicalizeModel(model));
 }
+
+/**
+ * Canonical URL slug segment for /cars/:make/:model and /locations/:district.
+ * Lowercase hyphenated ASCII so links match across hubs, estimates, and palette.
+ */
+export function slugifyHubSegment(value: string): string {
+  const normalized = String(value ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return normalized || String(value ?? "").trim().toLowerCase();
+}

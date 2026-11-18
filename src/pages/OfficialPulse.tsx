@@ -212,7 +212,7 @@ export default function OfficialPulse() {
             title={t("pulse.newsTitle", "Vehicle & policy headlines")}
             body={t(
               "pulse.newsDesc",
-              "Recent Helakuru Esana items filtered for vehicle, import, fuel, and transport keywords.",
+              "Recent Sri Lankan vehicle, import & transport headlines (Helakuru Esana, EconomyNext, Ada Derana).",
             )}
           >
             <ul className="cine-list border-y border-border">
@@ -237,7 +237,12 @@ export default function OfficialPulse() {
                         {item.title}
                       </a>
                     ) : (
-                      <p className="min-w-0 flex-1 text-footnote font-semibold text-foreground">{item.title}</p>
+                      <p className="min-w-0 flex-1 text-footnote font-semibold text-foreground">
+                        {item.title}
+                        <span className="ml-2 text-caption font-normal text-muted-foreground">
+                          ({t("pulse.noExternalLink", "No external link")})
+                        </span>
+                      </p>
                     )}
                   </m.li>
                 );

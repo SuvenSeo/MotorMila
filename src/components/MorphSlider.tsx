@@ -212,14 +212,20 @@ function makeFallbackTexture(gl: OGLRenderingContext) {
   return new Texture(gl, { image: data, width: size, height: size, generateMipmaps: false });
 }
 
-function hexToRgb(hex: string): [number, number, number] {
-  let h = (hex || "#000000").replace("#", "");
+function parseOverlayRgb(color: string): [number, number, number] {
+  const raw = (color || "").trim();
+  const rgbMatch = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i.exec(raw);
+  if (rgbMatch) {
+    return [Number(rgbMatch[1]) / 255, Number(rgbMatch[2]) / 255, Number(rgbMatch[3]) / 255];
+  }
+  let h = raw.replace("#", "");
   if (h.length === 3) {
     h = h
       .split("")
       .map((c) => c + c)
       .join("");
   }
+  if (!/^[0-9a-f]{6}$/i.test(h)) return [0, 0, 0];
   const n = parseInt(h, 16);
   return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
 }
@@ -283,8 +289,9 @@ class MorphEngine {
     this.onTextureError = onTextureError;
     this.reducedMotion = reducedMotion;
 
-    this.current = startIndex;
-    this.shownIndex = startIndex;
+    const clampedStart = items.length ? ((startIndex % items.length) + items.length) % items.length : 0;
+    this.current = clampedStart;
+    this.shownIndex = clampedStart;
 
     this.renderer = new Renderer({
       alpha: false,
@@ -323,7 +330,7 @@ class MorphEngine {
         uTime: { value: 0 },
         uReduce: { value: reducedMotion ? 1 : 0 },
         uPointer: { value: [0.5, 0.5] },
-        uOverlay: { value: hexToRgb(opts.overlayColor) },
+        uOverlay: { value: parseOverlayRgb(opts.overlayColor) },
       },
     });
 
@@ -383,7 +390,7 @@ class MorphEngine {
     this.program.uniforms.uScale.value = opts.scale;
     this.program.uniforms.uAberration.value = opts.aberration;
     this.program.uniforms.uDrift.value = opts.drift;
-    this.program.uniforms.uOverlay.value = hexToRgb(opts.overlayColor);
+    this.program.uniforms.uOverlay.value = parseOverlayRgb(opts.overlayColor);
   }
 
   loop(t: number) {
@@ -417,6 +424,51 @@ class MorphEngine {
     }
     this.syncOptions();
     const target = this.prepareNext(dir);
+    this.animating = true;
+    this.announce(target);
+    const duration = this.reducedMotion ? Math.min(opts.duration, 0.4) : opts.duration;
+    this.tween = gsap.fromTo(
+      this.program.uniforms.uProgress,
+      { value: 0 },
+      {
+        value: 1,
+        duration,
+        ease: opts.ease,
+        onComplete: () => this.commit(target),
+      },
+    );
+  }
+
+  goToIndex(rawTarget: number) {
+    if (this.dragging || this.items.length < 2) return;
+    const opts = this.getOptions();
+    const target = opts.loop
+      ? this.wrap(rawTarget)
+      : Math.max(0, Math.min(this.items.length - 1, rawTarget));
+    if (target === this.current && !this.animating) {
+      this.announce(target);
+      return;
+    }
+    if (this.tween) {
+      this.tween.kill();
+      this.tween = null;
+      this.current = this.shownIndex;
+      this.program.uniforms.uProgress.value = 0;
+      this.animating = false;
+      if (target === this.current) {
+        this.program.uniforms.tCurrent.value = this.textures[this.current];
+        this.program.uniforms.uCurrentSize.value = this.sizes[this.current];
+        this.announce(target);
+        return;
+      }
+    }
+    this.syncOptions();
+    const dir = target >= this.current ? 1 : -1;
+    this.program.uniforms.tCurrent.value = this.textures[this.current];
+    this.program.uniforms.uCurrentSize.value = this.sizes[this.current];
+    this.program.uniforms.tNext.value = this.textures[target];
+    this.program.uniforms.uNextSize.value = this.sizes[target];
+    this.program.uniforms.uDir.value = dir;
     this.animating = true;
     this.announce(target);
     const duration = this.reducedMotion ? Math.min(opts.duration, 0.4) : opts.duration;
@@ -538,6 +590,15 @@ class MorphEngine {
   }
 }
 
+export interface MorphSliderLabels {
+  region?: string;
+  prev?: string;
+  next?: string;
+  slides?: string;
+  /** Template containing `{n}` for 1-based slide index. */
+  slide?: string;
+}
+
 export interface MorphSliderProps {
   items?: MorphSliderItem[];
   startIndex?: number;
@@ -556,6 +617,7 @@ export interface MorphSliderProps {
   showCaptions?: boolean;
   showControls?: boolean;
   showIndicators?: boolean;
+  labels?: MorphSliderLabels;
   className?: string;
   /** Fired when the shown slide changes — lets a parent sync thumbnails, a counter or a lightbox. Not in the upstream React Bits API; additive only. */
   onIndexChange?: (index: number) => void;
@@ -577,15 +639,17 @@ export default function MorphSlider({
   autoplayDelay = 4,
   loop = true,
   radius = 16,
-  overlayColor = "#000000",
+  overlayColor = "rgb(0, 0, 0)",
   showCaptions = true,
   showControls = true,
   showIndicators = true,
+  labels,
   className = "",
   onIndexChange,
   onTextureError,
   ...props
 }: MorphSliderProps & React.HTMLAttributes<HTMLDivElement>) {
+  const sliderRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const engineRef = useRef<MorphEngine | null>(null);
   const [index, setIndex] = useState(startIndex);
@@ -593,6 +657,9 @@ export default function MorphSlider({
 
   const optsRef = useRef<MorphOptions>();
   optsRef.current = { transition, duration, ease, intensity, scale, aberration, drift, overlayColor, loop };
+
+  const initialStartRef = useRef(startIndex);
+  initialStartRef.current = startIndex;
 
   const indexChangeRef = useRef(onIndexChange);
   indexChangeRef.current = onIndexChange;
@@ -602,12 +669,13 @@ export default function MorphSlider({
   useEffect(() => {
     if (!containerRef.current) return undefined;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const initialStart = initialStartRef.current;
 
     let engine: MorphEngine;
     try {
       engine = new MorphEngine(containerRef.current, {
         items,
-        startIndex,
+        startIndex: initialStart,
         reducedMotion,
         dprCap: 2,
         getOptions: () => optsRef.current as MorphOptions,
@@ -625,13 +693,22 @@ export default function MorphSlider({
       return undefined;
     }
     engineRef.current = engine;
-    setIndex(startIndex);
+    setIndex(engine.current);
 
     return () => {
       engine.destroy();
       engineRef.current = null;
     };
-  }, [items, startIndex]);
+  }, [items]);
+
+  useEffect(() => {
+    const engine = engineRef.current;
+    if (!engine) return;
+    if (engine.current === startIndex && engine.shownIndex === startIndex && !engine.animating) {
+      return;
+    }
+    engine.goToIndex(startIndex);
+  }, [startIndex]);
 
   const handleNext = useCallback(() => engineRef.current?.next(), []);
   const handlePrev = useCallback(() => engineRef.current?.prev(), []);
@@ -689,8 +766,11 @@ export default function MorphSlider({
     };
   }, []);
 
-  const onKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
+  useEffect(() => {
+    const root = sliderRef.current;
+    if (!root) return undefined;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
       if (e.key === "ArrowRight") {
         e.preventDefault();
         handleNext();
@@ -698,14 +778,19 @@ export default function MorphSlider({
         e.preventDefault();
         handlePrev();
       }
-    },
-    [handleNext, handlePrev],
-  );
+    };
+    root.addEventListener("keydown", onKeyDown);
+    return () => root.removeEventListener("keydown", onKeyDown);
+  }, [handleNext, handlePrev]);
 
   const hasCaptions = items.some((item) => item.caption);
 
   return (
     <div
+      ref={sliderRef}
+      role="region"
+      aria-roledescription="carousel"
+      aria-label={labels?.region ?? "Image morph slider"}
       className={`morph-slider ${className}`.trim()}
       style={
         {
@@ -718,15 +803,7 @@ export default function MorphSlider({
       onMouseLeave={() => setHovering(false)}
       {...props}
     >
-      <div
-        ref={containerRef}
-        className="morph-slider-stage"
-        role="group"
-        aria-roledescription="carousel"
-        aria-label="Image morph slider"
-        tabIndex={0}
-        onKeyDown={onKeyDown}
-      />
+      <div ref={containerRef} className="morph-slider-stage" />
 
       {showCaptions && hasCaptions && (
         <div className="morph-slider-caption" aria-live="polite">
@@ -746,7 +823,12 @@ export default function MorphSlider({
 
       {showControls && (
         <div className="morph-slider-controls">
-          <button type="button" className="morph-slider-btn" aria-label="Previous slide" onClick={handlePrev}>
+          <button
+            type="button"
+            className="morph-slider-btn"
+            aria-label={labels?.prev ?? "Previous slide"}
+            onClick={handlePrev}
+          >
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
               <path
                 d="M15 5l-7 7 7 7"
@@ -758,7 +840,12 @@ export default function MorphSlider({
               />
             </svg>
           </button>
-          <button type="button" className="morph-slider-btn" aria-label="Next slide" onClick={handleNext}>
+          <button
+            type="button"
+            className="morph-slider-btn"
+            aria-label={labels?.next ?? "Next slide"}
+            onClick={handleNext}
+          >
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
               <path
                 d="M9 5l7 7-7 7"
@@ -774,22 +861,21 @@ export default function MorphSlider({
       )}
 
       {showIndicators && (
-        <div className="morph-slider-indicators" role="tablist" aria-label="Slides">
-          {items.map((item, i) => (
-            <button
-              key={i}
-              type="button"
-              role="tab"
-              aria-selected={i === index}
-              aria-label={`Go to slide ${i + 1}`}
-              className={`morph-slider-dot ${i === index ? "is-active" : ""}`}
-              onClick={() => {
-                const engine = engineRef.current;
-                if (!engine || i === index) return;
-                engine.goTo(i > index ? 1 : -1);
-              }}
-            />
-          ))}
+        <div className="morph-slider-indicators" role="tablist" aria-label={labels?.slides ?? "Slides"}>
+          {items.map((_, i) => {
+            const slideLabel = (labels?.slide ?? "Go to slide {n}").replace("{n}", String(i + 1));
+            return (
+              <button
+                key={i}
+                type="button"
+                role="tab"
+                aria-selected={i === index}
+                aria-label={slideLabel}
+                className={`morph-slider-dot ${i === index ? "is-active" : ""}`}
+                onClick={() => engineRef.current?.goToIndex(i)}
+              />
+            );
+          })}
         </div>
       )}
     </div>

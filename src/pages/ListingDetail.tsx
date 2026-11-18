@@ -601,7 +601,7 @@ export default function ListingDetail() {
       initial={enterAtRest ? false : "hidden"}
       animate="show"
       variants={revealContainer}
-      className="relative min-h-screen overflow-hidden bg-background pb-44 lg:pb-0"
+      className="relative min-h-screen overflow-x-clip bg-background pb-44 lg:pb-0"
     >
       {/* Stage — "Night drive": a dark band (both themes) holding the title and
           the filmstrip gallery. `theme-dark` scopes every token inside it. */}

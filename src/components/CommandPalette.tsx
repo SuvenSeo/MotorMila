@@ -20,6 +20,7 @@ import { getMakes, getModelIndex } from "@/services/api";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { COMMAND_PALETTE_OPEN_EVENT } from "@/lib/commandPalette";
+import { slugifyHubSegment } from "@/lib/makeNormalization";
 
 type PaletteAction = {
   id: string;
@@ -52,6 +53,7 @@ function formatCount(n: number): string {
 
 export function CommandPalette({ defaultOpen = false }: { defaultOpen?: boolean } = {}) {
   const [open, setOpen] = useState(defaultOpen);
+  const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useAppPreferences();
@@ -83,6 +85,9 @@ export function CommandPalette({ defaultOpen = false }: { defaultOpen?: boolean 
 
   useEffect(() => {
     if (!open) return;
+    const focusTimer = window.requestAnimationFrame(() => {
+      inputRef.current?.focus();
+    });
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onEsc = (e: KeyboardEvent) => {
@@ -90,10 +95,11 @@ export function CommandPalette({ defaultOpen = false }: { defaultOpen?: boolean 
     };
     window.addEventListener("keydown", onEsc);
     return () => {
+      window.cancelAnimationFrame(focusTimer);
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onEsc);
     };
-  }, [open ]);
+  }, [open]);
 
   // Close whenever the route changes (selection navigated). Skips the mount
   // run so a palette mounted already-open (lazy CommandPaletteHost) stays open.
@@ -164,7 +170,7 @@ export function CommandPalette({ defaultOpen = false }: { defaultOpen?: boolean 
           <div className="flex items-center gap-2.5 border-b border-border px-4">
             <Search className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
             <Command.Input
-              autoFocus
+              ref={inputRef}
               placeholder={t("palette.placeholder", "Search makes, models, or go to…")}
               className="w-full bg-transparent py-3.5 text-body outline-none placeholder:text-muted-foreground"
             />
@@ -188,7 +194,7 @@ export function CommandPalette({ defaultOpen = false }: { defaultOpen?: boolean 
                     key={`make:${m.make}`}
                     value={`make ${m.make}`}
                     keywords={[`${m.count} listings`]}
-                    onSelect={() => go(`/cars/${encodeURIComponent(m.make)}`)}
+                    onSelect={() => go(`/cars/${encodeURIComponent(slugifyHubSegment(m.make))}`)}
                     className="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-footnote outline-none data-[selected=true]:bg-primary/10"
                   >
                     <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-foreground/[0.04] text-muted-foreground group-data-[selected=true]:border-primary/30 group-data-[selected=true]:text-primary">
@@ -218,7 +224,7 @@ export function CommandPalette({ defaultOpen = false }: { defaultOpen?: boolean 
                     value={`${m.make} ${m.model}`}
                     keywords={[m.make, `${m.count} listings`]}
                     onSelect={() =>
-                      go(`/cars/${encodeURIComponent(m.make)}/${encodeURIComponent(m.model)}`)
+                      go(`/cars/${encodeURIComponent(slugifyHubSegment(m.make))}/${encodeURIComponent(slugifyHubSegment(m.model))}`)
                     }
                     className="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-footnote outline-none data-[selected=true]:bg-primary/10"
                   >

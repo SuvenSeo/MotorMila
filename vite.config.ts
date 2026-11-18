@@ -15,16 +15,16 @@ import path from "path";
  *   (home → Dashboard, /listing/:id → ListingDetail), and
  * - on "/", a high-priority preload of the hero AVIF with the SAME
  *   srcset/sizes AtmosphericImage renders (so the browser picks the same file).
- * The hero file is the default variant (DEFAULT_HERO_VARIANT_ID "night-drive"
- * in src/lib/heroVariants.ts → assets/page_home_hero_night*.avif).
+ * The hero file is the default variant (DEFAULT_HERO_VARIANT_ID "studio-bay"
+ * in src/lib/heroVariants.ts → assets/page_home_hero_studio*.avif).
  */
 function routeEarlyHints(): Plugin {
   const ROUTES: Array<{ test: string; page: string }> = [
     { test: 'p==="/"', page: "src/pages/Dashboard.tsx" },
     { test: 'p.indexOf("/listing/")===0', page: "src/pages/ListingDetail.tsx" },
   ];
-  const HERO_SM = "page_home_hero_night-sm.avif";
-  const HERO_LG = "page_home_hero_night.avif";
+  const HERO_SM = "page_home_hero_studio-sm.avif";
+  const HERO_LG = "page_home_hero_studio.avif";
 
   function chunkFor(bundle: OutputBundle, page: string): OutputChunk | undefined {
     const chunks = Object.values(bundle).filter((f): f is OutputChunk => f.type === "chunk");
@@ -120,54 +120,89 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          const nid = id.replace(/\\/g, "/");
           // Tiny helpers used everywhere (vite's preload helper, commonjs
           // interop, class-name utils). Without an explicit home rollup hoists
           // them into whichever vendor chunk first imports them -- which made
           // the entry statically import (and modulepreload) pdf-vendor and
           // chart-vendor on every page.
           if (
-            id.includes("vite/preload-helper") ||
-            id.includes("commonjsHelpers") ||
-            id.includes("node_modules/clsx") ||
-            id.includes("node_modules/tailwind-merge") ||
-            id.includes("node_modules/class-variance-authority")
+            nid.includes("vite/preload-helper") ||
+            nid.includes("commonjsHelpers") ||
+            nid.includes("node_modules/clsx") ||
+            nid.includes("node_modules/tailwind-merge") ||
+            nid.includes("node_modules/class-variance-authority")
           ) {
             return "core";
           }
           if (
-            id.includes("node_modules/react/") ||
-            id.includes("node_modules/react-dom/") ||
-            id.includes("node_modules/react-router")
+            nid.includes("node_modules/react/") ||
+            nid.includes("node_modules/react-dom/") ||
+            nid.includes("node_modules/react-router")
           ) {
             return "react-vendor";
           }
-          if (id.includes("@tanstack/react-query")) {
+          if (nid.includes("@tanstack/react-query")) {
             return "query-vendor";
           }
-          if (id.includes("@radix-ui") || id.includes("lucide-react")) {
+          if (nid.includes("@tanstack/react-table")) {
+            return "table-vendor";
+          }
+          if (nid.includes("@radix-ui") || nid.includes("lucide-react")) {
             return "ui-vendor";
           }
-          if (id.includes("recharts") || id.includes("d3-")) {
+          if (nid.includes("recharts") || nid.includes("d3-")) {
             return "chart-vendor";
           }
-          if (id.includes("leaflet") || id.includes("react-leaflet")) {
+          if (nid.includes("leaflet") || nid.includes("react-leaflet")) {
             return "map-vendor";
           }
-          if (id.includes("framer-motion") || id.includes("/motion/")) {
+          if (nid.includes("node_modules/ogl/") || nid.includes("node_modules/gsap/")) {
+            return "webgl-vendor";
+          }
+          if (nid.includes("embla-carousel")) {
+            return "carousel-vendor";
+          }
+          if (nid.includes("yet-another-react-lightbox")) {
+            return "lightbox-vendor";
+          }
+          if (nid.includes("node_modules/cmdk/")) {
+            return "cmdk-vendor";
+          }
+          if (nid.includes("framer-motion") || nid.includes("node_modules/motion/")) {
             return "motion-vendor";
           }
           if (
-            id.includes("node_modules/jspdf") ||
-            id.includes("html2canvas") ||
-            id.includes("dompurify")
+            nid.includes("node_modules/jspdf") ||
+            nid.includes("html2canvas") ||
+            nid.includes("dompurify")
           ) {
             return "pdf-vendor";
           }
-          if (id.includes("node_modules/docx") || id.includes("file-saver")) {
+          if (nid.includes("node_modules/docx") || nid.includes("file-saver")) {
             return "report-vendor";
           }
-          if (id.includes("node_modules/zod") || id.includes("@hookform")) {
+          if (nid.includes("node_modules/zod") || nid.includes("@hookform")) {
             return "form-vendor";
+          }
+          if (
+            nid.endsWith("/src/locales/en.ts") ||
+            nid.endsWith("/src/locales/listing.ts") ||
+            nid.endsWith("/src/locales/shell.ts") ||
+            nid.endsWith("/src/locales/features.ts") ||
+            nid.endsWith("/src/locales/data.ts") ||
+            nid.endsWith("/src/locales/tools.ts") ||
+            nid.endsWith("/src/locales/account.ts") ||
+            nid.endsWith("/src/locales/strings.ts") ||
+            nid.endsWith("/src/locales/content.ts")
+          ) {
+            return "locale-en";
+          }
+          if (nid.includes("/src/locales/si/") || nid.endsWith("/src/locales/si.ts")) {
+            return "locale-si";
+          }
+          if (nid.includes("/src/locales/ta/") || nid.endsWith("/src/locales/ta.ts")) {
+            return "locale-ta";
           }
         },
       },

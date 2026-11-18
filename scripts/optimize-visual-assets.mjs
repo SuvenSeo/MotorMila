@@ -1,6 +1,6 @@
 /**
  * Aggressive Motormila visual asset optimizer.
- * Rewrites assets/*.webp (and assets1/*.webp) + emits -sm.webp (960w) companions.
+ * Rewrites assets/*.webp + emits -sm.webp (960w) companions.
  *
  * Usage: node scripts/optimize-visual-assets.mjs
  */
@@ -12,7 +12,7 @@ import sharp from "sharp";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
 
-const DIRS = [path.join(root, "assets"), path.join(root, "assets1")];
+const DIRS = [path.join(root, "assets")];
 
 /** Hero / full-bleed photos — large display, need more width */
 const HERO_NAMES = new Set([

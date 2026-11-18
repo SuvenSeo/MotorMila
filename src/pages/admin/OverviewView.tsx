@@ -11,8 +11,10 @@ import {
   AdminListSkeleton,
   AdminShare,
   AdminSkeleton,
+  AdminStatBars,
   ADMIN_BLUE,
   adminCardClass,
+  adminGreeting,
   capitalise,
   formatCount,
   formatDay,
@@ -72,26 +74,6 @@ function SignupsChart({ daily }: { daily: Array<{ day: string; count: number }> 
   );
 }
 
-function StatBars({ rows }: { rows: Array<{ label: string; count: number }> }) {
-  const max = Math.max(1, ...rows.map((row) => row.count));
-  if (rows.length === 0) return <p className="text-[13px] text-label-2">No data yet.</p>;
-  return (
-    <ul className="space-y-2.5">
-      {rows.map((row) => (
-        <li key={row.label}>
-          <div className="mb-1 flex items-center justify-between gap-2 text-[12px]">
-            <span className="truncate font-medium text-foreground">{row.label}</span>
-            <span className="text-label-2 tabular-nums">{row.count.toLocaleString()}</span>
-          </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
-            <div className="h-full rounded-full" style={{ width: `${(row.count / max) * 100}%`, background: ADMIN_BLUE }} />
-          </div>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 function periodSeries(data: AdminOverview | undefined, period: Period): Array<{ day: string; count: number }> {
   const n = Number(period);
   const byDay = new Map((data?.signupsDaily ?? []).map((d) => [d.day, d.count]));
@@ -105,6 +87,18 @@ function periodSeries(data: AdminOverview | undefined, period: Period): Array<{ 
   return out;
 }
 
+function sumPriorDays(data: AdminOverview | undefined, days: number): number {
+  if (!data) return 0;
+  const byDay = new Map((data.signupsDaily ?? []).map((d) => [d.day, d.count]));
+  let sum = 0;
+  const today = new Date();
+  for (let i = days; i < days * 2; i += 1) {
+    const day = new Date(today.getTime() - i * 86_400_000).toISOString().slice(0, 10);
+    sum += byDay.get(day) ?? 0;
+  }
+  return sum;
+}
+
 export function OverviewView() {
   const overviewQuery = useQuery({ queryKey: ["admin", "overview"], queryFn: getAdminOverview, refetchInterval: 60_000 });
   const leadsQuery = useQuery({ queryKey: ["admin", "leads", "overview"], queryFn: () => getQueueLeads({}), staleTime: 30_000 });
@@ -112,19 +106,9 @@ export function OverviewView() {
   const data = overviewQuery.data;
   const series = useMemo(() => periodSeries(data, period), [data, period]);
   const periodTotal = series.reduce((s, d) => s + d.count, 0);
-  const prevTotal = useMemo(() => {
-    if (!data) return 0;
-    const byDay = new Map((data.signupsDaily ?? []).map((d) => [d.day, d.count]));
-    const n = Number(period);
-    let sum = 0;
-    const today = new Date();
-    for (let i = n; i < n * 2; i += 1) {
-      const day = new Date(today.getTime() - i * 86_400_000).toISOString().slice(0, 10);
-      sum += byDay.get(day) ?? 0;
-    }
-    return sum;
-  }, [data, period]);
-  const new7 = periodSeries(data, "7").reduce((s, d) => s + d.count, 0);
+  const prevTotal = useMemo(() => sumPriorDays(data, Number(period)), [data, period]);
+  const new7 = useMemo(() => periodSeries(data, "7").reduce((s, d) => s + d.count, 0), [data]);
+  const prev7 = useMemo(() => sumPriorDays(data, 7), [data]);
   const recentLeads = useMemo(() => {
     const items = [...(leadsQuery.data?.items ?? [])];
     items.sort((a, b) => Date.parse(b.created_at ?? "") - Date.parse(a.created_at ?? ""));
@@ -134,15 +118,8 @@ export function OverviewView() {
   return (
     <>
       <header className="flex flex-col gap-1.5">
-        <p className="text-[0.8125rem] font-medium text-label-2">
-          {(() => {
-            const now = new Date();
-            const hour = Number(now.toLocaleString("en-GB", { hour: "numeric", hourCycle: "h23", timeZone: "Asia/Colombo" }));
-            const date = now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Colombo" });
-            return `${hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"} · ${date}`;
-          })()}
-        </p>
-        <h1 className="font-display text-[1.875rem] leading-[1.1] tracking-[-0.01em] text-foreground sm:text-[2.25rem]">Overview</h1>
+        <p className="text-footnote font-medium text-label-2">{adminGreeting()}</p>
+        <h1 className="font-display text-title1 leading-[1.1] tracking-[-0.01em] text-foreground sm:text-large">Overview</h1>
       </header>
 
       {overviewQuery.error && !data ? (
@@ -157,7 +134,7 @@ export function OverviewView() {
               icon={UsersRound}
               value={data.users.total}
               to="/motormila/admin/users"
-              footer={<AdminDelta current={new7} previous={0} label="new this week" />}
+              footer={<AdminDelta current={new7} previous={prev7} label="new this week" />}
             />
             <AdminKpiCard label="Active 7d" icon={Activity} value={data.users.active7} footer={<AdminShare part={data.users.active7} whole={data.users.total} />} />
             <AdminKpiCard label="Active 30d" icon={Activity} value={data.users.active30} footer={<AdminShare part={data.users.active30} whole={data.users.total} />} />
@@ -300,7 +277,7 @@ export function OverviewView() {
       {/* Retained from the old overview: market glance, top makes, recent scrapes */}
       <div className="grid gap-4 xl:grid-cols-2">
         <AdminCard title="Top makes · live" description="Live listings by make">
-          {!data ? <AdminListSkeleton rows={5} avatar={false} /> : <div className="px-5 pb-5"><StatBars rows={(data.topMakes ?? []).map((r) => ({ label: r.make, count: r.count }))} /></div>}
+          {!data ? <AdminListSkeleton rows={5} avatar={false} /> : <div className="px-5 pb-5"><AdminStatBars rows={(data.topMakes ?? []).map((r) => ({ label: r.make, count: r.count }))} /></div>}
         </AdminCard>
         <AdminCard title="Recent scrapes" description="Latest pipeline runs">
           {!data ? (

@@ -1247,11 +1247,25 @@ function matchesSnapshotFilters(listing: CarListing, filters: FilterState): bool
 
   if (filters.make) {
     const wantedMake = canonicalizeMake(filters.make);
-    if (wantedMake && canonicalizeMake(listing.make) !== wantedMake) return false;
+    const wantedMakeKey = makeIndexKey(filters.make);
+    if (
+      wantedMake &&
+      canonicalizeMake(listing.make) !== wantedMake &&
+      (!wantedMakeKey || makeIndexKey(listing.make) !== wantedMakeKey)
+    ) {
+      return false;
+    }
   }
   if (filters.model) {
     const wantedModel = canonicalizeModel(filters.model);
-    if (wantedModel && canonicalizeModel(listing.model) !== wantedModel) return false;
+    const wantedModelKey = modelIndexKey(filters.model);
+    if (
+      wantedModel &&
+      canonicalizeModel(listing.model) !== wantedModel &&
+      (!wantedModelKey || modelIndexKey(listing.model) !== wantedModelKey)
+    ) {
+      return false;
+    }
   }
   if (!filters.include_archive && listing.is_active === false) return false;
   if (filters.district && String(listing.district || "").toLowerCase() !== String(filters.district).toLowerCase()) return false;
@@ -3182,11 +3196,16 @@ export const getMakeModelInsight = async (make: string, model: string): Promise<
   if (catalog) {
     const makeKey = make.trim().toLowerCase();
     const modelKey = model.trim().toLowerCase();
-    const rows = catalog.filter(
-      (l) =>
-        String(l.make || "").toLowerCase() === makeKey &&
-        String(l.model || "").toLowerCase() === modelKey,
-    );
+    const makeCompact = makeIndexKey(make);
+    const modelCompact = modelIndexKey(model);
+    const rows = catalog.filter((l) => {
+      const lm = String(l.make || "").trim().toLowerCase();
+      const lmo = String(l.model || "").trim().toLowerCase();
+      return (
+        (lm === makeKey || (makeCompact !== "" && makeIndexKey(l.make) === makeCompact)) &&
+        (lmo === modelKey || (modelCompact !== "" && modelIndexKey(l.model) === modelCompact))
+      );
+    });
     const prices = rows
       .map((l) => toNumberOrNull(l.price_lkr))
       .filter((p): p is number => p !== null && p >= MIN_REASONABLE_PRICE_LKR);
@@ -3327,8 +3346,10 @@ export const getMakeInsight = async (make: string): Promise<MakeInsight> => {
   const snapshot = await readSnapshot<Record<string, JsonRecord>>("make-insights.json");
   if (snapshot) {
     const wanted = (canonicalizeMake(make) || String(make || "").trim()).toLowerCase();
+    const wantedCompact = makeIndexKey(make);
     for (const key of Object.keys(snapshot)) {
-      if ((canonicalizeMake(key) || key).toLowerCase() !== wanted) continue;
+      const candidate = (canonicalizeMake(key) || key).toLowerCase();
+      if (candidate !== wanted && (!wantedCompact || makeIndexKey(key) !== wantedCompact)) continue;
       const data = snapshot[key];
       const mapModelRow = (row: JsonRecord) => ({
         model: String(row.model || ""),
@@ -4373,6 +4394,8 @@ export type AdminSystem = {
     b2bKeysConfigured: boolean;
     resendConfigured: boolean;
     twilioConfigured: boolean;
+    telegramConfigured?: boolean;
+    emailAlertConfigured?: boolean;
     dealerAdminTokenConfigured: boolean;
     publicAppOrigin?: string | null;
   };
@@ -4470,16 +4493,38 @@ export const getAdminSystem = async (): Promise<AdminSystem> => {
   return fetchJSON<AdminSystem>("/admin/system", undefined, authHeaders());
 };
 
-export const runRevcarDataPilot = async (): Promise<{
+export type AdminEnrichmentResult = {
   ok: boolean;
+  triggeredBy?: string;
   status?: string;
+  rows?: number;
+  failures?: number;
   attempted?: number;
   matched?: number;
-  false_matches?: number;
-  match_rate?: number;
-  msrp_used_for_lkr_fmv?: boolean;
-}> => {
+  error?: string | null;
+};
+
+export const runRevcarDataPilot = async (): Promise<
+  AdminEnrichmentResult & {
+    false_matches?: number;
+    match_rate?: number;
+    msrp_used_for_lkr_fmv?: boolean;
+  }
+> => {
   return postJSON("/admin/enrichment/revcardata", {}, authHeaders());
+};
+
+export const runOpenChargeMapIngest = async (): Promise<AdminEnrichmentResult> => {
+  return postJSON("/admin/enrichment/openchargemap", {}, authHeaders());
+};
+
+export const runGeoapifySample = async (limit = 100): Promise<AdminEnrichmentResult> => {
+  const safeLimit = Math.max(1, Math.min(100, Math.round(limit)));
+  return postJSON(`/admin/enrichment/geoapify?limit=${safeLimit}`, {}, authHeaders());
+};
+
+export const runProblemsByVinIngest = async (): Promise<AdminEnrichmentResult> => {
+  return postJSON("/admin/enrichment/problemsbyvin", {}, authHeaders());
 };
 
 export const updateAdminUser = async (

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "motion/react";
 import {
@@ -27,6 +27,7 @@ import { useAuth } from "@/lib/authContext";
 import { getAdminOverview } from "@/services/api";
 import { getAdminLeads, getModerationQueue } from "@/lib/adminQueuesApi";
 import { AdminAvatar } from "@/components/admin/AdminKit";
+import { ADMIN_LIGHT_VARS } from "@/components/admin/adminTheme";
 
 /**
  * AdminShell — CeyFi Admin's frame, Motormila-branded.
@@ -86,35 +87,6 @@ export const ADMIN_NAV: AdminNavSection[] = [
 ];
 
 const PILL = { type: "spring", visualDuration: 0.45, bounce: 0.04 } as const;
-
-/** Light token values from the app's :root, pinned so dark mode can't leak in. */
-const LIGHT_VARS = {
-  "--background": "36 28% 97.2%",
-  "--foreground": "24 16% 9%",
-  "--card": "40 40% 99%",
-  "--card-foreground": "24 16% 9%",
-  "--popover": "40 40% 99%",
-  "--popover-foreground": "24 16% 9%",
-  "--surface": "36 20% 94.6%",
-  "--surface-foreground": "24 16% 9%",
-  "--surface-1": "40 40% 99%",
-  "--surface-2": "240 20% 96%",
-  "--surface-3": "240 20% 96%",
-  "--primary": "213 100% 45%",
-  "--primary-foreground": "0 0% 100%",
-  "--secondary": "240 20% 96%",
-  "--secondary-foreground": "240 6% 14%",
-  "--muted": "240 20% 96%",
-  "--muted-foreground": "240 4% 42%",
-  "--accent": "240 20% 95%",
-  "--accent-foreground": "240 6% 12%",
-  "--destructive": "4 72% 47%",
-  "--destructive-foreground": "0 0% 100%",
-  "--border": "240 6% 10% / 0.10",
-  "--input": "240 6% 10% / 0.14",
-  "--ring": "213 100% 45%",
-  colorScheme: "light",
-} as CSSProperties;
 
 function isActive(pathname: string, to: string): boolean {
   const base = "/motormila/admin";
@@ -253,7 +225,7 @@ export function AdminShell({
   }, [pathname]);
 
   return (
-    <div style={LIGHT_VARS} className="min-h-svh bg-[#f4f4f2] text-foreground lg:h-svh lg:overflow-hidden">
+    <div style={ADMIN_LIGHT_VARS} className="min-h-svh bg-[#f4f4f2] text-foreground lg:h-svh lg:overflow-hidden">
       <a
         href="#admin-main"
         className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[70] focus:rounded-lg focus:bg-card focus:px-3 focus:py-2 focus:text-sm focus:shadow-lg"

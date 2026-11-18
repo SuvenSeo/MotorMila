@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { X } from "lucide-react";
 import { toast } from "sonner";
 import {
   AdminCard,
@@ -6,7 +7,15 @@ import {
 } from "@/components/admin/AdminKit";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { clearAdminStatsCache, getAdminSystem, runRevcarDataPilot, type AdminProviderHealth } from "@/services/api";
+import {
+  clearAdminStatsCache,
+  getAdminSystem,
+  runGeoapifySample,
+  runOpenChargeMapIngest,
+  runProblemsByVinIngest,
+  runRevcarDataPilot,
+  type AdminProviderHealth,
+} from "@/services/api";
 
 function providerStatusLabel(provider: AdminProviderHealth) {
   if (!provider.enabled) return "flagged off";
@@ -25,9 +34,11 @@ export function SystemView() {
   const q = useQuery({ queryKey: ["admin", "system"], queryFn: getAdminSystem });
 
   const cache = useMutation({
-    mutationFn: () => clearAdminStatsCache(),
-    onSuccess: (result) => {
-      toast.success(`Cleared ${result.deleted} cache row(s)`);
+    mutationFn: (key?: string) => clearAdminStatsCache(key),
+    onSuccess: (result, key) => {
+      toast.success(
+        key ? `Cleared cache key "${key}" (${result.deleted} row)` : `Cleared ${result.deleted} cache row(s)`,
+      );
       void q.refetch();
     },
     onError: (e: Error) => toast.error(e.message || "Cache clear failed"),
@@ -36,17 +47,58 @@ export function SystemView() {
   const revcar = useMutation({
     mutationFn: () => runRevcarDataPilot(),
     onSuccess: (result) => {
-      toast.success(`RevCarData pilot: ${result.matched ?? 0}/${result.attempted ?? 0} matched. MSRP not applied to FMV.`);
+      toast.success(`RevCarData pilot (${result.status ?? "done"}): ${result.matched ?? 0}/${result.attempted ?? 0} matched. MSRP not applied to FMV.`);
       void q.refetch();
     },
     onError: (e: Error) => toast.error(e.message || "RevCarData pilot failed"),
   });
 
+  const ocm = useMutation({
+    mutationFn: () => runOpenChargeMapIngest(),
+    onSuccess: (result) => {
+      if (!result.ok && result.error) {
+        toast.error(result.error);
+      } else {
+        toast.success(`EV charger ingest (${result.status ?? "done"}): ${result.rows ?? 0} station(s)`);
+      }
+      void q.refetch();
+    },
+    onError: (e: Error) => toast.error(e.message || "EV charger ingest failed"),
+  });
+
+  const geoapify = useMutation({
+    mutationFn: () => runGeoapifySample(100),
+    onSuccess: (result) => {
+      if (!result.ok && result.error) {
+        toast.error(result.error);
+      } else {
+        toast.success(
+          `Geoapify sample (${result.status ?? "done"}): ${result.matched ?? result.rows ?? 0}/${result.attempted ?? 100}`,
+        );
+      }
+      void q.refetch();
+    },
+    onError: (e: Error) => toast.error(e.message || "Geoapify sample failed"),
+  });
+
+  const pbv = useMutation({
+    mutationFn: () => runProblemsByVinIngest(),
+    onSuccess: (result) => {
+      if (!result.ok && result.error) {
+        toast.error(result.error);
+      } else {
+        toast.success(`ProblemsByVin (${result.status ?? "done"}): ${result.rows ?? 0} row(s)`);
+      }
+      void q.refetch();
+    },
+    onError: (e: Error) => toast.error(e.message || "ProblemsByVin ingest failed"),
+  });
+
   return (
     <>
       <header>
-        <h1 className="font-display text-[1.875rem] leading-[1.1] tracking-[-0.01em] text-foreground sm:text-[2.25rem]">System</h1>
-        <p className="mt-1.5 max-w-2xl text-[0.875rem] leading-5 text-label-2">
+        <h1 className="font-display text-title1 leading-[1.1] tracking-[-0.01em] text-foreground sm:text-large">System</h1>
+        <p className="mt-1.5 max-w-2xl text-body leading-5 text-label-2">
           Controls, not status — for live status see Health. Keys stay on the backend.
         </p>
       </header>
@@ -67,7 +119,9 @@ export function SystemView() {
                 ["Billing webhook", q.data.flags.billingWebhookConfigured ? "set" : "missing"],
                 ["B2B API keys", q.data.flags.b2bKeysConfigured ? "set" : "missing"],
                 ["Invite email (Resend)", q.data.flags.resendConfigured ? "set" : "missing"],
+                ["Email alerts (SMTP/Resend)", q.data.flags.emailAlertConfigured ? "set" : "missing"],
                 ["Twilio WhatsApp", q.data.flags.twilioConfigured ? "set" : "missing"],
+                ["Telegram alerts", q.data.flags.telegramConfigured ? "set" : "missing"],
                 ["Public app origin", q.data.flags.publicAppOrigin || "unset"],
               ].map(([label, value]) => (
                 <li key={label} className="flex items-center justify-between rounded-xl border border-border bg-surface-2 px-3 py-2">
@@ -80,11 +134,28 @@ export function SystemView() {
         </AdminCard>
         <AdminCard title="Ops tools" description="Clear the 1-hour market stats cache so summary / district endpoints recompute immediately after data changes.">
           <div className="px-5 pb-5">
-            <Button type="button" className="mt-1 h-10 rounded-full" disabled={cache.isPending} onClick={() => cache.mutate()}>
-              Clear stats cache
+            <Button type="button" className="mt-1 h-10 rounded-full" disabled={cache.isPending} onClick={() => cache.mutate(undefined)}>
+              Clear all stats cache
             </Button>
             {q.data?.statsCacheKeys?.length ? (
-              <p className="mt-3 text-caption text-label-2">Keys: {q.data.statsCacheKeys.join(", ")}</p>
+              <div className="mt-4">
+                <p className="text-caption font-medium text-label-2">Cached keys (click to clear one):</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {q.data.statsCacheKeys.map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      disabled={cache.isPending}
+                      onClick={() => cache.mutate(key)}
+                      aria-label={`Clear cache key ${key}`}
+                      className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-2 px-2.5 py-1 text-caption font-medium text-foreground transition-colors hover:border-foreground/30 hover:bg-surface-3 disabled:opacity-50"
+                    >
+                      <span className="font-mono">{key}</span>
+                      <X aria-hidden className="size-3 text-label-2" />
+                    </button>
+                  ))}
+                </div>
+              </div>
             ) : (
               <p className="mt-3 text-caption text-label-2">No cache rows currently.</p>
             )}
@@ -113,10 +184,21 @@ export function SystemView() {
           ) : (
             <p className="text-footnote text-label-2">Provider health unavailable.</p>
           )}
-          <Button type="button" variant="outline" className="mt-4" disabled={revcar.isPending} onClick={() => revcar.mutate()}>
-            {revcar.isPending ? "Running spec pilot…" : "Run RevCarData 100-record pilot"}
-          </Button>
-          <p className="mt-2 text-caption text-label-2">Match-rate sample only. Foreign MSRP is never written into LKR fair market value.</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button type="button" variant="outline" disabled={ocm.isPending} onClick={() => ocm.mutate()}>
+              {ocm.isPending ? "Refreshing EV chargers…" : "Refresh EV chargers (OCM / OSM)"}
+            </Button>
+            <Button type="button" variant="outline" disabled={geoapify.isPending} onClick={() => geoapify.mutate()}>
+              {geoapify.isPending ? "Running Geoapify sample…" : "Run Geoapify 100-listing sample"}
+            </Button>
+            <Button type="button" variant="outline" disabled={pbv.isPending} onClick={() => pbv.mutate()}>
+              {pbv.isPending ? "Ingesting ProblemsByVin…" : "Refresh ProblemsByVin"}
+            </Button>
+            <Button type="button" variant="outline" disabled={revcar.isPending} onClick={() => revcar.mutate()}>
+              {revcar.isPending ? "Running spec pilot…" : "Run RevCarData 100-record pilot"}
+            </Button>
+          </div>
+          <p className="mt-2 text-caption text-label-2">RevCarData is a match-rate sample only; foreign MSRP is never written into LKR fair market value.</p>
         </div>
       </AdminCard>
     </>

@@ -25,13 +25,15 @@ const GUIDANCE_DAYS = 30;
 
 export function DataRequestsView() {
   const openQ = useQuery({ queryKey: ["admin", "legal", "open-summary"], queryFn: () => getLegalRequests({ status: "open" }), staleTime: 30_000 });
-  const items = openQ.data?.items ?? [];
-  const now = Date.now();
-  const overdue = useMemo(() => items.filter((r) => r.dueAt && Date.parse(r.dueAt) < now).length, [items, now]);
-  const dueSoon = useMemo(
-    () => items.filter((r) => r.dueAt && Date.parse(r.dueAt) >= now && Date.parse(r.dueAt) - now <= 7 * 86_400_000).length,
-    [items, now],
-  );
+  const items = useMemo(() => openQ.data?.items ?? [], [openQ.data?.items]);
+  const overdue = useMemo(() => {
+    const now = Date.now();
+    return items.filter((r) => r.dueAt && Date.parse(r.dueAt) < now).length;
+  }, [items]);
+  const dueSoon = useMemo(() => {
+    const now = Date.now();
+    return items.filter((r) => r.dueAt && Date.parse(r.dueAt) >= now && Date.parse(r.dueAt) - now <= 7 * 86_400_000).length;
+  }, [items]);
 
   return (
     <>

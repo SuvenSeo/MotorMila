@@ -133,7 +133,6 @@ export function MobileAppPromo() {
   return (
     <aside
       ref={stripRef}
-      role="complementary"
       aria-label={t("mobile.promoAria", "Motormila mobile app announcement")}
       className="dock-strip pointer-events-none inset-x-0 flex justify-center px-3 md:justify-end md:px-6"
     >
@@ -154,7 +153,7 @@ export function MobileAppPromo() {
           type="button"
           onClick={dismiss}
           aria-label={t("mobile.promoClose", "Dismiss announcement")}
-          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <X className="h-4 w-4" aria-hidden />
         </button>

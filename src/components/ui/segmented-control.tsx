@@ -4,7 +4,12 @@ import { m } from "motion/react";
 import { cn } from "@/lib/utils";
 import { spring, usePrefersReducedMotionOrLowData } from "@/lib/motion";
 
-export type SegmentedOption<T extends string> = { value: T; label: React.ReactNode };
+export type SegmentedOption<T extends string> = {
+  value: T;
+  label: React.ReactNode;
+  disabled?: boolean;
+  title?: string;
+};
 
 type SegmentedControlProps<T extends string> = {
   value: T;
@@ -50,17 +55,24 @@ export function SegmentedControl<T extends string>({
     >
       {options.map((o) => {
         const active = o.value === value;
+        const disabled = Boolean(o.disabled);
         return (
           <button
             key={o.value}
             type="button"
+            disabled={disabled}
+            title={o.title}
             role={radio ? "radio" : undefined}
             aria-checked={radio ? active : undefined}
             aria-pressed={radio ? undefined : active}
-            onClick={() => onValueChange(o.value)}
+            onClick={() => {
+              if (!disabled) onValueChange(o.value);
+            }}
             className={cn(
-              "relative inline-flex h-full min-w-0 items-center justify-center rounded-full px-2 text-footnote font-semibold transition-colors duration-short ease-standard active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              active ? "text-foreground" : "text-label-2 hover:text-foreground",
+              "relative inline-flex h-full min-w-0 items-center justify-center rounded-full px-2 text-footnote font-semibold transition-colors duration-short ease-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              disabled
+                ? "cursor-not-allowed opacity-55 text-label-3"
+                : cn("active:scale-[0.97]", active ? "text-foreground" : "text-label-2 hover:text-foreground"),
             )}
           >
             {active ? (

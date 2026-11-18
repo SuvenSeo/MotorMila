@@ -16,7 +16,7 @@ self.addEventListener("push", (event) => {
   const options = {
     body: data.body || "",
     icon: "/logo.png",
-    badge: "/logo-mark.png",
+    badge: "/sw-badge-72.png",
     tag: data.topic || "alert-match",
     renotify: true,
     data: { url: data.url || "/alerts" },

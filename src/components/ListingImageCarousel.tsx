@@ -3,13 +3,15 @@ import { m, motion } from "motion/react";
 import useEmblaCarousel from "embla-carousel-react";
 import { Camera, ChevronLeft, ChevronRight, Expand } from "lucide-react";
 import { VehicleThumbnail } from "@/components/VehicleThumbnail";
-import MorphSlider from "@/components/MorphSlider";
 import { getGalleryImageProxyUrl } from "@/lib/galleryProxy";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { formatSourceName } from "@/lib/sourceAttribution";
 import { spring, useReducedMotionOrLowData } from "@/lib/motion";
 import { viewTransitionInFlight } from "@/lib/viewTransition";
 import type { Silhouette } from "@/lib/vehicleSilhouette";
+
+// MorphSlider loads ogl + gsap; defer so cards/home routes never pull WebGL into shared bundles.
+const MorphSlider = lazy(() => import("@/components/MorphSlider"));
 
 // Lightbox JS + CSS load only when someone taps a photo (low-end Android first).
 const ListingLightbox = lazy(() => import("@/components/listing/ListingLightbox"));
@@ -149,9 +151,12 @@ export function ListingImageCarousel({
         // photo through the same-origin /img proxy. Any proxy refusal fails
         // the texture and the gallery falls back to the filmstrip.
         image: getGalleryImageProxyUrl(src) ?? src,
-        caption: `Photo ${i + 1} of ${count}`,
+        caption: t("listingImage.photoLabel", "Photo {current} of {total}", {
+          current: String(i + 1),
+          total: String(count),
+        }),
       })),
-    [images, count],
+    [images, count, t],
   );
   const morphGoTo = useCallback(
     (i: number) => {
@@ -368,22 +373,31 @@ export function ListingImageCarousel({
             card's photo placeholder shows through until then). Otherwise the
             Embla filmstrip, as before. */}
         {morphMode && carouselLive ? (
-          <MorphSlider
-            key={`${imagesKey}-${morphJump}`}
-            items={morphItems}
-            startIndex={morphJump}
-            transition="melt"
-            intensity={0.55}
-            aberration={0.35}
-            drift={0}
-            radius={0}
-            autoplay={false}
-            showCaptions={false}
-            showIndicators={false}
-            onIndexChange={setIndex}
-            onTextureError={() => setMorphFailed(true)}
-            className="h-full w-full"
-          />
+          <Suspense fallback={null}>
+            <MorphSlider
+              key={imagesKey}
+              items={morphItems}
+              startIndex={morphJump}
+              transition="melt"
+              intensity={0.55}
+              aberration={0.35}
+              drift={0}
+              radius={0}
+              autoplay={false}
+              showCaptions={false}
+              showIndicators={false}
+              labels={{
+                region: t("listingImage.carousel", "Listing photos"),
+                prev: t("listingImage.prev", "Previous photo"),
+                next: t("listingImage.next", "Next photo"),
+                slides: t("listingImage.slides", "Slides"),
+                slide: t("listingImage.slideNumber", "Go to slide {n}"),
+              }}
+              onIndexChange={setIndex}
+              onTextureError={() => setMorphFailed(true)}
+              className="h-full w-full"
+            />
+          </Suspense>
         ) : null}
         {!morphMode && (
         <>
@@ -500,7 +514,7 @@ export function ListingImageCarousel({
             {index < 8 && (
               <m.span
                 aria-hidden
-                className="pointer-events-none absolute left-0 top-1/2 z-10 h-1.5 w-1.5 -mt-[3px] rounded-full bg-foreground shadow-[0_0_0_1.5px_rgba(255,255,255,0.35)]"
+                className="pointer-events-none absolute left-0 top-1/2 z-10 h-1.5 w-1.5 -mt-[3px] rounded-full bg-white shadow-[0_0_0_1.5px_rgba(0,0,0,0.45)]"
                 initial={false}
                 animate={{ x: index * 28 + 9 }}
                 transition={calm ? { duration: 0 } : spring.snappy}

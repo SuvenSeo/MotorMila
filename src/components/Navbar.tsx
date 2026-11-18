@@ -76,9 +76,17 @@ function paintHeader(header: HTMLElement, s: LiveHeader) {
  * that crossfades + scales (index.css "Site header"), and the side clusters
  * glide on `translate` keyframes (a CSS FLIP) instead of animating padding.
  */
+function isApplePlatform(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
+  const platform = nav.userAgentData?.platform || navigator.platform || navigator.userAgent || "";
+  return /mac|iphone|ipad|ipod/i.test(platform);
+}
+
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [signInOpen, setSignInOpen] = useState(false);
+  const [applePlatform, setApplePlatform] = useState(false);
   const { user, logout, isAuthenticated, hasProAccess } = useAuth();
   const { t, language } = useAppPreferences();
   const { pathname } = useLocation();
@@ -88,6 +96,10 @@ export function Navbar() {
   // Live header state, owned by the DOM (data-* attributes), mirrored here so
   // the scroll path never touches React state.
   const live = useRef<LiveHeader>({ scrolled: false, hidden: false, menuOpen: false, pathname });
+
+  useEffect(() => {
+    setApplePlatform(isApplePlatform());
+  }, []);
 
   // First paint: attributes in place before the browser draws the header.
   useIsoLayoutEffect(() => {
@@ -269,12 +281,12 @@ export function Navbar() {
             onClick={openCommandPalette}
             className="nav-control nav-search"
             aria-label={t("nav.search", "Search")}
-            title={t("nav.searchHint", "Search (Ctrl+K)")}
+            title={applePlatform ? t("nav.searchHintMac", "Search (⌘+K)") : t("nav.searchHint", "Search (Ctrl+K)")}
           >
             <Search className="h-4 w-4" aria-hidden />
             <span className="nav-search__label">{t("nav.search", "Search")}</span>
             <kbd className="nav-search__kbd rounded-md border border-border px-1.5 text-caption font-medium text-muted-foreground">
-              Ctrl K
+              {applePlatform ? "⌘ K" : "Ctrl K"}
             </kbd>
           </button>
 
@@ -419,14 +431,30 @@ export function Navbar() {
                   {t("nav.navigationMenu", "Navigation menu")}
                 </span>
                 {isAuthenticated && user ? (
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="nav-control gap-2 px-4 hover:border-destructive/30 hover:text-destructive sm:hidden"
-                  >
-                    <LogOut className="h-3.5 w-3.5" aria-hidden />
-                    {t("nav.signOut", "Sign out")}
-                  </button>
+                  <div className="flex flex-wrap items-center gap-1.5 sm:hidden">
+                    {hasProAccess ? (
+                      <button type="button" onClick={() => goTo("/pro")} className="nav-control gap-1.5 px-3">
+                        <Crown className="h-3.5 w-3.5" aria-hidden />
+                        {t("nav.proDashboard", "Pro Dashboard")}
+                      </button>
+                    ) : null}
+                    <button type="button" onClick={() => goTo("/profile")} className="nav-control gap-1.5 px-3">
+                      <UserCircle2 className="h-3.5 w-3.5" aria-hidden />
+                      {t("nav.myListings", "My listings")}
+                    </button>
+                    <button type="button" onClick={() => goTo("/settings")} className="nav-control gap-1.5 px-3">
+                      <Settings className="h-3.5 w-3.5" aria-hidden />
+                      {t("nav.settings", "Settings")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="nav-control gap-1.5 px-3 hover:border-destructive/30 hover:text-destructive"
+                    >
+                      <LogOut className="h-3.5 w-3.5" aria-hidden />
+                      {t("nav.signOut", "Sign out")}
+                    </button>
+                  </div>
                 ) : (
                   <button type="button" onClick={openSignIn} className="nav-control gap-2 px-4 sm:hidden">
                     <UserCircle2 className="h-3.5 w-3.5" aria-hidden />

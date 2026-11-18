@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -218,6 +219,11 @@ def test_upsert_clamps_oversized_mileage(db_session):
     assert row.mileage is None
 
 
+@pytest.mark.live
+@pytest.mark.skipif(
+    os.getenv("RUN_LIVE_TESTS") != "1",
+    reason="Live NHTSA test requires RUN_LIVE_TESTS=1",
+)
 def test_nhtsa_fetch_models_for_make_live():
     models = fetch_models_for_make("toyota")
     if not models:

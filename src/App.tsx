@@ -253,7 +253,6 @@ const App = () => {
                   <Route path="/estimate" element={<Estimate />} />
                   <Route path="/calculator" element={<Calculator />} />
                   <Route path="/ev-hub" element={<EVHub />} />
-                  {/* EV chargers: Open Charge Map cache is empty — redirect to EV Hub until real data exists. */}
                   <Route path="/ev-chargers" element={<EVChargers />} />
                   <Route path="/best-picks" element={<BestPicks />} />
                   <Route path="/sell" element={<SellYourCar />} />
@@ -317,35 +316,47 @@ const App = () => {
                   <Route path="/profile" element={<Profile />} />
                 </Route>
                 <Route path="/sign-in" element={
-                  <Suspense fallback={<MinimalLoader />}>
-                    <SignIn />
-                  </Suspense>
+                  <RouteErrorBoundary>
+                    <Suspense fallback={<MinimalLoader />}>
+                      <SignIn />
+                    </Suspense>
+                  </RouteErrorBoundary>
                 } />
                 <Route path="/sign-up" element={
-                  <Suspense fallback={<MinimalLoader />}>
-                    <SignUp />
-                  </Suspense>
+                  <RouteErrorBoundary>
+                    <Suspense fallback={<MinimalLoader />}>
+                      <SignUp />
+                    </Suspense>
+                  </RouteErrorBoundary>
                 } />
                 <Route path="/verify-email" element={
-                  <Suspense fallback={<MinimalLoader />}>
-                    <VerifyEmail />
-                  </Suspense>
+                  <RouteErrorBoundary>
+                    <Suspense fallback={<MinimalLoader />}>
+                      <VerifyEmail />
+                    </Suspense>
+                  </RouteErrorBoundary>
                 } />
                 <Route path="/forgot-password" element={
-                  <Suspense fallback={<MinimalLoader />}>
-                    <ForgotPassword />
-                  </Suspense>
+                  <RouteErrorBoundary>
+                    <Suspense fallback={<MinimalLoader />}>
+                      <ForgotPassword />
+                    </Suspense>
+                  </RouteErrorBoundary>
                 } />
                 <Route path="/reset-password" element={
-                  <Suspense fallback={<MinimalLoader />}>
-                    <ResetPassword />
-                  </Suspense>
+                  <RouteErrorBoundary>
+                    <Suspense fallback={<MinimalLoader />}>
+                      <ResetPassword />
+                    </Suspense>
+                  </RouteErrorBoundary>
                 } />
                 {import.meta.env.DEV ? (
                   <Route path="/hero-lab" element={
-                    <Suspense fallback={<MinimalLoader />}>
-                      <HeroLabGate />
-                    </Suspense>
+                    <RouteErrorBoundary>
+                      <Suspense fallback={<MinimalLoader />}>
+                        <HeroLabGate />
+                      </Suspense>
+                    </RouteErrorBoundary>
                   } />
                 ) : null}
                 {/**
@@ -354,36 +365,42 @@ const App = () => {
                  * from anywhere on the public site.
                  */}
                 <Route path="/motormila/admin" element={
-                  <Suspense fallback={<MinimalLoader />}>
-                    <AdminConsole />
-                  </Suspense>
+                  <RouteErrorBoundary>
+                    <Suspense fallback={<MinimalLoader />}>
+                      <AdminConsole />
+                    </Suspense>
+                  </RouteErrorBoundary>
                 }>
                   <Route index element={
-                    <Suspense fallback={<MinimalLoader />}>
-                      <AdminIndex />
-                    </Suspense>
+                    <RouteErrorBoundary>
+                      <Suspense fallback={<MinimalLoader />}>
+                        <AdminIndex />
+                      </Suspense>
+                    </RouteErrorBoundary>
                   } />
-                  <Route path="analytics" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="analytics" /></Suspense>} />
-                  <Route path="users" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="users" /></Suspense>} />
-                  <Route path="leads" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="leads" /></Suspense>} />
-                  <Route path="feedback" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="feedback" /></Suspense>} />
-                  <Route path="logs" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="logs" /></Suspense>} />
-                  <Route path="health" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="health" /></Suspense>} />
-                  <Route path="data-requests" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="data-requests" /></Suspense>} />
-                  <Route path="invites" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="invites" /></Suspense>} />
-                  <Route path="pipeline" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="pipeline" /></Suspense>} />
-                  <Route path="dealers" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="dealers" /></Suspense>} />
-                  <Route path="permits" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="permits" /></Suspense>} />
-                  <Route path="moderation" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="moderation" /></Suspense>} />
-                  <Route path="system" element={<Suspense fallback={<MinimalLoader />}><AdminSection section="system" /></Suspense>} />
+                  <Route path="analytics" element={<RouteErrorBoundary><Suspense fallback={<MinimalLoader />}><AdminSection section="analytics" /></Suspense></RouteErrorBoundary>} />
+                  <Route path="users" element={<RouteErrorBoundary><Suspense fallback={<MinimalLoader />}><AdminSection section="users" /></Suspense></RouteErrorBoundary>} />
+                  <Route path="leads" element={<RouteErrorBoundary><Suspense fallback={<MinimalLoader />}><AdminSection section="leads" /></Suspense></RouteErrorBoundary>} />
+                  <Route path="feedback" element={<RouteErrorBoundary><Suspense fallback={<MinimalLoader />}><AdminSection section="feedback" /></Suspense></RouteErrorBoundary>} />
+                  <Route path="logs" element={<RouteErrorBoundary><Suspense fallback={<MinimalLoader />}><AdminSection section="logs" /></Suspense></RouteErrorBoundary>} />
+                  <Route path="health" element={<RouteErrorBoundary><Suspense fallback={<MinimalLoader />}><AdminSection section="health" /></Suspense></RouteErrorBoundary>} />
+                  <Route path="data-requests" element={<RouteErrorBoundary><Suspense fallback={<MinimalLoader />}><AdminSection section="data-requests" /></Suspense></RouteErrorBoundary>} />
+                  <Route path="invites" element={<RouteErrorBoundary><Suspense fallback={<MinimalLoader />}><AdminSection section="invites" /></Suspense></RouteErrorBoundary>} />
+                  <Route path="pipeline" element={<RouteErrorBoundary><Suspense fallback={<MinimalLoader />}><AdminSection section="pipeline" /></Suspense></RouteErrorBoundary>} />
+                  <Route path="dealers" element={<RouteErrorBoundary><Suspense fallback={<MinimalLoader />}><AdminSection section="dealers" /></Suspense></RouteErrorBoundary>} />
+                  <Route path="permits" element={<RouteErrorBoundary><Suspense fallback={<MinimalLoader />}><AdminSection section="permits" /></Suspense></RouteErrorBoundary>} />
+                  <Route path="moderation" element={<RouteErrorBoundary><Suspense fallback={<MinimalLoader />}><AdminSection section="moderation" /></Suspense></RouteErrorBoundary>} />
+                  <Route path="system" element={<RouteErrorBoundary><Suspense fallback={<MinimalLoader />}><AdminSection section="system" /></Suspense></RouteErrorBoundary>} />
                   <Route path="*" element={<Navigate to="/motormila/admin" replace />} />
                 </Route>
                 {/** Legacy path kept as a bare redirect so old bookmarks still land. */}
                 <Route path="/admin" element={<Navigate to="/motormila/admin" replace />} />
                 <Route path="/pro" element={
-                  <Suspense fallback={<MinimalLoader />}>
-                    <RequireAuth><ProtectedRoute><ProDashboard /></ProtectedRoute></RequireAuth>
-                  </Suspense>
+                  <RouteErrorBoundary>
+                    <Suspense fallback={<MinimalLoader />}>
+                      <RequireAuth><ProtectedRoute><ProDashboard /></ProtectedRoute></RequireAuth>
+                    </Suspense>
+                  </RouteErrorBoundary>
                 } />
               </Routes>
               </CompareProvider>

@@ -1,6 +1,6 @@
 import { scrollBehavior } from "@/lib/motion";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { ArrowRight, ArrowUpRight, ExternalLink, Gauge, Laptop, Moon, Smartphone, Sun } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Gauge, Laptop, Moon, Smartphone, Sun } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -273,15 +273,6 @@ export function AppFooter() {
             {t("footer.copyright", "© {year} Ardeno Studio. Built in Sri Lanka.", { year })}
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            <a
-              href="https://ardeno-studio-website.vercel.app/"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={t("footer.ardenoStudio", "Ardeno Studio")}
-              className="cine-footer__quiet w-8 justify-center px-0"
-            >
-              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-            </a>
             <button type="button" onClick={() => openFeedbackDialog()} className="cine-footer__quiet">
               {t("shell.nav.feedback", "Send feedback")}
             </button>

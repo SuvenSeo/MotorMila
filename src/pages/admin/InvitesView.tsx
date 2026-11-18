@@ -44,7 +44,7 @@ export function InvitesView() {
     onError: (e: Error) => toast.error(e.message || "Revoke failed"),
   });
 
-  const invites = q.data?.invites ?? [];
+  const invites = useMemo(() => q.data?.invites ?? [], [q.data?.invites]);
   const pending = useMemo(() => invites.filter((i) => i.status === "pending"), [invites]);
 
   const onInvite = (event: FormEvent) => {

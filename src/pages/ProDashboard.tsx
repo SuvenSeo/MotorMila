@@ -1224,7 +1224,11 @@ export default function ProDashboard() {
                             <TableRow className="bg-primary/10 hover:bg-primary/10">
                               <TableCell colSpan={7} className="text-center text-footnote font-semibold">
                                 <Link to="/pricing" className="text-primary no-underline hover:underline">
-                                  {lockedLaneCount} more lane{lockedLaneCount === 1 ? "" : "s"} locked — start a 7-day free trial to unlock
+                                  {lockedLaneCount === 1
+                                    ? t("proDash.lockedLaneCta", "1 more lane on Pro (coming soon) — join the waitlist")
+                                    : t("proDash.lockedLanesCta", "{n} more lanes on Pro (coming soon) — join the waitlist", {
+                                        n: lockedLaneCount,
+                                      })}
                                 </Link>
                               </TableCell>
                             </TableRow>
@@ -1689,8 +1693,9 @@ export default function ProDashboard() {
                         const checked = reportSections.includes(section.id);
                         return (
                           <li key={section.id}>
-                            <label className="flex cursor-pointer items-start gap-3 py-3">
+                            <label htmlFor={`report-sec-${section.id}`} className="flex cursor-pointer items-start gap-3 py-3">
                               <Checkbox
+                                id={`report-sec-${section.id}`}
                                 checked={checked}
                                 onCheckedChange={(value) => toggleReportSection(section.id, Boolean(value))}
                                 className="mt-0.5 border-input data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"

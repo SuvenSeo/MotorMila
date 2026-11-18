@@ -29,6 +29,7 @@ import { listItem } from "@/lib/motion";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { useAuth } from "@/lib/authContext";
+import { slugifyHubSegment } from "@/lib/makeNormalization";
 import {
   FREE_EV_MODELS_LIMIT,
   hasFullPlatformAccess,
@@ -187,7 +188,7 @@ export default function EVHub() {
                     className="list-none"
                   >
                     <Link
-                      to={`/cars/${encodeURIComponent(model.make)}/${encodeURIComponent(model.model)}`}
+                      to={`/cars/${encodeURIComponent(slugifyHubSegment(model.make))}/${encodeURIComponent(slugifyHubSegment(model.model))}`}
                       className="group flex h-full flex-col justify-between gap-6 rounded-card border border-border bg-card p-5 no-underline transition-[border-color,box-shadow] duration-medium ease-decelerate hover:border-primary/30 hover:shadow-e2"
                     >
                       <span className="flex items-start justify-between gap-3">

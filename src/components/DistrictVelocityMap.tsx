@@ -21,25 +21,22 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
-function toRgb(hex: string) {
-  const clean = hex.replace("#", "");
-  const value = Number.parseInt(clean, 16);
-  return { r: (value >> 16) & 255, g: (value >> 8) & 255, b: value & 255 };
-}
+type Rgb = readonly [number, number, number];
+const COLOR_LOW: Rgb = [55, 65, 81];
+const COLOR_MID: Rgb = [20, 184, 166];
+const COLOR_HIGH: Rgb = [16, 185, 129];
 
-function lerpColor(from: string, to: string, ratio: number) {
-  const s = toRgb(from);
-  const e = toRgb(to);
+function lerpColor(s: Rgb, e: Rgb, ratio: number) {
   const t = clamp(ratio, 0, 1);
-  return `rgb(${Math.round(s.r + (e.r - s.r) * t)}, ${Math.round(s.g + (e.g - s.g) * t)}, ${Math.round(s.b + (e.b - s.b) * t)})`;
+  return `rgb(${Math.round(s[0] + (e[0] - s[0]) * t)}, ${Math.round(s[1] + (e[1] - s[1]) * t)}, ${Math.round(s[2] + (e[2] - s[2]) * t)})`;
 }
 
 function velocityColor(score: number, maxScore: number): string {
-  if (maxScore <= 0) return "rgb(55, 65, 81)";
+  if (maxScore <= 0) return `rgb(${COLOR_LOW.join(", ")})`;
   const ratio = clamp(score / maxScore, 0, 1);
   // cool slate → vivid emerald-teal at high velocity
-  if (ratio < 0.5) return lerpColor("#374151", "#14b8a6", ratio * 2);
-  return lerpColor("#14b8a6", "#10b981", (ratio - 0.5) * 2);
+  if (ratio < 0.5) return lerpColor(COLOR_LOW, COLOR_MID, ratio * 2);
+  return lerpColor(COLOR_MID, COLOR_HIGH, (ratio - 0.5) * 2);
 }
 
 function velocityRadius(listingCount: number, maxCount: number): number {
@@ -57,7 +54,7 @@ export const DistrictVelocityMap = memo(function DistrictVelocityMap({
   isError,
   onRetry,
 }: DistrictVelocityMapProps) {
-  const { t } = useAppPreferences();
+  const { resolvedTheme, t } = useAppPreferences();
   const points = useMemo(
     () => data.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng)),
     [data],
@@ -135,7 +132,10 @@ export const DistrictVelocityMap = memo(function DistrictVelocityMap({
         </div>
         <div className="flex items-center gap-2 rounded-2xl border border-border bg-surface px-3 py-1.5 text-muted-foreground transition-colors">
           <span>{t("velocityMap.low", "Low")}</span>
-          <div className="h-1.5 w-20 rounded-full bg-gradient-to-r from-[#374151] via-[#14b8a6] to-[#10b981]" />
+          <div
+            className="h-1.5 w-20 rounded-full"
+            style={{ background: "linear-gradient(to right, rgb(55, 65, 81), rgb(20, 184, 166), rgb(16, 185, 129))" }}
+          />
           <span className="text-deal-good-text">{t("velocityMap.high", "High")}</span>
         </div>
       </div>
@@ -166,6 +166,7 @@ export const DistrictVelocityMap = memo(function DistrictVelocityMap({
             const color = velocityColor(point.velocity_score, maxScore);
             const radius = velocityRadius(point.listing_count, maxCount);
             const isTop = topFive.has(point.district);
+            const topStroke = resolvedTheme === "light" ? "hsl(160 84% 24%)" : "hsl(152 76% 80%)";
 
             return (
               <CircleMarker
@@ -173,7 +174,7 @@ export const DistrictVelocityMap = memo(function DistrictVelocityMap({
                 center={[point.lat, point.lng]}
                 radius={radius}
                 pathOptions={{
-                  color: isTop ? "#a7f3d0" : color,
+                  color: isTop ? topStroke : color,
                   fillColor: color,
                   weight: isTop ? 2 : 1.3,
                   fillOpacity: 0.72,

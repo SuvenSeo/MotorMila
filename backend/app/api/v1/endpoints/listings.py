@@ -1102,9 +1102,23 @@ def search_listings(
             q = q.filter(_compact_expr(CarListing.source) == normalized_source)
 
     if make:
-        q = q.filter(CarListing.make.ilike(f"%{make}%"))
+        make_normalized = re.sub(r"[-_]+", " ", make).strip()
+        make_compact = _compact(make)
+        make_clauses = [CarListing.make.ilike(f"%{make}%")]
+        if make_normalized and make_normalized.lower() != make.strip().lower():
+            make_clauses.append(CarListing.make.ilike(f"%{make_normalized}%"))
+        if make_compact:
+            make_clauses.append(_compact_expr(CarListing.make).ilike(f"%{make_compact}%"))
+        q = q.filter(or_(*make_clauses))
     if model:
-        q = q.filter(CarListing.model.ilike(f"%{model}%"))
+        model_normalized = re.sub(r"[-_]+", " ", model).strip()
+        model_compact = _compact(model)
+        model_clauses = [CarListing.model.ilike(f"%{model}%")]
+        if model_normalized and model_normalized.lower() != model.strip().lower():
+            model_clauses.append(CarListing.model.ilike(f"%{model_normalized}%"))
+        if model_compact:
+            model_clauses.append(_compact_expr(CarListing.model).ilike(f"%{model_compact}%"))
+        q = q.filter(or_(*model_clauses))
     if year_min:
         q = q.filter(CarListing.year >= year_min)
     if year_max:

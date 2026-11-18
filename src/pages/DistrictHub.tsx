@@ -20,6 +20,7 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import { StatTile, CountValue, LkrValue } from "@/components/ui/stat-tile";
 import { HubLinkTile, HubTileGrid, HubTileSkeleton } from "@/components/data/HubParts";
 import { BRAND } from "@/lib/brand";
+import { slugifyHubSegment } from "@/lib/makeNormalization";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { useAppPreferences } from "@/lib/appPreferences";
 
@@ -60,6 +61,7 @@ export default function DistrictHub() {
 
   const insight = insightQuery.data;
   const canonicalDistrict = insight?.district || districtDisplay;
+  const districtSlug = slugifyHubSegment(canonicalDistrict || districtParam);
   const title = `Used Cars in ${canonicalDistrict}, Sri Lanka | ${SITE}`;
   const description = insight
     ? `${insight.listing_count} live vehicle listings in ${canonicalDistrict}. Average ${formatPrice(insight.avg_price_lkr)}, median ${formatPrice(insight.median_price_lkr)}. Browse on Motormila.`
@@ -85,10 +87,10 @@ export default function DistrictHub() {
       }
       link.setAttribute("href", href);
     };
-    const pathname = `/locations/${encodeURIComponent(districtParam)}`;
+    const pathname = `/locations/${encodeURIComponent(districtSlug)}`;
     setMeta("description", description);
     setCanonical(`${ORIGIN}${pathname}`);
-  }, [title, description, districtParam]);
+  }, [title, description, districtSlug]);
 
   const isPending = insightQuery.isPending;
   const isError = insightQuery.isError && !insight;
@@ -155,7 +157,7 @@ export default function DistrictHub() {
                 <HubLinkTile
                   key={`${entry.make}-${entry.model}`}
                   index={i}
-                  to={`/cars/${encodeURIComponent(entry.make)}/${encodeURIComponent(entry.model)}`}
+                  to={`/cars/${encodeURIComponent(slugifyHubSegment(entry.make))}/${encodeURIComponent(slugifyHubSegment(entry.model))}`}
                   title={`${entry.make} ${entry.model}`}
                   meta={
                     <Badge variant="neutral" className="tabular-nums">
@@ -197,7 +199,7 @@ export default function DistrictHub() {
         )}
 
         <Button asChild size="lg" className="w-full sm:w-auto">
-          <Link to={`/?district=${encodeURIComponent(districtParam)}#market`}>
+          <Link to={`/?district=${encodeURIComponent(canonicalDistrict)}#market`}>
             {t("districtHub.browse", "Browse {district} listings", { district: canonicalDistrict })} <ArrowRight aria-hidden />
           </Link>
         </Button>

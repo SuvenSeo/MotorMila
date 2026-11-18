@@ -3,7 +3,7 @@ import { VERIFY_BELOW_PCT } from "@/lib/priceVerdict";
 import { Link, useNavigate } from "react-router-dom";
 import { m } from "motion/react";
 import { cleanDistrict, isPlausiblePriceDrop } from "@/lib/dataSanity";
-import { ArrowRight, ExternalLink, ImageOff, Star, TrendingDown } from "lucide-react";
+import { ArrowRight, ExternalLink, ImageOff, Lock, Star, TrendingDown } from "lucide-react";
 import { getListings, getPriceDrops, formatPrice } from "@/services/api";
 import type { CarListing, FilterState, PriceDropItem } from "@/types/car";
 import { VehicleThumbnail } from "@/components/VehicleThumbnail";
@@ -318,11 +318,28 @@ export default function BestPicks() {
   const sortControl = (
     <SegmentedControl
       value={sortMode}
-      onValueChange={(v: BestPicksSortMode) => setSortMode(v)}
+      onValueChange={(v: BestPicksSortMode) => {
+        if (!fullAccess && v === "deal_score") return;
+        setSortMode(v);
+      }}
       aria-label={t("picks.sortAria", "Sort best picks")}
       className="w-full sm:w-72"
       options={[
-        { value: "deal_score", label: t("picks.sortDealScore", "Deal score") },
+        {
+          value: "deal_score",
+          label: fullAccess ? (
+            t("picks.sortDealScore", "Deal score")
+          ) : (
+            <span className="inline-flex items-center gap-1.5">
+              <Lock aria-hidden className="h-3.5 w-3.5" />
+              {t("picks.sortDealScore", "Deal score")}
+            </span>
+          ),
+          disabled: !fullAccess,
+          title: !fullAccess
+            ? t("picks.dealScoreProHint", "Deal score sorting unlocks with Pro")
+            : undefined,
+        },
         { value: "affordability", label: t("picks.sortAffordability", "Affordability") },
       ]}
     />

@@ -85,8 +85,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 50%;
   color: #fff;
@@ -119,28 +119,40 @@
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 18px;
+  bottom: 14px;
   z-index: 3;
   display: flex;
-  gap: 8px;
+  gap: 2px;
   justify-content: center;
   align-items: center;
 }
 
 .morph-slider-dot {
-  width: 8px;
-  height: 8px;
-  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
   border: none;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.35);
+  background: transparent;
   cursor: pointer;
+}
+
+.morph-slider-dot::after {
+  content: "";
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.35);
   transition:
     width var(--ms-dot) cubic-bezier(0.16, 1, 0.3, 1),
     background var(--ms-dot) ease;
 }
 
-.morph-slider-dot.is-active {
+.morph-slider-dot.is-active::after {
   width: 22px;
   background: rgba(255, 255, 255, 0.95);
 }
@@ -151,11 +163,6 @@
 }
 
 @media (max-width: 420px) {
-  .morph-slider-btn {
-    width: 34px;
-    height: 34px;
-  }
-
   .morph-slider-caption-text {
     font-size: 13px;
   }

@@ -20,6 +20,7 @@ import { useAuth } from "@/lib/authContext";
 import { hasFullPlatformAccess } from "@/lib/planLimits";
 import { howWePriceHref } from "@/lib/howWePrice";
 import { cn } from "@/lib/utils";
+import { slugifyHubSegment } from "@/lib/makeNormalization";
 import { duration, ease, spring, useReducedMotionOrLowData } from "@/lib/motion";
 import {
   QUIZ_QUESTIONS,
@@ -48,10 +49,6 @@ type Step = 0 | 1 | 2 | 3;
 
 const NOW_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: NOW_YEAR + 1 - 1990 + 1 }, (_, i) => NOW_YEAR + 1 - i);
-
-function slug(value: string): string {
-  return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-}
 
 /** Direction-aware horizontal step slide (dir 1 = forward, -1 = back). */
 const stepSlide: Variants = {
@@ -260,7 +257,7 @@ export default function Estimate() {
   const progressPct = step === 2 ? ((2 + qIndex / QUIZ_QUESTIONS.length) / 3) * 100 : (step / 3) * 100;
 
   const hubHref = useMemo(
-    () => (make && model ? `/cars/${encodeURIComponent(slug(make))}/${encodeURIComponent(slug(model))}` : "/"),
+    () => (make && model ? `/cars/${encodeURIComponent(slugifyHubSegment(make))}/${encodeURIComponent(slugifyHubSegment(model))}` : "/"),
     [make, model],
   );
 

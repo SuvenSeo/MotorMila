@@ -18,24 +18,21 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
-function toRgb(hex: string) {
-  const clean = hex.replace("#", "");
-  const value = Number.parseInt(clean, 16);
-  return { r: (value >> 16) & 255, g: (value >> 8) & 255, b: value & 255 };
-}
+type Rgb = readonly [number, number, number];
+const COLOR_LOW: Rgb = [55, 65, 81];
+const COLOR_MID: Rgb = [20, 184, 166];
+const COLOR_HIGH: Rgb = [16, 185, 129];
 
-function lerpColor(from: string, to: string, ratio: number) {
-  const s = toRgb(from);
-  const e = toRgb(to);
+function lerpColor(s: Rgb, e: Rgb, ratio: number) {
   const t = clamp(ratio, 0, 1);
-  return `rgb(${Math.round(s.r + (e.r - s.r) * t)}, ${Math.round(s.g + (e.g - s.g) * t)}, ${Math.round(s.b + (e.b - s.b) * t)})`;
+  return `rgb(${Math.round(s[0] + (e[0] - s[0]) * t)}, ${Math.round(s[1] + (e[1] - s[1]) * t)}, ${Math.round(s[2] + (e[2] - s[2]) * t)})`;
 }
 
 function velocityColor(score: number, maxScore: number): string {
-  if (maxScore <= 0) return "rgb(55, 65, 81)";
+  if (maxScore <= 0) return `rgb(${COLOR_LOW.join(", ")})`;
   const ratio = clamp(score / maxScore, 0, 1);
-  if (ratio < 0.5) return lerpColor("#374151", "#14b8a6", ratio * 2);
-  return lerpColor("#14b8a6", "#10b981", (ratio - 0.5) * 2);
+  if (ratio < 0.5) return lerpColor(COLOR_LOW, COLOR_MID, ratio * 2);
+  return lerpColor(COLOR_MID, COLOR_HIGH, (ratio - 0.5) * 2);
 }
 
 function formatVelocityPct(score: number): string {
@@ -58,7 +55,7 @@ function ProvinceCell({
 
   return (
     <article
-      className="relative min-w-0 overflow-hidden rounded-xl border border-border px-3 py-3 transition-ui duration-medium ease-decelerate hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-soft"
+      className="theme-dark relative min-w-0 overflow-hidden rounded-xl border border-border px-3 py-3 text-foreground transition-ui duration-medium ease-decelerate hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-soft"
       style={{
         background: `linear-gradient(160deg, ${color.replace("rgb", "rgba").replace(")", `, ${0.22 + intensity * 0.35})`)} 0%, rgba(17,17,17,0.85) 100%)`,
         boxShadow: `inset 0 0 0 1px ${color.replace("rgb", "rgba").replace(")", ", 0.25)")}`,
@@ -77,7 +74,7 @@ function ProvinceCell({
       <p className="text-caption font-semibold text-foreground/90">
         {provinceName}
       </p>
-      {/* Cell background is an always-dark data-viz gradient (not a theme surface), so text stays fixed-light regardless of theme */}
+      {/* Cell background is an always-dark data-viz gradient; .theme-dark keeps text light in both themes */}
       <p className="mt-2 num text-callout font-semibold tracking-tight text-deal-good-text">
         {formatVelocityPct(point.velocity_score)}
       </p>

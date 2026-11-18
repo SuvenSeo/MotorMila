@@ -165,7 +165,11 @@ export default function Calculator() {
           });
         } else {
           toast.success(t("tools.calc.fxLiveToast", "Live FX · Rs {rate} / USD", { rate: formatFxDisplay(quote.usd_lkr) }), {
-            description: quote.reference_date ? t("tools.calc.fxRef", "CBSL-linked print · ref {date}", { date: quote.reference_date }) : quote.source,
+            description: quote.reference_date
+              ? quote.source === "open_er_api"
+                ? t("tools.calc.fxOpenErRef", "Market FX (Open ER API) · ref {date}", { date: quote.reference_date })
+                : t("tools.calc.fxRef", "CBSL-linked print · ref {date}", { date: quote.reference_date })
+              : quote.source,
           });
         }
       }

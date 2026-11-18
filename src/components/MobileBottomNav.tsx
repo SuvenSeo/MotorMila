@@ -57,7 +57,7 @@ function TabItem({ dest, index, calm }: { dest: NavDestination; index: number; c
       aria-current={isActive ? "page" : undefined}
       data-active={isActive}
       title={label}
-      className={`bottom-nav-tab group relative flex min-w-[3.5rem] flex-1 basis-0 flex-col items-center justify-center gap-1 overflow-hidden px-0.5 py-2 no-underline outline-none transition-colors duration-short focus-visible:ring-2 focus-visible:ring-primary/50 ${
+      className={`bottom-nav-tab group relative flex min-w-[3.5rem] flex-1 basis-0 flex-col items-center justify-center gap-1 px-0.5 py-2 no-underline outline-none transition-colors duration-short focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/60 ${
         isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
       }`}
     >

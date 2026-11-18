@@ -24,6 +24,7 @@ type AppPreferencesContextValue = {
 };
 
 const THEME_STORAGE_KEY = "motormila_theme_mode";
+const LEGACY_THEME_STORAGE_KEY = "autolens_theme_mode";
 const LANGUAGE_STORAGE_KEY = "motormila_language";
 const DEFAULT_THEME_MODE: ThemeMode = "dark";
 
@@ -67,6 +68,18 @@ function writeStorage(key: string, value: string) {
   }
 }
 
+function isThemeMode(value: string | null): value is ThemeMode {
+  return value === "system" || value === "dark" || value === "light";
+}
+
+export function readSavedThemeMode(): ThemeMode {
+  const saved = readStorage(THEME_STORAGE_KEY);
+  if (isThemeMode(saved)) return saved;
+  const legacy = readStorage(LEGACY_THEME_STORAGE_KEY);
+  if (isThemeMode(legacy)) return legacy;
+  return DEFAULT_THEME_MODE;
+}
+
 function isLanguage(value: string | null): value is Language {
   return value === "en" || value === "si" || value === "ta";
 }
@@ -93,19 +106,25 @@ export async function preloadSavedLanguage(): Promise<void> {
 }
 
 export function AppPreferencesProvider({ children }: { children: React.ReactNode }) {
-  const [themeMode, setThemeModeState] = useState<ThemeMode>(DEFAULT_THEME_MODE);
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(() => readSavedThemeMode());
   // Start in the saved language when its dictionary is already loaded
   // (main.tsx preloads it), so there is no English-first flash.
   const [language, setLanguageState] = useState<Language>(() => {
     const saved = readSavedLanguage();
     return getDictionary(saved) ? saved : "en";
   });
-  const [resolvedTheme, setResolvedTheme] = useState<"dark" | "light">("dark");
+  const [resolvedTheme, setResolvedTheme] = useState<"dark" | "light">(() =>
+    resolveTheme(readSavedThemeMode()),
+  );
 
   useEffect(() => {
-    const savedTheme = (readStorage(THEME_STORAGE_KEY) as ThemeMode | null) || DEFAULT_THEME_MODE;
+    if (!isThemeMode(readStorage(THEME_STORAGE_KEY))) {
+      const legacy = readStorage(LEGACY_THEME_STORAGE_KEY);
+      if (isThemeMode(legacy)) {
+        writeStorage(THEME_STORAGE_KEY, legacy);
+      }
+    }
     const savedLanguage = readSavedLanguage();
-    setThemeModeState(savedTheme);
     if (getDictionary(savedLanguage)) {
       setLanguageState(savedLanguage);
     } else {

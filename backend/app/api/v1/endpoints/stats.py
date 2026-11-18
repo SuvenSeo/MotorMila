@@ -1173,19 +1173,57 @@ def get_dashboard_insights(
     return result
 
 
+def _compact_slug_sql(column):
+    return func.lower(
+        func.replace(
+            func.replace(
+                func.replace(
+                    func.replace(func.coalesce(column, ""), "-", ""),
+                    "_",
+                    "",
+                ),
+                " ",
+                "",
+            ),
+            ".",
+            "",
+        )
+    )
+
+
+def _slug_match_clause(column, raw: str, canonical: Optional[str] = None):
+    raw_stripped = raw.strip()
+    normalized = re.sub(r"[-_]+", " ", raw_stripped).strip()
+    lower_candidates = {v.lower() for v in (raw_stripped, normalized, canonical or "") if v}
+    compact_candidates = {
+        re.sub(r"[^a-z0-9]+", "", v.lower())
+        for v in (raw_stripped, normalized, canonical or "")
+        if v
+    }
+    compact_candidates.discard("")
+    clauses = [func.lower(column).in_(lower_candidates)]
+    if compact_candidates:
+        clauses.append(_compact_slug_sql(column).in_(compact_candidates))
+    return or_(*clauses)
+
+
 @router.get("/make-model-insight")
 def get_make_model_insight(
     make: str = Query(..., min_length=1),
     model: str = Query(..., min_length=1),
     db: Session = Depends(get_db),
 ):
-    make_lower = make.strip().lower()
-    model_lower = model.strip().lower()
+    from app.utils.make_canonical import canonicalize_make, canonicalize_model
+
+    make_normalized = re.sub(r"[-_]+", " ", make.strip()).strip()
+    model_normalized = re.sub(r"[-_]+", " ", model.strip()).strip()
+    canon_make_hint = canonicalize_make(make_normalized) or canonicalize_make(make)
+    canon_model_hint = canonicalize_model(model_normalized) or canonicalize_model(model)
 
     base_clause = and_(
         live_listing_filter(),
-        func.lower(CarListing.make) == make_lower,
-        func.lower(CarListing.model) == model_lower,
+        _slug_match_clause(CarListing.make, make, canon_make_hint),
+        _slug_match_clause(CarListing.model, model, canon_model_hint),
     )
     priced_clause = and_(
         base_clause,
@@ -1211,8 +1249,8 @@ def get_make_model_insight(
     )
 
     canonical = db.query(CarListing.make, CarListing.model).filter(base_clause).first()
-    canonical_make = str(canonical.make) if canonical else make.strip().title()
-    canonical_model = str(canonical.model) if canonical else model.strip().title()
+    canonical_make = str(canonical.make) if canonical else (canon_make_hint or make_normalized.title())
+    canonical_model = str(canonical.model) if canonical else (canon_model_hint or model_normalized.title())
 
     return {
         "make": canonical_make,
@@ -1271,6 +1309,7 @@ def get_make_insight(
     full cleaned list, for the "all models" browser).
     """
     from app.utils.make_canonical import (
+        canonicalize_make,
         canonicalize_model,
         compact_key,
         model_contains_foreign_make,
@@ -1279,11 +1318,11 @@ def get_make_insight(
     # "land-rover" / "land_rover" -> "land rover": hub URLs use slugs, the DB
     # stores display names.
     make_normalized = re.sub(r"[-_]+", " ", make.strip()).strip()
-    make_lower = make_normalized.lower()
+    canon_make_hint = canonicalize_make(make_normalized) or canonicalize_make(make)
 
     base_clause = and_(
         live_listing_filter(),
-        func.lower(CarListing.make) == make_lower,
+        _slug_match_clause(CarListing.make, make, canon_make_hint),
     )
     priced_clause = and_(
         base_clause,
@@ -1317,7 +1356,7 @@ def get_make_insight(
         if not canonical:
             continue
         # Cross-feed misattribution ("Toyota Aqua" under Land Rover).
-        if model_contains_foreign_make(row.model, make_normalized):
+        if model_contains_foreign_make(row.model, canon_make_hint or make_normalized):
             continue
         key = compact_key(canonical)
         bucket = merged.get(key)
@@ -1356,7 +1395,7 @@ def get_make_insight(
     )
 
     canonical = db.query(CarListing.make).filter(base_clause).first()
-    canonical_make = str(canonical.make) if canonical else make_normalized.title()
+    canonical_make = str(canonical.make) if canonical else (canon_make_hint or make_normalized.title())
 
     return {
         "make": canonical_make,
