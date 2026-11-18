@@ -48,29 +48,6 @@
     radial-gradient(circle at 74% 48%, hsl(var(--primary) / 0.13), transparent 56%);
 }
 
-/* ── Option 03: Studio Concrete Bay (always dark stage) ───────────────── */
-.mm-hero-studio {
-  --background: 24 16% 4.2%;
-  --foreground: 0 0% 98%;
-  --surface-1: 24 14% 7.2%;
-  --surface-2: 24 12% 11%;
-  --muted-foreground: 30 8% 72%;
-  --label-1: 0 0% 98%;
-  --label-2: 30 8% 74%;
-  --label-3: 30 8% 58%;
-  --primary-text: 213 100% 68%;
-  --border: 0 0% 100% / 0.12;
-  background: #09090b;
-  color: #fafafa;
-  border-bottom-color: rgb(255 255 255 / 0.1);
-}
-
-.mm-hero-studio__scrim {
-  background:
-    linear-gradient(90deg, #09090b 0%, rgba(9, 9, 11, 0.88) 38%, rgba(9, 9, 11, 0.42) 64%, rgba(9, 9, 11, 0.12) 100%),
-    linear-gradient(180deg, rgba(9, 9, 11, 0.56) 0%, transparent 28%, rgba(9, 9, 11, 0.4) 72%, #09090b 100%);
-}
-
 /* ── Option 04: Warm Plaster Gallery (always sunlit cream gallery) ─────── */
 .mm-hero-plaster {
   --background: 36 28% 95.8%;
@@ -98,10 +75,6 @@
 }
 
 @media (max-width: 1023.98px) {
-  .mm-hero-studio__scrim {
-    background:
-      linear-gradient(180deg, rgba(9, 9, 11, 0.62) 0%, rgba(9, 9, 11, 0.35) 36%, rgba(9, 9, 11, 0.92) 72%, #09090b 100%);
-  }
   .mm-hero-plaster__scrim {
     background:
       linear-gradient(180deg, rgba(246, 243, 238, 0.68) 0%, rgba(246, 243, 238, 0.38) 38%, rgba(246, 243, 238, 0.94) 72%, #f6f3ee 100%);

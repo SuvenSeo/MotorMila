@@ -368,5 +368,25 @@ describe("Home page order and honesty (ui/shell)", () => {
       expect(api.getListings).toHaveBeenLastCalledWith(expect.objectContaining({ district: "Kandy" }));
     });
   });
+
+  it("preserves exact live cine-hero UI for studio-bay while swapping only the background photo", async () => {
+    renderDashboard(["/?hero=studio-bay"]);
+    await screen.findByText("FilterSidebar");
+
+    const hero = document.getElementById("overview");
+    const market = document.getElementById("market");
+    expect(hero).toHaveAttribute("data-hero-variant", "studio-bay");
+    expect(hero!.nextElementSibling).toBe(market);
+
+    const heading = screen.getByRole("heading", { level: 1, name: /sri lanka's entire vehicle market/i });
+    expect(heading).toHaveClass("cine-title");
+    expect(heading.querySelector(".cine-title__accent")).not.toBeNull();
+    expect(hero!.querySelector(".cine-hud")).not.toBeNull();
+    expect(hero!.querySelector(".cine-strip")).not.toBeNull();
+    expect(hero!.querySelector(".cine-search")).not.toBeNull();
+
+    const bgImg = hero!.querySelector<HTMLImageElement>("img.cine-hero__img");
+    expect(bgImg?.getAttribute("src")).toMatch(/page_home_hero_studio/);
+  });
 });
 

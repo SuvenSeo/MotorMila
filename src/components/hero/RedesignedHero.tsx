@@ -59,13 +59,6 @@ function copyForVariant(variant: HeroVariant, liveCount: number, sourceCount: nu
         headlineAccent: "Sri Lanka.",
         body: "Asking prices shift sharply between Colombo, Gampaha, Kandy, and Kurunegala. Select any district to inspect supply, median asks, and top listed models.",
       };
-    case "studio-bay":
-      return {
-        eyebrow: "No. 01 · Sri Lanka Vehicle Price Intelligence",
-        headlineLead: "Sri Lanka's vehicle market, ",
-        headlineAccent: "priced clearly.",
-        body: `Every vehicle listing from ${srcLabel} marketplaces in one fast search — paired with comparable asking ranges and drop history.`,
-      };
     case "plaster-gallery":
       return {
         eyebrow: "Independent Valuation · Not a Dealer",
@@ -105,13 +98,11 @@ export function RedesignedHero({
 
   const tickerItems = buildTickerItems(trendingModels, hotDeals);
 
-  const isStudio = heroVariant.id === "studio-bay";
   const isPlaster = heroVariant.id === "plaster-gallery";
   const isPhotoStage = heroVariant.surfaceKind === "photo-stage" && heroVariant.image;
 
   const surfaceClass = cn(
     "mm-hero-stage -mt-[var(--nav-offset)] pt-[var(--nav-offset)]",
-    isStudio && "mm-hero-studio",
     isPlaster && "mm-hero-plaster",
     isPhotoStage && "flex min-h-[clamp(600px,84svh,840px)] flex-col justify-between",
   );
@@ -160,7 +151,7 @@ export function RedesignedHero({
         <div aria-hidden className="mm-hero-aura-map pointer-events-none absolute inset-0" />
       ) : null}
 
-      {/* Architectural backdrop photo layer for Options 03 & 04 */}
+      {/* Architectural backdrop photo layer for Option 04 */}
       {isPhotoStage && heroVariant.image ? (
         <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
           <AtmosphericImage
@@ -172,12 +163,7 @@ export function RedesignedHero({
             priority
             sizes="100vw"
           />
-          <div
-            className={cn(
-              "absolute inset-0",
-              isPlaster ? "mm-hero-plaster__scrim" : "mm-hero-studio__scrim",
-            )}
-          />
+          <div className="mm-hero-plaster__scrim absolute inset-0" />
         </div>
       ) : null}
 

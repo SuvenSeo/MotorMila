@@ -9,13 +9,15 @@ import {
 } from "@/lib/heroVariants";
 
 describe("home hero layout", () => {
-  it("keeps baseline production default on night-drive and preview default on evidence", () => {
+  it("keeps baseline production default on night-drive and preview default on studio-bay", () => {
     const baseline = getHeroVariant(DEFAULT_HERO_VARIANT_ID);
     const preview = getHeroVariant(PREVIEW_DEFAULT_HERO_VARIANT_ID);
 
     expect(baseline.id).toBe("night-drive");
     expect(baseline.align).toBe("left");
-    expect(preview.id).toBe("evidence");
+    expect(preview.id).toBe("studio-bay");
+    expect(preview.surfaceKind).toBe("cine-stage");
+    expect(preview.image?.src).toMatch(/page_home_hero_studio/);
     expect(HERO_VARIANTS.map((v) => v.id)).toEqual([
       "evidence",
       "telemetry-map",

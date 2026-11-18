@@ -190,8 +190,6 @@ export default function Dashboard() {
   const filterSheetRef = useRef<FilterSheetHandle>(null);
   const heroSectionRef = useRef<HTMLElement>(null);
   const wideFilters = useMediaQuery("(min-width: 1024px)", true);
-  // CSS loops inside the hero pause once it scrolls off screen.
-  useOffscreenPause(heroSectionRef);
   // Read on first render (localStorage): loading them in an effect re-rendered
   // the whole feed, every card included, right after it mounted.
   const { ids: watchlistIds, toggle: toggleSavedListing } = useWatchlist();
@@ -608,10 +606,13 @@ export default function Dashboard() {
   const isPriceUnavailableMode = filters.price_availability === "unavailable";
   const listingFreshnessAt = liveMarketSnapshot?.latest_listing_at ?? stats?.last_updated ?? null;
   const { variant: heroVariant, setVariantId: setHeroVariantId, showPicker: showHeroLab } = useHeroVariantLab();
+  const isCineHero = heroVariant.surfaceKind === "cine-stage";
   // The hero is a dark film stage in both themes (white type on the photo);
   // only the suggestions popover follows the theme.
   const heroStatsLoading = marketPulseListings <= 0 && statsQuery.isPending && !liveMarketSnapshot;
-  usePointerParallax(heroSectionRef, !motionStill);
+  // CSS loops inside the hero pause once it scrolls off screen.
+  useOffscreenPause(heroSectionRef, isCineHero);
+  usePointerParallax(heroSectionRef, !motionStill && isCineHero);
   // Suggestions popover rows follow the theme (bg-popover surface).
   const heroPopularBtnClass =
     "w-full rounded-2xl px-3 py-2.5 text-left text-footnote font-medium text-foreground transition-colors hover:bg-surface";
@@ -631,7 +632,7 @@ export default function Dashboard() {
         <HeroVariantPicker activeId={heroVariant.id} onSelect={setHeroVariantId} />
       ) : null}
 
-      {heroVariant.id !== "night-drive" ? (
+      {!isCineHero ? (
         <RedesignedHero
           heroVariant={heroVariant}
           resolvedTheme={resolvedTheme}
@@ -670,14 +671,14 @@ export default function Dashboard() {
           t={t}
         />
       ) : (
-      /* ── HERO — "Night drive" cinematic stage ───────────────────────
+      /* ── HERO — Cinematic stage ("Night drive" / "Studio Concrete Bay" BG swap) ─
           Layers (back → front): photo plate (pointer + scroll parallax,
           slow settle) · light bloom · scrim · grain ·
           exposure lift · letterbox curtain. All transform/opacity. */
       <section
         ref={heroSectionRef}
         id="overview"
-        data-hero-variant="night-drive"
+        data-hero-variant={heroVariant.id}
         data-hero-tone="dark"
         className="cine-hero -mt-[var(--nav-offset)] pt-[var(--nav-offset)]"
         style={{ "--cine-pos": heroVariant.objectPosition } as CSSProperties}
