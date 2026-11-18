@@ -410,3 +410,82 @@ def test_neon_export_is_the_durable_handoff_to_the_live_site():
     live = _workflow("manus-to-live.yml")
     triggers = str((live.get("on") or live.get(True)).get("workflow_run", {}).get("workflows", []))
     assert "Neon Export" in triggers
+
+
+def test_walled_sources_concurrency_group_is_per_attempt():
+    wf = _workflow("manus-scrape-every-2h.yml")
+    walled = wf["jobs"]["walled-sources"]
+    group = str(walled["concurrency"]["group"])
+    assert "matrix.attempt" in group
+
+
+def test_consecutive_503_pages_abort_source_early(monkeypatch):
+    from app.scrapers.generic_detail import SourceUnavailableError
+
+    class _DownScraper(GenericDetailScraper):
+        SOURCE = "carshoptest"
+        BASE_URL = "https://example.test"
+        START_URLS = ("https://example.test/list", "https://example.test/other")
+
+        @classmethod
+        def _extract_listing_links(cls, soup):
+            return []
+
+    scraper = _DownScraper(db=None)
+    err_503 = _FakeResponse(503, "Service Temporarily Unavailable")
+    client = _FakeClient([err_503] * 40)
+
+    with pytest.raises(SourceUnavailableError, match="page_errors"):
+        _run_with_client(monkeypatch, scraper, client)
+
+    # Stops at PAGE_ERROR_LIMIT (3) instead of burning all 5+ pages across 2 categories.
+    assert len(client.requested) == 3
+
+
+def test_persistent_detail_timeouts_abort_source_early(monkeypatch):
+    import httpx
+    from app.scrapers.generic_detail import SourceUnavailableError
+
+    class _NullSession:
+        def commit(self):
+            return None
+
+        def rollback(self):
+            return None
+
+    class _DetailFailScraper(GenericDetailScraper):
+        SOURCE = "salemetest"
+        BASE_URL = "https://example.test"
+        START_URLS = ("https://example.test/cars",)
+
+        @classmethod
+        def _extract_listing_links(cls, soup):
+            return [f"https://example.test/ad/{i}" for i in range(12)]
+
+    class _TimeoutDetailClient:
+        def __init__(self):
+            self.requested: list[str] = []
+
+        async def get(self, url, **kwargs):
+            self.requested.append(url)
+            if "/ad/" in url:
+                raise httpx.ReadTimeout("")
+            return _FakeResponse(200, "<html><body>list</body></html>")
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc_info):
+            return False
+
+    import app.scrapers.generic_detail as gd
+
+    scraper = _DetailFailScraper(db=_NullSession())
+    client = _TimeoutDetailClient()
+    monkeypatch.setattr(gd.httpx, "AsyncClient", lambda **kwargs: client)
+
+    with pytest.raises(SourceUnavailableError, match="ReadTimeout"):
+        asyncio.run(scraper.scrape(max_pages=5))
+
+    # 1 listing page + 1 batch of DETAIL_CONCURRENCY (4) detail calls, not all 12 items * 5 pages.
+    assert len(client.requested) == 5

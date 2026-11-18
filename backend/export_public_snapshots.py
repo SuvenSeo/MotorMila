@@ -505,6 +505,22 @@ def build_permits_snapshot(db) -> dict[str, Any]:
         return {"items": [], "generated_at": now, "unavailable": True}
 
 
+def build_charging_stations_snapshot(db) -> dict[str, Any]:
+    """Export all cached Sri Lanka EV charging stations for static/R2 fallback."""
+    from app.services.openchargemap import ATTRIBUTION, COLOMBO, nearby_stations
+
+    stations = nearby_stations(db, lat=COLOMBO[0], lng=COLOMBO[1], radius_km=500.0, limit=500)
+    return {
+        "count": len(stations),
+        "lat": COLOMBO[0],
+        "lng": COLOMBO[1],
+        "radius_km": 250,
+        "attribution": ATTRIBUTION,
+        "limitation": "Cached Sri Lanka Open Charge Map and OpenStreetMap points. Status may be stale; confirm before you travel.",
+        "stations": stations,
+    }
+
+
 def build_small_snapshots(db) -> dict[str, Any]:
     """Cheap aggregate files so the SPA survives a Neon outage.
 
@@ -519,6 +535,7 @@ def build_small_snapshots(db) -> dict[str, Any]:
         "hybrid-bands.json": lambda: stats_endpoint.get_hybrid_bands(db=db),
         "import-era-split.json": lambda: stats_endpoint.get_import_era_split(db),
         "permits.json": lambda: build_permits_snapshot(db),
+        "charging-stations.json": lambda: build_charging_stations_snapshot(db),
     }
     # Aggregate trends use the same compute path as the live endpoint (free-tier
     # depth: national overall, 12 months).
@@ -576,6 +593,7 @@ def build_snapshot(output_dir: Path, catalog_limit: int | None = None, *, skip_c
                     "hybrid-bands.json",
                     "import-era-split.json",
                     "permits.json",
+                    "charging-stations.json",
                     "price-sparklines.json",
                     "price-drops.json",
                     "dashboard-insights.json",

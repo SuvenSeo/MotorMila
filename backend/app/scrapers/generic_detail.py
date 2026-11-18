@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime
 from app.utils.time import utc_now
 import os
@@ -65,11 +66,24 @@ class SourceBlockedError(RuntimeError):
     """
 
 
+class SourceUnavailableError(RuntimeError):
+    """Raised when a source persistently fails (5xx/timeouts) with zero listings."""
+
+
+def _format_exc(exc: BaseException) -> str:
+    msg = str(exc).strip()
+    return f"{type(exc).__name__}: {msg}" if msg else type(exc).__name__
+
+
 class GenericDetailScraper:
     SOURCE = ""
     BASE_URL = ""
     START_URLS: tuple[str, ...] = ()
     EMPTY_PAGE_LIMIT = 3
+    PAGE_ERROR_LIMIT = 3
+    DETAIL_FAILURE_STREAK_LIMIT = 4
+    DETAIL_CONCURRENCY = 4
+    DETAIL_TIMEOUT_SECONDS = 20
     ALLOW_UNAVAILABLE_PRICE = False
 
     def empty_page_limit(self) -> int:
@@ -413,9 +427,16 @@ class GenericDetailScraper:
         seen_urls: set[str] = set()
         blocked = False
         block_reason: str | None = None
+        unavailable_reason: str | None = None
+        total_successful_pages = 0
+        total_successful_details = 0
 
         start_page = start_page_from_env(self.SOURCE)
         empty_page_limit = self.empty_page_limit()
+        page_error_limit = max(1, int(getattr(self, "PAGE_ERROR_LIMIT", 3)))
+        detail_failure_limit = max(1, int(getattr(self, "DETAIL_FAILURE_STREAK_LIMIT", 4)))
+        detail_concurrency = max(1, int(getattr(self, "DETAIL_CONCURRENCY", 4)))
+        detail_timeout = max(5, int(getattr(self, "DETAIL_TIMEOUT_SECONDS", 20)))
         groups = self._build_page_url_groups(max_pages, start_page=start_page)
         if start_page > 1:
             log.info(
@@ -426,12 +447,24 @@ class GenericDetailScraper:
                 categories=len(groups),
             )
 
+        async def _fetch_detail(client: httpx.AsyncClient, detail_url: str):
+            detail = await client.get(detail_url, timeout=detail_timeout)
+            detail_blocked = response_blocked_reason(detail)
+            if detail_blocked:
+                raise SourceBlockedError(detail_blocked)
+            if getattr(detail, "status_code", 200) == 404:
+                return None
+            detail.raise_for_status()
+            return detail
+
         async with httpx.AsyncClient(
             follow_redirects=True, **httpx_client_kwargs(DEFAULT_HEADERS)
         ) as client:
             for category_urls in groups:
                 # Per-category, not per-source: one category running out of
                 # pages must never end the crawl for the categories after it.
+                consecutive_page_errors = 0
+                consecutive_detail_failures = 0
                 consecutive_empty_pages = 0
                 for page_url in category_urls:
                     log.info("scraping_page", source=self.SOURCE, url=page_url)
@@ -443,6 +476,8 @@ class GenericDetailScraper:
                         response.raise_for_status()
                         soup = BeautifulSoup(response.text, "lxml")
                         listing_urls = self._extract_listing_links(soup)
+                        total_successful_pages += 1
+                        consecutive_page_errors = 0
                     except SourceBlockedError as exc:
                         log.warning(
                             "generic_detail_source_blocked",
@@ -454,7 +489,26 @@ class GenericDetailScraper:
                         block_reason = str(exc)
                         break
                     except Exception as exc:
-                        log.error("generic_detail_page_error", source=self.SOURCE, url=page_url, error=str(exc))
+                        err_text = _format_exc(exc)
+                        consecutive_page_errors += 1
+                        log.error(
+                            "generic_detail_page_error",
+                            source=self.SOURCE,
+                            url=page_url,
+                            error=err_text,
+                            consecutive_page_errors=consecutive_page_errors,
+                        )
+                        if consecutive_page_errors >= page_error_limit:
+                            log.warning(
+                                "generic_detail_category_aborted_page_errors",
+                                source=self.SOURCE,
+                                url=page_url,
+                                limit=page_error_limit,
+                                error=err_text,
+                            )
+                            if total_successful_pages == 0:
+                                unavailable_reason = f"page_errors: {err_text}"
+                            break
                         continue
 
                     if not listing_urls:
@@ -473,50 +527,101 @@ class GenericDetailScraper:
                     consecutive_empty_pages = 0
                     new_on_page = 0
                     page_category = self._category_from_page_url(page_url)
+                    pending_urls: list[str] = []
                     for detail_url in listing_urls:
                         if detail_url in seen_urls:
                             continue
                         seen_urls.add(detail_url)
-                        try:
-                            detail = await client.get(detail_url, timeout=30)
-                            detail_blocked = response_blocked_reason(detail)
-                            if detail_blocked:
-                                raise SourceBlockedError(detail_blocked)
-                            detail.raise_for_status()
-                            payload = self._build_payload(
-                                str(detail.url),
-                                detail.text,
-                                vehicle_category=page_category,
-                            )
-                            if not payload:
+                        pending_urls.append(detail_url)
+
+                    abort_details = False
+                    for chunk_start in range(0, len(pending_urls), detail_concurrency):
+                        chunk = pending_urls[chunk_start : chunk_start + detail_concurrency]
+                        results = await asyncio.gather(
+                            *(_fetch_detail(client, u) for u in chunk),
+                            return_exceptions=True,
+                        )
+                        for detail_url, outcome in zip(chunk, results):
+                            if isinstance(outcome, SourceBlockedError):
+                                self.db.rollback()
+                                log.warning(
+                                    "generic_detail_source_blocked",
+                                    source=self.SOURCE,
+                                    url=detail_url,
+                                    reason=str(outcome),
+                                )
+                                blocked = True
+                                block_reason = str(outcome)
+                                abort_details = True
+                                break
+                            if isinstance(outcome, BaseException):
+                                self.db.rollback()
+                                err_text = _format_exc(outcome)
+                                consecutive_detail_failures += 1
+                                log.error(
+                                    "generic_detail_item_error",
+                                    source=self.SOURCE,
+                                    url=detail_url,
+                                    error=err_text,
+                                    consecutive_failures=consecutive_detail_failures,
+                                )
+                                limit = (
+                                    detail_failure_limit
+                                    if total_successful_details == 0
+                                    else detail_failure_limit * 2
+                                )
+                                if consecutive_detail_failures >= limit:
+                                    log.warning(
+                                        "generic_detail_aborted_detail_errors",
+                                        source=self.SOURCE,
+                                        url=detail_url,
+                                        limit=limit,
+                                        error=err_text,
+                                    )
+                                    if total_successful_details == 0:
+                                        unavailable_reason = f"detail_errors: {err_text}"
+                                    abort_details = True
+                                    break
                                 continue
-                            self._upsert_listing(payload)
-                            self.db.commit()
-                            new_on_page += 1
-                        except SourceBlockedError as exc:
-                            self.db.rollback()
-                            log.warning(
-                                "generic_detail_source_blocked",
-                                source=self.SOURCE,
-                                url=detail_url,
-                                reason=str(exc),
-                            )
-                            blocked = True
-                            block_reason = str(exc)
+                            if outcome is None:
+                                # HTTP 404 (expired ad) — not a transport outage.
+                                continue
+                            try:
+                                resolved_url = str(getattr(outcome, "url", None) or detail_url)
+                                payload = self._build_payload(
+                                    resolved_url,
+                                    outcome.text,
+                                    vehicle_category=page_category,
+                                )
+                                consecutive_detail_failures = 0
+                                total_successful_details += 1
+                                if not payload:
+                                    continue
+                                self._upsert_listing(payload)
+                                self.db.commit()
+                                new_on_page += 1
+                            except Exception as exc:
+                                self.db.rollback()
+                                log.error(
+                                    "generic_detail_item_error",
+                                    source=self.SOURCE,
+                                    url=detail_url,
+                                    error=_format_exc(exc),
+                                )
+                        if abort_details:
                             break
-                        except Exception as exc:
-                            self.db.rollback()
-                            log.error("generic_detail_item_error", source=self.SOURCE, url=detail_url, error=str(exc))
+
+                    if blocked or unavailable_reason:
+                        break
+                    if abort_details:
+                        break
 
                     if new_on_page == 0:
                         consecutive_empty_pages += 1
                         if consecutive_empty_pages >= empty_page_limit:
                             break
 
-                    if blocked:
-                        break
-
-                if blocked:
+                if blocked or unavailable_reason:
                     break
 
         flush_upsert_buffer(self)
@@ -526,4 +631,8 @@ class GenericDetailScraper:
                 "generic_detail_source_gave_up_blocked",
                 source=self.SOURCE,
                 reason=self.blocked_reason,
+            )
+        elif unavailable_reason:
+            raise SourceUnavailableError(
+                f"{self.SOURCE} unavailable ({unavailable_reason})"
             )

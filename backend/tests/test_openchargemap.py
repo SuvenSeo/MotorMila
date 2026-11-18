@@ -147,3 +147,112 @@ def test_charging_stations_endpoint_reads_local_cache_only(monkeypatch):
         assert "stale" in body["limitation"].lower() or "confirm" in body["limitation"].lower()
     finally:
         app.dependency_overrides.clear()
+
+
+OSM_SAMPLE = {
+    "elements": [
+        {
+            "type": "node",
+            "id": 3690351891,
+            "lat": 6.915,
+            "lon": 79.857,
+            "timestamp": "2026-09-12T10:00:00Z",
+            "tags": {
+                "amenity": "charging_station",
+                "name": "Galle Face EV Hub",
+                "operator": "ChargeNET",
+                "addr:street": "Galle Road",
+                "addr:city": "Colombo",
+                "socket:type2": "2",
+                "socket:type2:output": "22 kW",
+                "socket:type2_combo": "1",
+                "socket:type2_combo:output": "60 kW",
+            },
+        },
+        {
+            "type": "way",
+            "id": 912345678,
+            "center": {"lat": 7.291, "lon": 80.634},
+            "tags": {
+                "amenity": "charging_station",
+                "brand": "BYD LK",
+                "addr:town": "Kandy",
+                "charging_station:output": "50kW",
+            },
+        },
+        {
+            "type": "node",
+            "id": 111111,
+            "lat": 6.92,
+            "lon": 79.86,
+            "tags": {
+                "amenity": "charging_station",
+                "disused:amenity": "charging_station",
+            },
+        },
+    ]
+}
+
+
+def _osm_client(payload):
+    mock = MagicMock()
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json.return_value = payload
+    mock.post.return_value = response
+    mock.close = MagicMock()
+    return mock
+
+
+def test_ingest_osm_lk_stations_stores_nodes_and_ways_with_safe_32bit_ids():
+    from app.services.openchargemap import ingest_osm_lk_stations
+
+    db = _session()
+    result = ingest_osm_lk_stations(db, client=_osm_client(OSM_SAMPLE))
+    assert result["status"] == "success"
+    assert result["source"] == "osm_overpass"
+    assert result["rows"] == 2
+
+    rows = db.query(ChargePoint).all()
+    assert len(rows) == 2
+    assert all(-2_147_483_648 <= int(row.ocm_id) <= -1_000_000 for row in rows)
+
+    colombo = next(row for row in rows if row.town == "Colombo")
+    assert colombo.name == "Galle Face EV Hub"
+    assert colombo.operator == "ChargeNET"
+    assert float(colombo.power_kw) == 60.0
+    assert "openstreetmap" in (colombo.attribution or "").lower()
+
+    kandy = next(row for row in rows if row.town == "Kandy")
+    assert float(kandy.lat) == pytest.approx(7.291, rel=1e-6)
+    assert float(kandy.power_kw) == 50.0
+
+
+def test_ingest_best_effort_falls_back_to_osm_without_ocm_key():
+    from app.services.openchargemap import ingest_lk_stations_best_effort
+
+    db = _session()
+    ocm_mock = _client(OCM_SAMPLE)
+    osm_mock = _osm_client(OSM_SAMPLE)
+
+    result = ingest_lk_stations_best_effort(
+        db, ocm_client=ocm_mock, osm_client=osm_mock, api_key=""
+    )
+    assert result["status"] == "success"
+    assert result["source"] == "osm_overpass"
+    assert result["rows"] == 2
+    assert ocm_mock.get.call_count == 0
+    assert osm_mock.post.call_count == 1
+
+
+def test_export_charging_stations_snapshot_includes_cached_stations():
+    from app.services.openchargemap import ingest_osm_lk_stations
+    from export_public_snapshots import build_charging_stations_snapshot
+
+    db = _session()
+    ingest_osm_lk_stations(db, client=_osm_client(OSM_SAMPLE))
+    snap = build_charging_stations_snapshot(db)
+    assert snap["count"] == 2
+    assert len(snap["stations"]) == 2
+    assert snap["stations"][0]["town"] == "Colombo"
+    assert "open charge map" in snap["attribution"].lower()

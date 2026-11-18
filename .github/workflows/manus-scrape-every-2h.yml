@@ -85,7 +85,7 @@ jobs:
     # parallel IP draws. Sharing the parent lock serializes the matrix legs
     # and kills the multi-IP strategy.
     concurrency:
-      group: manus-walled-sources-${{ github.run_id }}
+      group: manus-walled-sources-${{ github.run_id }}-${{ matrix.attempt }}
       cancel-in-progress: false
     strategy:
       # riyasewana.com Cloudflare-blocks a large share of GitHub's Azure egress

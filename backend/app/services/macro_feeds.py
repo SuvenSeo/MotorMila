@@ -10,7 +10,9 @@ gold-tracker FX conversion) — consumed as public data, not as a code dependenc
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
+from email.utils import parsedate_to_datetime
+import os
 from typing import Any
 
 import httpx
@@ -30,6 +32,7 @@ ER_API_USD_URL = "https://open.er-api.com/v6/latest/USD"
 
 # Planning fallback when every live source fails (aligned with calculator default).
 FALLBACK_USD_LKR = 300.0
+MACRO_FX_MAX_STALE_DAYS = 7
 
 USER_AGENT = "MotormilaMacroFeed/1.0 (+https://motormila.pages.dev)"
 
@@ -62,6 +65,50 @@ class MacroSnapshot:
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _max_fx_stale_days() -> int:
+    raw = os.getenv("MACRO_FX_MAX_STALE_DAYS", "").strip()
+    if not raw:
+        return MACRO_FX_MAX_STALE_DAYS
+    try:
+        return max(1, int(raw))
+    except ValueError:
+        return MACRO_FX_MAX_STALE_DAYS
+
+
+def _parse_reference_date(value: str | None) -> date | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    prefix = text[:10]
+    try:
+        return date.fromisoformat(prefix)
+    except ValueError:
+        pass
+    try:
+        parsed = parsedate_to_datetime(text)
+        if parsed.tzinfo is not None:
+            parsed = parsed.astimezone(timezone.utc)
+        return parsed.date()
+    except (TypeError, ValueError, OverflowError):
+        return None
+
+
+def _is_fx_quote_stale(
+    quote: FxQuote | None,
+    *,
+    now: datetime | None = None,
+    max_age_days: int | None = None,
+) -> bool:
+    if quote is None:
+        return True
+    ref_day = _parse_reference_date(quote.reference_date)
+    if ref_day is None:
+        return True
+    today = (now or datetime.now(timezone.utc)).astimezone(timezone.utc).date()
+    limit = _max_fx_stale_days() if max_age_days is None else max(1, int(max_age_days))
+    return (today - ref_day).days > limit
 
 
 def _parse_usd_records(payload: dict[str, Any]) -> FxQuote | None:
@@ -172,16 +219,23 @@ def _fx_from_er_api(client: httpx.Client) -> FxQuote | None:
         return None
     if rate <= 0:
         return None
+    raw_ref = str(payload.get("time_last_update_utc") or "").strip() or None
+    parsed_ref = _parse_reference_date(raw_ref)
+    reference_date = parsed_ref.isoformat() if parsed_ref else raw_ref
     return FxQuote(
         usd_lkr=round(rate, 4),
-        reference_date=str(payload.get("time_last_update_utc") or "") or None,
+        reference_date=reference_date,
         source="open_er_api",
         source_url=ER_API_USD_URL,
         fetched_at=_now_iso(),
     )
 
 
-def fetch_macro_snapshot(*, client: httpx.Client | None = None) -> MacroSnapshot:
+def fetch_macro_snapshot(
+    *,
+    client: httpx.Client | None = None,
+    now: datetime | None = None,
+) -> MacroSnapshot:
     """Return the best available FX (+ optional CCPI) snapshot."""
     owns_client = client is None
     http = client or httpx.Client(
@@ -190,15 +244,28 @@ def fetch_macro_snapshot(*, client: httpx.Client | None = None) -> MacroSnapshot
         timeout=8.0,
     )
     try:
-        fx: FxQuote | None = None
+        cbsl_fx: FxQuote | None = None
         inflation: InflationQuote | None = None
 
         fx_payload = _fetch_json(http, MACRO_PUBLISHER_FX_URL)
         if fx_payload:
-            fx = _parse_usd_records(fx_payload)
+            cbsl_fx = _parse_usd_records(fx_payload)
 
-        if fx is None:
-            fx = _fx_from_er_api(http)
+        fx: FxQuote | None = None
+        if cbsl_fx is not None and not _is_fx_quote_stale(cbsl_fx, now=now):
+            fx = cbsl_fx
+        else:
+            if cbsl_fx is not None:
+                log.info(
+                    "macro_fx_cbsl_stale_checking_fallback",
+                    cbsl_reference_date=cbsl_fx.reference_date,
+                )
+            er_fx = _fx_from_er_api(http)
+            if er_fx is not None:
+                fx = er_fx
+            elif cbsl_fx is not None:
+                # Stale real CBSL quote still beats the static planning constant.
+                fx = cbsl_fx
 
         if fx is None:
             fx = FxQuote(

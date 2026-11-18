@@ -1383,6 +1383,7 @@ _FUEL_CATEGORY_MAP: dict[str, str] = {
     "diesel": "diesel",
     "hybrid": "hybrid",
     "plugin_hybrid": "hybrid",
+    "pluginhybrid": "hybrid",
     "phev": "hybrid",
     "electric": "electric",
     "ev": "electric",
@@ -1428,7 +1429,7 @@ def get_fuel_mix(db: Session = Depends(get_db)):
     }
 
 
-_HYBRID_FUEL_TYPES = {"hybrid", "plugin_hybrid", "phev"}
+_HYBRID_FUEL_TYPES = {"hybrid", "plugin_hybrid", "pluginhybrid", "phev"}
 
 _HYBRID_BANDS: list[dict] = [
     {"key": "le1500", "label": "≤1500cc", "cc_max": 1500},

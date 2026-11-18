@@ -16,14 +16,14 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 os.environ.setdefault("ALLOW_SQLITE_FALLBACK", "true")
 
 from db.session import SessionLocal, init_db  # noqa: E402
-from app.services.openchargemap import ingest_lk_stations  # noqa: E402
+from app.services.openchargemap import ingest_lk_stations_best_effort  # noqa: E402
 
 
 def main() -> int:
     init_db()
     db = SessionLocal()
     try:
-        result = ingest_lk_stations(db)
+        result = ingest_lk_stations_best_effort(db)
         print(result)
         status = result.get("status")
         return 0 if status in {"success", "skipped"} else 1

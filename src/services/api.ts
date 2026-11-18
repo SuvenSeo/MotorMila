@@ -3947,6 +3947,7 @@ export interface VehicleNewsItem {
   title: string;
   thumb: string | null;
   source: string;
+  url?: string | null;
 }
 
 export const calculateLandedCost = async (input: LandedCostInput): Promise<LandedCostResult> => {
@@ -4015,26 +4016,104 @@ export const getVehicleSafetyResearch = async (input: {
   return fetchJSON<SafetyResearchResponse>("/vehicles/safety-research", params);
 };
 
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const radius = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * radius * Math.asin(Math.sqrt(Math.min(1, a)));
+}
+
+function buildChargingStationsFromSnapshot(
+  snapshot: ChargingStationsResponse,
+  lat: number,
+  lng: number,
+  radiusKm: number,
+): ChargingStationsResponse {
+  const rawStations = Array.isArray(snapshot?.stations) ? snapshot.stations : [];
+  const filtered = rawStations
+    .map((station) => {
+      const sLat = Number(station.lat);
+      const sLng = Number(station.lng);
+      if (!Number.isFinite(sLat) || !Number.isFinite(sLng)) return null;
+      const distance = Math.round(haversineKm(lat, lng, sLat, sLng) * 100) / 100;
+      if (distance > radiusKm) return null;
+      return {
+        ...station,
+        lat: sLat,
+        lng: sLng,
+        distance_km: distance,
+      };
+    })
+    .filter((station): station is ChargingStation => station !== null)
+    .sort((a, b) => a.distance_km - b.distance_km);
+
+  return {
+    count: filtered.length,
+    lat,
+    lng,
+    radius_km: radiusKm,
+    attribution: String(
+      snapshot?.attribution ||
+        "Data © Open Charge Map contributors, OpenStreetMap contributors (ODbL), and original data providers.",
+    ),
+    limitation: snapshot?.limitation,
+    stations: filtered,
+  };
+}
+
 export const getChargingStations = async (input?: {
   lat?: number;
   lng?: number;
   radius_km?: number;
 }): Promise<ChargingStationsResponse> => {
+  const lat = input?.lat ?? 6.9271;
+  const lng = input?.lng ?? 79.8612;
+  const radiusKm = input?.radius_km ?? 25;
+
+  if (SNAPSHOT_ONLY) {
+    const snapshot = await readSnapshot<ChargingStationsResponse>("charging-stations.json");
+    if (snapshot && Array.isArray(snapshot.stations)) {
+      return buildChargingStationsFromSnapshot(snapshot, lat, lng, radiusKm);
+    }
+    refuseLiveApiFallback("charging stations");
+  }
+
   const params: QueryParams = {};
   if (input?.lat != null) params.lat = input.lat;
   if (input?.lng != null) params.lng = input.lng;
   if (input?.radius_km != null) params.radius_km = input.radius_km;
-  const data = await fetchJSON<ChargingStationsResponse>("/ev/charging-stations", params);
-  const stations = Array.isArray(data?.stations) ? data.stations : [];
-  return {
-    count: Number(data?.count ?? stations.length),
-    lat: data?.lat,
-    lng: data?.lng,
-    radius_km: Number(data?.radius_km ?? input?.radius_km ?? 25),
-    attribution: String(data?.attribution || "Data © Open Charge Map contributors and original data providers."),
-    limitation: data?.limitation,
-    stations,
-  };
+  try {
+    const data = await fetchJSON<ChargingStationsResponse>("/ev/charging-stations", params);
+    const stations = Array.isArray(data?.stations) ? data.stations : [];
+    if (stations.length === 0) {
+      const snapshot = await readSnapshot<ChargingStationsResponse>("charging-stations.json");
+      if (snapshot && Array.isArray(snapshot.stations) && snapshot.stations.length > 0) {
+        return buildChargingStationsFromSnapshot(snapshot, lat, lng, radiusKm);
+      }
+    }
+    return {
+      count: Number(data?.count ?? stations.length),
+      lat: data?.lat,
+      lng: data?.lng,
+      radius_km: Number(data?.radius_km ?? radiusKm),
+      attribution: String(
+        data?.attribution ||
+          "Data © Open Charge Map contributors, OpenStreetMap contributors (ODbL), and original data providers.",
+      ),
+      limitation: data?.limitation,
+      stations,
+    };
+  } catch (error) {
+    const snapshot = await readSnapshot<ChargingStationsResponse>("charging-stations.json");
+    if (snapshot && Array.isArray(snapshot.stations) && snapshot.stations.length > 0) {
+      return buildChargingStationsFromSnapshot(snapshot, lat, lng, radiusKm);
+    }
+    throw error;
+  }
 };
 
 export const getMacroContext = async (): Promise<MacroContext> => {

@@ -119,8 +119,9 @@ def select_dumps_to_merge(
 
     if force_tag:
         if force_tag not in ts_by_tag:
+            expected_assets = "/".join(DUMP_ASSET_NAMES)
             print(
-                f"ERROR: release-tag {force_tag} not found (or lacks a dump asset: {"/".join(DUMP_ASSET_NAMES)})",
+                f"ERROR: release-tag {force_tag} not found (or lacks a dump asset: {expected_assets})",
                 file=sys.stderr,
             )
             raise SystemExit(1)

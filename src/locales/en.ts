@@ -1789,6 +1789,18 @@ export const en = {
   "seo.forgotPasswordTitle": "Forgot Password — {site}",
   "seo.resetPasswordTitle": "Reset Password — {site}",
   "seo.verifyEmailTitle": "Verify Email — {site}",
+  "common.remove": "Remove",
+  "comparePage.failedId": "Listing #{id} couldn't load",
+  "comparePage.partialFailure": "Some listings couldn't load. Your selections are kept; try again or remove them below.",
+  "comparePage.removeFailed": "Remove listing #{id}",
+  "comparePage.unresolved": "Listings that couldn't load",
+  "home.removeSavedId": "Remove saved listing #{id}",
+  "home.savedFailedId": "Listing #{id} couldn't load",
+  "home.savedOnDevice": "Saved on this browser only. These listings don't sync to your account or send price alerts.",
+  "home.someSavedFailed": "Some saved listings couldn't load. Try again; they may still be available.",
+  "listing.loadFailed": "This listing couldn't load",
+  "listing.retryBody": "Check your connection and try again. This does not mean the listing was removed.",
+  "listing.watchlistStorageError": "Couldn't save on this device. Check browser storage permissions and try again.",
 } as const;
 
 export type EnKey = keyof typeof en;

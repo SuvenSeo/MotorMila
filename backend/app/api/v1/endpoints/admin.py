@@ -899,10 +899,10 @@ def admin_ingest_openchargemap(
     admin: dict = Depends(require_admin_access),
     db: Session = Depends(get_db),
 ):
-    """Refresh the Sri Lanka Open Charge Map cache."""
-    from app.services.openchargemap import ingest_lk_stations
+    """Refresh the Sri Lanka EV charging station cache (OCM with OSM fallback)."""
+    from app.services.openchargemap import ingest_lk_stations_best_effort
 
-    result = ingest_lk_stations(db)
+    result = ingest_lk_stations_best_effort(db)
     return {"ok": result.get("status") == "success", "triggeredBy": admin["email"], **result}
 
 

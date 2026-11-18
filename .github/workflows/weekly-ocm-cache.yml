@@ -1,15 +1,14 @@
-# Weekly Sri Lanka Open Charge Map cache refresh.
+# Weekly Sri Lanka EV charger cache refresh.
 #
-# Page views never hit the public OCM API — they read local charge_points.
-# This job pulls LK POIs into Neon so /ev-chargers stays current.
-# Skips cleanly when OPENCHARGEMAP_API_KEY is unset.
+# Page views never hit external charger APIs — they read local charge_points
+# (or charging-stations.json snapshots). Uses Open Charge Map when configured,
+# and falls back to OpenStreetMap Overpass when OPENCHARGEMAP_API_KEY is unset.
 
 name: Weekly Open Charge Map cache
 
-# Dispatch-only: the EV charger dataset is refreshed on demand rather than
-# weekly, to keep Neon compute-hours near zero while scale-to-zero handles the
-# rest. The /ev-chargers page keeps serving the last ingested POIs.
 on:
+  schedule:
+    - cron: "15 3 * * 0"
   workflow_dispatch:
 
 concurrency:
@@ -20,7 +19,24 @@ permissions:
   contents: read
 
 jobs:
+  neon-guard:
+    name: Skip when Neon transfer quota is exhausted
+    uses: ./.github/workflows/probe-neon.yml
+    secrets: inherit
+
+  neon-skipped:
+    name: Neon blocked — SQLite pipeline still refreshes EV cache
+    runs-on: ubuntu-latest
+    needs: neon-guard
+    if: ${{ needs.neon-guard.outputs.available != 'true' }}
+    steps:
+      - run: |
+          echo "Neon Free has blocked connections (monthly transfer quota)."
+          echo "Skipping Neon EV cache write; manus-to-live.yml refreshes charge_points in SQLite & R2 snapshots."
+
   refresh-ocm:
+    needs: neon-guard
+    if: ${{ needs.neon-guard.outputs.available == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -39,16 +55,11 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Ingest Sri Lanka Open Charge Map POIs
+      - name: Ingest Sri Lanka EV Charger POIs
         env:
           HOT_DATABASE_URL: ${{ secrets.HOT_DATABASE_URL }}
           COLD_DATABASE_URL: ${{ secrets.HOT_DATABASE_URL }}
           OPENCHARGEMAP_API_KEY: ${{ secrets.OPENCHARGEMAP_API_KEY }}
           ALLOW_SQLITE_FALLBACK: "false"
           ENRICHMENT_OPEN_CHARGE_MAP: "true"
-        run: |
-          if [ -z "${OPENCHARGEMAP_API_KEY}" ]; then
-            echo "OPENCHARGEMAP_API_KEY is not configured; skipping OCM ingest."
-            exit 0
-          fi
-          python scripts/ingest_openchargemap.py
+        run: python scripts/ingest_openchargemap.py
