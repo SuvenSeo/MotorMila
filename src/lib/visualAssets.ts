@@ -50,6 +50,8 @@ import pageHomeHeroCoastal from "../../assets/page_home_hero_coastal.webp";
 import pageHomeHeroCoastalSm from "../../assets/page_home_hero_coastal-sm.webp";
 import pageHomeHeroNight from "../../assets/page_home_hero_night.webp";
 import pageHomeHeroNightSm from "../../assets/page_home_hero_night-sm.webp";
+import pageHomeHeroStudio from "../../assets/page_home_hero_studio.webp";
+import pageHomeHeroStudioSm from "../../assets/page_home_hero_studio-sm.webp";
 import authShowroom from "../../assets/auth_showroom.webp";
 import page404Night from "../../assets/page_404_night.webp";
 import page404NightSm from "../../assets/page_404_night-sm.webp";
@@ -66,6 +68,8 @@ import pageHomeHeroCoastalAvif from "../../assets/page_home_hero_coastal.avif";
 import pageHomeHeroCoastalAvifSm from "../../assets/page_home_hero_coastal-sm.avif";
 import pageHomeHeroNightAvif from "../../assets/page_home_hero_night.avif";
 import pageHomeHeroNightAvifSm from "../../assets/page_home_hero_night-sm.avif";
+import pageHomeHeroStudioAvif from "../../assets/page_home_hero_studio.avif";
+import pageHomeHeroStudioAvifSm from "../../assets/page_home_hero_studio-sm.avif";
 import authShowroomAvif from "../../assets/auth_showroom.avif";
 import page404NightAvif from "../../assets/page_404_night.avif";
 import page404NightAvifSm from "../../assets/page_404_night-sm.avif";
@@ -107,6 +111,8 @@ export const visuals = {
   alt2PageFeaturesBg: pair(alt2PageFeaturesBg, alt2PageFeaturesBgSm),
   /** Home hero: blue-hour coastal road, Lotus Tower on the horizon (generated, no badges). */
   pageHomeHeroNight: pair(pageHomeHeroNight, pageHomeHeroNightSm),
+  /** Home hero: minimalist dark concrete studio bay with vehicle right-anchored. */
+  pageHomeHeroStudio: pair(pageHomeHeroStudio, pageHomeHeroStudioSm),
   /** Auth visual panel: dark rain showroom, gold strip light (generated, no badges). */
   authShowroom: pair(authShowroom, authShowroomSm),
   /** 404: a coastal road at night forking into the dark (generated, no text/plates). */
@@ -132,6 +138,7 @@ export const HERO_AVIF: Record<string, HeroImageMeta> = {
   [pageHomeHeroDusk]: { avif: pageHomeHeroDuskAvif, avifSm: pageHomeHeroDuskAvifSm, width: 1920, height: 823 },
   [pageHomeHeroCoastal]: { avif: pageHomeHeroCoastalAvif, avifSm: pageHomeHeroCoastalAvifSm, width: 1920, height: 823 },
   [pageHomeHeroNight]: { avif: pageHomeHeroNightAvif, avifSm: pageHomeHeroNightAvifSm, width: 1920, height: 815 },
+  [pageHomeHeroStudio]: { avif: pageHomeHeroStudioAvif, avifSm: pageHomeHeroStudioAvifSm, width: 1376, height: 768 },
   [authShowroom]: { avif: authShowroomAvif, avifSm: authShowroomAvifSm, width: 1152, height: 1430 },
   [page404Night]: { avif: page404NightAvif, avifSm: page404NightAvifSm, width: 1920, height: 1072 },
 };

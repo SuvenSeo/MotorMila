@@ -341,4 +341,20 @@ describe("Home page order and honesty (ui/shell)", () => {
     expect(screen.queryByText(/seller trust on every listing/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/verified signals/i)).not.toBeInTheDocument();
   });
+
+  it("renders the studio-bay hero background without the floating AI Value HUD", async () => {
+    renderDashboard();
+    await screen.findByText("FilterSidebar");
+
+    const hero = document.getElementById("overview");
+    expect(hero).not.toBeNull();
+    expect(hero!.querySelector(".cine-hud")).toBeNull();
+    expect(hero!.querySelector(".cine-title")).not.toBeNull();
+    expect(hero!.querySelector(".cine-title__accent")).not.toBeNull();
+    expect(hero!.querySelector(".cine-search")).not.toBeNull();
+    expect(hero!.querySelector(".cine-strip")).not.toBeNull();
+
+    const bgImg = hero!.querySelector<HTMLImageElement>("img.cine-hero__img");
+    expect(bgImg?.getAttribute("src")).toMatch(/page_home_hero_studio/);
+  });
 });

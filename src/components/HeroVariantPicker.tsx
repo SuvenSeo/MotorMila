@@ -17,7 +17,7 @@ export function HeroVariantPicker({
           Hero lab · local only
         </p>
         <p className="mt-1 text-caption text-muted-foreground">
-          Local preview only. Production ships <code className="text-foreground">expressway-dusk</code>.
+          Local preview only. Production ships <code className="text-foreground">studio-bay</code>.
         </p>
         <div className="mt-2 grid max-h-[42vh] gap-1.5 overflow-y-auto pr-1">
           {HERO_VARIANTS.map((v) => {

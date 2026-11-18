@@ -50,7 +50,6 @@ import { TrendingDown,
   List,
   Search,
   SlidersHorizontal,
-  Sparkles,
 } from "lucide-react";
 import type { StatsOverview } from "@/types/car";
 import {
@@ -622,7 +621,7 @@ export default function Dashboard() {
         <HeroVariantPicker activeId={heroVariant.id} onSelect={setHeroVariantId} />
       ) : null}
 
-      {/* ── HERO — "Night drive" cinematic stage ───────────────────────
+      {/* ── HERO — Cinematic stage ("Studio concrete bay") ────────────
           Layers (back → front): photo plate (pointer + scroll parallax,
           slow settle) · light bloom · scrim · grain ·
           exposure lift · letterbox curtain. All transform/opacity. */}
@@ -655,30 +654,6 @@ export default function Dashboard() {
           <div className="cine-exposure" />
           <div className="cine-letterbox cine-letterbox--top" />
           <div className="cine-letterbox cine-letterbox--bottom" />
-        </div>
-
-        {/* AI Value HUD — pinned in the sky over the car (xl+). Illustrates the
-            fair-price band every ad gets; it shows no listing's numbers. */}
-        <div aria-hidden className="cine-hud right-[5%] top-[calc(var(--nav-offset)+11%)] hidden xl:block" data-depth="10">
-          <div className="cine-hud__card cine-in" style={{ "--i": 0, "--cine-t0": "1.35s" } as CSSProperties}>
-            <div className="cine-hud__body">
-              <p className="flex items-center gap-2 text-caption font-semibold text-white">
-                <Sparkles className="h-3.5 w-3.5 text-[hsl(213_100%_72%)]" aria-hidden />
-                {t("shell.home.hud.title", "AI Value")}
-              </p>
-              <p className="mt-1 text-footnote text-white/70">{t("shell.home.hud.body", "Fair-price range on every ad")}</p>
-              <div className="cine-hud__band mt-4" style={{ "--hud-x": "88px" } as CSSProperties}>
-                <span className="cine-hud__marker" />
-              </div>
-              <div className="mt-2.5 flex justify-between text-caption text-white/60">
-                <span>{t("shell.home.hud.great", "Great price")}</span>
-                <span>{t("shell.home.hud.fair", "Fair")}</span>
-                <span>{t("shell.home.hud.high", "High")}</span>
-              </div>
-            </div>
-          </div>
-          <div className="cine-hud__lead" />
-          <div className="cine-hud__ping" />
         </div>
 
         <div className="cine-hero__content">

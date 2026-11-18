@@ -4,6 +4,7 @@ export type HeroAlign = "center" | "left" | "right";
 export type HeroTone = "light" | "dark" | "golden";
 
 export type HeroVariantId =
+  | "studio-bay"
   | "night-drive"
   | "current"
   | "colombo-night"
@@ -29,13 +30,25 @@ export type HeroVariant = {
 };
 
 /**
- * Local hero lab options — switch via floating picker or `?hero=<id>`.
- * Do not commit a final pick until the user chooses.
+ * Hero options — studio-bay ships to production; remaining variants are local dev options.
  */
 export const HERO_VARIANTS: HeroVariant[] = [
   {
+    id: "studio-bay",
+    label: "0 · Studio concrete bay",
+    blurb: "Minimalist obsidian concrete studio bay with overhead softbox light — left copy, car on the right.",
+    image: visuals.pageHomeHeroStudio,
+    // Desktop crop; keep the studio-lit car anchored cleanly on the right.
+    objectPosition: "80% 52%",
+    imageOpacity: "opacity-100",
+    align: "left",
+    tone: "dark",
+    hideSideSignals: true,
+    scrims: [],
+  },
+  {
     id: "night-drive",
-    label: "0 · Night drive",
+    label: "1 · Night drive (previous)",
     blurb: "Blue-hour coast road, Lotus Tower on the horizon — editorial left copy, car on the right.",
     image: visuals.pageHomeHeroNight,
     // Desktop crop; below lg the photo is a top band cropped by CSS (.mm-hero).
@@ -159,9 +172,9 @@ export const HERO_VARIANTS: HeroVariant[] = [
   },
 ];
 
-export const DEFAULT_HERO_VARIANT_ID: HeroVariantId = "night-drive";
+export const DEFAULT_HERO_VARIANT_ID: HeroVariantId = "studio-bay";
 
-const STORAGE_KEY = "motormila.hero_variant.v4";
+const STORAGE_KEY = "motormila.hero_variant.v5";
 
 export function isHeroVariantId(value: string | null | undefined): value is HeroVariantId {
   return Boolean(value && HERO_VARIANTS.some((v) => v.id === value));
