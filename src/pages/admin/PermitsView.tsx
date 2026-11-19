@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Crown } from "lucide-react";
 import { toast } from "sonner";
-import { AdminCard, AdminEmptyNote, AdminErrorNote } from "@/components/admin/AdminKit";
+import { AdminCard, AdminEmptyNote, AdminErrorNote, AdminHeader } from "@/components/admin/AdminKit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getAdminPermits, upsertAdminPermit } from "@/services/api";
@@ -33,10 +33,7 @@ export function PermitsView() {
 
   return (
     <>
-      <header>
-        <h1 className="font-display text-[1.875rem] leading-[1.1] tracking-[-0.01em] text-foreground sm:text-[2.25rem]">Permits</h1>
-        <p className="mt-1.5 max-w-2xl text-[0.875rem] leading-5 text-label-2">Duty-free and EV permit market prices.</p>
-      </header>
+      <AdminHeader title="Permits" description="Duty-free and EV permit market prices." />
 
       {q.error ? <AdminErrorNote message="Couldn't load permits. Try again." onRetry={() => void q.refetch()} /> : null}
 

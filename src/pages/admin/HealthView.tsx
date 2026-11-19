@@ -44,10 +44,10 @@ function Row({
         <Icon aria-hidden className="size-4" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-[0.875rem] font-medium text-foreground">{label}</p>
-        <p className="mt-0.5 truncate text-[0.8125rem] text-label-2">{detail}</p>
+        <p className="text-body font-medium text-foreground">{label}</p>
+        <p className="mt-0.5 truncate text-footnote text-label-2">{detail}</p>
       </div>
-      <span className="flex shrink-0 items-center gap-2 text-[0.8125rem] font-medium text-foreground">
+      <span className="flex shrink-0 items-center gap-2 text-footnote font-medium text-foreground">
         <AdminStatusDot tone={tone} />
         {status}
       </span>
@@ -113,8 +113,8 @@ export function HealthView() {
               onClick={() => setAutoRefresh((v) => !v)}
               aria-pressed={autoRefresh}
               className={cn(
-                "inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-[0.8125rem] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-                autoRefresh ? "border-[#0A7AFF]/30 bg-[#0A7AFF]/10 text-[#0A7AFF]" : "border-border bg-card text-label-2 hover:border-black/20",
+                "inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-footnote font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                autoRefresh ? "border-primary/30 bg-primary/10 text-primary" : "border-border bg-card text-label-2 hover:border-foreground/20",
               )}
             >
               <AdminStatusDot tone={autoRefresh ? "ok" : "idle"} className="size-2" />
@@ -204,8 +204,8 @@ export function HealthView() {
           <ul className="divide-y divide-border border-t border-border">
             {data.statsCache.map((row) => (
               <li key={row.key} className="flex items-center justify-between gap-3 px-5 py-3">
-                <span className="font-mono text-[0.8125rem] text-foreground">{row.key}</span>
-                <span className="text-[0.75rem] text-label-2" title={formatWhen(row.refreshedAt)}>
+                <span className="font-mono text-footnote text-foreground">{row.key}</span>
+                <span className="text-caption text-label-2" title={formatWhen(row.refreshedAt)}>
                   refreshed {cacheAge(row.refreshedAt)}
                 </span>
               </li>
@@ -224,16 +224,16 @@ export function HealthView() {
             {data.recentErrors.map((err) => (
               <li key={err.id} className="flex items-center gap-3 px-5 py-3">
                 <AdminStatusDot tone="bad" />
-                <span className="shrink-0 font-mono text-[0.75rem] text-foreground">{err.source}</span>
-                <span className="min-w-0 flex-1 truncate text-[0.8125rem] text-label-2">{err.errorMessage || "No error message recorded"}</span>
-                <span className="shrink-0 text-[0.75rem] text-label-2">{formatRelative(err.startedAt)}</span>
+                <span className="shrink-0 font-mono text-caption text-foreground">{err.source}</span>
+                <span className="min-w-0 flex-1 truncate text-footnote text-label-2">{err.errorMessage || "No error message recorded"}</span>
+                <span className="shrink-0 text-caption text-label-2">{formatRelative(err.startedAt)}</span>
               </li>
             ))}
           </ul>
         )}
       </AdminCard>
 
-      <p className="text-[0.75rem] leading-5 text-label-2">
+      <p className="text-caption leading-5 text-label-2">
         Listing-OG, sitemap and canonical checks are public-site checks, not backend self-checks: verify them on
         motormila.pages.dev (a listing page's OG preview, /sitemap.xml, and a page canonical) rather than from this
         panel. They are not rendered here because the backend cannot honestly check its own public edge.

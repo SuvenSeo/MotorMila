@@ -24,6 +24,7 @@ import { BRAND } from "@/lib/brand";
 import { slugifyHubSegment } from "@/lib/makeNormalization";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { useAppPreferences } from "@/lib/appPreferences";
+import { useNoindexRoute } from "@/components/RouteMeta";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
 
 const ModelPriceTimeMachine = lazyWithRetry(() =>
@@ -179,6 +180,20 @@ export default function MakeModelHub() {
   const isError = insightQuery.isError && !insightQuery.data;
 
   const recentListings = listingsQuery.data?.listings?.slice(0, 4) ?? [];
+
+  // Definitive "this make/model does not exist": the insight answered with no
+  // rows, no districts and the listing query settled empty too. A pending query
+  // or an API error is not proof of absence, so neither may noindex.
+  useNoindexRoute(
+    Boolean(makeParam && modelParam) &&
+      !isPending &&
+      !isError &&
+      insight?.total === 0 &&
+      !insight.top_districts.length &&
+      !listingsQuery.isPending &&
+      !listingsQuery.isError &&
+      !recentListings.length,
+  );
 
   const scatterPoints = useMemo(() => {
     const listings = scatterQuery.data?.listings ?? [];

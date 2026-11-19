@@ -44,13 +44,13 @@ export function DataRequestsView() {
       {openQ.error ? <AdminErrorNote message="Couldn't load request counts. Try again." onRetry={() => void openQ.refetch()} /> : null}
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
-        <AdminKpiCard label="Open requests" icon={ShieldCheck} value={openQ.isLoading ? undefined : items.length} footer={<span className="text-[0.75rem] text-label-2">Across removal and account deletion</span>} />
-        <AdminKpiCard label="Overdue" icon={ShieldCheck} value={openQ.isLoading ? undefined : overdue} footer={<span className="text-[0.75rem] text-label-2">Past their due date, still open</span>} />
-        <AdminKpiCard label="Due within 7 days" icon={ShieldCheck} value={openQ.isLoading ? undefined : dueSoon} footer={<span className="text-[0.75rem] text-label-2">Handle these first</span>} />
+        <AdminKpiCard label="Open requests" icon={ShieldCheck} value={openQ.isLoading ? undefined : items.length} footer={<span className="text-caption text-label-2">Across removal and account deletion</span>} />
+        <AdminKpiCard label="Overdue" icon={ShieldCheck} value={openQ.isLoading ? undefined : overdue} footer={<span className="text-caption text-label-2">Past their due date, still open</span>} />
+        <AdminKpiCard label="Due within 7 days" icon={ShieldCheck} value={openQ.isLoading ? undefined : dueSoon} footer={<span className="text-caption text-label-2">Handle these first</span>} />
       </div>
 
       <AdminCard title="How the countdown works" description="Each request carries a due date; the queue flags anything overdue.">
-        <p className="px-5 pb-5 text-[0.8125rem] leading-5 text-label-2">
+        <p className="px-5 pb-5 text-footnote leading-5 text-label-2">
           {`Today is ${formatDay(new Date().toISOString().slice(0, 10))}. `}
           A request received today should be handled within {GUIDANCE_DAYS} days. The queue below is sorted oldest
           deadline first, so the most urgent requests are always at the top. Resolution notes are recorded on the

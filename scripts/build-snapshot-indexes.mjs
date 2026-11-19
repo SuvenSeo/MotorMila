@@ -46,12 +46,32 @@ async function loadTsModule(rel) {
     return await import(file.href);
   } catch {
     try {
-      const { transform } = await import("esbuild");
-      const source = await fs.readFile(fileURLToPath(file), "utf8");
-      const { code } = await transform(source, { loader: "ts", format: "esm" });
+      // districts.ts imports "@/lib/dataSanity", so the bare transform below
+      // cannot resolve it. Bundle with the app's "@" alias first: an unresolved
+      // import used to leave SL_DISTRICT_COORDS empty and silently produce no
+      // district routes at all.
+      const { build } = await import("esbuild");
+      const srcRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "src");
+      const bundled = await build({
+        entryPoints: [fileURLToPath(file)],
+        bundle: true,
+        write: false,
+        format: "esm",
+        platform: "node",
+        alias: { "@": srcRoot },
+      });
+      const code = bundled.outputFiles[0].text;
       return await import(`data:text/javascript;base64,${Buffer.from(code).toString("base64")}`);
     } catch {
-      return null;
+      try {
+        const { transform } = await import("esbuild");
+        const source = await fs.readFile(fileURLToPath(file), "utf8");
+        const { code } = await transform(source, { loader: "ts", format: "esm" });
+        return await import(`data:text/javascript;base64,${Buffer.from(code).toString("base64")}`);
+      } catch (err) {
+        console.warn(`[idx] could not load ${rel}; using the naive fallback (${err?.message || err})`);
+        return null;
+      }
     }
   }
 }
@@ -82,6 +102,12 @@ export const SHARD_SIZE = 250;
 const MODEL_ITEM_CAP = 600;
 const MAKE_ITEM_CAP = 300;
 const DISTRICT_ITEM_CAP = 300;
+// Year hub shells (/cars/<make>/<model>/<year>) get a page each, so thin years
+// stay out of the index: 5 listings is enough for a real year page, and the cap
+// keeps the prerender at a few thousand extra shells instead of tens of
+// thousands of one-listing pages.
+export const MIN_YEAR_ROUTE_LISTINGS = 5;
+export const YEAR_ROUTE_CAP = 3000;
 const LATEST_CAP = 600;
 const SEARCH_CAP = 4000;
 const SITEMAP_URLS_PER_FILE = 45000;
@@ -181,6 +207,80 @@ async function writeJson(file, payload) {
   await fs.writeFile(file, JSON.stringify(payload));
 }
 
+async function readSummary(dir, name) {
+  try {
+    return await readJson(path.join(dir, name));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * District hub routes for /locations/<slug>. The district map the app renders
+ * is fed by the snapshot's own district summaries, not by row-level district
+ * strings (which are often towns, aliases or junk), so the SEO tier is derived
+ * from the same summaries: district-velocity.json carries the listing counts,
+ * district-prices.json the medians. Catalogue totals win when the full index
+ * build ran, because they count every row rather than the sampled points.
+ */
+async function districtRoutes(dir, catalogueTotals = new Map()) {
+  const [prices, velocity] = await Promise.all([readSummary(dir, "district-prices.json"), readSummary(dir, "district-velocity.json")]);
+  const counts = new Map();
+  const medians = new Map();
+  const isDistrict = (name) => Boolean(name && Object.prototype.hasOwnProperty.call(SL_DISTRICT_COORDS, name) && name !== "Sri Lanka");
+  for (const point of Array.isArray(velocity?.points) ? velocity.points : []) {
+    const district = normalizeDistrictName(point.district);
+    if (!isDistrict(district)) continue;
+    counts.set(district, Math.max(counts.get(district) || 0, Number(point.listing_count) || 0));
+  }
+  for (const point of Array.isArray(prices?.points) ? prices.points : []) {
+    const district = normalizeDistrictName(point.district);
+    if (!isDistrict(district)) continue;
+    if (!(counts.get(district) > 0)) counts.set(district, Number(point.count) || 0);
+    const median = Number(point.median_price_lkr);
+    if (Number.isFinite(median) && median > 0) medians.set(district, Math.round(median));
+  }
+  for (const [district, count] of catalogueTotals) if (isDistrict(district) && count > 0) counts.set(district, count);
+  return [...counts.entries()]
+    .filter(([, count]) => count > 0)
+    .map(([district, count]) => ({ path: `/locations/${slugify(district)}`, district, count, median_price_lkr: medians.get(district) ?? null }))
+    .sort((a, b) => b.count - a.count);
+}
+
+/**
+ * Year hub routes for /cars/<make>/<model>/<year>. Years come from the
+ * catalogue rows (they are the only place a per-year count exists), so this is
+ * empty without one.
+ */
+function yearRoutes(models, cap = YEAR_ROUTE_CAP) {
+  const rows = [];
+  for (const mo of models.values()) {
+    for (const [year, yr] of mo.years) {
+      if (yr.count < MIN_YEAR_ROUTE_LISTINGS) continue;
+      rows.push({
+        path: `/cars/${slugify(mo.make)}/${slugify(mo.model)}/${year}`,
+        make: mo.make,
+        model: mo.model,
+        year,
+        count: yr.count,
+        avg_price_lkr: yr.priced ? Math.round(yr.priceSum / yr.priced) : null,
+      });
+    }
+  }
+  rows.sort((a, b) => b.count - a.count);
+  return rows.slice(0, cap);
+}
+
+/** Refresh idx/routes.json's district tier when no catalogue is available. */
+async function refreshDistrictRoutes(dir) {
+  const routesFile = path.join(dir, "idx", "routes.json");
+  const previous = await readSummary(dir, path.join("idx", "routes.json"));
+  const districts = await districtRoutes(dir);
+  if (!districts.length) return;
+  await writeJson(routesFile, { makes: previous?.makes || [], models: previous?.models || [], years: previous?.years || [], districts });
+  console.log(`[idx] routes.json district tier refreshed without a catalogue: ${districts.length} districts`);
+}
+
 async function* iterateCatalog(dir) {
   // Freshest rows first: the live-market overlay lists ads newer than the
   // weekly catalogue; first occurrence of an id wins.
@@ -225,6 +325,9 @@ function urlset(entries) {
 export async function buildIndexes(dir = SNAPSHOT_DIR, { publicDir = PUBLIC_DIR, sitemaps = WRITE_SITEMAPS } = {}) {
   if (!existsSync(path.join(dir, "listing-catalog.json"))) {
     console.warn(`[idx] no listing-catalog.json in ${dir}; skipping index build`);
+    // The district tier needs no catalogue: its counts live in the snapshot's
+    // district summaries, so keep /locations shells buildable on any machine.
+    await refreshDistrictRoutes(dir);
     return null;
   }
   const started = Date.now();
@@ -301,12 +404,21 @@ export async function buildIndexes(dir = SNAPSHOT_DIR, { publicDir = PUBLIC_DIR,
         const key = `${makeKey}/${modelKey}`;
         let mo = models.get(key);
         if (!mo) {
-          models.set(key, (mo = { make, model, makeKey, modelKey, total: 0, items: [], comps: [], prices: [], lastmod: "" }));
+          models.set(key, (mo = { make, model, makeKey, modelKey, total: 0, items: [], comps: [], prices: [], years: new Map(), lastmod: "" }));
           m.models.set(modelKey, mo);
         }
         mo.total += 1;
         const y = Number(row.year) || 0;
         if (y > (mo.maxYear || 0) && y <= new Date().getUTCFullYear() + 1) mo.maxYear = y;
+        if (y > 1970 && y <= new Date().getUTCFullYear() + 1) {
+          let yr = mo.years.get(y);
+          if (!yr) mo.years.set(y, (yr = { count: 0, priceSum: 0, priced: 0 }));
+          yr.count += 1;
+          if (price !== null) {
+            yr.priceSum += price;
+            yr.priced += 1;
+          }
+        }
         if (mo.items.length < MODEL_ITEM_CAP * 2) mo.items.push(json);
         if (first > mo.lastmod) mo.lastmod = first;
         if (price !== null) {
@@ -365,7 +477,7 @@ export async function buildIndexes(dir = SNAPSHOT_DIR, { publicDir = PUBLIC_DIR,
     files += 1;
   }
 
-  const routes = { makes: [], models: [], districts: [] };
+  const routes = { makes: [], models: [], years: [], districts: [] };
   const searchRows = [];
   for (const mo of models.values()) {
     const prices = mo.prices;
@@ -421,8 +533,9 @@ export async function buildIndexes(dir = SNAPSHOT_DIR, { publicDir = PUBLIC_DIR,
     await writeJson(path.join(tmpDir, "districts", `${dk}.json`), payload);
     files += 1;
     districtRows.push({ district: d.district, listing_count: d.total, new_7d_count: d.new7d, median_price_lkr: payload.median_price_lkr });
-    if (Object.prototype.hasOwnProperty.call(SL_DISTRICT_COORDS, d.district)) routes.districts.push({ path: `/locations/${slugify(d.district)}`, district: d.district, count: d.total });
   }
+  routes.years = yearRoutes(models);
+  routes.districts = await districtRoutes(dir, new Map([...districts.values()].map((d) => [d.district, d.total])));
 
   searchRows.sort((a, b) => b[2] - a[2]);
   await writeJson(path.join(tmpDir, "search.json"), { fields: ["make", "model", "count", "max_year", "median_price_lkr"], rows: searchRows.slice(0, SEARCH_CAP) });
@@ -447,14 +560,17 @@ export async function buildIndexes(dir = SNAPSHOT_DIR, { publicDir = PUBLIC_DIR,
   routes.models.sort((a, b) => b.count - a.count);
   routes.makes.sort((a, b) => b.count - a.count);
   routes.districts.sort((a, b) => b.count - a.count);
+  console.log(
+    `[idx] hub routes: ${routes.makes.length} makes, ${routes.models.length} models, ${routes.years.length} year pages (>= ${MIN_YEAR_ROUTE_LISTINGS} listings each, cap ${YEAR_ROUTE_CAP}), ${routes.districts.length} districts`,
+  );
   await writeJson(path.join(tmpDir, "routes.json"), routes);
   const manifest = {
     version: INDEX_VERSION,
     shard_size: SHARD_SIZE,
     listing_count: total,
     newest_first_seen_at: newestIso || null,
-    caps: { model_items: MODEL_ITEM_CAP, make_items: MAKE_ITEM_CAP, district_items: DISTRICT_ITEM_CAP, latest: LATEST_CAP },
-    counts: { shards: shards.size, models: models.size, makes: makes.size, districts: districts.size, files: files + 7 },
+    caps: { model_items: MODEL_ITEM_CAP, make_items: MAKE_ITEM_CAP, district_items: DISTRICT_ITEM_CAP, latest: LATEST_CAP, year_routes: YEAR_ROUTE_CAP, year_min_listings: MIN_YEAR_ROUTE_LISTINGS },
+    counts: { shards: shards.size, models: models.size, makes: makes.size, years: routes.years.length, districts: districts.size, files: files + 7 },
     generated_at: new Date().toISOString(),
   };
   await writeJson(path.join(tmpDir, "manifest.json"), manifest);
@@ -468,6 +584,7 @@ export async function buildIndexes(dir = SNAPSHOT_DIR, { publicDir = PUBLIC_DIR,
     const hubs = [
       ...routes.makes.map((r) => ({ loc: `${SITE_ORIGIN}${r.path}`, lastmod: today })),
       ...routes.models.map((r) => ({ loc: `${SITE_ORIGIN}${r.path}`, lastmod: r.lastmod || today })),
+      ...routes.years.map((r) => ({ loc: `${SITE_ORIGIN}${r.path}`, lastmod: today })),
       ...routes.districts.map((r) => ({ loc: `${SITE_ORIGIN}${r.path}`, lastmod: today })),
     ];
     await fs.mkdir(publicDir, { recursive: true });

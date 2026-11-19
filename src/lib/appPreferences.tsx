@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import {
-  EN_DICTIONARY,
+  ENGLISH,
   LOCALE_TAGS,
   getDictionary,
   interpolate,
@@ -187,8 +187,8 @@ export function AppPreferencesProvider({ children }: { children: React.ReactNode
 
   const t = useMemo(() => {
     return (key: string, fallback?: string, vars?: TranslateVars) => {
-      const selected = (getDictionary(language) ?? EN_DICTIONARY)[key];
-      const english = EN_DICTIONARY[key];
+      const selected = (getDictionary(language) ?? ENGLISH)[key];
+      const english = ENGLISH[key];
       const raw = selected || english || fallback || key;
       return interpolate(raw, vars);
     };
@@ -218,7 +218,7 @@ const FALLBACK_PREFERENCES: AppPreferencesContextValue = {
   setLanguage: () => {},
   localeTag: LOCALE_TAGS.en,
   t: (key, fallback, vars) => {
-    const raw = EN_DICTIONARY[key] || fallback || key;
+    const raw = ENGLISH[key] || fallback || key;
     return interpolate(raw, vars);
   },
 };

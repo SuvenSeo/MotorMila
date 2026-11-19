@@ -49,23 +49,23 @@ export function LeadsView() {
                       type="button"
                       onClick={() => setOpenId(isOpen ? null : lead.id)}
                       aria-expanded={isOpen}
-                      className="flex w-full items-center justify-between gap-3 px-5 py-3 text-left hover:bg-black/[0.02]"
+                      className="flex w-full items-center justify-between gap-3 px-5 py-3 text-left hover:bg-surface-2"
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-[0.8125rem] font-medium text-foreground">
+                        <p className="truncate text-footnote font-medium text-foreground">
                           {lead.kind} · {lead.name || "—"} <span className="font-normal text-label-2">· {lead.status}</span>
                         </p>
-                        <p className="truncate text-[0.75rem] text-label-2">
+                        <p className="truncate text-caption text-label-2">
                           {lead.vehicle || "—"} · {formatRelative(lead.created_at)}
                         </p>
                       </div>
-                      <span className={cn("shrink-0 text-[0.75rem] text-label-2", isOpen && "font-semibold text-foreground")}>
+                      <span className={cn("shrink-0 text-caption text-label-2", isOpen && "font-semibold text-foreground")}>
                         {isOpen ? "Close" : "Detail"}
                       </span>
                     </button>
                     {isOpen ? (
                       <div className="border-t border-border bg-surface-2/60 px-5 py-4">
-                        <dl className="grid gap-2 text-[0.8125rem] sm:grid-cols-2">
+                        <dl className="grid gap-2 text-footnote sm:grid-cols-2">
                           <div><dt className="text-caption text-label-2">Name</dt><dd className="font-medium text-foreground">{lead.name || "—"}</dd></div>
                           <div><dt className="text-caption text-label-2">Phone</dt><dd className="font-medium text-foreground">{lead.phone || "—"}</dd></div>
                           <div><dt className="text-caption text-label-2">Email</dt><dd className="font-medium text-foreground">{lead.email || "—"}</dd></div>

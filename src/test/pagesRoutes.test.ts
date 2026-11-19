@@ -42,8 +42,11 @@ const prerendered = new Set(
 );
 
 // Hub tiers are shelled per URL from the snapshot index at build time
-// (sitemap-hubs.xml has one line per shell), not listed in STATIC_ROUTES.
-const isPrerenderedHub = (url: string) => /^\/cars\/[^/]+(\/[^/]+)?$/.test(url);
+// (sitemap-hubs.xml has one line per shell), not listed in STATIC_ROUTES:
+//   /cars/<make>, /cars/<make>/<model>, /cars/<make>/<model>/<year>
+//   /locations/<district>
+const isPrerenderedHub = (url: string) =>
+  /^\/cars\/[^/]+(\/[^/]+(\/\d{4})?)?$/.test(url) || /^\/locations\/[^/]+$/.test(url);
 
 // Line endings are the checkout's, not the file's: a CRLF working copy must
 // not make a header assertion fail.
@@ -122,14 +125,23 @@ describe("Pages SPA routing", () => {
   });
 
   it("never lets a _redirects 200 rule shadow a prerendered shell", () => {
-    const hubSamples = ["/cars/nissan", "/cars/nissan/caravan"];
+    // One sample per hub tier: make, model, year, district.
+    const hubSamples = ["/cars/nissan", "/cars/nissan/caravan", "/cars/nissan/caravan/2018", "/locations/colombo"];
     for (const r of cfRedirects.filter((x) => x.status === 200 && x.to === "/")) {
       const rule = sourceToRegex(r.from.replace(/\*$/, ":splat*"));
       for (const shell of prerendered) expect(rule.test(shell)).toBe(false);
-      // A 200 rule over a hub tier would serve every one of the 1,509 hub
-      // URLs the home <head>, canonical "/" included.
+      // A 200 rule over a hub tier would serve the home <head>, canonical "/"
+      // included, on every one of that tier's URLs.
       for (const hub of hubSamples) expect(rule.test(hub)).toBe(false);
     }
+  });
+
+  it("treats every hub tier as shelled rather than SPA fallback", () => {
+    for (const url of ["/cars/toyota", "/cars/toyota/aqua", "/cars/toyota/aqua/2018", "/locations/colombo"]) {
+      expect(isPrerenderedHub(url)).toBe(true);
+    }
+    expect(isPrerenderedHub("/cars/toyota/aqua/2018/extra")).toBe(false);
+    expect(isPrerenderedHub("/locations")).toBe(false);
   });
 
   it("treats unknown paths as 404/noindex", () => {

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { BRAND } from "@/lib/brand";
@@ -42,6 +42,49 @@ function setCanonical(href: string) {
     document.head.appendChild(link);
   }
   link.setAttribute("href", href);
+}
+
+/**
+ * Soft-404 handling for id/slug routes.
+ *
+ * public/_redirects serves /listing/:id, /cars/:make/:model(/:year),
+ * /locations/:district, /compare/:slug and /official-pulse/* from the SPA shell
+ * with HTTP 200, and that shell's <meta name="robots"> says index,follow.
+ * Cloudflare Pages cannot know an id or slug is dead, so isKnownRoutePath()
+ * alone made every dead id infinitely indexable. Pages that get a definitive
+ * "this entity does not exist" answer claim a noindex here; the static shell
+ * stays indexable, and this client-side flip is what keeps the soft-404 out of
+ * the index. Loading and API-error states must never claim it.
+ *
+ * RouteMeta owns the base directive (unknown route / noindex path); claims are
+ * counted, so several components can claim without fighting and the value is
+ * recomputed from the whole set on every change.
+ */
+let baseRobots = "index, follow";
+const noindexClaims = new Set<symbol>();
+
+function applyRobots() {
+  setMeta("robots", noindexClaims.size > 0 ? "noindex, follow" : baseRobots);
+}
+
+function setBaseRobots(directive: string) {
+  baseRobots = directive;
+  applyRobots();
+}
+
+/** Noindex the current route while `active`, restoring the route's own directive when it flips off or the caller unmounts. */
+export function useNoindexRoute(active: boolean) {
+  const claim = useRef(Symbol("noindex-route"));
+  useLayoutEffect(() => {
+    const key = claim.current;
+    if (active) noindexClaims.add(key);
+    else noindexClaims.delete(key);
+    applyRobots();
+    return () => {
+      noindexClaims.delete(key);
+      applyRobots();
+    };
+  }, [active]);
 }
 
 function setJsonLd(data: unknown) {
@@ -568,7 +611,7 @@ export function RouteMeta() {
         description: defaultDescription,
       };
     }
-    setMeta("robots", unknownRoute || isNoindexPath(pathname) ? "noindex, nofollow" : "index, follow");
+    setBaseRobots(unknownRoute || isNoindexPath(pathname) ? "noindex, nofollow" : "index, follow");
 
     document.title = meta.title;
     setMeta("description", meta.description);

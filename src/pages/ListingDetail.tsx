@@ -30,6 +30,7 @@ import { listingVin } from '@/lib/dataSanity';
 import { ListingGeoCard } from '@/components/ListingGeoCard';
 import { FmvExplainer } from '@/components/FmvExplainer';
 import { useCompareTray } from '@/lib/compareTray';
+import { useNoindexRoute } from '@/components/RouteMeta';
 import { useWatchlist } from '@/lib/watchlist';
 import { DealLadder } from '@/components/DealLadder';
 import { formatListedDateTime } from '@/lib/listing-card-meta';
@@ -161,6 +162,11 @@ export default function ListingDetail() {
   // and CSS hid one: render only the one this layout shows.
   const isDesktop = useMediaQuery('(min-width: 1024px)', true);
   const isMobileFlow = !isDesktop || typeof window === 'undefined' || typeof window.matchMedia !== 'function';
+
+  // A 404'd id is a soft-404: the static shell served 200 + index,follow for
+  // /listing/:id, so drop it from the index once "not found" is definitive.
+  // Loading and loadError are not proof of anything, so they stay indexable.
+  useNoindexRoute(!listing && !loading && !loadError);
 
   const handleWatchlistToggle = () => {
     if (!listing) return;

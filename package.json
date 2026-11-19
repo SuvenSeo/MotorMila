@@ -17,6 +17,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "optimize:assets": "node scripts/optimize-visual-assets.mjs",
     "i18n:check": "node scripts/i18n-check.mjs",
+    "i18n:chunks": "node scripts/build-locale-chunks.mjs",
     "i18n:untranslated": "node scripts/i18n-untranslated.mjs"
   },
   "dependencies": {

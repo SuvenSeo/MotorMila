@@ -23,6 +23,7 @@ import { BRAND } from "@/lib/brand";
 import { slugifyHubSegment } from "@/lib/makeNormalization";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { useAppPreferences } from "@/lib/appPreferences";
+import { useNoindexRoute } from "@/components/RouteMeta";
 
 const SITE = BRAND.siteName;
 const ORIGIN = BRAND.origin;
@@ -129,6 +130,18 @@ export default function MakeHub() {
     `/cars/${encodeURIComponent(makeSlug)}/${encodeURIComponent(slugifyHubSegment(model))}`;
   const nothingYet =
     !isPending && !isError && popularModels.length === 0 && allModels.length === 0 && !(insight?.top_districts?.length);
+  // Definitive "this make does not exist": the insight answered with nothing and
+  // every settled listing/model query agreed. A pending query or an API error is
+  // not proof, so neither may noindex a real make.
+  useNoindexRoute(
+    Boolean(makeParam) &&
+      nothingYet &&
+      insight?.total === 0 &&
+      !listingsQuery.isPending &&
+      !listingsQuery.isError &&
+      !recentListings.length &&
+      !fallbackModelsQuery.isPending,
+  );
 
   const stats = [
     {

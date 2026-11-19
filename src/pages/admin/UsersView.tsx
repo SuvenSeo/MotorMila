@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   AdminEmptyNote,
   AdminErrorNote,
+  AdminHeader,
   AdminSearchField,
   adminCardClass,
   adminTdClass,
@@ -60,20 +61,18 @@ export function UsersView() {
 
   return (
     <>
-      <header>
-        <h1 className="font-display text-[1.875rem] leading-[1.1] tracking-[-0.01em] text-foreground sm:text-[2.25rem]">Users</h1>
-        <p className="mt-1.5 max-w-2xl text-[0.875rem] leading-5 text-label-2">
-          Search, filter, upgrade, demote, or disable seats. Changes invalidate their sessions.
-        </p>
-      </header>
+      <AdminHeader
+        title="Users"
+        description="Search, filter, upgrade, demote, or disable seats. Changes invalidate their sessions."
+      />
 
       {q.error ? <AdminErrorNote message="Couldn't load users. Try again." onRetry={() => void q.refetch()} /> : null}
 
       <div className={adminCardClass}>
         <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border px-6 py-5">
           <div>
-            <h2 className="font-display text-callout font-semibold">Users & plans</h2>
-            <p className="mt-1 text-caption text-label-2">{q.data ? `${q.data.total} in all` : "Loading…"}</p>
+            <h2 className="text-body font-semibold text-foreground">Users &amp; plans</h2>
+            <p className="mt-0.5 text-caption text-label-2">{q.data ? `${q.data.total} in all` : "Loading…"}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <AdminSearchField value={query} onChange={setQuery} placeholder="Search email or name" label="Search users" className="w-[220px]" />

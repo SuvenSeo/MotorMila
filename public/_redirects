@@ -36,12 +36,13 @@
 /login /sign-in 301
 /signin /sign-in 301
 /signup /sign-up 301
-# Year and district hubs have no prerendered shell yet (the writer only emits
-# make + model), so they keep the SPA fallback and the app sets title/canonical
-# after hydration. Add shells for them and delete these two lines to fix the
-# raw-HTML metadata for those tiers.
-/cars/:make/:model/:year / 200
-/locations/:district / 200
+# Year and district hubs now have prerendered shells too: the index builder
+# emits routes.years (/cars/<make>/<model>/<year> with >= 5 listings, capped)
+# and routes.districts (/locations/<slug> from the district summaries), and
+# scripts/prerender-seo.mjs writes dist/cars/<make>/<model>/<year>.html and
+# dist/locations/<district>.html. Those two 200 rules are therefore gone on
+# purpose — leaving them would serve the home <head>, canonical "/" included,
+# on every year and district URL. /compare/:slug still has no shell.
 /compare/:slug / 200
 # /listing/:id was a Pages Function (bot OG split) until 31 Oct 2026 — removed because a bot crawl of 107k listing URLs burned the 100k/day Workers quota. Serve the SPA shell statically instead; bots and humans both get index.html, no Function runs.
 /listing/:id / 200
@@ -54,6 +55,9 @@
 # because _redirects wins over static assets — every hub URL served the home
 # <head> with canonical="/". The shells exist (dist/cars/<make>.html,
 # dist/cars/<make>/<model>.html), so those two rules are gone on purpose.
+# Their outer tiers followed: /cars/:make/:model/:year and /locations/:district
+# are shelled now too (dist/cars/<make>/<model>/<year>.html,
+# dist/locations/<district>.html), so no 200 rule may cover them either.
 # EXCEPTION 12 Nov 2026 (Suven's word): ONE Function is back — the gallery
 # image proxy at /img (functions/img.ts). It exists so the MorphSlider WebGL
 # textures load (marketplaces send no CORS); it is NOT a general proxy — it

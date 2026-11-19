@@ -6,6 +6,7 @@ import {
   AdminCard,
   AdminEmptyNote,
   AdminErrorNote,
+  AdminHeader,
 } from "@/components/admin/AdminKit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,10 +68,7 @@ export function InvitesView() {
 
   return (
     <>
-      <header>
-        <h1 className="font-display text-[1.875rem] leading-[1.1] tracking-[-0.01em] text-foreground sm:text-[2.25rem]">Invites</h1>
-        <p className="mt-1.5 max-w-2xl text-[0.875rem] leading-5 text-label-2">Only invited addresses can create an account.</p>
-      </header>
+      <AdminHeader title="Invites" description="Only invited addresses can create an account." />
 
       {q.error ? <AdminErrorNote message="Couldn't load invites. Try again." onRetry={() => void q.refetch()} /> : null}
 
@@ -118,7 +116,7 @@ export function InvitesView() {
             </Button>
           </form>
           {lastInviteLink ? (
-            <div className="mx-5 mb-5 rounded-2xl border border-primary/25 bg-primary/5 p-4">
+            <div className="mx-5 mb-5 rounded-card border border-primary/25 bg-primary/5 p-4">
               <p className="text-footnote font-semibold text-primary">Share this link</p>
               <p className="mt-2 break-all text-caption font-medium leading-relaxed">{lastInviteLink}</p>
               <Button type="button" variant="outline" size="sm" className="mt-3 h-9 gap-1.5 rounded-full" onClick={() => void copyLink(lastInviteLink)}>
@@ -138,7 +136,7 @@ export function InvitesView() {
                 pending.map((invite: AdminInvite) => {
                   const link = `${window.location.origin}${invite.signupPath}`;
                   return (
-                    <div key={invite.id} className="rounded-xl border border-border bg-surface-2 p-4">
+                    <div key={invite.id} className="rounded-control border border-border bg-surface-2 p-4">
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <p className="text-body font-semibold">{invite.email}</p>
@@ -165,7 +163,7 @@ export function InvitesView() {
           <AdminCard title="Invite history">
             <div className="max-h-[320px] space-y-2 overflow-y-auto px-5 pb-5">
               {invites.map((invite) => (
-                <div key={`hist-${invite.id}`} className="flex items-center justify-between gap-3 rounded-xl border border-border/70 px-3 py-2 text-caption">
+                <div key={`hist-${invite.id}`} className="flex items-center justify-between gap-3 rounded-control border border-border/70 px-3 py-2 text-caption">
                   <span className="truncate font-medium">{invite.email}</span>
                   <span className="shrink-0 font-medium text-label-2">
                     {invite.status} · {invite.plan}

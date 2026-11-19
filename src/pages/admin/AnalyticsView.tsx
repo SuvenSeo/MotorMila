@@ -4,6 +4,7 @@ import {
   AdminCard,
   AdminEmptyNote,
   AdminErrorNote,
+  AdminHeader,
   AdminKpiCard,
   AdminSkeleton,
   AdminStatBars,
@@ -34,12 +35,10 @@ export function AnalyticsView() {
 
   return (
     <>
-      <header>
-        <h1 className="font-display text-title1 leading-[1.1] tracking-[-0.01em] text-foreground sm:text-large">Analytics</h1>
-        <p className="mt-1.5 max-w-2xl text-body leading-5 text-label-2">
-          Listings, users, alerts, signals and scrape outcomes across the platform.
-        </p>
-      </header>
+      <AdminHeader
+        title="Analytics"
+        description="Listings, users, alerts, signals and scrape outcomes across the platform."
+      />
 
       {q.error && !a ? (
         <AdminErrorNote message="Couldn't load analytics. Try again." onRetry={() => void q.refetch()} />

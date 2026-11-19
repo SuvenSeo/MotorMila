@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import {
   AdminCard,
   AdminErrorNote,
+  AdminHeader,
 } from "@/components/admin/AdminKit";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -96,12 +97,10 @@ export function SystemView() {
 
   return (
     <>
-      <header>
-        <h1 className="font-display text-title1 leading-[1.1] tracking-[-0.01em] text-foreground sm:text-large">System</h1>
-        <p className="mt-1.5 max-w-2xl text-body leading-5 text-label-2">
-          Controls, not status — for live status see Health. Keys stay on the backend.
-        </p>
-      </header>
+      <AdminHeader
+        title="System"
+        description="Controls, not status — for live status see Health. Keys stay on the backend."
+      />
 
       {q.error ? <AdminErrorNote message="Couldn't load system info. Try again." onRetry={() => void q.refetch()} /> : null}
 

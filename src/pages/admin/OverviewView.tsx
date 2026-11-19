@@ -7,14 +7,13 @@ import {
   AdminDelta,
   AdminEmptyNote,
   AdminErrorNote,
+  AdminHeader,
   AdminKpiCard,
   AdminListSkeleton,
   AdminShare,
   AdminSkeleton,
   AdminStatBars,
-  ADMIN_BLUE,
   adminCardClass,
-  adminGreeting,
   capitalise,
   formatCount,
   formatDay,
@@ -49,23 +48,23 @@ function SignupsChart({ daily }: { daily: Array<{ day: string; count: number }> 
       <svg viewBox={`0 0 ${W} ${H}`} className="h-56 w-full sm:h-64" preserveAspectRatio="none">
         <defs>
           <linearGradient id="admin-signups-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={ADMIN_BLUE} stopOpacity="0.22" />
-            <stop offset="100%" stopColor={ADMIN_BLUE} stopOpacity="0" />
+            <stop offset="0%" className="text-brand" style={{ stopColor: "currentColor", stopOpacity: 0.22 }} />
+            <stop offset="100%" className="text-brand" style={{ stopColor: "currentColor", stopOpacity: 0 }} />
           </linearGradient>
         </defs>
         {[0, 1, 2, 3].map((g) => {
           const gy = PAD_T + (g / 3) * (H - PAD_T - PAD_B);
-          return <line key={g} x1={PAD_L} x2={W - PAD_R} y1={gy} y2={gy} stroke="#e7e7e1" strokeDasharray="3 3" strokeWidth="1" />;
+          return <line key={g} x1={PAD_L} x2={W - PAD_R} y1={gy} y2={gy} className="stroke-border" strokeDasharray="3 3" strokeWidth="1" />;
         })}
         {area ? <path d={area} fill="url(#admin-signups-fill)" /> : null}
-        {points ? <polyline points={points} fill="none" stroke={ADMIN_BLUE} strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" /> : null}
+        {points ? <polyline points={points} fill="none" className="stroke-brand" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" /> : null}
         {labels.map((i) => (
-          <text key={i} x={x(i)} y={H - 8} textAnchor="middle" fontSize="11" fill="#62635f">
+          <text key={i} x={x(i)} y={H - 8} textAnchor="middle" fontSize="12" className="fill-label-2">
             {formatDay(daily[i]?.day)}
           </text>
         ))}
         {[0, Math.ceil(max / 2), max].map((v) => (
-          <text key={v} x={PAD_L - 6} y={y(v) + 4} textAnchor="end" fontSize="11" fill="#62635f">
+          <text key={v} x={PAD_L - 6} y={y(v) + 4} textAnchor="end" fontSize="12" className="fill-label-2">
             {v}
           </text>
         ))}
@@ -117,10 +116,7 @@ export function OverviewView() {
 
   return (
     <>
-      <header className="flex flex-col gap-1.5">
-        <p className="text-footnote font-medium text-label-2">{adminGreeting()}</p>
-        <h1 className="font-display text-title1 leading-[1.1] tracking-[-0.01em] text-foreground sm:text-large">Overview</h1>
-      </header>
+      <AdminHeader title="Overview" greeting />
 
       {overviewQuery.error && !data ? (
         <AdminErrorNote message="Couldn't load the overview. Try again." onRetry={() => void overviewQuery.refetch()} />
@@ -142,21 +138,21 @@ export function OverviewView() {
               label="Live listings"
               icon={Car}
               value={data.listings.live}
-              footer={<span className="text-[0.75rem] text-label-2">{formatCount(data.listings.total)} total scraped</span>}
+              footer={<span className="text-caption text-label-2">{formatCount(data.listings.total)} total scraped</span>}
             />
             <AdminKpiCard
               label="Pending moderation"
               icon={ShieldCheck}
               value={data.moderation?.pending}
               to="/motormila/admin/moderation"
-              footer={<span className="text-[0.75rem] text-label-2">User ads waiting for review</span>}
+              footer={<span className="text-caption text-label-2">User ads waiting for review</span>}
             />
             <AdminKpiCard
               label="Open feedback"
               icon={MessageSquareText}
               value={data.feedback.open}
               to="/motormila/admin/feedback"
-              footer={<span className="text-[0.75rem] text-label-2">{formatCount(data.users.admins)} admins on the platform</span>}
+              footer={<span className="text-caption text-label-2">{formatCount(data.users.admins)} admins on the platform</span>}
             />
           </>
         ) : (
@@ -173,11 +169,11 @@ export function OverviewView() {
       <section className={cn(adminCardClass, "px-5 pt-5 pb-4 sm:px-6")} aria-labelledby="signups-title">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h2 id="signups-title" className="text-[0.9375rem] font-semibold tracking-[-0.01em] text-foreground">Sign-ups</h2>
-            <p className="mt-0.5 text-[0.75rem] text-label-2">New accounts per day, last {period} days</p>
+            <h2 id="signups-title" className="text-body font-semibold text-foreground">Sign-ups</h2>
+            <p className="mt-0.5 text-caption text-label-2">New accounts per day, last {period} days</p>
             {data ? (
               <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <span className="font-display text-[2rem] leading-none tracking-[-0.02em] text-foreground tabular-nums">{periodTotal.toLocaleString("en-GB")}</span>
+                <span className="font-display text-title2 font-semibold text-foreground tabular-nums">{periodTotal.toLocaleString("en-GB")}</span>
                 <AdminDelta current={periodTotal} previous={prevTotal} label={`vs the ${period} days before`} />
               </div>
             ) : (
@@ -200,8 +196,8 @@ export function OverviewView() {
         <div className="relative mt-4">
           {data ? <SignupsChart daily={series} /> : <AdminSkeleton className="h-56 w-full rounded-xl sm:h-64" />}
           {data && periodTotal === 0 ? (
-            <p className="pointer-events-none absolute inset-x-0 top-[38%] text-center text-[0.8125rem] text-label-2">
-              <span className="rounded-full border border-border bg-card/90 px-3 py-1.5 shadow-[0_1px_2px_rgb(0_0_0/0.04)]">No sign-ups in the last {period} days yet</span>
+            <p className="pointer-events-none absolute inset-x-0 top-[38%] text-center text-footnote text-label-2">
+              <span className="rounded-full border border-border bg-card/90 px-3 py-1.5 shadow-e1">No sign-ups in the last {period} days yet</span>
             </p>
           ) : null}
         </div>
@@ -219,10 +215,10 @@ export function OverviewView() {
                 <li key={u.id} className="flex items-center gap-3 px-5 py-3">
                   <AdminAvatar name={u.name || u.email || "?"} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[0.8125rem] font-medium text-foreground">{u.name || "Name not known yet"}</p>
-                    <p className="truncate text-[0.75rem] text-label-2">{u.email}</p>
+                    <p className="truncate text-footnote font-medium text-foreground">{u.name || "Name not known yet"}</p>
+                    <p className="truncate text-caption text-label-2">{u.email}</p>
                   </div>
-                  <span className="shrink-0 text-[0.75rem] text-label-2">{formatRelative(u.createdAt)}</span>
+                  <span className="shrink-0 text-caption text-label-2">{formatRelative(u.createdAt)}</span>
                 </li>
               ))}
             </ul>
@@ -239,8 +235,8 @@ export function OverviewView() {
               {recentLeads.map((l) => (
                 <li key={l.id} className="flex items-center gap-3 px-5 py-3">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[0.8125rem] font-medium text-foreground">{l.name || "—"}</p>
-                    <p className="truncate text-[0.75rem] text-label-2">
+                    <p className="truncate text-footnote font-medium text-foreground">{l.name || "—"}</p>
+                    <p className="truncate text-caption text-label-2">
                       {capitalise(l.kind)} · {capitalise(String(l.status))} · {formatRelative(l.created_at)}
                     </p>
                   </div>
@@ -259,10 +255,10 @@ export function OverviewView() {
             <ul className="divide-y divide-border border-t border-border">
               {(data.recentFeedback ?? []).map((f) => (
                 <li key={f.id} className="flex gap-3 px-5 py-3">
-                  <span aria-hidden className={cn("mt-1.5 size-2 shrink-0 rounded-full", f.status === "resolved" || f.status === "closed" ? "bg-zinc-300" : "bg-[#0A7AFF]")} />
+                  <span aria-hidden className={cn("mt-1.5 size-2 shrink-0 rounded-full", f.status === "resolved" || f.status === "closed" ? "bg-label-3" : "bg-brand")} />
                   <div className="min-w-0 flex-1">
-                    <p className="line-clamp-2 text-[0.8125rem] leading-5 text-foreground">{f.message}</p>
-                    <p className="mt-0.5 text-[0.75rem] text-label-2">
+                    <p className="line-clamp-2 text-footnote leading-5 text-foreground">{f.message}</p>
+                    <p className="mt-0.5 text-caption text-label-2">
                       {formatRelative(f.createdAt)}
                       {f.status === "resolved" || f.status === "closed" ? ` · ${capitalise(f.status)}` : ""}
                     </p>
@@ -289,8 +285,8 @@ export function OverviewView() {
               {(data.recentScrapes ?? []).slice(0, 8).map((run) => (
                 <li key={run.id} className="flex items-center justify-between gap-3 px-5 py-3">
                   <div className="min-w-0">
-                    <p className="text-[0.8125rem] font-medium text-foreground">{run.source}</p>
-                    <p className="text-[0.75rem] text-label-2">
+                    <p className="text-footnote font-medium text-foreground">{run.source}</p>
+                    <p className="text-caption text-label-2">
                       found {formatCount(run.listingsFound)} · new {formatCount(run.listingsNew)}
                     </p>
                   </div>

@@ -2,22 +2,27 @@ import type { ReactNode } from "react";
 import { ArrowRight, RotateCw, Search, X, type LucideIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, cardVariants } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StatTile } from "@/components/ui/stat-tile";
 
 /**
- * Admin kit — CeyFi Admin's pieces, translated to Motormila.
+ * Admin kit — the console's pieces, built from the app's primitives.
  *
- * Same language as CeyFi's kit.tsx: white rounded-2xl cards with hairline
- * borders on the inset sheet, font-display for page titles and big figures,
- * tabular numbers, colour only where it means something. Accent is
- * Motormila Blue #0A7AFF (chart line, share bar, links); the active nav
- * pill is Ink #09090B, and Deal Green is never used as an admin accent.
- * Missing data renders as "—", never as a plausible 0.
+ * Cards are `Card`, chips are `Badge`, KPI tiles are `StatTile`; type is the
+ * shared scale (page title `text-title1`, card titles `text-body`, body copy
+ * `text-footnote`/`text-caption`) and colour is semantic tokens only, so the
+ * console follows the same light/dark theme as the rest of Motormila. Chart
+ * accents use `brand` (Motormila Blue, decoration only) and `deal-*` signals;
+ * Deal Green is never an admin accent. Missing data renders as "—", never as
+ * a plausible 0.
  */
 
-export const ADMIN_BLUE = "#0A7AFF";
-export const ADMIN_INK = "#09090B";
+/** Bar/line accent: Motormila Blue as a fill — decoration, never text. */
+const ACCENT_FILL = "bg-brand";
 
 export function formatCount(value: number | null | undefined): string {
   if (value === null || value === undefined || !Number.isFinite(Number(value))) return "—";
@@ -81,19 +86,17 @@ export function AdminHeader({
   return (
     <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
-        {greeting ? <p className="mb-1.5 text-[0.8125rem] font-medium text-label-2">{adminGreeting()}</p> : null}
-        <h1 className="font-display text-[1.875rem] leading-[1.1] tracking-[-0.01em] text-foreground sm:text-[2.25rem]">
-          {title}
-        </h1>
-        {description ? <p className="mt-1.5 max-w-2xl text-[0.875rem] leading-5 text-label-2">{description}</p> : null}
+        {greeting ? <p className="mb-1.5 text-footnote font-medium text-label-2">{adminGreeting()}</p> : null}
+        <h1 className="font-display text-title1 font-semibold text-foreground [text-wrap:balance]">{title}</h1>
+        {description ? <p className="mt-2 max-w-2xl text-body text-label-2 [text-wrap:pretty]">{description}</p> : null}
       </div>
       {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
     </header>
   );
 }
 
-export const adminCardClass =
-  "min-w-0 overflow-hidden rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgb(0_0_0/0.04)]";
+/** The one card shell in the console — the `Card` primitive, unpadded. */
+export const adminCardClass = cn(cardVariants({ padding: "none" }), "min-w-0 overflow-hidden");
 
 export function AdminCard({
   title,
@@ -111,18 +114,18 @@ export function AdminCard({
   bodyClassName?: string;
 }) {
   return (
-    <section className={cn(adminCardClass, className)}>
+    <Card padding="none" className={cn("overflow-hidden", className)}>
       {title ? (
         <div className="flex items-start justify-between gap-4 px-5 pt-4 pb-3">
           <div className="min-w-0">
-            <h2 className="text-[0.9375rem] font-semibold tracking-[-0.01em] text-foreground">{title}</h2>
-            {description ? <p className="mt-0.5 text-[0.75rem] leading-4 text-label-2">{description}</p> : null}
+            <h2 className="text-body font-semibold text-foreground">{title}</h2>
+            {description ? <p className="mt-0.5 text-caption text-label-2">{description}</p> : null}
           </div>
           {action ? <div className="shrink-0">{action}</div> : null}
         </div>
       ) : null}
       <div className={bodyClassName}>{children}</div>
-    </section>
+    </Card>
   );
 }
 
@@ -130,7 +133,7 @@ export function AdminCardLink({ to, children }: { to: string; children: ReactNod
   return (
     <Link
       to={to}
-      className="inline-flex items-center gap-1 rounded-md text-[0.75rem] font-medium text-label-2 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+      className="inline-flex items-center gap-1 rounded-control text-caption font-medium text-label-2 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       {children}
       <ArrowRight aria-hidden className="h-3.5 w-3.5" />
@@ -138,24 +141,20 @@ export function AdminCardLink({ to, children }: { to: string; children: ReactNod
   );
 }
 
-/** Change against the previous period: a small tinted chip with an arrow. */
+/** Change against the previous period: a small tinted Badge with an arrow. */
 export function AdminDelta({ current, previous, label }: { current: number; previous: number; label: string }) {
   const diff = current - previous;
   const tone = diff > 0 ? "up" : diff < 0 ? "down" : "flat";
   const pct = previous > 0 ? Math.round((diff / previous) * 100) : null;
   const text = tone === "flat" ? "No change" : pct !== null ? `${pct > 0 ? "+" : ""}${pct}%` : `${diff > 0 ? "+" : ""}${diff}`;
   return (
-    <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[0.75rem] text-label-2">
-      <span
-        className={cn(
-          "inline-flex h-5 items-center gap-0.5 rounded-full px-1.5 font-medium tabular-nums",
-          tone === "up" && "bg-[#0A7AFF]/10 text-[#0A7AFF]",
-          tone === "down" && "bg-red-500/10 text-red-600",
-          tone === "flat" && "bg-surface-2 text-label-2",
-        )}
+    <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-caption text-label-2">
+      <Badge
+        variant={tone === "up" ? "info" : tone === "down" ? "danger" : "neutral"}
+        className="h-5 gap-1 px-1.5 font-medium tabular-nums"
       >
         {tone === "up" ? "↑" : tone === "down" ? "↓" : "—"} {text}
-      </span>
+      </Badge>
       <span>{label}</span>
     </span>
   );
@@ -182,35 +181,33 @@ export function AdminKpiCard({
       : typeof value === "number"
         ? value.toLocaleString("en-GB")
         : value;
-  const isString = typeof value === "string" && value !== "";
-  const body = (
-    <>
-      <div className="flex items-center justify-between gap-2">
-        <span className="truncate text-[0.8125rem] font-medium text-label-2">{label}</span>
-        {Icon ? (
-          <span className="hidden size-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-label-2 transition-colors group-hover:bg-[#09090B] group-hover:text-white sm:flex">
-            <Icon aria-hidden className="size-3.5" />
-          </span>
-        ) : null}
-      </div>
-      <p
-        className={cn(
-          "mt-2.5 font-display leading-none tracking-[-0.02em] text-foreground tabular-nums sm:mt-3",
-          isString ? "text-title2 sm:text-title1" : "text-[2rem] sm:text-[2.5rem]",
-        )}
-      >
-        {formatted}
-      </p>
+  const tile = (
+    <StatTile
+      label={
+        <span className="flex items-center justify-between gap-2">
+          <span className="truncate">{label}</span>
+          {Icon ? (
+            <span className="hidden size-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-label-2 sm:flex">
+              <Icon aria-hidden className="size-3.5" />
+            </span>
+          ) : null}
+        </span>
+      }
+      value={formatted}
+      className={cn("px-4 pt-3.5 pb-3.5 sm:px-5 sm:pt-4 sm:pb-4", className)}
+    >
       <div className="mt-3 min-h-5">{footer}</div>
-    </>
+    </StatTile>
   );
-  const classes = cn(adminCardClass, "group block px-4 pt-3.5 pb-3.5 sm:px-5 sm:pt-4 sm:pb-4", className);
   return to ? (
-    <Link to={to} className={cn(classes, "transition-[border-color,box-shadow] hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40")}>
-      {body}
+    <Link
+      to={to}
+      className="group block rounded-card transition-shadow duration-short ease-standard hover:shadow-e2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      {tile}
     </Link>
   ) : (
-    <div className={classes}>{body}</div>
+    tile
   );
 }
 
@@ -226,7 +223,7 @@ export function AdminStatBars({ rows }: { rows: Array<{ label: string; count: nu
             <span className="text-label-2 tabular-nums">{row.count.toLocaleString()}</span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
-            <div className="h-full rounded-full" style={{ width: `${(row.count / max) * 100}%`, background: ADMIN_BLUE }} />
+            <div className={cn("h-full rounded-full", ACCENT_FILL)} style={{ width: `${(row.count / max) * 100}%` }} />
           </div>
         </li>
       ))}
@@ -236,13 +233,13 @@ export function AdminStatBars({ rows }: { rows: Array<{ label: string; count: nu
 
 export function AdminShare({ part, whole, noun = "of all users" }: { part: number | null | undefined; whole: number | null | undefined; noun?: string }) {
   if (whole === null || whole === undefined || whole === 0 || part === null || part === undefined) {
-    return <span className="text-[0.75rem] text-label-2">—</span>;
+    return <span className="text-caption text-label-2">—</span>;
   }
   const pct = Math.round((part / whole) * 100);
   return (
-    <span className="flex items-center gap-2 text-[0.75rem] text-label-2">
+    <span className="flex items-center gap-2 text-caption text-label-2">
       <span aria-hidden className="relative hidden h-1.5 w-12 shrink-0 overflow-hidden rounded-full bg-surface-2 sm:block">
-        <span className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${pct}%`, background: ADMIN_BLUE }} />
+        <span className={cn("absolute inset-y-0 left-0 rounded-full", ACCENT_FILL)} style={{ width: `${pct}%` }} />
       </span>
       <span>
         <span className="font-medium text-foreground tabular-nums">{pct}%</span> {noun}
@@ -252,7 +249,7 @@ export function AdminShare({ part, whole, noun = "of all users" }: { part: numbe
 }
 
 export function AdminSkeleton({ className }: { className?: string }) {
-  return <span aria-hidden className={cn("block animate-pulse rounded-md bg-surface-2", className)} />;
+  return <Skeleton className={cn("rounded-control", className)} />;
 }
 
 export function AdminListSkeleton({ rows = 5, avatar = true }: { rows?: number; avatar?: boolean }) {
@@ -288,12 +285,12 @@ export function AdminEmptyNote({
   return (
     <div className={cn("flex flex-col items-center justify-center px-6 py-12 text-center", className)}>
       <span className="relative flex size-12 items-center justify-center">
-        <span aria-hidden className="absolute inset-0 rounded-2xl bg-surface-2" />
-        <span aria-hidden className="absolute inset-[5px] rounded-[0.8rem] border border-border bg-card shadow-[0_1px_2px_rgb(0_0_0/0.05)]" />
+        <span aria-hidden className="absolute inset-0 rounded-card bg-surface-2" />
+        <span aria-hidden className="absolute inset-[5px] rounded-control border border-border bg-card shadow-e1" />
         <Icon aria-hidden className="relative size-[1.125rem] text-label-2" strokeWidth={1.8} />
       </span>
-      <p className="mt-4 text-[0.875rem] font-medium text-foreground">{title}</p>
-      {body ? <p className="mt-1 max-w-xs text-[0.8125rem] leading-5 text-label-2">{body}</p> : null}
+      <p className="mt-4 text-body font-medium text-foreground">{title}</p>
+      {body ? <p className="mt-1 max-w-xs text-footnote text-label-2">{body}</p> : null}
       {action ? <div className="mt-4">{action}</div> : null}
     </div>
   );
@@ -301,8 +298,8 @@ export function AdminEmptyNote({
 
 export function AdminErrorNote({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div role="alert" className={cn(adminCardClass, "flex flex-wrap items-center justify-between gap-3 border-red-500/25 bg-red-500/5 px-5 py-4")}>
-      <p className="text-[0.8125rem] text-red-600">{message}</p>
+    <div role="alert" className={cn(adminCardClass, "flex flex-wrap items-center justify-between gap-3 border-deal-high/25 bg-deal-high/5 px-5 py-4")}>
+      <p className="text-footnote text-deal-high-text">{message}</p>
       {onRetry ? (
         <Button type="button" variant="outline" size="sm" className="h-8 rounded-full" onClick={onRetry}>
           <RotateCw aria-hidden className="size-3.5" /> Try again
@@ -314,10 +311,10 @@ export function AdminErrorNote({ message, onRetry }: { message: string; onRetry?
 
 export type AdminDotTone = "ok" | "warn" | "bad" | "idle";
 const DOT: Record<AdminDotTone, string> = {
-  ok: "bg-[#0A7AFF]",
-  warn: "bg-amber-600",
-  bad: "bg-red-500",
-  idle: "bg-zinc-400",
+  ok: "bg-brand",
+  warn: "bg-deal-caution",
+  bad: "bg-deal-high",
+  idle: "bg-label-3",
 };
 
 export function AdminStatusDot({ tone, className }: { tone: AdminDotTone; className?: string }) {
@@ -360,7 +357,7 @@ export function AdminSearchField({
           type="button"
           onClick={() => onChange("")}
           aria-label="Clear search"
-          className="absolute top-1/2 right-2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full bg-surface-2 text-label-2 hover:bg-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          className="absolute top-1/2 right-2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full bg-surface-2 text-label-2 hover:bg-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <X aria-hidden className="size-3" />
         </button>
@@ -381,8 +378,8 @@ export function AdminAvatar({ name, size = "md", className }: { name: string; si
     <span
       aria-hidden
       className={cn(
-        "flex shrink-0 items-center justify-center rounded-full bg-[#09090B] font-semibold text-white",
-        size === "sm" ? "size-6 text-caption" : size === "lg" ? "size-10 text-[0.8125rem]" : "size-8 text-caption",
+        "flex shrink-0 items-center justify-center rounded-full bg-foreground font-semibold text-background",
+        size === "sm" ? "size-6 text-caption" : size === "lg" ? "size-10 text-footnote" : "size-8 text-caption",
         className,
       )}
     >

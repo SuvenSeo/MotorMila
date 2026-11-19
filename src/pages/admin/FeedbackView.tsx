@@ -6,6 +6,7 @@ import {
   AdminCard,
   AdminEmptyNote,
   AdminErrorNote,
+  AdminHeader,
   AdminSearchField,
   adminCardClass,
   formatRelative,
@@ -47,12 +48,10 @@ export function FeedbackView() {
 
   return (
     <>
-      <header>
-        <h1 className="font-display text-[1.875rem] leading-[1.1] tracking-[-0.01em] text-foreground sm:text-[2.25rem]">Feedback</h1>
-        <p className="mt-1.5 max-w-2xl text-[0.875rem] leading-5 text-label-2">
-          Triage bugs, ideas, and data reports from the in-app widget. {openCount} open.
-        </p>
-      </header>
+      <AdminHeader
+        title="Feedback"
+        description={`Triage bugs, ideas, and data reports from the in-app widget. ${openCount} open.`}
+      />
 
       {q.error ? <AdminErrorNote message="Couldn't load feedback. Try again." onRetry={() => void q.refetch()} /> : null}
 
@@ -87,7 +86,7 @@ export function FeedbackView() {
                     className="flex w-full items-start justify-between gap-3 px-4 py-3.5 text-left"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="text-caption font-medium text-primary/80">
+                      <p className="text-caption font-medium text-primary">
                         {item.category} · {item.status}
                       </p>
                       <p className={cn("mt-2 text-body font-medium leading-relaxed text-foreground", !open && "line-clamp-2")}>{item.message}</p>
@@ -100,7 +99,7 @@ export function FeedbackView() {
                   </button>
                   {open ? (
                     <div className="border-t border-border px-4 py-3.5">
-                      <dl className="grid gap-2 text-[0.8125rem] sm:grid-cols-2">
+                      <dl className="grid gap-2 text-footnote sm:grid-cols-2">
                         <div>
                           <dt className="text-caption text-label-2">Received</dt>
                           <dd className="font-medium text-foreground">{formatWhen(item.createdAt)}</dd>

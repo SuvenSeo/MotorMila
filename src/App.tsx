@@ -8,7 +8,8 @@ import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { RouteFallback } from "@/components/RouteFallback";
 import { RouteTransition } from "@/components/RouteTransition";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
-import { prefetchAppShellRoutes, registerRouteLoaders } from "@/lib/routePrefetch";
+import { pageRoute } from "@/lib/lazyPage";
+import { prefetchAppShellRoutes } from "@/lib/routePrefetch";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -34,92 +35,61 @@ const TrialCountdownBanner = lazyWithRetry(() =>
   import("./pages/Pricing").then((m) => ({ default: m.TrialCountdownBanner }))
 );
 
-// Lazy load heavy page chunks
-const Dashboard = lazyWithRetry(() => import("./pages/Dashboard"));
-const DealerDashboard = lazyWithRetry(() => import("./pages/DealerDashboard"));
-const ListingDetail = lazyWithRetry(() => import("./pages/ListingDetail"));
-const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
-const Settings = lazyWithRetry(() => import("./pages/Settings"));
-const Trends = lazyWithRetry(() => import("./pages/Trends"));
-const Estimate = lazyWithRetry(() => import("./pages/Estimate"));
-const Calculator = lazyWithRetry(() => import("./pages/Calculator"));
-const EVHub = lazyWithRetry(() => import("./pages/EVHub"));
-const EVChargers = lazyWithRetry(() => import("./pages/EVChargers"));
+// Lazy load heavy page chunks. pageRoute also awaits the deferred English
+// dictionary chunks the page renders (locales/chunks), so a route never paints
+// a key that has not arrived; the key prefetches both on hover/idle.
+const Dashboard = pageRoute(["market"], () => import("./pages/Dashboard"), "/");
+const DealerDashboard = pageRoute(["rest", "account"], () => import("./pages/DealerDashboard"), "/dealer");
+const ListingDetail = pageRoute(["market", "rest"], () => import("./pages/ListingDetail"), "listing-detail");
+const NotFound = pageRoute(["rest"], () => import("./pages/NotFound"));
+const Settings = pageRoute(["account"], () => import("./pages/Settings"), "/settings");
+// /price-index redirects to /trends, so it warms the same chunks.
+const Trends = pageRoute(["rest", "market"], () => import("./pages/Trends"), ["/trends", "/price-index"]);
+const Estimate = pageRoute(["tools"], () => import("./pages/Estimate"), "/estimate");
+const Calculator = pageRoute(["tools"], () => import("./pages/Calculator"), "/calculator");
+const EVHub = pageRoute(["content", "rest"], () => import("./pages/EVHub"), "/ev-hub");
+const EVChargers = pageRoute(["content", "rest"], () => import("./pages/EVChargers"), "/ev-chargers");
 
-const BestPicks = lazyWithRetry(() => import("./pages/BestPicks"));
-const SellYourCar = lazyWithRetry(() => import("./pages/SellYourCar"));
-const SignIn = lazyWithRetry(() => import("./pages/SignIn"));
-const SignUp = lazyWithRetry(() => import("./pages/SignUp"));
-const VerifyEmail = lazyWithRetry(() => import("./pages/VerifyEmail"));
-const ForgotPassword = lazyWithRetry(() => import("./pages/ForgotPassword"));
-const ResetPassword = lazyWithRetry(() => import("./pages/ResetPassword"));
-const ProDashboard = lazyWithRetry(() => import("./pages/ProDashboard"));
-const ProPreview = lazyWithRetry(() => import("./pages/ProPreview"));
-const AdminConsole = lazyWithRetry(() => import("./pages/AdminConsole"));
+const BestPicks = pageRoute(["content", "market", "account"], () => import("./pages/BestPicks"), "/best-picks");
+const SellYourCar = pageRoute(["content", "tools"], () => import("./pages/SellYourCar"));
+const SignIn = pageRoute(["account"], () => import("./pages/SignIn"), "/sign-in");
+const SignUp = pageRoute(["account"], () => import("./pages/SignUp"), "/sign-up");
+const VerifyEmail = pageRoute(["account"], () => import("./pages/VerifyEmail"));
+const ForgotPassword = pageRoute(["account"], () => import("./pages/ForgotPassword"));
+const ResetPassword = pageRoute(["account"], () => import("./pages/ResetPassword"));
+const ProDashboard = pageRoute(["account", "rest"], () => import("./pages/ProDashboard"), "/pro");
+const ProPreview = pageRoute(["account", "rest"], () => import("./pages/ProPreview"), "/pro-preview");
+const AdminConsole = pageRoute(["account", "rest"], () => import("./pages/AdminConsole"));
 const AdminSection = lazyWithRetry(() => import("./pages/admin/AdminSection").then((m) => ({ default: m.AdminSection })));
 const AdminIndex = lazyWithRetry(() => import("./pages/admin/AdminSection").then((m) => ({ default: m.AdminIndex })));
-const MobileApp = lazyWithRetry(() => import("./pages/MobileApp"));
-const MakeModelHub = lazyWithRetry(() => import("./pages/MakeModelHub"));
-const MakeHub = lazyWithRetry(() => import("./pages/MakeHub"));
-const DistrictHub = lazyWithRetry(() => import("./pages/DistrictHub"));
-const Alerts = lazyWithRetry(() => import("./pages/Alerts"));
-const Profile = lazyWithRetry(() => import("./pages/Profile"));
+const MobileApp = pageRoute(["content"], () => import("./pages/MobileApp"), "/mobile-app");
+const MakeModelHub = pageRoute(["rest", "market"], () => import("./pages/MakeModelHub"), "make-model-hub");
+const MakeHub = pageRoute(["rest", "market"], () => import("./pages/MakeHub"), "make-hub");
+const DistrictHub = pageRoute(["rest", "market"], () => import("./pages/DistrictHub"), "district-hub");
+const Alerts = pageRoute(["market", "account"], () => import("./pages/Alerts"), "/alerts");
+const Profile = pageRoute(["account"], () => import("./pages/Profile"));
 
-const Docs = lazyWithRetry(() => import("./pages/Docs"));
-const Pricing = lazyWithRetry(() => import("./pages/Pricing"));
-const OfficialPulse = lazyWithRetry(() => import("./pages/OfficialPulse"));
-const OfficialPulseDetail = lazyWithRetry(() => import("./pages/OfficialPulseDetail"));
-const OfficialPulseGuide = lazyWithRetry(() => import("./pages/OfficialPulseGuide"));
+const Docs = pageRoute(["content"], () => import("./pages/Docs"), "/docs");
+const Pricing = pageRoute(["rest", "account"], () => import("./pages/Pricing"), "/pricing");
+const OfficialPulse = pageRoute(["rest"], () => import("./pages/OfficialPulse"), "/official-pulse");
+const OfficialPulseDetail = pageRoute(["rest"], () => import("./pages/OfficialPulseDetail"), "pulse-detail");
+const OfficialPulseGuide = pageRoute(["rest"], () => import("./pages/OfficialPulseGuide"), "pulse-guide");
 const HeroLab = lazyWithRetry(() => import("./pages/HeroLab"));
-const PrivacyPolicy = lazyWithRetry(() => import("./pages/PrivacyPolicy"));
-const TermsOfService = lazyWithRetry(() => import("./pages/TermsOfService"));
-const Permits = lazyWithRetry(() => import("./pages/Permits"));
-const Compare = lazyWithRetry(() => import("./pages/Compare"));
-const Afford = lazyWithRetry(() => import("./pages/Afford"));
-const SafeTransfer = lazyWithRetry(() => import("./pages/SafeTransfer"));
+const PrivacyPolicy = pageRoute([], () => import("./pages/PrivacyPolicy"), "/privacy");
+const TermsOfService = pageRoute([], () => import("./pages/TermsOfService"), "/terms");
+const Permits = pageRoute(["tools"], () => import("./pages/Permits"), "/permits");
+const Compare = pageRoute(["tools", "market"], () => import("./pages/Compare"), "/compare");
+const Afford = pageRoute(["tools"], () => import("./pages/Afford"));
+const SafeTransfer = pageRoute(["tools"], () => import("./pages/SafeTransfer"));
 // overhaul/money-legal: lead capture, legal requests, PayHere return
-const LeadRequest = lazyWithRetry(() => import("./pages/LeadRequest"));
-const RemovalRequest = lazyWithRetry(() => import("./pages/RemovalRequest"));
-const AccountDeletion = lazyWithRetry(() => import("./pages/AccountDeletion"));
-const CookieNotice = lazyWithRetry(() => import("./pages/CookieNotice"));
-const CheckoutReturn = lazyWithRetry(() => import("./pages/CheckoutReturn"));
+const LeadRequest = pageRoute(["tools", "account"], () => import("./pages/LeadRequest"));
+const RemovalRequest = pageRoute(["tools"], () => import("./pages/RemovalRequest"));
+const AccountDeletion = pageRoute(["account"], () => import("./pages/AccountDeletion"));
+const CookieNotice = pageRoute([], () => import("./pages/CookieNotice"));
+const CheckoutReturn = pageRoute(["account"], () => import("./pages/CheckoutReturn"));
 // ui/features: methodology explainer
-const HowWePrice = lazyWithRetry(() => import("./pages/HowWePrice"));
-const BotInfo = lazyWithRetry(() => import("./pages/BotInfo"));
-
-// Hover / focus / idle prefetch targets (lib/routePrefetch.ts imports no pages,
-// so the map lives here beside the lazy routes; same specifiers → same chunks).
-registerRouteLoaders({
-  "/": () => import("./pages/Dashboard"),
-  "/trends": () => import("./pages/Trends"),
-  "/price-index": () => import("./pages/Trends"), // redirects to /trends
-  "/estimate": () => import("./pages/Estimate"),
-  "/calculator": () => import("./pages/Calculator"),
-  "/ev-hub": () => import("./pages/EVHub"),
-  "/ev-chargers": () => import("./pages/EVChargers"),
-  "/best-picks": () => import("./pages/BestPicks"),
-  "/official-pulse": () => import("./pages/OfficialPulse"),
-  "/docs": () => import("./pages/Docs"),
-  "/pricing": () => import("./pages/Pricing"),
-  "/compare": () => import("./pages/Compare"),
-  "/permits": () => import("./pages/Permits"),
-  "/alerts": () => import("./pages/Alerts"),
-  "/settings": () => import("./pages/Settings"),
-  "/dealer": () => import("./pages/DealerDashboard"),
-  "/mobile-app": () => import("./pages/MobileApp"),
-  "/pro": () => import("./pages/ProDashboard"),
-  "/pro-preview": () => import("./pages/ProPreview"),
-  "/sign-in": () => import("./pages/SignIn"),
-  "/sign-up": () => import("./pages/SignUp"),
-  "/privacy": () => import("./pages/PrivacyPolicy"),
-  "/terms": () => import("./pages/TermsOfService"),
-  "listing-detail": () => import("./pages/ListingDetail"),
-  "pulse-guide": () => import("./pages/OfficialPulseGuide"),
-  "pulse-detail": () => import("./pages/OfficialPulseDetail"),
-  "district-hub": () => import("./pages/DistrictHub"),
-  "make-hub": () => import("./pages/MakeHub"),
-  "make-model-hub": () => import("./pages/MakeModelHub"),
-});
+const HowWePrice = pageRoute(["tools"], () => import("./pages/HowWePrice"));
+const BotInfo = pageRoute(["content"], () => import("./pages/BotInfo"));
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -189,6 +189,7 @@ export default {
           3: "hsl(var(--label-3))",
         },
         separator: "hsl(var(--separator))",
+        scrim: "hsl(var(--scrim))",
         // Legacy `intelligence.*` names (amber was actually blue) now resolve
         // to semantic tokens; prefer primary / deal-* in new code.
         intelligence: {

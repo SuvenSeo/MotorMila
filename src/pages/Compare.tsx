@@ -26,6 +26,7 @@ import { useLowData } from "@/hooks/useLowData";
 import { cn } from "@/lib/utils";
 import { BRAND } from "@/lib/brand";
 import { useCompare } from "@/components/compare/CompareContext";
+import { useNoindexRoute } from "@/components/RouteMeta";
 import { AnimatePresence, motion } from "motion/react";
 import { duration, ease, spring, useReducedMotionOrLowData } from "@/lib/motion";
 import "@/styles/listing-motion.css";
@@ -73,6 +74,8 @@ export default function Compare() {
   const [highlight, setHighlight] = useState(true);
   const [onlyDiff, setOnlyDiff] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  /** idsKey whose batch has settled: noindex must wait for a real answer, never the first paint. */
+  const [settledIdsKey, setSettledIdsKey] = useState("");
   const motionCalm = useReducedMotionOrLowData();
 
   // Canonical slug path (/compare/12-vs-45) wins; legacy ?ids=12,45 still works.
@@ -97,6 +100,7 @@ export default function Compare() {
       setListings([]);
       setError(null);
       setLoading(false);
+      setSettledIdsKey(idsKey);
       return;
     }
     setLoading(true);
@@ -110,7 +114,11 @@ export default function Compare() {
         setListings(ids.map((id) => byId.get(id)).filter((r): r is CarListing => Boolean(r)));
       })
       .catch(() => !cancelled && setError(t("comparePage.error", "Couldn't load these listings. Check your connection and try again.")))
-      .finally(() => !cancelled && setLoading(false));
+      .finally(() => {
+        if (cancelled) return;
+        setLoading(false);
+        setSettledIdsKey(idsKey);
+      });
     // FMV per listing (live first, snapshot fallback inside getListingFmv).
     ids.forEach((id) => {
       getListingFmv(id)
@@ -345,6 +353,17 @@ export default function Compare() {
   const hasIds = ids.length > 0;
   const [rowsBefore, rowsAfter] = t("comparePage.rowsShown", "{n} rows", { n: "\u0000" }).split("\u0000");
   const enough = listings.length >= 2;
+  // A /compare/{slug} whose ids resolve to nothing is a soft-404: the shell is
+  // served 200 + index,follow, so drop it from the index once the batch has
+  // settled. A partial resolve (some cars found) keeps real content indexable,
+  // and loading or an API error is never proof the listings are gone.
+  const deadSlug =
+    Boolean(slug) &&
+    settledIdsKey === idsKey &&
+    !loading &&
+    !error &&
+    (urlIds.length === 0 || listings.length === 0);
+  useNoindexRoute(deadSlug);
 
   const switchRow = "inline-flex min-h-11 cursor-pointer select-none items-center gap-2.5 text-footnote font-medium text-foreground sm:min-h-9";
 

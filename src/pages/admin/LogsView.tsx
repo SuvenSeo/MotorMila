@@ -12,6 +12,7 @@ import {
   formatWhen,
 } from "@/components/admin/AdminKit";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getAdminAuditLog, getAdminPipeline } from "@/services/api";
 import { cn } from "@/lib/utils";
@@ -90,16 +91,16 @@ export function LogsView() {
         <AdminErrorNote message="Couldn't load logs. Try again." onRetry={() => { void auditQ.refetch(); void pipeQ.refetch(); }} />
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-[0_1px_2px_rgb(0_0_0/0.04)]">
-        <div className="flex items-center gap-1 rounded-xl bg-surface-2 p-1">
+      <Card padding="none" className="flex flex-wrap items-center gap-3 p-4">
+        <div className="flex items-center gap-1 rounded-control bg-surface-2 p-1">
           {(["all", "error", "info"] as const).map((lvl) => (
             <button
               key={lvl}
               type="button"
               onClick={() => setLevel(lvl)}
               className={cn(
-                "rounded-lg px-2.5 py-1 text-[0.75rem] font-medium capitalize transition-colors",
-                level === lvl ? "bg-card text-foreground shadow-[0_1px_2px_rgb(0_0_0/0.05)]" : "text-label-2 hover:text-foreground",
+                "rounded-control px-2.5 py-1 text-caption font-medium capitalize transition-colors",
+                level === lvl ? "bg-card text-foreground shadow-e1" : "text-label-2 hover:text-foreground",
               )}
             >
               {lvl === "all" ? "All levels" : lvl === "error" ? "Errors" : "Info"}
@@ -109,7 +110,7 @@ export function LogsView() {
         <div className="min-w-[200px] flex-1">
           <AdminSearchField value={search} onChange={setSearch} placeholder="Search actions, runs or error text…" label="Search logs" />
         </div>
-      </div>
+      </Card>
 
       <AdminCard
         title={
@@ -135,13 +136,13 @@ export function LogsView() {
             {auditRows.map((row) => (
               <li key={row.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
                 <AdminStatusDot tone="ok" />
-                <span className="shrink-0 font-mono text-[0.75rem] text-foreground">{row.action}</span>
-                <span className="min-w-0 flex-1 truncate text-[0.8125rem] text-label-2">
+                <span className="shrink-0 font-mono text-caption text-foreground">{row.action}</span>
+                <span className="min-w-0 flex-1 truncate text-footnote text-label-2">
                   {row.targetType}:{row.targetId ?? "—"}
                   {row.detail ? ` · ${row.detail}` : ""}
                 </span>
-                <span className="shrink-0 text-[0.75rem] text-label-2">{row.actorEmail}</span>
-                <span className="shrink-0 text-[0.75rem] text-label-2">{formatRelative(row.createdAt)}</span>
+                <span className="shrink-0 text-caption text-label-2">{row.actorEmail}</span>
+                <span className="shrink-0 text-caption text-label-2">{formatRelative(row.createdAt)}</span>
               </li>
             ))}
           </ul>
@@ -172,13 +173,13 @@ export function LogsView() {
             {runs.map((run) => (
               <li key={run.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
                 <AdminStatusDot tone={run.status === "FAILED" ? "bad" : run.status === "SUCCESS" ? "ok" : "idle"} />
-                <span className="shrink-0 font-mono text-[0.75rem] text-foreground">{run.source}</span>
-                <span className="shrink-0 text-[0.75rem] font-medium text-label-2">{run.status || "—"}</span>
-                <span className="min-w-0 flex-1 truncate text-[0.8125rem] text-label-2">
+                <span className="shrink-0 font-mono text-caption text-foreground">{run.source}</span>
+                <span className="shrink-0 text-caption font-medium text-label-2">{run.status || "—"}</span>
+                <span className="min-w-0 flex-1 truncate text-footnote text-label-2">
                   found {run.listingsFound} · new {run.listingsNew}
                   {run.errorMessage ? ` · ${run.errorMessage}` : ""}
                 </span>
-                <span className="shrink-0 text-[0.75rem] text-label-2" title={formatWhen(run.startedAt)}>{formatRelative(run.startedAt)}</span>
+                <span className="shrink-0 text-caption text-label-2" title={formatWhen(run.startedAt)}>{formatRelative(run.startedAt)}</span>
               </li>
             ))}
           </ul>

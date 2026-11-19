@@ -23,6 +23,8 @@ import { BRAND } from "@/lib/brand";
 import { slugifyHubSegment } from "@/lib/makeNormalization";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { useAppPreferences } from "@/lib/appPreferences";
+import { SRI_LANKA_DISTRICTS, normalizeDistrictName } from "@/data/districts";
+import { useNoindexRoute } from "@/components/RouteMeta";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
 
 const DistrictPriceHeatmap = lazyWithRetry(() =>
@@ -103,6 +105,12 @@ export default function DistrictHub() {
   const isPending = insightQuery.isPending;
   const isError = insightQuery.isError && !insight;
   const recentListings = listingsQuery.data?.listings?.slice(0, 4) ?? [];
+
+  // Definitive "this district does not exist": the slug is not one of the 25.
+  // A real district with no ads indexed yet (empty, not unknown) stays
+  // indexable — the soft-404 is the made-up slug, not the empty market.
+  const knownDistrict = SRI_LANKA_DISTRICTS.includes(normalizeDistrictName(districtDisplay) ?? "");
+  useNoindexRoute(Boolean(districtParam) && !knownDistrict);
 
   const stats = [
     { label: t("makeHub.liveListings", "Live listings"), value: <CountValue value={insight ? insight.listing_count : null} /> },

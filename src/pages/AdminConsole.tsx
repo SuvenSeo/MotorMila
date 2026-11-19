@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Outlet } from "react-router-dom";
 import { AdminShell } from "@/components/admin/AdminShell";
-import { ADMIN_LIGHT_VARS } from "@/components/admin/adminTheme";
 import {
   adminSessionMinutesLeft,
   clearAdminSession,
@@ -130,7 +129,7 @@ export default function AdminConsole() {
 
   // ── The gate ─────────────────────────────────────────────────────
   return (
-    <div style={ADMIN_LIGHT_VARS} className="relative flex min-h-screen items-center justify-center bg-background px-5 py-14 text-foreground sm:px-8">
+    <div className="relative flex min-h-screen items-center justify-center bg-background px-5 py-14 text-foreground sm:px-8">
       <div className="w-full max-w-[27.5rem]">
         <m.div variants={scaleIn} initial="hidden" animate="show">
           <Card padding="lg">

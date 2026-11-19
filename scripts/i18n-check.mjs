@@ -30,9 +30,10 @@ export function readLocale(lang) {
 
 /**
  * Feature bundles (src/locales/<area>.ts, e.g. shell.ts / listing.ts / features.ts)
- * are spread into DICTIONARIES by locales/index.ts, with the bundle's English
- * entries as the si/ta fallback — so a key defined in any bundle counts as present
- * for every language.
+ * are merged into the dictionaries (into src/locales/chunks/ for English, via
+ * scripts/build-locale-chunks.mjs), with the bundle's English entries as the
+ * si/ta fallback — so a key defined in any bundle counts as present for every
+ * language.
  */
 export function readBundleKeys() {
   const dir = path.join(SRC, "locales");

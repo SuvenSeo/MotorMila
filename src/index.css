@@ -61,6 +61,10 @@
     --input: 240 6% 10% / 0.14;
     --ring: 213 100% 45%;
 
+    /* Overlay wash behind drawers and mobile sheets. Dark in both themes so
+       the page behind reads as pushed back, never bleached. */
+    --scrim: 24 16% 9% / 0.45;
+
     --radius: 12px;                      /* cards; full scale in styles/tokens.css */
     --nav-height: 4rem;
     --nav-offset: 4rem;
@@ -173,6 +177,8 @@
     --border: 32 18% 88% / 0.05;
     --input: 32 18% 88% / 0.10;
     --ring: 213 100% 62%;
+
+    --scrim: 0 0% 0% / 0.6;
 
     --signal-green: 145 60% 50%;
     --signal-cyan: 199 89% 60%;

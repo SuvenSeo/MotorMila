@@ -11,9 +11,9 @@
  *   dist/<route>.html      served for /<route> (CF Pages default)
  *   dist/404.html          noindex shell, served with a real 404 status for unknown paths
  *
- * Hub routes (makes, make/model, districts) come from the snapshot index
- * (idx/routes.json + idx/models/*), so this works without the database. When
- * the index is missing only the static routes are written.
+ * Hub routes (makes, make/model, make/model/year, districts) come from the
+ * snapshot index (idx/routes.json + idx/models/*), so this works without the
+ * database. When the index is missing only the static routes are written.
  */
 import { promises as fs, existsSync } from "node:fs";
 import path from "node:path";
@@ -24,6 +24,7 @@ const DIST = path.resolve(process.argv[2] || path.join(ROOT, "dist"));
 const ORIGIN = (process.env.SITE_ORIGIN || "https://motormila.pages.dev").replace(/\/+$/, "");
 const SITE = "Motormila";
 const MAX_MODEL_PAGES = Number(process.env.PRERENDER_MAX_MODELS || 1500);
+const MAX_YEAR_PAGES = Number(process.env.PRERENDER_MAX_YEARS || 3000);
 const DEFAULT_DESC =
   "Track Sri Lankan vehicle prices, trends, deal signals, and valuation tools in one market intelligence cockpit.";
 
@@ -280,12 +281,26 @@ export async function prerender() {
     console.log(`[prerender] wrote ${count} static route shells + 404.html`);
     return;
   }
-  const routes = (await readJson(path.join(idx, "routes.json"))) || { makes: [], models: [], districts: [] };
+  const routes = (await readJson(path.join(idx, "routes.json"))) || { makes: [], models: [], years: [], districts: [] };
   const modelsByMake = new Map();
   for (const m of routes.models || []) {
     const list = modelsByMake.get(m.make) || [];
     list.push(m);
     modelsByMake.set(m.make, list);
+  }
+  // Model detail files are read by both the model shells and their year shells.
+  const modelDetailCache = new Map();
+  const modelDetail = async (make, model) => {
+    const key = `${compactKey(make)}/${compactKey(model)}`;
+    if (!modelDetailCache.has(key)) modelDetailCache.set(key, await readJson(path.join(idx, "models", compactKey(make), `${compactKey(model)}.json`)));
+    return modelDetailCache.get(key);
+  };
+  const yearsByModel = new Map();
+  for (const r of routes.years || []) {
+    const key = `${r.make}\u0000${r.model}`;
+    const list = yearsByModel.get(key) || [];
+    list.push(r);
+    yearsByModel.set(key, list);
   }
 
   for (const r of routes.makes || []) {
@@ -310,7 +325,7 @@ export async function prerender() {
 
   for (const r of (routes.models || []).slice(0, MAX_MODEL_PAGES)) {
     const vehicle = `${r.make} ${r.model}`;
-    const detail = await readJson(path.join(idx, "models", compactKey(r.make), `${compactKey(r.model)}.json`));
+    const detail = await modelDetail(r.make, r.model);
     const median = lkr(detail?.median_price_lkr ?? r.median_price_lkr);
     const title = `${vehicle} Price Sri Lanka — Live Listings, Trends & Fair Value | ${SITE}`;
     const description = `${r.count.toLocaleString("en-US")} ${vehicle} listings in Sri Lanka${median ? `, median ${median}` : ""}. Live prices (LKR), district breakdown, price trends and fair-value signals on ${SITE}.`;
@@ -334,6 +349,7 @@ export async function prerender() {
       ],
     };
     const items = Array.isArray(detail?.items) ? detail.items.slice(0, 12) : [];
+    const modelYears = (yearsByModel.get(`${r.make}\u0000${r.model}`) || []).slice().sort((a, b) => b.year - a.year);
     const body =
       `<h1>${esc(vehicle)} prices in Sri Lanka</h1><p>${esc(description)}</p>` +
       (items.length
@@ -341,22 +357,94 @@ export async function prerender() {
             .map((it) => `<li><a href="/listing/${Number(it.id)}">${esc([it.year, vehicle].filter(Boolean).join(" "))}</a>${lkr(it.price_lkr) ? ` — ${lkr(it.price_lkr)}` : ""}${it.district ? `, ${esc(it.district)}` : ""}</li>`)
             .join("")}</ul>`
         : "") +
+      (modelYears.length
+        ? `<h2>${esc(vehicle)} prices by year</h2><ul>${modelYears
+            .map((y) => `<li><a href="${esc(y.path)}">${esc(`${y.year} ${vehicle}`)}</a> (${y.count} listings${lkr(y.avg_price_lkr) ? `, average ${lkr(y.avg_price_lkr)}` : ""})</li>`)
+            .join("")}</ul>`
+        : "") +
       `<p><a href="/cars/${esc(slugify(r.make))}">All ${esc(r.make)} models</a></p>`;
     await writeRoute(r.path, renderShell(template, { path: r.path, title, description, jsonLd, body }));
     count += 1;
   }
 
-  for (const r of routes.districts || []) {
-    const title = `${r.district} Vehicle Prices — District Market Hub | ${SITE}`;
-    const description = `${r.count.toLocaleString("en-US")} live vehicle listings in ${r.district} district (LKR): listings, model mix, price heatmap and market velocity on ${SITE}.`;
+  for (const r of (routes.years || []).slice(0, MAX_YEAR_PAGES)) {
+    const vehicle = `${r.make} ${r.model}`;
+    const label = `${r.year} ${vehicle}`;
+    const detail = await modelDetail(r.make, r.model);
+    const avg = lkr(r.avg_price_lkr);
+    const title = `${label} Price Sri Lanka — ${r.year} Listings, Mileage & Prices | ${SITE}`;
+    const description = `${r.count.toLocaleString("en-US")} ${label} listings in Sri Lanka${avg ? `, average asking ${avg}` : ""}. ${r.year}-only prices in LKR, mileage, district mix and how they compare with other years of the ${vehicle}.`;
     const jsonLd = {
       "@context": "https://schema.org",
       "@graph": [
-        { "@type": "CollectionPage", name: title, url: `${ORIGIN}${r.path}`, description, about: { "@type": "Place", name: `${r.district}, Sri Lanka` } },
+        { "@type": "WebPage", name: title, url: `${ORIGIN}${r.path}`, description, about: { "@type": "Vehicle", name: label, brand: { "@type": "Brand", name: r.make }, model: r.model, vehicleModelDate: String(r.year) }, inLanguage: "en" },
+        crumbs([
+          { name: "Home", path: "/" },
+          { name: r.make, path: `/cars/${slugify(r.make)}` },
+          { name: vehicle, path: `/cars/${slugify(r.make)}/${slugify(r.model)}` },
+          { name: String(r.year), path: r.path },
+        ]),
+      ],
+    };
+    const items = (Array.isArray(detail?.items) ? detail.items : []).filter((it) => Number(it.year) === Number(r.year)).slice(0, 12);
+    const siblings = (yearsByModel.get(`${r.make}\u0000${r.model}`) || [])
+      .filter((y) => y.year !== r.year)
+      .sort((a, b) => Math.abs(a.year - r.year) - Math.abs(b.year - r.year) || b.year - a.year)
+      .slice(0, 8)
+      .sort((a, b) => b.year - a.year);
+    const body =
+      `<h1>${esc(label)} prices in Sri Lanka</h1><p>${esc(description)}</p>` +
+      (items.length
+        ? `<h2>Latest ${esc(label)} listings</h2><ul>${items
+            .map(
+              (it) =>
+                `<li><a href="/listing/${Number(it.id)}">${esc([it.year, vehicle, it.mileage_km ? `${Number(it.mileage_km).toLocaleString("en-US")} km` : null].filter(Boolean).join(" · "))}</a>${lkr(it.price_lkr) ? ` — ${lkr(it.price_lkr)}` : ""}${it.district ? `, ${esc(it.district)}` : ""}</li>`,
+            )
+            .join("")}</ul>`
+        : "") +
+      (siblings.length
+        ? `<h2>Other ${esc(vehicle)} model years</h2><ul>${siblings
+            .map((y) => `<li><a href="${esc(y.path)}">${esc(`${y.year} ${vehicle}`)}</a> (${y.count} listings${lkr(y.avg_price_lkr) ? `, average ${lkr(y.avg_price_lkr)}` : ""})</li>`)
+            .join("")}</ul>`
+        : "") +
+      `<p><a href="/cars/${esc(slugify(r.make))}/${esc(slugify(r.model))}">All ${esc(vehicle)} listings</a> · <a href="/cars/${esc(slugify(r.make))}">All ${esc(r.make)} models</a> · <a href="/trends">Price trends</a></p>`;
+    await writeRoute(r.path, renderShell(template, { path: r.path, title, description, jsonLd, body }));
+    count += 1;
+  }
+
+  for (const r of routes.districts || []) {
+    const detail = await readJson(path.join(idx, "districts", `${compactKey(r.district)}.json`));
+    const median = lkr(detail?.median_price_lkr ?? r.median_price_lkr);
+    const title = `${r.district} Vehicle Prices — District Market Hub | ${SITE}`;
+    const description = `${r.count.toLocaleString("en-US")} live vehicle listings in ${r.district} district (LKR)${median ? `, median ${median}` : ""}: listings, model mix, price heatmap and market velocity on ${SITE}.`;
+    const jsonLd = {
+      "@context": "https://schema.org",
+      "@graph": [
+        { "@type": "WebPage", name: title, url: `${ORIGIN}${r.path}`, description, about: { "@type": "Place", name: `${r.district}, Sri Lanka` }, inLanguage: "en" },
         crumbs([{ name: "Home", path: "/" }, { name: r.district, path: r.path }]),
       ],
     };
-    const body = `<h1>Used vehicles in ${esc(r.district)}, Sri Lanka</h1><p>${esc(description)}</p>`;
+    const topModels = Array.isArray(detail?.top_models) ? detail.top_models.slice(0, 6) : [];
+    const topMakes = Array.isArray(detail?.top_makes) ? detail.top_makes.slice(0, 8) : [];
+    const siblings = (routes.districts || []).filter((d) => d.path !== r.path).slice(0, 12);
+    const body =
+      `<h1>Used vehicles in ${esc(r.district)}, Sri Lanka</h1><p>${esc(description)}</p>` +
+      (detail?.new_7d_count ? `<p>${Number(detail.new_7d_count).toLocaleString("en-US")} new ${esc(r.district)} listings in the last 7 days${detail.avg_price_lkr ? `, average asking ${lkr(detail.avg_price_lkr)}` : ""}.</p>` : "") +
+      (topModels.length
+        ? `<h2>Popular models in ${esc(r.district)}</h2><ul>${topModels
+            .map(
+              (m) =>
+                `<li><a href="/cars/${esc(slugify(m.make))}/${esc(slugify(m.model))}">${esc(`${m.make} ${m.model}`)}</a> (${Number(m.listing_count).toLocaleString("en-US")} listings${lkr(m.avg_price_lkr) ? `, average ${lkr(m.avg_price_lkr)}` : ""})</li>`,
+            )
+            .join("")}</ul>`
+        : "") +
+      (topMakes.length
+        ? `<h2>Makes selling in ${esc(r.district)}</h2><ul>${topMakes.map((m) => `<li><a href="/cars/${esc(slugify(m.make))}">${esc(m.make)} prices in Sri Lanka</a> (${Number(m.count).toLocaleString("en-US")} listings)</li>`).join("")}</ul>`
+        : "") +
+      (siblings.length
+        ? `<h2>Other districts</h2><ul>${siblings.map((d) => `<li><a href="${esc(d.path)}">Vehicles in ${esc(d.district)}, Sri Lanka</a></li>`).join("")}</ul>`
+        : "") +
+      `<p><a href="/trends">Sri Lanka vehicle price trends</a> · <a href="/estimate">Check a fair price</a></p>`;
     await writeRoute(r.path, renderShell(template, { path: r.path, title, description, jsonLd, body }));
     count += 1;
   }

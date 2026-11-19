@@ -27,24 +27,21 @@ import { useAuth } from "@/lib/authContext";
 import { getAdminOverview } from "@/services/api";
 import { getAdminLeads, getModerationQueue } from "@/lib/adminQueuesApi";
 import { AdminAvatar } from "@/components/admin/AdminKit";
-import { ADMIN_LIGHT_VARS } from "@/components/admin/adminTheme";
 
 /**
- * AdminShell — CeyFi Admin's frame, Motormila-branded.
+ * AdminShell — the console frame.
  *
- * Fixed 15.5rem sidebar on desktop, the page inset as one white rounded
- * sheet that scrolls on its own, a black active pill with a spring
- * layoutId, badge counts on Leads / Feedback / Moderation, and an account
- * area with the session time left and a Lock button.
+ * Fixed 15.5rem sidebar on desktop, the page inset as one rounded sheet
+ * that scrolls on its own, an inverted active pill with a spring layoutId,
+ * badge counts on Leads / Feedback / Moderation, and an account area with
+ * the session time left and a Lock button.
  *
- * Mobile differs from CeyFi on purpose: CeyFi's 8-item bottom tab bar
- * cannot fit 14 sections, so phones get a top bar plus a drawer with the
- * full nav (no bottom bar).
+ * Mobile differs on purpose: a 14-item bottom tab bar cannot fit, so
+ * phones get a top bar plus a drawer with the full nav (no bottom bar).
  *
- * The shell forces the light theme for its whole subtree by overriding
- * the app's light token values inline: the admin stays light even when
- * the rest of the site is in dark mode, and token-based panels
- * (e.g. the queue panels) render light too.
+ * Every surface here is a semantic token (background canvas, card sheet,
+ * foreground pill), so the console follows the app's light/dark theme
+ * instead of pinning a light palette of its own.
  */
 
 export interface AdminNavItem {
@@ -132,22 +129,22 @@ function NavList({ badges, onNavigate }: { badges: Record<string, number>; onNav
                     aria-current={active ? "page" : undefined}
                     onClick={onNavigate}
                     className={cn(
-                      "group relative isolate flex h-9 items-center gap-3 rounded-lg px-3 text-[0.8125rem] no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                      "group relative isolate flex h-9 items-center gap-3 rounded-control px-3 text-footnote no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       active
-                        ? "font-medium text-white transition-colors delay-75 duration-150"
-                        : "text-label-2 transition-colors duration-200 hover:bg-black/5 hover:text-foreground",
+                        ? "font-medium text-background transition-colors delay-75 duration-150"
+                        : "text-label-2 transition-colors duration-200 hover:bg-surface-2 hover:text-foreground",
                     )}
                   >
                     {active ? (
                       <motion.span
                         layoutId="admin-nav-pill"
                         transition={PILL}
-                        className="absolute inset-0 -z-10 rounded-lg bg-[#09090B] shadow-[0_1px_2px_rgb(0_0_0/0.14)]"
+                        className="absolute inset-0 -z-10 rounded-control bg-foreground shadow-e1"
                       />
                     ) : null}
                     <Icon
                       aria-hidden
-                      className={cn("size-4 shrink-0", active ? "text-white" : "text-label-2 group-hover:text-foreground")}
+                      className={cn("size-4 shrink-0", active ? "text-background" : "text-label-2 group-hover:text-foreground")}
                       strokeWidth={active ? 2.2 : 1.8}
                     />
                     <span className="min-w-0 flex-1 truncate">{item.label}</span>
@@ -155,7 +152,7 @@ function NavList({ badges, onNavigate }: { badges: Record<string, number>; onNav
                       <span
                         className={cn(
                           "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-caption font-semibold tabular-nums",
-                          active ? "bg-white/20 text-white" : "bg-black/5 text-foreground",
+                          active ? "bg-background/20 text-background" : "bg-surface-2 text-foreground",
                         )}
                       >
                         {count}
@@ -182,20 +179,20 @@ function AccountArea({ minutesLeft, onLock }: { minutesLeft: number; onLock: () 
       <div className="flex items-center gap-2.5 px-2 py-1.5">
         <AdminAvatar name={name} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[0.8125rem] font-medium text-foreground">{name}</span>
+          <span className="block truncate text-footnote font-medium text-foreground">{name}</span>
           <span className="block truncate text-caption text-label-2">{email}</span>
         </span>
         <button
           type="button"
           onClick={onLock}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-[0.75rem] font-medium text-foreground hover:border-black/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-caption font-medium text-foreground hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Lock aria-hidden className="size-3.5" />
           Lock{minutesLeft > 0 ? ` · ${minutesLeft}m` : ""}
         </button>
       </div>
       <p className="mt-2 flex items-center gap-1.5 px-2 text-caption leading-4 text-label-2">
-        <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-[#0A7AFF]" />
+        <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-brand" />
         Motormila Admin · listings, users and counts only
       </p>
     </div>
@@ -225,7 +222,7 @@ export function AdminShell({
   }, [pathname]);
 
   return (
-    <div style={ADMIN_LIGHT_VARS} className="min-h-svh bg-[#f4f4f2] text-foreground lg:h-svh lg:overflow-hidden">
+    <div className="min-h-svh bg-background text-foreground lg:h-svh lg:overflow-hidden">
       <a
         href="#admin-main"
         className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[70] focus:rounded-lg focus:bg-card focus:px-3 focus:py-2 focus:text-sm focus:shadow-lg"
@@ -235,10 +232,10 @@ export function AdminShell({
 
       {/* Sidebar */}
       <aside aria-label="Motormila Admin" className="fixed inset-y-0 left-0 z-40 hidden w-[15.5rem] flex-col px-3 py-4 lg:flex">
-        <Link to="/motormila/admin" aria-label="Motormila Admin, overview" className="flex h-8 items-center gap-2.5 self-start rounded-md pl-2 text-foreground no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+        <Link to="/motormila/admin" aria-label="Motormila Admin, overview" className="flex h-8 items-center gap-2.5 self-start rounded-control pl-2 text-foreground no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <img src="/logo-mark.svg" alt="" aria-hidden className="h-6 w-6 shrink-0 object-contain" />
-          <span className="font-display text-[1.0625rem] font-semibold tracking-tight">Motormila</span>
-          <span className="rounded-full bg-[#09090B] px-2 py-0.5 text-caption font-medium tracking-[0.01em] text-white">Admin</span>
+          <span className="font-display text-callout font-semibold">Motormila</span>
+          <span className="rounded-full bg-foreground px-2 py-0.5 text-caption font-medium text-background">Admin</span>
         </Link>
         <div className="mt-7 flex-1 overflow-y-auto">
           <NavList badges={badges} />
@@ -247,19 +244,19 @@ export function AdminShell({
       </aside>
 
       {/* Phone: top bar */}
-      <div className="sticky top-0 z-40 flex h-14 items-center justify-between gap-3 border-b border-border bg-[#f4f4f2]/90 px-4 backdrop-blur-xl lg:hidden">
+      <div className="sticky top-0 z-40 flex h-14 items-center justify-between gap-3 border-b border-border bg-background/90 px-4 backdrop-blur-xl lg:hidden">
         <button
           type="button"
           onClick={() => setDrawerOpen(true)}
           aria-label="Open admin menu"
-          className="flex size-9 items-center justify-center rounded-full border border-border bg-card text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          className="flex size-9 items-center justify-center rounded-full border border-border bg-card text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Menu aria-hidden className="size-4" />
         </button>
         <Link to="/motormila/admin" aria-label="Motormila Admin, overview" className="flex items-center gap-2 text-foreground no-underline">
           <img src="/logo-mark.svg" alt="" aria-hidden className="h-5 w-5 shrink-0 object-contain" />
-          <span className="font-display text-[1rem] font-semibold tracking-tight">Motormila</span>
-          <span className="rounded-full bg-[#09090B] px-2 py-0.5 text-caption font-medium text-white">Admin</span>
+          <span className="font-display text-callout font-semibold">Motormila</span>
+          <span className="rounded-full bg-foreground px-2 py-0.5 text-caption font-medium text-background">Admin</span>
         </Link>
         <span className="w-9" aria-hidden />
       </div>
@@ -267,19 +264,19 @@ export function AdminShell({
       {/* Phone: drawer with the full nav (no bottom tab bar — 14 items won't fit one) */}
       {drawerOpen ? (
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Admin menu">
-          <button type="button" aria-label="Close menu" onClick={() => setDrawerOpen(false)} className="absolute inset-0 bg-black/40" />
-          <div className="absolute inset-y-0 left-0 flex w-[19rem] max-w-[85vw] flex-col bg-[#f4f4f2] px-3 py-4 shadow-2xl">
+          <button type="button" aria-label="Close menu" onClick={() => setDrawerOpen(false)} className="absolute inset-0 bg-scrim" />
+          <div className="absolute inset-y-0 left-0 flex w-[19rem] max-w-[85vw] flex-col bg-background px-3 py-4 shadow-e3">
             <div className="mb-6 flex items-center justify-between pl-2">
               <span className="flex items-center gap-2">
                 <img src="/logo-mark.svg" alt="" aria-hidden className="h-6 w-6 object-contain" />
-                <span className="font-display text-[1.0625rem] font-semibold">Motormila</span>
-                <span className="rounded-full bg-[#09090B] px-2 py-0.5 text-caption font-medium text-white">Admin</span>
+                <span className="font-display text-callout font-semibold">Motormila</span>
+                <span className="rounded-full bg-foreground px-2 py-0.5 text-caption font-medium text-background">Admin</span>
               </span>
               <button
                 type="button"
                 onClick={() => setDrawerOpen(false)}
                 aria-label="Close menu"
-                className="flex size-9 items-center justify-center rounded-full border border-border bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                className="flex size-9 items-center justify-center rounded-full border border-border bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <X aria-hidden className="size-4" />
               </button>
@@ -296,7 +293,7 @@ export function AdminShell({
       <div className="lg:h-svh lg:py-2.5 lg:pr-2.5 lg:pl-[15.5rem]">
         <div
           ref={scroller}
-          className="min-h-[calc(100svh-3.5rem)] rounded-t-[1.5rem] bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.06)] max-lg:overflow-x-clip lg:h-full lg:min-h-0 lg:overflow-y-auto lg:rounded-[1.5rem] lg:shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_3px_rgb(0_0_0/0.04)]"
+          className="min-h-[calc(100svh-3.5rem)] rounded-t-sheet bg-card shadow-e1 max-lg:overflow-x-clip lg:h-full lg:min-h-0 lg:overflow-y-auto lg:rounded-sheet"
         >
           <main id="admin-main" tabIndex={-1} className="mx-auto w-full max-w-[76rem] px-4 pt-6 pb-16 outline-none sm:px-6 lg:px-10 lg:pt-9">
             <div key={pathname} className="space-y-6">

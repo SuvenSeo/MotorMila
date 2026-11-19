@@ -1,36 +1,32 @@
-import { en } from "./en";
-import { listingEn } from "./listing";
-import { shellEn } from "./shell";
-import { featuresEn } from "./features";
-import { dataEn } from "./data";
-import { toolsEn } from "./tools";
-import { accountEn } from "./account";
-import { stringsEn } from "./strings";
-import { contentEn } from "./content";
+import { EN_CORE } from "./chunks/core";
 
 export type Language = "en" | "si" | "ta";
 export type Dictionary = Record<string, string>;
 
 /**
- * English ships in the entry chunk. Sinhala and Tamil (~2/3 of all strings) are
- * separate chunks loaded on demand: main.tsx awaits the saved language before
- * the first render, and setLanguage() waits for the chunk before switching, so
- * there is never a frame of the wrong language. Tests/scripts that need every
- * dictionary synchronously import ./all.
+ * Live English dictionary. It starts as the eager core (shell chrome, nav,
+ * footer, route meta and the home above-the-fold copy — see
+ * scripts/build-locale-chunks.mjs) and gains each deferred chunk as the route
+ * that needs it loads (./namespaces.ts, awaited by lib/lazyPage.ts).
+ *
+ * t() stays synchronous, so a key that has not arrived yet resolves through the
+ * English fallback literal at the call site: never a bare key, never another
+ * language. Every deferred key resolves to the same string the chunk would
+ * have supplied (src/test/localeChunks.test.ts), so nothing changes on screen
+ * when a chunk lands late.
+ *
+ * Sinhala and Tamil are one chunk each, loaded on demand: main.tsx awaits the
+ * saved language before the first render, and setLanguage() waits for the
+ * chunk before switching, so there is no frame of the wrong language.
  */
-export const EN_DICTIONARY: Dictionary = {
-  ...(en as unknown as Dictionary),
-  ...listingEn,
-  ...shellEn,
-  ...featuresEn,
-  ...dataEn,
-  ...toolsEn,
-  ...accountEn,
-  ...stringsEn,
-  ...contentEn,
-};
+export const ENGLISH: Dictionary = { ...EN_CORE };
 
-const loaded: Partial<Record<Language, Dictionary>> = { en: EN_DICTIONARY };
+/** Fold a deferred English chunk into the live dictionary. */
+export function mergeEnglish(part: Dictionary): void {
+  Object.assign(ENGLISH, part);
+}
+
+const loaded: Partial<Record<Language, Dictionary>> = { en: ENGLISH };
 const pending: Partial<Record<Language, Promise<Dictionary>>> = {};
 
 /** The dictionary for a language if it is already in memory. */
