@@ -1,7 +1,7 @@
 import { useAppPreferences } from "@/lib/appPreferences";
 import { LazyMotion, MotionConfig, domAnimation } from "motion/react";
 import { Suspense, useEffect } from "react";
-import { Navigate, Route, Routes, unstable_HistoryRouter as HistoryRouter } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation, unstable_HistoryRouter as HistoryRouter } from "react-router-dom";
 import { createViewTransitionHistory } from "@/lib/viewTransition";
 import { ScrollRestoration } from "@/components/ScrollRestoration";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
@@ -28,6 +28,9 @@ import { useDockTypingFlag } from "@/lib/dock";
 const FeedbackWidget = lazyWithRetry(() =>
   import("@/components/FeedbackWidget").then((m) => ({ default: m.FeedbackWidget }))
 );
+const FooterPreview = import.meta.env.DEV
+  ? lazyWithRetry(() => import("@/components/MotormilaTearFooter"))
+  : null;
 import { CompareTray, CompareProvider } from "@/components/compare/CompareTray";
 // Trial banner lives in Pricing to avoid a new chunk; lazy keeps it out of first paint.
 const TrialCountdownBanner = lazyWithRetry(() =>
@@ -171,6 +174,8 @@ function SkipLink() {
 function AppShell() {
   // Floating buttons step aside while a text field is focused (mobile keyboard).
   useDockTypingFlag();
+  const { pathname, search } = useLocation();
+  const showFooterPreview = pathname === "/" && new URLSearchParams(search).get("footerPreview") === "1";
   return (
     // app-shell-dock-pad: content and footer always clear the bottom dock
     // (mobile nav + compare tray). See src/styles/layers.css.
@@ -190,7 +195,13 @@ function AppShell() {
           </Suspense>
         </RouteErrorBoundary>
       </main>
-      <AppFooter />
+      {FooterPreview && showFooterPreview ? (
+        <div id="footer-preview" data-scroll-anchor="footer-preview" className="mt-16 scroll-mt-[var(--nav-offset)]">
+          <Suspense fallback={<div aria-hidden className="min-h-[620px]" />}>
+            <FooterPreview />
+          </Suspense>
+        </div>
+      ) : <AppFooter />}
       {/* Bottom dock — one area, stacked: app promo strip → compare tray → bottom nav. */}
       <MobileAppPromo />
       <CompareTray />

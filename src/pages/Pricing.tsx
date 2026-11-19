@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { AnimatePresence, m } from "motion/react";
 import { ArrowRight, ChevronDown, Check, CreditCard, MessageCircle, Sparkles, Timer, Users } from "lucide-react";
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState } from "react";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,16 +11,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CineHeader } from "@/components/CineHeader";
-import { AtmosphericImage } from "@/components/AtmosphericImage";
+import { PricingPlansShowcase } from "@/components/pricing/PricingPlansShowcase";
 import { visuals } from "@/lib/visualAssets";
-import { cn } from "@/lib/utils";
 import "@/styles/cinematic-pages.css";
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BRAND } from "@/lib/brand";
-import { DEALER_FAQ, DEALER_TIERS, PLAN_PRICES, PRICING_COMING_SOON, PRICING_FAQ, PRICING_TIERS, PRO_FREE_DURING_BETA, TRIAL_OFFER, formatLkr } from "@/lib/pricingContent";
+import { DEALER_FAQ, DEALER_TIERS, PLAN_PRICES, PRICING_COMING_SOON, PRICING_FAQ, PRO_FREE_DURING_BETA, TRIAL_OFFER, formatLkr } from "@/lib/pricingContent";
 import type { DealerTierCode } from "@/lib/pricingContent";
-import type { I18nText } from "@/lib/translate";
 import { createPayhereCheckout, getPayhereConfig, submitPayhereForm, type PayhereConfig } from "@/lib/moneyApi";
 import { duration, fadeUp, listItem, listStagger, scaleIn, spring, useReducedMotionOrLowData } from "@/lib/motion";
 import { useAppPreferences } from "@/lib/appPreferences";
@@ -543,20 +541,6 @@ function SectionTitle({ id, eyebrow, title }: { id: string; eyebrow: string; tit
   );
 }
 
-function FeatureList({ items, tone = "default" }: { items: readonly I18nText[]; tone?: "default" | "stage" }) {
-  const { t } = useAppPreferences();
-  return (
-    <ul className={cn("mt-6 flex-1 space-y-3 border-t pt-6", tone === "stage" ? "border-white/10" : "border-separator")}>
-      {items.map((feature) => (
-        <li key={feature[0]} className={cn("flex gap-2.5 text-footnote", tone === "stage" ? "text-white/85" : "text-label-1")}>
-          <Check aria-hidden className={cn("mt-0.5 h-4 w-4 shrink-0", tone === "stage" ? "text-[hsl(213_100%_70%)]" : "text-primary")} />
-          <span>{tx(t, feature)}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 export default function Pricing() {
   const { t } = useAppPreferences();
   const motionStill = useReducedMotionOrLowData();
@@ -569,9 +553,7 @@ export default function Pricing() {
     free: cell(row.free),
     pro: cell(row.pro),
   }));
-  // Free + one honest Pro card. Dealer plans live in their own section below.
-  const free = PRICING_TIERS.find((tier) => tier.id === "free");
-  const pro = PRICING_TIERS.find((tier) => tier.id === "pro");
+  // Three-card showcase above; dealer checkout stays in its own section below.
   return (
     <div className="bg-background">
       <CineHeader
@@ -597,63 +579,11 @@ export default function Pricing() {
 
       <div className="layout-shell space-y-16 pb-20 pt-10 md:pt-14 lg:space-y-24 lg:pb-28">
         <section id="plans" aria-labelledby="tiers-heading" className="mx-auto max-w-5xl scroll-mt-24">
-          <SectionTitle id="tiers-heading" eyebrow={t("pricing.plansEyebrow", "Plans")} title={t("shell.pricing.tiersTitle", "Two plans. One is free.")} />
-          <div className="grid gap-5 md:grid-cols-2">
-            {free ? (
-              <article className="cine-plan cine-rise flex flex-col p-6 sm:p-8" style={{ "--i": 0 } as CSSProperties} aria-labelledby="plan-free">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 id="plan-free" className="text-callout font-semibold text-foreground">{tx(t, free.name)}</h3>
-                  <Badge variant="success">{t("shell.pro.freeBeta", "Free during beta")}</Badge>
-                </div>
-                <p className="mt-6 flex items-baseline gap-2">
-                  <span className="cine-display num text-[clamp(2.75rem,2.2rem+2vw,3.75rem)] text-foreground">{tx(t, free.priceLkr)}</span>
-                  {free.priceNote ? <span className="text-footnote text-label-2">{tx(t, free.priceNote)}</span> : null}
-                </p>
-                <p className="mt-3 max-w-sm text-footnote leading-relaxed text-label-2">{tx(t, free.audience)}</p>
-                <FeatureList items={free.features} />
-                <Button asChild size="lg" className="mt-8 w-full">
-                  <Link to={free.ctaTo}>
-                    {tx(t, free.ctaLabel)}
-                    <ArrowRight aria-hidden />
-                  </Link>
-                </Button>
-              </article>
-            ) : null}
-            {pro ? (
-              <article
-                id="get-started"
-                className="cine-plan cine-plan--pro theme-dark cine-rise flex scroll-mt-24 flex-col overflow-hidden"
-                style={{ "--i": 1 } as CSSProperties}
-                aria-labelledby="plan-pro"
-              >
-                <div aria-hidden className="cine-plan__plate">
-                  <AtmosphericImage src={visuals.darkGarageSilhouette.src} srcSm={visuals.darkGarageSilhouette.srcSm} sizes="(min-width: 768px) 32rem, 100vw" style={{ objectPosition: "80% 70%" }} />
-                </div>
-                <div className="relative flex flex-1 flex-col px-6 pb-6 sm:px-8 sm:pb-8">
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 id="plan-pro" className="text-callout font-semibold text-white">{tx(t, pro.name)}</h3>
-                    <Badge variant="info">{t("shell.pro.badge", "Pro · coming soon")}</Badge>
-                  </div>
-                  <p className="cine-display mt-6 text-[clamp(2.25rem,1.9rem+1.6vw,3rem)] text-white">
-                    <em>{tx(t, pro.priceLkr)}</em>
-                  </p>
-                  {pro.annualNote ? <p className="mt-2 text-footnote text-white/70">{tx(t, pro.annualNote)}</p> : null}
-                  <p className="mt-3 max-w-sm text-footnote leading-relaxed text-white/70">{tx(t, pro.audience)}</p>
-                  <FeatureList items={pro.features} tone="stage" />
-                  <div className="mt-8">
-                    <p className="mb-3 text-footnote font-semibold text-white">{t("shell.pricing.ctaTitle", "Get an email when Pro launches.")}</p>
-                    <TrialCta className="flex w-full flex-wrap items-center gap-2" />
-                    <Link
-                      to="/pro-preview"
-                      className="mt-4 inline-flex min-h-11 items-center gap-1.5 text-footnote font-semibold text-white/80 no-underline hover:text-white"
-                    >
-                      {t("shell.pricing.whatPro", "What Pro will include")} <ArrowRight aria-hidden className="h-3.5 w-3.5" />
-                    </Link>
-                  </div>
-                </div>
-              </article>
-            ) : null}
-          </div>
+          <SectionTitle id="tiers-heading" eyebrow={t("pricing.plansEyebrow", "Plans")} title={t("shell.pricing.tiersTitle", "Plans for buyers and dealers")} />
+          <PricingPlansShowcase
+            proCta={<TrialCta className="flex w-full flex-wrap items-center gap-2" />}
+            onDealerClick={() => setDealersOpen(true)}
+          />
         </section>
 
         <m.section {...onScrollReveal} variants={fadeUp} aria-labelledby="compare-heading" className="mx-auto max-w-5xl">

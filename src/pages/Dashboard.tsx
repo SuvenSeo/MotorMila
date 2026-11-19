@@ -85,6 +85,7 @@ import { SearchPagination } from "@/components/search/SearchPagination";
 import { NoResultsState, type AlertStatus } from "@/components/search/NoResultsState";
 import { Reveal } from "@/components/motion/Reveal";
 import { HeroFlipWords } from "@/components/motion/HeroFlipWords";
+import { BorderBeam } from "@/components/ui/border-beam";
 
 // First-load entrance: capped stagger (30ms/item, the first ~10 rows) so a
 // long list never makes the last row wait.
@@ -700,11 +701,29 @@ export default function Dashboard() {
 
             <div className="cine-in mt-7 w-full max-w-2xl sm:mt-9" style={{ "--i": 2, "--cine-t0": "0.75s" } as CSSProperties}>
                 <div className="relative">
-                  <m.div
-                    animate={{ scale: heroFocused && !motionStill ? 1.015 : 1 }}
-                    transition={spring.smooth}
-                    className={cn("cine-search", heroFocused && "hero-search--focused")}
+                  <BorderBeam
+                    size="md"
+                    colorVariant="ice"
+                    theme="dark"
+                    staticColors
+                    borderRadius={999}
+                    duration={3.2}
+                    strength={1}
+                    brightness={2}
+                    glowSize={1.4}
+                    css={`
+                      [data-beam="{id}"][data-active]::after,
+                      [data-beam="{id}"][data-fading]::after {
+                        padding: 2px;
+                      }
+                    `}
+                    active={!motionStill}
                   >
+                    <m.div
+                      animate={{ scale: heroFocused && !motionStill ? 1.015 : 1 }}
+                      transition={spring.smooth}
+                      className={cn("cine-search", heroFocused && "hero-search--focused")}
+                    >
                     <div className="cine-search__inner">
                     <Search aria-hidden className="ml-3.5 h-5 w-5 shrink-0 text-white/55" />
                     <label htmlFor="hero-search" className="sr-only">{t("common.search", "Search")} vehicles</label>
@@ -771,7 +790,8 @@ export default function Dashboard() {
                       {t("common.search", "Search")}
                     </Button>
                     </div>
-                  </m.div>
+                    </m.div>
+                  </BorderBeam>
 
                   {showHeroPopular ? (
                     <div id="hero-suggestions" role="listbox" className="absolute inset-x-0 bottom-full z-50 mb-2 overflow-hidden rounded-card border border-border bg-popover p-1.5 shadow-e3">

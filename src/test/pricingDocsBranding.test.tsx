@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import Docs from "@/pages/Docs";
@@ -26,12 +26,15 @@ describe("Docs and Pricing pages", () => {
     expect(document.getElementById("dealer-workspace")).toBeTruthy();
   });
 
-  it("shows only Free + an honest Pro (coming soon, notify me); dealers tucked away", () => {
+  it("shows Free, Pro and Dealer while keeping Pro on a waitlist and dealer checkout separate", () => {
     wrap(<Pricing />);
     expect(screen.getByRole("heading", { name: /free while we're in beta/i })).toBeInTheDocument();
     expect(screen.queryByText(/funds the pipeline/i)).toBeNull();
-    // Plan grid: Free and Pro only
-    expect(screen.getByRole("heading", { name: /two plans/i })).toBeInTheDocument();
+    const plans = within(screen.getByRole("region", { name: "Plans for buyers and dealers" }));
+    expect(plans.getByRole("heading", { name: /^Free$/ })).toBeInTheDocument();
+    expect(plans.getByRole("heading", { name: /^Pro$/ })).toBeInTheDocument();
+    expect(plans.getByRole("heading", { name: /^Dealer$/ })).toBeInTheDocument();
+    expect(plans.getByRole("link", { name: "See dealer plans" })).toHaveAttribute("href", "#dealer-plans");
     expect(screen.queryByText(/^Custom$/)).toBeNull();
     expect(screen.queryByText(/SLA/i)).toBeNull();
     expect(screen.getAllByText(/coming soon/i).length).toBeGreaterThan(0);
@@ -39,8 +42,8 @@ describe("Docs and Pricing pages", () => {
     // One Pro voice
     expect(screen.queryByText(/join the waitlist|upgrade to pro/i)).toBeNull();
     expect(screen.getAllByText(/free during beta/i).length).toBeGreaterThan(0);
-    // Dealer plans still reachable, inside "For dealers"
-    expect(screen.getByText(/^for dealers$/i)).toBeInTheDocument();
+    // Checkout is still inside the collapsed dealer section.
+    expect(screen.getByRole("button", { name: /^for dealers/i })).toHaveAttribute("aria-expanded", "false");
     expect(screen.getAllByText("LKR 2,990").length).toBeGreaterThan(0);
     expect(PRICING_COMING_SOON).toBe(true);
     expect(screen.queryByText(/stripe/i)).toBeNull();

@@ -1,0 +1,275 @@
+/* Motormila's treatment of the poster. The reusable tear keeps its own stage. */
+.tpf.tpf-motormila {
+  color-scheme: dark;
+  --mm-poster-sheet: hsl(218 48% 13%);
+  --mm-poster-fibre: hsl(217 25% 50%);
+  --fs: clamp(0.875rem, 1.85cqmin, 1.0625rem);
+}
+
+/* Steel-toned paper fibres keep the tear visible without a white edge. */
+.tpf-motormila .tpf-rim {
+  fill: var(--mm-poster-fibre);
+}
+
+.tpf-motormila .tpf-flap-gradient stop:first-child {
+  stop-color: var(--mm-poster-sheet);
+}
+
+.tpf-motormila .tpf-flap-gradient stop:nth-child(2) {
+  stop-color: color-mix(in srgb, var(--mm-poster-sheet) 70%, var(--mm-poster-fibre));
+}
+
+.tpf-motormila .tpf-flap-gradient stop:last-child {
+  stop-color: var(--mm-poster-fibre);
+}
+
+.tpf-motormila .tpf-paper-grain { opacity: 0.12; }
+.tpf-motormila .tpf-sheet-grain { opacity: 0.2; }
+
+.tpf-motormila .tpf-top {
+  margin-inline: auto;
+  max-width: 94rem;
+}
+
+.tpf-motormila .tpf-logo img {
+  display: block;
+  width: clamp(2.75rem, 6.2cqmin, 3.75rem);
+  height: auto;
+  border-radius: 22%;
+}
+
+.tpf.tpf-motormila .tpf-ib,
+.tpf.tpf-motormila .tpf-mail {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  margin: 0;
+  justify-content: center;
+}
+
+.tpf-motormila .tpf-news {
+  top: 17%;
+  max-width: 85cqw;
+}
+
+.tpf-motormila .tpf-action-caption {
+  font: 600 clamp(1.0625rem, 3.15cqmin, 1.875rem)/1.12 var(--font-display);
+  text-align: center;
+  text-wrap: balance;
+}
+
+.tpf.tpf-motormila .tpf-action {
+  width: min(37cqw, 20rem);
+  min-height: 2.75rem;
+  background: color-mix(in srgb, var(--mm-poster-sheet) 75%, var(--mm-poster-fibre));
+  color: hsl(var(--foreground));
+  box-shadow: inset 0 0 0 1px var(--mm-poster-fibre);
+}
+
+.tpf-motormila .tpf-action .tpf-knob {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  box-shadow: none;
+}
+
+.tpf-motormila .tpf-flank,
+.tpf-motormila .tpf-brand-top,
+.tpf-motormila .tpf-pin-hint {
+  font-family: ui-monospace, monospace;
+  font-size: clamp(0.6875rem, 1.45cqmin, 0.8125rem);
+  letter-spacing: 0.09em;
+}
+
+.tpf.tpf-motormila .tpf-status {
+  top: 33.5%;
+  max-width: 48cqw;
+  font-size: var(--fs);
+  text-align: center;
+  white-space: normal;
+}
+
+.tpf-motormila .tpf-live {
+  flex: none;
+}
+
+.tpf-motormila .tpf-clock i,
+.tpf-motormila .tpf-live::after,
+.tpf-motormila .tpf-dots i {
+  animation: none;
+}
+
+.tpf-motormila .tpf-badge {
+  display: none;
+}
+
+.tpf.tpf-motormila .tpf-col {
+  top: 25.5%;
+  max-width: min(23cqw, 14rem);
+  gap: 0.3rem;
+}
+
+.tpf.tpf-motormila .tpf-col h3 {
+  min-width: 0;
+  font-size: 0.76em;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  opacity: 1;
+}
+
+.tpf-motormila .tpf-col a {
+  min-height: 1.5rem;
+  overflow-wrap: anywhere;
+}
+
+.tpf.tpf-motormila .tpf-big {
+  font-family: var(--font-display);
+  font-size: clamp(1.125rem, 3.1cqmin, 1.625rem);
+  line-height: 1.2;
+}
+
+.tpf.tpf-motormila .tpf-pin {
+  top: 62%;
+  width: clamp(3.25rem, 9.5cqmin, 5.75rem);
+  height: auto;
+  aspect-ratio: 1 / 2;
+}
+
+.tpf-motormila .tpf-pin-hint {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  left: 50%;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-radius: 99px;
+  transform: translateX(-50%);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tpf-motormila .tpf-pin:hover .tpf-pin-hint,
+.tpf-motormila .tpf-pin:focus-visible .tpf-pin-hint {
+  border-color: currentColor;
+}
+
+.tpf.tpf-motormila .tpf-brand {
+  top: 70%;
+  width: min(54cqw, 39rem);
+}
+
+.tpf.tpf-motormila .tpf-brand-top {
+  padding: 0 0 0.6rem;
+  text-transform: uppercase;
+}
+
+.tpf.tpf-motormila .tpf-eye {
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  background: none;
+}
+
+.tpf.tpf-motormila .tpf-word {
+  padding: 0 0 0.75rem;
+  font-size: inherit;
+}
+
+.tpf-motormila .tpf-word img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.tpf.tpf-motormila .tpf-word span::after {
+  inset-inline: 0;
+  bottom: -0.55rem;
+  height: 1px;
+  background: color-mix(in srgb, currentColor 30%, transparent);
+}
+
+.tpf.tpf-motormila .tpf-side {
+  top: 85%;
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  gap: 0.5rem;
+  font-size: var(--fs);
+}
+
+.tpf.tpf-motormila .tpf-side.l { left: 15%; }
+.tpf.tpf-motormila .tpf-side.r { left: 85%; }
+
+.tpf.tpf-motormila .tpf-foot {
+  bottom: 3.5%;
+  gap: 0.75rem;
+  padding-inline: 7%;
+  font-size: clamp(0.75rem, 1.7cqmin, 0.875rem);
+}
+
+.tpf-motormila .tpf-handle {
+  flex: none;
+  white-space: nowrap;
+}
+
+@container (max-width: 740px) {
+  .tpf-motormila .tpf-top {
+    padding-inline: 6%;
+  }
+
+  .tpf-motormila .tpf-mail span,
+  .tpf-motormila .tpf-flank-mark {
+    display: none;
+  }
+
+  .tpf.tpf-motormila .tpf-flank-time {
+    display: block;
+    inset: 4% 6% auto auto;
+    transform: none;
+  }
+
+  .tpf.tpf-motormila .tpf-news {
+    top: 15%;
+  }
+
+  .tpf.tpf-motormila .tpf-action {
+    width: min(80cqw, 19rem);
+  }
+
+  .tpf.tpf-motormila .tpf-status {
+    top: 28%;
+    max-width: 80cqw;
+  }
+
+  .tpf.tpf-motormila .tpf-col {
+    top: 32.5%;
+    max-width: 34cqw;
+    gap: 0.15rem;
+  }
+
+  .tpf.tpf-motormila .tpf-col.l { left: 7%; }
+  .tpf.tpf-motormila .tpf-col.r { right: 7%; }
+  .tpf.tpf-motormila .tpf-col ul { gap: 0.2rem; }
+  .tpf.tpf-motormila .tpf-col li { display: list-item; }
+
+  .tpf.tpf-motormila .tpf-big {
+    margin-top: 0.2rem;
+    font-size: 1rem;
+  }
+
+  .tpf.tpf-motormila .tpf-brand {
+    top: 71%;
+    width: min(80cqw, 28rem);
+  }
+
+  .tpf.tpf-motormila .tpf-side {
+    top: 84%;
+  }
+
+  .tpf.tpf-motormila .tpf-side.l { left: 25%; }
+  .tpf.tpf-motormila .tpf-side.r { left: 75%; }
+}
+
+@media (max-width: 740px) {
+  .tpf.tpf-motormila {
+    min-height: 43rem;
+  }
+}
