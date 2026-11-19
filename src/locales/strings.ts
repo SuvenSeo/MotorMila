@@ -297,7 +297,7 @@ export const stringsEn: Record<string, string> = {
   "pricing.tier.dealer.audience": "Yards and multi-lot dealers running inventory every day",
   "pricing.tier.dealer.ctaLabel": "See dealer plans",
   "pricing.tier.dealer.f.agingAndPricegapViews": "Aging and price-gap views",
-  "pricing.tier.dealer.f.everythingInPro": "Everything in Pro",
+  "pricing.tier.dealer.f.proSignalsIncluded": "Deal scores, full price history and CSV / PDF exports",
   "pricing.tier.dealer.f.fullDealerWorkspaceDealer": "Full Dealer workspace (/dealer)",
   "pricing.tier.dealer.f.leadsFromMotormilaBuyers": "Leads from MotorMila buyers",
   "pricing.tier.dealer.f.payByCardWallet": "Pay by card, wallet, bank transfer or KOKO",

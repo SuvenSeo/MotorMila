@@ -292,7 +292,7 @@ export const stringsTa: Record<string, string> = {
   "pricing.tier.dealer.audience": "தினமும் இருப்பை நிர்வகிக்கும் யார்டுகள் மற்றும் பல இட டீலர்கள்",
   "pricing.tier.dealer.ctaLabel": "டீலர் திட்டங்களைப் பாருங்கள்",
   "pricing.tier.dealer.f.agingAndPricegapViews": "பழைய இருப்பு மற்றும் விலை இடைவெளிக் காட்சிகள்",
-  "pricing.tier.dealer.f.everythingInPro": "Pro-வில் உள்ள அனைத்தும்",
+  "pricing.tier.dealer.f.proSignalsIncluded": "Deal மதிப்பெண்கள், முழு விலை வரலாறு மற்றும் CSV / PDF ஏற்றுமதிகள்",
   "pricing.tier.dealer.f.fullDealerWorkspaceDealer": "முழு டீலர் பணியிடம் (/dealer)",
   "pricing.tier.dealer.f.leadsFromMotormilaBuyers": "MotorMila வாங்குபவர்களிடமிருந்து வாய்ப்புகள்",
   "pricing.tier.dealer.f.payByCardWallet": "அட்டை, டிஜிட்டல் வாலெட், வங்கிப் பரிமாற்றம் அல்லது KOKO மூலம் செலுத்துங்கள்",

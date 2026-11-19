@@ -156,7 +156,7 @@ export const PRICING_TIERS: PricingTier[] = [
     audience: ["pricing.tier.dealer.audience", "Yards and multi-lot dealers running inventory every day"],
     highlight: true,
     features: [
-      ["pricing.tier.dealer.f.everythingInPro", "Everything in Pro"],
+      ["pricing.tier.dealer.f.proSignalsIncluded", "Deal scores, full price history and CSV / PDF exports"],
       ["pricing.tier.dealer.f.fullDealerWorkspaceDealer", "Full Dealer workspace (/dealer)"],
       ["pricing.tier.dealer.f.yourStockPricedAgainst", "Your stock priced against market medians"],
       ["pricing.tier.dealer.f.agingAndPricegapViews", "Aging and price-gap views"],

@@ -292,7 +292,7 @@ export const stringsSi: Record<string, string> = {
   "pricing.tier.dealer.audience": "දිනපතා තොග කළමනාකරණය කරන යාඩ් සහ ශාඛා කිහිපයක් ඇති වෙළෙන්දන්",
   "pricing.tier.dealer.ctaLabel": "වෙළෙන්දා සැලසුම් බලන්න",
   "pricing.tier.dealer.f.agingAndPricegapViews": "පැරණි තොග සහ මිල පරතර දසුන්",
-  "pricing.tier.dealer.f.everythingInPro": "Pro හි සියල්ල",
+  "pricing.tier.dealer.f.proSignalsIncluded": "Deal ලකුණු, සම්පූර්ණ මිල ඉතිහාසය සහ CSV / PDF අපනයන",
   "pricing.tier.dealer.f.fullDealerWorkspaceDealer": "සම්පූර්ණ වෙළෙන්දා වැඩබිම (/dealer)",
   "pricing.tier.dealer.f.leadsFromMotormilaBuyers": "MotorMila ගැනුම්කරුවන්ගෙන් විමසීම්",
   "pricing.tier.dealer.f.payByCardWallet": "කාඩ්පත, ඩිජිටල් පසුම්බිය, බැංකු මාරුව හෝ KOKO මඟින් ගෙවන්න",
