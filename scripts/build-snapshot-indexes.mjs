@@ -575,9 +575,19 @@ export async function buildIndexes(dir = SNAPSHOT_DIR, { publicDir = PUBLIC_DIR,
   };
   await writeJson(path.join(tmpDir, "manifest.json"), manifest);
 
-  // Atomic-ish swap so a half-written idx/ is never served.
-  await fs.rm(outDir, { recursive: true, force: true });
-  await fs.rename(tmpDir, outDir);
+  // Atomic-ish swap so a half-written idx/ is never served. The rename can fail
+  // with EPERM on Windows while a sync client (OneDrive) holds a handle on the
+  // directory, and the old code deleted the live idx/ first — so that failure
+  // destroyed a good index. Copy over it instead, and only then drop the temp.
+  try {
+    await fs.rm(outDir, { recursive: true, force: true });
+    await fs.rename(tmpDir, outDir);
+  } catch (err) {
+    console.warn(`[idx] directory swap fell back to a copy (${err?.code || err?.message || err})`);
+    await fs.mkdir(outDir, { recursive: true });
+    await fs.cp(tmpDir, outDir, { recursive: true, force: true });
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
 
   if (sitemaps) {
     const today = new Date().toISOString().slice(0, 10);
