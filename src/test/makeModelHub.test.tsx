@@ -172,8 +172,7 @@ describe("MakeModelHub", () => {
 
   it("shows the price time machine section", async () => {
     renderHub();
-    await waitFor(() => {
-      expect(screen.getByText(/Price Time Machine/i)).toBeInTheDocument();
-    });
+    // The section is a lazy chunk now, so give the import room under load.
+    expect(await screen.findByText(/Price Time Machine/i, {}, { timeout: 5000 })).toBeInTheDocument();
   });
 });
