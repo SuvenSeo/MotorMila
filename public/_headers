@@ -12,6 +12,13 @@
   Access-Control-Allow-Origin: *
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
+# Unhashed but static: the woff2 set (114 kB) and the district GeoJSON are
+# revalidated on every visit without this, holding the first paint of any
+# si/ta session and DistrictHub's map.
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+/geo/*
+  Cache-Control: public, max-age=31536000, immutable
 /sw-push.js
   Cache-Control: public, max-age=0, must-revalidate
 # INTERIM (merge review 2026-10-19): legal pages stay out of the index until

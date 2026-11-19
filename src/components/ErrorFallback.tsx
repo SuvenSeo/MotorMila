@@ -38,7 +38,7 @@ export function ErrorFallback({
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.97 }}
           transition={spring.snappy}
-          className="mt-5 h-9 rounded-2xl bg-primary px-5 text-caption font-semibold text-white hover:bg-primary/95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="mt-5 h-9 rounded-2xl bg-primary px-5 text-caption font-semibold text-primary-foreground hover:bg-primary/95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           {t("errorBoundary.reload", "Reload App")}
         </motion.button>

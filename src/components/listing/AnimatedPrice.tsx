@@ -10,7 +10,8 @@ import { AnimatedNumber } from "@/components/ui/animated-number";
 export function AnimatedPrice({ priceLkr, className }: { priceLkr: number; className?: string }) {
   if (!Number.isFinite(priceLkr) || priceLkr <= 0) return <span className={className}>{formatLkrFull(priceLkr)}</span>;
   return (
-    <span className={className} aria-label={formatLkrFull(priceLkr)}>
+    <span className={className}>
+      <span className="sr-only">{formatLkrFull(priceLkr)}</span>
       <span aria-hidden>
         <AnimatedNumber
           value={Math.round(priceLkr)}

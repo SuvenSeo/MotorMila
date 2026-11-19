@@ -13,7 +13,7 @@ import { formatPrice, getModelPriceHistory } from "@/services/api";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { SectionHeading } from "@/components/ui/section-heading";
 import {
   ChartFrame,
@@ -156,13 +156,18 @@ export function ModelPriceTimeMachine({
       />
 
       <Card padding="md">
-        <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)}>
-          {/* Tamil/Sinhala tab labels are long: let the pills shrink and wrap on phones instead of overflowing. */}
-          <TabsList aria-label={t("timeMachine.viewAria", "Chart view")} className="h-auto max-w-full">
-            <TabsTrigger value="calendar" className="h-auto min-h-8 whitespace-normal py-1 text-center leading-tight">{t("timeMachine.calendarTab", "Calendar history")}</TabsTrigger>
-            <TabsTrigger value="yom" className="h-auto min-h-8 whitespace-normal py-1 text-center leading-tight">{t("timeMachine.yomTab", "By manufacture year")}</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {/* A view switcher, not tab panels: TabsTrigger pointed aria-controls at
+            a panel that never rendered, which is an invalid ARIA value. */}
+        <SegmentedControl
+          value={mode}
+          onValueChange={(v) => setMode(v)}
+          semantics="radio"
+          aria-label={t("timeMachine.viewAria", "Chart view")}
+          options={[
+            { value: "calendar", label: t("timeMachine.calendarTab", "Calendar history") },
+            { value: "yom", label: t("timeMachine.yomTab", "By manufacture year") },
+          ]}
+        />
 
         <ChartFrame
           key={mode}

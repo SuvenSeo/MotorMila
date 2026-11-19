@@ -260,7 +260,7 @@ describe("Alerts page", () => {
     });
   });
 
-  it("calls remove when the delete button is clicked", async () => {
+  it("asks for confirmation before removing an alert", async () => {
     const removeFn = vi.fn().mockResolvedValue(undefined);
     const alerts: ServerMarketAlert[] = [
       {
@@ -280,6 +280,10 @@ describe("Alerts page", () => {
 
     const deleteBtn = screen.getByRole("button", { name: /delete alert for suzuki alto/i });
     fireEvent.click(deleteBtn);
+
+    // The trash icon only opens the confirmation; nothing is removed yet.
+    expect(removeFn).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole("button", { name: /^delete$/i }));
 
     await waitFor(() => {
       expect(removeFn).toHaveBeenCalledWith(5);

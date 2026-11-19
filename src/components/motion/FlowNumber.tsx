@@ -31,17 +31,20 @@ export function FlowNumber({ value, prefix, suffix, format = DEFAULT_FORMAT, cla
   if (!Number.isFinite(value)) return fallback;
   return (
     <Suspense fallback={fallback}>
-      <span className={className} aria-label={label}>
-        <NumberFlow
-          value={value}
-          prefix={prefix}
-          suffix={suffix}
-          locales="en-US"
-          format={format}
-          animated={!still}
-          respectMotionPreference
-          aria-hidden
-        />
+      <span className={className}>
+        <span className="sr-only">{label}</span>
+        <span aria-hidden>
+          <NumberFlow
+            value={value}
+            prefix={prefix}
+            suffix={suffix}
+            locales="en-US"
+            format={format}
+            animated={!still}
+            respectMotionPreference
+            aria-hidden
+          />
+        </span>
       </span>
     </Suspense>
   );

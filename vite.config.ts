@@ -117,6 +117,11 @@ export default defineConfig({
     },
   },
   build: {
+    // Silhouette AVIF/WebP pairs are 2.7-3.9 kB, so the 4096-byte default
+    // inlined them as base64 into vehicleSilhouette-*.js — uncacheable, and
+    // decoded synchronously on the home/listing/Make first paint. Under 1 kB
+    // (true icons) still inlines; everything else becomes a cacheable file.
+    assetsInlineLimit: 1024,
     rollupOptions: {
       output: {
         manualChunks(id) {

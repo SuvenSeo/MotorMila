@@ -2237,3 +2237,15 @@ body.cursor-custom-active * { cursor: auto; }
   fill: #00c853;
   filter: drop-shadow(0 0 6px rgba(0, 200, 83, 0.8));
 }
+
+/* ── Touch input sizing ──────────────────────────────────────────────────────
+   iOS Safari zooms the viewport when a text field under 16px takes focus,
+   which pushes the layout sideways and hides the bottom dock mid-typing.
+   Keep form controls at 16px on touch pointers only. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}

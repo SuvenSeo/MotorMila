@@ -294,7 +294,7 @@ export function OverviewView() {
                       found {formatCount(run.listingsFound)} · new {formatCount(run.listingsNew)}
                     </p>
                   </div>
-                  <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[0.6875rem] font-medium text-label-2">{run.status || "—"}</span>
+                  <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-caption font-medium text-label-2">{run.status || "—"}</span>
                 </li>
               ))}
             </ul>

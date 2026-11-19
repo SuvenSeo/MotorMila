@@ -76,7 +76,7 @@ class RouteErrorBoundaryInner extends Component<RouteErrorBoundaryProps, RouteEr
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.97 }}
               transition={spring.snappy}
-              className="h-9 rounded-2xl bg-primary px-5 text-caption font-semibold text-white"
+              className="h-9 rounded-2xl bg-primary px-5 text-caption font-semibold text-primary-foreground"
             >
               {t("routeError.reload", "Reload page")}
             </motion.button>

@@ -408,7 +408,8 @@ export function AnimatedLkr({
     );
   }
   return (
-    <span className={cn("tabular-nums", className)} aria-label={label}>
+    <span className={cn("tabular-nums", className)}>
+      <span className="sr-only">{label}</span>
       <span aria-hidden>{inner}</span>
     </span>
   );

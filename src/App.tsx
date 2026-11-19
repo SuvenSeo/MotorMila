@@ -1,7 +1,7 @@
 import { useAppPreferences } from "@/lib/appPreferences";
 import { LazyMotion, MotionConfig, domAnimation } from "motion/react";
 import { Suspense, useEffect } from "react";
-import { Navigate, Route, Routes, unstable_HistoryRouter as HistoryRouter } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes, unstable_HistoryRouter as HistoryRouter } from "react-router-dom";
 import { createViewTransitionHistory } from "@/lib/viewTransition";
 import { ScrollRestoration } from "@/components/ScrollRestoration";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
@@ -217,6 +217,19 @@ function ProtectedLayout() {
   );
 }
 
+/**
+ * Auth screens render without the marketing chrome, so they need their own
+ * main landmark — otherwise the whole page sits outside any landmark and
+ * "skip to content" has nowhere to land.
+ */
+function AuthShell() {
+  return (
+    <main id="main-content" className="min-h-screen bg-background">
+      <Outlet />
+    </main>
+  );
+}
+
 const App = () => {
   // Route chunks prefetch on idle; nothing is gated behind an artificial loader.
   useEffect(() => {
@@ -317,6 +330,7 @@ const App = () => {
                   <Route path="/alerts" element={<Alerts />} />
                   <Route path="/profile" element={<Profile />} />
                 </Route>
+                <Route element={<AuthShell />}>
                 <Route path="/sign-in" element={
                   <RouteErrorBoundary>
                     <Suspense fallback={<MinimalLoader />}>
@@ -361,6 +375,7 @@ const App = () => {
                     </RouteErrorBoundary>
                   } />
                 ) : null}
+                </Route>
                 {/**
                  * Admin console: unlisted, credential-gated, and deliberately
                  * outside the marketing shell — no navbar, no footer, no links

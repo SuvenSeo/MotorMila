@@ -119,7 +119,7 @@ function NavList({ badges, onNavigate }: { badges: Record<string, number>; onNav
     <div className="space-y-6">
       {ADMIN_NAV.map((section) => (
         <nav key={section.label} aria-label={`${section.label} admin pages`}>
-          <p className="mb-1.5 px-3 text-[0.625rem] font-semibold tracking-[0.16em] text-label-2 uppercase">{section.label}</p>
+          <p className="mb-1.5 px-3 text-caption font-semibold tracking-[0.16em] text-label-2 uppercase">{section.label}</p>
           <ul className="space-y-0.5">
             {section.items.map((item) => {
               const active = isActive(pathname, item.to);
@@ -154,7 +154,7 @@ function NavList({ badges, onNavigate }: { badges: Record<string, number>; onNav
                     {count > 0 ? (
                       <span
                         className={cn(
-                          "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[0.6875rem] font-semibold tabular-nums",
+                          "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-caption font-semibold tabular-nums",
                           active ? "bg-white/20 text-white" : "bg-black/5 text-foreground",
                         )}
                       >
@@ -183,7 +183,7 @@ function AccountArea({ minutesLeft, onLock }: { minutesLeft: number; onLock: () 
         <AdminAvatar name={name} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[0.8125rem] font-medium text-foreground">{name}</span>
-          <span className="block truncate text-[0.6875rem] text-label-2">{email}</span>
+          <span className="block truncate text-caption text-label-2">{email}</span>
         </span>
         <button
           type="button"
@@ -194,7 +194,7 @@ function AccountArea({ minutesLeft, onLock }: { minutesLeft: number; onLock: () 
           Lock{minutesLeft > 0 ? ` · ${minutesLeft}m` : ""}
         </button>
       </div>
-      <p className="mt-2 flex items-center gap-1.5 px-2 text-[0.6875rem] leading-4 text-label-2">
+      <p className="mt-2 flex items-center gap-1.5 px-2 text-caption leading-4 text-label-2">
         <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-[#0A7AFF]" />
         Motormila Admin · listings, users and counts only
       </p>
@@ -238,7 +238,7 @@ export function AdminShell({
         <Link to="/motormila/admin" aria-label="Motormila Admin, overview" className="flex h-8 items-center gap-2.5 self-start rounded-md pl-2 text-foreground no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
           <img src="/logo-mark.svg" alt="" aria-hidden className="h-6 w-6 shrink-0 object-contain" />
           <span className="font-display text-[1.0625rem] font-semibold tracking-tight">Motormila</span>
-          <span className="rounded-full bg-[#09090B] px-2 py-0.5 text-[0.6875rem] font-medium tracking-[0.01em] text-white">Admin</span>
+          <span className="rounded-full bg-[#09090B] px-2 py-0.5 text-caption font-medium tracking-[0.01em] text-white">Admin</span>
         </Link>
         <div className="mt-7 flex-1 overflow-y-auto">
           <NavList badges={badges} />
@@ -259,7 +259,7 @@ export function AdminShell({
         <Link to="/motormila/admin" aria-label="Motormila Admin, overview" className="flex items-center gap-2 text-foreground no-underline">
           <img src="/logo-mark.svg" alt="" aria-hidden className="h-5 w-5 shrink-0 object-contain" />
           <span className="font-display text-[1rem] font-semibold tracking-tight">Motormila</span>
-          <span className="rounded-full bg-[#09090B] px-2 py-0.5 text-[0.6875rem] font-medium text-white">Admin</span>
+          <span className="rounded-full bg-[#09090B] px-2 py-0.5 text-caption font-medium text-white">Admin</span>
         </Link>
         <span className="w-9" aria-hidden />
       </div>
@@ -273,7 +273,7 @@ export function AdminShell({
               <span className="flex items-center gap-2">
                 <img src="/logo-mark.svg" alt="" aria-hidden className="h-6 w-6 object-contain" />
                 <span className="font-display text-[1.0625rem] font-semibold">Motormila</span>
-                <span className="rounded-full bg-[#09090B] px-2 py-0.5 text-[0.6875rem] font-medium text-white">Admin</span>
+                <span className="rounded-full bg-[#09090B] px-2 py-0.5 text-caption font-medium text-white">Admin</span>
               </span>
               <button
                 type="button"

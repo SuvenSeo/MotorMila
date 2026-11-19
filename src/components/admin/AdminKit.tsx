@@ -382,7 +382,7 @@ export function AdminAvatar({ name, size = "md", className }: { name: string; si
       aria-hidden
       className={cn(
         "flex shrink-0 items-center justify-center rounded-full bg-[#09090B] font-semibold text-white",
-        size === "sm" ? "size-6 text-[0.625rem]" : size === "lg" ? "size-10 text-[0.8125rem]" : "size-8 text-[0.6875rem]",
+        size === "sm" ? "size-6 text-caption" : size === "lg" ? "size-10 text-[0.8125rem]" : "size-8 text-caption",
         className,
       )}
     >
@@ -391,7 +391,7 @@ export function AdminAvatar({ name, size = "md", className }: { name: string; si
   );
 }
 
-export const adminThClass = "h-10 px-3 text-left text-[0.6875rem] font-medium tracking-[0.06em] whitespace-nowrap text-label-2 uppercase first:pl-5 last:pr-5";
+export const adminThClass = "h-10 px-3 text-left text-caption font-medium tracking-[0.06em] whitespace-nowrap text-label-2 uppercase first:pl-5 last:pr-5";
 export const adminTdClass = "px-3 py-3 align-middle first:pl-5 last:pr-5";
 
 export const capitalise = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);

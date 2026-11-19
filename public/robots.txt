@@ -6,4 +6,4 @@ Disallow: /snapshots/
 Disallow: /admin
 Disallow: /motormila/admin
 
-Sitemap: https://motormila.pages.dev/sitemap.xml
+Sitemap: https://motormila.pages.dev/sitemap-index.xml

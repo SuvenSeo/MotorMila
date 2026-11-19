@@ -260,10 +260,15 @@ export async function prerender() {
   }
 
   // Real 404 shell (Pages falls through to the static 404.html with status 404).
-  await fs.writeFile(
-    path.join(DIST, "404.html"),
-    renderShell(template, { path: "/404", title: `Page not found — ${SITE}`, description: DEFAULT_DESC, indexable: false }),
-  );
+  // public/404.html is a self-contained page with real navigation that works
+  // without JS; Vite already copied it here, so only synthesise a shell when
+  // that file is gone — overwriting it left hard 404s as an empty #root div.
+  if (!existsSync(path.join(DIST, "404.html"))) {
+    await fs.writeFile(
+      path.join(DIST, "404.html"),
+      renderShell(template, { path: "/404", title: `Page not found — ${SITE}`, description: DEFAULT_DESC, indexable: false }),
+    );
+  }
 
   const idx = findIdxDir();
   if (!idx) {

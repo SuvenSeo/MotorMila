@@ -116,7 +116,7 @@ export function LogsView() {
           <span className="flex items-center gap-2">
             Admin actions
             {auditQ.data ? (
-              <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[0.6875rem] font-medium text-label-2 tabular-nums">
+              <span className="rounded-full bg-surface-2 px-2 py-0.5 text-caption font-medium text-label-2 tabular-nums">
                 {auditRows.length} {auditRows.length === 1 ? "entry" : "entries"}
               </span>
             ) : null}
@@ -153,7 +153,7 @@ export function LogsView() {
           <span className="flex items-center gap-2">
             Pipeline runs
             {pipeQ.data ? (
-              <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[0.6875rem] font-medium text-label-2 tabular-nums">
+              <span className="rounded-full bg-surface-2 px-2 py-0.5 text-caption font-medium text-label-2 tabular-nums">
                 {runs.length} {runs.length === 1 ? "run" : "runs"}
               </span>
             ) : null}
