@@ -423,7 +423,7 @@ export default function Calculator() {
       tone="caution"
       title={
         surchargeCountdown.expired
-          ? t("calc.surchargeExpired", "The 50% CID surcharge's gazetted 3-month period has ended")
+          ? t("calc.surchargeExpired", "The 50% CID surcharge's gazetted window has ended")
           : t("calc.surchargeActive", "50% CID surcharge in force — set to lapse in {days} day(s)", { days: surchargeCountdown.daysLeft })
       }
       action={
@@ -437,8 +437,8 @@ export default function Calculator() {
     >
       <p className="text-label-2">
         {surchargeCountdown.expired
-          ? t("calc.surchargeExpiredHint", "No extension has been gazetted as of our last review — verify current customs rates before committing an import.")
-          : t("calc.surchargeActiveHint", "Gazetted expiry {date} · no extension decision announced · LCs opened on or before 15 May 2026 are exempt", {
+          ? t("calc.surchargeExpiredHint", "A further extension may have been gazetted since our last review — verify current customs rates before committing an import.")
+          : t("calc.surchargeActiveHint", "Extended to {date} · LCs opened on or before 15 May 2026 are exempt (void if amended or shipped after 15 Nov 2026) · verify with Customs", {
               date: surchargeCountdown.expiryLabel,
             })}
       </p>

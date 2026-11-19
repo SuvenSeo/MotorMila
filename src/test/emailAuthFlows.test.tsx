@@ -161,3 +161,78 @@ describe("SignUp self-serve", () => {
     vi.resetModules();
   });
 });
+
+describe("SignUp self-serve bullets", () => {
+  it("shows open-signup bullets when the backend enables self-signup", async () => {
+    vi.stubEnv("VITE_ENABLE_BACKEND_AUTH", "true");
+    const fetchMock = vi.fn<typeof fetch>(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/auth/self-signup/status")) return json({ enabled: true, trialDays: 14, plan: "pro" });
+      return json({ detail: "Invalid or expired token." }, 401);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.resetModules();
+
+    const { AuthProvider } = await import("@/lib/authContext");
+    const { AppPreferencesProvider: FreshPrefs } = await import("@/lib/appPreferences");
+    const SignUp = (await import("@/pages/SignUp")).default;
+
+    render(
+      <FreshPrefs>
+        <AuthProvider>
+          <MemoryRouter initialEntries={["/sign-up"]} future={future}>
+            <Routes>
+              <Route path="/sign-up" element={<SignUp />} />
+            </Routes>
+          </MemoryRouter>
+        </AuthProvider>
+      </FreshPrefs>,
+    );
+
+    expect(await screen.findByText(/open to everyone/i)).toBeInTheDocument();
+    expect(screen.getByText(/14-day pro trial, then free during beta/i)).toBeInTheDocument();
+    expect(screen.getByText(/saved vehicles and price-drop alerts on every device/i)).toBeInTheDocument();
+    expect(screen.queryByText(/closed platform/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/your plan is set by the motormila admin/i)).not.toBeInTheDocument();
+
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("keeps the invite-only bullets when self-signup is disabled", async () => {
+    vi.stubEnv("VITE_ENABLE_BACKEND_AUTH", "true");
+    const fetchMock = vi.fn<typeof fetch>(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/auth/self-signup/status")) return json({ enabled: false });
+      return json({ detail: "Invalid or expired token." }, 401);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.resetModules();
+
+    const { AuthProvider } = await import("@/lib/authContext");
+    const { AppPreferencesProvider: FreshPrefs } = await import("@/lib/appPreferences");
+    const SignUp = (await import("@/pages/SignUp")).default;
+
+    render(
+      <FreshPrefs>
+        <AuthProvider>
+          <MemoryRouter initialEntries={["/sign-up"]} future={future}>
+            <Routes>
+              <Route path="/sign-up" element={<SignUp />} />
+            </Routes>
+          </MemoryRouter>
+        </AuthProvider>
+      </FreshPrefs>,
+    );
+
+    // The missing-token notice only renders once the status answer is processed.
+    expect(await screen.findByText(/missing an invite token/i)).toBeInTheDocument();
+    expect(screen.getByText(/closed platform/i)).toBeInTheDocument();
+    expect(screen.getByText(/your plan is set by the motormila admin/i)).toBeInTheDocument();
+    expect(screen.getByText(/credentials stay private to your organisation/i)).toBeInTheDocument();
+    expect(screen.queryByText(/open to everyone/i)).not.toBeInTheDocument();
+
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+});

@@ -1,10 +1,11 @@
 {
   "_comment": "CANONICAL Sri Lanka import tax rates — single source of truth. Frontend (src/lib/importTaxModel.ts) derives its constants from this file; the backend keeps mirrored constants in backend/app/api/v1/endpoints/calculators.py guarded by backend/tests/test_tax_config_parity.py, which fails CI if the two drift. Band upper bounds use null for unbounded. Update 'reviewed' whenever rates are re-verified against the latest gazette.",
-  "reviewed": "2026-07",
+  "reviewed": "2026-11",
+  "_surcharge_note": "50% CID surcharge effective 2026-05-16 (Gazette 2488/56, 2026-05-15); the initial 3-month window was EXTENDED to 2026-12-31 (Cabinet decision reported 2026-09-13, The Morning / Daily FT 2026-10-01). LCs opened on or before 2026-05-15 stay exempt unless amended or shipped on board after 2026-11-15. Re-verify against Customs before each import; update surcharge_expiry when a further gazette lands.",
   "cid_rate": 0.2,
   "cid_surcharge_rate": 0.5,
   "surcharge_effective_from": "2026-05-16",
-  "surcharge_expiry": "2026-08-16",
+  "surcharge_expiry": "2026-12-31",
   "sscl_rate": 0.025,
   "vat_rate": 0.18,
   "excise_bands_per_cc": {

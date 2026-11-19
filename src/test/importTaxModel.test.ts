@@ -4,8 +4,10 @@ import {
   getExciseRatePerCc,
   getHybridCliffBadge,
   getHybridExciseCliffInsight,
+  getSurchargeCountdown,
   HYBRID_EXCISE_CLIFF_CC,
   isAtHybridExciseCliff,
+  SURCHARGE_EXPIRY_ISO,
 } from "@/lib/importTaxModel";
 
 function line(result: ReturnType<typeof computeImportTaxes>, key: string) {
@@ -111,5 +113,26 @@ describe("getHybridCliffBadge", () => {
     expect(getHybridCliffBadge("plugin_hybrid", 1490)?.kind).toBe("at_cliff");
     expect(getHybridCliffBadge("hybrid", 1790)?.kind).toBe("above_cliff");
     expect(getHybridCliffBadge("hybrid", 1790)?.label).toMatch(/1,?790/);
+  });
+});
+
+describe("CID surcharge window", () => {
+  it("reflects the gazetted extension to 31 December 2026", () => {
+    // The initial 3-month window (2026-05-16 → 2026-08-16) was extended to
+    // 2026-12-31. If a further gazette changes this, update
+    // src/data/importTaxRates.json (surcharge_expiry + _surcharge_note) and
+    // this pin together — never let the calculator silently assume lapse.
+    expect(SURCHARGE_EXPIRY_ISO).toBe("2026-12-31");
+  });
+
+  it("is in force during the extension and expires after it", () => {
+    const during = getSurchargeCountdown(new Date("2026-11-19T12:00:00+05:30"));
+    expect(during.expired).toBe(false);
+    expect(during.daysLeft).toBeGreaterThan(30);
+    expect(during.expiryLabel).toMatch(/2026/);
+
+    const after = getSurchargeCountdown(new Date("2027-01-01T00:00:01+05:30"));
+    expect(after.expired).toBe(true);
+    expect(after.daysLeft).toBe(0);
   });
 });
