@@ -27,8 +27,8 @@ function makeHeader(width: number, actionsByLevel: number[], centre = 440, brand
 }
 
 describe("fitNav", () => {
-  // Signed-in actions width per step: full, -Ctrl K, Search→icon, -name, (Saved step leaves actions alone)
-  const signedIn = [418, 368, 308, 258, 258];
+  // Signed-in actions width per step: full, -name, (the Saved step leaves actions alone)
+  const signedIn = [418, 258, 258];
 
   it("keeps everything at the top of a wide screen", () => {
     expect(fitNav(makeHeader(1920, signedIn), false)).toBe(0);
@@ -42,13 +42,13 @@ describe("fitNav", () => {
   });
 
   it("steps further when the side budget is tighter", () => {
-    // 1366 top: 1326 interior → budget 431 → full fits; 1240 capsule: 1184 → budget 360 → step 2
+    // 1366 top: 1326 interior → budget 431 → full fits; 1000 capsule: 944 → budget 240 → the last step
     expect(fitNav(makeHeader(1366, signedIn), false)).toBe(0);
-    expect(fitNav(makeHeader(1240, signedIn), true)).toBe(2);
+    expect(fitNav(makeHeader(1000, signedIn), true)).toBe(2);
   });
 
   it("caps at the last step when nothing fits", () => {
-    expect(fitNav(makeHeader(900, [900]), true)).toBe(4);
+    expect(fitNav(makeHeader(900, [900]), true)).toBe(2);
   });
 
   it("is a no-op when the centre group is not rendered (below lg)", () => {
