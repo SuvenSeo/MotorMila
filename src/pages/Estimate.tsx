@@ -303,6 +303,7 @@ export default function Estimate() {
         <div
           className="h-1 overflow-hidden rounded-full bg-surface-2"
           role="progressbar"
+          aria-label={t("quiz.progressBar", "Valuation progress")}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={Math.round(progressPct)}

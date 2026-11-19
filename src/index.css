@@ -2249,3 +2249,36 @@ body.cursor-custom-active * { cursor: auto; }
     font-size: 16px;
   }
 }
+
+/* ============================================================================
+   Header safe area (notch / installed PWA)
+   ----------------------------------------------------------------------------
+   Navbar.tsx pads the fixed header by env(safe-area-inset-top) so the brand
+   row and the hamburger clear a notch. --nav-offset has to grow with that
+   inset: pages start their content at pt-[var(--nav-offset)] (App.tsx,
+   PageCanvas, CineHeader, sticky sidebars), so a header taller than 4rem
+   would otherwise cover the top of the page. Registering the property as a
+   length keeps its computed value a plain px number for the JS reader in
+   lib/scrollMemory.ts; without @property support the declaration below still
+   applies and every inset is 0 on desktop and in a normal mobile tab, so
+   nothing changes there.
+   ========================================================================== */
+@property --nav-offset {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 4rem;
+}
+
+:root {
+  --nav-offset: calc(4rem + env(safe-area-inset-top, 0px));
+}
+
+/* The capsule is absolutely positioned against the header's border box, so it
+   does not inherit the header's padding: shift it by the same insets, or on a
+   notched phone it would sit over the row instead of wrapping it. All insets
+   are 0 elsewhere, so this rule is a no-op off the notch. */
+.site-nav-header .site-nav-bg {
+  top: calc(var(--cap-top) + env(safe-area-inset-top, 0px));
+  left: calc(env(safe-area-inset-left, 0px) + max(var(--cap-gap), calc((var(--hdr-w) - var(--cap-max)) / 2)));
+  right: calc(env(safe-area-inset-right, 0px) + max(var(--cap-gap), calc((var(--hdr-w) - var(--cap-max)) / 2)));
+}

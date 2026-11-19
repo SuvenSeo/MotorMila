@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, m } from "motion/react";
 import { Bell, BellOff, ChevronRight, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { useServerMarketAlerts } from "@/hooks/useServerMarketAlerts";
 import { usePush } from "@/hooks/usePush";
 import { trackEvent } from "@/lib/analytics";
@@ -14,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -488,11 +490,13 @@ function AlertRow({
 }) {
   const { t } = useAppPreferences();
   const [deleting, setDeleting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [savingChannels, setSavingChannels] = useState(false);
   const activeChannels = parseChannels(alert.notify_channels);
   const deliveryMode = alert.delivery_mode === "digest" ? "digest" : "instant";
 
   const handleDelete = useCallback(async () => {
+    setConfirmOpen(false);
     setDeleting(true);
     try {
       onDelete(alert.id);
@@ -511,13 +515,16 @@ function AlertRow({
       setSavingChannels(true);
       try {
         await onChannelsChange(alert.id, { channels: Array.from(next) });
-      } catch {
-        // fail silently — toggles are non-critical
+      } catch (err) {
+        toast.error(
+          t("alerts.channelsUpdateFailed", "Couldn't update channels. Your alert is unchanged."),
+          { description: err instanceof Error ? err.message : undefined },
+        );
       } finally {
         setSavingChannels(false);
       }
     },
-    [alert.id, activeChannels, onChannelsChange, savingChannels],
+    [alert.id, activeChannels, onChannelsChange, savingChannels, t],
   );
 
   const cycleDelivery = useCallback(async () => {
@@ -525,12 +532,15 @@ function AlertRow({
     setSavingChannels(true);
     try {
       await onChannelsChange(alert.id, { delivery_mode: deliveryMode === "digest" ? "instant" : "digest" });
-    } catch {
-      // fail silently
+    } catch (err) {
+      toast.error(
+        t("alerts.deliveryUpdateFailed", "Couldn't change delivery mode. Your alert is unchanged."),
+        { description: err instanceof Error ? err.message : undefined },
+      );
     } finally {
       setSavingChannels(false);
     }
-  }, [alert.id, deliveryMode, onChannelsChange, savingChannels]);
+  }, [alert.id, deliveryMode, onChannelsChange, savingChannels, t]);
 
   const label = [alert.make, alert.model].filter(Boolean).join(" ") || t("alerts.allVehicles", "All vehicles");
   const channelLabel = (channel: ChannelName) =>
@@ -545,6 +555,7 @@ function AlertRow({
             : t("alerts.channelPush", "Push");
 
   return (
+    <>
     <Card padding="sm" className="transition-colors duration-short hover:border-foreground/20" data-testid="alert-row">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
@@ -575,7 +586,7 @@ function AlertRow({
             type="button"
             variant="ghost"
             size="icon-sm"
-            onClick={handleDelete}
+            onClick={() => setConfirmOpen(true)}
             disabled={deleting}
             aria-label={t("alerts.deleteAria", "Delete alert for {label}", { label })}
             className="text-label-2 hover:bg-deal-high/10 hover:text-deal-high-text"
@@ -615,6 +626,25 @@ function AlertRow({
         </Chip>
       </div>
     </Card>
+    <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{t("alerts.deleteTitle", "Delete this alert?")}</DialogTitle>
+          <DialogDescription>
+            {t("alerts.deleteBody", "“{label}” will stop watching the market. This can’t be undone.", { label })}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2">
+          <Button type="button" variant="ghost" onClick={() => setConfirmOpen(false)}>
+            {t("common.cancel", "Cancel")}
+          </Button>
+          <Button type="button" variant="destructive" loading={deleting} onClick={() => void handleDelete()}>
+            {t("common.delete", "Delete")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 

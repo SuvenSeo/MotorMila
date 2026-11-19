@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { VERIFY_BELOW_PCT } from "@/lib/priceVerdict";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { m } from "motion/react";
 import { cleanDistrict, isPlausiblePriceDrop } from "@/lib/dataSanity";
 import { ArrowRight, ExternalLink, ImageOff, Lock, Star, TrendingDown } from "lucide-react";
@@ -45,6 +45,12 @@ const PICKS_PAGES = 4;
 const MIN_DEAL_SCORE = 8;
 
 export type BestPicksSortMode = "deal_score" | "affordability";
+
+const SORT_MODES: readonly BestPicksSortMode[] = ["deal_score", "affordability"];
+
+function isSortMode(value: string | null): value is BestPicksSortMode {
+  return value != null && (SORT_MODES as readonly string[]).includes(value);
+}
 
 function dealBand(score: number): "elite" | "strong" | "watch" {
   if (score >= 15) return "elite";
@@ -225,9 +231,18 @@ export default function BestPicks() {
   const navigate = useNavigate();
   const [timedOut, setTimedOut] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  const [sortMode, setSortMode] = useState<BestPicksSortMode>(() =>
-    fullAccess ? "deal_score" : "affordability",
-  );
+  const [searchParams, setSearchParams] = useSearchParams();
+  const defaultSortMode: BestPicksSortMode = fullAccess ? "deal_score" : "affordability";
+  const requestedSort = searchParams.get("sort");
+  const sortMode: BestPicksSortMode =
+    isSortMode(requestedSort) && (fullAccess || requestedSort === "affordability") ? requestedSort : defaultSortMode;
+  const setSortMode = (next: BestPicksSortMode) => {
+    if (!fullAccess && next === "deal_score") return;
+    const params = new URLSearchParams(searchParams);
+    if (next === defaultSortMode) params.delete("sort");
+    else params.set("sort", next);
+    setSearchParams(params, { replace: true });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -318,10 +333,7 @@ export default function BestPicks() {
   const sortControl = (
     <SegmentedControl
       value={sortMode}
-      onValueChange={(v: BestPicksSortMode) => {
-        if (!fullAccess && v === "deal_score") return;
-        setSortMode(v);
-      }}
+      onValueChange={(v: BestPicksSortMode) => setSortMode(v)}
       aria-label={t("picks.sortAria", "Sort best picks")}
       className="w-full sm:w-72"
       options={[

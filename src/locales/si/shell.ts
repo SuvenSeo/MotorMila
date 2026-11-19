@@ -170,4 +170,13 @@ export const shellSi: Record<string, string> = {
   "shell.calc.hlShare": "බෙදාගන්න",
   "shell.calc.hlShareValue": "සබැඳිය",
   "shell.calc.hlShareHint": "ඕනෑම අවස්ථාවක් සබැඳියක් ලෙස යවන්න",
+  "alerts.deleteTitle": "මෙම ඇඟවීම මකන්නද?",
+  "alerts.deleteBody": "“{label}” තවදුරටත් වෙළඳපොළ නිරීක්ෂණය නොකරනු ඇත. මෙය අහෝසි කළ නොහැක.",
+  "alerts.channelsUpdateFailed": "නාලිකා යාවත්කාලීන කළ නොහැක. ඇඟවීම වෙනස් නොවී ඇත.",
+  "alerts.deliveryUpdateFailed": "ලැබීමේ ක්‍රමය වෙනස් කළ නොහැක. ඇඟවීම වෙනස් නොවී ඇත.",
+  "trends.catalogErrorTitle": "make සහ model ලැයිස්තුව පූරණය නොවීය.",
+  "trends.catalogErrorMakes": "make ලැයිස්තුව පූරණය කළ නොහැක. ඔබගේ සම්බන්ධතාවය පරීක්ෂා කර නැවත උත්සාහ කරන්න.",
+  "trends.catalogErrorModels": "මෙම make සඳහා model ලැයිස්තුව පූරණය කළ නොහැක. ඔබගේ සම්බන්ධතාවය පරීක්ෂා කර නැවත උත්සාහ කරන්න.",
+  "trends.loadErrorKeep": "අවසන් වරට පූරණය වූ දත්ත පෙන්වයි. ඔබගේ සම්බන්ධතාවය පරීක්ෂා කර නැවත උත්සාහ කරන්න.",
+  "quiz.progressBar": "ඇගයීම් ප්‍රගතිය",
 };

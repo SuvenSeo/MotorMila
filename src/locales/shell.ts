@@ -186,4 +186,14 @@ export const shellEn: Record<string, string> = {
   "shell.calc.hlShare": "Share",
   "shell.calc.hlShareValue": "Link",
   "shell.calc.hlShareHint": "Send any scenario as a link",
+  // Alerts: destructive confirm + channel/delivery save errors
+  "alerts.deleteTitle": "Delete this alert?",
+  "alerts.deleteBody": "“{label}” will stop watching the market. This can’t be undone.",
+  "alerts.channelsUpdateFailed": "Couldn't update channels. Your alert is unchanged.",
+  "alerts.deliveryUpdateFailed": "Couldn't change delivery mode. Your alert is unchanged.",
+  "trends.catalogErrorTitle": "Makes and models didn't load.",
+  "trends.catalogErrorMakes": "We couldn't load the make list. Check your connection and try again.",
+  "trends.catalogErrorModels": "We couldn't load the models for this make. Check your connection and try again.",
+  "trends.loadErrorKeep": "Showing the last series that loaded. Check your connection and try again.",
+  "quiz.progressBar": "Valuation progress",
 };

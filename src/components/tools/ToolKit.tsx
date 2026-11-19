@@ -475,8 +475,13 @@ export function ResultCard({
   );
 }
 
+/**
+ * Container for result rows. Each row carries its own `<dl>`: a `dl` may only
+ * hold `dt`/`dd` groups, and the share bar under a row has to sit outside that
+ * pair, so the list can't wrap several rows and their bars at once.
+ */
 export function ResultRows({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <dl className={cn("space-y-2.5", className)}>{children}</dl>;
+  return <div className={cn("space-y-2.5", className)}>{children}</div>;
 }
 
 export function ResultRow({
@@ -502,7 +507,7 @@ export function ResultRow({
   className?: string;
 }) {
   const row = (
-    <div
+    <dl
       className={cn(
         "flex items-baseline justify-between gap-4 text-footnote",
         strong && "border-t border-separator pt-2.5",
@@ -513,7 +518,7 @@ export function ResultRow({
     >
       <dt className={cn(tone ? "" : "text-label-2", strong && "font-semibold text-foreground")}>{label}</dt>
       <dd className={cn("shrink-0 text-right font-semibold tabular-nums", !tone && "text-foreground")}>{value}</dd>
-    </div>
+    </dl>
   );
   if (share === undefined) return row;
   const w = Number.isFinite(share) ? Math.max(0, Math.min(1, share)) : 0;

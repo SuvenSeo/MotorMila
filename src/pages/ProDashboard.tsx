@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { motion } from "motion/react";
 import { listStagger } from "@/lib/motion";
 import { AnimatedNumber } from "@/components/ui/animated-number";
@@ -12,17 +12,6 @@ import { Table, TableBody, TableCell, TableContainer, TableHead, TableHeader, Ta
 import { Link, useNavigate } from "react-router-dom";
 
 const containerVariants = listStagger;
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import {
   ArrowRightLeft,
   BarChart3,
@@ -87,7 +76,13 @@ import type {
   ProTrendPoint,
   ProVehicleLane,
 } from "@/types/pro";
-import { formatLkrCompact } from "@/lib/price";
+import { lazyWithRetry } from "@/lib/lazyWithRetry";
+
+const loadCharts = () => import("@/components/ProDashboardCharts");
+const ProDetailTrendChart = lazyWithRetry(() => loadCharts().then((m) => ({ default: m.ProDetailTrendChart })));
+const ProLaneTrendChart = lazyWithRetry(() => loadCharts().then((m) => ({ default: m.ProLaneTrendChart })));
+const ProSourceMixChart = lazyWithRetry(() => loadCharts().then((m) => ({ default: m.ProSourceMixChart })));
+const ProImportEraChart = lazyWithRetry(() => loadCharts().then((m) => ({ default: m.ProImportEraChart })));
 
 type WorkspaceTab = "overview" | "vehicles" | "areas" | "trends" | "sources" | "reports";
 type LaneFocus = "all" | "hot" | "coverage" | "fresh";
@@ -214,13 +209,6 @@ function StatCell({
 }
 
 /** Recharts tooltip on the dark chart panels. */
-const CHART_TOOLTIP_STYLE = {
-  background: "hsl(var(--card))",
-  border: "1px solid hsl(var(--border))",
-  borderRadius: 12,
-  color: "hsl(var(--foreground))",
-};
-
 function ExportButtons({ report }: { report: ProReportPayload }) {
   const { hasProAccess, isAuthenticated } = useAuth();
   const { t } = useAppPreferences();
@@ -428,20 +416,9 @@ function DetailDialog({
                 <h3 className="text-caption font-semibold uppercase tracking-caps text-label-2">{t("proDash.trendDetail", "Trend Detail")}</h3>
                 <div className="mt-4 h-72">
                   {chartData.length ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                        <XAxis dataKey="month" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} unit="M" />
-                        <Tooltip
-                          contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, color: "hsl(var(--foreground))" }}
-                          labelStyle={{ color: "hsl(var(--foreground))" }}
-                          formatter={(value: number, name: string) => [formatLkrCompact(Number(value) * 1_000_000), name]}
-                        />
-                        <Line type="monotone" dataKey="median" name="Median" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={false} />
-                        <Line type="monotone" dataKey="avg" name="Average" stroke="hsl(var(--muted-foreground))" strokeWidth={2} strokeDasharray="4 3" dot={false} />
-                      </LineChart>
-                    </ResponsiveContainer>
+                    <Suspense fallback={<Skeleton className="h-full w-full rounded-control bg-surface-2" />}>
+                      <ProDetailTrendChart data={chartData} />
+                    </Suspense>
                   ) : (
                     <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-border text-footnote text-label-2">
                       {t("proDash.trendHistoryIsNotDeep", "Trend history is not deep enough for this selection yet.")}
@@ -1072,21 +1049,9 @@ export default function ProDashboard() {
                   ) : (snapshot?.source_coverage?.length ?? 0) === 0 ? (
                     <EmptyState icon={BarChart3} title={t("proDash.sourceCoverageWillPopulateOnce", "Source coverage will populate once the snapshot reloads.")} className="flex h-full flex-col justify-center py-8" />
                   ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={snapshot?.source_coverage || []}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                        <XAxis dataKey="label" interval={0} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} />
-                        <YAxis
-                          width={40}
-                          tickFormatter={(v: number) => (v >= 1000 ? `${Math.round(v / 100) / 10}k` : `${v}`)}
-                          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-                          axisLine={false}
-                          tickLine={false}
-                        />
-                        <Tooltip cursor={{ fill: "hsl(var(--muted) / 0.4)" }} contentStyle={CHART_TOOLTIP_STYLE} labelStyle={{ color: "hsl(var(--foreground))" }} />
-                        <Bar dataKey="count" fill="hsl(213 100% 64%)" radius={[6, 6, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <Suspense fallback={<Skeleton className="h-full w-full rounded-control bg-foreground/10" />}>
+                      <ProSourceMixChart data={snapshot?.source_coverage ?? []} />
+                    </Suspense>
                   )}
                 </div>
               </CineSection>
@@ -1359,16 +1324,9 @@ export default function ProDashboard() {
                   {loading ? (
                     <Skeleton className="h-full w-full rounded-control bg-foreground/10" />
                   ) : trendChart.length ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={trendChart}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                        <XAxis dataKey="month" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} />
-                        <YAxis width={44} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} unit="M" />
-                        <Tooltip contentStyle={CHART_TOOLTIP_STYLE} labelStyle={{ color: "hsl(var(--foreground))" }} />
-                        <Line type="monotone" dataKey="median" stroke="hsl(213 100% 64%)" strokeWidth={2.5} dot={false} name="Median" />
-                        <Line type="monotone" dataKey="avg" stroke="hsl(var(--muted-foreground))" strokeWidth={2} dot={false} strokeDasharray="4 3" name="Average" />
-                      </LineChart>
-                    </ResponsiveContainer>
+                    <Suspense fallback={<Skeleton className="h-full w-full rounded-control bg-foreground/10" />}>
+                      <ProLaneTrendChart data={trendChart} />
+                    </Suspense>
                   ) : (
                     <EmptyState icon={TrendingUp} title={t("proDash.noTrendDataAvailableFor", "No trend data available for this lane yet.")} className="flex h-full flex-col justify-center py-8" />
                   )}
@@ -1405,36 +1363,9 @@ export default function ProDashboard() {
                   ) : (eraData?.makes?.length ?? 0) === 0 ? (
                     <EmptyState icon={TrendingUp} title={t("proDash.importEraSplitDataIs", "Import-era split data is not yet available.")} className="flex h-full flex-col justify-center py-8" />
                   ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={(eraData?.makes ?? []).map((row) => ({
-                          make: row.make,
-                          pre: row.pre_freeze.median_price_lkr !== null ? row.pre_freeze.median_price_lkr / 1_000_000 : null,
-                          post: row.post_freeze.median_price_lkr !== null ? row.post_freeze.median_price_lkr / 1_000_000 : null,
-                          preCount: row.pre_freeze.count,
-                          postCount: row.post_freeze.count,
-                        }))}
-                        margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                        <XAxis dataKey="make" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} />
-                        <YAxis width={44} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} unit="M" />
-                        <Tooltip
-                          cursor={{ fill: "hsl(var(--muted) / 0.4)" }}
-                          contentStyle={CHART_TOOLTIP_STYLE}
-                          labelStyle={{ color: "hsl(var(--foreground))" }}
-                          formatter={(value: unknown, name: string, props: { payload?: Record<string, unknown> }) => {
-                            const numVal = typeof value === "number" ? value : null;
-                            const isPost = name === "post";
-                            const count = isPost ? (props.payload?.postCount ?? 0) : (props.payload?.preCount ?? 0);
-                            const label = isPost ? "Post-freeze ≥2025" : "Pre-freeze ≤2024";
-                            return [numVal !== null ? `${formatLkrCompact(numVal * 1_000_000)} (${count} listings)` : "—", label];
-                          }}
-                        />
-                        <Bar dataKey="pre" name="Pre-freeze ≤2024" fill="hsl(var(--deal-amber))" radius={[6, 6, 0, 0]} />
-                        <Bar dataKey="post" name="Post-freeze ≥2025" fill="hsl(var(--signal-cyan))" radius={[6, 6, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <Suspense fallback={<Skeleton className="h-full w-full rounded-control bg-foreground/10" />}>
+                      <ProImportEraChart makes={eraData?.makes ?? []} />
+                    </Suspense>
                   )}
                 </div>
                 {(eraData?.makes?.length ?? 0) > 0 && (

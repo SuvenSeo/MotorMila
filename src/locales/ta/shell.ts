@@ -170,4 +170,13 @@ export const shellTa: Record<string, string> = {
   "shell.calc.hlShare": "பகிர்",
   "shell.calc.hlShareValue": "இணைப்பு",
   "shell.calc.hlShareHint": "எந்தக் கணக்கீட்டையும் இணைப்பாக அனுப்புங்கள்",
+  "alerts.deleteTitle": "இந்த விழிப்பூட்டலை நீக்கவா?",
+  "alerts.deleteBody": "“{label}” இனி சந்தையைக் கண்காணிக்காது. இதை மீளச் செய்ய முடியாது.",
+  "alerts.channelsUpdateFailed": "சேனல்களைப் புதுப்பிக்க முடியவில்லை. விழிப்பூட்டல் மாறவில்லை.",
+  "alerts.deliveryUpdateFailed": "வழங்கல் முறையை மாற்ற முடியவில்லை. விழிப்பூட்டல் மாறவில்லை.",
+  "trends.catalogErrorTitle": "make, model பட்டியல் ஏற்றப்படவில்லை.",
+  "trends.catalogErrorMakes": "make பட்டியலை ஏற்ற முடியவில்லை. இணைப்பைச் சரிபார்த்து மீண்டும் முயலுங்கள்.",
+  "trends.catalogErrorModels": "இந்த make-க்கான model பட்டியலை ஏற்ற முடியவில்லை. இணைப்பைச் சரிபார்த்து மீண்டும் முயலுங்கள்.",
+  "trends.loadErrorKeep": "கடைசியாக ஏற்றப்பட்ட தொடர் காட்டப்படுகிறது. இணைப்பைச் சரிபார்த்து மீண்டும் முயலுங்கள்.",
+  "quiz.progressBar": "மதிப்பீட்டு முன்னேற்றம்",
 };

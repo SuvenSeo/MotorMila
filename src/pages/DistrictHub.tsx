@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { m } from "motion/react";
 import { useQuery } from "@tanstack/react-query";
@@ -6,16 +6,16 @@ import { ArrowRight, Car, MapPin } from "lucide-react";
 import { getDistrictQuickInsight, getDistrictPrices, getListings, formatPrice } from "@/services/api";
 import { listItem, revealItem } from "@/lib/motion";
 import { PageBody } from "@/components/PageBody";
+import { DeferredSection } from "@/components/DeferredSection";
 import { PageCanvas } from "@/components/PageCanvas";
 import { ListingCard } from "@/components/ListingCard";
-import { DistrictPriceHeatmap } from "@/components/DistrictPriceHeatmap";
-import { DistrictVelocityList } from "@/components/DistrictVelocityList";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { PageHeader } from "@/components/ui/page-header";
+import { Skeleton } from "@/components/ui/skeleton";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { StatTile, CountValue, LkrValue } from "@/components/ui/stat-tile";
 import { HubLinkTile, HubTileGrid, HubTileSkeleton } from "@/components/data/HubParts";
@@ -23,6 +23,14 @@ import { BRAND } from "@/lib/brand";
 import { slugifyHubSegment } from "@/lib/makeNormalization";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { useAppPreferences } from "@/lib/appPreferences";
+import { lazyWithRetry } from "@/lib/lazyWithRetry";
+
+const DistrictPriceHeatmap = lazyWithRetry(() =>
+  import("@/components/DistrictPriceHeatmap").then((m) => ({ default: m.DistrictPriceHeatmap })),
+);
+const DistrictVelocityList = lazyWithRetry(() =>
+  import("@/components/DistrictVelocityList").then((m) => ({ default: m.DistrictVelocityList })),
+);
 
 const SITE = BRAND.siteName;
 const ORIGIN = BRAND.origin;
@@ -135,13 +143,17 @@ export default function DistrictHub() {
             eyebrow={t("districtHub.priceMapEyebrow", "District price map")}
             title={t("districtHub.priceMapTitle", "Sri Lanka price landscape")}
           />
-          <DistrictPriceHeatmap
-            data={districtPricesQuery.data ?? []}
-            highlightDistrict={canonicalDistrict}
-            isLoading={districtPricesQuery.isPending}
-            isError={districtPricesQuery.isError}
-            onRetry={() => districtPricesQuery.refetch()}
-          />
+          <DeferredSection lazy minHeight={420}>
+            <Suspense fallback={<Skeleton className="h-[420px]" />}>
+              <DistrictPriceHeatmap
+                data={districtPricesQuery.data ?? []}
+                highlightDistrict={canonicalDistrict}
+                isLoading={districtPricesQuery.isPending}
+                isError={districtPricesQuery.isError}
+                onRetry={() => districtPricesQuery.refetch()}
+              />
+            </Suspense>
+          </DeferredSection>
         </m.section>
 
         {isPending ? (
@@ -182,7 +194,17 @@ export default function DistrictHub() {
         ) : null}
 
         <m.section variants={revealItem}>
-          <DistrictVelocityList />
+          <DeferredSection lazy minHeight={380}>
+            <Suspense
+              fallback={
+                <Card padding="md">
+                  <Skeleton className="h-72" />
+                </Card>
+              }
+            >
+              <DistrictVelocityList />
+            </Suspense>
+          </DeferredSection>
         </m.section>
 
         {recentListings.length > 0 && (

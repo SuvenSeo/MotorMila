@@ -1,7 +1,8 @@
 import { BrandLogo } from "@/components/BrandLogo";
 import { scrollBehavior, spring, tween as motionTween, usePrefersReducedMotionOrLowData } from "@/lib/motion";
 import { prefetchRoute } from "@/lib/routePrefetch";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, LayoutGroup, m, motion } from "motion/react";
 import { ChevronDown, Crown, LayoutGrid, LogOut, Menu, Search, Settings, UserCircle2, X } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -34,6 +35,9 @@ const UNSCROLLED_AT = 8;
 const HIDE_AFTER = 96;
 /** Scroll this far in one direction before the phone header hides/reveals. */
 const HIDE_DELTA = 10;
+/** What Tab may land on inside the phone menu panel (the panel itself is -1). */
+const MENU_FOCUSABLE =
+  'a[href], button:not([disabled]), summary, input, select, textarea, [tabindex]:not([tabindex="-1"])';
 const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 type LiveHeader = { scrolled: boolean; hidden: boolean; menuOpen: boolean; pathname: string };
@@ -93,9 +97,67 @@ export function Navbar() {
   const navigate = useNavigate();
   const calm = usePrefersReducedMotionOrLowData();
   const headerRef = useRef<HTMLElement>(null);
+  const menuPanelRef = useRef<HTMLDivElement>(null);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
+  const restoreMenuFocus = useRef(false);
   // Live header state, owned by the DOM (data-* attributes), mirrored here so
   // the scroll path never touches React state.
   const live = useRef<LiveHeader>({ scrolled: false, hidden: false, menuOpen: false, pathname });
+
+  /** Dismiss the phone menu (Escape, backdrop, toggle): focus goes back to the hamburger. */
+  const dismissMenu = useCallback(() => {
+    restoreMenuFocus.current = true;
+    setMenuOpen(false);
+  }, []);
+
+  // The phone menu is modal while open: Escape closes it from anywhere, Tab
+  // stays inside the panel, and the page behind it cannot scroll (the same
+  // body lock CommandPalette uses).
+  useEffect(() => {
+    if (!menuOpen) return;
+    const panel = menuPanelRef.current;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const focusFrame = window.requestAnimationFrame(() => panel?.focus({ preventScroll: true }));
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        dismissMenu();
+        return;
+      }
+      if (event.key !== "Tab" || !panel) return;
+      const focusable = Array.from(panel.querySelectorAll<HTMLElement>(MENU_FOCUSABLE));
+      if (!focusable.length) {
+        event.preventDefault();
+        panel.focus({ preventScroll: true });
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      const inside = active !== null && panel.contains(active);
+      if (event.shiftKey && (active === first || !inside)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || !inside)) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      window.cancelAnimationFrame(focusFrame);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [menuOpen, dismissMenu]);
+
+  // Hand focus back to the button that opened the panel.
+  useEffect(() => {
+    if (menuOpen || !restoreMenuFocus.current) return;
+    restoreMenuFocus.current = false;
+    menuTriggerRef.current?.focus({ preventScroll: true });
+  }, [menuOpen]);
 
   useEffect(() => {
     setApplePlatform(isApplePlatform());
@@ -218,6 +280,16 @@ export function Navbar() {
     <header
       ref={headerRef}
       className="site-nav-header right-scroll-bar-position fixed inset-x-0 top-0 z-header"
+      // Notched phones and installed PWAs: the row (brand, hamburger) sits
+      // inside the top inset instead of under the notch. The horizontal
+      // insets only matter in landscape. Matches the dock's env() padding;
+      // --nav-offset grows with the same inset (index.css) so page content
+      // still starts below the header.
+      style={{
+        paddingTop: "env(safe-area-inset-top, 0px)",
+        paddingLeft: "env(safe-area-inset-left, 0px)",
+        paddingRight: "env(safe-area-inset-right, 0px)",
+      }}
       data-fit="0"
     >
       <div aria-hidden className="site-nav-bg" />
@@ -343,10 +415,8 @@ export function Navbar() {
           {/* Hamburger only where the centre nav is collapsed */}
           <button
             type="button"
-            onClick={() => setMenuOpen((open) => !open)}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") setMenuOpen(false);
-            }}
+            ref={menuTriggerRef}
+            onClick={() => (menuOpen ? dismissMenu() : setMenuOpen(true))}
             className="nav-control nav-control--icon lg:hidden"
             aria-label={menuLabel}
             aria-expanded={menuOpen}
@@ -359,18 +429,40 @@ export function Navbar() {
 
       {/* Hamburger menu panel (below lg) — every route, grouped under its destination */}
       <AnimatePresence>
+        {/* Dimmed backdrop, portalled to <body>: the header is a transformed
+            box, so a fixed child inside it would not cover the viewport. It
+            sits under the header (z-header) so the row and panel stay crisp.
+            The display:contents span is only there because AnimatePresence
+            tracks DOM children, not portals — it lets the backdrop animate
+            out with the panel. */}
+        {menuOpen && typeof document !== "undefined" ? (
+          <span key="site-menu-backdrop" className="contents">
+            {createPortal(
+              <m.div
+                className="fixed inset-0 z-[45] bg-black/40"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1, transition: calm ? { duration: 0 } : motionTween.short }}
+                exit={{ opacity: 0, transition: calm ? { duration: 0 } : motionTween.exit }}
+                onClick={dismissMenu}
+                aria-hidden
+              />,
+              document.body,
+            )}
+          </span>
+        ) : null}
         {menuOpen && (
           <m.div
             key="site-menu"
+            ref={menuPanelRef}
             id="site-menu"
-            className="site-menu-panel-wrap"
+            role="dialog"
+            aria-modal="true"
             aria-label={t("nav.navigationMenu", "Navigation menu")}
+            tabIndex={-1}
+            className="site-menu-panel-wrap outline-none"
             initial={calm ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: -4 }}
             animate={{ opacity: 1, scale: 1, y: 0, transition: motionTween.short }}
             exit={calm ? { opacity: 0 } : { opacity: 0, scale: 0.98, y: -4, transition: motionTween.exit }}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") setMenuOpen(false);
-            }}
           >
             <div className="max-h-[min(78vh,720px)] overflow-y-auto overscroll-contain rounded-3xl border border-border bg-popover/[0.98] p-3.5 shadow-soft-lg">
               <div className="grid gap-4 sm:grid-cols-2">

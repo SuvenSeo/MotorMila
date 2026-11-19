@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { m } from "motion/react";
 import { useQuery } from "@tanstack/react-query";
@@ -8,14 +8,12 @@ import { listItem, revealItem } from "@/lib/motion";
 import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
 import { ListingCard } from "@/components/ListingCard";
-import { ModelPriceTimeMachine } from "@/components/ModelPriceTimeMachine";
-import { ModelTrendPanel } from "@/components/ModelTrendPanel";
 import { BuyOrWaitCard } from "@/components/BuyOrWaitCard";
-import { MileagePriceScatter } from "@/components/MileagePriceScatter";
 import { NhtsaModelsCard } from "@/components/NhtsaModelsCard";
 import { SafetyResearchCard } from "@/components/SafetyResearchCard";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { ErrorState } from "@/components/ui/error-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -26,6 +24,17 @@ import { BRAND } from "@/lib/brand";
 import { slugifyHubSegment } from "@/lib/makeNormalization";
 import { QUERY_STALE } from "@/lib/queryPolicy";
 import { useAppPreferences } from "@/lib/appPreferences";
+import { lazyWithRetry } from "@/lib/lazyWithRetry";
+
+const ModelPriceTimeMachine = lazyWithRetry(() =>
+  import("@/components/ModelPriceTimeMachine").then((m) => ({ default: m.ModelPriceTimeMachine })),
+);
+const ModelTrendPanel = lazyWithRetry(() =>
+  import("@/components/ModelTrendPanel").then((m) => ({ default: m.ModelTrendPanel })),
+);
+const MileagePriceScatter = lazyWithRetry(() =>
+  import("@/components/MileagePriceScatter").then((m) => ({ default: m.MileagePriceScatter })),
+);
 
 const SITE = BRAND.siteName;
 const ORIGIN = BRAND.origin;
@@ -282,7 +291,15 @@ export default function MakeModelHub() {
             </div>
           )}
           <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start">
-            <ModelTrendPanel make={makeParam} model={modelParam} displayMake={makeDisplay} displayModel={modelDisplay} />
+            <Suspense
+              fallback={
+                <Card padding="md">
+                  <Skeleton className="h-64 sm:h-72" />
+                </Card>
+              }
+            >
+              <ModelTrendPanel make={makeParam} model={modelParam} displayMake={makeDisplay} displayModel={modelDisplay} />
+            </Suspense>
             <BuyOrWaitCard make={makeParam} model={modelParam} displayMake={makeDisplay} displayModel={modelDisplay} />
           </div>
         </m.section>
@@ -324,7 +341,15 @@ export default function MakeModelHub() {
         )}
 
         <m.div variants={revealItem}>
-          <ModelPriceTimeMachine make={makeParam} model={modelParam} displayMake={makeDisplay} displayModel={modelDisplay} />
+          <Suspense
+            fallback={
+              <Card padding="md">
+                <Skeleton className="h-72 sm:h-[21rem]" />
+              </Card>
+            }
+          >
+            <ModelPriceTimeMachine make={makeParam} model={modelParam} displayMake={makeDisplay} displayModel={modelDisplay} />
+          </Suspense>
         </m.div>
 
         <m.section variants={revealItem}>
@@ -332,13 +357,21 @@ export default function MakeModelHub() {
             eyebrow={t("hub.mileageScatterEyebrow", "Mileage vs. price")}
             title={t("hub.mileageScatterTitle", "{vehicle}: mileage vs. asking price", { vehicle })}
           />
-          <MileagePriceScatter
-            points={scatterPoints}
-            title={t("hub.mileageScatterCard", "{vehicle} — mileage vs. price", { vehicle })}
-            isLoading={scatterQuery.isPending}
-            isError={scatterQuery.isError}
-            onRetry={() => void scatterQuery.refetch()}
-          />
+          <Suspense
+            fallback={
+              <Card padding="md">
+                <Skeleton className="h-80" />
+              </Card>
+            }
+          >
+            <MileagePriceScatter
+              points={scatterPoints}
+              title={t("hub.mileageScatterCard", "{vehicle} — mileage vs. price", { vehicle })}
+              isLoading={scatterQuery.isPending}
+              isError={scatterQuery.isError}
+              onRetry={() => void scatterQuery.refetch()}
+            />
+          </Suspense>
         </m.section>
 
         {recentListings.length > 0 && (
