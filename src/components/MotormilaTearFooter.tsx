@@ -1,30 +1,17 @@
-import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
 import PushpinTearFooter, { type FooterAnchorProps } from "@/components/ui/pushpin-tear-footer";
 import { PrefetchLink } from "@/components/PrefetchLink";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { BRAND } from "@/lib/brand";
 import { HOW_WE_PRICE_PATH } from "@/lib/howWePrice";
-import { restoreScroll } from "@/lib/scrollMemory";
 import "@/styles/pushpin-footer.css";
 
 function FooterRouterLink({ href, ...props }: FooterAnchorProps) {
   return <PrefetchLink to={href} {...props} />;
 }
 
-/** The home-page poster preview. The reusable footer doesn't depend on the app router. */
+/** The site footer: Motormila's take on the pushpin tear-off poster. */
 export default function MotormilaTearFooter() {
   const { t } = useAppPreferences();
-  const { hash } = useLocation();
-
-  useEffect(() => {
-    if (hash !== "#footer-preview") return;
-    const anchor = document.getElementById("footer-preview");
-    if (!anchor) return;
-    // The home sections above the poster are lazy; hold this deep link while they settle.
-    const top = parseFloat(getComputedStyle(anchor).scrollMarginTop) || 0;
-    return restoreScroll({ y: window.scrollY, anchor: { id: anchor.id, top } });
-  }, [hash]);
 
   return (
     <PushpinTearFooter

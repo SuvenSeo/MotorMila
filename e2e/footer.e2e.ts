@@ -1,26 +1,27 @@
 import { expect, test } from "@playwright/test";
 
-const preview = "/?footerPreview=1#footer-preview";
+const poster = (page: import("@playwright/test").Page) => page.getByRole("contentinfo").last();
 
-test("the regular homepage keeps the platform footer", async ({ page }) => {
+test("the poster footer carries the site on every route", async ({ page }) => {
   await page.goto("/");
-  const footer = page.getByRole("contentinfo");
-  await expect(footer.getByRole("link", { name: "Cookie notice" })).toBeVisible();
-  await expect(footer.getByRole("button", { name: "Pull the pin" })).toHaveCount(0);
-});
-
-test("the preview opens at the poster and uses app navigation", async ({ page }) => {
-  await page.goto(preview);
-  const footer = page.getByRole("contentinfo");
-  const trends = footer.getByRole("link", { name: "Trends", exact: true });
-  await expect(trends).toBeInViewport();
-  await expect(footer).toHaveCSS("color-scheme", "dark");
+  const footer = poster(page);
+  await expect(footer.getByRole("button", { name: "Pull the pin" })).toBeVisible();
   await expect(footer.getByRole("link", { name: "Motormila", exact: true }).locator("img"))
     .toHaveAttribute("src", "/logo-wordmark-dark.svg");
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-  await expect(page.getByText("Hero lab · local only")).toHaveCount(0);
   await expect(footer.getByRole("link", { name: "Privacy", exact: true })).toHaveAttribute("href", "/privacy");
   await expect(footer.locator("input[type=email]")).toHaveCount(0);
+
+  await page.goto("/pricing");
+  await expect(poster(page).getByRole("button", { name: "Pull the pin" })).toBeVisible();
+});
+
+test("the pin tears the sheet and the poster navigates inside the app", async ({ page }) => {
+  await page.goto("/");
+  const footer = poster(page);
+  const trends = footer.getByRole("link", { name: "Trends", exact: true });
+  await trends.scrollIntoViewIfNeeded();
+  await expect(trends).toBeInViewport();
+  await expect(footer).toHaveCSS("color-scheme", "dark");
 
   const pin = footer.getByRole("button", { name: "Pull the pin" });
   const edge = footer.locator(".tpf-rim");
@@ -40,11 +41,12 @@ test("the preview opens at the poster and uses app navigation", async ({ page })
 test("on a narrow phone, the pin redraws without motion and the footer links stay available", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 720 });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto(preview);
+  await page.goto("/");
 
-  const footer = page.getByRole("contentinfo");
+  const footer = poster(page);
   const pin = footer.getByRole("button", { name: "Pull the pin" });
   const edge = footer.locator(".tpf-rim");
+  await pin.scrollIntoViewIfNeeded();
   await expect(pin).toBeInViewport();
   await expect(edge).toHaveAttribute("d", /^M/);
   const before = await edge.getAttribute("d");
@@ -56,6 +58,6 @@ test("on a narrow phone, the pin redraws without motion and the footer links sta
   await expect(footer.getByRole("link", { name: "EV Hub", exact: true })).toBeVisible();
   expect(await footer.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
 
-  await footer.getByRole("button", { name: "Back to top" }).click();
+  await footer.getByRole("button", { name: "Back to top" }).first().click();
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 });

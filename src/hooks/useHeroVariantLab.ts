@@ -20,12 +20,11 @@ export function useHeroVariantLab(): {
   showPicker: boolean;
 } {
   const [params, setParams] = useSearchParams();
-  const allowHeroVariants = import.meta.env.DEV;
-  const showPicker = allowHeroVariants && params.get("footerPreview") !== "1";
+  const showPicker = import.meta.env.DEV;
 
   // Production always renders the shipped hero: no `?hero=` or stored pick.
-  const paramId = allowHeroVariants ? params.get("hero") : null;
-  const initial = allowHeroVariants
+  const paramId = showPicker ? params.get("hero") : null;
+  const initial = showPicker
     ? (isHeroVariantId(paramId) ? paramId : null) ?? readStoredHeroVariantId() ?? DEFAULT_HERO_VARIANT_ID
     : DEFAULT_HERO_VARIANT_ID;
 

@@ -1872,11 +1872,6 @@
   }
 }
 
-/* Footer: tokenised (components/AppFooter.tsx); it follows the theme now.
-   It stays hidden until the route content has painted (CLS: the footer used
-   to paint first and get shoved down by lazy pages). */
-.app-footer { content-visibility: auto; contain-intrinsic-size: auto 520px; }
-
 /* ============================================================================
    1px gap grid (magazine layout)
    ========================================================================== */
