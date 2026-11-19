@@ -30,6 +30,9 @@ PASSWORD = "a-long-password-1"
 def env(monkeypatch):
     monkeypatch.setenv("AUTH_TOKEN_SECRET", "test-secret-verify")
     monkeypatch.setenv("SELF_SIGNUP", "true")
+    # Self-signup refuses to run without an email provider (accounts must be
+    # verifiable). The actual sends are mocked below.
+    monkeypatch.setenv("RESEND_API_KEY", "test-resend-key")
     monkeypatch.setattr("app.main.SKIP_DB_INIT", True)
     monkeypatch.setenv(
         "AUTH_USERS",

@@ -1187,6 +1187,14 @@ def self_signup(
         raise HTTPException(status_code=503, detail="Authentication is not configured on this deployment.")
     if not self_signup_enabled():
         raise HTTPException(status_code=403, detail="Self-serve signup is disabled. Ask your Motormila admin for an invite.")
+    # Verification email is mandatory for self-signups (backend/.env.example):
+    # without a provider the account could never be activated, so refuse
+    # loudly instead of creating dead unverified rows.
+    if not (os.getenv("RESEND_API_KEY", "").strip() or os.getenv("SMTP_HOST", "").strip()):
+        raise HTTPException(
+            status_code=503,
+            detail="Email verification is not available on this deployment yet. Please try again soon.",
+        )
     if db is None:
         raise HTTPException(status_code=503, detail="Database is required for self-serve signup.")
     _ensure_account_writes_allowed()

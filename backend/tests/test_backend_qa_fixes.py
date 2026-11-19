@@ -389,6 +389,7 @@ def test_account_writes_answer_503_in_failover_mode(db_env, monkeypatch):
     _engine, _Session, client = db_env
     monkeypatch.setenv("AUTH_TOKEN_SECRET", "qa-secret")
     monkeypatch.setenv("SELF_SIGNUP", "true")
+    monkeypatch.setenv("RESEND_API_KEY", "qa-resend-key")
     import db.sqlite_failover as failover
 
     monkeypatch.setattr(failover, "_activated", True)

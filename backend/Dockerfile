@@ -8,6 +8,11 @@ ENV DAILY_SYNC_ENABLED=false
 # Production schema changes are applied by the GitHub Actions maintenance
 # workflow. Avoid blocking API startup on remote DDL locks or pooler latency.
 ENV SKIP_DB_INIT=true
+# Consumer self-serve signup (7-day Pro trial, email-verified). Dealer/admin
+# seats stay invite-only. Requires RESEND_API_KEY (or SMTP_*) and a persistent
+# account store (private R2_ACCOUNTS_BUCKET or /data) — see db/account_store.py.
+# Override with an HF Space variable SELF_SIGNUP=false to close it again.
+ENV SELF_SIGNUP=true
 
 WORKDIR /app
 
