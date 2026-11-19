@@ -41,6 +41,14 @@ const prerendered = new Set(
   [...prerenderSource.matchAll(/"(\/[^"]*)":\s*\[/g)].map((m) => m[1]),
 );
 
+// Hub tiers are shelled per URL from the snapshot index at build time
+// (sitemap-hubs.xml has one line per shell), not listed in STATIC_ROUTES.
+const isPrerenderedHub = (url: string) => /^\/cars\/[^/]+(\/[^/]+)?$/.test(url);
+
+// Line endings are the checkout's, not the file's: a CRLF working copy must
+// not make a header assertion fail.
+const readNormalised = (rel: string) => readFileSync(path.join(root, rel), "utf8").replace(/\r\n/g, "\n");
+
 // Resolve relative child routes against their parent instead of treating
 // <Route path="users"> as a top-level URL. Use the TSX tree so pathless
 // layout routes and index routes keep the correct parent scope.
@@ -87,7 +95,7 @@ describe("Pages SPA routing", () => {
     const url = sample(routePath);
     if (url === "/") return; // static index.html
     const viaRewrite = spaRules.some((re) => re.test(url));
-    const viaShell = prerendered.has(url);
+    const viaShell = prerendered.has(url) || isPrerenderedHub(url);
     const viaRedirect = cfRedirects.some((r) => r.status === 301 && sourceToRegex(r.from).test(url));
     expect(viaRewrite || viaShell || viaRedirect).toBe(true);
     expect(isKnownRoutePath(url)).toBe(true);
@@ -96,7 +104,7 @@ describe("Pages SPA routing", () => {
   it.each(routePaths)("Cloudflare _redirects / shells cover %s", (routePath) => {
     const url = sample(routePath);
     if (url === "/") return;
-    const viaShell = prerendered.has(url);
+    const viaShell = prerendered.has(url) || isPrerenderedHub(url);
     const viaRule = cfRedirects.some((r) => sourceToRegex(r.from.replace(/\*$/, ":splat*")).test(url));
     expect(viaShell || viaRule).toBe(true);
   });
@@ -114,10 +122,13 @@ describe("Pages SPA routing", () => {
   });
 
   it("never lets a _redirects 200 rule shadow a prerendered shell", () => {
+    const hubSamples = ["/cars/nissan", "/cars/nissan/caravan"];
     for (const r of cfRedirects.filter((x) => x.status === 200 && x.to === "/")) {
-      for (const shell of prerendered) {
-        expect(sourceToRegex(r.from.replace(/\*$/, ":splat*")).test(shell)).toBe(false);
-      }
+      const rule = sourceToRegex(r.from.replace(/\*$/, ":splat*"));
+      for (const shell of prerendered) expect(rule.test(shell)).toBe(false);
+      // A 200 rule over a hub tier would serve every one of the 1,509 hub
+      // URLs the home <head>, canonical "/" included.
+      for (const hub of hubSamples) expect(rule.test(hub)).toBe(false);
     }
   });
 
@@ -132,7 +143,7 @@ describe("Pages SPA routing", () => {
     for (const routePath of routePaths.filter((p) => p.startsWith("/motormila/admin/"))) {
       expect(isNoindexPath(routePath)).toBe(true);
     }
-    expect(readFileSync(path.join(root, "public/_headers"), "utf8"))
+    expect(readNormalised("public/_headers"))
       .toMatch(/\/motormila\/admin\/\*\n\s+X-Robots-Tag: noindex, nofollow/);
   });
 
