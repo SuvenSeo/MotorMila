@@ -233,11 +233,18 @@ export default function SignUp() {
     },
   }[planKey];
 
-  const bullets = [
-    t("signup.bullet1", "Closed platform — no public self-serve signup"),
-    t("signup.bullet2", "Your plan is set by the Motormila admin"),
-    t("signup.bullet3", "Credentials stay private to your organisation"),
-  ];
+  const bullets =
+    selfServeEnabled && !token
+      ? [
+          t("signup.selfServeBullet1", "Open to everyone — no invite needed"),
+          t("signup.selfServeBullet2", `${selfServeTrialDays}-day Pro trial, then free during beta`, { days: selfServeTrialDays }),
+          t("signup.selfServeBullet3", "Saved vehicles and price-drop alerts on every device"),
+        ]
+      : [
+          t("signup.bullet1", "Closed platform — no public self-serve signup"),
+          t("signup.bullet2", "Your plan is set by the Motormila admin"),
+          t("signup.bullet3", "Credentials stay private to your organisation"),
+        ];
 
   const pwLabels: [string, string] = [t("signup.hidePassword", "Hide password"), t("signup.showPassword", "Show password")];
   const serverAlert = (

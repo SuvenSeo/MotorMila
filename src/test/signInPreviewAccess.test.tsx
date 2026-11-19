@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import SignIn from "@/pages/SignIn";
@@ -244,5 +244,97 @@ describe("SignIn preview access", () => {
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
     vi.resetModules();
+  });
+});
+
+describe("SignIn self-signup CTA", () => {
+  beforeEach(() => {
+    installLocalStorage();
+  });
+
+  function renderSignIn() {
+    return render(
+      <AppPreferencesProvider>
+        <AuthProvider>
+          <MemoryRouter initialEntries={["/sign-in"]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <Routes>
+              <Route path="/sign-in" element={<SignIn />} />
+            </Routes>
+          </MemoryRouter>
+        </AuthProvider>
+      </AppPreferencesProvider>,
+    );
+  }
+
+  it("offers Create an account when self-signup is enabled", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/auth/self-signup/status")) {
+        return new Response(JSON.stringify({ enabled: true, trialDays: 7, plan: "pro" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ detail: "Invalid or expired token." }), { status: 401 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderSignIn();
+
+    const link = await screen.findByRole("link", { name: /create an account/i });
+    expect(link).toHaveAttribute("href", "/sign-up");
+    expect(screen.getByText(/new to motormila\?/i)).toBeInTheDocument();
+    // The invite and browse lines stay untouched.
+    expect(screen.getByRole("link", { name: /complete sign-up/i })).toHaveAttribute("href", "/sign-up");
+    expect(screen.getByRole("link", { name: /browse the live market instead/i })).toHaveAttribute("href", "/");
+
+    vi.unstubAllGlobals();
+  });
+
+  it("keeps today's invite-only copy when self-signup is disabled", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/auth/self-signup/status")) {
+        return new Response(JSON.stringify({ enabled: false }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ detail: "Invalid or expired token." }), { status: 401 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderSignIn();
+
+    expect(await screen.findByText(/have an invite link\?/i)).toBeInTheDocument();
+    // Let the status response settle before asserting the CTA stays hidden.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/auth/self-signup/status"))).toBe(true);
+    expect(screen.queryByRole("link", { name: /create an account/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/new to motormila/i)).not.toBeInTheDocument();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("stays silent when the status endpoint is unreachable", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("network down");
+      }),
+    );
+
+    renderSignIn();
+
+    expect(await screen.findByText(/have an invite link\?/i)).toBeInTheDocument();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(screen.queryByRole("link", { name: /create an account/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+    vi.unstubAllGlobals();
   });
 });

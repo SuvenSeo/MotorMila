@@ -17,6 +17,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from app.api.v1.endpoints import auth
 from app.core.owners import is_owner_email, owner_emails
 from app.main import app
+from app.services import invite_email
 from app.utils.plan_limits import is_free_browse_plan
 from db.models import Base, PlatformUser
 from db.session import get_db
@@ -28,6 +29,10 @@ OWNER = "suvenseoras@gmail.com"
 @pytest.fixture()
 def env(monkeypatch):
     monkeypatch.setenv("AUTH_TOKEN_SECRET", "test-secret-owner")
+    # Self-signup refuses to run without an email provider (accounts must be
+    # verifiable). The actual send is mocked so the test stays offline.
+    monkeypatch.setenv("RESEND_API_KEY", "test-resend-key")
+    monkeypatch.setattr(invite_email, "try_send_verification_email", lambda **kwargs: True)
     monkeypatch.setattr("app.main.SKIP_DB_INIT", True)
     monkeypatch.setenv("APP_ACCESS_ENFORCED", "true")
     monkeypatch.setenv("PRO_ACCESS_ENFORCED", "true")

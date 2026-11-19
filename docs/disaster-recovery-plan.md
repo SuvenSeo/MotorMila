@@ -126,7 +126,18 @@ The scraper and digest pipelines authenticate via HuggingFace and Cloudflare tok
 
 ## 6. Backend API Recovery
 
-The API runs as a HuggingFace Space (Docker). It is **stateless** — all state lives in the database.
+The API runs as a HuggingFace Space (Docker). Catalog state lives in the
+database; **accounts are the exception**.
+
+**Accounts during failover:** the public SQLite failover dump carries no
+accounts, so `backend/db/account_store.py` keeps a dedicated account SQLite
+DB on HF persistent storage (`/data`) or in a PRIVATE R2 bucket
+(`R2_ACCOUNTS_BUCKET` / `R2_UPLOADS_BUCKET` — never the public snapshot
+`R2_BUCKET`). It stays the account source of truth across failover and
+failback, so signup/invites keep working during a Neon outage and accounts
+created then survive recovery. Without `/data` or a private bucket the store
+is skipped and account writes are refused while failed over. Config:
+`backend/.env.example` → "Persistent account store".
 
 **To redeploy:**
 

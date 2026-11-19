@@ -70,3 +70,13 @@ egress well inside the free allowance (see `docs/neon-egress-budget.md`).
 If R2 secrets are not set yet, upload is skipped without failing the exporter
 script locally; in GitHub, the export step still fails clearly if the database
 itself is unavailable.
+
+## Accounts during snapshot mode
+
+Snapshots are read-only catalog data; the public `R2_BUCKET` never holds
+accounts. Signups, invites and logins keep working during snapshot/failover
+operation via `backend/db/account_store.py`: a dedicated account SQLite DB on
+HF `/data` or a PRIVATE R2 bucket (`R2_ACCOUNTS_BUCKET`, fallback
+`R2_UPLOADS_BUCKET`), synced after every commit. It stays the account source
+of truth across failover and failback. See `backend/.env.example`
+("Persistent account store") and `docs/disaster-recovery-plan.md` §6.

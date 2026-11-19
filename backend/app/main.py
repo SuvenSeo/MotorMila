@@ -13,6 +13,7 @@ from starlette.middleware.gzip import GZipMiddleware
 from app.services.daily_sync_scheduler import start_daily_sync_scheduler, stop_daily_sync_scheduler
 from app.services.digest_flush_scheduler import start_digest_flush_scheduler, stop_digest_flush_scheduler
 from db import session as db_session
+from db.account_store import account_store_status
 from db.session import init_db
 from db.sqlite_failover import (
     failover_active,
@@ -138,6 +139,17 @@ async def lifespan(app: FastAPI):
     # blocking uvicorn listen (HF HEALTHCHECK start-period is 10s).
     start_sqlite_failover_background()
 
+    # Dedicated account store (persistent /data file or private R2 object).
+    # The public failover dump carries no accounts and loses writes on
+    # refresh, so signup/invites need this to work during a catalog outage.
+    # Best effort: a misconfigured store must never block startup.
+    try:
+        from db.account_store import maybe_configure_account_store
+
+        maybe_configure_account_store()
+    except Exception as e:  # noqa: BLE001
+        logger.error("account_store_configure_failed", error=str(e))
+
     if SKIP_DB_INIT:
         logger.info("db_init_skipped", reason="SKIP_DB_INIT=true")
     else:
@@ -166,6 +178,13 @@ async def lifespan(app: FastAPI):
         logger.error("digest_flush_scheduler_start_failed", error=str(e))
 
     yield
+
+    try:
+        from db.account_store import flush_account_store
+
+        await asyncio.to_thread(flush_account_store)
+    except Exception as e:  # noqa: BLE001
+        logger.error("account_store_flush_failed", error=str(e))
 
     try:
         stop_digest_flush_scheduler()
@@ -366,6 +385,11 @@ async def health_check():
         "primary_checked_at": fo.get("primary_checked_at"),
         # Breaker state only - the error text can name the DB host.
         "circuit": circuit.get("state"),
+        # Dedicated account store (signup/invites during catalog failover).
+        "account_store": {
+            k: account_store_status().get(k)
+            for k in ("enabled", "mode", "last_sync_at", "last_error")
+        },
         "version": "1.0.0",
     }
 

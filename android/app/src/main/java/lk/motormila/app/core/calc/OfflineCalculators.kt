@@ -68,6 +68,12 @@ object OfflineCalculators {
         val fuel = fuelType.lowercase()
         val cifLkr = cifUsd * exchangeRate
         val cid = cifLkr * 0.20
+        // 50% CID surcharge: in force 2026-05-16 → 2026-12-31 (the initial
+        // 3-month window was extended; Gazette 2488/56 + 2501/88). No expiry
+        // gate here — mirrors backend calculators.py, which also applies it
+        // unconditionally (default ON). Re-verify the gazette after
+        // 2026-12-31 and mirror any change here, in the backend, and in
+        // src/data/importTaxRates.json (web).
         val surcharge = if (applySurcharge) cid * 0.50 else 0.0
         val excise = if (fuel == "electric") {
             val kw = motorKw ?: throw IllegalArgumentException("motorKw required for electric")

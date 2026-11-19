@@ -15,7 +15,7 @@ import { englishT, type TranslateFn } from "@/lib/translate";
 
 export const TAX_MODEL_REVIEWED = taxRates.reviewed;
 
-/** Gazette expiry of the temporary 50% CID surcharge (3 months from 2026-05-16). */
+/** Gazette expiry of the temporary 50% CID surcharge (from 2026-05-16, extended to 2026-12-31). */
 export const SURCHARGE_EXPIRY_ISO = taxRates.surcharge_expiry;
 
 export interface SurchargeCountdown {

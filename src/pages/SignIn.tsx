@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { ResendVerification } from "@/components/auth/ResendVerification";
 import { AnimatePresence, m } from "motion/react";
@@ -16,6 +16,7 @@ import { useAppPreferences } from "@/lib/appPreferences";
 import { fadeIn, scaleIn } from "@/lib/motion";
 import { sanitizeSignInRedirect } from "@/lib/signIn";
 import { authErrorText } from "@/lib/authErrorText";
+import { API_BASE, resolveFetchCredentials } from "@/services/api";
 
 type FormValues = { email: string; password: string };
 
@@ -29,6 +30,28 @@ export default function SignIn() {
   const [loading, setLoading] = useState(false);
   // Set when the API answers 403 email_unverified: offer to resend the link.
   const [unverifiedEmail, setUnverifiedEmail] = useState("");
+  // Self-serve signup flag: when the backend opens consumer signup, offer a
+  // "Create an account" CTA next to the invite copy. Failures stay silent.
+  const [selfSignupEnabled, setSelfSignupEnabled] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch(
+          new URL(`${API_BASE}/auth/self-signup/status`, window.location.origin).toString(),
+          { credentials: resolveFetchCredentials(API_BASE), headers: { Accept: "application/json" } },
+        );
+        if (cancelled || !response.ok) return;
+        const data = (await response.json()) as { enabled?: boolean };
+        if (!cancelled && data.enabled) setSelfSignupEnabled(true);
+      } catch {
+        // Progressive enhancement only — keep the invite-only copy on failure.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const from = sanitizeSignInRedirect(
     (location.state as { from?: { pathname: string } } | null)?.from?.pathname,
   );
@@ -165,6 +188,14 @@ export default function SignIn() {
       </form>
 
       <div className="cine-in mt-9 space-y-2 border-t border-separator pt-6 text-center" style={{ "--i": 5, "--cine-t0": "0.25s" } as CSSProperties}>
+        {selfSignupEnabled && (
+          <p className="text-footnote text-label-2">
+            {t("signin.newHere", "New to Motormila?")}{" "}
+            <Link to="/sign-up" className="font-semibold text-primary underline-offset-4 hover:underline">
+              {t("signin.createAccount", "Create an account")}
+            </Link>
+          </p>
+        )}
         <p className="text-footnote text-label-2">
           {t("signin.invitePrompt", "Have an invite link?")}{" "}
           <Link to="/sign-up" className="font-semibold text-primary underline-offset-4 hover:underline">
