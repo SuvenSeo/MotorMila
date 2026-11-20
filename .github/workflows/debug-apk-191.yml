@@ -6,6 +6,11 @@ name: Debug APK 1.9.1
 # Trigger: workflow_dispatch on branch debug-apk/1.9.1. Remove after use.
 on:
   workflow_dispatch:
+    inputs:
+      strip_sentry:
+        description: "Remove the Sentry SDK before building (diagnose a native/provider crash)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -29,6 +34,25 @@ jobs:
           set -euo pipefail
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
+      - name: Strip Sentry SDK (diagnostic input)
+        if: ${{ inputs.strip_sentry }}
+        run: |
+          python3 - <<'PY'
+          import re
+          p = "android/app/build.gradle.kts"
+          s = open(p).read()
+          s = s.replace("    implementation(libs.sentry.android)\n", "")
+          assert "libs.sentry.android" not in s, "sentry dep still present"
+          open(p, "w").write(s)
+          p = "android/app/src/main/java/lk/motormila/app/MotormilaApp.kt"
+          s = open(p).read()
+          s = s.replace("import io.sentry.android.core.SentryAndroid\n", "")
+          s = re.sub(r"        // Sentry crash reporting.*?\n        \}\n", "", s, flags=re.S)
+          assert "SentryAndroid" not in s and "io.sentry" not in s, "sentry refs remain"
+          open(p, "w").write(s)
+          print("sentry stripped")
+          PY
+
       - name: Build direct debug APK
         working-directory: android
         env:
@@ -40,7 +64,7 @@ jobs:
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: motormila-1.9.1-debug
+          name: ${{ inputs.strip_sentry && 'motormila-1.9.1-debug-nosentry' || 'motormila-1.9.1-debug' }}
           path: android/app/build/outputs/apk/direct/debug/*.apk
           if-no-files-found: error
           retention-days: 14
