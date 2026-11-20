@@ -220,12 +220,15 @@ fun HomeContent(
                 )
             }
 
-            // 6. Best priced (real hot deals only)
-            if (state.insights.hotDeals.isNotEmpty()) {
+            // 6. Best priced (real hot deals only). The featured deal above
+            // is hotDeals[0], so drop it here: the same listing must not
+            // register its shared-element keys twice (featured + rail).
+            val railDeals = state.insights.hotDeals.drop(1).take(10)
+            if (railDeals.isNotEmpty()) {
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(MmSpacing.sm)) {
                         MmSectionHeader(stringResource(R.string.mm_home_best_priced), onSeeAll = { onSeeAll("deals") })
-                        HomeDealRail(state.insights.hotDeals.take(10), onClick = onListingClick)
+                        HomeDealRail(railDeals, onClick = onListingClick)
                     }
                 }
             }

@@ -119,7 +119,7 @@ fun WatchlistScreen(
     val undoMessage = when {
         undo == null -> null
         undo.isClearAll -> stringResource(R.string.v19_watch_cleared, undo.items.size)
-        else -> stringResource(R.string.v19_watch_removed, undo.items.first().title)
+        else -> stringResource(R.string.v19_watch_removed, undo.items.firstOrNull()?.title.orEmpty())
     }
     val undoLabel = stringResource(R.string.v19_watch_undo)
     LaunchedEffect(undo) {
