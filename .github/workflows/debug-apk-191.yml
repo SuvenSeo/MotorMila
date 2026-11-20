@@ -31,6 +31,8 @@ jobs:
 
       - name: Build direct debug APK
         working-directory: android
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
           chmod +x gradlew
           ./gradlew :app:assembleDirectDebug --stacktrace
