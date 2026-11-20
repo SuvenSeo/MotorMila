@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.9.0 detail-screen fixes (audit P1-A/B/E). Owned by the detail cluster. -->
+<resources>
+    <!-- Listing gone (404) -->
+    <string name="mm_detail_gone_title">This listing is no longer available</string>
+    <string name="mm_detail_gone_body">It may have been sold or removed from the source site.</string>
+    <string name="mm_detail_back_to_search">Back to search</string>
+    <string name="mm_detail_load_failed">Couldn\'t load this listing.</string>
+
+    <!-- Secondary payload tri-state + inline retry -->
+    <string name="mm_detail_retry">Retry</string>
+    <string name="mm_detail_similar_failed">Couldn\'t load similar vehicles.</string>
+    <string name="mm_detail_history_failed">Couldn\'t load price history.</string>
+    <string name="mm_detail_fmv_failed">Couldn\'t load the price check.</string>
+    <string name="mm_detail_seller_failed">Couldn\'t load the seller profile.</string>
+    <string name="mm_detail_seller_loading">Loading seller profile…</string>
+    <string name="mm_detail_seller_unavailable">No seller profile available for this listing.</string>
+    <string name="mm_detail_watch_failed">Couldn\'t update your watchlist. Try again.</string>
+
+    <!-- Seller card -->
+    <string name="mm_detail_seller_on_source">Seller on %1$s</string>
+    <string name="mm_detail_seller_type_dealer">Dealer</string>
+    <string name="mm_detail_seller_type_private">Private seller</string>
+    <string name="mm_detail_seller_generic">Seller</string>
+    <string name="mm_detail_member_since">Member since %1$s</string>
+    <string name="mm_detail_listing_count">%1$d listings</string>
+
+    <!-- Specifications bento -->
+    <string name="mm_detail_specs">Specifications</string>
+    <string name="mm_spec_year">Year</string>
+    <string name="mm_spec_mileage">Mileage</string>
+    <string name="mm_spec_transmission">Transmission</string>
+    <string name="mm_spec_fuel">Fuel</string>
+    <string name="mm_spec_condition">Condition</string>
+    <string name="mm_spec_body">Body type</string>
+    <string name="mm_spec_unknown">Not listed</string>
+    <string name="mm_spec_preowned">Pre-owned</string>
+    <string name="mm_spec_km">%1$s km</string>
+
+    <!-- Similar rail -->
+    <string name="mm_detail_similar">Similar vehicles</string>
+    <string name="mm_detail_compare_similar">Compare with similar</string>
+
+    <!-- Price history section -->
+    <string name="mm_detail_history_loading">Loading price history…</string>
+    <string name="mm_detail_history_single">Only one price point so far — check back after the next update.</string>
+    <string name="mm_detail_history_summary">Overall %1$s · %2$d cuts · %3$d rises</string>
+
+    <!-- Price chart -->
+    <string name="mm_chart_title">Price history</string>
+    <string name="mm_chart_typical">Typical</string>
+    <string name="mm_chart_empty">Not enough price history yet — the chart appears once more prices are tracked.</string>
+    <string name="mm_chart_cd">Price history, %1$d points, from %2$s to %3$s</string>
+
+    <!-- Collapsible calculators -->
+    <string name="mm_detail_estimate_monthly">Estimate monthly payment</string>
+    <string name="mm_detail_estimate_duty">Estimate import duty</string>
+    <string name="mm_calc_lease_title">Lease payment calculator</string>
+    <string name="mm_calc_lease_caption" formatted="false">CBSL max LTV 40% · Brand new / under 1 year</string>
+    <string name="mm_calc_down_payment">Down payment</string>
+    <string name="mm_calc_interest_rate">Interest rate</string>
+    <string name="mm_calc_tenure">Loan tenure</string>
+    <string name="mm_calc_tenure_year">%1$d yr</string>
+    <string name="mm_calc_tenure_years">%1$d yrs</string>
+    <string name="mm_calc_tenure_max">5 yrs (60 mo)</string>
+    <string name="mm_calc_principal">Principal amount</string>
+    <string name="mm_calc_total_interest">Total interest paid</string>
+    <string name="mm_calc_monthly">Est. monthly payment</string>
+    <string name="mm_calc_per_month">/mo</string>
+    <string name="mm_calc_duty_title">Import duty &amp; tax estimator</string>
+    <string name="mm_calc_indicative">Indicative</string>
+    <string name="mm_tax_cif">Base CIF (est.)</string>
+    <string name="mm_tax_cid" formatted="false">Customs import duty (30%)</string>
+    <string name="mm_tax_surcharge" formatted="false">CID surcharge (50% of CID)</string>
+    <string name="mm_tax_excise_cc">Excise duty (per cm³ band)</string>
+    <string name="mm_tax_excise_kw">Excise duty (per kW band)</string>
+    <string name="mm_tax_sscl" formatted="false">SSCL levy (2.5%)</string>
+    <string name="mm_tax_vat" formatted="false">VAT (18% duty-inclusive)</string>
+    <string name="mm_tax_luxury">Luxury tax</string>
+    <string name="mm_tax_total">Total estimated taxes</string>
+    <string name="mm_tax_landed">Estimated landed cost</string>
+    <string name="mm_tax_landed_hint">On-road estimate</string>
+    <string name="mm_tax_disclaimer">Indicative model of the post-2025 import regime. Verify current customs rates before committing an import.</string>
+
+    <!-- Deep links row -->
+    <string name="mm_deep_estimate">Estimate</string>
+    <string name="mm_deep_tax">Tax</string>
+    <string name="mm_deep_lease">Lease</string>
+    <string name="mm_deep_map">Map</string>
+
+    <!-- Outbound links -->
+    <string name="mm_link_no_app">No app can open this link</string>
+    <string name="mm_link_copied">Link copied</string>
+    <string name="mm_link_copy_fallback">Can\'t open this link here — copied to clipboard</string>
+
+    <!-- Deal ring / badge accessibility + fallbacks -->
+    <string name="mm_deal_score_locked_cd">Deal score locked</string>
+    <string name="mm_deal_score_cd">Deal score %1$.1f</string>
+    <string name="mm_badge_great">Great deal</string>
+    <string name="mm_badge_great_score">Great · %1$.1f</string>
+    <string name="mm_badge_fair_score">Near typical · %1$.1f</string>
+    <string name="mm_badge_high">Above typical</string>
+
+    <!-- Gallery accessibility -->
+    <string name="mm_gallery_cd">Photos of %1$s, %2$d photos</string>
+    <string name="mm_gallery_photo_cd">Photo %1$d of %2$s</string>
+
+    <!-- Misc accessibility -->
+    <string name="mm_ladder_your_range">, your range</string>
+    <string name="mm_fmv_explain_cd">Explain valuation</string>
+</resources>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.9.0 search/browse + listing-card fixes (audit P1-A/D/E) — Tamil. -->
+<resources>
+    <string name="v19_search_voice_empty">கேட்டது தெளிவாக இல்லை — மீண்டும் முயற்சிக்கவும்.</string>
+    <string name="v19_search_voice_unavailable">இந்தச் சாதனத்தில் குரல் தேடல் கிடைக்கவில்லை.</string>
+    <string name="v19_search_alert_saved">எச்சரிக்கை சேமிக்கப்பட்டது — பொருத்தங்கள் கிடைக்கும்போது அறிவிப்போம்</string>
+    <string name="v19_search_error_generic">ஏதோ தவறு நடந்தது</string>
+    <string name="v19_search_load_error">முடிவுகளை ஏற்ற முடியவில்லை</string>
+    <string name="v19_search_load_more_error">மேலும் முடிவுகளை ஏற்ற முடியவில்லை</string>
+    <string name="v19_search_create_alert">இந்த வடிகட்டிகளிலிருந்து எச்சரிக்கை உருவாக்கவும்</string>
+    <string name="v19_search_sign_in_alerts">விலை எச்சரிக்கைகளை உருவாக்க உள்நுழையவும்.</string>
+    <string name="v19_search_compare_full">ஒப்பீட்டுத் தட்டு நிரம்பியது (அதிகபட்சம் %1$d) — முதலில் ஒன்றை அகற்றவும்</string>
+    <string name="v19_search_alert_save_error">எச்சரிக்கையைச் சேமிக்க முடியவில்லை. %1$s</string>
+    <string name="v19_search_for_query">“%1$s” என்று தேடவும்</string>
+    <string name="v19_search_recent_title">சமீபத்திய தேடல்கள்</string>
+    <string name="v19_search_clear_history">வரலாற்றை அழிக்கவும்</string>
+    <string name="v19_search_remove_recent_cd">சமீபத்திய தேடல்களிலிருந்து %1$s ஐ அகற்றவும்</string>
+    <string name="v19_search_clear_cd">தேடலை அழிக்கவும்</string>
+    <string name="v19_search_filters_cd">தேடல் வடிகட்டிகள்</string>
+    <string name="v19_search_typical_price">வழக்கமான %1$s</string>
+    <string name="v19_search_checked_now">இப்போது சரிபார்க்கப்பட்டது</string>
+    <string name="v19_search_checked_hours">%1$d மணி நேரத்திற்கு முன் சரிபார்க்கப்பட்டது</string>
+    <string name="v19_search_checked_days">%1$d நாட்களுக்கு முன் சரிபார்க்கப்பட்டது</string>
+    <string name="v19_search_details_fallback">விவரங்கள் அறிவிப்புப் பக்கத்தில்</string>
+    <string name="v19_search_result_count">%1$s முடிவுகள்</string>
+    <string name="v19_search_end_of_list">முடிவுகளின் இறுதி · %1$s அறிவிப்புகள்</string>
+    <string name="v19_search_back_to_top">மீண்டும் மேலே</string>
+    <string name="v19_search_sort_cd">முடிவுகளை வரிசைப்படுத்தவும். தற்போதையது: %1$s</string>
+    <string name="v19_search_pro_sort_title">சிறந்த டீல் வரிசை Pro இல் உள்ளது</string>
+    <string name="v19_search_pro_sort_body">டீல்-மதிப்பெண் வரிசை ஒவ்வொரு அறிவிப்பையும் அதன் வழக்கமான கேட்பு விலையுடன் ஒப்பிட்டுத் தரவரிசைப்படுத்துகிறது, இதனால் சிறந்த டீல்கள் மேலே வரும். Pro இல் கிடைக்கும்.</string>
+    <string name="v19_search_pro_sort_cta">Pro திட்டங்களைப் பார்க்கவும்</string>
+    <string name="v19_search_pro_sort_later">பிறகு</string>
+    <string name="v19_search_loading">ஏற்றுகிறது</string>
+    <string name="v19_search_deal_verify_short">முதலில் சரிபார்க்கவும்</string>
+    <string name="v19_combobox_expand_cd">விருப்பங்களை விரிக்கவும்</string>
+    <string name="v19_combobox_collapse_cd">விருப்பங்களைச் சுருக்கவும்</string>
+    <string name="v19_combobox_expanded_state">விரிக்கப்பட்டது</string>
+    <string name="v19_combobox_collapsed_state">சுருக்கப்பட்டது</string>
+    <string name="v19_combobox_clear_cd">தேர்வை அகற்றவும்</string>
+</resources>

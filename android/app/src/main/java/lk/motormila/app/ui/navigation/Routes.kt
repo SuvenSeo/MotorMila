@@ -11,6 +11,13 @@ data object Splash
 data class Login(
     val token: String? = null,
     val signup: Boolean = false,
+    /**
+     * Route key of the screen that triggered sign-in (e.g. "alerts"). After
+     * login the graph pops back to it instead of always landing on Home;
+     * null keeps the legacy Home landing. Read by the nav graph (and
+     * LoginScreen via toRoute) — see finishLogin in MotormilaNavGraph.
+     */
+    val returnTo: String? = null,
 )
 
 @Serializable
@@ -330,6 +337,7 @@ private fun loginDestination(parsed: ParsedDeepLink, signup: Boolean): Login {
     return Login(
         token = token,
         signup = signup || !token.isNullOrBlank(),
+        returnTo = parsed.queryOrNull("returnTo"),
     )
 }
 

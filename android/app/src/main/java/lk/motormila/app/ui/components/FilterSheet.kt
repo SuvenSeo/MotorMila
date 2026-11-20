@@ -30,6 +30,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddAlert
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -278,6 +279,8 @@ fun FilterSheet(
     sources: List<String> = emptyList(),
     onMakeChange: (String?) -> Unit = {},
     countFor: (suspend (ListingQuery) -> Int?)? = null,
+    /** Create a price alert from the draft filters; rendered next to the apply CTA. */
+    onCreateAlert: (() -> Unit)? = null,
 ) {
     var draft by remember(current) { mutableStateOf(FilterDraft.from(current)) }
     var count by remember { mutableStateOf<Int?>(null) }
@@ -290,10 +293,11 @@ fun FilterSheet(
             counting = false
         }
     }
+    val filtersCd = stringResource(R.string.v19_search_filters_cd)
     MmSheet(
         onDismissRequest = onDismiss,
         title = stringResource(R.string.ui_components_filters),
-        modifier = modifier.semantics { contentDescription = "Search filters" },
+        modifier = modifier.semantics { contentDescription = filtersCd },
     ) {
         FilterSheetBody(
             draft = draft,
@@ -312,6 +316,9 @@ fun FilterSheet(
                 onMakeChange(null)
             },
             onApply = { onApply(draft.toQuery(current)) },
+            onCreateAlert = onCreateAlert?.let { create ->
+                { create() }
+            },
         )
     }
 }
@@ -331,6 +338,8 @@ fun ColumnScope.FilterSheetBody(
     liveCount: Int? = null,
     counting: Boolean = false,
     initiallyExpanded: Set<String> = DEFAULT_EXPANDED,
+    /** Create-alert action rendered just above the apply CTA (moved out of the sort row). */
+    onCreateAlert: (() -> Unit)? = null,
 ) {
     val applyHaptics = MmHaptics.current
     val c = MmColors.current
@@ -590,7 +599,7 @@ fun ColumnScope.FilterSheetBody(
                         .padding(top = 8.dp)
                         .clip(MmShapes.pill)
                         .clickable(role = Role.Button) { allDistricts = !allDistricts }
-                        .heightIn(min = 40.dp)
+                        .heightIn(min = 48.dp)
                         .padding(horizontal = 8.dp, vertical = 10.dp),
                 )
             }
@@ -604,6 +613,19 @@ fun ColumnScope.FilterSheetBody(
         Spacer(Modifier.height(MmSpacing.sm))
     }
 
+    // Create-alert lives next to the apply CTA (was an off-screen icon in the sort row).
+    if (onCreateAlert != null) {
+        MmButton(
+            text = stringResource(R.string.v19_search_create_alert),
+            onClick = onCreateAlert,
+            style = MmButtonStyle.Tonal,
+            leadingIcon = Icons.Filled.AddAlert,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = MmSpacing.gutter)
+                .padding(bottom = MmSpacing.sm),
+        )
+    }
     // Pinned CTA row. At large text two side-by-side pills ellipsized both
     // labels ("அ…" / "Show results" cut): stack them, primary on top.
     val stackCtas = androidx.compose.ui.platform.LocalDensity.current.fontScale >= 1.5f
@@ -740,7 +762,7 @@ private fun FilterSection(
                             haptics.unsave()
                             onReset()
                         }
-                        .heightIn(min = 40.dp)
+                        .heightIn(min = 48.dp)
                         .padding(horizontal = 10.dp, vertical = 10.dp),
                 )
             }
@@ -808,7 +830,7 @@ private fun Segmented(left: String, right: String, rightSelected: Boolean, onSel
                     .clip(MmShapes.pill)
                     .background(if (sel) c.surfaceRaised else androidx.compose.ui.graphics.Color.Transparent)
                     .clickable(role = Role.Tab) { onSelect(isRight) }
-                    .heightIn(min = 40.dp)
+                    .heightIn(min = 48.dp)
                     .padding(horizontal = 8.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center,
             ) {

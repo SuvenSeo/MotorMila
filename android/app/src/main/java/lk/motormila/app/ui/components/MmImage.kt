@@ -1,6 +1,6 @@
 package lk.motormila.app.ui.components
 
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,16 +10,18 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.res.painterResource
 import coil3.compose.AsyncImage
 import androidx.compose.runtime.remember
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import lk.motormila.app.R
 import lk.motormila.app.ui.theme.MmColors
 import lk.motormila.app.ui.theme.MmMotion
 
@@ -71,23 +73,53 @@ fun MmImage(
     }
 }
 
+/**
+ * Calm placeholder plate: theme-aware raised ground with a quiet vehicle
+ * silhouette (replaces the Apex-M wordmark fallback). Used for blank URLs,
+ * load failures and previews — never a hard brand stamp on a missing photo.
+ */
 @Composable
 fun MmImagePlaceholder(modifier: Modifier = Modifier) {
     val c = MmColors.current
+    val silhouette = c.textTertiary.copy(alpha = if (c.isDark) 0.30f else 0.34f)
+    val cabin = remember { vehicleCabinPath() }
     Box(
         modifier = modifier.background(c.surfaceRaised),
         contentAlignment = Alignment.Center,
     ) {
-        Image(
-            painter = painterResource(
-                motormilaWordmarkRes(c.isDark),
-            ),
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier
-                .fillMaxWidth(0.42f)
-                .aspectRatio(MOTORMILA_WORDMARK_ASPECT)
-                .alpha(if (c.isDark) 0.22f else 0.28f),
-        )
+        Canvas(
+            Modifier
+                .fillMaxWidth(0.44f)
+                .aspectRatio(2.5f),
+        ) {
+            // Draw in a normalised 100×40 space, scaled to the plate.
+            scale(size.width / 100f, size.height / 40f, pivot = Offset.Zero) {
+                // Body
+                drawRoundRect(
+                    silhouette,
+                    topLeft = Offset(4f, 17f),
+                    size = Size(92f, 13f),
+                    cornerRadius = CornerRadius(6f, 6f),
+                )
+                // Cabin
+                drawPath(cabin, silhouette)
+                // Wheels + quiet hub cutouts
+                drawCircle(silhouette, radius = 7f, center = Offset(26f, 31f))
+                drawCircle(silhouette, radius = 7f, center = Offset(74f, 31f))
+                drawCircle(c.surfaceRaised, radius = 2.5f, center = Offset(26f, 31f))
+                drawCircle(c.surfaceRaised, radius = 2.5f, center = Offset(74f, 31f))
+            }
+        }
     }
+}
+
+/** Generic car cabin (roof + windscreen slopes) in the 100×40 placeholder space. */
+private fun vehicleCabinPath(): Path = Path().apply {
+    moveTo(22f, 18f)
+    lineTo(30f, 9f)
+    quadraticBezierTo(32f, 7f, 36f, 7f)
+    lineTo(60f, 7f)
+    quadraticBezierTo(64f, 7f, 67f, 10f)
+    lineTo(77f, 18f)
+    close()
 }

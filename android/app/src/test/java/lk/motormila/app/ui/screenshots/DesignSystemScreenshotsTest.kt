@@ -253,7 +253,7 @@ class DesignSystemScreenshotsTest {
     private fun HomeSample() {
         Box(Modifier.fillMaxSize()) {
             HomeContent(
-                state = homeState(), live = emptyList(), onRefresh = {}, onRetry = {}, onDismissCached = {},
+                state = homeState(), onRefresh = {}, onRetry = {}, onDismissCached = {},
                 banner = {}, onListingClick = {}, onSearchClick = {}, onAlertsClick = {}, onSeeAll = {},
             )
             MmBottomBar(motormilaTabItems(emptyMap()), MotormilaTabs.BUY, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp, vertical = 12.dp))
@@ -273,7 +273,7 @@ class DesignSystemScreenshotsTest {
                     onSuggestionClick = {}, onRecentClick = {}, onVoiceClick = {},
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), showDropdown = false,
                 )
-                SortFilterRow(sort = "newest", onSort = {}, onFilters = {}, onCreateAlert = {}, gridMode = true, onToggleLayout = {})
+                SortFilterRow(sort = "newest", isPro = true, onSort = {}, onFilters = {}, gridMode = true, onToggleLayout = {})
                 CardsGrid()
             }
             Column(Modifier.align(Alignment.BottomCenter)) {

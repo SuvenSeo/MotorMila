@@ -1,6 +1,7 @@
 package lk.motormila.app.ui.components
 
 import lk.motormila.app.ui.theme.mmTappable
+import androidx.annotation.StringRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
@@ -55,6 +56,9 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+import lk.motormila.app.R
+import lk.motormila.app.core.common.AppError
+import lk.motormila.app.core.network.ErrorMapper
 import lk.motormila.app.ui.theme.MotionTokens
 import lk.motormila.app.ui.theme.MotormilaRadius
 import lk.motormila.app.ui.theme.ReduceMotion
@@ -92,6 +96,7 @@ fun Modifier.shimmer(enabled: Boolean = true): Modifier = composed {
 @Composable
 fun LoadingSkeletonCard(modifier: Modifier = Modifier) {
     val reduced = rememberReducedMotion()
+    val loadingDesc = stringResource(R.string.v19_skeleton_market)
     // Bento-metrics placeholder: one headline figure + a 2×2 stat grid so the
     // skeleton reads as the same layout that replaces it (no layout jump).
     Column(
@@ -100,7 +105,7 @@ fun LoadingSkeletonCard(modifier: Modifier = Modifier) {
             .clip(MotormilaRadius.lg)
             .background(MaterialTheme.colorScheme.surface)
             .padding(16.dp)
-            .semantics { contentDescription = "Loading market stats" },
+            .semantics { contentDescription = loadingDesc },
     ) {
         Box(Modifier.width(140.dp).height(14.dp).clip(MotormilaRadius.pill).shimmer(!reduced))
         Spacer(Modifier.height(10.dp))
@@ -127,11 +132,12 @@ fun LoadingSkeletonCard(modifier: Modifier = Modifier) {
 @Composable
 fun LoadingSkeletonRow(modifier: Modifier = Modifier) {
     val reduced = rememberReducedMotion()
+    val loadingDesc = stringResource(R.string.v19_skeleton_row)
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .semantics { contentDescription = "Loading row" },
+            .semantics { contentDescription = loadingDesc },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(56.dp).clip(MotormilaRadius.lg).shimmer(!reduced))
@@ -147,13 +153,14 @@ fun LoadingSkeletonRow(modifier: Modifier = Modifier) {
 @Composable
 fun LoadingSkeletonChart(modifier: Modifier = Modifier) {
     val reduced = rememberReducedMotion()
+    val loadingDesc = stringResource(R.string.v19_skeleton_chart)
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(180.dp)
             .clip(MotormilaRadius.lg)
             .shimmer(!reduced)
-            .semantics { contentDescription = "Loading chart" },
+            .semantics { contentDescription = loadingDesc },
     )
 }
 
@@ -163,11 +170,12 @@ fun LoadingSkeletonList(
     rows: Int = 5,
     modifier: Modifier = Modifier,
 ) {
+    val loadingDesc = stringResource(R.string.v19_skeleton_content)
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(vertical = 8.dp)
-            .semantics { contentDescription = "Loading content" },
+            .semantics { contentDescription = loadingDesc },
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         repeat(rows) { LoadingSkeletonRow() }
@@ -253,6 +261,72 @@ fun EmptyState(
     }
 }
 
+/**
+ * Typed UI error classification (v1.9.0 P1-E). Replaces the old English
+ * substring sniffing ("reach", "timed out", "Unauthorized"): the kind is
+ * derived from the structured [AppError] produced by [ErrorMapper], and all
+ * copy resolves from string resources at the UI edge.
+ */
+enum class ErrorKind { SESSION, OFFLINE, SERVER, RATE_LIMITED, NOT_FOUND, PLAN, VALIDATION, GENERIC }
+
+/** Map a typed transport/HTTP failure to its UI kind. */
+fun AppError.toErrorKind(): ErrorKind = when (this) {
+    is AppError.Unauthorized -> ErrorKind.SESSION
+    is AppError.Network -> ErrorKind.OFFLINE
+    is AppError.Server -> ErrorKind.SERVER
+    is AppError.RateLimited -> ErrorKind.RATE_LIMITED
+    is AppError.NotFound -> ErrorKind.NOT_FOUND
+    is AppError.Forbidden -> ErrorKind.PLAN
+    is AppError.Validation -> ErrorKind.VALIDATION
+    is AppError.Unknown -> ErrorKind.GENERIC
+}
+
+@StringRes
+private fun ErrorKind.headingRes(): Int = when (this) {
+    ErrorKind.SESSION -> R.string.v19_error_session_title
+    ErrorKind.OFFLINE -> R.string.v19_error_offline_title
+    ErrorKind.SERVER -> R.string.v19_error_server_title
+    ErrorKind.RATE_LIMITED -> R.string.v19_error_rate_title
+    ErrorKind.NOT_FOUND -> R.string.v19_error_notfound_title
+    ErrorKind.PLAN -> R.string.v19_error_plan_title
+    ErrorKind.VALIDATION -> R.string.v19_error_validation_title
+    ErrorKind.GENERIC -> R.string.v19_error_generic_title
+}
+
+@StringRes
+private fun ErrorKind.bodyRes(): Int = when (this) {
+    ErrorKind.SESSION -> R.string.v19_error_session_body
+    ErrorKind.OFFLINE -> R.string.v19_error_offline_body
+    ErrorKind.SERVER -> R.string.v19_error_server_body
+    ErrorKind.RATE_LIMITED -> R.string.v19_error_rate_body
+    ErrorKind.NOT_FOUND -> R.string.v19_error_notfound_body
+    ErrorKind.PLAN -> R.string.v19_error_plan_body
+    ErrorKind.VALIDATION -> R.string.v19_error_validation_body
+    ErrorKind.GENERIC -> R.string.v19_error_generic_body
+}
+
+/**
+ * Typed error state — preferred entry point. Copy is fully localized and the
+ * raw exception/backend message is never shown to the user.
+ */
+@Composable
+fun ErrorState(
+    error: AppError,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+    cachedAvailable: Boolean = false,
+    onShowCached: (() -> Unit)? = null,
+    onLogin: (() -> Unit)? = null,
+) {
+    ErrorStateContent(error.toErrorKind(), onRetry, modifier, cachedAvailable, onShowCached, onLogin)
+}
+
+/**
+ * Legacy string entry point — kept source-compatible for existing callers.
+ * The string is classified structurally via [ErrorMapper.fromLegacyMessage]
+ * (canonical mapper outputs + HTTP status codes only, no English sniffing)
+ * and is NEVER rendered raw; unrecognised text gets the calm generic copy.
+ */
 @Composable
 fun ErrorState(
     message: String,
@@ -262,35 +336,34 @@ fun ErrorState(
     onShowCached: (() -> Unit)? = null,
     onLogin: (() -> Unit)? = null,
 ) {
-    val isAuthError = message.contains("401", ignoreCase = true) ||
-        message.contains("Unauthorized", ignoreCase = true) ||
-        message.contains("Authentication", ignoreCase = true)
-    // Server fault (5xx / reachability) reads very differently from a client
-    // auth problem — give the user a calm, accurate message instead of a raw
-    // exception string.
-    val isServerError = message.contains("500", ignoreCase = true) ||
-        message.contains("502", ignoreCase = true) ||
-        message.contains("503", ignoreCase = true) ||
-        message.contains("reach", ignoreCase = true) ||
-        message.contains("Taking too long", ignoreCase = true) ||
-        message.contains("timed out", ignoreCase = true) ||
-        message.contains("Couldn't refresh", ignoreCase = true)
+    ErrorState(
+        error = ErrorMapper.fromLegacyMessage(message),
+        onRetry = onRetry,
+        modifier = modifier,
+        cachedAvailable = cachedAvailable,
+        onShowCached = onShowCached,
+        onLogin = onLogin,
+    )
+}
 
-    val heading = when {
-        isAuthError -> "Session Required"
-        isServerError -> "Motormila is unreachable"
-        else -> "Something went wrong"
-    }
-    val body = when {
-        isAuthError -> "Sign in with your Motormila account to browse vehicle intelligence and market data."
-        isServerError -> "The Motormila service isn't responding right now. It may be waking up or briefly down — try again in a moment."
-        else -> message
-    }
+@Composable
+private fun ErrorStateContent(
+    kind: ErrorKind,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+    cachedAvailable: Boolean = false,
+    onShowCached: (() -> Unit)? = null,
+    onLogin: (() -> Unit)? = null,
+) {
+    val heading = stringResource(kind.headingRes())
+    val body = stringResource(kind.bodyRes())
+    val retryLabel = stringResource(R.string.v19_error_retry)
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(32.dp),
+            .padding(32.dp)
+            .semantics { contentDescription = "$heading. $body" },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -304,21 +377,21 @@ fun ErrorState(
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(16.dp))
-        if (isAuthError && onLogin != null) {
+        if (kind == ErrorKind.SESSION && onLogin != null) {
             MotormilaPrimaryButton(
-                label = "Sign in to Motormila",
+                label = stringResource(R.string.v19_error_sign_in),
                 onClick = onLogin,
                 fillMaxWidth = false,
             )
             Spacer(Modifier.height(8.dp))
             MotormilaGhostButton(
-                label = "Retry",
+                label = retryLabel,
                 onClick = onRetry,
                 fillMaxWidth = false,
             )
         } else {
             MotormilaPrimaryButton(
-                label = "Retry",
+                label = retryLabel,
                 onClick = onRetry,
                 fillMaxWidth = false,
             )
@@ -326,7 +399,7 @@ fun ErrorState(
         if (cachedAvailable && onShowCached != null) {
             Spacer(Modifier.height(8.dp))
             MotormilaGhostButton(
-                label = "Show cached results",
+                label = stringResource(R.string.v19_error_show_cached),
                 onClick = onShowCached,
                 fillMaxWidth = false,
             )
@@ -345,6 +418,9 @@ fun OfflineBanner(
     text: String? = null,
 ) {
     if (!visible) return
+    val bannerDesc = stringResource(R.string.v19_offline_banner_desc)
+    val retryDesc = stringResource(R.string.v19_offline_retry_desc)
+    val dismissDesc = stringResource(R.string.v19_offline_dismiss_desc)
     lk.motormila.app.ui.theme.CappedFontScale(max = 1.3f) {
     Row(
         modifier = modifier
@@ -355,7 +431,7 @@ fun OfflineBanner(
             .background(MaterialTheme.colorScheme.secondaryContainer)
             .then(if (onRetry != null) Modifier.mmTappable(role = androidx.compose.ui.semantics.Role.Button, pressedScale = 1f) { onRetry() } else Modifier)
             .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp)
-            .semantics { contentDescription = "Offline, showing cached data. Tap to retry." },
+            .semantics { contentDescription = bannerDesc },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(Icons.Filled.WifiOff, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(16.dp))
@@ -372,7 +448,7 @@ fun OfflineBanner(
         if (onRetry != null) {
             Icon(
                 Icons.Filled.Refresh,
-                contentDescription = "Retry",
+                contentDescription = retryDesc,
                 tint = MaterialTheme.colorScheme.onSecondaryContainer,
                 modifier = Modifier
                     .padding(end = 8.dp)
@@ -386,7 +462,7 @@ fun OfflineBanner(
             ) {
                 Icon(
                     Icons.Filled.Close,
-                    contentDescription = "Dismiss offline notice",
+                    contentDescription = dismissDesc,
                     tint = MaterialTheme.colorScheme.onSecondaryContainer,
                     modifier = Modifier.size(18.dp),
                 )

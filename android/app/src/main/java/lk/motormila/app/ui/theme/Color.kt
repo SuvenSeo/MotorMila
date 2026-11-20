@@ -18,57 +18,62 @@ object LegacyPalette {
     var isDark: Boolean by mutableStateOf(false)
 }
 
-// Dark-first tokens - Motormila brand matching web (tailwind / index.css)
-val MotormilaBg: Color get() = if (LegacyPalette.isDark) Color(0xFF09090B) else Color(0xFFF5F5F7)
-val MotormilaSurface: Color get() = if (LegacyPalette.isDark) Color(0xFF0F0F12) else Color(0xFFFFFFFF)
-val MotormilaSurfaceLow: Color get() = if (LegacyPalette.isDark) Color(0xFF0D0D10) else Color(0xFFF5F5F7)
-val MotormilaSurfaceHigh: Color get() = if (LegacyPalette.isDark) Color(0xFF16161A) else Color(0xFFF0F0F3)
-val MotormilaSurfaceHighest: Color get() = if (LegacyPalette.isDark) Color(0xFF1F1F24) else Color(0xFFE6E6EA)
-val MotormilaOnSurface: Color get() = if (LegacyPalette.isDark) Color(0xFFF5F5F7) else Color(0xFF0B0B0F)
-val MotormilaSecondaryText: Color get() = if (LegacyPalette.isDark) Color(0xFF8E8E93) else Color(0xFF55555F)
-val MotormilaOutline: Color get() = if (LegacyPalette.isDark) Color(0x1FFFFFFF) else Color(0x1A000000)
-val MotormilaGlassBorder: Color get() = if (LegacyPalette.isDark) Color(0x22FFFFFF) else Color(0x1F000000)
+// Legacy Motormila* tokens now DELEGATE to the v3 MmColors palette, so the
+// ~53 legacy screens inherit the warm night-showroom grounds, AA text tiers,
+// unified deal-green and three-role blue without a per-file migration.
+// Single source of truth = MmColors.Dark / MmColors.Light. Getters read the
+// snapshot-state [LegacyPalette.isDark], so they work in draw/remember scopes.
+private fun legacy(dark: Boolean): MmColors = if (dark) MmColors.Dark else MmColors.Light
 
-// Brand accent: Motormila Electric Blue
-val MotormilaPrimary = Color(0xFF0A7AFFL)
-val MotormilaPrimaryBright: Color get() = if (LegacyPalette.isDark) Color(0xFF3D94FF) else Color(0xFF0062D6)
-val MotormilaPrimaryGlow = Color(0x330A7AFFL)
-val MotormilaOnPrimary = Color(0xFFFFFFFFL)
+val MotormilaBg: Color get() = legacy(LegacyPalette.isDark).background
+val MotormilaSurface: Color get() = legacy(LegacyPalette.isDark).surface
+val MotormilaSurfaceLow: Color get() = legacy(LegacyPalette.isDark).background
+val MotormilaSurfaceHigh: Color get() = legacy(LegacyPalette.isDark).surfaceHigh
+val MotormilaSurfaceHighest: Color get() = legacy(LegacyPalette.isDark).surfaceHigh
+val MotormilaOnSurface: Color get() = legacy(LegacyPalette.isDark).textPrimary
+val MotormilaSecondaryText: Color get() = legacy(LegacyPalette.isDark).textSecondary
+val MotormilaOutline: Color get() = legacy(LegacyPalette.isDark).outline
+val MotormilaGlassBorder: Color get() = legacy(LegacyPalette.isDark).outlineStrong
 
-// Shared alpha variants — use these instead of raw ARGB hex or .copy(alpha=).
-// Pairs with the Motormila*Container family below.
-val MotormilaPrimaryContainer = Color(0x2E0A7AFFL) // 18% blue — tinted surfaces, highlights
-val MotormilaPrimaryBorder = Color(0x550A7AFFL) // 33% blue — highlighted borders
-val MotormilaPrimarySoft = Color(0x1A0A7AFFL) // 10% blue — soft washes
-val MotormilaGoodSoft = Color(0x5500C853L) // 33% green — deal borders
+// Brand: MotormilaPrimary is now the AA-safe FILL (white label >= 4.5:1).
+val MotormilaPrimary: Color get() = legacy(LegacyPalette.isDark).brand
+val MotormilaPrimaryBright: Color get() = legacy(LegacyPalette.isDark).brandText
+val MotormilaPrimaryGlow: Color get() = legacy(LegacyPalette.isDark).brandContainer
+val MotormilaOnPrimary: Color get() = legacy(LegacyPalette.isDark).textOnBrand
 
-// Legacy alias kept for call sites still using Gold naming
-val MotormilaGold = Color(0xFF0A7AFFL)
-val MotormilaOnGold = Color(0xFFFFFFFFL)
+val MotormilaPrimaryContainer: Color get() = legacy(LegacyPalette.isDark).brandContainer
+val MotormilaPrimaryBorder: Color get() = legacy(LegacyPalette.isDark).brand.copy(alpha = 0.33f)
+val MotormilaPrimarySoft: Color get() = legacy(LegacyPalette.isDark).brand.copy(alpha = 0.10f)
+val MotormilaGoodSoft: Color get() = legacy(LegacyPalette.isDark).dealGood.copy(alpha = 0.33f)
 
-// Semantic deal and signal tokens
-val MotormilaTeal = Color(0xFF38BDF8L)
-val MotormilaSky = Color(0xFF3D94FFL)
-val MotormilaGood = Color(0xFF00C853L)
-val MotormilaGoodContainer = Color(0x2E00C853L)
-val MotormilaGoodText: Color get() = if (LegacyPalette.isDark) Color(0xFF69F0AE) else Color(0xFF1A7440)
-val MotormilaWarn = Color(0xFFF59E0BL)
-val MotormilaWarnContainer = Color(0x2EF59E0BL)
-val MotormilaBad = Color(0xFFEF4444L)
-val MotormilaBadContainer = Color(0x2EEF4444L)
-val MotormilaBadText: Color get() = if (LegacyPalette.isDark) Color(0xFFFCA5A5) else Color(0xFFB91C1C)
+// Legacy Gold naming aliases -> brand
+val MotormilaGold: Color get() = legacy(LegacyPalette.isDark).brand
+val MotormilaOnGold: Color get() = legacy(LegacyPalette.isDark).textOnBrand
 
-// Light scheme tokens
-val MotormilaLightBg = Color(0xFFFBFBFDL)
-val MotormilaLightSurface = Color(0xFFFFFFFFL)
-val MotormilaLightContainer = Color(0xFFF5F5F7L)
-val MotormilaLightHigh = Color(0xFFEBEBF0L)
-val MotormilaLightOnSurface = Color(0xFF1A1A1CL)
-val MotormilaLightVariant = Color(0xFF6E6E73L)
-val MotormilaLightPrimary = Color(0xFF0A7AFFL)
-val MotormilaLightOnPrimary = Color(0xFFFFFFFFL)
-val MotormilaLightGoldContainer = Color(0x1A0A7AFFL)
-val MotormilaLightGood = Color(0xFF059669L)
-val MotormilaLightWarn = Color(0xFFD97706L)
-val MotormilaLightBad = Color(0xFFDC2626L)
-val MotormilaLightOutline = Color(0x1A000000L)
+// Semantic deal + signal tokens (unified with the v2 deal bands; teal retired
+// in favour of the brand blue so nothing off-palette ships).
+val MotormilaTeal: Color get() = legacy(LegacyPalette.isDark).brandText
+val MotormilaSky: Color get() = legacy(LegacyPalette.isDark).brandText
+val MotormilaGood: Color get() = legacy(LegacyPalette.isDark).dealGood
+val MotormilaGoodContainer: Color get() = legacy(LegacyPalette.isDark).dealGoodContainer
+val MotormilaGoodText: Color get() = legacy(LegacyPalette.isDark).onDealGood
+val MotormilaWarn: Color get() = legacy(LegacyPalette.isDark).caution
+val MotormilaWarnContainer: Color get() = legacy(LegacyPalette.isDark).cautionContainer
+val MotormilaBad: Color get() = legacy(LegacyPalette.isDark).dealHigh
+val MotormilaBadContainer: Color get() = legacy(LegacyPalette.isDark).dealHighContainer
+val MotormilaBadText: Color get() = legacy(LegacyPalette.isDark).onDealHigh
+
+// Light scheme aliases (kept for call sites) -> the v3 light palette.
+val MotormilaLightBg: Color get() = MmColors.Light.background
+val MotormilaLightSurface: Color get() = MmColors.Light.surface
+val MotormilaLightContainer: Color get() = MmColors.Light.background
+val MotormilaLightHigh: Color get() = MmColors.Light.surfaceHigh
+val MotormilaLightOnSurface: Color get() = MmColors.Light.textPrimary
+val MotormilaLightVariant: Color get() = MmColors.Light.textSecondary
+val MotormilaLightPrimary: Color get() = MmColors.Light.brand
+val MotormilaLightOnPrimary: Color get() = MmColors.Light.textOnBrand
+val MotormilaLightGoldContainer: Color get() = MmColors.Light.brandContainer
+val MotormilaLightGood: Color get() = MmColors.Light.dealGood
+val MotormilaLightWarn: Color get() = MmColors.Light.caution
+val MotormilaLightBad: Color get() = MmColors.Light.dealHigh
+val MotormilaLightOutline: Color get() = MmColors.Light.outline

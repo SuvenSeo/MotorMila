@@ -48,10 +48,8 @@ import lk.motormila.app.ui.detail.DealVerdictRow
 import lk.motormila.app.ui.detail.DetailActionBar
 import lk.motormila.app.ui.detail.DetailGallery
 import lk.motormila.app.ui.detail.PriceDealSection
-import lk.motormila.app.ui.home.HeroStatsCard
 import lk.motormila.app.ui.home.HomeContent
 import lk.motormila.app.ui.home.HomeUiState
-import lk.motormila.app.ui.home.PriceDropCard
 import lk.motormila.app.ui.motormilaTabItems
 import lk.motormila.app.ui.pricing.PricingContent
 import lk.motormila.app.ui.profile.ProfileActions
@@ -188,7 +186,7 @@ class VisualSweepScreenshotsTest {
                     onSuggestionClick = {}, onRecentClick = {}, onVoiceClick = {},
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), showDropdown = false,
                 )
-                SortFilterRow(sort = "price_desc", onSort = {}, onFilters = {}, onCreateAlert = {}, gridMode = true, onToggleLayout = {})
+                SortFilterRow(sort = "price_desc", isPro = true, onSort = {}, onFilters = {}, gridMode = true, onToggleLayout = {})
                 StressCards()
             }
             Column(Modifier.align(Alignment.BottomCenter)) {
@@ -246,18 +244,10 @@ class VisualSweepScreenshotsTest {
     @Test fun home() = one("home", reducedMotion = false) {
         Box(Modifier.fillMaxSize()) {
             HomeContent(
-                state = homeState(), live = emptyList(), onRefresh = {}, onRetry = {}, onDismissCached = {},
+                state = homeState(), onRefresh = {}, onRetry = {}, onDismissCached = {},
                 banner = {}, onListingClick = {}, onSearchClick = {}, onAlertsClick = {}, onSeeAll = {},
             )
             MmBottomBar(motormilaTabItems(emptyMap()), MotormilaTabs.BUY, onSelect = {}, modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp, vertical = 12.dp))
-        }
-    }
-
-    @Test fun home_parts() = one("home_parts", reducedMotion = false) {
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            HeroStatsCard(total = 1_248_210, goodDeals = 91_284, new24h = 15_342, avgPrice = "Rs 125 Mn")
-            PriceDropCard(title = Sweep.LONG_TITLE, imageUrl = null, newPrice = "Rs 125,000,000", dropPct = 5.7, onClick = {})
-            ErrorState(message = "Couldn't reach Motormila. Check your connection and try again.", onRetry = {}, cachedAvailable = true, onShowCached = {})
         }
     }
 

@@ -40,6 +40,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -96,6 +98,9 @@ fun MakeCombobox(
     val allMakes = allLabel ?: stringResource(R.string.filter_all_makes)
     val fieldLabel = label ?: stringResource(R.string.filter_make_label)
     val hint = searchHint ?: stringResource(R.string.filter_make_search_hint)
+    val expandCd = stringResource(if (expanded) R.string.v19_combobox_collapse_cd else R.string.v19_combobox_expand_cd)
+    val expandState = stringResource(if (expanded) R.string.v19_combobox_expanded_state else R.string.v19_combobox_collapsed_state)
+    val clearCd = stringResource(R.string.v19_combobox_clear_cd)
     val focusManager = LocalFocusManager.current
     val listInView = remember { BringIntoViewRequester() }
     // The sheet does not resize for the IME, so the option list opened under the
@@ -138,15 +143,18 @@ fun MakeCombobox(
                         }) {
                             Icon(
                                 Icons.Filled.Close,
-                                contentDescription = allMakes,
+                                contentDescription = clearCd,
                                 tint = MotormilaSecondaryText,
                             )
                         }
                     }
-                    IconButton(onClick = { expanded = !expanded }) {
+                    IconButton(
+                        onClick = { expanded = !expanded },
+                        modifier = Modifier.semantics { stateDescription = expandState },
+                    ) {
                         Icon(
                             if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                            contentDescription = null,
+                            contentDescription = expandCd,
                             tint = MotormilaSecondaryText,
                         )
                     }
@@ -211,6 +219,7 @@ private fun ComboboxRow(
         modifier = Modifier
             .fillMaxWidth()
             .applePress(rowPress)
+            .heightIn(min = 48.dp)
             .clickable(interactionSource = rowPress, indication = null, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,

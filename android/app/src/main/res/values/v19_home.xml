@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.9.0 HOME + CHROME + NAV + WATCHLIST strings (audit P1-A/D/E). -->
+<resources>
+    <!-- Brand / chrome -->
+    <string name="v19_brand_name">MotorMila</string>
+    <string name="v19_brand_tagline">Sri Lanka Vehicle Market Intelligence</string>
+    <string name="v19_live">LIVE</string>
+    <string name="v19_open_cd">Open %1$s</string>
+    <string name="v19_unknown_error">Unknown error</string>
+    <string name="v19_tab_count_cd">%1$s, %2$s items</string>
+
+    <!-- Home -->
+    <string name="v19_home_featured_eyebrow">Featured deal</string>
+    <string name="v19_home_more">More</string>
+    <string name="v19_home_more_title">More tools</string>
+    <string name="v19_home_more_cd">More shortcuts</string>
+    <string name="v19_home_err_reach">Couldn\'t reach MotorMila</string>
+    <string name="v19_home_err_refresh">Couldn\'t refresh</string>
+    <string name="v19_home_err_slow">Taking too long to reach MotorMila</string>
+
+    <!-- Watchlist -->
+    <string name="v19_watch_title">Watchlist</string>
+    <string name="v19_watch_title_count">Watchlist (%1$d)</string>
+    <string name="v19_watch_refresh_cd">Refresh watched prices</string>
+    <string name="v19_watch_clear_cd">Clear entire watchlist</string>
+    <string name="v19_watch_clear_title">Clear watchlist?</string>
+    <string name="v19_watch_clear_body">This removes all %1$d saved vehicles. Price-drop history will be lost.</string>
+    <string name="v19_watch_clear_confirm">Clear all</string>
+    <string name="v19_watch_cleared">Cleared %1$d saved vehicles</string>
+    <string name="v19_watch_removed">Removed %1$s</string>
+    <string name="v19_watch_undo">Undo</string>
+    <string name="v19_watch_empty_title">Nothing saved yet</string>
+    <string name="v19_watch_empty_body">Tap the bookmark on any listing to save it here — we\'ll flag every price drop against the typical price.</string>
+    <string name="v19_watch_browse">Browse listings</string>
+    <string name="v19_watch_typical">Typical %1$s</string>
+    <string name="v19_watch_below_typical">%1$s below typical</string>
+    <string name="v19_watch_drop_cd">Price dropped %1$s</string>
+    <string name="v19_watch_alert_cd">Create price alert for %1$s</string>
+    <string name="v19_watch_remove_cd">Remove %1$s from watchlist</string>
+    <string name="v19_watch_row_cd">Watched %1$s at %2$s</string>
+    <string name="v19_watch_swipe_alert">Swipe to create price alert</string>
+    <string name="v19_watch_swipe_remove">Swipe to remove from watchlist</string>
+    <string name="v19_watch_create_alert">Create alert</string>
+    <string name="v19_watch_remove">Remove</string>
+    <string name="v19_watch_err_load">Couldn\'t load your watchlist.</string>
+    <string name="v19_watch_err_remove">Couldn\'t remove that listing.</string>
+    <string name="v19_watch_err_refresh">Couldn\'t refresh prices.</string>
+    <string name="v19_watch_err_clear">Couldn\'t clear your watchlist.</string>
+    <string name="v19_watch_err_restore">Couldn\'t restore the removed items.</string>
+</resources>

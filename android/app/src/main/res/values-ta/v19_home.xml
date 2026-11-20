@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.9.0 HOME + CHROME + NAV + WATCHLIST strings — Tamil. -->
+<resources>
+    <!-- Brand / chrome -->
+    <string name="v19_brand_name">MotorMila</string>
+    <string name="v19_brand_tagline">இலங்கை வாகன சந்தை நுண்ணறிவு</string>
+    <string name="v19_live">நேரடி</string>
+    <string name="v19_open_cd">%1$s ஐத் திற</string>
+    <string name="v19_unknown_error">தெரியாத பிழை</string>
+    <string name="v19_tab_count_cd">%1$s, %2$s உருப்படிகள்</string>
+
+    <!-- Home -->
+    <string name="v19_home_featured_eyebrow">சிறப்புச் சலுகை</string>
+    <string name="v19_home_more">மேலும்</string>
+    <string name="v19_home_more_title">மேலும் கருவிகள்</string>
+    <string name="v19_home_more_cd">மேலும் குறுக்குவழிகள்</string>
+    <string name="v19_home_err_reach">MotorMila ஐ அடைய முடியவில்லை</string>
+    <string name="v19_home_err_refresh">புதுப்பிக்க முடியவில்லை</string>
+    <string name="v19_home_err_slow">MotorMila ஐ அடைய அதிக நேரம் எடுக்கிறது</string>
+
+    <!-- Watchlist -->
+    <string name="v19_watch_title">சேமித்த பட்டியல்</string>
+    <string name="v19_watch_title_count">சேமித்த பட்டியல் (%1$d)</string>
+    <string name="v19_watch_refresh_cd">சேமித்த விலைகளைப் புதுப்பி</string>
+    <string name="v19_watch_clear_cd">சேமித்த பட்டியலை முழுவதுமாக அழி</string>
+    <string name="v19_watch_clear_title">சேமித்த பட்டியலை அழிக்கவா?</string>
+    <string name="v19_watch_clear_body">இது சேமித்த %1$d வாகனங்களையும் நீக்கும். விலை வீழ்ச்சி வரலாறு இழக்கப்படும்.</string>
+    <string name="v19_watch_clear_confirm">அனைத்தையும் அழி</string>
+    <string name="v19_watch_cleared">சேமித்த %1$d வாகனங்கள் அழிக்கப்பட்டன</string>
+    <string name="v19_watch_removed">%1$s நீக்கப்பட்டது</string>
+    <string name="v19_watch_undo">செயல்தவிர்</string>
+    <string name="v19_watch_empty_title">இதுவரை எதுவும் சேமிக்கப்படவில்லை</string>
+    <string name="v19_watch_empty_body">எந்தப் பட்டியலிலும் புக்மார்க் குறியீட்டைத் தட்டி இங்கே சேமியுங்கள் — வழக்கமான விலையுடன் ஒப்பிட்டு ஒவ்வொரு விலை வீழ்ச்சியையும் நாங்கள் குறிப்போம்.</string>
+    <string name="v19_watch_browse">பட்டியல்களைப் பார்</string>
+    <string name="v19_watch_typical">வழக்கமான %1$s</string>
+    <string name="v19_watch_below_typical">வழக்கமானதை விட %1$s குறைவு</string>
+    <string name="v19_watch_drop_cd">விலை %1$s குறைந்தது</string>
+    <string name="v19_watch_alert_cd">%1$s க்கு விலை எச்சரிக்கை உருவாக்கு</string>
+    <string name="v19_watch_remove_cd">%1$s ஐ சேமித்த பட்டியலிலிருந்து நீக்கு</string>
+    <string name="v19_watch_row_cd">%2$s விலையில் %1$s சேமிக்கப்பட்டது</string>
+    <string name="v19_watch_swipe_alert">விலை எச்சரிக்கை உருவாக்க ஸ்வைப் செய்யவும்</string>
+    <string name="v19_watch_swipe_remove">சேமித்த பட்டியலிலிருந்து நீக்க ஸ்வைப் செய்யவும்</string>
+    <string name="v19_watch_create_alert">எச்சரிக்கை உருவாக்கு</string>
+    <string name="v19_watch_remove">நீக்கு</string>
+    <string name="v19_watch_err_load">உங்கள் சேமித்த பட்டியலை ஏற்ற முடியவில்லை.</string>
+    <string name="v19_watch_err_remove">அந்தப் பட்டியலை நீக்க முடியவில்லை.</string>
+    <string name="v19_watch_err_refresh">விலைகளைப் புதுப்பிக்க முடியவில்லை.</string>
+    <string name="v19_watch_err_clear">சேமித்த பட்டியலை அழிக்க முடியவில்லை.</string>
+    <string name="v19_watch_err_restore">நீக்கிய உருப்படிகளை மீட்டெடுக்க முடியவில்லை.</string>
+</resources>

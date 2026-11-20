@@ -11,7 +11,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -103,12 +102,13 @@ fun FmvGauge(
     val fair = c.dealFair
     val high = c.dealHigh
     // Needle follows the text colour so it reads on light and dark cards.
-    val needle = MaterialTheme.colorScheme.onSurface
-    val hub = MaterialTheme.colorScheme.surface
+    val needle = c.textPrimary
+    val hub = c.surface
     val gaugePress = remember { MutableInteractionSource() }
     val headline = verdict.headline()
     val toneColors = c.deal(verdict.tone)
     val typicalLabel = androidx.compose.ui.res.stringResource(lk.motormila.app.R.string.mm_why_typical)
+    val explainCd = androidx.compose.ui.res.stringResource(lk.motormila.app.R.string.mm_fmv_explain_cd)
     Column(
         modifier = modifier
             .applePress(gaugePress)
@@ -118,7 +118,7 @@ fun FmvGauge(
             }
             .clickable(
                 role = Role.Button,
-                onClickLabel = "Explain valuation",
+                onClickLabel = explainCd,
                 interactionSource = gaugePress,
                 indication = null,
                 onClick = onExplainClick,
@@ -182,12 +182,12 @@ fun FmvGauge(
             text = LkrFormat.full(verdict.referenceLkr),
             fontWeight = FontWeight.Bold,
             fontSize = 15.sp,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = c.textPrimary,
         )
         Text(
             text = androidx.compose.ui.res.stringResource(lk.motormila.app.R.string.mm_fmv_hint, confidenceWord(confidence)),
             fontSize = 11.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = c.textSecondary,
             textAlign = TextAlign.Center,
         )
     }

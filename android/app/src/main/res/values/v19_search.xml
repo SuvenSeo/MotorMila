@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.9.0 search/browse + listing-card fixes (audit P1-A/D/E). Owned by the search workstream. -->
+<resources>
+    <string name="v19_search_voice_empty">Didn\'t catch that — try again.</string>
+    <string name="v19_search_voice_unavailable">Voice search isn\'t available on this device.</string>
+    <string name="v19_search_alert_saved">Alert saved — we\'ll notify you of matches</string>
+    <string name="v19_search_error_generic">Something went wrong</string>
+    <string name="v19_search_load_error">Couldn\'t load results</string>
+    <string name="v19_search_load_more_error">Couldn\'t load more</string>
+    <string name="v19_search_create_alert">Create alert from these filters</string>
+    <string name="v19_search_sign_in_alerts">Sign in to create price alerts.</string>
+    <string name="v19_search_compare_full">Compare tray is full (max %1$d) — remove one first</string>
+    <string name="v19_search_alert_save_error">Couldn\'t save alert. %1$s</string>
+    <string name="v19_search_for_query">Search for “%1$s”</string>
+    <string name="v19_search_recent_title">Recent searches</string>
+    <string name="v19_search_clear_history">Clear history</string>
+    <string name="v19_search_remove_recent_cd">Remove %1$s from recent searches</string>
+    <string name="v19_search_clear_cd">Clear search</string>
+    <string name="v19_search_filters_cd">Search filters</string>
+    <string name="v19_search_typical_price">Typical %1$s</string>
+    <string name="v19_search_checked_now">Checked just now</string>
+    <string name="v19_search_checked_hours">Checked %1$d h ago</string>
+    <string name="v19_search_checked_days">Checked %1$d d ago</string>
+    <string name="v19_search_details_fallback">Details on listing page</string>
+    <string name="v19_search_result_count">%1$s results</string>
+    <string name="v19_search_end_of_list">End of results · %1$s listings</string>
+    <string name="v19_search_back_to_top">Back to top</string>
+    <string name="v19_search_sort_cd">Sort results. Current: %1$s</string>
+    <string name="v19_search_pro_sort_title">Best-deal sort is Pro</string>
+    <string name="v19_search_pro_sort_body">Deal-score sorting ranks every ad against its typical asking price, so the best deals rise to the top. Available on Pro.</string>
+    <string name="v19_search_pro_sort_cta">See Pro plans</string>
+    <string name="v19_search_pro_sort_later">Maybe later</string>
+    <string name="v19_search_loading">Loading</string>
+    <string name="v19_search_deal_verify_short">Verify first</string>
+    <string name="v19_combobox_expand_cd">Expand options</string>
+    <string name="v19_combobox_collapse_cd">Collapse options</string>
+    <string name="v19_combobox_expanded_state">Expanded</string>
+    <string name="v19_combobox_collapsed_state">Collapsed</string>
+    <string name="v19_combobox_clear_cd">Clear selection</string>
+</resources>

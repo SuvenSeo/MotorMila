@@ -9,9 +9,9 @@ import androidx.compose.ui.unit.dp
  * overlap so old and new surfaces sit together.
  */
 object MmShapes {
-    val xs = RoundedCornerShape(10.dp)    // tags, tiny chips, chart tooltips
-    val sm = RoundedCornerShape(14.dp)   // inputs, inner tiles, image thumbs
-    val md = RoundedCornerShape(18.dp)   // list rows, compact cards
+    val xs = RoundedCornerShape(12.dp)    // tags, tiny chips, chart tooltips
+    val sm = RoundedCornerShape(16.dp)   // inputs, inner tiles, image thumbs
+    val md = RoundedCornerShape(20.dp)   // list rows, compact cards
     val lg = RoundedCornerShape(24.dp)   // standard card
     val xl = RoundedCornerShape(32.dp)   // hero / dialogs
     val sheet = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)

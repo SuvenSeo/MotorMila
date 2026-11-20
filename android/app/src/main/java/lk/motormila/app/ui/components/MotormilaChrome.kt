@@ -50,6 +50,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
@@ -58,6 +59,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import lk.motormila.app.R
 import lk.motormila.app.ui.theme.MotormilaGlassBorder
 import lk.motormila.app.ui.theme.MotormilaGlassFill
 import lk.motormila.app.ui.theme.MotormilaGlassFillStrong
@@ -300,11 +302,12 @@ fun MotormilaTopBar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (onBack != null) {
+                val backCd = stringResource(R.string.mm_back)
                 IconButton(
                     onClick = onBack,
                     modifier = Modifier
                         .size(48.dp)
-                        .semantics { contentDescription = "Back" },
+                        .semantics { contentDescription = backCd },
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
@@ -666,6 +669,7 @@ fun MotormilaListRow(
     trailing: String? = null,
 ) {
     val interaction = remember { MutableInteractionSource() }
+    val openCd = stringResource(R.string.v19_open_cd, title)
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -676,7 +680,7 @@ fun MotormilaListRow(
             .border(1.dp, MotormilaOutline, MotormilaCardShape)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp)
-            .semantics { contentDescription = "Open $title" },
+            .semantics { contentDescription = openCd },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
@@ -714,6 +718,7 @@ fun MotormilaGroupRow(
     showDivider: Boolean = true,
 ) {
     val interaction = remember { MutableInteractionSource() }
+    val openCd = stringResource(R.string.v19_open_cd, title)
     Column(modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -722,7 +727,7 @@ fun MotormilaGroupRow(
                 .applePress(interaction)
                 .clickable(interactionSource = interaction, indication = null, onClick = onClick)
                 .padding(horizontal = 16.dp, vertical = 12.dp)
-                .semantics { contentDescription = "Open $title" },
+                .semantics { contentDescription = openCd },
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {

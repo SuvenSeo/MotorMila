@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.9.0 P1-C/E: Alerts + Auth + shared error-state + Inbox + Pro copy.
+     Owned by the alerts/auth agent; si/ta parity lives in values-si/values-ta. -->
+<resources>
+    <!-- ── Shared error states (States.kt / ErrorMapper) ── -->
+    <string name="v19_error_session_title">Session required</string>
+    <string name="v19_error_session_body">Sign in with your MotorMila account to browse vehicle intelligence and market data.</string>
+    <string name="v19_error_offline_title">You\'re offline</string>
+    <string name="v19_error_offline_body">Check your internet connection and try again.</string>
+    <string name="v19_error_server_title">MotorMila is unreachable</string>
+    <string name="v19_error_server_body">The MotorMila service isn\'t responding right now. It may be waking up or briefly down — try again in a moment.</string>
+    <string name="v19_error_rate_title">Too many requests</string>
+    <string name="v19_error_rate_body">That\'s a lot of requests in a short time. Wait a moment and try again.</string>
+    <string name="v19_error_notfound_title">Not found</string>
+    <string name="v19_error_notfound_body">We couldn\'t find what you were looking for. It may have been removed.</string>
+    <string name="v19_error_plan_title">Pro feature</string>
+    <string name="v19_error_plan_body">Your current plan doesn\'t include this feature. Upgrade to Pro to unlock it.</string>
+    <string name="v19_error_validation_title">Check your input</string>
+    <string name="v19_error_validation_body">Some details aren\'t valid. Review the form and try again.</string>
+    <string name="v19_error_generic_title">Something went wrong</string>
+    <string name="v19_error_generic_body">An unexpected error occurred. Please try again.</string>
+    <string name="v19_error_sign_in">Sign in to MotorMila</string>
+    <string name="v19_error_retry">Retry</string>
+    <string name="v19_error_show_cached">Show cached results</string>
+    <string name="v19_offline_banner_desc">Offline, showing cached data. Tap to retry.</string>
+    <string name="v19_offline_retry_desc">Retry</string>
+    <string name="v19_offline_dismiss_desc">Dismiss offline notice</string>
+    <string name="v19_skeleton_market">Loading market stats</string>
+    <string name="v19_skeleton_row">Loading row</string>
+    <string name="v19_skeleton_chart">Loading chart</string>
+    <string name="v19_skeleton_content">Loading content</string>
+
+    <!-- ── Alerts screen ── -->
+    <string name="v19_alerts_title">Price alerts</string>
+    <string name="v19_alerts_title_unread">Price alerts (%1$d)</string>
+    <string name="v19_alerts_prefilled">Form filled from listing</string>
+    <string name="v19_alerts_new">New alert</string>
+    <string name="v19_alerts_edit">Edit alert</string>
+    <string name="v19_alerts_make">Make</string>
+    <string name="v19_alerts_select_make">Select make</string>
+    <string name="v19_alerts_model_optional">Model (optional)</string>
+    <string name="v19_alerts_select_model">Select model</string>
+    <string name="v19_alerts_pick_make_first">Pick a make first</string>
+    <string name="v19_alerts_loading_models">Loading models…</string>
+    <string name="v19_alerts_district">District</string>
+    <string name="v19_alerts_any_district">Any district</string>
+    <string name="v19_alerts_max_price">Max price (e.g. 8m)</string>
+    <string name="v19_alerts_max_price_hint">Triggers at or under this price. Type rupees or tap a shortcut.</string>
+    <string name="v19_alerts_err_make">Pick a make for this alert</string>
+    <string name="v19_alerts_err_price">Enter a valid max price, e.g. 8m</string>
+    <string name="v19_alerts_whatsapp_phone">WhatsApp phone</string>
+    <string name="v19_alerts_whatsapp_hint">Used when WhatsApp is selected (Pro)</string>
+    <string name="v19_alerts_telegram_chat_id">Telegram chat ID</string>
+    <string name="v19_alerts_telegram_hint">Chat ID or @username (Pro)</string>
+    <string name="v19_alerts_notify_via">Notify via</string>
+    <string name="v19_alerts_channel_inapp">In-app</string>
+    <string name="v19_alerts_channel_email">Email</string>
+    <string name="v19_alerts_channel_whatsapp">WhatsApp</string>
+    <string name="v19_alerts_channel_telegram">Telegram</string>
+    <string name="v19_alerts_channel_push">Push</string>
+    <string name="v19_alerts_delivery">Delivery</string>
+    <string name="v19_alerts_instant">Instant</string>
+    <string name="v19_alerts_digest">Digest</string>
+    <string name="v19_alerts_quiet_hours">Quiet hours 21:00–07:00</string>
+    <string name="v19_alerts_quiet_hours_desc">Quiet hours</string>
+    <string name="v19_alerts_digest_note">Email, WhatsApp, Telegram and push queue for the 07:00 digest. In-app always delivers.</string>
+    <string name="v19_alerts_save">Save changes</string>
+    <string name="v19_alerts_cancel_edit">Cancel editing</string>
+    <string name="v19_alerts_create">Create alert</string>
+    <string name="v19_alerts_active">Active (%1$d)</string>
+    <string name="v19_alerts_matching">Matching…</string>
+    <string name="v19_alerts_refresh_matches">Refresh matches</string>
+    <string name="v19_alerts_empty_title">No alerts yet</string>
+    <string name="v19_alerts_empty_body">Create one above — we\'ll ping you the moment a match lands under your max price.</string>
+    <string name="v19_alerts_row_desc">Alert %1$s under %2$s</string>
+    <string name="v19_alerts_row_meta">%1$s · triggers ≤ %2$s · %3$s</string>
+    <string name="v19_alerts_deactivate">Deactivate alert</string>
+    <string name="v19_alerts_activate">Activate alert</string>
+    <string name="v19_alerts_edit_desc">Edit alert</string>
+    <string name="v19_alerts_delete_desc">Delete alert</string>
+    <string name="v19_alerts_channels">Channels</string>
+    <string name="v19_alerts_matches">Matches (%1$d)</string>
+    <string name="v19_alerts_price_on_request">Price on request</string>
+    <string name="v19_alerts_under_max">%1$s under max</string>
+    <string name="v19_alerts_view">View</string>
+    <string name="v19_alerts_paused">Paused — flip the switch to resume matching.</string>
+    <string name="v19_alerts_confetti_desc">Alert created celebration</string>
+    <string name="v19_alerts_signin_title">Sign in to create price alerts</string>
+    <string name="v19_alerts_signin_title_emph">Sign in to create this alert</string>
+    <string name="v19_alerts_signin_body">Price alerts are saved to your MotorMila account so we can notify you when a match lands.</string>
+    <string name="v19_alerts_signin_cta">Sign in</string>
+    <string name="v19_alerts_draft_saved">Your draft is saved — sign in to finish creating it.</string>
+    <string name="v19_alerts_cap">Free plan: 1 alert. Pro unlocks unlimited alerts.</string>
+    <string name="v19_alerts_err_cap">Free plan allows 1 alert. Upgrade to Pro for unlimited alerts.</string>
+    <string name="v19_alerts_err_pro_channels">WhatsApp and Telegram notifications unlock with Pro.</string>
+    <string name="v19_alerts_err_channels_pro">WhatsApp and Telegram channels unlock with Pro.</string>
+    <string name="v19_alerts_err_digest_pro">Digest delivery unlocks with Pro.</string>
+    <string name="v19_alerts_err_quiet_pro">Quiet hours unlock with Pro.</string>
+    <string name="v19_alerts_err_save">Couldn\'t save your changes — the alert is unchanged.</string>
+    <string name="v19_alerts_err_form">Enter at least a make and a max price (e.g. 8m).</string>
+
+    <!-- ── Auth (LoginScreen / AuthViewModel) ── -->
+    <string name="v19_auth_title">Sign in</string>
+    <string name="v19_auth_eyebrow">Invite-only intelligence</string>
+    <string name="v19_auth_session_expired">Session for %1$s expired — sign in again.</string>
+    <string name="v19_auth_last_signed_in">Last signed in as %1$s.</string>
+    <string name="v19_auth_tab_login">Log in</string>
+    <string name="v19_auth_tab_signup">Sign up</string>
+    <string name="v19_auth_confirm_password">Confirm password</string>
+    <string name="v19_auth_err_email_format">Enter a valid email address.</string>
+    <string name="v19_auth_err_password_mismatch">Passwords don\'t match.</string>
+    <string name="v19_auth_err_credentials">Enter your email and password.</string>
+    <string name="v19_auth_err_invite_required">Invite token is required — MotorMila access is invite-only.</string>
+    <string name="v19_auth_err_password_short">Password must be at least 8 characters.</string>
+    <string name="v19_auth_invite_optional">Optional — leave blank to start a %1$d-day Pro trial.</string>
+    <string name="v19_auth_invite_required_hint">Invite-only: get a token from Admin or your dealer.</string>
+    <string name="v19_auth_start_trial">Start %1$d-day trial</string>
+    <string name="v19_auth_create_account">Create account</string>
+    <string name="v19_auth_login">Log in</string>
+    <string name="v19_auth_retry_offline">Retry when back online</string>
+    <string name="v19_auth_retry">Retry</string>
+    <string name="v19_auth_show_password">Show password</string>
+    <string name="v19_auth_hide_password">Hide password</string>
+    <string name="v19_auth_forgot_title">Forgot your password?</string>
+    <string name="v19_auth_forgot_body">Password resets are issued by the MotorMila team. Email %1$s and we\'ll send a reset invite to your account address.</string>
+    <string name="v19_auth_forgot_cta">Email support</string>
+    <string name="v19_auth_forgot_subject">MotorMila password reset</string>
+    <string name="v19_auth_forgot_email_body">Hi MotorMila team,\n\nPlease send a password reset invite for my account: %1$s\n\nThanks.</string>
+    <string name="v19_auth_forgot_no_app">No email app found. Write to %1$s from any mail app.</string>
+
+    <!-- ── Biometric host (kept for the nav graph; no longer gates login) ── -->
+    <string name="v19_biometric_needs_android9">Biometric unlock needs Android 9 or newer</string>
+    <string name="v19_biometric_cancel">Cancel</string>
+    <string name="v19_biometric_error">Authentication error</string>
+
+    <!-- ── Notifications inbox ── -->
+    <string name="v19_notif_title">Inbox</string>
+    <string name="v19_notif_title_unread">Inbox (%1$d)</string>
+    <string name="v19_notif_mark_all">Mark all read</string>
+    <string name="v19_notif_empty_title">All caught up</string>
+    <string name="v19_notif_empty_body">Price drops, alert matches and market pulses will land here.</string>
+    <string name="v19_notif_kind_listing">Listing</string>
+    <string name="v19_notif_kind_alert">Alert</string>
+    <string name="v19_notif_read">Read</string>
+    <string name="v19_notif_unread">Unread</string>
+    <string name="v19_notif_row_desc">%1$s: %2$s</string>
+    <string name="v19_notif_kind_desc">%1$s notification</string>
+    <string name="v19_notif_err_open">Couldn\'t open that notification.</string>
+
+    <!-- ── Pro paywall / live Pro screen ── -->
+    <string name="v19_pro_paywall_desc">Pro paywall</string>
+    <string name="v19_pro_paywall_value">Snapshots, lane velocity, district arbitrage and source-quality scores. Blurred previews above — unlock to trade on them.</string>
+    <string name="v19_pro_kpis">Snapshot KPIs · %1$s</string>
+    <string name="v19_pro_kpi_listings">Listings</string>
+    <string name="v19_pro_kpi_avg">Avg</string>
+    <string name="v19_pro_kpi_median">Median</string>
+    <string name="v19_pro_kpi_new_7d">New 7d</string>
+    <string name="v19_pro_kpi_hot_deals">Hot deals</string>
+    <string name="v19_pro_kpi_districts">Districts</string>
+    <string name="v19_pro_export_csv">Export CSV report</string>
+    <string name="v19_pro_export_csv_desc">Export Pro CSV report</string>
+    <string name="v19_pro_lanes_title">Lanes — tap a lane for detail</string>
+    <string name="v19_pro_lane_fallback">Lane</string>
+    <string name="v19_pro_lane_desc">Vehicle lane %1$s</string>
+    <string name="v19_pro_lane_meta">%1$d listings · median %2$s</string>
+    <string name="v19_pro_loading_lane">Loading lane detail…</string>
+    <string name="v19_pro_err_lane">Couldn\'t load lane detail.</string>
+    <string name="v19_pro_range">Range</string>
+    <string name="v19_pro_districts_sources">Districts / sources</string>
+    <string name="v19_pro_top_district_source">Top district / source</string>
+    <string name="v19_pro_districts_title">Districts</string>
+    <string name="v19_pro_district_desc">District %1$s, deep-dive in Insights</string>
+    <string name="v19_pro_district_meta">%1$d · median %2$s</string>
+    <string name="v19_pro_hide_detail">Hide detail</string>
+    <string name="v19_pro_inspect">Inspect</string>
+    <string name="v19_pro_loading_district">Loading district detail…</string>
+    <string name="v19_pro_err_district">Couldn\'t load district detail.</string>
+    <string name="v19_pro_average">Average</string>
+    <string name="v19_pro_sources">Sources</string>
+    <string name="v19_pro_top_make_model">Top make / model</string>
+    <string name="v19_pro_arb_title">Arbitrage pairs · %1$d significant ≥ %2$s%%</string>
+    <string name="v19_pro_arb_threshold_desc">Arbitrage threshold %1$s percent</string>
+    <string name="v19_pro_arb_desc">Arbitrage buy %1$s sell %2$s, gap %3$s</string>
+    <string name="v19_pro_buy_sell">Buy %1$s → sell %2$s</string>
+    <string name="v19_pro_gap">GAP</string>
+    <string name="v19_pro_spread">Spread %1$s · %2$s</string>
+    <string name="v19_pro_buys_sells">%1$d buys · %2$d sells</string>
+    <string name="v19_pro_source_quality">Source quality</string>
+    <string name="v19_pro_source_quality_note">Source-quality scores live in the Insights feed in this build.</string>
+    <string name="v19_pro_unlock">Unlock Pro</string>
+    <string name="v19_pro_locked_preview">Locked Pro preview</string>
+    <string name="v19_pro_csv_subject">MotorMila Pro report</string>
+    <string name="v19_pro_csv_text">MotorMila Pro snapshot, lanes, districts, and arbitrage export.</string>
+    <string name="v19_pro_csv_share">Share Pro CSV</string>
+    <!-- Honest launch copy: Pro already runs for trial/invited accounts (the
+         live Pro screen renders real data for them); only PAID plans are pending.
+         Replaces scr_pro_soon_* which claimed Pro itself didn\'t exist yet. -->
+    <string name="v19_pro_soon_title">Pro is live for invited members.</string>
+    <string name="v19_pro_soon_body">Pro tools already run for trial and invited accounts. Paid plans are on the way — leave your email and we\'ll tell you before they launch. Nothing is charged now.</string>
+</resources>

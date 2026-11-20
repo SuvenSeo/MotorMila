@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.9.0 detail-screen fixes — Sinhala. -->
+<resources>
+    <!-- Listing gone (404) -->
+    <string name="mm_detail_gone_title">මෙම දැන්වීම තවදුරටත් නොමැත</string>
+    <string name="mm_detail_gone_body">එය විකුණා හෝ මූලාශ්‍ර වෙබ් අඩවියෙන් ඉවත් කර ඇති විය හැක.</string>
+    <string name="mm_detail_back_to_search">සෙවුම වෙත ආපසු</string>
+    <string name="mm_detail_load_failed">මෙම දැන්වීම පූරණය කළ නොහැකි විය.</string>
+
+    <!-- Secondary payload tri-state + inline retry -->
+    <string name="mm_detail_retry">නැවත උත්සාහ කරන්න</string>
+    <string name="mm_detail_similar_failed">සමාන වාහන පූරණය කළ නොහැකි විය.</string>
+    <string name="mm_detail_history_failed">මිල ඉතිහාසය පූරණය කළ නොහැකි විය.</string>
+    <string name="mm_detail_fmv_failed">මිල ඇගයීම පූරණය කළ නොහැකි විය.</string>
+    <string name="mm_detail_seller_failed">විකුණුම්කරුගේ තොරතුරු පූරණය කළ නොහැකි විය.</string>
+    <string name="mm_detail_seller_loading">විකුණුම්කරුගේ තොරතුරු පූරණය වෙමින්…</string>
+    <string name="mm_detail_seller_unavailable">මෙම දැන්වීම සඳහා විකුණුම්කරු තොරතුරු නොමැත.</string>
+    <string name="mm_detail_watch_failed">ඔබේ නිරීක්ෂණ ලැයිස්තුව යාවත්කාලීන කළ නොහැකි විය. නැවත උත්සාහ කරන්න.</string>
+
+    <!-- Seller card -->
+    <string name="mm_detail_seller_on_source">%1$s හි විකුණුම්කරු</string>
+    <string name="mm_detail_seller_type_dealer">වෙළෙන්දා</string>
+    <string name="mm_detail_seller_type_private">පෞද්ගලික විකුණුම්කරු</string>
+    <string name="mm_detail_seller_generic">විකුණුම්කරු</string>
+    <string name="mm_detail_member_since">%1$s සිට සාමාජික</string>
+    <string name="mm_detail_listing_count">දැන්වීම් %1$d</string>
+
+    <!-- Specifications bento -->
+    <string name="mm_detail_specs">පිරිවිතර</string>
+    <string name="mm_spec_year">වර්ෂය</string>
+    <string name="mm_spec_mileage">ධාවන දුර</string>
+    <string name="mm_spec_transmission">ගියර් පද්ධතිය</string>
+    <string name="mm_spec_fuel">ඉන්ධන</string>
+    <string name="mm_spec_condition">තත්ත්වය</string>
+    <string name="mm_spec_body">බොඩි වර්ගය</string>
+    <string name="mm_spec_unknown">සඳහන් නැත</string>
+    <string name="mm_spec_preowned">භාවිත කළ</string>
+    <string name="mm_spec_km">%1$s කි.මී.</string>
+
+    <!-- Similar rail -->
+    <string name="mm_detail_similar">සමාන වාහන</string>
+    <string name="mm_detail_compare_similar">සමාන වාහන සමඟ සසඳන්න</string>
+
+    <!-- Price history section -->
+    <string name="mm_detail_history_loading">මිල ඉතිහාසය පූරණය වෙමින්…</string>
+    <string name="mm_detail_history_single">මෙතෙක් ඇත්තේ එක් මිල ලක්ෂ්‍යයක් පමණි — ඊළඟ යාවත්කාලීනයෙන් පසු නැවත බලන්න.</string>
+    <string name="mm_detail_history_summary">සමස්ත %1$s · අඩු කිරීම් %2$d · වැඩි කිරීම් %3$d</string>
+
+    <!-- Price chart -->
+    <string name="mm_chart_title">මිල ඉතිහාසය</string>
+    <string name="mm_chart_typical">සාමාන්‍ය</string>
+    <string name="mm_chart_empty">මිල ඉතිහාසය තවම ප්‍රමාණවත් නැත — තවත් මිල ගණන් නිරීක්ෂණය වූ පසු ප්‍රස්තාරය පෙන්වනු ඇත.</string>
+    <string name="mm_chart_cd">මිල ඉතිහාසය, ලක්ෂ්‍ය %1$d, %2$s සිට %3$s දක්වා</string>
+
+    <!-- Collapsible calculators -->
+    <string name="mm_detail_estimate_monthly">මාසික ගෙවීම ඇස්තමේන්තු කරන්න</string>
+    <string name="mm_detail_estimate_duty">ආනයන බදු ඇස්තමේන්තු කරන්න</string>
+    <string name="mm_calc_lease_title">ලීස් ගෙවීම් කැල්කියුලේටරය</string>
+    <string name="mm_calc_lease_caption" formatted="false">CBSL උපරිම LTV 40% · අලුත්ම / වසර 1ට අඩු</string>
+    <string name="mm_calc_down_payment">මූලික ගෙවීම</string>
+    <string name="mm_calc_interest_rate">පොලී අනුපාතය</string>
+    <string name="mm_calc_tenure">ණය කාලසීමාව</string>
+    <string name="mm_calc_tenure_year">වසර %1$d</string>
+    <string name="mm_calc_tenure_years">වසර %1$d</string>
+    <string name="mm_calc_tenure_max">වසර 5 (මාස 60)</string>
+    <string name="mm_calc_principal">මූලධනය</string>
+    <string name="mm_calc_total_interest">ගෙවූ මුළු පොලිය</string>
+    <string name="mm_calc_monthly">ඇස්තමේන්තුගත මාසික ගෙවීම</string>
+    <string name="mm_calc_per_month">/මාසෙකට</string>
+    <string name="mm_calc_duty_title">ආනයන බදු සහ වැට් ඇස්තමේන්තුව</string>
+    <string name="mm_calc_indicative">ඇඟවුම් පමණි</string>
+    <string name="mm_tax_cif">මූලික CIF (ඇස්ත.)</string>
+    <string name="mm_tax_cid" formatted="false">රේගු ආනයන බදු (30%)</string>
+    <string name="mm_tax_surcharge" formatted="false">CID අතිරේක ගාස්තුව (CID හි 50%)</string>
+    <string name="mm_tax_excise_cc">එක්සයිස් බදු (cm³ පරාසය අනුව)</string>
+    <string name="mm_tax_excise_kw">එක්සයිස් බදු (kW පරාසය අනුව)</string>
+    <string name="mm_tax_sscl" formatted="false">SSCL ගාස්තුව (2.5%)</string>
+    <string name="mm_tax_vat" formatted="false">වැට් (බදු ඇතුළු 18%)</string>
+    <string name="mm_tax_luxury">සුඛෝපභෝගී බදු</string>
+    <string name="mm_tax_total">ඇස්තමේන්තුගත මුළු බදු</string>
+    <string name="mm_tax_landed">ඇස්තමේන්තුගත ගොඩබිම් පිරිවැය</string>
+    <string name="mm_tax_landed_hint">මාර්ගගත පිරිවැය ඇස්තමේන්තුව</string>
+    <string name="mm_tax_disclaimer">2025න් පසු ආනයන ක්‍රමයේ ඇඟවුම් ආකෘතියකි. ආනයනයකට පෙර වත්මන් රේගු අනුපාත තහවුරු කරන්න.</string>
+
+    <!-- Deep links row -->
+    <string name="mm_deep_estimate">ඇස්තමේන්තු</string>
+    <string name="mm_deep_tax">බදු</string>
+    <string name="mm_deep_lease">ලීස්</string>
+    <string name="mm_deep_map">සිතියම</string>
+
+    <!-- Outbound links -->
+    <string name="mm_link_no_app">මෙම සබැඳිය විවෘත කළ හැකි යෙදුමක් නැත</string>
+    <string name="mm_link_copied">සබැඳිය පිටපත් විය</string>
+    <string name="mm_link_copy_fallback">මෙම සබැඳිය මෙහි විවෘත කළ නොහැක — පිටපත් කර ගන්නා ලදී</string>
+
+    <!-- Deal ring / badge accessibility + fallbacks -->
+    <string name="mm_deal_score_locked_cd">ගනුදෙනු ලකුණු අගුළු දමා ඇත</string>
+    <string name="mm_deal_score_cd">ගනුදෙනු ලකුණු %1$.1f</string>
+    <string name="mm_badge_great">විශිෂ්ට ගනුදෙනුව</string>
+    <string name="mm_badge_great_score">විශිෂ්ට · %1$.1f</string>
+    <string name="mm_badge_fair_score">සාමාන්‍ය · %1$.1f</string>
+    <string name="mm_badge_high">සාමාන්‍ය මිලට වඩා වැඩි</string>
+
+    <!-- Gallery accessibility -->
+    <string name="mm_gallery_cd">%1$s හි ඡායාරූප, ඡායාරූප %2$d</string>
+    <string name="mm_gallery_photo_cd">%2$s හි ඡායාරූප %1$d</string>
+
+    <!-- Misc accessibility -->
+    <string name="mm_ladder_your_range">, ඔබේ පරාසය</string>
+    <string name="mm_fmv_explain_cd">ඇගයීම පැහැදිලි කරන්න</string>
+</resources>

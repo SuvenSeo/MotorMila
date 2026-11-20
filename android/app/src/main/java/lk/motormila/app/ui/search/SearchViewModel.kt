@@ -86,6 +86,10 @@ data class SearchUiState(
     val pendingVoice: Boolean = false,
     /** Saved listing ids (card heart state), same source as Best Picks. */
     val watchedIds: Set<Int> = emptySet(),
+    /** Live backend total for the applied query (result-count line); null while unknown/offline. */
+    val resultTotal: Int? = null,
+    /** Free user tapped the locked Best-deal sort: show the Pro upsell sheet (no silent downgrade). */
+    val showProUpsell: Boolean = false,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -109,6 +113,9 @@ class SearchViewModel @Inject constructor(
     private val queryFlow = MutableStateFlow("")
     private val pagingKey = MutableStateFlow(defaultSearchQuery())
 
+    /** Typed keyword, debounced into the paging key so results update live (not only on IME submit). */
+    private val liveKeyword = MutableStateFlow<String?>(null)
+
     /** True while results come from the offline snapshot (backend down). */
     val fromSnapshot: kotlinx.coroutines.flow.StateFlow<Boolean> get() = getListingsPaging.fromSnapshot
 
@@ -118,6 +125,10 @@ class SearchViewModel @Inject constructor(
         .cachedIn(viewModelScope)
 
     init {
+        // Recent searches survive process death / config change (SavedStateHandle).
+        savedStateHandle.get<ArrayList<String>>(RECENT_SEARCHES_KEY)
+            ?.filter { it.isNotBlank() }?.distinct()?.take(8)
+            ?.let { _state.value = _state.value.copy(recentSearches = it) }
         val route = runCatching { savedStateHandle.toRoute<Search>() }.getOrNull()
         route?.let { applyRouteArgs(it) }
         // Filters survive process death / config change (SavedStateHandle),
@@ -175,35 +186,86 @@ class SearchViewModel @Inject constructor(
                 }
             }
         }
+        // Live results: the typed keyword joins the paging key after a 400 ms
+        // pause, so results follow typing instead of waiting for IME submit.
+        viewModelScope.launch {
+            liveKeyword.debounce(400).distinctUntilChanged().collect { kw ->
+                val current = _state.value.filters
+                if (current.keyword != kw) {
+                    val next = current.copy(keyword = kw)
+                    _state.value = _state.value.copy(filters = next)
+                    pagingKey.value = next
+                    saveFilters(next)
+                }
+            }
+        }
+        // Result-count line: live backend total for the applied query.
+        viewModelScope.launch {
+            pagingKey.debounce(350).distinctUntilChanged().collect { q ->
+                val total = runCatching { listings.count(q) }.getOrNull()
+                // A newer query may have landed while counting; don't overwrite it.
+                if (pagingKey.value == q) {
+                    _state.value = _state.value.copy(resultTotal = total)
+                }
+            }
+        }
+        // Seed the live keyword with whatever the route / restored filters set,
+        // so the first debounce emission is a no-op instead of clearing it.
+        liveKeyword.value = _state.value.filters.keyword
     }
 
     fun onQueryChange(q: String) {
         queryFlow.value = q
         _state.value = _state.value.copy(query = q)
+        val kw = q.trim().ifBlank { null }
         // Clearing the field (✕ or deleting the text) drops the keyword filter too,
         // otherwise the results stay filtered by a query the field no longer shows.
-        if (q.isBlank() && _state.value.filters.keyword != null) {
+        if (kw == null && _state.value.filters.keyword != null) {
             applyFilters(_state.value.filters.copy(keyword = null))
         }
+        liveKeyword.value = kw
     }
 
     fun onSearch(q: String) {
         val trimmed = q.trim()
+        // Commit immediately (IME / pinned row); align the debounce so a stale
+        // pending keyword can't re-apply after the explicit search.
+        liveKeyword.value = trimmed.ifBlank { null }
         if (trimmed.isNotBlank()) {
             val recents = (listOf(trimmed) + _state.value.recentSearches).distinct().take(8)
             _state.value = _state.value.copy(recentSearches = recents)
+            persistRecents(recents)
         }
         applyFilters(_state.value.filters.copy(keyword = trimmed.ifBlank { null }))
     }
 
     fun applyIncomingQuery(query: ListingQuery) {
         val text = query.keyword?.trim().orEmpty()
+        liveKeyword.value = text.ifBlank { null }
         if (text.isNotBlank()) {
             onQueryChange(text)
             val recents = (listOf(text) + _state.value.recentSearches).distinct().take(8)
             _state.value = _state.value.copy(recentSearches = recents)
+            persistRecents(recents)
         }
         applyFilters(query.copy(keyword = text.ifBlank { null }))
+    }
+
+    /** Per-row remove in the recent-searches dropdown. */
+    fun removeRecent(query: String) {
+        val recents = _state.value.recentSearches.filterNot { it == query }
+        _state.value = _state.value.copy(recentSearches = recents)
+        persistRecents(recents)
+    }
+
+    /** Clear-history action in the recent-searches dropdown. */
+    fun clearRecents() {
+        _state.value = _state.value.copy(recentSearches = emptyList())
+        persistRecents(emptyList())
+    }
+
+    private fun persistRecents(recents: List<String>) {
+        savedStateHandle[RECENT_SEARCHES_KEY] = ArrayList(recents)
     }
 
     fun consumeVoice() {
@@ -279,14 +341,16 @@ class SearchViewModel @Inject constructor(
 
     fun onSortChange(sort: String) {
         // Free tier has no deal_score — only that sort is Pro; price/km/newest stay free.
+        // Instead of a silent downgrade + error toast, the UI opens a Pro upsell.
         if (!_state.value.isPro && sort == ListingSorts.DEAL_SCORE) {
-            applyFilters(_state.value.filters.copy(sort = ListingSorts.NEWEST))
-            _state.value = _state.value.copy(
-                error = "Best-deal sort is a Pro feature — upgrade to Pro to sort by deal score",
-            )
+            _state.value = _state.value.copy(showProUpsell = true)
             return
         }
         applyFilters(_state.value.filters.copy(sort = sort))
+    }
+
+    fun dismissProUpsell() {
+        _state.value = _state.value.copy(showProUpsell = false)
     }
 
     fun openFilters() {
@@ -318,9 +382,7 @@ class SearchViewModel @Inject constructor(
         if (current.contains(id)) current.remove(id)
         else if (current.size < MAX_COMPARE_IDS) current.add(id)
         else {
-            _state.value = _state.value.copy(
-                error = "Compare tray is full (max $MAX_COMPARE_IDS) — remove one first",
-            )
+            _state.value = _state.value.copy(error = ERR_COMPARE_FULL)
             return
         }
         _state.value = _state.value.copy(compareIds = current)
@@ -359,7 +421,7 @@ class SearchViewModel @Inject constructor(
                         district = f.district,
                     ),
                 )
-                _state.value = _state.value.copy(alertSaved = true)
+                _state.value = _state.value.copy(alertSaved = true, showFilterSheet = false)
             } catch (e: kotlin.coroutines.cancellation.CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -367,7 +429,8 @@ class SearchViewModel @Inject constructor(
                 val msg = if (mapped is lk.motormila.app.core.common.AppError.Unauthorized) {
                     SIGN_IN_FOR_ALERTS
                 } else {
-                    "Couldn't save alert. ${mapped.message}"
+                    // Stable prefix; SearchScreen localises it via v19_search.xml.
+                    ERR_ALERT_SAVE_PREFIX + mapped.message
                 }
                 _state.value = _state.value.copy(error = msg)
             }
@@ -405,5 +468,10 @@ class SearchViewModel @Inject constructor(
     companion object {
         private const val VOICE_CONSUMED_KEY = "pending_voice_consumed"
         private const val SAVED_FILTERS_KEY = "search_filters_v1"
+        private const val RECENT_SEARCHES_KEY = "search_recent_searches_v1"
+
+        /** Stable error keys localised by SearchScreen (v19_search.xml). */
+        const val ERR_COMPARE_FULL = "search_err_compare_full"
+        const val ERR_ALERT_SAVE_PREFIX = "search_err_alert_save:"
     }
 }

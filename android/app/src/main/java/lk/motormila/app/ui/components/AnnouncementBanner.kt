@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -25,6 +26,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -103,37 +107,54 @@ fun AnnouncementBanner(
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
             color = MotormilaOnSurface,
-            maxLines = 1,
+            // ~100-char si/ta messages ellipsised on one line; allow two.
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
         Spacer(Modifier.width(8.dp))
         val dealsPress = remember { MutableInteractionSource() }
+        val dealsLabel = stringResource(R.string.announcement_view_deals)
+        // 48dp touch target around the compact pill (was ~31dp), Role.Button.
         Box(
             modifier = Modifier
+                .heightIn(min = 48.dp)
                 .applePress(dealsPress)
                 .clip(MotormilaRadius.pill)
-                .background(MotormilaPrimary)
-                .clickable(interactionSource = dealsPress, indication = null, onClick = onViewDeals)
-                .padding(horizontal = 14.dp, vertical = 6.dp),
+                .clickable(
+                    interactionSource = dealsPress,
+                    indication = null,
+                    role = Role.Button,
+                    onClickLabel = dealsLabel,
+                    onClick = onViewDeals,
+                )
+                .semantics { contentDescription = dealsLabel },
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = stringResource(R.string.announcement_view_deals),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White,
-            )
+            Box(
+                Modifier
+                    .clip(MotormilaRadius.pill)
+                    .background(MotormilaPrimary)
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
+            ) {
+                Text(
+                    text = dealsLabel,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White,
+                )
+            }
         }
+        // 48dp dismiss target (was 32dp); IconButton carries Role.Button.
         IconButton(
             onClick = viewModel::dismiss,
-            modifier = Modifier.size(32.dp),
+            modifier = Modifier.size(48.dp),
         ) {
             Icon(
                 Icons.Filled.Close,
                 contentDescription = stringResource(R.string.announcement_dismiss),
                 tint = MotormilaOnSurface.copy(alpha = 0.7f),
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(18.dp),
             )
         }
     }

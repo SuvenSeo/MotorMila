@@ -155,6 +155,23 @@ import lk.motormila.app.ui.scan.VoiceSearchHelper
 import lk.motormila.app.ui.scan.parseVoiceQuery
 import lk.motormila.app.ui.theme.MotormilaGlassFillStrong
 import lk.motormila.app.ui.theme.liquidGlass
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.ui.semantics.stateDescription
+import lk.motormila.app.core.price.PriceVerdict
+import lk.motormila.app.ui.components.ListingRow
+import lk.motormila.app.ui.components.MmButton
+import lk.motormila.app.ui.components.MmButtonStyle
+import lk.motormila.app.ui.components.MmDealVerdict
+import lk.motormila.app.ui.components.MmLeaseTakeover
+import lk.motormila.app.ui.components.MmListingRowSkeleton
+import lk.motormila.app.ui.components.MmSheet
+import lk.motormila.app.ui.detail.DealWhySheet
+import java.text.NumberFormat
+import java.util.Locale
 
 /**
  * Search: query + suggestions + filters + sort + Paging3 LazyColumn
@@ -169,11 +186,22 @@ fun SearchScreen(
     viewModel: SearchViewModel = hiltViewModel(),
     /** A pasted ad / MotorMila link ("Make, model or paste a link") opens the share-import flow. */
     onOpenSharedUrl: ((String) -> Unit)? = null,
+    /** Opens the Pro plans page from the Best-deal-sort upsell; falls back to the motormila://pricing deep link. */
+    onOpenPricing: (() -> Unit)? = null,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val items = viewModel.paging.collectAsLazyPagingItems()
     val searchResultsCd = stringResource(R.string.mm_search_results_cd)
     val bestDealProCd = stringResource(R.string.mm_best_deal_pro_cd)
+    // Localised one-shot messages (resolved in composition, shown from effects).
+    val voiceEmptyMsg = stringResource(R.string.v19_search_voice_empty)
+    val voiceUnavailableMsg = stringResource(R.string.v19_search_voice_unavailable)
+    val alertSavedMsg = stringResource(R.string.v19_search_alert_saved)
+    val genericErrorMsg = stringResource(R.string.v19_search_error_generic)
+    val loadErrorMsg = stringResource(R.string.v19_search_load_error)
+    val loadMoreErrorMsg = stringResource(R.string.v19_search_load_more_error)
+    val backToTopLabel = stringResource(R.string.v19_search_back_to_top)
+    val countFormat = remember { NumberFormat.getIntegerInstance(Locale.US) }
     val fromSnapshot by viewModel.fromSnapshot.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -194,7 +222,7 @@ fun SearchScreen(
                 ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
                 ?.firstOrNull().orEmpty()
             if (heard.isBlank()) {
-                scope.launch { snackbar.showSnackbar("Didn't catch that — try again.") }
+                scope.launch { snackbar.showSnackbar(voiceEmptyMsg) }
             } else {
                 viewModel.onQueryChange(heard)
                 val parsed = parseVoiceQuery(heard)
@@ -213,7 +241,7 @@ fun SearchScreen(
         if (!voiceAvailable) return@LaunchedEffect
         runCatching { voiceLauncher.launch(voiceHelper.recogniserIntent()) }
             .onFailure {
-                snackbar.showSnackbar("Voice search isn't available on this device.")
+                snackbar.showSnackbar(voiceUnavailableMsg)
             }
     }
 
@@ -222,13 +250,14 @@ fun SearchScreen(
     lk.motormila.app.core.notifications.NotificationPermissionPrompt(trigger = state.alertSaved)
     LaunchedEffect(state.alertSaved) {
         if (state.alertSaved) {
-            snackbar.showSnackbar("Alert saved — we'll notify you of matches")
+            snackbar.showSnackbar(alertSavedMsg)
             viewModel.consumeAlertSaved()
         }
     }
-    LaunchedEffect(state.error) {
-        if (state.error != null) {
-            snackbar.showSnackbar(state.error ?: "Error")
+    val errorText = state.error?.let { searchErrorText(it) }
+    LaunchedEffect(errorText) {
+        if (errorText != null) {
+            snackbar.showSnackbar(errorText)
             viewModel.clearError()
         }
     }
@@ -239,6 +268,18 @@ fun SearchScreen(
     val density = LocalDensity.current
     val trayHeight = with(density) { trayHeightPx.toDp() }
     val trayShown = state.compareIds.isNotEmpty()
+
+    // Tappable verdict: the on-photo badge opens the same Why sheet Detail uses.
+    var whyListing by remember { mutableStateOf<lk.motormila.app.domain.model.Listing?>(null) }
+
+    // Grid columns at the current width: the layout toggle is hidden when both
+    // modes would render a single column (very narrow windows).
+    var rootWidthPx by remember { mutableStateOf(0) }
+    val gridColumns = with(density) {
+        val available = rootWidthPx - (MmSpacing.gutter * 2).roundToPx()
+        adaptiveColumnCount(available, GridMinCell.roundToPx(), MmSpacing.cardGap.roundToPx())
+    }
+    val layoutToggleVisible = gridColumns > 1
 
     // Edge-to-edge: results scroll under a liquid-glass search header (top)
     // and the floating glass tab bar (bottom). The header is measured once
@@ -273,7 +314,7 @@ fun SearchScreen(
     val reducedMotion = MmMotion.reduced
 
     var rootHeightPx by remember { mutableStateOf(0f) }
-    Box(Modifier.fillMaxSize().onSizeChanged { rootHeightPx = it.height.toFloat() }) {
+    Box(Modifier.fillMaxSize().onSizeChanged { rootHeightPx = it.height.toFloat(); rootWidthPx = it.width }) {
             MmPullToRefresh(
                 isRefreshing = isRefreshing,
                 onRefresh = { items.refresh() },
@@ -307,20 +348,22 @@ fun SearchScreen(
                     0 -> {
                         // Skeletons match the result layout (grid cards / list rows).
                         LazyVerticalGrid(
-                            columns = if (gridMode) GridCells.Adaptive(172.dp) else GridCells.Fixed(1),
+                            columns = if (gridMode) GridCells.Adaptive(GridMinCell) else GridCells.Fixed(1),
                             contentPadding = PaddingValues(start = MmSpacing.gutter, end = MmSpacing.gutter, top = headerH + MmSpacing.sm, bottom = bottomPad),
                             horizontalArrangement = Arrangement.spacedBy(MmSpacing.cardGap),
                             verticalArrangement = Arrangement.spacedBy(MmSpacing.cardGap),
                             userScrollEnabled = false,
                         ) {
-                            items(6, contentType = { "skeleton" }) { MmListingCardSkeleton() }
+                            items(6, contentType = { "skeleton" }) {
+                                if (gridMode) MmListingCardSkeleton() else MmListingRowSkeleton()
+                            }
                         }
                     }
                     1 -> {
                         // Safe cast: this branch is still drawn while it fades out.
                         val err = items.loadState.refresh as? LoadState.Error
                         ErrorState(
-                            message = err?.error?.message ?: "Couldn't load results",
+                            message = err?.error?.message ?: loadErrorMsg,
                             onRetry = { items.retry() },
                             cachedAvailable = items.itemCount > 0,
                             onShowCached = { items.retry() },
@@ -353,7 +396,10 @@ fun SearchScreen(
                     else -> {
                         LazyVerticalGrid(
                             state = gridState,
-                            columns = if (gridMode) GridCells.Adaptive(172.dp) else GridCells.Fixed(1),
+                            // 152dp minimum: two columns on 360dp phones (2×152 + 12 gap
+                            // = 316 ≤ 320 available after the 20dp gutters). 172dp yielded
+                            // ONE column on the dominant Sri Lankan 360dp width.
+                            columns = if (gridMode) GridCells.Adaptive(GridMinCell) else GridCells.Fixed(1),
                             contentPadding = PaddingValues(
                                 start = MmSpacing.gutter,
                                 end = MmSpacing.gutter,
@@ -367,14 +413,37 @@ fun SearchScreen(
                                 .fillMaxSize()
                                 .semantics { contentDescription = searchResultsCd },
                         ) {
+                            // Quiet result count (live backend total when known).
+                            item(span = { GridItemSpan(maxLineSpan) }, contentType = "result-count") {
+                                val total = state.resultTotal
+                                if (total != null) {
+                                    Text(
+                                        stringResource(R.string.v19_search_result_count, countFormat.format(total)),
+                                        style = MmType.current.caption,
+                                        color = c.textTertiary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                }
+                            }
                             items(
                                 count = items.itemCount,
                                 key = { i -> items.peek(i)?.id ?: -i - 1 },
-                                contentType = { "listing" },
+                                contentType = { if (gridMode) "listing" else "listing-row" },
                             ) { i ->
                                 val listing = items[i]
                                 if (listing != null) {
                                     val inCompare = state.compareIds.contains(listing.id)
+                                    // Badge opens the Why sheet when there is a verdict to
+                                    // explain; locked (free) rows go to Detail's price panel.
+                                    val onWhy: () -> Unit = {
+                                        if (listing.marketMedianLkr != null && listing.marketMedianLkr > 0) {
+                                            whyListing = listing
+                                        } else {
+                                            onListingClick(listing.id)
+                                        }
+                                    }
                                     Box(
                                         Modifier.animateItem(
                                             fadeInSpec = null,
@@ -384,36 +453,89 @@ fun SearchScreen(
                                     ) {
                                         val firstReveal = remember(listing.id) { revealedIds.add(listing.id) }
                                         StaggeredItem(index = i, animate = firstReveal) {
-                                            ListingCard(
-                                                listing = listing,
-                                                isWatched = state.watchedIds.contains(listing.id),
-                                                onClick = { onListingClick(listing.id) },
-                                                onWatchToggle = { viewModel.toggleWatch(listing) },
-                                                compareSelected = inCompare,
-                                                compareEnabled = inCompare || state.compareIds.size < MAX_COMPARE_IDS,
-                                                onCompareToggle = {
-                                                    if (inCompare) haptics.unsave() else haptics.save()
-                                                    viewModel.toggleCompare(listing.id)
-                                                },
-                                                onCompareFly = { from ->
-                                                    if (!reducedMotion && from != androidx.compose.ui.geometry.Rect.Zero) {
-                                                        flights += CompareFlight(System.nanoTime(), listing.heroImageUrl, from, state.compareIds.size)
-                                                    }
-                                                },
-                                            )
+                                            if (gridMode) {
+                                                ListingCard(
+                                                    listing = listing,
+                                                    isWatched = state.watchedIds.contains(listing.id),
+                                                    onClick = { onListingClick(listing.id) },
+                                                    onWatchToggle = { viewModel.toggleWatch(listing) },
+                                                    compareSelected = inCompare,
+                                                    compareEnabled = inCompare || state.compareIds.size < MAX_COMPARE_IDS,
+                                                    onCompareToggle = {
+                                                        if (inCompare) haptics.unsave() else haptics.save()
+                                                        viewModel.toggleCompare(listing.id)
+                                                    },
+                                                    onCompareFly = { from ->
+                                                        if (!reducedMotion && from != androidx.compose.ui.geometry.Rect.Zero) {
+                                                            flights += CompareFlight(System.nanoTime(), listing.heroImageUrl, from, state.compareIds.size)
+                                                        }
+                                                    },
+                                                    onWhy = onWhy,
+                                                )
+                                            } else {
+                                                // True compact list row (112×84 thumb + title/price/meta).
+                                                ListingRow(
+                                                    listing = listing,
+                                                    isWatched = state.watchedIds.contains(listing.id),
+                                                    onClick = { onListingClick(listing.id) },
+                                                    onWatchToggle = { viewModel.toggleWatch(listing) },
+                                                    compareSelected = inCompare,
+                                                    compareEnabled = inCompare || state.compareIds.size < MAX_COMPARE_IDS,
+                                                    onCompareToggle = {
+                                                        if (inCompare) haptics.unsave() else haptics.save()
+                                                        viewModel.toggleCompare(listing.id)
+                                                    },
+                                                    onWhy = onWhy,
+                                                )
+                                            }
                                         }
                                     }
                                 }
                             }
                             if (items.loadState.append is LoadState.Loading) {
-                                item { MmListingCardSkeleton() }
+                                item(span = { GridItemSpan(maxLineSpan) }, contentType = "skeleton-append") {
+                                    if (gridMode) MmListingCardSkeleton() else MmListingRowSkeleton()
+                                }
                             }
                             if (items.loadState.append is LoadState.Error) {
                                 item(span = { GridItemSpan(maxLineSpan) }) {
                                     ErrorState(
-                                        message = "Couldn't load more",
+                                        message = loadMoreErrorMsg,
                                         onRetry = { items.retry() },
                                     )
+                                }
+                            }
+                            // End-of-list footer once the source says there is no more.
+                            if (items.itemCount > 0 && items.loadState.append.endOfPaginationReached) {
+                                item(span = { GridItemSpan(maxLineSpan) }, contentType = "end-footer") {
+                                    Column(
+                                        Modifier.fillMaxWidth().padding(vertical = MmSpacing.lg),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                    ) {
+                                        Text(
+                                            stringResource(
+                                                R.string.v19_search_end_of_list,
+                                                countFormat.format(state.resultTotal ?: items.itemCount),
+                                            ),
+                                            style = MmType.current.caption,
+                                            color = c.textTertiary,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                        Spacer(Modifier.height(4.dp))
+                                        Box(
+                                            Modifier
+                                                .heightIn(min = 48.dp)
+                                                .clip(MmShapes.pill)
+                                                .clickable(role = Role.Button) {
+                                                    scope.launch { gridState.animateScrollToItem(0) }
+                                                }
+                                                .padding(horizontal = 12.dp),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Text(backToTopLabel, style = MmType.current.label, color = c.brandText, maxLines = 1)
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -470,11 +592,13 @@ fun SearchScreen(
                 recentSearches = state.recentSearches,
                 onSuggestionClick = { onListingClick(it.id) },
                 onRecentClick = { viewModel.onSearch(it) },
+                onRecentRemove = viewModel::removeRecent,
+                onClearRecents = viewModel::clearRecents,
                 onVoiceClick = if (voiceAvailable) {
                     {
                         runCatching { voiceLauncher.launch(voiceHelper.recogniserIntent()) }
                             .onFailure {
-                                scope.launch { snackbar.showSnackbar("Voice search isn't available on this device.") }
+                                scope.launch { snackbar.showSnackbar(voiceUnavailableMsg) }
                             }
                     }
                 } else {
@@ -516,18 +640,19 @@ fun SearchScreen(
             )
             SortFilterRow(
                 sort = state.filters.sort,
+                isPro = state.isPro,
                 onSort = viewModel::onSortChange,
                 onFilters = {
                     viewModel.loadModels(state.filters.make)
                     viewModel.openFilters()
                 },
                 activeCount = state.filters.activeFilterCount(),
-                onCreateAlert = viewModel::createAlertFromFilters,
                 gridMode = gridMode,
                 onToggleLayout = {
                     haptics.toggle()
                     gridMode = !gridMode
                 },
+                layoutToggleVisible = layoutToggleVisible,
             )
             // Removable active-filter chips (web parity), spring in/out.
             ActiveFilterChipsRow(
@@ -611,6 +736,45 @@ fun SearchScreen(
                 sources = state.sources,
                 onMakeChange = viewModel::loadModels,
                 countFor = viewModel::countFor,
+                onCreateAlert = viewModel::createAlertFromFilters,
+            )
+        }
+
+        // Tappable verdict: same explanation sheet the Detail screen uses.
+        whyListing?.let { l ->
+            val resolved = l.rowVerdict()
+            DealWhySheet(
+                verdict = MmDealVerdict.from(
+                    resolved,
+                    isLeaseTakeover = MmLeaseTakeover.detect(l.title, l.model),
+                ),
+                askingLkr = l.priceLkr,
+                typicalLkr = (resolved as? PriceVerdict.Ok)?.referenceLkr,
+                comparables = null,
+                onDismiss = { whyListing = null },
+                onFullEstimate = {
+                    whyListing = null
+                    onListingClick(l.id)
+                },
+            )
+        }
+
+        // Free user tapped the locked Best-deal sort: upsell instead of a silent downgrade.
+        if (state.showProUpsell) {
+            ProSortUpsellSheet(
+                onDismiss = viewModel::dismissProUpsell,
+                onSeePlans = {
+                    viewModel.dismissProUpsell()
+                    val opener = onOpenPricing
+                    if (opener != null) {
+                        opener()
+                    } else {
+                        // NavGraph wiring is optional; the in-app deep link always resolves.
+                        runCatching {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("motormila://pricing")))
+                        }
+                    }
+                },
             )
         }
     }
@@ -663,89 +827,213 @@ internal fun VehicleCategory.labelRes(): Int = when (this) {
     VehicleCategory.OTHERS -> R.string.vehicle_category_other
 }
 
+/**
+ * Sort + filter row. The five sort options live in a compact menu button that
+ * shows the active sort — every option is reachable in one tap (the old
+ * LazyRow hid Price-desc / Low-km off-screen on 360dp phones). Create-alert
+ * moved into the filter sheet, next to the apply CTA. The layout toggle is
+ * hidden when the current width cannot change column count.
+ */
 @Composable
 internal fun SortFilterRow(
     sort: String,
+    isPro: Boolean,
     onSort: (String) -> Unit,
     onFilters: () -> Unit,
-    onCreateAlert: () -> Unit,
     gridMode: Boolean,
     onToggleLayout: () -> Unit,
     activeCount: Int = 0,
+    layoutToggleVisible: Boolean = true,
 ) {
     val c = MmColors.current
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        // Chips scroll under a soft fade at the trailing edge instead of being
-        // cut hard against the layout toggle ("P" of "Price ↓" clipped).
-        LazyRow(
-            contentPadding = PaddingValues(start = 8.dp, end = 20.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = MmSpacing.gutter),
+    ) {
+        Box {
+            MmIconButton(
+                icon = Icons.Outlined.Tune,
+                contentDescription = stringResource(R.string.mm_open_filters_cd),
+                onClick = onFilters,
+                style = MmIconButtonStyle.Filled,
+            )
+            FilterCountBadge(activeCount, Modifier.align(Alignment.TopEnd))
+        }
+        Spacer(Modifier.width(8.dp))
+        SortMenuButton(
+            sort = sort,
+            isPro = isPro,
+            onSort = onSort,
+        )
+        Spacer(Modifier.weight(1f))
+        if (layoutToggleVisible) {
+            // Layout toggle gets its own slot, separated by a hairline.
+            Box(
+                Modifier
+                    .padding(horizontal = 2.dp)
+                    .width(0.5.dp)
+                    .height(24.dp)
+                    .background(c.outline),
+            )
+            MmIconButton(
+                icon = if (gridMode) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
+                contentDescription = if (gridMode) stringResource(R.string.mm_show_list_cd) else stringResource(R.string.mm_show_grid_cd),
+                onClick = onToggleLayout,
+                modifier = Modifier.padding(end = 4.dp),
+            )
+        }
+    }
+}
+
+/** Compact sort button + one-tap menu with all five sorts (Pro lock on Best deal for free plans). */
+@Composable
+private fun SortMenuButton(
+    sort: String,
+    isPro: Boolean,
+    onSort: (String) -> Unit,
+) {
+    val c = MmColors.current
+    var open by remember { mutableStateOf(false) }
+    val activeLabel = sortLabel(sort)
+    val sortCd = stringResource(R.string.v19_search_sort_cd, activeLabel)
+    val proCd = stringResource(R.string.mm_best_deal_pro_cd)
+    Box {
+        Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .weight(1f)
-                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                .drawWithContent {
-                    drawContent()
-                    val fade = 24.dp.toPx()
-                    drawRect(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(Color.Black, Color.Transparent),
-                            startX = size.width - fade,
-                            endX = size.width,
-                        ),
-                        topLeft = Offset(size.width - fade, 0f),
-                        size = Size(fade, size.height),
-                        blendMode = BlendMode.DstIn,
-                    )
-                },
+                .heightIn(min = 48.dp)
+                .clip(MmShapes.pill)
+                .background(c.surfaceRaised)
+                .border(0.5.dp, c.outline, MmShapes.pill)
+                .clickable(role = Role.Button) { open = true }
+                .semantics(mergeDescendants = true) { contentDescription = sortCd }
+                .padding(start = 14.dp, end = 8.dp),
         ) {
-            item {
-                Box {
-                    MmIconButton(
-                        icon = Icons.Outlined.Tune,
-                        contentDescription = stringResource(R.string.mm_open_filters_cd),
-                        onClick = onFilters,
-                        style = MmIconButtonStyle.Filled,
-                    )
-                    FilterCountBadge(activeCount, Modifier.align(Alignment.TopEnd))
-                }
-            }
-            items(ListingSorts.ALL) { s ->
-                MmChip(
-                    label = when (s) {
-                        ListingSorts.NEWEST -> stringResource(R.string.sort_newest)
-                        ListingSorts.DEAL_SCORE -> stringResource(R.string.sort_best_deal)
-                        ListingSorts.PRICE_ASC -> stringResource(R.string.sort_price_asc)
-                        ListingSorts.PRICE_DESC -> stringResource(R.string.sort_price_desc)
-                        ListingSorts.MILEAGE_ASC -> stringResource(R.string.sort_low_km)
-                        else -> s
+            Text(
+                activeLabel,
+                style = MmType.current.labelS,
+                color = c.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            Icon(
+                Icons.Filled.ArrowDropDown,
+                contentDescription = null,
+                tint = c.textSecondary,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            ListingSorts.ALL.forEach { s ->
+                val locked = s == ListingSorts.DEAL_SCORE && !isPro
+                DropdownMenuItem(
+                    text = {
+                        Text(sortLabel(s), style = MmType.current.label, maxLines = 1)
                     },
-                    selected = sort == s,
-                    onClick = { onSort(s) },
-                )
-            }
-            item {
-                MmIconButton(
-                    icon = Icons.Filled.AddAlert,
-                    contentDescription = "Create alert from these filters",
-                    onClick = onCreateAlert,
+                    onClick = {
+                        open = false
+                        onSort(s)
+                    },
+                    trailingIcon = {
+                        when {
+                            locked -> Icon(
+                                Icons.Filled.Lock,
+                                contentDescription = proCd,
+                                tint = c.textTertiary,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            sort == s -> Icon(
+                                Icons.Filled.Check,
+                                contentDescription = null,
+                                tint = c.brandText,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    },
                 )
             }
         }
-        // Layout toggle gets its own slot, separated by a hairline.
-        Box(
-            Modifier
-                .padding(horizontal = 2.dp)
-                .width(0.5.dp)
-                .height(24.dp)
-                .background(c.outline),
-        )
-        MmIconButton(
-            icon = if (gridMode) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.GridView,
-            contentDescription = if (gridMode) stringResource(R.string.mm_show_list_cd) else stringResource(R.string.mm_show_grid_cd),
-            onClick = onToggleLayout,
-            modifier = Modifier.padding(end = 4.dp),
-        )
+    }
+}
+
+/** Localised label for a sort key (shared by the button and the menu). */
+@Composable
+private fun sortLabel(sort: String): String = when (sort) {
+    ListingSorts.NEWEST -> stringResource(R.string.sort_newest)
+    ListingSorts.DEAL_SCORE -> stringResource(R.string.sort_best_deal)
+    ListingSorts.PRICE_ASC -> stringResource(R.string.sort_price_asc)
+    ListingSorts.PRICE_DESC -> stringResource(R.string.sort_price_desc)
+    ListingSorts.MILEAGE_ASC -> stringResource(R.string.sort_low_km)
+    else -> sort
+}
+
+/**
+ * Adaptive grid minimum cell width. 152dp (not 172dp) so a 360dp phone —
+ * the dominant width in Sri Lanka — gets TWO columns:
+ * 2×152 + 12 gap = 316 ≤ 320dp available after the 20dp gutters.
+ */
+private val GridMinCell = 152.dp
+
+/** Same maths as [GridCells.Adaptive]: floor((available + gap) / (min + gap)), at least 1. */
+private fun adaptiveColumnCount(availablePx: Int, minCellPx: Int, gapPx: Int): Int =
+    if (availablePx <= 0) 2 else maxOf(1, (availablePx + gapPx) / (minCellPx + gapPx))
+
+/** Localises the ViewModel's stable error keys; pass-through for backend messages. */
+@Composable
+private fun searchErrorText(error: String): String = when {
+    error == SIGN_IN_FOR_ALERTS -> stringResource(R.string.v19_search_sign_in_alerts)
+    error == SearchViewModel.ERR_COMPARE_FULL -> stringResource(R.string.v19_search_compare_full, MAX_COMPARE_IDS)
+    error.startsWith(SearchViewModel.ERR_ALERT_SAVE_PREFIX) -> stringResource(
+        R.string.v19_search_alert_save_error,
+        error.removePrefix(SearchViewModel.ERR_ALERT_SAVE_PREFIX),
+    )
+    else -> error
+}
+
+/** Pro upsell shown when a free user taps the locked Best-deal sort. */
+@Composable
+private fun ProSortUpsellSheet(
+    onDismiss: () -> Unit,
+    onSeePlans: () -> Unit,
+) {
+    val c = MmColors.current
+    MmSheet(
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.v19_search_pro_sort_title),
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = MmSpacing.gutter),
+            verticalArrangement = Arrangement.spacedBy(MmSpacing.lg),
+        ) {
+            Row(
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    Icons.Filled.Lock,
+                    contentDescription = null,
+                    tint = c.brandText,
+                    modifier = Modifier.size(18.dp),
+                )
+                Text(
+                    stringResource(R.string.v19_search_pro_sort_body),
+                    style = MmType.current.bodyM,
+                    color = c.textSecondary,
+                )
+            }
+            MmButton(
+                text = stringResource(R.string.v19_search_pro_sort_cta),
+                onClick = onSeePlans,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            MmButton(
+                text = stringResource(R.string.v19_search_pro_sort_later),
+                onClick = onDismiss,
+                style = MmButtonStyle.Ghost,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 
@@ -819,28 +1107,34 @@ internal fun ActiveFilterChipsRow(
             items(chips, key = { it.key }, contentType = { "active-filter" }) { chip ->
                 val removeCd = stringResource(R.string.filter_remove_cd, chip.label)
                 CappedFontScale(max = 1.3f) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
+                    // 48dp hit box; the visual pill stays small inside it.
+                    Box(
                         modifier = Modifier
                             .animateItem(
                                 fadeInSpec = if (MmMotion.reduced) null else tween(MmMotion.Base),
                                 placementSpec = if (MmMotion.reduced) null else MmMotion.itemPlacement,
                                 fadeOutSpec = if (MmMotion.reduced) null else tween(MmMotion.Fast),
                             )
-                            .heightIn(min = 36.dp)
-                            .clip(MmShapes.pill)
-                            .background(c.brandContainer)
-                            .border(0.5.dp, c.brand.copy(alpha = 0.35f), MmShapes.pill)
+                            .heightIn(min = 48.dp)
                             .clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = removeCd) {
                                 haptics.unsave()
                                 onRemove(chip.key)
                             }
-                            .semantics(mergeDescendants = true) { contentDescription = removeCd }
-                            .padding(start = 12.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+                            .semantics(mergeDescendants = true) { contentDescription = removeCd },
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Text(chip.label, style = MmType.current.label, color = c.onBrandContainer, maxLines = 1)
-                        Spacer(Modifier.width(4.dp))
-                        Icon(Icons.Filled.Close, contentDescription = null, tint = c.onBrandContainer, modifier = Modifier.size(16.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(MmShapes.pill)
+                                .background(c.brandContainer)
+                                .border(0.5.dp, c.brand.copy(alpha = 0.35f), MmShapes.pill)
+                                .padding(start = 12.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+                        ) {
+                            Text(chip.label, style = MmType.current.label, color = c.onBrandContainer, maxLines = 1)
+                            Spacer(Modifier.width(4.dp))
+                            Icon(Icons.Filled.Close, contentDescription = null, tint = c.onBrandContainer, modifier = Modifier.size(16.dp))
+                        }
                     }
                 }
             }

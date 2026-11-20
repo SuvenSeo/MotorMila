@@ -43,28 +43,28 @@ object MmMotion {
     // Durations (ms)
     const val Instant = 100
     const val Fast = 180
-    const val Base = 280
-    const val Slow = 450
+    const val Base = 260
+    const val Slow = 400
     const val Page = 350
     const val StaggerMs = 40
     const val MaxStaggered = 8
     const val ShimmerMs = 1300
 
     // Easing
-    val Standard: Easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
+    val Standard: Easing = CubicBezierEasing(0.32f, 0.72f, 0f, 1f)
     val Emphasized: Easing = CubicBezierEasing(0.3f, 0f, 0f, 1f)
-    val Exit: Easing = CubicBezierEasing(0.4f, 0f, 1f, 1f)
+    val Exit: Easing = CubicBezierEasing(0.3f, 0f, 1f, 1f)
 
     // Press
     const val PressScale = 0.97f
 
     // Spring parameters (exposed so callers can build typed springs)
     const val SnappyStiffness = 500f
-    const val SnappyDamping = 0.8f
+    const val SnappyDamping = 1.0f
     const val GentleStiffness = Spring.StiffnessLow + 60f // ≈ 260
-    const val GentleDamping = 0.92f
+    const val GentleDamping = 1.0f
     const val BouncyStiffness = 400f
-    const val BouncyDamping = 0.6f
+    const val BouncyDamping = 0.7f
 
     fun <T> snappy(visibilityThreshold: T? = null): SpringSpec<T> =
         spring(SnappyDamping, SnappyStiffness, visibilityThreshold)

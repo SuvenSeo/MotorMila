@@ -33,6 +33,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import lk.motormila.app.R
 import lk.motormila.app.ui.theme.MmColors
 import lk.motormila.app.ui.theme.MmMotion
 import lk.motormila.app.ui.theme.MmShapes
@@ -94,19 +96,23 @@ fun MmSkeleton(
     )
 }
 
-/** Matches [lk.motormila.app.ui.components.ListingCard] grid/feed layout. */
+/** Matches [lk.motormila.app.ui.components.ListingCard] grid/feed layout (incl. the evidence layer). */
 @Composable
 fun MmListingCardSkeleton(modifier: Modifier = Modifier) {
+    val loadingCd = stringResource(R.string.v19_search_loading)
     Column(
         modifier = modifier
             .clip(MmShapes.lg)
             .background(MmColors.current.surface)
-            .semantics { contentDescription = "Loading" },
+            .semantics { contentDescription = loadingCd },
     ) {
         Box(Modifier.fillMaxWidth().aspectRatio(4f / 3f).mmShimmer(MmShapes.lg))
         Column(Modifier.padding(MmSpacing.md), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             MmSkeleton(Modifier.fillMaxWidth(0.85f), height = 14.dp)
             MmSkeleton(width = 92.dp, height = 20.dp)
+            // Typical-price anchor + market-position bar + meta/footer.
+            MmSkeleton(Modifier.fillMaxWidth(0.55f), height = 11.dp)
+            MmSkeleton(Modifier.fillMaxWidth(0.9f), height = 4.dp, shape = MmShapes.pill)
             MmSkeleton(Modifier.fillMaxWidth(0.6f), height = 11.dp)
         }
     }

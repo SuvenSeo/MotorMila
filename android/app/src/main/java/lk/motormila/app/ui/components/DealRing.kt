@@ -4,7 +4,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import lk.motormila.app.core.motion.motionSpec
 import lk.motormila.app.core.motion.rememberReducedMotion
 import lk.motormila.app.domain.model.DealBand
+import lk.motormila.app.ui.theme.MmColors
 import lk.motormila.app.ui.theme.rememberHaptics
 import lk.motormila.app.ui.theme.ringSpring
 
@@ -62,20 +62,25 @@ fun DealRing(
         animationSpec = if (reducedMotion) motionSpec(reducedMotion) else ringSpring(),
         label = "deal-ring-sweep",
     )
-    val track = MaterialTheme.colorScheme.surfaceVariant
+    // MmColors deal tokens — the same greens/reds as FmvGauge and DealBadge.
+    val c = MmColors.current
+    val track = c.surfaceHigh
     val bar = when (band) {
-        DealBand.GREAT -> lk.motormila.app.ui.theme.MotormilaGood
-        DealBand.FAIR -> lk.motormila.app.ui.theme.MotormilaPrimary
-        DealBand.HIGH -> lk.motormila.app.ui.theme.MotormilaBad
-        DealBand.LOCKED -> lk.motormila.app.ui.theme.MotormilaOutline
+        DealBand.GREAT -> c.dealGood
+        DealBand.FAIR -> c.dealFair
+        DealBand.HIGH -> c.dealHigh
+        DealBand.LOCKED -> c.outlineStrong
     }
+    val ringCd = description
+        ?: if (score == null) {
+            androidx.compose.ui.res.stringResource(lk.motormila.app.R.string.mm_deal_score_locked_cd)
+        } else {
+            androidx.compose.ui.res.stringResource(lk.motormila.app.R.string.mm_deal_score_cd, score)
+        }
     Box(
         modifier = modifier
             .size(size)
-            .semantics {
-                contentDescription = description
-                    ?: if (score == null) "Deal score locked" else "Deal score %.1f".format(score)
-            },
+            .semantics { contentDescription = ringCd },
         contentAlignment = Alignment.Center,
     ) {
         Canvas(modifier = Modifier.size(size)) {
@@ -105,7 +110,7 @@ fun DealRing(
             maxLines = 1,
             softWrap = false,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = c.textPrimary,
         )
     }
 }

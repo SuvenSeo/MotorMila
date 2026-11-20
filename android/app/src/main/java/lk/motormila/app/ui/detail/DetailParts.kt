@@ -126,6 +126,7 @@ fun DetailGallery(
     } else {
         Modifier
     }
+    val galleryCd = stringResource(R.string.mm_gallery_cd, title, images.size)
     Box(
         modifier
             .fillMaxWidth()
@@ -141,12 +142,12 @@ fun DetailGallery(
             beyondViewportPageCount = 1,
             modifier = Modifier
                 .fillMaxSize()
-                .semantics { contentDescription = "Photos of $title, ${images.size} photos" },
+                .semantics { contentDescription = galleryCd },
         ) { page ->
             MmImage(
                 url = images[page],
                 placeholderKey = if (page == 0) heroPlaceholderUrl else null,
-                contentDescription = "Photo ${page + 1} of $title",
+                contentDescription = stringResource(R.string.mm_gallery_photo_cd, page + 1, title),
                 modifier = Modifier
                     .fillMaxSize()
                     .then(if (page == 0) heroModifier else Modifier)
@@ -258,7 +259,7 @@ fun FullScreenGallery(
             ) { page ->
                 ZoomableImage(
                     url = images[page],
-                    contentDescription = "Photo ${page + 1} of $title",
+                    contentDescription = stringResource(R.string.mm_gallery_photo_cd, page + 1, title),
                     onVerticalDrag = { dy -> dragY += dy },
                     onDragEnd = {
                         if (abs(dragY) > 260f) {
@@ -421,16 +422,12 @@ fun DetailActionBar(
     // Fixed chrome: cap Dynamic Type at 1.3x like an iOS toolbar so the price and the
     // button both fit at 200 %; the price additionally shrinks to fit (MmFitText).
     lk.motormila.app.ui.theme.CappedFontScale(max = 1.3f) {
-    // Full rupees normally; at large text the compact "Rs 1.2 Mn"
-    // (full figure is already in the page title block).
-    val largeText = androidx.compose.ui.platform.LocalConfiguration.current.fontScale > 1.15f
-    val priceMode = if (largeText) MmPriceMode.Compact else MmPriceMode.Full
+    // Compact ONLY (v1.9.0): the full rupee figure lives in the price hero on
+    // the page — one hero, one full price. The bar keeps the short "Rs 1.2 Mn".
+    val priceMode = MmPriceMode.Compact
     val priceStyle = MmType.current.priceM
     val fallback = stringResource(R.string.mm_price_on_request)
-    val priceText = when (priceMode) {
-        MmPriceMode.Compact -> MmPriceFormat.compact(priceLkr, fallback)
-        else -> MmPriceFormat.full(priceLkr, fallback)
-    }
+    val priceText = MmPriceFormat.compact(priceLkr, fallback)
     val measurer = androidx.compose.ui.text.rememberTextMeasurer()
     val density = androidx.compose.ui.platform.LocalDensity.current
     // PRICE HAS PRIORITY (1.7.0 bug: "Rs 950,00C"). The Row measured the

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.9.0 search/browse + listing-card fixes (audit P1-A/D/E) — Sinhala. -->
+<resources>
+    <string name="v19_search_voice_empty">හඬ පැහැදිලි නැහැ — නැවත උත්සාහ කරන්න.</string>
+    <string name="v19_search_voice_unavailable">මෙම උපාංගයේ හඬ සෙවීම ලබා ගත නොහැක.</string>
+    <string name="v19_search_alert_saved">ඇඟවීම සුරැකිණි — ගැළපීම් ඇති විට ඔබට දන්වන්නෙමු</string>
+    <string name="v19_search_error_generic">යම් දෝෂයක් සිදු විය</string>
+    <string name="v19_search_load_error">ප්‍රතිඵල පූරණය කළ නොහැකි විය</string>
+    <string name="v19_search_load_more_error">තවත් ප්‍රතිඵල පූරණය කළ නොහැකි විය</string>
+    <string name="v19_search_create_alert">මෙම පෙරහන්වලින් ඇඟවීමක් සාදන්න</string>
+    <string name="v19_search_sign_in_alerts">මිල ඇඟවීම් සෑදීමට පිවිසෙන්න.</string>
+    <string name="v19_search_compare_full">සංසන්දන තැටිය පිරී ඇත (උපරීම %1$d) — පළමුව එකක් ඉවත් කරන්න</string>
+    <string name="v19_search_alert_save_error">ඇඟවීම සුරැකිය නොහැකි විය. %1$s</string>
+    <string name="v19_search_for_query">“%1$s” සඳහා සොයන්න</string>
+    <string name="v19_search_recent_title">මෑත සෙවීම්</string>
+    <string name="v19_search_clear_history">ඉතිහාසය මකන්න</string>
+    <string name="v19_search_remove_recent_cd">මෑත සෙවීම්වලින් %1$s ඉවත් කරන්න</string>
+    <string name="v19_search_clear_cd">සෙවීම හිස් කරන්න</string>
+    <string name="v19_search_filters_cd">සෙවුම් පෙරහන්</string>
+    <string name="v19_search_typical_price">සාමාන්‍ය %1$s</string>
+    <string name="v19_search_checked_now">දැන් පරීක්ෂා කළා</string>
+    <string name="v19_search_checked_hours">පැය %1$dකට පෙර පරීක්ෂා කළා</string>
+    <string name="v19_search_checked_days">දින %1$dකට පෙර පරීක්ෂා කළා</string>
+    <string name="v19_search_details_fallback">විස්තර දැන්වීම් පිටුවේ</string>
+    <string name="v19_search_result_count">ප්‍රතිඵල %1$s</string>
+    <string name="v19_search_end_of_list">ප්‍රතිඵල අවසානය · දැන්වීම් %1$s</string>
+    <string name="v19_search_back_to_top">නැවත මුලට</string>
+    <string name="v19_search_sort_cd">ප්‍රතිඵල අනුපිළිවෙල. වත්මන්: %1$s</string>
+    <string name="v19_search_pro_sort_title">හොඳම ගනුදෙනු අනුපිළිවෙල Pro සමඟ</string>
+    <string name="v19_search_pro_sort_body">ගනුදෙනු-ලකුණු අනුපිළිවෙල මඟින් සෑම දැන්වීමක්ම එහි සාමාන්‍ය ඉල්ලුම් මිලට සාපේක්ෂව ශ්‍රේණිගත කරයි, එවිට හොඳම ගනුදෙනු ඉහළට පැමිණේ. Pro හි ලබා ගත හැක.</string>
+    <string name="v19_search_pro_sort_cta">Pro සැලසුම් බලන්න</string>
+    <string name="v19_search_pro_sort_later">පසුව</string>
+    <string name="v19_search_loading">පූරණය වෙමින්</string>
+    <string name="v19_search_deal_verify_short">පළමුව සත්‍යාපනය කරන්න</string>
+    <string name="v19_combobox_expand_cd">විකල්ප දිග හරින්න</string>
+    <string name="v19_combobox_collapse_cd">විකල්ප හකුළන්න</string>
+    <string name="v19_combobox_expanded_state">දිග හැර ඇත</string>
+    <string name="v19_combobox_collapsed_state">හකුළා ඇත</string>
+    <string name="v19_combobox_clear_cd">තේරීම ඉවත් කරන්න</string>
+</resources>

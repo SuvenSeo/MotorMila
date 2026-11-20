@@ -1,25 +1,24 @@
 package lk.motormila.app.ui.home
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
+import lk.motormila.app.R
 import lk.motormila.app.domain.model.DistrictStat
 import lk.motormila.app.domain.model.FuelMixBucket
 import lk.motormila.app.domain.model.Insights
 import lk.motormila.app.domain.model.Listing
 import lk.motormila.app.domain.model.PriceDrop
 import lk.motormila.app.domain.model.StatsSummary
-import lk.motormila.app.domain.repository.ListingQuery
 import lk.motormila.app.domain.repository.StatsRepository
 import lk.motormila.app.domain.usecase.GetDistrictPricesUseCase
 import lk.motormila.app.domain.usecase.GetInsightsUseCase
@@ -27,7 +26,6 @@ import lk.motormila.app.domain.usecase.GetPriceDropsUseCase
 import lk.motormila.app.domain.usecase.GetStatsSummaryUseCase
 import lk.motormila.app.domain.usecase.ObserveSessionUseCase
 import lk.motormila.app.domain.usecase.ToggleWatchlistUseCase
-import lk.motormila.app.domain.model.VehicleCategory
 import lk.motormila.app.domain.model.VehicleCategoryRules
 import lk.motormila.app.domain.model.carsOnlyOrFirst
 import javax.inject.Inject
@@ -85,15 +83,16 @@ class HomeViewModel @Inject constructor(
     private val observeSession: ObserveSessionUseCase,
     private val toggleWatchlist: ToggleWatchlistUseCase,
     private val stats: StatsRepository,
+    // Nullable + default keeps manual (test) construction source-compatible;
+    // Hilt always injects the real application context.
+    @ApplicationContext private val appContext: Context? = null,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeUiState())
     val state: StateFlow<HomeUiState> = _state.asStateFlow()
 
-    /** Live ticker for the home live-strip (empty when offline). */
-    val liveStrip: StateFlow<List<Listing>> = stats.liveListings(limit = 10)
-        .catch { emit(emptyList()) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    private fun str(resId: Int, fallback: String): String =
+        appContext?.getString(resId) ?: fallback
 
     init {
         observePro()
@@ -132,7 +131,7 @@ class HomeViewModel @Inject constructor(
                             isLoading = false,
                             isOffline = true,
                             showCachedBadge = true,
-                            error = "Couldn't reach Motormila",
+                            error = str(R.string.v19_home_err_reach, "Couldn't reach MotorMila"),
                         )
                     } else {
                         _state.value = _state.value.copy(
@@ -160,7 +159,7 @@ class HomeViewModel @Inject constructor(
                     isLoading = false,
                     isOffline = true,
                     showCachedBadge = true,
-                    error = e.message ?: "Couldn't reach Motormila",
+                    error = e.message ?: str(R.string.v19_home_err_reach, "Couldn't reach MotorMila"),
                 )
             }
         }
@@ -201,7 +200,7 @@ class HomeViewModel @Inject constructor(
                     isRefreshing = false,
                     isOffline = true,
                     showCachedBadge = true,
-                    error = e.message ?: "Couldn't refresh",
+                    error = e.message ?: str(R.string.v19_home_err_refresh, "Couldn't refresh"),
                 )
             }
         }
@@ -241,7 +240,7 @@ class HomeViewModel @Inject constructor(
                     isLoading = false,
                     isOffline = true,
                     showCachedBadge = true,
-                    error = "Taking too long to reach Motormila",
+                    error = str(R.string.v19_home_err_slow, "Taking too long to reach MotorMila"),
                 )
             }
         }
@@ -256,8 +255,4 @@ class HomeViewModel @Inject constructor(
             }
         }
     }
-
-    /** Feed query for the home "Latest" feed section (newest first). */
-    fun feedQuery(): ListingQuery =
-        ListingQuery(sort = "newest", vehicleCategory = VehicleCategory.DEFAULT.apiValue)
 }

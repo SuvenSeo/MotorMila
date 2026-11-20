@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.9.0 HOME + CHROME + NAV + WATCHLIST strings — Sinhala. -->
+<resources>
+    <!-- Brand / chrome -->
+    <string name="v19_brand_name">MotorMila</string>
+    <string name="v19_brand_tagline">ශ්‍රී ලංකා වාහන වෙළඳපොළ බුද්ධිමත් තොරතුරු</string>
+    <string name="v19_live">සජීවී</string>
+    <string name="v19_open_cd">%1$s විවෘත කරන්න</string>
+    <string name="v19_unknown_error">නොදන්නා දෝෂයකි</string>
+    <string name="v19_tab_count_cd">%1$s, අයිතම %2$s</string>
+
+    <!-- Home -->
+    <string name="v19_home_featured_eyebrow">විශේෂ ගනුදෙනුව</string>
+    <string name="v19_home_more">තව</string>
+    <string name="v19_home_more_title">තවත් මෙවලම්</string>
+    <string name="v19_home_more_cd">තවත් කෙටිමං</string>
+    <string name="v19_home_err_reach">MotorMila වෙත සම්බන්ධ විය නොහැකි විය</string>
+    <string name="v19_home_err_refresh">යාවත්කාලීන කළ නොහැකි විය</string>
+    <string name="v19_home_err_slow">MotorMila වෙත සම්බන්ධ වීමට බොහෝ වේලාවක් ගතවේ</string>
+
+    <!-- Watchlist -->
+    <string name="v19_watch_title">සුරැකි ලැයිස්තුව</string>
+    <string name="v19_watch_title_count">සුරැකි ලැයිස්තුව (%1$d)</string>
+    <string name="v19_watch_refresh_cd">සුරැකි මිල ගණන් යාවත්කාලීන කරන්න</string>
+    <string name="v19_watch_clear_cd">සුරැකි ලැයිස්තුව සම්පූර්ණයෙන් හිස් කරන්න</string>
+    <string name="v19_watch_clear_title">සුරැකි ලැයිස්තුව හිස් කරන්නද?</string>
+    <string name="v19_watch_clear_body">මෙය සුරැකි වාහන %1$dක්ම ඉවත් කරයි. මිල පහත වැටීමේ ඉතිහාසය අහිමි වේ.</string>
+    <string name="v19_watch_clear_confirm">සියල්ල හිස් කරන්න</string>
+    <string name="v19_watch_cleared">සුරැකි වාහන %1$dක් හිස් කරන ලදී</string>
+    <string name="v19_watch_removed">%1$s ඉවත් කරන ලදී</string>
+    <string name="v19_watch_undo">පෙර පරිදි</string>
+    <string name="v19_watch_empty_title">තවම කිසිවක් සුරැකී නැත</string>
+    <string name="v19_watch_empty_body">ඕනෑම ලැයිස්තුවක බුක්මාර්ක් සලකුණ තට්ටු කර එය මෙහි සුරකින්න — සාමාන්‍ය මිලට සාපේක්ෂව සෑම මිල පහත වැටීමක්ම අපි සලකුණු කරමු.</string>
+    <string name="v19_watch_browse">ලැයිස්තු බලන්න</string>
+    <string name="v19_watch_typical">සාමාන්‍ය %1$s</string>
+    <string name="v19_watch_below_typical">සාමාන්‍යයට වඩා %1$s අඩුයි</string>
+    <string name="v19_watch_drop_cd">මිල %1$sකින් පහත වැටුණි</string>
+    <string name="v19_watch_alert_cd">%1$s සඳහා මිල ඇඟවීමක් සාදන්න</string>
+    <string name="v19_watch_remove_cd">%1$s සුරැකි ලැයිස්තුවෙන් ඉවත් කරන්න</string>
+    <string name="v19_watch_row_cd">%2$s මිලට %1$s සුරැකී ඇත</string>
+    <string name="v19_watch_swipe_alert">මිල ඇඟවීමක් සෑදීමට ස්වයිප් කරන්න</string>
+    <string name="v19_watch_swipe_remove">සුරැකි ලැයිස්තුවෙන් ඉවත් කිරීමට ස්වයිප් කරන්න</string>
+    <string name="v19_watch_create_alert">ඇඟවීම සාදන්න</string>
+    <string name="v19_watch_remove">ඉවත් කරන්න</string>
+    <string name="v19_watch_err_load">ඔබේ සුරැකි ලැයිස්තුව පූරණය කළ නොහැකි විය.</string>
+    <string name="v19_watch_err_remove">එම ලැයිස්තුව ඉවත් කළ නොහැකි විය.</string>
+    <string name="v19_watch_err_refresh">මිල ගණන් යාවත්කාලීන කළ නොහැකි විය.</string>
+    <string name="v19_watch_err_clear">සුරැකි ලැයිස්තුව හිස් කළ නොහැකි විය.</string>
+    <string name="v19_watch_err_restore">ඉවත් කළ අයිතම නැවත පිහිටුවිය නොහැකි විය.</string>
+</resources>

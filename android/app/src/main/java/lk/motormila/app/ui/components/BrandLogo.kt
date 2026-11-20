@@ -29,6 +29,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
@@ -75,7 +76,7 @@ fun BrandLogo(
     size: BrandLogoSize = BrandLogoSize.NAV,
     showWordmark: Boolean = true,
     showTagline: Boolean = size.showTagline,
-    tagline: String = "Sri Lanka Vehicle Market Intelligence",
+    tagline: String = stringResource(R.string.v19_brand_tagline),
     showLiveIndicator: Boolean = false,
 ) {
     if (!showWordmark) {
@@ -95,7 +96,7 @@ fun BrandLogo(
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.motormila_mark),
-                    contentDescription = "Motormila",
+                    contentDescription = stringResource(R.string.v19_brand_name),
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.size(size.markSize * 0.66f),
                 )
@@ -112,7 +113,7 @@ fun BrandLogo(
                 painter = painterResource(
                     id = motormilaWordmarkRes(lk.motormila.app.ui.theme.MmColors.current.isDark),
                 ),
-                contentDescription = "Motormila",
+                contentDescription = stringResource(R.string.v19_brand_name),
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .height(size.lockupHeight * 0.7f)
@@ -171,7 +172,7 @@ fun MarketLivePill(modifier: Modifier = Modifier) {
         )
         Spacer(Modifier.width(5.dp))
         Text(
-            text = "LIVE",
+            text = stringResource(R.string.v19_live),
             fontSize = 9.sp,
             fontWeight = FontWeight.ExtraBold,
             color = lk.motormila.app.ui.theme.MotormilaGoodText,

@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -58,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import lk.motormila.app.R
 import lk.motormila.app.ui.theme.CappedFontScale
 import lk.motormila.app.ui.theme.GlassWeight
 import lk.motormila.app.ui.theme.MmColors
@@ -314,13 +316,25 @@ private fun BottomBarTab(
     // stronger ink than textSecondary so they keep AA contrast in dark mode.
     val idleInk = c.textPrimary.copy(alpha = if (c.isDark) 0.78f else 0.70f)
     val tint = if (selected) c.brandText else idleInk
+    // TalkBack: mergeDescendants hides the badge's own text, so the count
+    // must ride in the tab's contentDescription ("Saved, 3 items").
+    val badgeCount = item.badge?.takeIf { it > 0 }
+    val tabCd = if (badgeCount != null) {
+        stringResource(
+            R.string.v19_tab_count_cd,
+            item.label,
+            if (badgeCount > 99) "99+" else badgeCount.toString(),
+        )
+    } else {
+        item.label
+    }
     Column(
         modifier = modifier
             .fillMaxHeight()
             .clickable(interactionSource = interaction, indication = null, role = Role.Tab, onClick = onClick)
             .mmPress(interaction, 0.88f)
             .semantics(mergeDescendants = true) {
-                contentDescription = item.label
+                contentDescription = tabCd
                 this.selected = selected
             },
         horizontalAlignment = Alignment.CenterHorizontally,

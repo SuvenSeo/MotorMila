@@ -1,8 +1,10 @@
 package lk.motormila.app.core.network
 
+import androidx.annotation.StringRes
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
+import lk.motormila.app.R
 import lk.motormila.app.core.common.AppError
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -54,4 +56,60 @@ object ErrorMapper {
             detail.toString().take(300)
         }
     }.getOrNull()
+
+    /**
+     * Compatibility bridge for legacy callers that still carry error *strings*
+     * (e.g. `ErrorState(message = state.error)`). Recognises only structured
+     * markers — the mapper's own canonical default messages (exact match) and
+     * leading HTTP status codes — never free English substrings. Anything
+     * unrecognised becomes [AppError.Unknown] so the UI shows calm localized
+     * copy instead of a raw exception string.
+     */
+    fun fromLegacyMessage(message: String?): AppError {
+        val m = message?.trim().orEmpty()
+        if (m.isEmpty()) return AppError.Unknown()
+        // Exact canonical outputs of map()/AppError defaults (English source of truth).
+        when (m) {
+            AppError.Network().message, "No internet connection.",
+            "Request timed out. Please retry.",
+            -> return AppError.Network(m)
+            AppError.Unauthorized().message -> return AppError.Unauthorized(m)
+            AppError.Forbidden().message -> return AppError.Forbidden(m)
+            AppError.NotFound().message -> return AppError.NotFound(m)
+            AppError.RateLimited().message -> return AppError.RateLimited(m)
+            AppError.Server().message -> return AppError.Server(m)
+            AppError.Unknown().message -> return AppError.Unknown(m)
+        }
+        // Structured HTTP status markers ("401", "HTTP 503", "503 Service Unavailable").
+        val code = Regex("^(?:HTTP\\s*)?(\\d{3})\\b").find(m)?.groupValues?.get(1)?.toIntOrNull()
+        if (code != null) {
+            return when (code) {
+                401 -> AppError.Unauthorized(m)
+                403 -> AppError.Forbidden(m)
+                404 -> AppError.NotFound(m)
+                409, 410, 422 -> AppError.Validation(m)
+                429 -> AppError.RateLimited(m)
+                in 500..599 -> AppError.Server(m)
+                else -> AppError.Unknown(m)
+            }
+        }
+        return AppError.Unknown(m)
+    }
+}
+
+/**
+ * Localized user-facing copy for a mapped error (v1.9.0 P1-E). The typed
+ * [AppError] stays the source of truth; the UI edge resolves this res id via
+ * `stringResource` so no raw/English exception text ever reaches the user.
+ */
+@StringRes
+fun AppError.messageRes(): Int = when (this) {
+    is AppError.Network -> R.string.v19_error_offline_body
+    is AppError.Unauthorized -> R.string.v19_error_session_body
+    is AppError.Forbidden -> R.string.v19_error_plan_body
+    is AppError.NotFound -> R.string.v19_error_notfound_body
+    is AppError.Validation -> R.string.v19_error_validation_body
+    is AppError.RateLimited -> R.string.v19_error_rate_body
+    is AppError.Server -> R.string.v19_error_server_body
+    is AppError.Unknown -> R.string.v19_error_generic_body
 }

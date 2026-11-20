@@ -33,7 +33,8 @@ class AlertsChannelFormTest {
             telegram = true,
             push = true,
         )
-        assertEquals(listOf("email", "push"), form.selectedNotifyChannels(isPro = false))
+        // In-app/email/push are free; only WhatsApp/Telegram are Pro-gated.
+        assertEquals(listOf("inapp", "email", "push"), form.selectedNotifyChannels(isPro = false))
     }
 
     @Test
@@ -75,7 +76,7 @@ class AlertsChannelFormTest {
         ).toAlertInput(isPro = false)!!
         assertNull(input.notifyPhone)
         assertNull(input.notifyTelegramChatId)
-        assertEquals("push", input.notifyChannels)
+        assertEquals("inapp,push", input.notifyChannels)
         assertEquals("instant", input.deliveryMode)
         assertEquals(true, input.quietHoursEnabled)
     }

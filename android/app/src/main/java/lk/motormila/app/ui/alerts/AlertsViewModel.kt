@@ -15,9 +15,13 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import lk.motormila.app.R
 import lk.motormila.app.core.common.AppError
 import lk.motormila.app.core.format.parseLkrShorthand
 import lk.motormila.app.core.network.ErrorMapper
+import lk.motormila.app.core.network.messageRes
 import lk.motormila.app.domain.model.Alert
 import lk.motormila.app.domain.model.AlertInput
 import lk.motormila.app.domain.model.AlertMatch
@@ -45,10 +49,12 @@ fun formatLkrShorthand(value: Double): String {
     return value.toLong().toString()
 }
 
+@Serializable
 data class AlertForm(
     val make: String = "",
     val model: String = "",
-    val district: String = "Colombo",
+    /** Empty = "Any district" (null server-side). Never silently defaults to Colombo. */
+    val district: String = "",
     val maxPrice: String = "",
     val push: Boolean = true,
     val email: Boolean = false,
@@ -72,7 +78,9 @@ fun parseNotifyChannels(raw: String?): List<String> {
 
 fun AlertForm.selectedNotifyChannels(isPro: Boolean): List<String> {
     val selected = buildList {
-        if (inapp && isPro) add("inapp")
+        // In-app is FREE (v1.9.0): the form shows it selected to everyone, so it
+        // must actually be saved — never silently drop a displayed selection.
+        if (inapp) add("inapp")
         if (email) add("email")
         if (whatsapp && isPro) add("whatsapp")
         if (telegram && isPro) add("telegram")
@@ -102,7 +110,7 @@ fun alertFormFrom(alert: Alert): AlertForm {
     return AlertForm(
         make = alert.make.orEmpty(),
         model = alert.model.orEmpty(),
-        district = alert.district ?: "Colombo",
+        district = alert.district ?: "",
         maxPrice = alert.maxPriceLkr?.let(::formatLkrShorthand).orEmpty(),
         push = alert.notifyChannels == null || "push" in channels,
         email = "email" in channels,
@@ -269,7 +277,7 @@ class AlertsViewModel @Inject constructor(
                             form = current.form.copy(
                                 make = listing.make,
                                 model = listing.model,
-                                district = listing.district ?: "Colombo",
+                                district = listing.district ?: "",
                                 maxPrice = listing.priceLkr?.let(::formatLkrShorthand).orEmpty(),
                             ),
                             justPrefill = true,
@@ -439,8 +447,10 @@ class AlertsViewModel @Inject constructor(
     }
 
     private fun toggleAlertChannel(id: Int, channel: String) {
-        if (!_state.value.isPro) {
-            _state.update { it.copy(error = "Notification channels unlock with Pro.") }
+        // In-app / email / push are free; only WhatsApp + Telegram are Pro-gated.
+        val proOnly = channel == "whatsapp" || channel == "telegram"
+        if (proOnly && !_state.value.isPro) {
+            _state.update { it.copy(error = "WhatsApp and Telegram notifications unlock with Pro.") }
             return
         }
         val alert = _state.value.alerts.firstOrNull { it.id == id } ?: return

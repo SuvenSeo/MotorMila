@@ -54,7 +54,7 @@ fun HomeTopRow(onAlertsClick: () -> Unit, modifier: Modifier = Modifier) {
     ) {
         Image(
             painter = painterResource(lk.motormila.app.ui.components.motormilaWordmarkRes(c.isDark)),
-            contentDescription = "MotorMila",
+            contentDescription = stringResource(R.string.v19_brand_name),
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .width(132.dp)
@@ -71,8 +71,9 @@ fun HomeTopRow(onAlertsClick: () -> Unit, modifier: Modifier = Modifier) {
 }
 
 /**
- * Calm hero: one confident line, one honest sub-line (live count only when
- * we actually have it), and a single search entry that opens Search.
+ * Calm hero: one confident display headline (40sp), one honest sub-line
+ * (live count only when we actually have it), and a single search entry that
+ * opens Search. The photographic hero moment lives below it (HomeFeaturedDeal).
  */
 @Composable
 fun HomeHero(
@@ -84,7 +85,7 @@ fun HomeHero(
     val c = MmColors.current
     val t = MmType.current
     Column(modifier.fillMaxWidth().padding(horizontal = MmSpacing.gutter)) {
-        Text(stringResource(R.string.mm_home_title), style = t.displayM, color = c.textPrimary)
+        Text(stringResource(R.string.mm_home_title), style = t.displayL, color = c.textPrimary)
         Spacer(Modifier.height(10.dp))
         val sub = when {
             totalListings > 0 && sourceCount > 0 ->

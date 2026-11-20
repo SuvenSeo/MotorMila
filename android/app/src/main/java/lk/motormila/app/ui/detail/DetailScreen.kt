@@ -7,12 +7,13 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-import lk.motormila.app.ui.theme.CalSansText
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import lk.motormila.app.ui.theme.tabular
 import android.content.Context
-import android.content.Intent
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.core.Animatable
@@ -56,6 +57,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.LocalGasStation
@@ -72,6 +74,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -86,7 +90,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.geometry.Offset
@@ -101,7 +104,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
-import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
@@ -146,6 +148,11 @@ import lk.motormila.app.ui.navigation.LocalNavAnimatedVisibilityScope
 import lk.motormila.app.ui.navigation.LocalSharedTransitionScope
 import lk.motormila.app.ui.navigation.listingHeroKey
 import lk.motormila.app.ui.share.FmvShare
+import lk.motormila.app.ui.share.OutboundLinks
+import lk.motormila.app.ui.theme.MmColors
+import lk.motormila.app.ui.theme.MmMotion
+import lk.motormila.app.ui.theme.MmShapes
+import lk.motormila.app.ui.theme.MmType
 import lk.motormila.app.ui.theme.MotormilaGood
 import lk.motormila.app.ui.theme.MotormilaGoodContainer
 import lk.motormila.app.ui.theme.MotormilaGoodText
@@ -160,13 +167,11 @@ import lk.motormila.app.ui.theme.MotormilaSecondaryText
 import lk.motormila.app.ui.theme.MotormilaSurface as MotormilaSurfaceColor
 import lk.motormila.app.ui.theme.MotormilaSurfaceHigh
 import lk.motormila.app.ui.theme.MotormilaSurfaceHighest
-import lk.motormila.app.ui.theme.MotormilaTeal
 import lk.motormila.app.ui.theme.MotormilaWarn
 import lk.motormila.app.ui.theme.MotormilaWarnContainer
 import lk.motormila.app.ui.components.motormilaSharedBoundsTransform
 import lk.motormila.app.ui.theme.rememberHaptics
 import java.text.NumberFormat
-import java.util.Calendar
 import java.util.Locale
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
@@ -178,9 +183,13 @@ import kotlin.math.roundToInt
  *
  * Upgraded with full web platform parity:
  * - 2x3 Bento Specifications Grid (Year, Mileage, Transmission, Fuel, Condition, Body Type)
- * - Interactive CBSL Lease Payment Calculator (10%-80% slider, 1-5 yr tenure, principal/interest, est monthly payment)
- * - Import Duty and Tax Estimator (Fuel pills, CID/Excise/SSCL/VAT/Luxury, Total taxes & Landed cost, 2025 gazette alert)
- * - Seller Trust, WhatsApp Share Intent, View on Source, and Intelligence Pills
+ * - Collapsible CBSL Lease Payment Calculator (down payment clamped to >= 60%, 1-5 yr tenure)
+ * - Collapsible Import Duty and Tax Estimator (import/reconditioned listings only)
+ * - Seller Trust, WhatsApp Share Intent, View on Source (allowlisted outbound links)
+ *
+ * v1.9.0 (audit P1-A/B/E): one price hero (30sp + "Asking price" eyebrow, compact
+ * sticky bar), fabricated Intelligence Pills removed, neutral seller fallback,
+ * tri-state secondary loads with inline retry + dedicated 404 state, localized copy.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -202,6 +211,20 @@ fun ListingDetailScreen(
     var viewerPage by remember { mutableStateOf<Int?>(null) }
     val mmHaptics = lk.motormila.app.ui.theme.MmHaptics.current
     var showWhy by remember { mutableStateOf(false) }
+    // Watchlist toggle failures surface as a snackbar (one-shot state from the VM).
+    val snackbarHostState = remember { SnackbarHostState() }
+    val watchFailedMsg = stringResource(R.string.mm_detail_watch_failed)
+    LaunchedEffect(state.watchError) {
+        if (state.watchError != null) {
+            snackbarHostState.showSnackbar(watchFailedMsg)
+            viewModel.clearWatchError()
+        }
+    }
+    // Measured height of the sticky action bar (it grows with font scale);
+    // hoisted so the snackbar can sit above it in every branch.
+    var actionBarHeightPx by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableIntStateOf(0)
+    }
     // THE price verdict for this listing — computed once and handed to every
     // price panel (deal row, ring/badge, gauge, ladder, history line, Why sheet,
     // share card) so they cannot contradict each other. FMV loaded: its
@@ -234,6 +257,9 @@ fun ListingDetailScreen(
     val stretch = rememberDetailStretch()
     val galleryIndex = if (state.isOffline) 1 else 0
     val density = androidx.compose.ui.platform.LocalDensity.current
+    // Room for the sticky price / "View on source" bar: its measured height
+    // (it grows with font scale), never less than the original 120 dp.
+    val actionBarRoom = with(density) { maxOf(120.dp, actionBarHeightPx.toDp() + 16.dp) }
     val screenW = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp
     val statusTop = androidx.compose.foundation.layout.WindowInsets.statusBars
         .asPaddingValues().calculateTopPadding()
@@ -260,9 +286,20 @@ fun ListingDetailScreen(
                 state.isLoading && state.listing == null -> {
                     Box(Modifier.padding(top = statusTop + 56.dp)) { MmDetailSkeleton() }
                 }
+                state.notFound -> {
+                    // 404/NotFound: the listing is gone — say so plainly and offer
+                    // the way back, never a generic error with a futile Retry.
+                    EmptyState(
+                        title = stringResource(R.string.mm_detail_gone_title),
+                        body = stringResource(R.string.mm_detail_gone_body),
+                        ctaLabel = stringResource(R.string.mm_detail_back_to_search),
+                        onCta = onBack,
+                        modifier = Modifier.fillMaxSize().padding(top = statusTop + 56.dp),
+                    )
+                }
                 state.listing == null -> {
                     ErrorState(
-                        message = state.error ?: "Listing not found",
+                        message = state.error ?: stringResource(R.string.mm_detail_load_failed),
                         onRetry = viewModel::retry,
                         cachedAvailable = false,
                         modifier = Modifier.fillMaxSize().padding(top = statusTop + 56.dp),
@@ -273,14 +310,6 @@ fun ListingDetailScreen(
                     val galleryImages = listing.images.ifEmpty { listOfNotNull(listing.thumbnailUrl) }
                     val sourceUrl = listing.externalUrl ?: listing.detailUrl
                     Box(Modifier.fillMaxSize()) {
-                    // Room for the sticky price / "View on source" bar: its measured height
-                    // (it grows with font scale), never less than the original 120 dp.
-                    var actionBarHeightPx by androidx.compose.runtime.remember {
-                        androidx.compose.runtime.mutableIntStateOf(0)
-                    }
-                    val actionBarRoom = with(androidx.compose.ui.platform.LocalDensity.current) {
-                        maxOf(120.dp, actionBarHeightPx.toDp() + 16.dp)
-                    }
                     LazyColumn(
                         state = listState,
                         modifier = Modifier
@@ -292,7 +321,15 @@ fun ListingDetailScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         if (state.isOffline) {
-                            item { OfflineBanner(visible = true, modifier = Modifier.padding(top = statusTop + 56.dp)) }
+                            // isOffline is set only for genuine network errors; tapping
+                            // the banner retries the load.
+                            item {
+                                OfflineBanner(
+                                    visible = true,
+                                    onRetry = viewModel::retry,
+                                    modifier = Modifier.padding(top = statusTop + 56.dp),
+                                )
+                            }
                         }
                         item {
                             DetailGallery(
@@ -383,30 +420,58 @@ fun ListingDetailScreen(
                                 }
                             }
                         }
+                        if (state.fmv == null && state.fmvState == DetailLoadState.FAILED) {
+                            item {
+                                InlineRetryRow(
+                                    text = stringResource(R.string.mm_detail_fmv_failed),
+                                    onRetry = viewModel::retryFmv,
+                                    modifier = Modifier.padding(horizontal = MmSpacing.gutter),
+                                )
+                            }
+                        }
                         item {
                             BentoSpecsGrid(
                                 listing = listing,
                                 modifier = Modifier.padding(horizontal = MmSpacing.gutter),
                             )
                         }
+                        // Calculators are tools, not content: collapsed by default so
+                        // history / seller are not buried under ~600 dp of always-on UI.
                         item {
-                            LeasePaymentCalculator(
-                                priceLkr = listing.priceLkr ?: 12_500_000.0,
+                            ExpandableToolRow(
+                                title = stringResource(R.string.mm_detail_estimate_monthly),
                                 modifier = Modifier.padding(horizontal = MmSpacing.gutter),
-                            )
+                            ) {
+                                LeasePaymentCalculator(
+                                    priceLkr = listing.priceLkr ?: 12_500_000.0,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
                         }
-                        item {
-                            ImportDutyEstimator(
-                                priceLkr = listing.priceLkr ?: 10_000_000.0,
-                                engineCc = listing.engineCc ?: 1500.0,
-                                initialFuel = listing.fuelType,
-                                modifier = Modifier.padding(horizontal = MmSpacing.gutter),
-                            )
+                        // Duty only makes sense for an import (reconditioned / brand-new
+                        // import / unregistered); everyone else reaches it via Tools → Tax.
+                        if (isImportContext(listing)) {
+                            item {
+                                ExpandableToolRow(
+                                    title = stringResource(R.string.mm_detail_estimate_duty),
+                                    modifier = Modifier.padding(horizontal = MmSpacing.gutter),
+                                ) {
+                                    ImportDutyEstimator(
+                                        priceLkr = listing.priceLkr ?: 10_000_000.0,
+                                        engineCc = listing.engineCc ?: 1500.0,
+                                        initialFuel = listing.fuelType,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                }
+                            }
                         }
                         item {
                             HistorySection(
-                                history = state.history,
+                                // Guard against stale history from an in-place similar swap.
+                                history = state.history?.takeIf { it.listingId == listing.id },
                                 report = state.report,
+                                historyState = state.historyState,
+                                onRetryHistory = viewModel::retryHistory,
                                 // Typical line only when the verdict stands (never a withheld estimate).
                                 fmvLkr = (priceVerdict as? lk.motormila.app.core.price.PriceVerdict.Ok)?.referenceLkr,
                                 modifier = Modifier.padding(horizontal = MmSpacing.gutter),
@@ -415,6 +480,8 @@ fun ListingDetailScreen(
                         item {
                             SellerCard(
                                 seller = state.seller,
+                                sellerState = state.sellerState,
+                                onRetrySeller = viewModel::retrySeller,
                                 sourceName = sourceDisplayName(listing.source),
                                 onViewSource = {
                                     val url = listing.externalUrl ?: listing.detailUrl
@@ -433,7 +500,8 @@ fun ListingDetailScreen(
                                 onLease = onEstimate,
                                 onMap = {
                                     val q = "${listing.district ?: ""} ${listing.city ?: ""}".trim()
-                                    openUrl(context, "https://www.openstreetmap.org/search?query=${q.ifBlank { "Sri Lanka" }}")
+                                    val query = android.net.Uri.encode(q.ifBlank { "Sri Lanka" })
+                                    openUrl(context, "https://www.openstreetmap.org/search?query=$query")
                                 },
                                 modifier = Modifier.padding(horizontal = MmSpacing.gutter),
                             )
@@ -441,9 +509,9 @@ fun ListingDetailScreen(
                         if (state.similar.isNotEmpty()) {
                             item {
                                 Text(
-                                    "Similar vehicles",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.bodyLarge,
+                                    stringResource(R.string.mm_detail_similar),
+                                    style = MmType.current.titleS,
+                                    color = MmColors.current.textPrimary,
                                     modifier = Modifier.padding(horizontal = MmSpacing.gutter),
                                 )
                                 Spacer(Modifier.height(8.dp))
@@ -470,13 +538,22 @@ fun ListingDetailScreen(
                                     }
                                 }
                                 MotormilaGhostButton(
-                                    label = "Compare with similar",
+                                    label = stringResource(R.string.mm_detail_compare_similar),
                                     onClick = {
                                         // The listing on screen (may differ from the route id after an in-place swap).
                                         val shownId = state.listing?.id ?: listingId
                                         onCompare((listOf(shownId) + state.similar.map { it.id }.filter { it != shownId }.take(2)))
                                     },
                                     modifier = Modifier.padding(horizontal = MmSpacing.gutter, vertical = 8.dp),
+                                )
+                            }
+                        }
+                        if (state.similar.isEmpty() && state.similarState == DetailLoadState.FAILED) {
+                            item {
+                                InlineRetryRow(
+                                    text = stringResource(R.string.mm_detail_similar_failed),
+                                    onRetry = viewModel::retrySimilar,
+                                    modifier = Modifier.padding(horizontal = MmSpacing.gutter),
                                 )
                             }
                         }
@@ -531,6 +608,13 @@ fun ListingDetailScreen(
                 modifier = Modifier.align(Alignment.TopStart),
             )
         }
+        // Watchlist-toggle failure snackbar, parked above the sticky action bar.
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(start = 16.dp, end = 16.dp, bottom = actionBarRoom),
+        )
     }
 
     val viewerListing = state.listing
@@ -688,17 +772,28 @@ internal fun PriceDealSection(
         }
         Text(
             listing.displayName,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.headlineMedium,
-            color = MotormilaOnSurface,
+            style = MmType.current.titleM,
+            color = MmColors.current.textPrimary,
             modifier = titleShared,
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
-            PriceSlot(
-                listing = listing,
-                history = history,
+            // Price hero: the ONE full-rupee figure on the page (the sticky bar
+            // is compact-only). "Asking price" eyebrow + 30sp tabular price that
+            // shrinks to fit instead of clipping at 200 % font scale.
+            Column(
                 modifier = Modifier.weight(1f),
-            )
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    stringResource(R.string.mm_detail_asking),
+                    style = MmType.current.overline,
+                    color = MmColors.current.textSecondary,
+                )
+                PriceSlot(
+                    listing = listing,
+                    history = history,
+                )
+            }
             // Free tier already shows the PRO badge + locked "Deal score" row below;
             // an empty ring with a dash next to the price read as a broken widget.
             if (isPro && ok != null) {
@@ -733,8 +828,8 @@ internal fun PriceDealSection(
                 LockedValue(placeholder = "8.4")
             }
         }
-        // Intelligence Pills: MILEAGE LOOKS TYPICAL, 89 SELL SPEED, 71 AD HEALTH
-        IntelligencePills(listing = listing)
+        // Intelligence Pills removed (audit P1-A): sell-speed / ad-health /
+        // "typical mileage" were fabricated metrics with no data behind them.
     }
 }
 
@@ -767,12 +862,10 @@ private fun PriceSlot(
     } else {
         Modifier
     }
-    val priceStyle = TextStyle(
-        fontFamily = CalSansText, fontFeatureSettings = "tnum",
-        fontWeight = FontWeight.Bold,
-        fontSize = 26.sp,
-        color = MotormilaOnSurface,
-    )
+    // Hero price: 30sp display-tier tabular figures (MmType.priceL), the one
+    // full-rupee figure on the page. MmFitText / fit styles below keep it whole
+    // at 200 % font scale.
+    val priceStyle = MmType.current.priceL.copy(color = MmColors.current.textPrimary)
     val drop = remember(listing.id, history) { detectPriceDrop(listing.id, history) }
     // Shared bounds hug the price text (not the weight(1f) slot): matched
     // against the slot's full row width, the card's short "Rs 1.4 Mn" was
@@ -936,123 +1029,6 @@ private fun PriceDropTicker(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun IntelligencePills(listing: Listing, modifier: Modifier = Modifier) {
-    val mileageLabelRes = remember(listing.mileageKm, listing.year) {
-        val mileage = listing.mileageKm
-        val year = listing.year
-        val currentYear = Calendar.getInstance().get(Calendar.YEAR)
-        if (mileage != null && mileage > 0 && year != null && year in 1980..currentYear) {
-            val age = (currentYear - year).coerceAtLeast(1)
-            val kmPerYear = mileage / age
-            val ratio = kmPerYear / 12000.0
-            when {
-                age >= 3 && ratio < 0.35 -> R.string.mm_km_low_anomaly
-                ratio > 2.2 -> R.string.mm_km_high_usage
-                ratio < 0.55 && age >= 2 -> R.string.mm_km_below_avg
-                else -> R.string.mm_km_typical
-            }
-        } else {
-            R.string.mm_km_typical
-        }
-    }
-    val mileageLabel = stringResource(mileageLabelRes)
-
-    val sellSpeedScore = remember(listing.dealScore) {
-        val score = listing.dealScore ?: 7.5
-        ((score * 2.5) + 68).toInt().coerceIn(30, 96)
-    }
-
-    val adHealthScore = remember(listing) {
-        var score = 0
-        if (!listing.thumbnailUrl.isNullOrBlank() || listing.images.isNotEmpty()) score += 15
-        if ((listing.mileageKm ?: 0.0) > 0) score += 14
-        if ((listing.engineCc ?: 0.0) > 0) score += 14
-        if (!listing.fuelType.isNullOrBlank()) score += 14
-        if (!listing.district.isNullOrBlank()) score += 14
-        if (listing.title.isNotBlank()) score += 14
-        if ((listing.year ?: 0) > 0) score += 15
-        if (score == 0) 71 else score
-    }
-
-    FlowRow(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        // Mileage Intelligence Pill
-        Surface(
-            shape = MotormilaRadius.lg,
-            color = MotormilaGoodContainer,
-            border = BorderStroke(1.dp, MotormilaGood.copy(alpha = 0.35f)),
-        ) {
-            Text(
-                text = mileageLabel,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.5.sp,
-                color = MotormilaGoodText,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-            )
-        }
-
-        // Sell Speed Intelligence Pill
-        Surface(
-            shape = MotormilaRadius.lg,
-            color = Color(0x2E38BDF8),
-            border = BorderStroke(1.dp, MotormilaTeal.copy(alpha = 0.35f)),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-            ) {
-                Text(
-                    text = "$sellSpeedScore",
-                    style = (MaterialTheme.typography.labelSmall).tabular(),
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MotormilaTeal,
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    text = stringResource(R.string.mm_pill_sell_speed),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp,
-                    color = MotormilaTeal,
-                )
-            }
-        }
-
-        // Advert Health Intelligence Pill
-        Surface(
-            shape = MotormilaRadius.lg,
-            color = MotormilaWarnContainer,
-            border = BorderStroke(1.dp, MotormilaWarn.copy(alpha = 0.35f)),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-            ) {
-                Text(
-                    text = "$adHealthScore",
-                    style = (MaterialTheme.typography.labelSmall).tabular(),
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MotormilaWarn,
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    text = stringResource(R.string.mm_pill_ad_health),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp,
-                    color = MotormilaWarn,
-                )
-            }
-        }
-    }
-}
-
 @Composable
 private fun HeroActionsRow(
     listing: Listing,
@@ -1182,11 +1158,12 @@ internal fun DealLadder(
 
 @Composable
 private fun LadderRung(label: String, value: Double, active: Boolean) {
+    val yourRange = stringResource(R.string.mm_ladder_your_range)
     Row(
         Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .semantics { contentDescription = "$label ${LkrFormat.full(value)}${if (active) ", your range" else ""}" },
+            .semantics { contentDescription = "$label ${LkrFormat.full(value)}${if (active) yourRange else ""}" },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
@@ -1235,38 +1212,39 @@ private data class BentoSpecItem(
 @Composable
 internal fun BentoSpecsGrid(listing: Listing, modifier: Modifier = Modifier) {
     val numberFormatter = remember { NumberFormat.getIntegerInstance(Locale.US) }
+    val unknown = stringResource(R.string.mm_spec_unknown)
 
-    val yearVal = listing.year?.toString() ?: "Unknown"
+    val yearVal = listing.year?.toString() ?: unknown
     val mileageVal = if (listing.mileageKm != null && listing.mileageKm > 0) {
-        "${numberFormatter.format(listing.mileageKm.toLong())} KM"
+        stringResource(R.string.mm_spec_km, numberFormatter.format(listing.mileageKm.toLong()))
     } else {
-        "Unknown"
+        unknown
     }
     val transVal = listing.transmission
         ?.replaceFirstChar { it.uppercase() }
         ?.replace("_", " ")
-        ?.ifBlank { "Unknown" } ?: "Unknown"
+        ?.ifBlank { unknown } ?: unknown
     val fuelVal = listing.fuelType
         ?.replaceFirstChar { it.uppercase() }
         ?.replace("_", " ")
-        ?.ifBlank { "Unknown" } ?: "Unknown"
+        ?.ifBlank { unknown } ?: unknown
     val condVal = listing.condition
         ?.replaceFirstChar { it.uppercase() }
         ?.replace("_", " ")
-        ?.ifBlank { "Pre-Owned" } ?: "Pre-Owned"
+        ?.ifBlank { stringResource(R.string.mm_spec_preowned) } ?: stringResource(R.string.mm_spec_preowned)
     val bodyVal = listing.bodyType
         ?.replace("_", " ")
         ?.trim()
         ?.let { if (it.length <= 4) it.uppercase() else it.replaceFirstChar(Char::uppercase) }
-        ?.ifBlank { "Unknown" } ?: "Unknown"
+        ?.ifBlank { unknown } ?: unknown
 
     val specs = listOf(
-        BentoSpecItem("YEAR", yearVal, Icons.Filled.CalendarMonth),
-        BentoSpecItem("MILEAGE", mileageVal, Icons.Filled.Speed),
-        BentoSpecItem("TRANSMISSION", transVal, Icons.Filled.Tune),
-        BentoSpecItem("FUEL", fuelVal, Icons.Filled.LocalGasStation),
-        BentoSpecItem("CONDITION", condVal, Icons.Filled.AutoAwesome),
-        BentoSpecItem("BODY TYPE", bodyVal, Icons.Filled.DirectionsCar),
+        BentoSpecItem(stringResource(R.string.mm_spec_year), yearVal, Icons.Filled.CalendarMonth),
+        BentoSpecItem(stringResource(R.string.mm_spec_mileage), mileageVal, Icons.Filled.Speed),
+        BentoSpecItem(stringResource(R.string.mm_spec_transmission), transVal, Icons.Filled.Tune),
+        BentoSpecItem(stringResource(R.string.mm_spec_fuel), fuelVal, Icons.Filled.LocalGasStation),
+        BentoSpecItem(stringResource(R.string.mm_spec_condition), condVal, Icons.Filled.AutoAwesome),
+        BentoSpecItem(stringResource(R.string.mm_spec_body), bodyVal, Icons.Filled.DirectionsCar),
     )
 
     Column(
@@ -1274,11 +1252,9 @@ internal fun BentoSpecsGrid(listing: Listing, modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Text(
-            text = "SPECIFICATIONS",
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.4.sp,
-            color = MotormilaSecondaryText,
+            text = stringResource(R.string.mm_detail_specs),
+            style = MmType.current.overline,
+            color = MmColors.current.textSecondary,
             modifier = Modifier.padding(bottom = 2.dp),
         )
         Row(
@@ -1361,6 +1337,107 @@ private fun BentoCell(item: BentoSpecItem, modifier: Modifier = Modifier) {
 // 2. Interactive CBSL Lease Payment Calculator
 // ─────────────────────────────────────────────────────────────
 
+/**
+ * Collapsible tool row (audit P1-B): the calculators are tools, not content —
+ * closed by default so history / seller are not buried under ~600 dp of
+ * always-on calculator UI. Header is a full-width 48 dp touch target.
+ */
+@Composable
+private fun ExpandableToolRow(
+    title: String,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    val c = MmColors.current
+    var expanded by remember { mutableStateOf(false) }
+    val rotation by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        animationSpec = tween(MmMotion.Base, easing = MmMotion.Standard),
+        label = "tool-chevron",
+    )
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Surface(
+            onClick = { expanded = !expanded },
+            shape = MmShapes.md,
+            color = c.surface,
+            border = BorderStroke(1.dp, c.outline),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = MmSpacing.touch),
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = MmSpacing.cardPadding, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    title,
+                    style = MmType.current.label,
+                    color = c.textPrimary,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    Icons.Filled.ExpandMore,
+                    contentDescription = null,
+                    tint = c.textSecondary,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .graphicsLayer { rotationZ = rotation },
+                )
+            }
+        }
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically(animationSpec = tween(MmMotion.Base, easing = MmMotion.Standard)) +
+                fadeIn(tween(MmMotion.Base)),
+            exit = shrinkVertically(animationSpec = tween(MmMotion.Fast, easing = MmMotion.Exit)) +
+                fadeOut(tween(MmMotion.Fast)),
+        ) {
+            content()
+        }
+    }
+}
+
+/** Inline "couldn't load …" + Retry for a failed secondary payload (no dead-end spinners). */
+@Composable
+private fun InlineRetryRow(
+    text: String,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val c = MmColors.current
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text,
+            style = MmType.current.bodyS,
+            color = c.textSecondary,
+            modifier = Modifier.weight(1f),
+        )
+        MotormilaGhostButton(
+            label = stringResource(R.string.mm_detail_retry),
+            fillMaxWidth = false,
+            onClick = onRetry,
+        )
+    }
+}
+
+/**
+ * The import-duty estimator only makes sense for an import context:
+ * reconditioned / brand-new (imported) / unregistered. Locally-used cars
+ * reach the estimator via the Tools → Tax deep link instead.
+ */
+private fun isImportContext(listing: Listing): Boolean {
+    val condition = listing.condition?.lowercase()?.replace('_', ' ') ?: return false
+    return condition.contains("recond") ||
+        condition.contains("import") ||
+        condition.contains("unregistered") ||
+        condition.contains("brand new")
+}
+
 @Composable
 private fun LeasePaymentCalculator(
     priceLkr: Double,
@@ -1396,20 +1473,19 @@ private fun LeasePaymentCalculator(
             // Header
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "LEASE PAYMENT CALCULATOR",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 1.2.sp,
-                    color = MotormilaOnSurface,
+                    text = stringResource(R.string.mm_calc_lease_title),
+                    style = MmType.current.overline,
+                    color = MmColors.current.textPrimary,
                 )
                 Text(
-                    text = "CBSL-oriented max LTV 40% · Brand new / <1yr",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MotormilaSecondaryText,
+                    text = stringResource(R.string.mm_calc_lease_caption),
+                    style = MmType.current.caption,
+                    color = MmColors.current.textSecondary,
                 )
             }
 
-            // Down Payment Slider
+            // Down Payment Slider — clamped to >= 60 % so the financed share
+            // never exceeds the CBSL 40 % max LTV the caption promises.
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1417,11 +1493,9 @@ private fun LeasePaymentCalculator(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "DOWN PAYMENT",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        letterSpacing = 0.8.sp,
-                        color = MotormilaSecondaryText,
+                        text = stringResource(R.string.mm_calc_down_payment),
+                        style = MmType.current.labelS,
+                        color = MmColors.current.textSecondary,
                     )
                     Text(
                         text = "${downPaymentPct.toInt()}% (${LkrFormat.price(downPayment)})",
@@ -1432,9 +1506,9 @@ private fun LeasePaymentCalculator(
                 }
                 Slider(
                     value = downPaymentPct,
-                    onValueChange = { downPaymentPct = ((it / 5f).roundToInt() * 5f).coerceIn(10f, 80f) },
-                    valueRange = 10f..80f,
-                    steps = 13,
+                    onValueChange = { downPaymentPct = ((it / 5f).roundToInt() * 5f).coerceIn(60f, 80f) },
+                    valueRange = 60f..80f,
+                    steps = 3,
                     colors = SliderDefaults.colors(
                         thumbColor = MotormilaPrimaryBright,
                         activeTrackColor = MotormilaPrimary,
@@ -1446,7 +1520,7 @@ private fun LeasePaymentCalculator(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text("10%", style = MaterialTheme.typography.labelSmall, color = MotormilaSecondaryText)
+                    Text("60%", style = MaterialTheme.typography.labelSmall, color = MotormilaSecondaryText)
                     Text(stringResource(R.string.ui_detail_40_cbsl_cap), style = MaterialTheme.typography.labelSmall, color = MotormilaSecondaryText)
                     Text("80%", style = MaterialTheme.typography.labelSmall, color = MotormilaSecondaryText)
                 }
@@ -1460,11 +1534,9 @@ private fun LeasePaymentCalculator(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "INTEREST RATE",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        letterSpacing = 0.8.sp,
-                        color = MotormilaSecondaryText,
+                        text = stringResource(R.string.mm_calc_interest_rate),
+                        style = MmType.current.labelS,
+                        color = MmColors.current.textSecondary,
                     )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -1504,11 +1576,9 @@ private fun LeasePaymentCalculator(
                 // Loan Tenure Selector (1 to 5 years, default 5 years / 60 mo)
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = "LOAN TENURE",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        letterSpacing = 0.8.sp,
-                        color = MotormilaSecondaryText,
+                        text = stringResource(R.string.mm_calc_tenure),
+                        style = MmType.current.labelS,
+                        color = MmColors.current.textSecondary,
                     )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -1516,7 +1586,11 @@ private fun LeasePaymentCalculator(
                     ) {
                         (1..5).forEach { yr ->
                             val selected = tenureYears == yr
-                            val label = if (yr == 5) "5 Yrs (60 mo)" else "$yr ${if (yr == 1) "Yr" else "Yrs"}"
+                            val label = when (yr) {
+                                5 -> stringResource(R.string.mm_calc_tenure_max)
+                                1 -> stringResource(R.string.mm_calc_tenure_year, yr)
+                                else -> stringResource(R.string.mm_calc_tenure_years, yr)
+                            }
                             Surface(
                                 shape = MotormilaRadius.lg,
                                 color = if (selected) MotormilaPrimary else MotormilaSurfaceHigh,
@@ -1558,7 +1632,7 @@ private fun LeasePaymentCalculator(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        text = "Principal Amount",
+                        text = stringResource(R.string.mm_calc_principal),
                         style = MaterialTheme.typography.labelSmall,
                         color = MotormilaSecondaryText,
                     )
@@ -1574,7 +1648,7 @@ private fun LeasePaymentCalculator(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        text = "Total Interest Paid",
+                        text = stringResource(R.string.mm_calc_total_interest),
                         style = MaterialTheme.typography.labelSmall,
                         color = MotormilaSecondaryText,
                     )
@@ -1599,10 +1673,8 @@ private fun LeasePaymentCalculator(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
-                        text = "EST. MONTHLY PAYMENT",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.2.sp,
+                        text = stringResource(R.string.mm_calc_monthly),
+                        style = MmType.current.overline,
                         color = MotormilaPrimaryBright,
                     )
                     Row(
@@ -1616,7 +1688,7 @@ private fun LeasePaymentCalculator(
                             color = MotormilaOnSurface,
                         )
                         Text(
-                            text = "/mo",
+                            text = stringResource(R.string.mm_calc_per_month),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
                             color = MotormilaSecondaryText,
@@ -1633,11 +1705,11 @@ private fun LeasePaymentCalculator(
 // 3. Import Duty and Tax Estimator (Indicative)
 // ─────────────────────────────────────────────────────────────
 
-private enum class ImportFuelClass(val label: String) {
-    PETROL("Petrol"),
-    DIESEL("Diesel"),
-    HYBRID("Hybrid"),
-    ELECTRIC("Electric");
+private enum class ImportFuelClass(@androidx.annotation.StringRes val labelRes: Int) {
+    PETROL(R.string.calc_fuel_petrol),
+    DIESEL(R.string.calc_fuel_diesel),
+    HYBRID(R.string.calc_fuel_hybrid),
+    ELECTRIC(R.string.calc_fuel_electric);
 }
 
 @Composable
@@ -1742,11 +1814,10 @@ private fun ImportDutyEstimator(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "IMPORT DUTY & TAX ESTIMATOR",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 1.2.sp,
-                    color = MotormilaOnSurface,
+                    text = stringResource(R.string.mm_calc_duty_title),
+                    style = MmType.current.overline,
+                    color = MmColors.current.textPrimary,
+                    modifier = Modifier.weight(1f),
                 )
                 Surface(
                     shape = MotormilaRadius.pill,
@@ -1754,7 +1825,7 @@ private fun ImportDutyEstimator(
                     border = BorderStroke(1.dp, MotormilaPrimary.copy(alpha = 0.4f)),
                 ) {
                     Text(
-                        text = "INDICATIVE",
+                        text = stringResource(R.string.mm_calc_indicative),
                         style = (MaterialTheme.typography.labelSmall).tabular(),
                         fontWeight = FontWeight.Bold,
                         color = MotormilaPrimaryBright,
@@ -1789,7 +1860,7 @@ private fun ImportDutyEstimator(
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                text = fuel.label,
+                                text = stringResource(fuel.labelRes),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                                 color = if (selected) MotormilaOnSurface else MotormilaSecondaryText,
@@ -1808,17 +1879,19 @@ private fun ImportDutyEstimator(
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                TaxBreakdownRow("Base CIF (Est.)", LkrFormat.price(baseCif))
-                TaxBreakdownRow("Customs Import Duty (30%)", LkrFormat.price(cid))
-                TaxBreakdownRow("CID Surcharge (50% of CID)", LkrFormat.price(surcharge))
+                TaxBreakdownRow(stringResource(R.string.mm_tax_cif), LkrFormat.price(baseCif))
+                TaxBreakdownRow(stringResource(R.string.mm_tax_cid), LkrFormat.price(cid))
+                TaxBreakdownRow(stringResource(R.string.mm_tax_surcharge), LkrFormat.price(surcharge))
                 TaxBreakdownRow(
-                    if (selectedFuel == ImportFuelClass.ELECTRIC) "Excise Duty (per kW band)" else "Excise Duty (per cm³ band)",
+                    stringResource(
+                        if (selectedFuel == ImportFuelClass.ELECTRIC) R.string.mm_tax_excise_kw else R.string.mm_tax_excise_cc,
+                    ),
                     LkrFormat.price(excise)
                 )
-                TaxBreakdownRow("SSCL Levy (2.5%)", LkrFormat.price(sscl))
-                TaxBreakdownRow("VAT (18% duty-inclusive)", LkrFormat.price(vat))
+                TaxBreakdownRow(stringResource(R.string.mm_tax_sscl), LkrFormat.price(sscl))
+                TaxBreakdownRow(stringResource(R.string.mm_tax_vat), LkrFormat.price(vat))
                 if (luxuryTax > 0) {
-                    TaxBreakdownRow("Luxury Tax", LkrFormat.price(luxuryTax))
+                    TaxBreakdownRow(stringResource(R.string.mm_tax_luxury), LkrFormat.price(luxuryTax))
                 }
             }
 
@@ -1839,7 +1912,7 @@ private fun ImportDutyEstimator(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "Total Estimated Taxes",
+                            text = stringResource(R.string.mm_tax_total),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Medium,
                             color = MotormilaSecondaryText,
@@ -1869,14 +1942,12 @@ private fun ImportDutyEstimator(
                     ) {
                         Column {
                             Text(
-                                text = "ESTIMATED LANDED COST",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp,
+                                text = stringResource(R.string.mm_tax_landed),
+                                style = MmType.current.overline,
                                 color = MotormilaPrimaryBright,
                             )
                             Text(
-                                text = "LKR Millions (On-Road Est.)",
+                                text = stringResource(R.string.mm_tax_landed_hint),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MotormilaSecondaryText,
                             )
@@ -1910,7 +1981,7 @@ private fun ImportDutyEstimator(
                         modifier = Modifier.size(18.dp),
                     )
                     Text(
-                        text = "Indicative model of the post-2025 import regime. Verify current customs rates before committing an import.",
+                        text = stringResource(R.string.mm_tax_disclaimer),
                         style = MaterialTheme.typography.labelSmall,
                         lineHeight = 16.sp,
                         color = MotormilaOnSurface.copy(alpha = 0.85f),
@@ -1948,26 +2019,59 @@ private fun HistorySection(
     report: lk.motormila.app.domain.model.HistoryReport?,
     fmvLkr: Double?,
     modifier: Modifier = Modifier,
+    historyState: DetailLoadState = DetailLoadState.LOADING,
+    onRetryHistory: (() -> Unit)? = null,
 ) {
     MotormilaSurface(modifier = modifier) {
-        Text(stringResource(R.string.ui_detail_price_history), fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
-        Spacer(Modifier.height(8.dp))
-        if (history == null || history.points.size < 2) {
-            Text(
-                if (history == null) "Loading price history…" else "Only one price point so far — check back after the next scrape.",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        } else {
-            MmPriceChart(points = history.points, typicalLkr = fmvLkr, modifier = Modifier.fillMaxWidth())
-            val change = history.changePct
-            if (change != null) {
-                Spacer(Modifier.height(4.dp))
+        val chartTitle = stringResource(R.string.mm_chart_title)
+        when {
+            history == null && historyState == DetailLoadState.FAILED -> {
+                Text(chartTitle, style = MmType.current.titleS, color = MmColors.current.textPrimary)
+                Spacer(Modifier.height(8.dp))
+                if (onRetryHistory != null) {
+                    InlineRetryRow(
+                        text = stringResource(R.string.mm_detail_history_failed),
+                        onRetry = onRetryHistory,
+                    )
+                } else {
+                    Text(
+                        stringResource(R.string.mm_detail_history_failed),
+                        style = MmType.current.bodyS,
+                        color = MmColors.current.textSecondary,
+                    )
+                }
+            }
+            history == null || history.points.size < 2 -> {
+                Text(chartTitle, style = MmType.current.titleS, color = MmColors.current.textPrimary)
+                Spacer(Modifier.height(8.dp))
                 Text(
-                    "Overall ${LkrFormat.deltaPct(change)} · ${history.cutCount} cuts · ${history.raiseCount} rises",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    if (history == null) stringResource(R.string.mm_detail_history_loading)
+                    else stringResource(R.string.mm_detail_history_single),
+                    style = MmType.current.bodyS,
+                    color = MmColors.current.textSecondary,
                 )
+            }
+            else -> {
+                MmPriceChart(
+                    points = history.points,
+                    typicalLkr = fmvLkr,
+                    title = chartTitle,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                val change = history.changePct
+                if (change != null) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        stringResource(
+                            R.string.mm_detail_history_summary,
+                            LkrFormat.deltaPct(change),
+                            history.cutCount,
+                            history.raiseCount,
+                        ),
+                        style = MmType.current.caption,
+                        color = MmColors.current.textSecondary,
+                    )
+                }
             }
         }
         val flags = report?.flags.orEmpty()
@@ -2012,6 +2116,8 @@ private fun SellerCard(
     sourceName: String,
     onViewSource: () -> Unit,
     modifier: Modifier = Modifier,
+    sellerState: DetailLoadState = DetailLoadState.LOADING,
+    onRetrySeller: (() -> Unit)? = null,
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -2042,21 +2148,32 @@ private fun SellerCard(
                     )
                 }
                 Column(modifier = Modifier.weight(1f)) {
+                    // Neutral until the profile loads — "Verified" is reserved for
+                    // badges the source itself reports (below), never a default name.
                     Text(
-                        text = seller?.sellerName ?: "Verified Seller",
+                        text = seller?.sellerName?.takeIf { it.isNotBlank() }
+                            ?: stringResource(R.string.mm_detail_seller_on_source, sourceName),
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.titleMedium,
                         color = MotormilaOnSurface,
                     )
-                    Text(
-                        text = if (seller != null && seller.sellerType.isNotBlank()) {
+                    val typeLabel = when {
+                        seller == null -> null
+                        seller.sellerType.equals("dealer", ignoreCase = true) ->
+                            stringResource(R.string.mm_detail_seller_type_dealer)
+                        seller.sellerType.equals("private", ignoreCase = true) ->
+                            stringResource(R.string.mm_detail_seller_type_private)
+                        seller.sellerType.isNotBlank() && !seller.sellerType.equals("unknown", ignoreCase = true) ->
                             seller.sellerType.replaceFirstChar(Char::uppercase)
-                        } else {
-                            "Direct Seller"
-                        },
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MotormilaSecondaryText,
-                    )
+                        else -> stringResource(R.string.mm_detail_seller_generic)
+                    }
+                    if (typeLabel != null) {
+                        Text(
+                            text = typeLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MotormilaSecondaryText,
+                        )
+                    }
                 }
                 seller?.rating?.let { rating ->
                     Row(
@@ -2108,8 +2225,8 @@ private fun SellerCard(
                 }
 
                 val meta = listOfNotNull(
-                    seller.memberSince?.let { "Member since $it" },
-                    seller.listingCount?.let { "$it listings" },
+                    seller.memberSince?.let { stringResource(R.string.mm_detail_member_since, it) },
+                    seller.listingCount?.let { stringResource(R.string.mm_detail_listing_count, it) },
                 ).joinToString(" · ")
                 if (meta.isNotBlank()) {
                     Text(
@@ -2118,12 +2235,35 @@ private fun SellerCard(
                         color = MotormilaSecondaryText,
                     )
                 }
-            } else {
-                Text(
-                    text = "Loading seller profile and trust metrics…",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MotormilaSecondaryText,
-                )
+            } else when (sellerState) {
+                DetailLoadState.FAILED -> {
+                    if (onRetrySeller != null) {
+                        InlineRetryRow(
+                            text = stringResource(R.string.mm_detail_seller_failed),
+                            onRetry = onRetrySeller,
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(R.string.mm_detail_seller_failed),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MotormilaSecondaryText,
+                        )
+                    }
+                }
+                DetailLoadState.LOADED -> {
+                    Text(
+                        text = stringResource(R.string.mm_detail_seller_unavailable),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MotormilaSecondaryText,
+                    )
+                }
+                else -> {
+                    Text(
+                        text = stringResource(R.string.mm_detail_seller_loading),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MotormilaSecondaryText,
+                    )
+                }
             }
 
             // No phone/WhatsApp reveal: MotorMila does not republish seller
@@ -2152,26 +2292,26 @@ private fun DeepLinksRow(
 ) {
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         MotormilaGhostButton(
-            label = "Estimate",
+            label = stringResource(R.string.mm_deep_estimate),
             fillMaxWidth = false,
             // "Estimate" wrapped mid-word at equal weights on a 1080 px screen.
             modifier = Modifier.weight(1.4f),
             onClick = onEstimate,
         )
         MotormilaGhostButton(
-            label = "Tax",
+            label = stringResource(R.string.mm_deep_tax),
             fillMaxWidth = false,
             modifier = Modifier.weight(0.85f),
             onClick = onTax,
         )
         MotormilaGhostButton(
-            label = "Lease",
+            label = stringResource(R.string.mm_deep_lease),
             fillMaxWidth = false,
             modifier = Modifier.weight(1f),
             onClick = onLease,
         )
         MotormilaGhostButton(
-            label = "Map",
+            label = stringResource(R.string.mm_deep_map),
             fillMaxWidth = false,
             modifier = Modifier.weight(0.85f),
             onClick = onMap,
@@ -2202,15 +2342,9 @@ private fun SimilarMiniCard(title: String, imageUrl: String?, price: String, onC
 }
 
 private fun openUrl(context: Context, url: String) {
-    val intent = Intent(Intent.ACTION_VIEW, url.toUri())
-        .addCategory(Intent.CATEGORY_BROWSABLE)
-        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    try {
-        context.startActivity(intent)
-    } catch (_: Exception) {
-        // No browser / handler: tell the user instead of silently doing nothing.
-        android.widget.Toast.makeText(context, "No app can open this link", android.widget.Toast.LENGTH_SHORT).show()
-    }
+    // Allowlisted https source hosts only; anything else (or no handler)
+    // falls back to copy-to-clipboard with a localized toast (audit P1-E).
+    OutboundLinks.open(context, url)
 }
 
 private fun shareListing(context: Context, listing: Listing, verdict: lk.motormila.app.core.price.PriceVerdict?) {

@@ -2,7 +2,6 @@ package lk.motormila.app.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -23,11 +22,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import lk.motormila.app.domain.model.DealBand
-import lk.motormila.app.ui.theme.MotormilaGoodContainer
-import lk.motormila.app.ui.theme.MotormilaGoodSoft
-import lk.motormila.app.ui.theme.MotormilaPrimaryBorder
-import lk.motormila.app.ui.theme.MotormilaPrimaryContainer
-import lk.motormila.app.ui.theme.MotormilaRadius
 
 /**
  * Deal pill: GREAT (good) / FAIR (warn) / HIGH (bad) + LOCKED (free tier,
@@ -52,29 +46,35 @@ fun DealBadge(
     val belowText = pct?.let { stringResource(lk.motormila.app.R.string.mm_badge_below, it) }
     val aboveText = pct?.let { stringResource(lk.motormila.app.R.string.mm_badge_above, it) }
     val nearText = stringResource(lk.motormila.app.R.string.mm_deal_fair)
+    // MmColors deal tokens — the same greens/reds as DealRing and FmvGauge.
+    val c = lk.motormila.app.ui.theme.MmColors.current
     val style = when (band) {
         DealBand.GREAT -> DealBadgeStyle(
-            container = MotormilaGoodContainer,
-            content = lk.motormila.app.ui.theme.MotormilaGoodText,
-            border = MotormilaGoodSoft,
-            text = belowText ?: if (score != null) "GREAT %.1f".format(score) else "GREAT",
+            container = c.dealGoodContainer,
+            content = c.onDealGood,
+            border = c.dealGood.copy(alpha = 0.33f),
+            text = belowText
+                ?: score?.let { stringResource(lk.motormila.app.R.string.mm_badge_great_score, it) }
+                ?: stringResource(lk.motormila.app.R.string.mm_badge_great),
         )
         DealBand.FAIR -> DealBadgeStyle(
-            container = MotormilaPrimaryContainer,
-            content = lk.motormila.app.ui.theme.MotormilaPrimaryBright,
-            border = MotormilaPrimaryBorder,
-            text = if (pct != null) nearText else if (score != null) "FAIR %.1f".format(score) else "FAIR",
+            container = c.dealFairContainer,
+            content = c.onDealFair,
+            border = c.dealFair.copy(alpha = 0.33f),
+            text = if (pct != null) nearText
+                else score?.let { stringResource(lk.motormila.app.R.string.mm_badge_fair_score, it) }
+                ?: nearText,
         )
         DealBand.HIGH -> DealBadgeStyle(
-            container = androidx.compose.ui.graphics.Color(0x2EEF4444),
-            content = lk.motormila.app.ui.theme.MotormilaBadText,
-            border = androidx.compose.ui.graphics.Color(0x55EF4444),
-            text = aboveText ?: "HIGH",
+            container = c.dealHighContainer,
+            content = c.onDealHigh,
+            border = c.dealHigh.copy(alpha = 0.33f),
+            text = aboveText ?: stringResource(lk.motormila.app.R.string.mm_badge_high),
         )
         DealBand.LOCKED -> DealBadgeStyle(
-            container = lk.motormila.app.ui.theme.MotormilaSurfaceHighest,
-            content = lk.motormila.app.ui.theme.MotormilaOnSurface,
-            border = lk.motormila.app.ui.theme.MotormilaGlassBorder,
+            container = c.surfaceHigh,
+            content = c.textSecondary,
+            border = c.outlineStrong,
             text = lockedLabel,
         )
     }
@@ -82,8 +82,8 @@ fun DealBadge(
     val dealRatingCd = stringResource(lk.motormila.app.R.string.mm_deal_rating_cd, text)
     Row(
         modifier = modifier
-            .background(container, MotormilaRadius.pill)
-            .border(1.dp, border, MotormilaRadius.pill)
+            .background(container, lk.motormila.app.ui.theme.MmShapes.pill)
+            .border(1.dp, border, lk.motormila.app.ui.theme.MmShapes.pill)
             .semantics { contentDescription = dealRatingCd }
             .padding(horizontal = 9.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,

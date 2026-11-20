@@ -8,8 +8,6 @@ import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import lk.motormila.app.ui.components.ErrorState
 import lk.motormila.app.ui.components.LoadingSkeletonCard
-import lk.motormila.app.ui.home.HeroStatsCard
-import lk.motormila.app.ui.home.PriceDropCard
 import lk.motormila.app.ui.theme.MotormilaTheme
 import org.junit.Rule
 import org.junit.Test
@@ -59,36 +57,6 @@ class MotormilaScreenshotsTest {
     }
 
     @Test
-    fun home_loadedStats_dark() {
-        paparazzi.snapshot {
-            MotormilaTheme(darkTheme = true) {
-                HeroStatsCard(
-                    total = 325_984,
-                    goodDeals = 1_284,
-                    new24h = 342,
-                    avgPrice = "Rs 8.45 Mn",
-                    modifier = Modifier.padding(16.dp),
-                )
-            }
-        }
-    }
-
-    @Test
-    fun home_loadedStats_light() {
-        paparazzi.snapshot {
-            MotormilaTheme(darkTheme = false) {
-                HeroStatsCard(
-                    total = 325_984,
-                    goodDeals = 1_284,
-                    new24h = 342,
-                    avgPrice = "Rs 8.45 Mn",
-                    modifier = Modifier.padding(16.dp),
-                )
-            }
-        }
-    }
-
-    @Test
     fun home_errorState_dark() {
         paparazzi.snapshot {
             MotormilaTheme(darkTheme = true) {
@@ -116,42 +84,5 @@ class MotormilaScreenshotsTest {
         }
     }
 
-    // ------------------------------------------------------------------
-    // Deal card
-    // ------------------------------------------------------------------
-
-    @Test
-    fun deal_priceDropCard_dark() {
-        paparazzi.snapshot {
-            MotormilaTheme(darkTheme = true) {
-                Box(Modifier.padding(16.dp)) {
-                    PriceDropCard(
-                        title = "Toyota Aqua G 2017",
-                        imageUrl = null,
-                        newPrice = "Rs. 7.95M",
-                        dropPct = 8.5,
-                        onClick = {},
-                    )
-                }
-            }
-        }
-    }
-
-    @Test
-    fun deal_priceDropCard_light() {
-        paparazzi.snapshot {
-            MotormilaTheme(darkTheme = false) {
-                Box(Modifier.padding(16.dp)) {
-                    PriceDropCard(
-                        title = "Honda Fit GP5 2018",
-                        imageUrl = null,
-                        newPrice = "Rs. 9.20M",
-                        dropPct = 12.0,
-                        onClick = {},
-                    )
-                }
-            }
-        }
-    }
 }
 

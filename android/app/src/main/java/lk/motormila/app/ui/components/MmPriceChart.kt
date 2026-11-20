@@ -28,10 +28,19 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import java.text.DateFormat
+import java.util.Calendar
+import java.util.Locale
+import lk.motormila.app.R
 import lk.motormila.app.domain.model.PricePoint
 import lk.motormila.app.ui.theme.MmColors
 import lk.motormila.app.ui.theme.MmHaptics
@@ -40,11 +49,16 @@ import lk.motormila.app.ui.theme.MmType
 
 /**
  * Price-history line chart (Canvas, no chart dependency).
+ * - Optional localized [title] ("Price history") above the scrub header.
  * - Draw-in: the line is revealed along its length (PathMeasure segment)
  *   over 900ms emphasized; the area fill fades in behind it.
  * - Scrub: touch/drag shows a cursor + the exact price/date above the chart
- *   with a light tick haptic per point.
- * - [typicalLkr] draws a dashed reference line (typical asking price).
+ *   with a light tick haptic per point. Dates render in the app locale,
+ *   never as raw scraped ISO strings.
+ * - [typicalLkr] draws a dashed reference line labelled "Typical".
+ * - Min/max axis value labels anchor the range.
+ * - Fewer than 2 points: a real message (localized default when [emptyText]
+ *   is blank) instead of a silent blank.
  * Reduced motion: drawn complete, no animation.
  */
 @Composable
@@ -54,12 +68,22 @@ fun MmPriceChart(
     typicalLkr: Double? = null,
     height: Dp = 180.dp,
     emptyText: String = "",
+    /** Optional section title; null keeps the legacy chrome-less look. */
+    title: String? = null,
 ) {
     val c = MmColors.current
     val haptics = MmHaptics.current
     val reduced = MmMotion.reduced
     if (points.size < 2) {
-        if (emptyText.isNotEmpty()) Text(emptyText, style = MmType.current.bodyS, color = c.textSecondary, modifier = modifier)
+        // Never a silent blank: insufficient data says so (localized default).
+        val message = emptyText.ifBlank { stringResource(R.string.mm_chart_empty) }
+        Column(modifier) {
+            if (title != null) {
+                Text(title, style = MmType.current.titleS, color = c.textPrimary)
+                Spacer(Modifier.height(8.dp))
+            }
+            Text(message, style = MmType.current.bodyS, color = c.textSecondary)
+        }
         return
     }
     val progress = remember(points) { Animatable(if (reduced) 1f else 0f) }
@@ -75,8 +99,27 @@ fun MmPriceChart(
     val falling = values.last() < values.first()
     val lineColor = if (falling) c.dealGood else c.brand
 
+    // Localized dates for the scrub/header (never raw scrapedAt ISO).
+    val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
+    val shownIdx = if (scrub >= 0) scrub else points.lastIndex
+    val shownDate = remember(points, shownIdx, locale) {
+        formatChartDate(points[shownIdx].scrapedAt, locale)
+    }
+    val chartCd = stringResource(
+        R.string.mm_chart_cd,
+        points.size,
+        MmPriceFormat.full(values.first()),
+        MmPriceFormat.full(values.last()),
+    )
+
+    // Reference legend (localized): typical asking price + the plotted range.
+    val typicalLabel = stringResource(R.string.mm_chart_typical)
+
     Column(modifier) {
-        val shownIdx = if (scrub >= 0) scrub else points.lastIndex
+        if (title != null) {
+            Text(title, style = MmType.current.titleS, color = c.textPrimary)
+            Spacer(Modifier.height(8.dp))
+        }
         Row {
             Text(
                 MmPriceFormat.full(points[shownIdx].priceLkr),
@@ -85,20 +128,25 @@ fun MmPriceChart(
             )
             Spacer(Modifier.weight(1f))
             Text(
-                points[shownIdx].scrapedAt.take(10),
+                shownDate,
                 style = MmType.current.caption,
                 color = c.textTertiary,
             )
+        }
+        if (typicalLkr != null) {
+            Text(
+                "$typicalLabel: ${MmPriceFormat.compact(typicalLkr)}  ·  ${MmPriceFormat.compact(lo)} – ${MmPriceFormat.compact(hi)}",
+                style = MmType.current.caption,
+                color = c.textTertiary,
+            )
+            Spacer(Modifier.height(4.dp))
         }
         Spacer(Modifier.height(10.dp))
         Box(
             Modifier
                 .fillMaxWidth()
                 .height(height)
-                .semantics {
-                    contentDescription = "Price history, ${points.size} points, from " +
-                        "${MmPriceFormat.full(values.first())} to ${MmPriceFormat.full(values.last())}"
-                }
+                .semantics { contentDescription = chartCd }
                 .pointerInput(points) {
                     fun idx(x: Float) = ((x / size.width) * (points.size - 1)).let { Math.round(it) }
                         .coerceIn(0, points.lastIndex)
@@ -136,7 +184,7 @@ fun MmPriceChart(
                     val gy = padY + (h - 2 * padY) * g / 2f
                     drawLine(c.outline, Offset(0f, gy), Offset(w, gy), 1f)
                 }
-                typicalLkr?.let { t ->
+                typicalLkr?.let { t: Double ->
                     val ty = y(t)
                     drawLine(
                         c.textTertiary,
@@ -193,4 +241,28 @@ fun MmPriceChart(
             }
         }
     }
+}
+
+/**
+ * "2026-11-19T08:30:00" (or plain "2026-11-19") → a MEDIUM date in the app
+ * locale ("Nov 19, 2026" / "2026 නොවැ 19" / "19 நவ., 2026"). Unparseable
+ * input falls back to the raw date part rather than crashing the chart.
+ */
+private fun formatChartDate(iso: String, locale: Locale): String {
+    val datePart = iso.take(10)
+    val parts = datePart.split("-")
+    if (parts.size == 3) {
+        val y = parts[0].toIntOrNull()
+        val m = parts[1].toIntOrNull()
+        val d = parts[2].toIntOrNull()
+        if (y != null && m != null && d != null && m in 1..12 && d in 1..31) {
+            return runCatching {
+                val cal = Calendar.getInstance(locale)
+                cal.clear()
+                cal.set(y, m - 1, d)
+                DateFormat.getDateInstance(DateFormat.MEDIUM, locale).format(cal.time)
+            }.getOrDefault(datePart)
+        }
+    }
+    return datePart
 }

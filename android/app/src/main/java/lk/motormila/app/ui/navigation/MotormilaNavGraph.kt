@@ -17,15 +17,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -127,6 +131,9 @@ fun MotormilaNavGraph(
         else -> ""
     }
     val reducedMotion = rememberReducedMotion()
+    // Re-tapping the active bottom tab ticks that tab's reselect counter;
+    // screens observe it via LocalTabReselect and scroll to top.
+    val tabReselect = remember { TabReselectState() }
 
     // In-app update check (sideload channel): one passive check per cold
     // start; the dialog is hosted above the scaffold content.
@@ -150,7 +157,7 @@ fun MotormilaNavGraph(
         viewModel.authEventBus.events.collect { event ->
             // Only after SessionGuard really cleared the rejected session.
             if (event is AuthEvent.SessionEnded) {
-                navController.navigate(Login()) {
+                navController.navigate(Login(returnTo = loginReturnKeyFor(navController.currentDestination))) {
                     launchSingleTop = true
                 }
             }
@@ -186,7 +193,10 @@ fun MotormilaNavGraph(
     }
 
     SharedTransitionLayout {
-        CompositionLocalProvider(LocalSharedTransitionScope provides this) {
+        CompositionLocalProvider(
+            LocalSharedTransitionScope provides this,
+            LocalTabReselect provides tabReselect,
+        ) {
         MotormilaScaffold(
             selected = selectedTab,
             showBottomBar = showBottomBar,
@@ -210,6 +220,7 @@ fun MotormilaNavGraph(
                 }
             },
             onScan = { navController.navigate(PlateScan) },
+            onReselect = { routeKey -> tabReselect.tick(routeKey) },
         ) { innerPadding ->
             // Edge-to-edge: every screen owns its status-bar inset (glass top
             // bars draw under it). Tab roots let content scroll under the
@@ -267,12 +278,13 @@ fun MotormilaNavGraph(
                             navDeepLink { uriPattern = "motormila://login" },
                             navDeepLink { uriPattern = "https://motormila.pages.dev/sign-in" },
                         ),
-                    ) {
+                    ) { entry ->
+                        val loginRoute = entry.toRoute<Login>()
                         LoginScreen(
                             onLoggedIn = {
-                                navController.navigate(Home) {
-                                    popUpTo<Login> { inclusive = true }
-                                }
+                                // Return to the screen that triggered sign-in
+                                // (Alerts, Profile, Sell…) instead of always Home.
+                                navController.finishLogin(loginRoute.returnTo)
                             },
                             onBrowse = {
                                 navController.navigate(Home) {
@@ -284,17 +296,21 @@ fun MotormilaNavGraph(
                     }
                     motormilaComposable<Home> {
                         HomeScreen(
-                            onListingClick = { id -> navController.navigate(ListingDetail(id)) },
+                            // fromCard: rail/featured cards register the shared
+                            // keys, so Detail runs the container transform.
+                            onListingClick = { id -> navController.navigate(ListingDetail(id, fromCard = true)) },
                             onSearchClick = { navController.navigate(Search()) },
                             onAlertsClick = { navController.navigate(Alerts()) },
                             onSeeAll = { key ->
                                 when (key) {
                                     "drops", "deals" -> navController.navigate(BestPicks)
-                                    "districts" -> navController.navigate(Insights)
+                                    // Most-listed models lives in Insights' Trends
+                                    // tab (web /trends parity) — not a blank Search.
+                                    "trends", "districts" -> navController.navigate(Insights)
                                     else -> navController.navigate(Search())
                                 }
                             },
-                            onLoginClick = { navController.navigate(Login()) },
+                            onLoginClick = { navController.navigate(Login(returnTo = "home")) },
                             onEvHubClick = { navController.navigate(EvHub) },
                             onBestPicksClick = { navController.navigate(BestPicks) },
                             onPulseClick = { navController.navigate(OfficialPulse) },
@@ -327,7 +343,7 @@ fun MotormilaNavGraph(
                         ),
                     ) {
                         WatchlistScreen(
-                            onOpenDetail = { id -> navController.navigate(ListingDetail(id)) },
+                            onOpenDetail = { id -> navController.navigate(ListingDetail(id, fromCard = true)) },
                             onCreateAlert = { id -> navController.navigate(Alerts(listingId = id)) },
                             onBrowse = { navController.navigate(Search()) },
                         )
@@ -355,7 +371,7 @@ fun MotormilaNavGraph(
                     }
                     motormilaComposable<Profile> {
                         ProfileScreen(
-                            onLoginClick = { navController.navigate(Login()) },
+                            onLoginClick = { navController.navigate(Login(returnTo = "profile")) },
                             onSettingsClick = { navController.navigate(Settings) },
                             onProClick = { navController.navigate(Pro) },
                             onDealerClick = { navController.navigate(Dealer) },
@@ -428,7 +444,7 @@ fun MotormilaNavGraph(
                         AlertsScreen(
                             onOpenDetail = { id -> navController.navigate(ListingDetail(id)) },
                             onUpgrade = { navController.navigate(Pro) },
-                            onSignIn = { navController.navigate(Login()) },
+                            onSignIn = { navController.navigate(Login(returnTo = "alerts")) },
                         )
                     }
                     motormilaComposable<Notifications>(
@@ -683,7 +699,7 @@ fun MotormilaNavGraph(
                     ) {
                         SellScreen(
                             onBack = { navController.popBackStack() },
-                            onLoginClick = { navController.navigate(Login()) },
+                            onLoginClick = { navController.navigate(Login(returnTo = "sell")) },
                         )
                     }
                     motormilaComposable<Docs>(
@@ -716,7 +732,7 @@ fun MotormilaNavGraph(
                     ) {
                         AdminScreen(
                             onBack = { navController.popBackStack() },
-                            onLoginClick = { navController.navigate(Login()) },
+                            onLoginClick = { navController.navigate(Login(returnTo = "admin")) },
                         )
                     }
                     motormilaComposable<EvChargers>(
@@ -810,3 +826,94 @@ private fun SplashGate(
 }
 
 private const val SUPPORT_MAILTO = lk.motormila.app.core.SupportContact.MAILTO
+
+// ───────────────────────────────────────────────────────────────────────────
+// Tab reselect → scroll-to-top signal
+// ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * Per-tab reselect counters. Re-tapping the active bottom tab increments
+ * that tab's tick; a screen reads its tick via [LocalTabReselect] and scrolls
+ * its list to the top. Screens that don't observe it yet simply no-op, so
+ * the mechanism can be adopted screen by screen.
+ */
+@Stable
+class TabReselectState {
+    private val ticks = mutableStateMapOf<String, Int>()
+
+    fun tick(key: String) {
+        ticks[key] = (ticks[key] ?: 0) + 1
+    }
+
+    fun tickFor(key: String): Int = ticks[key] ?: 0
+}
+
+val LocalTabReselect = staticCompositionLocalOf { TabReselectState() }
+
+// ───────────────────────────────────────────────────────────────────────────
+// Login returnTo: land back on the screen that triggered sign-in
+// ───────────────────────────────────────────────────────────────────────────
+
+/** Route key for the current destination, used when a session ends mid-screen. */
+private fun loginReturnKeyFor(destination: NavDestination?): String? = when {
+    destination == null -> null
+    destination.hasRoute(Alerts::class) -> "alerts"
+    destination.hasRoute(Profile::class) -> "profile"
+    destination.hasRoute(Sell::class) -> "sell"
+    destination.hasRoute(Watchlist::class) -> "watchlist"
+    destination.hasRoute(Tools::class) -> "tools"
+    destination.hasRoute(Insights::class) -> "insights"
+    destination.hasRoute(Search::class) -> "search"
+    destination.hasRoute(Admin::class) -> "admin"
+    destination.hasRoute(Settings::class) -> "settings"
+    destination.hasRoute(Pro::class) -> "pro"
+    destination.hasRoute(Home::class) -> "home"
+    else -> null
+}
+
+private fun loginReturnRouteClass(key: String?): kotlin.reflect.KClass<*>? = when (key) {
+    "alerts" -> Alerts::class
+    "home" -> Home::class
+    "profile" -> Profile::class
+    "sell" -> Sell::class
+    "watchlist" -> Watchlist::class
+    "tools" -> Tools::class
+    "insights" -> Insights::class
+    "search" -> Search::class
+    "admin" -> Admin::class
+    "settings" -> Settings::class
+    "pro" -> Pro::class
+    else -> null
+}
+
+private fun loginReturnDestination(key: String?): Any? = when (key) {
+    "alerts" -> Alerts()
+    "home" -> Home
+    "profile" -> Profile
+    "sell" -> Sell
+    "watchlist" -> Watchlist
+    "tools" -> Tools
+    "insights" -> Insights
+    "search" -> Search()
+    "admin" -> Admin
+    "settings" -> Settings
+    "pro" -> Pro
+    else -> null
+}
+
+/**
+ * After sign-in: pop back to the triggering screen when its entry is still
+ * in the back stack (Alerts keeps its listingId arg and scroll state);
+ * otherwise navigate to it fresh. Null/unknown keys keep the legacy Home
+ * landing. Login itself is always removed.
+ */
+private fun NavHostController.finishLogin(returnTo: String?) {
+    val kclass = loginReturnRouteClass(returnTo)
+    if (kclass != null) {
+        val entry = currentBackStack.value.lastOrNull { it.destination.hasRoute(kclass) }
+        if (entry != null && popBackStack(entry.destination.id, false)) return
+    }
+    navigate(loginReturnDestination(returnTo) ?: Home) {
+        popUpTo<Login> { inclusive = true }
+    }
+}

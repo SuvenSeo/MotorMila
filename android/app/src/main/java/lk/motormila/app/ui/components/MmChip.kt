@@ -34,9 +34,10 @@ import lk.motormila.app.ui.theme.mmPress
 import lk.motormila.app.ui.components.mmWobbleOnSelect
 
 /**
- * Filter / choice chip. 36dp visual height inside a 48dp touch row when used
- * in a FlowRow with vertical spacing. Selected = brand container + brand text;
- * colour change is a tween (never a bouncing colour). Toggle haptic on tap.
+ * Filter / choice chip. 36dp visual pill inside a 48dp touch box (audit P1:
+ * 36dp chips were below the minimum hit target). Selected = brand container +
+ * brand text; colour change is a tween (never a bouncing colour). Toggle
+ * haptic on tap.
  */
 @Composable
 fun MmChip(
@@ -55,14 +56,10 @@ fun MmChip(
     val bg by animateColorAsState(if (selected) c.brandContainer else c.surfaceRaised, tween(dur), label = "chip-bg")
     val fg by animateColorAsState(if (selected) c.onBrandContainer else c.textPrimary, tween(dur), label = "chip-fg")
     val bd by animateColorAsState(if (selected) c.brand.copy(alpha = 0.45f) else c.outline, tween(dur), label = "chip-bd")
+    // 48dp clickable box; the visual pill stays small inside it.
     Box(
         modifier = modifier
-            .heightIn(min = 36.dp)
-            .mmWobbleOnSelect(selected)
-            .mmPress(interaction, 0.95f)
-            .clip(MmShapes.pill)
-            .background(bg)
-            .border(1.dp, bd, MmShapes.pill)
+            .heightIn(min = 48.dp)
             .semantics { this.selected = selected }
             .clickable(
                 interactionSource = interaction,
@@ -72,17 +69,28 @@ fun MmChip(
             ) {
                 haptics.toggle()
                 onClick()
-            }
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            },
         contentAlignment = Alignment.Center,
     ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Box(
+            modifier = Modifier
+                .heightIn(min = 36.dp)
+                .mmWobbleOnSelect(selected)
+                .mmPress(interaction, 0.95f)
+                .clip(MmShapes.pill)
+                .background(bg)
+                .border(1.dp, bd, MmShapes.pill)
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            if (leadingIcon != null) Icon(leadingIcon, null, tint = fg, modifier = Modifier.size(16.dp))
-            Text(label, style = MmType.current.labelS, color = fg, maxLines = 1)
-            if (trailingIcon != null) Icon(trailingIcon, null, tint = fg, modifier = Modifier.size(16.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (leadingIcon != null) Icon(leadingIcon, null, tint = fg, modifier = Modifier.size(16.dp))
+                Text(label, style = MmType.current.labelS, color = fg, maxLines = 1)
+                if (trailingIcon != null) Icon(trailingIcon, null, tint = fg, modifier = Modifier.size(16.dp))
+            }
         }
     }
 }
