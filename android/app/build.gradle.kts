@@ -46,8 +46,8 @@ android {
         applicationId = "lk.motormila.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 23
-        versionName = "1.9.1"
+        versionCode = 24
+        versionName = "1.9.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -76,15 +76,6 @@ android {
                 .replace("\"", "")
             buildConfigField("String", "FIREBASE_$key", "\"$value\"")
         }
-        // Sentry crash reporting (Ardeno Studio org). The DSN is a client
-        // key and is NEVER committed: supply it at build time via env
-        // SENTRY_DSN or -P sentryDsn (or local.properties). Blank -> Sentry
-        // stays off and the app builds/runs exactly as before.
-        val sentryDsn = providers.environmentVariable("SENTRY_DSN")
-            .orElse(providers.gradleProperty("sentryDsn"))
-            .getOrElse("")
-            .replace("\"", "")
-        buildConfigField("String", "SENTRY_DSN", "\"$sentryDsn\"")
     }
 
     // Two distribution channels (see docs/overhaul/android.md):
@@ -426,9 +417,6 @@ dependencies {
     // MOTORMILA_FIREBASE_* build values are absent.
     implementation(libs.firebase.messaging)
 
-    // Crash reporting (Sentry, Ardeno Studio org). Initialised manually in
-    // MotormilaApp; inert when the SENTRY_DSN build value is absent.
-    implementation(libs.sentry.android)
 
     // Coroutines
     implementation(libs.coroutines.core)
