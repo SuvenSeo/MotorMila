@@ -1,0 +1,44 @@
+name: Debug APK 1.9.1
+
+# One-off diagnostic: build the direct debug APK (no R8, .debug suffix,
+# installs alongside the release app) to isolate whether the 1.9.1 launch
+# crash is release-only (R8/minify) or reproduces in debug too.
+# Trigger: workflow_dispatch on branch debug-apk/1.9.1. Remove after use.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  debug-apk:
+    name: Build direct debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Accept Android SDK licenses
+        run: |
+          set -euo pipefail
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+
+      - name: Build direct debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleDirectDebug --stacktrace
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: motormila-1.9.1-debug
+          path: android/app/build/outputs/apk/direct/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
