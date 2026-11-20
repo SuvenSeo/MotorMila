@@ -53,6 +53,12 @@ import pageHomeHeroNightSm from "../../assets/page_home_hero_night-sm.webp";
 import pageHomeHeroStudio from "../../assets/page_home_hero_studio.webp";
 import pageHomeHeroStudioSm from "../../assets/page_home_hero_studio-sm.webp";
 import authShowroom from "../../assets/auth_showroom.webp";
+import authNightCoast from "../../assets/auth_night_coast.webp";
+import authNightCoastSm from "../../assets/auth_night_coast-sm.webp";
+import authNightHills from "../../assets/auth_night_hills.webp";
+import authNightHillsSm from "../../assets/auth_night_hills-sm.webp";
+import authNightCity from "../../assets/auth_night_city.webp";
+import authNightCitySm from "../../assets/auth_night_city-sm.webp";
 import page404Night from "../../assets/page_404_night.webp";
 import page404NightSm from "../../assets/page_404_night-sm.webp";
 import authShowroomSm from "../../assets/auth_showroom-sm.webp";
@@ -115,6 +121,10 @@ export const visuals = {
   pageHomeHeroStudio: pair(pageHomeHeroStudio, pageHomeHeroStudioSm),
   /** Auth visual panel: dark rain showroom, gold strip light (generated, no badges). */
   authShowroom: pair(authShowroom, authShowroomSm),
+  /** auth-11 sign-in panel: generated Sri Lanka night-drive triptych (coast, tea country, city rain). */
+  authNightCoast: pair(authNightCoast, authNightCoastSm),
+  authNightHills: pair(authNightHills, authNightHillsSm),
+  authNightCity: pair(authNightCity, authNightCitySm),
   /** 404: a coastal road at night forking into the dark (generated, no text/plates). */
   page404Night: pair(page404Night, page404NightSm),
 } as const;
