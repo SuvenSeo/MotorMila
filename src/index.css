@@ -1140,22 +1140,11 @@
   }
 
   /* ── Header collapse steps ──────────────────────────────────────
-     1 hide "Ctrl K" · 2 Search → icon · 3 account name → icon ·
-     4 Saved moves into More (it is already a group in the More panel).
+     1 account name → icon · 2 Saved moves into More (it is already a
+     group in the More panel).
      Media queries are the width floor (also the pre-hydration render);
      fitNav() raises [data-fit] further when the capsule, a long name or a
      longer language needs it. */
-  .nav-search { width: auto; gap: 8px; padding-inline: 12px 14px; }
-  .nav-search__label { display: inline; }
-  .nav-search__kbd { display: inline; }
-
-  @media (max-width: 1439.98px) {
-    .nav-search__kbd { display: none; }
-  }
-  @media (max-width: 1319.98px) {
-    .nav-search { width: 36px; gap: 0; padding: 0; }
-    .nav-search__label { display: none; }
-  }
   @media (max-width: 1279.98px) {
     .nav-account__name { display: none; }
   }
@@ -1163,11 +1152,8 @@
     .site-nav__link[data-dest="saved"] { display: none; }
   }
 
-  .site-nav-header:is([data-fit="1"], [data-fit="2"], [data-fit="3"], [data-fit="4"]) .nav-search__kbd { display: none; }
-  .site-nav-header:is([data-fit="2"], [data-fit="3"], [data-fit="4"]) .nav-search { width: 36px; gap: 0; padding: 0; }
-  .site-nav-header:is([data-fit="2"], [data-fit="3"], [data-fit="4"]) .nav-search__label { display: none; }
-  .site-nav-header:is([data-fit="3"], [data-fit="4"]) .nav-account__name { display: none; }
-  .site-nav-header[data-fit="4"] .site-nav__link[data-dest="saved"] { display: none; }
+  .site-nav-header:is([data-fit="1"], [data-fit="2"]) .nav-account__name { display: none; }
+  .site-nav-header[data-fit="2"] .site-nav__link[data-dest="saved"] { display: none; }
 
   .site-nav__brand-logo .brand-wordmark {
     white-space: nowrap;
@@ -1214,6 +1200,18 @@
   .site-nav__link[data-active="true"] { color: hsl(var(--foreground)); font-weight: 600; background: transparent; }
   .site-nav__link[aria-expanded="true"] { color: hsl(var(--foreground)); background: hsl(var(--foreground) / 0.07); }
   .site-nav__link:focus-visible { box-shadow: 0 0 0 2px hsl(var(--primary) / 0.55); }
+
+  /* Mega-panel triggers: the sliding hover pill is the hover state, so the
+     link itself stays transparent (two tints would stack into a dark blob). */
+  .site-nav__link.nav-mega__trigger:hover,
+  .site-nav__link.nav-mega__trigger[aria-expanded="true"] { background: transparent; }
+  .nav-mega__hover-pill {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: 9999px;
+    background: hsl(var(--foreground) / 0.06);
+  }
   /* Press: sink to 0.96 fast, spring back on release (Apple-style). */
   .site-nav__link:active { transform: scale(0.96); transition-duration: var(--dur-short), var(--dur-short), 90ms; }
   @media (prefers-reduced-motion: reduce) { .site-nav__link:active, .nav-control:active { transform: none; } }
@@ -1234,6 +1232,9 @@
     background: rgb(255 255 255 / 0.16);
     box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.28);
   }
+  :is(.site-nav-header[data-over-hero="true"], html:has([data-nav-stage]) .site-nav-header[data-capsule="false"]) .nav-mega__hover-pill {
+    background: rgb(255 255 255 / 0.12);
+  }
   :is(.site-nav-header[data-over-hero="true"], html:has([data-nav-stage]) .site-nav-header[data-capsule="false"]) .nav-control {
     border-color: rgb(255 255 255 / 0.18);
     background: rgb(0 0 0 / 0.28);
@@ -1241,7 +1242,6 @@
   }
   :is(.site-nav-header[data-over-hero="true"], html:has([data-nav-stage]) .site-nav-header[data-capsule="false"]) .nav-control:hover,
   :is(.site-nav-header[data-over-hero="true"], html:has([data-nav-stage]) .site-nav-header[data-capsule="false"]) .nav-control[data-state="open"] { background: rgb(0 0 0 / 0.42); color: #fff; }
-  :is(.site-nav-header[data-over-hero="true"], html:has([data-nav-stage]) .site-nav-header[data-capsule="false"]) .nav-search__kbd { border-color: rgb(255 255 255 / 0.2); color: rgb(255 255 255 / 0.7); }
   :is(.site-nav-header[data-over-hero="true"], html:has([data-nav-stage]) .site-nav-header[data-capsule="false"]) .bg-border { background: rgb(255 255 255 / 0.2); }
 
   .site-nav__pill {

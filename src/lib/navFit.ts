@@ -1,7 +1,7 @@
 // Header fit logic (polish r3), kept out of Navbar.tsx for fast refresh.
 
-/** Collapse steps, in order: 1 hide "Ctrl K" · 2 Search → icon · 3 account name → icon · 4 Saved → More. */
-const MAX_FIT = 4;
+/** Collapse steps, in order: 1 account name → icon · 2 Saved → More. */
+const MAX_FIT = 2;
 /** Minimum clear space between the centre group and either side cluster. */
 const NAV_MIN_GAP = 12;
 

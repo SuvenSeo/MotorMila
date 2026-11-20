@@ -1,10 +1,10 @@
 import { BrandLogo } from "@/components/BrandLogo";
-import { scrollBehavior, spring, tween as motionTween, usePrefersReducedMotionOrLowData } from "@/lib/motion";
+import { scrollBehavior, tween as motionTween, usePrefersReducedMotionOrLowData } from "@/lib/motion";
 import { prefetchRoute } from "@/lib/routePrefetch";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, LayoutGroup, m, motion } from "motion/react";
-import { ChevronDown, Crown, LayoutGrid, LogOut, Menu, Search, Settings, UserCircle2, X } from "lucide-react";
+import { AnimatePresence, LayoutGroup, m } from "motion/react";
+import { ChevronDown, Crown, LayoutGrid, LogOut, Menu, Settings, UserCircle2, X } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { SignInPortalModal } from "@/components/SignInPortalModal";
@@ -19,11 +19,11 @@ import {
 import { useAppPreferences } from "@/lib/appPreferences";
 import { useAuth } from "@/lib/authContext";
 import { NotificationBell } from "@/components/NotificationBell";
-import { openCommandPalette } from "@/lib/commandPalette";
 import { openFeedbackDialog } from "@/lib/feedbackEvents";
 import { FEEDBACK_LINK, MORE_LINKS, NAV_DESTINATIONS, isDestinationActive, type NavLinkItem } from "@/lib/siteNav";
-import { NavFreshnessIndicator } from "@/components/NavFreshnessIndicator";
 import { NavMoreMenu } from "@/components/NavMoreMenu";
+import { NavMegaMenu } from "@/components/NavMegaMenu";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { fitNav } from "@/lib/navFit";
 import { cn } from "@/lib/utils";
 
@@ -64,10 +64,12 @@ function paintHeader(header: HTMLElement, s: LiveHeader) {
  * Site header (polish/shell; motion pass web/navbar-motion).
  *
  * One 64px row on a 3-column grid: brand left · five destinations centred on
- * the viewport (lg+) with a compact "More" dropdown (NavMoreMenu) holding only
- * the routes no destination reaches · actions right (search, freshness hint,
- * language, bell, account), all 36px controls. Below lg the destinations live
- * in the bottom nav (mobile) / hamburger menu panel, which lists every route.
+ * the viewport (lg+) — hover or focus opens a shared morphing panel
+ * (NavMegaMenu) that expands Buy, Prices, Tools and Sell in place — with a
+ * compact "More" dropdown (NavMoreMenu) holding only the routes no destination
+ * reaches · actions right (theme switch, language, bell, account), all 36px
+ * controls. Below lg the destinations live in the bottom nav (mobile) /
+ * hamburger menu panel, which lists every route.
  *
  * Transparent at the top so page heroes run underneath it; scrolling morphs it
  * into a floating glass capsule. On phones it slides away while scrolling down
@@ -80,17 +82,9 @@ function paintHeader(header: HTMLElement, s: LiveHeader) {
  * that crossfades + scales (index.css "Site header"), and the side clusters
  * glide on `translate` keyframes (a CSS FLIP) instead of animating padding.
  */
-function isApplePlatform(): boolean {
-  if (typeof navigator === "undefined") return false;
-  const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
-  const platform = nav.userAgentData?.platform || navigator.platform || navigator.userAgent || "";
-  return /mac|iphone|ipad|ipod/i.test(platform);
-}
-
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [signInOpen, setSignInOpen] = useState(false);
-  const [applePlatform, setApplePlatform] = useState(false);
   const { user, logout, isAuthenticated, hasProAccess } = useAuth();
   const { t, language } = useAppPreferences();
   const { pathname } = useLocation();
@@ -158,10 +152,6 @@ export function Navbar() {
     restoreMenuFocus.current = false;
     menuTriggerRef.current?.focus({ preventScroll: true });
   }, [menuOpen]);
-
-  useEffect(() => {
-    setApplePlatform(isApplePlatform());
-  }, []);
 
   // First paint: attributes in place before the browser draws the header.
   useIsoLayoutEffect(() => {
@@ -305,42 +295,10 @@ export function Navbar() {
           </Link>
         </div>
 
-        {/* Five destinations + More (desktop), centred on the viewport */}
+        {/* Destinations + More (desktop), centred on the viewport */}
         <LayoutGroup id="desktop-nav">
           <div className="site-nav__center hidden lg:flex">
-            {NAV_DESTINATIONS.map((dest) => {
-              const active = isDestinationActive(dest, pathname);
-              return (
-                <Link
-                  key={dest.id}
-                  to={dest.href}
-                  onPointerEnter={() => prefetchRoute(dest.href)}
-                  onFocus={() => prefetchRoute(dest.href)}
-                  onClick={(e) => {
-                    if (dest.href === "/" && pathname === "/") {
-                      e.preventDefault();
-                      window.scrollTo({ top: 0, behavior: scrollBehavior() });
-                    }
-                  }}
-                  aria-current={active ? "page" : undefined}
-                  data-active={active}
-                  data-dest={dest.id}
-                  className="site-nav__link"
-                >
-                  {active && (
-                    <motion.span
-                      layoutId="desktop-nav-pill"
-                      // Measure only when the route changes, not on every Navbar render.
-                      layoutDependency={pathname}
-                      className="site-nav__pill"
-                      transition={calm ? { duration: 0 } : spring.snappy}
-                      aria-hidden
-                    />
-                  )}
-                  <span className="relative z-10">{label(dest)}</span>
-                </Link>
-              );
-            })}
+            <NavMegaMenu pathname={pathname} calm={calm} t={t} />
             <span aria-hidden className="mx-1 h-4 w-px bg-border" />
             <NavMoreMenu pathname={pathname} t={t} />
           </div>
@@ -348,21 +306,7 @@ export function Navbar() {
 
         {/* Actions */}
         <div className="flex min-w-0 items-center justify-end gap-1.5 justify-self-end">
-          <button
-            type="button"
-            onClick={openCommandPalette}
-            className="nav-control nav-search"
-            aria-label={t("nav.search", "Search")}
-            title={applePlatform ? t("nav.searchHintMac", "Search (⌘+K)") : t("nav.searchHint", "Search (Ctrl+K)")}
-          >
-            <Search className="h-4 w-4" aria-hidden />
-            <span className="nav-search__label">{t("nav.search", "Search")}</span>
-            <kbd className="nav-search__kbd rounded-md border border-border px-1.5 text-caption font-medium text-muted-foreground">
-              {applePlatform ? "⌘ K" : "Ctrl K"}
-            </kbd>
-          </button>
-
-          <NavFreshnessIndicator />
+          <ThemeToggle />
 
           <div className="hidden md:flex">
             <LocaleSwitcher />
@@ -516,7 +460,6 @@ export function Navbar() {
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
                 <div className="flex items-center gap-2 md:hidden">
                   <LocaleSwitcher showName />
-                  <NavFreshnessIndicator className="!inline-flex" />
                 </div>
                 <span className="hidden items-center gap-1.5 text-caption text-muted-foreground md:inline-flex">
                   <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
