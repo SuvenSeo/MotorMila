@@ -79,7 +79,7 @@ function CompareTrayPanel({ className }: { className?: string }) {
       className={cn("overflow-hidden rounded-card border border-border bg-popover text-popover-foreground shadow-e3", className)}
     >
       {expanded && (
-        <ul className="relative max-h-[50vh] space-y-1 overflow-auto border-b border-separator p-2" aria-label={t("compareTray.listAria", "Selected vehicles")}>
+        <ul className="relative max-h-[50vh] divide-y divide-border/60 overflow-auto border-b border-separator p-1.5" aria-label={t("compareTray.listAria", "Selected vehicles")}>
           <AnimatePresence mode="popLayout" initial={false}>
           {items.map((p) => (
             <motion.li
@@ -89,10 +89,10 @@ function CompareTrayPanel({ className }: { className?: string }) {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.96, transition: { duration: duration.short, ease: ease.accelerate } }}
               transition={layoutT}
-              className="flex items-center gap-2 rounded-control px-2.5 py-1.5 transition-colors duration-short hover:bg-surface-2"
+              className="flex items-center gap-2 rounded-control px-2 py-2 transition-colors duration-short hover:bg-surface-2"
             >
               <div className="min-w-0 flex-1">
-                <Link to={`/listing/${p.id}`} className="block truncate text-body font-semibold text-foreground no-underline transition-colors duration-short hover:text-primary">
+                <Link to={`/listing/${p.id}`} className="block truncate font-display text-body font-semibold tracking-tight text-foreground no-underline transition-colors duration-short hover:text-primary">
                   {p.year ? `${p.year} ` : ""}
                   {p.make} {p.model}
                 </Link>
@@ -123,7 +123,7 @@ function CompareTrayPanel({ className }: { className?: string }) {
                 clear();
                 setExpanded(false);
               }}
-              className="w-full text-label-2"
+              className="w-full rounded-control text-label-2"
             >
               <Trash2 aria-hidden />
               {t("compareTray.clear", "Clear all")}
@@ -176,7 +176,7 @@ function CompareTrayPanel({ className }: { className?: string }) {
                   key={`empty-${i}`}
                   layout={!calm}
                   transition={layoutT}
-                  className="hidden h-8 w-8 rounded-control border-2 border-dashed border-border bg-transparent sm:block"
+                  className="hidden h-8 w-8 rounded-control border border-dashed border-border/70 bg-transparent sm:block"
                 />
               ),
             )}
@@ -185,7 +185,7 @@ function CompareTrayPanel({ className }: { className?: string }) {
           <span className="ml-1.5 flex min-w-0 items-center gap-1.5 truncate text-footnote font-semibold text-foreground">
             {/* Same sentence; the count digit rolls on every change. */}
             <span className="sr-only">{t("compareTray.count", "{count} of {max} selected", { count, max })}</span>
-            <span aria-hidden className="truncate">
+            <span aria-hidden className="num truncate">
               {countBefore}
               <AnimatedNumber value={count} />
               {countAfter}
@@ -204,7 +204,7 @@ function CompareTrayPanel({ className }: { className?: string }) {
             </Link>
           </Button>
         ) : (
-          <span className="inline-flex h-11 shrink-0 items-center rounded-full border border-dashed border-border px-4 text-footnote font-semibold text-label-2">
+          <span className="inline-flex h-11 shrink-0 items-center rounded-control border border-dashed border-border/70 px-3.5 text-footnote font-semibold text-label-2">
             {t("compareTray.addOneMore", "Add 1 more")}
           </span>
         )}
