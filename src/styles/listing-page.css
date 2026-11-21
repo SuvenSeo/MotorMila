@@ -1,0 +1,173 @@
+/* ============================================================================
+   Listing detail — 2026 refresh.
+   Scoped to .lp-page so the shared cinematic primitives (cine-stage,
+   cine-gallery, cine-specs) keep their behaviour on the other pages.
+   Language: one full-bleed photo stage, quiet hairline surfaces below,
+   display type on the title and price, everything else at reading size.
+   ========================================================================== */
+
+.lp-page {
+  --lp-radius: var(--radius-card);
+  --lp-radius-media: var(--radius-sheet);
+}
+
+/* ── Stage ──────────────────────────────────────────────────────────────── */
+
+.lp-stage {
+  background:
+    radial-gradient(120% 80% at 50% -20%, hsl(213 60% 14% / 0.55), transparent 62%),
+    hsl(var(--cine-ink));
+}
+.lp-stage::after {
+  background: hsl(0 0% 100% / 0.06);
+}
+
+.lp-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+}
+:root:lang(si) .lp-eyebrow,
+:root:lang(ta) .lp-eyebrow {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.lp-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 0.98;
+  font-size: clamp(2.25rem, 1.25rem + 3.2vw, 3.5rem);
+  text-wrap: balance;
+}
+:root:lang(si) .lp-title,
+:root:lang(ta) .lp-title {
+  letter-spacing: 0;
+  line-height: 1.15;
+}
+
+/* Top bar controls sit in one quiet glass rail instead of four loose buttons. */
+.lp-stage-rail {
+  border: 1px solid hsl(0 0% 100% / 0.1);
+  background: hsl(0 0% 100% / 0.06);
+  backdrop-filter: blur(14px);
+}
+
+/* ── Gallery: full-bleed, cover, one solid frame ────────────────────────── */
+
+.lp-gallery {
+  --g-h: clamp(200px, 62vw, 300px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+@media (min-width: 768px) {
+  .lp-gallery {
+    --g-h: clamp(360px, 56svh, 560px);
+  }
+}
+.lp-gallery .cine-gallery__frame {
+  width: min(100%, calc(var(--g-h) * 1.5));
+  margin-inline: 0;
+  border-radius: var(--lp-radius-media);
+  overflow: hidden;
+  border: 1px solid hsl(0 0% 100% / 0.07);
+  background:
+    radial-gradient(90% 120% at 50% 0%, hsl(214 26% 13%), hsl(220 30% 6%) 72%);
+  box-shadow: 0 40px 90px -50px rgb(0 0 0 / 0.9);
+}
+.lp-gallery .cine-gallery__slide {
+  height: 100%;
+  margin-right: 0.75rem;
+}
+.lp-gallery .cine-gallery__slide:last-child {
+  margin-right: 0;
+}
+.lp-gallery .cine-gallery .cine-gallery__img {
+  object-fit: contain;
+}
+.lp-gallery .cine-gallery__ph {
+  object-fit: contain;
+  border-radius: var(--lp-radius-media);
+  background: transparent;
+}
+.lp-gallery .cine-gallery__frame [role="tablist"] {
+  margin-top: 0.875rem;
+  padding-inline: 0.25rem;
+}
+@media (max-width: 767px) {
+  .lp-gallery .cine-gallery__frame {
+    width: 100%;
+  }
+  .lp-gallery .cine-gallery__frame [role="tablist"] {
+    padding-inline: 1.25rem;
+  }
+}
+
+/* ── Surfaces ───────────────────────────────────────────────────────────── */
+
+.lp-card {
+  border-radius: var(--lp-radius);
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--surface-1));
+  box-shadow: var(--shadow-e1);
+}
+
+.lp-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+}
+:root:lang(si) .lp-label,
+:root:lang(ta) .lp-label {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Key specs: self-contained tiles. Wrapping a short last row never leaves a
+   hollow cell in a bordered grid, which read as a chopped-off box. */
+.lp-specs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+@media (min-width: 640px) {
+  .lp-specs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1280px) {
+  .lp-specs {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.lp-specs > .lp-spec {
+  min-width: 0;
+  padding: 0.875rem 1rem 1rem;
+  border-radius: var(--radius-control);
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--surface-1));
+}
+
+/* Price card: the one place the display face runs large. */
+.lp-price {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-size: clamp(2.375rem, 1.6rem + 2.2vw, 3.25rem);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Section rhythm inside the main column. */
+.lp-section + .lp-section {
+  margin-top: 1.5rem;
+}

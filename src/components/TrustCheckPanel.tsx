@@ -32,7 +32,7 @@ export function TrustCheckPanel(props: TrustInput & { className?: string }) {
   return (
     <section
       aria-labelledby="trust-check-title"
-      className={cn("rounded-[1.75rem] border border-border bg-card p-5 shadow-soft", className)}
+      className={cn("rounded-card border border-border bg-surface-1 p-5 shadow-e1 sm:p-6", className)}
     >
       <div className="flex items-start gap-3">
         <span

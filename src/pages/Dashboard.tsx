@@ -927,22 +927,23 @@ export default function Dashboard() {
       </section>
 
       <section id="market" className="scroll-mt-20">
-        <div className="mx-auto max-w-[1560px] px-5 py-8 sm:px-6 lg:py-10">
+        <div className="mx-auto max-w-[1560px] px-5 pb-8 pt-8 sm:px-6 lg:pb-12 lg:pt-14">
 
-          {/* Toolbar */}
-          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <Reveal className="flex flex-col gap-2 sm:gap-2.5">
-              <div className="flex items-baseline gap-2.5">
-                <h2 className="text-title3 font-semibold text-foreground">
+          {/* Toolbar — title, live count and freshness on the left, controls on the right. */}
+          <div className="mb-6 flex flex-col gap-4 border-b border-border pb-5 lg:mb-7 lg:flex-row lg:items-end lg:justify-between">
+            <Reveal className="min-w-0">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <h2 className="font-display text-title1 font-semibold tracking-tight text-foreground sm:text-large">
                   {isPriceUnavailableMode ? t("common.unpricedInventory", "Unpriced inventory") : t("common.inventory", "Inventory")}
                 </h2>
                 {loadingListings ? (
-                  <Skeleton shape="text" className="h-4 w-16" />
+                  <Skeleton shape="text" className="h-6 w-20" />
                 ) : (
-                  <span className="content-in num text-footnote font-medium text-label-2" aria-live="polite">
-                    <AnimatedNumber value={total} />
+                  <span className="content-in inline-flex h-7 items-center gap-1.5 rounded-full border border-border bg-surface-1 px-3 text-footnote font-semibold text-label-2" aria-live="polite">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
+                    <span className="num"><AnimatedNumber value={total} /></span>
                     {!isPriceUnavailableMode && activeFilterLabels.length === 0 ? (
-                      <span className="ml-1">{t("home.pricedSuffix", "priced")}</span>
+                      <span className="font-medium">{t("home.pricedSuffix", "priced")}</span>
                     ) : null}
                   </span>
                 )}
@@ -952,7 +953,7 @@ export default function Dashboard() {
                   latestListingAt={liveMarketSnapshot?.latest_listing_at}
                   lastUpdated={stats?.last_updated}
                   variant="subline"
-                  className="normal-case tracking-normal"
+                  className="mt-2 normal-case tracking-normal"
                 />
               ) : null}
             </Reveal>
@@ -986,18 +987,18 @@ export default function Dashboard() {
               <Chip onClick={() => setShowMarketAlerts(true)} aria-pressed={undefined}>
                 <AnimatedNumber value={marketAlerts.length} /> {t("common.alerts", "alerts")}
               </Chip>
-              <div className="hidden items-center gap-1 md:flex" role="group" aria-label={t("home.viewMode", "View")}>
+              <div className="hidden items-center gap-0.5 rounded-full border border-border bg-surface-1 p-0.5 md:flex" role="group" aria-label={t("home.viewMode", "View")}>
                 <Chip
                   onClick={() => setMarketView("grid")}
                   selected={marketView === "grid"}
                   aria-label={t("home.gridView", "Grid view")}
-                  className="w-8 justify-center px-0"
+                  className="h-7 w-8 justify-center border-transparent bg-transparent px-0 hover:bg-surface-2"
                 ><LayoutGrid aria-hidden /></Chip>
                 <Chip
                   onClick={() => setMarketView("list")}
                   selected={marketView === "list"}
                   aria-label={t("home.listView", "List view")}
-                  className="w-8 justify-center px-0"
+                  className="h-7 w-8 justify-center border-transparent bg-transparent px-0 hover:bg-surface-2"
                 ><List aria-hidden /></Chip>
               </div>
             </div>
@@ -1063,7 +1064,7 @@ export default function Dashboard() {
               aria-busy={refreshingListings || undefined}
             >
               {loadingListings || gridCatchingUp ? (
-                <div className={marketView === "grid" ? "grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3" : "space-y-3"}>
+                <div className={marketView === "grid" ? "grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3" : "space-y-3"}>
                   {Array.from({ length: marketView === "grid" ? 9 : 6 }).map((_, i) => (
                     <ListingCardSkeleton key={`skel-${i}`} />
                   ))}
@@ -1086,7 +1087,7 @@ export default function Dashboard() {
                   isSignedIn={isAuthenticated}
                 />
               ) : marketView === "grid" ? (
-                <div className="content-in grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+                <div className="content-in grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
                   {/* Cards self-reveal on scroll (ListingCard revealIndex caps the stagger). */}
                   {gridListings.map((listing, index) => (
                     <ListingCard key={listing.id} listing={listing} priority={index < 6} revealIndex={index} onCompareToggle={toggleCompare} isComparing={compareIdSet.has(listing.id)} onWatchlistToggle={toggleWatchlist} isWatchlisted={watchlistIdSet.has(listing.id)} />
@@ -1106,29 +1107,29 @@ export default function Dashboard() {
                         <Link
                           to={`/listing/${listing.id}`}
                           className={cn(
-                            "group flex items-center gap-4 rounded-card border border-border bg-surface-1 p-3 no-underline shadow-e1",
-                            "transition-ui duration-short ease-standard [@media(hover:hover)_and_(pointer:fine)]:hover:-translate-y-0.5 [@media(hover:hover)_and_(pointer:fine)]:hover:shadow-e2 active:scale-[0.99] motion-reduce:transform-none",
+                            "group flex items-center gap-4 rounded-card border border-border bg-surface-1 p-3 no-underline shadow-e1 sm:gap-5 sm:p-3.5",
+                            "transition-[border-color,box-shadow,transform] duration-short ease-standard [@media(hover:hover)_and_(pointer:fine)]:hover:-translate-y-0.5 [@media(hover:hover)_and_(pointer:fine)]:hover:border-primary/30 [@media(hover:hover)_and_(pointer:fine)]:hover:shadow-e2 active:scale-[0.99] motion-reduce:transform-none",
                             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                           )}
                         >
-                          <div className="h-16 w-24 shrink-0 overflow-hidden rounded-control bg-surface-2">
-                            <VehicleThumbnail src={pickVehicleImageUrl([listing.thumbnail_url, ...(Array.isArray(listing.images) ? listing.images : [])], [listing.detail_url])} listingId={listing.id} source={listing.source} alt={`${listing.make} ${listing.model}`} silhouette={silhouetteFor(listing)} className="h-full w-full object-cover" />
+                          <div className="h-[72px] w-[112px] shrink-0 overflow-hidden rounded-control bg-surface-2 sm:h-20 sm:w-32">
+                            <VehicleThumbnail src={pickVehicleImageUrl([listing.thumbnail_url, ...(Array.isArray(listing.images) ? listing.images : [])], [listing.detail_url])} listingId={listing.id} source={listing.source} alt={`${listing.make} ${listing.model}`} silhouette={silhouetteFor(listing)} className="h-full w-full object-cover transition-transform duration-long ease-decelerate motion-safe:group-hover:scale-[1.04] motion-reduce:transition-none" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-body font-semibold text-foreground transition-colors duration-short group-hover:text-primary">{listing.make} {listing.model} {listing.variant || ""}</p>
-                            <p className="num mt-0.5 truncate text-footnote text-label-2">{[listing.year, listing.district, listing.source].filter(Boolean).join(" · ")}</p>
+                            <p className="truncate font-display text-callout font-semibold tracking-tight text-foreground transition-colors duration-short group-hover:text-primary">{listing.make} {listing.model} {listing.variant || ""}</p>
+                            <p className="num mt-1 truncate text-footnote text-label-2">{[listing.year, listing.district, listing.source].filter(Boolean).join(" · ")}</p>
                           </div>
                           <div className="shrink-0 text-right">
                             {hasPrice ? (
-                              <p className="cine-card__price num text-body text-foreground">{formatPrice(Number(listing.price_lkr))}</p>
+                              <p className="cine-card__price num text-title3 leading-none text-foreground">{formatPrice(Number(listing.price_lkr))}</p>
                             ) : <PriceUnavailableBadge label={t("common.na", "N/A")} className="text-caption" />}
-                            {fullAccess && listing.deal_score != null && (
-                              <p className={cn("num mt-0.5 text-caption font-semibold", Number(listing.deal_score) >= 0 ? "text-deal-good-text" : "text-label-2")}>
+                            {fullAccess && listing.deal_score != null ? (
+                              <p className={cn("num mt-1.5 text-caption font-semibold", Number(listing.deal_score) >= 0 ? "text-deal-good-text" : "text-label-2")}>
                                 {t("home.dealScoreShort", "{score} deal", { score: `${Number(listing.deal_score) >= 0 ? "+" : ""}${Number(listing.deal_score).toFixed(0)}` })}
                               </p>
-                            )}
+                            ) : null}
                             {!fullAccess && (
-                              <p className="mt-0.5 text-caption font-medium text-label-2">{t("home.proScore", "Pro score")}</p>
+                              <p className="mt-1.5 text-caption font-medium text-label-2">{t("home.proScore", "Pro score")}</p>
                             )}
                           </div>
                           <ArrowRight aria-hidden className="hidden h-4 w-4 shrink-0 text-label-2 transition-transform duration-short ease-standard group-hover:translate-x-0.5 group-hover:text-primary sm:block" />

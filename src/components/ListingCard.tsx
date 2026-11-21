@@ -10,6 +10,7 @@ import { isReasonableListingPrice } from "@/lib/formatting";
 import { getListingImageList } from "@/lib/listingImage";
 import { getListingDaysOnMarketLabel } from "@/lib/listing-card-meta";
 import { HybridCliffBadge } from "@/components/HybridCliffBadge";
+import { getHybridCliffBadge } from "@/lib/importTaxModel";
 import { plausibleEngineCc } from "@/lib/engineCapacity";
 import { MileageTrustChip } from "@/components/MileageTrustChip";
 import { computeMileageTrust } from "@/lib/mileageTrust";
@@ -80,6 +81,10 @@ function formatEngineCc(value: number | null | undefined): string | null {
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
+
+/** Photo-corner actions: glass on the photo, blue when engaged. */
+const PHOTO_ACTION =
+  "tap-44 pointer-events-auto relative z-30 flex h-10 w-10 items-center justify-center rounded-full border backdrop-blur-md transition-[background-color,border-color,color,transform] duration-short ease-standard active:scale-90 active:duration-micro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:active:scale-100";
 
 /** Listing ids whose card already played its reveal this session. */
 const REVEALED_LISTINGS = new Set<number | string>();
@@ -194,6 +199,8 @@ export const ListingCard = memo(function ListingCard({
     [listing.vehicle_category, listing.body_type, listing.title],
   );
   const mileageKnown = computeMileageTrust({ mileageKm: listing.mileage_km, year: listing.year }).risk !== "unknown";
+  const hasMetaChips = listing.is_active === false || showDropBadge || Boolean(daysOnMarketLabel) || showSites;
+  const hybridCliff = Boolean(getHybridCliffBadge(listing.fuel_type, plausibleEngineCc(listing.engine_cc, listing.year)));
 
   return (
     <m.article
@@ -217,8 +224,8 @@ export const ListingCard = memo(function ListingCard({
         cardVariants({ variant: "media", padding: "none" }),
         // Off-screen cards skip style/layout/paint while scrolling (sized from
         // their last render; 440px until then).
-        "[content-visibility:auto] [contain-intrinsic-size:auto_440px]",
-        "group isolate h-full transition-[border-color,box-shadow] duration-medium ease-decelerate hover:border-primary/30 hover:shadow-e2 motion-reduce:transition-none",
+        "[content-visibility:auto] [contain-intrinsic-size:auto_504px]",
+        "group isolate flex h-full flex-col transition-[border-color,box-shadow] duration-medium ease-decelerate hover:border-primary/30 hover:shadow-e2 motion-reduce:transition-none",
       )}
       onPointerEnter={() => {
         // Only warm the route chunk. Data prefetch on hover used to pull the
@@ -270,7 +277,7 @@ export const ListingCard = memo(function ListingCard({
       />
 
       <div ref={controlsRef} className="pointer-events-none relative z-20 flex h-full flex-col">
-        <div className="listing-card-photo relative aspect-[16/10] overflow-hidden bg-surface-2">
+        <div className="listing-card-photo relative aspect-[4/3] overflow-hidden bg-surface-2">
           <ListingImageCarousel
             images={galleryImages}
             listingId={listing.id}
@@ -280,6 +287,7 @@ export const ListingCard = memo(function ListingCard({
             priority={priority}
             silhouette={silhouette}
             className="h-full w-full"
+            imageClassName="transition-transform duration-long ease-decelerate motion-safe:group-hover:scale-[1.035] motion-reduce:transition-none"
           />
           {/* No usable photo: the silhouette plate gets a real caption (CSS :has, no JS). */}
           <p className="cine-card__nophoto vt-overlay">
@@ -288,23 +296,23 @@ export const ListingCard = memo(function ListingCard({
           </p>
 
           {conditionLabel && (
-            <div className="vt-overlay absolute left-3 top-3 flex items-center gap-1.5">
+            <div className="vt-overlay absolute left-4 top-4 flex items-center gap-1.5 sm:left-5 sm:top-5">
               {/* Over the photo: dark chip regardless of theme. */}
-              <span className="inline-flex h-6 items-center rounded-full bg-black/60 px-2.5 text-caption font-semibold text-white">
+              <span className="inline-flex h-6 items-center rounded-full border border-transparent bg-black/60 px-2.5 text-caption font-semibold text-white backdrop-blur-md">
                 {conditionLabel}
               </span>
             </div>
           )}
 
-          <div className="vt-overlay absolute right-3 top-3 flex items-center gap-1.5">
+          <div className="vt-overlay absolute right-4 top-4 flex items-center gap-1.5 sm:right-5 sm:top-5">
             {onWatchlistToggle && (
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onWatchlistToggle(listing); }}
-                className={`tap-44 pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border transition-[background-color,border-color,color,transform] duration-short ease-standard active:scale-90 active:duration-micro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 ${
+                className={`${PHOTO_ACTION} ${
                   isWatchlisted
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "border-transparent bg-black/55 text-white hover:bg-black/70"
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-transparent bg-black/45 text-white hover:bg-black/65"
                 }`}
                 aria-label={isWatchlisted ? t("listingCard.removeWatchlist", "Remove from watchlist") : t("listingCard.addWatchlist", "Add to watchlist")}
               >
@@ -315,10 +323,10 @@ export const ListingCard = memo(function ListingCard({
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onCompareToggle(listing); }}
-                className={`tap-44 pointer-events-auto relative z-30 flex h-9 w-9 items-center justify-center rounded-full border transition-[background-color,border-color,color,transform] duration-short ease-standard active:scale-90 active:duration-micro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 ${
+                className={`${PHOTO_ACTION} ${
                   isComparing
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "border-transparent bg-black/55 text-white hover:bg-black/70"
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-transparent bg-black/45 text-white hover:bg-black/65"
                 }`}
                 aria-label={isComparing ? t("listingCard.removeCompare", "Remove from comparison") : t("listingCard.addCompare", "Add to comparison")}
               >
@@ -326,13 +334,12 @@ export const ListingCard = memo(function ListingCard({
               </button>
             )}
           </div>
-
         </div>
 
         <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
           <div className="min-w-0">
             <div className="flex items-baseline justify-between gap-3">
-              <h3 className="truncate text-callout font-semibold text-foreground transition-colors duration-short group-hover:text-primary">
+              <h3 className="truncate font-display text-callout font-semibold tracking-tight text-foreground transition-colors duration-short group-hover:text-primary">
                 {listingTitle}
               </h3>
               {listing.year ? (
@@ -340,17 +347,15 @@ export const ListingCard = memo(function ListingCard({
               ) : null}
             </div>
             {specPills.length > 0 && (
-              <p className="cine-card__specs mt-1 text-caption text-label-2">
+              <p className="cine-card__specs num mt-1.5 text-footnote tracking-tight text-label-2">
                 {specPills.map((p) => (
-                  <span key={p.key} className={cn((p.key === "km" || p.key === "cc") && "num")}>
-                    {p.text}
-                  </span>
+                  <span key={p.key}>{p.text}</span>
                 ))}
               </p>
             )}
           </div>
 
-          <div className="flex items-end justify-between gap-3">
+          <div className="flex items-baseline justify-between gap-3">
             {hasKnownPrice ? (
               <p className="cine-card__price num text-title2 leading-none text-foreground">{formatPrice(priceValue)}</p>
             ) : (
@@ -358,7 +363,7 @@ export const ListingCard = memo(function ListingCard({
             )}
             {monthly && (
               <p
-                className="num shrink-0 text-right text-caption font-medium leading-tight text-label-2"
+                className="num shrink-0 text-right text-caption font-medium leading-snug text-label-2"
                 title={t("listingCard.monthlyTitle", "Estimate: {ltv}% loan (CBSL cap), {rate}% a year over {years} years. Banks set the final terms.", {
                   ltv: monthly.ltvPct,
                   rate: monthly.ratePct,
@@ -370,10 +375,26 @@ export const ListingCard = memo(function ListingCard({
             )}
           </div>
 
-          {deal.kind !== "none" && <DealBadge badge={deal} tone="soft" className="self-start" />}
+          {fmv != null && (
+            <div className="rounded-control border border-border/50 bg-surface-2/50 px-3 py-2">
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="num truncate text-caption font-medium text-label-2">
+                  {t("listingCard.typical", "Typical {price}", { price: formatPrice(fmv.fmv_lkr) })}
+                </p>
+                <p className={`num shrink-0 text-caption font-semibold ${DEAL_TEXT_CLASSES[fmvKind]}`}>{fmv.shortLabel}</p>
+              </div>
+              <div className="relative mt-2 h-1.5 overflow-hidden rounded-full bg-foreground/10">
+                <div
+                  className={`absolute inset-y-0 left-0 rounded-full transition-ui duration-long motion-reduce:transition-none ${DEAL_BAR_CLASSES[fmvKind]}`}
+                  style={{ width: `${marketPosition}%` }}
+                />
+              </div>
+            </div>
+          )}
 
-          {(listing.is_active === false || showDropBadge || daysOnMarketLabel || showSites) && (
-            <div className="flex flex-wrap gap-1.5">
+          {(deal.kind !== "none" || hasMetaChips || mileageKnown || hybridCliff) && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {deal.kind !== "none" && <DealBadge badge={deal} tone="soft" className="shrink-0" />}
               {listing.is_active === false && (
                 <Badge variant="warning">{t("listingCard.archived", "Archived / Past ad")}</Badge>
               )}
@@ -397,59 +418,23 @@ export const ListingCard = memo(function ListingCard({
                   {t("listingCard.onSites", "On {n} sites", { n: sites })}
                 </Badge>
               )}
+              <HybridCliffBadge
+                fuelType={listing.fuel_type}
+                engineCc={plausibleEngineCc(listing.engine_cc, listing.year)}
+                compact
+                className="h-6 px-2"
+              />
+              {mileageKnown && (
+                <MileageTrustChip
+                  mileageKm={listing.mileage_km}
+                  year={listing.year}
+                  className="h-6 px-2 !py-0 !text-caption"
+                />
+              )}
             </div>
           )}
 
-          <HybridCliffBadge
-            fuelType={listing.fuel_type}
-            engineCc={plausibleEngineCc(listing.engine_cc, listing.year)}
-            compact
-            className="self-start"
-          />
-          {mileageKnown && (
-            <MileageTrustChip
-              mileageKm={listing.mileage_km}
-              year={listing.year}
-              className="self-start !px-2 !py-0.5 !text-caption"
-            />
-          )}
-
-          <div className="mt-auto">
-            {fmv != null && (
-              <>
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="num text-caption font-medium text-label-2">
-                    {t("listingCard.typical", "Typical {price}", { price: formatPrice(fmv.fmv_lkr) })}
-                  </p>
-                  <p className={`text-caption font-semibold num ${DEAL_TEXT_CLASSES[fmvKind]}`}>{fmv.shortLabel}</p>
-                </div>
-                <div className="relative mb-2 h-1.5 overflow-hidden rounded-full bg-foreground/10">
-                  <div
-                    className={`absolute inset-y-0 left-0 rounded-full transition-ui duration-long motion-reduce:transition-none ${DEAL_BAR_CLASSES[fmvKind]}`}
-                    style={{ width: `${marketPosition}%` }}
-                  />
-                </div>
-              </>
-            )}
-            {pricePoints.length >= 2 && (
-              <div className="flex items-center justify-end gap-1.5">
-                <span className="text-caption text-label-2">
-                  {t("listingCard.priceMoves", "{n} price changes", { n: pricePoints.length - 1 })}
-                </span>
-                <PriceSparkline
-                  points={pricePoints}
-                  width={56}
-                  height={18}
-                  label={t("listingCard.sparkAria", "Asking price went from {from} to {to}", {
-                    from: formatPrice(pricePoints[0].price),
-                    to: formatPrice(pricePoints[pricePoints.length - 1].price),
-                  })}
-                />
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center justify-between gap-3 border-t border-separator pt-3">
+          <div className="mt-auto flex items-end justify-between gap-3 border-t border-separator pt-3">
             <div className="min-w-0">
               {listing.district && (
                 <p className="flex items-center gap-1.5 truncate text-footnote font-medium text-foreground">
@@ -462,6 +447,22 @@ export const ListingCard = memo(function ListingCard({
                 {attribution.checkedAgo ? ` · ${t("listingCard.checked", "checked {ago}", { ago: attribution.checkedAgo })}` : ""}
               </p>
             </div>
+            {pricePoints.length >= 2 && (
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                <span className="num text-caption text-label-2">
+                  {t("listingCard.priceMoves", "{n} price changes", { n: pricePoints.length - 1 })}
+                </span>
+                <PriceSparkline
+                  points={pricePoints}
+                  width={64}
+                  height={20}
+                  label={t("listingCard.sparkAria", "Asking price went from {from} to {to}", {
+                    from: formatPrice(pricePoints[0].price),
+                    to: formatPrice(pricePoints[pricePoints.length - 1].price),
+                  })}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
