@@ -70,6 +70,13 @@
 @media (min-width: 768px) {
   .lp-gallery {
     --g-h: clamp(360px, 56svh, 560px);
+    /* Column reserved for the vertical photo rail beside the hero frame. */
+    --lp-rail-w: 9rem;
+  }
+}
+@media (min-width: 1024px) {
+  .lp-gallery {
+    --lp-rail-w: clamp(9.5rem, 12vw, 11rem);
   }
 }
 .lp-gallery .cine-gallery__frame {
@@ -96,6 +103,48 @@
   object-fit: contain;
   border-radius: var(--lp-radius-media);
   background: transparent;
+}
+/* The photo rail lives in the empty dark to the right of the frame: the matte
+   stops clipping on md+ and the photo viewport clips itself instead, so the
+   hero keeps its exact size, position and object-contain fit. */
+@media (min-width: 768px) {
+  .lp-gallery .cine-gallery__frame {
+    width: min(calc(var(--g-h) * 1.5), calc(100% - var(--lp-rail-w) - 1.5rem));
+    overflow: visible;
+  }
+  .lp-gallery [data-gallery-viewport] {
+    border-radius: var(--lp-radius-media);
+  }
+}
+.lp-rail {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 1.5rem);
+  width: var(--lp-rail-w, 9rem);
+  max-height: var(--g-h);
+}
+/* Hero loading plate: the frame's own dark ground, breathing until the
+   full-size photo decodes. Opacity only, so it never repaints the matte. */
+.lp-hero-load {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--lp-radius-media);
+  background: linear-gradient(180deg, hsl(214 26% 16%), hsl(220 30% 8%));
+  animation: lp-hero-breathe 1.6s ease-in-out infinite alternate;
+}
+@keyframes lp-hero-breathe {
+  from { opacity: 1; }
+  to { opacity: 0.62; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-hero-load { animation: none; }
+}
+html.low-data .lp-hero-load { animation: none; }
+/* The plate is the hero's loading state; the generic pending rule would paint
+   a flat muted tile over it (and flash light on the dark stage). */
+.lp-gallery img[data-listing-hero][data-pending="true"] {
+  background-color: transparent;
+  animation: none;
 }
 .lp-gallery .cine-gallery__frame [role="tablist"] {
   margin-top: 0.875rem;

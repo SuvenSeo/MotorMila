@@ -10,6 +10,8 @@ import {
   type ImportFuelType,
 } from "@/lib/importTaxModel";
 import { useAppPreferences } from "@/lib/appPreferences";
+import { Badge } from "@/components/ui/badge";
+import { Chip } from "@/components/ui/chip";
 
 const FUEL_OPTIONS: { value: ImportFuelType; label: string }[] = [
   { value: "petrol", label: "Petrol" },
@@ -19,6 +21,9 @@ const FUEL_OPTIONS: { value: ImportFuelType; label: string }[] = [
 ];
 // Labels render through t(`fuel.${value}`, label).
 
+const INPUT_CLASS =
+  "h-9 rounded-control border border-border bg-surface-2 px-3 text-caption font-semibold tabular-nums text-foreground outline-none transition-colors duration-short ease-standard placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring";
+
 function HybridTaxAdvantageCallout({ engineCapacity, fuelType }: { engineCapacity: number; fuelType: ImportFuelType }) {
   const { t } = useAppPreferences();
   const location = useLocation();
@@ -27,11 +32,11 @@ function HybridTaxAdvantageCallout({ engineCapacity, fuelType }: { engineCapacit
   const atCliff = isAtHybridExciseCliff(engineCapacity);
 
   return (
-    <div className="flex gap-2 rounded-2xl border border-deal-good/20 bg-deal-good/[0.06] p-3">
+    <div className="flex gap-2 rounded-control border border-deal-good/20 bg-deal-good/[0.06] p-3">
       <Leaf className="mt-0.5 h-3.5 w-3.5 shrink-0 text-deal-good-text" aria-hidden="true" />
       <div className="min-w-0 space-y-1.5">
         <p className="text-caption font-semibold text-deal-good-text">{t("taxBreakdown.hybridTitle", "Hybrid tax advantage")}</p>
-        <p className="text-caption leading-relaxed text-muted-foreground">
+        <p className="text-caption leading-relaxed text-label-2">
           {t(
             "taxBreakdown.hybridBody",
             "Hybrid excise is charged per cm³ in capacity bands. At {cliff} cc the rate is Rs. {rate}/cc — one cc over moves to Rs. {rateAbove}/cc, stepping excise up by {stepUp} on this model. At the cliff, hybrid saves {saving} in excise alone vs petrol (Rs. {petrolRate}/cc).",
@@ -97,44 +102,35 @@ export function TaxBreakdown({
   const showHybridAdvantage = fuelType === "hybrid" || (effectiveCc != null && isAtHybridExciseCliff(effectiveCc));
 
   return (
-    <div className="page-panel space-y-4 rounded-xl p-6">
-      <div className="flex flex-wrap items-center gap-2">
-        <h3 className="field-label text-foreground">{t("taxBreakdown.title", "Import duty and tax")}</h3>
-        <span className="rounded-2xl border border-primary/20 bg-primary/10 px-2 py-0.5 text-caption font-mono font-bold text-primary-bright">
-          {t("taxBreakdown.indicative", "Indicative")}
-        </span>
+    <div className="rounded-card border border-border bg-surface-1 p-5 shadow-e1 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-caption font-semibold uppercase tracking-caps text-label-2">{t("taxBreakdown.title", "Import duty and tax")}</h3>
+        <Badge variant="info">{t("taxBreakdown.indicative", "Indicative")}</Badge>
       </div>
 
       {/* Fuel type + EV power input */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex gap-1" role="group" aria-label={t("common.fuel", "Fuel")}>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="flex gap-1.5" role="group" aria-label={t("common.fuel", "Fuel")}>
           {FUEL_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => setFuelType(option.value)}
-              className={`rounded-full border px-2.5 py-1 text-caption font-semibold transition-colors ${
-                fuelType === option.value
-                  ? "border-primary/25 bg-primary/10 text-primary-bright"
-                  : "border-border text-muted-foreground hover:text-foreground"
-              }`}
-            >
+            <Chip key={option.value} selected={fuelType === option.value} onClick={() => setFuelType(option.value)}>
               {t(`fuel.${option.value}`, option.label)}
-            </button>
+            </Chip>
           ))}
         </div>
         {fuelType === "electric" && (
-          <label className="flex items-center gap-2 text-caption text-muted-foreground">
+          <label className="flex items-center gap-2 text-caption text-label-2">
             {t("taxBreakdown.motorPower", "Motor power")}
-            <input
-              type="number"
-              min={0}
-              value={motorKw}
-              onChange={(e) => setMotorKw(Number(e.target.value))}
-              className="w-20 rounded-full border border-border bg-surface px-2 py-1 text-caption font-semibold text-foreground outline-none focus:ring-1 focus:ring-primary/50 num"
-              aria-label={t("taxBreakdown.motorPowerAria", "Motor power in kilowatts")}
-            />
-            kW
+            <span className="relative inline-flex items-center">
+              <input
+                type="number"
+                min={0}
+                value={motorKw}
+                onChange={(e) => setMotorKw(Number(e.target.value))}
+                className={`${INPUT_CLASS} w-24 pr-9`}
+                aria-label={t("taxBreakdown.motorPowerAria", "Motor power in kilowatts")}
+              />
+              <span aria-hidden className="pointer-events-none absolute right-3 text-caption text-label-2">kW</span>
+            </span>
           </label>
         )}
       </div>
@@ -142,69 +138,70 @@ export function TaxBreakdown({
       {/* CC input — the listing's capacity may be unknown (or a scrape
           artifact); duty is per-cc so we ask instead of assuming 1,500 cc. */}
       {!knownCc && (
-        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-surface p-3">
-          <label htmlFor="tax-cc-input" className="text-caption font-medium text-muted-foreground">
+        <div className="mt-3 rounded-control border border-border bg-surface-2/60 p-3">
+          <label htmlFor="tax-cc-input" className="text-caption font-medium text-label-2">
             {t("taxBreakdown.engineCapacity", "Engine capacity")}
           </label>
-          <input
-            id="tax-cc-input"
-            type="number"
-            min={1}
-            value={ccInput}
-            onChange={(e) => setCcInput(e.target.value)}
-            placeholder={t("taxBreakdown.ccPlaceholder", "e.g. 1496")}
-            className="w-28 rounded-full border border-border bg-card px-3 py-1.5 text-caption font-semibold text-foreground outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-primary/50 num"
-            aria-describedby="tax-cc-hint"
-          />
-          <span className="text-caption text-muted-foreground">cc</span>
-          <p id="tax-cc-hint" className="w-full text-caption text-muted-foreground">
+          <div className="mt-1.5 flex items-center gap-2">
+            <input
+              id="tax-cc-input"
+              type="number"
+              min={1}
+              value={ccInput}
+              onChange={(e) => setCcInput(e.target.value)}
+              placeholder={t("taxBreakdown.ccPlaceholder", "e.g. 1496")}
+              className={`${INPUT_CLASS} w-28`}
+              aria-describedby="tax-cc-hint"
+            />
+            <span className="text-caption text-label-2">cc</span>
+          </div>
+          <p id="tax-cc-hint" className="mt-1.5 text-caption leading-relaxed text-label-2">
             {t("taxBreakdown.ccHint", "This listing doesn't carry a verified engine capacity — enter it to get an indicative duty figure.")}
           </p>
         </div>
       )}
 
       {effectiveCc == null ? (
-        <p className="text-caption text-muted-foreground">
+        <p className="mt-3 text-caption text-label-2">
           {t("taxBreakdown.ccPrompt", "Enter the engine capacity above to see the indicative import-duty breakdown.")}
         </p>
       ) : (
         <>
-      <div className="space-y-3">
-        <div className="flex justify-between border-b border-border pb-2 text-caption text-muted-foreground">
-          <span>{t("taxBreakdown.base", "Base Value (CIF est.)")}</span>
-          <span className="font-medium text-foreground num">{formatPrice(price)}</span>
-        </div>
+          <dl className="mt-4 border-t border-separator">
+            <div className="flex items-baseline justify-between gap-3 border-b border-separator py-2.5 text-caption">
+              <dt className="text-label-2">{t("taxBreakdown.base", "Base Value (CIF est.)")}</dt>
+              <dd className="num font-semibold text-foreground">{formatPrice(price)}</dd>
+            </div>
 
-        {result.lines.map((line) => (
-          <div key={line.key} className="flex justify-between gap-3 text-caption text-muted-foreground">
-            <span>
-              {line.label}
-              {line.note && <span className="mt-0.5 block text-caption text-muted-foreground num">{line.note}</span>}
-            </span>
-            <span className="shrink-0 font-medium text-foreground num">{formatPrice(line.amount)}</span>
-          </div>
-        ))}
-      </div>
+            {result.lines.map((line) => (
+              <div key={line.key} className="flex items-baseline justify-between gap-3 border-b border-separator py-2.5 text-caption">
+                <dt className="min-w-0 text-label-2">
+                  {line.label}
+                  {line.note && <span className="num mt-0.5 block text-caption text-label-3">{line.note}</span>}
+                </dt>
+                <dd className="num shrink-0 font-semibold text-foreground">{formatPrice(line.amount)}</dd>
+              </div>
+            ))}
+          </dl>
 
-      {showHybridAdvantage && <HybridTaxAdvantageCallout engineCapacity={effectiveCc} fuelType={fuelType} />}
+          {showHybridAdvantage && <div className="mt-3"><HybridTaxAdvantageCallout engineCapacity={effectiveCc} fuelType={fuelType} /></div>}
 
-      <div className="space-y-2 border-t border-border pt-4">
-        <div className="flex items-center justify-between rounded-xl border border-border bg-surface p-3">
-          <span className="text-caption font-medium text-muted-foreground">{t("taxBreakdown.totalTax", "Total Est. Taxes")}</span>
-          <span className="text-footnote font-bold text-primary num">+{formatPrice(result.totalTax)}</span>
-        </div>
-
-        <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/10 p-4">
-          <span className="text-caption font-semibold text-primary-bright">{t("taxBreakdown.landed", "Estimated landed cost")}</span>
-          <span className="text-callout font-bold tracking-tight text-foreground num">{formatPrice(result.totalOnRoad)}</span>
-        </div>
-      </div>
+          <dl className="mt-3 space-y-2 border-t border-separator pt-3">
+            <div className="flex items-baseline justify-between gap-3 text-caption">
+              <dt className="text-label-2">{t("taxBreakdown.totalTax", "Total Est. Taxes")}</dt>
+              <dd className="num text-callout font-semibold text-primary">+{formatPrice(result.totalTax)}</dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-3">
+              <dt className="text-caption font-semibold text-label-2">{t("taxBreakdown.landed", "Estimated landed cost")}</dt>
+              <dd className="num font-display text-title3 font-semibold tracking-tight text-foreground">{formatPrice(result.totalOnRoad)}</dd>
+            </div>
+          </dl>
         </>
       )}
 
-      <div className="flex gap-2 rounded-2xl border border-deal-amber/30 bg-deal-amber/10 p-3">
-        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-deal-amber" />
-        <p className="text-caption leading-relaxed text-muted-foreground">
+      <div className="mt-4 flex gap-2 rounded-control border border-deal-caution/30 bg-deal-caution/10 p-3">
+        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-deal-caution-text" aria-hidden="true" />
+        <p className="text-caption leading-relaxed text-label-2">
           {t(
             "taxBreakdown.disclaimer",
             "Indicative model of the post-2025 import regime (per-cm³/per-kW excise bands, luxury tax above the CIF threshold, VAT on the duty-inclusive value). Band rates last reviewed {date} — actual duty changes by gazette, so verify with Sri Lanka Customs or your clearing agent before committing to an import.",
