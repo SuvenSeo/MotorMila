@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowUpRight, Check, Info, Link2, Plus, Search, X } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Info, Link2, Plus, Search, X } from "lucide-react";
 import { CineHeader } from "@/components/CineHeader";
 import { visuals } from "@/lib/visualAssets";
 import { Button } from "@/components/ui/button";
@@ -31,10 +31,6 @@ import { AnimatePresence, motion } from "motion/react";
 import { duration, ease, spring, useReducedMotionOrLowData } from "@/lib/motion";
 import "@/styles/listing-motion.css";
 import { SellSpeedBadge } from "@/components/SellSpeedBadge";
-import { VehicleThumbnail } from "@/components/VehicleThumbnail";
-import { silhouetteFor } from "@/lib/vehicleSilhouette";
-import { computeDealBadge } from "@/lib/dealBadge";
-import { DealBadge } from "@/components/listing/DealBadge";
 import {
   COMPARE_ROWS,
   bestIndexes,
@@ -308,31 +304,18 @@ export default function Compare() {
           </span>
         ),
       }),
-      ...listings.map((l, index) => {
-        const deal = computeDealBadge({ askingLkr: askingPrice(l), fmvLkr: fmvFor(l, fmvById[Number(l.id)]), verdict: compareVerdict(l, fmvById[Number(l.id)]) });
-        return columnHelper.display({
+      ...listings.map((l, index) =>
+        columnHelper.display({
           id: `l-${l.id}`,
           header: () => (
-            <div className="content-in flex min-w-0 flex-col gap-3 normal-case tracking-normal">
-              {!lowData ? (
-                <div className="relative aspect-[16/10] overflow-hidden rounded-control bg-surface-2">
-                  <VehicleThumbnail
-                    src={l.thumbnail_url ?? null}
-                    listingId={Number(l.id)}
-                    alt={`${l.make} ${l.model}`}
-                    source={l.source}
-                    silhouette={silhouetteFor(l)}
-                    sizes="(max-width: 767px) 60vw, 16rem"
-                    className="h-full w-full object-cover"
-                  />
-                </div>
+            <div className="content-in flex min-w-0 flex-col gap-2.5 normal-case tracking-normal">
+              {!lowData && l.thumbnail_url ? (
+                <img src={l.thumbnail_url} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" width={480} height={360} className="aspect-[4/3] w-full rounded-control bg-surface-2 object-cover" />
               ) : null}
               <div className="flex items-start justify-between gap-1">
-                <Link to={`/listing/${l.id}`} className="min-w-0 no-underline">
-                  <span className="block font-display text-callout font-semibold leading-snug tracking-tight text-foreground transition-colors duration-short hover:text-primary">
-                    {l.year} {l.make} {l.model}
-                  </span>
-                  {l.variant ? <span className="mt-0.5 block text-footnote text-label-2">{l.variant}</span> : null}
+                <Link to={`/listing/${l.id}`} className="min-w-0 text-body font-semibold leading-snug text-foreground no-underline transition-colors duration-short hover:text-primary">
+                  {l.year} {l.make} {l.model}
+                  {l.variant ? <span className="block text-footnote font-normal text-label-2">{l.variant}</span> : null}
                 </Link>
                 <Button
                   type="button"
@@ -340,17 +323,11 @@ export default function Compare() {
                   size="icon-sm"
                   onClick={() => removeId(Number(l.id))}
                   aria-label={t("compareTray.removeAria", "Remove {name} from compare", { name: [l.make, l.model].filter(Boolean).join(" ") })}
-                  className="-mr-1 mt-0.5 shrink-0 text-label-2"
+                  className="-mr-1 -mt-1 text-label-2"
                 >
                   <X aria-hidden />
                 </Button>
               </div>
-              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                <p className="cine-card__price num text-title3 leading-none text-foreground">
-                  {askingPrice(l) !== null ? lkr(askingPrice(l)) : t("comparePage.priceOnRequest", "Price not listed")}
-                </p>
-              </div>
-              {deal.kind !== "none" ? <DealBadge badge={deal} tone="soft" className="self-start" /> : null}
               <SellSpeedBadge make={l.make} model={l.model} className="self-start" />
             </div>
           ),
@@ -359,14 +336,13 @@ export default function Compare() {
             const isBest = highlight && r.best.has(index);
             return (
               <span className={cn("block", isBest && "font-semibold text-deal-good-text")}>
-                {isBest ? <Check aria-hidden className="mr-1 inline h-3 w-3 align-[-0.1em]" /> : null}
                 {renderCell(r.def.key, l)}
                 {isBest ? <span className="sr-only"> {t("comparePage.bestSr", "(best)")}</span> : null}
               </span>
             );
           },
-        });
-      }),
+        }),
+      ),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [listings, fmvById, highlight, lowData, t],
@@ -525,7 +501,7 @@ export default function Compare() {
 
         {!error && enough && (
           <div className="content-in">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-card border border-border bg-surface-1 px-4 py-2 shadow-e1">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
               <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
                 <label className={switchRow}>
                   <Switch checked={highlight} onCheckedChange={setHighlight} size="sm" />
@@ -557,10 +533,10 @@ export default function Compare() {
                           key={header.id}
                           scope="col"
                           className={cn(
-                            "border-b border-border bg-surface-1 p-3 text-left align-top font-normal sm:p-4",
+                            "border-b border-separator bg-surface-1 p-3 text-left align-top font-normal sm:p-4",
                             i === 0
-                              ? "sticky left-0 z-[2] w-24 min-w-24 border-r border-border/60 sm:w-36 sm:min-w-36"
-                              : "min-w-44 sm:min-w-56",
+                              ? "sticky left-0 z-[1] w-28 min-w-28 sm:w-40 sm:min-w-40"
+                              : "min-w-40 sm:min-w-48",
                           )}
                         >
                           {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
@@ -592,26 +568,16 @@ export default function Compare() {
                               key={cell.id}
                               scope="row"
                               className={cn(
-                                "sticky left-0 z-[1] border-b border-r border-border/60 bg-surface-1 p-3 text-left align-top transition-colors duration-short sm:px-4",
+                                "sticky left-0 z-[1] border-b border-separator bg-surface-1 p-3 text-left text-footnote font-semibold transition-colors duration-short sm:px-4",
                                 tint ? "text-foreground" : "text-label-2",
                               )}
                             >
                               {/* Highlight tint fades (opacity) instead of snapping. */}
-                              <span aria-hidden className="cmp-tint bg-primary/[0.06]" data-on={tint ? "true" : "false"} />
-                              <span className="relative flex items-start gap-1.5">
-                                {tint ? <span aria-hidden className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-primary" /> : null}
-                                <span className="text-caption font-semibold uppercase tracking-caps">{flexRender(cell.column.columnDef.cell, cell.getContext())}</span>
-                              </span>
+                              <span aria-hidden className="cmp-tint bg-primary/[0.07]" data-on={tint ? "true" : "false"} />
+                              <span className="relative">{flexRender(cell.column.columnDef.cell, cell.getContext())}</span>
                             </th>
                           ) : (
-                            <td
-                              key={cell.id}
-                              className={cn(
-                                "num relative border-b border-border/60 p-3 align-top text-body sm:px-4",
-                                tint ? "text-foreground" : "",
-                                highlight && r.best.has(i - 1) && "bg-deal-good/[0.07]",
-                              )}
-                            >
+                            <td key={cell.id} className={cn("num relative border-b border-separator p-3 align-top text-body sm:px-4", tint ? "text-foreground" : "")}>
                               <span aria-hidden className="cmp-tint bg-primary/[0.04]" data-on={tint ? "true" : "false"} />
                               <span className="relative block">{flexRender(cell.column.columnDef.cell, cell.getContext())}</span>
                             </td>
