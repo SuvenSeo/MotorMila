@@ -1,0 +1,21 @@
+name: Publish showroom test APK
+on:
+  push:
+    branches: [test-apk/showroom-1821e3fc]
+permissions:
+  contents: write
+jobs:
+  prerelease:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 2
+      - name: Publish verified test APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          apk=artifacts/android/MotorMila-showroom-debug.apk
+          echo "1821e3fcd7888116b9ed3c3e9d2ca649719aa1d595f5139ddb606c033fa1aa23  $apk" | sha256sum -c -
+          gh release create showroom-test-1821e3fc "$apk" --target "$(git rev-parse HEAD^)" --prerelease --latest=false --title "MotorMila Showroom · Android test APK" --notes "Android 8+ test build of the redesigned Home, Search and listing detail screens. Install the attached APK alongside the production app. Package: lk.motormila.app.debug. Version: 1.9.2-debug (24)."
