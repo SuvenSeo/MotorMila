@@ -51,7 +51,9 @@ jobs:
       - name: Run Robo test on virtual Pixel
         # Robo test crawls the app automatically for 3 minutes on a virtual
         # Pixel 7 (API 34). Catches crashes, ANRs, and broken navigation
-        # without writing instrumentation tests.
+        # without writing instrumentation tests. Results go to Test Lab's
+        # default bucket: the service account cannot create a custom one on
+        # the Spark plan ("Permission denied while creating bucket").
         run: |
           set -o pipefail
           gcloud firebase test android run \
@@ -60,7 +62,6 @@ jobs:
             --app "$APK" \
             --device model=panther,version=34,locale=en,orientation=portrait \
             --timeout 180s \
-            --results-bucket motormila-test-lab \
             2>&1 | tee test-lab-output.txt
 
       - name: Check for crashes
