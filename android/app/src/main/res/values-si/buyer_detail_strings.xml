@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="buyer_comparison_evidence">මිල සැසඳුවේ කෙසේද?</string>
+    <string name="buyer_comparison_loading">සමාන දැන්වීම් පරීක්ෂා කරමින්…</string>
+    <string name="buyer_no_comparison">මිල සැසඳීමක් නොමැත.</string>
+    <string name="buyer_last_change">අවසන් වරට සටහන් වූ මිල වෙනස: %1$s සිට %2$s දක්වා</string>
+    <string name="buyer_source_unavailable">මුල් දැන්වීම නොමැත · %1$s</string>
+    <string name="buyer_lease_example">මෙය ගෙවීම් උදාහරණයක් මිස ණය දෙන ආයතනයක මිල ගණනක් නොවේ. මූලික ගෙවීම, පොලී අනුපාතය සහ කාලය වෙනස් කළ හැක.</string>
+    <string name="buyer_last_known_ask">අවසන් වරට දන්නා ඉල්ලුම් මිල: %1$s</string>
+    <string name="buyer_saved_at_price">සුරැකූ විට මිල: %1$s</string>
+    <string name="buyer_saved_checked">අවසන් පරීක්ෂාව: %1$s</string>
+    <string name="buyer_saved_unchecked">පරීක්ෂා කළ දිනය නොමැත</string>
+    <string name="buyer_no_recorded_asks">තවමත් ඉල්ලුම් මිලක් සටහන් වී නැත.</string>
+    <string name="buyer_expanded">විවෘතයි</string>
+    <string name="buyer_collapsed">හකුළා ඇත</string>
+    <string name="buyer_lower_rate">පොලී අනුපාතය අඩු කරන්න</string>
+    <string name="buyer_raise_rate">පොලී අනුපාතය වැඩි කරන්න</string>
+    <string name="buyer_back">ආපසු යන්න</string>
+    <string name="buyer_saved_vehicles_count">සුරැකි වාහන (%1$d)</string>
+    <string name="buyer_saved_vehicles">සුරැකි වාහන</string>
+</resources>

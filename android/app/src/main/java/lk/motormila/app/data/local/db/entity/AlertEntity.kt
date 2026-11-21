@@ -1,15 +1,12 @@
 package lk.motormila.app.data.local.db.entity
 
 import androidx.room.Entity
-import androidx.room.PrimaryKey
 
-/**
- * Offline mirror of a server alert. [dirty] marks local active-toggles that the
- * backend cannot persist yet (no PATCH /alerts) for reconciliation on refresh.
- */
-@Entity(tableName = "alerts")
+/** Confirmed server rule; owner is the normalized account email, never a bearer. */
+@Entity(tableName = "alerts", primaryKeys = ["owner", "id"])
 data class AlertEntity(
-    @PrimaryKey val id: Int,
+    val owner: String,
+    val id: Int,
     val make: String? = null,
     val model: String? = null,
     val maxPriceLkr: Double? = null,
@@ -20,5 +17,6 @@ data class AlertEntity(
     val notifyChannels: String? = null,
     val active: Boolean = true,
     val createdAt: String? = null,
-    val dirty: Boolean = false,
+    val deliveryMode: String? = null,
+    val quietHoursEnabled: Boolean? = null,
 )

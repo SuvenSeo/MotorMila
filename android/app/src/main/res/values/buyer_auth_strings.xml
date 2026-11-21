@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="buyer_auth_welcome">Welcome back</string>
+    <string name="buyer_auth_sign_in">Sign in</string>
+    <string name="buyer_auth_sign_up">Sign up</string>
+    <string name="buyer_auth_create_account">Create account</string>
+    <string name="buyer_auth_session_expired">Your session for %1$s has expired. Sign in again.</string>
+    <string name="buyer_auth_last_account">Last signed in as %1$s.</string>
+    <string name="buyer_auth_name">Name</string>
+    <string name="buyer_auth_email">Email</string>
+    <string name="buyer_auth_password">Password</string>
+    <string name="buyer_auth_hide_password">Hide password</string>
+    <string name="buyer_auth_show_password">Show password</string>
+    <string name="buyer_auth_invite">Invite code</string>
+    <string name="buyer_auth_invite_optional">Optional. Leave blank for a %1$d-day Pro trial.</string>
+    <string name="buyer_auth_invite_required">Enter the code from your admin or dealer.</string>
+    <string name="buyer_auth_start_trial">Start %1$d-day trial</string>
+    <string name="buyer_auth_retry">Try again</string>
+    <string name="buyer_auth_retry_online">Try again when online</string>
+    <string name="buyer_auth_reset_web">Reset password on the website</string>
+    <string name="buyer_auth_reset_unavailable">Could not open the reset page. Open this address in a browser: %1$s</string>
+    <string name="buyer_auth_guest">Browse as a guest</string>
+</resources>

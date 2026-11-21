@@ -7,6 +7,9 @@ import kotlinx.serialization.Serializable
  * Alert + notification DTOs. Backend: endpoints/alerts.py, notifications.py.
  */
 @Serializable
+data class AlertPreferencesDto(@SerialName("explicit_alert_channels") val explicitChannels: Boolean = false)
+
+@Serializable
 data class AlertDto(
     val id: Int = 0,
     @SerialName("user_token") val userToken: String = "",
@@ -20,7 +23,7 @@ data class AlertDto(
     @SerialName("notify_channels") val notifyChannels: String? = null,
     @SerialName("delivery_mode") val deliveryMode: String? = null,
     @SerialName("quiet_hours_enabled") val quietHoursEnabled: Boolean? = null,
-    val active: Boolean = true,
+    @kotlinx.serialization.Required val active: Boolean = true,
     @SerialName("created_at") val createdAt: String? = null,
 )
 
@@ -37,6 +40,9 @@ data class CreateAlertRequestDto(
     @SerialName("delivery_mode") val deliveryMode: String? = null,
     @SerialName("quiet_hours_enabled") val quietHoursEnabled: Boolean? = null,
 )
+
+@Serializable
+data class AlertActiveDto(val active: Boolean)
 
 @Serializable
 data class AlertChannelsUpdateDto(
@@ -88,5 +94,5 @@ data class NotificationDto(
 
 @Serializable
 data class MarkAllReadDto(
-    @SerialName("marked_read") val markedRead: Int = 0,
+    @kotlinx.serialization.Required @SerialName("marked_read") val markedRead: Int = 0,
 )

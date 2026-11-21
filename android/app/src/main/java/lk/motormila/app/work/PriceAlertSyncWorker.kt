@@ -103,9 +103,11 @@ class PriceAlertSyncWorker(
         val api = entryPoint.api()
         val db = entryPoint.db()
         val notifications = entryPoint.notifications()
-        val alerts = runCatching { db.alertDao().getAll().filter { it.active } }.getOrElse { emptyList() }
+        val alerts = runCatching { db.alertDao().getAll(session.email.trim().lowercase()).filter {
+            it.active && (it.notifyChannels.isNullOrBlank() || "push" in it.notifyChannels.split(',').map(String::trim))
+        } }.getOrElse { emptyList() }
         if (alerts.isEmpty()) return Result.success()
-        val match = runCatching { api.matchAlerts() }.getOrElse { e ->
+        val match = runCatching { api.matchAlerts(lk.motormila.app.core.network.AlertSessionGuard(session.token)) }.getOrElse { e ->
             if (e is kotlin.coroutines.cancellation.CancellationException) throw e
             return alertRetryDecision((e as? retrofit2.HttpException)?.code(), runAttemptCount, MAX_ATTEMPTS)
         }
@@ -113,6 +115,7 @@ class PriceAlertSyncWorker(
         val seenEditor = seen.edit()
         val res = applicationContext.resources
         match.results.forEach { row ->
+            if (entryPoint.sessionStore().cachedToken != session.token) return Result.success()
             if (row.matchingCount <= 0 || alerts.none { it.id == row.alertId }) return@forEach
             // Dedupe by listing id: notify only for listings this alert has
             // never notified about (a count change alone is not news).

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="buyer_alert_choose_channel">அறிவிப்பைப் பெறக் குறைந்தது ஒரு வழியைத் தேர்ந்தெடுக்கவும்.</string>
+    <string name="buyer_alert_legacy_channels">இந்தச் சேவையகத்தில் தேர்ந்தெடுத்த இலவச வழிகளைச் சேமிக்க முடியாது. இயல்புநிலையைப் பயன்படுத்த, செயலிக்குள் மற்றும் Push மட்டும் தேர்ந்தெடுத்து மீண்டும் சேமிக்கவும்.</string>
+    <string name="buyer_alert_change_unconfirmed">மாற்றத்தைச் சேவையகம் உறுதிப்படுத்தவில்லை. மீண்டும் முயலும் முன் புதுப்பித்து விதியைச் சரிபார்க்கவும்.</string>
+    <string name="buyer_alert_pending">சேவையக உறுதிப்படுத்தலுக்காகக் காத்திருக்கிறது…</string>
+    <string name="buyer_alert_empty">இதுவரை அறிவிப்பு விதிகள் இல்லை</string>
+    <string name="buyer_alert_empty_body">புதிய பொருத்தங்களை அறிய மேலே ஒரு விதியை உருவாக்கவும்.</string>
+    <string name="buyer_alert_rules">அறிவிப்பு விதிகள் (%1$d)</string>
+    <string name="buyer_alert_push_blocked">இந்தச் சாதனத்தில் Push முடக்கப்பட்டுள்ளது. செயலிக்குள் தேர்ந்தெடுக்கலாம் அல்லது அமைப்புகளில் அறிவிப்புகளை இயக்கலாம்.</string>
+    <string name="buyer_inbox_title">உள்வரும் செய்திகள்</string>
+    <string name="buyer_inbox_mark_all">அனைத்தையும் படித்ததாகக் குறிக்கவும்</string>
+    <string name="buyer_inbox_signed_out">உங்கள் அறிவிப்புகளைக் காண உள்நுழையவும்.</string>
+    <string name="buyer_inbox_empty">இதுவரை அறிவிப்புகள் இல்லை</string>
+    <string name="buyer_inbox_empty_body">புதிய பொருத்தங்களும் விலை மாற்றங்களும் இங்கே தோன்றும்.</string>
+    <string name="buyer_inbox_listing">விளம்பரம்</string>
+    <string name="buyer_inbox_alert">அறிவிப்பு</string>
+    <string name="buyer_inbox_read">படித்தது</string>
+    <string name="buyer_inbox_unread">படிக்காதது</string>
+</resources>

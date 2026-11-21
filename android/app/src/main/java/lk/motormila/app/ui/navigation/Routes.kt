@@ -34,6 +34,8 @@ data class Search(
     val plate: String? = null,
     /** Extra web-format filters (year/price/mileage/fuel/…), see SearchArgs.WEB_FILTER_KEYS. */
     val filters: String? = null,
+    /** Nonempty only while adding a single vehicle to an existing comparison. */
+    val compareSeedIds: List<Int> = emptyList(),
 )
 
 @Serializable

@@ -4,116 +4,87 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import lk.motormila.app.core.common.AppError
 import lk.motormila.app.core.network.ErrorMapper
+import lk.motormila.app.core.network.messageRes
 import lk.motormila.app.domain.model.AppNotification
 import lk.motormila.app.domain.repository.AlertsRepository
+import lk.motormila.app.domain.repository.AuthRepository
 
 data class NotificationsUiState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
+    val signedIn: Boolean = false,
     val items: List<AppNotification> = emptyList(),
-    val unreadCount: Int = 0,
     val offline: Boolean = false,
-    val error: String? = null,
-)
+    val error: Int? = null,
+) {
+    val unreadCount get() = items.count { !it.isRead }
+}
 
 sealed interface NotificationsUiEvent {
     data object Refresh : NotificationsUiEvent
-    data class MarkRead(val id: String) : NotificationsUiEvent
+    data class MarkRead(val id: Int) : NotificationsUiEvent
     data object MarkAllRead : NotificationsUiEvent
-    data object DismissError : NotificationsUiEvent
 }
 
 @HiltViewModel
 class NotificationsViewModel @Inject constructor(
-    // Inbox rows are served by AlertsRepository (no NotificationsRepository exists).
     private val repository: AlertsRepository,
+    auth: AuthRepository,
 ) : ViewModel() {
-
     private val _state = MutableStateFlow(NotificationsUiState())
-    val state: StateFlow<NotificationsUiState> = _state.asStateFlow()
+    val state = _state.asStateFlow()
+    private val actions = Mutex()
+    private var accountJob = SupervisorJob(viewModelScope.coroutineContext[Job])
 
     init {
         viewModelScope.launch {
-            repository.observeNotifications()
-                .catch { e ->
-                    val mapped = ErrorMapper.map(e)
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            isRefreshing = false,
-                            offline = mapped is AppError.Network,
-                            error = mapped.message,
-                        )
-                    }
-                }
-                .collect { items ->
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            isRefreshing = false,
-                            offline = false,
-                            items = items,
-                            unreadCount = items.count { n -> !n.isRead },
-                        )
-                    }
-                }
+            auth.session().map { it?.token }.distinctUntilChanged().collect { identity ->
+                accountJob.cancel()
+                accountJob = SupervisorJob(viewModelScope.coroutineContext[Job])
+                _state.value = NotificationsUiState(isLoading = identity != null, signedIn = identity != null)
+                if (identity != null) onEvent(NotificationsUiEvent.Refresh)
+            }
         }
     }
 
     fun onEvent(event: NotificationsUiEvent) {
-        when (event) {
-            NotificationsUiEvent.Refresh -> refresh()
-            is NotificationsUiEvent.MarkRead -> viewModelScope.launch {
-                // Screen/NavGraph carry ids as String; domain ids are Int.
-                // Non-numeric ids are ignored (graph drops them too).
-                val id = event.id.toIntOrNull()
-                if (id == null) {
-                    _state.update { it.copy(error = "Couldn't open that notification.") }
-                    return@launch
-                }
-                runCatching { repository.markNotificationRead(id) }
-                    .onFailure { e ->
-                        val mapped = ErrorMapper.map(e)
-                        _state.update {
-                            it.copy(offline = mapped is AppError.Network, error = mapped.message)
+        if (!_state.value.signedIn) return
+        CoroutineScope(viewModelScope.coroutineContext + accountJob).launch {
+            actions.withLock {
+                _state.update { it.copy(isRefreshing = !it.isLoading, error = null) }
+                try {
+                    when (event) {
+                        NotificationsUiEvent.Refresh -> {
+                            val rows = repository.notifications(50)
+                            _state.update { it.copy(items = rows) }
+                        }
+                        is NotificationsUiEvent.MarkRead -> {
+                            repository.markNotificationRead(event.id)
+                            _state.update { it.copy(items = it.items.map { n -> if (n.id == event.id) n.copy(isRead = true) else n }) }
+                        }
+                        NotificationsUiEvent.MarkAllRead -> {
+                            repository.markAllNotificationsRead()
+                            _state.update { it.copy(items = it.items.map { n -> n.copy(isRead = true) }) }
                         }
                     }
-            }
-            NotificationsUiEvent.MarkAllRead -> viewModelScope.launch {
-                // Backend POST /notifications/read-all marks everything server-side
-                // in one call (previously marked rows one by one).
-                runCatching { repository.markAllNotificationsRead() }
-                    .onFailure { e ->
-                        val mapped = ErrorMapper.map(e)
-                        _state.update {
-                            it.copy(offline = mapped is AppError.Network, error = mapped.message)
-                        }
-                    }
-            }
-            NotificationsUiEvent.DismissError -> _state.update { it.copy(error = null, offline = false) }
-        }
-    }
-
-    private fun refresh() {
-        viewModelScope.launch {
-            _state.update { it.copy(isRefreshing = true, error = null, offline = false) }
-            // observeNotifications() re-emits from network; warm it here so pull-to-refresh settles.
-            runCatching { repository.notifications() }
-                .onFailure { e ->
+                    _state.update { it.copy(isLoading = false, isRefreshing = false, offline = false) }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
                     val mapped = ErrorMapper.map(e)
-                    _state.update {
-                        it.copy(offline = mapped is AppError.Network, error = mapped.message)
-                    }
+                    _state.update { it.copy(isLoading = false, isRefreshing = false, offline = mapped is AppError.Network, error = mapped.messageRes()) }
                 }
-            _state.update { it.copy(isRefreshing = false) }
+            }
         }
     }
 }

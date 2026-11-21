@@ -3,8 +3,6 @@ package lk.motormila.app.ui.home
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -21,26 +20,26 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import lk.motormila.app.R
-import lk.motormila.app.core.format.LkrFormat
 import lk.motormila.app.ui.components.MmIconButton
 import lk.motormila.app.ui.components.MmIconButtonStyle
 import lk.motormila.app.ui.theme.MmColors
 import lk.motormila.app.ui.theme.MmShapes
 import lk.motormila.app.ui.theme.MmSpacing
 import lk.motormila.app.ui.theme.MmType
-import lk.motormila.app.ui.theme.mmPress
+import lk.motormila.app.ui.theme.mmTappable
 
 /** Home top row: brand lockup (theme-aware artwork) + price-alerts button. */
 @Composable
@@ -70,49 +69,54 @@ fun HomeTopRow(onAlertsClick: () -> Unit, modifier: Modifier = Modifier) {
     }
 }
 
-/**
- * Calm hero: one confident display headline (40sp), one honest sub-line
- * (live count only when we actually have it), and a single search entry that
- * opens Search. The photographic hero moment lives below it (HomeFeaturedDeal).
- */
+/** The approved study's 132dp crop. It's editorial art, not a photo of a particular ad. */
 @Composable
-fun HomeHero(
-    totalListings: Int,
-    sourceCount: Int,
-    onSearchClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+internal fun BuyerHomeIntroduction(onSearchClick: () -> Unit) {
     val c = MmColors.current
     val t = MmType.current
-    Column(modifier.fillMaxWidth().padding(horizontal = MmSpacing.gutter)) {
-        Text(stringResource(R.string.mm_home_title), style = t.displayL, color = c.textPrimary)
-        Spacer(Modifier.height(10.dp))
-        val sub = when {
-            totalListings > 0 && sourceCount > 0 ->
-                stringResource(R.string.mm_home_sub_counts, LkrFormat.count(totalListings), sourceCount)
-            totalListings > 0 -> stringResource(R.string.mm_home_sub_count, LkrFormat.count(totalListings))
-            else -> stringResource(R.string.mm_home_sub)
+    val largeType = LocalDensity.current.fontScale >= 1.5f
+    Column(Modifier.fillMaxWidth()) {
+        Image(
+            painter = painterResource(R.drawable.buyer_home_studio),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            alignment = BiasAlignment(1f, 0.2f), // right 60%, as in buyer-study.html
+            modifier = Modifier.fillMaxWidth().height(if (largeType) 88.dp else 132.dp),
+        )
+        Column(Modifier.padding(start = MmSpacing.gutter, end = MmSpacing.gutter, top = 18.dp)) {
+            Text(stringResource(R.string.buyer_home_headline),
+                style = if (largeType) t.titleL else t.displayL, color = c.textPrimary,
+                modifier = Modifier.semantics { heading() })
+            if (!largeType) {
+                Spacer(Modifier.height(8.dp))
+                Text(stringResource(R.string.buyer_home_intro), style = t.bodyL, color = c.textSecondary)
+            }
         }
-        Text(sub, style = t.bodyL, color = c.textSecondary)
-        Spacer(Modifier.height(MmSpacing.xl))
-        val press = remember { MutableInteractionSource() }
-        val hint = stringResource(R.string.mm_home_search_hint)
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .mmPress(press)
-                .clip(MmShapes.pill)
-                .background(c.surfaceRaised)
-                .border(1.dp, c.outlineStrong, MmShapes.pill)
-                .clickable(interactionSource = press, indication = null, role = Role.Button, onClick = onSearchClick)
-                .semantics { contentDescription = hint }
-                .padding(horizontal = 18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Icon(Icons.Outlined.Search, null, tint = c.textSecondary, modifier = Modifier.size(22.dp))
-            Text(hint, style = t.bodyL, color = c.textTertiary, maxLines = 1)
+        Spacer(Modifier.height(16.dp))
+        BuyerHomeSearch(onSearchClick)
+        if (largeType) {
+            // Keep the action ahead of supporting copy when translations wrap to many lines.
+            Spacer(Modifier.height(8.dp))
+            Text(stringResource(R.string.buyer_home_intro), style = t.bodyL, color = c.textSecondary,
+                modifier = Modifier.padding(horizontal = MmSpacing.gutter))
         }
+    }
+}
+
+/** This is a route into Search, not a non-editable input pretending to hold a query. */
+@Composable
+internal fun BuyerHomeSearch(onClick: () -> Unit) {
+    val c = MmColors.current
+    Row(
+        modifier = Modifier.padding(horizontal = MmSpacing.gutter).fillMaxWidth()
+            .heightIn(min = 54.dp).clip(MmShapes.md).background(c.surfaceRaised)
+            .border(1.dp, c.outlineStrong, MmShapes.md)
+            .mmTappable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(Icons.Outlined.Search, null, tint = c.brandText, modifier = Modifier.size(22.dp))
+        Text(stringResource(R.string.buyer_home_search), style = MmType.current.titleS, color = c.textPrimary)
     }
 }

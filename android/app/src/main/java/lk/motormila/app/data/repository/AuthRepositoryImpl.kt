@@ -40,8 +40,10 @@ class AuthRepositoryImpl @Inject constructor(
     override fun session(): Flow<UserSession?> = sessionStore.observe()
 
     override suspend fun me(): UserSession? = withContext(io) {
+        val before = sessionStore.snapshot() ?: return@withContext null
         val dto = api.me().toUserDto()
         val token = sessionStore.cachedToken ?: return@withContext null
+        if (token != before.token || !dto.email.equals(before.email, ignoreCase = true)) return@withContext null
         val session = UserSession(
             email = dto.email,
             name = dto.name.ifBlank { null },
@@ -113,11 +115,13 @@ class AuthRepositoryImpl @Inject constructor(
         }
 
     override suspend fun logout(): Unit = withContext(io) {
+        val owner = sessionStore.snapshot()?.email?.trim()?.lowercase()
         // Unbind this device's push token while the bearer is still valid.
         runCatching { pushRegistrar.unregister() }
         runCatching { api.logout() }
         sessionStore.clear()
         authInterceptor.updateToken(null)
+        owner?.let { database.alertDao().clear(it) }
         // Stop background workers — otherwise they keep hitting /alerts/match
         // with a cleared token after logout.
         // (SnapshotRefreshWorker keeps running: public market data for guests too.)
@@ -126,9 +130,11 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun clearRejectedSession(rejectedToken: String?): Boolean = withContext(io) {
+        val owner = sessionStore.snapshot()?.email?.trim()?.lowercase()
         val cleared = sessionStore.clearIfRejected(rejectedToken)
         if (cleared) {
             authInterceptor.updateToken(null)
+            owner?.let { database.alertDao().clear(it) }
             runCatching { PriceAlertSyncWorker.cancel(context) }
             // Bearer is dead: rotate the FCM token so the server row prunes itself.
             runCatching { pushRegistrar.unregister() }
@@ -137,6 +143,7 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun deleteAccount(password: String?): Unit = withContext(io) {
+        val owner = sessionStore.snapshot()?.email?.trim()?.lowercase()
         val response = api.deleteAccount(
             lk.motormila.app.data.remote.dto.DeleteAccountRequestDto(password?.takeIf { it.isNotBlank() }),
         )
@@ -147,8 +154,8 @@ class AuthRepositoryImpl @Inject constructor(
         authInterceptor.updateToken(null)
         runCatching { PriceAlertSyncWorker.cancel(context) }
         runCatching { pushRegistrar.unregister() }
-        // Local caches tied to the account (alerts, watchlist) go too.
-        runCatching { database.clearAllTables() }
+        // The guest shortlist belongs to the device, not this account.
+        owner?.let { database.alertDao().clear(it) }
         Unit
     }
 

@@ -5,7 +5,7 @@ import lk.motormila.app.domain.model.Listing
 /** Pure helpers for the compare matrix (unit-tested). */
 object CompareLogic {
     /** Same cap as the Search compare tray (MAX_COMPARE_IDS) and the web (MAX_COMPARE = 4): up to 4 cars side by side. */
-    const val MAX = 4
+    const val MAX = COMPARE_CAPACITY
 
     /**
      * Merge the cars already in the tray with ids arriving from navigation.
@@ -50,7 +50,7 @@ object CompareLogic {
         }
         return listOf(
             row("price", items.map { format.price(it.priceLkr) }, items.map { it.priceLkr?.takeIf { p -> p > 0 } }, Best.LOW),
-            row("vsMarket", items.map { format.vsMarket(it.deltaVsMedianPct()) }, items.map { it.deltaVsMedianPct() }, Best.LOW),
+
             row("year", items.map { it.year?.toString() }, items.map { it.year?.toDouble() }, Best.HIGH),
             row("mileage", items.map { format.km(it.mileageKm) }, items.map { it.mileageKm?.takeIf { m -> m > 0 } }, Best.LOW),
             row("fuel", items.map { it.fuelType }),
@@ -68,5 +68,5 @@ object CompareLogic {
 interface CompareFormat {
     fun price(lkr: Double?): String?
     fun km(km: Double?): String?
-    fun vsMarket(pct: Double?): String?
+
 }

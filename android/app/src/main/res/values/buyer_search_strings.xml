@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="buyer_search_review_cta">Alert me to new matches</string>
+    <string name="buyer_search_rule_saved">Search alert saved</string>
+    <string name="buyer_search_pick_one">Choose one listing to add to your comparison.</string>
+    <string name="buyer_search_already_added">Already in your comparison. Choose another listing.</string>
+    <string name="buyer_search_review_title">Review search alert</string>
+    <string name="buyer_search_matches">The alert will match only these criteria:</string>
+    <string name="buyer_search_need_filter">Add a make, model, district or maximum price so the alert has something to match.</string>
+    <string name="buyer_search_not_matched">Only used in Search, not in this alert:</string>
+    <string name="buyer_search_delivery">Delivery: in-app matches and push on devices with notifications enabled. No email or chat messages.</string>
+    <string name="buyer_search_saving">Saving…</string>
+    <string name="buyer_search_sign_in">Sign in to continue</string>
+    <string name="buyer_search_confirm">Save with listed criteria only</string>
+    <string name="buyer_search_edit">Edit filters</string>
+    <string name="buyer_search_keyword">Search text</string>
+    <string name="buyer_search_field">%1$s: %2$s</string>
+    <string name="buyer_search_rupees">Rs %1$s</string>
+    <string name="buyer_search_min_price">Minimum price</string>
+    <string name="buyer_search_fix_numbers">Check numeric ranges</string>
+</resources>

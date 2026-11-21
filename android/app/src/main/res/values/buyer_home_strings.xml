@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="buyer_home_headline">Know the price before you call.</string>
+    <string name="buyer_home_intro">Compare asking prices across Sri Lanka. Start with a vehicle or a budget.</string>
+    <string name="buyer_home_search">Search vehicles</string>
+    <string name="buyer_home_saved">Your saved vehicle</string>
+    <string name="buyer_home_saved_drop">Price drop on a saved vehicle</string>
+    <string name="buyer_home_listing_id">Listing %1$d</string>
+    <string name="buyer_home_recorded_drop">Recorded price drop</string>
+    <string name="buyer_home_last_ask">Last recorded asking price</string>
+    <string name="buyer_home_previous_ask">Previous asking price: %1$s</string>
+    <string name="buyer_home_at_save">When you saved it: %1$s</string>
+    <string name="buyer_home_open_listing">Open listing</string>
+    <string name="buyer_home_feed_error">Price changes could not be updated.</string>
+    <string name="buyer_home_rupees">Rs %1$s</string>
+    <string name="buyer_home_after_cut">Asking price after the drop</string>
+    <string name="buyer_home_no_ask">No recorded asking price</string>
+</resources>

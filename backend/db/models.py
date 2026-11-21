@@ -353,6 +353,8 @@ class MarketAlert(Base):
     # quiet hours 21:00-07:00 Asia/Colombo instead of sending immediately.
     quiet_hours_enabled = Column(Boolean, nullable=True)
     active = Column(Boolean, nullable=False, default=True)
+    # active=False alone denotes a legacy soft-delete; only an explicit pause is resumable.
+    paused_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     __table_args__ = (

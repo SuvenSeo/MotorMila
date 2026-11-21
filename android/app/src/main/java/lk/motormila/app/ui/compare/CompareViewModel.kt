@@ -66,6 +66,7 @@ class CompareViewModel @Inject constructor(
             ?: emptyList()
 
     private val _state = MutableStateFlow(CompareUiState(ids = CompareLogic.merge(tray.read(), navIds)))
+    private var lastNavIds = navIds
     val state: StateFlow<CompareUiState> = _state.asStateFlow()
 
     init {
@@ -75,6 +76,9 @@ class CompareViewModel @Inject constructor(
 
     /** Reconcile with a new nav arg while this VM is alive. */
     fun syncIds(ids: List<Int>) {
+        // Back from the picker (without selection) or Detail is not a new Add.
+        if (ids == lastNavIds) return
+        lastNavIds = ids
         val merged = CompareLogic.merge(_state.value.ids, ids)
         if (merged != _state.value.ids) {
             setIds(merged)

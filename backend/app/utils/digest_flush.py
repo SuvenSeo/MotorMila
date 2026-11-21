@@ -13,6 +13,8 @@ from __future__ import annotations
 import structlog
 from sqlalchemy.orm import Session
 
+from app.utils.channel_center import match_channels_of
+
 log = structlog.get_logger()
 
 QUEUED_STATUSES = ("digest_queued", "queued_quiet")
@@ -61,9 +63,10 @@ def flush_queued_deliveries(db: Session, *, limit: int = 500) -> dict:
     for (alert_id, channel), receipts in groups.items():
         try:
             alert = db.query(MarketAlert).filter(MarketAlert.id == alert_id).first() if alert_id else None
-            if alert is None or not getattr(alert, "active", True):
+            if alert is None or not alert.active or channel not in match_channels_of(alert):
                 for r in receipts:
                     r.status = "skipped"
+                summary["skipped"] += 1
                 continue
             match = (
                 db.query(MarketAlertMatch)

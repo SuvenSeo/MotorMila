@@ -1,34 +1,39 @@
 package lk.motormila.app.ui.auth
 
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -36,40 +41,34 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.password
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlin.math.roundToInt
-import kotlinx.coroutines.launch
 import lk.motormila.app.R
 import lk.motormila.app.core.motion.rememberReducedMotion
-import lk.motormila.app.ui.components.BrandLogo
-import lk.motormila.app.ui.components.BrandLogoSize
-import lk.motormila.app.ui.components.MotormilaEyebrow
-import lk.motormila.app.ui.components.MotormilaGhostButton
-import lk.motormila.app.ui.components.MotormilaPillTabs
-import lk.motormila.app.ui.components.MotormilaPrimaryButton
-import lk.motormila.app.ui.components.MotormilaSurface
+import lk.motormila.app.ui.common.MmScreen
 import lk.motormila.app.ui.components.OfflineBanner
-import lk.motormila.app.ui.theme.MotormilaOnSurface
-import lk.motormila.app.ui.theme.MotormilaOutline
 import lk.motormila.app.ui.theme.MotormilaPill
-import lk.motormila.app.ui.theme.MotormilaPrimaryBright
-import lk.motormila.app.ui.theme.MotormilaSecondaryText
 import lk.motormila.app.ui.theme.rememberHaptics
-import lk.motormila.app.ui.theme.motormilaReveal
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,24 +79,20 @@ fun LoginScreen(
     viewModel: AuthViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val biometricEnabled by viewModel.biometricEnabled.collectAsStateWithLifecycle()
     val snacks = remember { SnackbarHostState() }
     val reducedMotion = rememberReducedMotion()
     val haptics = rememberHaptics()
-    val shake = remember { Animatable(0f) }
-    var passwordVisible by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-    val browseMarketLabel = stringResource(R.string.login_browse_market)
-    val forgotPasswordMessage = stringResource(R.string.login_forgot_password_message)
-    val fieldColors = OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = MotormilaPrimaryBright,
-        unfocusedBorderColor = MotormilaOutline,
-        focusedLabelColor = MotormilaPrimaryBright,
-        unfocusedLabelColor = MotormilaSecondaryText,
-        cursorColor = MotormilaPrimaryBright,
-        focusedTextColor = MotormilaOnSurface,
-        unfocusedTextColor = MotormilaOnSurface,
-    )
+    val context = LocalContext.current
+    val focus = LocalFocusManager.current
+    val signup = state.isSignupTab
+    var passwordVisible by remember(signup) { mutableStateOf(false) }
+    var resetPageUnavailable by remember(signup) { mutableStateOf(false) }
+    val submit: () -> Unit = {
+        if (!state.loading) {
+            focus.clearFocus()
+            viewModel.onEvent(AuthUiEvent.Submit)
+        }
+    }
 
     LaunchedEffect(state.loggedIn) {
         if (state.loggedIn) {
@@ -111,174 +106,192 @@ fun LoginScreen(
             if (!reducedMotion) haptics.reject()
             snacks.showSnackbar(it)
         }
-        if (state.shakeToken > 0 && !reducedMotion) {
-            shake.snapTo(0f)
-            // iOS-style "wrong password" shake: one impulse into an
-            // under-damped spring that settles on its own.
-            shake.snapTo(0f)
-            shake.animateTo(
-                0f,
-                spring(dampingRatio = 0.18f, stiffness = 1800f),
-                initialVelocity = 900f,
-            )
-        }
     }
 
-    lk.motormila.app.ui.common.MmScreen(title = "Sign in", snackbarHostState = snacks) {
+    MmScreen(
+        title = stringResource(if (signup) R.string.buyer_auth_create_account else R.string.buyer_auth_welcome),
+        snackbarHostState = snacks,
+    ) {
         Column(
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .imePadding()
-                .padding(horizontal = 20.dp, vertical = 8.dp)
-                .offset { IntOffset(shake.value.roundToInt(), 0) },
+            modifier = Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            OfflineBanner(visible = state.offline)
-            Column(
-                Modifier.motormilaReveal().fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                BrandLogo(
-                    size = BrandLogoSize.DEFAULT,
-                    showWordmark = true,
-                    showTagline = true,
-                    modifier = Modifier.semantics { contentDescription = browseMarketLabel },
+            Column(modifier = Modifier.widthIn(max = 480.dp).fillMaxWidth()) {
+                OfflineBanner(visible = state.offline)
+                // One locally bundled frame from the website's night drive; no slideshow or network request.
+                Image(
+                    painter = painterResource(R.drawable.buyer_auth_night_coast),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxWidth().aspectRatio(8f / 3f).clip(RoundedCornerShape(16.dp)),
                 )
-                Spacer(Modifier.height(18.dp))
-                MotormilaEyebrow("INVITE-ONLY INTELLIGENCE")
-                if (state.sessionEmail != null) {
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        text = if (state.sessionExpired) {
-                            "Session for ${state.sessionEmail} expired — sign in again."
-                        } else {
-                            "Last signed in as ${state.sessionEmail}."
-                        },
-                        fontSize = 13.sp,
-                        color = if (state.sessionExpired) MotormilaPrimaryBright else MotormilaSecondaryText,
-                    )
+                Spacer(Modifier.height(16.dp))
+                BuyerAuthTabs(signup = signup, enabled = !state.loading) {
+                    focus.clearFocus()
+                    viewModel.onEvent(AuthUiEvent.TabChanged(it))
                 }
-            }
-            Spacer(Modifier.height(24.dp))
-            MotormilaPillTabs(
-                tabs = listOf("Log in", "Sign up"),
-                selected = if (state.isSignupTab) 1 else 0,
-                onSelect = { viewModel.onEvent(AuthUiEvent.TabChanged(it == 1)) },
-            )
-            Spacer(Modifier.height(20.dp))
-            if (state.isSignupTab) {
+                Spacer(Modifier.height(16.dp))
+                if (!signup) {
+                    state.sessionEmail?.let { email ->
+                        Text(
+                            stringResource(
+                                if (state.sessionExpired) R.string.buyer_auth_session_expired else R.string.buyer_auth_last_account,
+                                email,
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(12.dp))
+                    }
+                }
+                val field = Modifier.fillMaxWidth().heightIn(min = 56.dp)
+                val shape = RoundedCornerShape(14.dp)
+                if (signup) {
+                    OutlinedTextField(
+                        value = state.name,
+                        onValueChange = { viewModel.onEvent(AuthUiEvent.NameChanged(it)) },
+                        label = { Text(stringResource(R.string.buyer_auth_name)) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
+                        shape = shape,
+                        modifier = field,
+                    )
+                    Spacer(Modifier.height(10.dp))
+                }
                 OutlinedTextField(
-                    value = state.name,
-                    onValueChange = { viewModel.onEvent(AuthUiEvent.NameChanged(it)) },
-                    label = { Text(stringResource(R.string.ui_auth_name)) },
+                    value = state.email,
+                    onValueChange = { viewModel.onEvent(AuthUiEvent.EmailChanged(it)) },
+                    label = { Text(stringResource(R.string.buyer_auth_email)) },
                     singleLine = true,
-                    shape = MotormilaPill,
-                    colors = fieldColors,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+                    shape = shape,
+                    modifier = field,
                 )
                 Spacer(Modifier.height(10.dp))
-            }
-            OutlinedTextField(
-                value = state.email,
-                onValueChange = { viewModel.onEvent(AuthUiEvent.EmailChanged(it)) },
-                label = { Text(stringResource(R.string.ui_auth_email)) },
-                singleLine = true,
-                shape = MotormilaPill,
-                colors = fieldColors,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-            )
-            Spacer(Modifier.height(10.dp))
-            OutlinedTextField(
-                value = state.password,
-                onValueChange = { viewModel.onEvent(AuthUiEvent.PasswordChanged(it)) },
-                label = { Text(stringResource(R.string.account_delete_password)) },
-                singleLine = true,
-                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                shape = MotormilaPill,
-                colors = fieldColors,
-                trailingIcon = {
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(
-                            if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                            contentDescription = if (passwordVisible) "Hide password" else "Show password",
-                            tint = MotormilaSecondaryText,
+                OutlinedTextField(
+                    value = state.password,
+                    onValueChange = { viewModel.onEvent(AuthUiEvent.PasswordChanged(it)) },
+                    label = { Text(stringResource(R.string.buyer_auth_password)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = if (signup) ImeAction.Next else ImeAction.Done,
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { submit() }),
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    shape = shape,
+                    trailingIcon = {
+                        IconButton(onClick = { passwordVisible = !passwordVisible }, modifier = Modifier.size(48.dp)) {
+                            Icon(
+                                if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                contentDescription = stringResource(
+                                    if (passwordVisible) R.string.buyer_auth_hide_password else R.string.buyer_auth_show_password,
+                                ),
+                            )
+                        }
+                    },
+                    modifier = field.semantics { password() },
+                )
+                if (signup) {
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = state.inviteToken,
+                        onValueChange = { viewModel.onEvent(AuthUiEvent.InviteTokenChanged(it)) },
+                        label = { Text(stringResource(R.string.buyer_auth_invite)) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { submit() }),
+                        supportingText = {
+                            Text(
+                                if (state.selfSignupEnabled) stringResource(R.string.buyer_auth_invite_optional, state.selfSignupTrialDays)
+                                else stringResource(R.string.buyer_auth_invite_required),
+                            )
+                        },
+                        shape = shape,
+                        modifier = field,
+                    )
+                } else {
+                    TextButton(
+                        onClick = {
+                            focus.clearFocus()
+                            resetPageUnavailable = !openBuyerResetRequest(context)
+                        },
+                        modifier = Modifier.align(Alignment.End).heightIn(min = 48.dp),
+                    ) { Text(stringResource(R.string.buyer_auth_reset_web)) }
+                    if (resetPageUnavailable) {
+                        SelectionContainer {
+                            Text(
+                                stringResource(R.string.buyer_auth_reset_unavailable, BUYER_RESET_REQUEST_URL),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Button(
+                    onClick = submit,
+                    enabled = !state.loading,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (state.loading) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        Text(
+                            when {
+                                signup && state.selfSignupEnabled && state.inviteToken.isBlank() ->
+                                    stringResource(R.string.buyer_auth_start_trial, state.selfSignupTrialDays)
+                                signup -> stringResource(R.string.buyer_auth_create_account)
+                                else -> stringResource(R.string.buyer_auth_sign_in)
+                            },
+                            textAlign = TextAlign.Center,
                         )
                     }
-                },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-            )
-            if (state.isSignupTab) {
-                Spacer(Modifier.height(10.dp))
-                OutlinedTextField(
-                    value = state.inviteToken,
-                    onValueChange = { viewModel.onEvent(AuthUiEvent.InviteTokenChanged(it)) },
-                    label = { Text(stringResource(R.string.ui_auth_invite_token)) },
-                    singleLine = true,
-                    supportingText = {
-                        Text(
-                            if (state.selfSignupEnabled) {
-                                "Optional — leave blank to start a ${state.selfSignupTrialDays}-day Pro trial."
-                            } else {
-                                "Invite-only: get a token from Admin or your dealer."
-                            },
-                            color = MotormilaSecondaryText,
-                        )
-                    },
-                    shape = MotormilaPill,
-                    colors = fieldColors,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                }
+                if (state.error != null && !state.loading) {
+                    TextButton(
+                        onClick = { viewModel.onEvent(AuthUiEvent.Retry) },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                    ) {
+                        Text(stringResource(if (state.offline) R.string.buyer_auth_retry_online else R.string.buyer_auth_retry))
+                    }
+                }
+                TextButton(onClick = onBrowse, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                    Text(stringResource(R.string.buyer_auth_guest))
+                }
+                Spacer(Modifier.height(12.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun BuyerAuthTabs(signup: Boolean, enabled: Boolean, select: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clip(MotormilaPill).background(MaterialTheme.colorScheme.surfaceVariant)
+            .selectableGroup().padding(3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        for (isSignup in listOf(false, true)) {
+            val selected = signup == isSignup
+            Tab(
+                selected = selected,
+                enabled = enabled,
+                onClick = { if (!selected) select(isSignup) },
+                modifier = Modifier.weight(1f).heightIn(min = 48.dp).clip(MotormilaPill).then(
+                    if (selected) Modifier.background(MaterialTheme.colorScheme.primaryContainer) else Modifier,
+                ),
+                selectedContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ) {
+                Text(
+                    stringResource(if (isSignup) R.string.buyer_auth_sign_up else R.string.buyer_auth_sign_in),
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.titleSmall,
                 )
             }
-            Spacer(Modifier.height(18.dp))
-            MotormilaPrimaryButton(
-                label = when {
-                    state.isSignupTab && state.selfSignupEnabled && state.inviteToken.isBlank() ->
-                        "Start ${state.selfSignupTrialDays}-day trial"
-                    state.isSignupTab -> "Create account"
-                    else -> "Log in"
-                },
-                onClick = { viewModel.onEvent(AuthUiEvent.Submit) },
-                loading = state.loading,
-            )
-            if (state.error != null && !state.loading) {
-                Spacer(Modifier.height(10.dp))
-                MotormilaGhostButton(
-                    if (state.offline) "Retry when back online" else "Retry",
-                    onClick = { viewModel.onEvent(AuthUiEvent.Retry) },
-                )
-            }
-            // No credentials are ever baked into the release build: earlier
-            // revisions shipped a one-tap demo sign-in with a hardcoded review
-            // account, which is a live account leak on a store/release APK.
-            // Biometric unlock removed: it gated nothing (the session persists anyway).
-            Spacer(Modifier.height(16.dp))
-            Text(
-                stringResource(R.string.login_invite_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            TextButton(
-                shape = androidx.compose.foundation.shape.CircleShape,
-                onClick = onBrowse,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp),
-            ) {
-                Text(browseMarketLabel)
-            }
-            // Password resets are issued by the Motormila team (no self-serve
-            // email flow yet), so the previous no-op button now says so.
-            TextButton(
-                shape = androidx.compose.foundation.shape.CircleShape,
-                onClick = {
-                    scope.launch { snacks.showSnackbar(forgotPasswordMessage) }
-                },
-                modifier = Modifier.heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.login_forgot_password))
-            }
-            Spacer(Modifier.height(20.dp))
         }
     }
 }

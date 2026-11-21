@@ -22,6 +22,7 @@ from app.utils.channel_center import (
     check_and_record_delivery,
     dedupe_key,
     mark_delivery_sent,
+    match_channels_of as _resolve_channels,
     release_failed_delivery,
     should_queue,
 )
@@ -54,22 +55,6 @@ def _count_matching(db: Session, alert: MarketAlert) -> int:
     if alert.max_price:
         q = q.filter(CarListing.price_lkr <= alert.max_price)
     return int(q.count())
-
-
-def _resolve_channels(alert: MarketAlert) -> set[str]:
-    """Return the set of channel names to notify for this alert."""
-    raw = (getattr(alert, "notify_channels", None) or "").strip()
-    if raw:
-        return {ch.strip().lower() for ch in raw.split(",") if ch.strip()}
-    # Infer from which destination fields are set.
-    channels: set[str] = set()
-    if getattr(alert, "notify_phone", None):
-        channels.add("whatsapp")
-    if getattr(alert, "notify_email", None):
-        channels.add("email")
-    if getattr(alert, "notify_telegram_chat_id", None):
-        channels.add("telegram")
-    return channels
 
 
 def _representative_listing_id(db: Session, alert: MarketAlert) -> int:
@@ -290,20 +275,20 @@ def run_alert_match_pass(db: Session) -> dict:
                             except Exception:
                                 pass
 
-                # Record in-app notification — fail silently so this never
-                # aborts the match pass if the table is missing or not yet migrated.
-                try:
-                    record_alert_match_notification(
-                        db,
-                        user_token=alert.user_token,
-                        make=alert.make,
-                        model=alert.model,
-                        district=alert.district,
-                        max_price=float(alert.max_price) if alert.max_price is not None else None,
-                        new_match_count=delta,
-                    )
-                except Exception as notif_exc:
-                    log.debug("alert_match_inapp_notif_failed", alert_id=alert.id, error=str(notif_exc))
+                # Legacy inferred alerts include the inbox; explicit selections are opt-in.
+                if not (alert.notify_channels or "").strip() or "inapp" in channels:
+                    try:
+                        record_alert_match_notification(
+                            db,
+                            user_token=alert.user_token,
+                            make=alert.make,
+                            model=alert.model,
+                            district=alert.district,
+                            max_price=float(alert.max_price) if alert.max_price is not None else None,
+                            new_match_count=delta,
+                        )
+                    except Exception as notif_exc:
+                        log.debug("alert_match_inapp_notif_failed", alert_id=alert.id, error=str(notif_exc))
 
             log.debug(
                 "alert_match",

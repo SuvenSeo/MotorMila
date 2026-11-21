@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="buyer_comparison_evidence">How was this compared?</string>
+    <string name="buyer_comparison_loading">Checking comparable listings…</string>
+    <string name="buyer_no_comparison">No price comparison available.</string>
+    <string name="buyer_last_change">Last recorded change: %1$s to %2$s</string>
+    <string name="buyer_source_unavailable">Original ad unavailable · %1$s</string>
+    <string name="buyer_lease_example">Payment example, not a lender quote. Adjust the deposit, interest rate and term.</string>
+    <string name="buyer_last_known_ask">Last known ask: %1$s</string>
+    <string name="buyer_saved_at_price">When saved: %1$s</string>
+    <string name="buyer_saved_checked">Last checked: %1$s</string>
+    <string name="buyer_saved_unchecked">Check date unavailable</string>
+    <string name="buyer_no_recorded_asks">No asking prices recorded yet.</string>
+    <string name="buyer_expanded">Expanded</string>
+    <string name="buyer_collapsed">Collapsed</string>
+    <string name="buyer_lower_rate">Decrease interest rate</string>
+    <string name="buyer_raise_rate">Increase interest rate</string>
+    <string name="buyer_back">Go back</string>
+    <string name="buyer_saved_vehicles_count">Saved vehicles (%1$d)</string>
+    <string name="buyer_saved_vehicles">Saved vehicles</string>
+</resources>

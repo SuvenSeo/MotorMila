@@ -50,6 +50,8 @@ class AuthInterceptor @Inject constructor(
         } else {
             null
         }
+        val guard = original.tag(AlertSessionGuard::class.java)
+        if (guard != null && !guard.matches(token)) throw java.io.IOException("Alert session changed")
         val request = if (!token.isNullOrBlank()) {
             original.newBuilder().header("Authorization", "Bearer $token").build()
         } else {

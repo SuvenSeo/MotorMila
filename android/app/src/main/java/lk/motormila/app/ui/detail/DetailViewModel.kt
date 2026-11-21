@@ -4,7 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -86,6 +85,9 @@ class DetailViewModel @Inject constructor(
     private var shownAtMs: Long = 0L
     val state: StateFlow<DetailUiState> = _state.asStateFlow()
 
+    private var loadJob: kotlinx.coroutines.Job? = null
+    private var watchedJob: kotlinx.coroutines.Job? = null
+
     init {
         observePro()
         if (listingId > 0) {
@@ -113,31 +115,19 @@ class DetailViewModel @Inject constructor(
         // used to start a second, identical load whose late state updates
         // re-laid the page out mid-transition.
         if (loadedId == listingId && _state.value.error == null) return
+        loadJob?.cancel()
+        watchedJob?.cancel()
         loadedId = listingId
         shownAtMs = android.os.SystemClock.uptimeMillis()
-        viewModelScope.launch {
-            val seed = _state.value.listing?.takeIf { it.id == listingId }
-                ?: lk.motormila.app.ui.navigation.ListingPreviewCache.get(listingId)
-            _state.value = if (seed != null) {
-                _state.value.copy(
-                    isLoading = true, error = null, notFound = false, listing = seed,
-                    similarState = DetailLoadState.LOADING, historyState = DetailLoadState.LOADING,
-                    fmvState = DetailLoadState.LOADING, sellerState = DetailLoadState.LOADING,
-                )
-            } else {
-                _state.value.copy(
-                    isLoading = true, error = null, notFound = false,
-                    listing = _state.value.listing?.takeIf { it.id == listingId },
-                    similar = emptyList(), history = null, report = null, fmv = null, seller = null,
-                    similarState = DetailLoadState.LOADING, historyState = DetailLoadState.LOADING,
-                    fmvState = DetailLoadState.LOADING, sellerState = DetailLoadState.LOADING,
-                )
-            }
+        val seed = _state.value.listing?.takeIf { it.id == id }
+            ?: lk.motormila.app.ui.navigation.ListingPreviewCache.get(id)
+        _state.value = DetailUiState(listing = seed, isPro = _state.value.isPro)
+        observeWatchedOnce()
+        loadJob = viewModelScope.launch {
             try {
-                val detail = getDetail(listingId)
+                val detail = getDetail(id)
                 holdForTransition()
                 _state.value = _state.value.copy(listing = detail, isLoading = false)
-                observeWatchedOnce()
                 // Secondary payloads load independently; one failure must not blank the page.
                 launch { loadSimilar() }
                 launch { loadHistory() }
@@ -158,6 +148,10 @@ class DetailViewModel @Inject constructor(
                 _state.value = _state.value.copy(
                     isLoading = false,
                     notFound = gone,
+                    fmvState = DetailLoadState.FAILED,
+                    historyState = DetailLoadState.FAILED,
+                    sellerState = DetailLoadState.FAILED,
+                    similarState = DetailLoadState.FAILED,
                     // OfflineBanner is for genuine network errors only — a 404 or a
                     // server fault is not "offline".
                     isOffline = mapped is lk.motormila.app.core.common.AppError.Network,
@@ -203,13 +197,19 @@ class DetailViewModel @Inject constructor(
         val id = listingId
         _state.value = _state.value.copy(historyState = DetailLoadState.LOADING)
         try {
-            val deferredHistory = viewModelScope.async { listings.priceHistory(id) }
-            val deferredReport = viewModelScope.async { listings.historyReport(id) }
-            val history = deferredHistory.await()
-            val report = deferredReport.await()
+            val history = listings.priceHistory(id)
             holdForTransition()
             if (id != listingId) return
-            _state.value = _state.value.copy(history = history, report = report, historyState = DetailLoadState.LOADED)
+            _state.value = _state.value.copy(history = history, historyState = DetailLoadState.LOADED)
+            // Optional ownership flags must not hide a successfully fetched price movement.
+            val report = try {
+                listings.historyReport(id)
+            } catch (ce: kotlin.coroutines.cancellation.CancellationException) {
+                throw ce
+            } catch (_: Exception) {
+                null
+            }
+            if (id == listingId) _state.value = _state.value.copy(report = report)
         } catch (ce: kotlin.coroutines.cancellation.CancellationException) {
             throw ce
         } catch (_: Exception) {
@@ -261,8 +261,6 @@ class DetailViewModel @Inject constructor(
         _state.value = _state.value.copy(watchError = null)
     }
 
-    private var watchedJob: kotlinx.coroutines.Job? = null
-
     private fun observeWatchedOnce() {
         // Cancel any prior collector before starting a new one — load()/retry()
         // must not stack infinite collectors.
@@ -278,8 +276,7 @@ class DetailViewModel @Inject constructor(
         val listing = _state.value.listing ?: return
         viewModelScope.launch {
             try {
-                if (_state.value.isWatched) watchlist.remove(listing.id)
-                else watchlist.add(listing)
+                watchlist.toggle(listing)
             } catch (ce: kotlin.coroutines.cancellation.CancellationException) {
                 throw ce
             } catch (e: Exception) {

@@ -10,7 +10,6 @@ import {
   Gauge,
   Layers,
   Plus,
-  RefreshCw,
   ScanLine,
   Search,
   ShieldCheck,
@@ -22,6 +21,7 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { PrefetchLink } from "@/components/PrefetchLink";
 import { Button } from "@/components/ui/button";
 import { trackEvent } from "@/lib/analytics";
+import { approvedAndroidRelease as apk, RELEASE_CERT_SHA256 } from "@/lib/approvedAndroidRelease";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { MOBILE_APP_QR_PATH, MOBILE_APP_QR_SIZE } from "@/lib/mobileAppQr";
 import { cn } from "@/lib/utils";
@@ -33,22 +33,11 @@ import screenAlerts from "../../assets/mobile-app/screen-alerts.webp";
 import "@/styles/locale-labels.css";
 import "@/styles/mobile-app.css";
 
-/**
- * Live sideload release — keep in step with android/app/build.gradle.kts and
- * public/app/latest-release.json (the in-app updater's manifest).
- */
-const APK_VERSION = "1.8.0";
-const APK_VERSION_CODE = 21;
-/** 5,800,279 bytes (published APK Content-Length). */
-const APK_BYTES = 5_800_279;
-const APK_SIZE = "5.5 MB";
-// Public R2 download, published by .github/workflows/android-release.yml.
-const APK_URL = `https://pub-f15911ef9a914db9a44e1fd6b47dfe4e.r2.dev/app/motormila-${APK_VERSION}.apk`;
-const APK_SHA256 = "6d9d417bf837deb6277d387318e88acc79fdcef6f95d6ed401cfd7258732634f";
-/** SHA-256 of the release signing certificate (APK Signature Scheme v2/v3), same key since 1.7.0. */
-const APK_CERT_SHA256 = "384420c0922cb84ee0e6866ab09b4e47e7012bf21c69e83f934304366f445217";
-/** Release date of APK_VERSION (latest-release.json `published_at`), ISO date. */
-const APK_UPDATED = "2026-10-30";
+const updateAdvice = {
+  en: "If the app offers a version other than the one on this page, choose Later. If you already have a newer build, don't uninstall it to downgrade; browse on the web instead.",
+  si: "යෙදුම මෙම පිටුවේ දැක්වෙන අනුවාදයට වඩා වෙනස් අනුවාදයක් ලබා දෙන්නේ නම්, ‘පසුව’ තෝරන්න. ඔබ සතුව දැනටමත් නව අනුවාදයක් තිබේ නම්, පැරණි අනුවාදයක් ස්ථාපනය කිරීමට එය ඉවත් නොකර වෙබ් අඩවිය භාවිත කරන්න.",
+  ta: "இந்தப் பக்கத்தில் உள்ள பதிப்பைத் தவிர வேறொரு பதிப்பைச் செயலி பரிந்துரைத்தால், ‘பின்னர்’ என்பதைத் தேர்ந்தெடுக்கவும். ஏற்கெனவே புதிய பதிப்பு இருந்தால், பழைய பதிப்பை நிறுவ அதை நீக்க வேண்டாம்; இணையதளத்தைப் பயன்படுத்தவும்.",
+};
 
 /** App screenshots: 1080×2400 emulator captures of the release app (live data), resized to 600×1333. */
 const SCREEN_W = 600;
@@ -57,7 +46,7 @@ const SCREEN_H = 1333;
 type Placement = "hero" | "trust" | "cta";
 
 function onDownload(placement: Placement) {
-  trackEvent("app_download_click", { placement, version: APK_VERSION });
+  trackEvent("app_download_click", { placement, version: apk.version });
 }
 
 /* ── Building blocks ─────────────────────────────────────────────────── */
@@ -153,13 +142,13 @@ export default function MobileApp() {
   const pageRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLElement>(null);
   useReveal(pageRef, heroRef);
-  const apkHash = useCopy(APK_SHA256);
+  const apkHash = useCopy(apk.sha256);
 
   const locale = language === "si" ? "si-LK" : language === "ta" ? "ta-LK" : "en-LK";
   const updated = new Intl.DateTimeFormat(locale, { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Colombo" }).format(
-    new Date(`${APK_UPDATED}T12:00:00+05:30`),
+    new Date(apk.published_at),
   );
-  const bytes = new Intl.NumberFormat("en-LK").format(APK_BYTES);
+  const bytes = new Intl.NumberFormat(locale).format(apk.bytes);
 
   const features = [
     {
@@ -230,21 +219,6 @@ export default function MobileApp() {
         "Open the downloaded file. If Android asks, turn on “Allow from this source” for your browser. You only need to do this once.",
       ),
     },
-    {
-      key: "protect",
-      icon: ShieldCheck,
-      title: t("mapp.step.protect.title", "If Play Protect asks"),
-      body: t(
-        "mapp.step.protect.body",
-        "Google Play Protect may warn you because the app isn't from the Play Store yet. Tap “More details”, then “Install anyway”, or let it scan the app first.",
-      ),
-    },
-    {
-      key: "open",
-      icon: Check,
-      title: t("mapp.step.open.title", "Open Motormila"),
-      body: t("mapp.step.open.body", "That's it. From now on the app updates itself."),
-    },
   ];
 
   const faq = [
@@ -275,10 +249,7 @@ export default function MobileApp() {
     {
       key: "updates",
       q: t("mapp.faq.updates.q", "How do updates work?"),
-      a: t(
-        "mapp.faq.updates.a",
-        "When the app opens it checks for a new version. Tap “Update now” and it downloads the update, checks its SHA-256, then Android asks you to confirm. Your data stays.",
-      ),
+      a: updateAdvice[language],
     },
     {
       key: "ios",
@@ -292,7 +263,7 @@ export default function MobileApp() {
 
   const facts: Array<{ key: string; node: ReactNode }> = [
     { key: "free", node: t("mapp.fact.free", "Free") },
-    { key: "size", node: APK_SIZE },
+    { key: "size", node: apk.size },
     { key: "android", node: t("mapp.fact.android", "Android 8.0 and up") },
     {
       key: "languages",
@@ -325,7 +296,7 @@ export default function MobileApp() {
               </span>
               <div className="min-w-0">
                 <p className="text-body font-semibold text-foreground">{t("mapp.eyebrow", "Motormila for Android")}</p>
-                <p className="text-footnote text-label-2">{t("mapp.previewTag", "Preview · version {version}", { version: APK_VERSION })}</p>
+                <p className="text-footnote text-label-2">{t("mapp.trust.versionValue", "{version} (build {code})", { version: apk.version, code: apk.version_code })}</p>
               </div>
             </div>
 
@@ -342,12 +313,12 @@ export default function MobileApp() {
 
             <div className="ma-enter mt-8 flex flex-wrap items-center gap-x-5 gap-y-3" style={delay(3)}>
               <Button asChild size="lg" className="h-14 max-w-full gap-3 px-6">
-                <a href={APK_URL} onClick={() => onDownload("hero")}>
+                <a href={apk.apkUrl} onClick={() => onDownload("hero")}>
                   <Download aria-hidden />
                   <span className="flex flex-col items-start leading-tight">
                     <span>{t("mapp.download", "Download APK")}</span>
                     <span className="text-caption font-medium opacity-85">
-                      {t("mapp.downloadMeta", "v{version} · {size}", { version: APK_VERSION, size: APK_SIZE })}
+                      {t("mapp.downloadMeta", "v{version} · {size}", { version: apk.version, size: apk.size })}
                     </span>
                   </span>
                 </a>
@@ -370,11 +341,13 @@ export default function MobileApp() {
                 <ShieldCheck className="h-4 w-4 text-primary" aria-hidden />
                 {t("mapp.trust.sha", "SHA-256 published")}
               </li>
-              <li className="inline-flex items-center gap-1.5">
-                <RefreshCw className="h-4 w-4 text-primary" aria-hidden />
-                {t("mapp.trust.ota", "Updates itself")}
-              </li>
             </ul>
+            <p className="mt-4 max-w-xl text-footnote text-label-2">
+              {updateAdvice[language]}{" "}
+              <PrefetchLink to="/" className="font-semibold text-primary underline">
+                {t("mapp.ctaWeb", "Browse on the web")}
+              </PrefetchLink>
+            </p>
 
             {/* Desktop only: hand-off to the phone. */}
             <div className="ma-enter mt-10 hidden max-w-md items-center gap-5 rounded-[1.5rem] border border-border bg-card/80 p-4 pr-6 shadow-e1 lg:flex" style={delay(5)}>
@@ -527,7 +500,7 @@ export default function MobileApp() {
                 </span>
                 <div className="min-w-0">
                   <p className="font-display text-title3 font-semibold text-foreground">
-                    {t("mapp.trust.title", "Motormila {version}", { version: APK_VERSION })}
+                    {t("mapp.trust.title", "Motormila {version}", { version: apk.version })}
                   </p>
                   <p className="mt-0.5 text-footnote text-label-2">{t("mapp.trust.subtitle", "Android preview · direct download")}</p>
                 </div>
@@ -535,8 +508,8 @@ export default function MobileApp() {
 
               <dl className="mt-6 divide-y divide-separator border-y border-separator text-footnote">
                 {[
-                  [t("mapp.trust.version", "Version"), t("mapp.trust.versionValue", "{version} (build {code})", { version: APK_VERSION, code: APK_VERSION_CODE })],
-                  [t("mapp.trust.size", "Size"), t("mapp.trust.sizeValue", "{size} ({bytes} bytes)", { size: APK_SIZE, bytes })],
+                  [t("mapp.trust.version", "Version"), t("mapp.trust.versionValue", "{version} (build {code})", { version: apk.version, code: apk.version_code })],
+                  [t("mapp.trust.size", "Size"), t("mapp.trust.sizeValue", "{size} ({bytes} bytes)", { size: apk.size, bytes })],
                   [t("mapp.trust.updated", "Updated"), updated],
                   [t("mapp.trust.requires", "Requires"), t("mapp.fact.android", "Android 8.0 and up")],
                 ].map(([label, value]) => (
@@ -555,7 +528,7 @@ export default function MobileApp() {
                   className="press mt-2 flex w-full items-start gap-3 rounded-control border border-border bg-background px-3.5 py-3 text-left transition-colors duration-short ease-standard hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label={t("mapp.copySha", "Copy the APK's SHA-256 checksum")}
                 >
-                  <code className="min-w-0 flex-1 break-all font-code text-caption text-label-1">{APK_SHA256}</code>
+                  <code className="min-w-0 flex-1 break-all font-code text-caption text-label-1">{apk.sha256}</code>
                   {apkHash.copied ? (
                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-deal-good-text" aria-hidden />
                   ) : (
@@ -570,7 +543,7 @@ export default function MobileApp() {
               <div className="mt-5">
                 <p className="text-footnote font-semibold text-foreground">{t("mapp.trust.certLabel", "Signing certificate (SHA-256)")}</p>
                 <code className="mt-2 block break-all rounded-control border border-border bg-background px-3.5 py-3 font-code text-caption text-label-1">
-                  {APK_CERT_SHA256}
+                  {RELEASE_CERT_SHA256}
                 </code>
                 <p className="mt-1.5 text-caption text-label-2 [text-wrap:pretty]">
                   {t(
@@ -580,20 +553,10 @@ export default function MobileApp() {
                 </p>
               </div>
 
-              <div className="mt-5 flex gap-3 rounded-control bg-primary/10 px-4 py-3">
-                <RefreshCw className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
-                <p className="text-footnote text-label-1 [text-wrap:pretty]">
-                  {t(
-                    "mapp.trust.otaBody",
-                    "Automatic updates: the app checks for new versions when it opens, verifies each download's SHA-256, and asks before installing.",
-                  )}
-                </p>
-              </div>
-
               <Button asChild size="lg" className="mt-6 w-full">
-                <a href={APK_URL} onClick={() => onDownload("trust")}>
+                <a href={apk.apkUrl} onClick={() => onDownload("trust")}>
                   <Download aria-hidden />
-                  {t("mapp.downloadWithSize", "Download APK · {size}", { size: APK_SIZE })}
+                  {t("mapp.downloadWithSize", "Download APK · {size}", { size: apk.size })}
                 </a>
               </Button>
             </div>
@@ -643,11 +606,11 @@ export default function MobileApp() {
               {t("mapp.ctaTitle", "Take the whole market with you.")}
             </h2>
             <p className="mx-auto mt-3 max-w-lg text-body text-label-2">
-              {t("mapp.ctaBody", "Free for Android 8.0 and up. Version {version}, {size}.", { version: APK_VERSION, size: APK_SIZE })}
+              {t("mapp.ctaBody", "Free for Android 8.0 and up. Version {version}, {size}.", { version: apk.version, size: apk.size })}
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Button asChild size="lg">
-                <a href={APK_URL} onClick={() => onDownload("cta")}>
+                <a href={apk.apkUrl} onClick={() => onDownload("cta")}>
                   <Download aria-hidden />
                   {t("mapp.download", "Download APK")}
                 </a>

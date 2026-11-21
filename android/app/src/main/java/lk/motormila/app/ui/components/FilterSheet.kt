@@ -124,8 +124,19 @@ data class FilterDraft(
     val source: String? = null,
     val priceAvailability: String? = null,
     val includeArchive: Boolean = false,
-) {
+    // Keep partial text as draft input, never reinterpret a nonblank invalid field as Any.
+    val numberText: Map<String, String> = emptyMap(),
+) : java.io.Serializable {
     val noPrice: Boolean get() = priceAvailability == "unavailable"
+
+    val validNumbers: Boolean get() =
+        (noPrice || ((numberText["pMin"].isNullOrBlank() || priceMin != null) &&
+            (numberText["pMax"].isNullOrBlank() || priceMax != null) &&
+            (priceMin == null || priceMax == null || priceMin <= priceMax))) &&
+        (numberText["yMin"].isNullOrBlank() || yearMin != null) &&
+        (numberText["yMax"].isNullOrBlank() || yearMax != null) &&
+        (yearMin == null || yearMax == null || yearMin <= yearMax) &&
+        (numberText["km"].isNullOrBlank() || mileageMax != null)
 
     fun toQuery(base: ListingQuery): ListingQuery = base.copy(
         vehicleCategory = vehicleCategory,
@@ -279,17 +290,18 @@ fun FilterSheet(
     sources: List<String> = emptyList(),
     onMakeChange: (String?) -> Unit = {},
     countFor: (suspend (ListingQuery) -> Int?)? = null,
-    /** Create a price alert from the draft filters; rendered next to the apply CTA. */
-    onCreateAlert: (() -> Unit)? = null,
+    /** Review the same immutable query used for the count and apply actions. */
+    onCreateAlert: ((ListingQuery) -> Unit)? = null,
 ) {
-    var draft by remember(current) { mutableStateOf(FilterDraft.from(current)) }
+    var draft by androidx.compose.runtime.saveable.rememberSaveable(current) { mutableStateOf(FilterDraft.from(current)) }
+    val preview = draft.toQuery(current)
     var count by remember { mutableStateOf<Int?>(null) }
     var counting by remember { mutableStateOf(false) }
     if (countFor != null) {
-        LaunchedEffect(draft) {
+        LaunchedEffect(preview) {
             counting = true
             delay(300)
-            count = countFor(draft.toQuery(current))
+            count = countFor(preview)
             counting = false
         }
     }
@@ -315,9 +327,9 @@ fun FilterSheet(
                 draft = FilterDraft(vehicleCategory = current.vehicleCategory)
                 onMakeChange(null)
             },
-            onApply = { onApply(draft.toQuery(current)) },
+            onApply = { onApply(preview) },
             onCreateAlert = onCreateAlert?.let { create ->
-                { create() }
+                { create(preview) }
             },
         )
     }
@@ -453,7 +465,7 @@ fun ColumnScope.FilterSheetBody(
             active = !draft.noPrice && (draft.priceMin != null || draft.priceMax != null),
             expanded = expanded["price"] == true,
             onToggle = { toggle("price") },
-            onReset = { onDraftChange(draft.copy(priceMin = null, priceMax = null)) },
+            onReset = { onDraftChange(draft.copy(priceMin = null, priceMax = null, numberText = draft.numberText - "pMin" - "pMax")) },
         ) {
             if (draft.noPrice) {
                 Text(stringResource(R.string.filter_price_needs_priced), style = t.bodyS, color = c.textSecondary)
@@ -467,6 +479,7 @@ fun ColumnScope.FilterSheetBody(
                             draft.copy(
                                 priceMin = if (s <= 0f) null else PRICE_STEPS[s.toInt()],
                                 priceMax = if (e >= last) null else PRICE_STEPS[e.toInt()],
+                                numberText = draft.numberText - "pMin" - "pMax",
                             ),
                         )
                     },
@@ -477,12 +490,12 @@ fun ColumnScope.FilterSheetBody(
                     endValueText = MmPriceFormat.compact(draft.priceMax, any),
                 )
                 MinMaxFields(
-                    minText = draft.priceMin?.let { MmPriceFormat.mnNumber(it) }.orEmpty(),
-                    maxText = draft.priceMax?.let { MmPriceFormat.mnNumber(it) }.orEmpty(),
+                    minText = draft.numberText["pMin"] ?: draft.priceMin?.let { it.toBigDecimal().movePointLeft(6).stripTrailingZeros().toPlainString() }.orEmpty(),
+                    maxText = draft.numberText["pMax"] ?: draft.priceMax?.let { it.toBigDecimal().movePointLeft(6).stripTrailingZeros().toPlainString() }.orEmpty(),
                     suffix = stringResource(R.string.filter_mn_suffix),
                     decimal = true,
-                    onMin = { txt -> onDraftChange(draft.copy(priceMin = txt.toDoubleOrNull()?.takeIf { it > 0 }?.times(1_000_000))) },
-                    onMax = { txt -> onDraftChange(draft.copy(priceMax = txt.toDoubleOrNull()?.takeIf { it > 0 }?.times(1_000_000))) },
+                    onMin = { txt -> onDraftChange(draft.copy(priceMin = priceInput(txt), numberText = draft.numberText + ("pMin" to txt))) },
+                    onMax = { txt -> onDraftChange(draft.copy(priceMax = priceInput(txt), numberText = draft.numberText + ("pMax" to txt))) },
                 )
             }
         }
@@ -495,7 +508,7 @@ fun ColumnScope.FilterSheetBody(
             active = draft.yearMin != null || draft.yearMax != null,
             expanded = expanded["year"] == true,
             onToggle = { toggle("year") },
-            onReset = { onDraftChange(draft.copy(yearMin = null, yearMax = null)) },
+            onReset = { onDraftChange(draft.copy(yearMin = null, yearMax = null, numberText = draft.numberText - "yMin" - "yMax")) },
         ) {
             MmRangeSlider(
                 start = (draft.yearMin ?: FILTER_MIN_YEAR).toFloat(),
@@ -505,6 +518,7 @@ fun ColumnScope.FilterSheetBody(
                         draft.copy(
                             yearMin = s.toInt().takeIf { it > FILTER_MIN_YEAR },
                             yearMax = e.toInt().takeIf { it < FILTER_MAX_YEAR },
+                            numberText = draft.numberText - "yMin" - "yMax",
                         ),
                     )
                 },
@@ -515,14 +529,14 @@ fun ColumnScope.FilterSheetBody(
                 endValueText = (draft.yearMax ?: FILTER_MAX_YEAR).toString(),
             )
             MinMaxFields(
-                minText = draft.yearMin?.toString().orEmpty(),
-                maxText = draft.yearMax?.toString().orEmpty(),
+                minText = draft.numberText["yMin"] ?: draft.yearMin?.toString().orEmpty(),
+                maxText = draft.numberText["yMax"] ?: draft.yearMax?.toString().orEmpty(),
                 suffix = null,
                 decimal = false,
                 minPlaceholder = FILTER_MIN_YEAR.toString(),
                 maxPlaceholder = FILTER_MAX_YEAR.toString(),
-                onMin = { txt -> onDraftChange(draft.copy(yearMin = txt.toIntOrNull()?.takeIf { it in FILTER_MIN_YEAR..FILTER_MAX_YEAR })) },
-                onMax = { txt -> onDraftChange(draft.copy(yearMax = txt.toIntOrNull()?.takeIf { it in FILTER_MIN_YEAR..FILTER_MAX_YEAR })) },
+                onMin = { txt -> onDraftChange(draft.copy(yearMin = txt.toIntOrNull()?.takeIf { it in FILTER_MIN_YEAR..FILTER_MAX_YEAR }, numberText = draft.numberText + ("yMin" to txt))) },
+                onMax = { txt -> onDraftChange(draft.copy(yearMax = txt.toIntOrNull()?.takeIf { it in FILTER_MIN_YEAR..FILTER_MAX_YEAR }, numberText = draft.numberText + ("yMax" to txt))) },
             )
         }
 
@@ -534,13 +548,13 @@ fun ColumnScope.FilterSheetBody(
             active = draft.mileageMax != null,
             expanded = expanded["mileage"] == true,
             onToggle = { toggle("mileage") },
-            onReset = { onDraftChange(draft.copy(mileageMax = null)) },
+            onReset = { onDraftChange(draft.copy(mileageMax = null, numberText = draft.numberText - "km")) },
         ) {
             MmRangeSlider(
                 start = 0f,
                 end = (draft.mileageMax ?: FILTER_MAX_MILEAGE).toFloat(),
                 onChange = { _, e ->
-                    onDraftChange(draft.copy(mileageMax = e.toInt().takeIf { it < FILTER_MAX_MILEAGE }))
+                    onDraftChange(draft.copy(mileageMax = e.toInt().takeIf { it < FILTER_MAX_MILEAGE }, numberText = draft.numberText - "km"))
                 },
                 valueRange = 0f..FILTER_MAX_MILEAGE.toFloat(),
                 step = FILTER_MILEAGE_STEP.toFloat(),
@@ -549,13 +563,13 @@ fun ColumnScope.FilterSheetBody(
                 endValueText = draft.mileageMax?.let { kmLabel(it) } ?: any,
             )
             SingleField(
-                text = draft.mileageMax?.toString().orEmpty(),
+                text = draft.numberText["km"] ?: draft.mileageMax?.toString().orEmpty(),
                 label = stringResource(R.string.filter_max),
                 suffix = stringResource(R.string.filter_km_suffix),
                 placeholder = grouping.format(FILTER_MAX_MILEAGE),
                 onText = { txt ->
                     val v = txt.filter(Char::isDigit).toIntOrNull()
-                    onDraftChange(draft.copy(mileageMax = v?.takeIf { it in 1 until FILTER_MAX_MILEAGE }))
+                    onDraftChange(draft.copy(mileageMax = v?.takeIf { it in 1..FILTER_MAX_MILEAGE }, numberText = draft.numberText + ("km" to txt)))
                 },
             )
         }
@@ -616,7 +630,8 @@ fun ColumnScope.FilterSheetBody(
     // Create-alert lives next to the apply CTA (was an off-screen icon in the sort row).
     if (onCreateAlert != null) {
         MmButton(
-            text = stringResource(R.string.v19_search_create_alert),
+            text = stringResource(R.string.buyer_search_review_cta),
+            enabled = draft.validNumbers,
             onClick = onCreateAlert,
             style = MmButtonStyle.Tonal,
             leadingIcon = Icons.Filled.AddAlert,
@@ -642,10 +657,11 @@ fun ColumnScope.FilterSheetBody(
             text = stringResource(R.string.filter_reset_all),
             onClick = onReset,
             style = MmButtonStyle.Secondary,
-            enabled = draft.activeCount > 0,
+            enabled = draft.activeCount > 0 || !draft.validNumbers,
             modifier = if (stackCtas) Modifier.fillMaxWidth() else Modifier.weight(1f),
         )
         val cta = when {
+            !draft.validNumbers -> stringResource(R.string.buyer_search_fix_numbers)
             // Never show the previous draft's total while the new one is counting.
             counting -> stringResource(R.string.filter_count_loading)
             liveCount == null -> stringResource(R.string.filter_show_results)
@@ -655,6 +671,7 @@ fun ColumnScope.FilterSheetBody(
         }
         MmButton(
             text = cta,
+            enabled = draft.validNumbers,
             onClick = {
                 applyHaptics.save() // confirm tick on filter apply
                 onApply()
@@ -668,6 +685,9 @@ fun ColumnScope.FilterSheetBody(
 
 /** Sections open the first time the sheet shows. */
 val DEFAULT_EXPANDED: Set<String> = setOf("makeModel", "price", "year", "fuel")
+
+private fun priceInput(millions: String): Double? = millions.toBigDecimalOrNull()
+    ?.movePointRight(6)?.toDouble()?.takeIf { it > 0 && it.isFinite() }
 
 @Composable
 private fun chipSection(

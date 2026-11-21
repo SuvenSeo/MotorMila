@@ -56,7 +56,7 @@ import lk.motormila.app.ui.common.MmScreen
 import lk.motormila.app.ui.common.ScreenError
 import lk.motormila.app.ui.common.ScreenSkeleton
 import lk.motormila.app.ui.components.MmChip
-import lk.motormila.app.ui.components.MmDealBadge
+
 import lk.motormila.app.ui.components.MmEmptyState
 import lk.motormila.app.ui.components.MmIconButton
 import lk.motormila.app.ui.components.MmImage
@@ -77,7 +77,7 @@ private val RowHeight = 52.dp
 fun CompareScreen(
     ids: List<Int>,
     onOpenDetail: (id: Int) -> Unit,
-    onAddListing: () -> Unit,
+    onAddListing: (existingIds: List<Int>) -> Unit,
     onBrowse: () -> Unit,
     viewModel: CompareViewModel = hiltViewModel(),
 ) {
@@ -96,8 +96,8 @@ fun CompareScreen(
         title = stringResource(R.string.scr_cmp_title),
         snackbarHostState = snacks,
         actions = {
-            if (state.items.size < CompareUiState.MAX_IDS && state.items.isNotEmpty()) {
-                MmIconButton(Icons.Filled.Add, stringResource(R.string.scr_cmp_add), onClick = onAddListing)
+            if (state.ids.size < CompareUiState.MAX_IDS && state.items.isNotEmpty()) {
+                MmIconButton(Icons.Filled.Add, stringResource(R.string.scr_cmp_add), onClick = { onAddListing(state.ids) })
             }
         },
     ) {
@@ -131,7 +131,8 @@ fun CompareScreen(
                         onToggleDifferences = { viewModel.onEvent(CompareUiEvent.OnlyDifferences(it)) },
                         onOpenDetail = onOpenDetail,
                         onRemove = { viewModel.onEvent(CompareUiEvent.Remove(it)) },
-                        onAdd = onAddListing,
+                        onAdd = { onAddListing(state.ids) },
+                        canAdd = state.ids.size < CompareUiState.MAX_IDS,
                     )
                 }
             }
@@ -141,20 +142,11 @@ fun CompareScreen(
 
 @Composable
 private fun rememberCompareFormat(): CompareFormat {
-    val below = stringResource(R.string.scr_cmp_below_market)
-    val above = stringResource(R.string.scr_cmp_above_market)
-    val at = stringResource(R.string.scr_cmp_at_market)
-    return remember(below, above, at) {
+    return remember {
         object : CompareFormat {
             override fun price(lkr: Double?) = lkr?.takeIf { it > 0 }?.let { MmPriceFormat.compact(it) }
             override fun km(km: Double?) = km?.takeIf { it > 0 }?.let { "%,d km".format(it.toLong()) }
-            override fun vsMarket(pct: Double?) = pct?.let {
-                when {
-                    it <= -1 -> below.format("%.0f".format(-it))
-                    it >= 1 -> above.format("%.0f".format(it))
-                    else -> at
-                }
-            }
+
         }
     }
 }
@@ -163,7 +155,7 @@ private fun rememberCompareFormat(): CompareFormat {
 private fun rowLabel(key: String): String = stringResource(
     when (key) {
         "price" -> R.string.scr_cmp_price
-        "vsMarket" -> R.string.scr_cmp_vs_market
+
         "year" -> R.string.scr_cmp_year
         "mileage" -> R.string.scr_cmp_mileage
         "fuel" -> R.string.scr_cmp_fuel
@@ -192,6 +184,7 @@ fun CompareMatrix(
     onOpenDetail: (Int) -> Unit,
     onRemove: (Int) -> Unit,
     onAdd: () -> Unit,
+    canAdd: Boolean = items.size < CompareUiState.MAX_IDS,
 ) {
     val c = MmColors.current
     val type = MmType.current
@@ -217,7 +210,7 @@ fun CompareMatrix(
                 else -> avail / 2.4f
             }.coerceIn(MinColumnWidth * fontScale, MaxColumnWidth * fontScale)
             val rowH = RowHeight * fontScale
-            val showAdd = items.size < CompareUiState.MAX_IDS
+            val showAdd = canAdd
             Column(Modifier.fillMaxSize()) {
                 Row(
                     Modifier.padding(horizontal = MmSpacing.lg, vertical = MmSpacing.sm),
@@ -274,20 +267,12 @@ fun CompareMatrix(
                                     )
                                 }
                             }
-                            LabelCell(rowH, divider = false) {
-                                Text(
-                                    stringResource(R.string.scr_cmp_deal),
-                                    style = type.labelS,
-                                    color = c.textSecondary,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
+
                         }
                         // Scrolling car columns (same ScrollState as the header).
                         Row(Modifier.horizontalScroll(hScroll).padding(end = MmSpacing.lg)) {
-                            items.forEachIndexed { col, item ->
-                                CarColumn(item, col, rows, colW, rowH)
+                            items.indices.forEach { col ->
+                                CarColumn(col, rows, colW, rowH)
                             }
                             if (showAdd) Spacer(Modifier.width(colW))
                         }
@@ -392,7 +377,6 @@ private fun CarHeader(
 
 @Composable
 private fun CarColumn(
-    item: Listing,
     col: Int,
     rows: List<CompareLogic.Row>,
     colW: androidx.compose.ui.unit.Dp,
@@ -431,9 +415,7 @@ private fun CarColumn(
                 )
             }
         }
-        Box(Modifier.height(rowH).padding(start = MmSpacing.sm), contentAlignment = Alignment.CenterStart) {
-            MmDealBadge(band = item.dealBand())
-        }
+
     }
 }
 

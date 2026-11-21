@@ -31,6 +31,7 @@ _TABLE_COLUMN_PATCHES = (
     ("market_alerts", "notify_telegram_chat_id", "VARCHAR(64)", "VARCHAR(64)"),
     ("market_alerts", "notify_channels", "VARCHAR(64)", "VARCHAR(64)"),
     ("market_alerts", "delivery_mode", "VARCHAR(16)", "VARCHAR(16)"),
+    ("market_alerts", "paused_at", "TIMESTAMPTZ", "DATETIME"),
     ("market_alerts", "quiet_hours_enabled", "BOOLEAN", "BOOLEAN"),
     ("dealer_profiles", "verified_at", "TIMESTAMPTZ", "DATETIME"),
     ("dealer_profiles", "plan", "VARCHAR(20) NOT NULL DEFAULT 'dealer'", "VARCHAR(20) NOT NULL DEFAULT 'dealer'"),
