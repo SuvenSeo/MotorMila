@@ -1038,12 +1038,6 @@ export default function Dashboard() {
             </Card>
           )}
 
-          <DataFreshnessIndicator
-            latestListingAt={liveMarketSnapshot?.latest_listing_at}
-            lastUpdated={stats?.last_updated}
-            variant="banner"
-            className="mb-5"
-          />
           <SnapshotModeNotice className="mb-5" />
 
           {/* Filters + Grid */}

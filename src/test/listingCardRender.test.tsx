@@ -126,10 +126,13 @@ describe("ListingCard render states and interactions", () => {
     renderCard(<ListingCard listing={listing} />);
 
     expect(screen.getByText(/typical rs/i)).toBeInTheDocument();
-    expect(screen.getByText("6% below typical")).toBeInTheDocument();
+    const percentLabel = screen.getByText("6% below typical");
+    expect(percentLabel).toBeInTheDocument();
     expect(screen.queryByText(/fmv|fair market/i)).toBeNull();
-    // Rupee gap badge: 9.5M - 8.9M = Rs 0.6 Mn.
-    expect(screen.getByText("Rs 0.6 Mn below typical")).toBeInTheDocument();
+    // One verdict, stated once: the band carries the percent and the rupee gap
+    // (9.5M - 8.9M = Rs 0.6 Mn) rides on its tooltip instead of a second pill.
+    expect(percentLabel).toHaveAttribute("title", "Rs 0.6 Mn below typical");
+    expect(screen.queryByText("Rs 0.6 Mn below typical")).toBeNull();
   });
 
   it("paints very cheap outliers amber, never green", () => {

@@ -5,11 +5,11 @@ import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Bell, MapPin, SearchX, Wallet, X } from "lucide-react";
+import { Bell, CarFront, MapPin, SearchX, Wallet, X } from "lucide-react";
 import type { FilterState } from "@/types/car";
 import { nearbyDistricts, widenPrice } from "@/lib/searchSuggestions";
 import { useAppPreferences } from "@/lib/appPreferences";
-import { formatLkrRange } from "@/lib/price";
+import { formatLkrCompact, formatLkrRange } from "@/lib/price";
 import { EMPTY_FILTERS } from "@/lib/searchUrlState";
 import { cn } from "@/lib/utils";
 
@@ -61,6 +61,37 @@ export function NoResultsState({ filters, onFiltersChange, onCreateAlert, alertS
   }, [filters, hasPrice, t]);
 
   const apply = (patch: Partial<FilterState>) => onFiltersChange({ ...filters, ...patch, page: 1 });
+
+  const relaxations = useMemo(() => {
+    const items: Array<{ key: string; label: string; icon: typeof MapPin; patch: Partial<FilterState> }> = [];
+    if (filters.price_max) {
+      const wider = Math.round((filters.price_max * 1.1) / 100_000) * 100_000;
+      items.push({
+        key: "price",
+        label: t("search.relaxPrice", "Up to {price} (+10%)", { price: formatLkrCompact(wider) }),
+        icon: Wallet,
+        patch: { price_max: wider },
+      });
+    }
+    if (filters.district) {
+      items.push({
+        key: "district",
+        label: t("search.relaxAnyDistrict", "Any district"),
+        icon: MapPin,
+        patch: { district: undefined },
+      });
+    }
+    if (filters.make || filters.model) {
+      items.push({
+        key: "vehicle",
+        label: t("search.relaxAnyVehicle", "Any make or model"),
+        icon: CarFront,
+        patch: { make: undefined, model: undefined },
+      });
+    }
+    return items;
+  }, [filters.price_max, filters.district, filters.make, filters.model, t]);
+
   const chip = "h-11 sm:h-9";
   const sectionLabel = "mb-2 flex items-center gap-1.5 text-footnote font-medium text-label-2";
 
@@ -123,6 +154,20 @@ export function NoResultsState({ filters, onFiltersChange, onCreateAlert, alertS
                 >
                   <span className="max-w-48 truncate capitalize">{item.label}</span>
                   <X aria-hidden className="opacity-60" />
+                </Chip>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {relaxations.length ? (
+          <div>
+            <p className={sectionLabel}>{t("search.relaxLabel", "Loosen the search")}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {relaxations.map(({ key, label, icon: Icon, patch }) => (
+                <Chip key={key} className={cn(chip, key === "price" && "num")} onClick={() => apply(patch)}>
+                  <Icon aria-hidden />
+                  {label}
                 </Chip>
               ))}
             </div>

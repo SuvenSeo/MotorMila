@@ -30,7 +30,7 @@ import { PriceSparkline } from "@/components/PriceSparkline";
 import { getSourceAttribution } from "@/lib/sourceAttribution";
 import { silhouetteFor } from "@/lib/vehicleSilhouette";
 import "@/styles/cinematic-pages.css";
-import { computeDealBadge, DEAL_BAR_CLASSES, DEAL_TEXT_CLASSES } from "@/lib/dealBadge";
+import { computeDealBadge, dealBadgeLabel, DEAL_BAR_CLASSES, DEAL_TEXT_CLASSES } from "@/lib/dealBadge";
 import { isLeaseTakeoverListing } from "@/lib/leaseTakeover";
 import { estimateListingMonthly, formatMonthlyLkr } from "@/lib/listingFinance";
 import { DealBadge } from "@/components/listing/DealBadge";
@@ -156,6 +156,12 @@ export const ListingCard = memo(function ListingCard({
   const marketPosition = marketDeltaPct === null ? 50 : clamp(50 - marketDeltaPct, 8, 92);
   // FMV tone follows the deal badge so a "verify" outlier is never painted green.
   const fmvKind = fmv?.verify_first ? "verify" : fmv?.band === "below" ? "below" : fmv?.band === "above" ? "above" : "fair";
+
+  // One verdict, stated once: the typical-price band already carries the
+  // percentage, so the rupee-gap badge only shows when there is no band (lease
+  // takeover, no typical price) or when it adds a safety call (verify first).
+  const showDealBadge = deal.kind === "lease" || deal.kind === "verify" || (deal.kind !== "none" && fmv === null);
+  const hiddenGapLabel = !showDealBadge && (deal.kind === "below" || deal.kind === "above") ? dealBadgeLabel(deal, t) : null;
 
   const monthly = hasKnownPrice
     ? estimateListingMonthly({
@@ -381,7 +387,12 @@ export const ListingCard = memo(function ListingCard({
                 <p className="num truncate text-caption font-medium text-label-2">
                   {t("listingCard.typical", "Typical {price}", { price: formatPrice(fmv.fmv_lkr) })}
                 </p>
-                <p className={`num shrink-0 text-caption font-semibold ${DEAL_TEXT_CLASSES[fmvKind]}`}>{fmv.shortLabel}</p>
+                <p
+                  className={`num shrink-0 text-caption font-semibold ${DEAL_TEXT_CLASSES[fmvKind]}`}
+                  title={hiddenGapLabel ?? undefined}
+                >
+                  {fmv.shortLabel}
+                </p>
               </div>
               <div className="relative mt-2 h-1.5 overflow-hidden rounded-full bg-foreground/10">
                 <div
@@ -392,9 +403,9 @@ export const ListingCard = memo(function ListingCard({
             </div>
           )}
 
-          {(deal.kind !== "none" || hasMetaChips || mileageKnown || hybridCliff) && (
+          {(showDealBadge || hasMetaChips || mileageKnown || hybridCliff) && (
             <div className="flex flex-wrap items-center gap-1.5">
-              {deal.kind !== "none" && <DealBadge badge={deal} tone="soft" className="shrink-0" />}
+              {showDealBadge && <DealBadge badge={deal} tone="soft" className="shrink-0" />}
               {listing.is_active === false && (
                 <Badge variant="warning">{t("listingCard.archived", "Archived / Past ad")}</Badge>
               )}
