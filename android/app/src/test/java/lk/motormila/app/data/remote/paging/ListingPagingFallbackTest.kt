@@ -69,6 +69,19 @@ class ListingPagingFallbackTest {
     }
 
     @Test
+    fun liveDown_noMatchesInLimitedSnapshotIsNotAnAuthoritativeEmptyPage() = runTest {
+        val flags = mutableListOf<Boolean>()
+        val query = ListingQuery(make = "Mazda")
+        val result = source(failingApi(), query,
+            snapshot = { filterSnapshotListings(snapshotRows, query).map { it.toDomain() } },
+            flags = flags,
+        ).load(refresh())
+
+        assertTrue("Search must offer recovery rather than imply the market is empty", result is PagingSource.LoadResult.Error)
+        assertTrue("No actual snapshot rows were served", true !in flags)
+    }
+
+    @Test
     fun apiDown_laterPagesStayErrors() = runTest {
         val result = source(failingApi(), ListingQuery(), snapshot = { emptyList() }, flags = mutableListOf())
             .load(PagingSource.LoadParams.Append(key = 2, loadSize = 20, placeholdersEnabled = false))

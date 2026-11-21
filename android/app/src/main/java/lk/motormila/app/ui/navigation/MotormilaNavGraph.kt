@@ -223,8 +223,8 @@ fun MotormilaNavGraph(
             onReselect = { routeKey -> tabReselect.tick(routeKey) },
         ) { innerPadding ->
             // Edge-to-edge: every screen owns its status-bar inset (glass top
-            // bars draw under it). Tab roots let content scroll under the
-            // floating glass tab bar and pad via LocalBottomChrome; Detail
+            // bars draw under it). Tab roots clear the measured dock via
+            // LocalBottomChrome; Detail
             // owns its bottom action bar; other pushed routes keep the
             // gesture/nav-bar inset here so nothing ends under it.
             val navInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -300,6 +300,7 @@ fun MotormilaNavGraph(
                             // keys, so Detail runs the container transform.
                             onListingClick = { id -> navController.navigate(ListingDetail(id, fromCard = true)) },
                             onSearchClick = { navController.navigate(Search()) },
+                            onShowroomSearch = { route -> navController.navigate(route) },
                             onAlertsClick = { navController.navigate(Alerts()) },
                             onSeeAll = { key ->
                                 when (key) {

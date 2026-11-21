@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="showroom_headline">Find your\nnext vehicle.</string>
+    <string name="showroom_market">Sri Lanka</string>
+    <string name="showroom_headline_compact">Find a vehicle</string>
+    <string name="showroom_results_unavailable">Can’t load vehicles</string>
+    <string name="showroom_results_retry_body">Live listings are unavailable. Your filters are still applied.</string>
+
+    <string name="showroom_query_hint">Make, model or budget</string>
+    <string name="showroom_body_title">Browse by body type</string>
+    <string name="showroom_hatchbacks">Hatchbacks</string>
+    <string name="showroom_sedans">Sedans</string>
+    <string name="showroom_suvs">SUVs</string>
+    <string name="showroom_vans">Vans</string>
+</resources>

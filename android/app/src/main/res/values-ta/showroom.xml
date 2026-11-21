@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="showroom_headline">உங்கள் அடுத்த வாகனத்தைக் கண்டறியுங்கள்.</string>
+    <string name="showroom_market">இலங்கை</string>
+    <string name="showroom_headline_compact">வாகனம் தேடுங்கள்</string>
+    <string name="showroom_results_unavailable">வாகனங்களை ஏற்ற முடியவில்லை</string>
+    <string name="showroom_results_retry_body">நேரடி வாகன விளம்பரங்கள் கிடைக்கவில்லை. உங்கள் வடிகட்டிகள் மாறவில்லை.</string>
+
+    <string name="showroom_query_hint">தயாரிப்பு, மாடல் அல்லது பட்ஜெட்</string>
+    <string name="showroom_body_title">வாகன வடிவத்தின்படி தேடுங்கள்</string>
+    <string name="showroom_hatchbacks">ஹாட்ச்பேக்</string>
+    <string name="showroom_sedans">செடான்</string>
+    <string name="showroom_suvs">SUV</string>
+    <string name="showroom_vans">வேன்</string>
+</resources>

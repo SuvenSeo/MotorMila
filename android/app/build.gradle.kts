@@ -46,8 +46,8 @@ android {
         applicationId = "lk.motormila.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 25
-        versionName = "2.0.0-rc1"
+        versionCode = 26
+        versionName = "2.0.0-rc2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

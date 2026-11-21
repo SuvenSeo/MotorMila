@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
@@ -38,6 +39,7 @@ import lk.motormila.app.ui.components.GlassStatusBarStrip
 import lk.motormila.app.ui.components.MmIconButton
 import lk.motormila.app.ui.components.MmPullToRefresh
 import lk.motormila.app.ui.navigation.LocalTabReselect
+import lk.motormila.app.ui.navigation.Search
 import lk.motormila.app.ui.theme.MmColors
 import lk.motormila.app.ui.theme.MmSpacing
 import lk.motormila.app.ui.theme.MmType
@@ -63,12 +65,13 @@ fun HomeScreen(
     onCalculatorClick: () -> Unit = {},
     onPriceIndexClick: () -> Unit = {},
     onPermitsClick: () -> Unit = {},
+    onShowroomSearch: (Search) -> Unit = { onSearchClick() },
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     HomeContent(state = state, onRefresh = viewModel::refresh, onRetry = viewModel::retry,
         onDismissCached = viewModel::dismissCachedBadge, onListingClick = onListingClick,
-        onSearchClick = onSearchClick, onAlertsClick = onAlertsClick)
+        onSearchClick = onSearchClick, onAlertsClick = onAlertsClick, onShowroomSearch = onShowroomSearch)
 }
 
 /** Stateless body used by the shipping route and screenshot tests. The legacy banner and
@@ -87,6 +90,7 @@ fun HomeContent(
     onSearchClick: () -> Unit,
     onAlertsClick: () -> Unit,
     onSeeAll: (String) -> Unit = {},
+    onShowroomSearch: (Search) -> Unit = { onSearchClick() },
 ) {
     val chrome = LocalBottomChrome.current
     val listState = rememberLazyListState()
@@ -97,15 +101,18 @@ fun HomeContent(
     val saved = state.savedVehicle
     val drop = state.recordedDrop
 
-    Box(Modifier.fillMaxSize()) {
+    // Keep the focused search field inside a scrollable visible viewport when
+    // the system keyboard consumes a short window. Dock visibility alone does
+    // not change edge-to-edge measurement.
+    Box(Modifier.fillMaxSize().imePadding()) {
         MmPullToRefresh(isRefreshing = state.isRefreshing, onRefresh = onRefresh, indicatorTop = statusTop,
             modifier = Modifier.fillMaxSize().glassBackdrop(backdrop)) {
             LazyColumn(state = listState, modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(top = statusTop, bottom = chrome.contentPadding + 20.dp)) {
-                item(key = "masthead") { HomeTopRow(onAlertsClick, Modifier.padding(bottom = 8.dp)) }
+                item(key = "masthead") { HomeTopRow(onAlertsClick, Modifier.padding(bottom = 6.dp)) }
                 item(key = "entry") {
                     if (saved == null && state.shortlistReady) {
-                        BuyerHomeIntroduction(onSearchClick)
+                        BuyerHomeIntroduction(onShowroomSearch)
                     } else {
                         Column {
                             if (saved != null) SavedVehicleSection(saved, onListingClick)

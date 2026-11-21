@@ -130,7 +130,6 @@ fun MotormilaTheme(
                         .fillMaxSize()
                         .background(colors.background),
                 ) {
-                    if (darkTheme) MotormilaAmbient()
                     content()
                 }
             }

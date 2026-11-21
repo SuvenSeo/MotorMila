@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="showroom_headline">ඔබේ ඊළඟ වාහනය සොයාගන්න.</string>
+    <string name="showroom_market">ශ්‍රී ලංකාව</string>
+    <string name="showroom_headline_compact">වාහනය සොයන්න</string>
+    <string name="showroom_results_unavailable">වාහන පූරණය කළ නොහැක</string>
+    <string name="showroom_results_retry_body">සජීවී දැන්වීම් දැන් ලබාගත නොහැක. ඔබේ පෙරහන් තවමත් යෙදී ඇත.</string>
+
+    <string name="showroom_query_hint">නිෂ්පාදකයා, මාදිලිය හෝ අයවැය</string>
+    <string name="showroom_body_title">බඳ වර්ගය අනුව බලන්න</string>
+    <string name="showroom_hatchbacks">හැච්බැක්</string>
+    <string name="showroom_sedans">සෙඩාන්</string>
+    <string name="showroom_suvs">SUV</string>
+    <string name="showroom_vans">වෑන්</string>
+</resources>

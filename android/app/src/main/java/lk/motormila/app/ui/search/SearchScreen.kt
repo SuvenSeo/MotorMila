@@ -93,8 +93,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SnackbarHostState
@@ -122,6 +125,7 @@ import kotlinx.coroutines.launch
 import lk.motormila.app.domain.repository.ListingSorts
 import lk.motormila.app.ui.components.EmptyState
 import lk.motormila.app.ui.components.ErrorState
+import lk.motormila.app.ui.components.MmEmptyState
 import lk.motormila.app.ui.components.FilterSheet
 import lk.motormila.app.ui.components.ListingCard
 import lk.motormila.app.ui.components.ListingImage
@@ -177,7 +181,6 @@ fun SearchScreen(
     val voiceUnavailableMsg = stringResource(R.string.v19_search_voice_unavailable)
     val alertSavedMsg = stringResource(R.string.buyer_search_rule_saved)
     val genericErrorMsg = stringResource(R.string.v19_search_error_generic)
-    val loadErrorMsg = stringResource(R.string.v19_search_load_error)
     val loadMoreErrorMsg = stringResource(R.string.v19_search_load_more_error)
     val backToTopLabel = stringResource(R.string.v19_search_back_to_top)
     val countFormat = remember { NumberFormat.getIntegerInstance(Locale.US) }
@@ -185,6 +188,8 @@ fun SearchScreen(
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val isRefreshing = items.loadState.refresh is LoadState.Loading
+    val refreshFailed = items.loadState.refresh is LoadState.Error
+    val hasLoadedResults = items.itemSnapshotList.items.isNotEmpty()
     var preferGrid by rememberSaveable { mutableStateOf(true) }
     val largeText = LocalDensity.current.fontScale >= 1.5f
     val gridMode = preferGrid && !largeText
@@ -270,7 +275,7 @@ fun SearchScreen(
     val layoutToggleVisible = gridColumns > 1 && !largeText
 
     // Edge-to-edge: results scroll under a liquid-glass search header (top)
-    // and the floating glass tab bar (bottom). The header is measured once
+    // and clear the measured dock (bottom). The header is measured once
     // per size change (not per frame) and pads the result grid.
     val chrome = LocalBottomChrome.current
     // Saveable: on pop back from Detail the screen re-enters composition and a
@@ -315,7 +320,7 @@ fun SearchScreen(
                 // between skeleton / error / empty / grid instead of cutting.
                 val phase = when {
                     isRefreshing -> 0
-                    items.loadState.refresh is LoadState.Error -> 1
+                    refreshFailed -> 1
                     items.itemCount == 0 && !items.loadState.append.endOfPaginationReached -> 2
                     items.itemCount == 0 -> 3
                     else -> 4
@@ -348,15 +353,16 @@ fun SearchScreen(
                         }
                     }
                     1 -> {
-                        // Safe cast: this branch is still drawn while it fades out.
-                        val err = items.loadState.refresh as? LoadState.Error
-                        ErrorState(
-                            message = err?.error?.message ?: loadErrorMsg,
-                            onRetry = { items.retry() },
-                            cachedAvailable = items.itemCount > 0,
-                            onShowCached = { items.retry() },
-                            modifier = Modifier.fillMaxSize().padding(top = headerH, bottom = bottomPad),
-                        )
+                        Box(Modifier.fillMaxSize().padding(top = headerH, bottom = bottomPad),
+                            contentAlignment = Alignment.Center) {
+                            MmEmptyState(
+                                icon = Icons.Outlined.CloudOff,
+                                title = stringResource(R.string.showroom_results_unavailable),
+                                message = stringResource(R.string.showroom_results_retry_body),
+                                primaryAction = stringResource(R.string.v19_error_retry) to { items.retry() },
+                                modifier = Modifier.verticalScroll(rememberScrollState()),
+                            )
+                        }
                     }
                     // Truly empty only once the source says so: on (re)entry the
                     // first frame can have 0 items before the cached page lands,
@@ -548,9 +554,8 @@ fun SearchScreen(
                 .statusBarsPadding()
                 .padding(bottom = 4.dp),
         ) {
-            if (items.loadState.refresh is LoadState.Error) {
-                OfflineBanner(visible = true, onRetry = { items.refresh() })
-            } else if (fromSnapshot) {
+            // A refresh error is a recovery state, not proof of a populated cache.
+            if (!isRefreshing && !refreshFailed && hasLoadedResults && fromSnapshot) {
                 OfflineBanner(
                     visible = true,
                     text = stringResource(R.string.offline_snapshot_banner),

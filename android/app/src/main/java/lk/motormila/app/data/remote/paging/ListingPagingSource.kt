@@ -11,7 +11,8 @@ import lk.motormila.app.domain.repository.ListingQuery
  * PagingSource for listing search: live API, with an optional offline
  * snapshot fallback for page 1 ([snapshotFallback]) so Search / Best Picks
  * keep working during a backend outage. Snapshot results are a single page
- * (no further keys). [onSourceChanged] reports true when the snapshot served.
+ * (no further keys); no hits in the limited snapshot cannot establish that the
+ * live market has no matches. [onSourceChanged] reports true for displayed rows.
  *
  * Page keys are 1-based backend pages; [ListingQuery] mirrors GET /listings params.
  * Backend caps free plans to page 1 server-side; [nextKey] still follows `pages`.
@@ -70,8 +71,12 @@ class ListingPagingSource(
         if (page != 1 || fallback == null) return LoadResult.Error(liveError)
         return try {
             val rows = fallback()
-            onSourceChanged?.invoke(true)
-            LoadResult.Page(data = rows, prevKey = null, nextKey = null)
+            if (rows.isEmpty()) {
+                LoadResult.Error(liveError)
+            } else {
+                onSourceChanged?.invoke(true)
+                LoadResult.Page(data = rows, prevKey = null, nextKey = null)
+            }
         } catch (ce: kotlin.coroutines.cancellation.CancellationException) {
             throw ce
         } catch (snapshotError: Throwable) {

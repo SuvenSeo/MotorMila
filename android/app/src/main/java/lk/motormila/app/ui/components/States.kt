@@ -418,7 +418,7 @@ fun OfflineBanner(
     text: String? = null,
 ) {
     if (!visible) return
-    val bannerDesc = stringResource(R.string.v19_offline_banner_desc)
+    val bannerDesc = text ?: stringResource(R.string.v19_offline_banner_desc)
     val retryDesc = stringResource(R.string.v19_offline_retry_desc)
     val dismissDesc = stringResource(R.string.v19_offline_dismiss_desc)
     lk.motormila.app.ui.theme.CappedFontScale(max = 1.3f) {
@@ -429,7 +429,8 @@ fun OfflineBanner(
             // Rounded rect, not a stadium: a 2-line banner in a pill looked like a blob.
             .clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp))
             .background(MaterialTheme.colorScheme.secondaryContainer)
-            .then(if (onRetry != null) Modifier.mmTappable(role = androidx.compose.ui.semantics.Role.Button, pressedScale = 1f) { onRetry() } else Modifier)
+            .then(if (onRetry != null) Modifier.mmTappable(onClickLabel = retryDesc,
+                role = androidx.compose.ui.semantics.Role.Button, pressedScale = 1f) { onRetry() } else Modifier)
             .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp)
             .semantics { contentDescription = bannerDesc },
         verticalAlignment = Alignment.CenterVertically,
