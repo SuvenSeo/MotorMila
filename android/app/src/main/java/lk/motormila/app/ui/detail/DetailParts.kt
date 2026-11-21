@@ -2,7 +2,6 @@
 
 package lk.motormila.app.ui.detail
 
-import lk.motormila.app.ui.theme.liquidGlass
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.core.Animatable
@@ -16,7 +15,6 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,12 +25,10 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
@@ -52,7 +48,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -69,23 +64,19 @@ import kotlin.math.abs
 import kotlinx.coroutines.launch
 import lk.motormila.app.R
 import lk.motormila.app.ui.components.MmButton
-import lk.motormila.app.ui.components.MmButtonSize
 import lk.motormila.app.ui.components.MmDealBadge
 import lk.motormila.app.ui.components.MmDealVerdict
 import lk.motormila.app.ui.components.MmIconButton
 import lk.motormila.app.ui.components.MmIconButtonStyle
 import lk.motormila.app.ui.components.MmImage
 import lk.motormila.app.ui.components.MmImagePlaceholder
-import lk.motormila.app.ui.components.MmPrice
 import lk.motormila.app.ui.components.MmPriceFormat
-import lk.motormila.app.ui.components.MmPriceMode
 import lk.motormila.app.ui.components.MmSheet
 import lk.motormila.app.ui.components.label
 import lk.motormila.app.ui.navigation.LocalNavAnimatedVisibilityScope
 import lk.motormila.app.ui.navigation.LocalSharedTransitionScope
 import lk.motormila.app.ui.navigation.listingHeroKey
 import lk.motormila.app.ui.theme.MmColors
-import lk.motormila.app.ui.theme.MmDealTone
 import lk.motormila.app.ui.theme.MmMotion
 import lk.motormila.app.ui.theme.MmShapes
 import lk.motormila.app.ui.theme.MmSpacing
@@ -403,113 +394,30 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.awaitEac
 
 
 // ─────────────────────────────────────────────────────────────
-// Sticky bottom action bar
+// Original-source handoff
 // ─────────────────────────────────────────────────────────────
 
-/**
- * Sticky bottom bar on listing detail: full asking price (detail is the one
- * place full rupees are shown) + "View on <source>" primary action. Sits on
- * a translucent surface with a hairline; handles the navigation-bar inset.
- */
+/** One source action. Never repeat the asking price or invent a destination for a missing URL. */
 @Composable
 fun DetailActionBar(
     priceLkr: Double?,
     sourceName: String,
     onViewSource: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    copyOnly: Boolean = false,
 ) {
-    val c = MmColors.current
-    // Fixed chrome: cap Dynamic Type at 1.3x like an iOS toolbar so the price and the
-    // button both fit at 200 %; the price additionally shrinks to fit (MmFitText).
-    lk.motormila.app.ui.theme.CappedFontScale(max = 1.3f) {
-    // Compact ONLY (v1.9.0): the full rupee figure lives in the price hero on
-    // the page — one hero, one full price. The bar keeps the short "Rs 1.2 Mn".
-    val priceMode = MmPriceMode.Compact
-    val priceStyle = MmType.current.priceM
-    val fallback = stringResource(R.string.mm_price_on_request)
-    val priceText = MmPriceFormat.compact(priceLkr, fallback)
-    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    // PRICE HAS PRIORITY (1.7.0 bug: "Rs 950,00C"). The Row measured the
-    // un-weighted button first, so "View on Riyasewana" took its full one-line
-    // width and the weighted price column got the leftovers. Now the price
-    // reserves its real per-glyph width; the button takes what is left (label
-    // wraps/ellipsizes) and, if that is under [MinButtonWidth], the bar stacks.
-    val priceWidthPx = remember(priceText, priceStyle, density) {
-        lk.motormila.app.ui.components.mmPriceWidthPx(measurer, priceText, priceStyle) + with(density) { 2.dp.roundToPx() }
-    }
-    androidx.compose.foundation.layout.BoxWithConstraints(
-        modifier = modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            // Floating liquid-glass capsule over the scrolling page.
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-            .liquidGlass(MmShapes.xl, lk.motormila.app.ui.theme.GlassWeight.Regular, elevation = 18.dp)
-            .padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
-    ) {
-        val maxW = constraints.maxWidth
-        val gapPx = with(density) { 12.dp.roundToPx() }
-        val minButtonPx = with(density) { MinButtonWidth.roundToPx() }
-        val stacked = onViewSource != null &&
-            maxW - priceWidthPx - gapPx < minButtonPx
-        val priceBlock: @Composable (Modifier) -> Unit = { m ->
-            Column(m) {
-                Text(
-                    stringResource(R.string.mm_detail_asking),
-                    style = MmType.current.caption,
-                    color = c.textSecondary,
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                )
-                MmPrice(
-                    value = priceLkr,
-                    mode = priceMode,
-                    style = priceStyle,
-                    fallback = fallback,
-                )
-            }
-        }
-        if (stacked) {
-            Column(
-                Modifier.fillMaxWidth().padding(end = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                priceBlock(Modifier.fillMaxWidth())
-                MmButton(
-                    text = stringResource(R.string.listing_view_on_source, sourceName),
-                    onClick = onViewSource!!,
-                    trailingIcon = Icons.AutoMirrored.Filled.OpenInNew,
-                    size = MmButtonSize.Medium,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        } else {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                // The button (measured first) is capped so at least priceWidthPx
-                // is left; the weighted price column takes all of the rest.
-                priceBlock(Modifier.weight(1f))
-                if (onViewSource != null) {
-                    MmButton(
-                        text = stringResource(R.string.listing_view_on_source, sourceName),
-                        onClick = onViewSource,
-                        trailingIcon = Icons.AutoMirrored.Filled.OpenInNew,
-                        size = MmButtonSize.Medium,
-                        modifier = Modifier.widthIn(
-                            max = with(density) { (maxW - priceWidthPx - gapPx).coerceAtLeast(minButtonPx).toDp() },
-                        ),
-                    )
-                }
-            }
-        }
-    }
+    if (onViewSource == null) {
+        Text(stringResource(R.string.buyer_source_unavailable, sourceName), style = MmType.current.bodyS,
+            color = MmColors.current.textSecondary, modifier = modifier)
+    } else {
+        val label = if (copyOnly) R.string.buyer_copy_source_link else R.string.listing_view_on_source
+        MmButton(
+            text = stringResource(label, sourceName), onClick = onViewSource,
+            trailingIcon = if (copyOnly) null else Icons.AutoMirrored.Filled.OpenInNew,
+            modifier = modifier.fillMaxWidth(),
+        )
     }
 }
-
-/** Below this the "View on …" button would be unreadable next to the price: stack instead. */
-private val MinButtonWidth = 136.dp
 
 // ─────────────────────────────────────────────────────────────
 // Deal verdict row + "Why?" sheet + lease label

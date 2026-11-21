@@ -29,7 +29,6 @@ _CHANNEL_ALIASES = {
     "in-app": "inapp",
     "in_app": "inapp",
     "wa": "whatsapp",
-    "sms": "whatsapp",
     "tg": "telegram",
     "webpush": "push",
     "web-push": "push",
@@ -54,7 +53,7 @@ def dedupe_key(alert_id: int | str, listing_id: int | str, channel: str) -> str:
     return f"{alert_id}:{listing_id}:{str(channel).strip().lower()}"
 
 
-def normalize_channels(raw: object) -> set[str]:
+def normalize_channels(raw: object, *, strict: bool = False) -> set[str]:
     """Parse a notify_channels string into canonical supported channel names."""
     if raw is None:
         return set()
@@ -62,12 +61,30 @@ def normalize_channels(raw: object) -> set[str]:
     out: set[str] = set()
     for part in parts:
         token = str(part).strip().lower()
-        if not token:
-            continue
         token = _CHANNEL_ALIASES.get(token, token)
         if token in SUPPORTED_CHANNELS:
             out.add(token)
+        elif strict:
+            raise ValueError(f"Invalid channel. Supported: {', '.join(SUPPORTED_CHANNELS)}.")
+    if strict and not out:
+        raise ValueError("Select at least one channel, or pause the alert.")
     return out
+
+
+def match_channels_of(alert: object) -> set[str]:
+    """Return the set of channel names to notify for this alert."""
+    raw = getattr(alert, "notify_channels", None)
+    if raw is not None:
+        return normalize_channels(raw)
+    # Infer from which destination fields are set.
+    channels: set[str] = set()
+    if getattr(alert, "notify_phone", None):
+        channels.add("whatsapp")
+    if getattr(alert, "notify_email", None):
+        channels.add("email")
+    if getattr(alert, "notify_telegram_chat_id", None):
+        channels.add("telegram")
+    return channels
 
 
 def delivery_mode_of(alert: object) -> str:

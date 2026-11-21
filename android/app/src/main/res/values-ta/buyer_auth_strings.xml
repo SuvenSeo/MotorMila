@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="buyer_auth_welcome">மீண்டும் வரவேற்கிறோம்</string>
+    <string name="buyer_auth_sign_in">உள்நுழையவும்</string>
+    <string name="buyer_auth_sign_up">பதிவு செய்யவும்</string>
+    <string name="buyer_auth_create_account">கணக்கை உருவாக்கவும்</string>
+    <string name="buyer_auth_session_expired">%1$s கணக்கிற்கான அமர்வு காலாவதியானது. மீண்டும் உள்நுழையவும்.</string>
+    <string name="buyer_auth_last_account">கடைசியாக %1$s என்ற கணக்கில் உள்நுழைந்தீர்கள்.</string>
+    <string name="buyer_auth_name">பெயர்</string>
+    <string name="buyer_auth_email">மின்னஞ்சல் முகவரி</string>
+    <string name="buyer_auth_password">கடவுச்சொல்</string>
+    <string name="buyer_auth_hide_password">கடவுச்சொல்லை மறைக்கவும்</string>
+    <string name="buyer_auth_show_password">கடவுச்சொல்லைக் காட்டவும்</string>
+    <string name="buyer_auth_invite">அழைப்புக் குறியீடு</string>
+    <string name="buyer_auth_invite_optional">கட்டாயமில்லை. %1$d நாள் Pro சோதனைக் காலத்திற்கு இதைக் காலியாக விடவும்.</string>
+    <string name="buyer_auth_invite_required">உங்கள் நிர்வாகி அல்லது வாகன விற்பனையாளர் வழங்கிய குறியீட்டை உள்ளிடவும்.</string>
+    <string name="buyer_auth_start_trial">%1$d நாள் சோதனையைத் தொடங்கவும்</string>
+    <string name="buyer_auth_retry">மீண்டும் முயலவும்</string>
+    <string name="buyer_auth_retry_online">இணைய இணைப்பு கிடைத்ததும் மீண்டும் முயலவும்</string>
+    <string name="buyer_auth_reset_web">இணையதளத்தில் கடவுச்சொல்லை மீட்டமைக்கவும்</string>
+    <string name="buyer_auth_reset_unavailable">கடவுச்சொல் மீட்டமைப்புப் பக்கத்தைத் திறக்க முடியவில்லை. இந்த முகவரியை உலாவியில் திறக்கவும்: %1$s</string>
+    <string name="buyer_auth_guest">விருந்தினராக வாகனங்களைப் பார்க்கவும்</string>
+</resources>

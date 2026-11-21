@@ -20,6 +20,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.res.stringResource
+import lk.motormila.app.R
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
@@ -42,7 +44,7 @@ import lk.motormila.app.ui.theme.rememberHaptics
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationsScreen(
-    onOpenNotification: (id: String) -> Unit,
+    onOpenListing: (listingId: Int) -> Unit,
     viewModel: NotificationsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -50,20 +52,20 @@ fun NotificationsScreen(
     val reducedMotion = rememberReducedMotion()
     val haptics = rememberHaptics()
 
-    LaunchedEffect(state.error) {
-        state.error?.let {
+    val message = state.error?.let { stringResource(it) }
+    LaunchedEffect(message) {
+        message?.let {
             if (!reducedMotion) haptics.reject()
             snacks.showSnackbar(it)
-            viewModel.onEvent(NotificationsUiEvent.DismissError)
         }
     }
 
     lk.motormila.app.ui.common.MmScreen(
-        title = if (state.unreadCount > 0) "Inbox (${state.unreadCount})" else "Inbox",
+        title = stringResource(R.string.buyer_inbox_title) + if (state.unreadCount > 0) " (${state.unreadCount})" else "",
         snackbarHostState = snacks,
         actions = {
-            MotormilaGhostButton(
-                label = "Mark all read",
+            if (state.unreadCount > 0) MotormilaGhostButton(
+                label = stringResource(R.string.buyer_inbox_mark_all),
                 fillMaxWidth = false,
                 onClick = {
                     if (state.unreadCount > 0) {
@@ -90,12 +92,13 @@ fun NotificationsScreen(
                     LoadingSkeletonList(rows = 6)
                 } else {
                     when {
-                        state.error != null && state.items.isEmpty() ->
-                            ErrorRetry(state.error ?: "Error", onRetry = { viewModel.onEvent(NotificationsUiEvent.Refresh) })
+                        !state.signedIn -> EmptyState(title = stringResource(R.string.buyer_inbox_title), body = stringResource(R.string.buyer_inbox_signed_out))
+                        message != null && state.items.isEmpty() ->
+                            ErrorRetry(message, onRetry = { viewModel.onEvent(NotificationsUiEvent.Refresh) })
 
                         state.items.isEmpty() -> EmptyState(
-                            title = "All caught up",
-                            body = "Price drops, alert matches and market pulses will land here.",
+                            title = stringResource(R.string.buyer_inbox_empty),
+                            body = stringResource(R.string.buyer_inbox_empty_body),
                         )
 
                         else -> LazyColumn(
@@ -109,8 +112,10 @@ fun NotificationsScreen(
                                     modifier = Modifier.animateItem(fadeInSpec = null, placementSpec = lk.motormila.app.ui.theme.MmMotion.itemPlacement, fadeOutSpec = androidx.compose.animation.core.spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow)).cascadeEntrance(index),
                                     onOpen = {
                                         if (!reducedMotion) haptics.tick()
-                                        viewModel.onEvent(NotificationsUiEvent.MarkRead(n.id.toString()))
-                                        onOpenNotification(n.id.toString())
+                                        n.openFromInbox(
+                                            markRead = { viewModel.onEvent(NotificationsUiEvent.MarkRead(it)) },
+                                            openListing = onOpenListing,
+                                        )
                                     },
                                 )
                             }
@@ -128,13 +133,11 @@ private fun NotificationRow(
     onOpen: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // kind is mapper-derived (DATA_CONTRACT §1): "listing" iff the backend
-    // link contained /listings/{id}, else "alert". Listing rows deep-link to
-    // detail via the graph's Int parsing; alert rows open the inbox only.
-    val kindLabel = if (n.kind == "listing") "Listing" else "Alert"
+    val kindLabel = stringResource(if (n.listingId != null) R.string.buyer_inbox_listing else R.string.buyer_inbox_alert)
+    val readLabel = stringResource(if (n.isRead) R.string.buyer_inbox_read else R.string.buyer_inbox_unread)
     MotormilaSurface(
         modifier = modifier.semantics {
-            contentDescription = "${if (n.isRead) "Read" else "Unread"}: ${n.title}"
+            contentDescription = "$readLabel: ${n.title}"
         },
         onClick = onOpen,
         highlighted = !n.isRead,
@@ -151,8 +154,7 @@ private fun NotificationRow(
                 modifier = Modifier.weight(1f),
             )
             Badge(
-                modifier = Modifier.padding(start = 8.dp)
-                    .semantics { contentDescription = "$kindLabel notification" },
+                modifier = Modifier.padding(start = 8.dp),
             ) { Text(kindLabel) }
         }
         Text(n.body, style = MaterialTheme.typography.bodySmall)
@@ -162,4 +164,10 @@ private fun NotificationRow(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+}
+
+/** Notification IDs address read receipts only. General messages stay visible in the inbox. */
+internal fun AppNotification.openFromInbox(markRead: (Int) -> Unit, openListing: (Int) -> Unit) {
+    if (!isRead) markRead(id)
+    listingId?.takeIf { it > 0 }?.let(openListing)
 }

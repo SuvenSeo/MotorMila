@@ -2,51 +2,32 @@
 
 package lk.motormila.app.ui.components
 
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.animateContentSize
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.boundsInRoot
-import lk.motormila.app.ui.theme.glassEdges
-import lk.motormila.app.ui.theme.mmPress
 import androidx.compose.animation.BoundsTransform
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.outlined.BookmarkBorder
-import androidx.compose.ui.res.stringResource
-import lk.motormila.app.ui.theme.MmColors
-import lk.motormila.app.ui.theme.MmDealTone
-import lk.motormila.app.ui.theme.MmHaptics
-import lk.motormila.app.ui.theme.MmMotion
-import lk.motormila.app.ui.theme.MmShapes
-import lk.motormila.app.ui.theme.MmSpacing
-import lk.motormila.app.ui.theme.MmType
 import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.automirrored.filled.CompareArrows
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.automirrored.filled.CompareArrows
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -54,21 +35,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -76,33 +52,27 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import java.time.Duration
+import java.time.Instant
 import lk.motormila.app.R
 import lk.motormila.app.core.format.LkrFormat
 import lk.motormila.app.core.motion.rememberReducedMotion
-import lk.motormila.app.domain.model.DealBand
 import lk.motormila.app.domain.model.Listing
 import lk.motormila.app.ui.navigation.LocalNavAnimatedVisibilityScope
 import lk.motormila.app.ui.navigation.LocalSharedTransitionScope
 import lk.motormila.app.ui.navigation.listingHeroKey
-import lk.motormila.app.ui.theme.deal
-import lk.motormila.app.ui.theme.MotormilaBad
-import lk.motormila.app.ui.theme.MotormilaGoodContainer
-import lk.motormila.app.ui.theme.MotormilaGoodSoft
-import lk.motormila.app.ui.theme.MotormilaOnSurface
-import lk.motormila.app.ui.theme.MotormilaRadius
-import lk.motormila.app.ui.theme.MotormilaSecondaryText
+import lk.motormila.app.ui.theme.MmColors
+import lk.motormila.app.ui.theme.MmHaptics
+import lk.motormila.app.ui.theme.MmMotion
+import lk.motormila.app.ui.theme.MmShapes
+import lk.motormila.app.ui.theme.MmSpacing
+import lk.motormila.app.ui.theme.MmType
 import lk.motormila.app.ui.theme.MotormilaSurfaceHigh
-import lk.motormila.app.ui.theme.fluidSpring
-import java.time.Duration
-import java.time.Instant
+import lk.motormila.app.ui.theme.deal
+import lk.motormila.app.ui.theme.glassEdges
+import lk.motormila.app.ui.theme.mmPress
 
-/**
- * Listing card (design v2): 4:3 photo with a deal verdict pill (same rules
- * as web: asking vs typical asking, lease takeovers get no verdict, very
- * cheap → amber "verify") and a glass save button; below, title, compact
- * price in MILLIONS ("Rs 8.5 Mn") and one quiet meta line. Press-scale 0.97,
- * save haptic, hero image shared-element → detail gallery.
- */
+/** Photo, asking price and attributed observation only. A row carries no detailed comparison. */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ListingCard(
@@ -118,7 +88,7 @@ fun ListingCard(
     onCompareToggle: (() -> Unit)? = null,
     /** Called with the photo's bounds (in root) when the car is ADDED to compare — drives the fly-to-tray motion. */
     onCompareFly: ((androidx.compose.ui.geometry.Rect) -> Unit)? = null,
-    /** Opens the verdict explanation sheet (same Why sheet Detail uses). Null = badge is decorative. */
+    /** Reserved for a future feed carrying publishable verdicts. */
     onWhy: (() -> Unit)? = null,
 ) {
     val c = MmColors.current
@@ -187,32 +157,16 @@ fun ListingCard(
     } else {
         Modifier
     }
-    // The one price verdict from the row (same rules as the detail screen).
-    val verdict = remember(listing.id, listing.priceLkr, listing.marketMedianLkr, listing.title, listing.model) {
-        MmDealVerdict.from(
-            listing.rowVerdict(),
-            isLeaseTakeover = MmLeaseTakeover.detect(listing.title, listing.model),
-        )
-    }
-    val isPro = LocalIsPro.current
-    val priceText = MmPriceFormat.compact(listing.priceLkr, stringResource(R.string.mm_price_on_request))
-    // Evidence layer: typical-price anchor + market position + source/checked-ago.
-    val typicalLkr = listing.marketMedianLkr?.takeIf { it > 0 }
-    val typicalText = if (typicalLkr != null) {
-        stringResource(R.string.v19_search_typical_price, MmPriceFormat.compact(typicalLkr))
-    } else {
-        null
-    }
+    // Search rows have no detailed verdict (confidence, sample count, server withhold reason).
+    // Do not infer a rating, typical-price graphic or Pro promise from a score/median.
+    val lease = showDeal && remember(listing.title, listing.model) { MmLeaseTakeover.detect(listing.title, listing.model) }
+    val priceText = MmPriceFormat.compact(listing.priceLkr?.takeIf { it.isFinite() }, stringResource(R.string.mm_price_on_request))
     val meta = metaLine(listing)
     val sourceText = listing.source?.takeIf { it.isNotBlank() }?.let { sourceLabel(it) }
     val agoText = checkedAgoText(listing.lastSeenAt ?: listing.scrapedAt)
     val footerText = listOfNotNull(sourceText, agoText).joinToString(" · ")
-    val verdictLabel = if (showDeal) verdict.label() else null
-    val lockedBadge = showDeal && verdictLabel == null && !isPro &&
-        listing.dealBand() == DealBand.LOCKED && listing.priceLkr != null
-    // ONE composed description (name + price + verdict + typical + meta) so
-    // TalkBack reads the card once, verdict included — not name+price twice.
-    val cardCd = composeListingCd(listing.displayName, priceText, verdictLabel, typicalText, meta, lockedBadge)
+    val leaseLabel = if (lease) stringResource(R.string.mm_lease_short) else null
+    val cardCd = listOfNotNull(listing.displayName, priceText, meta, leaseLabel, footerText.takeIf { it.isNotBlank() }).joinToString(", ")
 
     MmCard(
         onClick = {
@@ -248,37 +202,9 @@ fun ListingCard(
                     .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                     .then(heroShared),
             )
-            if (showDeal) {
-                if (verdictLabel != null) {
-                    MmDealBadge(
-                        label = if (verdict.kind == MmDealVerdict.Kind.LEASE) stringResource(R.string.mm_lease_short) else verdictLabel,
-                        tone = verdict.tone,
-                        onImage = true,
-                        onWhy = onWhy,
-                        // End inset keeps the pill clear of the 48dp save button
-                        // (Cal Sans Text sets ~15% wider than the old face).
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(start = 10.dp, top = 10.dp, end = 52.dp)
-                            // Without a Why action the badge is decorative: the card's
-                            // composed description already carries the verdict.
-                            .then(if (onWhy == null) Modifier.clearAndSetSemantics { } else Modifier),
-                    )
-                } else if (lockedBadge) {
-                    // Pro lock only for non-Pro users (free rows carry no score);
-                    // a Pro user's unrated ad simply has no badge.
-                    MmDealBadge(
-                        band = DealBand.LOCKED,
-                        onImage = true,
-                        onWhy = onWhy,
-                        // End inset keeps the pill clear of the 48dp save button
-                        // (Cal Sans Text sets ~15% wider than the old face).
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(start = 10.dp, top = 10.dp, end = 52.dp)
-                            .then(if (onWhy == null) Modifier.clearAndSetSemantics { } else Modifier),
-                    )
-                }
+            if (leaseLabel != null) {
+                Text(leaseLabel, style = t.labelS, color = c.onBrandContainer,
+                    modifier = Modifier.padding(8.dp).clip(MmShapes.sm).background(c.brandContainer).padding(6.dp))
             }
             SaveButton(
                 saved = isWatched,
@@ -326,27 +252,6 @@ fun ListingCard(
                 // "Rs 1.85 Mn" needs ~0.45x (was floored at 0.55 -> "Rs 1.85 …").
                 minScale = 0.3f,
             )
-            // Evidence layer (web parity): the typical-price anchor the verdict
-            // argues from, plus a thin market-position bar. Quiet, not a shout.
-            if (typicalText != null) {
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    text = typicalText,
-                    style = t.caption,
-                    color = c.textTertiary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                val asking = listing.priceLkr
-                if (asking != null && asking > 0 && typicalLkr != null) {
-                    Spacer(Modifier.height(4.dp))
-                    MarketPositionBar(
-                        askingLkr = asking,
-                        typicalLkr = typicalLkr,
-                        tone = verdict.tone,
-                    )
-                }
-            }
             Spacer(Modifier.height(6.dp))
             Text(
                 text = meta,
@@ -494,25 +399,6 @@ private fun SaveButton(
     }
 }
 
-@Composable
-private fun DeltaChip(deltaPct: Double) {
-    val down = deltaPct < 0
-    val container = if (down) MotormilaGoodContainer else Color(0x2EEF4444)
-    val content = if (down) lk.motormila.app.ui.theme.MotormilaGoodText else lk.motormila.app.ui.theme.MotormilaBadText
-    val border = if (down) MotormilaGoodSoft else Color(0x55EF4444)
-    Text(
-        text = "${if (down) "▼" else "▲"} ${LkrFormat.deltaPct(deltaPct)}",
-        fontSize = 11.sp,
-        fontWeight = FontWeight.Bold,
-        color = content,
-        modifier = Modifier
-            .clip(MotormilaRadius.pill)
-            .background(container)
-            .border(1.dp, border, MotormilaRadius.pill)
-            .padding(horizontal = 8.dp, vertical = 3.dp),
-    )
-}
-
 /**
  * One quiet meta line, district FIRST so location survives narrow cells
  * (the old year-first order ellipsized the district away on 152dp cards).
@@ -530,86 +416,6 @@ private fun metaLine(l: Listing): String {
     return parts.joinToString(" · ").ifBlank { fallback }
 }
 
-/** One composed card description: name, price, verdict, typical anchor, meta. */
-@Composable
-private fun composeListingCd(
-    name: String,
-    priceText: String,
-    verdictLabel: String?,
-    typicalText: String?,
-    meta: String,
-    lockedBadge: Boolean,
-): String {
-    val lockedLabel = if (lockedBadge && verdictLabel == null) stringResource(R.string.mm_deal_locked) else null
-    return buildString {
-        append(name)
-        append(", ")
-        append(priceText)
-        if (verdictLabel != null) {
-            append(", ")
-            append(verdictLabel)
-        } else if (lockedLabel != null) {
-            append(", ")
-            append(lockedLabel)
-        }
-        if (typicalText != null) {
-            append(", ")
-            append(typicalText)
-        }
-        append(", ")
-        append(meta)
-    }
-}
-
-/**
- * Thin market-position bar: the asking price's position against the typical
- * asking price (centre tick), on a quiet 0.6×–1.4× typical scale. Decorative —
- * the card's composed description carries the numbers for screen readers.
- */
-@Composable
-private fun MarketPositionBar(
-    askingLkr: Double,
-    typicalLkr: Double,
-    tone: MmDealTone,
-    modifier: Modifier = Modifier,
-) {
-    val c = MmColors.current
-    val accent = c.deal(tone).solid
-    val track = c.surfaceHigh
-    val tick = c.textTertiary
-    val fraction = ((askingLkr / typicalLkr - 0.6) / 0.8).coerceIn(0.0, 1.0).toFloat()
-    Canvas(
-        modifier
-            .fillMaxWidth()
-            .height(6.dp)
-            .clearAndSetSemantics { },
-    ) {
-        val r = size.height / 2f
-        drawRoundRect(track, cornerRadius = CornerRadius(r, r))
-        // Typical-price anchor at the centre.
-        drawLine(
-            tick,
-            Offset(size.width / 2f, 0f),
-            Offset(size.width / 2f, size.height),
-            strokeWidth = 1.5.dp.toPx(),
-        )
-        // Asking-price marker.
-        val x = r + fraction * (size.width - 2f * r)
-        drawCircle(accent, radius = r, center = Offset(x, size.height / 2f))
-    }
-}
-
-/** Short verdict label for compact list rows (the full sentence is too wide for a 112dp thumb). */
-@Composable
-private fun MmDealVerdict.shortLabel(): String? = when (kind) {
-    MmDealVerdict.Kind.BELOW -> stringResource(R.string.mm_badge_below, pct)
-    MmDealVerdict.Kind.ABOVE -> stringResource(R.string.mm_badge_above, pct)
-    MmDealVerdict.Kind.FAIR -> stringResource(R.string.mm_deal_fair)
-    MmDealVerdict.Kind.VERIFY -> stringResource(R.string.v19_search_deal_verify_short)
-    MmDealVerdict.Kind.LEASE -> stringResource(R.string.mm_lease_short)
-    MmDealVerdict.Kind.NONE -> null
-}
-
 /** "Checked … ago" from an ISO timestamp; null when absent/unparseable. */
 @Composable
 private fun checkedAgoText(iso: String?): String? {
@@ -618,7 +424,9 @@ private fun checkedAgoText(iso: String?): String? {
         runCatching { Instant.parse(iso) }.getOrNull()
             ?: runCatching { Instant.parse(iso.replace(' ', 'T') + "Z") }.getOrNull()
     } ?: return null
-    val hours = Duration.between(instant, Instant.now()).toHours()
+    val age = Duration.between(instant, Instant.now())
+    if (age.isNegative) return null
+    val hours = age.toHours()
     return when {
         hours < 1 -> stringResource(R.string.v19_search_checked_now)
         hours < 24 -> stringResource(R.string.v19_search_checked_hours, hours.toInt())
@@ -628,7 +436,7 @@ private fun checkedAgoText(iso: String?): String? {
 
 /**
  * Compact LIST row (list mode): 112×84 thumbnail + title/price/meta, matching
- * [MmListingRowSkeleton] geometry. Same evidence layer and tappable verdict as
+ * [MmListingRowSkeleton] geometry. Same asking-price and source evidence as
  * the grid card; save + compare stay reachable. No shared-element morph (the
  * grid card owns the card→Detail transition keys).
  */
@@ -643,36 +451,20 @@ fun ListingRow(
     compareSelected: Boolean? = null,
     compareEnabled: Boolean = true,
     onCompareToggle: (() -> Unit)? = null,
-    /** Opens the verdict explanation sheet (same Why sheet Detail uses). */
+    /** Reserved for a future feed carrying publishable verdicts. */
     onWhy: (() -> Unit)? = null,
 ) {
     val c = MmColors.current
     val t = MmType.current
     val haptics = MmHaptics.current
     val reduced = MmMotion.reduced
-    val verdict = remember(listing.id, listing.priceLkr, listing.marketMedianLkr, listing.title, listing.model) {
-        MmDealVerdict.from(
-            listing.rowVerdict(),
-            isLeaseTakeover = MmLeaseTakeover.detect(listing.title, listing.model),
-        )
-    }
-    val isPro = LocalIsPro.current
-    val priceText = MmPriceFormat.compact(listing.priceLkr, stringResource(R.string.mm_price_on_request))
-    val typicalLkr = listing.marketMedianLkr?.takeIf { it > 0 }
-    val typicalText = if (typicalLkr != null) {
-        stringResource(R.string.v19_search_typical_price, MmPriceFormat.compact(typicalLkr))
-    } else {
-        null
-    }
+    val leaseLabel = if (showDeal && remember(listing.title, listing.model) { MmLeaseTakeover.detect(listing.title, listing.model) }) stringResource(R.string.mm_lease_short) else null
+    val priceText = MmPriceFormat.compact(listing.priceLkr?.takeIf { it.isFinite() }, stringResource(R.string.mm_price_on_request))
     val meta = metaLine(listing)
     val sourceText = listing.source?.takeIf { it.isNotBlank() }?.let { sourceLabel(it) }
     val agoText = checkedAgoText(listing.lastSeenAt ?: listing.scrapedAt)
     val footerText = listOfNotNull(sourceText, agoText).joinToString(" · ")
-    val verdictLabel = if (showDeal) verdict.label() else null
-    val shortLabel = if (showDeal) verdict.shortLabel() else null
-    val lockedBadge = showDeal && shortLabel == null && !isPro &&
-        listing.dealBand() == DealBand.LOCKED && listing.priceLkr != null
-    val rowCd = composeListingCd(listing.displayName, priceText, verdictLabel, typicalText, meta, lockedBadge)
+    val rowCd = listOfNotNull(listing.displayName, priceText, meta, leaseLabel, footerText.takeIf { it.isNotBlank() }).joinToString(", ")
 
     MmCard(
         onClick = {
@@ -705,28 +497,6 @@ fun ListingRow(
                     contentDescription = null,
                     modifier = Modifier.matchParentSize(),
                 )
-                if (shortLabel != null) {
-                    MmDealBadge(
-                        label = shortLabel,
-                        tone = verdict.tone,
-                        onImage = true,
-                        onWhy = onWhy,
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(4.dp)
-                            .then(if (onWhy == null) Modifier.clearAndSetSemantics { } else Modifier),
-                    )
-                } else if (lockedBadge) {
-                    MmDealBadge(
-                        band = DealBand.LOCKED,
-                        onImage = true,
-                        onWhy = onWhy,
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(4.dp)
-                            .then(if (onWhy == null) Modifier.clearAndSetSemantics { } else Modifier),
-                    )
-                }
                 if (compareSelected != null && onCompareToggle != null) {
                     RowCompareToggle(
                         selected = compareSelected,
@@ -766,21 +536,7 @@ fun ListingRow(
                     color = c.textPrimary,
                     minScale = 0.4f,
                 )
-                if (typicalText != null) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = typicalText,
-                        style = t.caption,
-                        color = c.textTertiary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    val asking = listing.priceLkr
-                    if (asking != null && asking > 0 && typicalLkr != null) {
-                        Spacer(Modifier.height(4.dp))
-                        MarketPositionBar(askingLkr = asking, typicalLkr = typicalLkr, tone = verdict.tone)
-                    }
-                }
+                if (leaseLabel != null) Text(leaseLabel, style = t.caption, color = c.textSecondary)
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = meta,

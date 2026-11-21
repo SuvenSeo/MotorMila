@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="buyer_search_review_cta">නව ගැළපීම් ගැන දැනුම් දෙන්න</string>
+    <string name="buyer_search_rule_saved">සෙවුම් දැනුම්දීම සුරැකිණි</string>
+    <string name="buyer_search_pick_one">සැසඳීමට එක් දැන්වීමක් තෝරන්න.</string>
+    <string name="buyer_search_already_added">මෙය දැනටමත් සැසඳීමේ ඇත. වෙනත් දැන්වීමක් තෝරන්න.</string>
+    <string name="buyer_search_review_title">සෙවුම් දැනුම්දීම පරීක්ෂා කරන්න</string>
+    <string name="buyer_search_matches">දැනුම්දීම සඳහා යොදාගන්නේ මේ කොන්දේසි පමණි:</string>
+    <string name="buyer_search_need_filter">දැනුම්දීමට අදාළ දැන්වීම් සොයා ගැනීමට නිෂ්පාදකයෙක්, මාදිලියක්, දිස්ත්‍රික්කයක් හෝ උපරිම මිලක් එක් කරන්න.</string>
+    <string name="buyer_search_not_matched">සෙවුමට පමණක් අදාළයි. මේ දැනුම්දීමට අදාළ නැත:</string>
+    <string name="buyer_search_delivery">ලැබෙන ආකාරය: යෙදුම තුළ ගැළපීම් සහ දැනුම්දීම් සක්‍රිය උපාංගවලට දැනුම්දීම්. ඊමේල් හෝ චැට් පණිවිඩ නැත.</string>
+    <string name="buyer_search_saving">සුරකිමින්…</string>
+    <string name="buyer_search_sign_in">ඉදිරියට යාමට පිවිසෙන්න</string>
+    <string name="buyer_search_confirm">දැක්වූ කොන්දේසි පමණක් සුරකින්න</string>
+    <string name="buyer_search_edit">පෙරහන් වෙනස් කරන්න</string>
+    <string name="buyer_search_keyword">සෙවුම් පෙළ</string>
+    <string name="buyer_search_field">%1$s: %2$s</string>
+    <string name="buyer_search_rupees">රු. %1$s</string>
+    <string name="buyer_search_min_price">අවම මිල</string>
+    <string name="buyer_search_fix_numbers">අංක පරාස පරීක්ෂා කරන්න</string>
+</resources>

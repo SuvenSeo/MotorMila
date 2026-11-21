@@ -136,7 +136,10 @@ if HOT_URL == COLD_URL:
     cold_engine = hot_engine
 
 HotSessionLocal  = sessionmaker(autocommit=False, autoflush=False, bind=hot_engine)
-ColdSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=cold_engine)
+# Scraper passes use ColdSessionLocal, but alert edits and consent live on HOT.
+# Keep the factory (not the engine) so auth binds and reattachments are honored.
+ColdSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=cold_engine,
+                                info={"alert_dispatch_sessionmaker": HotSessionLocal})
 
 # ============================================================================
 # Optional dedicated account store (AUTH_DATABASE_URL).

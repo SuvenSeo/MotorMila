@@ -16,9 +16,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import lk.motormila.app.domain.model.AlertInput
+
 import lk.motormila.app.domain.model.Listing
 import lk.motormila.app.domain.repository.AlertsRepository
 import lk.motormila.app.domain.repository.ListingQuery
@@ -58,8 +60,7 @@ val SRI_LANKA_DISTRICTS: List<String> = listOf(
     "Kilinochchi", "Mannar", "Mullaitivu",
 )
 
-/** Web parity (Compare.tsx / compareSlug.ts): tray holds at most 3 ids. */
-const val MAX_COMPARE_IDS = 4 // Web parity: MAX_COMPARE = 4 (pages/Compare.tsx)
+const val MAX_COMPARE_IDS = lk.motormila.app.ui.compare.COMPARE_CAPACITY
 
 /** Shown when "Create alert from these filters" is used while signed out. */
 const val SIGN_IN_FOR_ALERTS = "Sign in to create price alerts."
@@ -79,6 +80,11 @@ data class SearchUiState(
     /** Listing sources (ikman, riyasewana…) for the Source filter. */
     val sources: List<String> = emptyList(),
     val alertSaved: Boolean = false,
+    val isSignedIn: Boolean = false,
+    val alertOwner: String? = null,
+    val alertDraft: ListingQuery? = null,
+    val alertSaving: Boolean = false,
+    val alertError: String? = null,
     val error: String? = null,
     /** Free tier has no deal_score — backend forces `newest` (BestPicks.tsx parity). */
     val isPro: Boolean = false,
@@ -110,6 +116,7 @@ class SearchViewModel @Inject constructor(
     /** Ids whose entrance already played (survives Search leaving composition while Detail is open). */
     val revealedIds: HashSet<Int> = HashSet()
 
+    private var alertSaveJob: Job? = null
     private val queryFlow = MutableStateFlow("")
     private val pagingKey = MutableStateFlow(defaultSearchQuery())
 
@@ -130,12 +137,12 @@ class SearchViewModel @Inject constructor(
             ?.filter { it.isNotBlank() }?.distinct()?.take(8)
             ?.let { _state.value = _state.value.copy(recentSearches = it) }
         val route = runCatching { savedStateHandle.toRoute<Search>() }.getOrNull()
-        route?.let { applyRouteArgs(it) }
-        // Filters survive process death / config change (SavedStateHandle),
-        // unless this entry was opened with explicit args.
-        if (_state.value.filters == defaultSearchQuery()) {
-            restoreSavedFilters()?.let { applyFilters(it) }
-        }
+        // Nav args seed a new entry; a restored entry already has the buyer's later edits.
+        val restored = restoreSavedFilters()
+        if (restored != null) {
+            _state.value = _state.value.copy(query = restored.keyword.orEmpty())
+            applyFilters(restored)
+        } else route?.let { applyRouteArgs(it) }
         viewModelScope.launch {
             observeSession().collect { session ->
                 val isPro = session?.isPro == true
@@ -146,7 +153,12 @@ class SearchViewModel @Inject constructor(
                 } else {
                     current.filters
                 }
-                _state.value = current.copy(isPro = isPro, filters = nextFilters)
+                val owner = session?.email?.trim()?.lowercase()
+                val next = if (current.alertOwner != null && current.alertOwner != owner) {
+                    alertSaveJob?.cancel()
+                    current.copy(alertDraft = null, alertError = null, alertSaving = false, alertSaved = false, showFilterSheet = false)
+                } else current // A guest may finish reviewing after signing in.
+                _state.value = next.copy(isSignedIn = session != null, alertOwner = owner, isPro = isPro, filters = nextFilters)
                 if (nextFilters != current.filters) {
                     pagingKey.value = nextFilters
                 }
@@ -161,9 +173,8 @@ class SearchViewModel @Inject constructor(
         }
         viewModelScope.launch {
             try {
-                _state.value = _state.value.copy(
-                    makes = listings.makes(),
-                )
+                val makes = listings.makes()
+                _state.value = _state.value.copy(makes = makes)
             } catch (_: Exception) {
             }
         }
@@ -180,7 +191,8 @@ class SearchViewModel @Inject constructor(
                     _state.value = _state.value.copy(suggestions = emptyList())
                 } else {
                     try {
-                        _state.value = _state.value.copy(suggestions = listings.suggestions(q))
+                        val suggestions = listings.suggestions(q)
+                        if (q == queryFlow.value) _state.value = _state.value.copy(suggestions = suggestions)
                     } catch (_: Exception) {
                     }
                 }
@@ -228,6 +240,7 @@ class SearchViewModel @Inject constructor(
 
     fun onSearch(q: String) {
         val trimmed = q.trim()
+        _state.value = _state.value.copy(query = trimmed)
         // Commit immediately (IME / pinned row); align the debounce so a stale
         // pending keyword can't re-apply after the explicit search.
         liveKeyword.value = trimmed.ifBlank { null }
@@ -324,6 +337,7 @@ class SearchViewModel @Inject constructor(
     private fun saveFilters(q: ListingQuery) {
         savedStateHandle[SAVED_FILTERS_KEY] = arrayListOf(
             q.make.orEmpty(), q.model.orEmpty(), q.district.orEmpty(), q.sort, q.toWebFilters().orEmpty(),
+            q.keyword.orEmpty(), q.vehicleCategory.orEmpty(),
         )
     }
 
@@ -335,7 +349,8 @@ class SearchViewModel @Inject constructor(
             model = saved[1].ifBlank { null },
             district = saved[2].ifBlank { null },
             sort = saved[3].ifBlank { ListingSorts.NEWEST },
-            vehicleCategory = VehicleCategory.DEFAULT.apiValue,
+            keyword = saved.getOrNull(5)?.ifBlank { null },
+            vehicleCategory = if (saved.size >= 7) saved[6].ifBlank { null } else VehicleCategory.DEFAULT.apiValue,
         ).withWebFilters(saved[4].ifBlank { null })
     }
 
@@ -354,6 +369,10 @@ class SearchViewModel @Inject constructor(
     }
 
     fun openFilters() {
+        // Flush the visible keyword before opening a draft; a late debounce
+        // must not reset the sheet after the first filter edit.
+        val q = _state.value.filters.copy(keyword = liveKeyword.value)
+        if (q != _state.value.filters) applyFilters(q)
         _state.value = _state.value.copy(showFilterSheet = true)
     }
 
@@ -402,37 +421,36 @@ class SearchViewModel @Inject constructor(
         }
     }
 
-    /** Create a price alert from the current filters. */
-    fun createAlertFromFilters() {
-        val f = _state.value.filters
-        viewModelScope.launch {
-            val session = runCatching { observeSession().first() }.getOrNull()
-            if (session == null) {
-                // Alerts are server-side; a signed-out create used to fail with no visible feedback.
-                _state.value = _state.value.copy(error = SIGN_IN_FOR_ALERTS)
-                return@launch
-            }
+    fun reviewAlert(draft: ListingQuery) {
+        if (!_state.value.alertSaving) _state.value = _state.value.copy(alertDraft = draft, alertError = null)
+    }
+
+    fun dismissAlertReview() {
+        if (!_state.value.alertSaving) _state.value = _state.value.copy(alertDraft = null, alertError = null)
+    }
+
+    /** The confirmation and the request use one snapshot. No write on preview or sign-in. */
+    internal fun confirmAlert(review: SearchAlertReview, expectedOwner: String?) {
+        val current = _state.value
+        if (expectedOwner == null || current.alertOwner != expectedOwner || current.alertSaving || current.alertDraft != review.draft) return
+        val rule = review.rule ?: return
+        _state.value = current.copy(alertSaving = true, alertError = null)
+        alertSaveJob = viewModelScope.launch {
             try {
-                alerts.create(
-                    AlertInput(
-                        make = f.make,
-                        model = f.model,
-                        maxPriceLkr = f.priceMax,
-                        district = f.district,
-                    ),
-                )
-                _state.value = _state.value.copy(alertSaved = true, showFilterSheet = false)
+                alerts.create(rule, expectedOwner)
+                ensureActive()
+                _state.value = _state.value.copy(alertSaved = true, alertDraft = null, showFilterSheet = false)
             } catch (e: kotlin.coroutines.cancellation.CancellationException) {
                 throw e
             } catch (e: Exception) {
+                ensureActive()
                 val mapped = lk.motormila.app.core.network.ErrorMapper.map(e)
-                val msg = if (mapped is lk.motormila.app.core.common.AppError.Unauthorized) {
+                val key = if (mapped is lk.motormila.app.core.common.AppError.Unauthorized) {
                     SIGN_IN_FOR_ALERTS
-                } else {
-                    // Stable prefix; SearchScreen localises it via v19_search.xml.
-                    ERR_ALERT_SAVE_PREFIX + mapped.message
-                }
-                _state.value = _state.value.copy(error = msg)
+                } else ERR_ALERT_SAVE_PREFIX + mapped.message
+                _state.value = _state.value.copy(alertError = key)
+            } finally {
+                if (isActive) _state.value = _state.value.copy(alertSaving = false)
             }
         }
     }

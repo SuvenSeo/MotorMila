@@ -4,8 +4,9 @@
 adb + uiautomator driven end-to-end checks: every test performs a real action
 and asserts an observable effect (data from the live API on screen, state that
 persists across process death, deep links that resolve, intents that leave the
-app). Each check records PASS / FAIL / INFO with a screenshot + dump and, where
-it applies, the API response it was compared against.
+app). Each check records PASS / FAIL / INFO with evidence where applicable.
+H4 records SKIP (not PASS) when a healthy Home has no distinct documented cut in
+the optional price-change feed. Missing required UI, data errors and broken taps fail.
 
 Usage: functional_qa.py --apk app.apk --out fq-out [--old-apk old.apk] [--only a,b]
 """
@@ -420,149 +421,232 @@ def t_offline_clean():
 
 
 # ------------------------------------------------------------------ 2. home
-@T("H1", "Home", "Home stats show live numbers matching /stats/summary")
-def t_home_stats():
-    link("motormila://home"); ns = wait_for(r"(?:Cars|Vehicles) listed", 30) or nodes()
-    ev = [shot("H1_home")]
-    stats = api("stats/summary")
-    txt = joined(ns)
-    nums = re.findall(r"^[\d,]+$", txt, re.M)
-    record("H1", "Home", "Home stats", "PASS" if nums else "FAIL",
-           f"on-screen numbers={nums[:4]}; api total_listings={stats.get('total_listings')} listings_this_week={stats.get('listings_this_week')} avg={stats.get('avg_price_lkr')}; texts={txt[:300]!r}", ev, stats)
+# English UIAutomator contract: Home's search affordance is a button, not an input.
+HOME_INTRO = "Know the price before you call."
+HOME_SAVED = ("Your saved vehicle", "Price drop on a saved vehicle")
+HOME_ENTRY = "^(?:" + "|".join(map(re.escape, (HOME_INTRO, *HOME_SAVED))) + ")$"
+HOME_SEARCH = r"^Search vehicles$"
 
 
-HUBS = [
-    ("Best picks", r"(?i)(best picks|deal)"),
-    ("Price Index", r"(?i)price index"),
-    ("Calculator", r"(?i)(calculator|landed|import)"),
-    ("EV Hub", r"(?i)(EV|electric)"),
-    ("Official Pulse", r"(?i)(official pulse|pulse)"),
-    ("Permit market", r"(?i)permit"),
-]
+def home_require(value, why):
+    if not value:
+        raise AssertionError(why)
+    return value
 
 
-@T("H2", "Home", "Every hub tile opens its destination with data")
-def t_home_tiles():
-    for label, dest in HUBS:
-        link("motormila://home"); time.sleep(4)
-        ns = nodes()
-        if not find(rf"^{re.escape(label)}$", ns):
-            swipe_up(0.3); ns = nodes()
-        n = find(rf"^{re.escape(label)}$", ns, max_y=0.88)
-        if not n:
-            record(f"H2.{label}", "Home", f"Hub tile {label}", "FAIL", "tile not found on Home", [shot(f"H2_{label}_missing")]); continue
-        tapxy(*center(n)); time.sleep(9)
-        if re.search(r"(?i)loading", joined()):
-            time.sleep(12)
-        ns2 = nodes(); ev = [shot(f"H2_{label.replace(' ', '_')}")]
-        txt = joined(ns2)
-        has_back = bool(find(r"^Back$", ns2))
-        nums = len(re.findall(r"\d", txt))
-        err = re.search(r"(?i)(couldn.t load|something went wrong|error|try again)", txt)
-        ok = has_back and re.search(dest, txt) and nums > 5 and not err
-        record(f"H2.{label}", "Home", f"Hub tile {label}", "PASS" if ok else "FAIL",
-               f"opened={has_back}; digits_on_screen={nums}; error={err.group(0) if err else None}; texts={txt[:250]!r}", ev)
+def buyer_home():
+    out = link("motormila://home")
+    home_require("Status: ok" in out, f"Home intent did not resolve: {out[:250]}")
+    # A singleTop Home intent can keep the previous scroll position. Reselect Buy
+    # to return to the masthead; never use the bottom tab itself as proof of Home.
+    ns = nodes()
+    if not find(r"^Price alerts$", ns) and find(r"^(Search vehicles|Recorded price drop|Previous asking price: Rs .+)$", ns, flags=re.M):
+        tap(r"^Buy$", ns=ns, min_y=0.8)
+    return home_require(wait_for(HOME_ENTRY), "neither the introduction nor a saved-vehicle heading appeared")
 
 
-@T("H3", "Home", "Home sections/carousels: scroll all, open a card from each listing rail")
-def t_home_sections():
-    link("motormila://home"); time.sleep(6)
-    seen_headers, opened, ev = [], [], []
-    for i in range(10):
-        ns = nodes()
-        for n in ns:
-            t = n["text"]
-            if t and n["cls"].endswith("TextView") and 3 < len(t) < 40 and t not in seen_headers and n["b"][3] - n["b"][1] > 50:
-                seen_headers.append(t)
-        cs = [c for c in cards(ns) if SIZE[1] * 0.2 < c["node"]["b"][1] < SIZE[1] * 0.75]
-        if not cs:  # Home rails: card node desc == its title text, photo-sized
-            for n in ns:
-                if n["desc"] and n["b"][3] - n["b"][1] > 300 and n["b"][1] > SIZE[1] * 0.06 and n["b"][3] < SIZE[1] * 0.85 \
-                        and any(m["text"] == n["desc"] for m in ns):
-                    cs.append({"title": n["desc"], "node": n, "price": None, "sub": ""})
-        if cs and len(opened) < 4:
-            c = cs[0]
-            if c["title"] not in [o[0] for o in opened]:
-                x, y = center(c["node"]); tapxy(x, int(c["node"]["b"][1] + (c["node"]["b"][3] - c["node"]["b"][1]) * 0.85)); time.sleep(6)
-                d = nodes()
-                ok = bool(find(r"(?i)(SPECIFICATIONS|Asking price|View on)", d))
-                opened.append((c["title"], ok))
-                ev.append(shot(f"H3_card_{len(opened)}"))
-                back(); time.sleep(2)
-        if i % 3 == 2:
-            ev.append(shot(f"H3_scroll_{i}"))
-        swipe_up(0.4)
-    ok = opened and all(o[1] for o in opened)
-    record("H3", "Home", "Home sections + cards open Detail", "PASS" if ok else "FAIL",
-           f"cards_opened={opened}; headers_seen={seen_headers[:40]}", ev)
+def home_scroll_to(rx):
+    for i in range(5):
+        n = find(rx, max_y=0.86, flags=re.M)
+        if n:
+            return n
+        if i < 4:
+            swipe_up(0.25)
+    return None
 
 
-@T("H4", "Home", "Price drops 'See all' opens a list with data")
-def t_home_drops():
-    link("motormila://home"); time.sleep(5)
-    for _ in range(8):
-        ns = nodes()
-        h = find(r"^Price drops$", ns, max_y=0.85)
-        sa = find(r"^See all$", ns, max_y=0.88)
-        if h and sa:
-            tapxy(*center(sa)); time.sleep(8)
-            ns2 = nodes(); ev = [shot("H4_price_drops")]
-            drops = api("listings/price-drops", days=7, vehicle_category="cars")
-            n_api = len(drops) if isinstance(drops, list) else len(drops.get("items", [])) if isinstance(drops, dict) else 0
-            txt = joined(ns2)
-            ok = bool(find(r"^Back$", ns2)) and (len(cards(ns2)) > 0 or "Rs" in txt)
-            record("H4", "Home", "Price drops See all", "PASS" if ok else "FAIL",
-                   f"api price-drops n={n_api}; screen={txt[:250]!r}", ev)
-            return
-        swipe_up(0.35)
-    record("H4", "Home", "Price drops See all", "FAIL", "Price drops section / See all not found", [shot("H4_missing")])
+def home_card(ask_labels):
+    # 'Open listing' is an accessibility ACTION label, not a content-desc. Read
+    # the text of the clickable card subtree (not an unrelated price elsewhere).
+    _, root = dump()
+    if root is not None:
+        for e in root.iter("node"):
+            if e.get("package") == PKG and e.get("clickable") == "true":
+                ns = nodes(e)
+                lines = [line.strip() for line in joined(ns).splitlines() if line.strip()]
+                if any(label in lines for label in ask_labels):
+                    return ns[0], lines
+    return None
 
 
-@T("H5", "Home", "Pull to refresh on Home reloads without losing data")
+def open_home_card(card, title, saved=False):
+    tapxy(*center(card))
+    ns = wait_for(r"^Remove from saved$" if saved else r"^Share listing$") or []
+    home_require(title and title in labels(ns) and find(r"^Share listing$", ns),
+                 f"did not reach Detail for {title!r} (saved={saved})")
+
+
+@T("H1", "Home", "Buy opens the buyer introduction or saved-vehicle entry")
+def t_home_entry():
+    ns = buyer_home()
+    heading = find(HOME_ENTRY, ns)["text"]
+    if heading == HOME_INTRO:
+        home_require("Compare asking prices across Sri Lanka. Start with a vehicle or a budget." in labels(ns),
+                     "introduction missing its buyer copy")
+    else:
+        home_require(home_scroll_to(r"^(Last recorded asking price|No recorded asking price)$"),
+                     "saved entry missing its asking-price state")
+    ok = find(r"^MotorMila$", ns) and find(r"^Price alerts$", ns) and home_scroll_to(HOME_SEARCH)
+    record("H1", "Home", "Buyer entry and actions", "PASS" if ok else "FAIL", heading, [shot("H1_home")])
+
+
+@T("H2", "Home", "Masthead price alerts opens Alerts, not the notification inbox")
+def t_home_alerts():
+    ns = buyer_home()
+    tapped = tap(r"^Price alerts$", ns=ns)
+    dest = wait_for(r"^(Sign in to create (?:price alerts|this alert)|New alert)$") if tapped else None
+    ok = dest and find(r"^Price alerts(?: \(\d+\))?$", dest)
+    record("H2", "Home", "Price alerts destination", "PASS" if ok else "FAIL",
+           joined(dest or [])[:250] or "no Alerts sign-in gate or creation form", [shot("H2_alerts")])
+
+
+@T("H3", "Home", "Resume the saved vehicle in Detail")
+def t_home_saved():
+    ns = buyer_home()
+    created_id = None
+    try:
+        if find("^" + re.escape(HOME_INTRO) + "$", ns):
+            # Exercise the returning-buyer path even on a fresh guest install.
+            item = home_require(next((i for i in LISTINGS if i.get("id") and (i.get("title") or "").strip()), None),
+                                "no titled listing available to seed a guest save")
+            link(f"motormila://listing/{item['id']}")
+            ns = wait_for(r"^Share listing$") or []
+            home_require(item["title"] in labels(ns) and tap(r"^Save$", ns=ns), "fixture detail/save missing")
+            created_id = item["id"]
+            home_require(wait_for(r"^Remove from saved$"), "fixture save did not take effect")
+            ns = buyer_home()
+        home_require(any(h in labels(ns) for h in HOME_SAVED), "saved-vehicle heading missing")
+        ask = ("Last recorded asking price", "No recorded asking price")
+        home_require(home_scroll_to(r"^(Last recorded asking price|No recorded asking price)$"), "no saved price state")
+        card, lines = home_require(home_card(ask), "no clickable saved vehicle")
+        title = lines[0]
+        home_require(title not in ask and (created_id is None or title == item["title"]), "wrong saved vehicle")
+        if ask[0] in lines:
+            home_require(any(re.fullmatch(r"Rs [1-9][\d,]*", line) for line in lines), "saved asking price has no value")
+        if HOME_SAVED[1] in labels(ns):
+            home_require(any(re.fullmatch(r"When you saved it: Rs [1-9][\d,]*", line) for line in lines),
+                         "saved price drop missing its baseline")
+        ev = [shot("H3_saved_entry")]
+        open_home_card(card, title, saved=True)
+        ev.append(shot("H3_saved_detail"))
+    finally:
+        if created_id is not None:  # Never remove a pre-existing save.
+            link(f"motormila://listing/{created_id}")
+            ns = wait_for(r"^Remove from saved$") or []
+            home_require(item["title"] in labels(ns) and tap(r"^Remove from saved$", ns=ns) and wait_for(r"^Save$"),
+                         "could not restore empty guest shortlist")
+    record("H3", "Home", "Resume saved vehicle", "PASS", title, ev)
+
+
+def documented_drops(items):
+    # Match GetPriceDropsUseCase's first 20 and isDocumentedDrop's whole-rupee cut.
+    from datetime import datetime
+    import math
+    candidates = {}
+    for row in items[:20]:
+        listing = row["listing"]
+        lid = listing.get("id", 0)
+        title = (listing.get("title") or "").strip() or " ".join(
+            str(listing[k]) for k in ("make", "model", "year") if listing.get(k)).strip()
+        old, new = row.get("previous_price_lkr"), row.get("new_price_lkr")
+        if not (lid > 0 and listing.get("is_active", True) and title and
+                all(isinstance(v, (float, int)) and math.isfinite(v) and v >= 1 for v in (old, new)) and
+                int(new + 0.5) < int(old + 0.5)):
+            continue
+        try:
+            datetime.fromisoformat((row.get("dropped_at") or "").replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        candidates[lid] = title
+    return candidates
+
+
+@T("H4", "Home", "Optional documented price cut shows both asks and opens that listing")
+def t_home_drop():
+    ns = buyer_home()
+    saved = home_card(("Last recorded asking price", "No recorded asking price")) if any(h in labels(ns) for h in HOME_SAVED) else None
+    # Home allows 20s for live/snapshot. A successful empty response has no UI
+    # marker: wait before scanning, then corroborate absence, never PASS on it.
+    wait_for(r"^(Recorded price drop|Price changes could not be updated\.)$", timeout=22)
+    heading = home_scroll_to(r"^Recorded price drop$")
+    if not heading:
+        end = nodes()
+        home_require(find(HOME_SEARCH, end) and not find(r"^Price changes could not be updated\.$", end),
+                     "could not confirm healthy Home without a drop (feed error, wrong screen or dump failure)")
+        home_require(not find(r"^(?:Asking price after the drop|Previous asking price:.*)$", end, flags=re.M),
+                     "drop evidence visible without its heading")
+        ev = [shot("H4_no_distinct_drop")]
+        feed = api("listings/price-drops", days=7, vehicle_category="cars")
+        home_require(isinstance(feed, dict) and isinstance(feed.get("items"), list), "no valid price-drops response")
+        candidates = documented_drops(feed["items"])
+        # Home excludes the resume vehicle. If the only candidate matches its
+        # title, verify that ID actually is saved rather than skipping on text alone.
+        if len(candidates) == 1 and saved and saved[1][0] == next(iter(candidates.values())):
+            lid = next(iter(candidates))
+            link(f"motormila://listing/{lid}")
+            home_require(wait_for(r"^Remove from saved$"), "missing eligible price drop (candidate not saved)")
+            reason = f"sole eligible listing {lid} is already saved and matches the resume card"
+        else:
+            home_require(not candidates, f"documented price drop missing; eligible IDs: {list(candidates)}")
+            reason = f"no documented cut in first {min(20, len(feed['items']))} feed rows"
+        record("H4", "Home", "Recorded price drop", "SKIP", reason, ev)
+        return
+    home_require(home_scroll_to(r"^Previous asking price: Rs [\d,]+$"), "drop card missing previous ask")
+    card, lines = home_require(home_card(("Asking price after the drop",)), "drop card missing new ask")
+    text = "\n".join(lines)
+    cut = re.search(r"^Asking price after the drop\nRs ([\d,]+)\nPrevious asking price: Rs ([\d,]+)$", text, re.M)
+    home_require(cut and 0 < int(cut[1].replace(",", "")) < int(cut[2].replace(",", "")), f"not a documented decrease: {lines}")
+    ev = [shot("H4_recorded_drop")]
+    open_home_card(card, lines[0])
+    record("H4", "Home", "Recorded price drop", "PASS", text, ev + [shot("H4_drop_detail")])
+
+
+@T("H5", "Home", "Buyer entry and Search remain usable after the refresh gesture")
 def t_home_ptr():
-    link("motormila://home"); time.sleep(5)
-    swipe_down(0.45, 600, 0.3); ev = [shot("H5_ptr_mid")]
-    time.sleep(6)
-    ns = nodes(); ev.append(shot("H5_ptr_after"))
-    ok = alive() and bool(find(r"(?:Cars|Vehicles) listed", ns))
-    record("H5", "Home", "Home pull to refresh", "PASS" if ok else "FAIL", f"stats still shown={ok}", ev)
+    before = find(HOME_ENTRY, buyer_home())["text"]
+    swipe_down(0.45, 600, 0.3)
+    ns = wait_for(HOME_ENTRY) or []
+    ok = before in labels(ns) and home_scroll_to(HOME_SEARCH) and tap(HOME_SEARCH) and wait_for(r"^Vehicle search$")
+    record("H5", "Home", "Buyer entry after pull to refresh", "PASS" if ok else "FAIL",
+           f"entry={before!r}; Search opened after pull={bool(ok)}", [shot("H5_after_pull")])
 
 
-@T("H6", "Home", "Home search bar: tap, type, submit -> Search with results")
+def submit_from_home(query):
+    buyer_home()
+    n = home_require(home_scroll_to(HOME_SEARCH), "Home Search vehicles button missing")
+    tapxy(*center(n))
+    ns = wait_for(r"^Vehicle search$") or []
+    field = next((n for n in ns if n["pkg"] == PKG and n["cls"].endswith("EditText")), None)
+    home_require(field, "Search destination has no editable field")
+    tapxy(*center(field))
+    adb(f"shell input text '{query}'")  # fixed test strings, not external URLs
+    # This is SearchBar's explicit commit action. It proves the entire input
+    # arrived before submitting and does not depend on the installed IME.
+    action = "^" + re.escape(f"Search for “{query}”") + "$"
+    home_require(tap(action, ns=wait_for(action) or []), "typed query missing from Search commit row")
+
+
+@T("H6", "Home", "Home to Search: submit Aqua and get matching listing cards")
 def t_home_search():
-    link("motormila://home"); time.sleep(5)
-    if not tap(r"^Make, model or paste a link$", 2):
-        record("H6", "Home", "Home search bar", "FAIL", "search bar not found", [shot("H6_missing")]); return
-    time.sleep(2)
-    f = find(r"^(Search make or model|Vehicle search)$")
-    if f:
-        tapxy(*center(f)); time.sleep(1)
-    adb("shell input text 'aqua'"); time.sleep(2.5)
-    ev = [shot("H6_typed")]
-    ime_submit(); time.sleep(10)
-    ns = nodes(); ev.append(shot("H6_results"))
-    cs = cards(ns)
-    hits = [c["title"] for c in cs if "aqua" in c["title"].lower()]
-    record("H6", "Home", "Home search bar", "PASS" if cs and len(hits) >= max(1, len(cs) // 2) else "FAIL",
-           f"cards={len(cs)} aqua_hits={len(hits)} titles={[c['title'] for c in cs][:6]}", ev)
+    submit_from_home("aqua")
+    # ListingCard and its row variant describe title, price, then metadata.
+    aqua_card = r"(?i)^.*\baqua\b.*, (?:Rs [\d.,]+(?: Mn)?|Price on request)(?:, |$)"
+    ns = wait_for(aqua_card) or []
+    hits = [n["desc"] for n in ns if n["pkg"] == PKG and re.match(aqua_card, n["desc"])]
+    ok = hits and find(r"^Search results$", ns)
+    record("H6", "Home", "Submitted vehicle search", "PASS" if ok else "FAIL",
+           f"matching cards={hits[:3]}", [shot("H6_results")])
 
 
-@T("H7", "Home", "Paste an ikman ad link in Home search -> opens it in-app")
+@T("H7", "Home", "Home to Search: submit an ad slug and verify the valuation prefill")
 def t_home_paste():
-    url = next((i["url"] for i in LISTINGS if "ikman.lk" in (i.get("url") or "")), None)
-    if not url:
-        record("H7", "Home", "Paste link", "INFO", "no ikman url from API"); return
-    link("motormila://home"); time.sleep(5)
-    tap(r"^Make, model or paste a link$", 3)
-    f = find(r"^(Search make or model|Vehicle search)$")
-    if f:
-        tapxy(*center(f)); time.sleep(1)
-    adb(f"shell input text '{url}'"); time.sleep(1.5)
-    ime_submit(); time.sleep(12)
-    ns = nodes(); ev = [shot("H7_paste_result")]
-    txt = joined(ns)
-    ok = bool(re.search(r"(?i)(SPECIFICATIONS|Asking price|View on|valuation|fair price|estimate)", txt))
-    record("H7", "Home", "Paste listing link", "PASS" if ok else "FAIL", f"url={url}; screen={txt[:250]!r}", ev)
+    # ShareUrlParser handles this slug locally. A slug without a numeric ad ID
+    # routes to Valuation(make, model, year), not to an arbitrary listing Detail.
+    submit_from_home("https://ikman.lk/en/ad/toyota-axio-2017-for-sale")
+    ns = wait_for(r"^Which car\?$") or []
+    missing = {"Toyota", "Axio", "2017"}.difference(labels(ns))
+    record("H7", "Home", "Ad link to prefilled valuation", "FAIL" if missing else "PASS",
+           f"missing prefill={sorted(missing)}", [shot("H7_valuation")])
 
 
 # ------------------------------------------------------------------ 3. search
@@ -1702,6 +1786,8 @@ for tid, area, name, fn in TESTS:
     print("==>", tid, name, flush=True)
     try:
         fn()
+    except AssertionError as e:
+        record(tid, area, name, "FAIL", str(e), [shot(f"{tid}_failed")])
     except Exception as e:  # noqa
         import traceback
         record(tid, area, name, "FAIL", "harness error: " + traceback.format_exc()[-600:], [])
@@ -1710,6 +1796,6 @@ for tid, area, name, fn in TESTS:
 
 sh(f"adb logcat -d -b crash > '{OUT}/crash.txt'")
 sh(f"adb logcat -d > '{OUT}/logcat.txt'", 120)
-summary = {s: sum(1 for r in RESULTS if r["status"] == s) for s in ("PASS", "FAIL", "INFO")}
+summary = {s: sum(1 for r in RESULTS if r["status"] == s) for s in ("PASS", "FAIL", "INFO", "SKIP")}
 json.dump({"sdk": SDK, "size": SIZE, "summary": summary, "results": RESULTS}, open(os.path.join(OUT, "results.json"), "w"), indent=1, ensure_ascii=False)
 print("DONE sdk", SDK, summary)

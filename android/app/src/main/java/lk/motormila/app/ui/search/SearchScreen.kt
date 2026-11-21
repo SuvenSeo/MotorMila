@@ -10,13 +10,13 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.material.icons.filled.Close
 import lk.motormila.app.ui.components.activeFilterChips
+import lk.motormila.app.ui.components.chipLabelRes
 import lk.motormila.app.ui.components.activeFilterCount
 import lk.motormila.app.domain.model.VehicleCategory
 
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.GridView
@@ -24,7 +24,6 @@ import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import lk.motormila.app.ui.components.MmChip
 import lk.motormila.app.ui.components.MmIconButton
 import lk.motormila.app.ui.components.MmIconButtonStyle
 import lk.motormila.app.ui.components.MmListingCardSkeleton
@@ -45,13 +44,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.Role
 import lk.motormila.app.ui.theme.MmColors
@@ -101,17 +94,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddAlert
-import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -138,38 +125,28 @@ import lk.motormila.app.ui.components.ErrorState
 import lk.motormila.app.ui.components.FilterSheet
 import lk.motormila.app.ui.components.ListingCard
 import lk.motormila.app.ui.components.ListingImage
-import lk.motormila.app.ui.components.LoadingSkeletonCard
-import lk.motormila.app.ui.components.MotormilaChoiceChip
-import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.R
 import lk.motormila.app.ui.components.OfflineBanner
 import lk.motormila.app.ui.components.SearchBar
 import lk.motormila.app.ui.components.cascadeDelay
 import lk.motormila.app.ui.navigation.LocalNavAnimatedVisibilityScope
 import lk.motormila.app.ui.navigation.LocalSharedTransitionScope
-import lk.motormila.app.ui.theme.MotormilaRadius
 import lk.motormila.app.ui.theme.applePress
 import lk.motormila.app.ui.theme.motormilaReveal
 import lk.motormila.app.ui.components.motormilaSharedBoundsTransform
 import lk.motormila.app.ui.scan.VoiceSearchHelper
 import lk.motormila.app.ui.scan.parseVoiceQuery
-import lk.motormila.app.ui.theme.MotormilaGlassFillStrong
 import lk.motormila.app.ui.theme.liquidGlass
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.ui.semantics.stateDescription
-import lk.motormila.app.core.price.PriceVerdict
 import lk.motormila.app.ui.components.ListingRow
 import lk.motormila.app.ui.components.MmButton
 import lk.motormila.app.ui.components.MmButtonStyle
-import lk.motormila.app.ui.components.MmDealVerdict
-import lk.motormila.app.ui.components.MmLeaseTakeover
 import lk.motormila.app.ui.components.MmListingRowSkeleton
 import lk.motormila.app.ui.components.MmSheet
-import lk.motormila.app.ui.detail.DealWhySheet
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -188,15 +165,17 @@ fun SearchScreen(
     onOpenSharedUrl: ((String) -> Unit)? = null,
     /** Opens the Pro plans page from the Best-deal-sort upsell; falls back to the motormila://pricing deep link. */
     onOpenPricing: (() -> Unit)? = null,
+    compareSeedIds: List<Int> = emptyList(),
+    onSignIn: () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val items = viewModel.paging.collectAsLazyPagingItems()
     val searchResultsCd = stringResource(R.string.mm_search_results_cd)
-    val bestDealProCd = stringResource(R.string.mm_best_deal_pro_cd)
+
     // Localised one-shot messages (resolved in composition, shown from effects).
     val voiceEmptyMsg = stringResource(R.string.v19_search_voice_empty)
     val voiceUnavailableMsg = stringResource(R.string.v19_search_voice_unavailable)
-    val alertSavedMsg = stringResource(R.string.v19_search_alert_saved)
+    val alertSavedMsg = stringResource(R.string.buyer_search_rule_saved)
     val genericErrorMsg = stringResource(R.string.v19_search_error_generic)
     val loadErrorMsg = stringResource(R.string.v19_search_load_error)
     val loadMoreErrorMsg = stringResource(R.string.v19_search_load_more_error)
@@ -206,7 +185,19 @@ fun SearchScreen(
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val isRefreshing = items.loadState.refresh is LoadState.Loading
-    var gridMode by rememberSaveable { mutableStateOf(true) }
+    var preferGrid by rememberSaveable { mutableStateOf(true) }
+    val largeText = LocalDensity.current.fontScale >= 1.5f
+    val gridMode = preferGrid && !largeText
+    val picking = compareSeedIds.isNotEmpty()
+    val alreadyAdded = stringResource(R.string.buyer_search_already_added)
+    val trayFull = stringResource(R.string.v19_search_compare_full, MAX_COMPARE_IDS)
+    val openListing: (Int) -> Unit = { id ->
+        if (!picking) onListingClick(id) else {
+            val result = lk.motormila.app.ui.compare.addOneToCompare(compareSeedIds, id)
+            if (result != null) onCompare(result)
+            else scope.launch { snackbar.showSnackbar(if (id in compareSeedIds) alreadyAdded else trayFull) }
+        }
+    }
     val haptics = MmHaptics.current
 
     // Voice affordance: system recogniser (no RECORD_AUDIO permission needed),
@@ -245,9 +236,7 @@ fun SearchScreen(
             }
     }
 
-    // Android 13+: ask for notification permission right after an alert is
-    // saved from search (rationale first; never on cold start).
-    lk.motormila.app.core.notifications.NotificationPermissionPrompt(trigger = state.alertSaved)
+
     LaunchedEffect(state.alertSaved) {
         if (state.alertSaved) {
             snackbar.showSnackbar(alertSavedMsg)
@@ -267,10 +256,9 @@ fun SearchScreen(
     var trayHeightPx by remember { mutableStateOf(0) }
     val density = LocalDensity.current
     val trayHeight = with(density) { trayHeightPx.toDp() }
-    val trayShown = state.compareIds.isNotEmpty()
+    val trayShown = !picking && state.compareIds.isNotEmpty()
 
-    // Tappable verdict: the on-photo badge opens the same Why sheet Detail uses.
-    var whyListing by remember { mutableStateOf<lk.motormila.app.domain.model.Listing?>(null) }
+
 
     // Grid columns at the current width: the layout toggle is hidden when both
     // modes would render a single column (very narrow windows).
@@ -279,7 +267,7 @@ fun SearchScreen(
         val available = rootWidthPx - (MmSpacing.gutter * 2).roundToPx()
         adaptiveColumnCount(available, GridMinCell.roundToPx(), MmSpacing.cardGap.roundToPx())
     }
-    val layoutToggleVisible = gridColumns > 1
+    val layoutToggleVisible = gridColumns > 1 && !largeText
 
     // Edge-to-edge: results scroll under a liquid-glass search header (top)
     // and the floating glass tab bar (bottom). The header is measured once
@@ -434,16 +422,14 @@ fun SearchScreen(
                             ) { i ->
                                 val listing = items[i]
                                 if (listing != null) {
-                                    val inCompare = state.compareIds.contains(listing.id)
-                                    // Badge opens the Why sheet when there is a verdict to
-                                    // explain; locked (free) rows go to Detail's price panel.
-                                    val onWhy: () -> Unit = {
-                                        if (listing.marketMedianLkr != null && listing.marketMedianLkr > 0) {
-                                            whyListing = listing
-                                        } else {
-                                            onListingClick(listing.id)
+                                    val inCompare = listing.id in (if (picking) compareSeedIds else state.compareIds)
+                                    val compareAction: () -> Unit = {
+                                        if (picking) openListing(listing.id) else {
+                                            if (inCompare) haptics.unsave() else haptics.save()
+                                            viewModel.toggleCompare(listing.id)
                                         }
                                     }
+
                                     Box(
                                         Modifier.animateItem(
                                             fadeInSpec = null,
@@ -457,35 +443,29 @@ fun SearchScreen(
                                                 ListingCard(
                                                     listing = listing,
                                                     isWatched = state.watchedIds.contains(listing.id),
-                                                    onClick = { onListingClick(listing.id) },
+                                                    onClick = { openListing(listing.id) },
                                                     onWatchToggle = { viewModel.toggleWatch(listing) },
                                                     compareSelected = inCompare,
                                                     compareEnabled = inCompare || state.compareIds.size < MAX_COMPARE_IDS,
-                                                    onCompareToggle = {
-                                                        if (inCompare) haptics.unsave() else haptics.save()
-                                                        viewModel.toggleCompare(listing.id)
-                                                    },
-                                                    onCompareFly = { from ->
+                                                    onCompareToggle = compareAction,
+                                                    onCompareFly = if (picking) null else { from ->
                                                         if (!reducedMotion && from != androidx.compose.ui.geometry.Rect.Zero) {
                                                             flights += CompareFlight(System.nanoTime(), listing.heroImageUrl, from, state.compareIds.size)
                                                         }
                                                     },
-                                                    onWhy = onWhy,
+
                                                 )
                                             } else {
                                                 // True compact list row (112×84 thumb + title/price/meta).
                                                 ListingRow(
                                                     listing = listing,
                                                     isWatched = state.watchedIds.contains(listing.id),
-                                                    onClick = { onListingClick(listing.id) },
+                                                    onClick = { openListing(listing.id) },
                                                     onWatchToggle = { viewModel.toggleWatch(listing) },
                                                     compareSelected = inCompare,
                                                     compareEnabled = inCompare || state.compareIds.size < MAX_COMPARE_IDS,
-                                                    onCompareToggle = {
-                                                        if (inCompare) haptics.unsave() else haptics.save()
-                                                        viewModel.toggleCompare(listing.id)
-                                                    },
-                                                    onWhy = onWhy,
+                                                    onCompareToggle = compareAction,
+
                                                 )
                                             }
                                         }
@@ -590,7 +570,7 @@ fun SearchScreen(
                 },
                 suggestions = state.suggestions,
                 recentSearches = state.recentSearches,
-                onSuggestionClick = { onListingClick(it.id) },
+                onSuggestionClick = { openListing(it.id) },
                 onRecentClick = { viewModel.onSearch(it) },
                 onRecentRemove = viewModel::removeRecent,
                 onClearRecents = viewModel::clearRecents,
@@ -608,37 +588,13 @@ fun SearchScreen(
                     .fillMaxWidth()
                     .padding(horizontal = MmSpacing.gutter, vertical = 8.dp),
             )
-            // Free tier has no deal_score — backend forces `newest` (web parity).
-            if (!state.isPro) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = MmSpacing.gutter)
-                        .semantics { contentDescription = bestDealProCd },
-                ) {
-                    Icon(
-                        Icons.Filled.Lock,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(14.dp),
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        stringResource(R.string.glass_free_plan_note),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                Spacer(Modifier.height(4.dp))
+            if (picking) {
+                Text(stringResource(R.string.buyer_search_pick_one), style = MmType.current.label,
+                    color = c.textPrimary, modifier = Modifier.padding(horizontal = MmSpacing.gutter))
             }
-            CategoryChipRow(
-                selected = VehicleCategory.fromApi(state.filters.vehicleCategory),
-                onSelect = viewModel::onCategoryChange,
-            )
             SortFilterRow(
+                category = VehicleCategory.fromApi(state.filters.vehicleCategory),
+                onCategory = viewModel::onCategoryChange,
                 sort = state.filters.sort,
                 isPro = state.isPro,
                 onSort = viewModel::onSortChange,
@@ -650,7 +606,7 @@ fun SearchScreen(
                 gridMode = gridMode,
                 onToggleLayout = {
                     haptics.toggle()
-                    gridMode = !gridMode
+                    preferGrid = !preferGrid
                 },
                 layoutToggleVisible = layoutToggleVisible,
             )
@@ -669,7 +625,7 @@ fun SearchScreen(
             }
         }
         AnimatedVisibility(
-            visible = state.compareIds.isNotEmpty(),
+            visible = trayShown,
             enter = if (MmMotion.reduced) fadeIn(tween(0)) else slideInVertically(MmMotion.snappy()) { it } + fadeIn(tween(MmMotion.Fast)),
             exit = if (MmMotion.reduced) fadeOut(tween(0)) else slideOutVertically(tween(MmMotion.Fast)) { it } + fadeOut(tween(MmMotion.Fast)),
             modifier = Modifier
@@ -736,28 +692,25 @@ fun SearchScreen(
                 sources = state.sources,
                 onMakeChange = viewModel::loadModels,
                 countFor = viewModel::countFor,
-                onCreateAlert = viewModel::createAlertFromFilters,
+                onCreateAlert = if (picking) null else viewModel::reviewAlert,
             )
         }
 
-        // Tappable verdict: same explanation sheet the Detail screen uses.
-        whyListing?.let { l ->
-            val resolved = l.rowVerdict()
-            DealWhySheet(
-                verdict = MmDealVerdict.from(
-                    resolved,
-                    isLeaseTakeover = MmLeaseTakeover.detect(l.title, l.model),
-                ),
-                askingLkr = l.priceLkr,
-                typicalLkr = (resolved as? PriceVerdict.Ok)?.referenceLkr,
-                comparables = null,
-                onDismiss = { whyListing = null },
-                onFullEstimate = {
-                    whyListing = null
-                    onListingClick(l.id)
-                },
+        state.alertDraft?.let { draft ->
+            val review = remember(draft) { SearchAlertReview(draft) }
+            val renderedOwner = state.alertOwner
+            SearchAlertDialog(
+                review = review,
+                signedIn = state.isSignedIn,
+                saving = state.alertSaving,
+                error = state.alertError?.let { searchErrorText(it) },
+                onConfirm = { viewModel.confirmAlert(review, renderedOwner) },
+                onSignIn = onSignIn,
+                onEdit = viewModel::dismissAlertReview,
             )
         }
+
+
 
         // Free user tapped the locked Best-deal sort: upsell instead of a silent downgrade.
         if (state.showProUpsell) {
@@ -780,52 +733,7 @@ fun SearchScreen(
     }
 }
 
-/**
- * Browse category chips. Cars is the default first impression; one tap
- * switches to All vehicles or another type.
- */
-@Composable
-internal fun CategoryChipRow(
-    selected: VehicleCategory,
-    onSelect: (VehicleCategory) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val categoryRowCd = stringResource(R.string.vehicle_category_row_cd)
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = MmSpacing.gutter),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(bottom = 4.dp)
-            .semantics { contentDescription = categoryRowCd },
-    ) {
-        items(VehicleCategory.entries, key = { it.name }) { cat ->
-            MmChip(
-                label = stringResource(cat.labelRes()),
-                selected = cat == selected,
-                onClick = { onSelect(cat) },
-            )
-        }
-    }
-}
 
-/** Localised chip label; the domain enum keeps an English label for logs/tests only. */
-@androidx.annotation.StringRes
-internal fun VehicleCategory.labelRes(): Int = when (this) {
-    VehicleCategory.CARS -> R.string.vehicle_category_cars
-    VehicleCategory.ALL -> R.string.vehicle_category_all
-    VehicleCategory.MOTORBIKES -> R.string.vehicle_category_bikes
-    VehicleCategory.THREE_WHEELERS -> R.string.vehicle_category_three_wheelers
-    VehicleCategory.VANS -> R.string.vehicle_category_vans
-    VehicleCategory.LORRIES -> R.string.vehicle_category_lorries
-    VehicleCategory.BUSES -> R.string.vehicle_category_buses
-    VehicleCategory.HEAVY_DUTY -> R.string.vehicle_category_heavy
-    VehicleCategory.TRACTORS -> R.string.vehicle_category_tractors
-    VehicleCategory.BOATS -> R.string.vehicle_category_boats
-    VehicleCategory.BICYCLES -> R.string.vehicle_category_cycles
-    VehicleCategory.OTHERS -> R.string.vehicle_category_other
-}
 
 /**
  * Sort + filter row. The five sort options live in a compact menu button that
@@ -844,6 +752,8 @@ internal fun SortFilterRow(
     onToggleLayout: () -> Unit,
     activeCount: Int = 0,
     layoutToggleVisible: Boolean = true,
+    category: VehicleCategory? = null,
+    onCategory: (VehicleCategory) -> Unit = {},
 ) {
     val c = MmColors.current
     Row(
@@ -865,7 +775,28 @@ internal fun SortFilterRow(
             isPro = isPro,
             onSort = onSort,
         )
-        Spacer(Modifier.weight(1f))
+        Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+            if (category != null) {
+                var open by remember { mutableStateOf(false) }
+                val label = stringResource(category.chipLabelRes())
+                val description = stringResource(R.string.buyer_search_field, stringResource(R.string.filter_section_vehicle), label)
+                Row(Modifier.clip(MmShapes.pill).clickable(role = Role.Button) { open = true }
+                    .heightIn(min = 48.dp).padding(horizontal = 6.dp)
+                    .semantics(mergeDescendants = true) { contentDescription = description },
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Text(label, style = MmType.current.labelS, color = c.textPrimary, maxLines = 2,
+                        overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = c.textSecondary, modifier = Modifier.size(20.dp))
+                }
+                DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                    VehicleCategory.entries.forEach { option ->
+                        DropdownMenuItem(text = { Text(stringResource(option.chipLabelRes())) },
+                            trailingIcon = { if (category == option) Icon(Icons.Filled.Check, contentDescription = null) },
+                            onClick = { open = false; onCategory(option) })
+                    }
+                }
+            }
+        }
         if (layoutToggleVisible) {
             // Layout toggle gets its own slot, separated by a hairline.
             Box(
@@ -959,7 +890,7 @@ private fun SortMenuButton(
 
 /** Localised label for a sort key (shared by the button and the menu). */
 @Composable
-private fun sortLabel(sort: String): String = when (sort) {
+internal fun sortLabel(sort: String): String = when (sort) {
     ListingSorts.NEWEST -> stringResource(R.string.sort_newest)
     ListingSorts.DEAL_SCORE -> stringResource(R.string.sort_best_deal)
     ListingSorts.PRICE_ASC -> stringResource(R.string.sort_price_asc)

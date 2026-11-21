@@ -9,7 +9,8 @@ import lk.motormila.app.domain.model.AppNotification
 interface AlertsRepository {
     fun observeAlerts(): Flow<List<Alert>>
     suspend fun refresh(): List<Alert>
-    suspend fun create(input: AlertInput): Alert
+    /** expectedOwner is the normalized email from the screen that confirmed this write. */
+    suspend fun create(input: AlertInput, expectedOwner: String): Alert
     suspend fun update(id: Int, input: AlertInput): Alert
     suspend fun updateChannels(
         id: Int,

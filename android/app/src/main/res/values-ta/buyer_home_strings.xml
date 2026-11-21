@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="buyer_home_headline">அழைக்கும் முன் விலையைத் தெரிந்துகொள்ளுங்கள்.</string>
+    <string name="buyer_home_intro">இலங்கை முழுவதும் விற்பனையாளர்கள் கேட்கும் விலைகளை ஒப்பிடுங்கள். வாகனம் அல்லது உங்கள் செலவுத் திட்டத்தின் அடிப்படையில் தேடுங்கள்.</string>
+    <string name="buyer_home_search">வாகனங்களைத் தேடுங்கள்</string>
+    <string name="buyer_home_saved">நீங்கள் சேமித்த வாகனம்</string>
+    <string name="buyer_home_saved_drop">நீங்கள் சேமித்த வாகனத்தின் விலை குறைந்துள்ளது</string>
+    <string name="buyer_home_listing_id">விளம்பரம் %1$d</string>
+    <string name="buyer_home_recorded_drop">பதிவான விலைக் குறைவு</string>
+    <string name="buyer_home_last_ask">கடைசியாகப் பதிவான கேட்பு விலை</string>
+    <string name="buyer_home_previous_ask">முன்பு கேட்ட விலை: %1$s</string>
+    <string name="buyer_home_at_save">நீங்கள் சேமித்தபோது இருந்த விலை: %1$s</string>
+    <string name="buyer_home_open_listing">விளம்பரத்தைத் திறக்கவும்</string>
+    <string name="buyer_home_feed_error">விலை மாற்றங்களைப் புதுப்பிக்க முடியவில்லை.</string>
+    <string name="buyer_home_rupees">ரூ. %1$s</string>
+    <string name="buyer_home_after_cut">குறைந்த பிறகு கேட்ட விலை</string>
+    <string name="buyer_home_no_ask">கேட்பு விலை பதிவு செய்யப்படவில்லை</string>
+</resources>

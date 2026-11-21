@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="buyer_comparison_evidence">இந்த விலை எவ்வாறு ஒப்பிடப்பட்டது?</string>
+    <string name="buyer_comparison_loading">ஒத்த விளம்பரங்களைச் சரிபார்க்கிறோம்…</string>
+    <string name="buyer_no_comparison">விலை ஒப்பீடு கிடைக்கவில்லை.</string>
+    <string name="buyer_last_change">கடைசியாகப் பதிவான விலை மாற்றம்: %1$s இலிருந்து %2$s ஆக</string>
+    <string name="buyer_source_unavailable">அசல் விளம்பரம் கிடைக்கவில்லை · %1$s</string>
+    <string name="buyer_lease_example">இது தவணைக் கணக்கு உதாரணம்; கடன் வழங்குநரின் சலுகை அல்ல. முன்பணம், வட்டி விகிதம், காலம் ஆகியவற்றை மாற்றலாம்.</string>
+    <string name="buyer_last_known_ask">கடைசியாக அறிந்த கேட்பு விலை: %1$s</string>
+    <string name="buyer_saved_at_price">சேமித்தபோது: %1$s</string>
+    <string name="buyer_saved_checked">கடைசியாகச் சரிபார்த்தது: %1$s</string>
+    <string name="buyer_saved_unchecked">சரிபார்த்த தேதி கிடைக்கவில்லை</string>
+    <string name="buyer_no_recorded_asks">கேட்பு விலை இன்னும் பதிவாகவில்லை.</string>
+    <string name="buyer_expanded">விரிக்கப்பட்டது</string>
+    <string name="buyer_collapsed">சுருக்கப்பட்டது</string>
+    <string name="buyer_lower_rate">வட்டி விகிதத்தைக் குறைக்கவும்</string>
+    <string name="buyer_raise_rate">வட்டி விகிதத்தை அதிகரிக்கவும்</string>
+    <string name="buyer_back">பின்னால் செல்லவும்</string>
+    <string name="buyer_saved_vehicles_count">சேமித்த வாகனங்கள் (%1$d)</string>
+    <string name="buyer_saved_vehicles">சேமித்த வாகனங்கள்</string>
+    <string name="buyer_copy_source_link">%1$s விளம்பர இணைப்பை நகலெடு</string>
+</resources>

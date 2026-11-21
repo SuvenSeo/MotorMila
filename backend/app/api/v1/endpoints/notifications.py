@@ -156,11 +156,13 @@ def get_preferences(
     _resolve_notification_identity(request, authorization, x_alert_token, db)
     return {
         "channels": list(SUPPORTED_CHANNELS),
+        # Matching and deferred delivery both enforce a rule's explicit choices.
+        "explicit_alert_channels": True,
         "quiet_hours": {
             "start": QUIET_START_HOUR,
             "end": QUIET_END_HOUR,
             "tz": TIMEZONE_NAME,
-            "note": "External channels queue during 21:00-07:00 Asia/Colombo; in-app always delivers.",
+            "note": "External channels queue during 21:00-07:00 Asia/Colombo; selected in-app alerts are immediate.",
         },
         "digest_time": DIGEST_TIME_LABEL,
         "delivery_modes": ["instant", "digest"],

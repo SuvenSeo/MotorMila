@@ -1,0 +1,12 @@
+{
+  "signing_cert_sha256": "384420c0922cb84ee0e6866ab09b4e47e7012bf21c69e83f934304366f445217",
+  "fallback": {
+    "channel": "stable",
+    "version": "1.8.0",
+    "version_code": 21,
+    "bytes": 5800279,
+    "sha256": "6d9d417bf837deb6277d387318e88acc79fdcef6f95d6ed401cfd7258732634f",
+    "published_at": "2026-10-30T21:55:11Z"
+  },
+  "approved": null
+}

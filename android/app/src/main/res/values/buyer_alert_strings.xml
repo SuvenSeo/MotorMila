@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="buyer_alert_choose_channel">Choose at least one delivery channel.</string>
+    <string name="buyer_alert_legacy_channels">This server cannot save this free channel selection. To use its default, select both In-app and Push only, then save again.</string>
+    <string name="buyer_alert_change_unconfirmed">The server did not confirm this change. Refresh to check the rule before trying again.</string>
+    <string name="buyer_alert_pending">Waiting for server confirmation…</string>
+    <string name="buyer_alert_empty">No alerts yet</string>
+    <string name="buyer_alert_empty_body">Create a rule above to track new matches.</string>
+    <string name="buyer_alert_rules">Alert rules (%1$d)</string>
+    <string name="buyer_alert_push_blocked">Push is off on this device. You can choose In-app instead or enable notifications in Settings.</string>
+    <string name="buyer_inbox_title">Inbox</string>
+    <string name="buyer_inbox_mark_all">Mark all read</string>
+    <string name="buyer_inbox_signed_out">Sign in to view your notifications.</string>
+    <string name="buyer_inbox_empty">No notifications yet</string>
+    <string name="buyer_inbox_empty_body">New matches and price updates will appear here.</string>
+    <string name="buyer_inbox_listing">Listing</string>
+    <string name="buyer_inbox_alert">Alert</string>
+    <string name="buyer_inbox_read">Read</string>
+    <string name="buyer_inbox_unread">Unread</string>
+</resources>

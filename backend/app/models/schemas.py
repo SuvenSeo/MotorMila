@@ -608,6 +608,11 @@ class MarketAlertRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class AlertActiveUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    active: bool = Field(strict=True)
+
+
 class AlertChannelsUpdate(BaseModel):
     """Per-alert channel center update (additive; all fields optional)."""
 

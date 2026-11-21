@@ -1,257 +1,94 @@
 package lk.motormila.app.ui.home
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.async
+import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
-import lk.motormila.app.R
+import lk.motormila.app.data.repository.WatchlistRepositoryImpl
 import lk.motormila.app.domain.model.DistrictStat
-import lk.motormila.app.domain.model.FuelMixBucket
 import lk.motormila.app.domain.model.Insights
-import lk.motormila.app.domain.model.Listing
 import lk.motormila.app.domain.model.PriceDrop
 import lk.motormila.app.domain.model.StatsSummary
-import lk.motormila.app.domain.repository.StatsRepository
-import lk.motormila.app.domain.usecase.GetDistrictPricesUseCase
-import lk.motormila.app.domain.usecase.GetInsightsUseCase
-import lk.motormila.app.domain.usecase.GetPriceDropsUseCase
-import lk.motormila.app.domain.usecase.GetStatsSummaryUseCase
-import lk.motormila.app.domain.usecase.ObserveSessionUseCase
-import lk.motormila.app.domain.usecase.ToggleWatchlistUseCase
 import lk.motormila.app.domain.model.VehicleCategoryRules
+import lk.motormila.app.domain.model.WatchItem
 import lk.motormila.app.domain.model.carsOnlyOrFirst
-import javax.inject.Inject
+import lk.motormila.app.domain.usecase.GetPriceDropsUseCase
 
-/**
- * First impression is cars: Home rails come from endpoints without a category
- * param, so keep car-like items only (or rank them first when too few).
- */
-/** Deals claiming more than this % below typical are treated as data errors on Home. */
-internal const val MAX_PLAUSIBLE_DEAL_PCT = 60.0
-
-internal fun Insights.carsFirst(): Insights = copy(
-    hotDeals = hotDeals
-        // "96% below typical" is a mis-parsed price, not a deal: never lead with it.
-        .filter { it.dealScore <= MAX_PLAUSIBLE_DEAL_PCT }
-        .carsOnlyOrFirst { VehicleCategoryRules.isCarLike(null, it.make, it.model) },
-    trendingModels = trendingModels.carsOnlyOrFirst { VehicleCategoryRules.isCarLike(null, it.make, it.model) },
-)
-
+// Legacy BestPicksViewModel caller; Buy does not rank price cuts by percentage or category.
 internal fun List<PriceDrop>.carsFirst(): List<PriceDrop> =
-    // Same plausibility rule as deals: a 75% "cut" is a mis-typed price, not a drop.
-    filter { kotlin.math.abs(it.dropPct) <= MAX_PLAUSIBLE_DEAL_PCT }
+    filter { kotlin.math.abs(it.dropPct) <= 60.0 }
         .carsOnlyOrFirst { VehicleCategoryRules.isCarLike(it.listing) }
-
 
 data class HomeUiState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
+    val priceDrops: List<PriceDrop> = emptyList(),
+    val savedVehicle: WatchItem? = null,
+    val unavailableSavedIds: Set<Int> = emptySet(),
+    val shortlistReady: Boolean = true,
+    val showCachedBadge: Boolean = false,
+    // Source-compatible with the existing Home screenshot fixtures. Buy neither loads nor
+    // presents national aggregates: they are not evidence about a particular vehicle.
     val summary: StatsSummary = StatsSummary(),
     val insights: Insights = Insights(),
-    val priceDrops: List<PriceDrop> = emptyList(),
     val districts: List<DistrictStat> = emptyList(),
-    val fuelMix: List<FuelMixBucket> = emptyList(),
-    val isPro: Boolean = false,
-    val isOffline: Boolean = false,
-    val showCachedBadge: Boolean = false,
-    val error: String? = null,
-)
-
-/** 5-tuple for the parallel home load (destructurable). */
-private data class Quint<A, B, C, D, E>(
-    val first: A,
-    val second: B,
-    val third: C,
-    val fourth: D,
-    val fifth: E,
-)
+) {
+    internal val recordedDrop: PriceDrop?
+        get() = priceDrops.firstOrNull {
+            it.listing.id != savedVehicle?.listingId && it.listing.id !in unavailableSavedIds && it.isDocumentedDrop()
+        }
+}
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val getStatsSummary: GetStatsSummaryUseCase,
-    private val getInsights: GetInsightsUseCase,
     private val getPriceDrops: GetPriceDropsUseCase,
-    private val getDistrictPrices: GetDistrictPricesUseCase,
-    private val observeSession: ObserveSessionUseCase,
-    private val toggleWatchlist: ToggleWatchlistUseCase,
-    private val stats: StatsRepository,
-    // Nullable + default keeps manual (test) construction source-compatible;
-    // Hilt always injects the real application context.
-    @ApplicationContext private val appContext: Context? = null,
+    watchlist: WatchlistRepositoryImpl,
 ) : ViewModel() {
-
-    private val _state = MutableStateFlow(HomeUiState())
+    private val _state = MutableStateFlow(HomeUiState(shortlistReady = false))
     val state: StateFlow<HomeUiState> = _state.asStateFlow()
-
-    private fun str(resId: Int, fallback: String): String =
-        appContext?.getString(resId) ?: fallback
+    private var loadJob: Job? = null
 
     init {
-        observePro()
-        load()
-        armStuckLoadWatchdog()
-    }
-
-    private fun observePro() {
+        // Local observation only. Opening Buy must not refresh every watched vehicle or
+        // require sign-in/network before the buyer can resume a listing.
         viewModelScope.launch {
-            observeSession().collect { session ->
-                _state.value = _state.value.copy(isPro = session?.isPro == true)
+            watchlist.observeCheckedSaves().catch { emit(emptyList()) }.collect { rows ->
+                val (gone, availableOrUnchecked) = rows.partition { (_, check) -> check?.unavailable == true }
+                val resume = availableOrUnchecked.map { it.first }.resumeVehicle()
+                val goneIds = gone.map { it.first.listingId }.toSet()
+                _state.update { it.copy(shortlistReady = true, savedVehicle = resume, unavailableSavedIds = goneIds) }
             }
         }
+        load(refreshing = false)
     }
 
-    fun load() {
-        viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true, error = null)
-            try {
-                // Hard bound: no single hanging call (dead radio, captive portal,
-                // stalled snapshot fetch) may keep the skeleton up forever.
-                // Each section is bounded on its own (see bounded()); partial results apply.
-                coroutineScope {
-                    val summaryDef = async { bounded { getStatsSummary() } }
-                    val insightsDef = async { bounded { getInsights().carsFirst() } }
-                    val dropsDef = async { bounded { getPriceDrops().carsFirst() } }
-                    val districtsDef = async { bounded { getDistrictPrices() } }
-                    val fuelDef = async { bounded { stats.fuelMix() } }
+    fun refresh() = load(refreshing = true)
+    fun retry() = load(refreshing = false)
+    fun dismissCachedBadge() = _state.update { it.copy(showCachedBadge = false) }
 
-                    // Headline sections first: publish as soon as they land so a
-                    // slow secondary section never holds Home in skeleton/offline.
-                    val summary = summaryDef.await()
-                    val insights = insightsDef.await()
-                    if (summary == null && insights == null) {
-                        _state.value = _state.value.copy(
-                            isLoading = false,
-                            isOffline = true,
-                            showCachedBadge = true,
-                            error = str(R.string.v19_home_err_reach, "Couldn't reach MotorMila"),
-                        )
-                    } else {
-                        _state.value = _state.value.copy(
-                            isLoading = false,
-                            summary = summary ?: _state.value.summary,
-                            insights = insights ?: _state.value.insights,
-                            isOffline = false,
-                            showCachedBadge = false,
-                            error = null,
-                        )
-                    }
-
-                    val drops = dropsDef.await()
-                    val districts = districtsDef.await()
-                    val fuel = fuelDef.await()
-                    _state.value = _state.value.copy(
-                        priceDrops = drops ?: _state.value.priceDrops,
-                        districts = districts ?: _state.value.districts,
-                        fuelMix = fuel ?: _state.value.fuelMix,
-                    )
-                }
-            } catch (e: Exception) {
-                // Offline: keep last good values, flag cached badge.
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    isOffline = true,
-                    showCachedBadge = true,
-                    error = e.message ?: str(R.string.v19_home_err_reach, "Couldn't reach MotorMila"),
-                )
-            }
-        }
-    }
-
-    fun refresh() {
-        viewModelScope.launch {
-            _state.value = _state.value.copy(isRefreshing = true, error = null)
-            try {
-                // Same hard bound as load(): refresh must always settle.
-                val (summary, insights, drops, districts, fuel) = coroutineScope {
-                    val summaryDef = async { bounded { getStatsSummary() } }
-                    val insightsDef = async { bounded { getInsights().carsFirst() } }
-                    val dropsDef = async { bounded { getPriceDrops().carsFirst() } }
-                    val districtsDef = async { bounded { getDistrictPrices() } }
-                    val fuelDef = async { bounded { stats.fuelMix() } }
-                    Quint(
-                        summaryDef.await(),
-                        insightsDef.await(),
-                        dropsDef.await(),
-                        districtsDef.await(),
-                        fuelDef.await(),
-                    )
-                }
-
-                _state.value = _state.value.copy(
-                    summary = summary ?: _state.value.summary,
-                    insights = insights ?: _state.value.insights,
-                    priceDrops = drops ?: _state.value.priceDrops,
-                    districts = districts ?: _state.value.districts,
-                    fuelMix = fuel ?: _state.value.fuelMix,
-                    isRefreshing = false,
-                    isOffline = false,
-                    showCachedBadge = false,
-                )
-            } catch (e: Exception) {
-                _state.value = _state.value.copy(
-                    isRefreshing = false,
-                    isOffline = true,
-                    showCachedBadge = true,
-                    error = e.message ?: str(R.string.v19_home_err_refresh, "Couldn't refresh"),
-                )
-            }
-        }
-    }
-
-    fun retry() = load()
-
-    /**
-     * Per-section bound: one slow endpoint (cold HF backend, sequential
-     * district enrichment) must not discard the sections that did load.
-     * Previously a single withTimeout(20 s) around all five calls threw and
-     * flagged the whole Home as offline with "0 cars listed" (QA 2026-10-21).
-     */
-    private suspend fun <T> bounded(block: suspend () -> T): T? =
-        withTimeoutOrNull(SECTION_TIMEOUT_MS) { runCatching { block() }.getOrNull() }
-
-    private companion object {
-        const val SECTION_TIMEOUT_MS = 20_000L
-    }
-
-    fun dismissCachedBadge() {
-        _state.value = _state.value.copy(showCachedBadge = false)
-    }
-
-    /**
-     * Stuck-load watchdog: if a cold-started backend (or a dead device radio)
-     * leaves every home request hanging, the skeleton would otherwise sit
-     * forever. After [timeoutMs] with nothing loaded, flip to the error state
-     * so the user gets a retry affordance instead of an eternal spinner.
-     */
-    fun armStuckLoadWatchdog(timeoutMs: Long = 12_000L) {
-        viewModelScope.launch {
-            kotlinx.coroutines.delay(timeoutMs)
-            val s = _state.value
-            if (s.isLoading && s.summary.totalListings == 0 && !s.isRefreshing) {
-                _state.value = s.copy(
-                    isLoading = false,
-                    isOffline = true,
-                    showCachedBadge = true,
-                    error = str(R.string.v19_home_err_slow, "Taking too long to reach MotorMila"),
-                )
-            }
-        }
-    }
-
-    fun onToggleWatch(listing: Listing) {
-        viewModelScope.launch {
-            try {
-                toggleWatchlist(listing)
+    private fun load(refreshing: Boolean) {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            _state.update { it.copy(isLoading = !refreshing, isRefreshing = refreshing) }
+            val drops = try {
+                withTimeoutOrNull(20_000L) { getPriceDrops() }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (_: Exception) {
-                // Watchlist writes are local-first; surface nothing on home.
+                null
+            }
+            _state.update {
+                it.copy(isLoading = false, isRefreshing = false, showCachedBadge = drops == null,
+                    priceDrops = drops ?: it.priceDrops)
             }
         }
     }

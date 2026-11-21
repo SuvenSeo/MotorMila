@@ -330,10 +330,17 @@ fun MotormilaNavGraph(
                     // only, silently dropping web filter keys (fuel_type, transmission…) and
                     // relaunching the task. resolveMotormilaDeepLink (Splash / onNewIntent)
                     // maps every key into Search.filters instead.
-                    motormilaComposable<Search> {
+                    motormilaComposable<Search> { entry ->
+                        val seedIds = entry.toRoute<Search>().compareSeedIds
                         SearchScreen(
                             onListingClick = { id -> navController.navigate(ListingDetail(id, fromCard = true)) },
-                            onCompare = { ids -> navController.navigate(Compare(ids)) },
+                            compareSeedIds = seedIds,
+                            onSignIn = { navController.navigate(Login(returnTo = "search")) },
+                            onCompare = { ids -> navController.navigate(Compare(ids)) {
+                                // Replace the picker and the previous comparison, rather than
+                                // returning Back to a stale tray after the single add.
+                                if (seedIds.isNotEmpty()) popUpTo<Compare> { inclusive = true }
+                            } },
                             onOpenSharedUrl = { url -> navController.navigate(ShareImport(url)) },
                         )
                     }
@@ -420,7 +427,7 @@ fun MotormilaNavGraph(
                         CompareScreen(
                             ids = route.ids,
                             onOpenDetail = { id -> navController.navigate(ListingDetail(id)) },
-                            onAddListing = { navController.navigate(Search()) },
+                            onAddListing = { ids -> navController.navigate(Search(compareSeedIds = ids)) },
                             onBrowse = { navController.navigate(Search()) },
                         )
                     }
@@ -454,9 +461,7 @@ fun MotormilaNavGraph(
                         ),
                     ) {
                         NotificationsScreen(
-                            onOpenNotification = { id ->
-                                id.toIntOrNull()?.let { navController.navigate(ListingDetail(it)) }
-                            },
+                            onOpenListing = { listingId -> navController.navigate(ListingDetail(listingId)) },
                         )
                     }
                     motormilaComposable<Pro>(

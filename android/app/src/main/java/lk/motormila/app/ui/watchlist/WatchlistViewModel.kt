@@ -15,9 +15,8 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import lk.motormila.app.R
-import lk.motormila.app.domain.model.Listing
 import lk.motormila.app.domain.model.WatchItem
-import lk.motormila.app.domain.repository.WatchlistRepository
+import lk.motormila.app.data.repository.WatchlistRepositoryImpl
 import lk.motormila.app.domain.usecase.ObserveWatchlistUseCase
 
 data class WatchlistUiState(
@@ -54,7 +53,7 @@ sealed interface WatchlistUiEvent {
 @HiltViewModel
 class WatchlistViewModel @Inject constructor(
     private val observeWatchlist: ObserveWatchlistUseCase,
-    private val repository: WatchlistRepository,
+    private val repository: WatchlistRepositoryImpl,
     // Nullable + default keeps manual (test) construction source-compatible;
     // Hilt always injects the real application context.
     @ApplicationContext private val appContext: Context? = null,
@@ -62,6 +61,8 @@ class WatchlistViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(WatchlistUiState())
     val state: StateFlow<WatchlistUiState> = _state.asStateFlow()
+
+    internal val checks = repository.observeChecks()
 
     private var observeJob: Job? = null
     private var undoExpiryJob: Job? = null
@@ -72,7 +73,7 @@ class WatchlistViewModel @Inject constructor(
 
     fun onEvent(event: WatchlistUiEvent) {
         when (event) {
-            WatchlistUiEvent.Refresh -> observe(refresh = true)
+            WatchlistUiEvent.Refresh -> observe()
             WatchlistUiEvent.RefreshPrices -> refreshPrices()
             is WatchlistUiEvent.Remove -> remove(event.id)
             WatchlistUiEvent.ClearAll -> clearAll()
@@ -85,12 +86,11 @@ class WatchlistViewModel @Inject constructor(
     private fun str(resId: Int, fallback: String, vararg args: Any): String =
         appContext?.getString(resId, *args) ?: fallback
 
-    private fun observe(refresh: Boolean = false) {
+    private fun observe() {
         // One collector at a time: pull-to-refresh used to stack a new
         // collect on every refresh.
         observeJob?.cancel()
         observeJob = viewModelScope.launch {
-            if (refresh) _state.update { it.copy(isRefreshing = true, error = null) }
             observeWatchlist()
                 .catch { e ->
                     _state.update {
@@ -105,7 +105,6 @@ class WatchlistViewModel @Inject constructor(
                     _state.update {
                         it.copy(
                             isLoading = false,
-                            isRefreshing = false,
                             items = items,
                             droppedIds = items
                                 .filter { w -> w.hasPriceDrop }
@@ -132,6 +131,7 @@ class WatchlistViewModel @Inject constructor(
 
     /** Best-effort network refresh of last-known prices (Room-backed). */
     fun refreshPrices() {
+        if (_state.value.isRefreshing) return
         viewModelScope.launch {
             _state.update { it.copy(isRefreshing = true, error = null) }
             runCatching { repository.refreshPrices() }
@@ -175,7 +175,7 @@ class WatchlistViewModel @Inject constructor(
         if (System.currentTimeMillis() > undo.expiresAtMs) return
         viewModelScope.launch {
             undo.items.forEach { item ->
-                runCatching { repository.add(item.toListing()) }
+                runCatching { repository.restore(item) }
                     .onFailure { e ->
                         _state.update {
                             it.copy(error = e.message ?: str(R.string.v19_watch_err_restore, "Couldn't restore the removed items."))
@@ -190,39 +190,6 @@ class WatchlistViewModel @Inject constructor(
         undoExpiryJob = null
         _state.update { it.copy(pendingUndo = null) }
     }
-
-    /**
-     * Re-add path for Undo. Note: [WatchlistRepository.add] re-baselines the
-     * drop snapshot at the current price, so a restored row starts a fresh
-     * price-drop history (the Clear-all dialog warns about this). A
-     * full-fidelity restore (original add-price baseline / addedAt) needs a
-     * repository restore API — tracked as follow-up.
-     */
-    private fun WatchItem.toListing(): Listing = Listing(
-        id = id,
-        title = title,
-        make = "",
-        model = "",
-        year = null,
-        priceLkr = priceLkr,
-        mileageKm = null,
-        fuelType = null,
-        transmission = null,
-        condition = null,
-        bodyType = null,
-        district = district,
-        city = null,
-        source = null,
-        thumbnailUrl = thumbnailUrl,
-        dealScore = null,
-        marketMedianLkr = fmvLkr,
-        scrapedAt = null,
-        firstSeenAt = null,
-        lastSeenAt = null,
-        detailUrl = null,
-        externalUrl = null,
-        engineCc = null,
-    )
 
     private companion object {
         /** Longer than the Undo snackbar so a late tap still restores. */

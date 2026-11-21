@@ -92,18 +92,8 @@ class MotormilaApp : Application(), SingletonImageLoader.Factory, Configuration.
         // the persisted session + token, then posts SessionEnded so the nav
         // graph routes to Login.
         sessionGuard.start(appScope)
-        // Alert matching only runs while signed in.
-        appScope.launch {
-            runCatching {
-                authRepository.session()
-                    .map { it != null }
-                    .distinctUntilChanged()
-                    .collect { signedIn ->
-                        if (signedIn) runCatching { PriceAlertSyncWorker.enqueue(this@MotormilaApp) }
-                        else runCatching { PriceAlertSyncWorker.cancel(this@MotormilaApp) }
-                    }
-            }
-        }
+        // Server push/inbox own delivery. Retire both schedules on upgrade, even for guests.
+        runCatching { PriceAlertSyncWorker.cancelLegacyWork(androidx.work.WorkManager.getInstance(this)) }
         // Native push: (re-)register the FCM token while signed in, and again
         // whenever the watchlist or the Settings price-drop toggle changes
         // (the server pushes drops for watched listings). Logout unregisters

@@ -96,49 +96,54 @@ class CoreDataFallbackTest {
     private fun alertsRepo(api: MotormilaApiService, dao: AlertDao): AlertsRepositoryImpl {
         val db = mockk<MotormilaDatabase>()
         every { db.alertDao() } returns dao
-        return AlertsRepositoryImpl(api, db, Dispatchers.Unconfined)
+        val account = mockk<lk.motormila.app.domain.model.UserSession>(relaxed = true)
+        every { account.email } returns "buyer@example.invalid"
+        val sessions = mockk<lk.motormila.app.data.local.datastore.SessionStore>()
+        coEvery { sessions.snapshot() } returns account
+        every { sessions.cachedToken } returns account.token
+        return AlertsRepositoryImpl(api, db, Dispatchers.Unconfined, sessions)
     }
 
     @Test
     fun alert_update_is_in_place_put_with_no_delete_or_create() = runTest {
         val api = mockk<MotormilaApiService>()
         val dao = mockk<AlertDao>(relaxed = true)
-        coEvery { api.updateAlert(7, any()) } returns AlertDto(id = 7, make = "Honda", active = true)
+        coEvery { api.updateAlert(7, any(), any()) } returns AlertDto(id = 7, make = "Honda", active = true)
         val updated = alertsRepo(api, dao).update(7, AlertInput(make = "Honda"))
 
         assertEquals(7, updated.id)
         assertEquals("Honda", updated.make)
-        coVerify(exactly = 0) { api.deleteAlert(any()) }
-        coVerify(exactly = 0) { api.createAlert(any()) }
-        coVerify(exactly = 0) { dao.delete(any()) }
+        coVerify(exactly = 0) { api.deleteAlert(any(), any()) }
+        coVerify(exactly = 0) { api.createAlert(any(), any()) }
+        coVerify(exactly = 0) { dao.delete(any(), any()) }
     }
 
     @Test
     fun alert_update_errors_leave_the_original_untouched() = runTest {
         val api = mockk<MotormilaApiService>()
         val dao = mockk<AlertDao>(relaxed = true)
-        coEvery { api.updateAlert(7, any()) } throws http(403)
+        coEvery { api.updateAlert(7, any(), any()) } throws http(403)
         try {
             alertsRepo(api, dao).update(7, AlertInput(make = "Honda", notifyEmail = "a@b.lk"))
             fail("expected 403")
         } catch (e: HttpException) {
             assertEquals(403, e.code())
         }
-        coVerify(exactly = 0) { api.deleteAlert(any()) }
-        coVerify(exactly = 0) { dao.delete(any()) }
+        coVerify(exactly = 0) { api.deleteAlert(any(), any()) }
+        coVerify(exactly = 0) { dao.delete(any(), any()) }
     }
 
     @Test
     fun alert_update_falls_back_to_create_first_only_on_pre_put_backend() = runTest {
         val api = mockk<MotormilaApiService>(relaxed = true)
         val dao = mockk<AlertDao>(relaxed = true)
-        coEvery { api.updateAlert(7, any()) } throws http(405)
-        coEvery { api.createAlert(any()) } returns AlertDto(id = 8, make = "Honda", active = true)
+        coEvery { api.updateAlert(7, any(), any()) } throws http(405)
+        coEvery { api.createAlert(any(), any()) } returns AlertDto(id = 8, make = "Honda", active = true)
         val updated = alertsRepo(api, dao).update(7, AlertInput(make = "Honda"))
 
         assertEquals(8, updated.id)
-        coVerify { api.createAlert(any()) }
-        coVerify { api.deleteAlert(7) }
+        coVerify { api.createAlert(any(), any()) }
+        coVerify { api.deleteAlert(7, any()) }
         assertTrue(isUpdateUnsupported(405))
         assertFalse(isUpdateUnsupported(404))
         assertFalse(isUpdateUnsupported(429))
