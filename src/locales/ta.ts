@@ -1825,6 +1825,19 @@ export const ta = {
   "thumbnail.photoUnavailable": "புகைப்படம் கிடைக்கவில்லை",
   "thumbnail.photosOnSource": "{source} இல் புகைப்படங்கள்",
   "tools.calc.fxOpenErRef": "சந்தை நாணய விகிதம் (Open ER API) · குறிப்பு {date}",
+
+  "filter.findMakeModel": "Find a make or model",
+  "filter.clearFind": "Clear make search",
+  "filter.noneActive": "No filters applied yet",
+  "filter.moreMakes": "Top {n} makes — search to narrow the list",
+
+  "alerts.anyPrice": "Any price",
+  "alerts.matchesCount": "{n} matches",
+  "alerts.cheapestNow": "Cheapest now {price}",
+  "alerts.underTarget": "{amount} under target",
+  "alerts.overTarget": "{amount} over target",
+  "alerts.paused": "Paused",
+  "alerts.createFirst": "Create your first alert",
 } as const;
 
 export type TaKey = keyof typeof ta;

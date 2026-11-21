@@ -1825,6 +1825,19 @@ export const en = {
   "thumbnail.photoUnavailable": "Photo unavailable",
   "thumbnail.photosOnSource": "Photos on {source}",
   "tools.calc.fxOpenErRef": "Market FX (Open ER API) · ref {date}",
+
+  "filter.findMakeModel": "Find a make or model",
+  "filter.clearFind": "Clear make search",
+  "filter.noneActive": "No filters applied yet",
+  "filter.moreMakes": "Top {n} makes — search to narrow the list",
+
+  "alerts.anyPrice": "Any price",
+  "alerts.matchesCount": "{n} matches",
+  "alerts.cheapestNow": "Cheapest now {price}",
+  "alerts.underTarget": "{amount} under target",
+  "alerts.overTarget": "{amount} over target",
+  "alerts.paused": "Paused",
+  "alerts.createFirst": "Create your first alert",
 } as const;
 
 export type EnKey = keyof typeof en;

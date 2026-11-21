@@ -1825,6 +1825,19 @@ export const si = {
   "thumbnail.photoUnavailable": "ඡායාරූපය නොමැත",
   "thumbnail.photosOnSource": "{source} හි ඡායාරූප",
   "tools.calc.fxOpenErRef": "වෙළඳපොළ විනිමය (Open ER API) · යොමු {date}",
+
+  "filter.findMakeModel": "Find a make or model",
+  "filter.clearFind": "Clear make search",
+  "filter.noneActive": "No filters applied yet",
+  "filter.moreMakes": "Top {n} makes — search to narrow the list",
+
+  "alerts.anyPrice": "Any price",
+  "alerts.matchesCount": "{n} matches",
+  "alerts.cheapestNow": "Cheapest now {price}",
+  "alerts.underTarget": "{amount} under target",
+  "alerts.overTarget": "{amount} over target",
+  "alerts.paused": "Paused",
+  "alerts.createFirst": "Create your first alert",
 } as const;
 
 export type SiKey = keyof typeof si;
