@@ -1,21 +1,19 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, m } from "motion/react";
-import { Bell, BellOff, ChevronRight, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
-import { toast } from "sonner";
+import { Bell, BellOff, Plus, RefreshCw, Search } from "lucide-react";
 import { useServerMarketAlerts } from "@/hooks/useServerMarketAlerts";
 import { usePush } from "@/hooks/usePush";
 import { trackEvent } from "@/lib/analytics";
 import { loadMarketAlerts } from "@/lib/marketAlerts";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { isValidNotifyPhone } from "@/lib/notifyPhone";
-import { matchAlerts, formatPrice, type AlertMatchResponse, type ServerMarketAlert } from "@/services/api";
+import { matchAlerts, formatPrice, type AlertMatchResponse } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -26,47 +24,23 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { PageBody } from "@/components/PageBody";
 import { PageCanvas } from "@/components/PageCanvas";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
+import { AlertsSectionHeader } from "@/components/alerts/AlertsSectionHeader";
+import { AlertCard, type AlertMatchSummary } from "@/components/alerts/AlertCard";
+import { MatchedListingRow } from "@/components/alerts/MatchedListingRow";
 import { duration, ease, listItem, listStagger, spring, useReducedMotionOrLowData } from "@/lib/motion";
 import { useAuth } from "@/lib/authContext";
 import { FREE_ALERTS_LIMIT, freePlanCopy, hasFullPlatformAccess } from "@/lib/planLimits";
 
-/** Section heading used on this page (eyebrow + title2), same rhythm as the kit PageHeader. */
-function SectionTitle({ id, eyebrow, title, aside }: { id: string; eyebrow: string; title: string; aside?: React.ReactNode }) {
-  return (
-    <div className="mb-5 flex items-end justify-between gap-4">
-      <div className="min-w-0">
-        <p className="mb-1 text-footnote font-semibold text-primary">{eyebrow}</p>
-        <h2 id={id} className="text-title2 font-semibold text-foreground">
-          {title}
-        </h2>
-      </div>
-      {aside}
-    </div>
-  );
-}
-
-const ALL_CHANNELS = ["inapp", "email", "whatsapp", "telegram", "push"] as const;
-type ChannelName = (typeof ALL_CHANNELS)[number];
-
-function parseChannels(raw: string | null | undefined): Set<ChannelName> {
-  const out = new Set<ChannelName>();
-  if (!raw) return out;
-  for (const part of raw.split(",")) {
-    const token = part.trim().toLowerCase();
-    if ((ALL_CHANNELS as readonly string[]).includes(token)) out.add(token as ChannelName);
-  }
-  return out;
-}
-
-function ChannelCenterSection({ alertCount }: { alertCount: number }) {
+function DeliverySection() {
   const { t } = useAppPreferences();
   const push = usePush();
-  void alertCount;
   return (
     <Card padding="md" aria-label={t("alerts.channelCenter", "Channel center")} role="region">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-callout font-semibold text-foreground">{t("alerts.channelCenter", "Channel center")}</h2>
+          <h2 className="font-display text-title3 font-semibold tracking-tight text-foreground">
+            {t("alerts.channelCenter", "Channel center")}
+          </h2>
           <p className="mt-1 text-footnote text-label-2">
             {t("alerts.channelsHint", "Pick where each alert pings you. In-app always delivers.")}
           </p>
@@ -100,38 +74,22 @@ function ChannelCenterSection({ alertCount }: { alertCount: number }) {
   );
 }
 
-function AlertMatchSection({ token }: { token: string }) {
+function MatchesSection({
+  matchData,
+  loading,
+  error,
+  onRefresh,
+}: {
+  matchData: AlertMatchResponse | null;
+  loading: boolean;
+  error: string | null;
+  onRefresh: () => void;
+}) {
   const { t } = useAppPreferences();
-  const { hasProAccess, isAdmin } = useAuth();
-  const fullAccess = hasFullPlatformAccess({ hasProAccess, isAdmin });
-  const [matchData, setMatchData] = useState<AlertMatchResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const runMatch = useCallback(async () => {
-    if (!token) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await matchAlerts(token);
-      setMatchData(result);
-      trackEvent("saved_search", { matches: result.results.length });
-    } catch (err) {
-      setError(friendlyApiError(err, t("alerts.matchFailed", "Failed to fetch matches"), t));
-    } finally {
-      setLoading(false);
-    }
-  }, [token, t]);
-
-  useEffect(() => {
-    runMatch();
-  }, [runMatch]);
-
-  if (!token) return null;
 
   return (
     <section aria-labelledby="match-results-heading" className="scroll-mt-24">
-      <SectionTitle
+      <AlertsSectionHeader
         id="match-results-heading"
         eyebrow={t("alerts.liveResults", "Live results")}
         title={t("alerts.currentMatches", "Current matches")}
@@ -139,7 +97,7 @@ function AlertMatchSection({ token }: { token: string }) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={runMatch}
+            onClick={onRefresh}
             disabled={loading}
             aria-label={t("alerts.refreshAria", "Refresh matches")}
             className="shrink-0 text-label-2"
@@ -152,11 +110,11 @@ function AlertMatchSection({ token }: { token: string }) {
 
       {error && !loading ? (
         <Card padding="none">
-          <ErrorState body={error} onRetry={runMatch} />
+          <ErrorState body={error} onRetry={onRefresh} />
         </Card>
       ) : null}
 
-      {!error && matchData && matchData.results.length === 0 && (
+      {!error && matchData && matchData.results.length === 0 ? (
         <Card padding="none">
           <EmptyState
             icon={BellOff}
@@ -164,20 +122,22 @@ function AlertMatchSection({ token }: { token: string }) {
             body={t("alerts.noMatches", "No matching listings for your alerts right now.")}
           />
         </Card>
-      )}
+      ) : null}
 
-      {!error && matchData && matchData.results.length > 0 && (
-        <div className="content-in space-y-4">
+      {!error && matchData && matchData.results.length > 0 ? (
+        <div className="content-in space-y-3">
           {matchData.results.map((result) => (
             <Card key={result.alert_id} padding="none" className="overflow-hidden">
-              <div className="flex items-center justify-between gap-3 border-b border-separator px-4 py-3.5 sm:px-5">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-separator px-4 py-3 sm:px-5">
                 <div className="min-w-0">
-                  <p className="truncate text-body font-semibold text-foreground">
+                  <p className="truncate font-display text-callout font-semibold tracking-tight text-foreground">
                     {[result.make, result.model].filter(Boolean).join(" ") || t("alerts.allVehicles", "All vehicles")}
-                    {result.district ? ` · ${result.district}` : ""}
+                    {result.district ? (
+                      <span className="font-sans text-footnote font-normal tracking-normal text-label-2"> · {result.district}</span>
+                    ) : null}
                   </p>
                   {result.max_price ? (
-                    <p className="num mt-0.5 text-footnote text-label-2">
+                    <p className="num mt-0.5 text-caption text-label-2">
                       {t("alerts.underPrice", "Under {price}", { price: formatPrice(result.max_price) })}
                     </p>
                   ) : null}
@@ -186,56 +146,35 @@ function AlertMatchSection({ token }: { token: string }) {
                   {t("alerts.found", "{count} found", { count: result.matching_count.toLocaleString() })}
                 </Badge>
               </div>
-              {result.listings.length > 0 && (
+              {result.listings.length > 0 ? (
                 <ul className="divide-y divide-separator">
                   {result.listings.slice(0, 5).map((listing) => (
-                    <li key={listing.id}>
-                      <Link
-                        to={`/listing/${listing.id}`}
-                        aria-label={t("alerts.viewListingAria", "View listing {title}", { title: listing.title || listing.id })}
-                        className="group flex items-center justify-between gap-3 px-4 py-3 no-underline transition-colors duration-short hover:bg-surface-2 active:bg-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-5"
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate text-body font-medium text-foreground">
-                            {listing.title || `${listing.make} ${listing.model}`}
-                            {listing.year && !(listing.title ?? "").includes(String(listing.year)) ? ` ${listing.year}` : ""}
-                          </p>
-                          <p className="mt-0.5 text-footnote text-label-2">
-                            {listing.district || "LK"}
-                            {fullAccess && listing.deal_score !== null ? ` ${t("alerts.dealSuffix", "· +{score} deal", { score: Number(listing.deal_score).toFixed(0) })}` : ""}
-                          </p>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-2">
-                          {listing.price_lkr !== null && (
-                            <span className="num text-body font-semibold text-foreground">{formatPrice(listing.price_lkr)}</span>
-                          )}
-                          <ChevronRight aria-hidden className="h-4 w-4 text-label-2 transition-transform duration-short ease-standard group-hover:translate-x-0.5" />
-                        </div>
-                      </Link>
-                    </li>
+                    <MatchedListingRow key={listing.id} listing={listing} />
                   ))}
                 </ul>
-              )}
+              ) : null}
             </Card>
           ))}
           <p className="num text-right text-caption text-label-2">
             {t("alerts.checkedAt", "Checked {time}", { time: new Date(matchData.checked_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) })}
           </p>
         </div>
-      )}
+      ) : null}
 
-      {loading && !matchData && (
+      {loading && !matchData ? (
         <div className="space-y-3" aria-hidden>
           {[1, 2].map((i) => (
             <Skeleton key={i} className="h-28 w-full" />
           ))}
         </div>
-      )}
+      ) : null}
     </section>
   );
 }
 
 interface CreateAlertFormProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onCreated: () => void;
   token: string;
   alertCount: number;
@@ -254,7 +193,7 @@ interface CreateAlertFormProps {
   }) => Promise<unknown>;
 }
 
-function CreateAlertForm({ onCreated, onCreate, alertCount, fullAccess }: CreateAlertFormProps) {
+function CreateAlertForm({ open, onOpenChange, onCreated, onCreate, alertCount, fullAccess }: CreateAlertFormProps) {
   const { t } = useAppPreferences();
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
@@ -271,7 +210,6 @@ function CreateAlertForm({ onCreated, onCreate, alertCount, fullAccess }: Create
   const [deliveryMode, setDeliveryMode] = useState<"instant" | "digest">("instant");
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
   const atFreeLimit = !fullAccess && alertCount >= FREE_ALERTS_LIMIT;
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
@@ -319,14 +257,14 @@ function CreateAlertForm({ onCreated, onCreate, alertCount, fullAccess }: Create
       setNotifyPhone(""); setNotifyEmail(""); setNotifyTelegram("");
       setChannelWhatsApp(false); setChannelEmail(false); setChannelTelegram(false);
       setChannelPush(false); setChannelInApp(true); setDeliveryMode("instant");
-      setOpen(false);
+      onOpenChange(false);
       onCreated();
     } catch (err) {
       setFormError(err instanceof Error ? err.message : t("alerts.saveFailed", "Failed to save alert"));
     } finally {
       setSaving(false);
     }
-  }, [make, model, district, maxPrice, notifyPhone, notifyEmail, notifyTelegram, channelWhatsApp, channelEmail, channelTelegram, channelPush, channelInApp, deliveryMode, onCreate, onCreated, fullAccess, alertCount, t]);
+  }, [make, model, district, maxPrice, notifyPhone, notifyEmail, notifyTelegram, channelWhatsApp, channelEmail, channelTelegram, channelPush, channelInApp, deliveryMode, onCreate, onCreated, onOpenChange, fullAccess, alertCount, t]);
 
   if (atFreeLimit) {
     return (
@@ -338,20 +276,9 @@ function CreateAlertForm({ onCreated, onCreate, alertCount, fullAccess }: Create
     );
   }
 
-  if (!open) {
-    return (
-      <Button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label={t("alerts.createAria", "Create new alert")}
-      >
-        <Plus aria-hidden />
-        {t("alerts.newAlert", "New alert")}
-      </Button>
-    );
-  }
+  if (!open) return null;
 
-  const label = "mb-1.5 block text-footnote font-medium text-label-2";
+  const label = "mb-1.5 block text-caption font-semibold uppercase tracking-caps text-label-2";
   const channelChips: Array<{ on: boolean; set: (v: boolean) => void; text: string }> = [
     { on: channelInApp, set: setChannelInApp, text: t("alerts.channelInApp", "In-app") },
     { on: channelWhatsApp, set: setChannelWhatsApp, text: t("alerts.channelWhatsApp", "WhatsApp") },
@@ -362,289 +289,121 @@ function CreateAlertForm({ onCreated, onCreate, alertCount, fullAccess }: Create
 
   return (
     <Card padding="none" className="content-in">
-    <form
-      onSubmit={handleSubmit}
-      aria-label={t("alerts.formAria", "Create alert form")}
-      className="space-y-5 p-5 sm:p-6"
-    >
-      <h2 className="text-callout font-semibold text-foreground">{t("alerts.newAlert", "New alert")}</h2>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div>
-          <label htmlFor="alert-make" className={label}>{t("common.make", "Make")}</label>
-          <Input id="alert-make" value={make} onChange={(e) => setMake(e.target.value)} placeholder="Toyota" />
-        </div>
-        <div>
-          <label htmlFor="alert-model" className={label}>{t("common.model", "Model")}</label>
-          <Input id="alert-model" value={model} onChange={(e) => setModel(e.target.value)} placeholder="Aqua" />
-        </div>
-        <div>
-          <label htmlFor="alert-district" className={label}>{t("common.district", "District")}</label>
-          <Input id="alert-district" value={district} onChange={(e) => setDistrict(e.target.value)} placeholder="Colombo" />
-        </div>
-        <div>
-          <label htmlFor="alert-price" className={label}>{t("alerts.maxPrice", "Max price (LKR)")}</label>
-          <Input
-            id="alert-price"
-            value={maxPrice}
-            onChange={(e) => setMaxPrice(e.target.value.replace(/[^\d]/g, ""))}
-            inputMode="numeric"
-            placeholder="5000000"
-            className="num"
-          />
-        </div>
-      </div>
-      {fullAccess ? (
-        <div className="space-y-4 border-t border-separator pt-5">
-          <div>
-            <p className={label}>{t("alerts.notifyChannels", "Notify me via (Pro)")}</p>
-            <div className="flex flex-wrap gap-1.5" role="group" aria-label={t("alerts.notifyChannels", "Notify me via (Pro)")}>
-              {channelChips.map((c) => (
-                <Chip key={c.text} selected={c.on} onClick={() => c.set(!c.on)}>
-                  {c.text}
-                </Chip>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className={label}>{t("alerts.deliveryMode", "Delivery")}</p>
-            <SegmentedControl
-              value={deliveryMode}
-              onValueChange={(v: "instant" | "digest") => setDeliveryMode(v)}
-              semantics="radio"
-              aria-label={t("alerts.deliveryMode", "Delivery")}
-              className="max-w-sm"
-              options={[
-                { value: "instant", label: t("alerts.instantMode", "Instant") },
-                { value: "digest", label: t("alerts.digestMode", "Digest (07:00 daily)") },
-              ]}
-            />
-          </div>
-          <p className="text-footnote text-label-2">
-            {t(
-              "alerts.quietHoursNote",
-              "Quiet hours 21:00–07:00 Asia/Colombo: email, WhatsApp, Telegram & push queue for the 07:00 digest. In-app always delivers.",
-            )}
-          </p>
-          {channelWhatsApp && (
-            <div className="content-in">
-              <label htmlFor="alert-whatsapp" className={label}>
-                {t("alerts.notifyWhatsapp", "WhatsApp number")}
-              </label>
-              <Input id="alert-whatsapp" value={notifyPhone} onChange={(e) => setNotifyPhone(e.target.value)} placeholder="0771234567" inputMode="tel" />
-              <p className="mt-1.5 text-caption text-label-2">
-                {t("alerts.whatsappHint", "Get a WhatsApp ping when new matches appear (requires Twilio on the server).")}
-              </p>
-            </div>
-          )}
-          {channelEmail && (
-            <div className="content-in">
-              <label htmlFor="alert-email" className={label}>
-                {t("alerts.notifyEmail", "Email address")}
-              </label>
-              <Input id="alert-email" type="email" value={notifyEmail} onChange={(e) => setNotifyEmail(e.target.value)} placeholder="you@example.com" />
-            </div>
-          )}
-          {channelTelegram && (
-            <div className="content-in">
-              <label htmlFor="alert-telegram" className={label}>
-                {t("alerts.notifyTelegram", "Telegram chat ID or @username")}
-              </label>
-              <Input id="alert-telegram" value={notifyTelegram} onChange={(e) => setNotifyTelegram(e.target.value)} placeholder={t("alerts.telegramPlaceholder", "123456789 or @mychannel")} />
-              <p className="mt-1.5 text-caption text-label-2">
-                {t("alerts.telegramHint", "Send /start to your bot first to get a chat ID.")}
-              </p>
-            </div>
-          )}
-        </div>
-      ) : (
-        <p className="rounded-control bg-primary/5 px-3.5 py-3 text-footnote text-label-2">
-          {t("alerts.notifyPro", "WhatsApp, Email & Telegram match pings unlock with Pro.")}
-        </p>
-      )}
-      {formError && (
-        <p role="alert" className="content-in text-footnote font-medium text-destructive">{formError}</p>
-      )}
-      <div className="flex gap-2">
-        <Button type="submit" loading={saving} className="flex-1 sm:flex-none">
-          {t("alerts.save", "Save alert")}
-        </Button>
-        <Button type="button" variant="ghost" onClick={() => { setOpen(false); setFormError(null); }}>
-          {t("common.cancel", "Cancel")}
-        </Button>
-      </div>
-    </form>
-    </Card>
-  );
-}
-
-function AlertRow({
-  alert,
-  onDelete,
-  onChannelsChange,
-}: {
-  alert: ServerMarketAlert;
-  /** Kept for call-site compatibility; the row itself does not need it. */
-  token?: string;
-  onDelete: (id: number) => void;
-  onChannelsChange?: (id: number, data: { channels?: string[]; delivery_mode?: "instant" | "digest" }) => Promise<unknown>;
-}) {
-  const { t } = useAppPreferences();
-  const [deleting, setDeleting] = useState(false);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [savingChannels, setSavingChannels] = useState(false);
-  const activeChannels = parseChannels(alert.notify_channels);
-  const deliveryMode = alert.delivery_mode === "digest" ? "digest" : "instant";
-
-  const handleDelete = useCallback(async () => {
-    setConfirmOpen(false);
-    setDeleting(true);
-    try {
-      onDelete(alert.id);
-    } finally {
-      setDeleting(false);
-    }
-  }, [alert.id, onDelete]);
-
-  const toggleChannel = useCallback(
-    async (channel: ChannelName) => {
-      if (!onChannelsChange || savingChannels) return;
-      const next = new Set(activeChannels);
-      if (next.has(channel)) next.delete(channel);
-      else next.add(channel);
-      // In-app is the fail-open baseline: keep at least one channel entry.
-      setSavingChannels(true);
-      try {
-        await onChannelsChange(alert.id, { channels: Array.from(next) });
-      } catch (err) {
-        toast.error(
-          t("alerts.channelsUpdateFailed", "Couldn't update channels. Your alert is unchanged."),
-          { description: err instanceof Error ? err.message : undefined },
-        );
-      } finally {
-        setSavingChannels(false);
-      }
-    },
-    [alert.id, activeChannels, onChannelsChange, savingChannels, t],
-  );
-
-  const cycleDelivery = useCallback(async () => {
-    if (!onChannelsChange || savingChannels) return;
-    setSavingChannels(true);
-    try {
-      await onChannelsChange(alert.id, { delivery_mode: deliveryMode === "digest" ? "instant" : "digest" });
-    } catch (err) {
-      toast.error(
-        t("alerts.deliveryUpdateFailed", "Couldn't change delivery mode. Your alert is unchanged."),
-        { description: err instanceof Error ? err.message : undefined },
-      );
-    } finally {
-      setSavingChannels(false);
-    }
-  }, [alert.id, deliveryMode, onChannelsChange, savingChannels, t]);
-
-  const label = [alert.make, alert.model].filter(Boolean).join(" ") || t("alerts.allVehicles", "All vehicles");
-  const channelLabel = (channel: ChannelName) =>
-    channel === "inapp"
-      ? t("alerts.channelInApp", "In-app")
-      : channel === "email"
-        ? t("alerts.channelEmail", "Email")
-        : channel === "whatsapp"
-          ? t("alerts.channelWhatsApp", "WhatsApp")
-          : channel === "telegram"
-            ? t("alerts.channelTelegram", "Telegram")
-            : t("alerts.channelPush", "Push");
-
-  return (
-    <>
-    <Card padding="sm" className="transition-colors duration-short hover:border-foreground/20" data-testid="alert-row">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-body font-semibold text-foreground">{label}</p>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-footnote text-label-2">
-            {alert.district && <span>{alert.district}</span>}
-            {alert.district && alert.max_price ? <span aria-hidden>·</span> : null}
-            {alert.max_price && <span className="num">{t("alerts.underPrice", "Under {price}", { price: formatPrice(alert.max_price) })}</span>}
-            {alert.notify_phone && <Badge variant="success" className="num">WhatsApp {alert.notify_phone}</Badge>}
-            {alert.notify_email && <Badge variant="info">{alert.notify_email}</Badge>}
-            {alert.notify_telegram_chat_id && <Badge variant="info">Telegram {alert.notify_telegram_chat_id}</Badge>}
-            {!alert.district && !alert.max_price && !alert.notify_phone && !alert.notify_email && !alert.notify_telegram_chat_id && (
-              <span>{t("alerts.anyPriceAllDistricts", "Any price · All districts")}</span>
-            )}
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <Button asChild variant="tertiary" size="sm">
-            <Link
-              to={`/?make=${encodeURIComponent(alert.make || "")}&model=${encodeURIComponent(alert.model || "")}${alert.district ? `&district=${encodeURIComponent(alert.district)}` : ""}${alert.max_price ? `&price_max=${alert.max_price}` : ""}#market`}
-              onClick={() => trackEvent("listing_view", { alert_id: alert.id })}
-              className="no-underline"
-            >
-              {t("common.browse", "Browse")}
-            </Link>
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => setConfirmOpen(true)}
-            disabled={deleting}
-            aria-label={t("alerts.deleteAria", "Delete alert for {label}", { label })}
-            className="text-label-2 hover:bg-deal-high/10 hover:text-deal-high-text"
-          >
-            <Trash2 aria-hidden />
-          </Button>
-        </div>
-      </div>
-      <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-separator pt-3" role="group" aria-label={t("alerts.perAlertChannels", "Channels")}>
-        <span className="mr-1 text-footnote font-medium text-label-2">{t("alerts.perAlertChannels", "Channels")}</span>
-        {ALL_CHANNELS.map((channel) => {
-          const on = activeChannels.has(channel);
-          return (
-            <Chip
-              key={channel}
-              selected={on}
-              disabled={!onChannelsChange || savingChannels}
-              onClick={() => void toggleChannel(channel)}
-              className="h-7 px-3 text-caption"
-            >
-              {channelLabel(channel)}
-            </Chip>
-          );
-        })}
-        <Chip
-          disabled={!onChannelsChange || savingChannels}
-          onClick={() => void cycleDelivery()}
-          aria-pressed={undefined}
-          aria-label={`${t("alerts.deliveryMode", "Delivery")}: ${deliveryMode === "digest" ? t("alerts.digestMode", "Digest (07:00 daily)") : t("alerts.instantMode", "Instant")}`}
-          title={t(
-            "alerts.quietHoursNote",
-            "Quiet hours 21:00–07:00 Asia/Colombo: email, WhatsApp, Telegram & push queue for the 07:00 digest. In-app always delivers.",
-          )}
-          className="num h-7 px-3 text-caption"
-        >
-          {deliveryMode === "digest" ? t("alerts.digestMode", "Digest (07:00 daily)") : t("alerts.instantMode", "Instant")}
-        </Chip>
-      </div>
-    </Card>
-    <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{t("alerts.deleteTitle", "Delete this alert?")}</DialogTitle>
-          <DialogDescription>
-            {t("alerts.deleteBody", "“{label}” will stop watching the market. This can’t be undone.", { label })}
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="gap-2">
-          <Button type="button" variant="ghost" onClick={() => setConfirmOpen(false)}>
+      <form onSubmit={handleSubmit} aria-label={t("alerts.formAria", "Create alert form")} className="p-5 sm:p-6">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-display text-title3 font-semibold tracking-tight text-foreground">
+            {t("alerts.newAlert", "New alert")}
+          </h2>
+          <Button type="button" variant="ghost" size="sm" onClick={() => { onOpenChange(false); setFormError(null); }}>
             {t("common.cancel", "Cancel")}
           </Button>
-          <Button type="button" variant="destructive" loading={deleting} onClick={() => void handleDelete()}>
-            {t("common.delete", "Delete")}
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="alert-make" className={label}>{t("common.make", "Make")}</label>
+            <Input id="alert-make" value={make} onChange={(e) => setMake(e.target.value)} placeholder="Toyota" />
+          </div>
+          <div>
+            <label htmlFor="alert-model" className={label}>{t("common.model", "Model")}</label>
+            <Input id="alert-model" value={model} onChange={(e) => setModel(e.target.value)} placeholder="Aqua" />
+          </div>
+          <div>
+            <label htmlFor="alert-district" className={label}>{t("common.district", "District")}</label>
+            <Input id="alert-district" value={district} onChange={(e) => setDistrict(e.target.value)} placeholder="Colombo" />
+          </div>
+          <div>
+            <label htmlFor="alert-price" className={label}>{t("alerts.maxPrice", "Max price (LKR)")}</label>
+            <Input
+              id="alert-price"
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(e.target.value.replace(/[^\d]/g, ""))}
+              inputMode="numeric"
+              placeholder="5000000"
+              className="num"
+            />
+          </div>
+        </div>
+        {fullAccess ? (
+          <div className="mt-5 space-y-4 border-t border-separator pt-5">
+            <div>
+              <p className={label}>{t("alerts.notifyChannels", "Notify me via (Pro)")}</p>
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label={t("alerts.notifyChannels", "Notify me via (Pro)")}>
+                {channelChips.map((c) => (
+                  <Chip key={c.text} selected={c.on} onClick={() => c.set(!c.on)}>
+                    {c.text}
+                  </Chip>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className={label}>{t("alerts.deliveryMode", "Delivery")}</p>
+              <SegmentedControl
+                value={deliveryMode}
+                onValueChange={(v: "instant" | "digest") => setDeliveryMode(v)}
+                semantics="radio"
+                aria-label={t("alerts.deliveryMode", "Delivery")}
+                className="max-w-sm"
+                options={[
+                  { value: "instant", label: t("alerts.instantMode", "Instant") },
+                  { value: "digest", label: t("alerts.digestMode", "Digest (07:00 daily)") },
+                ]}
+              />
+            </div>
+            <p className="text-footnote text-label-2">
+              {t(
+                "alerts.quietHoursNote",
+                "Quiet hours 21:00–07:00 Asia/Colombo: email, WhatsApp, Telegram & push queue for the 07:00 digest. In-app always delivers.",
+              )}
+            </p>
+            {channelWhatsApp && (
+              <div className="content-in">
+                <label htmlFor="alert-whatsapp" className={label}>
+                  {t("alerts.notifyWhatsapp", "WhatsApp number")}
+                </label>
+                <Input id="alert-whatsapp" value={notifyPhone} onChange={(e) => setNotifyPhone(e.target.value)} placeholder="0771234567" inputMode="tel" />
+                <p className="mt-1.5 text-caption text-label-2">
+                  {t("alerts.whatsappHint", "Get a WhatsApp ping when new matches appear (requires Twilio on the server).")}
+                </p>
+              </div>
+            )}
+            {channelEmail && (
+              <div className="content-in">
+                <label htmlFor="alert-email" className={label}>
+                  {t("alerts.notifyEmail", "Email address")}
+                </label>
+                <Input id="alert-email" type="email" value={notifyEmail} onChange={(e) => setNotifyEmail(e.target.value)} placeholder="you@example.com" />
+              </div>
+            )}
+            {channelTelegram && (
+              <div className="content-in">
+                <label htmlFor="alert-telegram" className={label}>
+                  {t("alerts.notifyTelegram", "Telegram chat ID or @username")}
+                </label>
+                <Input id="alert-telegram" value={notifyTelegram} onChange={(e) => setNotifyTelegram(e.target.value)} placeholder={t("alerts.telegramPlaceholder", "123456789 or @mychannel")} />
+                <p className="mt-1.5 text-caption text-label-2">
+                  {t("alerts.telegramHint", "Send /start to your bot first to get a chat ID.")}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="mt-5 rounded-control bg-primary/5 px-3.5 py-3 text-footnote text-label-2">
+            {t("alerts.notifyPro", "WhatsApp, Email & Telegram match pings unlock with Pro.")}
+          </p>
+        )}
+        {formError && (
+          <p role="alert" className="content-in mt-4 text-footnote font-medium text-destructive">{formError}</p>
+        )}
+        <div className="mt-5 flex gap-2 border-t border-separator pt-4">
+          <Button type="submit" loading={saving} className="flex-1 sm:flex-none">
+            {t("alerts.save", "Save alert")}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-    </>
+          <Button type="button" variant="ghost" onClick={() => { onOpenChange(false); setFormError(null); }}>
+            {t("common.cancel", "Cancel")}
+          </Button>
+        </div>
+      </form>
+    </Card>
   );
 }
 
@@ -659,9 +418,48 @@ export default function Alerts() {
       throw new Error("channel update unavailable");
     });
 
+  const [createOpen, setCreateOpen] = useState(false);
+  const [matchData, setMatchData] = useState<AlertMatchResponse | null>(null);
+  const [matchLoading, setMatchLoading] = useState(false);
+  const [matchError, setMatchError] = useState<string | null>(null);
+
+  const runMatch = useCallback(async () => {
+    if (!token) return;
+    setMatchLoading(true);
+    setMatchError(null);
+    try {
+      const result = await matchAlerts(token);
+      setMatchData(result);
+      trackEvent("saved_search", { matches: result.results.length });
+    } catch (err) {
+      setMatchError(friendlyApiError(err, t("alerts.matchFailed", "Failed to fetch matches"), t));
+    } finally {
+      setMatchLoading(false);
+    }
+  }, [token, t]);
+
+  useEffect(() => {
+    void runMatch();
+  }, [runMatch]);
+
+  const matchSummaries = useMemo(() => {
+    const summaries = new Map<number, AlertMatchSummary>();
+    for (const result of matchData?.results ?? []) {
+      const prices = result.listings
+        .map((listing) => Number(listing.price_lkr))
+        .filter((price) => Number.isFinite(price) && price > 0);
+      summaries.set(result.alert_id, {
+        count: result.matching_count,
+        cheapest: prices.length ? Math.min(...prices) : null,
+      });
+    }
+    return summaries;
+  }, [matchData]);
+
   const localAlerts = loadMarketAlerts();
   const showFallback = !loading && error !== null && alerts.length === 0 && localAlerts.length > 0;
   const calm = useReducedMotionOrLowData();
+  const atFreeLimit = !fullAccess && alerts.length >= FREE_ALERTS_LIMIT;
 
   return (
     <PageCanvas ambient="subtle">
@@ -671,6 +469,14 @@ export default function Alerts() {
         eyebrowIcon={Bell}
         title={t("alerts.title", "Market Alerts")}
         description={t("alerts.description", "Get notified when vehicles matching your criteria appear on the market.")}
+        actions={
+          atFreeLimit ? undefined : (
+            <Button type="button" onClick={() => setCreateOpen(true)} aria-label={t("alerts.createAria", "Create new alert")}>
+              <Plus aria-hidden />
+              {t("alerts.newAlert", "New alert")}
+            </Button>
+          )
+        }
         stats={[
           {
             label: t("alerts.highlightActive", "Active"),
@@ -682,21 +488,23 @@ export default function Alerts() {
       />
 
       <PageBody narrow className="pb-16 pt-2 sm:pt-4 lg:pt-4">
-        <m.div initial="hidden" animate="show" variants={listStagger} className="space-y-12">
-          <m.div variants={listItem} custom={0} className="space-y-4">
-            <ChannelCenterSection alertCount={alerts.length} />
-            <CreateAlertForm
-              token={token}
-              onCreated={refresh}
-              onCreate={create}
-              alertCount={alerts.length}
-              fullAccess={fullAccess}
-            />
-          </m.div>
+        <m.div initial="hidden" animate="show" variants={listStagger} className="space-y-10">
+          {createOpen || atFreeLimit ? (
+            <m.div variants={listItem} custom={0}>
+              <CreateAlertForm
+                open={createOpen}
+                onOpenChange={setCreateOpen}
+                token={token}
+                onCreated={refresh}
+                onCreate={create}
+                alertCount={alerts.length}
+                fullAccess={fullAccess}
+              />
+            </m.div>
+          ) : null}
 
-          {/* Active alerts */}
           <m.section variants={listItem} custom={1} aria-labelledby="active-alerts-heading" className="relative z-10">
-            <SectionTitle
+            <AlertsSectionHeader
               id="active-alerts-heading"
               eyebrow={t("alerts.yourWatchlist", "Your watchlist")}
               title={t("alerts.active", "Active alerts")}
@@ -729,6 +537,12 @@ export default function Alerts() {
                   icon={BellOff}
                   title={t("alerts.emptyTitle", "No alerts yet")}
                   body={t("alerts.empty", "No active alerts. Create one above to get started.")}
+                  action={
+                    <Button type="button" onClick={() => setCreateOpen(true)}>
+                      <Plus aria-hidden />
+                      {t("alerts.createFirst", "Create your first alert")}
+                    </Button>
+                  }
                 />
               </Card>
             )}
@@ -745,7 +559,12 @@ export default function Alerts() {
                       exit={{ opacity: 0, scale: calm ? 1 : 0.98, transition: { duration: duration.short, ease: ease.accelerate } }}
                       transition={calm ? { duration: duration.micro } : spring.snappy}
                     >
-                      <AlertRow alert={alert} token={token} onDelete={remove} onChannelsChange={updateChannels} />
+                      <AlertCard
+                        alert={alert}
+                        match={matchSummaries.get(alert.id)}
+                        onDelete={remove}
+                        onChannelsChange={updateChannels}
+                      />
                     </m.li>
                   ))}
                 </AnimatePresence>
@@ -753,17 +572,19 @@ export default function Alerts() {
             )}
 
             {showFallback && (
-              <Card padding="sm" className="mt-4">
-                <p className="mb-3 text-footnote font-medium text-label-2">
+              <Card padding="none" className="mt-4 overflow-hidden">
+                <p className="border-b border-separator px-4 py-2.5 text-caption font-semibold uppercase tracking-caps text-label-2 sm:px-5">
                   {t("alerts.localSaved", "Locally saved (offline)")}
                 </p>
-                <ul className="space-y-1.5">
+                <ul className="divide-y divide-separator">
                   {localAlerts.map((a) => (
-                    <li key={a.id} className="flex items-center justify-between gap-3 rounded-control bg-surface-2 p-3">
+                    <li key={a.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5">
                       <div className="min-w-0">
-                        <p className="truncate text-body font-semibold text-foreground">{a.label}</p>
+                        <p className="truncate text-body font-medium text-foreground">{a.label}</p>
                         {a.target_price_lkr ? (
-                          <p className="num mt-0.5 text-footnote text-label-2">{t("alerts.underPrice", "Under {price}", { price: formatPrice(a.target_price_lkr) })}</p>
+                          <p className="num mt-0.5 text-caption text-label-2">
+                            {t("alerts.underPrice", "Under {price}", { price: formatPrice(a.target_price_lkr) })}
+                          </p>
                         ) : null}
                       </div>
                       <Button asChild variant="tertiary" size="sm">
@@ -782,9 +603,14 @@ export default function Alerts() {
             )}
           </m.section>
 
-          {/* Match results */}
-          <m.div variants={listItem} custom={2}>
-            <AlertMatchSection token={token} />
+          {token ? (
+            <m.div variants={listItem} custom={2}>
+              <MatchesSection matchData={matchData} loading={matchLoading} error={matchError} onRefresh={runMatch} />
+            </m.div>
+          ) : null}
+
+          <m.div variants={listItem} custom={3}>
+            <DeliverySection />
           </m.div>
         </m.div>
       </PageBody>
