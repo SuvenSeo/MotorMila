@@ -3,6 +3,8 @@ import { m, motion } from "motion/react";
 import useEmblaCarousel from "embla-carousel-react";
 import { Camera, ChevronLeft, ChevronRight, Expand } from "lucide-react";
 import { VehicleThumbnail } from "@/components/VehicleThumbnail";
+import { PhotoRail } from "@/components/listing/PhotoRail";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { getGalleryImageProxyUrl } from "@/lib/galleryProxy";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { formatSourceName } from "@/lib/sourceAttribution";
@@ -39,6 +41,12 @@ interface ListingImageCarouselProps {
   frameClassName?: string;
   /** Report the active detail photo's proportions to its surrounding frame. */
   onPhotoAspectRatio?: (ratio: number | null) => void;
+  /**
+   * Detail hero: called once the entry photo has decoded (or fallen back), so
+   * the page can drop its loading plate. The melt slider paints no <img> at
+   * all, which is why this is reported from here rather than read off the DOM.
+   */
+  onHeroPaint?: () => void;
   /**
    * Detail hero: GPU melt morph between photos (React Bits MorphSlider,
    * ogl + gsap) instead of the Embla filmstrip. Cards, single-photo
@@ -83,12 +91,17 @@ export function ListingImageCarousel({
   trackClassName,
   frameClassName,
   onPhotoAspectRatio,
+  onHeroPaint,
   morph = false,
 }: ListingImageCarouselProps) {
   const { t } = useAppPreferences();
   const count = images.length;
   const multi = count > 1;
   const isDetail = variant === "detail";
+  // Wide enough for the vertical rail beside the hero: the rail replaces the
+  // horizontal filmstrip thumbs there (page CSS reserves its column).
+  const mdUp = useMediaQuery("(min-width: 768px)");
+  const railShown = isDetail && multi && mdUp;
   const calm = useReducedMotionOrLowData();
   const reduced = calm;
   const ringId = useId();
@@ -181,6 +194,42 @@ export function ListingImageCarousel({
     // card → listing morph had flown into it. onLoadCapture reports again.
   }, [index, onPhotoAspectRatio, morphMode]);
   useEffect(() => { reportPhotoAspect(); }, [reportPhotoAspect, images]);
+  // Report the entry photo's decode exactly once: the page keeps a plate inside
+  // the frame until then, so the stage never shows a bare rectangle.
+  const heroPaintedRef = useRef(false);
+  const reportHeroPaint = useCallback(() => {
+    if (heroPaintedRef.current) return;
+    heroPaintedRef.current = true;
+    onHeroPaint?.();
+  }, [onHeroPaint]);
+  // The filmstrip carries real <img>s: their load event says the hero landed.
+  const onRegionLoad = useCallback(
+    (e: React.SyntheticEvent<HTMLDivElement>) => {
+      reportPhotoAspect();
+      if ((e.target as HTMLImageElement).dataset?.listingHero !== undefined) reportHeroPaint();
+    },
+    [reportPhotoAspect, reportHeroPaint],
+  );
+  // Morph mode has no hero <img>, so decode the entry photo once here (the
+  // proxy copy is what the melt canvas textures, and it reads the same bytes).
+  const heroSrc = images[initialSlide];
+  useEffect(() => {
+    if (!isDetail || !morphMode || !onHeroPaint || heroPaintedRef.current || !heroSrc) return;
+    const probe = new Image();
+    // Only a decode counts: a refused proxy copy fails the texture and the
+    // gallery falls back to the filmstrip, whose own <img> reports instead.
+    probe.onload = reportHeroPaint;
+    probe.src = getGalleryImageProxyUrl(heroSrc) ?? heroSrc;
+    return () => {
+      probe.onload = null;
+    };
+  }, [isDetail, morphMode, onHeroPaint, heroSrc, reportHeroPaint]);
+  // A cached hero finishes before React attaches its load listener.
+  useEffect(() => {
+    if (!isDetail || !onHeroPaint) return;
+    const img = regionRef.current?.querySelector<HTMLImageElement>("img[data-listing-hero]");
+    if (img?.complete) reportHeroPaint();
+  }, [index, isDetail, onHeroPaint, reportHeroPaint]);
   // Morph mode has no <img> in the DOM for reportPhotoAspect to measure, so
   // report the active photo's proportions from a plain preload instead
   // (reading naturalWidth/Height needs no CORS — the pixels never touch a canvas).
@@ -294,6 +343,7 @@ export function ListingImageCarousel({
     setLightboxIndex(0);
     setMorphJump(0);
     setMorphFailed(false);
+    heroPaintedRef.current = false;
     setMounted(new Set(isDetail && multi ? [0, 1, count - 1] : [0]));
     emblaApi?.reInit();
     emblaApi?.scrollTo(0, true);
@@ -363,11 +413,11 @@ export function ListingImageCarousel({
       aria-roledescription="carousel"
       aria-label={t("listingImage.carousel", "Listing photos")}
       className={className}
-      onLoadCapture={reportPhotoAspect}
+      onLoadCapture={onRegionLoad}
       onPointerEnter={multi ? () => { prime(index); wake(); } : undefined}
       onFocus={multi ? () => { prime(index); wake(); } : undefined}
     >
-      <div className={`relative w-full overflow-hidden ${frameClassName ?? "h-full"}`}>
+      <div data-gallery-viewport className={`relative w-full overflow-hidden ${frameClassName ?? "h-full"}`}>
         {/* Morph mode: the melt slider owns the frame (gated on carouselLive
             so it never paints over the card → listing View Transition — the
             card's photo placeholder shows through until then). Otherwise the
@@ -551,7 +601,19 @@ export function ListingImageCarousel({
         )}
       </div>
 
-      {isDetail && multi && (
+      {railShown && (
+        <PhotoRail
+          images={images}
+          index={index}
+          listingId={listingId}
+          source={source}
+          label={label}
+          onSelect={(i) => (morphMode ? morphGoTo(i) : goTo(i))}
+          onOpenAll={(from) => openLightbox(from ?? regionRef.current, index)}
+        />
+      )}
+
+      {isDetail && multi && !railShown && (
         <div className="mt-2 flex gap-2 overflow-x-auto px-1 pb-1" role="group" aria-label={t("listingImage.thumbs", "Photo thumbnails")}>
           {images.map((src, i) => (
             <button

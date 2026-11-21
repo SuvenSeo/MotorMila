@@ -1,4 +1,4 @@
-import { Suspense, useState, useEffect, useRef } from 'react';
+import { Suspense, useState, useEffect, useRef, useCallback } from 'react';
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
 import { DeferredSection } from '@/components/DeferredSection';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
@@ -148,6 +148,11 @@ export default function ListingDetail() {
   const [loading, setLoading] = useState(!seed && !kept);
   const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  // The hero keeps a plate inside its frame until the entry photo decodes (or
+  // the card's photo is already under it), so the stage is never a bare box.
+  const [heroPaintedId, setHeroPaintedId] = useState<string | null>(null);
+  const handleHeroPaint = useCallback(() => setHeroPaintedId(id ?? null), [id]);
+  const heroPainted = heroPaintedId === id;
   const { toggle: toggleCompare, isPinned: isPinnedForCompare } = useCompareTray();
   const { ids: watchlistIds, toggle: toggleWatchlist } = useWatchlist();
   const watchlisted = !!listing && watchlistIds.includes(Number(listing.id));
@@ -712,6 +717,11 @@ export default function ListingDetail() {
                   className="cine-gallery__ph"
                 />
               )}
+              {!heroPlaceholder && galleryImages.length > 0 && !heroPainted && (
+                // No card photo to hand over (a shared link, a reload): a quiet
+                // plate holds the frame while the full-size photo decodes.
+                <div aria-hidden className="lp-hero-load" />
+              )}
               <ListingImageCarousel
                 images={galleryImages}
                 listingId={listing.id}
@@ -721,6 +731,7 @@ export default function ListingDetail() {
                 source={listing.source}
                 silhouette={silhouette}
                 priority
+                onHeroPaint={handleHeroPaint}
                 className="relative w-full"
                 frameClassName="h-[var(--g-h)]"
                 slideClassName="cine-gallery__slide"
@@ -823,7 +834,7 @@ export default function ListingDetail() {
             {rest && priceHistory && priceHistory.points.length > 0 && (
               <DeferredSection minHeight={224}>
               <motion.div {...onScroll}>
-                <Suspense fallback={<div className="h-56 rounded-2xl border border-border bg-card skeleton-shimmer" />}>
+                <Suspense fallback={<div className="h-56 rounded-card border border-border bg-surface-1 skeleton-shimmer" />}>
                   <ListingPriceTimeline
                     history={priceHistory}
                     marketMedianLkr={fmvLkr}
@@ -890,7 +901,7 @@ export default function ListingDetail() {
                       ) : (
                         <div className="lp-card flex flex-col gap-4 p-5 sm:p-6">
                           <div>
-                            <h2 className="text-footnote font-semibold text-primary">{t("listing.importDutyTax", "Import duty and tax")}</h2>
+                            <h2 className="lp-label">{t("listing.importDutyTax", "Import duty and tax")}</h2>
                             <p className="mt-2 text-footnote leading-relaxed text-label-2">
                               {t(
                                 "listing.importDutyRegistered",

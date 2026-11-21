@@ -14,7 +14,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { ArrowDownRight, ArrowUpRight, LineChart, TrendingDown } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, TrendingDown } from "lucide-react";
 import { formatPrice } from "@/services/api";
 import { formatPriceLkrMillions } from "@/lib/formatting";
 import type { PriceHistoryInfo } from "@/types/car";
@@ -131,7 +131,7 @@ export function ListingPriceTimeline({
   const lastChangeAt = history?.last_change_at ?? null;
 
   if (isLoading) {
-    return <div className="h-56 rounded-2xl border border-border bg-card skeleton-shimmer" />;
+    return <div className="h-56 rounded-card border border-border bg-surface-1 skeleton-shimmer" />;
   }
 
   if (!history || points.length === 0) {
@@ -139,18 +139,15 @@ export function ListingPriceTimeline({
   }
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-5 shadow-soft">
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10">
-            <LineChart className="h-4 w-4 text-primary-bright" />
-          </div>
-          <div>
-            <h2 className="text-footnote font-bold text-foreground">{t("priceTimeline.title", "Price timeline")}</h2>
-            <p className="text-caption font-semibold text-muted-foreground">
-              {t("priceTimeline.subtitle", "Scan-over-scan tracking")}{listingTitle ? ` · ${listingTitle}` : ""}
-            </p>
-          </div>
+    <section className="rounded-card border border-border bg-surface-1 p-5 shadow-e1 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-caption font-semibold uppercase tracking-caps text-label-2">
+            {t("priceTimeline.title", "Price timeline")}
+          </h2>
+          <p className="mt-1 text-caption text-label-2">
+            {t("priceTimeline.subtitle", "Scan-over-scan tracking")}{listingTitle ? ` · ${listingTitle}` : ""}
+          </p>
         </div>
         {cutCount > 0 && (
           <Link
@@ -163,29 +160,29 @@ export function ListingPriceTimeline({
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 border-b border-border pb-4 sm:grid-cols-4">
-        <div className="rounded-2xl border border-border bg-surface p-3">
-          <p className="text-caption font-medium text-muted-foreground">{t("priceTimeline.opening", "Opening ask")}</p>
-          <p className="mt-1 text-footnote font-bold text-foreground num">
+      <dl className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-control border border-border bg-border sm:grid-cols-4">
+        <div className="min-w-0 bg-surface-1 p-3">
+          <dt className="text-caption font-medium text-label-2">{t("priceTimeline.opening", "Opening ask")}</dt>
+          <dd className="num mt-1 font-display text-title3 font-semibold tracking-tight text-foreground">
             {history.first_price_lkr ? formatPrice(history.first_price_lkr) : "—"}
-          </p>
+          </dd>
           {points[0]?.scraped_at ? (
-            <p className="mt-0.5 text-caption text-muted-foreground">{formatFullDate(points[0].scraped_at, localeTag)}</p>
+            <dd className="mt-0.5 text-caption text-label-2">{formatFullDate(points[0].scraped_at, localeTag)}</dd>
           ) : null}
         </div>
-        <div className="rounded-2xl border border-border bg-surface p-3">
-          <p className="text-caption font-medium text-muted-foreground">{t("priceTimeline.current", "Current ask")}</p>
-          <p className="mt-1 text-footnote font-bold text-foreground num">
+        <div className="min-w-0 bg-surface-1 p-3">
+          <dt className="text-caption font-medium text-label-2">{t("priceTimeline.current", "Current ask")}</dt>
+          <dd className="num mt-1 font-display text-title3 font-semibold tracking-tight text-foreground">
             {history.current_price_lkr ? formatPrice(history.current_price_lkr) : "—"}
-          </p>
+          </dd>
           {lastChangeAt ? (
-            <p className="mt-0.5 text-caption text-muted-foreground">{t("priceTimeline.updated", "Updated {date}", { date: formatFullDate(lastChangeAt, localeTag) })}</p>
+            <dd className="mt-0.5 text-caption text-label-2">{t("priceTimeline.updated", "Updated {date}", { date: formatFullDate(lastChangeAt, localeTag) })}</dd>
           ) : null}
         </div>
-        <div className="rounded-2xl border border-border bg-surface p-3">
-          <p className="text-caption font-medium text-muted-foreground">{t("priceTimeline.totalMove", "Total move")}</p>
-          <div
-            className={`mt-1 inline-flex items-center gap-1 text-footnote font-bold num ${
+        <div className="min-w-0 bg-surface-1 p-3">
+          <dt className="text-caption font-medium text-label-2">{t("priceTimeline.totalMove", "Total move")}</dt>
+          <dd
+            className={`num mt-1 inline-flex items-center gap-1 font-display text-title3 font-semibold tracking-tight ${
               isDrop
                 ? "text-deal-good-text"
                 : isRise
@@ -193,13 +190,13 @@ export function ListingPriceTimeline({
                   : "text-foreground"
             }`}
           >
-            {isDrop ? <ArrowDownRight className="h-3.5 w-3.5" /> : isRise ? <ArrowUpRight className="h-3.5 w-3.5" /> : null}
+            {isDrop ? <ArrowDownRight className="h-4 w-4" /> : isRise ? <ArrowUpRight className="h-4 w-4" /> : null}
             {formatChangePct(changePct)}
-          </div>
+          </dd>
         </div>
-        <div className="rounded-2xl border border-border bg-surface p-3">
-          <p className="text-caption font-medium text-muted-foreground">{t("priceTimeline.moves", "Price moves")}</p>
-          <p className="mt-1 text-footnote font-bold text-foreground num">
+        <div className="min-w-0 bg-surface-1 p-3">
+          <dt className="text-caption font-medium text-label-2">{t("priceTimeline.moves", "Price moves")}</dt>
+          <dd className="num mt-1 font-display text-title3 font-semibold tracking-tight text-foreground">
             {cutCount > 0 || raiseCount > 0 ? (
               <>
                 {cutCount > 0 ? `${cutCount}↓` : null}
@@ -209,10 +206,10 @@ export function ListingPriceTimeline({
             ) : (
               t("priceTimeline.stable", "Stable")
             )}
-          </p>
-          <p className="mt-0.5 text-caption text-muted-foreground">{points.length === 1 ? t("priceTimeline.pointsOne", "1 tracked point") : t("priceTimeline.points", "{n} tracked points", { n: points.length })}</p>
+          </dd>
+          <dd className="mt-0.5 text-caption text-label-2">{points.length === 1 ? t("priceTimeline.pointsOne", "1 tracked point") : t("priceTimeline.points", "{n} tracked points", { n: points.length })}</dd>
         </div>
-      </div>
+      </dl>
 
       <div className="mt-4 h-[220px] w-full sm:h-[260px]">
         {hasChart ? (
@@ -294,16 +291,16 @@ export function ListingPriceTimeline({
             </ResponsiveContainer>
           </div>
         ) : (
-          <div className="flex h-full flex-col items-center justify-center rounded-xl border border-dashed border-border bg-surface px-6 text-center">
+          <div className="flex h-full flex-col items-center justify-center rounded-control border border-dashed border-border bg-surface-2/60 px-6 text-center">
             <p className="text-caption font-semibold text-foreground">{t("priceTimeline.started", "Tracking started")}</p>
-            <p className="mt-1 max-w-sm text-caption leading-relaxed text-muted-foreground">
+            <p className="mt-1 max-w-sm text-caption leading-relaxed text-label-2">
               {t("priceTimeline.startedBody", "We recorded the opening ask at {price}. The chart fills in when the seller changes their price on a future scan.", { price: formatPrice(points[0].price_lkr) })}
             </p>
           </div>
         )}
       </div>
 
-      <p className="mt-3 text-caption leading-relaxed text-muted-foreground">
+      <p className="mt-3 text-caption leading-relaxed text-label-2">
         {t("priceTimeline.footnote", "Prices update when our scans detect a change at the source — unchanged asks do not add duplicate points.")}
       </p>
     </section>

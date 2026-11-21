@@ -7,6 +7,7 @@ import {
   type VehicleFinanceClass,
 } from "@/lib/cashToOwn";
 import { useAppPreferences } from "@/lib/appPreferences";
+import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { SimpleSelect } from "@/components/ui/select";
 import {
@@ -14,7 +15,6 @@ import {
   Field,
   Notice,
   NumberField,
-  ResultCard,
   ResultRow,
   ResultRows,
 } from "@/components/tools/ToolKit";
@@ -52,26 +52,21 @@ export function LeaseCalculator({
   const totalInterest = monthlyPayment * numberOfPayments - principal;
 
   return (
-    <ResultCard
-      label={t("tools.lease.monthly", "Est. monthly payment")}
-      value={<AnimatedLkr value={monthlyPayment} mode="monthly" />}
-      caption={t("tools.lease.caption", "Lease payment calculator · max LTV {ltv}% · {cls}", {
-        ltv: Math.round(CBSL_LTV_CAPS[financeClass] * 100),
-        cls: getFinanceClassLabel(financeClass),
-      })}
-      footer={
-        exceedsLtv ? (
-          <Notice tone="caution">
-            {t(
-              "tools.lease.ltvWarn",
-              "The financed share is above the usual CBSL limit for this class. Raise the down payment to at least {pct}% (about {amount}).",
-              { pct: ltvMinDown, amount: formatPrice(price * (ltvMinDown / 100)) },
-            )}
-          </Notice>
-        ) : null
-      }
-    >
-      <div className="space-y-4">
+    <Card className="p-5" aria-live="polite">
+      <h3 className="text-caption font-semibold uppercase tracking-caps text-label-2">
+        {t("tools.lease.monthly", "Est. monthly payment")}
+      </h3>
+      <p className="num mt-2 font-display text-title3 font-semibold tracking-tight text-foreground">
+        <AnimatedLkr value={monthlyPayment} mode="monthly" />
+      </p>
+      <p className="mt-1 text-caption leading-relaxed text-label-2">
+        {t("tools.lease.caption", "Lease payment calculator · max LTV {ltv}% · {cls}", {
+          ltv: Math.round(CBSL_LTV_CAPS[financeClass] * 100),
+          cls: getFinanceClassLabel(financeClass),
+        })}
+      </p>
+
+      <div className="mt-4 space-y-4 border-t border-separator pt-4">
         <Field
           label={t("tools.lease.down", "Down payment")}
           htmlFor="lease-down-payment"
@@ -98,11 +93,25 @@ export function LeaseCalculator({
             />
           </Field>
         </div>
-        <ResultRows className="border-t border-separator pt-4">
-          <ResultRow label={t("tools.lease.principal", "Amount financed")} value={<AnimatedLkr value={principal} />} />
+        <ResultRows className="border-t border-separator pt-3">
+          <ResultRow
+            className="border-b border-separator pb-2.5"
+            label={t("tools.lease.principal", "Amount financed")}
+            value={<AnimatedLkr value={principal} />}
+          />
           <ResultRow label={t("tools.lease.interest", "Total interest paid")} value={<AnimatedLkr value={totalInterest} />} />
         </ResultRows>
       </div>
-    </ResultCard>
+
+      {exceedsLtv && (
+        <Notice tone="caution" className="mt-4">
+          {t(
+            "tools.lease.ltvWarn",
+            "The financed share is above the usual CBSL limit for this class. Raise the down payment to at least {pct}% (about {amount}).",
+            { pct: ltvMinDown, amount: formatPrice(price * (ltvMinDown / 100)) },
+          )}
+        </Notice>
+      )}
+    </Card>
   );
 }
