@@ -22,12 +22,18 @@ class BuyerAlertRepositoryTest {
     private val api = mockk<MotormilaApiService>()
     private val dao = mockk<AlertDao>(relaxed = true)
     private val db = mockk<MotormilaDatabase> { every { alertDao() } returns dao }
-    private val buyer = mockk<UserSession>(relaxed = true) { every { email } returns "a@example.invalid" }
+    private val buyer = UserSession("a@example.invalid", null, "free", "user", null, "fixture", null)
     private val sessions = mockk<SessionStore> {
         coEvery { snapshot() } returns buyer
         every { cachedToken } returns buyer.token
     }
     private val repo = AlertsRepositoryImpl(api, db, Dispatchers.Unconfined, sessions)
+
+    @Test fun createConfirmedBeforeAccountSwitchNeverSends() = runTest {
+        assertTrue(runCatching { repo.create(AlertInput(make = "Toyota"), "previous@example.invalid") }.isFailure)
+        coVerify(exactly = 0) { api.createAlert(any(), any()) }
+        coVerify(exactly = 0) { dao.upsert(any()) }
+    }
 
     @Test fun guestNeverConsultsAlertCache() = runTest {
         every { sessions.observe() } returns flowOf(null)
@@ -55,8 +61,8 @@ class BuyerAlertRepositoryTest {
 
     @Test fun newerServerReceivesOnlyExplicitFreeChannels() = runTest {
         coEvery { api.createAlert(match { it.notifyChannels == "email,push" }, any()) } returns AlertDto(id = 3, notifyChannels = "push,email")
-        assertEquals(3, repo.create(AlertInput(notifyChannels = "email,push")).id)
-        coVerify(exactly = 1) { api.createAlert(any(), any()) }
+        assertEquals(3, repo.create(AlertInput(notifyChannels = "email,push"), buyer.email).id)
+        coVerify(exactly = 1) { api.createAlert(any(), match { it.matches(buyer.token) && !it.matches("other") }) }
     }
 
     private fun taggedGate() = HttpException(Response.error<Any>(403,
@@ -64,14 +70,14 @@ class BuyerAlertRepositoryTest {
 
     @Test fun taggedServerCannotSilentlyEnablePush() = runTest {
         coEvery { api.createAlert(any(), any()) } throws taggedGate()
-        assertTrue(runCatching { repo.create(AlertInput(notifyChannels = "inapp")) }.exceptionOrNull() is UnsupportedFreeChannels)
+        assertTrue(runCatching { repo.create(AlertInput(notifyChannels = "inapp"), buyer.email) }.exceptionOrNull() is UnsupportedFreeChannels)
         coVerify(exactly = 0) { api.createAlert(match { it.notifyChannels == null }, any()) }
     }
 
     @Test fun onlyExactLegacyDefaultMayRetryAfterTaggedRejection() = runTest {
         coEvery { api.createAlert(match { it.notifyChannels != null }, any()) } throws taggedGate()
         coEvery { api.createAlert(match { it.notifyChannels == null }, any()) } returns AlertDto(id = 3)
-        assertEquals(3, repo.create(AlertInput(notifyChannels = "inapp,push")).id)
+        assertEquals(3, repo.create(AlertInput(notifyChannels = "inapp,push"), buyer.email).id)
         coVerify(exactly = 2) { api.createAlert(any(), any()) }
     }
 }

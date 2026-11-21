@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import lk.motormila.app.data.repository.WatchlistRepositoryImpl
 import lk.motormila.app.domain.model.DistrictStat
 import lk.motormila.app.domain.model.Insights
 import lk.motormila.app.domain.model.PriceDrop
@@ -21,7 +22,6 @@ import lk.motormila.app.domain.model.VehicleCategoryRules
 import lk.motormila.app.domain.model.WatchItem
 import lk.motormila.app.domain.model.carsOnlyOrFirst
 import lk.motormila.app.domain.usecase.GetPriceDropsUseCase
-import lk.motormila.app.domain.usecase.ObserveWatchlistUseCase
 
 // Legacy BestPicksViewModel caller; Buy does not rank price cuts by percentage or category.
 internal fun List<PriceDrop>.carsFirst(): List<PriceDrop> =
@@ -33,6 +33,7 @@ data class HomeUiState(
     val isRefreshing: Boolean = false,
     val priceDrops: List<PriceDrop> = emptyList(),
     val savedVehicle: WatchItem? = null,
+    val unavailableSavedIds: Set<Int> = emptySet(),
     val shortlistReady: Boolean = true,
     val showCachedBadge: Boolean = false,
     // Source-compatible with the existing Home screenshot fixtures. Buy neither loads nor
@@ -43,14 +44,14 @@ data class HomeUiState(
 ) {
     internal val recordedDrop: PriceDrop?
         get() = priceDrops.firstOrNull {
-            it.listing.id != savedVehicle?.listingId && it.isDocumentedDrop()
+            it.listing.id != savedVehicle?.listingId && it.listing.id !in unavailableSavedIds && it.isDocumentedDrop()
         }
 }
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val getPriceDrops: GetPriceDropsUseCase,
-    observeWatchlist: ObserveWatchlistUseCase,
+    watchlist: WatchlistRepositoryImpl,
 ) : ViewModel() {
     private val _state = MutableStateFlow(HomeUiState(shortlistReady = false))
     val state: StateFlow<HomeUiState> = _state.asStateFlow()
@@ -60,9 +61,11 @@ class HomeViewModel @Inject constructor(
         // Local observation only. Opening Buy must not refresh every watched vehicle or
         // require sign-in/network before the buyer can resume a listing.
         viewModelScope.launch {
-            observeWatchlist().catch { emit(emptyList()) }.collect { rows ->
-                val resume = rows.resumeVehicle()
-                _state.update { it.copy(shortlistReady = true, savedVehicle = resume) }
+            watchlist.observeCheckedSaves().catch { emit(emptyList()) }.collect { rows ->
+                val (gone, availableOrUnchecked) = rows.partition { (_, check) -> check?.unavailable == true }
+                val resume = availableOrUnchecked.map { it.first }.resumeVehicle()
+                val goneIds = gone.map { it.first.listingId }.toSet()
+                _state.update { it.copy(shortlistReady = true, savedVehicle = resume, unavailableSavedIds = goneIds) }
             }
         }
         load(refreshing = false)

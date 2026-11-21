@@ -51,10 +51,11 @@ class AlertsViewModelTest {
 
     @Test
     fun create_proSendsWhatsappTelegramAndChannelCsv() {
-        coEvery { repository.create(any()) } returns sampleAlert()
+        coEvery { repository.create(any(), any()) } returns sampleAlert()
         val vm = viewModel()
         vm.onEvent(
             AlertsUiEvent.FormChanged(
+                vm.state.value.alertOwner,
                 AlertForm(
                     make = "Toyota",
                     maxPrice = "8m",
@@ -70,7 +71,7 @@ class AlertsViewModelTest {
                 ),
             ),
         )
-        vm.onEvent(AlertsUiEvent.Create)
+        vm.onEvent(AlertsUiEvent.Create(vm.state.value.alertOwner))
 
         coVerify {
             repository.create(
@@ -81,6 +82,7 @@ class AlertsViewModelTest {
                         input.deliveryMode == "digest" &&
                         input.quietHoursEnabled == true
                 },
+                "pro@example.com",
             )
         }
         assertEquals(1, vm.state.value.justCreatedId)
@@ -92,6 +94,7 @@ class AlertsViewModelTest {
         val vm = viewModel()
         vm.onEvent(
             AlertsUiEvent.FormChanged(
+                vm.state.value.alertOwner,
                 AlertForm(
                     make = "Honda",
                     maxPrice = "5m",
@@ -100,9 +103,9 @@ class AlertsViewModelTest {
                 ),
             ),
         )
-        vm.onEvent(AlertsUiEvent.Create)
+        vm.onEvent(AlertsUiEvent.Create(vm.state.value.alertOwner))
 
-        coVerify(exactly = 0) { repository.create(any()) }
+        coVerify(exactly = 0) { repository.create(any(), any()) }
         assertTrue(vm.state.value.error?.contains("Pro") == true)
     }
 
@@ -111,22 +114,22 @@ class AlertsViewModelTest {
         every { auth.session() } returns flowOf(null)
         val vm = viewModel()
         assertFalse(vm.state.value.signedIn)
-        vm.onEvent(AlertsUiEvent.FormChanged(AlertForm(make = "Toyota", maxPrice = "8m")))
-        vm.onEvent(AlertsUiEvent.Create)
+        vm.onEvent(AlertsUiEvent.FormChanged(vm.state.value.alertOwner, AlertForm(make = "Toyota", maxPrice = "8m")))
+        vm.onEvent(AlertsUiEvent.Create(vm.state.value.alertOwner))
 
-        coVerify(exactly = 0) { repository.create(any()) }
+        coVerify(exactly = 0) { repository.create(any(), any()) }
         assertTrue(vm.state.value.signInRequired)
         assertFalse(vm.state.value.creating)
     }
 
     @Test
     fun create_unauthorizedResponseShowsSignInPrompt() {
-        coEvery { repository.create(any()) } throws HttpException(
+        coEvery { repository.create(any(), any()) } throws HttpException(
             Response.error<Any>(401, "{}".toResponseBody(null)),
         )
         val vm = viewModel()
-        vm.onEvent(AlertsUiEvent.FormChanged(AlertForm(make = "Toyota", maxPrice = "8m")))
-        vm.onEvent(AlertsUiEvent.Create)
+        vm.onEvent(AlertsUiEvent.FormChanged(vm.state.value.alertOwner, AlertForm(make = "Toyota", maxPrice = "8m")))
+        vm.onEvent(AlertsUiEvent.Create(vm.state.value.alertOwner))
 
         assertTrue(vm.state.value.signInRequired)
         assertFalse(vm.state.value.creating)
@@ -162,6 +165,30 @@ class AlertsViewModelTest {
 
         coVerify(exactly = 0) { repository.updateChannels(any(), any(), any(), any()) }
         assertTrue(vm.state.value.error?.contains("Pro") == true)
+    }
+
+    @Test fun listingIntentWaitsForLoginAndNeverRestoresAnotherBuyersDraft() {
+        val sessions = kotlinx.coroutines.flow.MutableStateFlow<UserSession?>(null)
+        every { auth.session() } returns sessions
+        val listing = mockk<lk.motormila.app.domain.model.Listing>(relaxed = true) {
+            every { make } returns "Toyota"
+            every { model } returns "Aqua"
+        }
+        coEvery { listings.getDetail(42) } returns listing
+        val vm = AlertsViewModel(repository, listings, auth, SavedStateHandle(mapOf("listingId" to 42)))
+        coVerify(exactly = 0) { listings.getDetail(any()) }
+        sessions.value = proSession()
+        assertEquals("Toyota", vm.state.value.form.make)
+        val owner = vm.state.value.alertOwner
+        vm.onEvent(AlertsUiEvent.FormChanged(owner, vm.state.value.form.copy(whatsappPhone = "0771234567")))
+        val previousForm = vm.state.value.form
+        sessions.value = freeSession().copy(token = "other")
+        vm.onEvent(AlertsUiEvent.FormChanged(owner, previousForm))
+        assertEquals(AlertForm(), vm.state.value.form)
+        coVerify(exactly = 1) { listings.getDetail(42) }
+        vm.onEvent(AlertsUiEvent.FormChanged(vm.state.value.alertOwner, AlertForm(make = "Honda", maxPrice = "8m")))
+        vm.onEvent(AlertsUiEvent.Create(owner))
+        coVerify(exactly = 0) { repository.create(any(), any()) }
     }
 
     private fun viewModel(): AlertsViewModel = AlertsViewModel(

@@ -17,13 +17,13 @@ from datetime import datetime, timezone
 import structlog
 from sqlalchemy.orm import Session
 
-from db.models import CarListing, MarketAlert, MarketAlertMatch, live_listing_filter
+from db.models import (
+    CarListing, MarketAlert, MarketAlertMatch, NotificationDeliveryLog, PushSubscription, live_listing_filter,
+)
+from app.utils.alert_dispatch import dispatch_session, lock_active_rule, permitted_channels
 from app.utils.channel_center import (
-    check_and_record_delivery,
     dedupe_key,
-    mark_delivery_sent,
     match_channels_of as _resolve_channels,
-    release_failed_delivery,
     should_queue,
 )
 from app.utils.notify_email import email_notify_configured, send_alert_email
@@ -75,53 +75,49 @@ def _representative_listing_id(db: Session, alert: MarketAlert) -> int:
         return 0
 
 
-def _channel_sendable(
-    db: Session,
-    *,
-    alert: MarketAlert,
-    listing_id: int,
-    channel: str,
-) -> tuple[bool, str, str]:
-    """Apply digest/quiet-hours queue + dedupe.
-
-    Returns ``(send_now, receipt_status, dedupe_key)``.
-
-    - digest or quiet-hours window -> (False, "digest_queued"|"queued_quiet", key)
-    - duplicate dedupe key -> (False, "duplicate", key)
-    - else records the receipt as ``attempted`` and returns (True, "attempted", key).
-      The caller must mark ``sent`` on success or release the receipt on failure
-      so a failed send can retry next pass.
-    In-app is handled by the caller (always immediate, fail-open).
-    """
+def _record_decision(
+    db: Session, alert: MarketAlert, listing_id: int, channel: str,
+) -> NotificationDeliveryLog | None:
+    """Under the rule lock, reserve this delivery before contacting a provider."""
     key = dedupe_key(alert.id, listing_id, channel)
-    try:
-        queued, reason = should_queue(channel, alert)
-        if queued:
-            status = "digest_queued" if reason == "digest_0700" else "queued_quiet"
-            check_and_record_delivery(
-                db,
-                key=key,
-                alert_id=int(alert.id),
-                listing_id=listing_id or None,
-                channel=channel,
-                status=status,
-            )
-            return False, status, key
-        fresh = check_and_record_delivery(
-            db,
-            key=key,
-            alert_id=int(alert.id),
-            listing_id=listing_id or None,
-            channel=channel,
-            status="attempted",
-        )
-        return (True, "attempted", key) if fresh else (False, "duplicate", key)
-    except Exception:
-        # Fail open: any helper error must not block the send attempt.
-        return True, "attempted", key
+    if db.query(NotificationDeliveryLog.id).filter_by(dedupe_key=key).first():
+        return None
+    queued, reason = should_queue(channel, alert)
+    status = "attempted"
+    if queued:
+        status = "digest_queued" if reason == "digest_0700" else "queued_quiet"
+    receipt = NotificationDeliveryLog(dedupe_key=key, alert_id=alert.id, listing_id=listing_id or None,
+                                      channel=channel, status=status)
+    db.add(receipt)
+    # No fail-open rollback: losing the transaction also loses consent locks.
+    db.flush()
+    return receipt
+
+
+def _send_match(db: Session, channel: str, alert: MarketAlert, delta: int, body: str) -> bool:
+    if channel == "whatsapp":
+        return send_whatsapp_alert(to_phone=alert.notify_phone, body=body)
+    if channel == "telegram":
+        return send_telegram_alert(chat_id=alert.notify_telegram_chat_id, body=body)
+    label = " ".join(p for p in (alert.make, alert.model) if p) or "your saved search"
+    title = f"Motormila: {delta} new match{'es' if delta != 1 else ''} for {label}"
+    if channel == "email":
+        return send_alert_email(to_email=alert.notify_email, subject=title, text=body)
+    if channel == "push":
+        subs = (db.query(PushSubscription.endpoint, PushSubscription.p256dh, PushSubscription.auth)
+                .filter_by(user_token=alert.user_token).all())
+        return any(send_push_alert(endpoint=sub.endpoint, p256dh=sub.p256dh, auth=sub.auth,
+                                   title=title, body=body, url="/alerts", topic=PUSH_TOPIC_ALERT_MATCH)
+                   for sub in subs)
+    raise ValueError(f"Unsupported match delivery: {channel}")
 
 
 def run_alert_match_pass(db: Session) -> dict:
+    with dispatch_session(db) as worker:
+        return _run_alert_match_pass(worker)
+
+
+def _run_alert_match_pass(db: Session) -> dict:
     """Check all active MarketAlerts and upsert MarketAlertMatch rows.
 
     For each active alert:
@@ -129,7 +125,7 @@ def run_alert_match_pass(db: Session) -> dict:
     - Insert or update the corresponding MarketAlertMatch row.
     - Log the result at DEBUG level.
 
-    A single commit is issued at the end of the pass; individual alert errors
+    Each rule commits before the next rule is locked; individual alert errors
     are caught and logged as warnings so one bad alert never aborts the rest.
 
     Returns a summary dict with keys:
@@ -140,35 +136,37 @@ def run_alert_match_pass(db: Session) -> dict:
     """
     t0 = time.monotonic()
 
-    alerts: list[MarketAlert] = (
-        db.query(MarketAlert)
+    alert_ids = (
+        db.query(MarketAlert.id)
         .filter(MarketAlert.active.is_(True))
         .all()
     )
 
+    db.commit()  # end the read-only candidate scan
+
     now = datetime.now(timezone.utc)
     total_matches = 0
     errors = 0
-    whatsapp_sent = 0
-    email_sent = 0
-    telegram_sent = 0
-    push_sent = 0
+    configured = {
+        "whatsapp": whatsapp_notify_configured(), "email": email_notify_configured(),
+        "telegram": telegram_notify_configured(), "push": push_notify_configured(),
+    }
+    sent = dict.fromkeys(configured, 0)
     queued = 0
 
-    wa_configured = whatsapp_notify_configured()
-    tg_configured = telegram_notify_configured()
-    em_configured = email_notify_configured()
-    push_configured = push_notify_configured()
-
-    for alert in alerts:
+    for (alert_id,) in alert_ids:
         try:
+            alert = lock_active_rule(db, alert_id)
+            if alert is None:
+                db.commit()
+                continue
             count = _count_matching(db, alert)
             total_matches += count
 
             existing: MarketAlertMatch | None = (
                 db.query(MarketAlertMatch)
                 .filter(MarketAlertMatch.alert_id == alert.id)
-                .first()
+                .populate_existing().first()
             )
             previous_count = int(existing.match_count) if existing is not None else 0
             if existing is None:
@@ -193,90 +191,27 @@ def run_alert_match_pass(db: Session) -> dict:
                     max_price=float(alert.max_price) if alert.max_price is not None else None,
                     match_count=delta,
                 )
-                channels = _resolve_channels(alert)
+                channels = permitted_channels(db, alert)
                 listing_id = _representative_listing_id(db, alert)
 
-                if "whatsapp" in channels and wa_configured and getattr(alert, "notify_phone", None):
-                    send_now, _receipt, dedupe = _channel_sendable(db, alert=alert, listing_id=listing_id, channel="whatsapp")
-                    if not send_now:
+                destinations = {"whatsapp": alert.notify_phone, "email": alert.notify_email,
+                                "telegram": alert.notify_telegram_chat_id}
+                for ch, ready in configured.items():
+                    if ch not in channels or not ready or (ch in destinations and not destinations[ch]):
+                        continue
+                    receipt = _record_decision(db, alert, listing_id, ch)
+                    if receipt is None:
+                        continue  # duplicate, not queued
+                    if receipt.status != "attempted":
                         queued += 1
-                    elif send_whatsapp_alert(to_phone=str(alert.notify_phone), body=body):
-                        whatsapp_sent += 1
-                        mark_delivery_sent(db, key=dedupe)
+                    elif _send_match(db, ch, alert, delta, body):
+                        sent[ch] += 1
+                        receipt.status = "sent"
                     else:
-                        release_failed_delivery(db, key=dedupe)
-
-                if "email" in channels and em_configured and getattr(alert, "notify_email", None):
-                    send_now, _receipt, dedupe = _channel_sendable(db, alert=alert, listing_id=listing_id, channel="email")
-                    if not send_now:
-                        queued += 1
-                    else:
-                        label_parts = [p for p in [alert.make, alert.model] if p]
-                        label = " ".join(label_parts) if label_parts else "your saved search"
-                        subject = f"Motormila: {delta} new match{'es' if delta != 1 else ''} for {label}"
-                        if send_alert_email(
-                            to_email=str(alert.notify_email),
-                            subject=subject,
-                            text=body,
-                        ):
-                            email_sent += 1
-                            mark_delivery_sent(db, key=dedupe)
-                        else:
-                            release_failed_delivery(db, key=dedupe)
-
-                if "telegram" in channels and tg_configured and getattr(alert, "notify_telegram_chat_id", None):
-                    send_now, _receipt, dedupe = _channel_sendable(db, alert=alert, listing_id=listing_id, channel="telegram")
-                    if not send_now:
-                        queued += 1
-                    elif send_telegram_alert(chat_id=str(alert.notify_telegram_chat_id), body=body):
-                        telegram_sent += 1
-                        mark_delivery_sent(db, key=dedupe)
-                    else:
-                        release_failed_delivery(db, key=dedupe)
-
-                if "push" in channels and push_configured:
-                    send_now, _receipt, dedupe = _channel_sendable(db, alert=alert, listing_id=listing_id, channel="push")
-                    if not send_now:
-                        queued += 1
-                    else:
-                        try:
-                            from db.models import PushSubscription
-
-                            subs = (
-                                db.query(PushSubscription)
-                                .filter(PushSubscription.user_token == alert.user_token)
-                                .all()
-                            )
-                            label_parts = [p for p in [alert.make, alert.model] if p]
-                            label = " ".join(label_parts) if label_parts else "your saved search"
-                            title = f"Motormila: {delta} new match{'es' if delta != 1 else ''} for {label}"
-                            delivered = False
-                            for sub in subs:
-                                if send_push_alert(
-                                    endpoint=str(sub.endpoint),
-                                    p256dh=getattr(sub, "p256dh", None),
-                                    auth=getattr(sub, "auth", None),
-                                    title=title,
-                                    body=body,
-                                    url="/alerts",
-                                    topic=PUSH_TOPIC_ALERT_MATCH,
-                                ):
-                                    push_sent += 1
-                                    delivered = True
-                                    break
-                            if delivered:
-                                mark_delivery_sent(db, key=dedupe)
-                            else:
-                                release_failed_delivery(db, key=dedupe)
-                        except Exception as push_exc:
-                            log.debug("alert_match_push_failed", alert_id=alert.id, error=str(push_exc))
-                            try:
-                                release_failed_delivery(db, key=dedupe)
-                            except Exception:
-                                pass
+                        db.delete(receipt)
 
                 # Legacy inferred alerts include the inbox; explicit selections are opt-in.
-                if not (alert.notify_channels or "").strip() or "inapp" in channels:
+                if "inapp" in channels:
                     try:
                         record_alert_match_notification(
                             db,
@@ -298,20 +233,17 @@ def run_alert_match_pass(db: Session) -> dict:
                 district=alert.district,
                 match_count=count,
             )
+            db.commit()
         except Exception as exc:
+            db.rollback()
             errors += 1
-            log.warning("alert_match_error", alert_id=alert.id, error=str(exc))
-
-    db.commit()
+            log.warning("alert_match_error", alert_id=alert_id, error=str(exc))
 
     elapsed = round(time.monotonic() - t0, 3)
     summary = {
-        "alerts_checked": len(alerts),
+        "alerts_checked": len(alert_ids),
         "total_matches": total_matches,
-        "whatsapp_sent": whatsapp_sent,
-        "email_sent": email_sent,
-        "telegram_sent": telegram_sent,
-        "push_sent": push_sent,
+        **{f"{ch}_sent": n for ch, n in sent.items()},
         "queued": queued,
         "errors": errors,
         "elapsed_seconds": elapsed,

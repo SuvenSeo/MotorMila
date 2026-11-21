@@ -344,8 +344,8 @@ class MarketAlert(Base):
     # Optional Telegram chat_id (numeric id or @username) for Telegram notifications.
     notify_telegram_chat_id = Column(String(64), nullable=True)
     # Comma-separated list of channels to notify: "inapp", "whatsapp", "email", "telegram", "push".
-    # When null/empty, infer active channels from whichever destination fields are set.
-    # "inapp" is always fail-open immediate even when other channels queue.
+    # Only NULL uses legacy destination inference and the default inbox.
+    # A non-NULL selection never falls back to another channel.
     notify_channels = Column(String(64), nullable=True)
     # "instant" (default) vs "digest" (07:00 Asia/Colombo daily batch).
     delivery_mode = Column(String(16), nullable=True)

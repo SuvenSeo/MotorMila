@@ -135,94 +135,44 @@ jobs:
           path: dist/${{ steps.apk.outputs.name }}
           if-no-files-found: error
 
-      - name: Publish GitHub Release
+      - name: Prepare conditional R2 client
         if: steps.channel.outputs.stable == 'true'
         working-directory: .
         run: |
-          set -euo pipefail
-          TAG="${GITHUB_REF_NAME}"
-          if [[ "${GITHUB_REF_TYPE}" != "tag" ]]; then
-            TAG="android-v${{ steps.apk.outputs.version }}"
-          fi
-          NOTES_FILE="$(mktemp)"
-          {
-            echo "Sideload preview of the Motormila Android app (package \`lk.motormila.app\`)."
-            echo
-            echo "- Install: download the APK, enable **Install unknown apps**, open the file."
-            echo "- API: production Hugging Face backend."
-            echo "- Signed with the MotorMila release key (from repository secrets). If you installed a build signed with the old public sideload key (1.6.5 or earlier), uninstall it once before installing this one."
-            echo "- Guest browse works without signing in; Pro / alerts / dealer still need an invite."
-            echo
-            echo "Built from \`${GITHUB_SHA}\`."
-          } > "$NOTES_FILE"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "${{ steps.apk.outputs.path }}" --clobber
-            gh release edit "$TAG" --notes-file "$NOTES_FILE"
-          else
-            gh release create "$TAG" "${{ steps.apk.outputs.path }}" \
-              --title "Motormila Android ${{ steps.apk.outputs.version }}" \
-              --notes-file "$NOTES_FILE"
-          fi
-          echo "Published $TAG"
+          python3 -m venv "$RUNNER_TEMP/release-venv"
+          "$RUNNER_TEMP/release-venv/bin/pip" install boto3==1.43.53
 
-      - name: Upload APK to R2 (public download)
+      - name: Preflight and create immutable stable APKs
         if: steps.channel.outputs.stable == 'true'
         working-directory: .
         env:
-          # Same credentials the snapshot workflows use; the uploader falls
-          # back to the Cloudflare API when S3-style R2_* creds are absent.
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          R2_BUCKET: motormila-snapshots
-          R2_PREFIX: app
-          SNAPSHOT_SOURCE_DIR: dist
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          APK: ${{ steps.apk.outputs.path }}
         run: |
           set -euo pipefail
-          python backend/upload_snapshots_r2.py
-          echo "APK live at https://pub-f15911ef9a914db9a44e1fd6b47dfe4e.r2.dev/app/${{ steps.apk.outputs.name }}"
+          VERSION_CODE="$(grep -oP 'versionCode\s*=\s*\K[0-9]+' android/app/build.gradle.kts | head -1)"
+          git fetch --no-tags origin main
+          MANIFEST_DIR=$(mktemp -d "$RUNNER_TEMP/immutable-release.XXXXXXXX")
+          printf 'MANIFEST_DIR=%s\nMANIFEST_BASE=%s\n' "$MANIFEST_DIR" "$(git rev-parse FETCH_HEAD)" >> "$GITHUB_ENV"
+          "$RUNNER_TEMP/release-venv/bin/python" scripts/immutable_release.py \
+            "$APK" "$VERSION_CODE" "$MANIFEST_DIR/latest-release.json"
 
-      - name: Commit release manifest (drives the in-app update checker)
+      - name: Commit verified release manifest (drives the in-app update checker)
         if: steps.channel.outputs.stable == 'true'
         working-directory: .
         run: |
           set -euo pipefail
-          VERSION="${{ steps.apk.outputs.version }}"
-          VERSION_CODE="$(grep -oP 'versionCode\s*=\s*\K[0-9]+' android/app/build.gradle.kts | head -1)"
-          # Public R2 URL (bucket motormila-snapshots has its managed r2.dev
-          # domain enabled). The backend's /releases/app serves this to the
-          # in-app updater via the site manifest below.
-          APK_URL="https://pub-f15911ef9a914db9a44e1fd6b47dfe4e.r2.dev/app/${{ steps.apk.outputs.name }}"
-          PUBLISHED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          # The in-app updater refuses to install without a matching SHA-256.
-          APK_SHA256="$(sha256sum "${{ steps.apk.outputs.path }}" | cut -d' ' -f1)"
-          mkdir -p android public/app
-          for DEST in android/latest-release.json public/app/latest-release.json; do
-          cat > "$DEST" <<EOF
-          {
-            "version": "${VERSION}",
-            "version_code": ${VERSION_CODE},
-            "apk_url": "${APK_URL}",
-            "published_at": "${PUBLISHED_AT}",
-            "sha256": "${APK_SHA256}",
-            "tag": "${GITHUB_REF_NAME}"
-          }
-          EOF
-          done
-          cat android/latest-release.json
+          MANIFEST="$MANIFEST_DIR/latest-release.json"
+          [[ -f "$MANIFEST" ]] || exit 0  # already identical in both locations
+          # Parent the manifest-only commit on the exact main read at preflight.
+          # A concurrent main update must reject the push, not be rebased over.
+          git switch --detach "$MANIFEST_BASE"
+          cp "$MANIFEST" android/latest-release.json
+          cp "$MANIFEST" public/app/latest-release.json
           git config user.name "motormila-release-bot"
           git config user.email "hello@ardenostudio.com"
           git add android/latest-release.json public/app/latest-release.json
-          if git diff --cached --quiet; then
-            echo "Manifest unchanged; nothing to commit"
-          else
-            git commit -m "chore(release): android-v${VERSION} (versionCode ${VERSION_CODE}) [skip ci]"
-            # Rebase onto latest main first: the tag checkout goes stale if
-            # main moved since the release run started (bit 1.5.4).
-            git fetch origin main
-            git rebase origin/main
-            git push origin "HEAD:main"
-            echo "Manifest pushed to main"
-          fi
+          git commit -m "chore(release): ${GITHUB_REF_NAME} [skip ci]"
+          git push origin HEAD:main

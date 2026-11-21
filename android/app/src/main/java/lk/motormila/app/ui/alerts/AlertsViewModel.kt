@@ -3,7 +3,6 @@ package lk.motormila.app.ui.alerts
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlin.math.abs
@@ -33,7 +32,6 @@ import lk.motormila.app.domain.model.AlertMatch
 import lk.motormila.app.domain.repository.AlertsRepository
 import lk.motormila.app.domain.repository.AuthRepository
 import lk.motormila.app.domain.repository.ListingRepository
-import lk.motormila.app.ui.navigation.Alerts
 
 /**
  * Format rupees as alert-form shorthand: "8.5m" at/above 1M, else a whole-rupee integer.
@@ -154,6 +152,7 @@ data class AlertsUiState(
     val freeCapReached: Boolean = false,
     /** False once the session flow reports no signed-in user (alerts are server-side). */
     val signedIn: Boolean = false,
+    val alertOwner: String? = null,
     /** Set when a create was blocked or rejected because the user is signed out. */
     val signInRequired: Boolean = false,
     /** Inbox unread count (same repository's notification surface). */
@@ -171,8 +170,8 @@ data class AlertsUiState(
 
 sealed interface AlertsUiEvent {
     data object Refresh : AlertsUiEvent
-    data class FormChanged(val form: AlertForm) : AlertsUiEvent
-    data object Create : AlertsUiEvent
+    data class FormChanged(val expectedOwner: String?, val form: AlertForm) : AlertsUiEvent
+    data class Create(val expectedOwner: String?) : AlertsUiEvent
     data class Prefill(val id: Int) : AlertsUiEvent
     data object CancelEdit : AlertsUiEvent
     data object Update : AlertsUiEvent
@@ -209,12 +208,13 @@ class AlertsViewModel @Inject constructor(
         viewModelScope.launch {
             var previous: String? = null
             authRepository.session().collect { session ->
-                if (previous != session?.token || _state.value.isLoading) {
+                val owner = session?.email?.trim()?.lowercase()
+                if (previous != session?.token || _state.value.alertOwner != owner || _state.value.isLoading) {
                     previous = session?.token
                     accountJob.cancel()
                     accountJob = SupervisorJob(viewModelScope.coroutineContext[Job])
                     lastMatchedIds = emptyList()
-                    _state.value = AlertsUiState(signedIn = session != null, isPro = session?.isPro == true, isLoading = false)
+                    _state.value = AlertsUiState(signedIn = session != null, alertOwner = owner, isPro = session?.isPro == true, isLoading = false)
                     if (session != null) {
                         accountScope.launch {
                             repository.observeAlerts().collect { alerts ->
@@ -229,8 +229,8 @@ class AlertsViewModel @Inject constructor(
                         accountScope.launch { repository.unreadCount().collect { n -> _state.update { it.copy(unreadCount = n) } } }
                         accountScope.launch { runRequest { repository.notifications(50) } }
                         refresh()
+                        prefillFromListingIfNeeded()
                     }
-                    prefillFromListingIfNeeded()
                 } else {
                     _state.update { it.copy(isPro = session?.isPro == true,
                         freeCapReached = session?.isPro != true && it.alerts.any { alert -> alert.active }) }
@@ -250,8 +250,10 @@ class AlertsViewModel @Inject constructor(
     fun onEvent(event: AlertsUiEvent) {
         when (event) {
             AlertsUiEvent.Refresh -> refresh()
-            is AlertsUiEvent.FormChanged -> _state.update { it.copy(form = event.form) }
-            AlertsUiEvent.Create -> create()
+            is AlertsUiEvent.FormChanged -> _state.update {
+                if (it.alertOwner == event.expectedOwner) it.copy(form = event.form) else it
+            }
+            is AlertsUiEvent.Create -> create(event.expectedOwner)
             is AlertsUiEvent.Prefill -> prefill(event.id)
             AlertsUiEvent.CancelEdit -> _state.update { it.copy(editingId = null, form = AlertForm()) }
             AlertsUiEvent.Update -> update()
@@ -268,18 +270,19 @@ class AlertsViewModel @Inject constructor(
     }
 
     /**
-     * Watchlist "create alert" navigates with [Alerts.listingId] > 0. WatchItem has no
+     * Watchlist "create alert" navigates with a positive listingId. WatchItem has no
      * make/model, so we load listing detail and copy make/model/district/max price into the form.
      */
     private fun prefillFromListingIfNeeded() {
         if (savedStateHandle.get<Boolean>(PREFILL_CONSUMED_KEY) == true) return
-        val listingId = runCatching { savedStateHandle.toRoute<Alerts>() }.getOrNull()?.listingId ?: return
+        val listingId = savedStateHandle.get<Int>("listingId") ?: return
         if (listingId <= 0) return
+        // Claim only the navigation intent, never a prior account's form or delivery details.
+        savedStateHandle[PREFILL_CONSUMED_KEY] = true
         _state.update { it.copy(prefillFromListing = true) }
         accountScope.launch {
             runRequest { listings.getDetail(listingId) }
                 .onSuccess { listing ->
-                    savedStateHandle[PREFILL_CONSUMED_KEY] = true
                     _state.update { current ->
                         current.copy(
                             form = current.form.copy(
@@ -345,7 +348,7 @@ class AlertsViewModel @Inject constructor(
 
     private fun buildInput(f: AlertForm): AlertInput? = f.toAlertInput(_state.value.isPro)
 
-    private fun create() {
+    private fun create(expectedOwner: String?) {
         if (_state.value.creating || _state.value.updating) return
         val f = _state.value.form
         if (!_state.value.signedIn) {
@@ -353,6 +356,7 @@ class AlertsViewModel @Inject constructor(
             _state.update { it.copy(signInRequired = true, error = null) }
             return
         }
+        if (expectedOwner == null || expectedOwner != _state.value.alertOwner) return
         if (_state.value.freeCapReached) {
             _state.update { it.copy(error = "Free plan allows 1 alert. Upgrade to Pro for unlimited alerts.") }
             return
@@ -367,9 +371,9 @@ class AlertsViewModel @Inject constructor(
             _state.update { it.copy(error = "Enter at least a make and a max price (e.g. 8m).") }
             return
         }
+        _state.update { it.copy(creating = true, error = null, offline = false) }
         accountScope.launch {
-            _state.update { it.copy(creating = true, error = null, offline = false) }
-            runRequest { repository.create(input) }
+            runRequest { repository.create(input, expectedOwner) }
                 .onSuccess { alert ->
                     _state.update { it.copy(creating = false, form = AlertForm(), justCreatedId = alert.id) }
                 }

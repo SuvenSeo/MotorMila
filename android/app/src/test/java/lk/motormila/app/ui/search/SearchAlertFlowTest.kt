@@ -46,6 +46,21 @@ class SearchAlertFlowTest {
         vm = SearchViewModel(mockk(), mockk(), sessions, listings, alerts, SavedStateHandle(), watches)
     }
 
+    @Test fun switchingAccountsDismissesThePreviousBuyersReview() = runTest(dispatcher) {
+        val a = UserSession("a@example.invalid", null, "free", "user", null, "first", null)
+        session.value = a
+        runCurrent()
+        vm.reviewAlert(ListingQuery(make = "Toyota"))
+        session.value = a.copy(email = "b@example.invalid", token = "second")
+        runCurrent()
+        assertNull(vm.state.value.alertDraft)
+        val draft = ListingQuery(make = "Toyota")
+        vm.reviewAlert(draft)
+        vm.confirmAlert(SearchAlertReview(draft), a.email) // click from A's last rendered dialog
+        runCurrent()
+        coVerify(exactly = 0) { alerts.create(any(), any()) }
+    }
+
     @After fun closeSearch() {
         vm.viewModelScope.cancel()
         Dispatchers.resetMain()
@@ -59,18 +74,18 @@ class SearchAlertFlowTest {
         val draft = FilterDraft.from(applied).copy(priceMax = 6e6, fuelType = "hybrid").toQuery(applied)
         vm.reviewAlert(draft)
         val review = SearchAlertReview(draft)
-        vm.confirmAlert(review) // still signed out
+        vm.confirmAlert(review, vm.state.value.alertOwner) // still signed out
         session.value = UserSession("test@example.invalid", null, "free", "user", null, "test", null)
         runCurrent()
-        vm.confirmAlert(SearchAlertReview(applied)) // stale confirmation
+        vm.confirmAlert(SearchAlertReview(applied), vm.state.value.alertOwner) // stale confirmation
         runCurrent()
-        coVerify(exactly = 0) { alerts.create(any()) }
+        coVerify(exactly = 0) { alerts.create(any(), any()) }
         assertEquals(applied, vm.state.value.filters)
         assertEquals(draft, vm.state.value.alertDraft)
-        vm.confirmAlert(review)
-        vm.confirmAlert(review) // double tap
+        vm.confirmAlert(review, vm.state.value.alertOwner)
+        vm.confirmAlert(review, vm.state.value.alertOwner) // double tap
         runCurrent()
-        coVerify(exactly = 1) { alerts.create(requireNotNull(review.rule)) }
+        coVerify(exactly = 1) { alerts.create(requireNotNull(review.rule), "test@example.invalid") }
         assertTrue(vm.state.value.alertSaved)
         assertEquals(applied, vm.state.value.filters)
         assertNull(vm.state.value.alertDraft)

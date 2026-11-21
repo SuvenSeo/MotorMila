@@ -42,14 +42,22 @@ class WatchlistRepositoryImpl @Inject constructor(
 
     override fun observe(): Flow<List<WatchItem>> = dao.observeAll().map { rows -> rows.map { it.savedItem() } }
 
+    private fun savedCheck(row: WatchlistEntity): SavedCheck? {
+        val id = row.listingId
+        val at = checks.getLong("checked-$id", 0L)
+        if (at <= 0 || checks.getLong("saved-$id", -1L) != row.addedAtMs) return null
+        return SavedCheck(at, checks.getBoolean("gone-$id", false))
+    }
+
     internal fun observeChecks(): Flow<Map<Int, SavedCheck>> =
         combine(dao.observeAll(), checkRevision) { rows, _ ->
-            rows.mapNotNull { row ->
-                val id = row.listingId
-                val at = checks.getLong("checked-$id", 0L)
-                if (at <= 0 || checks.getLong("saved-$id", -1L) != row.addedAtMs) null
-                else id to SavedCheck(at, checks.getBoolean("gone-$id", false))
-            }.toMap()
+            rows.mapNotNull { row -> savedCheck(row)?.let { row.listingId to it } }.toMap()
+        }
+
+    /** Read each check with the save it belongs to; a re-save must not inherit a gone flag. */
+    internal fun observeCheckedSaves(): Flow<List<Pair<WatchItem, SavedCheck?>>> =
+        combine(dao.observeAll(), checkRevision) { rows, _ ->
+            rows.map { row -> row.savedItem() to savedCheck(row) }
         }
 
     override fun isWatched(listingId: Int): Flow<Boolean> = dao.isWatched(listingId)

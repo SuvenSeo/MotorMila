@@ -15,7 +15,7 @@ from sqlalchemy.orm import sessionmaker
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from app.utils.alert_matcher import _count_matching, _resolve_channels, run_alert_match_pass
-from db.models import Base, CarListing, MarketAlert, MarketAlertMatch
+from db.models import Base, CarListing, MarketAlert, MarketAlertMatch, PlatformUser
 
 
 # ---------------------------------------------------------------------------
@@ -306,7 +306,10 @@ def test_resolve_channels_empty_when_no_destinations():
 
 
 def _make_alert_with_channels(db, **kwargs):
-    alert = MarketAlert(user_token="test-token", active=True, **kwargs)
+    # These are positive provider tests: anonymous rules cannot authorize these routes.
+    db.add(PlatformUser(email="user@example.com", name="Fixture", password_hash="unused",
+                        plan="pro", subscription_status="active", email_verified=True))
+    alert = MarketAlert(user_token="mm:user@example.com", active=True, **kwargs)
     db.add(alert)
     db.commit()
     db.refresh(alert)

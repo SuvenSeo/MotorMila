@@ -58,7 +58,8 @@ class AlertsRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun create(input: AlertInput): Alert = writeRule { account ->
+    override suspend fun create(input: AlertInput, expectedOwner: String): Alert = writeRule { account ->
+        check(account.owner == expectedOwner && expectedOwner.isNotBlank()) { "Account changed. Review this alert again." }
         saveChannels(account, input) { api.createAlert(it, account.guard) }
     }
 

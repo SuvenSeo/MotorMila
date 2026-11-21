@@ -18,4 +18,5 @@
     <string name="buyer_back">Go back</string>
     <string name="buyer_saved_vehicles_count">Saved vehicles (%1$d)</string>
     <string name="buyer_saved_vehicles">Saved vehicles</string>
+    <string name="buyer_copy_source_link">Copy %1$s ad link</string>
 </resources>

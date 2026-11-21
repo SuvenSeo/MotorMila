@@ -16,7 +16,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 import lk.motormila.app.domain.model.Listing
@@ -79,6 +81,7 @@ data class SearchUiState(
     val sources: List<String> = emptyList(),
     val alertSaved: Boolean = false,
     val isSignedIn: Boolean = false,
+    val alertOwner: String? = null,
     val alertDraft: ListingQuery? = null,
     val alertSaving: Boolean = false,
     val alertError: String? = null,
@@ -113,6 +116,7 @@ class SearchViewModel @Inject constructor(
     /** Ids whose entrance already played (survives Search leaving composition while Detail is open). */
     val revealedIds: HashSet<Int> = HashSet()
 
+    private var alertSaveJob: Job? = null
     private val queryFlow = MutableStateFlow("")
     private val pagingKey = MutableStateFlow(defaultSearchQuery())
 
@@ -149,7 +153,12 @@ class SearchViewModel @Inject constructor(
                 } else {
                     current.filters
                 }
-                _state.value = current.copy(isSignedIn = session != null, isPro = isPro, filters = nextFilters)
+                val owner = session?.email?.trim()?.lowercase()
+                val next = if (current.alertOwner != null && current.alertOwner != owner) {
+                    alertSaveJob?.cancel()
+                    current.copy(alertDraft = null, alertError = null, alertSaving = false, alertSaved = false, showFilterSheet = false)
+                } else current // A guest may finish reviewing after signing in.
+                _state.value = next.copy(isSignedIn = session != null, alertOwner = owner, isPro = isPro, filters = nextFilters)
                 if (nextFilters != current.filters) {
                     pagingKey.value = nextFilters
                 }
@@ -421,29 +430,27 @@ class SearchViewModel @Inject constructor(
     }
 
     /** The confirmation and the request use one snapshot. No write on preview or sign-in. */
-    internal fun confirmAlert(review: SearchAlertReview) {
+    internal fun confirmAlert(review: SearchAlertReview, expectedOwner: String?) {
         val current = _state.value
-        if (current.alertSaving || current.alertDraft != review.draft || !current.isSignedIn) return
+        if (expectedOwner == null || current.alertOwner != expectedOwner || current.alertSaving || current.alertDraft != review.draft) return
         val rule = review.rule ?: return
         _state.value = current.copy(alertSaving = true, alertError = null)
-        viewModelScope.launch {
+        alertSaveJob = viewModelScope.launch {
             try {
-                if (observeSession().first() == null) {
-                    _state.value = _state.value.copy(alertError = SIGN_IN_FOR_ALERTS)
-                    return@launch
-                }
-                alerts.create(rule)
+                alerts.create(rule, expectedOwner)
+                ensureActive()
                 _state.value = _state.value.copy(alertSaved = true, alertDraft = null, showFilterSheet = false)
             } catch (e: kotlin.coroutines.cancellation.CancellationException) {
                 throw e
             } catch (e: Exception) {
+                ensureActive()
                 val mapped = lk.motormila.app.core.network.ErrorMapper.map(e)
                 val key = if (mapped is lk.motormila.app.core.common.AppError.Unauthorized) {
                     SIGN_IN_FOR_ALERTS
                 } else ERR_ALERT_SAVE_PREFIX + mapped.message
                 _state.value = _state.value.copy(alertError = key)
             } finally {
-                _state.value = _state.value.copy(alertSaving = false)
+                if (isActive) _state.value = _state.value.copy(alertSaving = false)
             }
         }
     }

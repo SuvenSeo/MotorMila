@@ -18,4 +18,5 @@
     <string name="buyer_back">ආපසු යන්න</string>
     <string name="buyer_saved_vehicles_count">සුරැකි වාහන (%1$d)</string>
     <string name="buyer_saved_vehicles">සුරැකි වාහන</string>
+    <string name="buyer_copy_source_link">%1$s දැන්වීමේ සබැඳිය පිටපත් කරන්න</string>
 </resources>

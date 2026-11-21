@@ -31,6 +31,7 @@ class NotificationHelper @Inject constructor(
         const val CHANNEL_PRICE_DROPS = "price_drops"
         const val CHANNEL_MARKET_NEWS = "market_news"
         const val CHANNEL_SYNC = "sync"
+        private const val ALERT_TAG = "market_alert"
     }
 
     fun ensureChannels() {
@@ -108,7 +109,18 @@ class NotificationHelper @Inject constructor(
                 else NotificationCompat.PRIORITY_DEFAULT,
             )
         if (contentIntent != null) builder.setContentIntent(contentIntent)
-        NotificationManagerCompat.from(context).notify(id, builder.build())
+        val tag = if (channel == CHANNEL_PRICE_DROPS) ALERT_TAG else null
+        NotificationManagerCompat.from(context).notify(tag, id, builder.build())
+    }
+
+    /** Old workers and pushes posted untagged on price_drops. IDs alone are not a namespace. */
+    fun clearPostedAlerts() {
+        val manager = context.getSystemService(NotificationManager::class.java) ?: return
+        for (posted in manager.activeNotifications) {
+            if (posted.notification.channelId == CHANNEL_PRICE_DROPS && (posted.tag == null || posted.tag == ALERT_TAG)) {
+                manager.cancel(posted.tag, posted.id)
+            }
+        }
     }
 
     fun cancel(id: Int) {

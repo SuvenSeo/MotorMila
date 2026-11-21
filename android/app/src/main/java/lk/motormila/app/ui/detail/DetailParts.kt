@@ -404,13 +404,18 @@ fun DetailActionBar(
     sourceName: String,
     onViewSource: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    copyOnly: Boolean = false,
 ) {
     if (onViewSource == null) {
         Text(stringResource(R.string.buyer_source_unavailable, sourceName), style = MmType.current.bodyS,
             color = MmColors.current.textSecondary, modifier = modifier)
     } else {
-        MmButton(text = stringResource(R.string.listing_view_on_source, sourceName), onClick = onViewSource,
-            trailingIcon = Icons.AutoMirrored.Filled.OpenInNew, modifier = modifier.fillMaxWidth())
+        val label = if (copyOnly) R.string.buyer_copy_source_link else R.string.listing_view_on_source
+        MmButton(
+            text = stringResource(label, sourceName), onClick = onViewSource,
+            trailingIcon = if (copyOnly) null else Icons.AutoMirrored.Filled.OpenInNew,
+            modifier = modifier.fillMaxWidth(),
+        )
     }
 }
 

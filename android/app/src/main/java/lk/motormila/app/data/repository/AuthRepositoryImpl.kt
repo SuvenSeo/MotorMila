@@ -1,7 +1,5 @@
 package lk.motormila.app.data.repository
 
-import android.content.Context
-import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
@@ -18,7 +16,7 @@ import lk.motormila.app.di.IoDispatcher
 import lk.motormila.app.domain.model.SelfSignupStatus
 import lk.motormila.app.domain.model.UserSession
 import lk.motormila.app.domain.repository.AuthRepository
-import lk.motormila.app.work.PriceAlertSyncWorker
+import lk.motormila.app.core.notifications.NotificationHelper
 
 /**
  * Auth: login/signup/me/logout against the POST and GET auth endpoints, session persisted in
@@ -28,7 +26,7 @@ import lk.motormila.app.work.PriceAlertSyncWorker
  */
 @Singleton
 class AuthRepositoryImpl @Inject constructor(
-    @ApplicationContext private val context: Context,
+    private val notifications: NotificationHelper,
     private val api: MotormilaApiService,
     private val sessionStore: SessionStore,
     private val authInterceptor: AuthInterceptor,
@@ -70,7 +68,7 @@ class AuthRepositoryImpl @Inject constructor(
             expiresAt = SessionStore.epochToIso(res.expiresAt),
             playProEntitled = sessionStore.snapshot()?.playProEntitled == true,
         )
-        sessionStore.saveSession(session)
+        saveLogin(session)
         authInterceptor.updateToken(session.token)
         session
     }
@@ -89,7 +87,7 @@ class AuthRepositoryImpl @Inject constructor(
                 expiresAt = SessionStore.epochToIso(res.expiresAt),
                 playProEntitled = sessionStore.snapshot()?.playProEntitled == true,
             )
-            sessionStore.saveSession(session)
+            saveLogin(session)
             authInterceptor.updateToken(session.token)
             session
         }
@@ -121,11 +119,8 @@ class AuthRepositoryImpl @Inject constructor(
         runCatching { api.logout() }
         sessionStore.clear()
         authInterceptor.updateToken(null)
+        clearPostedAlerts()
         owner?.let { database.alertDao().clear(it) }
-        // Stop background workers — otherwise they keep hitting /alerts/match
-        // with a cleared token after logout.
-        // (SnapshotRefreshWorker keeps running: public market data for guests too.)
-        runCatching { PriceAlertSyncWorker.cancel(context) }
         Unit
     }
 
@@ -134,8 +129,8 @@ class AuthRepositoryImpl @Inject constructor(
         val cleared = sessionStore.clearIfRejected(rejectedToken)
         if (cleared) {
             authInterceptor.updateToken(null)
+            clearPostedAlerts()
             owner?.let { database.alertDao().clear(it) }
-            runCatching { PriceAlertSyncWorker.cancel(context) }
             // Bearer is dead: rotate the FCM token so the server row prunes itself.
             runCatching { pushRegistrar.unregister() }
         }
@@ -152,7 +147,7 @@ class AuthRepositoryImpl @Inject constructor(
         }
         sessionStore.clear()
         authInterceptor.updateToken(null)
-        runCatching { PriceAlertSyncWorker.cancel(context) }
+        clearPostedAlerts()
         runCatching { pushRegistrar.unregister() }
         // The guest shortlist belongs to the device, not this account.
         owner?.let { database.alertDao().clear(it) }
@@ -161,8 +156,17 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun restore(): UserSession? = withContext(io) {
         val session = sessionStore.rehydrate()
+        if (session == null) clearPostedAlerts()
         authInterceptor.updateToken(session?.token)
         session
+    }
+
+    private fun clearPostedAlerts() { runCatching { notifications.clearPostedAlerts() } }
+
+    private suspend fun saveLogin(session: UserSession) {
+        // Unlike /me refreshes, an explicit login may replace a different account without a logout.
+        clearPostedAlerts()
+        sessionStore.saveSession(session)
     }
 
     private suspend fun persistToken(
@@ -180,7 +184,7 @@ class AuthRepositoryImpl @Inject constructor(
             expiresAt = SessionStore.epochToIso(res.expiresAt),
             playProEntitled = sessionStore.snapshot()?.playProEntitled == true,
         )
-        sessionStore.saveSession(session)
+        saveLogin(session)
         authInterceptor.updateToken(session.token)
         return session
     }

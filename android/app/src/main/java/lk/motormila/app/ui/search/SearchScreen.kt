@@ -698,12 +698,13 @@ fun SearchScreen(
 
         state.alertDraft?.let { draft ->
             val review = remember(draft) { SearchAlertReview(draft) }
+            val renderedOwner = state.alertOwner
             SearchAlertDialog(
                 review = review,
                 signedIn = state.isSignedIn,
                 saving = state.alertSaving,
                 error = state.alertError?.let { searchErrorText(it) },
-                onConfirm = { viewModel.confirmAlert(review) },
+                onConfirm = { viewModel.confirmAlert(review, renderedOwner) },
                 onSignIn = onSignIn,
                 onEdit = viewModel::dismissAlertReview,
             )

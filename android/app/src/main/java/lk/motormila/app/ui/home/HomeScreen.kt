@@ -95,7 +95,7 @@ fun HomeContent(
     val reselect = LocalTabReselect.current.tickFor(MotormilaTabs.BUY)
     LaunchedEffect(reselect) { if (reselect > 0) listState.animateScrollToItem(0) }
     val saved = state.savedVehicle
-    val drop = remember(state.priceDrops, saved?.listingId) { state.recordedDrop }
+    val drop = state.recordedDrop
 
     Box(Modifier.fillMaxSize()) {
         MmPullToRefresh(isRefreshing = state.isRefreshing, onRefresh = onRefresh, indicatorTop = statusTop,

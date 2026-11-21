@@ -226,8 +226,7 @@ fun ListingDetailScreen(
                 else -> {
                     val listing = state.listing!!
                     val galleryImages = listing.images.ifEmpty { listOfNotNull(listing.thumbnailUrl) }
-                    val sourceUrl = listOfNotNull(listing.externalUrl, listing.detailUrl)
-                        .map { it.trim() }.firstOrNull(OutboundLinks::isAllowed)
+                    val sourceLink = detailSourceLink(listing.externalUrl, listing.detailUrl, listing.isActive)
                     LazyColumn(
                         state = listState,
                         modifier = Modifier
@@ -306,7 +305,8 @@ fun ListingDetailScreen(
                                     observationDate(change.at)?.let { Text(it, style = MmType.current.caption, color = MmColors.current.textSecondary) }
                                 }
                                 DetailActionBar(listing.priceLkr, sourceDisplayName(listing.source),
-                                    onViewSource = sourceUrl?.takeIf { listing.isActive }?.let { url -> { openUrl(context, url) } })
+                                    copyOnly = sourceLink?.copyOnly == true,
+                                    onViewSource = sourceLink?.let { link -> { link.handOff(context) } })
                             }
                         }
                         item {

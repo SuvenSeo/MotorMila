@@ -29,7 +29,6 @@ _CHANNEL_ALIASES = {
     "in-app": "inapp",
     "in_app": "inapp",
     "wa": "whatsapp",
-    "sms": "whatsapp",
     "tg": "telegram",
     "webpush": "push",
     "web-push": "push",
@@ -74,8 +73,8 @@ def normalize_channels(raw: object, *, strict: bool = False) -> set[str]:
 
 def match_channels_of(alert: object) -> set[str]:
     """Return the set of channel names to notify for this alert."""
-    raw = (getattr(alert, "notify_channels", None) or "").strip()
-    if raw:
+    raw = getattr(alert, "notify_channels", None)
+    if raw is not None:
         return normalize_channels(raw)
     # Infer from which destination fields are set.
     channels: set[str] = set()
