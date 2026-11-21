@@ -75,6 +75,12 @@ fun SearchBar(
     onRecentRemove: ((String) -> Unit)? = null,
     /** Clear-history action above the recent-searches list (null hides it). */
     onClearRecents: (() -> Unit)? = null,
+    /**
+     * Field focus changes. A screen that passes `showDropdown = false` renders
+     * [SearchSuggestionsPanel] itself as an overlay (so the header it sits in
+     * never changes height) and uses this to know when to show it.
+     */
+    onFocusedChange: ((Boolean) -> Unit)? = null,
 ) {
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
@@ -125,153 +131,193 @@ fun SearchBar(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .onFocusChanged { focused = it.isFocused },
+                .onFocusChanged {
+                    if (focused != it.isFocused) onFocusedChange?.invoke(it.isFocused)
+                    focused = it.isFocused
+                },
         )
         if (showDropdown && focused && (query.isNotBlank() || recentSearches.isNotEmpty())) {
-            MotormilaGlass(
+            SearchSuggestionsPanel(
+                query = query,
+                suggestions = suggestions,
+                recentSearches = recentSearches,
+                onSubmit = onSearch,
+                onSuggestionClick = onSuggestionClick,
+                onRecentClick = onRecentClick,
+                onRecentRemove = onRecentRemove,
+                onClearRecents = onClearRecents,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp),
-                specular = true,
-            ) {
-                LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp)) {
-                    if (query.isNotBlank()) {
-                        // Pinned commit row: results also update live (debounced),
-                        // but an explicit "Search for …" is always one tap away.
-                        item(key = "__search_for") {
-                            val searchPress = remember { MutableInteractionSource() }
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .applePress(searchPress)
-                                    .heightIn(min = 48.dp)
-                                    .clickable(
-                                        interactionSource = searchPress,
-                                        indication = null,
-                                        role = Role.Button,
-                                        onClick = { submit(query) },
-                                    )
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(Icons.Filled.Search, contentDescription = null, tint = MotormilaSecondaryText)
-                                Spacer(Modifier.width(12.dp))
-                                Text(
-                                    stringResource(R.string.v19_search_for_query, query.trim()),
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
+            )
+        }
+    }
+}
+
+/**
+ * The suggestions / recent-searches dropdown of [SearchBar] on its own, so a
+ * screen can draw it as an overlay instead of inside its header (results must
+ * not jump when it opens). Committing a row hides the keyboard and clears focus.
+ */
+@Composable
+fun SearchSuggestionsPanel(
+    query: String,
+    suggestions: List<Listing>,
+    recentSearches: List<String>,
+    onSubmit: (String) -> Unit,
+    onSuggestionClick: (Listing) -> Unit,
+    onRecentClick: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    onRecentRemove: ((String) -> Unit)? = null,
+    onClearRecents: (() -> Unit)? = null,
+) {
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    val submit: (String) -> Unit = { q ->
+        onSubmit(q)
+        keyboard?.hide()
+        focusManager.clearFocus()
+    }
+    MotormilaGlass(
+        modifier = modifier,
+        specular = true,
+    ) {
+        LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp)) {
+            if (query.isNotBlank()) {
+                // Pinned commit row: results also update live (debounced),
+                // but an explicit "Search for …" is always one tap away.
+                item(key = "__search_for") {
+                    val searchPress = remember { MutableInteractionSource() }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .applePress(searchPress)
+                            .heightIn(min = 48.dp)
+                            .clickable(
+                                interactionSource = searchPress,
+                                indication = null,
+                                role = Role.Button,
+                                onClick = { submit(query) },
+                            )
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Filled.Search, contentDescription = null, tint = MotormilaSecondaryText)
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            stringResource(R.string.v19_search_for_query, query.trim()),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+                items(suggestions, key = { it.id }) { s ->
+                    val suggestPress = remember { MutableInteractionSource() }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .applePress(suggestPress)
+                            .heightIn(min = 48.dp)
+                            .clickable(
+                                interactionSource = suggestPress,
+                                indication = null,
+                                onClick = { keyboard?.hide(); focusManager.clearFocus(); onSuggestionClick(s) },
+                            )
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        AsyncImage(
+                            model = s.thumbnailUrl,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(MotormilaRadius.lg),
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("${s.make} ${s.model} ${s.year ?: ""}".trim(), fontSize = 14.sp)
+                            Text(
+                                s.formattedPrice(),
+                                fontSize = 12.sp,
+                                color = MotormilaSecondaryText,
+                            )
                         }
-                        items(suggestions, key = { it.id }) { s ->
-                            val suggestPress = remember { MutableInteractionSource() }
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .applePress(suggestPress)
+                    }
+                }
+            } else {
+                // Recent searches: persisted, per-row remove + clear history.
+                item(key = "__recents_header") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 8.dp, top = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            stringResource(R.string.v19_search_recent_title),
+                            fontSize = 12.sp,
+                            color = MotormilaSecondaryText,
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (onClearRecents != null) {
+                            Box(
+                                Modifier
                                     .heightIn(min = 48.dp)
-                                    .clickable(
-                                        interactionSource = suggestPress,
-                                        indication = null,
-                                        onClick = { keyboard?.hide(); focusManager.clearFocus(); onSuggestionClick(s) },
-                                    )
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                AsyncImage(
-                                    model = s.thumbnailUrl,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .size(44.dp)
-                                        .clip(MotormilaRadius.lg),
-                                )
-                                Spacer(Modifier.width(12.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text("${s.make} ${s.model} ${s.year ?: ""}".trim(), fontSize = 14.sp)
-                                    Text(
-                                        s.formattedPrice(),
-                                        fontSize = 12.sp,
-                                        color = MotormilaSecondaryText,
-                                    )
-                                }
-                            }
-                        }
-                    } else {
-                        // Recent searches: persisted, per-row remove + clear history.
-                        item(key = "__recents_header") {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(start = 16.dp, end = 8.dp, top = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
+                                    .clip(MotormilaRadius.pill)
+                                    .clickable(role = Role.Button, onClick = onClearRecents)
+                                    .padding(horizontal = 10.dp),
+                                contentAlignment = Alignment.Center,
                             ) {
                                 Text(
-                                    stringResource(R.string.v19_search_recent_title),
+                                    stringResource(R.string.v19_search_clear_history),
                                     fontSize = 12.sp,
-                                    color = MotormilaSecondaryText,
-                                    modifier = Modifier.weight(1f),
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MmColors.current.brandText,
+                                    maxLines = 1,
                                 )
-                                if (onClearRecents != null) {
-                                    Box(
-                                        Modifier
-                                            .heightIn(min = 48.dp)
-                                            .clip(MotormilaRadius.pill)
-                                            .clickable(role = Role.Button, onClick = onClearRecents)
-                                            .padding(horizontal = 10.dp),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Text(
-                                            stringResource(R.string.v19_search_clear_history),
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MmColors.current.brandText,
-                                            maxLines = 1,
-                                        )
-                                    }
-                                }
                             }
                         }
-                        items(recentSearches.take(5), key = { it }) { recent ->
-                            val recentPress = remember { MutableInteractionSource() }
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .applePress(recentPress)
-                                    .heightIn(min = 48.dp)
-                                    .clickable(
-                                        interactionSource = recentPress,
-                                        indication = null,
-                                        onClick = { onRecentClick(recent); keyboard?.hide(); focusManager.clearFocus() },
-                                    )
-                                    .padding(start = 16.dp, end = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
+                    }
+                }
+                items(recentSearches.take(5), key = { it }) { recent ->
+                    val recentPress = remember { MutableInteractionSource() }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .applePress(recentPress)
+                            .heightIn(min = 48.dp)
+                            .clickable(
+                                interactionSource = recentPress,
+                                indication = null,
+                                onClick = { onRecentClick(recent); keyboard?.hide(); focusManager.clearFocus() },
+                            )
+                            .padding(start = 16.dp, end = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Filled.History, contentDescription = null, tint = MotormilaSecondaryText)
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            recent,
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (onRecentRemove != null) {
+                            IconButton(
+                                onClick = { onRecentRemove(recent) },
+                                modifier = Modifier.size(48.dp),
                             ) {
-                                Icon(Icons.Filled.History, contentDescription = null, tint = MotormilaSecondaryText)
-                                Spacer(Modifier.width(12.dp))
-                                Text(
-                                    recent,
-                                    fontSize = 14.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f),
+                                Icon(
+                                    Icons.Filled.Close,
+                                    contentDescription = stringResource(R.string.v19_search_remove_recent_cd, recent),
+                                    tint = MotormilaSecondaryText,
+                                    modifier = Modifier.size(18.dp),
                                 )
-                                if (onRecentRemove != null) {
-                                    IconButton(
-                                        onClick = { onRecentRemove(recent) },
-                                        modifier = Modifier.size(48.dp),
-                                    ) {
-                                        Icon(
-                                            Icons.Filled.Close,
-                                            contentDescription = stringResource(R.string.v19_search_remove_recent_cd, recent),
-                                            tint = MotormilaSecondaryText,
-                                            modifier = Modifier.size(18.dp),
-                                        )
-                                    }
-                                }
                             }
                         }
                     }

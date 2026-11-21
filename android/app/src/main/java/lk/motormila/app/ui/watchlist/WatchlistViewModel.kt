@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import lk.motormila.app.R
+import lk.motormila.app.data.local.db.MotormilaDatabase
+import lk.motormila.app.data.local.db.entity.WatchlistEntity
 import lk.motormila.app.domain.model.Listing
 import lk.motormila.app.domain.model.WatchItem
 import lk.motormila.app.domain.repository.WatchlistRepository
@@ -33,12 +35,18 @@ data class WatchlistUiState(
 
 /**
  * A removal (single swipe or Clear all) whose entities are kept until
- * [expiresAtMs] so the Undo snackbar can restore them.
+ * [expiresAtMs] so the Undo snackbar can restore them. A second removal inside
+ * the window merges into the pending one, so Undo never silently drops the first.
  */
 data class WatchlistUndo(
     val items: List<WatchItem>,
     val isClearAll: Boolean,
     val expiresAtMs: Long,
+    /**
+     * Full stored rows (original title, add-price baseline, addedAt, typical
+     * price) re-inserted verbatim on Undo; empty when the DB isn't available.
+     */
+    val rows: List<WatchlistEntity> = emptyList(),
 )
 
 sealed interface WatchlistUiEvent {
@@ -58,6 +66,9 @@ class WatchlistViewModel @Inject constructor(
     // Nullable + default keeps manual (test) construction source-compatible;
     // Hilt always injects the real application context.
     @ApplicationContext private val appContext: Context? = null,
+    // Direct row access so Undo can restore the exact stored entities (the
+    // repository's add() re-baselines the price-drop snapshot).
+    private val db: MotormilaDatabase? = null,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(WatchlistUiState())
@@ -97,7 +108,7 @@ class WatchlistViewModel @Inject constructor(
                         it.copy(
                             isLoading = false,
                             isRefreshing = false,
-                            error = e.message ?: str(R.string.v19_watch_err_load, "Couldn't load your watchlist."),
+                            error = str(R.string.v19_watch_err_load, "Couldn't load your watchlist."),
                         )
                     }
                 }
@@ -120,14 +131,22 @@ class WatchlistViewModel @Inject constructor(
     private fun remove(id: Int) {
         val item = _state.value.items.firstOrNull { it.id == id }
         viewModelScope.launch {
+            val rows = snapshotRows(setOf(id))
             runCatching { repository.removeFromWatchlist(id) }
-                .onSuccess { if (item != null) offerUndo(listOf(item), isClearAll = false) }
-                .onFailure { e ->
+                .onSuccess { if (item != null) offerUndo(listOf(item), isClearAll = false, rows = rows) }
+                .onFailure {
                     _state.update {
-                        it.copy(error = e.message ?: str(R.string.v19_watch_err_remove, "Couldn't remove that listing."))
+                        it.copy(error = str(R.string.v19_watch_err_remove, "Couldn't remove that listing."))
                     }
                 }
         }
+    }
+
+    /** Stored rows for [ids], read before deletion so Undo can re-insert them unchanged. */
+    private suspend fun snapshotRows(ids: Set<Int>?): List<WatchlistEntity> {
+        val dao = db?.watchlistDao() ?: return emptyList()
+        return runCatching { dao.getAll() }.getOrDefault(emptyList())
+            .filter { ids == null || it.listingId in ids }
     }
 
     /** Best-effort network refresh of last-known prices (Room-backed). */
@@ -135,9 +154,9 @@ class WatchlistViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(isRefreshing = true, error = null) }
             runCatching { repository.refreshPrices() }
-                .onFailure { e ->
+                .onFailure {
                     _state.update {
-                        it.copy(error = e.message ?: str(R.string.v19_watch_err_refresh, "Couldn't refresh prices."))
+                        it.copy(error = str(R.string.v19_watch_err_refresh, "Couldn't refresh prices."))
                     }
                 }
             _state.update { it.copy(isRefreshing = false) }
@@ -147,20 +166,38 @@ class WatchlistViewModel @Inject constructor(
     private fun clearAll() {
         val cleared = _state.value.items
         viewModelScope.launch {
+            val rows = snapshotRows(ids = null)
             runCatching { repository.clear() }
-                .onSuccess { offerUndo(cleared, isClearAll = true) }
-                .onFailure { e ->
+                .onSuccess { offerUndo(cleared, isClearAll = true, rows = rows) }
+                .onFailure {
                     _state.update {
-                        it.copy(error = e.message ?: str(R.string.v19_watch_err_clear, "Couldn't clear your watchlist."))
+                        it.copy(error = str(R.string.v19_watch_err_clear, "Couldn't clear your watchlist."))
                     }
                 }
         }
     }
 
-    /** Retain the cleared entities until the undo window expires. */
-    private fun offerUndo(items: List<WatchItem>, isClearAll: Boolean) {
+    /**
+     * Retain the removed entities until the undo window expires. A removal
+     * while another Undo is still pending merges into it (one snackbar, one
+     * Undo that restores everything) instead of discarding the earlier one.
+     */
+    private fun offerUndo(items: List<WatchItem>, isClearAll: Boolean, rows: List<WatchlistEntity>) {
         if (items.isEmpty()) return
-        val undo = WatchlistUndo(items, isClearAll, System.currentTimeMillis() + UNDO_WINDOW_MS)
+        val previous = _state.value.pendingUndo
+            ?.takeIf { System.currentTimeMillis() <= it.expiresAtMs }
+        val undo = if (previous == null) {
+            WatchlistUndo(items, isClearAll, System.currentTimeMillis() + UNDO_WINDOW_MS, rows)
+        } else {
+            val newIds = items.map { it.id }.toSet()
+            val newRowIds = rows.map { it.listingId }.toSet()
+            WatchlistUndo(
+                items = previous.items.filter { it.id !in newIds } + items,
+                isClearAll = previous.isClearAll || isClearAll,
+                expiresAtMs = System.currentTimeMillis() + UNDO_WINDOW_MS,
+                rows = previous.rows.filter { it.listingId !in newRowIds } + rows,
+            )
+        }
         _state.update { it.copy(pendingUndo = undo) }
         undoExpiryJob?.cancel()
         undoExpiryJob = viewModelScope.launch {
@@ -174,13 +211,21 @@ class WatchlistViewModel @Inject constructor(
         dismissUndo()
         if (System.currentTimeMillis() > undo.expiresAtMs) return
         viewModelScope.launch {
+            val dao = db?.watchlistDao()
+            val rowsById = undo.rows.associateBy { it.listingId }
+            var failed = false
             undo.items.forEach { item ->
-                runCatching { repository.add(item.toListing()) }
-                    .onFailure { e ->
-                        _state.update {
-                            it.copy(error = e.message ?: str(R.string.v19_watch_err_restore, "Couldn't restore the removed items."))
-                        }
-                    }
+                val row = rowsById[item.id]
+                runCatching {
+                    // Exact stored row when we have it (keeps title, add-price
+                    // baseline and addedAt); otherwise the lossy re-add path.
+                    if (dao != null && row != null) dao.upsert(row) else repository.add(item.toListing())
+                }.onFailure { failed = true }
+            }
+            if (failed) {
+                _state.update {
+                    it.copy(error = str(R.string.v19_watch_err_restore, "Couldn't restore the removed items."))
+                }
             }
         }
     }
@@ -192,11 +237,9 @@ class WatchlistViewModel @Inject constructor(
     }
 
     /**
-     * Re-add path for Undo. Note: [WatchlistRepository.add] re-baselines the
-     * drop snapshot at the current price, so a restored row starts a fresh
-     * price-drop history (the Clear-all dialog warns about this). A
-     * full-fidelity restore (original add-price baseline / addedAt) needs a
-     * repository restore API — tracked as follow-up.
+     * Fallback re-add path for Undo when no stored row was captured (no DB in
+     * tests). [WatchlistRepository.add] re-baselines the drop snapshot at the
+     * current price; the title is carried over so the row is never blank.
      */
     private fun WatchItem.toListing(): Listing = Listing(
         id = id,

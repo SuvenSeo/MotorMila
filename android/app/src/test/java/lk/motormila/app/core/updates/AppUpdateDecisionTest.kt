@@ -28,15 +28,15 @@ class AppUpdateDecisionTest {
 
     @Test
     fun missingOrMalformedHashIsNeverOffered() {
-        assertEquals(AppUpdateChecker.CheckResult.UpToDate, AppUpdateChecker.decide(release(18, sha256 = null), 17))
-        assertEquals(AppUpdateChecker.CheckResult.UpToDate, AppUpdateChecker.decide(release(18, sha256 = "abc"), 17))
+        assertEquals(AppUpdateChecker.CheckResult.CheckFailed, AppUpdateChecker.decide(release(18, sha256 = null), 17))
+        assertEquals(AppUpdateChecker.CheckResult.CheckFailed, AppUpdateChecker.decide(release(18, sha256 = "abc"), 17))
     }
 
     @Test
     fun sameOrOlderVersionIsUpToDate() {
         assertEquals(AppUpdateChecker.CheckResult.UpToDate, AppUpdateChecker.decide(release(17), 17))
-        assertEquals(AppUpdateChecker.CheckResult.UpToDate, AppUpdateChecker.decide(release(null), 17))
-        assertEquals(AppUpdateChecker.CheckResult.UpToDate, AppUpdateChecker.decide(release(18, url = " "), 17))
+        assertEquals(AppUpdateChecker.CheckResult.CheckFailed, AppUpdateChecker.decide(release(null), 17))
+        assertEquals(AppUpdateChecker.CheckResult.CheckFailed, AppUpdateChecker.decide(release(18, url = " "), 17))
     }
 
     @Test

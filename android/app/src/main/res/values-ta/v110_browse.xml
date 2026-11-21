@@ -1,0 +1,17 @@
+<resources>
+    <string name="v110m_alert_deleted">விழிப்பூட்டல் நீக்கப்பட்டது</string>
+    <string name="v110m_any_vehicle">எந்த வாகனமும்</string>
+    <string name="v110m_auth_err_wrong_credentials">மின்னஞ்சல் அல்லது கடவுச்சொல் தவறானது</string>
+    <string name="v110_card_listed_on">%1$s தளத்தில் பட்டியலிடப்பட்டது</string>
+    <string name="v110_card_no_photo_source">%1$s தளத்திலிருந்து படம் கிடைக்கவில்லை</string>
+    <string name="v110_card_no_photo">படம் கிடைக்கவில்லை</string>
+    <string name="v110_search_refresh_failed">முடிவுகளைப் புதுப்பிக்க முடியவில்லை. மீண்டும் முயலவும்.</string>
+    <string name="v110m_watch_removed_many">%1$d வாகனங்கள் அகற்றப்பட்டன</string>
+    <string name="v110m_more_options">மேலும் விருப்பங்கள்</string>
+    <string name="v110m_widget_mom">கடந்த மாதத்தை விட %1$s</string>
+    <string name="v110m_widget_updated">புதுப்பித்தது %1$s</string>
+    <string name="v110m_widget_index">விலைக் குறியீடு %1$s</string>
+    <string name="v110m_widget_drop">விலை %1$s குறைந்தது</string>
+    <string name="v110_compare_best">இந்த ஒப்பீட்டில் சிறந்த மதிப்பு</string>
+    <string name="v110_compare_differs">வாகனங்களுக்கிடையில் வேறுபடுகிறது</string>
+</resources>

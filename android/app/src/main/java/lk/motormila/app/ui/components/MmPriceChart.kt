@@ -33,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -55,8 +56,13 @@ import lk.motormila.app.ui.theme.MmType
  * - Scrub: touch/drag shows a cursor + the exact price/date above the chart
  *   with a light tick haptic per point. Dates render in the app locale,
  *   never as raw scraped ISO strings.
- * - [typicalLkr] draws a dashed reference line labelled "Typical".
- * - Min/max axis value labels anchor the range.
+ * - X positions follow time (first → last tracked date) whenever every
+ *   point's date parses, so a cut after two quiet months doesn't look like
+ *   the day after; index spacing is the fallback. Start / end dates sit
+ *   under the plot.
+ * - [typicalLkr] draws a dashed reference line labelled "Typical" whenever a
+ *   reference exists (the range always includes it).
+ * - Min/max price labels anchor the range at the plot's top / bottom.
  * - Fewer than 2 points: a real message (localized default when [emptyText]
  *   is blank) instead of a silent blank.
  * Reduced motion: drawn complete, no animation.
@@ -93,8 +99,13 @@ fun MmPriceChart(
     var scrub by remember(points) { mutableIntStateOf(-1) }
 
     val values = points.map { it.priceLkr }
-    val lo = (listOfNotNull(values.min(), typicalLkr).min())
-    val hi = (listOfNotNull(values.max(), typicalLkr).max())
+    // 0…1 x position per point: by time when every date parses and they span
+    // more than a moment, otherwise evenly spaced by index.
+    val xFractions = remember(points) { chartXFractions(points) }
+    val minPrice = values.min()
+    val maxPrice = values.max()
+    val lo = (listOfNotNull(minPrice, typicalLkr).min())
+    val hi = (listOfNotNull(maxPrice, typicalLkr).max())
     val span = (hi - lo).takeIf { it > 0 } ?: 1.0
     val falling = values.last() < values.first()
     val lineColor = if (falling) c.dealGood else c.brand
@@ -105,6 +116,12 @@ fun MmPriceChart(
     val shownDate = remember(points, shownIdx, locale) {
         formatChartDate(points[shownIdx].scrapedAt, locale)
     }
+    val startDate = remember(points, locale) { formatChartDate(points.first().scrapedAt, locale) }
+    val endDate = remember(points, locale) { formatChartDate(points.last().scrapedAt, locale) }
+    val axisMeasurer = rememberTextMeasurer()
+    val axisStyle = MmType.current.caption.copy(color = c.textTertiary, fontFeatureSettings = "tnum")
+    val maxLabel = MmPriceFormat.compact(maxPrice)
+    val minLabel = MmPriceFormat.compact(minPrice)
     val chartCd = stringResource(
         R.string.mm_chart_cd,
         points.size,
@@ -148,8 +165,7 @@ fun MmPriceChart(
                 .height(height)
                 .semantics { contentDescription = chartCd }
                 .pointerInput(points) {
-                    fun idx(x: Float) = ((x / size.width) * (points.size - 1)).let { Math.round(it) }
-                        .coerceIn(0, points.lastIndex)
+                    fun idx(x: Float) = nearestIndex(xFractions, x / size.width)
                     detectHorizontalDragGestures(
                         onDragStart = { scrub = idx(it.x) },
                         onDragEnd = { scrub = -1 },
@@ -164,8 +180,7 @@ fun MmPriceChart(
                 .pointerInput(points) {
                     detectTapGestures(
                         onPress = {
-                            scrub = ((it.x / size.width) * (points.size - 1)).let { v -> Math.round(v) }
-                                .coerceIn(0, points.lastIndex)
+                            scrub = nearestIndex(xFractions, it.x / size.width)
                             tryAwaitRelease()
                             scrub = -1
                         },
@@ -176,7 +191,7 @@ fun MmPriceChart(
                 val w = size.width
                 val h = size.height
                 val padY = 8.dp.toPx()
-                fun x(i: Int) = w * i / (points.size - 1).toFloat()
+                fun x(i: Int) = w * xFractions[i]
                 fun y(v: Double) = (h - padY - (h - 2 * padY) * ((v - lo) / span)).toFloat()
 
                 // Baseline grid (3 hairlines).
@@ -238,9 +253,71 @@ fun MmPriceChart(
                     drawCircle(c.background, 6.dp.toPx(), Offset(sx, sy))
                     drawCircle(lineColor, 4.dp.toPx(), Offset(sx, sy))
                 }
+                // Max / min price labels at the line's own extremes (right edge).
+                if (maxPrice > minPrice) {
+                    val maxText = axisMeasurer.measure(maxLabel, axisStyle)
+                    val minText = axisMeasurer.measure(minLabel, axisStyle)
+                    val labelX = (w - maxOf(maxText.size.width, minText.size.width)).coerceAtLeast(0f)
+                    drawText(
+                        maxText,
+                        topLeft = Offset(labelX, (y(maxPrice) - maxText.size.height - 2.dp.toPx()).coerceAtLeast(0f)),
+                    )
+                    drawText(
+                        minText,
+                        topLeft = Offset(labelX, (y(minPrice) + 2.dp.toPx()).coerceAtMost(h - minText.size.height)),
+                    )
+                }
             }
         }
+        Spacer(Modifier.height(6.dp))
+        // Start / end of the tracked window.
+        Row(Modifier.fillMaxWidth()) {
+            Text(startDate, style = MmType.current.caption, color = c.textTertiary)
+            Spacer(Modifier.weight(1f))
+            Text(endDate, style = MmType.current.caption, color = c.textTertiary)
+        }
     }
+}
+
+/**
+ * 0…1 x position per point. By time when every date parses and the window
+ * spans at least an hour; evenly spaced by index otherwise.
+ */
+private fun chartXFractions(points: List<PricePoint>): List<Float> {
+    val byIndex = List(points.size) { i -> i / (points.size - 1).coerceAtLeast(1).toFloat() }
+    val times = points.map { parseChartMillis(it.scrapedAt) ?: return byIndex }
+    val t0 = times.min()
+    val span = times.max() - t0
+    if (span < 3_600_000L) return byIndex
+    return times.map { ((it - t0).toDouble() / span).toFloat().coerceIn(0f, 1f) }
+}
+
+/** Index of the point whose x fraction is closest to [fraction]. */
+private fun nearestIndex(xFractions: List<Float>, fraction: Float): Int {
+    var best = 0
+    var bestDist = Float.MAX_VALUE
+    xFractions.forEachIndexed { i, fx ->
+        val d = kotlin.math.abs(fx - fraction)
+        if (d < bestDist) {
+            bestDist = d
+            best = i
+        }
+    }
+    return best
+}
+
+/** ISO date / datetime (with or without offset) → epoch millis; null when unparseable. */
+private fun parseChartMillis(iso: String): Long? {
+    val s = iso.trim()
+    if (s.isEmpty()) return null
+    return runCatching { java.time.OffsetDateTime.parse(s).toInstant().toEpochMilli() }.getOrNull()
+        ?: runCatching { java.time.Instant.parse(s).toEpochMilli() }.getOrNull()
+        ?: runCatching {
+            java.time.LocalDateTime.parse(s.replace(' ', 'T')).toInstant(java.time.ZoneOffset.UTC).toEpochMilli()
+        }.getOrNull()
+        ?: runCatching {
+            java.time.LocalDate.parse(s.take(10)).atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli()
+        }.getOrNull()
 }
 
 /**

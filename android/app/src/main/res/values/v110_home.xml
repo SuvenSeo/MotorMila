@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.10 "Showroom" Home strings (stage hero, eyebrow section headers). -->
+<resources>
+    <!-- Hero -->
+    <string name="v110_home_kicker">Sri Lanka · live prices</string>
+    <!-- Must appear verbatim inside mm_home_title; it is drawn in the accent blue. -->
+    <string name="v110_home_headline_accent">fair price</string>
+    <string name="v110_home_featured_cd">Open featured deal: %1$s, %2$s</string>
+
+    <!-- Section eyebrows / titles -->
+    <string name="v110_home_eyebrow_deals">Below typical</string>
+    <string name="v110_home_eyebrow_drops">Just reduced</string>
+    <string name="v110_home_eyebrow_market">Market today</string>
+    <string name="v110_home_market_title">The market right now</string>
+    <string name="v110_home_eyebrow_tools">Tools</string>
+    <string name="v110_home_tools_title">Price it before you buy</string>
+    <string name="v110_home_eyebrow_models">Popular</string>
+    <string name="v110_home_eyebrow_districts">Where to buy</string>
+</resources>

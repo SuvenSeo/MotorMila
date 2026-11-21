@@ -138,11 +138,7 @@ class DetailViewModel @Inject constructor(
                 holdForTransition()
                 _state.value = _state.value.copy(listing = detail, isLoading = false)
                 observeWatchedOnce()
-                // Secondary payloads load independently; one failure must not blank the page.
-                launch { loadSimilar() }
-                launch { loadHistory() }
-                launch { loadFmv() }
-                launch { loadSeller() }
+                startSecondaryLoads()
             } catch (ce: kotlin.coroutines.cancellation.CancellationException) {
                 throw ce
             } catch (e: Exception) {
@@ -164,8 +160,29 @@ class DetailViewModel @Inject constructor(
                     error = if (gone) null else mapped.message
                         .takeIf { it.isNotBlank() } ?: "Couldn't load listing",
                 )
+                // A card preview is still on screen (audit #10): its sections must
+                // not sit on "Loading…" forever. Try the secondary payloads anyway
+                // (each fails into its own inline retry); with nothing on screen,
+                // or a listing that is gone, settle them as FAILED.
+                if (!gone && _state.value.listing?.id == listingId) {
+                    observeWatchedOnce()
+                    startSecondaryLoads()
+                } else {
+                    _state.value = _state.value.copy(
+                        similarState = DetailLoadState.FAILED, historyState = DetailLoadState.FAILED,
+                        fmvState = DetailLoadState.FAILED, sellerState = DetailLoadState.FAILED,
+                    )
+                }
             }
         }
+    }
+
+    /** Secondary payloads load independently; one failure must not blank the page. */
+    private fun startSecondaryLoads() {
+        viewModelScope.launch { loadSimilar() }
+        viewModelScope.launch { loadHistory() }
+        viewModelScope.launch { loadFmv() }
+        viewModelScope.launch { loadSeller() }
     }
 
     fun retry() {
@@ -203,9 +220,18 @@ class DetailViewModel @Inject constructor(
         val id = listingId
         _state.value = _state.value.copy(historyState = DetailLoadState.LOADING)
         try {
-            val deferredHistory = viewModelScope.async { listings.priceHistory(id) }
-            val deferredReport = viewModelScope.async { listings.historyReport(id) }
-            val history = deferredHistory.await()
+            // The seller-history report is optional garnish: its failure must not
+            // discard a perfectly good price history, so it is caught on its own.
+            val deferredReport = viewModelScope.async {
+                try {
+                    listings.historyReport(id)
+                } catch (ce: kotlin.coroutines.cancellation.CancellationException) {
+                    throw ce
+                } catch (_: Exception) {
+                    null
+                }
+            }
+            val history = listings.priceHistory(id)
             val report = deferredReport.await()
             holdForTransition()
             if (id != listingId) return

@@ -1,0 +1,17 @@
+<resources>
+    <string name="v110m_alert_deleted">ඇඟවීම මකා දැමිණි</string>
+    <string name="v110m_any_vehicle">ඕනෑම වාහනයක්</string>
+    <string name="v110m_auth_err_wrong_credentials">ඊමේල් ලිපිනය හෝ මුරපදය වැරදියි</string>
+    <string name="v110_card_listed_on">%1$s හි පළ කර ඇත</string>
+    <string name="v110_card_no_photo_source">%1$s වෙතින් ඡායාරූපයක් නැත</string>
+    <string name="v110_card_no_photo">ඡායාරූපයක් නැත</string>
+    <string name="v110_search_refresh_failed">ප්‍රතිඵල යාවත්කාලීන කළ නොහැකි විය. නැවත උත්සාහ කරන්න.</string>
+    <string name="v110m_watch_removed_many">වාහන %1$dක් ඉවත් කෙරිණි</string>
+    <string name="v110m_more_options">තවත් විකල්ප</string>
+    <string name="v110m_widget_mom">පෙර මාසයට සාපේක්ෂව %1$s</string>
+    <string name="v110m_widget_updated">යාවත්කාලීන කළේ %1$s</string>
+    <string name="v110m_widget_index">මිල දර්ශකය %1$s</string>
+    <string name="v110m_widget_drop">මිල %1$sකින් අඩු විය</string>
+    <string name="v110_compare_best">මෙම සැසඳීමේ හොඳම අගය</string>
+    <string name="v110_compare_differs">වාහන අතර වෙනස් වේ</string>
+</resources>

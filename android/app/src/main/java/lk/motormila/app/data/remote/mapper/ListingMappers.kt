@@ -49,7 +49,7 @@ fun ListingDto.toDomain(): Listing {
         priceLkr = priceLkr,
         marketMedianLkr = marketMedianLkr,
         dealScore = dealScore,
-        ctx = PriceContext(category = vehicleCategory, model = model, title = title),
+        ctx = PriceContext(category = vehicleCategory, model = model, title = title, description = description),
     )
     return toDomainRaw(
         dealScore = if (plausible) dealScore else null,
@@ -84,6 +84,7 @@ private fun ListingDto.toDomainRaw(dealScore: Double?, marketMedianLkr: Double?)
     externalUrl = externalUrl ?: url,
     engineCc = engineCapacity?.toDouble(),
     vehicleCategory = vehicleCategory,
+    description = description?.trim()?.takeIf { it.isNotEmpty() },
 )
 
 fun ListingSearchSuggestionDto.toDomain(): Listing = Listing(

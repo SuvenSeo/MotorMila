@@ -97,6 +97,12 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.positionInRoot
+import kotlin.math.sign
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -192,7 +198,6 @@ fun SearchScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val items = viewModel.paging.collectAsLazyPagingItems()
     val searchResultsCd = stringResource(R.string.mm_search_results_cd)
-    val bestDealProCd = stringResource(R.string.mm_best_deal_pro_cd)
     // Localised one-shot messages (resolved in composition, shown from effects).
     val voiceEmptyMsg = stringResource(R.string.v19_search_voice_empty)
     val voiceUnavailableMsg = stringResource(R.string.v19_search_voice_unavailable)
@@ -201,6 +206,7 @@ fun SearchScreen(
     val loadErrorMsg = stringResource(R.string.v19_search_load_error)
     val loadMoreErrorMsg = stringResource(R.string.v19_search_load_more_error)
     val backToTopLabel = stringResource(R.string.v19_search_back_to_top)
+    val refreshFailedMsg = stringResource(R.string.v110_search_refresh_failed)
     val countFormat = remember { NumberFormat.getIntegerInstance(Locale.US) }
     val fromSnapshot by viewModel.fromSnapshot.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
@@ -289,10 +295,35 @@ fun SearchScreen(
     // 0 header for the first frame drew the grid up under the chips.
     var headerPx by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(0) }
     val headerH = with(density) { headerPx.toDp() }
+    // Live header height. [headerPx] (the grid's top padding) follows it only
+    // at the top of the list; scrolled, it keeps the expanded height so the
+    // header collapsing / expanding never shifts the results under it.
+    var headerLivePx by remember { mutableStateOf(0) }
     val searchBackdrop = remember { HazeState() }
     val gridState = rememberLazyGridState()
     val scrolledUnder by remember {
         derivedStateOf { gridState.firstVisibleItemIndex > 0 || gridState.firstVisibleItemScrollOffset > 4 }
+    }
+    LaunchedEffect(scrolledUnder) {
+        if (!scrolledUnder && headerLivePx > 0) headerPx = headerLivePx
+    }
+    // Collapse on scroll: scrolling the results down hides the category and
+    // active-filter chip rows; scrolling up (or any filter change) shows them.
+    val headerCollapse = remember(density) { HeaderCollapseState(thresholdPx = with(density) { 24.dp.toPx() }) }
+    val headerCollapsed = headerCollapse.collapsed && scrolledUnder
+    LaunchedEffect(state.filters) { headerCollapse.expand() }
+    // Suggestions / recents render as an overlay under the field (they never
+    // change the measured header height, so results don't jump).
+    var searchFocused by remember { mutableStateOf(false) }
+    var searchBarBottomPx by remember { mutableStateOf(0f) }
+    var overlayTopPx by remember { mutableStateOf(0f) }
+    val submitSearch: (String) -> Unit = { q ->
+        val trimmed = q.trim()
+        if (onOpenSharedUrl != null && Regex("^(https?://|motormila://)", RegexOption.IGNORE_CASE).containsMatchIn(trimmed)) {
+            onOpenSharedUrl(trimmed)
+        } else {
+            viewModel.onSearch(q)
+        }
     }
     val headerGlass by animateFloatAsState(
         if (scrolledUnder) 1f else 0f,
@@ -321,16 +352,20 @@ fun SearchScreen(
                 indicatorTop = headerH,
                 modifier = Modifier
                     .fillMaxSize()
+                    .nestedScroll(headerCollapse.connection)
                     .glassBackdrop(searchBackdrop),
             ) {
                 // Results update (filter apply, sort, category, refresh) cross-fades
                 // between skeleton / error / empty / grid instead of cutting.
+                // Loaded results stay on screen through a refresh (the pull
+                // indicator shows it) and through a failed refresh (header
+                // banner): skeleton and full error only when there is nothing.
                 val phase = when {
+                    items.itemCount > 0 -> 4
                     isRefreshing -> 0
                     items.loadState.refresh is LoadState.Error -> 1
-                    items.itemCount == 0 && !items.loadState.append.endOfPaginationReached -> 2
-                    items.itemCount == 0 -> 3
-                    else -> 4
+                    !items.loadState.append.endOfPaginationReached -> 2
+                    else -> 3
                 }
                 AnimatedContent(
                     targetState = phase,
@@ -362,11 +397,11 @@ fun SearchScreen(
                     1 -> {
                         // Safe cast: this branch is still drawn while it fades out.
                         val err = items.loadState.refresh as? LoadState.Error
+                        // Only reached with no items, so there is no cached list to
+                        // offer (the old "Show cached results" just retried).
                         ErrorState(
                             message = err?.error?.message ?: loadErrorMsg,
                             onRetry = { items.retry() },
-                            cachedAvailable = items.itemCount > 0,
-                            onShowCached = { items.retry() },
                             modifier = Modifier.fillMaxSize().padding(top = headerH, bottom = bottomPad),
                         )
                     }
@@ -544,12 +579,15 @@ fun SearchScreen(
                 }
             }
         CompositionLocalProvider(LocalGlassEnv provides glassEnv.copy(backdrop = searchBackdrop)) {
-        Box(Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxSize().onGloballyPositioned { overlayTopPx = it.positionInRoot().y }) {
         Column(
             Modifier
                 .align(Alignment.TopStart)
                 .fillMaxWidth()
-                .onSizeChanged { headerPx = it.height }
+                .onSizeChanged {
+                    headerLivePx = it.height
+                    if (!scrolledUnder) headerPx = it.height
+                }
                 .then(
                     if (glassEnv.solid) {
                         Modifier.background(LiquidGlass.solid(c).copy(alpha = 0.97f))
@@ -569,7 +607,13 @@ fun SearchScreen(
                 .padding(bottom = 4.dp),
         ) {
             if (items.loadState.refresh is LoadState.Error) {
-                OfflineBanner(visible = true, onRetry = { items.refresh() })
+                // With results on screen a failed refresh keeps them and says so
+                // here (no full-screen error); with none, ErrorState explains.
+                OfflineBanner(
+                    visible = true,
+                    text = if (items.itemCount > 0) refreshFailedMsg else null,
+                    onRetry = { items.retry() },
+                )
             } else if (fromSnapshot) {
                 OfflineBanner(
                     visible = true,
@@ -580,14 +624,7 @@ fun SearchScreen(
             SearchBar(
                 query = state.query,
                 onQueryChange = viewModel::onQueryChange,
-                onSearch = { q ->
-                    val t = q.trim()
-                    if (onOpenSharedUrl != null && Regex("^(https?://|motormila://)", RegexOption.IGNORE_CASE).containsMatchIn(t)) {
-                        onOpenSharedUrl(t)
-                    } else {
-                        viewModel.onSearch(q)
-                    }
-                },
+                onSearch = submitSearch,
                 suggestions = state.suggestions,
                 recentSearches = state.recentSearches,
                 onSuggestionClick = { onListingClick(it.id) },
@@ -604,40 +641,26 @@ fun SearchScreen(
                 } else {
                     null
                 },
+                // Dropdown drawn as an overlay below (see SearchSuggestionsPanel).
+                showDropdown = false,
+                onFocusedChange = { searchFocused = it },
                 modifier = Modifier
+                    .onGloballyPositioned { searchBarBottomPx = it.boundsInRoot().bottom }
                     .fillMaxWidth()
                     .padding(horizontal = MmSpacing.gutter, vertical = 8.dp),
             )
-            // Free tier has no deal_score — backend forces `newest` (web parity).
-            if (!state.isPro) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = MmSpacing.gutter)
-                        .semantics { contentDescription = bestDealProCd },
-                ) {
-                    Icon(
-                        Icons.Filled.Lock,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(14.dp),
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        stringResource(R.string.glass_free_plan_note),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                Spacer(Modifier.height(4.dp))
+            // Free-plan note lives in the sort menu now (on the locked Best-deal
+            // row), not as a separate header row.
+            AnimatedVisibility(
+                visible = !headerCollapsed,
+                enter = if (reducedMotion) fadeIn(tween(0)) else expandVertically(MmMotion.gentle()) + fadeIn(tween(MmMotion.Base)),
+                exit = if (reducedMotion) fadeOut(tween(0)) else shrinkVertically(MmMotion.snappy()) + fadeOut(tween(MmMotion.Fast)),
+            ) {
+                CategoryChipRow(
+                    selected = VehicleCategory.fromApi(state.filters.vehicleCategory),
+                    onSelect = viewModel::onCategoryChange,
+                )
             }
-            CategoryChipRow(
-                selected = VehicleCategory.fromApi(state.filters.vehicleCategory),
-                onSelect = viewModel::onCategoryChange,
-            )
             SortFilterRow(
                 sort = state.filters.sort,
                 isPro = state.isPro,
@@ -658,6 +681,27 @@ fun SearchScreen(
             ActiveFilterChipsRow(
                 chips = activeFilterChips(state.filters),
                 onRemove = viewModel::removeFilter,
+                collapsed = headerCollapsed,
+            )
+        }
+
+        // Search suggestions / recent searches: an overlay pinned under the
+        // field, drawn over the chip rows and results (header height unchanged).
+        if (searchFocused && (state.query.isNotBlank() || state.recentSearches.isNotEmpty())) {
+            lk.motormila.app.ui.components.SearchSuggestionsPanel(
+                query = state.query,
+                suggestions = state.suggestions,
+                recentSearches = state.recentSearches,
+                onSubmit = submitSearch,
+                onSuggestionClick = { onListingClick(it.id) },
+                onRecentClick = { viewModel.onSearch(it) },
+                onRecentRemove = viewModel::removeRecent,
+                onClearRecents = viewModel::clearRecents,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .offset { IntOffset(0, (searchBarBottomPx - overlayTopPx).roundToInt().coerceAtLeast(0)) }
+                    .fillMaxWidth()
+                    .padding(horizontal = MmSpacing.gutter),
             )
         }
 
@@ -736,7 +780,8 @@ fun SearchScreen(
                 sources = state.sources,
                 onMakeChange = viewModel::loadModels,
                 countFor = viewModel::countFor,
-                onCreateAlert = viewModel::createAlertFromFilters,
+                // The sheet hands over its DRAFT, not the applied filters.
+                onCreateAlert = { draft -> viewModel.createAlertFromFilters(draft) },
             )
         }
 
@@ -885,7 +930,11 @@ internal fun SortFilterRow(
     }
 }
 
-/** Compact sort button + one-tap menu with all five sorts (Pro lock on Best deal for free plans). */
+/**
+ * Compact sort button + one-tap menu with all five sorts. Free plans see a
+ * lock on the button and on the Best-deal row, which also carries the
+ * free-plan note (was a separate header row).
+ */
 @Composable
 private fun SortMenuButton(
     sort: String,
@@ -895,8 +944,8 @@ private fun SortMenuButton(
     val c = MmColors.current
     var open by remember { mutableStateOf(false) }
     val activeLabel = sortLabel(sort)
-    val sortCd = stringResource(R.string.v19_search_sort_cd, activeLabel)
     val proCd = stringResource(R.string.mm_best_deal_pro_cd)
+    val sortCd = stringResource(R.string.v19_search_sort_cd, activeLabel).let { if (isPro) it else "$it. $proCd" }
     Box {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -917,6 +966,15 @@ private fun SortMenuButton(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f, fill = false),
             )
+            if (!isPro) {
+                Spacer(Modifier.width(4.dp))
+                Icon(
+                    Icons.Filled.Lock,
+                    contentDescription = null,
+                    tint = c.textTertiary,
+                    modifier = Modifier.size(12.dp),
+                )
+            }
             Icon(
                 Icons.Filled.ArrowDropDown,
                 contentDescription = null,
@@ -929,7 +987,20 @@ private fun SortMenuButton(
                 val locked = s == ListingSorts.DEAL_SCORE && !isPro
                 DropdownMenuItem(
                     text = {
-                        Text(sortLabel(s), style = MmType.current.label, maxLines = 1)
+                        Column {
+                            Text(sortLabel(s), style = MmType.current.label, maxLines = 1)
+                            if (locked) {
+                                // Free tier has no deal_score: backend forces `newest` (web parity).
+                                Text(
+                                    stringResource(R.string.glass_free_plan_note),
+                                    style = MmType.current.caption,
+                                    color = c.textTertiary,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.widthIn(max = 220.dp),
+                                )
+                            }
+                        }
                     },
                     onClick = {
                         open = false
@@ -1082,17 +1153,20 @@ private fun FilterCountBadge(count: Int, modifier: Modifier = Modifier) {
 /**
  * Removable chips for the applied filters, under the sort row. Each chip
  * removes its filter (spring placement / fade); the row itself expands and
- * collapses as the first chip arrives or the last leaves.
+ * collapses as the first chip arrives or the last leaves, and while the
+ * header is collapsed on scroll.
  */
 @Composable
 internal fun ActiveFilterChipsRow(
     chips: List<lk.motormila.app.ui.components.ActiveFilterChip>,
     onRemove: (String) -> Unit,
+    /** Header collapsed on scroll: the row folds away like the category chips. */
+    collapsed: Boolean = false,
 ) {
     val c = MmColors.current
     val haptics = MmHaptics.current
     AnimatedVisibility(
-        visible = chips.isNotEmpty(),
+        visible = chips.isNotEmpty() && !collapsed,
         enter = if (MmMotion.reduced) fadeIn(tween(0)) else expandVertically(MmMotion.gentle()) + fadeIn(tween(MmMotion.Base)),
         exit = if (MmMotion.reduced) fadeOut(tween(0)) else shrinkVertically(MmMotion.snappy()) + fadeOut(tween(MmMotion.Fast)),
     ) {
@@ -1383,4 +1457,37 @@ private fun FlyingCompareThumb(
                 }
             },
     )
+}
+
+/**
+ * Scroll direction → search header collapse (same feel as the tab bar's
+ * minimise): ~24dp of scrolling down collapses, the same up expands, and an
+ * over-scroll at the very top always expands.
+ */
+@androidx.compose.runtime.Stable
+private class HeaderCollapseState(private val thresholdPx: Float) {
+    var collapsed by mutableStateOf(false)
+        private set
+    private var acc = 0f
+
+    val connection: NestedScrollConnection = object : NestedScrollConnection {
+        override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+            val dy = consumed.y
+            if (dy == 0f && available.y > 0f) {
+                collapsed = false
+                acc = 0f
+                return Offset.Zero
+            }
+            if (dy == 0f) return Offset.Zero
+            if (sign(dy) != sign(acc)) acc = 0f
+            acc += dy
+            if (acc < -thresholdPx) collapsed = true else if (acc > thresholdPx) collapsed = false
+            return Offset.Zero
+        }
+    }
+
+    fun expand() {
+        collapsed = false
+        acc = 0f
+    }
 }

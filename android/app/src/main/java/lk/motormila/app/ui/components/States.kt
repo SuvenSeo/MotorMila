@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -421,17 +422,26 @@ fun OfflineBanner(
     val bannerDesc = stringResource(R.string.v19_offline_banner_desc)
     val retryDesc = stringResource(R.string.v19_offline_retry_desc)
     val dismissDesc = stringResource(R.string.v19_offline_dismiss_desc)
+    // A custom message (snapshot / refresh failed) is what TalkBack reads,
+    // not the generic "offline, cached data" sentence.
+    val description = if (text != null) {
+        if (onRetry != null) "$text. $retryDesc" else text
+    } else {
+        bannerDesc
+    }
     lk.motormila.app.ui.theme.CappedFontScale(max = 1.3f) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
+            // Tappable (retry): at least a 48dp target.
+            .then(if (onRetry != null) Modifier.heightIn(min = 48.dp) else Modifier)
             // Rounded rect, not a stadium: a 2-line banner in a pill looked like a blob.
             .clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp))
             .background(MaterialTheme.colorScheme.secondaryContainer)
             .then(if (onRetry != null) Modifier.mmTappable(role = androidx.compose.ui.semantics.Role.Button, pressedScale = 1f) { onRetry() } else Modifier)
             .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp)
-            .semantics { contentDescription = bannerDesc },
+            .semantics { contentDescription = description },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(Icons.Filled.WifiOff, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(16.dp))

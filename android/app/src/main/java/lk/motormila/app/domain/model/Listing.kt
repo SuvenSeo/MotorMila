@@ -33,13 +33,17 @@ data class Listing(
     val engineCc: Double?,
     /** Backend `vehicle_category` (cars, suvs, motorbikes, three-wheelers…); null on cached/legacy rows. */
     val vehicleCategory: String? = null,
+    /** Seller's ad text when the backend serves it; feeds the verdict's "for parts" / lease checks. */
+    val description: String? = null,
 ) {
     /** Compact LKR display ("Rs 12.45 Mn"), or "Price on request". */
     fun formattedPrice(): String = lk.motormila.app.core.format.LkrFormat.price(priceLkr)
 
     /** Ad text + category/model the one price verdict reads. */
     val priceContext: lk.motormila.app.core.price.PriceContext
-        get() = lk.motormila.app.core.price.PriceContext(category = vehicleCategory, model = model, title = title)
+        get() = lk.motormila.app.core.price.PriceContext(
+            category = vehicleCategory, model = model, title = title, description = description,
+        )
 
     /**
      * The one price verdict from this row alone (cards, lists, compare): the

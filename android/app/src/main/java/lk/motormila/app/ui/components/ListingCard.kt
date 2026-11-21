@@ -4,7 +4,11 @@ package lk.motormila.app.ui.components
 
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.animateContentSize
-import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.draw.alpha
+import lk.motormila.app.ui.theme.tabular
+import kotlin.math.roundToInt
 import androidx.compose.ui.layout.boundsInRoot
 import lk.motormila.app.ui.theme.glassEdges
 import lk.motormila.app.ui.theme.mmPress
@@ -97,11 +101,17 @@ import java.time.Duration
 import java.time.Instant
 
 /**
- * Listing card (design v2): 4:3 photo with a deal verdict pill (same rules
- * as web: asking vs typical asking, lease takeovers get no verdict, very
- * cheap → amber "verify") and a glass save button; below, title, compact
- * price in MILLIONS ("Rs 8.5 Mn") and one quiet meta line. Press-scale 0.97,
- * save haptic, hero image shared-element → detail gallery.
+ * Listing card (1.10 showroom, web ListingCard.tsx anatomy): 16:10 photo with
+ * a small condition chip top-start and save + compare on the photo; below,
+ * title with the year on the end, one "·"-joined spec line, the price at
+ * title2 (tabular), the deal verdict as a compact soft badge UNDER the price
+ * (never a pill covering the photo; same rules as web: lease takeovers get no
+ * verdict, very cheap → amber "verify"), the typical-price anchor + market
+ * bar, and a hairline footer with district + "Listed on X · checked Y".
+ *
+ * Every slot is reserved (2-line title, badge row, evidence, footer) so cells
+ * in a grid row come out the same height. Press-scale 0.97, save haptic, hero
+ * image shared-element → detail gallery.
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -122,71 +132,13 @@ fun ListingCard(
     onWhy: (() -> Unit)? = null,
 ) {
     val c = MmColors.current
-    // Photo bounds for the fly-to-tray motion; a plain holder (no recomposition).
-    val photoBounds = remember { arrayOf(androidx.compose.ui.geometry.Rect.Zero) }
+    // Photo coordinates for the fly-to-tray motion: bounds are read at tap
+    // time (onPlaced only hands over the coordinates object, no per-frame work).
+    val photoCoords = remember { arrayOfNulls<LayoutCoordinates>(1) }
     val t = MmType.current
     val haptics = MmHaptics.current
     val reduced = MmMotion.reduced
-    val sharedScope = LocalSharedTransitionScope.current
-    val animatedScope = LocalNavAnimatedVisibilityScope.current
-    val heroShared = if (sharedScope != null && animatedScope != null) {
-        with(sharedScope) {
-            Modifier.sharedElement(
-                rememberSharedContentState(key = listingHeroKey(listing.id)),
-                animatedScope,
-                boundsTransform = motormilaSharedBoundsTransform(),
-            )
-        }
-    } else {
-        sharedElementModifier
-    }
-    val priceShared = if (sharedScope != null && animatedScope != null) {
-        with(sharedScope) {
-            Modifier.sharedBounds(
-                rememberSharedContentState(key = listingPriceKey(listing.id)),
-                animatedScope,
-                boundsTransform = motormilaSharedBoundsTransform(),
-                resizeMode = PriceMorphResize,
-            )
-        }
-    } else {
-        Modifier
-    }
-    val titleShared = if (sharedScope != null && animatedScope != null) {
-        with(sharedScope) {
-            Modifier.sharedBounds(
-                rememberSharedContentState(key = listingTitleKey(listing.id)),
-                animatedScope,
-                boundsTransform = motormilaSharedBoundsTransform(),
-            )
-        }
-    } else {
-        Modifier
-    }
-    // Container transform (card -> whole Detail page). Detail carries the
-    // matching sharedBounds on its root only when opened from a card.
-    val cardShared = if (sharedScope != null && animatedScope != null) {
-        with(sharedScope) {
-            Modifier.sharedBounds(
-                rememberSharedContentState(key = listingCardKey(listing.id)),
-                animatedScope,
-                // Fade-through: the card's own content is scaled with the
-                // container (ScaleToBounds), so at full-page bounds it read ~2x
-                // (giant Compare pill / spec line). It leaves fast on open and
-                // only comes back once the page has mostly shrunk into it.
-                enter = androidx.compose.animation.fadeIn(
-                    androidx.compose.animation.core.tween(200, delayMillis = 140, easing = lk.motormila.app.ui.theme.MmMotion.Standard),
-                ),
-                exit = androidx.compose.animation.fadeOut(
-                    androidx.compose.animation.core.tween(90, easing = lk.motormila.app.ui.theme.MmMotion.Exit),
-                ),
-                boundsTransform = motormilaSharedBoundsTransform(),
-                clipInOverlayDuringTransition = OverlayClip(lk.motormila.app.ui.theme.MmShapes.lg),
-            )
-        }
-    } else {
-        Modifier
-    }
+    val shared = listingSharedModifiers(listing.id, sharedElementModifier, MmShapes.lg)
     // The one price verdict from the row (same rules as the detail screen).
     val verdict = remember(listing.id, listing.priceLkr, listing.marketMedianLkr, listing.title, listing.model) {
         MmDealVerdict.from(
@@ -194,25 +146,46 @@ fun ListingCard(
             isLeaseTakeover = MmLeaseTakeover.detect(listing.title, listing.model),
         )
     }
+    val isLease = verdict.kind == MmDealVerdict.Kind.LEASE
     val isPro = LocalIsPro.current
     val priceText = MmPriceFormat.compact(listing.priceLkr, stringResource(R.string.mm_price_on_request))
-    // Evidence layer: typical-price anchor + market position + source/checked-ago.
+    // Evidence layer: typical-price anchor + market position. A lease
+    // takeover's asking price isn't the full price, so it gets neither.
     val typicalLkr = listing.marketMedianLkr?.takeIf { it > 0 }
-    val typicalText = if (typicalLkr != null) {
+    val typicalText = if (typicalLkr != null && !isLease) {
         stringResource(R.string.v19_search_typical_price, MmPriceFormat.compact(typicalLkr))
     } else {
         null
     }
-    val meta = metaLine(listing)
+    val specs = specLine(listing)
+    val conditionText = listing.condition?.trim()?.takeIf { it.isNotBlank() }
+        ?.let { optionLabel(it.lowercase().replace(' ', '_')) }
+    val districtText = (listing.district?.takeIf { it.isNotBlank() } ?: listing.city?.takeIf { it.isNotBlank() })
     val sourceText = listing.source?.takeIf { it.isNotBlank() }?.let { sourceLabel(it) }
     val agoText = checkedAgoText(listing.lastSeenAt ?: listing.scrapedAt)
-    val footerText = listOfNotNull(sourceText, agoText).joinToString(" · ")
+    val footerText = listOfNotNull(
+        sourceText?.let { stringResource(R.string.v110_card_listed_on, it) },
+        agoText,
+    ).joinToString(" · ")
+    val noPhotoCaption = if (sourceText != null) {
+        stringResource(R.string.v110_card_no_photo_source, sourceText)
+    } else {
+        stringResource(R.string.v110_card_no_photo)
+    }
     val verdictLabel = if (showDeal) verdict.label() else null
     val lockedBadge = showDeal && verdictLabel == null && !isPro &&
         listing.dealBand() == DealBand.LOCKED && listing.priceLkr != null
-    // ONE composed description (name + price + verdict + typical + meta) so
-    // TalkBack reads the card once, verdict included — not name+price twice.
-    val cardCd = composeListingCd(listing.displayName, priceText, verdictLabel, typicalText, meta, lockedBadge)
+    // ONE composed description (name, price, verdict, typical, specs, place,
+    // source + freshness) so TalkBack reads the card once, verdict included.
+    val cardCd = composeListingCd(
+        name = listing.displayName,
+        priceText = priceText,
+        verdictLabel = verdictLabel,
+        typicalText = typicalText,
+        meta = listOfNotNull(conditionText, listing.year?.toString(), specs, districtText).joinToString(", "),
+        lockedBadge = lockedBadge,
+        footer = footerText.takeIf { it.isNotBlank() },
+    )
 
     MmCard(
         onClick = {
@@ -223,7 +196,7 @@ fun ListingCard(
         contentPadding = PaddingValues(0.dp),
         modifier = modifier
             .fillMaxWidth()
-            .then(cardShared)
+            .then(shared.card)
             // Selected for compare: a brand ring on the whole card, so the state
             // reads at a glance in the grid (iOS selection style).
             .then(
@@ -235,50 +208,29 @@ fun ListingCard(
             MmImage(
                 url = listing.heroImageUrl,
                 contentDescription = null,
+                fallbackCaption = noPhotoCaption,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(4f / 3f)
+                    // 16:10 like the web card (was 4:3): more cars per screen.
+                    .aspectRatio(16f / 10f)
                     .then(
                         if (onCompareFly != null) {
-                            Modifier.onGloballyPositioned { photoBounds[0] = it.boundsInRoot() }
+                            Modifier.onPlaced { photoCoords[0] = it }
                         } else {
                             Modifier
                         },
                     )
                     .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-                    .then(heroShared),
+                    .then(shared.hero),
             )
-            if (showDeal) {
-                if (verdictLabel != null) {
-                    MmDealBadge(
-                        label = if (verdict.kind == MmDealVerdict.Kind.LEASE) stringResource(R.string.mm_lease_short) else verdictLabel,
-                        tone = verdict.tone,
-                        onImage = true,
-                        onWhy = onWhy,
-                        // End inset keeps the pill clear of the 48dp save button
-                        // (Cal Sans Text sets ~15% wider than the old face).
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(start = 10.dp, top = 10.dp, end = 52.dp)
-                            // Without a Why action the badge is decorative: the card's
-                            // composed description already carries the verdict.
-                            .then(if (onWhy == null) Modifier.clearAndSetSemantics { } else Modifier),
-                    )
-                } else if (lockedBadge) {
-                    // Pro lock only for non-Pro users (free rows carry no score);
-                    // a Pro user's unrated ad simply has no badge.
-                    MmDealBadge(
-                        band = DealBand.LOCKED,
-                        onImage = true,
-                        onWhy = onWhy,
-                        // End inset keeps the pill clear of the 48dp save button
-                        // (Cal Sans Text sets ~15% wider than the old face).
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(start = 10.dp, top = 10.dp, end = 52.dp)
-                            .then(if (onWhy == null) Modifier.clearAndSetSemantics { } else Modifier),
-                    )
-                }
+            if (conditionText != null) {
+                ConditionChip(
+                    text = conditionText,
+                    // End inset keeps the chip clear of the 48dp save button.
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(start = 10.dp, top = 12.dp, end = 56.dp),
+                )
             }
             SaveButton(
                 saved = isWatched,
@@ -297,76 +249,225 @@ fun ListingCard(
                     enabled = compareEnabled || compareSelected,
                     listingName = listing.displayName,
                     onToggle = {
-                        if (!compareSelected) onCompareFly?.invoke(photoBounds[0])
+                        if (!compareSelected) {
+                            val bounds = photoCoords[0]?.takeIf { it.isAttached }?.boundsInRoot()
+                            onCompareFly?.invoke(bounds ?: androidx.compose.ui.geometry.Rect.Zero)
+                        }
                         onCompareToggle()
                     },
                     modifier = Modifier.align(Alignment.BottomEnd),
                 )
             }
         }
-        Column(Modifier.padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 14.dp)) {
-            Text(
-                text = listing.displayName,
-                style = t.label.copy(fontSize = 15.sp, lineHeight = 20.sp),
-                color = c.textPrimary,
-                // Two lines at every font scale: narrow 152dp cells clipped
-                // names to ~6 chars ("Merced…") when limited to one line.
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.then(titleShared),
-            )
-            Spacer(Modifier.height(4.dp))
-            // Shrinks to fit instead of dropping "Mn" at large font scales.
-            MmFitText(
-                text = priceText,
-                style = t.priceM,
-                color = c.textPrimary,
-                modifier = Modifier.then(priceShared),
-                // A price never ellipsizes: at 200 % on a 360 dp two-column grid
-                // "Rs 1.85 Mn" needs ~0.45x (was floored at 0.55 -> "Rs 1.85 …").
-                minScale = 0.3f,
-            )
-            // Evidence layer (web parity): the typical-price anchor the verdict
-            // argues from, plus a thin market-position bar. Quiet, not a shout.
-            if (typicalText != null) {
-                Spacer(Modifier.height(6.dp))
+        Column(Modifier.padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 12.dp)) {
+            // Title with the year on the end (web: callout title, year in secondary).
+            Row(verticalAlignment = Alignment.Top) {
                 Text(
-                    text = typicalText,
-                    style = t.caption,
-                    color = c.textTertiary,
-                    maxLines = 1,
+                    text = listing.displayName,
+                    style = t.label.copy(fontSize = 16.sp, lineHeight = 21.sp),
+                    color = c.textPrimary,
+                    // Two lines at every font scale (narrow 152dp cells clipped
+                    // names to ~6 chars on one line); two lines reserved always so
+                    // a grid row's cells line up.
+                    minLines = 2,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f).then(shared.title),
                 )
-                val asking = listing.priceLkr
-                if (asking != null && asking > 0 && typicalLkr != null) {
-                    Spacer(Modifier.height(4.dp))
-                    MarketPositionBar(
-                        askingLkr = asking,
-                        typicalLkr = typicalLkr,
-                        tone = verdict.tone,
+                listing.year?.let { year ->
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = year.toString(),
+                        style = t.labelS.tabular(),
+                        color = c.textSecondary,
+                        maxLines = 1,
+                        modifier = Modifier.padding(top = 3.dp),
                     )
                 }
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(2.dp))
             Text(
-                text = meta,
+                text = specs,
                 style = t.caption,
                 color = c.textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            // Source + checked-ago footer, only where the data exists.
-            if (footerText.isNotBlank()) {
-                Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(8.dp))
+            // Shrinks to fit instead of dropping "Mn" at large font scales.
+            MmFitText(
+                text = priceText,
+                style = t.title2.tabular(),
+                color = c.textPrimary,
+                modifier = Modifier.then(shared.price),
+                // A price never ellipsizes: at 200 % on a 360 dp two-column grid
+                // "Rs 1.85 Mn" needs ~0.45x.
+                minScale = 0.3f,
+            )
+            // Verdict slot: a compact soft badge under the price (48dp row, so
+            // the Why target is reachable and every card keeps the same height).
+            Box(
+                Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                if (verdictLabel != null) {
+                    MmDealBadge(
+                        label = if (isLease) stringResource(R.string.mm_lease_short) else verdictLabel,
+                        tone = verdict.tone,
+                        onWhy = onWhy,
+                        singleLine = true,
+                        // Without a Why action the badge is decorative: the card's
+                        // composed description already carries the verdict.
+                        modifier = if (onWhy == null) Modifier.clearAndSetSemantics { } else Modifier,
+                    )
+                } else if (lockedBadge) {
+                    // Pro lock only for non-Pro users (free rows carry no score);
+                    // a Pro user's unrated ad simply has no badge.
+                    MmDealBadge(
+                        band = DealBand.LOCKED,
+                        onWhy = onWhy,
+                        singleLine = true,
+                        modifier = if (onWhy == null) Modifier.clearAndSetSemantics { } else Modifier,
+                    )
+                }
+            }
+            // Evidence layer (web parity): the typical-price anchor the verdict
+            // argues from, plus a thin market-position bar. The slot is always
+            // laid out (invisible when there is nothing to show) so rows align.
+            val asking = listing.priceLkr
+            val showBar = typicalText != null && typicalLkr != null && asking != null && asking > 0
+            Column(
+                if (typicalText != null) Modifier else Modifier.alpha(0f).clearAndSetSemantics { },
+            ) {
                 Text(
-                    text = footerText,
-                    style = t.overline,
+                    text = typicalText ?: " ",
+                    style = t.caption.tabular(),
                     color = c.textTertiary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                Spacer(Modifier.height(4.dp))
+                if (showBar && asking != null && typicalLkr != null) {
+                    MarketPositionBar(
+                        askingLkr = asking,
+                        typicalLkr = typicalLkr,
+                        tone = verdict.tone,
+                    )
+                } else {
+                    Spacer(Modifier.height(6.dp))
+                }
             }
+            // Footer: hairline, district, "Listed on X · checked Y".
+            Spacer(Modifier.height(10.dp))
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(0.5.dp)
+                    .background(c.outline),
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = districtText ?: " ",
+                style = t.labelS,
+                color = c.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = footerText.ifBlank { " " },
+                style = t.caption,
+                color = c.textTertiary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
+    }
+}
+
+/** Shared-element modifiers for one listing (card / row ↔ Detail). */
+private class ListingSharedModifiers(
+    val hero: Modifier,
+    val price: Modifier,
+    val title: Modifier,
+    val card: Modifier,
+)
+
+/**
+ * The card ↔ Detail shared keys (hero photo, price, title, container). The
+ * grid card and the list row both register them, since Search opens Detail
+ * with `fromCard = true` from either layout. Outside a shared-transition
+ * scope the hero falls back to [heroFallback] and the rest are no-ops.
+ */
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+private fun listingSharedModifiers(
+    listingId: Int,
+    heroFallback: Modifier,
+    containerShape: androidx.compose.ui.graphics.Shape,
+): ListingSharedModifiers {
+    val sharedScope = LocalSharedTransitionScope.current
+    val animatedScope = LocalNavAnimatedVisibilityScope.current
+    if (sharedScope == null || animatedScope == null) {
+        return ListingSharedModifiers(heroFallback, Modifier, Modifier, Modifier)
+    }
+    return with(sharedScope) {
+        ListingSharedModifiers(
+            hero = Modifier.sharedElement(
+                rememberSharedContentState(key = listingHeroKey(listingId)),
+                animatedScope,
+                boundsTransform = motormilaSharedBoundsTransform(),
+            ),
+            price = Modifier.sharedBounds(
+                rememberSharedContentState(key = listingPriceKey(listingId)),
+                animatedScope,
+                boundsTransform = motormilaSharedBoundsTransform(),
+                resizeMode = PriceMorphResize,
+            ),
+            title = Modifier.sharedBounds(
+                rememberSharedContentState(key = listingTitleKey(listingId)),
+                animatedScope,
+                boundsTransform = motormilaSharedBoundsTransform(),
+            ),
+            // Container transform (card -> whole Detail page). Detail carries the
+            // matching sharedBounds on its root only when opened from a card.
+            card = Modifier.sharedBounds(
+                rememberSharedContentState(key = listingCardKey(listingId)),
+                animatedScope,
+                // Fade-through: the card's own content is scaled with the
+                // container (ScaleToBounds), so at full-page bounds it read ~2x
+                // (giant Compare pill / spec line). It leaves fast on open and
+                // only comes back once the page has mostly shrunk into it.
+                enter = androidx.compose.animation.fadeIn(
+                    androidx.compose.animation.core.tween(200, delayMillis = 140, easing = lk.motormila.app.ui.theme.MmMotion.Standard),
+                ),
+                exit = androidx.compose.animation.fadeOut(
+                    androidx.compose.animation.core.tween(90, easing = lk.motormila.app.ui.theme.MmMotion.Exit),
+                ),
+                boundsTransform = motormilaSharedBoundsTransform(),
+                clipInOverlayDuringTransition = OverlayClip(containerShape),
+            ),
+        )
+    }
+}
+
+/** Small dark condition chip on the photo (web: bg-black/60 pill), capped at 1.15x. */
+@Composable
+private fun ConditionChip(text: String, modifier: Modifier = Modifier) {
+    lk.motormila.app.ui.theme.CappedFontScale(max = 1.15f) {
+        Text(
+            text = text,
+            style = MmType.current.labelS,
+            color = Color.White,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = modifier
+                .clip(MmShapes.pill)
+                .background(Color(0x99000000))
+                .padding(horizontal = 9.dp, vertical = 3.dp)
+                // The card's composed description already includes it.
+                .clearAndSetSemantics { },
+        )
     }
 }
 
@@ -530,7 +631,22 @@ private fun metaLine(l: Listing): String {
     return parts.joinToString(" · ").ifBlank { fallback }
 }
 
-/** One composed card description: name, price, verdict, typical anchor, meta. */
+/**
+ * Card spec line (web `cine-card__specs`): mileage · fuel · transmission ·
+ * engine, joined by "·". District and year live elsewhere on the card.
+ */
+@Composable
+private fun specLine(l: Listing): String {
+    val parts = mutableListOf<String>()
+    l.mileageKm?.let { if (it > 0) parts += LkrFormat.km(it) }
+    l.fuelType?.takeIf { it.isNotBlank() }?.let { parts += optionLabel(it.trim().lowercase()) }
+    l.transmission?.takeIf { it.isNotBlank() }?.let { parts += optionLabel(it.trim().lowercase()) }
+    l.engineCc?.let { if (it in 50.0..10000.0) parts += "${it.roundToInt()} cc" }
+    val fallback = stringResource(R.string.v19_search_details_fallback)
+    return parts.joinToString(" · ").ifBlank { fallback }
+}
+
+/** One composed card description: name, price, verdict, typical anchor, meta, source/freshness. */
 @Composable
 private fun composeListingCd(
     name: String,
@@ -539,6 +655,7 @@ private fun composeListingCd(
     typicalText: String?,
     meta: String,
     lockedBadge: Boolean,
+    footer: String? = null,
 ): String {
     val lockedLabel = if (lockedBadge && verdictLabel == null) stringResource(R.string.mm_deal_locked) else null
     return buildString {
@@ -558,6 +675,10 @@ private fun composeListingCd(
         }
         append(", ")
         append(meta)
+        if (!footer.isNullOrBlank()) {
+            append(", ")
+            append(footer)
+        }
     }
 }
 
@@ -629,8 +750,9 @@ private fun checkedAgoText(iso: String?): String? {
 /**
  * Compact LIST row (list mode): 112×84 thumbnail + title/price/meta, matching
  * [MmListingRowSkeleton] geometry. Same evidence layer and tappable verdict as
- * the grid card; save + compare stay reachable. No shared-element morph (the
- * grid card owns the card→Detail transition keys).
+ * the grid card (the verdict sits under the price, not on the photo); save +
+ * compare stay reachable. Registers the same card → Detail shared keys as the
+ * grid card, since Search opens Detail with `fromCard = true` from either.
  */
 @Composable
 fun ListingRow(
@@ -650,16 +772,19 @@ fun ListingRow(
     val t = MmType.current
     val haptics = MmHaptics.current
     val reduced = MmMotion.reduced
+    val shared = listingSharedModifiers(listing.id, Modifier, MmShapes.md)
     val verdict = remember(listing.id, listing.priceLkr, listing.marketMedianLkr, listing.title, listing.model) {
         MmDealVerdict.from(
             listing.rowVerdict(),
             isLeaseTakeover = MmLeaseTakeover.detect(listing.title, listing.model),
         )
     }
+    val isLease = verdict.kind == MmDealVerdict.Kind.LEASE
     val isPro = LocalIsPro.current
     val priceText = MmPriceFormat.compact(listing.priceLkr, stringResource(R.string.mm_price_on_request))
     val typicalLkr = listing.marketMedianLkr?.takeIf { it > 0 }
-    val typicalText = if (typicalLkr != null) {
+    // No typical anchor / market bar for a lease takeover (not the full price).
+    val typicalText = if (typicalLkr != null && !isLease) {
         stringResource(R.string.v19_search_typical_price, MmPriceFormat.compact(typicalLkr))
     } else {
         null
@@ -667,12 +792,23 @@ fun ListingRow(
     val meta = metaLine(listing)
     val sourceText = listing.source?.takeIf { it.isNotBlank() }?.let { sourceLabel(it) }
     val agoText = checkedAgoText(listing.lastSeenAt ?: listing.scrapedAt)
-    val footerText = listOfNotNull(sourceText, agoText).joinToString(" · ")
+    val footerText = listOfNotNull(
+        sourceText?.let { stringResource(R.string.v110_card_listed_on, it) },
+        agoText,
+    ).joinToString(" · ")
     val verdictLabel = if (showDeal) verdict.label() else null
     val shortLabel = if (showDeal) verdict.shortLabel() else null
     val lockedBadge = showDeal && shortLabel == null && !isPro &&
         listing.dealBand() == DealBand.LOCKED && listing.priceLkr != null
-    val rowCd = composeListingCd(listing.displayName, priceText, verdictLabel, typicalText, meta, lockedBadge)
+    val rowCd = composeListingCd(
+        name = listing.displayName,
+        priceText = priceText,
+        verdictLabel = verdictLabel,
+        typicalText = typicalText,
+        meta = meta,
+        lockedBadge = lockedBadge,
+        footer = footerText.takeIf { it.isNotBlank() },
+    )
 
     MmCard(
         onClick = {
@@ -683,6 +819,7 @@ fun ListingRow(
         shape = MmShapes.md,
         modifier = modifier
             .fillMaxWidth()
+            .then(shared.card)
             .then(
                 if (compareSelected == true) Modifier.border(2.dp, c.brand, MmShapes.md) else Modifier,
             )
@@ -693,8 +830,8 @@ fun ListingRow(
             horizontalArrangement = Arrangement.spacedBy(MmSpacing.md),
             verticalAlignment = Alignment.Top,
         ) {
-            // Thumbnail (MmListingRowSkeleton geometry) with the short verdict
-            // pill and the compare toggle on the photo, like the grid card.
+            // Thumbnail (MmListingRowSkeleton geometry) with the compare toggle
+            // on the photo, like the grid card.
             Box(
                 Modifier
                     .size(width = 112.dp, height = 84.dp)
@@ -703,30 +840,9 @@ fun ListingRow(
                 MmImage(
                     url = listing.heroImageUrl,
                     contentDescription = null,
-                    modifier = Modifier.matchParentSize(),
+                    fallbackCaption = stringResource(R.string.v110_card_no_photo),
+                    modifier = Modifier.matchParentSize().then(shared.hero),
                 )
-                if (shortLabel != null) {
-                    MmDealBadge(
-                        label = shortLabel,
-                        tone = verdict.tone,
-                        onImage = true,
-                        onWhy = onWhy,
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(4.dp)
-                            .then(if (onWhy == null) Modifier.clearAndSetSemantics { } else Modifier),
-                    )
-                } else if (lockedBadge) {
-                    MmDealBadge(
-                        band = DealBand.LOCKED,
-                        onImage = true,
-                        onWhy = onWhy,
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(4.dp)
-                            .then(if (onWhy == null) Modifier.clearAndSetSemantics { } else Modifier),
-                    )
-                }
                 if (compareSelected != null && onCompareToggle != null) {
                     RowCompareToggle(
                         selected = compareSelected,
@@ -748,7 +864,7 @@ fun ListingRow(
                         color = c.textPrimary,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).then(shared.title),
                     )
                     SaveButton(
                         saved = isWatched,
@@ -764,8 +880,26 @@ fun ListingRow(
                     text = priceText,
                     style = t.priceS,
                     color = c.textPrimary,
+                    modifier = Modifier.then(shared.price),
                     minScale = 0.4f,
                 )
+                // Short verdict under the price (48dp touch row when tappable).
+                if (shortLabel != null) {
+                    MmDealBadge(
+                        label = shortLabel,
+                        tone = verdict.tone,
+                        onWhy = onWhy,
+                        singleLine = true,
+                        modifier = if (onWhy == null) Modifier.padding(vertical = 4.dp).clearAndSetSemantics { } else Modifier,
+                    )
+                } else if (lockedBadge) {
+                    MmDealBadge(
+                        band = DealBand.LOCKED,
+                        onWhy = onWhy,
+                        singleLine = true,
+                        modifier = if (onWhy == null) Modifier.padding(vertical = 4.dp).clearAndSetSemantics { } else Modifier,
+                    )
+                }
                 if (typicalText != null) {
                     Spacer(Modifier.height(4.dp))
                     Text(

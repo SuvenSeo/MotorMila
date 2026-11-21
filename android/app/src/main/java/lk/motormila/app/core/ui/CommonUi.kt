@@ -24,7 +24,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import lk.motormila.app.core.common.AppError
 import lk.motormila.app.core.motion.rememberReducedMotion
+import lk.motormila.app.core.network.ErrorMapper
+import lk.motormila.app.ui.components.ErrorState
 import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface
 
@@ -46,32 +49,36 @@ fun PrimaryAction(
     )
 }
 
-/** Full-screen error state with retry. */
+/**
+ * Full-screen error state with retry. Legacy string entry point: the message is
+ * classified structurally ([ErrorMapper.fromLegacyMessage]) and rendered as the
+ * localized typed copy — the raw exception/backend text is never shown.
+ */
 @Composable
 fun ErrorRetry(
     message: String,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(24.dp)
-            .semantics { contentDescription = "Error: $message" },
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+    ErrorRetry(
+        error = ErrorMapper.fromLegacyMessage(message),
+        onRetry = onRetry,
+        modifier = modifier,
+    )
+}
+
+/** Full-screen typed error state with retry; copy resolves via [ErrorState]. */
+@Composable
+fun ErrorRetry(
+    error: AppError,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.error,
-        )
-        Spacer(Modifier.height(16.dp))
-        MotormilaPrimaryButton(
-            label = "Retry",
-            onClick = onRetry,
-            fillMaxWidth = false,
-        )
+        ErrorState(error = error, onRetry = onRetry)
     }
 }
 

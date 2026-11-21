@@ -20,6 +20,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import coil3.compose.AsyncImage
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.Text
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import lk.motormila.app.ui.theme.CappedFontScale
+import lk.motormila.app.ui.theme.MmType
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import lk.motormila.app.ui.theme.MmColors
@@ -46,11 +58,13 @@ fun MmImage(
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
     placeholderKey: String? = null,
+    /** Caption under the silhouette when there is no photo (blank URL or a failed load), e.g. "No photo · see it on ikman.lk". */
+    fallbackCaption: String? = null,
 ) {
     val c = MmColors.current
     val reduced = MmMotion.reduced
     if (url.isNullOrBlank() || LocalInspectionMode.current) {
-        MmImagePlaceholder(modifier)
+        MmImagePlaceholder(modifier, caption = if (url.isNullOrBlank()) fallbackCaption else null)
         return
     }
     val context = LocalContext.current
@@ -62,12 +76,17 @@ fun MmImage(
             .crossfade(if (reduced) 0 else MmMotion.Base)
             .build()
     }
+    // The caption only appears once the load has actually failed (never while
+    // the photo is still on its way).
+    var failed by remember(url) { mutableStateOf(false) }
     Box(modifier.background(c.surfaceRaised)) {
-        MmImagePlaceholder(Modifier.matchParentSize())
+        MmImagePlaceholder(Modifier.matchParentSize(), caption = if (failed) fallbackCaption else null)
         AsyncImage(
             model = request,
             contentDescription = contentDescription,
             contentScale = contentScale,
+            onSuccess = { failed = false },
+            onError = { failed = true },
             modifier = Modifier.matchParentSize(),
         )
     }
@@ -77,9 +96,10 @@ fun MmImage(
  * Calm placeholder plate: theme-aware raised ground with a quiet vehicle
  * silhouette (replaces the Apex-M wordmark fallback). Used for blank URLs,
  * load failures and previews — never a hard brand stamp on a missing photo.
+ * [caption] (optional) sits under the silhouette, one line.
  */
 @Composable
-fun MmImagePlaceholder(modifier: Modifier = Modifier) {
+fun MmImagePlaceholder(modifier: Modifier = Modifier, caption: String? = null) {
     val c = MmColors.current
     val silhouette = c.textTertiary.copy(alpha = if (c.isDark) 0.30f else 0.34f)
     val cabin = remember { vehicleCabinPath() }
@@ -87,6 +107,7 @@ fun MmImagePlaceholder(modifier: Modifier = Modifier) {
         modifier = modifier.background(c.surfaceRaised),
         contentAlignment = Alignment.Center,
     ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Canvas(
             Modifier
                 .fillMaxWidth(0.44f)
@@ -109,6 +130,21 @@ fun MmImagePlaceholder(modifier: Modifier = Modifier) {
                 drawCircle(c.surfaceRaised, radius = 2.5f, center = Offset(26f, 31f))
                 drawCircle(c.surfaceRaised, radius = 2.5f, center = Offset(74f, 31f))
             }
+        }
+        if (caption != null) {
+            Spacer(Modifier.height(6.dp))
+            CappedFontScale(max = 1.3f) {
+                Text(
+                    text = caption,
+                    style = MmType.current.caption,
+                    color = c.textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 10.dp),
+                )
+            }
+        }
         }
     }
 }

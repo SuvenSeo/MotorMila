@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
+import lk.motormila.app.R
 import lk.motormila.app.domain.model.Alert
 import lk.motormila.app.domain.model.AlertInput
 import lk.motormila.app.domain.model.UserSession
@@ -103,7 +104,7 @@ class AlertsViewModelTest {
         vm.onEvent(AlertsUiEvent.Create)
 
         coVerify(exactly = 0) { repository.create(any()) }
-        assertTrue(vm.state.value.error?.contains("Pro") == true)
+        assertEquals(AlertsMessage.Res(R.string.v19_alerts_err_pro_channels), vm.state.value.error)
     }
 
     @Test
@@ -161,7 +162,7 @@ class AlertsViewModelTest {
         vm.onEvent(AlertsUiEvent.ToggleAlertChannel(1, "telegram"))
 
         coVerify(exactly = 0) { repository.updateChannels(any(), any(), any(), any()) }
-        assertTrue(vm.state.value.error?.contains("Pro") == true)
+        assertEquals(AlertsMessage.Res(R.string.v19_alerts_err_channels_pro), vm.state.value.error)
     }
 
     private fun viewModel(): AlertsViewModel = AlertsViewModel(

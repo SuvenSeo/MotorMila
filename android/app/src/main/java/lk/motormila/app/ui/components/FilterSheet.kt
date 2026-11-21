@@ -279,8 +279,11 @@ fun FilterSheet(
     sources: List<String> = emptyList(),
     onMakeChange: (String?) -> Unit = {},
     countFor: (suspend (ListingQuery) -> Int?)? = null,
-    /** Create a price alert from the draft filters; rendered next to the apply CTA. */
-    onCreateAlert: (() -> Unit)? = null,
+    /**
+     * Create a price alert from the sheet's DRAFT filters (what the user sees
+     * here, not yet applied); rendered next to the apply CTA.
+     */
+    onCreateAlert: ((ListingQuery) -> Unit)? = null,
 ) {
     var draft by remember(current) { mutableStateOf(FilterDraft.from(current)) }
     var count by remember { mutableStateOf<Int?>(null) }
@@ -317,7 +320,7 @@ fun FilterSheet(
             },
             onApply = { onApply(draft.toQuery(current)) },
             onCreateAlert = onCreateAlert?.let { create ->
-                { create() }
+                { create(draft.toQuery(current)) }
             },
         )
     }

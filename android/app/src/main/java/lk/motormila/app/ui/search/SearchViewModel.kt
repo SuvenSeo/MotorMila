@@ -161,8 +161,10 @@ class SearchViewModel @Inject constructor(
         }
         viewModelScope.launch {
             try {
+                // De-duplicated: MakeCombobox uses the makes as LazyColumn keys,
+                // and a repeated make crashed the sheet (duplicate key).
                 _state.value = _state.value.copy(
-                    makes = listings.makes(),
+                    makes = listings.makes().filter { it.isNotBlank() }.distinct(),
                 )
             } catch (_: Exception) {
             }
@@ -196,6 +198,15 @@ class SearchViewModel @Inject constructor(
                     _state.value = _state.value.copy(filters = next)
                     pagingKey.value = next
                     saveFilters(next)
+                }
+            }
+        }
+        // A new query drops the previous total at once, so the count line and
+        // the end-of-list footer never show the old query's number meanwhile.
+        viewModelScope.launch {
+            pagingKey.collect {
+                if (_state.value.resultTotal != null) {
+                    _state.value = _state.value.copy(resultTotal = null)
                 }
             }
         }
@@ -402,9 +413,14 @@ class SearchViewModel @Inject constructor(
         }
     }
 
-    /** Create a price alert from the current filters. */
-    fun createAlertFromFilters() {
-        val f = _state.value.filters
+    /**
+     * Create a price alert from [query]: the filter sheet passes its DRAFT (what
+     * the user sees in the sheet), not the applied filters. The alert model
+     * (AlertInput / backend MarketAlertCreate) only carries make, model, max
+     * price and district; category, fuel and year can't be saved on an alert.
+     */
+    fun createAlertFromFilters(query: ListingQuery = _state.value.filters) {
+        val f = query
         viewModelScope.launch {
             val session = runCatching { observeSession().first() }.getOrNull()
             if (session == null) {

@@ -43,6 +43,8 @@ data class ListingDto(
     @SerialName("is_active") val isActive: Boolean = true,
     @SerialName("detail_url") val detailUrl: String? = null,
     @SerialName("external_url") val externalUrl: String? = null,
+    /** Seller's ad text; optional (older backends don't serve it). */
+    val description: String? = null,
 )
 
 @Serializable

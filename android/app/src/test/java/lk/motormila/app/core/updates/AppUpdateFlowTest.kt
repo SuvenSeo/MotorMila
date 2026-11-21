@@ -110,12 +110,12 @@ class AppUpdateFlowTest {
 
         val state = viewModel.state.value
         assertNull(state.available)
-        assertEquals(false, state.manuallyCheckedWithNoUpdate)
+        assertNull(state.checkFeedback)
         assertEquals(false, state.checking)
     }
 
     @Test
-    fun checkerFailureIsSilentUpToDate() = runTest(testDispatcher) {
+    fun manualCheckerFailureReportsFailure() = runTest(testDispatcher) {
         coEvery { checker.check(7) } throws RuntimeException("offline")
 
         viewModel.manualCheck(7)
@@ -123,7 +123,7 @@ class AppUpdateFlowTest {
 
         val state = viewModel.state.value
         assertNull(state.available)
-        assertEquals(true, state.manuallyCheckedWithNoUpdate)
+        assertEquals(AppUpdateViewModel.CheckFeedback.Failed, state.checkFeedback)
         assertEquals(false, state.checking)
     }
 

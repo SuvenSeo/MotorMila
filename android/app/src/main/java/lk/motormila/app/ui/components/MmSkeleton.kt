@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -96,7 +97,10 @@ fun MmSkeleton(
     )
 }
 
-/** Matches [lk.motormila.app.ui.components.ListingCard] grid/feed layout (incl. the evidence layer). */
+/**
+ * Matches [lk.motormila.app.ui.components.ListingCard] grid/feed layout: 16:10
+ * photo, two-line title, spec line, price, verdict slot, evidence, footer.
+ */
 @Composable
 fun MmListingCardSkeleton(modifier: Modifier = Modifier) {
     val loadingCd = stringResource(R.string.v19_search_loading)
@@ -106,14 +110,24 @@ fun MmListingCardSkeleton(modifier: Modifier = Modifier) {
             .background(MmColors.current.surface)
             .semantics { contentDescription = loadingCd },
     ) {
-        Box(Modifier.fillMaxWidth().aspectRatio(4f / 3f).mmShimmer(MmShapes.lg))
-        Column(Modifier.padding(MmSpacing.md), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(Modifier.fillMaxWidth().aspectRatio(16f / 10f).mmShimmer(MmShapes.lg))
+        Column(
+            Modifier.padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             MmSkeleton(Modifier.fillMaxWidth(0.85f), height = 14.dp)
-            MmSkeleton(width = 92.dp, height = 20.dp)
-            // Typical-price anchor + market-position bar + meta/footer.
+            MmSkeleton(Modifier.fillMaxWidth(0.6f), height = 14.dp)
+            MmSkeleton(Modifier.fillMaxWidth(0.7f), height = 11.dp)
+            // Price (title2) + verdict badge.
+            MmSkeleton(width = 104.dp, height = 24.dp)
+            MmSkeleton(width = 96.dp, height = 22.dp, shape = MmShapes.pill)
+            // Typical-price anchor + market-position bar.
             MmSkeleton(Modifier.fillMaxWidth(0.55f), height = 11.dp)
-            MmSkeleton(Modifier.fillMaxWidth(0.9f), height = 4.dp, shape = MmShapes.pill)
-            MmSkeleton(Modifier.fillMaxWidth(0.6f), height = 11.dp)
+            MmSkeleton(Modifier.fillMaxWidth(), height = 6.dp, shape = MmShapes.pill)
+            // Footer: district + listed on / checked.
+            Spacer(Modifier.height(2.dp))
+            MmSkeleton(Modifier.fillMaxWidth(0.4f), height = 12.dp)
+            MmSkeleton(Modifier.fillMaxWidth(0.75f), height = 11.dp)
         }
     }
 }
@@ -136,23 +150,70 @@ fun MmListingRowSkeleton(modifier: Modifier = Modifier) {
     }
 }
 
-/** Matches the listing detail layout (hero, title, price, spec grid). */
+/**
+ * Matches the immersive listing detail (1.10 Showroom): the 4:3 photo runs
+ * under the status bar, then the dark stage band (eyebrow, title, meta row,
+ * "Asking price" + hero price, verdict pill), a hairline 3×2 spec grid and the
+ * floating sticky-bar capsule at the bottom. The stage block shimmers in the
+ * dark palette in both themes, like the real band.
+ */
 @Composable
 fun MmDetailSkeleton(modifier: Modifier = Modifier) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        Box(Modifier.fillMaxWidth().aspectRatio(4f / 3f).mmShimmer(MmShapes.xs))
-        Column(Modifier.padding(MmSpacing.gutter), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            MmSkeleton(width = 96.dp, height = 22.dp, shape = MmShapes.pill)
-            MmSkeleton(Modifier.fillMaxWidth(0.8f), height = 24.dp)
-            MmSkeleton(width = 180.dp, height = 32.dp)
-            Spacer(Modifier.height(8.dp))
-            repeat(2) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    repeat(3) { MmSkeleton(Modifier.weight(1f), height = 56.dp, shape = MmShapes.md) }
+    val loadingCd = stringResource(R.string.v19_search_loading)
+    Box(modifier.fillMaxWidth().semantics { contentDescription = loadingCd }) {
+        Column(Modifier.fillMaxWidth()) {
+            Box(Modifier.fillMaxWidth().aspectRatio(4f / 3f).mmShimmer(MmShapes.xs))
+            androidx.compose.runtime.CompositionLocalProvider(
+                lk.motormila.app.ui.theme.LocalMmColors provides MmColors.Dark,
+            ) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .background(MmColors.current.stage)
+                        .padding(horizontal = MmSpacing.gutter, vertical = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    MmSkeleton(width = 180.dp, height = 11.dp)
+                    MmSkeleton(Modifier.fillMaxWidth(0.85f), height = 28.dp)
+                    MmSkeleton(Modifier.fillMaxWidth(0.6f), height = 12.dp)
+                    Spacer(Modifier.height(6.dp))
+                    MmSkeleton(width = 96.dp, height = 11.dp)
+                    MmSkeleton(width = 220.dp, height = 42.dp)
+                    MmSkeleton(width = 150.dp, height = 26.dp, shape = MmShapes.pill)
                 }
             }
-            Spacer(Modifier.height(8.dp))
-            MmSkeleton(Modifier.fillMaxWidth(), height = 160.dp, shape = MmShapes.lg)
+            Column(
+                Modifier.padding(MmSpacing.gutter),
+                verticalArrangement = Arrangement.spacedBy(1.dp),
+            ) {
+                // 3×2 hairline spec grid: label + value per cell.
+                repeat(2) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(1.dp)) {
+                        repeat(3) {
+                            Column(
+                                Modifier
+                                    .weight(1f)
+                                    .background(MmColors.current.surface)
+                                    .padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                MmSkeleton(Modifier.fillMaxWidth(0.6f), height = 10.dp)
+                                MmSkeleton(Modifier.fillMaxWidth(0.8f), height = 16.dp)
+                            }
+                        }
+                    }
+                }
+            }
         }
+        // Sticky price / "View on source" capsule placeholder.
+        Box(
+            Modifier
+                .align(androidx.compose.ui.Alignment.BottomCenter)
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .height(64.dp)
+                .mmShimmer(MmShapes.xl),
+        )
     }
 }

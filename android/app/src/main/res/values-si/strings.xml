@@ -96,6 +96,7 @@
     <string name="update_later">පසුව</string>
     <string name="update_downloading">යාවත්කාලීනය බාගනිමින්…</string>
     <string name="update_download_failed">යාවත්කාලීනය බාගත කළ නොහැක. සම්බන්ධතාවය පරීක්ෂා කර නැවත උත්සාහ කරන්න.</string>
+    <string name="update_check_failed">යාවත්කාලීන පරීක්ෂා කළ නොහැකි විය. නැවත උත්සාහ කරන්න.</string>
     <string name="update_up_to_date">ඔබ නවතම අනුවාදයේ සිටියි.</string>
 
     <!-- Announcement banner (Home) -->

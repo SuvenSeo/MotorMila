@@ -168,10 +168,8 @@ class DesignSystemScreenshotsTest {
         Box(Modifier.fillMaxSize()) {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 DetailGallery(images = listOf("a", "b", "c", "d"), title = l.title, listingId = l.id, onOpenViewer = {})
+                lk.motormila.app.ui.detail.PriceDealSection(l, isPro = false, onDealShown = {})
                 Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    DealVerdictRow(MmDealVerdict.compute(l.priceLkr, l.marketMedianLkr, ratingAllowed = true), onWhy = {})
-                    Text("Toyota Aqua G 2018", style = MmType.current.titleL, color = MmColors.current.textPrimary)
-                    Text("48,000 km · Hybrid · Auto · Nugegoda, Colombo", style = MmType.current.bodyM, color = MmColors.current.textSecondary)
                     MmPriceChart(
                         points = listOf(
                             PricePoint(7_100_000.0, "2026-08-01"), PricePoint(6_950_000.0, "2026-08-20"),

@@ -235,6 +235,8 @@ fun DetailTopChrome(
             DetailGlassButton(
                 contentDescription = stringResource(if (saved) R.string.glass_unsave else R.string.glass_save),
                 onClick = onToggleSave,
+                // The screen plays save / unsave itself: no second key-press buzz.
+                haptic = false,
             ) {
                 MmSaveBurstIcon(
                     saved = saved,
@@ -244,7 +246,7 @@ fun DetailTopChrome(
                     iconSize = 20.dp,
                 )
             }
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(2.dp))
             DetailGlassButton(
                 contentDescription = stringResource(R.string.glass_share),
                 onClick = onShare,
@@ -255,25 +257,37 @@ fun DetailTopChrome(
     }
 }
 
+/**
+ * Round glass button: a [size] glass disc centred in a 48 dp touch target
+ * (the disc alone was 44 dp, under the minimum). [haptic] false when the
+ * caller plays its own, more specific haptic (save / unsave).
+ */
 @Composable
 private fun DetailGlassButton(
     contentDescription: String,
     onClick: () -> Unit,
     size: Dp = 44.dp,
+    haptic: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val haptics = MmHaptics.current
     Box(
         Modifier
-            .size(size)
-            .mmPress(interaction, 0.86f)
-            .liquidGlass(MmShapes.pill, GlassWeight.Thin, elevation = 8.dp)
+            .size(maxOf(size, 48.dp))
             .clickable(interactionSource = interaction, indication = null, role = Role.Button) {
-                haptics.press()
+                if (haptic) haptics.press()
                 onClick()
             }
             .semantics { this.contentDescription = contentDescription },
         contentAlignment = Alignment.Center,
-    ) { content() }
+    ) {
+        Box(
+            Modifier
+                .size(size)
+                .mmPress(interaction, 0.86f)
+                .liquidGlass(MmShapes.pill, GlassWeight.Thin, elevation = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) { content() }
+    }
 }

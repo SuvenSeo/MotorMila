@@ -69,7 +69,6 @@ import lk.motormila.app.ui.theme.MmColors
 import lk.motormila.app.ui.theme.MmMotion
 import lk.motormila.app.ui.theme.MmSpacing
 import lk.motormila.app.ui.theme.MmType
-import lk.motormila.app.ui.updates.AppUpdateDialog
 import lk.motormila.app.ui.updates.AppUpdateViewModel
 
 /** Navigation targets reachable from the "You" tab. */
@@ -123,7 +122,7 @@ fun ProfileScreen(
     onPrivacyClick: () -> Unit = {},
     onTermsClick: () -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel(),
-    updateViewModel: AppUpdateViewModel = hiltViewModel(),
+    updateViewModel: AppUpdateViewModel,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val updateState by updateViewModel.state.collectAsStateWithLifecycle()
@@ -135,21 +134,17 @@ fun ProfileScreen(
             viewModel.onEvent(ProfileUiEvent.DismissError)
         }
     }
-    val upToDate = stringResource(R.string.update_up_to_date)
-    val downloadFailed = stringResource(R.string.update_download_failed)
-    LaunchedEffect(updateState.manuallyCheckedWithNoUpdate) {
-        if (updateState.manuallyCheckedWithNoUpdate) {
-            snacks.showSnackbar(upToDate)
-            updateViewModel.consumeNoUpdateFeedback()
+    val checkMessage = when (updateState.checkFeedback) {
+        AppUpdateViewModel.CheckFeedback.UpToDate -> stringResource(R.string.update_up_to_date)
+        AppUpdateViewModel.CheckFeedback.Failed -> stringResource(R.string.update_check_failed)
+        null -> null
+    }
+    LaunchedEffect(checkMessage) {
+        if (checkMessage != null) {
+            snacks.showSnackbar(checkMessage)
+            updateViewModel.consumeCheckFeedback()
         }
     }
-    LaunchedEffect(updateState.downloadFailedTick) {
-        if (updateState.downloadFailedTick > 0) {
-            snacks.showSnackbar(downloadFailed)
-            updateViewModel.consumeDownloadFailure()
-        }
-    }
-
     val actions = ProfileActions(
         onLoginClick, onSettingsClick, onProClick, onDealerClick, onAlertsClick, onNotificationsClick,
         onEvHubClick, onPulseClick, onBestPicksClick, onCalculatorClick, onCompareClick, onTrendsClick,
@@ -189,14 +184,7 @@ fun ProfileScreen(
         }
     }
 
-    updateState.available?.let { update ->
-        AppUpdateDialog(
-            update = update,
-            downloading = updateState.downloading,
-            onUpdate = { updateViewModel.downloadAndInstall(update) },
-            onDismiss = { updateViewModel.dismiss() },
-        )
-    }
+
 }
 
 @Composable

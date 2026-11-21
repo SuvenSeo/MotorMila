@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.10 Showroom detail (stage band, typical price, duty note) — Tamil. -->
+<resources>
+    <string name="v110_detail_listed_checked">%1$s இல் பட்டியலிடப்பட்டது · %2$s சரிபார்க்கப்பட்டது</string>
+    <string name="v110_detail_ago_now">இப்போது</string>
+    <string name="v110_detail_ago_hours">%1$d மணி முன்</string>
+    <string name="v110_detail_ago_days">%1$d நாள் முன்</string>
+    <string name="v110_detail_tracked_days">%1$d நாட்களாகக் கண்காணிப்பு</string>
+    <string name="v110_detail_listed_date">பட்டியலிட்டது %1$s</string>
+    <string name="v110_detail_est_monthly">≈ %1$s மாதம் (மதிப்பீடு)</string>
+    <string name="v110_detail_est_monthly_basis" formatted="false">40% கடன் · 5 ஆண்டுகள் · ஆண்டுக்கு 15%</string>
+    <string name="v110_detail_price_cuts">விலைக் குறைப்புகள்: %1$d</string>
+    <string name="v110_detail_possibly_sold">விற்கப்பட்டிருக்கலாம் · %1$d நாட்களாகக் காணவில்லை</string>
+    <string name="v110_detail_no_longer_listed">இனி பட்டியலில் இல்லை · விற்கப்பட்டிருக்கலாம்</string>
+    <string name="v110_detail_typical_title">வழக்கமான விலை</string>
+    <string name="v110_detail_duty_included">மறுசீரமைக்கப்பட்ட (reconditioned) வாகனத்தின் விலையில் இறக்குமதி வரி ஏற்கனவே அடங்கியுள்ளது.</string>
+    <string name="v110_detail_duty_fresh_import">புதிய இறக்குமதியைக் கணக்கிடுங்கள்</string>
+    <string name="v110_detail_lease_caption_neutral" formatted="false">40% வரை கடன் · நிபந்தனைகள் கடன் வழங்குநர் மற்றும் வாகன வயதைப் பொறுத்து மாறும்</string>
+    <string name="v110_detail_rate_down">வட்டி விகிதத்தைக் குறைக்கவும்</string>
+    <string name="v110_detail_rate_up">வட்டி விகிதத்தை அதிகரிக்கவும்</string>
+    <string name="v110_detail_description">விளக்கம்</string>
+    <string name="v110_detail_show_more">மேலும் காட்டு</string>
+    <string name="v110_detail_show_less">குறைவாகக் காட்டு</string>
+</resources>

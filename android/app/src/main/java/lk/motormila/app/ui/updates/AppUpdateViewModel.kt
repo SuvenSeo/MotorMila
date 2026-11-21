@@ -29,7 +29,7 @@ import lk.motormila.app.di.IoDispatcher
  * Dismissal: "Later" hides the dialog and remembers that version code so the
  * passive launch check stays quiet, while an explicit manual check always
  * re-shows what's available. Failures are silent except the manual check,
- * which surfaces a "no update" confirmation.
+ * which reports the outcome.
  */
 @HiltViewModel
 class AppUpdateViewModel @Inject constructor(
@@ -39,13 +39,15 @@ class AppUpdateViewModel @Inject constructor(
     @IoDispatcher private val io: CoroutineDispatcher,
 ) : ViewModel() {
 
+    enum class CheckFeedback { UpToDate, Failed }
+
     data class UiState(
         val checking: Boolean = false,
         val downloading: Boolean = false,
         val available: AppUpdateChecker.CheckResult.UpdateAvailable? = null,
         val dismissedVersionCode: Int? = null,
         val downloadFailedTick: Int = 0,
-        val manuallyCheckedWithNoUpdate: Boolean = false,
+        val checkFeedback: CheckFeedback? = null,
         /** User was sent to "Install unknown apps"; tap Update again on return. */
         val installPermissionRequested: Boolean = false,
     )
@@ -67,8 +69,8 @@ class AppUpdateViewModel @Inject constructor(
         runCheck(currentVersionCode, isManual = true)
     }
 
-    fun consumeNoUpdateFeedback() {
-        _state.update { it.copy(manuallyCheckedWithNoUpdate = false) }
+    fun consumeCheckFeedback() {
+        _state.update { it.copy(checkFeedback = null) }
     }
 
     fun consumeDownloadFailure() {
@@ -114,16 +116,14 @@ class AppUpdateViewModel @Inject constructor(
     }
     private fun runCheck(currentVersionCode: Int, isManual: Boolean) {
         if (_state.value.checking) return
-        _state.update { it.copy(checking = true) }
+        _state.update { it.copy(checking = true, checkFeedback = null) }
         viewModelScope.launch {
             // The checker performs blocking network I/O — always on Dispatchers.IO.
-            // Any failure (network down, parse error, unexpected exception) is a
-            // silent "up to date"; the update flow can never crash the app.
             val result = runCatching {
                 withContext(io) { updateChecker.check(currentVersionCode) }
             }.getOrElse {
                 if (it is kotlinx.coroutines.CancellationException) throw it
-                AppUpdateChecker.CheckResult.UpToDate
+                AppUpdateChecker.CheckResult.CheckFailed
             }
             _state.update { current ->
                 when (result) {
@@ -136,7 +136,11 @@ class AppUpdateViewModel @Inject constructor(
                         }
                     AppUpdateChecker.CheckResult.UpToDate -> current.copy(
                         checking = false,
-                        manuallyCheckedWithNoUpdate = isManual,
+                        checkFeedback = if (isManual) CheckFeedback.UpToDate else null,
+                    )
+                    AppUpdateChecker.CheckResult.CheckFailed -> current.copy(
+                        checking = false,
+                        checkFeedback = if (isManual) CheckFeedback.Failed else null,
                     )
                 }
             }

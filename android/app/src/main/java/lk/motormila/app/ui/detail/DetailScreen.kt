@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -79,6 +80,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import lk.motormila.app.ui.components.MmEyebrow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -96,6 +98,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -190,6 +193,12 @@ import kotlin.math.roundToInt
  * v1.9.0 (audit P1-A/B/E): one price hero (30sp + "Asking price" eyebrow, compact
  * sticky bar), fabricated Intelligence Pills removed, neutral seller fallback,
  * tri-state secondary loads with inline retry + dedicated 404 state, localized copy.
+ *
+ * v1.10 Showroom (web ListingDetail parity): gallery → dark stage band
+ * (eyebrow, title · year, meta row, "Asking price" + 42sp price, verdict +
+ * Why, gauge, est./mo, chips) → before-you-pay → hairline spec grid →
+ * typical-price card → history → tools → description → seller → similar.
+ * One call to action (the sticky bar); the verdict is shown to everyone.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -203,10 +212,19 @@ fun ListingDetailScreen(
     fromCard: Boolean = false,
     /** Opens another listing as a new back-stack entry (Similar rail), so Back returns here. */
     onOpenListing: ((Int) -> Unit)? = null,
+    /**
+     * Opens the Calculator (tax / lease tools, fresh-import duty). Null falls
+     * back to [onEstimate]; NavGraph wires `navController.navigate(Calculator)`.
+     */
+    onOpenCalculator: (() -> Unit)? = null,
+    /**
+     * Opens Valuation prefilled with this car. Null falls back to [onEstimate];
+     * NavGraph wires `navController.navigate(Valuation(make, model, year))`.
+     */
+    onValuation: ((make: String?, model: String?, year: Int?) -> Unit)? = null,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val haptics = LocalHapticFeedback.current
     var showFmvExplain by remember { mutableStateOf(false) }
     var viewerPage by remember { mutableStateOf<Int?>(null) }
     val mmHaptics = lk.motormila.app.ui.theme.MmHaptics.current
@@ -241,8 +259,22 @@ fun ListingDetailScreen(
         }
     }
     val isLease = remember(state.listing) {
-        state.listing?.let { MmLeaseTakeover.detect(it.title, it.model) } == true
+        state.listing?.let { MmLeaseTakeover.detect(it.title, it.model, it.description) } == true
     }
+    val openCalculator: () -> Unit = onOpenCalculator ?: onEstimate
+    // Valuation prefilled with the car on screen (may differ from the route id
+    // after an in-place similar swap).
+    val openValuation: () -> Unit = {
+        val l = state.listing
+        if (onValuation != null) {
+            onValuation(l?.make?.takeIf { it.isNotBlank() }, l?.model?.takeIf { it.isNotBlank() }, l?.year)
+        } else {
+            onEstimate()
+        }
+    }
+    // The deal haptic plays once per listing, not on every recomposition,
+    // FMV arrival or return from the back stack (MmHaptics is reduced-motion gated).
+    var dealBuzzedFor by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(0) }
 
     LaunchedEffect(listingId) {
         if (listingId > 0) {
@@ -284,7 +316,8 @@ fun ListingDetailScreen(
         run {
             when {
                 state.isLoading && state.listing == null -> {
-                    Box(Modifier.padding(top = statusTop + 56.dp)) { MmDetailSkeleton() }
+                    // Immersive like the page itself: photo under the status bar.
+                    MmDetailSkeleton(Modifier.fillMaxSize())
                 }
                 state.notFound -> {
                     // 404/NotFound: the listing is gone — say so plainly and offer
@@ -332,92 +365,63 @@ fun ListingDetailScreen(
                             }
                         }
                         item {
-                            DetailGallery(
-                                images = galleryImages,
-                                title = listing.displayName,
-                                listingId = listing.id,
-                                heroPlaceholderUrl = remember(listing.id) {
-                                    lk.motormila.app.ui.navigation.ListingPreviewCache.get(listing.id)?.heroImageUrl
-                                } ?: listing.heroImageUrl,
-                                onOpenViewer = { page -> viewerPage = page },
-                                // Signature header motion: parallax (photo scrolls at
-                                // ~55 % speed under the content) + rubber-band zoom on
-                                // over-pull. Graphics layer only.
-                                modifier = Modifier.graphicsLayer {
-                                    val st = stretch.offset
-                                    if (st > 0f && size.height > 0f) {
-                                        val sc = (size.height + st) / size.height
-                                        scaleX = sc
-                                        scaleY = sc
-                                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 1f)
-                                    } else if (listState.firstVisibleItemIndex == galleryIndex) {
-                                        translationY = listState.firstVisibleItemScrollOffset * 0.45f
-                                    }
-                                },
-                            )
-                        }
-                        item {
-                            val verdict = remember(priceVerdict, isLease, state.isPro, state.fmv) {
-                                MmDealVerdict.from(
-                                    priceVerdict ?: listing.rowVerdict(),
-                                    isLeaseTakeover = isLease,
-                                    // Free rows carry no score; a loaded FMV verdict is shown to everyone.
-                                    ratingAllowed = state.isPro || state.fmv != null,
+                            // Gallery and stage band share one item: the band must
+                            // butt against the photo (no list spacing between them)
+                            // and slides over it as the photo parallaxes.
+                            Column(Modifier.fillMaxWidth()) {
+                                DetailGallery(
+                                    images = galleryImages,
+                                    title = listing.displayName,
+                                    listingId = listing.id,
+                                    heroPlaceholderUrl = remember(listing.id) {
+                                        lk.motormila.app.ui.navigation.ListingPreviewCache.get(listing.id)?.heroImageUrl
+                                    } ?: listing.heroImageUrl,
+                                    onOpenViewer = { page -> viewerPage = page },
+                                    // Signature header motion: parallax (photo scrolls at
+                                    // ~55 % speed under the content) + rubber-band zoom on
+                                    // over-pull. Graphics layer only.
+                                    modifier = Modifier.graphicsLayer {
+                                        val st = stretch.offset
+                                        if (st > 0f && size.height > 0f) {
+                                            val sc = (size.height + st) / size.height
+                                            scaleX = sc
+                                            scaleY = sc
+                                            transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 1f)
+                                        } else if (listState.firstVisibleItemIndex == galleryIndex) {
+                                            translationY = listState.firstVisibleItemScrollOffset * 0.45f
+                                        }
+                                    },
                                 )
-                            }
-                            DealVerdictRow(
-                                verdict = verdict,
-                                onWhy = { showWhy = true },
-                                modifier = Modifier.padding(horizontal = MmSpacing.gutter),
-                            )
-                        }
-                        item {
-                            PriceDealSection(
-                                listing = listing,
-                                isPro = state.isPro,
-                                history = state.history,
-                                verdict = priceVerdict,
-                                onDealShown = {
-                                    val ok = priceVerdict as? lk.motormila.app.core.price.PriceVerdict.Ok
-                                    if (ok != null && ok.band == lk.motormila.app.core.price.VerdictBand.BELOW && !ok.verifyFirst) {
-                                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    }
-                                },
-                            )
-                        }
-                        item {
-                            HeroActionsRow(
-                                listing = listing,
-                                onViewSource = {
-                                    val url = listing.externalUrl ?: listing.detailUrl
-                                    if (url != null) openUrl(context, url)
-                                },
-                                onShareWhatsApp = { shareWhatsApp(context, listing, priceVerdict) },
-                                onShare = { shareListing(context, listing, priceVerdict) },
-                                modifier = Modifier.padding(horizontal = MmSpacing.gutter),
-                            )
-                        }
-                        if (state.fmv != null) {
-                            item {
-                                MotormilaSurface(modifier = Modifier.padding(horizontal = MmSpacing.gutter)) {
-                                    // Withheld → a plain "why there is no rating" card, never a gauge.
-                                    FmvGauge(
-                                        verdict = priceVerdict ?: listing.rowVerdict(),
-                                        askingLkr = listing.priceLkr,
-                                        confidence = state.fmv!!.confidence,
-                                        onExplainClick = { showFmvExplain = true },
-                                        modifier = Modifier.fillMaxWidth(),
-                                    )
-                                }
-                            }
-                            if (priceVerdict is lk.motormila.app.core.price.PriceVerdict.Ok) {
-                                item {
-                                    DealLadder(
-                                        verdict = priceVerdict,
-                                        askingLkr = listing.priceLkr,
-                                        modifier = Modifier.padding(horizontal = MmSpacing.gutter),
-                                    )
-                                }
+                                PriceDealSection(
+                                    listing = listing,
+                                    isPro = state.isPro,
+                                    history = state.history,
+                                    verdict = priceVerdict,
+                                    isLease = isLease,
+                                    onWhy = { showWhy = true },
+                                    onDealShown = {
+                                        val ok = priceVerdict as? lk.motormila.app.core.price.PriceVerdict.Ok
+                                        if (ok != null && ok.band == lk.motormila.app.core.price.VerdictBand.BELOW &&
+                                            !ok.verifyFirst && dealBuzzedFor != listing.id
+                                        ) {
+                                            dealBuzzedFor = listing.id
+                                            mmHaptics.toggle()
+                                        }
+                                    },
+                                    gauge = {
+                                        // Only once the FMV is in. Withheld → a plain "why
+                                        // there is no rating" card, never a gauge.
+                                        if (state.fmv != null) {
+                                            FmvGauge(
+                                                verdict = priceVerdict ?: listing.rowVerdict(),
+                                                askingLkr = listing.priceLkr,
+                                                confidence = state.fmv?.confidence,
+                                                onExplainClick = { showFmvExplain = true },
+                                                modifier = Modifier.fillMaxWidth(),
+                                            )
+                                        }
+                                    },
+                                )
                             }
                         }
                         if (state.fmv == null && state.fmvState == DetailLoadState.FAILED) {
@@ -430,39 +434,26 @@ fun ListingDetailScreen(
                             }
                         }
                         item {
+                            BeforeYouPayCard(Modifier.padding(horizontal = MmSpacing.gutter))
+                        }
+                        item {
                             BentoSpecsGrid(
                                 listing = listing,
                                 modifier = Modifier.padding(horizontal = MmSpacing.gutter),
                             )
                         }
-                        // Calculators are tools, not content: collapsed by default so
-                        // history / seller are not buried under ~600 dp of always-on UI.
-                        item {
-                            ExpandableToolRow(
-                                title = stringResource(R.string.mm_detail_estimate_monthly),
-                                modifier = Modifier.padding(horizontal = MmSpacing.gutter),
-                            ) {
-                                LeasePaymentCalculator(
-                                    priceLkr = listing.priceLkr ?: 12_500_000.0,
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
-                            }
-                        }
-                        // Duty only makes sense for an import (reconditioned / brand-new
-                        // import / unregistered); everyone else reaches it via Tools → Tax.
-                        if (isImportContext(listing)) {
+                        if (priceVerdict is lk.motormila.app.core.price.PriceVerdict.Ok) {
                             item {
-                                ExpandableToolRow(
-                                    title = stringResource(R.string.mm_detail_estimate_duty),
+                                // Typical-price card: reference, comparables + confidence
+                                // (from the FMV the Why sheet reads) and the ladder.
+                                DealLadder(
+                                    verdict = priceVerdict,
+                                    askingLkr = listing.priceLkr,
+                                    comparables = state.fmv?.sampleCount,
+                                    confidence = state.fmv?.confidence,
+                                    onExplain = state.fmv?.let { { showFmvExplain = true } },
                                     modifier = Modifier.padding(horizontal = MmSpacing.gutter),
-                                ) {
-                                    ImportDutyEstimator(
-                                        priceLkr = listing.priceLkr ?: 10_000_000.0,
-                                        engineCc = listing.engineCc ?: 1500.0,
-                                        initialFuel = listing.fuelType,
-                                        modifier = Modifier.fillMaxWidth(),
-                                    )
-                                }
+                                )
                             }
                         }
                         item {
@@ -477,31 +468,63 @@ fun ListingDetailScreen(
                                 modifier = Modifier.padding(horizontal = MmSpacing.gutter),
                             )
                         }
+                        // Calculators are tools, not content: collapsed by default so
+                        // history / seller are not buried under ~600 dp of always-on UI.
+                        item {
+                            ExpandableToolRow(
+                                title = stringResource(R.string.mm_detail_estimate_monthly),
+                                modifier = Modifier.padding(horizontal = MmSpacing.gutter),
+                            ) {
+                                LeasePaymentCalculator(
+                                    priceLkr = listing.priceLkr ?: 12_500_000.0,
+                                    brandNew = isBrandNewOrUnderOneYear(listing),
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
+                        }
+                        // A reconditioned / imported car's asking price already
+                        // includes duty (audit #17): never stack an estimate on top;
+                        // say so and hand off to the Calculator for a fresh import.
+                        if (isImportContext(listing)) {
+                            item {
+                                DutyIncludedNote(
+                                    onOpenCalculator = openCalculator,
+                                    modifier = Modifier.padding(horizontal = MmSpacing.gutter),
+                                )
+                            }
+                        }
+                        item {
+                            DeepLinksRow(
+                                onEstimate = openValuation,
+                                onTax = openCalculator,
+                                onLease = openCalculator,
+                                onMap = {
+                                    val q = "${listing.district ?: ""} ${listing.city ?: ""}".trim()
+                                    val query = android.net.Uri.encode(q.ifBlank { "Sri Lanka" })
+                                    openUrl(context, "https://www.openstreetmap.org/search?query=$query")
+                                },
+                                modifier = Modifier.padding(horizontal = MmSpacing.gutter),
+                            )
+                        }
+                        listing.description?.let { text ->
+                            item {
+                                DescriptionCard(
+                                    text = text,
+                                    listingId = listing.id,
+                                    modifier = Modifier.padding(horizontal = MmSpacing.gutter),
+                                )
+                            }
+                        }
                         item {
                             SellerCard(
                                 seller = state.seller,
                                 sellerState = state.sellerState,
                                 onRetrySeller = viewModel::retrySeller,
                                 sourceName = sourceDisplayName(listing.source),
+                                // The one inline "View on …" (the sticky bar is the main CTA).
                                 onViewSource = {
                                     val url = listing.externalUrl ?: listing.detailUrl
                                     if (url != null) openUrl(context, url)
-                                },
-                                modifier = Modifier.padding(horizontal = MmSpacing.gutter),
-                            )
-                        }
-                        item {
-                            BeforeYouPayCard(Modifier.padding(horizontal = MmSpacing.gutter))
-                        }
-                        item {
-                            DeepLinksRow(
-                                onEstimate = onEstimate,
-                                onTax = onEstimate,
-                                onLease = onEstimate,
-                                onMap = {
-                                    val q = "${listing.district ?: ""} ${listing.city ?: ""}".trim()
-                                    val query = android.net.Uri.encode(q.ifBlank { "Sri Lanka" })
-                                    openUrl(context, "https://www.openstreetmap.org/search?query=$query")
                                 },
                                 modifier = Modifier.padding(horizontal = MmSpacing.gutter),
                             )
@@ -639,7 +662,7 @@ fun ListingDetailScreen(
             onDismiss = { showWhy = false },
             onFullEstimate = {
                 showWhy = false
-                onEstimate()
+                openValuation()
             },
         )
     }
@@ -678,7 +701,13 @@ fun ListingDetailScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(16.dp))
-                MotormilaPrimaryButton(label = stringResource(R.string.mm_why_full_estimate), onClick = onEstimate)
+                MotormilaPrimaryButton(
+                    label = stringResource(R.string.mm_why_full_estimate),
+                    onClick = {
+                        showFmvExplain = false
+                        openValuation()
+                    },
+                )
                 Spacer(Modifier.height(12.dp))
             }
         }
@@ -735,30 +764,65 @@ private fun detailContainerTransform(listingId: Int, fromCard: Boolean): Modifie
     }
 }
 
+/**
+ * The stage band (web ListingDetail on phones): dark stage ink in both themes
+ * carrying "Listed on X · checked Y", the title with its year muted, the meta
+ * row, "Asking price" + the 42sp hero price, the verdict pill (+ Why), the
+ * gauge slot, the est./mo line and the evidence chips.
+ *
+ * The verdict is shown to everyone (it is the product's core and the website
+ * shows it free): no LOCKED badge or blurred score sits next to it any more.
+ * [isPro] stays for callers/previews; it no longer gates anything here.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun PriceDealSection(
     listing: Listing,
-    isPro: Boolean,
+    @Suppress("UNUSED_PARAMETER") isPro: Boolean,
     onDealShown: () -> Unit,
     history: PriceHistory? = null,
     /** The screen's one resolved verdict; null = the row's own (previews). */
     verdict: lk.motormila.app.core.price.PriceVerdict? = null,
+    isLease: Boolean = false,
+    /** Opens the Why sheet; null = the pill is not tappable (previews). */
+    onWhy: (() -> Unit)? = null,
+    /** Value meter under the verdict (the screen passes the FMV gauge). */
+    gauge: @Composable () -> Unit = {},
 ) {
     val resolved = verdict ?: remember(listing) { listing.rowVerdict() }
     val ok = resolved as? lk.motormila.app.core.price.PriceVerdict.Ok
-    LaunchedEffect(listing.id) { onDealShown() }
+    // Re-fires when the verdict firms up (FMV arrives); the screen plays the
+    // deal haptic at most once per listing.
+    LaunchedEffect(listing.id, ok?.band, ok?.verifyFirst) { onDealShown() }
     // The card container key (listingCardKey) lives ONLY on the Detail root
     // (detailContainerTransform). A second sharedBounds with the same key here
     // made Compose pair the root against this section: the whole page was
     // ScaleToBounds-squeezed into this band and stayed there after settling.
     val sharedScope = LocalSharedTransitionScope.current
     val animatedScope = LocalNavAnimatedVisibilityScope.current
+    // Stage ink is dark in both themes, so the band reads the dark palette:
+    // every child (pill, gauge, chips) gets on-stage contrast for free.
+    androidx.compose.runtime.CompositionLocalProvider(
+        lk.motormila.app.ui.theme.LocalMmColors provides MmColors.Dark,
+    ) {
+    val c = MmColors.current
     Column(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = MmSpacing.gutter),
+            .background(c.stage)
+            .padding(horizontal = MmSpacing.gutter, vertical = 20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        val sourceName = sourceDisplayName(listing.source)
+        val checkedAgo = agoText(listing.lastSeenAt ?: listing.scrapedAt)
+        MmEyebrow(
+            text = if (checkedAgo != null) {
+                stringResource(R.string.v110_detail_listed_checked, sourceName, checkedAgo)
+            } else {
+                stringResource(R.string.listing_listed_on, sourceName)
+            },
+            color = c.stageAccent,
+        )
         val titleShared = if (sharedScope != null && animatedScope != null) {
             with(sharedScope) {
                 Modifier.sharedBounds(
@@ -771,66 +835,212 @@ internal fun PriceDealSection(
             Modifier
         }
         Text(
-            listing.displayName,
-            style = MmType.current.titleM,
-            color = MmColors.current.textPrimary,
+            stageTitle(listing, c.onStageSecondary),
+            style = MmType.current.titleL,
+            color = c.onStage,
             modifier = titleShared,
         )
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            // Price hero: the ONE full-rupee figure on the page (the sticky bar
-            // is compact-only). "Asking price" eyebrow + 30sp tabular price that
-            // shrinks to fit instead of clipping at 200 % font scale.
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
+        val meta = stageMeta(listing)
+        if (meta.isNotBlank()) {
+            Text(meta, style = MmType.current.caption, color = c.onStageSecondary)
+        }
+        Spacer(Modifier.height(6.dp))
+        // Price hero: the ONE full-rupee figure on the page (the sticky bar is
+        // compact-only). 42sp tabular, shrinking to fit at 200 % font scale.
+        MmEyebrow(stringResource(R.string.mm_detail_asking), color = c.onStageSecondary)
+        PriceSlot(
+            listing = listing,
+            history = history,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        // Verdict pill under the price (it used to sit above the title).
+        DealVerdictRow(
+            verdict = remember(resolved, isLease) {
+                MmDealVerdict.from(resolved, isLeaseTakeover = isLease, ratingAllowed = true)
+            },
+            onWhy = onWhy ?: {},
+        )
+        gauge()
+        val monthly = remember(listing.priceLkr, resolved, isLease) {
+            estMonthlyLkr(listing.priceLkr, resolved, isLease)
+        }
+        if (monthly != null) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                    stringResource(R.string.mm_detail_asking),
-                    style = MmType.current.overline,
-                    color = MmColors.current.textSecondary,
+                    stringResource(R.string.v110_detail_est_monthly, LkrFormat.price(monthly)),
+                    style = MmType.current.label.tabular(),
+                    color = c.onStage,
                 )
-                PriceSlot(
-                    listing = listing,
-                    history = history,
-                )
-            }
-            // Free tier already shows the PRO badge + locked "Deal score" row below;
-            // an empty ring with a dash next to the price read as a broken widget.
-            if (isPro && ok != null) {
-                // Signed percent vs the typical asking price — the same number as the
-                // badge and gauge ("−12%" / "+6%"), never a bare score.
-                val sign = if (ok.gapPct < 0) "\u2212" else "+"
-                DealRing(
-                    score = ok.dealScore,
-                    band = ok.band.toDealBand(),
-                    label = if (ok.pct == 0) "0%" else "$sign${ok.pct}%",
-                    description = ok.headline(),
+                Text(
+                    stringResource(R.string.v110_detail_est_monthly_basis),
+                    style = MmType.current.caption,
+                    color = c.onStageSecondary,
                 )
             }
         }
-        if (isPro) {
-            // Same verdict as the deal row / gauge. Withheld: no badge here —
-            // the price card below says why (never a Pro lock for a Pro user).
-            if (ok != null) DealBadge(band = ok.band.toDealBand(), score = ok.dealScore, pct = ok.pct)
-        } else if (ok != null) {
-            // Free tier: backend nulls deal_score — LOCKED badge + blurred value
-            // gatekept behind UserSession.isPro (DOMAIN_CONTRACT §5). Only when
-            // this listing has a rating to unlock: a Pro lock over a withheld
-            // verdict promises a score that doesn't exist.
-            DealBadge(band = DealBand.LOCKED, score = null)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    stringResource(R.string.mm_deal_score_label),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.width(8.dp))
-                LockedValue(placeholder = "8.4")
+        val cuts = history?.takeIf { it.listingId == listing.id }?.cutCount ?: 0
+        val unseenDays = daysSince(listing.lastSeenAt)
+        val possiblySold = !listing.isActive || (unseenDays != null && unseenDays > STALE_DAYS)
+        if (cuts > 0 || possiblySold) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (cuts > 0) {
+                    StageChip(
+                        text = stringResource(R.string.v110_detail_price_cuts, cuts),
+                        container = c.dealGoodContainer,
+                        content = c.onDealGood,
+                    )
+                }
+                if (possiblySold) {
+                    StageChip(
+                        text = if (!listing.isActive || unseenDays == null) {
+                            stringResource(R.string.v110_detail_no_longer_listed)
+                        } else {
+                            stringResource(R.string.v110_detail_possibly_sold, unseenDays.toInt())
+                        },
+                        container = c.cautionContainer,
+                        content = c.onCaution,
+                        icon = Icons.Filled.Warning,
+                    )
+                }
             }
         }
         // Intelligence Pills removed (audit P1-A): sell-speed / ad-health /
         // "typical mileage" were fabricated metrics with no data behind them.
     }
+    }
+}
+
+/** Not seen on the source for longer than this → "possibly sold". */
+private const val STALE_DAYS = 7L
+
+/** Small evidence chip on the stage band. */
+@Composable
+private fun StageChip(
+    text: String,
+    container: androidx.compose.ui.graphics.Color,
+    content: androidx.compose.ui.graphics.Color,
+    icon: ImageVector? = null,
+) {
+    Row(
+        Modifier
+            .clip(MmShapes.pill)
+            .background(container)
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        if (icon != null) Icon(icon, contentDescription = null, tint = content, modifier = Modifier.size(14.dp))
+        Text(text, style = MmType.current.labelS, color = content)
+    }
+}
+
+/** "Toyota Aqua G · 2015": the year split off the title and muted. */
+private fun stageTitle(listing: Listing, muted: androidx.compose.ui.graphics.Color): androidx.compose.ui.text.AnnotatedString {
+    val base = listing.displayName.trim()
+    val year = listing.year?.toString()
+    val stripped = if (year != null && base.endsWith(year)) {
+        base.removeSuffix(year).trimEnd(' ', '-', ',', '·', '(').ifBlank { base }
+    } else {
+        base
+    }
+    val showYear = year != null && (stripped != base || !base.contains(year))
+    return androidx.compose.ui.text.buildAnnotatedString {
+        append(stripped)
+        if (showYear) {
+            pushStyle(androidx.compose.ui.text.SpanStyle(color = muted))
+            append(" · $year")
+            pop()
+        }
+    }
+}
+
+/** Meta row: district · tracked N d · listed <date>, only what the data has. */
+@Composable
+private fun stageMeta(listing: Listing): String {
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0] ?: Locale.getDefault()
+    val tracked = daysSince(listing.firstSeenAt)
+    val listedOn = remember(listing.firstSeenAt, locale) {
+        parseIsoInstant(listing.firstSeenAt)?.let { instant ->
+            java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM, locale).format(java.util.Date(instant.toEpochMilli()))
+        }
+    }
+    return listOfNotNull(
+        listing.district?.trim()?.takeIf { it.isNotEmpty() },
+        tracked?.takeIf { it >= 1 }?.let { stringResource(R.string.v110_detail_tracked_days, it.toInt()) },
+        listedOn?.let { stringResource(R.string.v110_detail_listed_date, it) },
+    ).joinToString(" · ")
+}
+
+/** "just now" / "3 h ago" / "4 d ago" from an ISO timestamp; null when absent/unparseable. */
+@Composable
+private fun agoText(iso: String?): String? {
+    val instant = remember(iso) { parseIsoInstant(iso) } ?: return null
+    val hours = java.time.Duration.between(instant, java.time.Instant.now()).toHours().coerceAtLeast(0)
+    return when {
+        hours < 1 -> stringResource(R.string.v110_detail_ago_now)
+        hours < 24 -> stringResource(R.string.v110_detail_ago_hours, hours.toInt())
+        else -> stringResource(R.string.v110_detail_ago_days, (hours / 24).toInt())
+    }
+}
+
+/** Whole days since an ISO timestamp; null when absent/unparseable. */
+private fun daysSince(iso: String?): Long? =
+    parseIsoInstant(iso)?.let { java.time.Duration.between(it, java.time.Instant.now()).toDays().coerceAtLeast(0) }
+
+/**
+ * Backend datetimes: ISO with or without an offset ("2026-11-19T08:30:00",
+ * "…+00:00", "…Z") or a plain date. Naive values are UTC (backend convention).
+ */
+internal fun parseIsoInstant(iso: String?): java.time.Instant? {
+    val s = iso?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+    return runCatching { java.time.OffsetDateTime.parse(s).toInstant() }.getOrNull()
+        ?: runCatching { java.time.Instant.parse(s) }.getOrNull()
+        ?: runCatching { java.time.LocalDateTime.parse(s.replace(' ', 'T')).toInstant(java.time.ZoneOffset.UTC) }.getOrNull()
+        ?: runCatching { java.time.LocalDate.parse(s.take(10)).atStartOfDay(java.time.ZoneOffset.UTC).toInstant() }.getOrNull()
+}
+
+/** Lease defaults shared by the est./mo line and the calculator's initial state. */
+private const val LEASE_DEFAULT_DOWN_PCT = 60f
+private const val LEASE_DEFAULT_RATE = 15.0
+private const val LEASE_DEFAULT_YEARS = 5
+
+/** Standard annuity payment on the financed share of [priceLkr]. */
+private fun leaseMonthly(priceLkr: Double, downPaymentPct: Float, ratePct: Double, years: Int): Double {
+    val principal = (priceLkr * (1.0 - downPaymentPct / 100.0)).coerceAtLeast(0.0)
+    val n = years * 12
+    val monthlyRate = (ratePct / 100.0) / 12.0
+    return if (monthlyRate <= 0.0) {
+        principal / n
+    } else {
+        val factor = Math.pow(1.0 + monthlyRate, n.toDouble())
+        principal * monthlyRate * factor / (factor - 1.0)
+    }
+}
+
+/**
+ * "Rs X est./mo" for the stage band: the calculator's defaults (40 % financed,
+ * 5 years, 15 %) on the asking price. Null when the price isn't a real full
+ * price (lease takeover, placeholder, parts / rent wording).
+ */
+private fun estMonthlyLkr(
+    priceLkr: Double?,
+    verdict: lk.motormila.app.core.price.PriceVerdict,
+    isLease: Boolean,
+): Double? {
+    if (isLease || priceLkr == null || priceLkr <= 0.0) return null
+    val withheld = verdict as? lk.motormila.app.core.price.PriceVerdict.Withheld
+    if (withheld != null && withheld.group in setOf(
+            lk.motormila.app.core.price.WithheldGroup.PRICE_UNUSABLE,
+            lk.motormila.app.core.price.WithheldGroup.LEASE_OR_RENT,
+            lk.motormila.app.core.price.WithheldGroup.PARTS_OR_DAMAGED,
+        )
+    ) {
+        return null
+    }
+    return leaseMonthly(priceLkr, LEASE_DEFAULT_DOWN_PCT, LEASE_DEFAULT_RATE, LEASE_DEFAULT_YEARS)
 }
 
 /**
@@ -862,10 +1072,11 @@ private fun PriceSlot(
     } else {
         Modifier
     }
-    // Hero price: 30sp display-tier tabular figures (MmType.priceL), the one
-    // full-rupee figure on the page. MmFitText / fit styles below keep it whole
-    // at 200 % font scale.
-    val priceStyle = MmType.current.priceL.copy(color = MmColors.current.textPrimary)
+    // Hero price: 42sp display-tier tabular figures (MmType.priceXL, web
+    // 38-52px), the one full-rupee figure on the page. MmFitText / fit styles
+    // below keep it whole at 200 % font scale. Colours come from MmColors so
+    // the price reads on the stage band.
+    val priceStyle = MmType.current.priceXL.copy(color = MmColors.current.textPrimary)
     val drop = remember(listing.id, history) { detectPriceDrop(listing.id, history) }
     // Shared bounds hug the price text (not the weight(1f) slot): matched
     // against the slot's full row width, the card's short "Rs 1.4 Mn" was
@@ -886,7 +1097,7 @@ private fun PriceSlot(
                     lk.motormila.app.ui.components.MmFitText(
                         text = LkrFormat.priceFull(listing.priceLkr),
                         style = priceStyle,
-                        color = MotormilaOnSurface,
+                        color = MmColors.current.textPrimary,
                         minScale = 0.5f,
                     )
                 }
@@ -931,7 +1142,7 @@ private fun detectPriceDrop(listingId: Int, history: PriceHistory?): PriceDrop? 
  * 1. the old price strike-through draws left → right (400ms),
  * 2. digits roll down to the new price via [SlidingNumber] (650ms),
  * 3. a Deal-Green flash washes the price row,
- * 4. [HapticHelper.tick] lands on settle.
+ * 4. a light [lk.motormila.app.ui.theme.MmHaptics.toggle] tick lands on settle.
  *
  * Reduced motion collapses the whole moment to a simple crossfade.
  */
@@ -947,7 +1158,8 @@ private fun PriceDropTicker(
     // price) without the roll, flash or haptic. It used to show only the new
     // price, so reduced-motion users never saw that the price had dropped.
     val reducedMotion = rememberReducedMotion()
-    val haptics = rememberHaptics()
+    val haptics = lk.motormila.app.ui.theme.MmHaptics.current
+    val c = MmColors.current
     var started by remember(drop.dropId) { mutableStateOf(false) }
     val strikeProgress by animateFloatAsState(
         targetValue = if (started || reducedMotion) 1f else 0f,
@@ -962,7 +1174,7 @@ private fun PriceDropTicker(
         flash.animateTo(0.22f, tween(durationMillis = 150))
         flash.animateTo(0f, tween(durationMillis = 600))
         delay(150)
-        haptics.tick()
+        haptics.toggle()
     }
     // Each price is fitted to the FULL slot width on its own (sized for the
     // wider of old/new so the ticker never resizes mid-roll); the FlowRow puts
@@ -976,7 +1188,7 @@ private fun PriceDropTicker(
     )
     val oldBase = MaterialTheme.typography.headlineMedium.copy(
         fontFeatureSettings = "tnum",
-        color = MotormilaSecondaryText,
+        color = c.textSecondary,
     )
     val oldPriceStyle = rememberFitTextStyle(LkrFormat.full(drop.oldPriceLkr), oldBase, maxWidthPx)
     Box(modifier = modifier) {
@@ -995,7 +1207,7 @@ private fun PriceDropTicker(
                 Canvas(Modifier.matchParentSize()) {
                     val y = size.height / 2f
                     drawLine(
-                        color = MotormilaGood,
+                        color = c.dealGood,
                         start = Offset(0f, y),
                         end = Offset(size.width * strikeProgress, y),
                         strokeWidth = 2.dp.toPx(),
@@ -1023,86 +1235,9 @@ private fun PriceDropTicker(
             Box(
                 Modifier
                     .matchParentSize()
-                    .background(MotormilaGood.copy(alpha = flash.value)),
+                    .background(c.dealGood.copy(alpha = flash.value)),
             )
         }
-    }
-}
-
-@Composable
-private fun HeroActionsRow(
-    listing: Listing,
-    onViewSource: () -> Unit,
-    onShareWhatsApp: () -> Unit,
-    onShare: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val sourceName = sourceDisplayName(listing.source)
-    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-    // Attribution: every listing is credited to the site it was listed on.
-    Text(
-        text = stringResource(R.string.listing_listed_on, sourceName),
-        style = MaterialTheme.typography.labelMedium,
-        color = MotormilaSecondaryText,
-    )
-    // Large Dynamic Type (> 1.3x): two side-by-side buttons can't hold their labels
-    // ("Share o… WhatsA pp" at 200 %), so stack them full width instead.
-    val largeText = androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f
-    if (largeText) {
-        MotormilaPrimaryButton(
-            label = stringResource(R.string.listing_view_on_source, sourceName),
-            leadingIcon = Icons.AutoMirrored.Filled.OpenInNew,
-            onClick = onViewSource,
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            MotormilaGhostButton(
-                label = stringResource(R.string.listing_share_whatsapp),
-                fillMaxWidth = false,
-                leadingIcon = Icons.AutoMirrored.Filled.Chat,
-                modifier = Modifier.weight(1f),
-                onClick = onShareWhatsApp,
-            )
-            MotormilaIconAction(
-                icon = Icons.Filled.Share,
-                contentDescription = stringResource(R.string.listing_share_cd),
-                onClick = onShare,
-            )
-        }
-    } else {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        MotormilaPrimaryButton(
-            label = stringResource(R.string.listing_view_on_source, sourceName),
-            fillMaxWidth = false,
-            leadingIcon = Icons.AutoMirrored.Filled.OpenInNew,
-            modifier = Modifier.weight(1f),
-            onClick = onViewSource,
-        )
-        // Short "WhatsApp" label (icon + word) so it never wraps beside the
-        // primary button ("Share on / WhatsApp" at 100 %); the full phrase stays
-        // as the accessibility label.
-        val waCd = stringResource(R.string.listing_share_whatsapp)
-        MotormilaGhostButton(
-            label = stringResource(R.string.listing_share_whatsapp_short),
-            fillMaxWidth = false,
-            leadingIcon = Icons.AutoMirrored.Filled.Chat,
-            modifier = Modifier.semantics { contentDescription = waCd },
-            onClick = onShareWhatsApp,
-        )
-        MotormilaIconAction(
-            icon = Icons.Filled.Share,
-            contentDescription = stringResource(R.string.listing_share_cd),
-            onClick = onShare,
-        )
-    }
-    }
     }
 }
 
@@ -1120,26 +1255,65 @@ internal fun DealLadder(askingLkr: Double?, fmvLkr: Double?, modifier: Modifier 
 }
 
 /**
- * Deal ladder on the verdict bands: 5 %+ below typical · typical · 8 %+ above.
- * The highlighted rung is the verdict's band, so it always agrees with the
- * badge and gauge. Only drawn for an ok verdict.
+ * Typical-price card: the reference (typical asking price of comparable
+ * listings), how many comparables and how confident (the same FMV the Why
+ * sheet reads), then the deal ladder on the verdict bands: 5 %+ below
+ * typical · typical · 8 %+ above. The highlighted rung is the verdict's band,
+ * so it always agrees with the badge and gauge. Only drawn for an ok verdict.
  */
 @Composable
 internal fun DealLadder(
     verdict: lk.motormila.app.core.price.PriceVerdict.Ok,
     askingLkr: Double?,
     modifier: Modifier = Modifier,
+    /** FMV sample size; null/0 = not known yet (row median only). */
+    comparables: Int? = null,
+    /** Backend confidence token ("high" / "medium" / "low"). */
+    confidence: String? = null,
+    /** Opens the "how this valuation works" sheet. */
+    onExplain: (() -> Unit)? = null,
 ) {
     if (askingLkr == null) return
     val ref = verdict.referenceLkr
     val belowPct = lk.motormila.app.core.price.PriceVerdicts.BELOW_PCT
     val abovePct = lk.motormila.app.core.price.PriceVerdicts.ABOVE_PCT
+    val c = MmColors.current
     MotormilaSurface(modifier = modifier) {
+        lk.motormila.app.ui.components.MmEyebrow(stringResource(R.string.v110_detail_typical_title))
+        Spacer(Modifier.height(8.dp))
+        Text(
+            LkrFormat.full(ref),
+            style = MmType.current.title2.tabular(),
+            color = c.textPrimary,
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.fitWidth(),
+        )
+        if (comparables != null && comparables > 0) {
+            Text(
+                stringResource(
+                    R.string.mm_fmv_explain_sample,
+                    comparables,
+                    lk.motormila.app.ui.components.confidenceWord(confidence),
+                ),
+                style = MmType.current.caption,
+                color = c.textSecondary,
+            )
+        }
+        if (onExplain != null) {
+            MotormilaGhostButton(
+                label = stringResource(R.string.ui_detail_how_this_valuation_works),
+                fillMaxWidth = false,
+                onClick = onExplain,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
+        Spacer(Modifier.height(12.dp))
         Text(
             stringResource(R.string.mm_deal_ladder),
             fontWeight = FontWeight.SemiBold,
             style = MaterialTheme.typography.bodyMedium,
-            color = MotormilaOnSurface,
+            color = c.textPrimary,
         )
         Spacer(Modifier.height(8.dp))
         LadderRung(
@@ -1200,136 +1374,113 @@ private fun LadderRung(label: String, value: Double, active: Boolean) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// 1. 2x3 Bento Specifications Grid
+// 1. Hairline specification grid
 // ─────────────────────────────────────────────────────────────
 
 private data class BentoSpecItem(
     val label: String,
     val value: String,
-    val icon: ImageVector,
 )
 
+/**
+ * Spec grid drawn with 1 dp hairlines (web .spec-grid), three cells per row.
+ * Unknown values are hidden rather than shown as "Not listed" tiles; no
+ * known spec at all → nothing is drawn.
+ */
 @Composable
 internal fun BentoSpecsGrid(listing: Listing, modifier: Modifier = Modifier) {
     val numberFormatter = remember { NumberFormat.getIntegerInstance(Locale.US) }
-    val unknown = stringResource(R.string.mm_spec_unknown)
+    val c = MmColors.current
 
-    val yearVal = listing.year?.toString() ?: unknown
+    fun tidy(raw: String?): String? = raw
+        ?.replace("_", " ")
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() && !it.equals("unknown", ignoreCase = true) && !it.equals("n/a", ignoreCase = true) }
+
+    val yearVal = listing.year?.toString()
     val mileageVal = if (listing.mileageKm != null && listing.mileageKm > 0) {
         stringResource(R.string.mm_spec_km, numberFormatter.format(listing.mileageKm.toLong()))
     } else {
-        unknown
+        null
     }
-    val transVal = listing.transmission
-        ?.replaceFirstChar { it.uppercase() }
-        ?.replace("_", " ")
-        ?.ifBlank { unknown } ?: unknown
-    val fuelVal = listing.fuelType
-        ?.replaceFirstChar { it.uppercase() }
-        ?.replace("_", " ")
-        ?.ifBlank { unknown } ?: unknown
-    val condVal = listing.condition
-        ?.replaceFirstChar { it.uppercase() }
-        ?.replace("_", " ")
-        ?.ifBlank { stringResource(R.string.mm_spec_preowned) } ?: stringResource(R.string.mm_spec_preowned)
-    val bodyVal = listing.bodyType
-        ?.replace("_", " ")
-        ?.trim()
+    val transVal = tidy(listing.transmission)?.replaceFirstChar { it.uppercase() }
+    val fuelVal = tidy(listing.fuelType)?.replaceFirstChar { it.uppercase() }
+    val condVal = tidy(listing.condition)?.replaceFirstChar { it.uppercase() }
+    val bodyVal = tidy(listing.bodyType)
         ?.let { if (it.length <= 4) it.uppercase() else it.replaceFirstChar(Char::uppercase) }
-        ?.ifBlank { unknown } ?: unknown
+    val engineVal = listing.engineCc?.takeIf { it > 0 }?.let { "${numberFormatter.format(it.toLong())} cc" }
 
-    val specs = listOf(
-        BentoSpecItem(stringResource(R.string.mm_spec_year), yearVal, Icons.Filled.CalendarMonth),
-        BentoSpecItem(stringResource(R.string.mm_spec_mileage), mileageVal, Icons.Filled.Speed),
-        BentoSpecItem(stringResource(R.string.mm_spec_transmission), transVal, Icons.Filled.Tune),
-        BentoSpecItem(stringResource(R.string.mm_spec_fuel), fuelVal, Icons.Filled.LocalGasStation),
-        BentoSpecItem(stringResource(R.string.mm_spec_condition), condVal, Icons.Filled.AutoAwesome),
-        BentoSpecItem(stringResource(R.string.mm_spec_body), bodyVal, Icons.Filled.DirectionsCar),
-    )
+    val specs = listOfNotNull(
+        yearVal?.let { BentoSpecItem(stringResource(R.string.mm_spec_year), it) },
+        mileageVal?.let { BentoSpecItem(stringResource(R.string.mm_spec_mileage), it) },
+        transVal?.let { BentoSpecItem(stringResource(R.string.mm_spec_transmission), it) },
+        fuelVal?.let { BentoSpecItem(stringResource(R.string.mm_spec_fuel), it) },
+        condVal?.let { BentoSpecItem(stringResource(R.string.mm_spec_condition), it) },
+        bodyVal?.let { BentoSpecItem(stringResource(R.string.mm_spec_body), it) },
+        engineVal?.let { BentoSpecItem(stringResource(R.string.scr_cmp_engine), it) },
+    ).take(6)
+    if (specs.isEmpty()) return
 
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text(
-            text = stringResource(R.string.mm_detail_specs),
-            style = MmType.current.overline,
-            color = MmColors.current.textSecondary,
-            modifier = Modifier.padding(bottom = 2.dp),
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        lk.motormila.app.ui.components.MmEyebrow(stringResource(R.string.mm_detail_specs))
+        // Hairlines = the 1 dp gaps between opaque cells over an outline fill.
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .clip(MmShapes.md)
+                .background(c.outlineStrong)
+                .padding(1.dp),
+            verticalArrangement = Arrangement.spacedBy(1.dp),
         ) {
-            BentoCell(item = specs[0], modifier = Modifier.weight(1f))
-            BentoCell(item = specs[1], modifier = Modifier.weight(1f))
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            BentoCell(item = specs[2], modifier = Modifier.weight(1f))
-            BentoCell(item = specs[3], modifier = Modifier.weight(1f))
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            BentoCell(item = specs[4], modifier = Modifier.weight(1f))
-            BentoCell(item = specs[5], modifier = Modifier.weight(1f))
+            specs.chunked(3).forEach { row ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(androidx.compose.foundation.layout.IntrinsicSize.Min),
+                    horizontalArrangement = Arrangement.spacedBy(1.dp),
+                ) {
+                    row.forEach { item ->
+                        BentoCell(item = item, modifier = Modifier.weight(1f).fillMaxHeight())
+                    }
+                    repeat(3 - row.size) {
+                        Box(Modifier.weight(1f).fillMaxHeight().background(c.background))
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
 private fun BentoCell(item: BentoSpecItem, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = MotormilaRadius.lg,
-        color = MotormilaSurfaceColor,
-        border = BorderStroke(1.dp, MotormilaOutline),
+    val c = MmColors.current
+    Column(
+        modifier = modifier
+            .background(c.background)
+            .padding(horizontal = 12.dp, vertical = 12.dp)
+            .semantics(mergeDescendants = true) {},
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(MotormilaRadius.lg)
-                    .background(MotormilaPrimaryGlow),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = item.icon,
-                    contentDescription = item.label,
-                    tint = MotormilaPrimary,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    text = item.label,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 1.sp,
-                    color = MotormilaSecondaryText,
-                    // "TRANSMISSION" broke mid-word ("TRANSMISSIO / N") at 130 %+.
-                    maxLines = 1,
-                    softWrap = false,
-                    modifier = Modifier.fitWidth(minScale = 0.5f),
-                )
-                Text(
-                    text = item.value,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MotormilaOnSurface,
-                    maxLines = 1,
-                    softWrap = false,
-                    modifier = Modifier.fitWidth(minScale = 0.5f),
-                )
-            }
-        }
+        Text(
+            text = item.label,
+            style = MmType.current.caption,
+            color = c.textSecondary,
+            // "TRANSMISSION" broke mid-word ("TRANSMISSIO / N") at 130 %+.
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.fitWidth(minScale = 0.5f),
+        )
+        Text(
+            text = item.value,
+            style = MmType.current.label,
+            color = c.textPrimary,
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.fitWidth(minScale = 0.5f),
+        )
     }
 }
 
@@ -1438,26 +1589,34 @@ private fun isImportContext(listing: Listing): Boolean {
         condition.contains("brand new")
 }
 
+/**
+ * Brand new or under a year old: the only case the "Brand new / under 1 year"
+ * LTV caption describes. Everything else gets the neutral caption.
+ */
+private fun isBrandNewOrUnderOneYear(listing: Listing): Boolean {
+    val condition = listing.condition?.lowercase()?.replace('_', ' ').orEmpty()
+    if (condition.contains("brand new")) return true
+    val year = listing.year ?: return false
+    return year >= java.util.Calendar.getInstance().get(java.util.Calendar.YEAR) - 1
+}
+
 @Composable
 private fun LeasePaymentCalculator(
     priceLkr: Double,
     modifier: Modifier = Modifier,
+    /** Picks the LTV caption: the "Brand new / under 1 year" rule only for such cars. */
+    brandNew: Boolean = false,
 ) {
     val safePrice = if (priceLkr > 0) priceLkr else 12_500_000.0
-    var downPaymentPct by remember { mutableStateOf(60f) }
-    var interestRate by remember { mutableStateOf(15.0) }
-    var tenureYears by remember { mutableStateOf(5) }
+    var downPaymentPct by remember { mutableStateOf(LEASE_DEFAULT_DOWN_PCT) }
+    var interestRate by remember { mutableStateOf(LEASE_DEFAULT_RATE) }
+    var tenureYears by remember { mutableStateOf(LEASE_DEFAULT_YEARS) }
 
     val downPayment = safePrice * (downPaymentPct / 100.0)
     val principal = (safePrice - downPayment).coerceAtLeast(0.0)
     val numberOfPayments = tenureYears * 12
-    val monthlyRate = (interestRate / 100.0) / 12.0
-    val monthlyPayment = if (monthlyRate <= 0.0) {
-        principal / numberOfPayments
-    } else {
-        val factor = Math.pow(1.0 + monthlyRate, numberOfPayments.toDouble())
-        principal * monthlyRate * factor / (factor - 1.0)
-    }
+    // Same annuity as the stage band's est./mo line.
+    val monthlyPayment = leaseMonthly(safePrice, downPaymentPct, interestRate, tenureYears)
     val totalInterest = (monthlyPayment * numberOfPayments) - principal
 
     Surface(
@@ -1478,7 +1637,9 @@ private fun LeasePaymentCalculator(
                     color = MmColors.current.textPrimary,
                 )
                 Text(
-                    text = stringResource(R.string.mm_calc_lease_caption),
+                    text = stringResource(
+                        if (brandNew) R.string.mm_calc_lease_caption else R.string.v110_detail_lease_caption_neutral,
+                    ),
                     style = MmType.current.caption,
                     color = MmColors.current.textSecondary,
                 )
@@ -1538,6 +1699,8 @@ private fun LeasePaymentCalculator(
                         style = MmType.current.labelS,
                         color = MmColors.current.textSecondary,
                     )
+                    val rateDownCd = stringResource(R.string.v110_detail_rate_down)
+                    val rateUpCd = stringResource(R.string.v110_detail_rate_up)
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1547,10 +1710,18 @@ private fun LeasePaymentCalculator(
                             color = MotormilaSurfaceHigh,
                             border = BorderStroke(1.dp, MotormilaOutline),
                             onClick = { interestRate = (interestRate - 0.5).coerceAtLeast(8.0) },
-                            modifier = Modifier.size(48.dp),
+                            modifier = Modifier
+                                .size(48.dp)
+                                .semantics { contentDescription = rateDownCd },
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Text("−", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = MotormilaOnSurface)
+                                Text(
+                                    "−",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MotormilaOnSurface,
+                                    modifier = Modifier.clearAndSetSemantics {},
+                                )
                             }
                         }
                         Text(
@@ -1564,10 +1735,18 @@ private fun LeasePaymentCalculator(
                             color = MotormilaSurfaceHigh,
                             border = BorderStroke(1.dp, MotormilaOutline),
                             onClick = { interestRate = (interestRate + 0.5).coerceAtMost(30.0) },
-                            modifier = Modifier.size(48.dp),
+                            modifier = Modifier
+                                .size(48.dp)
+                                .semantics { contentDescription = rateUpCd },
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Text("+", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = MotormilaOnSurface)
+                                Text(
+                                    "+",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MotormilaOnSurface,
+                                    modifier = Modifier.clearAndSetSemantics {},
+                                )
                             }
                         }
                     }
@@ -2355,4 +2534,35 @@ private fun shareListing(context: Context, listing: Listing, verdict: lk.motormi
 
 private fun shareWhatsApp(context: Context, listing: Listing, verdict: lk.motormila.app.core.price.PriceVerdict?) {
     FmvShare.shareWhatsApp(context, listing, verdict)
+}
+
+@Composable
+private fun DutyIncludedNote(onOpenCalculator: () -> Unit, modifier: Modifier) {
+    Column(modifier) {
+        Text(stringResource(R.string.v110_detail_duty_included), style = MmType.current.bodyM)
+        androidx.compose.material3.TextButton(onClick = onOpenCalculator) {
+            Text(stringResource(R.string.v110_detail_duty_fresh_import))
+        }
+    }
+}
+
+@Composable
+private fun DescriptionCard(text: String, listingId: Int, modifier: Modifier) {
+    var expanded by androidx.compose.runtime.saveable.rememberSaveable(listingId) { mutableStateOf(false) }
+    var truncated by remember(text) { mutableStateOf(false) }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(stringResource(R.string.v110_detail_description), style = MmType.current.titleM)
+        Text(
+            text,
+            style = MmType.current.bodyM,
+            maxLines = if (expanded) Int.MAX_VALUE else 4,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            onTextLayout = { if (!expanded) truncated = it.hasVisualOverflow },
+        )
+        if (truncated || expanded) {
+            androidx.compose.material3.TextButton(onClick = { expanded = !expanded }) {
+                Text(stringResource(if (expanded) R.string.v110_detail_show_less else R.string.v110_detail_show_more))
+            }
+        }
+    }
 }

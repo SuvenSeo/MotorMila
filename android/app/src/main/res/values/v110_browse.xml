@@ -1,0 +1,17 @@
+<resources>
+    <string name="v110m_alert_deleted">Alert deleted</string>
+    <string name="v110m_any_vehicle">Any vehicle</string>
+    <string name="v110m_auth_err_wrong_credentials">Incorrect email or password</string>
+    <string name="v110_card_listed_on">Listed on %1$s</string>
+    <string name="v110_card_no_photo_source">No photo from %1$s</string>
+    <string name="v110_card_no_photo">No photo available</string>
+    <string name="v110_search_refresh_failed">Could not refresh results. Try again.</string>
+    <string name="v110m_watch_removed_many">Removed %1$d vehicles</string>
+    <string name="v110m_more_options">More options</string>
+    <string name="v110m_widget_mom">%1$s month over month</string>
+    <string name="v110m_widget_updated">Updated %1$s</string>
+    <string name="v110m_widget_index">Price index %1$s</string>
+    <string name="v110m_widget_drop">Price down %1$s</string>
+    <string name="v110_compare_best">Best in this comparison</string>
+    <string name="v110_compare_differs">Differs between vehicles</string>
+</resources>

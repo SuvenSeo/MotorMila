@@ -24,9 +24,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddAlert
 import androidx.compose.material.icons.filled.ClearAll
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -99,6 +102,7 @@ fun WatchlistScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snacks = remember { SnackbarHostState() }
     var showClearDialog by remember { mutableStateOf(false) }
+    var overflowOpen by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
 
     // Re-tapping the active Saved tab scrolls the list back to the top.
@@ -119,6 +123,8 @@ fun WatchlistScreen(
     val undoMessage = when {
         undo == null -> null
         undo.isClearAll -> stringResource(R.string.v19_watch_cleared, undo.items.size)
+        // Several swipes inside one undo window merge into a single Undo.
+        undo.items.size > 1 -> stringResource(R.string.v110m_watch_removed_many, undo.items.size)
         else -> stringResource(R.string.v19_watch_removed, undo.items.firstOrNull()?.title.orEmpty())
     }
     val undoLabel = stringResource(R.string.v19_watch_undo)
@@ -176,12 +182,33 @@ fun WatchlistScreen(
                 contentDescription = stringResource(R.string.v19_watch_refresh_cd),
                 onClick = { viewModel.onEvent(WatchlistUiEvent.RefreshPrices) },
             )
+            // Clear all lives in an overflow menu, away from Refresh, so a
+            // mis-tap next to Refresh can't open the destructive flow.
             if (state.items.isNotEmpty()) {
-                MotormilaIconAction(
-                    icon = Icons.Filled.ClearAll,
-                    contentDescription = stringResource(R.string.v19_watch_clear_cd),
-                    onClick = { showClearDialog = true },
-                )
+                Box {
+                    MotormilaIconAction(
+                        icon = Icons.Filled.MoreVert,
+                        contentDescription = stringResource(R.string.v110m_more_options),
+                        onClick = { overflowOpen = true },
+                    )
+                    DropdownMenu(expanded = overflowOpen, onDismissRequest = { overflowOpen = false }) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    stringResource(R.string.v19_watch_clear_cd),
+                                    color = MmColors.current.danger,
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Filled.ClearAll, contentDescription = null, tint = MmColors.current.danger)
+                            },
+                            onClick = {
+                                overflowOpen = false
+                                showClearDialog = true
+                            },
+                        )
+                    }
+                }
             }
         },
     ) {

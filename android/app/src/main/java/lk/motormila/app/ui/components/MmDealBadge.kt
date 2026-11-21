@@ -1,6 +1,11 @@
 package lk.motormila.app.ui.components
 
-import lk.motormila.app.ui.theme.mmTappable
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.ripple
+import androidx.compose.runtime.remember
+import lk.motormila.app.ui.theme.MmHaptics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -34,8 +39,10 @@ import lk.motormila.app.ui.theme.tone
 
 /**
  * Deal verdict pill. Tone colours come from [MmColors] (great/good/fair/high/
- * caution). [onWhy] adds a "Why?" affordance that opens the explanation sheet.
+ * caution). [onWhy] adds a "Why?" affordance that opens the explanation sheet;
+ * the touch target is then at least 48dp tall (the visual pill stays compact).
  * [onImage] gives the pill an opaque dark backing so it reads on photos.
+ * [singleLine] keeps the label on one line and ellipsizes (card / row badge).
  */
 @Composable
 fun MmDealBadge(
@@ -45,27 +52,46 @@ fun MmDealBadge(
     onWhy: (() -> Unit)? = null,
     onImage: Boolean = false,
     locked: Boolean = false,
+    singleLine: Boolean = false,
 ) {
     val c = MmColors.current
     val d = c.deal(tone)
     val bg = if (onImage) Color(0xCC0B0B0F) else d.container
     val fg = if (onImage) (if (tone == MmDealTone.NEUTRAL) Color.White else d.solid.lighten()) else d.content
     val whyLabel = stringResource(R.string.mm_deal_why)
-    // On a photo the pill shares a fixed 4:3 frame with the save button, so its
+    val haptics = MmHaptics.current
+    val interaction = remember { MutableInteractionSource() }
+    // On a photo the pill shares a fixed frame with the save button, so its
     // text is capped at 1.15x (iOS-style) — at 200 % it read "Near …" / "Rs 0.…".
     lk.motormila.app.ui.theme.CappedFontScale(max = if (onImage) 1.15f else 2f) {
-    Row(
+    // Outer box = touch target (>= 48dp tall when tappable); inner row = pill.
+    Box(
         modifier = modifier
-            .clip(MmShapes.pill)
-            .background(bg)
             .then(
                 if (onWhy != null) {
-                    Modifier.mmTappable(role = Role.Button, onClickLabel = whyLabel, pressedScale = 1f, onClick = onWhy)
+                    Modifier
+                        .heightIn(min = 48.dp)
+                        .clickable(
+                            interactionSource = interaction,
+                            indication = null,
+                            role = Role.Button,
+                            onClickLabel = whyLabel,
+                        ) {
+                            haptics.press()
+                            onWhy()
+                        }
                 } else {
                     Modifier
                 },
             )
-            .semantics(mergeDescendants = true) { contentDescription = label }
+            .semantics(mergeDescendants = true) { contentDescription = label },
+        contentAlignment = Alignment.CenterStart,
+    ) {
+    Row(
+        modifier = Modifier
+            .clip(MmShapes.pill)
+            .background(bg)
+            .then(if (onWhy != null) Modifier.indication(interaction, ripple()) else Modifier)
             .padding(start = 10.dp, end = if (onWhy != null) 8.dp else 10.dp, top = 5.dp, bottom = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -75,10 +101,19 @@ fun MmDealBadge(
         } else {
             Box(Modifier.size(6.dp).clip(MmShapes.pill).background(if (onImage) fg else d.solid))
         }
-        Text(label, style = MmType.current.labelS, color = fg, modifier = Modifier.weight(1f, fill = false), maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        Text(
+            label,
+            style = MmType.current.labelS,
+            color = fg,
+            modifier = Modifier.weight(1f, fill = false),
+            maxLines = if (singleLine) 1 else 2,
+            softWrap = !singleLine,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        )
         if (onWhy != null) {
             Icon(Icons.AutoMirrored.Outlined.HelpOutline, null, tint = fg.copy(alpha = 0.8f), modifier = Modifier.size(14.dp))
         }
+    }
     }
     }
 }
@@ -97,6 +132,7 @@ fun MmDealBadge(
     modifier: Modifier = Modifier,
     onWhy: (() -> Unit)? = null,
     onImage: Boolean = false,
+    singleLine: Boolean = false,
 ) {
     val label = when (band) {
         DealBand.GREAT -> stringResource(R.string.mm_deal_great)
@@ -111,5 +147,6 @@ fun MmDealBadge(
         onWhy = onWhy,
         onImage = onImage,
         locked = band == DealBand.LOCKED,
+        singleLine = singleLine,
     )
 }

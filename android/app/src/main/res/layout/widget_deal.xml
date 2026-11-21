@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Swarm E: RemoteViews layout for the Deal-of-the-day widget.
-     RemoteViews supports only LinearLayout/TextView/ImageView — no Compose. -->
+     RemoteViews supports only LinearLayout/TextView/ImageView — no Compose.
+     Colors are theme-aware (values / values-night v110_widget_colors). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@color/motormila_bg"
+    android:background="@color/v110_widget_bg"
     android:orientation="vertical"
     android:padding="12dp">
 
@@ -20,7 +21,7 @@
             android:layout_weight="1"
             android:contentDescription="@string/widget_deal_desc"
             android:text="@string/widget_index_missing"
-            android:textColor="@color/motormila_gold"
+            android:textColor="@color/v110_widget_accent"
             android:textSize="14sp"
             android:textStyle="bold" />
 
@@ -29,7 +30,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text=""
-            android:textColor="#FFFFFF"
+            android:textColor="@color/v110_widget_text_secondary"
             android:textSize="12sp" />
     </LinearLayout>
 
@@ -43,7 +44,7 @@
         android:maxLines="2"
         android:minHeight="48dp"
         android:text="@string/widget_deal_title"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/v110_widget_text"
         android:textSize="14sp" />
 
     <TextView
@@ -53,8 +54,17 @@
         android:layout_marginTop="2dp"
         android:minHeight="48dp"
         android:text=""
-        android:textColor="@color/motormila_deal"
+        android:textColor="@color/v110_widget_deal"
         android:textSize="14sp"
         android:textStyle="bold" />
+
+    <!-- "Updated X ago": stays visible when an offline refresh keeps the last good deal. -->
+    <TextView
+        android:id="@+id/widget_updated"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textColor="@color/v110_widget_text_secondary"
+        android:textSize="11sp" />
 
 </LinearLayout>

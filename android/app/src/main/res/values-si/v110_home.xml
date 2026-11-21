@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.10 "Showroom" Home strings — Sinhala. -->
+<resources>
+    <!-- Hero -->
+    <string name="v110_home_kicker">ශ්‍රී ලංකාව · සජීවී මිල</string>
+    <!-- Must appear verbatim inside mm_home_title; it is drawn in the accent blue. -->
+    <string name="v110_home_headline_accent">සාධාරණ මිලක්</string>
+    <string name="v110_home_featured_cd">විශේෂ ගනුදෙනුව විවෘත කරන්න: %1$s, %2$s</string>
+
+    <!-- Section eyebrows / titles -->
+    <string name="v110_home_eyebrow_deals">සාමාන්‍ය මිලට අඩුවෙන්</string>
+    <string name="v110_home_eyebrow_drops">මෑතකදී අඩු කළ</string>
+    <string name="v110_home_eyebrow_market">අද වෙළඳපොළ</string>
+    <string name="v110_home_market_title">මේ මොහොතේ වෙළඳපොළ</string>
+    <string name="v110_home_eyebrow_tools">මෙවලම්</string>
+    <string name="v110_home_tools_title">මිලදී ගැනීමට පෙර මිල බලන්න</string>
+    <string name="v110_home_eyebrow_models">ජනප්‍රිය</string>
+    <string name="v110_home_eyebrow_districts">මිලදී ගත හැකි ස්ථාන</string>
+</resources>

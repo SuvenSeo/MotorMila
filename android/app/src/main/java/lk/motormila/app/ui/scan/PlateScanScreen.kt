@@ -260,66 +260,67 @@ private fun CameraPreview(
 ) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current
-    val executor = remember { Executors.newSingleThreadExecutor() }
-    val recogniser = remember { TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS) }
+    val preview = remember(context) { PreviewView(context) }
+    val onResult = androidx.compose.runtime.rememberUpdatedState(onOcrText)
 
-    DisposableEffect(Unit) {
+    AndroidView(factory = { preview }, modifier = modifier)
+    DisposableEffect(preview, lifecycle) {
+        val executor = Executors.newSingleThreadExecutor()
+        val recogniser = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+        var disposed = false
+        val previewUse = androidx.camera.core.Preview.Builder().build().also {
+            it.surfaceProvider = preview.surfaceProvider
+        }
+        val providerFuture = ProcessCameraProvider.getInstance(context)
+        val analysis = ImageAnalysis.Builder()
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .build()
+            .also { ia ->
+                ia.setAnalyzer(executor) { imageProxy ->
+                    val media = imageProxy.image
+                    if (media == null) {
+                        imageProxy.close()
+                        return@setAnalyzer
+                    }
+                    val image = InputImage.fromMediaImage(media, imageProxy.imageInfo.rotationDegrees)
+                    recogniser.process(image)
+                        .addOnSuccessListener { vision ->
+                            if (disposed) return@addOnSuccessListener
+                            val sideways = image.rotationDegrees % 180 != 0
+                            val w = (if (sideways) imageProxy.height else imageProxy.width).toFloat()
+                            val h = (if (sideways) imageProxy.width else imageProxy.height).toFloat()
+                            onResult.value(
+                                vision.text,
+                                vision.textBlocks.map { b ->
+                                    val box = b.boundingBox
+                                    if (box == null) FloatRect(0f, 0f, 0f, 0f)
+                                    else FloatRect(
+                                        box.left / w, box.top / h,
+                                        box.right / w, box.bottom / h,
+                                    )
+                                }.filter { it.r > it.l && it.b > it.t },
+                            )
+                        }
+                        .addOnCompleteListener { imageProxy.close() }
+                }
+            }
+        var provider: ProcessCameraProvider? = null
+        providerFuture.addListener({
+            if (!disposed) {
+                runCatching {
+                    provider = providerFuture.get()
+                    provider?.bindToLifecycle(lifecycle, CameraSelector.DEFAULT_BACK_CAMERA, previewUse, analysis)
+                }
+            }
+        }, ContextCompat.getMainExecutor(context))
         onDispose {
-            runCatching { recogniser.close() }
-            runCatching { executor.shutdown() }
+            disposed = true
+            analysis.clearAnalyzer()
+            provider?.unbind(previewUse, analysis)
+            executor.execute { recogniser.close() }
+            executor.shutdown()
         }
     }
-
-    AndroidView(
-        factory = { ctx ->
-            PreviewView(ctx).also { preview ->
-                val providerFuture = ProcessCameraProvider.getInstance(ctx)
-                providerFuture.addListener({
-                    runCatching {
-                        val provider = providerFuture.get()
-                        val previewUse = androidx.camera.core.Preview.Builder().build().also {
-                            it.surfaceProvider = preview.surfaceProvider
-                        }
-                        val analysis = ImageAnalysis.Builder()
-                            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                            .build()
-                            .also { ia ->
-                                ia.setAnalyzer(executor) { imageProxy ->
-                                    val media = imageProxy.image
-                                    if (media == null) {
-                                        imageProxy.close()
-                                        return@setAnalyzer
-                                    }
-                                    val image = InputImage.fromMediaImage(media, imageProxy.imageInfo.rotationDegrees)
-                                    recogniser.process(image)
-                                        .addOnSuccessListener { vision ->
-                                            val w = imageProxy.width.toFloat()
-                                            val h = imageProxy.height.toFloat()
-                                            onOcrText(
-                                                vision.text,
-                                                vision.textBlocks.map { b ->
-                                                    val box = b.boundingBox
-                                                    if (box == null) FloatRect(0f, 0f, 0f, 0f)
-                                                    else FloatRect(
-                                                        box.left / w, box.top / h,
-                                                        box.right / w, box.bottom / h,
-                                                    )
-                                                }.filter { it.r > it.l && it.b > it.t },
-                                            )
-                                        }
-                                        .addOnCompleteListener { imageProxy.close() }
-                                }
-                            }
-                        provider.unbindAll()
-                        provider.bindToLifecycle(
-                            lifecycle, CameraSelector.DEFAULT_BACK_CAMERA, previewUse, analysis,
-                        )
-                    }
-                }, ContextCompat.getMainExecutor(ctx))
-            }
-        },
-        modifier = modifier,
-    )
 }
 
 /** Thin OCR overlay strip rendering recognised block boxes. */

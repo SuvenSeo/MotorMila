@@ -72,18 +72,19 @@ class AppUpdateChecker @Inject constructor(
             val mandatory: Boolean = false,
         ) : CheckResult
 
-        /** Running build is the newest (or check failed) — no action needed. */
+        /** Running build is current. */
         data object UpToDate : CheckResult
+        data object CheckFailed : CheckResult
     }
 
     /**
      * Ask the backend for the newest release. Returns [CheckResult.UpdateAvailable]
      * only when the remote versionCode strictly exceeds the running one AND an
-     * apk_url is present. Any network/parse error yields [CheckResult.UpToDate].
+     * apk_url is present. Any network/parse error yields [CheckResult.CheckFailed].
      */
     suspend fun check(currentVersionCode: Int): CheckResult {
         if (!BuildConfig.SELF_UPDATE_ENABLED) return CheckResult.UpToDate
-        val release = fetchLatestRelease() ?: return CheckResult.UpToDate
+        val release = fetchLatestRelease() ?: return CheckResult.CheckFailed
         return decide(release, currentVersionCode)
     }
 
@@ -216,8 +217,6 @@ class AppUpdateChecker @Inject constructor(
             // Coroutine cancellation must propagate, never be swallowed.
             throw e
         } catch (_: Exception) {
-            // Any failure (offline, parse, unexpected runtime error) is a silent
-            // "up to date" — a broken update check must never crash the app.
             null
         }
     }
@@ -228,11 +227,12 @@ class AppUpdateChecker @Inject constructor(
     companion object {
         /** Pure decision policy (unit-tested). */
         internal fun decide(release: LatestRelease, currentVersionCode: Int): CheckResult {
-            val remoteCode = release.version_code ?: return CheckResult.UpToDate
+            val remoteCode = release.version_code ?: return CheckResult.CheckFailed
             val url = release.apk_url?.trim().orEmpty()
-            if (remoteCode <= currentVersionCode || url.isBlank()) return CheckResult.UpToDate
+            if (remoteCode <= currentVersionCode) return CheckResult.UpToDate
             // No published hash = no verifiable install: stay quiet.
-            val sha = normalizeSha256(release.sha256) ?: return CheckResult.UpToDate
+            if (!url.startsWith("https://")) return CheckResult.CheckFailed
+            val sha = normalizeSha256(release.sha256) ?: return CheckResult.CheckFailed
             return CheckResult.UpdateAvailable(
                 versionName = release.version ?: "v$remoteCode",
                 versionCode = remoteCode,

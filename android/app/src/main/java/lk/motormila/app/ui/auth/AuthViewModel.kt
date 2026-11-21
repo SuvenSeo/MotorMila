@@ -1,5 +1,6 @@
 package lk.motormila.app.ui.auth
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -8,16 +9,14 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Instant
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import lk.motormila.app.R
 import lk.motormila.app.core.common.AppError
 import lk.motormila.app.core.network.ErrorMapper
-import lk.motormila.app.data.local.datastore.SettingsStore
+import lk.motormila.app.core.network.messageRes
 import lk.motormila.app.domain.repository.AuthRepository
 import lk.motormila.app.domain.usecase.LoginUseCase
 import lk.motormila.app.domain.usecase.ObserveSessionUseCase
@@ -27,6 +26,8 @@ data class AuthUiState(
     val name: String = "",
     val email: String = "",
     val password: String = "",
+    /** Sign-up only: must equal [password] before the account is created. */
+    val confirmPassword: String = "",
     val inviteToken: String = "",
     val isSignupTab: Boolean = false,
     val loading: Boolean = false,
@@ -34,14 +35,16 @@ data class AuthUiState(
     val selfSignupTrialDays: Int = 7,
     /** Increments on each failed attempt to retrigger the shake animation. */
     val shakeToken: Int = 0,
-    val error: String? = null,
+    /** Localized error copy (string res); never raw backend/exception text. */
+    @StringRes val errorRes: Int? = null,
     /** True when the last failure was transport-level (drives the offline badge). */
     val offline: Boolean = false,
     val loggedIn: Boolean = false,
-    val biometricAvailable: Boolean = false,
+    /** "Forgot password?" expanded into a persistent help card with a contact action. */
+    val forgotOpen: Boolean = false,
     /** True until the cold-start restore() finishes ( SplashGate also gates on this). */
     val restoring: Boolean = true,
-    /** Last known session (drives biometric fast-path + "signed in as" hint). */
+    /** Last known session (drives the "signed in as" hint). */
     val sessionEmail: String? = null,
     val expiresAt: String? = null,
     val sessionExpired: Boolean = false,
@@ -51,13 +54,12 @@ sealed interface AuthUiEvent {
     data class NameChanged(val value: String) : AuthUiEvent
     data class EmailChanged(val value: String) : AuthUiEvent
     data class PasswordChanged(val value: String) : AuthUiEvent
+    data class ConfirmPasswordChanged(val value: String) : AuthUiEvent
     data class InviteTokenChanged(val value: String) : AuthUiEvent
     data class TabChanged(val signup: Boolean) : AuthUiEvent
     data object Submit : AuthUiEvent
     data object Retry : AuthUiEvent
-    data object BiometricUnlock : AuthUiEvent
-    /** Biometric prompt succeeded: fast-path when a live session exists, else submit. */
-    data object BiometricSuccess : AuthUiEvent
+    data object ToggleForgot : AuthUiEvent
     data object ConsumeLoggedIn : AuthUiEvent
     data object DismissError : AuthUiEvent
 }
@@ -68,15 +70,10 @@ class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val login: LoginUseCase,
     observeSession: ObserveSessionUseCase,
-    settingsStore: SettingsStore,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AuthUiState())
     val state: StateFlow<AuthUiState> = _state.asStateFlow()
-
-    val biometricEnabled: StateFlow<Boolean> = settingsStore.observe()
-        .map { it.biometricEnabled }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     init {
         runCatching { savedStateHandle.toRoute<LoginRoute>() }.getOrNull()?.let { route ->
@@ -126,47 +123,36 @@ class AuthViewModel @Inject constructor(
 
     fun onEvent(event: AuthUiEvent) {
         when (event) {
-            is AuthUiEvent.NameChanged -> _state.update { it.copy(name = event.value, error = null, offline = false) }
-            is AuthUiEvent.EmailChanged -> _state.update { it.copy(email = event.value, error = null, offline = false) }
-            is AuthUiEvent.PasswordChanged -> _state.update { it.copy(password = event.value, error = null, offline = false) }
-            is AuthUiEvent.InviteTokenChanged -> _state.update { it.copy(inviteToken = event.value, error = null, offline = false) }
-            is AuthUiEvent.TabChanged -> _state.update { it.copy(isSignupTab = event.signup, error = null, offline = false) }
+            is AuthUiEvent.NameChanged -> _state.update { it.copy(name = event.value, errorRes = null, offline = false) }
+            is AuthUiEvent.EmailChanged -> _state.update { it.copy(email = event.value, errorRes = null, offline = false) }
+            is AuthUiEvent.PasswordChanged -> _state.update { it.copy(password = event.value, errorRes = null, offline = false) }
+            is AuthUiEvent.ConfirmPasswordChanged -> _state.update { it.copy(confirmPassword = event.value, errorRes = null, offline = false) }
+            is AuthUiEvent.InviteTokenChanged -> _state.update { it.copy(inviteToken = event.value, errorRes = null, offline = false) }
+            is AuthUiEvent.TabChanged -> _state.update { it.copy(isSignupTab = event.signup, errorRes = null, offline = false) }
             AuthUiEvent.Submit -> submit()
             AuthUiEvent.Retry -> submit()
-            AuthUiEvent.BiometricUnlock -> _state.update { it.copy(biometricAvailable = true) }
-            AuthUiEvent.BiometricSuccess -> onBiometricSuccess()
+            AuthUiEvent.ToggleForgot -> _state.update { it.copy(forgotOpen = !it.forgotOpen) }
             AuthUiEvent.ConsumeLoggedIn -> _state.update { it.copy(loggedIn = false) }
-            AuthUiEvent.DismissError -> _state.update { it.copy(error = null, offline = false) }
-        }
-    }
-
-    private fun onBiometricSuccess() {
-        val s = _state.value
-        // Live session on file: skip credential round-trip entirely.
-        if (s.sessionEmail != null && !s.sessionExpired) {
-            _state.update { it.copy(loggedIn = true, error = null, offline = false) }
-        } else {
-            submit()
+            AuthUiEvent.DismissError -> _state.update { it.copy(errorRes = null, offline = false) }
         }
     }
 
     private fun submit() {
         val s = _state.value
-        if (s.email.isBlank() || s.password.isBlank()) {
-            // Biometric fast-path already handled above; here credentials are required.
-            fail(AppError.Validation("Enter your email and password."))
-            return
+        val invalid = when {
+            s.email.isBlank() || s.password.isBlank() -> R.string.v19_auth_err_credentials
+            !EMAIL.matches(s.email.trim()) -> R.string.v19_auth_err_email_format
+            s.isSignupTab && s.inviteToken.isBlank() && !s.selfSignupEnabled -> R.string.v19_auth_err_invite_required
+            s.isSignupTab && s.password.length < 8 -> R.string.v19_auth_err_password_short
+            s.isSignupTab && s.confirmPassword != s.password -> R.string.v19_auth_err_password_mismatch
+            else -> null
         }
-        if (s.isSignupTab && s.inviteToken.isBlank() && !s.selfSignupEnabled) {
-            fail(AppError.Validation("Invite token is required — Motormila access is invite-only."))
-            return
-        }
-        if (s.isSignupTab && s.password.length < 8) {
-            fail(AppError.Validation("Password must be at least 8 characters."))
+        if (invalid != null) {
+            fail(invalid)
             return
         }
         viewModelScope.launch {
-            _state.update { it.copy(loading = true, error = null, offline = false) }
+            _state.update { it.copy(loading = true, errorRes = null, offline = false) }
             runCatching {
                 if (s.isSignupTab) {
                     if (s.inviteToken.isBlank() && s.selfSignupEnabled) {
@@ -187,18 +173,32 @@ class AuthViewModel @Inject constructor(
                     login(s.email.trim(), s.password)
                 }
             }.onSuccess { _state.update { it.copy(loading = false, loggedIn = true) } }
-                .onFailure { e -> fail(ErrorMapper.map(e)) }
+                .onFailure { e ->
+                    val mapped = ErrorMapper.map(e)
+                    // A 401 on the login call means wrong credentials, not an expired session.
+                    val res = if (mapped is AppError.Unauthorized && !s.isSignupTab) {
+                        R.string.v110m_auth_err_wrong_credentials
+                    } else {
+                        mapped.messageRes()
+                    }
+                    fail(res, offline = mapped is AppError.Network)
+                }
         }
     }
 
-    private fun fail(error: AppError) {
+    private fun fail(@StringRes res: Int, offline: Boolean = false) {
         _state.update {
             it.copy(
                 loading = false,
-                error = error.message,
-                offline = error is AppError.Network,
+                errorRes = res,
+                offline = offline,
                 shakeToken = it.shakeToken + 1,
             )
         }
+    }
+
+    private companion object {
+        /** Same pattern as the Pro notify-me form (ProNotifyViewModel.EMAIL). */
+        val EMAIL = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
     }
 }

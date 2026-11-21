@@ -78,7 +78,8 @@ class AlertsChannelFormTest {
         assertNull(input.notifyTelegramChatId)
         assertEquals("inapp,push", input.notifyChannels)
         assertEquals("instant", input.deliveryMode)
-        assertEquals(true, input.quietHoursEnabled)
+        // Free users never see the quiet-hours switch, so it is never enabled for them.
+        assertEquals(false, input.quietHoursEnabled)
     }
 
     @Test

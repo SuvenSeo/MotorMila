@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.10: Deal-of-the-day widget palette for a dark launcher (Ink ground). -->
+<resources>
+    <color name="v110_widget_bg">#09090B</color>
+    <color name="v110_widget_text">#FFFFFF</color>
+    <color name="v110_widget_text_secondary">#A1A1AA</color>
+    <color name="v110_widget_accent">#0A7AFF</color>
+    <color name="v110_widget_deal">#00C853</color>
+</resources>

@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -403,7 +404,14 @@ private fun CarColumn(
     Column(Modifier.width(colW)) {
         rows.forEach { row ->
             val isBest = row.best == col
-            Box(Modifier.fillMaxWidth().height(rowH)) {
+            val value = row.values.getOrElse(col) { "—" }
+            val annotation = when {
+                isBest -> stringResource(R.string.v110_compare_best)
+                row.differs -> stringResource(R.string.v110_compare_differs)
+                else -> null
+            }
+            val spoken = listOfNotNull(item.displayName, rowLabel(row.key), value, annotation).joinToString(", ")
+            Box(Modifier.fillMaxWidth().height(rowH).clearAndSetSemantics { contentDescription = spoken }) {
                 Box(
                     Modifier
                         .fillMaxSize()
@@ -414,7 +422,7 @@ private fun CarColumn(
                     contentAlignment = Alignment.CenterStart,
                 ) {
                     Text(
-                        row.values.getOrElse(col) { "—" },
+                        value,
                         style = if (row.key == "price") type.priceS else type.bodyM,
                         color = if (isBest) c.onDealGreat else c.textPrimary,
                         fontWeight = if (row.differs || isBest) FontWeight.SemiBold else FontWeight.Normal,

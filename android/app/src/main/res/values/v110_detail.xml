@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.10 Showroom detail (stage band, typical price, duty note) — English. -->
+<resources>
+    <string name="v110_detail_listed_checked">Listed on %1$s · checked %2$s</string>
+    <string name="v110_detail_ago_now">just now</string>
+    <string name="v110_detail_ago_hours">%1$d h ago</string>
+    <string name="v110_detail_ago_days">%1$d d ago</string>
+    <string name="v110_detail_tracked_days">Tracked %1$d d</string>
+    <string name="v110_detail_listed_date">Listed %1$s</string>
+    <string name="v110_detail_est_monthly">≈ %1$s est./mo</string>
+    <string name="v110_detail_est_monthly_basis" formatted="false">40% financed · 5 years · 15% p.a.</string>
+    <string name="v110_detail_price_cuts">Price cuts: %1$d</string>
+    <string name="v110_detail_possibly_sold">Possibly sold · not seen for %1$d d</string>
+    <string name="v110_detail_no_longer_listed">No longer listed · possibly sold</string>
+    <string name="v110_detail_typical_title">Typical price</string>
+    <string name="v110_detail_duty_included">Import duty is already in a reconditioned car\'s price.</string>
+    <string name="v110_detail_duty_fresh_import">Model a fresh import</string>
+    <string name="v110_detail_lease_caption_neutral" formatted="false">Up to 40% financed · terms vary by lender and vehicle age</string>
+    <string name="v110_detail_rate_down">Lower interest rate</string>
+    <string name="v110_detail_rate_up">Raise interest rate</string>
+    <string name="v110_detail_description">Description</string>
+    <string name="v110_detail_show_more">Show more</string>
+    <string name="v110_detail_show_less">Show less</string>
+</resources>

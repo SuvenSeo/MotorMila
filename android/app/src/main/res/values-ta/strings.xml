@@ -96,6 +96,7 @@
     <string name="update_later">பின்னர்</string>
     <string name="update_downloading">புதுப்பிப்பு பதிவிறக்கப்படுகிறது…</string>
     <string name="update_download_failed">புதுப்பிப்பை பதிவிறக்க முடியவில்லை. இணைப்பை சரிபார்த்து மீண்டும் முயற்சிக்கவும்.</string>
+    <string name="update_check_failed">புதுப்பிப்புகளைச் சரிபார்க்க முடியவில்லை. மீண்டும் முயலவும்.</string>
     <string name="update_up_to_date">நீங்கள் சமீபத்திய பதிப்பில் இருக்கிறீர்கள்.</string>
 
     <!-- Announcement banner (Home) -->

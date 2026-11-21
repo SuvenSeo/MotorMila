@@ -1,5 +1,8 @@
 package lk.motormila.app.ui.auth
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -17,9 +20,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,10 +44,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.IntOffset
@@ -54,6 +63,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import lk.motormila.app.R
+import lk.motormila.app.core.SupportContact
 import lk.motormila.app.core.motion.rememberReducedMotion
 import lk.motormila.app.ui.components.BrandLogo
 import lk.motormila.app.ui.components.BrandLogoSize
@@ -76,11 +86,12 @@ import lk.motormila.app.ui.theme.motormilaReveal
 fun LoginScreen(
     onLoggedIn: () -> Unit,
     onBrowse: () -> Unit = {},
+    // Kept only because the nav graph still passes it; biometric unlock no longer gates login.
+    @Suppress("UNUSED_PARAMETER")
     onBiometricAuth: (onSuccess: () -> Unit, onError: (String) -> Unit) -> Unit,
     viewModel: AuthViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val biometricEnabled by viewModel.biometricEnabled.collectAsStateWithLifecycle()
     val snacks = remember { SnackbarHostState() }
     val reducedMotion = rememberReducedMotion()
     val haptics = rememberHaptics()
@@ -88,7 +99,13 @@ fun LoginScreen(
     var passwordVisible by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val browseMarketLabel = stringResource(R.string.login_browse_market)
-    val forgotPasswordMessage = stringResource(R.string.login_forgot_password_message)
+    val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
+    val nextField = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
+    val submitField = KeyboardActions(onDone = {
+        focusManager.clearFocus()
+        viewModel.onEvent(AuthUiEvent.Submit)
+    })
     val fieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = MotormilaPrimaryBright,
         unfocusedBorderColor = MotormilaOutline,
@@ -106,10 +123,10 @@ fun LoginScreen(
             onLoggedIn()
         }
     }
-    LaunchedEffect(state.error, state.shakeToken) {
-        state.error?.let {
+    LaunchedEffect(state.errorRes, state.shakeToken) {
+        state.errorRes?.let {
             if (!reducedMotion) haptics.reject()
-            snacks.showSnackbar(it)
+            snacks.showSnackbar(context.getString(it))
         }
         if (state.shakeToken > 0 && !reducedMotion) {
             shake.snapTo(0f)
@@ -124,7 +141,7 @@ fun LoginScreen(
         }
     }
 
-    lk.motormila.app.ui.common.MmScreen(title = "Sign in", snackbarHostState = snacks) {
+    lk.motormila.app.ui.common.MmScreen(title = stringResource(R.string.v19_auth_title), snackbarHostState = snacks) {
         Column(
             Modifier
                 .fillMaxSize()
@@ -146,14 +163,14 @@ fun LoginScreen(
                     modifier = Modifier.semantics { contentDescription = browseMarketLabel },
                 )
                 Spacer(Modifier.height(18.dp))
-                MotormilaEyebrow("INVITE-ONLY INTELLIGENCE")
+                MotormilaEyebrow(stringResource(R.string.v19_auth_eyebrow).uppercase())
                 if (state.sessionEmail != null) {
                     Spacer(Modifier.height(12.dp))
                     Text(
                         text = if (state.sessionExpired) {
-                            "Session for ${state.sessionEmail} expired — sign in again."
+                            stringResource(R.string.v19_auth_session_expired, state.sessionEmail.orEmpty())
                         } else {
-                            "Last signed in as ${state.sessionEmail}."
+                            stringResource(R.string.v19_auth_last_signed_in, state.sessionEmail.orEmpty())
                         },
                         fontSize = 13.sp,
                         color = if (state.sessionExpired) MotormilaPrimaryBright else MotormilaSecondaryText,
@@ -162,7 +179,7 @@ fun LoginScreen(
             }
             Spacer(Modifier.height(24.dp))
             MotormilaPillTabs(
-                tabs = listOf("Log in", "Sign up"),
+                tabs = listOf(stringResource(R.string.v19_auth_tab_login), stringResource(R.string.v19_auth_tab_signup)),
                 selected = if (state.isSignupTab) 1 else 0,
                 onSelect = { viewModel.onEvent(AuthUiEvent.TabChanged(it == 1)) },
             )
@@ -173,6 +190,8 @@ fun LoginScreen(
                     onValueChange = { viewModel.onEvent(AuthUiEvent.NameChanged(it)) },
                     label = { Text(stringResource(R.string.ui_auth_name)) },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = nextField,
                     shape = MotormilaPill,
                     colors = fieldColors,
                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
@@ -184,6 +203,8 @@ fun LoginScreen(
                 onValueChange = { viewModel.onEvent(AuthUiEvent.EmailChanged(it)) },
                 label = { Text(stringResource(R.string.ui_auth_email)) },
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+                keyboardActions = nextField,
                 shape = MotormilaPill,
                 colors = fieldColors,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
@@ -195,13 +216,20 @@ fun LoginScreen(
                 label = { Text(stringResource(R.string.account_delete_password)) },
                 singleLine = true,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = if (state.isSignupTab) ImeAction.Next else ImeAction.Done,
+                ),
+                keyboardActions = if (state.isSignupTab) nextField else submitField,
                 shape = MotormilaPill,
                 colors = fieldColors,
                 trailingIcon = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(
                             if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                            contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                            contentDescription = stringResource(
+                                if (passwordVisible) R.string.v19_auth_hide_password else R.string.v19_auth_show_password,
+                            ),
                             tint = MotormilaSecondaryText,
                         )
                     }
@@ -211,16 +239,32 @@ fun LoginScreen(
             if (state.isSignupTab) {
                 Spacer(Modifier.height(10.dp))
                 OutlinedTextField(
+                    value = state.confirmPassword,
+                    onValueChange = { viewModel.onEvent(AuthUiEvent.ConfirmPasswordChanged(it)) },
+                    label = { Text(stringResource(R.string.v19_auth_confirm_password)) },
+                    singleLine = true,
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Next),
+                    keyboardActions = nextField,
+                    isError = state.confirmPassword.isNotEmpty() && state.confirmPassword != state.password,
+                    shape = MotormilaPill,
+                    colors = fieldColors,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                )
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
                     value = state.inviteToken,
                     onValueChange = { viewModel.onEvent(AuthUiEvent.InviteTokenChanged(it)) },
                     label = { Text(stringResource(R.string.ui_auth_invite_token)) },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = submitField,
                     supportingText = {
                         Text(
                             if (state.selfSignupEnabled) {
-                                "Optional — leave blank to start a ${state.selfSignupTrialDays}-day Pro trial."
+                                stringResource(R.string.v19_auth_invite_optional, state.selfSignupTrialDays)
                             } else {
-                                "Invite-only: get a token from Admin or your dealer."
+                                stringResource(R.string.v19_auth_invite_required_hint)
                             },
                             color = MotormilaSecondaryText,
                         )
@@ -234,17 +278,17 @@ fun LoginScreen(
             MotormilaPrimaryButton(
                 label = when {
                     state.isSignupTab && state.selfSignupEnabled && state.inviteToken.isBlank() ->
-                        "Start ${state.selfSignupTrialDays}-day trial"
-                    state.isSignupTab -> "Create account"
-                    else -> "Log in"
+                        stringResource(R.string.v19_auth_start_trial, state.selfSignupTrialDays)
+                    state.isSignupTab -> stringResource(R.string.v19_auth_create_account)
+                    else -> stringResource(R.string.v19_auth_login)
                 },
                 onClick = { viewModel.onEvent(AuthUiEvent.Submit) },
                 loading = state.loading,
             )
-            if (state.error != null && !state.loading) {
+            if (state.errorRes != null && !state.loading) {
                 Spacer(Modifier.height(10.dp))
                 MotormilaGhostButton(
-                    if (state.offline) "Retry when back online" else "Retry",
+                    stringResource(if (state.offline) R.string.v19_auth_retry_offline else R.string.v19_auth_retry),
                     onClick = { viewModel.onEvent(AuthUiEvent.Retry) },
                 )
             }
@@ -268,15 +312,47 @@ fun LoginScreen(
                 Text(browseMarketLabel)
             }
             // Password resets are issued by the Motormila team (no self-serve
-            // email flow yet), so the previous no-op button now says so.
+            // email flow yet): a persistent card with a one-tap email action,
+            // instead of a snackbar that vanished before it could be acted on.
             TextButton(
                 shape = androidx.compose.foundation.shape.CircleShape,
-                onClick = {
-                    scope.launch { snacks.showSnackbar(forgotPasswordMessage) }
-                },
+                onClick = { viewModel.onEvent(AuthUiEvent.ToggleForgot) },
                 modifier = Modifier.heightIn(min = 48.dp),
             ) {
                 Text(stringResource(R.string.login_forgot_password))
+            }
+            if (state.forgotOpen) {
+                val subject = stringResource(R.string.v19_auth_forgot_subject)
+                val body = stringResource(R.string.v19_auth_forgot_email_body, state.email.trim())
+                val noApp = stringResource(R.string.v19_auth_forgot_no_app, SupportContact.EMAIL)
+                MotormilaSurface(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        stringResource(R.string.v19_auth_forgot_title),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        stringResource(R.string.v19_auth_forgot_body, SupportContact.EMAIL),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    MotormilaPrimaryButton(
+                        label = stringResource(R.string.v19_auth_forgot_cta),
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:")).apply {
+                                putExtra(Intent.EXTRA_EMAIL, arrayOf(SupportContact.EMAIL))
+                                putExtra(Intent.EXTRA_SUBJECT, subject)
+                                putExtra(Intent.EXTRA_TEXT, body)
+                            }
+                            try {
+                                context.startActivity(intent)
+                            } catch (_: ActivityNotFoundException) {
+                                scope.launch { snacks.showSnackbar(noApp) }
+                            }
+                        },
+                    )
+                }
             }
             Spacer(Modifier.height(20.dp))
         }

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.10: theme-aware Deal-of-the-day widget palette (light launcher).
+     Night values live in values-night/v110_widget_colors.xml. -->
+<resources>
+    <color name="v110_widget_bg">#FFFFFF</color>
+    <color name="v110_widget_text">#09090B</color>
+    <color name="v110_widget_text_secondary">#52525B</color>
+    <color name="v110_widget_accent">#0062CC</color>
+    <color name="v110_widget_deal">#0B7A3B</color>
+</resources>

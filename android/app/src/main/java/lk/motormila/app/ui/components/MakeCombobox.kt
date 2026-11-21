@@ -40,7 +40,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
+import lk.motormila.app.ui.theme.MmMotion
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.res.stringResource
@@ -91,10 +98,14 @@ fun MakeCombobox(
 ) {
     var expanded by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
+    // distinct(): options are the LazyColumn keys below; a repeated make /
+    // model from the backend would crash the list (duplicate key).
     val filtered = remember(query, options) {
         val q = query.trim()
-        if (q.isEmpty()) options else options.filter { it.contains(q, ignoreCase = true) }
+        val unique = options.distinct()
+        if (q.isEmpty()) unique else unique.filter { it.contains(q, ignoreCase = true) }
     }
+    val reduced = MmMotion.reduced
     val allMakes = allLabel ?: stringResource(R.string.filter_all_makes)
     val fieldLabel = label ?: stringResource(R.string.filter_make_label)
     val hint = searchHint ?: stringResource(R.string.filter_make_search_hint)
@@ -163,13 +174,19 @@ fun MakeCombobox(
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { commitTyped() }, onSearch = { commitTyped() }, onGo = { commitTyped() }),
-            modifier = Modifier.fillMaxWidth(),
+            // Announced as a combobox (dropdown list) with its open state.
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics {
+                    role = Role.DropdownList
+                    stateDescription = expandState
+                },
         )
 
         AnimatedVisibility(
             visible = expanded && enabled,
-            enter = expandVertically(),
-            exit = shrinkVertically(),
+            enter = if (reduced) fadeIn(tween(0)) else expandVertically(),
+            exit = if (reduced) fadeOut(tween(0)) else shrinkVertically(),
         ) {
             LazyColumn(
                 modifier = Modifier
@@ -221,6 +238,7 @@ private fun ComboboxRow(
             .applePress(rowPress)
             .heightIn(min = 48.dp)
             .clickable(interactionSource = rowPress, indication = null, onClick = onClick)
+            .semantics { this.selected = selected }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

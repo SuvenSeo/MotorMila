@@ -137,18 +137,15 @@ fun MotormilaNavGraph(
 
     // In-app update check (sideload channel): one passive check per cold
     // start; the dialog is hosted above the scaffold content.
-    //
-    // ProfileScreen ALSO runs AppUpdateViewModel, but through the same Hilt
-    // scope it resolves the SAME instance — there is exactly one store and
-    // one check per process. Do not add a second checkOnLaunch here.
     val updateViewModel: AppUpdateViewModel = hiltViewModel()
     val updateState by updateViewModel.state.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) {
         updateViewModel.checkOnLaunch(BuildConfig.VERSION_CODE)
     }
+    val updateContext = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(updateState.downloadFailedTick) {
         if (updateState.downloadFailedTick > 0) {
-            // Transient failure toast; consumed state resets the tick.
+            android.widget.Toast.makeText(updateContext, R.string.update_download_failed, android.widget.Toast.LENGTH_LONG).show()
             updateViewModel.consumeDownloadFailure()
         }
     }
@@ -197,6 +194,11 @@ fun MotormilaNavGraph(
             LocalSharedTransitionScope provides this,
             LocalTabReselect provides tabReselect,
         ) {
+        // TODO(1.10 badges): `badges` is still the scaffold default (empty),
+        // so tab badges never render. Sources exist (ObserveWatchlistUseCase
+        // for Saved, AlertsRepository.unreadCount() for Tools/inbox) but must
+        // be exposed from NavGraphViewModel as a HomeTabBadges flow first,
+        // then passed here as `badges = tabBadges.toMap()`.
         MotormilaScaffold(
             selected = selectedTab,
             showBottomBar = showBottomBar,
@@ -220,7 +222,25 @@ fun MotormilaNavGraph(
                 }
             },
             onScan = { navController.navigate(PlateScan) },
-            onReselect = { routeKey -> tabReselect.tick(routeKey) },
+            onReselect = { routeKey ->
+                if (routeKey == MotormilaTabs.BUY && isSearch) {
+                    // Search shares the Buy tab, so tapping Buy there is a
+                    // "reselect" — but the user means "go Home" (audit #6).
+                    // Pop back to Home when it is under Search; otherwise
+                    // switch to it like any other tab.
+                    if (!navController.popBackStack<Home>(inclusive = false)) {
+                        navController.navigate(Home) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                } else {
+                    tabReselect.tick(routeKey)
+                }
+            },
         ) { innerPadding ->
             // Edge-to-edge: every screen owns its status-bar inset (glass top
             // bars draw under it). Tab roots let content scroll under the
@@ -371,6 +391,7 @@ fun MotormilaNavGraph(
                     }
                     motormilaComposable<Profile> {
                         ProfileScreen(
+                            updateViewModel = updateViewModel,
                             onLoginClick = { navController.navigate(Login(returnTo = "profile")) },
                             onSettingsClick = { navController.navigate(Settings) },
                             onProClick = { navController.navigate(Pro) },

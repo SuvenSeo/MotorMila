@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.10 "Showroom" Home strings — Tamil. -->
+<resources>
+    <!-- Hero -->
+    <string name="v110_home_kicker">இலங்கை · நேரடி விலைகள்</string>
+    <!-- Must appear verbatim inside mm_home_title; it is drawn in the accent blue. -->
+    <string name="v110_home_headline_accent">நியாயமான விலையைக்</string>
+    <string name="v110_home_featured_cd">சிறப்புச் சலுகையைத் திறக்கவும்: %1$s, %2$s</string>
+
+    <!-- Section eyebrows / titles -->
+    <string name="v110_home_eyebrow_deals">வழக்கமான விலைக்குக் கீழ்</string>
+    <string name="v110_home_eyebrow_drops">சமீபத்தில் குறைக்கப்பட்டவை</string>
+    <string name="v110_home_eyebrow_market">இன்றைய சந்தை</string>
+    <string name="v110_home_market_title">இப்போதைய சந்தை நிலை</string>
+    <string name="v110_home_eyebrow_tools">கருவிகள்</string>
+    <string name="v110_home_tools_title">வாங்கும் முன் விலையைச் சரிபாருங்கள்</string>
+    <string name="v110_home_eyebrow_models">பிரபலமானவை</string>
+    <string name="v110_home_eyebrow_districts">எங்கே வாங்கலாம்</string>
+</resources>

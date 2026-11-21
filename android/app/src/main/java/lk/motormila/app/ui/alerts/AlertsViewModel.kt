@@ -1,5 +1,6 @@
 package lk.motormila.app.ui.alerts
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -64,7 +65,8 @@ data class AlertForm(
     val telegram: Boolean = false,
     val inapp: Boolean = true,
     val digest: Boolean = false,
-    val quietHours: Boolean = true,
+    /** Off by default: only the Pro form shows the switch, so free alerts never get it silently. */
+    val quietHours: Boolean = false,
 )
 
 val ALERT_CHANNEL_ORDER = listOf("inapp", "email", "whatsapp", "telegram", "push")
@@ -101,8 +103,41 @@ fun AlertForm.toAlertInput(isPro: Boolean): AlertInput? {
         notifyTelegramChatId = if (isPro && telegram) telegramChatId.trim().ifBlank { null } else null,
         notifyChannels = selectedNotifyChannels(isPro).joinToString(","),
         deliveryMode = if (isPro && digest) "digest" else "instant",
-        quietHoursEnabled = if (isPro) quietHours else true,
+        // Free users never see the quiet-hours switch, so never enable it behind their back.
+        quietHoursEnabled = if (isPro) quietHours else false,
     )
+}
+
+/** Rebuilds the server input for a deleted alert so Undo restores it exactly. */
+fun Alert.toRestoreInput(): AlertInput = AlertInput(
+    make = make,
+    model = model,
+    maxPriceLkr = maxPriceLkr,
+    district = district,
+    notifyPhone = notifyPhone,
+    notifyEmail = notifyEmail,
+    notifyTelegramChatId = notifyTelegramChatId,
+    notifyChannels = notifyChannels,
+    deliveryMode = deliveryMode,
+    quietHoursEnabled = quietHoursEnabled,
+)
+
+/**
+ * User-facing alerts message. Resolved to a localized string at the UI edge so
+ * no English or raw exception text is carried in state.
+ */
+sealed interface AlertsMessage {
+    /** Fixed copy from a string resource. */
+    data class Res(@StringRes val id: Int) : AlertsMessage
+    /** Typed transport/HTTP failure; shown via [AppError.messageRes]. */
+    data class Failure(val error: AppError) : AlertsMessage
+}
+
+/** Localized copy for an [AlertsMessage]; never the raw exception text. */
+@StringRes
+fun AlertsMessage.textRes(): Int = when (this) {
+    is AlertsMessage.Res -> id
+    is AlertsMessage.Failure -> error.messageRes()
 }
 
 fun alertFormFrom(alert: Alert): AlertForm {
@@ -152,7 +187,13 @@ data class AlertsUiState(
     /** Inbox unread count (same repository's notification surface). */
     val unreadCount: Int = 0,
     val offline: Boolean = false,
-    val error: String? = null,
+    val error: AlertsMessage? = null,
+    /** Make options for the combobox (de-duplicated: makes are list keys). */
+    val makes: List<String> = emptyList(),
+    /** Model options for the selected make; empty = free text is committed. */
+    val models: List<String> = emptyList(),
+    /** One-shot: an alert was just deleted; the screen offers Undo, then consumes. */
+    val deletedAlert: Alert? = null,
     /**
      * Watchlist → Alerts listing-id prefill is in flight or finished.
      * Keeps the create form visible when listing detail fails (error goes to snackbar).
@@ -178,6 +219,8 @@ sealed interface AlertsUiEvent {
     data object ConsumeCreated : AlertsUiEvent
     data object ConsumePrefill : AlertsUiEvent
     data object DismissError : AlertsUiEvent
+    data class UndoDelete(val alert: Alert) : AlertsUiEvent
+    data object ConsumeDeleted : AlertsUiEvent
 }
 
 @HiltViewModel
@@ -207,7 +250,7 @@ class AlertsViewModel @Inject constructor(
                         isLoading = false,
                         isRefreshing = false,
                         offline = mapped is AppError.Network,
-                        error = mapped.message,
+                        error = AlertsMessage.Failure(mapped),
                     )
                 }
             }.collect { (alerts, session, ids) ->
@@ -237,12 +280,36 @@ class AlertsViewModel @Inject constructor(
                 .collect { n -> _state.update { it.copy(unreadCount = n) } }
         }
         prefillFromListingIfNeeded()
+        loadMakes()
+    }
+
+    private fun loadMakes() {
+        viewModelScope.launch {
+            runCatching { listings.makes() }
+                .onSuccess { makes -> _state.update { it.copy(makes = makes.distinct()) } }
+            // Failure is non-fatal: the combobox commits typed text when it has no options.
+        }
+        _state.value.form.make.takeIf { it.isNotBlank() }?.let(::loadModels)
+    }
+
+    private fun loadModels(make: String) {
+        viewModelScope.launch {
+            val models = runCatching { listings.models(make) }.getOrDefault(emptyList()).distinct()
+            // Ignore late results for a make the user has already changed.
+            _state.update { if (it.form.make == make) it.copy(models = models) else it }
+        }
+    }
+
+    private fun onFormChanged(form: AlertForm) {
+        val makeChanged = form.make != _state.value.form.make
+        _state.update { it.copy(form = form, models = if (makeChanged) emptyList() else it.models) }
+        if (makeChanged && form.make.isNotBlank()) loadModels(form.make)
     }
 
     fun onEvent(event: AlertsUiEvent) {
         when (event) {
             AlertsUiEvent.Refresh -> refresh()
-            is AlertsUiEvent.FormChanged -> _state.update { it.copy(form = event.form) }
+            is AlertsUiEvent.FormChanged -> onFormChanged(event.form)
             AlertsUiEvent.Create -> create()
             is AlertsUiEvent.Prefill -> prefill(event.id)
             AlertsUiEvent.CancelEdit -> _state.update { it.copy(editingId = null, form = AlertForm()) }
@@ -256,6 +323,8 @@ class AlertsViewModel @Inject constructor(
             AlertsUiEvent.ConsumeCreated -> _state.update { it.copy(justCreatedId = null) }
             AlertsUiEvent.ConsumePrefill -> _state.update { it.copy(justPrefill = false) }
             AlertsUiEvent.DismissError -> _state.update { it.copy(error = null, offline = false) }
+            is AlertsUiEvent.UndoDelete -> restore(event.alert)
+            AlertsUiEvent.ConsumeDeleted -> _state.update { it.copy(deletedAlert = null) }
         }
     }
 
@@ -283,13 +352,14 @@ class AlertsViewModel @Inject constructor(
                             justPrefill = true,
                         )
                     }
+                    if (listing.make.isNotBlank()) loadModels(listing.make)
                 }
                 .onFailure { e ->
                     val mapped = ErrorMapper.map(e)
                     _state.update {
                         it.copy(
                             offline = mapped is AppError.Network,
-                            error = mapped.message,
+                            error = AlertsMessage.Failure(mapped),
                         )
                     }
                 }
@@ -303,7 +373,7 @@ class AlertsViewModel @Inject constructor(
                 .onFailure { e ->
                     val mapped = ErrorMapper.map(e)
                     _state.update {
-                        it.copy(offline = mapped is AppError.Network, error = mapped.message)
+                        it.copy(offline = mapped is AppError.Network, error = AlertsMessage.Failure(mapped))
                     }
                 }
             _state.update { it.copy(isRefreshing = false) }
@@ -336,16 +406,16 @@ class AlertsViewModel @Inject constructor(
             return
         }
         if (_state.value.freeCapReached) {
-            _state.update { it.copy(error = "Free plan allows 1 alert. Upgrade to Pro for unlimited alerts.") }
+            _state.update { it.copy(error = AlertsMessage.Res(R.string.v19_alerts_err_cap)) }
             return
         }
         if (!_state.value.isPro && (f.whatsapp || f.telegram)) {
-            _state.update { it.copy(error = "WhatsApp and Telegram notifications unlock with Pro.") }
+            _state.update { it.copy(error = AlertsMessage.Res(R.string.v19_alerts_err_pro_channels)) }
             return
         }
         val input = buildInput(f)
         if (input == null) {
-            _state.update { it.copy(error = "Enter at least a make and a max price (e.g. 8m).") }
+            _state.update { it.copy(error = AlertsMessage.Res(formErrorRes(f))) }
             return
         }
         viewModelScope.launch {
@@ -363,12 +433,20 @@ class AlertsViewModel @Inject constructor(
                             it.copy(
                                 creating = false,
                                 offline = mapped is AppError.Network,
-                                error = mapped.message,
+                                error = AlertsMessage.Failure(mapped),
                             )
                         }
                     }
                 }
         }
+    }
+
+    /** Most specific validation copy for a form [AlertForm.toAlertInput] rejected. */
+    @StringRes
+    private fun formErrorRes(f: AlertForm): Int = when {
+        f.make.isBlank() -> R.string.v19_alerts_err_make
+        parseLkrShorthand(f.maxPrice) == null -> R.string.v19_alerts_err_price
+        else -> R.string.v19_alerts_err_form
     }
 
     private fun prefill(id: Int) {
@@ -377,8 +455,10 @@ class AlertsViewModel @Inject constructor(
             it.copy(
                 editingId = id,
                 form = alertFormFrom(alert),
+                models = emptyList(),
             )
         }
+        alert.make?.takeIf { it.isNotBlank() }?.let(::loadModels)
     }
 
     /**
@@ -390,7 +470,7 @@ class AlertsViewModel @Inject constructor(
         val id = _state.value.editingId ?: return
         val input = buildInput(_state.value.form)
         if (input == null) {
-            _state.update { it.copy(error = "Enter at least a make and a max price (e.g. 8m).") }
+            _state.update { it.copy(error = AlertsMessage.Res(formErrorRes(_state.value.form))) }
             return
         }
         viewModelScope.launch {
@@ -409,7 +489,11 @@ class AlertsViewModel @Inject constructor(
                         it.copy(
                             updating = false,
                             offline = mapped is AppError.Network,
-                            error = "Couldn't save your changes — the alert is unchanged. ${mapped.message}".trim(),
+                            error = if (mapped is AppError.Network) {
+                                AlertsMessage.Failure(mapped)
+                            } else {
+                                AlertsMessage.Res(R.string.v19_alerts_err_save)
+                            },
                         )
                     }
                     // Re-sync so the list reflects the server (legacy swap paths may have re-created it).
@@ -427,7 +511,7 @@ class AlertsViewModel @Inject constructor(
                 .onFailure { e ->
                     val mapped = ErrorMapper.map(e)
                     _state.update {
-                        it.copy(offline = mapped is AppError.Network, error = mapped.message)
+                        it.copy(offline = mapped is AppError.Network, error = AlertsMessage.Failure(mapped))
                     }
                 }
             _state.update { it.copy(togglingIds = it.togglingIds - id) }
@@ -435,14 +519,33 @@ class AlertsViewModel @Inject constructor(
     }
 
     private fun delete(id: Int) {
+        val alert = _state.value.alerts.firstOrNull { it.id == id }
         viewModelScope.launch {
             runCatching { repository.delete(id) }
+                .onSuccess { _state.update { it.copy(deletedAlert = alert) } }
                 .onFailure { e ->
                     val mapped = ErrorMapper.map(e)
                     _state.update {
-                        it.copy(offline = mapped is AppError.Network, error = mapped.message)
+                        it.copy(offline = mapped is AppError.Network, error = AlertsMessage.Failure(mapped))
                     }
                 }
+        }
+    }
+
+    /** Undo for delete: re-creates the alert with its original criteria, channels and paused state. */
+    private fun restore(alert: Alert) {
+        _state.update { it.copy(deletedAlert = null) }
+        viewModelScope.launch {
+            runCatching {
+                val created = repository.create(alert.toRestoreInput())
+                if (!alert.active) repository.setActive(created.id, false)
+            }.onFailure { e ->
+                if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+                val mapped = ErrorMapper.map(e)
+                _state.update {
+                    it.copy(offline = mapped is AppError.Network, error = AlertsMessage.Failure(mapped))
+                }
+            }
         }
     }
 
@@ -450,7 +553,7 @@ class AlertsViewModel @Inject constructor(
         // In-app / email / push are free; only WhatsApp + Telegram are Pro-gated.
         val proOnly = channel == "whatsapp" || channel == "telegram"
         if (proOnly && !_state.value.isPro) {
-            _state.update { it.copy(error = "WhatsApp and Telegram notifications unlock with Pro.") }
+            _state.update { it.copy(error = AlertsMessage.Res(R.string.v19_alerts_err_channels_pro)) }
             return
         }
         val alert = _state.value.alerts.firstOrNull { it.id == id } ?: return
@@ -462,7 +565,7 @@ class AlertsViewModel @Inject constructor(
 
     private fun toggleAlertDelivery(id: Int) {
         if (!_state.value.isPro) {
-            _state.update { it.copy(error = "Digest delivery unlocks with Pro.") }
+            _state.update { it.copy(error = AlertsMessage.Res(R.string.v19_alerts_err_digest_pro)) }
             return
         }
         val alert = _state.value.alerts.firstOrNull { it.id == id } ?: return
@@ -472,7 +575,7 @@ class AlertsViewModel @Inject constructor(
 
     private fun toggleAlertQuietHours(id: Int, enabled: Boolean) {
         if (!_state.value.isPro) {
-            _state.update { it.copy(error = "Quiet hours unlock with Pro.") }
+            _state.update { it.copy(error = AlertsMessage.Res(R.string.v19_alerts_err_quiet_pro)) }
             return
         }
         patchChannels(id, quietHoursEnabled = enabled)
@@ -496,7 +599,7 @@ class AlertsViewModel @Inject constructor(
             }.onFailure { e ->
                 val mapped = ErrorMapper.map(e)
                 _state.update {
-                    it.copy(offline = mapped is AppError.Network, error = mapped.message)
+                    it.copy(offline = mapped is AppError.Network, error = AlertsMessage.Failure(mapped))
                 }
             }
             _state.update { it.copy(channelUpdatingIds = it.channelUpdatingIds - id) }

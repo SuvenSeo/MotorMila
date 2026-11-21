@@ -51,18 +51,22 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import lk.motormila.app.R
 import lk.motormila.app.domain.model.DistrictStat
 import lk.motormila.app.domain.model.HotDeal
+import lk.motormila.app.domain.model.Listing
 import lk.motormila.app.domain.model.PriceDrop
 import lk.motormila.app.domain.model.TrendingModel
 import lk.motormila.app.core.format.LkrFormat
 import lk.motormila.app.ui.components.MmCard
 import lk.motormila.app.ui.components.MmDealBadge
+import lk.motormila.app.ui.components.MmEyebrow
 import lk.motormila.app.ui.components.MmImage
 import lk.motormila.app.ui.components.MmPriceFormat
 import lk.motormila.app.ui.components.MmSheet
@@ -84,24 +88,19 @@ import lk.motormila.app.ui.theme.mmPress
 import kotlin.math.roundToInt
 
 /*
- * Home sections, design v2.1 (v1.9.0): theme-aware, one type scale, one card
- * language. One art-directed hero moment (the featured deal photo), dot-eyebrow
- * section headers, 32dp rhythm between major sections. Rail cards register the
+ * Home sections, v1.10 "Showroom": theme-aware, one type scale, one card
+ * language. The featured deal photo is the stage hero band (HomeHeroPhoto),
+ * section headers are the web eyebrow + title2, the market strip is hairline
+ * separated labelled numbers. Rail cards and the hero register the
  * same shared-element keys as ListingCard so Home → Detail runs the flagship
  * container transform. Every number shown comes from the backend payload;
  * nothing is filled in when a value is missing.
  */
 
-/** Small brand dot used as the section eyebrow marker. */
-@Composable
-private fun SectionDot(modifier: Modifier = Modifier) {
-    Box(modifier.size(6.dp).clip(MmShapes.pill).background(MmColors.current.brand))
-}
-
 /**
- * Section title with a dot eyebrow + optional "See all" (brand text, 48dp
- * touch target). [eyebrow], when given, renders as an uppercase kicker above
- * the title instead of the inline dot.
+ * Section header, v1.10: the one web eyebrow ([MmEyebrow], hairline +
+ * uppercase label) over a 24sp title2 title, plus an optional "See all"
+ * (brand text, 48dp touch target). No eyebrow → the title stands alone.
  */
 @Composable
 fun MmSectionHeader(
@@ -113,24 +112,18 @@ fun MmSectionHeader(
     val c = MmColors.current
     Column(modifier.fillMaxWidth().padding(start = MmSpacing.gutter, end = 8.dp)) {
         if (eyebrow != null) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                SectionDot()
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    eyebrow.uppercase(),
-                    style = MmType.current.caption,
-                    color = c.brandText,
-                    letterSpacing = 0.8.sp,
-                )
-            }
-            Spacer(Modifier.height(6.dp))
+            MmEyebrow(eyebrow)
+            Spacer(Modifier.height(8.dp))
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (eyebrow == null) {
-                SectionDot(Modifier.padding(top = 2.dp))
-                Spacer(Modifier.width(10.dp))
-            }
-            Text(title, style = MmType.current.titleM, color = c.textPrimary, modifier = Modifier.weight(1f))
+            Text(
+                title,
+                style = MmType.current.title2,
+                color = c.textPrimary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
             if (onSeeAll != null) {
                 Text(
                     stringResource(R.string.mm_see_all),
@@ -146,7 +139,10 @@ fun MmSectionHeader(
     }
 }
 
-/** One calm card with three honest market numbers, separated by hairlines. */
+/**
+ * Web stat strip: three honest market numbers, each an UPPERCASE caption
+ * label over a large tabular number, divided by hairlines (no boxed card).
+ */
 @Composable
 fun HomeMarketStrip(
     totalListings: Int,
@@ -155,82 +151,97 @@ fun HomeMarketStrip(
     modifier: Modifier = Modifier,
 ) {
     val c = MmColors.current
-    MmCard(modifier = modifier.fillMaxWidth().padding(horizontal = MmSpacing.gutter), contentPadding = PaddingValues(vertical = 16.dp)) {
-        Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min)) {
-            Stat(LkrFormat.count(totalListings), stringResource(R.string.mm_stat_listed), Modifier.weight(1f))
+    Column(modifier.fillMaxWidth().padding(horizontal = MmSpacing.gutter)) {
+        Box(Modifier.fillMaxWidth().height(1.dp).background(c.outline))
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(androidx.compose.foundation.layout.IntrinsicSize.Min)
+                .padding(vertical = 16.dp),
+        ) {
+            Stat(if (totalListings > 0) LkrFormat.count(totalListings) else "—", stringResource(R.string.mm_stat_listed), Modifier.weight(1f))
             Divider()
             Stat(if (new24h > 0) LkrFormat.count(new24h) else "—", stringResource(R.string.mm_stat_new24h), Modifier.weight(1f))
             Divider()
             Stat(MmPriceFormat.compact(avgPriceLkr), stringResource(R.string.mm_stat_avg_asking), Modifier.weight(1f))
         }
+        Box(Modifier.fillMaxWidth().height(1.dp).background(c.outline))
     }
 }
 
 @Composable
 private fun Divider() {
-    Box(Modifier.width(1.dp).fillMaxHeight().padding(vertical = 4.dp).background(MmColors.current.outline))
+    Box(Modifier.width(1.dp).fillMaxHeight().background(MmColors.current.outline))
 }
 
 @Composable
 private fun Stat(value: String, label: String, modifier: Modifier) {
     val c = MmColors.current
+    val t = MmType.current
+    // Sinhala/Tamil have no case and tracking breaks conjuncts (as MmEyebrow).
+    val latin = LocalConfiguration.current.locales[0].language !in setOf("si", "ta")
     // Three numbers share one row: cap the font scale so 200% never clips
     // "90,624" to "90,62"; labels wrap to two lines instead of ellipsising.
     lk.motormila.app.ui.theme.CappedFontScale(max = 1.3f) {
-        Column(modifier.padding(horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            // Capped 1.3x still clipped "1,248,2" / "Rs 125 M" on 360 dp: scale to fit.
-            Text(value, style = MmType.current.priceM, color = c.textPrimary, maxLines = 1, softWrap = false, modifier = Modifier.fitWidth())
-            Spacer(Modifier.height(2.dp))
+        Column(modifier.padding(horizontal = 10.dp)) {
             Text(
-                label,
-                style = MmType.current.caption,
-                color = c.textTertiary,
+                if (latin) label.uppercase() else label,
+                style = t.caption,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = if (latin) 0.96.sp else 0.sp,
+                color = c.textSecondary,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+            Spacer(Modifier.height(6.dp))
+            // Capped 1.3x still clipped "1,248,2" / "Rs 125 M" on 360 dp: scale to fit.
+            Text(
+                value,
+                style = t.title2.copy(fontFeatureSettings = "tnum"),
+                color = c.textPrimary,
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.fitWidth(),
             )
         }
     }
 }
 
 /**
- * The one art-directed hero moment on Home: the best-priced listing as a
- * large photo card with its verdict badge and a scrim caption (photo-forward,
- * web parity). Registers the ListingCard shared keys so tapping it runs the
- * card → Detail container transform.
+ * The photo band of the Home stage hero: the featured deal full-bleed (top
+ * of the screen, under the status bar), fading into stage ink, with its
+ * verdict / title / price as a caption. Registers the ListingCard shared
+ * keys so tapping it runs the card → Detail container transform. [deal] null
+ * (still loading) keeps the band with a soft light pool instead of a photo.
  */
 @Composable
-fun HomeFeaturedDeal(
-    deal: HotDeal,
-    onClick: (Int) -> Unit,
+internal fun HomeHeroPhoto(
+    deal: HotDeal?,
+    height: androidx.compose.ui.unit.Dp,
+    statusTop: androidx.compose.ui.unit.Dp,
+    onClick: (HotDeal) -> Unit,
+    topRow: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = MmColors.current
     val t = MmType.current
-    val pct = deal.dealScore.roundToInt()
-    val tone = dealTone(pct)
-    val title = listOfNotNull(deal.make, deal.model).joinToString(" ")
-    val meta = listOfNotNull(deal.year?.toString(), deal.district).joinToString(" · ")
-    Column(modifier.fillMaxWidth().padding(horizontal = MmSpacing.gutter)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            SectionDot()
-            Spacer(Modifier.width(8.dp))
-            Text(
-                stringResource(R.string.v19_home_featured_eyebrow).uppercase(),
-                style = t.caption,
-                color = c.brandText,
-                letterSpacing = 0.8.sp,
-            )
-        }
-        Spacer(Modifier.height(10.dp))
-        MmCard(
-            onClick = { onClick(deal.id) },
-            contentPadding = PaddingValues(0.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .then(rememberListingCardShared(deal.id)),
-        ) {
-            Box(Modifier.fillMaxWidth().aspectRatio(16f / 10f)) {
+    Box(modifier.fillMaxWidth().height(height).background(c.stage)) {
+        if (deal != null) {
+            val pct = deal.dealScore.roundToInt()
+            val title = listOfNotNull(deal.make, deal.model).joinToString(" ")
+            val price = MmPriceFormat.compact(deal.priceLkr)
+            val meta = listOfNotNull(deal.year?.toString(), deal.district).joinToString(" · ")
+            val cd = stringResource(R.string.v110_home_featured_cd, title, price)
+            Box(
+                Modifier
+                    .matchParentSize()
+                    .then(rememberListingCardShared(deal.id))
+                    .mmTappable(role = Role.Button, onClickLabel = cd, pressedScale = 1f) {
+                        // Hand the row to Detail so the morph lands on real content.
+                        lk.motormila.app.ui.navigation.ListingPreviewCache.put(deal.toPreviewListing())
+                        onClick(deal)
+                    },
+            ) {
                 MmImage(
                     deal.thumbnailUrl,
                     contentDescription = title,
@@ -238,38 +249,63 @@ fun HomeFeaturedDeal(
                         .matchParentSize()
                         .then(rememberListingHeroShared(deal.id)),
                 )
-                if (pct >= 5) {
-                    MmDealBadge(
-                        stringResource(R.string.mm_pct_below_typical, pct),
-                        tone,
-                        onImage = true,
-                        modifier = Modifier.align(Alignment.TopStart).padding(12.dp),
-                    )
-                }
-                // Scrim caption: white type stays AA over any photo.
+                // Photo → stage ink: the caption and the headline below read
+                // as one band, and white type stays AA over any photo.
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .background(
+                            Brush.verticalGradient(
+                                0f to Color.Transparent,
+                                0.42f to Color.Transparent,
+                                0.78f to c.stage.copy(alpha = 0.72f),
+                                1f to c.stage,
+                            ),
+                        ),
+                )
                 Column(
                     Modifier
                         .align(Alignment.BottomStart)
                         .fillMaxWidth()
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color.Transparent, Color(0xB30B0B0F), Color(0xE60B0B0F)),
-                            ),
-                        )
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                        .padding(horizontal = MmSpacing.gutter, vertical = 12.dp),
                 ) {
-                    Text(title, style = t.titleS, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        MmEyebrow(
+                            stringResource(R.string.v19_home_featured_eyebrow),
+                            color = c.onStageSecondary,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        if (pct >= 5) {
+                            Spacer(Modifier.width(10.dp))
+                            MmDealBadge(stringResource(R.string.mm_pct_below_typical, pct), dealTone(pct), onImage = true)
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        title,
+                        style = t.titleM,
+                        color = c.onStage,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.then(rememberListingTitleShared(deal.id)),
+                    )
                     Spacer(Modifier.height(4.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        Text(MmPriceFormat.compact(deal.priceLkr), style = t.priceM, color = Color.White, maxLines = 1)
+                        Text(
+                            price,
+                            style = t.priceM,
+                            color = c.onStage,
+                            maxLines = 1,
+                            modifier = Modifier.then(rememberListingPriceShared(deal.id)),
+                        )
                         if (meta.isNotBlank()) {
                             Text(
                                 meta,
                                 style = t.caption,
-                                color = Color.White.copy(alpha = 0.78f),
+                                color = c.onStageSecondary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f, fill = false),
@@ -278,9 +314,61 @@ fun HomeFeaturedDeal(
                     }
                 }
             }
+        } else {
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(R.drawable.home_showroom),
+                contentDescription = null,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = Modifier.matchParentSize(),
+            )
+            Box(Modifier.matchParentSize().background(Brush.verticalGradient(
+                0.55f to Color.Transparent, 1f to c.stage,
+            )))
+        }
+        // Top shade: the lockup, the alerts button and the light status-bar
+        // icons stay legible over any photo.
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(statusTop + 88.dp)
+                .background(Brush.verticalGradient(listOf(Color(0x8C000000), Color.Transparent))),
+        )
+        Box(Modifier.align(Alignment.TopStart).padding(top = statusTop)) {
+            topRow()
         }
     }
 }
+
+/**
+ * Detail preview seed for a hot deal (see [lk.motormila.app.ui.navigation.ListingPreviewCache]).
+ * Only what the deal row carries; the verdict inputs stay null so Detail's
+ * first frame never shows a verdict its own fetch would withhold.
+ */
+internal fun HotDeal.toPreviewListing(): Listing = Listing(
+    id = id,
+    title = "",
+    make = make,
+    model = model,
+    year = year,
+    priceLkr = priceLkr,
+    mileageKm = null,
+    fuelType = null,
+    transmission = null,
+    condition = null,
+    bodyType = null,
+    district = district,
+    city = null,
+    source = source,
+    thumbnailUrl = thumbnailUrl,
+    dealScore = null,
+    marketMedianLkr = null,
+    scrapedAt = null,
+    firstSeenAt = null,
+    lastSeenAt = null,
+    detailUrl = null,
+    externalUrl = null,
+    engineCc = null,
+)
 
 private fun dealTone(pct: Int): MmDealTone = when {
     pct >= 15 -> MmDealTone.GREAT
@@ -419,7 +507,7 @@ fun HomeDealRail(deals: List<HotDeal>, onClick: (Int) -> Unit) {
         contentPadding = PaddingValues(horizontal = MmSpacing.gutter),
         horizontalArrangement = Arrangement.spacedBy(MmSpacing.cardGap),
     ) {
-        items(deals, key = { it.id }) { d ->
+        items(deals, key = { it.id }, contentType = { "deal" }) { d ->
             val pct = d.dealScore.roundToInt()
             RailCard(
                 listingId = d.id,
@@ -427,10 +515,16 @@ fun HomeDealRail(deals: List<HotDeal>, onClick: (Int) -> Unit) {
                 title = listOfNotNull(d.make, d.model).joinToString(" "),
                 price = MmPriceFormat.compact(d.priceLkr),
                 meta = listOfNotNull(d.year?.toString(), d.district).joinToString(" · "),
+                // The deal row carries no cohort median, so no "Typical" line
+                // here: the badge already states the gap.
+                typical = null,
                 badge = if (pct >= 5) stringResource(R.string.mm_pct_below_typical, pct) else null,
                 tone = dealTone(pct),
                 width = cardWidth,
-                onClick = { onClick(d.id) },
+                onClick = {
+                    lk.motormila.app.ui.navigation.ListingPreviewCache.put(d.toPreviewListing())
+                    onClick(d.id)
+                },
             )
         }
         }
@@ -446,17 +540,23 @@ fun HomeDropRail(drops: List<PriceDrop>, onClick: (Int) -> Unit) {
         contentPadding = PaddingValues(horizontal = MmSpacing.gutter),
         horizontalArrangement = Arrangement.spacedBy(MmSpacing.cardGap),
     ) {
-        items(drops, key = { it.listing.id }) { d ->
+        items(drops, key = { it.listing.id }, contentType = { "drop" }) { d ->
+            val typicalLkr = d.listing.marketMedianLkr?.takeIf { it > 0 }
             RailCard(
                 listingId = d.listing.id,
                 imageUrl = d.listing.heroImageUrl,
                 title = d.listing.displayName,
                 price = MmPriceFormat.compact(d.newPriceLkr),
                 meta = stringResource(R.string.mm_was_price, MmPriceFormat.compact(d.previousPriceLkr)),
+                typical = typicalLkr?.let { stringResource(R.string.v19_search_typical_price, MmPriceFormat.compact(it)) },
                 badge = "↓ ${"%.1f".format(d.dropPct)}%",
                 tone = MmDealTone.GOOD,
                 width = cardWidth,
-                onClick = { onClick(d.listing.id) },
+                onClick = {
+                    // Hand the row to Detail so its first frame is real content.
+                    lk.motormila.app.ui.navigation.ListingPreviewCache.put(d.listing)
+                    onClick(d.listing.id)
+                },
             )
         }
         }
@@ -467,7 +567,8 @@ fun HomeDropRail(drops: List<PriceDrop>, onClick: (Int) -> Unit) {
  * Rail card with the flagship card → Detail morph: the same shared keys as
  * [lk.motormila.app.ui.components.ListingCard] (hero photo sharedElement,
  * card container / price / title sharedBounds). Detail carries the matching
- * bounds when opened with fromCard = true.
+ * bounds when opened with fromCard = true. Titles take two lines (minLines
+ * keeps every card in a rail the same height); [typical] is the evidence line.
  */
 @Composable
 private fun RailCard(
@@ -476,6 +577,7 @@ private fun RailCard(
     title: String,
     price: String,
     meta: String,
+    typical: String?,
     badge: String?,
     tone: MmDealTone,
     onClick: () -> Unit,
@@ -502,7 +604,8 @@ private fun RailCard(
                 title,
                 style = MmType.current.titleS,
                 color = c.textPrimary,
-                maxLines = 1,
+                maxLines = 2,
+                minLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.then(rememberListingTitleShared(listingId)),
             )
@@ -514,6 +617,10 @@ private fun RailCard(
                 maxLines = 1,
                 modifier = Modifier.then(rememberListingPriceShared(listingId)),
             )
+            if (typical != null) {
+                Spacer(Modifier.height(2.dp))
+                Text(typical, style = MmType.current.caption, color = c.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
             if (meta.isNotBlank()) {
                 Spacer(Modifier.height(2.dp))
                 Text(meta, style = MmType.current.caption, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -639,7 +746,7 @@ fun HomeDistrictRail(districts: List<DistrictStat>, onClick: (String) -> Unit) {
         contentPadding = PaddingValues(horizontal = MmSpacing.gutter),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        items(districts, key = { it.district }) { d ->
+        items(districts, key = { it.district }, contentType = { "district" }) { d ->
             val press = remember { MutableInteractionSource() }
             Column(
                 Modifier
