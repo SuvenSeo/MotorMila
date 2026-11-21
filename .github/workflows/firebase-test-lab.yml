@@ -30,8 +30,15 @@ jobs:
       - name: Accept Android SDK licenses
         run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null
 
-      - name: Assemble debug APK
-        run: ./gradlew assembleDebug --no-daemon
+      - name: Assemble direct preview APK
+        # R8-minified like release (catches keep-rule / provider crashes) but
+        # signed with the committed preview key so Test Lab can install it.
+        run: |
+          set -euo pipefail
+          ./gradlew :app:assembleDirectPreview --no-daemon
+          APK="$(ls app/build/outputs/apk/direct/preview/*.apk | head -1)"
+          test -f "$APK"
+          echo "APK=$APK" >> "$GITHUB_ENV"
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -44,15 +51,17 @@ jobs:
       - name: Run Robo test on virtual Pixel
         # Robo test crawls the app automatically for 3 minutes on a virtual
         # Pixel 7 (API 34). Catches crashes, ANRs, and broken navigation
-        # without writing instrumentation tests.
+        # without writing instrumentation tests. Results go to Test Lab's
+        # default bucket: the service account cannot create a custom one on
+        # the Spark plan ("Permission denied while creating bucket").
         run: |
+          set -o pipefail
           gcloud firebase test android run \
             --project motormila-86154 \
             --type robo \
-            --app app/build/outputs/apk/debug/app-debug.apk \
+            --app "$APK" \
             --device model=panther,version=34,locale=en,orientation=portrait \
             --timeout 180s \
-            --results-bucket motormila-test-lab \
             2>&1 | tee test-lab-output.txt
 
       - name: Check for crashes
