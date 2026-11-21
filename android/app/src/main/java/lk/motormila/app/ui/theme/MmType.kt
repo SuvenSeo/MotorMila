@@ -181,9 +181,12 @@ private fun style(
  */
 @Immutable
 data class MmType(
+    val hero: TextStyle,
+    val large: TextStyle,
     val displayL: TextStyle,
     val displayM: TextStyle,
     val titleL: TextStyle,
+    val title2: TextStyle,
     val titleM: TextStyle,
     val titleS: TextStyle,
     val bodyL: TextStyle,
@@ -193,6 +196,7 @@ data class MmType(
     val labelS: TextStyle,
     val caption: TextStyle,
     val overline: TextStyle,
+    val priceXL: TextStyle,
     val priceL: TextStyle,
     val priceM: TextStyle,
     val priceS: TextStyle,
@@ -208,9 +212,13 @@ data class MmType(
          * where line heights scale with the sp size).
          */
         fun build(body: FontFamily = CalSansText, display: FontFamily = CalSans) = MmType(
+            // Web hero clamp(48..80) / large 44 / title2 24 (type-scale.ts).
+            hero = style(display, FontWeight.Bold, 48, 48, -1.4),
+            large = style(display, FontWeight.Bold, 44, 48, -0.9),
             displayL = style(display, FontWeight.Bold, 40, 46, -0.4),
             displayM = style(display, FontWeight.Bold, 32, 38, -0.3),
             titleL = style(display, FontWeight.SemiBold, 26, 32, -0.15),
+            title2 = style(display, FontWeight.SemiBold, 24, 30, -0.24),
             titleM = style(body, FontWeight.SemiBold, 20, 26, -0.2),
             titleS = style(body, FontWeight.SemiBold, 17, 22, -0.1),
             bodyL = style(body, FontWeight.Normal, 16, 24, 0.0),
@@ -220,6 +228,8 @@ data class MmType(
             labelS = style(body, FontWeight.SemiBold, 12, 16, 0.1),
             caption = style(body, FontWeight.Medium, 12, 16, 0.1),
             overline = style(body, FontWeight.SemiBold, 11, 14, 0.9),
+            // Detail "Asking price" hero (web 38-52px .num).
+            priceXL = style(display, FontWeight.Bold, 42, 46, -0.8, "tnum"),
             priceL = style(display, FontWeight.Bold, 30, 36, -0.2, "tnum"),
             priceM = style(body, FontWeight.Bold, 20, 24, -0.2, "tnum"),
             priceS = style(body, FontWeight.SemiBold, 16, 20, -0.1, "tnum"),

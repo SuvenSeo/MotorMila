@@ -64,6 +64,13 @@ data class MmColors(
     // Skeleton
     val skeletonBase: Color,
     val skeletonHighlight: Color,
+    // Stage ink: the web's night-drive band (cinematic.css --stage-ink) under
+    // the Home hero and the Detail title/price. Identical in both themes.
+    val stage: Color = Color(0xFF05060B),
+    val onStage: Color = Color(0xFFF8F5F2),
+    val onStageSecondary: Color = Color(0xC7F8F5F2),
+    val stageHairline: Color = Color(0x14FFFFFF),
+    val stageAccent: Color = Color(0xFF70B1FF), // hsl(213 100% 72%): small blue text on stage
 ) {
     companion object {
         val Dark = MmColors(
@@ -117,7 +124,7 @@ data class MmColors(
             scrim = Color(0x66000000),
             textPrimary = Color(0xFF1B1613),
             textSecondary = Color(0xFF67676F),
-            textTertiary = Color(0xFF67676F),
+            textTertiary = Color(0xFF736A61), // warm label-3: 4.8:1 on every light surface
             textOnBrand = Color(0xFFFFFFFF),
             outline = Color(0x141B1613),
             outlineStrong = Color(0x261B1613),
