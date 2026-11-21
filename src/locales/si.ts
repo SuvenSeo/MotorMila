@@ -2,7 +2,6 @@
 export const si = {
   "signin.browseAnyway": "සජීවී වෙළඳපොළ බලන්න",
   "signin.noInvite": "තවම ආරාධනාවක් නැද්ද?",
-  "signin.scene": "Scene {n}",
   "signin.secureAccess": "ආරක්ෂිත ප්‍රවේශය",
   "signInPortal.body": "ඔබේ Motormila ගිණුමෙන් සුරකින ලද සෙවුම්, මිල අඩුවීම් ඇඟවීම් සහ Pro ටර්මිනලය විවෘත වේ. සජීවී වෙළඳපොළ බැලීමට ගිණුමක් අවශ්‍ය නැත.",
   "signInPortal.browse": "පිවිසීමකින් තොරව දිගටම බලන්න",
@@ -976,8 +975,6 @@ export const si = {
   "signin.required": "අවශ්‍යයි",
   "signin.submit": "පිවිසෙන්න",
   "signin.title": "පිවිසෙන්න",
-  "signin.welcomeAccent": "back.",
-  "signin.welcomeLead": "Welcome",
   "signup.activate": "ගිණුම සක්‍රිය කරන්න",
   "signup.alreadyRegistered": "දැනටමත් ලියාපදිංචිද?",
   "signup.bullet1": "වසා ඇති වේදිකාව — පොදු ස්වයං-ලියාපදිංචියක් නැත",

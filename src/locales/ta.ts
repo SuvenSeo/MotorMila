@@ -2,7 +2,6 @@
 export const ta = {
   "signin.browseAnyway": "நேரடி சந்தையைப் பாருங்கள்",
   "signin.noInvite": "இன்னும் அழைப்பு இல்லையா?",
-  "signin.scene": "Scene {n}",
   "signin.secureAccess": "பாதுகாப்பான அணுகல்",
   "signInPortal.body": "உங்கள் Motormila கணக்கு சேமித்த தேடல்கள், விலை விழிப்பூட்டல்கள் மற்றும் Pro முனையத்தைத் திறக்கும். நேரடி சந்தையைப் பார்க்க கணக்கு தேவையில்லை.",
   "signInPortal.browse": "உள்நுழையாமல் தொடர்ந்து பாருங்கள்",
@@ -976,8 +975,6 @@ export const ta = {
   "signin.required": "தேவை",
   "signin.submit": "உள்நுழை",
   "signin.title": "உள்நுழை",
-  "signin.welcomeAccent": "back.",
-  "signin.welcomeLead": "Welcome",
   "signup.activate": "கணக்கை செயல்படுத்து",
   "signup.alreadyRegistered": "ஏற்கனவே பதிவு செய்துள்ளீர்களா?",
   "signup.bullet1": "மூடிய மேடை — பொது சுய-சேவை பதிவு இல்லை",
