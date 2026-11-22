@@ -2133,6 +2133,15 @@ export const en = {
   "pro.col.listings": "Listings",
   "pro.lanes.showing": "Showing {shown} of {total} lanes",
   "pro.lanes.showAll": "Show all",
+  "pro.era.body": "Vehicles manufactured up to 2024 against those from 2025 on. The premium in the right-hand column is what restricted imports are worth in today's asking prices.",
+  "pro.geo.arbBody": "For one lane, the districts with the widest median gap. Every pair needs real depth on both sides, so a single optimistic ad cannot create an opportunity.",
+  "pro.geo.body": "Depth, price position and delivery speed per district. A district with high stock and slow turnover is where an asking price has room to move.",
+  "pro.index.body": "A mix-adjusted Laspeyres index of asking prices, rebased so the first month equals 100. Each make is its own sub-index, so a shift in demand for one segment cannot hide in an all-market average.",
+  "pro.lanes.body": "Make and model groups, ranked the way a buyer shortlists: stock, price, movement, and how far the median sits from the whole market.",
+  "pro.lanes.footnote": "Median is the midpoint of asking prices, not a transaction price. Lanes under {n} listings are labelled thin so a sample of three never reads like a trend.",
+  "pro.opps.body": "Every scored listing, measured against the median of its own make and model. The gap is the trade; the percentile tells you whether the score is actually unusual.",
+  "pro.src.body": "Every number in this workspace inherits these rates. Fill rate decides how much of the market is visible; freshness decides how current it is; outliers and duplicates decide how much of it lies.",
+  "pro.trend.body": "Both series rebased to 100 at the first month of the window. If the lane line is above the market line, this vehicle is getting dearer faster than everything else.",
 } as const;
 
 export type EnKey = keyof typeof en;
